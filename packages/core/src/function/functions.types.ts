@@ -2,11 +2,11 @@ import type {
   CoreServices,
   CoreSecretlessSingletonServices,
   CoreUserSession,
-  CorePikkuMiddleware,
   PikkuWire,
-  PickRequired,
   SecretlessServices,
 } from '../types/core.types.js'
+import type { CorePikkuMiddleware } from '../middleware/middleware.types.js'
+import type { PickRequired } from '../utils.js'
 import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { PikkuError } from '../errors/error-handler.js'

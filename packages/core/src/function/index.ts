@@ -28,3 +28,12 @@ export type {
   CorePikkuPermissionConfig,
   CorePikkuPermissionFactory,
 } from './functions.types.js'
+export type {
+  FunctionMeta,
+  FunctionRuntimeMeta,
+  FunctionServicesMeta,
+  FunctionWiresMeta,
+  FunctionsMeta,
+  FunctionsRuntimeMeta,
+  PermissionMetadata,
+} from './function-meta.types.js'

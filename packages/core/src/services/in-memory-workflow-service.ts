@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import { isExpectedError } from '../errors/error-handler.js'
-import type { SerializedError } from '../types/core.types.js'
+import type { SerializedError } from '../errors/serialized-error.js'
 import type {
   WorkflowPlannedStep,
   WorkflowQueueOptions,

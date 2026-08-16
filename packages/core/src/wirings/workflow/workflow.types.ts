@@ -1,4 +1,5 @@
-import type { SerializedError, CommonWireMeta } from '../../types/core.types.js'
+import type { CommonWireMeta } from '../../types/core.types.js'
+import type { SerializedError } from '../../errors/serialized-error.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { GroupConcurrencyConfig } from '../queue/queue.types.js'
 

@@ -129,3 +129,23 @@ export const pikkuServerLifecycle = <
 >(
   lifecycle: ServerLifecycle<SS>
 ): ServerLifecycle<SS> => lifecycle
+
+export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
+  Required<Pick<T, K>>
+
+export type JSONPrimitive = string | number | boolean | null | undefined
+
+export type JSONValue =
+  | JSONPrimitive
+  | JSONValue[]
+  | {
+      [key: string]: JSONValue
+    }
+
+export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
+
+export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
+
+export type RequireAtLeastOne<T> = {
+  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
+}[keyof T]

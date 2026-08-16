@@ -1,9 +1,11 @@
 import type {
   CommonWireMeta,
-  CorePikkuMiddleware,
-  CorePikkuMiddlewareGroup,
   CoreSingletonServices,
 } from '../../types/core.types.js'
+import type {
+  CorePikkuMiddleware,
+  CorePikkuMiddlewareGroup,
+} from '../../middleware/middleware.types.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { PikkuHTTPRequest } from '../http/http.types.js'
 

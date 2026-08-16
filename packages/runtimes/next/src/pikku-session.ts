@@ -4,11 +4,8 @@ import {
   createMiddlewareSessionWireProps,
 } from '@pikku/core/services'
 import { PikkuFetchHTTPRequest } from '@pikku/core/http'
-import type {
-  CoreSingletonServices,
-  CoreUserSession,
-  CorePikkuMiddleware,
-} from '@pikku/core/types'
+import type { CoreSingletonServices, CoreUserSession } from '@pikku/core/types'
+import type { CorePikkuMiddleware } from '@pikku/core/middleware'
 import type { PikkuWire } from '@pikku/core/types'
 
 /**

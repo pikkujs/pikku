@@ -9,8 +9,7 @@ import type {
   GatewayInboundMessage,
   GatewayOutboundMessage,
 } from './gateway.types.js'
-import type { CorePikkuMiddleware } from '../../types/core.types.js'
-
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 const createMockAdapter = (
   opts: {
     name?: string

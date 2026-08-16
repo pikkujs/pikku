@@ -1,4 +1,4 @@
-import type { FunctionsMeta } from '../../types/core.types.js'
+import type { FunctionsMeta } from '../../function/function-meta.types.js'
 import type { WorkflowsMeta } from '../workflow/workflow.types.js'
 import type { ScenarioStepPhase } from '../workflow/scenario-step.types.js'
 import { composeStepProse } from '../workflow/scenario-prose.js'

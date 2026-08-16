@@ -5,7 +5,10 @@ import {
   pikkuPermission,
   pikkuPermissionFactory,
 } from './function/functions.types.js'
-import { pikkuMiddleware, pikkuMiddlewareFactory } from './types/core.types.js'
+import {
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
+} from './middleware/middleware-factories.js'
 
 test('pikkuPermission returns the same function', async () => {
   const originalFn = async () => true

@@ -9,15 +9,12 @@
  * exists rather than letting it break loudly.
  *
  * `bootstrap-compat.test.ts` fails if the pinned CLI's output drifts from this
- * list. Delete this file, its sibling, and both `exports` entries once the pin
- * moves to a CLI released from this branch.
+ * list. Delete this file and its `exports` entry once the pin moves to a CLI
+ * released from this branch.
  */
-export type {
-  CorePikkuMiddleware,
-  PickRequired,
-  PikkuWire,
-  SecretlessServices,
-} from '../types/core.types.js'
+export type { PikkuWire, SecretlessServices } from '../types/core.types.js'
+export type { CorePikkuMiddleware } from '../middleware/middleware.types.js'
+export type { PickRequired } from '../utils.js'
 export type { CorePermissionGroup } from '../function/functions.types.js'
 export type { ListInput, ListOutput } from '../function/list.types.js'
 export type { SecretService } from '../services/secret-service.js'

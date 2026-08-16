@@ -9,7 +9,7 @@ import {
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
 import type { AuditDurability } from '@pikku/core/services'
-import type { FunctionServicesMeta } from '@pikku/core/types'
+import type { FunctionServicesMeta } from '@pikku/core/function'
 import type { ScenarioSurface, ScenarioStepKind } from '@pikku/core/scenario'
 import { formatVersionedId, parseVersionedId } from '@pikku/core/version'
 

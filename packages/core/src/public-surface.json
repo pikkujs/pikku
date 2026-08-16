@@ -1,12 +1,6 @@
 {
   ".": [],
-  "./types": [
-    "pikkuAgentMiddleware",
-    "pikkuChannelMiddleware",
-    "pikkuChannelMiddlewareFactory",
-    "pikkuMiddleware",
-    "pikkuMiddlewareFactory"
-  ],
+  "./types": [],
   "./middleware": [
     "addGlobalMiddleware",
     "addGlobalPermission",
@@ -16,6 +10,11 @@
     "authBearer",
     "authCookie",
     "cors",
+    "pikkuAgentMiddleware",
+    "pikkuChannelMiddleware",
+    "pikkuChannelMiddlewareFactory",
+    "pikkuMiddleware",
+    "pikkuMiddlewareFactory",
     "pikkuRemoteAuthMiddleware",
     "runMiddleware",
     "telemetryInner",
@@ -96,9 +95,7 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./actor-flow": [
-    "runConversation"
-  ],
+  "./actor-flow": ["runConversation"],
   "./virtual-user": [
     "DISPOSITIONS",
     "IntentStack",
@@ -142,9 +139,7 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": [
-    "buildRemoteHeaders"
-  ],
+  "./remote": ["buildRemoteHeaders"],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -159,11 +154,7 @@
     "runScheduledTask",
     "wireScheduler"
   ],
-  "./trigger": [
-    "PikkuTriggerService",
-    "wireTrigger",
-    "wireTriggerSource"
-  ],
+  "./trigger": ["PikkuTriggerService", "wireTrigger", "wireTriggerSource"],
   "./rpc": [
     "PikkuRPCService",
     "RPCNotFoundError",
@@ -181,10 +172,7 @@
     "safeFetch",
     "setDefaultHostResolver"
   ],
-  "./node-host-resolver": [
-    "installNodeHostResolver",
-    "nodeHostResolver"
-  ],
+  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -252,10 +240,7 @@
     "runCLICommand",
     "wireCLI"
   ],
-  "./cli/command-parser": [
-    "generateCommandHelp",
-    "parseCLIArguments"
-  ],
+  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -294,14 +279,8 @@
     "validateAndBuildPersonasMeta",
     "verifyPersonaRoles"
   ],
-  "./secret": [
-    "defineSecret",
-    "validateAndBuildSecretDefinitionsMeta"
-  ],
-  "./variable": [
-    "defineVariable",
-    "validateAndBuildVariableDefinitionsMeta"
-  ],
+  "./secret": ["defineSecret", "validateAndBuildSecretDefinitionsMeta"],
+  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -396,19 +375,10 @@
     "stub",
     "withoutSecrets"
   ],
-  "./services/local-meta": [
-    "LocalMetaService"
-  ],
-  "./services/v8-coverage": [
-    "V8CoverageService"
-  ],
-  "./services/istanbul-coverage": [
-    "IstanbulCoverageService"
-  ],
-  "./services/local-content": [
-    "LocalContent",
-    "signedContentPath"
-  ],
+  "./services/local-meta": ["LocalMetaService"],
+  "./services/v8-coverage": ["V8CoverageService"],
+  "./services/istanbul-coverage": ["IstanbulCoverageService"],
+  "./services/local-content": ["LocalContent", "signedContentPath"],
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
@@ -438,10 +408,7 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": [
-    "hmacSha256Hex",
-    "timingSafeStringEqual"
-  ],
+  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
   "./state": [
     "addPackageServiceFactories",
     "getAllPackageStates",
@@ -466,20 +433,14 @@
     "unsafeAsSealed",
     "unsafeAsWrapped"
   ],
-  "./request": [
-    "PikkuRequest"
-  ],
+  "./request": ["PikkuRequest"],
   "./time-utils": [
     "getDurationInMilliseconds",
     "getRelativeTimeOffset",
     "getRelativeTimeOffsetFromNow",
     "parseDurationString"
   ],
-  "./version": [
-    "formatVersionedId",
-    "isVersionedId",
-    "parseVersionedId"
-  ],
+  "./version": ["formatVersionedId", "isVersionedId", "parseVersionedId"],
   "./utils": [
     "closeWireServices",
     "createWeakUID",
@@ -497,13 +458,6 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": [
-    "clearPikkuRuntimeState",
-    "defineServiceTests"
-  ],
-  "./dev": [
-    "pikkuDevReloader",
-    "reconcileAddonRegistry",
-    "reloadGeneratedMeta"
-  ]
+  "./testing": ["clearPikkuRuntimeState", "defineServiceTests"],
+  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

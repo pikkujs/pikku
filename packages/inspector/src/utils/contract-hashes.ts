@@ -1,5 +1,5 @@
 import type { FunctionsMeta } from '@pikku/core/services'
-import type { JSONValue } from '@pikku/core/types'
+import type { JSONValue } from '@pikku/core/utils'
 import { parseVersionedId } from '@pikku/core/version'
 import type { TypesMap } from '../types-map.js'
 import { ErrorCode } from '../error-codes.js'

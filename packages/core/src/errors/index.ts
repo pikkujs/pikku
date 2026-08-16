@@ -8,3 +8,4 @@ export { PikkuError, addError } from './error-handler.js'
  */
 export type { ErrorDetails } from './error-handler.js'
 export { isExpectedError } from './error-handler.js'
+export type { SerializedError } from './serialized-error.js'

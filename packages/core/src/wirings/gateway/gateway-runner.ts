@@ -81,10 +81,9 @@ export const resolveGatewayAdapter = (
 import type {
   PikkuWire,
   PikkuRawWire,
-  CorePikkuMiddleware,
   CoreSingletonServices,
 } from '../../types/core.types.js'
-
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 export const wireGateway = (config: CoreGateway): void => {
   pikkuState(null, 'gateway', 'gateways').set(config.name, config)
 

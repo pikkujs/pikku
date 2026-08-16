@@ -11,3 +11,19 @@ export {
   runMiddleware,
 } from '../middleware-runner.js'
 export { addGlobalPermission } from '../permissions.js'
+export type {
+  CorePikkuMiddleware,
+  CorePikkuMiddlewareConfig,
+  CorePikkuMiddlewareFactory,
+  CorePikkuMiddlewareGroup,
+  MiddlewareMetadata,
+  MiddlewarePriority,
+} from './middleware.types.js'
+export {
+  pikkuAgentMiddleware,
+  pikkuChannelMiddleware,
+  pikkuChannelMiddlewareFactory,
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
+} from './middleware-factories.js'
+export type { PikkuAgentMiddlewareHooks } from '../wirings/agent/agent.types.js'

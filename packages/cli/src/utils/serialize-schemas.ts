@@ -7,7 +7,7 @@ import {
   unlink,
   writeFile,
 } from 'fs/promises'
-import type { JSONValue } from '@pikku/core/types'
+import type { JSONValue } from '@pikku/core/utils'
 import type { CLILogger } from '../services/cli-logger.service.js'
 
 const SCHEMA_FILE_SUFFIX = '.schema.json'

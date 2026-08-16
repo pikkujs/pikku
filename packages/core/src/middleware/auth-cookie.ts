@@ -1,5 +1,8 @@
 import type { SerializeOptions } from 'cookie'
-import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
+import {
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
+} from './middleware-factories.js'
 import type { RelativeTimeInput } from '../time-utils.js'
 import { getRelativeTimeOffsetFromNow } from '../time-utils.js'
 

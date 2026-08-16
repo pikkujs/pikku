@@ -63,6 +63,17 @@ shared type surface, the largest single destination), `./state`, `./request`,
 `./secret-value`, `./data-classification`, `./column-form`, `./time-utils`,
 `./version` and `./utils`.
 
+`./types` inherited the root barrel's habit before it inherited its contents, so
+the names with an owner elsewhere were moved off it. The middleware types and the
+five middleware factories — `pikkuMiddleware`, `pikkuMiddlewareFactory`,
+`pikkuChannelMiddleware`, `pikkuChannelMiddlewareFactory` and
+`pikkuAgentMiddleware`, runtime values on a types entry point — are now
+`@pikku/core/middleware`; the function meta types are `@pikku/core/function`;
+`SerializedError` is `@pikku/core/errors`; and the generic TypeScript helpers
+(`MakeRequired`, `PickRequired`, `PickOptional`, `RequireAtLeastOne`,
+`JSONPrimitive`, `JSONValue`) are `@pikku/core/utils`. What is left on `./types`
+is the vocabulary the wirings share, which no single module owns.
+
 `pikku` was itself a root barrel — `export * from '@pikku/core'` — and
 now exports only the services it bundles.
 

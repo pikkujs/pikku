@@ -4,11 +4,7 @@ import type { SecretService } from '../services/secret-service.js'
 import type { SchemaService } from '../services/schema-service.js'
 import type { JWTService } from '../services/jwt-service.js'
 import type { PikkuHTTP } from '../wirings/http/http.types.js'
-import type {
-  PikkuChannel,
-  CorePikkuChannelMiddleware,
-  CorePikkuChannelMiddlewareFactory,
-} from '../wirings/channel/channel.types.js'
+import type { PikkuChannel } from '../wirings/channel/channel.types.js'
 import type { EventHubService } from '../wirings/channel/eventhub-service.js'
 import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { PikkuMCP } from '../wirings/mcp/mcp.types.js'
@@ -25,8 +21,6 @@ import type { PikkuScenarioWire } from '../wirings/workflow/scenario.types.js'
 import type {
   PikkuBrowserWire,
   PikkuScenarioStepWire,
-  ScenarioStepKind,
-  ScenarioSurface,
 } from '../wirings/workflow/scenario-step.types.js'
 import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
 import type { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
@@ -44,8 +38,9 @@ import type { AgentRunnerService } from '../services/agent-runner-service.js'
 import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
 import type { AgentRunStateService } from '../services/agent-run-state-service.js'
 import type { AgentRunService } from '../wirings/agent/agent.types.js'
+import type { MiddlewareMetadata } from '../middleware/middleware.types.js'
+import type { PermissionMetadata } from '../function/function-meta.types.js'
 import type { VirtualUserRunStore } from '../wirings/virtual-user/virtual-user-run-store.js'
-import type { PikkuAgentMiddlewareHooks } from '../wirings/agent/agent.types.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
@@ -75,175 +70,6 @@ export type PikkuWiringTypes =
   | 'workflow'
   | 'agent'
   | 'gateway'
-
-export interface FunctionServicesMeta {
-  optimized: boolean
-  services: string[]
-}
-
-export interface FunctionWiresMeta {
-  optimized: boolean
-  wires: string[]
-}
-
-export type MiddlewareMetadata =
-  | {
-      type: 'http'
-      route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
-    }
-  | {
-      type: 'tag'
-      tag: string
-    }
-  | {
-      type: 'wire'
-      name: string
-      inline?: boolean
-    }
-
-/**
- * A reference to a permission function, resolved by name. Function-scoped
- * only: there are no wire- or tag-level permission references.
- */
-export type PermissionMetadata = {
-  type: 'wire'
-  name: string
-  inline?: boolean
-}
-
-export type FunctionRuntimeMeta = {
-  pikkuFuncId: string
-  inputSchemaName: string | null
-  outputSchemaName: string | null
-  /** Scopes the session must hold to run this function. All are required (AND). */
-  scopes?: string[]
-  expose?: boolean
-  /**
-   * A sessionless function's own `auth: true`. `sessionless` carries the
-   * baseline — a `pikkuFunc` always requires a session — and this carries the
-   * tightening a `pikkuSessionlessFunc` applies to itself. Both are needed to
-   * know whether a function is gated without running it.
-   */
-  auth?: boolean
-  /**
-   * The author's declaration that this function's permission check lives in its
-   * own body. Carries no runtime effect — it records a gate codegen cannot see,
-   * so an audit is not left to guess whether a sessionless function is open.
-   * Refused unless `allow.permissionsInBody` is set in `pikku.config.json`.
-   */
-  permissionsInBody?: boolean
-  remote?: boolean
-  /**
-   * A step RPC: invoked by name only from a scenario run and refused
-   * everywhere else, so it is never network-callable.
-   */
-  scenarioStep?: boolean
-  /**
-   * The body of a `pikkuScenario(...)`. Only ever run by `pikku scenario run`,
-   * so it is held back from the app bootstrap and from every deployed unit.
-   */
-  scenario?: boolean
-  mcp?: boolean
-  readonly?: boolean
-  deploy?: 'serverless' | 'server' | 'auto'
-  sessionless?: boolean
-  /** When true, workflow steps calling this function are dispatched via the queue. No queue service configured is a hard error. */
-  workflowQueued?: boolean
-  /** Retry count when this function is used as a workflow step. */
-  workflowRetries?: number
-  /** Timeout when this function is used as a workflow step (e.g. '30s', '5m'). */
-  workflowTimeout?: string
-  /**
-   * Scenario steps only: which surfaces this step declares a binding for.
-   *
-   * The reporter derives coverage from this — a `then` with no binding for the
-   * surface the run targeted was never actually witnessed there, which is a gap
-   * worth counting rather than excusing.
-   */
-  scenarioStepSurfaces?: ScenarioSurface[]
-  /**
-   * Scenario steps only: who acts. Absent means `persona` — the ordinary step,
-   * and the only kind that existed before the other two.
-   *
-   * A `platform` or `addon` step is the app or a third-party system acting, and
-   * it must never reach a virtual user's catalogue. That is not tidiness: a
-   * virtual user that can invoke "Stripe's webhook arrives" can forge its own
-   * payment success, and every finding downstream of that is worthless.
-   */
-  scenarioStepKind?: ScenarioStepKind
-  /** Addon steps only: the addon whose system acts — `wireAddon`'s `name`. */
-  scenarioStepAddon?: string
-  /** Scenario steps only: the prose a reporter renders, with `{placeholders}` filled from the step's recorded input. */
-  scenarioStepTemplate?: string
-  /**
-   * The function's `audit` config, resolved — `audit: true` reads as
-   * `{ durability: 'best-effort' }`. Absent means the function records nothing:
-   * `auditLog.write()` from an unmarked function is dropped with a warning, so
-   * this is the only place a reader can see which functions have a trail at all
-   * without running them.
-   *
-   * Informational. The runner resolves audit from the live function config, not
-   * from here, so meta and runtime cannot disagree about whether audit is on.
-   */
-  audit?: {
-    durability: AuditDurability
-  }
-  version?: number
-  approvalRequired?: boolean
-  approvalDescription?: string
-  implementationHash?: string
-  contractHash?: string
-  inputHash?: string
-  outputHash?: string
-}
-
-export type FunctionMeta = FunctionRuntimeMeta &
-  Partial<
-    {
-      name: string
-      /** `remote`: a contract with no local body, answered by a connected client. */
-      functionType: 'user' | 'inline' | 'helper' | 'remote'
-      funcWrapper: string
-      services: FunctionServicesMeta
-      wires: FunctionWiresMeta
-      inputs: string[] | null
-      outputs: string[] | null
-      middleware: MiddlewareMetadata[]
-      permissions: PermissionMetadata[]
-      isDirectFunction: boolean
-      sourceFile: string
-      exportedName: string
-      /** File containing the handler body when it differs from sourceFile (imported handlers) */
-      bodySourceFile?: string
-      /** 1-indexed first line of the handler body (verbose meta; coverage mapping) */
-      bodyStart: number
-      /** 1-indexed last line of the handler body (verbose meta; coverage mapping) */
-      bodyEnd: number
-    } & CommonWireMeta
-  >
-
-export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
-export type FunctionsMeta = Record<string, FunctionMeta>
-
-export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
-  Required<Pick<T, K>>
-
-export type JSONPrimitive = string | number | boolean | null | undefined
-
-export type JSONValue =
-  | JSONPrimitive
-  | JSONValue[]
-  | {
-      [key: string]: JSONValue
-    }
-
-export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
-
-export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
-
-export type RequireAtLeastOne<T> = {
-  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
-}[keyof T]
 
 /**
  * Runtime pool tuning for the Postgres adapter. The connection string stays
@@ -461,96 +287,6 @@ export type PikkuWire<
 /** Wire as constructed by runners, before the function runner lazily adds `rpc`. */
 export type PikkuRawWire = Omit<PikkuWire, 'rpc'>
 
-export type CorePikkuMiddleware<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = (
-  services: SingletonServices,
-  wires: PikkuWire,
-  next: () => Promise<void>
-) => Promise<void>
-
-/**
- * Execution order: `highest` runs first (outermost in the onion), `lowest`
- * runs last, closest to the function.
- */
-export type MiddlewarePriority =
-  'highest' | 'high' | 'medium' | 'low' | 'lowest'
-
-export type CorePikkuMiddlewareConfig<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = {
-  func: CorePikkuMiddleware<SingletonServices, UserSession>
-  name?: string
-  description?: string
-  /** Execution priority. Lower runs first (outermost). Defaults to 'medium'. */
-  priority?: MiddlewarePriority
-}
-
-export type CorePikkuMiddlewareFactory<
-  In = any,
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = (input: In) => CorePikkuMiddleware<SingletonServices, UserSession>
-
-export type CorePikkuMiddlewareGroup<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = Array<
-  | CorePikkuMiddleware<SingletonServices, UserSession>
-  | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
->
-
-export const pikkuMiddleware = <
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
->(
-  middleware:
-    | CorePikkuMiddleware<SingletonServices, UserSession>
-    | CorePikkuMiddlewareConfig<SingletonServices, UserSession>
-): CorePikkuMiddleware<SingletonServices, UserSession> => {
-  if (typeof middleware === 'function') return middleware
-  const func = middleware.func as CorePikkuMiddleware<
-    SingletonServices,
-    UserSession
-  > & { __priority?: MiddlewarePriority }
-  if (middleware.priority) {
-    func.__priority = middleware.priority
-  }
-  return func
-}
-
-export const pikkuMiddlewareFactory = <In = any>(
-  factory: CorePikkuMiddlewareFactory<In>
-): CorePikkuMiddlewareFactory<In> => {
-  return factory
-}
-
-export const pikkuChannelMiddleware = <
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  Event = unknown,
->(
-  middleware: CorePikkuChannelMiddleware<SingletonServices, Event>
-): CorePikkuChannelMiddleware<SingletonServices, Event> => {
-  return middleware
-}
-
-export const pikkuChannelMiddlewareFactory = <In = any>(
-  factory: CorePikkuChannelMiddlewareFactory<In>
-): CorePikkuChannelMiddlewareFactory<In> => {
-  return factory
-}
-
-export type { PikkuAgentMiddlewareHooks } from '../wirings/agent/agent.types.js'
-
-export const pikkuAgentMiddleware = <
-  State extends Record<string, unknown> = Record<string, unknown>,
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
->(
-  hooks: PikkuAgentMiddlewareHooks<State, SingletonServices>
-): PikkuAgentMiddlewareHooks<State, SingletonServices> => hooks
-
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices
 
@@ -659,16 +395,6 @@ export interface SecurityAuditReport {
   issues: SecurityAuditIssue[]
   updates: SecurityAuditUpdate[]
   summary: SecurityAuditSummary
-}
-
-export interface SerializedError {
-  message: string
-  stack?: string
-  code?: string
-  // Set for a deliberate PikkuError; survives step-boundary rehydration so
-  // the workflow runner logs the message alone rather than a stack trace.
-  expected?: boolean
-  [key: string]: any
 }
 
 /**

@@ -14,14 +14,16 @@ import {
 } from '../schema.js'
 import type {
   CoreUserSession,
-  CorePikkuMiddleware,
   PikkuWiringTypes,
   PikkuWire,
   PikkuRawWire,
-  MiddlewareMetadata,
   CoreSingletonServices,
   CreateWireServices,
 } from '../types/core.types.js'
+import type {
+  CorePikkuMiddleware,
+  MiddlewareMetadata,
+} from '../middleware/middleware.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 import type { CorePikkuFunctionConfig } from './functions.types.js'
 import { parseVersionedId } from '../version.js'

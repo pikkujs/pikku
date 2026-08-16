@@ -1,10 +1,8 @@
 import { cors } from '@pikku/core/middleware'
 import { addHTTPMiddleware } from '@pikku/core/http'
-import { pikkuMiddleware } from '@pikku/core/types'
-import type {
-  CoreSingletonServices,
-  CorePikkuMiddleware,
-} from '@pikku/core/types'
+import { pikkuMiddleware } from '@pikku/core/middleware'
+import type { CoreSingletonServices } from '@pikku/core/types'
+import type { CorePikkuMiddleware } from '@pikku/core/middleware'
 import { betterAuthSession } from '@pikku/better-auth'
 // Registers the console addon's admin gate (a global permission). Imported here
 // so it runs at bootstrap alongside the global middleware registrations.

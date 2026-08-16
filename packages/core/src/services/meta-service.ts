@@ -27,9 +27,9 @@ import type { VariableDefinitionsMeta } from '../wirings/variable/variable.types
 import type {
   FunctionMeta,
   FunctionsMeta,
-  MiddlewareMetadata,
   PermissionMetadata,
-} from '../types/core.types.js'
+} from '../function/function-meta.types.js'
+import type { MiddlewareMetadata } from '../middleware/middleware.types.js'
 import type { AgentsMeta } from '../wirings/agent/agent.types.js'
 import type { GatewaysMeta } from '../wirings/gateway/gateway.types.js'
 

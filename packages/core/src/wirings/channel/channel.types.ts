@@ -6,8 +6,7 @@ import type {
 import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
-} from '../../types/core.types.js'
-
+} from '../../middleware/middleware.types.js'
 export type BinaryData = ArrayBuffer | Uint8Array
 
 export type CorePikkuChannelMiddleware<Services = any, Event = unknown> = (

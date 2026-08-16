@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import { deriveCatalogue, deriveIntents } from './virtual-user-derive.js'
 import { personaVirtualUserTarget } from './virtual-user-target.js'
-import type { FunctionsMeta } from '../../types/core.types.js'
+import type { FunctionsMeta } from '../../function/function-meta.types.js'
 import type { WorkflowsMeta } from '../workflow/workflow.types.js'
 import type {
   ScenarioPersona,

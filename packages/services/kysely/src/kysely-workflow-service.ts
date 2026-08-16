@@ -1,4 +1,4 @@
-import type { SerializedError } from '@pikku/core/types'
+import type { SerializedError } from '@pikku/core/errors'
 import { PikkuWorkflowService } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,

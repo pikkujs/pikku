@@ -32,7 +32,8 @@ import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-t
  * Core function, middleware, and permission types for all wirings
  */
 
-import type { CorePikkuMiddleware, PickRequired } from '@pikku/core/types'
+import type { CorePikkuMiddleware } from '@pikku/core/middleware'
+import type { PickRequired } from '@pikku/core/utils'
 import type { ListInput, ListOutput } from '@pikku/core/function'
 import type { CorePermissionGroup } from '@pikku/core/function'
 import type { PikkuWire, SecretlessServices } from '@pikku/core/types'

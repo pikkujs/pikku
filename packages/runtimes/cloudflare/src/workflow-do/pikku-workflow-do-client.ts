@@ -1,5 +1,5 @@
 import type { DurableObjectNamespace } from '@cloudflare/workers-types'
-import type { SerializedError } from '@pikku/core/types'
+import type { SerializedError } from '@pikku/core/errors'
 import type { WorkflowService } from '@pikku/core/workflow'
 import { buildRunTimeline, reconstructStateAt } from '@pikku/core/workflow'
 import type {

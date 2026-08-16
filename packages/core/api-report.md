@@ -19,20 +19,21 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow` | 78 | 29 | 131 |
 | `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
-| `./types` | 51 | 43 | 83 |
 | `./channel` | 32 | 32 | 84 |
+| `./types` | 25 | 22 | 74 |
 | `./queue` | 22 | 22 | 71 |
 | `./http` | 25 | 25 | 49 |
-| `./errors` | 48 | 48 | 15 |
+| `./errors` | 49 | 49 | 20 |
 | `./persona` | 27 | 27 | 34 |
 | `./services/local-meta` | 22 | 3 | 46 |
 | `./cli` | 14 | 12 | 26 |
 | `./mcp` | 20 | 20 | 17 |
+| `./function` | 31 | 26 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
-| `./function` | 24 | 21 | 4 |
 | `./gateway` | 11 | 11 | 14 |
 | `./rpc` | 15 | 15 | 8 |
+| `./middleware` | 24 | 22 | 0 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
 | `./trigger` | 8 | 8 | 12 |
@@ -41,10 +42,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/v8-coverage` | 11 | 6 | 11 |
 | `./secret-value` | 6 | 6 | 9 |
 | `./data-classification` | 11 | 11 | 4 |
-| `./middleware` | 12 | 12 | 0 |
 | `./workflow/types` | 45 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
+| `./utils` | 13 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./dev` | 5 | 5 | 5 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -54,7 +55,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./secret` | 7 | 7 | 0 |
 | `./time-utils` | 5 | 5 | 2 |
-| `./utils` | 7 | 7 | 0 |
 | `./scheduler` | 6 | 6 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
@@ -191,35 +191,6 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   webhook?: WebhookServiceConfig
   postgres?: PostgresConfig
 } & Config
-export type CorePikkuMiddleware<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = (
-  services: SingletonServices,
-  wires: PikkuWire,
-  next: () => Promise<void>
-) => Promise<void>
-export type CorePikkuMiddlewareConfig<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = {
-  func: CorePikkuMiddleware<SingletonServices, UserSession>
-  name?: string
-  description?: string
-  priority?: MiddlewarePriority
-}
-export type CorePikkuMiddlewareFactory<
-  In = any,
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = (input: In) => CorePikkuMiddleware<SingletonServices, UserSession>
-export type CorePikkuMiddlewareGroup<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = Array<
-  | CorePikkuMiddleware<SingletonServices, UserSession>
-  | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
->
 export type CoreSecretlessSingletonServices<
   Config extends CoreConfig = CoreConfig,
 > = SecretlessServices<CoreSingletonServices<Config>>
@@ -283,115 +254,6 @@ export type CreateWireServices<
   services: SingletonServices,
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
-export type FunctionMeta = FunctionRuntimeMeta &
-  Partial<
-    {
-      name: string
-      functionType: 'user' | 'inline' | 'helper' | 'remote'
-      funcWrapper: string
-      services: FunctionServicesMeta
-      wires: FunctionWiresMeta
-      inputs: string[] | null
-      outputs: string[] | null
-      middleware: MiddlewareMetadata[]
-      permissions: PermissionMetadata[]
-      isDirectFunction: boolean
-      sourceFile: string
-      exportedName: string
-      bodySourceFile?: string
-      bodyStart: number
-      bodyEnd: number
-    } & CommonWireMeta
-  >
-export type FunctionRuntimeMeta = {
-  pikkuFuncId: string
-  inputSchemaName: string | null
-  outputSchemaName: string | null
-  scopes?: string[]
-  expose?: boolean
-  auth?: boolean
-  permissionsInBody?: boolean
-  remote?: boolean
-  scenarioStep?: boolean
-  scenario?: boolean
-  mcp?: boolean
-  readonly?: boolean
-  deploy?: 'serverless' | 'server' | 'auto'
-  sessionless?: boolean
-  workflowQueued?: boolean
-  workflowRetries?: number
-  workflowTimeout?: string
-  scenarioStepSurfaces?: ScenarioSurface[]
-  scenarioStepKind?: ScenarioStepKind
-  scenarioStepAddon?: string
-  scenarioStepTemplate?: string
-  audit?: {
-    durability: AuditDurability
-  }
-  version?: number
-  approvalRequired?: boolean
-  approvalDescription?: string
-  implementationHash?: string
-  contractHash?: string
-  inputHash?: string
-  outputHash?: string
-}
-export interface FunctionServicesMeta {
-  optimized: boolean
-  services: string[]
-}
-export type FunctionsMeta = Record<string, FunctionMeta>
-export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
-export interface FunctionWiresMeta {
-  optimized: boolean
-  wires: string[]
-}
-export type JSONPrimitive = string | number | boolean | null | undefined
-export type JSONValue =
-  | JSONPrimitive
-  | JSONValue[]
-  | {
-      [key: string]: JSONValue
-    }
-export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
-  Required<Pick<T, K>>
-export type MiddlewareMetadata =
-  | {
-      type: 'http'
-      route: string
-    }
-  | {
-      type: 'tag'
-      tag: string
-    }
-  | {
-      type: 'wire'
-      name: string
-      inline?: boolean
-    }
-export type MiddlewarePriority =
-  'highest' | 'high' | 'medium' | 'low' | 'lowest'
-export type PermissionMetadata = {
-  type: 'wire'
-  name: string
-  inline?: boolean
-}
-export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
-export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
-pikkuAgentMiddleware: <State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(hooks: PikkuAgentMiddlewareHooks<State, SingletonServices>) => PikkuAgentMiddlewareHooks<State, SingletonServices>
-export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
-  modifyInput?: (services: Services, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }
-  modifyOutputStream?: (services: Services, ctx: { event: AgentStreamEvent; allEvents: readonly AgentStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AgentStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AgentStreamEvent | AgentStreamEvent[] | null> | AgentStreamEvent | AgentStreamEvent[] | null
-  modifyOutput?: (services: Services, ctx: { text: string; messages: AgentMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }> | { text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }
-  beforeToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown> }) => | Promise<{ args: Record<string, unknown> } | void> | { args: Record<string, unknown> } | void
-  afterToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown>; result: unknown; durationMs: number }) => Promise<{ result: unknown } | void> | { result: unknown } | void
-  afterStep?: (services: Services, ctx: { stepNumber: number; text: string; toolCalls: { toolCallId: string; toolName: string; args: unknown }[]; toolResults: { toolCallId: string; toolName: string; result: unknown; error?: string }[]; usage: { inputTokens: number; outputTokens: number }; finishReason: string }) => Promise<void> | void
-  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AgentMessage[] }) => Promise<void> | void
-}
-pikkuChannelMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Event = unknown>(middleware: CorePikkuChannelMiddleware<SingletonServices, Event>) => CorePikkuChannelMiddleware<SingletonServices, Event>
-pikkuChannelMiddlewareFactory: <In = any>(factory: CorePikkuChannelMiddlewareFactory<In>) => CorePikkuChannelMiddlewareFactory<In>
-pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
-pikkuMiddlewareFactory: <In = any>(factory: CorePikkuMiddlewareFactory<In, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>) => CorePikkuMiddlewareFactory<In, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
@@ -488,9 +350,6 @@ export interface PostgresConfig {
   statementTimeout?: number
   prepare?: boolean
 }
-export type RequireAtLeastOne<T> = {
-  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
-}[keyof T]
 export interface SchemaRefLike {
   variableName: string
   sourceFile: string
@@ -535,13 +394,6 @@ export interface SecurityAuditUpdate {
 }
 export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
 export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
-export interface SerializedError {
-  message: string
-  stack?: string
-  code?: string
-  expected?: boolean
-  [key: string]: any
-}
 export type ServerLifecycle<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > = {
@@ -563,14 +415,73 @@ addGlobalMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(middleware: C
 addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], packageName?: string | null) => CorePermissionGroup | CorePikkuPermission[]
 addMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
 addTagMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
-authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
-authBearer: CorePikkuMiddlewareFactory<{ token?: { value: string; userSession: CoreUserSession; } | { secretId: string; userSession: CoreUserSession; } | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
-authCookie: CorePikkuMiddlewareFactory<{ name: string; options: SerializeOptions; expiresIn: RelativeTimeInput; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
-cors: CorePikkuMiddlewareFactory<{ origin?: string | true | string[] | undefined; methods?: string[] | undefined; headers?: string[] | undefined; exposeHeaders?: string[] | undefined; credentials?: boolean | undefined; maxAge?: number | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }>
+authBearer: CorePikkuMiddlewareFactory<{ token?: { value: string; userSession: CoreUserSession; } | { secretId: string; userSession: CoreUserSession; } | undefined; }>
+authCookie: CorePikkuMiddlewareFactory<{ name: string; options: SerializeOptions; expiresIn: RelativeTimeInput; }>
+export type CorePikkuMiddleware<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (
+  services: SingletonServices,
+  wires: PikkuWire,
+  next: () => Promise<void>
+) => Promise<void>
+export type CorePikkuMiddlewareConfig<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = {
+  func: CorePikkuMiddleware<SingletonServices, UserSession>
+  name?: string
+  description?: string
+  priority?: MiddlewarePriority
+}
+export type CorePikkuMiddlewareFactory<
+  In = any,
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (input: In) => CorePikkuMiddleware<SingletonServices, UserSession>
+export type CorePikkuMiddlewareGroup<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = Array<
+  | CorePikkuMiddleware<SingletonServices, UserSession>
+  | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
+>
+cors: CorePikkuMiddlewareFactory<{ origin?: string | true | string[] | undefined; methods?: string[] | undefined; headers?: string[] | undefined; exposeHeaders?: string[] | undefined; credentials?: boolean | undefined; maxAge?: number | undefined; }>
+export type MiddlewareMetadata =
+  | {
+      type: 'http'
+      route: string
+    }
+  | {
+      type: 'tag'
+      tag: string
+    }
+  | {
+      type: 'wire'
+      name: string
+      inline?: boolean
+    }
+export type MiddlewarePriority =
+  'highest' | 'high' | 'medium' | 'low' | 'lowest'
+pikkuAgentMiddleware: <State extends Record<string, unknown> = Record<string, unknown>, SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(hooks: PikkuAgentMiddlewareHooks<State, SingletonServices>) => PikkuAgentMiddlewareHooks<State, SingletonServices>
+export interface PikkuAgentMiddlewareHooks< State extends Record<string, unknown> = Record<string, unknown>, Services = any, > {
+  modifyInput?: (services: Services, ctx: { messages: AgentMessage[]; instructions: string; shared: Record<string, unknown> }) => | Promise<{ messages: AgentMessage[]; instructions: string }> | { messages: AgentMessage[]; instructions: string }
+  modifyOutputStream?: (services: Services, ctx: { event: AgentStreamEvent; allEvents: readonly AgentStreamEvent[]; state: State; shared: Record<string, unknown>; emit: (event: AgentStreamEvent) => Promise<void>; signal?: AbortSignal }) => | Promise<AgentStreamEvent | AgentStreamEvent[] | null> | AgentStreamEvent | AgentStreamEvent[] | null
+  modifyOutput?: (services: Services, ctx: { text: string; messages: AgentMessage[]; usage: { inputTokens: number; outputTokens: number }; toolCalls: NonNullable<AgentStep['toolCalls']> }) => | Promise<{ text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }> | { text: string; messages: AgentMessage[]; toolCalls?: NonNullable<AgentStep['toolCalls']> }
+  beforeToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown> }) => | Promise<{ args: Record<string, unknown> } | void> | { args: Record<string, unknown> } | void
+  afterToolCall?: (services: Services, ctx: { toolName: string; toolCallId: string; args: Record<string, unknown>; result: unknown; durationMs: number }) => Promise<{ result: unknown } | void> | { result: unknown } | void
+  afterStep?: (services: Services, ctx: { stepNumber: number; text: string; toolCalls: { toolCallId: string; toolName: string; args: unknown }[]; toolResults: { toolCallId: string; toolName: string; result: unknown; error?: string }[]; usage: { inputTokens: number; outputTokens: number }; finishReason: string }) => Promise<void> | void
+  onError?: (services: Services, ctx: { error: Error; stepNumber: number; messages: AgentMessage[] }) => Promise<void> | void
+}
+pikkuChannelMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Event = unknown>(middleware: CorePikkuChannelMiddleware<SingletonServices, Event>) => CorePikkuChannelMiddleware<SingletonServices, Event>
+pikkuChannelMiddlewareFactory: <In = any>(factory: CorePikkuChannelMiddlewareFactory<In>) => CorePikkuChannelMiddlewareFactory<In>
+pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
+pikkuMiddlewareFactory: <In = any>(factory: CorePikkuMiddlewareFactory<In>) => CorePikkuMiddlewareFactory<In>
 pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
-telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
-telemetryOuter: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }, CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
+telemetryOuter: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
 ```
 
 ## ./function
@@ -733,6 +644,69 @@ export type CorePikkuSessionlessFunctionConfig<
 >
 export type Filter<F extends Record<string, unknown>> =
   LeafFilter<F> | Filter<F>[] | { [label: string]: Filter<F> }
+export type FunctionMeta = FunctionRuntimeMeta &
+  Partial<
+    {
+      name: string
+      functionType: 'user' | 'inline' | 'helper' | 'remote'
+      funcWrapper: string
+      services: FunctionServicesMeta
+      wires: FunctionWiresMeta
+      inputs: string[] | null
+      outputs: string[] | null
+      middleware: MiddlewareMetadata[]
+      permissions: PermissionMetadata[]
+      isDirectFunction: boolean
+      sourceFile: string
+      exportedName: string
+      bodySourceFile?: string
+      bodyStart: number
+      bodyEnd: number
+    } & CommonWireMeta
+  >
+export type FunctionRuntimeMeta = {
+  pikkuFuncId: string
+  inputSchemaName: string | null
+  outputSchemaName: string | null
+  scopes?: string[]
+  expose?: boolean
+  auth?: boolean
+  permissionsInBody?: boolean
+  remote?: boolean
+  scenarioStep?: boolean
+  scenario?: boolean
+  mcp?: boolean
+  readonly?: boolean
+  deploy?: 'serverless' | 'server' | 'auto'
+  sessionless?: boolean
+  workflowQueued?: boolean
+  workflowRetries?: number
+  workflowTimeout?: string
+  scenarioStepSurfaces?: ScenarioSurface[]
+  scenarioStepKind?: ScenarioStepKind
+  scenarioStepAddon?: string
+  scenarioStepTemplate?: string
+  audit?: {
+    durability: AuditDurability
+  }
+  version?: number
+  approvalRequired?: boolean
+  approvalDescription?: string
+  implementationHash?: string
+  contractHash?: string
+  inputHash?: string
+  outputHash?: string
+}
+export interface FunctionServicesMeta {
+  optimized: boolean
+  services: string[]
+}
+export type FunctionsMeta = Record<string, FunctionMeta>
+export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
+export interface FunctionWiresMeta {
+  optimized: boolean
+  wires: string[]
+}
 getAllFunctionNames: () => string[]
 export interface ListInput< F extends Record<string, unknown> = Record<string, never>, S extends string = never, > {
   cursor?: string
@@ -745,6 +719,11 @@ export interface ListOutput<Row> {
   rows: Row[]
   nextCursor: string | null
   totalCount?: number
+}
+export type PermissionMetadata = {
+  type: 'wire'
+  name: string
+  inline?: boolean
 }
 pikkuApprovalDescription: <In = any, Services extends CoreSecretlessSingletonServices = CoreSecretlessSingletonServices>(fn: CorePikkuApprovalDescription<In, Services>) => CorePikkuApprovalDescription<In, Services>
 pikkuAuth: <Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Session extends CoreUserSession = CoreUserSession>(auth: CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>) => CorePikkuPermission<any, Services, any>
@@ -4088,6 +4067,13 @@ export class ProxyAuthenticationRequiredError extends PikkuError {}
 export class RangeNotSatisfiableError extends PikkuError {}
 export class ReadonlySessionError extends PikkuError {}
 export class RequestTimeoutError extends PikkuError {}
+export interface SerializedError {
+  message: string
+  stack?: string
+  code?: string
+  expected?: boolean
+  [key: string]: any
+}
 export class ServiceUnavailableError extends PikkuError {}
 export class SystemRoleImmutableError extends PikkuError {
   public payload: { error: 'system_role_immutable'; role: string; operation: string }
@@ -5547,7 +5533,21 @@ createWeakUID: () => string
 freezeDedupe: <T>(arr?: readonly T[] | T[] | undefined) => readonly T[]
 getTagGroups: <T>(tagGroups: Record<string, T>, tag: string) => T[]
 isSerializable: (data: any) => boolean
+export type JSONPrimitive = string | number | boolean | null | undefined
+export type JSONValue =
+  | JSONPrimitive
+  | JSONValue[]
+  | {
+      [key: string]: JSONValue
+    }
+export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
+  Required<Pick<T, K>>
+export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
+export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
+export type RequireAtLeastOne<T> = {
+  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
+}[keyof T]
 stopSingletonServices: () => Promise<void>
 ```
 

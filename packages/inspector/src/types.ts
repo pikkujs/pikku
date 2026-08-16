@@ -28,8 +28,8 @@ import type { FunctionsMeta } from '@pikku/core/services'
 import type {
   FunctionServicesMeta,
   FunctionWiresMeta,
-  JSONValue,
-} from '@pikku/core/types'
+} from '@pikku/core/function'
+import type { JSONValue } from '@pikku/core/utils'
 import type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
 import type { ErrorCode, CodedDiagnostic } from './error-codes.js'
 import type {

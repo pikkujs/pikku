@@ -7,9 +7,9 @@ import type {
 } from '../types.js'
 import type {
   FunctionServicesMeta,
-  MiddlewareMetadata,
   PermissionMetadata,
-} from '@pikku/core/types'
+} from '@pikku/core/function'
+import type { MiddlewareMetadata } from '@pikku/core/middleware'
 import type ts from 'typescript'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'

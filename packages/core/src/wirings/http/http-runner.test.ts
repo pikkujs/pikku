@@ -1,7 +1,8 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
-import type { JSONValue, CorePikkuMiddleware } from '../../types/core.types.js'
+import type { JSONValue } from '../../utils.js'
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import {
   addHTTPMiddleware,
   createHTTPWire,

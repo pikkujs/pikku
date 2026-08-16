@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import type { FunctionWiresMeta } from '@pikku/core/types'
+import type { FunctionWiresMeta } from '@pikku/core/function'
 import type { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import {

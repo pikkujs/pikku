@@ -4,8 +4,7 @@ import { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
-import type { CorePikkuMiddleware } from '../../types/core.types.js'
-
+import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 const mockFunc = async () => ({ success: true })
 
 const mockMiddleware: CorePikkuMiddleware = async (_services, _wire, next) => {

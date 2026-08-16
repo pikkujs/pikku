@@ -5,8 +5,8 @@ import type {
 import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
-  PermissionMetadata,
-} from '../../types/core.types.js'
+} from '../../middleware/middleware.types.js'
+import type { PermissionMetadata } from '../../function/function-meta.types.js'
 import type { AIProviderOptions } from '../../services/agent-runner-service.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
 import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'

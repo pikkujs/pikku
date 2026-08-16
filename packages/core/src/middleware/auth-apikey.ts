@@ -1,5 +1,7 @@
-import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
-
+import {
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
+} from './middleware-factories.js'
 export const authAPIKey = pikkuMiddlewareFactory<{
   source: 'header' | 'query' | 'all'
 }>(({ source }) =>

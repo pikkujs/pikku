@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import type { PermissionMetadata } from '@pikku/core/types'
+import type { PermissionMetadata } from '@pikku/core/function'
 import { extractFunctionName } from './extract-function-name.js'
 import type { InspectorState } from '../types.js'
 

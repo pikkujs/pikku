@@ -54,9 +54,6 @@ import type {
   TriggerSourceMeta,
 } from '../wirings/trigger/trigger.types.js'
 import type {
-  FunctionsMeta,
-  CorePikkuMiddleware,
-  CorePikkuMiddlewareGroup,
   CreateConfig,
   CreateSingletonServices,
   CreateWireServices,
@@ -65,6 +62,11 @@ import type {
   CoreServices,
   CoreUserSession,
 } from './core.types.js'
+import type { FunctionsMeta } from '../function/function-meta.types.js'
+import type {
+  CorePikkuMiddleware,
+  CorePikkuMiddlewareGroup,
+} from '../middleware/middleware.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 
 export interface PikkuPackageState {

@@ -1,8 +1,5 @@
-import type {
-  CoreServices,
-  JSONValue,
-  CoreUserSession,
-} from '../../types/core.types.js'
+import type { CoreServices, CoreUserSession } from '../../types/core.types.js'
+import type { JSONValue } from '../../utils.js'
 import type {
   CorePikkuChannelMiddleware,
   BinaryData,

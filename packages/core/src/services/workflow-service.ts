@@ -1,4 +1,5 @@
-import type { CoreUserSession, SerializedError } from '../types/core.types.js'
+import type { CoreUserSession } from '../types/core.types.js'
+import type { SerializedError } from '../errors/serialized-error.js'
 import type {
   WorkflowRun,
   WorkflowPlannedStep,

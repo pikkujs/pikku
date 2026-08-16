@@ -1,5 +1,5 @@
 import { fetch } from '@pikku/core/http'
-import type { CorePikkuMiddleware } from '@pikku/core/types'
+import type { CorePikkuMiddleware } from '@pikku/core/middleware'
 import { addFunction } from '@pikku/core/function'
 import { wireHTTP } from '@pikku/core/http'
 import { httpRouter } from '@pikku/core/http'
