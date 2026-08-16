@@ -7,8 +7,10 @@ the last phase, and nothing in it is needed before then.
 
 `pikku deploy` builds and ships without any hosted service:
 
-    bunx --bun pikku deploy plan  --provider standalone --runtime bun
-    bunx --bun pikku deploy apply --provider standalone --runtime bun
+```sh
+bunx --bun pikku deploy plan  --provider standalone --runtime bun
+bunx --bun pikku deploy apply --provider standalone --runtime bun
+```
 
 `standalone` comes from the installed `@pikku/deploy-standalone` adapter: it
 bundles the project into a single unit and emits either a `bundle.js` you run
@@ -29,15 +31,35 @@ this wrong and sign-in fails on one app only, which is a miserable thing to debu
 
 Before shipping, run the full gate:
 
-    bunx --bun pikku all --tsc-summary --fail-on-warn
-    bunx --bun pikku validate
-    bunx --bun pikku knowledge validate
-    bunx --bun pikku scenario run local --spawn --coverage
+```sh
+bunx --bun pikku all --tsc-summary --fail-on-warn
+bunx --bun pikku validate
+bunx --bun pikku knowledge validate
+bunx --bun pikku scenario run local --spawn --coverage
+bunx --bun pikku scenario run local --spawn --run browser
+bun run build                     # every frontend workspace, type-checked
+```
 
 Keep `--coverage` on the release run even though you have been reading it per
 milestone (§7a). Each of those readings only covered the functions that
 milestone added; this is the first time the whole surface is measured at once,
 and it is where a function orphaned by a later refactor shows up.
+
+**The last two lines are not optional, and one of them is easy to talk yourself
+out of.** The server-side pass proves the functions; it renders nothing. The
+pages are client-rendered, so a component that throws still returns HTTP 200
+with an empty shell — the same trap §6 warns about, and the release gate is
+exactly where it gets shipped past. Run the browser pass, and run it **for every
+environment in `pikkufabric.config.json`**, not just the first:
+
+```sh
+bunx --bun pikku scenario run local-admin --spawn --run browser
+```
+
+`bun run build` is what type-checks each frontend (each app's `tsc` script runs
+`--noEmit`). `pikku all --tsc-summary` covers the functions package; it does not
+reach into the apps, so a broken screen passes every pikku command and fails on
+the deploy.
 
 `pikku all --security --fail-on-error` additionally runs the data-classification
 lint over function return types, catching a `Pii`/`Secret` field that leaks

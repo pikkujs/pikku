@@ -36,22 +36,36 @@ half-wired workflow engine is worse than no workflow engine.
 ## Choosing surfaces — during `pikku-build-app` §5 (planning)
 
 When you plan milestones, each surface below becomes its own milestone note in
-`knowledge/milestones/`, ordered after the spine it depends on. Pick the ones the
-domain actually motivates, and write the motivation into the note. If you cannot
-name what a surface is *for* in this app, drop it and say why in
-`knowledge/decisions/` — a documented omission is a stronger showcase than a
+`knowledge/milestones/`, ordered after the spine it depends on.
+
+**Five are required, and if the domain does not motivate them you chose the
+wrong domain:** workflows, schedules, queues, an AI agent, and realtime. They are
+what "platform" means here, and a showcase missing one of them is a showcase of
+something else. Pick a domain that needs all five — that choice is yours to make
+at §1, and it is much cheaper than contriving a use later.
+
+The rest — MCP, triggers and webhooks, extra locales, contract versioning,
+addons — are chosen on merit. Write the motivation into the note. If you cannot
+name what one of *those* is for in this app, drop it and say why in
+`knowledge/decisions/`: a documented omission is a stronger showcase than a
 contrived inclusion.
+
+What is never acceptable is a required surface present as a stub. A cron job
+that logs `tick` does not become a schedule by existing, and it is worse than
+the documented omission because it claims to be finished.
 
 Most surfaces are switched on by the CLI rather than hand-wired:
 
-    bunx --bun pikku enable workflow      # workflow workers
-    bunx --bun pikku enable agent         # public agent endpoints
-    bunx --bun pikku enable events        # realtime events channel + SSE stream
-    bunx --bun pikku enable remote-rpc    # internal RPC queue worker + HTTP endpoint
-    bunx --bun pikku enable webhook       # outgoing webhook delivery queue worker
-    bunx --bun pikku enable scenarios     # scenario instrumentation
-    bunx --bun pikku enable console       # console functions
-    bunx --bun pikku enable rpc           # public RPC endpoint
+```sh
+bunx --bun pikku enable workflow      # workflow workers
+bunx --bun pikku enable agent         # public agent endpoints
+bunx --bun pikku enable events        # realtime events channel + SSE stream
+bunx --bun pikku enable remote-rpc    # internal RPC queue worker + HTTP endpoint
+bunx --bun pikku enable webhook       # outgoing webhook delivery queue worker
+bunx --bun pikku enable scenarios     # scenario instrumentation
+bunx --bun pikku enable console       # console functions
+bunx --bun pikku enable rpc           # public RPC endpoint
+```
 
 Each scaffolds a `*.gen.ts` and wires it. Run the enable, then `pikku all`, then
 write the function — not the other way round.
@@ -150,7 +164,9 @@ schedule or queue rather than a request, because that is the interesting path.
 
 ### Contract versioning — `pikku-versioning`
 
-    bunx --bun pikku versions init
+```sh
+bunx --bun pikku versions init
+```
 
 The CLI suggests this on every run of a project without it. Versioning a function
 contract, then changing it, is a short milestone that shows something no
@@ -186,13 +202,15 @@ Two things change in a showcase:
 Everything in `pikku-build-app` §9, plus the checks a showcase should be able to
 survive:
 
-    bunx --bun pikku all --tsc-summary --fail-on-warn --strict-meta
-    bunx --bun pikku all --security --fail-on-error
-    bunx --bun pikku validate
-    bunx --bun pikku knowledge validate
-    bunx --bun pikku audit
-    bunx --bun pikku scenario run local --spawn --coverage
-    bunx --bun pikku scenario run local --spawn --run browser
+```sh
+bunx --bun pikku all --tsc-summary --fail-on-warn --strict-meta
+bunx --bun pikku all --security --fail-on-error
+bunx --bun pikku validate
+bunx --bun pikku knowledge validate
+bunx --bun pikku audit
+bunx --bun pikku scenario run local --spawn --coverage
+bunx --bun pikku scenario run local --spawn --run browser
+```
 
 - `--strict-meta` fails an agent tool with no description.
 - `--security` runs the data-classification lint over function return types,
@@ -214,7 +232,8 @@ built.
 
 - Base workflow: `pikku-build-app` — read it first, follow it in full
 - Per-surface skills: `pikku-workflow`, `pikku-schedule`, `pikku-cron`,
-  `pikku-queue`, `pikku-agent`, `pikku-realtime`, `pikku-websocket`, `pikku-mcp`,
-  `pikku-trigger`, `pikku-i18n`, `pikku-rtl`, `pikku-emails`, `pikku-versioning`,
-  `pikku-addon`, `pikku-security`, `pikku-audit`
+  `pikku-queue`, `pikku-agent`, `pikku-ai-vercel`, `pikku-realtime`,
+  `pikku-websocket`, `pikku-mcp`, `pikku-trigger`, `pikku-i18n`, `pikku-rtl`,
+  `pikku-emails`, `pikku-versioning`, `pikku-addon`, `pikku-security`,
+  `pikku-audit`
 - Every feature, end to end: https://pikkufabric.com/llm-all-features.txt

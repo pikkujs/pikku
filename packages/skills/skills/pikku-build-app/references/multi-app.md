@@ -25,9 +25,12 @@ Then, in order:
 - `name` → `@project/admin`
 - `dev` and `preview` ports → `7105`. Every frontend needs its own, or the second
   one fails to bind and the dev runner looks like it hung.
-- `tsBuildInfoFile` → `admin-tsc.tsbuildinfo`. Left alone, the two apps fight
-  over one incremental cache and you get type errors that vanish on a clean
-  build — an hour of debugging for a one-word edit.
+- the `--tsBuildInfoFile` path inside the **`tsc` script** → `admin-tsc.tsbuildinfo`.
+  In this template it is a CLI flag on that script (`tsc --noEmit --incremental
+  --tsBuildInfoFile node_modules/.cache/app-tsc.tsbuildinfo`), not a
+  `compilerOptions` entry — `tsconfig.json` needs no change. Left alone, the two
+  apps fight over one incremental cache and you get type errors that vanish on a
+  clean build: an hour of debugging for a one-word edit.
 
 ### 2. `pikkufabric.config.json`
 
