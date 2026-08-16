@@ -1,6 +1,6 @@
 import type { HttpResponse } from 'uWebSockets.js'
 import type { PikkuHTTPResponse } from '@pikku/core/ecosystem/http'
-import { serialize as serializeCookie, type SerializeOptions } from 'cookie'
+import { stringifySetCookie, type SerializeOptions } from 'cookie'
 
 export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   #statusCode: number = 200
@@ -43,7 +43,7 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   ): this {
     this.#headers.push([
       'Set-Cookie',
-      serializeCookie(name, value ?? '', options),
+      stringifySetCookie({ name, value: value ?? '', ...options }, options),
     ])
     return this
   }

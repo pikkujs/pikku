@@ -26,7 +26,7 @@ export class BullSchedulerService extends SchedulerService {
   private queue: Queue
   private recurringQueue: Queue
   private recurringWorker?: Worker
-  private repeatJobKeys: string[] = []
+  private jobSchedulerIds: string[] = []
 
   constructor(private redisConnectionOptions: ConnectionOptions) {
     super()
@@ -172,28 +172,24 @@ export class BullSchedulerService extends SchedulerService {
     })
 
     for (const [name, task] of scheduledTasks) {
-      const job = await this.recurringQueue.add(
-        name,
-        { rpcName: name } as ScheduledJobData,
-        {
-          repeat: { pattern: task.schedule },
-          jobId: `recurring:${name}`,
-        }
+      const jobSchedulerId = `recurring:${name}`
+      await this.recurringQueue.upsertJobScheduler(
+        jobSchedulerId,
+        { pattern: task.schedule },
+        { name, data: { rpcName: name } as ScheduledJobData }
       )
-      if (job.repeatJobKey) {
-        this.repeatJobKeys.push(job.repeatJobKey)
-      }
+      this.jobSchedulerIds.push(jobSchedulerId)
     }
   }
 
   /**
-   * Stop recurring scheduled tasks by removing repeat jobs.
+   * Stop recurring scheduled tasks by removing their job schedulers.
    */
   async stop(): Promise<void> {
-    for (const key of this.repeatJobKeys) {
-      await this.recurringQueue.removeRepeatableByKey(key)
+    for (const id of this.jobSchedulerIds) {
+      await this.recurringQueue.removeJobScheduler(id)
     }
-    this.repeatJobKeys = []
+    this.jobSchedulerIds = []
     if (this.recurringWorker) {
       await this.recurringWorker.close()
       this.recurringWorker = undefined

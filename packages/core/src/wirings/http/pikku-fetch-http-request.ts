@@ -1,5 +1,5 @@
 import { parse as parseQuery } from 'picoquery'
-import { parse as parseCookie } from 'cookie'
+import { parseCookie } from 'cookie'
 import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from './http.types.js'
 import {
   PayloadTooLargeError,

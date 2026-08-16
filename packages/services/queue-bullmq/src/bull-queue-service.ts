@@ -1,6 +1,6 @@
 import type { ConnectionOptions, JobsOptions } from 'bullmq'
 import type Bull from 'bullmq'
-import { Queue, QueueEvents, RedisConnection } from 'bullmq'
+import { Queue, QueueEvents } from 'bullmq'
 import type { QueueJob, QueueService } from '@pikku/core/ecosystem/queue'
 import type { JobOptions } from '@pikku/core/ecosystem/queue'
 import { mapBullJobToQueueJob } from './utils.js'
@@ -44,15 +44,6 @@ export const mapPikkuJobToBull = (options?: JobOptions): JobsOptions => {
   return bullOptions
 }
 
-class PikkuRedisConnection extends RedisConnection {
-  constructor(options: ConnectionOptions) {
-    super(options)
-    this.on('error', (error) => {
-      console.error('Redis connection error:', error)
-    })
-  }
-}
-
 /**
  * Bull/Redis queue service implementation
  * Supports job results, retries, and most queue features
@@ -76,7 +67,10 @@ export class BullQueueService implements QueueService {
       return this.queues.get(queueName)!
     }
 
-    const queue = new Queue(queueName, config, PikkuRedisConnection)
+    const queue = new Queue(queueName, config)
+    queue.on('error', (error) => {
+      console.error('Redis connection error:', error)
+    })
     await queue.waitUntilReady()
 
     this.queues.set(queueName, queue)

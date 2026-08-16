@@ -12,9 +12,17 @@ const AGENT = 'todoReadAgent'
 const RESOURCE_ID = 'agent-attachments'
 const ALICE = { userId: 'alice' }
 
-/** A 1x1 PNG, base64. The bytes are never decoded — only the part shape is. */
+/**
+ * A 1x1 PNG, base64. The AI SDK sniffs attachment bytes and rewrites the
+ * declared media type when they turn out to be an image, so each fixture below
+ * carries bytes that match the type it declares.
+ */
 const PIXEL =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC'
+
+/** A minimal PDF, base64. */
+const PDF =
+  'JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyA+PgplbmRvYmoKdHJhaWxlcgo8PCAvUm9vdCAxIDAgUiA+PgolJUVPRgo='
 
 export const agentAttachmentsImageReachesModelScenario = pikkuScenario<
   void,
@@ -63,7 +71,7 @@ export const agentAttachmentsFilePreservesMediaTypeScenario = pikkuScenario<
       attachments: [
         {
           type: 'file',
-          data: PIXEL,
+          data: PDF,
           mediaType: 'application/pdf',
           filename: 'report.pdf',
         },
