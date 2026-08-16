@@ -18,13 +18,23 @@ export interface PgWorkflowQueueOptions extends WorkflowQueueOptions {
    * Size it above the deepest chain of runs that start each other inline — a
    * parent holding a lock connection while a child asks for one is a deadlock,
    * not a wait.
+   *
+   * It must connect to the same Postgres database as every other worker's lock
+   * pool. `pg_advisory_xact_lock` is scoped to a database, so two workers whose
+   * lock pools point at different databases never contend and the same run
+   * executes twice.
    */
   lockDb?: Kysely<KyselyPikkuDB>
   /**
-   * Milliseconds to wait for the run lock before giving up, via `lock_timeout`.
-   * `0` (the default) waits forever, which is what a blocked run did before
-   * this option existed. Set it to surface a jam as a failed run rather than a
-   * process that never finishes one.
+   * Milliseconds a run waits for the advisory lock itself, via `lock_timeout`,
+   * once its transaction already holds a connection. `0` (the default) waits
+   * forever, which is what a blocked run did before this option existed. Set it
+   * to surface a jam as a failed run rather than a process that never finishes
+   * one.
+   *
+   * It does not bound checking a connection out of `lockDb`: a saturated lock
+   * pool still queues without a limit, which is the backpressure the pool is
+   * there to apply.
    */
   lockTimeoutMs?: number
 }
@@ -36,7 +46,11 @@ export class PgKyselyWorkflowService extends KyselyWorkflowService {
   constructor(db: Kysely<KyselyPikkuDB>, options: PgWorkflowQueueOptions = {}) {
     super(db, options)
     this.lockDb = options.lockDb ?? db
-    this.lockTimeoutMs = Math.max(0, Math.trunc(options.lockTimeoutMs ?? 0))
+    const lockTimeoutMs = options.lockTimeoutMs ?? 0
+    if (!Number.isFinite(lockTimeoutMs)) {
+      throw new RangeError('lockTimeoutMs must be a finite number of ms')
+    }
+    this.lockTimeoutMs = Math.max(0, Math.trunc(lockTimeoutMs))
   }
 
   /**

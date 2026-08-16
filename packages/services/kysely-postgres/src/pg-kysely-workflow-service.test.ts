@@ -351,30 +351,58 @@ describe('advisory locks', () => {
   })
 
   /**
+   * `bodyEntered` is what the lock tests wait on, rather than a delay: it
+   * resolves once the lock is taken and the body is running, which is the state
+   * they assert about.
+   */
+  const heldBody = () => {
+    let release!: () => void
+    let entered!: () => void
+    const body = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const bodyEntered = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    return {
+      run: () => {
+        entered()
+        return body
+      },
+      bodyEntered,
+      release,
+    }
+  }
+
+  /**
    * The one connection PGlite hands out stands in for a saturated pool: a run
    * lock taken on the query connection makes every other query wait for the
    * whole workflow body, which is how concurrent runs wedged a real server.
    */
   test('a run lock on the query pool blocks unrelated queries', async () => {
     let queryFinished = false
-    let releaseBody!: () => void
-    const body = new Promise<void>((resolve) => {
-      releaseBody = resolve
-    })
+    const { run, bodyEntered, release } = heldBody()
 
-    const held = service.withRunLock('run-1', () => body)
+    const held = service.withRunLock('run-1', run)
+    await bodyEntered
+
     const query = sql`select 1`.execute(db).then(() => {
       queryFinished = true
     })
-
-    await new Promise((r) => setTimeout(r, 20))
+    await new Promise((r) => setImmediate(r))
     assert.equal(queryFinished, false)
 
-    releaseBody()
+    release()
     await Promise.all([held, query])
     assert.equal(queryFinished, true)
   })
 
+  /**
+   * `lockDb` is a second PGlite instance, so this shows the query pool staying
+   * free rather than two workers contending. Contention needs two pools on one
+   * database, which PGlite cannot give: each instance is its own database and
+   * takes a single session.
+   */
   test('a run lock on lockDb leaves the query pool free', async () => {
     const lockDb = createDb()
     const isolated = new PgKyselyWorkflowService(db, {
@@ -383,20 +411,28 @@ describe('advisory locks', () => {
     } as any)
     await isolated.init()
 
-    let releaseBody!: () => void
-    const body = new Promise<void>((resolve) => {
-      releaseBody = resolve
-    })
+    const { run, bodyEntered, release } = heldBody()
 
-    const held = isolated.withRunLock('run-1', () => body)
-    await new Promise((r) => setTimeout(r, 20))
+    const held = isolated.withRunLock('run-1', run)
+    await bodyEntered
 
     const rows = await sql<{
       one: number
     }>`select 1 as one`.execute(db)
     assert.equal(rows.rows[0]!.one, 1)
 
-    releaseBody()
+    release()
     await held
+  })
+
+  test('a non-finite lock timeout is rejected', () => {
+    assert.throws(
+      () =>
+        new PgKyselyWorkflowService(db, {
+          wireQueues: false,
+          lockTimeoutMs: Number.NaN,
+        } as any),
+      RangeError
+    )
   })
 })

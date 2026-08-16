@@ -14,8 +14,15 @@ production backend down this way, and it only came back on a restart.
 `PgKyselyWorkflowService` now accepts `lockDb`, a second Kysely instance on its
 own pool used only for the run lock. That pool's size becomes the cap on
 concurrent runs per process — run N+1 waits for a lock connection instead of
-starving request serving. `lockTimeoutMs` bounds that wait so a jam surfaces as
-a failed run rather than a process that never finishes one.
+starving request serving. Every worker's `lockDb` has to reach the same database:
+`pg_advisory_xact_lock` is database-scoped, so lock pools pointed at different
+databases never contend and the same run executes twice.
+
+`lockTimeoutMs` bounds how long a run waits for the advisory lock once its
+transaction holds a connection, so a jam surfaces as a failed run rather than a
+process that never finishes one. Waiting for a connection out of a saturated
+`lockDb` stays unbounded — that queue is the backpressure the pool exists to
+apply.
 
 Both default to the previous behaviour: with no `lockDb` the lock is still taken
 on the query pool, and the wait is still unbounded.
