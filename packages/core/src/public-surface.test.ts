@@ -22,9 +22,8 @@ const subpaths = packageJson.exports as Record<string, string>
  * A wildcard subpath would pin a pattern rather than a surface, and a module
  * dropped into the matched directory would appear in the published API without
  * a diff. Expanding it is what keeps every entry point's exports in
- * `public-surface.json` under the same guarantee. `exports` declares none today
- * — `./ecosystem/*` was the last one — and this keeps that from being a
- * silent assumption.
+ * `public-surface.json` under the same guarantee. `exports` declares none
+ * today, and this keeps that from being a silent assumption.
  */
 const entryPoints = (): [string, string][] =>
   Object.entries(subpaths).flatMap(([subpath, dist]) => {

@@ -15,5 +15,5 @@ for — `requireScenarioEnv`, `requireActor`, `createCookieJar`, `pollUntil`,
 `createScenarioRunner`, `postScenarioJson`, `readScenarioHttpResponse` and the
 types beside them — so a scenario file has one specifier to import from and
 never has to know whether a helper is typed against this project or shipped by
-the framework. The names join the `ecosystem/scenario` and `ecosystem/persona`
-facades on the way through.
+the framework. The names come from the `@pikku/core/scenario` and
+`@pikku/core/persona` subpaths that own them.

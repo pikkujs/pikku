@@ -6,12 +6,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 ## What a compatibility promise covers
 
 **2692 observable things**: 858 exported names, plus
-1834 members on the classes and interfaces among them.
-
-| tier | entry points | names | members |
-| --- | ---: | ---: | ---: |
-| stable | 57 | 858 | 1834 |
-| ecosystem | 1 | 0 | 0 |
+1834 members on the classes and interfaces among them, reachable
+through 57 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -23,7 +19,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow` | 78 | 29 | 131 |
 | `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
-| `./types` | 51 | 42 | 83 |
+| `./types` | 51 | 43 | 83 |
 | `./channel` | 32 | 32 | 84 |
 | `./queue` | 22 | 22 | 71 |
 | `./http` | 25 | 25 | 49 |
@@ -53,10 +49,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./dev` | 5 | 5 | 5 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./role` | 9 | 9 | 0 |
+| `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./secret` | 7 | 7 | 0 |
-| `./state` | 9 | 7 | 0 |
 | `./time-utils` | 5 | 5 | 2 |
 | `./utils` | 7 | 7 | 0 |
 | `./scheduler` | 6 | 6 | 0 |
@@ -75,7 +71,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./hmac` | 2 | 2 | 0 |
 | `./remote` | 1 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
-| `./ecosystem` | 2 | 0 | 0 |
 
 ## .
 
@@ -166,21 +161,6 @@ export interface SecretService {
   deleteSecret(key: string): Promise<void>
   getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(keys: (keyof T & string)[]): Promise<Partial<SecretValues<T>>>
 }
-```
-
-## ./ecosystem
-
-```ts
-export type CreateWireServices<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  Services extends CoreServices<SingletonServices> =
-    CoreServices<SingletonServices>,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = (
-  services: SingletonServices,
-  wire: PikkuRawWire
-) => Promise<WireServices<Services, SingletonServices>>
-pikkuState: <Type extends keyof PikkuPackageState, Content extends keyof PikkuPackageState[Type]>(packageName: string | null, type: Type, content: Content, value?: PikkuPackageState[Type][Content] | undefined) => PikkuPackageState[Type][Content]
 ```
 
 ## ./types

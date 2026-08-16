@@ -114,16 +114,6 @@ describe('refreshScaffoldsImportingRemovedEntryPoints', () => {
     assert.ok(!existsSync(file))
   })
 
-  test('deletes an agent scaffold left on the deleted ecosystem tier', async () => {
-    const { file, config } = await agentConfig(
-      `import { canAccessThread } from '@pikku/core/ecosystem/agent'\n`
-    )
-
-    await refreshScaffoldsImportingRemovedEntryPoints(config)
-
-    assert.ok(!existsSync(file))
-  })
-
   test('deletes an agent scaffold left on the deleted #pikku hub', async () => {
     // The hub is the project's own file, so the scaffold names it by a relative
     // path rather than by package — it is gone all the same.

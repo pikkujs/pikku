@@ -1,8 +1,5 @@
 {
   ".": [],
-  "./ecosystem": [
-    "pikkuState"
-  ],
   "./types": [
     "pikkuAgentMiddleware",
     "pikkuChannelMiddleware",

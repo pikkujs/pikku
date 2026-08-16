@@ -27,7 +27,6 @@
   ],
   "exports": {
     ".": "./dist/bootstrap-compat/root.js",
-    "./ecosystem": "./dist/bootstrap-compat/ecosystem.js",
     "./types": "./dist/types/index.js",
     "./middleware": "./dist/middleware/index.js",
     "./function": "./dist/function/index.js",

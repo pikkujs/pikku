@@ -6,16 +6,13 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
- * `@pikku/core/ecosystem/*` was a second door onto modules the raw subpaths
- * already published — `ecosystem/http` re-exported `./http`, and a name was
- * reachable either way. Two specifiers for one module meant every addition had
- * to be made twice, and a consumer's imports said nothing about what it used.
- * The package root was the same problem at a larger scale: one barrel of 206
- * names that no bundler could take apart.
+ * The package root was one barrel of 206 names that no bundler could take
+ * apart, and the one specifier that revealed nothing about what a consumer
+ * actually used.
  *
- * Both are gone. Every name lives on the subpath that owns it, and every
- * import carries that subpath. What survives is a bootstrap shim, which the
- * second test here holds to its exact contents.
+ * It is gone. Every name lives on the subpath that owns it, and every import
+ * carries that subpath. What survives is a bootstrap shim, which the second
+ * test here holds to its exact contents.
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 
@@ -46,39 +43,7 @@ const walk = (dir: string, out: string[] = []): string[] => {
 const isGenerated = (path: string) =>
   path.includes('.gen.') || path.endsWith('.d.ts') || path.includes('/.pikku/')
 
-describe('no ecosystem surface', () => {
-  /**
-   * A text scan rather than an AST walk: the CLI's serializers hold the
-   * specifiers they emit inside template literals, and a serializer that still
-   * writes `ecosystem` is exactly the drift worth catching.
-   */
-  test('nothing reaches for @pikku/core/ecosystem', () => {
-    const self = fileURLToPath(import.meta.url)
-    const offenders: string[] = []
-
-    for (const file of walk(repoRoot)) {
-      if (file === self || isGenerated(file)) continue
-      if (file.includes('/bootstrap-compat/')) continue
-      readFileSync(file, 'utf8')
-        .split('\n')
-        .forEach((text, index) => {
-          if (!text.includes('@pikku/core/ecosystem')) return
-          offenders.push(
-            `${relative(repoRoot, file)}:${index + 1}  ${text.trim()}`
-          )
-        })
-    }
-
-    assert.deepStrictEqual(
-      offenders,
-      [],
-      `'@pikku/core/ecosystem/*' is gone. Import the name from the subpath ` +
-        `that owns it — '@pikku/core/http', '@pikku/core/services', ` +
-        `'@pikku/core/errors', '@pikku/core/types'.\n\n` +
-        offenders.join('\n')
-    )
-  })
-
+describe('no root barrel', () => {
   /**
    * Parsed rather than grepped: several tests hold a user's file as a template
    * literal, and `import { pikkuSessionlessFunc } from '@pikku/core'` inside
@@ -134,11 +99,6 @@ describe('no ecosystem surface', () => {
         .replace(/\/\*\*[\s\S]*?\*\//g, '')
         .match(/\b[A-Za-z][A-Za-z0-9]*\b(?=[,\n\s]*(?:,|\}))/g)
         ?.sort() ?? []
-
-    assert.deepStrictEqual(surface('bootstrap-compat/ecosystem.ts'), [
-      'CreateWireServices',
-      'pikkuState',
-    ])
 
     assert.deepStrictEqual(surface('bootstrap-compat/root.ts'), [
       'CorePermissionGroup',

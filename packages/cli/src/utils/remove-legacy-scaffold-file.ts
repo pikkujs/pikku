@@ -63,16 +63,15 @@ export const removeRetiredScaffoldFiles = async (config: PikkuCLIConfig) => {
 }
 
 /**
- * Entry points a scaffold may still import that nothing resolves any more:
- * the two #596 renamed, the `@pikku/core/ecosystem` tier #1308 deleted, and
- * the `#pikku` hub #1308 replaced with per-wiring leaves. The hub was the
- * project's own file, so a scaffold names it by a relative path rather than by
- * package — matching on the file name is what catches it wherever `outDir` sits.
+ * Entry points a scaffold may still import that nothing resolves any more: the
+ * two #596 renamed, and the `#pikku` hub #1308 replaced with per-wiring leaves.
+ * The hub was the project's own file, so a scaffold names it by a relative path
+ * rather than by package — matching on the file name is what catches it wherever
+ * `outDir` sits.
  */
 const REMOVED_ENTRY_POINTS = [
   '@pikku/core/ai-agent',
   '@pikku/core/ai-scorer',
-  '@pikku/core/ecosystem',
   'pikku-types.gen.js',
 ]
 

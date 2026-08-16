@@ -5,9 +5,9 @@ disagree, so widening the API is a visible diff rather than a side effect of an
 
 Types are not pinned: they are erased before the test can enumerate them.
 
-A wildcard subpath is expanded to the files it matches, so `./ecosystem/*` is
-pinned as one entry per area rather than as a pattern — otherwise a new
-sub-barrel joins the published API without a diff.
+A wildcard subpath is expanded to the files it matches, so it is pinned as one
+entry per area rather than as a pattern — otherwise a new sub-barrel joins the
+published API without a diff.
 
 Regenerate after an intentional change, from `packages/core`:
 

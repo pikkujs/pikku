@@ -231,17 +231,6 @@ const signature = (exported: ts.Symbol): string => {
   return `${exported.getName()}: ${checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation)}`
 }
 
-/**
- * Entry points whose signatures move with the CLI's codegen. Everything else
- * is what an application imports, and is what a compatibility promise covers.
- *
- * knowledge: decisions/internals/the-ecosystem-entry-point-carries-the-adapter-surface.md
- */
-const isEcosystem = (subpath: string) =>
-  subpath === './ecosystem' ||
-  subpath === './internal' ||
-  subpath.startsWith('./ecosystem/')
-
 type Exported = { name: string; members: number; signature: string }
 
 /** The members the report lists, which is what the tally is counting. */
@@ -280,33 +269,16 @@ for (const { subpath, file } of entryPoints) {
   )
 }
 
-// A name reachable from more than one entry point is counted once, against the
-// weaker promise — reaching it through a stable subpath is what a consumer will
-// have done, whatever else also exports it.
-const tierOf = new Map<string, string>()
+// A name reachable from more than one entry point is counted once: what a
+// compatibility promise owes is the name, not each door onto it.
 const membersOf = new Map<string, number>()
-for (const [subpath, exports] of modules) {
-  const tier = isEcosystem(subpath) ? 'ecosystem' : 'stable'
-  for (const { name, members } of exports) {
-    if (tier === 'stable' || !tierOf.has(name)) tierOf.set(name, tier)
+for (const exports of modules.values())
+  for (const { name, members } of exports)
     membersOf.set(name, Math.max(membersOf.get(name) ?? 0, members))
-  }
-}
 
-const tally = (tier: string) => {
-  const names = [...tierOf].filter(([, t]) => t === tier).map(([n]) => n)
-  return {
-    entryPoints: [...modules.keys()].filter(
-      (s) => (isEcosystem(s) ? 'ecosystem' : 'stable') === tier
-    ).length,
-    names: names.length,
-    members: names.reduce((total, n) => total + (membersOf.get(n) ?? 0), 0),
-  }
-}
-const stable = tally('stable')
-const ecosystem = tally('ecosystem')
-const observable =
-  stable.names + stable.members + ecosystem.names + ecosystem.members
+const names = membersOf.size
+const members = [...membersOf.values()].reduce((total, n) => total + n, 0)
+const observable = names + members
 
 const reachableFrom = new Map<string, number>()
 for (const exports of modules.values())
@@ -335,13 +307,9 @@ const sections: string[] = [
   '',
   '## What a compatibility promise covers',
   '',
-  `**${observable} observable things**: ${stable.names + ecosystem.names} exported names, plus`,
-  `${stable.members + ecosystem.members} members on the classes and interfaces among them.`,
-  '',
-  '| tier | entry points | names | members |',
-  '| --- | ---: | ---: | ---: |',
-  `| stable | ${stable.entryPoints} | ${stable.names} | ${stable.members} |`,
-  `| ecosystem | ${ecosystem.entryPoints} | ${ecosystem.names} | ${ecosystem.members} |`,
+  `**${observable} observable things**: ${names} exported names, plus`,
+  `${members} members on the classes and interfaces among them, reachable`,
+  `through ${modules.size} entry points.`,
   '',
   'An entry point whose exports are mostly *exclusive* is a self-contained',
   'subsystem rather than shared machinery — which tends to mean a newer one.',
