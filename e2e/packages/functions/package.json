@@ -5,6 +5,7 @@
   "private": true,
   "imports": {
     "#pikku": "../../.pikku/pikku-types.gen.ts",
+    "#pikku/scenario": "../../.pikku/scenarios/pikku-scenario-types.gen.ts",
     "#pikku/*": "../../.pikku/*"
   },
   "scripts": {

@@ -25,10 +25,7 @@
  *
  * Two real model calls per run and a real judge on top, so this is `ai-live`.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const HELPFUL_AGENT = 'todoReadAgent'
 const UNHELPFUL_AGENT = 'unhelpfulAgent'

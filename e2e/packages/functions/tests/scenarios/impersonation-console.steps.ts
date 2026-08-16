@@ -17,8 +17,7 @@
  * blind to anything the page sends by another route, and a negative assertion
  * that cannot see a request passes for the wrong reason.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
-import type { PikkuBrowserWire } from '@pikku/core/scenario'
+import { type PikkuBrowserWire, pikkuScenarioStep } from '#pikku/scenario'
 import { expect } from '@pikku/playwright'
 
 const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'

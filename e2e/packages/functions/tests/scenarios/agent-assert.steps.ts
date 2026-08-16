@@ -8,7 +8,7 @@
  * Naming: `expects*` compares values the scenario already holds and never
  * touches a DOM; `sees*` is reserved for browser-backed steps.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuScenarioStep } from '#pikku/scenario'
 import { describeValue } from './support.js'
 import type { MockLlmCall } from './agent-transport.js'
 

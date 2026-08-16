@@ -644,6 +644,8 @@
     "personaEmails",
     "personaEnvironmentErrors",
     "personaEnvironmentRefusal",
+    "postScenarioJson",
+    "readScenarioHttpResponse",
     "roleMismatchMessage",
     "validateAndBuildPersonasMeta",
     "verifyPersonaRoles"
@@ -670,6 +672,11 @@
     "SCENARIO_SURFACES",
     "addFeature",
     "composeStepProse",
+    "createCookieJar",
+    "createScenarioRunner",
+    "pollUntil",
+    "requireActor",
+    "requireScenarioEnv",
     "resolveFeatureScenarios"
   ],
   "./ecosystem/scheduler": [

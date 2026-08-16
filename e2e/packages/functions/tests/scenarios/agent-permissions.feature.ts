@@ -12,10 +12,7 @@
  * the offered tool list matters because a tool that is absent cannot be called
  * by any model, cooperative or not.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const RESOURCE_ID = 'agent-security'
 const PLAIN_TEXT_REPLY = 'The mock model replied with plain text.'

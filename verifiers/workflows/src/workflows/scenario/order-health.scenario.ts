@@ -1,4 +1,4 @@
-import { pikkuScenario } from '../../../.pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuScenario } from '#pikku/scenario'
 
 export const orderHealthScenario = pikkuScenario<
   { orderId: string },

@@ -46,6 +46,31 @@ import type { TypedPersonas } from '${personasImportPath}'
 export type { TypedPersonas }
 
 /**
+ * The scenario test surface, re-exported so a step file has one specifier to
+ * import from. These names are not generated — they come straight from core —
+ * but routing them through here means a scenario file never has to know
+ * whether the helper it wants is typed against this project or shipped by the
+ * framework.
+ */
+export {
+  createCookieJar,
+  createScenarioRunner,
+  pollUntil,
+  requireActor,
+  requireScenarioEnv,
+} from '@pikku/core/ecosystem/scenario'
+export type {
+  PikkuBrowserWire,
+  ScenarioSurface,
+  TestIdSelector,
+} from '@pikku/core/ecosystem/scenario'
+export {
+  postScenarioJson,
+  readScenarioHttpResponse,
+} from '@pikku/core/ecosystem/persona'
+export type { ScenarioHttpResponse } from '@pikku/core/ecosystem/persona'
+
+/**
  * The typed half of a scenario wire: \`given\`/\`when\`/\`then\`, narrowed to the
  * names declared by \`pikkuScenarioStep\` in this project. \`given\` and \`when\`
  * differ only in the prose the reporter renders; \`then\` additionally makes the

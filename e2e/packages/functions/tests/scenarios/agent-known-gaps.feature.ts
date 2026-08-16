@@ -3,10 +3,7 @@
  * is loud rather than silent. They are not endorsements — each is a place the
  * loop swallows a condition a caller might reasonably expect to surface.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const RESOURCE_ID = 'agent-security'
 const ALICE = { userId: 'alice' }

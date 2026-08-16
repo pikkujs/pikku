@@ -13,10 +13,7 @@
  * Two models are involved and neither is scripted, so this is `ai-live` and runs
  * only where a real key is available.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const TODO_AGENT = 'todoAgent'
 const TITLE = 'Book the venue'

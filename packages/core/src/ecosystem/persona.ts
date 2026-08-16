@@ -1,5 +1,10 @@
 export { HttpPersona, createHttpPersonas } from '../services/http-personas.js'
 export type { HttpPersonasConfig } from '../services/http-personas.js'
+export {
+  postScenarioJson,
+  readScenarioHttpResponse,
+} from '../services/personas-service.js'
+export type { ScenarioHttpResponse } from '../services/personas-service.js'
 export { personaEmails } from '../wirings/persona/persona-email.js'
 export {
   personaEnvironmentErrors,

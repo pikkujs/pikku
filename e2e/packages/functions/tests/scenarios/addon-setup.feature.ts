@@ -13,11 +13,7 @@
  * EMAILS_CREDENTIALS to EMAILS_PROMO_CREDENTIALS — so the instance selector
  * has something to switch between.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-  pikkuScenarioHook,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario, pikkuScenarioHook } from '#pikku/scenario'
 
 const FAKE_CRM_SETUP =
   '/console/addons?id=%40pikku%2Faddon-fake-crm&source=installed'

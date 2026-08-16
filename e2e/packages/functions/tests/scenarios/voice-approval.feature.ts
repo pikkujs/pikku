@@ -13,10 +13,7 @@
  * this contract (never rewriting the string, refusing to invent one) is
  * covered by `spokenApproval` in `@pikku/voice-agents`.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'voiceAssistantAgent'
 const RESOURCE_ID = 'voice-approval'

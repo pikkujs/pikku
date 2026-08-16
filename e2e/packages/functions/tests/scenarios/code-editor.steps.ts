@@ -5,9 +5,7 @@
  * effect goes through the step's actor, so the RPC calls and the browser
  * session are the same signed-in identity.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
-import type { TypedPersonas } from '#pikku/scenarios/pikku-scenario-types.gen.js'
-import { requireActor, type TestIdSelector } from '@pikku/core/scenario'
+import { pikkuScenarioStep, requireActor, type TestIdSelector, type TypedPersonas } from '#pikku/scenario'
 import { describeValue } from './support.js'
 import type {} from '@pikku/playwright'
 

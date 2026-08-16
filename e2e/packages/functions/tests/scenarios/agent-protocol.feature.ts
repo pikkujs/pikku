@@ -5,10 +5,7 @@
  * happens to cooperate. The script is chosen per request via the model override
  * (`mock/<script>`), which keeps scenarios independent of each other.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'todoReadAgent'
 const RESOURCE_ID = 'agent-protocol'

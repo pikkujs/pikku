@@ -8,10 +8,7 @@
  * bound. The installed side is not the registry's — the console left-joins what
  * the project actually wires — so those three names come from the fixture app.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 export const installedAddonsScenario = pikkuScenario<void, { addons: number }>({
   title: 'Installed addons are visible on the addons page',

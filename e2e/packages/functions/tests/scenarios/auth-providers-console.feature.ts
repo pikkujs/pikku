@@ -9,10 +9,7 @@
  * `data-configured="false"` rather than as the absence of a badge — an absent
  * element would also pass if the row never rendered at all.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AUTH_PROVIDERS_PAGE = '/console/auth-providers'
 const PROVIDERS_READY = { testId: 'auth-provider-row' }

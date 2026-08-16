@@ -1,4 +1,4 @@
-import { pikkuScenario } from '../../../.pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuScenario } from '#pikku/scenario'
 /**
  * A step declares one implementation per surface. An action resolves to exactly
  * one of them; an assertion runs every one it has. These three scenarios pin

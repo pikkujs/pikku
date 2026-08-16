@@ -9,10 +9,7 @@
  * what they meant — the audit ran and a report is on screen — is asserted on
  * the report element, which is also immune to the console being translated.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const SECURITY_PAGE = '/console/security'
 const WEBHOOKS_PAGE = '/console/webhooks'

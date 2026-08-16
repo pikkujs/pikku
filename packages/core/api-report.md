@@ -20,16 +20,16 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 130 | 19 | 70 |
 | `.` | 206 | 40 | 40 |
-| `./ecosystem/scenario` | 31 | 11 | 55 |
-| `./scenario` | 42 | 25 | 33 |
+| `./ecosystem/scenario` | 37 | 11 | 55 |
 | `./workflow` | 76 | 19 | 29 |
 | `./agent` | 48 | 22 | 26 |
 | `./channel` | 32 | 14 | 29 |
+| `./scenario` | 42 | 18 | 24 |
 | `./virtual-user` | 34 | 6 | 33 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./queue` | 22 | 6 | 17 |
 | `./gateway` | 11 | 9 | 14 |
-| `./persona` | 27 | 9 | 12 |
+| `./persona` | 27 | 7 | 12 |
 | `./workflow/timeline` | 9 | 3 | 14 |
 | `./rpc` | 15 | 8 | 8 |
 | `./services/local-meta` | 22 | 2 | 12 |
@@ -87,7 +87,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem/node` | 3 | 0 | 0 |
 | `./ecosystem/node-host-resolver` | 1 | 0 | 0 |
 | `./ecosystem/oauth2` | 2 | 0 | 0 |
-| `./ecosystem/persona` | 19 | 0 | 0 |
+| `./ecosystem/persona` | 22 | 0 | 0 |
 | `./ecosystem/queue` | 19 | 0 | 0 |
 | `./ecosystem/remote` | 3 | 0 | 0 |
 | `./ecosystem/role` | 10 | 0 | 0 |
@@ -7560,6 +7560,8 @@ export type PersonaMeta = {
   sourceFile?: string
 }
 export type PersonasMeta = Record<string, PersonaMeta>
+postScenarioJson: <T = unknown>(url: string, { body, headers, method, fetch: send, }?: ScenarioJsonRequest) => Promise<ScenarioHttpResponse<T>>
+readScenarioHttpResponse: <T = unknown>(res: Response) => Promise<ScenarioHttpResponse<T>>
 roleMismatchMessage: (verification: RoleVerification) => string | null
 export interface RoleVerification {
   persona: string
@@ -7568,6 +7570,12 @@ export interface RoleVerification {
   missing: string[]
   extra: string[]
   ok: boolean
+}
+export interface ScenarioHttpResponse<T = unknown> {
+  status: number
+  ok: boolean
+  body: T
+  serialized: string
 }
 export type ScenarioPersonas = Record<string, ScenarioPersona>
 validateAndBuildPersonasMeta: (definitions: PersonaDefinitions) => PersonasMeta
@@ -7862,6 +7870,8 @@ export type CoreWorkflow<
   middleware?: PikkuFunctionConfig['middleware']
   tags?: string[]
 }
+createCookieJar: (apiUrl: string) => ScenarioCookieJar
+createScenarioRunner: (options?: WorkflowQueueOptions) => { workflowService: InMemoryWorkflowService; scenarioService: PikkuScenarioService; }
 export type FeaturePlanEntry = {
   featureId: string
   featureName: string
@@ -7919,6 +7929,9 @@ export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
   then(stepName: string, stepFunc: string, data?: any, options?: ScenarioStepOptions): Promise<any>
   runScheduledTask: (name: string) => Promise<unknown>
 }
+pollUntil: <T>(attempt: () => T | Promise<T | undefined> | undefined, { timeoutMs, intervalMs }?: PollOptions) => Promise<T | undefined>
+requireActor: <TActor>(scenarioStep: PikkuScenarioStepWire<TActor> | undefined) => TActor
+requireScenarioEnv: (scenarioStep: PikkuScenarioStepWire<unknown> | undefined) => ScenarioEnvironment
 resolveFeatureScenarios: (features: Map<string, CoreFeature>, registrations: Map<string, CoreWorkflow>) => { entries: FeaturePlanEntry[]; unresolved: { featureId: string; index: number; }[]; }
 SCENARIO_SURFACES: readonly ScenarioSurface[]
 export interface ScenarioArtifact {
@@ -8034,6 +8047,13 @@ export interface ScenarioStepRow {
   error?: string
 }
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
+export interface TestIdSelector {
+  testId: string
+  prefix?: boolean
+  where?: Record<string, string>
+  containing?: string
+  within?: TestIdSelector
+}
 ```
 
 ## ./ecosystem/scheduler

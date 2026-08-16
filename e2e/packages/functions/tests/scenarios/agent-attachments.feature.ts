@@ -3,10 +3,7 @@
  * turned into content parts on the user message and handed to the model, which
  * is visible in the scripted model's request log.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'todoReadAgent'
 const RESOURCE_ID = 'agent-attachments'

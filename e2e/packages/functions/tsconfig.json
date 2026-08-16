@@ -13,6 +13,7 @@
     "noImplicitAny": false,
     "types": ["node"],
     "paths": {
+      "#pikku/scenario": ["../../.pikku/scenarios/pikku-scenario-types.gen.ts"],
       "#pikku/*": ["../../.pikku/*"]
     }
   },

@@ -13,10 +13,7 @@
  * since the snapshot it grades lives in the server process. Hence the admin
  * actor: it is the persona whose session carries the call there.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AGENT = 'todoReadAgent'
 const RESOURCE_ID = 'agent-scoring'

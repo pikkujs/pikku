@@ -16,10 +16,7 @@
  * rather than the `target` actor, because the ban has to be proven against a
  * real password sign-in — which is a thing only a person has.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 import { TARGET_USER } from '../../../../src/auth-fixtures.js'
 
 const BAN = 'pikkuAdminSetUserBanned'

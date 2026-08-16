@@ -12,10 +12,7 @@
  * an attribute would publish it to anything reading the DOM — a session
  * recorder, an analytics script, an extension — for the sake of a selector.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const USERS_PAGE = '/console/users'
 const IMPERSONATED = 'guest@e2e.test'

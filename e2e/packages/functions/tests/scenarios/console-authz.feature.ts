@@ -10,10 +10,7 @@
  * holds only `report-viewer`, which is what makes the pair the gate's two
  * sides.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const CREDENTIAL_GET = 'console:credentialGet'
 const FUNCTIONS_META = 'console:getFunctionsMeta'

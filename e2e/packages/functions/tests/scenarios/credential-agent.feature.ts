@@ -11,10 +11,7 @@
  *
  * These run against a real model and are tagged `ai-live`.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const OAUTH_AGENT = 'oauthApiAgent'
 const OAUTH_CREDENTIAL = 'user-oauth'

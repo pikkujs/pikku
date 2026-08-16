@@ -20,10 +20,7 @@
  * would surface a different, generic message and fail here.
  */
 import { rm } from 'node:fs/promises'
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const ADDONS_PAGE = '/console/addons'
 const UNWIRED_ADDON = '@pikku/addon-email-send'

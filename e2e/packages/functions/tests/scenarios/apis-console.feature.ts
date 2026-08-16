@@ -13,10 +13,7 @@
  * that does not exist. `mcpToolWithoutDescription` is still listed, which is
  * what the console genuinely offers.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const MCP_TAB = '/console/apis?tab=mcp'
 const GATEWAYS_TAB = '/console/apis?tab=gateways'

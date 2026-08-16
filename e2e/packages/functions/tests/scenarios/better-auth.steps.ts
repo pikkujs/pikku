@@ -14,9 +14,8 @@
  * The jar also stamps `Origin`: Better Auth rejects a state-changing POST whose
  * Origin does not match the baseURL.
  */
-import { pikkuScenarioStep } from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { createCookieJar, pikkuScenarioStep, requireScenarioEnv } from '#pikku/scenario'
 import { createAuthClient } from 'better-auth/client'
-import { createCookieJar, requireScenarioEnv } from '@pikku/core/scenario'
 
 const authClientFor = (apiUrl: string) =>
   createAuthClient({

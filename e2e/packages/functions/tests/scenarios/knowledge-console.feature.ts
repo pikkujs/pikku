@@ -13,10 +13,7 @@
  * teardown, and a suite that cannot write is the strongest statement that the
  * console is not a second source of truth for a committed file.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const KNOWLEDGE_PAGE = '/console/knowledge'
 const NAVIGATOR_READY = { testId: 'knowledge-navigator' }

@@ -10,10 +10,7 @@
  *   model as a generic failure, the loop carries on, and the thrown message is not
  *   handed to the model.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const RESOURCE_ID = 'agent-security'
 const ALICE = { userId: 'alice' }

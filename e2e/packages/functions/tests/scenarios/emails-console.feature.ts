@@ -5,10 +5,7 @@
  * own email templates, so they are a statement about this e2e app rather than
  * about the console's copy.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const EMAILS_PAGE = '/console/emails'
 const TEMPLATE = 'hello-world'

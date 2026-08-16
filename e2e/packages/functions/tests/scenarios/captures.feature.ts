@@ -12,10 +12,7 @@
  * off `browser.screenshot()` writes nothing and the scenario still passes, so
  * this also pins the promise that taking pictures never breaks a plain run.
  */
-import {
-  pikkuFeature,
-  pikkuScenario,
-} from '#pikku/scenarios/pikku-scenario-types.gen.js'
+import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 export const captureScenario = pikkuScenario<void, { captures: number }>({
   title: 'A run captures screenshots of the console',
