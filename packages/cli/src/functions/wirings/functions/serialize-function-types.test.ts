@@ -52,6 +52,40 @@ describe('serializeFunctionTypes', () => {
     }
   })
 
+  // Re-implementing a core factory means the generated copy drifts from it. The
+  // `__priority` stamp the middleware runner orders by is applied by core's
+  // `pikkuMiddleware` alone, so a generated one that rebuilds the body instead
+  // of calling it silently drops every priority an app declares.
+  describe('pikkuMiddleware', () => {
+    test('delegates to core rather than re-implementing it', () => {
+      const content = emit()
+
+      assert.match(
+        content,
+        /import \{[^}]*pikkuMiddleware as pikkuMiddlewareCore[^}]*\} from '@pikku\/core\/middleware'/s
+      )
+      assert.match(content, /pikkuMiddlewareCore\(middleware\)/)
+      assert.doesNotMatch(
+        content,
+        /typeof middleware === 'function' \? middleware : middleware\.func/
+      )
+    })
+
+    test('accepts and emits the priority the runtime orders by', () => {
+      const content = emit()
+
+      assert.match(
+        content,
+        /import type \{[^}]*MiddlewarePriority[^}]*\} from '@pikku\/core\/middleware'/s
+      )
+      assert.match(content, /export type \{ MiddlewarePriority \}/)
+      assert.match(
+        content,
+        /type PikkuMiddlewareConfig<[^]*?priority\?: MiddlewarePriority/
+      )
+    })
+  })
+
   describe('node config', () => {
     test('narrows category to the addon categories the project declared', () => {
       assert.match(
