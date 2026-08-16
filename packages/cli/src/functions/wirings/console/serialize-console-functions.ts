@@ -84,6 +84,16 @@ export const consoleRoutes = defineHTTPRoutes({
       sse: true,
       func: ref('console:streamWorkflowRun'),
     },
+    // A route rather than an RPC because a <video> and an <img> take a URL.
+    // Authenticated even though the group is not: everything else here is
+    // metadata, and these are recordings of an application being used. \`path\`
+    // arrives as a query parameter because an artifact key contains slashes.
+    scenarioArtifact: {
+      route: '/scenario-run/:runId/artifact',
+      method: 'get',
+      auth: true,
+      func: ref('console:getScenarioArtifact'),
+    },
   },
 })
 

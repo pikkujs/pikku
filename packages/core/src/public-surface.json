@@ -408,6 +408,7 @@
   "./services": [
     "ConsoleLogger",
     "DEFAULT_WEBHOOK_RETRIES",
+    "FileScenarioRunStore",
     "InMemoryAgentRunStateService",
     "InMemoryQueueService",
     "InMemorySessionStore",
@@ -440,6 +441,8 @@
     "getStubTracker",
     "isTestRun",
     "pikkuWebhookWorkerFunc",
+    "scenarioArtifactContentType",
+    "scenarioRunSummary",
     "spy",
     "stub"
   ],
@@ -666,6 +669,7 @@
   "./ecosystem/rpc": ["rpcService", "wireAddon", "wireRemoteAddon"],
   "./ecosystem/safe-fetch": ["safeFetch"],
   "./ecosystem/scenario": [
+    "FileScenarioRunStore",
     "PikkuScenarioService",
     "SCENARIO_SURFACES",
     "addFeature",

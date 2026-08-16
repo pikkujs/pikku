@@ -133,7 +133,8 @@ export class PikkuExpressServer {
       const file = await getRawBody(req, {
         length: req.headers['content-length'],
         limit: configContent.sizeLimit || '1mb',
-        encoding: contentType.parse(req).parameters.charset,
+        encoding: contentType.parse(req.headers['content-type'] ?? '')
+          .parameters.charset,
       })
 
       const dir = targetPath.substring(0, targetPath.lastIndexOf('/'))

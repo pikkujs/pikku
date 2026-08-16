@@ -25,7 +25,7 @@
     "test:cli": "node --import tsx --test tests/cli/*.test.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.97",
+    "@ai-sdk/openai": "^4.0.42",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-email-send": "0.1.2",
     "@pikku/addon-gmail": "0.1.2",
@@ -44,10 +44,10 @@
     "@pikku/redis": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/websocket": "workspace:*",
-    "ai": "^6.0.256",
+    "ai": "^7.0.66",
     "better-auth": "^1.6.29",
-    "better-sqlite3": "^12.11.1",
-    "ioredis": "^5.11.1",
+    "better-sqlite3": "^13.0.3",
+    "ioredis": "^6.0.0",
     "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
     "mysql2": "^3.23.3",
@@ -58,14 +58,14 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.68",
+    "@ai-sdk/openai-compatible": "^3.0.30",
     "@pikku/cli": "workspace:*",
     "@pikku/playwright": "workspace:*",
     "@playwright/test": "^1.50.0",
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22",
     "@types/ws": "^8.18.1",
-    "c8": "^10.1.3",
+    "c8": "^12.0.0",
     "ws": "^8.21.3"
   },
   "exports": {

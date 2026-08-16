@@ -8,6 +8,8 @@ import { DbSchemaService } from './services/db-schema.service.js'
 import { KnowledgeService } from './services/knowledge.service.js'
 import { SecretAdminService } from './services/secret-admin.service.js'
 import { findProjectRoot } from './lib/find-project-root.js'
+import { join } from 'node:path'
+import { FileScenarioRunStore } from '@pikku/core/ecosystem/scenario'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -52,11 +54,17 @@ export const createSingletonServices = pikkuAddonServices(
     let stateDiffService: StateDiffService | null = null
     let dbSchemaService: DbSchemaService | null = null
     let knowledgeService: KnowledgeService | null = null
+    let scenarioRunStore: FileScenarioRunStore | null = null
     if (metaBasePath) {
       const projectRoot = findProjectRoot(metaBasePath)
       stateDiffService = new StateDiffService(projectRoot)
       dbSchemaService = new DbSchemaService(metaService)
       knowledgeService = new KnowledgeService(projectRoot, metaBasePath)
+      // The same directory `pikku scenario run` writes to: the console reads
+      // runs the CLI recorded, so the path is the contract between them.
+      scenarioRunStore = new FileScenarioRunStore({
+        dir: join(metaBasePath, 'scenario-runs'),
+      })
       // code-edit.service pulls in the TypeScript compiler and is deliberately a
       // lazy, separately-bundled module. Self-contained bundles (e.g. the sandbox
       // orchestrator standalone artifact) don't ship it, so a failed import must
@@ -98,6 +106,7 @@ export const createSingletonServices = pikkuAddonServices(
       stateDiffService,
       dbSchemaService,
       knowledgeService,
+      scenarioRunStore,
       auth,
     }
   }

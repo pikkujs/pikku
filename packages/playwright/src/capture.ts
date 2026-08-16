@@ -1,23 +1,36 @@
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, rmSync, statSync } from 'node:fs'
+
+/**
+ * Which scenarios keep their recording.
+ *
+ * Playwright decides recording when the context is created, which is before
+ * anyone knows whether the scenario passes — so `failed` records everything and
+ * throws away the passes, rather than recording selectively.
+ */
+export type VideoRetention = 'off' | 'failed' | 'all'
 
 /**
  * What a run is allowed to capture, and where it goes.
- *
- * Both are off by default. A scenario run is usually a pass/fail question and
- * writing a video per scenario to answer it is waste; the flags exist for the
- * runs where somebody is going to *look*.
  */
 export interface CaptureOptions {
   /** Root directory for this run's artifacts. */
   dir: string
   /** The run these artifacts belong to — the folder everything is filed under. */
   runId: string
-  /** Record a video per scenario. */
-  video?: boolean
+  /** Write the screenshots a scenario asks for by name. */
+  screenshots?: boolean
   /**
-   * Re-encode finished videos with ffmpeg when it is on PATH.
+   * Which scenarios keep their recording. Defaults to `failed`.
+   *
+   * Recording costs ~0.1-0.5s per actor context, nearly all of it finalising
+   * the file on close, so the default is to record always and keep the footage
+   * for the runs somebody is going to watch. Encoding is the expensive part and
+   * only the kept videos pay it.
+   */
+  video?: VideoRetention
+  /**
+   * Re-encode kept videos with ffmpeg when it is on PATH.
    *
    * Worth doing by default: a scenario video is a mostly-static page with a
    * cursor moving over it, so consecutive frames are nearly identical and an
@@ -48,18 +61,26 @@ export const hasFfmpeg = (): Promise<boolean> => {
 }
 
 /**
- * Re-encode one video in place, keeping the original only if the encode fails.
+ * Re-encode one recording to h264, keeping the original if the encode fails.
  *
- * `-crf 32` with `libvpx-vp9` is deliberately aggressive. This footage is read
- * by a person checking whether a page looked right, not by anything measuring
- * quality, and the alternative to a heavily compressed video is usually no
- * video at all because nobody wants the disk cost.
+ * `-crf 28` is deliberately aggressive. This footage is read by a person
+ * checking whether a page looked right, not by anything measuring quality, and
+ * the alternative to a heavily compressed video is usually no video at all
+ * because nobody wants the disk cost.
+ *
+ * h264/mp4 rather than the VP9 this used to emit: measured on scenario
+ * footage, `-preset veryfast` encodes ~11x faster than `libvpx-vp9 -crf 32`
+ * AND lands ~30% smaller, and mp4 is the format that plays in every browser
+ * without a second thought. VP9 lost on every axis that matters here.
+ *
+ * Returns the path of the file that survived, which is a NEW path on success:
+ * the container changes with the codec.
  */
 export const compressVideo = async (file: string): Promise<string> => {
   if (!(await hasFfmpeg())) {
     return file
   }
-  const out = file.replace(/\.webm$/, '.compressed.webm')
+  const out = file.replace(/\.webm$/, '.mp4')
 
   const ok = await new Promise<boolean>((resolve) => {
     const proc = spawn(
@@ -69,15 +90,21 @@ export const compressVideo = async (file: string): Promise<string> => {
         '-i',
         file,
         '-c:v',
-        'libvpx-vp9',
+        'libx264',
         '-crf',
-        '32',
-        '-b:v',
-        '0',
+        '28',
+        '-preset',
+        'veryfast',
         // One keyframe every 10s: seeking matters less than size here, and
         // long GOPs are most of the win on near-static footage.
         '-g',
         '300',
+        // Chrome records at odd dimensions often enough, and libx264 refuses
+        // them outright rather than rounding.
+        '-vf',
+        'pad=ceil(iw/2)*2:ceil(ih/2)*2',
+        '-movflags',
+        '+faststart',
         '-an',
         out,
       ],
@@ -101,41 +128,45 @@ export const compressVideo = async (file: string): Promise<string> => {
   }
 
   rmSync(file, { force: true })
-  renameSync(out, file)
-  return file
+  return out
 }
 
 /**
- * Compress every `.webm` under a directory, in place.
+ * Re-encode the recordings a run kept, answering where each one ended up.
+ *
+ * Takes the files rather than a directory to walk: the run already knows
+ * exactly which recordings it filed and which scenario each belongs to, and
+ * that record has to be updated with the new name — a compressed video whose
+ * path nobody rewrote is a video the console links to and cannot find.
  *
  * ffmpeg is optional. Without it the raw recordings are kept exactly as
  * Playwright wrote them and the run still succeeds — but it says so, because a
  * silently-uncompressed artifact directory is how somebody discovers a
  * gigabyte of video a week later and has no idea why.
  */
-export const compressVideosIn = async (
-  dir: string,
+export const compressVideos = async (
+  files: string[],
   onWarn: (message: string) => void = console.warn
-): Promise<number> => {
-  if (!existsSync(dir)) {
-    return 0
+): Promise<Map<string, string>> => {
+  const renamed = new Map<string, string>()
+  if (files.length === 0) {
+    return renamed
   }
   if (!(await hasFfmpeg())) {
     onWarn(
       '[pikku] ffmpeg is not on PATH — scenario videos were kept uncompressed. ' +
         'Install ffmpeg to shrink them; the footage is nearly static, so it compresses hard.'
     )
-    return 0
+    return renamed
   }
-  let count = 0
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name)
-    if (entry.isDirectory()) {
-      count += await compressVideosIn(full, onWarn)
-    } else if (entry.name.endsWith('.webm')) {
-      await compressVideo(full)
-      count++
+  for (const file of files) {
+    if (!existsSync(file)) {
+      continue
+    }
+    const out = await compressVideo(file)
+    if (out !== file) {
+      renamed.set(file, out)
     }
   }
-  return count
+  return renamed
 }

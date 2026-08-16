@@ -107,7 +107,7 @@ export class RedisAgentRunService implements AgentRunService {
   }
 
   async getThreadMessages(threadId: string): Promise<AgentMessage[]> {
-    const entries = await this.redis.zrange(this.messagesKey(threadId), 0, -1)
+    const entries = await this.redis.zrange(this.messagesKey(threadId), 0, '-1')
     return entries.map((entry) => {
       const msg = JSON.parse(entry)
       return {
@@ -153,7 +153,11 @@ export class RedisAgentRunService implements AgentRunService {
     const exists = await this.redis.exists(this.threadKey(threadId))
     if (!exists) return false
 
-    const runIds = await this.redis.zrange(this.threadRunsKey(threadId), 0, -1)
+    const runIds = await this.redis.zrange(
+      this.threadRunsKey(threadId),
+      0,
+      '-1'
+    )
 
     const keysToDelete = [
       this.threadKey(threadId),

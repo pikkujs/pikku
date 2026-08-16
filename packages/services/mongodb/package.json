@@ -21,11 +21,11 @@
     "@pikku/core": "^0.12.84"
   },
   "dependencies": {
-    "mongodb": "^6.21.0"
+    "mongodb": "^7.5.0"
   },
   "devDependencies": {
-    "mongodb": "^6.21.0",
-    "mongodb-memory-server": "^10.4.3",
+    "mongodb": "^7.5.0",
+    "mongodb-memory-server": "^11.2.0",
     "typescript": "^6.0.3"
   },
   "exports": {

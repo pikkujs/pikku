@@ -110,7 +110,7 @@ export class RedisWorkflowRunService implements WorkflowRunService {
       const historyEntries = await this.redis.zrange(
         this.stepHistoryKey(data.stepId),
         0,
-        -1
+        '-1'
       )
 
       for (const entryStr of historyEntries) {

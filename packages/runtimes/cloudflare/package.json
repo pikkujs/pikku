@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.21.3",
-    "@cloudflare/workers-types": "^4.20260702.1",
+    "@cloudflare/workers-types": "^5.20260815.1",
     "@pikku/core": "^0.12.84",
     "@pikku/kysely": "^0.13.16",
     "@vitest/runner": "^4.1.10",

@@ -223,6 +223,12 @@ export type CoreCLICommandConfig<
       description?: string
       short?: string
       default?: ExtractFunctionInput<FuncConfig>[K]
+      /**
+       * The values this option accepts. Rejected by the parser and listed in
+       * `--help`, so a flag with a fixed vocabulary says so once rather than
+       * repeating itself in its description.
+       */
+      choices?: ReadonlyArray<ExtractFunctionInput<FuncConfig>[K]>
     }
   }
   middleware?: PikkuMiddleware[]

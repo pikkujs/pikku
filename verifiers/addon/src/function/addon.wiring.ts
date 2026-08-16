@@ -10,15 +10,35 @@ import {
   refHTTP,
   refChannel,
   refCLI,
+  ref,
   wireHTTPRoutes,
   wireChannel,
   wireCLI,
 } from '#pikku'
+import { defineHTTPRoutes } from '#pikku/http/pikku-http-types.gen.js'
 
 wireHTTPRoutes({
   basePath: '/api',
   routes: { ext: refHTTP('ext:helloRoutes') },
 })
+
+/**
+ * The other half of the addon HTTP story: a route this package shapes itself,
+ * pointed at an addon function through `ref()`. Unlike refHTTP — which adopts
+ * the addon's published route contract wholesale — the contract here has to be
+ * recovered from the addon's function metadata, and that is what regressed: a
+ * cold run (no `.pikku` yet) had nothing to resolve `ref('ext:goodbye')`
+ * against and widened the input to the whole RPC map. The types asserted in
+ * contracts.types.assert.ts are the check.
+ */
+export const localRoutes = defineHTTPRoutes({
+  basePath: '/local',
+  routes: {
+    goodbye: { method: 'get', route: '/goodbye', func: ref('ext:goodbye') },
+  },
+})
+
+wireHTTPRoutes({ basePath: '/api', routes: { local: localRoutes } })
 
 wireChannel({
   name: 'ext-events',
