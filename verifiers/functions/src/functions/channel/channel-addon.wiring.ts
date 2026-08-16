@@ -1,4 +1,4 @@
-import { wireChannel, defineChannelRoutes } from '#pikku'
+import { defineChannelRoutes, wireChannel } from '#pikku/channel'
 import {
   onConnect,
   onDisconnect,

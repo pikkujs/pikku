@@ -716,7 +716,7 @@ function generateFunctionFile(
   if (needsZod) {
     lines.push("import { z } from 'zod'")
   }
-  lines.push("import { pikkuSessionlessFunc } from '#pikku'")
+  lines.push("import { pikkuSessionlessFunc } from '#pikku/function'")
 
   if (errorClasses.length > 0) {
     lines.push(

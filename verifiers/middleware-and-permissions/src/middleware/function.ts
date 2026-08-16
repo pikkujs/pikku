@@ -1,4 +1,4 @@
-import { pikkuMiddlewareFactory } from '#pikku'
+import { pikkuMiddlewareFactory } from '#pikku/function'
 
 export const functionMiddleware = pikkuMiddlewareFactory(
   (name: string) =>

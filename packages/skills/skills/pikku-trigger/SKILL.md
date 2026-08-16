@@ -45,7 +45,7 @@ handler, and a handler can exist before any source is wired.
 Define the target function that handles trigger events:
 
 ```typescript
-import { wireTrigger } from '#pikku'
+import { wireTrigger } from '#pikku/trigger'
 
 wireTrigger({
   name: string, // Trigger name (matches source)
@@ -60,7 +60,7 @@ wireTrigger({
 Define the event source that fires triggers:
 
 ```typescript
-import { wireTriggerSource } from '#pikku'
+import { wireTriggerSource } from '#pikku/trigger'
 
 wireTriggerSource({
   name: string, // Must match a wireTrigger name
@@ -80,7 +80,7 @@ up a listener, calls `trigger.invoke(...)` for each event it sees, and returns a
 teardown function:
 
 ```typescript
-import { pikkuTriggerFunc } from '#pikku'
+import { pikkuTriggerFunc } from '#pikku/trigger'
 
 const source = pikkuTriggerFunc<
   InputType, // Configuration input

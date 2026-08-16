@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const getAgentThreadMessages = pikkuFunc<{ threadId: string }, any[]>({
   title: 'Get Agent Thread Messages',

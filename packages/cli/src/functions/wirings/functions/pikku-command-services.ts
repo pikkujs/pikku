@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
@@ -145,8 +145,8 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       )
     }
 
-    const servicesImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, singletonServicesType.typePath, config.packageMappings)}'`
-    const wireServicesImport = `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, wireServicesType.typePath, config.packageMappings)}'`
+    const servicesImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(config.servicesFile, singletonServicesType.typePath, config.packageMappings)}'`
+    const wireServicesImport = `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(config.servicesFile, wireServicesType.typePath, config.packageMappings)}'`
 
     const servicesCode = serializeServicesMap(
       visitState.serviceAggregation.allSingletonServices,

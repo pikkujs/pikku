@@ -2,7 +2,7 @@ import {
   pikkuAuth,
   pikkuPermission,
   pikkuSessionlessFunc,
-} from '#pikku/pikku-types.gen.js'
+} from '#pikku/function'
 
 /**
  * Session-only, so it can be evaluated with no request data.

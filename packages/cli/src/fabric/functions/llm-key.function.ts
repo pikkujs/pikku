@@ -3,7 +3,7 @@ import {
   BadRequestError,
   UnauthorizedError,
 } from '@pikku/core/ecosystem/errors'
-import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 

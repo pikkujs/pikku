@@ -1,4 +1,4 @@
-import { pikkuPermission } from '../.pikku/pikku-types.gen.js'
+import { pikkuPermission } from '#pikku/function'
 
 /**
  * Addon package permission that logs permission checks

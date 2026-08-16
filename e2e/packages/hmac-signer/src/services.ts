@@ -1,4 +1,4 @@
-import { pikkuAddonWireServices } from '#pikku'
+import { pikkuAddonWireServices } from '#pikku/addon'
 import { ForbiddenError } from '@pikku/core/errors'
 import { HmacSignerService } from './hmac-signer.service.js'
 

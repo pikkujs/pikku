@@ -9,7 +9,7 @@ import {
   ADMIN_SCOPES,
 } from '@pikku/better-auth'
 import { CREDENTIAL_OAUTH2_CONFIGS } from '#pikku/credentials/pikku-credentials.gen.js'
-import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
+import { pikkuBetterAuth } from '#pikku/auth'
 
 /**
  * Better Auth configuration for the e2e suite. Exercises email+password

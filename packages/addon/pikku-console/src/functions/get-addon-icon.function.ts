@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const getAddonIcon = pikkuFunc<{ alias: string }, string | null>({
   title: 'Get Addon Icon',

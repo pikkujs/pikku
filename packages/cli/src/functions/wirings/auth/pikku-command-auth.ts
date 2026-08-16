@@ -1,7 +1,8 @@
 import { join, dirname } from 'node:path'
 import { existsSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
@@ -20,7 +21,6 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       authTypesFile,
       authMetaJsonFile,
       functionTypesFile,
-      typesDeclarationFile,
       secretsFile: secretsServiceFile,
       variablesFile,
       packageMappings,
@@ -59,7 +59,7 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       state.auth.definition,
       state.auth.providers,
       authFile,
-      typesDeclarationFile,
+      (name) => getLeafImportPath(authFile, name, config),
       packageMappings ?? {},
       state.auth.hasUserSessionMiddleware ?? false,
       Boolean(config.scaffold?.console)
@@ -102,7 +102,7 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       )
     }
 
-    // Generate the typed pikkuBetterAuth re-export consumed by `import { pikkuBetterAuth } from '#pikku'`.
+    // Generate the typed pikkuBetterAuth re-export consumed by `import { pikkuBetterAuth } from '#pikku/auth'`.
     if (
       authTypesFile &&
       functionTypesFile &&

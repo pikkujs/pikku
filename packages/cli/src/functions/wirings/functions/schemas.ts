@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { saveSchemas } from '../../../utils/serialize-schemas.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { partitionRequiredSchemas } from '../scenarios/scenario-schema-partition.js'

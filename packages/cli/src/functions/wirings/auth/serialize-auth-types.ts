@@ -6,7 +6,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
  * `SingletonServices` type for the generic `CoreSingletonServices`. This lets
  * users write:
  *
- *   import { pikkuBetterAuth } from '#pikku'
+ *   import { pikkuBetterAuth } from '#pikku/auth'
  *
  * and get proper autocomplete on the factory's `services` param (e.g.
  * `(services) => betterAuth({ database: { db: services.kysely } })` types
@@ -25,13 +25,13 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
  * with no inline `getSecrets<{ ... }>()` generic, because the secret types flow
  * from the generated `CredentialsMap`.
  *
- * The file is re-exported from `.pikku/pikku-types.gen.ts` (the `#pikku` hub)
- * so the single import resolves correctly.
+ * The file is the `#pikku/auth` leaf's entry, so a project imports it as
+ * `#pikku/auth` and gets nothing else.
  */
 /**
  * A minimal `auth.types.ts` written during bootstrap (before the inspector has
  * run, so the typed wrapper above can't be built yet). It re-exports the raw
- * `pikkuBetterAuth` so `import { pikkuBetterAuth } from '#pikku'` resolves while
+ * `pikkuBetterAuth` so `import { pikkuBetterAuth } from '#pikku/auth'` resolves while
  * codegen is still in its bootstrap state — otherwise the first full inspect (or
  * a standalone `pikku db generate`) crashes importing the user's auth file with
  * "does not provide an export named 'pikkuBetterAuth'". The typed wrapper from

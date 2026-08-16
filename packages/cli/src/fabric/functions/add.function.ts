@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
-import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 
 export const FabricAddInput = z.object({

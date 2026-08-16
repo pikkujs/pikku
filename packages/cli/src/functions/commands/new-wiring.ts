@@ -1,13 +1,13 @@
 import { existsSync } from 'fs'
 import { dirname } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { scaffoldFilePath } from '../../utils/file-writer.js'
 
 function getWiringTemplate(type: string, name: string): string {
   switch (type) {
     case 'http':
-      return `import { wireHTTP } from '#pikku'
+      return `import { wireHTTP } from '#pikku/http'
 // import { myFunc } from '../functions/${name}.functions.js'
 
 wireHTTP({
@@ -19,7 +19,7 @@ wireHTTP({
 `
 
     case 'channel':
-      return `import { wireChannel } from '#pikku'
+      return `import { wireChannel } from '#pikku/channel'
 // import { onConnect, onMessage, onDisconnect } from '../functions/${name}.functions.js'
 
 wireChannel({
@@ -33,7 +33,7 @@ wireChannel({
 `
 
     case 'scheduler':
-      return `import { wireScheduler } from '#pikku'
+      return `import { wireScheduler } from '#pikku/scheduler'
 // import { myTask } from '../functions/${name}.functions.js'
 
 wireScheduler({
@@ -44,7 +44,7 @@ wireScheduler({
 `
 
     case 'queue':
-      return `import { wireQueueWorker } from '#pikku'
+      return `import { wireQueueWorker } from '#pikku/queue'
 // import { processItem } from '../functions/${name}.functions.js'
 
 wireQueueWorker({
@@ -54,7 +54,7 @@ wireQueueWorker({
 `
 
     case 'mcp':
-      return `import { wireMCPResource } from '#pikku'
+      return `import { wireMCPResource } from '#pikku/mcp'
 // import { myResource } from '../functions/${name}.functions.js'
 
 wireMCPResource({
@@ -66,7 +66,7 @@ wireMCPResource({
 `
 
     case 'cli':
-      return `import { wireCLI, pikkuCLICommand } from '#pikku'
+      return `import { wireCLI, pikkuCLICommand } from '#pikku/cli'
 // import { myCommand } from '../functions/${name}.functions.js'
 
 wireCLI({
@@ -81,7 +81,7 @@ wireCLI({
 `
 
     case 'trigger':
-      return `import { wireTrigger } from '#pikku'
+      return `import { wireTrigger } from '#pikku/trigger'
 // import { handleEvent } from '../functions/${name}.functions.js'
 
 wireTrigger({

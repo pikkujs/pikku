@@ -5,7 +5,8 @@
  * This file tests that the type system enforces proper schedule types.
  */
 
-import { wireScheduler, pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireScheduler } from '#pikku/scheduler'
 
 const validTask = pikkuSessionlessFunc<void, void>(async () => {})
 

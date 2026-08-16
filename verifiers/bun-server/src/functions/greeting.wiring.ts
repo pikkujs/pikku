@@ -1,4 +1,4 @@
-import { wireHTTP } from '#pikku'
+import { wireHTTP } from '#pikku/http'
 import { greeting } from './greeting.function.js'
 
 wireHTTP({

@@ -844,7 +844,7 @@ function emitIntegrationStub(node: ParsedNode): string {
   const outputName = `${Pascal}Output`
   return [
     `import { z } from 'zod'`,
-    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    `import { pikkuSessionlessFunc } from '#pikku/function'`,
     ``,
     envelopeSchemas(inputName, outputName),
     ``,
@@ -902,7 +902,7 @@ function emitHttpToolFunction(node: ParsedNode, spec: HttpToolSpec): string {
 
   return [
     `import { z } from 'zod'`,
-    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    `import { pikkuSessionlessFunc } from '#pikku/function'`,
     ``,
     envelopeSchemas(inputName, outputName),
     ``,
@@ -934,7 +934,7 @@ function emitCodeStub(node: ParsedNode): string {
     .join('\n')
   return [
     `import { z } from 'zod'`,
-    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    `import { pikkuSessionlessFunc } from '#pikku/function'`,
     ``,
     envelopeSchemas(inputName, outputName),
     ``,
@@ -1066,7 +1066,7 @@ function emitCodeFunction(
     // for this generated file only. The typed contract is the input/output.
     `// @ts-nocheck`,
     `import { z } from 'zod'`,
-    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    `import { pikkuSessionlessFunc } from '#pikku/function'`,
     ``,
     `export const ${inputName} = z.any()`,
     `export const ${outputName} = z.any()`,
@@ -1094,7 +1094,7 @@ function emitVectorStub(node: ParsedNode): string {
     'my-collection') as string
   return [
     `import { z } from 'zod'`,
-    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    `import { pikkuSessionlessFunc } from '#pikku/function'`,
     ``,
     `export const ${inputName} = z.object({`,
     `  query: z.string(),`,
@@ -1371,7 +1371,7 @@ function emitAgentFile(
 
   const imports = [
     `import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'`,
-    `import { ref } from '#pikku/pikku-types.gen.js'`,
+    `import { ref } from '#pikku/function'`,
   ]
   if (outputZod) imports.push(`import { z } from 'zod'`)
 

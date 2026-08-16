@@ -5,8 +5,8 @@
   "private": true,
   "description": "An addon that ships a table. Publishes its schema via `pikku db export` so the consumer can fold it into its own migration history.",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
   },
   "exports": {
     "./types": {

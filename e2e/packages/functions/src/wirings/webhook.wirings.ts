@@ -1,4 +1,4 @@
-import { wireHTTP } from '#pikku/pikku-types.gen.js'
+import { wireHTTP } from '#pikku/http'
 import { triggerWebhook, webhookSink } from '../functions/webhook.functions.js'
 
 // Enqueues an outgoing webhook (KyselyWebhookService → in-memory queue worker).

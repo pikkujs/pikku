@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 const invocations: Array<{ data: any }> = []
 export const getInvocations = () => invocations

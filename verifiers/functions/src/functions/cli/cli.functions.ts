@@ -1,4 +1,4 @@
-import { pikkuFunc, pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
 
 // Simple greeting function
 export const greetUser = pikkuSessionlessFunc<

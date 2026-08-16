@@ -5,7 +5,7 @@
  * Tools are defined using pikkuMCPToolFunc with description.
  */
 
-import { pikkuMCPToolFunc } from '#pikku'
+import { pikkuMCPToolFunc } from '#pikku/mcp'
 
 // Valid: Tool with properly typed input
 export const greet = pikkuMCPToolFunc<{ name: string }>({

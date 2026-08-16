@@ -7,7 +7,8 @@
   "type": "module",
   "main": "bin/start.ts",
   "imports": {
-    "#pikku/*": "./.pikku/*"
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
   },
   "scripts": {
     "pretest": "pikku all",

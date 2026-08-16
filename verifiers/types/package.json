@@ -4,9 +4,9 @@
   "private": true,
   "description": "TypeScript type constraint tests for Pikku framework",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
     "#pikku/scenario": "./.pikku/scenarios/pikku-scenario-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku/*.js": "./.pikku/*.js",
+    "#pikku/*": "./.pikku/*/index.js"
   },
   "dependencies": {
     "@pikku/core": "workspace:*",

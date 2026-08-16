@@ -1,4 +1,4 @@
-import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/function'
 import {
   LocalVariablesService,
   LocalSecretService,

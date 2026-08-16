@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 const KeyMappingSchema = z.object({
   oldKey: z.string().describe('The original key name'),

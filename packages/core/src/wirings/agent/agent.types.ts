@@ -423,7 +423,7 @@ export type CoreAgent<
    * which OR together, a scope can only narrow access.
    *
    * Narrowed to the generated `ScopeId` union in a project's own
-   * `pikku-types.gen.ts`, so an undeclared scope is a compile error.
+   * `#pikku/scopes`, so an undeclared scope is a compile error.
    */
   scopes?: Scope[]
   permissions?: CorePermissionGroup<PikkuPermission>

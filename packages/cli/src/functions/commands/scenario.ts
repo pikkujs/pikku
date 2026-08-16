@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { resolve, join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
 import { FileScenarioRunStore } from '@pikku/core/ecosystem/scenario'
 import { createHttpPersonas } from '@pikku/core/ecosystem/persona'
@@ -565,8 +565,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       feature?: string
     ): ScenarioResult => {
       const tags = state.workflows?.meta?.[scenarioName]?.tags as
-        | string[]
-        | undefined
+        string[] | undefined
       return {
         ...result,
         scenarioName,
@@ -748,7 +747,8 @@ export const scenarioRun = pikkuSessionlessFunc<
 
     const failed = results.filter((r) => r.status === 'failed')
     await runStore.finish(captureRunId, {
-      status: failed.length > 0 || hookFailures.length > 0 ? 'failed' : 'passed',
+      status:
+        failed.length > 0 || hookFailures.length > 0 ? 'failed' : 'passed',
       finishedAt: new Date().toISOString(),
       skipped,
       hookFailures,

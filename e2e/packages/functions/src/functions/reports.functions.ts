@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/pikku-types.gen.js'
+import { pikkuFunc } from '#pikku/function'
 
 /**
  * A scope-gated function used by the e2e scope suite: the session must hold

@@ -1,7 +1,7 @@
 import { existsSync } from 'fs'
 import { dirname } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { scaffoldFilePath } from '../../utils/file-writer.js'
 
 export const pikkuNewPermission = pikkuSessionlessFunc<
@@ -26,7 +26,7 @@ export const pikkuNewPermission = pikkuSessionlessFunc<
 
     switch (type) {
       case 'factory':
-        content = `import { pikkuPermissionFactory } from '#pikku'
+        content = `import { pikkuPermissionFactory } from '#pikku/function'
 
 export const ${name} = pikkuPermissionFactory(
   (param: string) =>
@@ -40,7 +40,7 @@ export const ${name} = pikkuPermissionFactory(
 
       case 'simple':
       default:
-        content = `import { pikkuPermission } from '#pikku'
+        content = `import { pikkuPermission } from '#pikku/function'
 
 export const ${name} = pikkuPermission(
   async ({ logger }, _data, { session }) => {

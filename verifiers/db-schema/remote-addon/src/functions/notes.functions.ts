@@ -5,7 +5,7 @@
  * They run on the host, against the host's database — which is the whole reason
  * the consumer must not fold this addon's schema into its own migrations.
  */
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const listNotes = pikkuSessionlessFunc<
   void,

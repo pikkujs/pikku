@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import type { AllMeta } from '../services/wiring.service.js'
 
 export const getAllMeta = pikkuFunc<null, AllMeta>({

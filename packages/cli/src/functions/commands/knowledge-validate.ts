@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { runKnowledgeValidate } from '@pikku/knowledge'
 import { renderKnowledgeValidate } from '../knowledge/render.js'
 import {

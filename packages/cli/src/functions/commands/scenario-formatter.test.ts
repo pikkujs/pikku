@@ -82,7 +82,8 @@ describe('formatScenarioFailure', () => {
             pageErrors: [],
             failedRequests: [],
             apiErrors: ['500 /api/rpc/console:readFunctionSource'],
-            screenshot: '.pikku/scenario-runs/run-1/code-editor/failure-admin.png',
+            screenshot:
+              '.pikku/scenario-runs/run-1/code-editor/failure-admin.png',
           },
         ],
       },

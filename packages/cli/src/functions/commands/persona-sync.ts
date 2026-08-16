@@ -1,6 +1,6 @@
 import type { Kysely } from 'kysely'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { createHttpPersonas } from '@pikku/core/ecosystem/persona'
 import type { ResolvedPersona } from '@pikku/core/ecosystem/services'
 import { personaEnvironmentRefusal } from '@pikku/core/ecosystem/persona'

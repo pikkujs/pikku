@@ -197,9 +197,6 @@ const _getPikkuCLIConfig = async (
         'pikku-function-types.gen.ts'
       )
     }
-    if (!result.typesDeclarationFile) {
-      result.typesDeclarationFile = join(result.outDir, 'pikku-types.gen.ts')
-    }
 
     // HTTP
     if (!result.httpWiringsFile) {

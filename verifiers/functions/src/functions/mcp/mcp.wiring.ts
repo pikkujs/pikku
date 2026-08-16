@@ -1,4 +1,4 @@
-import { wireMCPResource, wireMCPPrompt } from '#pikku'
+import { wireMCPPrompt, wireMCPResource } from '#pikku/mcp'
 import {
   getUserInfo,
   dynamicPromptGenerator,

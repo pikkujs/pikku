@@ -1,4 +1,4 @@
-import { defineHTTPRoutes, wireHTTPRoutes } from '#pikku/pikku-types.gen.js'
+import { defineHTTPRoutes, wireHTTPRoutes } from '#pikku/http'
 import {
   voiceDemoCompare,
   voiceDemoInterrupt,

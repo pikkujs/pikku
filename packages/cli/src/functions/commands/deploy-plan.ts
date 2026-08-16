@@ -1,7 +1,7 @@
 import { basename, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { generatePlan } from '../../deploy/plan/index.js'
 import { formatPlan } from '../../deploy/plan/formatter.js'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'

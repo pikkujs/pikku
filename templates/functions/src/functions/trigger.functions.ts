@@ -1,7 +1,5 @@
-import {
-  pikkuTriggerFunc,
-  pikkuSessionlessFunc,
-} from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuTriggerFunc } from '#pikku/trigger'
 import { OnTestEventInputSchema, OnTestEventOutputSchema } from '../schemas.js'
 
 /**

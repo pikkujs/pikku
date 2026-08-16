@@ -1,7 +1,7 @@
 import { existsSync } from 'fs'
 import { dirname } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { scaffoldFilePath } from '../../utils/file-writer.js'
 
 function capitalize(s: string): string {
@@ -33,7 +33,7 @@ export const pikkuNewFunction = pikkuSessionlessFunc<
 
     switch (type) {
       case 'func':
-        content = `import { pikkuFunc } from '#pikku'
+        content = `import { pikkuFunc } from '#pikku/function'
 
 export type ${inputName} = {
   // TODO: define input
@@ -53,7 +53,7 @@ export const ${name} = pikkuFunc<${inputName}, ${outputName}>({
         break
 
       case 'void':
-        content = `import { pikkuVoidFunc } from '#pikku'
+        content = `import { pikkuVoidFunc } from '#pikku/function'
 
 export type ${inputName} = {
   // TODO: define input
@@ -69,7 +69,7 @@ export const ${name} = pikkuVoidFunc<${inputName}>({
 
       case 'sessionless':
       default:
-        content = `import { pikkuSessionlessFunc } from '#pikku'
+        content = `import { pikkuSessionlessFunc } from '#pikku/function'
 
 export type ${inputName} = {
   // TODO: define input

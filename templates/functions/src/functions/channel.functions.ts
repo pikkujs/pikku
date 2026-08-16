@@ -1,8 +1,8 @@
 import {
-  pikkuChannelFunc,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
-} from '../../.pikku/pikku-types.gen.js'
+  pikkuChannelFunc,
+} from '#pikku/channel'
 import {
   ChannelAuthInputSchema,
   ChannelAuthOutputSchema,

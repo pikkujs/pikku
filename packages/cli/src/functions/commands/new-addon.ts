@@ -5,7 +5,7 @@ import {
   createEmptyManifest,
   saveManifest,
 } from '../../utils/contract-versions.js'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -186,8 +186,8 @@ export function getAddonFiles(
       // addon's own build resolves #pikku through tsconfig `paths` instead, so
       // these never have to point at the source tree.
       imports: {
-        '#pikku': './dist/.pikku/pikku-types.gen.js',
-        '#pikku/*': './dist/.pikku/*',
+        '#pikku/*.js': './dist/.pikku/*.js',
+        '#pikku/*': './dist/.pikku/*/index.js',
       },
       exports: {
         '.': {
@@ -300,7 +300,7 @@ ${description}
     files['src/services.ts'] =
       `import { UnauthorizedError } from '@pikku/core/errors'
 import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku'
+import { pikkuAddonWireServices } from '#pikku/addon'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -325,7 +325,7 @@ export const createWireServices = pikkuAddonWireServices(
     const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku'
+import { pikkuAddonWireServices } from '#pikku/addon'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -349,7 +349,7 @@ export const createWireServices = pikkuAddonWireServices(
     files['src/services.ts'] =
       `import { UnauthorizedError } from '@pikku/core/errors'
 import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku'
+import { pikkuAddonWireServices } from '#pikku/addon'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -370,7 +370,7 @@ export const createWireServices = pikkuAddonWireServices(
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
 import type { ${pascalName}Secrets } from './${name}.secret.js'
-import { pikkuAddonServices } from '#pikku'
+import { pikkuAddonServices } from '#pikku/addon'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
@@ -385,7 +385,7 @@ export const createSingletonServices = pikkuAddonServices(async (
   } else {
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonServices } from '#pikku'
+import { pikkuAddonServices } from '#pikku/addon'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
@@ -753,8 +753,8 @@ function getTestFiles(vars: AddonVars): Record<string, string> {
       private: true,
       type: 'module',
       imports: {
-        '#pikku': './.pikku/pikku-types.gen.ts',
-        '#pikku/*': './.pikku/*',
+        '#pikku/*.js': './.pikku/*.ts',
+        '#pikku/*': './.pikku/*/index.ts',
       },
       scripts: {
         pretest: 'pikku all',
@@ -814,7 +814,7 @@ function getTestFiles(vars: AddonVars): Record<string, string> {
   )
 
   // test/src/addons.ts
-  files['src/addons.ts'] = `import { wireAddon } from '#pikku'
+  files['src/addons.ts'] = `import { wireAddon } from '#pikku/function'
 
 wireAddon({ name: '${name}', package: '@pikku/addon-${name}' })
 `
@@ -825,7 +825,7 @@ wireAddon({ name: '${name}', package: '@pikku/addon-${name}' })
   LocalVariablesService,
   LocalSecretService,
 } from '@pikku/core/services'
-import { pikkuServices } from '#pikku'
+import { pikkuServices } from '#pikku/function'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 
@@ -844,7 +844,7 @@ export const createSingletonServices = pikkuServices(async (_config, existingSer
   // test/src/{name}-tests.function.ts
   files[`src/${name}-tests.function.ts`] =
     `import assert from 'node:assert/strict'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export type Test${pascalName}Input = {}
 export type Test${pascalName}Output = { passed: number; failed: string[] }

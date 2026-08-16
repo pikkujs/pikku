@@ -40,7 +40,7 @@ See `pikku-concepts` for the core mental model.
 Register an addon in the consuming project:
 
 ```typescript
-import { wireAddon } from '#pikku'
+import { wireAddon } from '#pikku/function'
 
 wireAddon({
   name: string,                    // Namespace for addon functions (e.g. 'todos')
@@ -123,7 +123,7 @@ Type-safe reference to a function — local or addon — for use in any wiring. 
 returns a function config that proxies the call via RPC at runtime:
 
 ```typescript
-import { ref } from '#pikku'
+import { ref } from '#pikku/function'
 
 ref('todos:addTodo') // namespace:functionName for an addon function
 ref('myLocalFunc') // a local function by name
@@ -134,7 +134,7 @@ There is no `addon()` helper; `ref()` covers both. For an addon that publishes
 `refChannel` and `refCLI`, which carry the addon's own route/config metadata:
 
 ```typescript
-import { refHTTP } from '#pikku'
+import { refHTTP } from '#pikku/function'
 
 wireHTTP(refHTTP('todos:listTodos', { basePath: '/api' }))
 ```
@@ -146,7 +146,7 @@ second argument is always present — an addon never falls back to its own logge
 variables or secrets; the consuming app supplies them:
 
 ```typescript
-import { pikkuAddonServices } from '#pikku'
+import { pikkuAddonServices } from '#pikku/addon'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, { secrets, logger }) => {
@@ -167,7 +167,7 @@ config object.
 Define per-request services for an addon package (created fresh per HTTP request, queue job, etc.):
 
 ```typescript
-import { pikkuAddonWireServices } from '#pikku'
+import { pikkuAddonWireServices } from '#pikku/addon'
 
 export const createWireServices = pikkuAddonWireServices(
   async (singletonServices, wire) => {
@@ -195,7 +195,7 @@ This generates `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json
 
 ```typescript
 // src/services.ts
-import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku'
+import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/addon'
 import { TodoStore } from './todo-store.service.js'
 
 export const createSingletonServices = pikkuAddonServices(async () => {
@@ -216,7 +216,7 @@ export const createWireServices = pikkuAddonWireServices(
 ```typescript
 // src/functions/addTodo.function.ts
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 const AddTodoInput = z.object({ title: z.string() })
 const AddTodoOutput = z.object({ id: z.string(), title: z.string() })
@@ -269,7 +269,7 @@ yarn add @my-org/addon-todos
 
 ```typescript
 // wirings/todos.wirings.ts
-import { wireAddon } from '#pikku'
+import { wireAddon } from '#pikku/function'
 
 wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 ```
@@ -290,7 +290,8 @@ export const myFunc = pikkuFunc({
 ### Wire to HTTP
 
 ```typescript
-import { wireHTTP, ref } from '#pikku'
+import { wireHTTP } from '#pikku/http'
+import { ref } from '#pikku/function'
 
 wireHTTP({
   method: 'get',
@@ -303,7 +304,8 @@ wireHTTP({
 Or batch multiple addon routes with `defineHTTPRoutes` + `wireHTTPRoutes`:
 
 ```typescript
-import { wireHTTPRoutes, defineHTTPRoutes, ref } from '#pikku'
+import { wireHTTPRoutes, defineHTTPRoutes } from '#pikku/http'
+import { ref } from '#pikku/function'
 
 const todoRoutes = defineHTTPRoutes({
   tags: ['todos'],
@@ -321,7 +323,7 @@ wireHTTPRoutes({ basePath: '/api', routes: { todos: todoRoutes } })
 
 ```typescript
 import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { ref } from '#pikku'
+import { ref } from '#pikku/function'
 
 export const todoAgent = pikkuAgent({
   name: 'todo-agent',

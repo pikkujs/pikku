@@ -5,7 +5,8 @@
  * for parameters and options.
  */
 
-import { wireCLI, pikkuCLICommand, pikkuFunc } from '#pikku'
+import { pikkuCLICommand, wireCLI } from '#pikku/cli'
+import { pikkuFunc } from '#pikku/function'
 
 // Valid: Subcommands with proper types
 wireCLI({

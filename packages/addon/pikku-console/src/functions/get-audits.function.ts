@@ -1,5 +1,5 @@
 import type { AuditEvent } from '@pikku/core/ecosystem/services'
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import {
   resolveAuditUsers,
   type AuditUserDirectory,

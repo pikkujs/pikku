@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'fs'
 import { dirname, join, resolve } from 'path'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { loadManifest } from '../../utils/contract-versions.js'
 import { loadSurface, readSurface, type Surface } from '../../utils/surface.js'
 import {

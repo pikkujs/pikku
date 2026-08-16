@@ -1,4 +1,4 @@
-import { wireScheduler } from '#pikku'
+import { wireScheduler } from '#pikku/scheduler'
 import { myScheduledTask } from './scheduled.function.js'
 
 wireScheduler({

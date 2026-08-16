@@ -9,7 +9,7 @@
 import { wireHTTPRoutes } from '@pikku/core/http'
 import { wireChannel } from '@pikku/core/channel'
 import { wireCLI } from '@pikku/core/cli'
-import { refHTTP, refChannel, refCLI, ref } from '#pikku'
+import { ref, refCLI, refChannel, refHTTP } from '#pikku/function'
 import { defineHTTPRoutes } from '#pikku/http/pikku-http-types.gen.js'
 
 wireHTTPRoutes({

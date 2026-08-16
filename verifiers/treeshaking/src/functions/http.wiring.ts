@@ -1,4 +1,4 @@
-import { wireHTTP, wireHTTPRoutes } from '#pikku'
+import { wireHTTP, wireHTTPRoutes } from '#pikku/http'
 import {
   sendEmail,
   sendSMS,

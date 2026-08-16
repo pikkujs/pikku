@@ -1,7 +1,4 @@
-import {
-  pikkuFunc,
-  pikkuSessionlessFunc,
-} from '../../.pikku/pikku-types.gen.js'
+import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
 import {
   EmptyInputSchema,
   UserIdInputSchema,

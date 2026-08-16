@@ -1,4 +1,5 @@
-import { wireHTTP, ref, wireAddon } from '#pikku'
+import { ref, wireAddon } from '#pikku/function'
+import { wireHTTP } from '#pikku/http'
 
 wireAddon({ name: 'ext', package: '@pikku/templates-function-addon' })
 

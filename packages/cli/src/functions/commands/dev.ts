@@ -1,7 +1,7 @@
 import { join, resolve } from 'path'
 import { existsSync, readFileSync } from 'node:fs'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import chokidar, { type FSWatcher } from 'chokidar'
 import {
   pikkuDevReloader,

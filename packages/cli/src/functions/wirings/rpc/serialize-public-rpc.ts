@@ -7,7 +7,7 @@ export interface PublicRPCGenOutput {
  * Generate public RPC HTTP endpoint
  */
 export const serializePublicRPC = (
-  pathToPikkuTypes: string,
+  leaf: (name: string) => string,
   requireAuth: boolean = true,
   globalHTTPPrefix: string = ''
 ): PublicRPCGenOutput => {
@@ -29,7 +29,8 @@ export const RPCCall = z.object({
  * Auto-generated public RPC HTTP endpoint
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
+import { pikkuSessionlessFunc } from '${leaf('function')}'
+import { wireHTTP } from '${leaf('http')}'
 import { RPCCall } from './rpc-public.schemas.gen.js'
 
 export const rpcCaller = pikkuSessionlessFunc({

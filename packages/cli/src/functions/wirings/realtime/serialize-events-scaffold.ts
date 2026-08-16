@@ -24,7 +24,7 @@ export interface EventsGenOutput {
  */
 export const serializeEventsScaffold = (
   authRequired: boolean,
-  pikkuTypesImportPath: string
+  leaf: (name: string) => string
 ): EventsGenOutput => {
   const auth = authRequired ? 'true' : 'false'
 
@@ -37,13 +37,9 @@ import { z } from 'zod'
 export const TopicRef = z.object({ topic: z.string() })
 `
 
-  const functions = `import {
-  pikkuChannelFunc,
-  pikkuSessionlessFunc,
-  wireChannel,
-  wireHTTP,
-  defineChannelRoutes,
-} from '${pikkuTypesImportPath}'
+  const functions = `import { pikkuChannelFunc, pikkuSessionlessFunc } from '${leaf('function')}'
+import { wireChannel, defineChannelRoutes } from '${leaf('channel')}'
+import { wireHTTP } from '${leaf('http')}'
 import { TopicRef } from './events.schemas.gen.js'
 
 /**

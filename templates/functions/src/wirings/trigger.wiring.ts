@@ -1,4 +1,4 @@
-import { wireTrigger, wireTriggerSource } from '../../.pikku/pikku-types.gen.js'
+import { wireTrigger, wireTriggerSource } from '#pikku/trigger'
 import {
   onTestEvent,
   testEventTrigger,

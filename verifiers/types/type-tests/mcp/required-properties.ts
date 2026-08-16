@@ -6,12 +6,12 @@
  */
 
 import {
-  wireMCPResource,
-  wireMCPPrompt,
-  pikkuMCPToolFunc,
-  pikkuMCPResourceFunc,
   pikkuMCPPromptFunc,
-} from '#pikku'
+  pikkuMCPResourceFunc,
+  pikkuMCPToolFunc,
+  wireMCPPrompt,
+  wireMCPResource,
+} from '#pikku/mcp'
 
 export const toolFunc = pikkuMCPToolFunc<unknown>({
   description: 'A valid tool',

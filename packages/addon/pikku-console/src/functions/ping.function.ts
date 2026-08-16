@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const ping = pikkuFunc<null, { pong: true }>({
   title: 'Ping',

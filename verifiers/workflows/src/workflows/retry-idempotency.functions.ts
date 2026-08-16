@@ -7,7 +7,7 @@
  * so the runner can assert exactly what happened under failure.
  */
 import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { tracker } from '../runners/retry-idempotency-tracker.js'
 
 /**

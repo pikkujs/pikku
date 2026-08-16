@@ -14,7 +14,8 @@
     "types": ["node"],
     "paths": {
       "#pikku/scenario": ["../../.pikku/scenarios/pikku-scenario-types.gen.ts"],
-      "#pikku/*": ["../../.pikku/*"]
+      "#pikku/*.js": ["../../.pikku/*.ts"],
+      "#pikku/*": ["../../.pikku/*/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],

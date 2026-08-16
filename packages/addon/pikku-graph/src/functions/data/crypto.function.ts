@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { createHash, createHmac, randomBytes, randomUUID } from 'crypto'
 
 export const CryptoInput = z.object({

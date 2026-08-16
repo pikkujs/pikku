@@ -4,7 +4,7 @@ import {
   LocalEnvironmentOnlyError,
 } from '@pikku/core/ecosystem/errors'
 import { pikkuState } from '@pikku/core/ecosystem'
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {
   assertAddonPackageName,
@@ -119,7 +119,7 @@ export const installAddon = pikkuFunc<
     // generated types regardless of where the addon wiring physically sits (a
     // relative guess breaks the moment scaffold.pikkuDir and the real .pikku
     // location diverge).
-    const wiringContent = `import { wireAddon } from '#pikku/pikku-types.gen.js'
+    const wiringContent = `import { wireAddon } from '#pikku/function'
 
 wireAddon(${serializeWireAddon(namespace, packageName, overrides)})
 `

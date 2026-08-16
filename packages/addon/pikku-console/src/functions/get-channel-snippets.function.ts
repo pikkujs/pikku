@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import type { ChannelMeta } from '@pikku/core/ecosystem/channel'
 import type { ChannelSnippets } from '../services/wiring.service.js'
 

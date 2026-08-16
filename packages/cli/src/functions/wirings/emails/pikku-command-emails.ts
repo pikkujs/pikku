@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import type { PikkuCLIConfig } from '../../../../types/config.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'

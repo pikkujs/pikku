@@ -7,7 +7,8 @@
  *
  * This endpoint allows exposed RPC functions to be called over HTTP.
  */
-import { pikkuSessionlessFunc, wireHTTP } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireHTTP } from '#pikku/http'
 
 /**
  * Public RPC endpoint that invokes any exposed RPC by name

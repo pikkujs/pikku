@@ -5,7 +5,7 @@ import type { AuthDefinition } from '@pikku/inspector'
 
 const AUTH_FILE = '/project/.pikku/auth.gen.ts'
 const SOURCE_FILE = '/project/src/auth.ts'
-const TYPES_FILE = '/project/.pikku/pikku-types.gen.ts'
+const leaf = (name: string) => `./${name}/index.js`
 
 const def = (overrides: Partial<AuthDefinition> = {}): AuthDefinition => ({
   exportName: 'auth',
@@ -17,7 +17,7 @@ const def = (overrides: Partial<AuthDefinition> = {}): AuthDefinition => ({
 })
 
 const gen = (providers: string[], d: AuthDefinition = def()) =>
-  serializeAuthGen(d, providers, AUTH_FILE, TYPES_FILE, {})
+  serializeAuthGen(d, providers, AUTH_FILE, leaf, {})
 const genWiring = (providers: string[], d: AuthDefinition = def()) =>
   gen(providers, d).wiring
 const genSecrets = (providers: string[], d: AuthDefinition = def()) =>
@@ -33,13 +33,14 @@ describe('serializeAuthGen', () => {
 
   test('wiring file imports the framework modules it uses', () => {
     const output = genWiring(['github'])
-    // The pikku types import is resolved relative to the scaffold location (not
-    // the `#pikku` subpath) so it works when the scaffold dir is outside the
-    // package's imports map.
+    // Each name comes from the leaf it belongs to, resolved relative to the
+    // scaffold location (not the `#pikku` subpath) so it works when the
+    // scaffold dir is outside the package's imports map.
     assert.match(
       output,
-      /import { pikkuSessionlessFunc, wireHTTPRoutes } from '\.\/pikku-types\.gen\.js'/
+      /import { pikkuSessionlessFunc } from '\.\/function\/index\.js'/
     )
+    assert.match(output, /import { wireHTTPRoutes } from '\.\/http\/index\.js'/)
     assert.match(
       output,
       /import { createAuthHandler, betterAuthSession } from '@pikku\/better-auth'/
@@ -259,7 +260,7 @@ describe('serializeAuthGen', () => {
   describe('console bearer token (scaffold.console enabled)', () => {
     const statelessDef = def({ cookieCache: true })
     const genConsole = (d: AuthDefinition = def()) =>
-      serializeAuthGen(d, ['github'], AUTH_FILE, TYPES_FILE, {}, false, true)
+      serializeAuthGen(d, ['github'], AUTH_FILE, leaf, {}, false, true)
 
     test('stateless: the middleware file registers authBearer alongside the session verifier', () => {
       const out = genConsole(statelessDef)
@@ -309,7 +310,7 @@ describe('serializeAuthGen', () => {
 
   describe('user-registered global betterAuthSession → CLI steps aside', () => {
     const genSkip = (providers: string[], d: AuthDefinition = def()) =>
-      serializeAuthGen(d, providers, AUTH_FILE, TYPES_FILE, {}, true)
+      serializeAuthGen(d, providers, AUTH_FILE, leaf, {}, true)
 
     test('drops the generated stateful session middleware (no double-register)', () => {
       const out = genSkip(['github'])

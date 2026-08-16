@@ -1,6 +1,12 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import {
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+  existsSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -60,7 +66,10 @@ describe('FileScenarioRunStore', () => {
     await store.start(record())
 
     await store.recordScenario('run-1', result({ name: 'one' }))
-    await store.recordScenario('run-1', result({ name: 'two', status: 'failed' }))
+    await store.recordScenario(
+      'run-1',
+      result({ name: 'two', status: 'failed' })
+    )
 
     const partial = await store.get('run-1')
     assert.deepEqual(
@@ -109,11 +118,18 @@ describe('FileScenarioRunStore', () => {
 
   test('runs list newest first, summarised without loading their stacks', async () => {
     const store = new FileScenarioRunStore({ dir })
-    await store.start(record({ runId: 'older', startedAt: '2026-08-14T10:00:00.000Z' }))
-    await store.start(record({ runId: 'newer', startedAt: '2026-08-15T10:00:00.000Z' }))
-    await store.recordScenario('newer', result({ artifacts: [
-      { scenario: 'x', kind: 'video', path: 'x/admin.mp4' },
-    ] }))
+    await store.start(
+      record({ runId: 'older', startedAt: '2026-08-14T10:00:00.000Z' })
+    )
+    await store.start(
+      record({ runId: 'newer', startedAt: '2026-08-15T10:00:00.000Z' })
+    )
+    await store.recordScenario(
+      'newer',
+      result({
+        artifacts: [{ scenario: 'x', kind: 'video', path: 'x/admin.mp4' }],
+      })
+    )
     await store.recordScenario('newer', result({ status: 'failed' }))
     await store.finish('newer', {
       status: 'failed',
@@ -150,7 +166,10 @@ describe('FileScenarioRunStore', () => {
     const store = new FileScenarioRunStore({ dir })
     for (const day of ['11', '12', '13']) {
       await store.start(
-        record({ runId: `run-${day}`, startedAt: `2026-08-${day}T10:00:00.000Z` })
+        record({
+          runId: `run-${day}`,
+          startedAt: `2026-08-${day}T10:00:00.000Z`,
+        })
       )
     }
 
@@ -166,7 +185,10 @@ describe('FileScenarioRunStore', () => {
     const store = new FileScenarioRunStore({ dir, keep: 2 })
     for (const day of ['11', '12', '13']) {
       await store.start(
-        record({ runId: `run-${day}`, startedAt: `2026-08-${day}T10:00:00.000Z` })
+        record({
+          runId: `run-${day}`,
+          startedAt: `2026-08-${day}T10:00:00.000Z`,
+        })
       )
       writeFileSync(join(dir, `run-${day}`, 'video.mp4'), 'x')
     }

@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const getWorkflowVersion = pikkuFunc<
   { name: string; graphHash: string },

@@ -5,7 +5,7 @@
  * with shared configuration (basePath, tags, auth, middleware).
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { wireHTTPRoutes, defineHTTPRoutes } from '@pikku/core/http'
 
 // Sample functions for testing

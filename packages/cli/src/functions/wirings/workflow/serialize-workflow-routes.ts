@@ -7,7 +7,7 @@ export interface WorkflowRoutesGenOutput {
  * Generate catch-all HTTP routes for workflow operations
  */
 export const serializeWorkflowRoutes = (
-  pathToPikkuTypes: string,
+  leaf: (name: string) => string,
   requireAuth: boolean = true
 ): WorkflowRoutesGenOutput => {
   const authFlag = requireAuth ? 'true' : 'false'
@@ -44,7 +44,8 @@ export const Acknowledged = z.object({ ok: z.literal(true) })
  * Workflow HTTP catch-all routes
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc, wireHTTPRoutes } from '${pathToPikkuTypes}'
+import { pikkuSessionlessFunc } from '${leaf('function')}'
+import { wireHTTPRoutes } from '${leaf('http')}'
 import { MissingServiceError } from '@pikku/core/errors'
 import { assertWorkflowRunOwner } from '@pikku/core/ecosystem/workflow'
 import {

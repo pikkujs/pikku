@@ -2,7 +2,7 @@ import { basename, join, relative } from 'node:path'
 import { readFile } from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import type {
   ProviderAdapter,
   EntryGenerationContext,

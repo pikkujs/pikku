@@ -2,7 +2,8 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { serializePublicAgent } from './serialize-public-agent.js'
 
-const generate = () => serializePublicAgent('./pikku-types.gen.js')
+const generate = () =>
+  serializePublicAgent((name: string) => `./${name}/index.js`)
 
 /**
  * The generated HTTP surface is the only contract a shipped app has for calling

@@ -68,7 +68,8 @@ export const scenarioArtifactContentType = (path: string): string =>
  * client and is joined onto a directory. Anything that could climb out of the
  * run, or name something other than a file inside it, is refused.
  */
-const SAFE_ARTIFACT_PATH = /^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/
+const SAFE_ARTIFACT_PATH =
+  /^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/
 
 export interface FileScenarioRunStoreOptions {
   /** The directory runs live under — one folder per run, named by its id. */
@@ -222,9 +223,7 @@ export class FileScenarioRunStore implements ScenarioRunStore {
     return next
   }
 
-  private async read(
-    runId: string
-  ): Promise<ScenarioRunRecord | undefined> {
+  private async read(runId: string): Promise<ScenarioRunRecord | undefined> {
     if (!SAFE_RUN_ID.test(runId)) {
       return undefined
     }

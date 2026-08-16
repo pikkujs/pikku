@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import { pikkuState } from '@pikku/core/ecosystem'
 
 export interface ScorerListEntry {

@@ -147,7 +147,7 @@ test('reads the override names out of the instance wiring file', async () => {
     const wiringFile = join(root, 'widget-promo.addon.ts')
     await writeFile(
       wiringFile,
-      `import { wireAddon } from '#pikku/pikku-types.gen.js'
+      `import { wireAddon } from '#pikku/function'
 
 wireAddon({
   name: 'widget-promo',

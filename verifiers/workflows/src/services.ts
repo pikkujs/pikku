@@ -1,4 +1,4 @@
-import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/function'
 import type { JWTService } from '@pikku/core/services'
 import {
   ConsoleLogger,

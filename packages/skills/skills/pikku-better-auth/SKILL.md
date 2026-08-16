@@ -274,7 +274,7 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables }) => {
 Functions that require a session use `pikkuFunc` — anonymous callers are rejected automatically. `betterAuthSession` has already bridged better-auth's session into `session`:
 
 ```typescript
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const me = pikkuFunc({
   expose: true,
@@ -346,7 +346,7 @@ Within that boundary, three properties bound the damage:
 
 - **It only ever signs in actors.** The plugin adds a `user.actor` boolean
   column; an email matching a row without it is refused with `User is not an
-  actor`. So the secret cannot take over a **real user's** account — the blast
+actor`. So the secret cannot take over a **real user's** account — the blast
   radius is the actor accounts and whatever roles they were granted.
 - **Unknown emails are created**, flagged `actor: true`, so a scenario that
   declares a new persona needs no seed step. Note the flip side: the secret

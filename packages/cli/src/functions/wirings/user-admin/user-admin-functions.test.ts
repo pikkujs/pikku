@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { serializeUserAdminFunctions } from './serialize-user-admin-functions.js'
 import { pikkuUserAdminFunctions } from './pikku-command-user-admin-functions.js'
 
+const leaf = (name: string) => `#pikku/${name}`
+
 const ADMIN_DEFINITION = {
   exportName: 'auth',
   sourceFile: '/app/src/auth.ts',
@@ -22,7 +24,7 @@ const services = (
       scaffold,
       userAdminFunctionsFile: '/app/src/scaffold/admin/user-admin.gen.ts',
       userAdminSchemasFile: '/app/src/scaffold/admin/user-admin.schemas.gen.ts',
-      typesDeclarationFile: '/app/.pikku/pikku-types.gen.ts',
+      outDir: '/app/.pikku',
       packageMappings: {},
     },
     getInspectorState: async () => ({ auth: { definition } }),
@@ -32,7 +34,7 @@ const services = (
   }) as any
 
 describe('serializeUserAdminFunctions', () => {
-  const { functions: out, schemas } = serializeUserAdminFunctions('#pikku')
+  const { functions: out, schemas } = serializeUserAdminFunctions(leaf)
 
   test('gates every function on its own capability', () => {
     assert.match(out, /scopes: \['admin:users:list'\]/)
@@ -71,9 +73,9 @@ describe('serializeUserAdminFunctions', () => {
   })
 
   test('requires auth by default and honours the sessionless opt-out', () => {
-    assert.match(serializeUserAdminFunctions('#pikku').functions, /auth: true/)
+    assert.match(serializeUserAdminFunctions(leaf).functions, /auth: true/)
     assert.match(
-      serializeUserAdminFunctions('#pikku', false).functions,
+      serializeUserAdminFunctions(leaf, false).functions,
       /auth: false/
     )
   })

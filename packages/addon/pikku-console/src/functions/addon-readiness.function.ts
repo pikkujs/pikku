@@ -5,7 +5,7 @@ import {
   BadRequestError,
   LocalEnvironmentOnlyError,
 } from '@pikku/core/ecosystem/errors'
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import { readWiringOverrides } from '../lib/addon-readiness.js'
 import { assertAddonPackageName } from '../lib/derive-instance-overrides.js'

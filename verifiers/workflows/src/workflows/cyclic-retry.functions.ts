@@ -9,7 +9,7 @@
  * own responsibility: `attempt` counts passes in run state and branches `done`
  * once it hits the target, so the cycle converges instead of looping forever.
  */
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 // Entry node: seed the run state, then hand off to the cyclic node.
 export const cyclicBegin = pikkuSessionlessFunc<

@@ -3,7 +3,7 @@
  * Mock implementations for document management and approval workflows
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 // Document CRUD
 export const documentCreate = pikkuSessionlessFunc<

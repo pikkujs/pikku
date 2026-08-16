@@ -160,6 +160,21 @@ while IFS= read -r -d '' f; do
       -e "s|@pikku/core/internal|@pikku/core/ecosystem|g" \
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
+# Write the leaf subpath entries the pinned CLI predates. `#pikku/<leaf>`
+# resolves to `.pikku/<leaf>/index.ts`, and this source tree imports through
+# those specifiers — so without them neither the pinned CLI's own schema pass
+# (which runtime-imports this source tree) nor the first tsc below can resolve a
+# single command file, and the local CLI that would generate them properly never
+# gets built. Drop this once PIKKU_CLI_VERSION emits leaf indexes itself.
+write_leaf_indexes() {
+  for leaf_dir in .pikku/*/; do
+    entry=$(find "$leaf_dir" -maxdepth 1 \( -name '*-types.gen.ts' -o -name 'pikku-credentials.gen.ts' -o -name 'auth.types.ts' \) | head -1)
+    [ -n "$entry" ] || continue
+    printf 'export * from %s\n' "'./$(basename "${entry%.ts}").js'" > "$leaf_dir/index.ts"
+  done
+}
+
+write_leaf_indexes
 "$_bootstrap_dir/node_modules/.bin/pikku"
 rm -rf "$_bootstrap_dir"
 
@@ -170,6 +185,8 @@ if [ -f .pikku/pikku-types.gen.ts ]; then
   sed "s|./forge/pikku-forge-types.gen.js|./node/pikku-node-types.gen.js|g" .pikku/pikku-types.gen.ts > "$tmp" && mv "$tmp" .pikku/pikku-types.gen.ts
 fi
 mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
+
+write_leaf_indexes
 
 # Patch legacy field names and stale imports in bootstrapped files.
 #

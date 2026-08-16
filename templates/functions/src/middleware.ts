@@ -1,5 +1,5 @@
 import type { AgentStreamEvent } from '@pikku/core/agent'
-import { pikkuChannelMiddleware } from '../.pikku/pikku-types.gen.js'
+import { pikkuChannelMiddleware } from '#pikku/channel'
 import { pikkuAgentMiddleware } from '../.pikku/agent/pikku-agent-types.gen.js'
 
 // The better-auth session-bridge middleware is generated into auth.gen.ts by the

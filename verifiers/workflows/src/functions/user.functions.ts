@@ -3,7 +3,7 @@
  * Mock implementations for user CRUD, invites, and verification
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 // User CRUD
 export const userCreate = pikkuSessionlessFunc<

@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { pikkuWorkflowFunc } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
 import type { Todo, Priority } from '../schemas.js'
 

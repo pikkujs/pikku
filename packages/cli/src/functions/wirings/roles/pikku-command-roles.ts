@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeRolesTypes } from './serialize-roles-types.js'
@@ -13,7 +13,7 @@ export const pikkuRoles = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     }
 
     // Same cold-start reasoning as Scopes: on a bare .pikku this runs before
-    // pikku-types.gen.ts exists, so it takes the zero state. The file only has
+    // the function leaf exists, so it takes the zero state. The file only has
     // to exist so personas can import SystemRoleName; the real Roles step
     // regenerates it with the declarations once setup has run.
     const bootstrap = data?.bootstrap ?? false

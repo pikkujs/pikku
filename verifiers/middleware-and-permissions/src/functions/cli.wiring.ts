@@ -1,4 +1,5 @@
-import { wireCLI, pikkuCLICommand, addTagMiddleware } from '#pikku'
+import { pikkuCLICommand, wireCLI } from '#pikku/cli'
+import { addTagMiddleware } from '#pikku/function'
 import { tagMiddleware } from '../middleware/tag.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'

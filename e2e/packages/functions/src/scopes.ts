@@ -1,4 +1,4 @@
-import { defineScope } from '#pikku/pikku-types.gen.js'
+import { defineScope } from '#pikku/scopes'
 
 defineScope({
   reports: {

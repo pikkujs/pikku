@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/pikku-types.gen.js'
+import { pikkuFunc } from '#pikku/function'
 
 /**
  * Records one audit event, so the audit suite has a trail produced by the real

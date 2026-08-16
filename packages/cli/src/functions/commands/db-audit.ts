@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { resolveDb } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 import type { ClassificationManifest } from '@pikku/core/ecosystem/types'

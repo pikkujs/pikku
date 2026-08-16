@@ -1,9 +1,9 @@
 import {
-  pikkuChannelFunc,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
-  pikkuSessionlessFunc,
-} from '#pikku'
+  pikkuChannelFunc,
+} from '#pikku/channel'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
   async ({ logger }, _, { channel }) => {

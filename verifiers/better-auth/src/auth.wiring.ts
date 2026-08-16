@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import { bearer } from 'better-auth/plugins'
-import { pikkuBetterAuth } from '#pikku'
+import { pikkuBetterAuth } from '#pikku/auth'
 
 /**
  * Verifier better-auth configuration. Exercises the full pikku integration:

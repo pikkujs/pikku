@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const deleteScenarioRun = pikkuFunc<{ runId: string }, void>({
   title: 'Delete Scenario Run',

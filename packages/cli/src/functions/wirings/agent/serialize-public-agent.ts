@@ -4,7 +4,7 @@ export interface PublicAgentGenOutput {
 }
 
 export const serializePublicAgent = (
-  pathToPikkuTypes: string,
+  leaf: (name: string) => string,
   requireAuth: boolean = true,
   globalHTTPPrefix: string = ''
 ): PublicAgentGenOutput => {
@@ -66,7 +66,8 @@ export const ThreadDeleted = z.object({ deleted: z.boolean() })
 `
 
   const functions = `import { canAccessThread, threadOwnerConstraint } from '@pikku/core/ecosystem/agent'
-import { pikkuSessionlessFunc, pikkuPermission, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
+import { pikkuPermission, pikkuSessionlessFunc } from '${leaf('function')}'
+import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
 import {
   AgentCall,
   AgentApproval,

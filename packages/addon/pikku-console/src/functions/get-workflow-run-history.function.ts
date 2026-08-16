@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const getWorkflowRunHistory = pikkuFunc<{ runId: string }, any[]>({
   title: 'Get Workflow Run History',

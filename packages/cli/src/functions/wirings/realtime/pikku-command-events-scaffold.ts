@@ -1,5 +1,5 @@
-import { pikkuSessionlessFunc } from '#pikku'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
@@ -24,14 +24,9 @@ export const pikkuEventsScaffold = pikkuSessionlessFunc<void, boolean>({
       'events',
       config.scaffold.events
     ).auth
-    const pikkuTypesImportPath = getFileImportRelativePath(
-      config.eventsChannelFile,
-      config.typesDeclarationFile,
-      config.packageMappings
-    )
     const { schemas, functions } = serializeEventsScaffold(
       authRequired,
-      pikkuTypesImportPath
+      (name) => getLeafImportPath(config.eventsChannelFile!, name, config)
     )
     await writeFileInDir(logger, config.eventsSchemasFile, schemas)
     await writeFileInDir(logger, config.eventsChannelFile, functions)

@@ -2,7 +2,7 @@ import { resolve, dirname } from 'node:path'
 import { existsSync, mkdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 function targetSuffix(target: string): string {
   return target.replace(/^bun-/, '').replace(/[^a-z0-9_-]/g, '-')

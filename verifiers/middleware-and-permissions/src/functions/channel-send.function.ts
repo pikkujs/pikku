@@ -1,4 +1,4 @@
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuVoidFunc } from '#pikku/function'
 import { functionMiddleware } from '../middleware/function.js'
 import { functionPermission } from '../permissions/function.js'
 

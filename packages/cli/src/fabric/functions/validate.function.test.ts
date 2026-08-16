@@ -57,8 +57,8 @@ async function makeValidProject(root: string) {
   await writeJson(join(root, 'packages', 'functions', 'package.json'), {
     type: 'module',
     imports: {
-      '#pikku': './.pikku/pikku-types.gen.ts',
-      '#pikku/*': './.pikku/*',
+      '#pikku/*.js': './.pikku/*.ts',
+      '#pikku/*': './.pikku/*/index.ts',
     },
     dependencies: {
       '@pikku/schema-cfworker': '^0.12.0',
@@ -622,8 +622,8 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
           imports: {
-            '#pikku': './.pikku/pikku-types.gen.ts',
-            '#pikku/*': './.pikku/*',
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
           },
           dependencies: {
             '@pikku/cloudflare': '^0.12.6',
@@ -673,7 +673,10 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
           type: 'module',
-          imports: { '#pikku': './.pikku/pikku-types.gen.ts' },
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
           dependencies: { '@pikku/kysely': '^0.12.0' }, // schema-cfworker omitted
         })
         const result = await runValidate(tmp)
@@ -694,7 +697,10 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
           type: 'module',
-          imports: { '#pikku': './.pikku/pikku-types.gen.ts' },
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
           dependencies: { '@pikku/schema-cfworker': '^0.12.0' }, // kysely omitted
         })
         const result = await runValidate(tmp)
@@ -1750,7 +1756,7 @@ describe('knowledge base (live validate.function)', () => {
 describe('better-auth stateless session (live validate.function)', () => {
   const authFile = (cookieCache: boolean) =>
     `import { betterAuth } from 'better-auth'
-import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
+import { pikkuBetterAuth } from '#pikku/auth'
 export const auth = pikkuBetterAuth(async ({ kysely, secrets }) => {
   const BETTER_AUTH_SECRET = await secrets.getSecret('BETTER_AUTH_SECRET')
   return betterAuth({
@@ -1808,7 +1814,7 @@ export const auth = pikkuBetterAuth(async ({ kysely, secrets }) => {
       await makeValidProject(tmp)
       await writeFile(
         join(tmp, 'packages', 'functions', 'src', 'wirings', 'middleware.ts'),
-        `import { addHTTPMiddleware } from '#pikku'
+        `import { addHTTPMiddleware } from '#pikku/http'
 import { betterAuthSession } from '@pikku/better-auth'
 addHTTPMiddleware('*', [betterAuthSession()])
 `,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const AggregateFieldInput = z.object({
   field: z.string().describe('The field path to collect values from'),

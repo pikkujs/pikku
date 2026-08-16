@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { PikkuError } from '@pikku/core/ecosystem/errors'
 import { CommandSummary } from '../../utils/command-summary.js'
 

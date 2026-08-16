@@ -1,5 +1,5 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/ecosystem/errors'
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const readFunctionSource = pikkuFunc<
   { sourceFile: string; exportedName: string },

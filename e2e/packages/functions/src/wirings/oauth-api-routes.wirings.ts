@@ -1,8 +1,5 @@
-import {
-  defineHTTPRoutes,
-  wireHTTPRoutes,
-  ref,
-} from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/function'
+import { defineHTTPRoutes, wireHTTPRoutes } from '#pikku/http'
 
 export const oauthApiRoutes = defineHTTPRoutes({
   auth: false,

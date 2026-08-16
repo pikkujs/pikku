@@ -1,5 +1,5 @@
-import { pikkuSessionlessFunc } from '#pikku'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
@@ -13,12 +13,9 @@ export const pikkuRemoteRPC = pikkuSessionlessFunc<void, boolean>({
     }
 
     if (config.remoteRpcWorkersFile && config.remoteRpcSchemasFile) {
-      const pathToPikkuTypes = getFileImportRelativePath(
-        config.remoteRpcWorkersFile,
-        config.typesDeclarationFile,
-        config.packageMappings
-      )
-      const { schemas, functions } = serializeRemoteRPC(pathToPikkuTypes)
+      const leaf = (name: string) =>
+        getLeafImportPath(config.remoteRpcWorkersFile!, name, config)
+      const { schemas, functions } = serializeRemoteRPC(leaf)
       await writeFileInDir(logger, config.remoteRpcSchemasFile, schemas)
       await writeFileInDir(logger, config.remoteRpcWorkersFile, functions)
       await removeLegacyScaffoldFile(config.remoteRpcWorkersFile)

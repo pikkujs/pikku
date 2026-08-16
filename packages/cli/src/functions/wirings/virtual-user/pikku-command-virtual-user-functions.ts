@@ -1,5 +1,6 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeVirtualUserFunctions } from './serialize-virtual-user-functions.js'
@@ -35,18 +36,15 @@ export const pikkuVirtualUserFunctions = pikkuSessionlessFunc<void, boolean>({
       )
     }
 
-    const pathToPikkuTypes = getFileImportRelativePath(
-      config.virtualUserFunctionsFile,
-      config.typesDeclarationFile,
-      config.packageMappings
-    )
+    const leaf = (name: string) =>
+      getLeafImportPath(config.virtualUserFunctionsFile!, name, config)
     const pathToPersonas = getFileImportRelativePath(
       config.virtualUserFunctionsFile,
       config.personasWiringFile,
       config.packageMappings
     )
     const { schemas, functions } = serializeVirtualUserFunctions(
-      pathToPikkuTypes,
+      leaf,
       pathToPersonas,
       resolveScaffoldFeature('virtualUser', config.scaffold.virtualUser).auth
     )

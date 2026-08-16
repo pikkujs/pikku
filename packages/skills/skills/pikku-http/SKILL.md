@@ -38,7 +38,7 @@ Follow existing patterns you find (naming, tag usage, file organization). See `p
 
 ## API Reference
 
-All three come from `#pikku` (the generated `.pikku/pikku-types.gen.js`), which
+All three come from `#pikku/http` (the generated `.pikku/http/index.ts`), which
 binds them to your project's service, session and middleware types. The
 `@pikku/core/http` versions are the unbound generics — they compile, but you
 lose the typing that makes the wiring worth having.
@@ -211,7 +211,7 @@ Functions live in their own files (one per file) and supply behavior + `permissi
 
 ```typescript
 // functions/books.functions.ts
-import { pikkuFunc, pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
 
 export const listBooks = pikkuSessionlessFunc({
   title: 'List Books',
@@ -226,7 +226,7 @@ export const getBook = pikkuFunc({
 })
 
 // wirings/books.http.ts — same defineHTTPRoutes/wireHTTPRoutes shape as the Route Groups example above
-import { addHTTPMiddleware } from '#pikku'
+import { addHTTPMiddleware } from '#pikku/http'
 import { cors, authBearer } from '@pikku/core/middleware'
 
 addHTTPMiddleware('*', [cors(), authBearer()])

@@ -1,5 +1,5 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/ecosystem/errors'
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {
   execPrefix,
@@ -113,7 +113,7 @@ export const installOpenapiAddon = pikkuFunc<
       if (!existsSync(wiringFile)) {
         writeFileSync(
           wiringFile,
-          `import { wireAddon } from '#pikku/pikku-types.gen.js'\n\nwireAddon({ name: '${name}', package: '@pikku/addon-${name}' })\n`,
+          `import { wireAddon } from '#pikku/function'\n\nwireAddon({ name: '${name}', package: '@pikku/addon-${name}' })\n`,
           'utf-8'
         )
       }

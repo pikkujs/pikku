@@ -2,7 +2,7 @@
  * Functions for testing RPC invoke type safety with void vs object inputs.
  */
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 export const VoidInputRPCOutput = { timestamp: 0 }
 

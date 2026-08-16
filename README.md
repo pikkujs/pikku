@@ -37,7 +37,7 @@ npm run dev
 At the core of Pikku is the `pikkuFunc` - a unified function that handles data from any source:
 
 ```ts
-import { pikkuFunc } from '../pikku-types.gen.js'
+import { pikkuFunc } from '#pikku/function'
 
 const addGithubStar = pikkuFunc<
   { repo: string },
@@ -64,33 +64,26 @@ const addGithubStar = pikkuFunc<
 Services are initialized at server startup and available to all functions. Pikku uses two types of services:
 
 ```ts
-import {
-  CreateSingletonServices,
-  CreateWireServices,
-} from '../pikku-types.gen.js'
+import { pikkuServices, pikkuWireServices } from '#pikku/function'
 import { ConsoleLogger, JWTService } from '@pikku/core/services'
 
 // Singleton services - created once at startup
-export const createSingletonServices: CreateSingletonServices = async (
-  config
-) => {
+export const createSingletonServices = pikkuServices(async (config) => {
   const logger = new ConsoleLogger()
   const db = new DatabaseClient()
   const jwt = new JWTService(['your-secret-key'], logger)
 
   return { logger, db, jwt }
-}
+})
 
 // Wire services - created per request
-export const createWireServices: CreateWireServices = async (
-  services,
-  interaction,
-  session
-) => {
-  return {
-    scopedLogger: new ScopedLogger(session.userId),
+export const createWireServices = pikkuWireServices(
+  async (services, interaction, session) => {
+    return {
+      scopedLogger: new ScopedLogger(session.userId),
+    }
   }
-}
+)
 ```
 
 ### Type Generation

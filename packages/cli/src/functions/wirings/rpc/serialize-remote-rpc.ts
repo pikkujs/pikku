@@ -7,7 +7,7 @@ export interface RemoteRPCGenOutput {
  * Generate remote internal RPC queue worker and HTTP endpoint
  */
 export const serializeRemoteRPC = (
-  pathToPikkuTypes: string
+  leaf: (name: string) => string
 ): RemoteRPCGenOutput => {
   const schemas = `/**
  * Auto-generated remote internal RPC schemas
@@ -25,7 +25,9 @@ export const RemoteRPCCall = z.object({
  * Auto-generated remote internal RPC queue worker and HTTP endpoint
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc, wireHTTP, wireQueueWorker } from '${pathToPikkuTypes}'
+import { pikkuSessionlessFunc } from '${leaf('function')}'
+import { wireHTTP } from '${leaf('http')}'
+import { wireQueueWorker } from '${leaf('queue')}'
 import { pikkuRemoteAuthMiddleware } from '@pikku/core/ecosystem/middleware'
 import { RemoteRPCCall } from './rpc-remote.schemas.gen.js'
 

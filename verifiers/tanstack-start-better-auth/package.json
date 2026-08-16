@@ -6,8 +6,8 @@
     "hoistingLimits": "workspaces"
   },
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
     "@pikku/better-auth": "workspace:*",

@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 
 export const processNotificationQueue = pikkuFunc<{ kind: string }, void>({
   func: async ({ notification }, data) => {

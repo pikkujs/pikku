@@ -5,7 +5,7 @@
  */
 
 import * as assert from 'node:assert'
-import { pikkuFunc } from '#pikku'
+import { pikkuFunc } from '#pikku/function'
 import { verifyScopes } from '@pikku/core'
 import { MissingScopeError } from '@pikku/core/errors'
 import type { ScopeId } from '../.pikku/scopes/pikku-scopes.gen.js'

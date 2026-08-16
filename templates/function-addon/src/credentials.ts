@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineSecret } from '../.pikku/pikku-types.gen.js'
+import { defineSecret } from '#pikku/secrets'
 
 export const exampleCredentialsSchema = z.object({
   apiKey: z.string().describe('API key for external service'),

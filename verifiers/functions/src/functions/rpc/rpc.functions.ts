@@ -1,4 +1,4 @@
-import { pikkuListFunc, pikkuSessionlessFunc } from '#pikku'
+import { pikkuListFunc, pikkuSessionlessFunc } from '#pikku/function'
 
 export const rpcTest = pikkuSessionlessFunc<{ in: number }>({
   func: async ({ logger }, data, { rpc }) => {

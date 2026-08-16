@@ -1,4 +1,4 @@
-import { wireTrigger, wireTriggerSource } from '#pikku'
+import { wireTrigger, wireTriggerSource } from '#pikku/trigger'
 import { triggerTargetHandler } from './trigger-target.functions.js'
 import { testEventTrigger } from './trigger.functions.js'
 

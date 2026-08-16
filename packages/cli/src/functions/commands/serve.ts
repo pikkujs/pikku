@@ -1,6 +1,6 @@
 import { join, resolve } from 'path'
 
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   InMemoryQueueService,
   QueueWebhookService,

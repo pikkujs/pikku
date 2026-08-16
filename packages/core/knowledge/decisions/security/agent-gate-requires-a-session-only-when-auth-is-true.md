@@ -13,7 +13,7 @@ session presence (only when `CoreAgent.auth === true`), then `scopes`, then
 `permissions`. The ordering mirrors the function runner — scopes AND together so
 they can only narrow access, and a missing scope short-circuits before any
 permission function does I/O. Declared `scopes` are narrowed to the generated
-`ScopeId` union in a project's `pikku-types.gen.ts`, so an undeclared scope is a
+`ScopeId` union in a project's `#pikku/scopes`, so an undeclared scope is a
 compile error.
 
 `auth` defaults to `false` (i.e. `pikkuSessionlessFunc`, not `pikkuFunc`) because

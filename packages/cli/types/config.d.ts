@@ -30,7 +30,6 @@ export interface PikkuCLICoreOutputFiles {
 
   // Schema and types
   schemaDirectory: string
-  typesDeclarationFile: string
 
   // Function definitions
   functionsFile: string

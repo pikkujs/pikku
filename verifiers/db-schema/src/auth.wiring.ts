@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { admin, organization, twoFactor } from 'better-auth/plugins'
-import { pikkuBetterAuth } from '#pikku'
+import { pikkuBetterAuth } from '#pikku/auth'
 
 /**
  * Better Auth with plugins that change the schema, which is the point.

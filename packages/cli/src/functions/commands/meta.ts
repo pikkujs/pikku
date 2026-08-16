@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku/function'
 import { getSchema } from '@pikku/core/ecosystem/schema'
 
 function out(value: unknown): void {

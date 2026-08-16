@@ -118,7 +118,7 @@ export const createWireServices = pikkuWireServices(async () => ({}))
 function functionFile(n: number): string {
   const pad = String(n).padStart(4, '0')
   const name = `testFunc${pad}`
-  return `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+  return `import { pikkuSessionlessFunc } from '../../.pikku/function/index.js'
 import { z } from 'zod'
 
 export const ${name}Input = z.object({
@@ -194,7 +194,7 @@ function httpWiringFile(count: number): string {
     ].join('\n')
   })
   return [
-    `import { defineHTTPRoutes } from '../../.pikku/pikku-types.gen.js'`,
+    `import { defineHTTPRoutes } from '../../.pikku/http/index.js'`,
     ...imports,
     ``,
     `defineHTTPRoutes({`,
@@ -213,7 +213,7 @@ function queueWiringFile(count: number): string {
     return `wireQueueWorker({ name: 'queue-${pad}', func: testFunc${pad} })`
   })
   return [
-    `import { wireQueueWorker } from '../../.pikku/pikku-types.gen.js'`,
+    `import { wireQueueWorker } from '../../.pikku/queue/index.js'`,
     ...imports,
     ``,
     ...wires,
@@ -232,7 +232,7 @@ function schedulerWiringFile(count: number): string {
     return `wireScheduler({ name: 'schedule-${pad}', schedule: '${minute} ${hour} * * *', func: testFunc${pad} })`
   })
   return [
-    `import { wireScheduler } from '../../.pikku/pikku-types.gen.js'`,
+    `import { wireScheduler } from '../../.pikku/scheduler/index.js'`,
     ...imports,
     ``,
     ...wires,

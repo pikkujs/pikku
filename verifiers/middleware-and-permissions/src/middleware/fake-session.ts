@@ -1,4 +1,4 @@
-import { pikkuMiddleware, addTagMiddleware } from '#pikku'
+import { addTagMiddleware, pikkuMiddleware } from '#pikku/function'
 
 /**
  * Session tag middleware that sets a fake session for testing.

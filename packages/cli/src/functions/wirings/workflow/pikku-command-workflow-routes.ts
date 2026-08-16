@@ -1,5 +1,5 @@
-import { pikkuSessionlessFunc } from '#pikku'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
@@ -13,13 +13,10 @@ export const pikkuWorkflowRoutes = pikkuSessionlessFunc<void, boolean>({
       config.workflowRoutesFile &&
       config.workflowRoutesSchemasFile
     ) {
-      const pathToPikkuTypes = getFileImportRelativePath(
-        config.workflowRoutesFile,
-        config.typesDeclarationFile,
-        config.packageMappings
-      )
+      const leaf = (name: string) =>
+        getLeafImportPath(config.workflowRoutesFile, name, config)
       const { schemas, functions } = serializeWorkflowRoutes(
-        pathToPikkuTypes,
+        leaf,
         resolveScaffoldFeature('workflow', config.scaffold?.workflow).auth
       )
       await writeFileInDir(logger, config.workflowRoutesSchemasFile, schemas)

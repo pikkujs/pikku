@@ -1,4 +1,4 @@
-import { pikkuVoidFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuVoidFunc } from '#pikku/function'
 
 /**
  * Scheduled task: Log daily todo summary.
