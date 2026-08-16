@@ -149,3 +149,17 @@ export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
 export type RequireAtLeastOne<T> = {
   [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
 }[keyof T]
+
+export {
+  getDurationInMilliseconds,
+  getRelativeTimeOffset,
+  getRelativeTimeOffsetFromNow,
+  parseDurationString,
+} from './time-utils.js'
+export type { RelativeTimeInput } from './time-utils.js'
+
+export {
+  formatVersionedId,
+  isVersionedId,
+  parseVersionedId,
+} from './version.js'

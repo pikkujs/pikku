@@ -1,4 +1,4 @@
-import type { Safe } from '@pikku/core/secret-value'
+import type { Safe } from '@pikku/core/classification'
 import { runPikkuFunc } from '@pikku/core/function'
 import {
   createConfig,

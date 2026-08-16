@@ -7,7 +7,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 **2692 observable things**: 858 exported names, plus
 1834 members on the classes and interfaces among them, reachable
-through 57 entry points.
+through 52 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -27,25 +27,24 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./persona` | 27 | 27 | 34 |
 | `./services/local-meta` | 22 | 3 | 46 |
 | `./cli` | 14 | 12 | 26 |
+| `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
-| `./function` | 31 | 26 | 8 |
+| `./classification` | 21 | 21 | 13 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./gateway` | 11 | 11 | 14 |
 | `./rpc` | 15 | 15 | 8 |
 | `./middleware` | 24 | 22 | 0 |
 | `./crypto-utils` | 20 | 20 | 2 |
+| `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
 | `./trigger` | 8 | 8 | 12 |
 | `./workflow/timeline` | 9 | 4 | 14 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
-| `./secret-value` | 6 | 6 | 9 |
-| `./data-classification` | 11 | 11 | 4 |
 | `./workflow/types` | 45 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
-| `./utils` | 13 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./dev` | 5 | 5 | 5 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -54,7 +53,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./secret` | 7 | 7 | 0 |
-| `./time-utils` | 5 | 5 | 2 |
 | `./scheduler` | 6 | 6 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
@@ -62,10 +60,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
 | `./testing` | 3 | 3 | 2 |
-| `./column-form` | 4 | 4 | 0 |
 | `./node` | 3 | 3 | 0 |
-| `./request` | 1 | 1 | 2 |
-| `./version` | 3 | 3 | 0 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
 | `./hmac` | 2 | 2 | 0 |
@@ -729,6 +724,10 @@ pikkuApprovalDescription: <In = any, Services extends CoreSecretlessSingletonSer
 pikkuAuth: <Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Session extends CoreUserSession = CoreUserSession>(auth: CorePikkuAuth<Services, Session> | CorePikkuAuthConfig<Services, Session>) => CorePikkuPermission<any, Services, any>
 pikkuPermission: <In = any, Services extends CoreSecretlessSingletonServices = SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, Wire extends PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session"> = PickRequired<PikkuWire<In, never, false, any, PikkuRPC, never, never>, "session">>(permission: CorePikkuPermission<In, Services, Wire> | CorePikkuPermissionConfig<In, Services, Wire>) => CorePikkuPermission<In, Services, Wire>
 pikkuPermissionFactory: <In = any>(factory: CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>) => CorePikkuPermissionFactory<In, SecretlessServices<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>, PikkuWire<In, never, false, any, PikkuRPC, never, never>>
+export abstract class PikkuRequest<In = any> {
+  constructor(data: In)
+  public async data(): Promise<In>
+}
 runPikkuFunc: <In = any, Out = any>(wireType: PikkuWiringTypes, wireId: string, funcName: string, { singletonServices, createWireServices, data, auth: wiringAuth, inheritedMiddleware, wireMiddleware, inheritedChannelMiddleware, wireChannelMiddleware, coerceDataFromSchema, wire, sessionService, credentialWireService, packageName, addonInstance, }: { singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; data: () => In | Promise<In>; auth?: boolean | undefined; inheritedMiddleware?: MiddlewareMetadata[] | undefined; wireMiddleware?: CorePikkuMiddleware[] | undefined; inheritedChannelMiddleware?: MiddlewareMetadata[] | undefined; wireChannelMiddleware?: CorePikkuChannelMiddleware[] | undefined; coerceDataFromSchema?: boolean | undefined; tags?: string[] | undefined; wire: PikkuRawWire; sessionService?: SessionService<CoreUserSession> | undefined; credentialWireService?: PikkuCredentialWireService | undefined; packageName?: string | null | undefined; addonInstance?: AddonInstance | undefined; }) => Promise<Out>
 ```
 
@@ -5424,11 +5423,29 @@ resetPikkuState: () => void
 setSingletonServices: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => void
 ```
 
-## ./secret-value
+## ./classification
 
 ```ts
+export type AnonymizeStrategy =
+  'fake:email' | 'fake:name' | 'hash' | 'keep' | null
+export type Classification = 'public' | 'private' | 'pii' | 'secret'
+export type ClassificationManifest = {
+  version: 1
+  tables: Record<string, Record<string, ColumnClassification>>
+}
+export interface ColumnClassification {
+  classification: Classification
+  anonymize_strategy: AnonymizeStrategy
+  form?: ColumnForm
+  description?: string
+}
+export type ColumnForm = 'plain' | 'hashed' | 'wrapped' | 'sealed'
 createSecretValue: <T>(value: T) => SecretValue<T>
+export type HashedValue = string & { readonly [hashedBrand]: true }
+hashToken: (raw: string) => Promise<HashedValue>
 isSecretValue: (value: unknown) => value is SecretValue<unknown>
+export type Pii<T> = T & { readonly __classification__?: 'pii' }
+export type Private<T> = T & { readonly __classification__?: 'private' }
 REDACTED: "[secret]"
 export type Safe<T> =
   IsAny<T> extends true
@@ -5446,6 +5463,8 @@ export type Safe<T> =
                 ? { [K in keyof T]: Safe<T[K]> }
                 : T
       : never
+export type SealedValue = string & { readonly [sealedBrand]: true }
+export type Secret<T> = T & { readonly __classification__?: 'secret' }
 export class SecretCoercionError extends Error {
   constructor()
 }
@@ -5459,70 +5478,10 @@ export class SecretValue<T = string> {
   toString(): never
   [Symbol.toPrimitive](): never
 }
-```
-
-## ./data-classification
-
-```ts
-export type AnonymizeStrategy =
-  'fake:email' | 'fake:name' | 'hash' | 'keep' | null
-export type Classification = 'public' | 'private' | 'pii' | 'secret'
-export type ClassificationManifest = {
-  version: 1
-  tables: Record<string, Record<string, ColumnClassification>>
-}
-export interface ColumnClassification {
-  classification: Classification
-  anonymize_strategy: AnonymizeStrategy
-  form?: ColumnForm
-  description?: string
-}
-export type ColumnForm = 'plain' | 'hashed' | 'wrapped' | 'sealed'
-export type HashedValue = string & { readonly [hashedBrand]: true }
-export type Pii<T> = T & { readonly __classification__?: 'pii' }
-export type Private<T> = T & { readonly __classification__?: 'private' }
-export type SealedValue = string & { readonly [sealedBrand]: true }
-export type Secret<T> = T & { readonly __classification__?: 'secret' }
-export type WrappedValue = string & { readonly [wrappedBrand]: true }
-```
-
-## ./column-form
-
-```ts
-hashToken: (raw: string) => Promise<HashedValue>
 unsafeAsHashed: (stored: string) => HashedValue
 unsafeAsSealed: (stored: string) => SealedValue
 unsafeAsWrapped: (stored: string) => WrappedValue
-```
-
-## ./request
-
-```ts
-export abstract class PikkuRequest<In = any> {
-  constructor(data: In)
-  public async data(): Promise<In>
-}
-```
-
-## ./time-utils
-
-```ts
-getDurationInMilliseconds: (duration: string | number) => number
-getRelativeTimeOffset: ({ value, unit, }: RelativeTimeInput) => number
-getRelativeTimeOffsetFromNow: (relativeTime: RelativeTimeInput) => Date
-parseDurationString: (duration: string) => number
-export interface RelativeTimeInput {
-  value: number
-  unit: TimeUnit
-}
-```
-
-## ./version
-
-```ts
-formatVersionedId: (baseName: string, version: number) => string
-isVersionedId: (id: string) => boolean
-parseVersionedId: (id: string) => { baseName: string; version: number | null; }
+export type WrappedValue = string & { readonly [wrappedBrand]: true }
 ```
 
 ## ./utils
@@ -5530,9 +5489,14 @@ parseVersionedId: (id: string) => { baseName: string; version: number | null; }
 ```ts
 closeWireServices: (logger: Logger, wireServices: WireServices) => Promise<void>
 createWeakUID: () => string
+formatVersionedId: (baseName: string, version: number) => string
 freezeDedupe: <T>(arr?: readonly T[] | T[] | undefined) => readonly T[]
+getDurationInMilliseconds: (duration: string | number) => number
+getRelativeTimeOffset: ({ value, unit, }: RelativeTimeInput) => number
+getRelativeTimeOffsetFromNow: (relativeTime: RelativeTimeInput) => Date
 getTagGroups: <T>(tagGroups: Record<string, T>, tag: string) => T[]
 isSerializable: (data: any) => boolean
+isVersionedId: (id: string) => boolean
 export type JSONPrimitive = string | number | boolean | null | undefined
 export type JSONValue =
   | JSONPrimitive
@@ -5542,9 +5506,15 @@ export type JSONValue =
     }
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
+parseDurationString: (duration: string) => number
+parseVersionedId: (id: string) => { baseName: string; version: number | null; }
 export type PickOptional<T, K extends keyof T> = Partial<T> & Pick<T, K>
 export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
+export interface RelativeTimeInput {
+  value: number
+  unit: TimeUnit
+}
 export type RequireAtLeastOne<T> = {
   [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>
 }[keyof T]

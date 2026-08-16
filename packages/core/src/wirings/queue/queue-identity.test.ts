@@ -21,7 +21,7 @@ import type {
   QueueJob,
   QueueService,
 } from './queue.types.js'
-import { createSecretValue } from '../../secret-value.js'
+import { createSecretValue } from '../../classification/secret-value.js'
 
 const QUEUE_NAME = 'identity-queue'
 const SECRET = 'a'.repeat(48)

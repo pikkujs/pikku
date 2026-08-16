@@ -12,7 +12,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { PikkuError } from '../errors/error-handler.js'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js'
-import type { Safe } from '../secret-value.js'
+import type { Safe } from '../classification/secret-value.js'
 
 export type CorePikkuFunction<
   In,

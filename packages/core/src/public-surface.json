@@ -22,6 +22,7 @@
   ],
   "./function": [
     "AbandonedError",
+    "PikkuRequest",
     "addFunction",
     "checkAuthPermissions",
     "getAllFunctionNames",
@@ -419,34 +420,30 @@
     "resetPikkuState",
     "setSingletonServices"
   ],
-  "./secret-value": [
+  "./classification": [
     "REDACTED",
     "SecretCoercionError",
     "SecretValue",
     "createSecretValue",
-    "isSecretValue"
-  ],
-  "./data-classification": [],
-  "./column-form": [
     "hashToken",
+    "isSecretValue",
     "unsafeAsHashed",
     "unsafeAsSealed",
     "unsafeAsWrapped"
   ],
-  "./request": ["PikkuRequest"],
-  "./time-utils": [
-    "getDurationInMilliseconds",
-    "getRelativeTimeOffset",
-    "getRelativeTimeOffsetFromNow",
-    "parseDurationString"
-  ],
-  "./version": ["formatVersionedId", "isVersionedId", "parseVersionedId"],
   "./utils": [
     "closeWireServices",
     "createWeakUID",
+    "formatVersionedId",
     "freezeDedupe",
+    "getDurationInMilliseconds",
+    "getRelativeTimeOffset",
+    "getRelativeTimeOffsetFromNow",
     "getTagGroups",
     "isSerializable",
+    "isVersionedId",
+    "parseDurationString",
+    "parseVersionedId",
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],

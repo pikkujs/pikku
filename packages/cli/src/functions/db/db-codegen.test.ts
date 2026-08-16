@@ -260,7 +260,7 @@ test('the nominal brands are imported from core, never redeclared', async () => 
   // core's own ciphertext would not be assignable to the column it belongs in.
   assert.match(
     schema,
-    /import type \{ WrappedValue \} from '@pikku\/core\/data-classification'/
+    /import type \{ WrappedValue \} from '@pikku\/core\/classification'/
   )
   assert.doesNotMatch(schema, /declare const wrappedBrand/)
 })

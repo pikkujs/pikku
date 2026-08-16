@@ -5,9 +5,9 @@ import {
   envelopeRewrap,
   generateKEKSalt,
 } from '@pikku/core/crypto-utils'
-import { createSecretValue, isSecretValue } from '@pikku/core/secret-value'
+import { createSecretValue, isSecretValue } from '@pikku/core/classification'
 import type { SecretService, SecretValues } from '@pikku/core/services'
-import type { SecretValue } from '@pikku/core/secret-value'
+import type { SecretValue } from '@pikku/core/classification'
 import { Redis, type RedisOptions } from 'ioredis'
 
 export interface RedisSecretServiceConfig {

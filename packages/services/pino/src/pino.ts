@@ -2,7 +2,7 @@ import * as pino from 'pino'
 
 import { LogLevel } from '@pikku/core/services'
 import type { Logger } from '@pikku/core/services'
-import type { Safe } from '@pikku/core/secret-value'
+import type { Safe } from '@pikku/core/classification'
 
 export class PinoLogger implements Logger {
   public pino: pino.Logger

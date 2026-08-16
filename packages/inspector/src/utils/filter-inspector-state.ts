@@ -4,7 +4,7 @@ import type {
   InspectorLogger,
 } from '../types.js'
 import type { PikkuWiringTypes } from '@pikku/core/types'
-import { parseVersionedId } from '@pikku/core/version'
+import { parseVersionedId } from '@pikku/core/utils'
 import { aggregateRequiredServices } from './post-process.js'
 import { resolveDeployTarget } from './resolve-deploy-target.js'
 

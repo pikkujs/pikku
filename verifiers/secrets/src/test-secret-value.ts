@@ -11,9 +11,9 @@ import {
   isSecretValue,
   REDACTED,
   SecretCoercionError,
-} from '@pikku/core/secret-value'
+} from '@pikku/core/classification'
 import type { QueueService } from '@pikku/core/queue'
-import type { SecretValue } from '@pikku/core/secret-value'
+import type { SecretValue } from '@pikku/core/classification'
 import { LocalSecretService } from '@pikku/core/services'
 import type { EmailService, Logger, WebhookService } from '@pikku/core/services'
 

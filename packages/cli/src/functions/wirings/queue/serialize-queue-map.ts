@@ -36,7 +36,7 @@ ${serializedImportMap}
 ${serializedCustomTypes}
 
 import type { QueueJob } from '@pikku/core/queue'
-import type { Safe } from '@pikku/core/secret-value'
+import type { Safe } from '@pikku/core/classification'
 
 interface QueueHandler<I, O> {
     input: I;

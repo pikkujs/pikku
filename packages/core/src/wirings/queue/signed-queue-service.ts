@@ -1,4 +1,4 @@
-import type { Safe } from '../../secret-value.js'
+import type { Safe } from '../../classification/secret-value.js'
 import type { Logger } from '../../services/logger.js'
 import type { SecretService } from '../../services/secret-service.js'
 import {

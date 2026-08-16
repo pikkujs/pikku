@@ -1,4 +1,4 @@
-import type { SecretValue } from '../secret-value.js'
+import type { SecretValue } from '../classification/secret-value.js'
 import type { SecretService, SecretValues } from './secret-service.js'
 
 export class ScopedSecretService implements SecretService {

@@ -13,7 +13,7 @@ import {
 import { RemoteAddonAuthError } from './remote-addon-auth.js'
 import { wireAddon } from './wire-addon.js'
 import { wireRemoteAddon } from './wire-remote-addon.js'
-import { createSecretValue } from '../../secret-value.js'
+import { createSecretValue } from '../../classification/secret-value.js'
 
 const createLogger = () => ({
   debug: () => {},

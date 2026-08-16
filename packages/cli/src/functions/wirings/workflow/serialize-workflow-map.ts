@@ -6,7 +6,7 @@ import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 import type { FunctionsMeta, Logger } from '@pikku/core/services'
-import { parseVersionedId } from '@pikku/core/version'
+import { parseVersionedId } from '@pikku/core/utils'
 
 /**
  * A workflow or graph node name is free-form prose written by a human, so an

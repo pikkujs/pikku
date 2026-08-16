@@ -7,7 +7,7 @@ import type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
 } from '@pikku/core/services'
-import { parseDurationString } from '@pikku/core/time-utils'
+import { parseDurationString } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { getScheduledTasks } from '@pikku/core/scheduler'
 

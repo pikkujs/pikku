@@ -11,7 +11,7 @@ import type {
   SealedValue,
   WrappedValue,
 } from './data-classification.js'
-import { deriveKEK, envelopeEncrypt, envelopeRewrap } from './crypto-utils.js'
+import { deriveKEK, envelopeEncrypt, envelopeRewrap } from '../crypto-utils.js'
 
 const KEY_MATERIAL = 'x'.repeat(32)
 
@@ -87,7 +87,7 @@ describe('the envelope primitives produce the brand', () => {
   test('decrypting accepts a bare string, so reading a row back needs no cast', async () => {
     const kek = await deriveKEK(KEY_MATERIAL, 'c2FsdA')
     const { ciphertext, wrappedDEK } = await envelopeEncrypt(kek, 'value')
-    const { envelopeDecrypt } = await import('./crypto-utils.js')
+    const { envelopeDecrypt } = await import('../crypto-utils.js')
     const fromRow: string = ciphertext
     assert.equal(
       await envelopeDecrypt<string>(kek, fromRow, wrappedDEK),

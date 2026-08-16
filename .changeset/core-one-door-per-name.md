@@ -16,6 +16,7 @@
 '@pikku/modelcontextprotocol': patch
 '@pikku/next': patch
 '@pikku/node-http-server': patch
+'@pikku/schedule': patch
 '@pikku/tanstack-start': patch
 '@pikku/uws-handler': patch
 '@pikku/uws': patch
@@ -57,11 +58,20 @@ import carries that subpath — `@pikku/core/http`, `@pikku/core/services`,
 Deleting the facades meant the raw subpaths had to become a superset of them,
 which they were not: the facade tree had accumulated 25 names with no raw home
 and about 26 more filed under a different area than the module they came from.
-Those names moved to the area that owns them, and nine areas were published as
+Those names moved to the area that owns them, and three areas were published as
 new entry points rather than left on a root that is going away — `./types` (the
-shared type surface, the largest single destination), `./state`, `./request`,
-`./secret-value`, `./data-classification`, `./column-form`, `./time-utils`,
-`./version` and `./utils`.
+shared type surface, the largest single destination), `./state` and
+`./classification`.
+
+`./classification` is one door onto one subject: what a value is and how it must
+be handled. Its three halves would each have been an entry point — the brands
+and manifest types, the stored-form helpers (`hashToken`, `unsafeAsSealed` and
+friends), and `SecretValue` — split by whether a name happens to be a type or a
+value, which is the same defect as the facades. The duration and versioned-id
+helpers went to `./utils`, which already published, and `PikkuRequest` went to
+`./function`: it is the transport-agnostic request base, not an HTTP one — HTTP
+has `PikkuHTTPAbstractRequest`, and the only thing outside core that extends
+`PikkuRequest` is Azure's timer request.
 
 `./types` inherited the root barrel's habit before it inherited its contents, so
 the names with an owner elsewhere were moved off it. The middleware types and the

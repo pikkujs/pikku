@@ -1,7 +1,7 @@
 import type { CommonWireMeta } from '../../types/core.types.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { QueueConfigMapping } from './validate-worker-config.js'
-import type { Safe } from '../../secret-value.js'
+import type { Safe } from '../../classification/secret-value.js'
 
 export interface PikkuWorkerConfig {
   name?: string

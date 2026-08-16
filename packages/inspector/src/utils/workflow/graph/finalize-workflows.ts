@@ -3,7 +3,7 @@ import {
   isVersionedId,
   formatVersionedId,
   parseVersionedId,
-} from '@pikku/core/version'
+} from '@pikku/core/utils'
 import type { SerializedWorkflowGraph } from './workflow-graph.types.js'
 import { canonicalJSON, hashString } from '../../hash.js'
 import { convertDslToGraph } from './convert-dsl-to-graph.js'

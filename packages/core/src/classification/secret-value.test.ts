@@ -8,8 +8,8 @@ import {
   type Safe,
   type SecretValue,
 } from './secret-value.js'
-import type { Logger } from './services/logger.js'
-import type { AuditLog } from './services/audit-service.js'
+import type { Logger } from '../services/logger.js'
+import type { AuditLog } from '../services/audit-service.js'
 
 const VALUE = 'sk-live-DEADBEEF'
 

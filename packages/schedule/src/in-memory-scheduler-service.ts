@@ -5,7 +5,7 @@ import type {
   ScheduledTaskSummary,
 } from '@pikku/core/services'
 import { SchedulerService } from '@pikku/core/services'
-import { parseDurationString } from '@pikku/core/time-utils'
+import { parseDurationString } from '@pikku/core/utils'
 import { pikkuState, getSingletonServices } from '@pikku/core/state'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { getScheduledTasks } from '@pikku/core/scheduler'

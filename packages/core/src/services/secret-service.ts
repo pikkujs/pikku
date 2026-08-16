@@ -1,4 +1,4 @@
-import type { SecretValue } from '../secret-value.js'
+import type { SecretValue } from '../classification/secret-value.js'
 
 /** A record of secrets, each still wrapped. */
 export type SecretValues<T> = { [K in keyof T]: SecretValue<T[K]> }

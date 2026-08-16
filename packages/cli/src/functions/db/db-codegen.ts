@@ -750,7 +750,7 @@ export async function generateSchemaTypes(
     `import type { ColumnType } from 'kysely'`,
     ...(usedFormBrands.length > 0
       ? [
-          `import type { ${usedFormBrands.join(', ')} } from '@pikku/core/data-classification'`,
+          `import type { ${usedFormBrands.join(', ')} } from '@pikku/core/classification'`,
         ]
       : []),
     ``,
@@ -761,7 +761,7 @@ export async function generateSchemaTypes(
     // `__classification__` is optional so plain values stay assignable to branded
     // columns (Kysely where/insert/update operands) while the brand remains
     // structurally detectable for the inspector's PKU910 output check. Keep this
-    // in lockstep with `@pikku/core`'s data-classification.ts definitions.
+    // in lockstep with `@pikku/core`'s classification/data-classification.ts definitions.
     `export type Private<T> = T & { readonly __classification__?: 'private' }`,
     `export type Pii<T> = T & { readonly __classification__?: 'pii' }`,
     `export type Secret<T> = T & { readonly __classification__?: 'secret' }`,

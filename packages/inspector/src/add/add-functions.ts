@@ -11,7 +11,7 @@ import { extractUsedWires } from '../utils/extract-services.js'
 import type { AuditDurability } from '@pikku/core/services'
 import type { FunctionServicesMeta } from '@pikku/core/function'
 import type { ScenarioSurface, ScenarioStepKind } from '@pikku/core/scenario'
-import { formatVersionedId, parseVersionedId } from '@pikku/core/version'
+import { formatVersionedId, parseVersionedId } from '@pikku/core/utils'
 
 /** Binding keys a `pikkuScenarioStep` may declare, in report order. */
 const SCENARIO_SURFACE_KEYS: readonly ScenarioSurface[] = [

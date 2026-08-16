@@ -37,3 +37,4 @@ export type {
   FunctionsRuntimeMeta,
   PermissionMetadata,
 } from './function-meta.types.js'
+export { PikkuRequest } from './pikku-request.js'

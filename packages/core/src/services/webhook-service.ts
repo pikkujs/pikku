@@ -1,6 +1,6 @@
 import { NotImplementedError } from '../errors/errors.js'
 import { hmacSha256Hex, timingSafeStringEqual } from '../utils/hmac.js'
-import type { Safe } from '../secret-value.js'
+import type { Safe } from '../classification/secret-value.js'
 
 export interface SendWebhookInput {
   url: string

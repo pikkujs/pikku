@@ -1,7 +1,7 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { resolveDb } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
-import type { ClassificationManifest } from '@pikku/core/data-classification'
+import type { ClassificationManifest } from '@pikku/core/classification'
 
 export const dbAudit = pikkuSessionlessFunc<{}, void>({
   remote: true,

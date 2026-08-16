@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
-import { parseVersionedId } from '@pikku/core/version'
+import { parseVersionedId } from '@pikku/core/utils'
 import type { VersionManifest } from '@pikku/inspector'
 import {
   readMetaSnapshot,

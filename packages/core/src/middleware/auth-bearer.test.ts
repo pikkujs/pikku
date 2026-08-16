@@ -8,7 +8,7 @@ import {
   createMiddlewareSessionWireProps,
 } from '../services/user-session-service.js'
 import { InvalidSessionError } from '../errors/errors.js'
-import { createSecretValue } from '../secret-value.js'
+import { createSecretValue } from '../classification/secret-value.js'
 
 beforeEach(() => {
   resetPikkuState()
