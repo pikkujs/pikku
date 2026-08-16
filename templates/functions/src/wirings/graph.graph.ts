@@ -1,4 +1,4 @@
-import { pikkuWorkflowGraph } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 export const todoReviewWorkflow = pikkuWorkflowGraph({
   description: 'Review overdue todos and send summary notification',

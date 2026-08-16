@@ -1,4 +1,4 @@
-import { PikkuQueue } from '../../functions/.pikku/pikku-queue.gen.js'
+import { PikkuQueue } from '#pikku/pikku-queue.gen.js'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 
 const connectionString =

@@ -1,7 +1,7 @@
 import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
 import { createSingletonServices, createConfig } from '../src/services.js'
-import mcpJSON from '../.pikku/mcp/mcp.gen.json' with { type: 'json' }
-import '../.pikku/pikku-bootstrap.gen.js'
+import mcpJSON from '#pikku/mcp/mcp.gen.json' with { type: 'json' }
+import '#pikku/pikku-bootstrap.gen.js'
 
 async function main() {
   const config = await createConfig()

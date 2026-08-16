@@ -6,7 +6,7 @@ import {
   createConfig,
   createSingletonServices,
 } from '../../functions/src/services.js'
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 
 const PORT = parseInt(process.env.PORT || '3001', 10)
 const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID || `server-${PORT}`

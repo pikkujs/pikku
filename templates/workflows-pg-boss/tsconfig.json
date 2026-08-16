@@ -4,7 +4,11 @@
     "module": "Node18",
     "noEmit": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "#pikku/*.js": ["../functions/.pikku/*.ts"],
+      "#pikku/*": ["../functions/.pikku/*/index.ts"]
+    }
   },
   "include": ["src/", ".pikku/*", "client/start-workflow.ts"],
   "files": []

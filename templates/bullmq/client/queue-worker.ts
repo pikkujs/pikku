@@ -1,5 +1,5 @@
 import { BullQueueService } from '@pikku/queue-bullmq'
-import { PikkuQueue } from '../../functions/.pikku/pikku-queue.gen.js'
+import { PikkuQueue } from '#pikku/pikku-queue.gen.js'
 
 async function main(): Promise<void> {
   try {

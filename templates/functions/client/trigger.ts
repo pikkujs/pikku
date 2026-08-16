@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { InMemoryTriggerService } from '@pikku/core/services'
 import { createConfig, createSingletonServices } from '../src/services.js'
-import '../.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 import { TodoStore } from '../src/services/store.service.js'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))

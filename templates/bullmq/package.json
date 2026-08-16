@@ -25,5 +25,9 @@
   },
   "exports": {
     ".": "./src/start.ts"
+  },
+  "imports": {
+    "#pikku/*.js": "../functions/.pikku/*.ts",
+    "#pikku/*": "../functions/.pikku/*/index.ts"
   }
 }

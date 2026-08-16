@@ -1,7 +1,7 @@
 import { runFetch, runScheduled } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'
 import type { ExportedHandler, Response } from '@cloudflare/workers-types'
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 
 export default {
   async scheduled(controller, env) {

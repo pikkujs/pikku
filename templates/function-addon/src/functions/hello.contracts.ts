@@ -1,4 +1,4 @@
-import { defineHTTPRoutes } from '../../.pikku/http/pikku-http-types.gen.js'
+import { defineHTTPRoutes } from '#pikku/http/pikku-http-types.gen.js'
 import { defineChannelRoutes } from '@pikku/core/channel'
 import { defineCLICommands } from '@pikku/core/cli'
 import { hello } from './hello.functions.js'

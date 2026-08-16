@@ -2,7 +2,7 @@ import { PikkuUWSServer } from '@pikku/uws'
 import { cors } from '@pikku/core/middleware'
 import { addHTTPMiddleware } from '@pikku/core/http'
 
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
   createSingletonServices,

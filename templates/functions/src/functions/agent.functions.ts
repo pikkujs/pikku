@@ -1,4 +1,4 @@
-import { pikkuAgent } from '../../.pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { AgentOutputSchema } from '../schemas.js'
 import { appendModified, logAgentIO } from '../middleware.js'
 import { listTodos, createTodo } from './todos.functions.js'

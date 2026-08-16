@@ -4,7 +4,11 @@
     "skipLibCheck": true,
     "noEmit": true,
     "resolveJsonModule": true,
-    "types": ["node", "bun"]
+    "types": ["node", "bun"],
+    "paths": {
+      "#pikku/*.js": ["../functions/.pikku/*.ts"],
+      "#pikku/*": ["../functions/.pikku/*/index.ts"]
+    }
   },
   "include": ["src/", ".pikku/*"],
   "files": []
