@@ -147,6 +147,11 @@ strings):
 | delete a user and their data                                         | `admin:users:remove`     |
 | revoke a user's sessions                                             | `admin:users:sessions`   |
 | set a user's password                                                | `admin:users:password`   |
+| read credential values and who holds them                            | `admin:credentials:read` |
+| set and delete credentials                                           | `admin:credentials:manage` |
+| view declared scopes, roles, and who holds them                      | `admin:scopes:read`      |
+| create roles, change their scopes, grant them                        | `admin:scopes:manage`    |
+| read the audit trail                                                 | `admin:audit:read`       |
 
 Holding the bare `admin` scope satisfies all of them — a parent grant covers
 everything nested beneath it — so `admin` is the direct replacement for the old
@@ -167,6 +172,8 @@ defineScope({
         description: 'Application-wide credentials',
         scopes: {
           link: { description: 'Bind a shared credential for every user' },
+          read: { description: 'Read credential values and who holds them' },
+          manage: { description: 'Set and delete credentials' },
         },
       },
       users: {
@@ -178,6 +185,27 @@ defineScope({
           remove: { description: 'Delete users and all their data' },
           sessions: { description: "Revoke a user's sessions" },
           password: { description: "Set a user's password" },
+        },
+      },
+      scopes: {
+        description: 'Authorization management',
+        scopes: {
+          read: {
+            description: 'View declared scopes, roles, and who holds them',
+          },
+          manage: {
+            description:
+              'Create and delete roles, change their scopes, and grant roles to users',
+          },
+        },
+      },
+      audit: {
+        description: 'The audit trail',
+        scopes: {
+          read: {
+            description:
+              'Read the audit trail — every recorded action, and which user took it',
+          },
         },
       },
     },

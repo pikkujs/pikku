@@ -43,6 +43,15 @@ const assertPasswordLength = (ctx: any, password: string) => {
 /**
  * Create a user out of band, with a credential account when a password is
  * given. Refuses an email that is already taken.
+ *
+ * A supplied password is checked against the configured policy even when it is
+ * empty — `''` is a password the caller chose, not an omitted one, and the
+ * account it would create can never be signed into.
+ *
+ * The user row and its credential account are two writes with no transaction
+ * across them, so a failed link deletes the user it was for. Without that, the
+ * caller is left with a passwordless user and every retry fails on the
+ * duplicate email instead.
  */
 export const createAuthUser = async (
   auth: AuthGetter,
@@ -50,7 +59,7 @@ export const createAuthUser = async (
 ): Promise<string> => {
   const ctx = await context(auth)
   const normalized = email.toLowerCase()
-  if (password) {
+  if (password !== undefined) {
     assertPasswordLength(ctx, password)
   }
   if (await ctx.internalAdapter.findUserByEmail(normalized)) {
@@ -66,13 +75,25 @@ export const createAuthUser = async (
     throw new Error('Failed to create user')
   }
 
-  if (password) {
-    await ctx.internalAdapter.linkAccount({
-      userId: user.id,
-      accountId: user.id,
-      providerId: 'credential',
-      password: await ctx.password.hash(password),
-    })
+  if (password !== undefined) {
+    try {
+      await ctx.internalAdapter.linkAccount({
+        userId: user.id,
+        accountId: user.id,
+        providerId: 'credential',
+        password: await ctx.password.hash(password),
+      })
+    } catch (error) {
+      try {
+        await ctx.internalAdapter.deleteUser(user.id)
+      } catch (cleanupError) {
+        throw new Error(
+          `Linking the credential account failed and user ${user.id} could not be removed: it has no password and its email is now taken`,
+          { cause: cleanupError }
+        )
+      }
+      throw error
+    }
   }
 
   return user.id
