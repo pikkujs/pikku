@@ -1,7 +1,15 @@
 import { test, describe } from 'node:test'
 import * as assert from 'assert'
 import ts from 'typescript'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -68,6 +76,10 @@ const tierSourceFiles = () => {
  * Parsed rather than grepped: `code-edit.service.test.ts` holds function
  * sources as template literals, and those `import … from '@pikku/core'` lines
  * are fixture text describing a user's file, not imports this package makes.
+ *
+ * A name is reported as core spells it, not as the file renames it: what
+ * `runQueueJob as handleJob` reaches for is `runQueueJob`, and reading the
+ * local name instead would let any alias walk past `dispatchEntryPoints`.
  */
 const coreSpecifiers = (file: string) => {
   const source = ts.createSourceFile(
@@ -99,7 +111,9 @@ const coreSpecifiers = (file: string) => {
       : statement.exportClause
     const names =
       clause && (ts.isNamedImports(clause) || ts.isNamedExports(clause))
-        ? clause.elements.map((element) => element.name.text)
+        ? clause.elements.map(
+            (element) => element.propertyName?.text ?? element.name.text
+          )
         : []
     found.push({ specifier, line: line + 1, names })
   }
@@ -181,6 +195,25 @@ describe('ecosystem surface', () => {
         `there — that is the deliberate act of making it public.\n\n` +
         offenders.join('\n')
     )
+  })
+
+  test('an alias does not hide the name it reaches for', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ecosystem-surface-'))
+    const file = join(dir, 'start.ts')
+    writeFileSync(
+      file,
+      `import { runQueueJob as handleJob } from '@pikku/core/queue'\n` +
+        `export { pikkuState as state } from '@pikku/core'\n`
+    )
+
+    try {
+      assert.deepStrictEqual(
+        coreSpecifiers(file).flatMap(({ names }) => names),
+        ['runQueueJob', 'pikkuState']
+      )
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   test('app bootstrap reaches dispatch entry points through ecosystem', () => {
