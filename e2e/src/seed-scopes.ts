@@ -47,8 +47,9 @@ const userIdByEmail = async (
  *   `admin:audit:read`. That leaves `staff@e2e.test` — an admin holding
  *   no audit scope — as the audit console suite's refused case.
  * - `admin@e2e.test` and `staff@e2e.test` get `platform-admin`, which is the
- *   umbrella `admin` scope plus every console area except scope administration and
- *   the audit trail. That is what lets them reach the console at all, what lets
+ *   whole `pikku:console` tree plus every `admin` area except scope
+ *   administration and the audit trail. The console grant is what lets them
+ *   reach the console at all; the `admin` leaves are what lets
  *   them impersonate (`admin:impersonate`) and what lets them read the user
  *   directory (`admin:users:list`). It is deliberately a *separate* role from `console-admin`
  *   so that staff stays what the scopes-console-permissions suite needs it to

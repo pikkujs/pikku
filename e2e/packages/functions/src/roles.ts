@@ -16,10 +16,12 @@ defineSystemRole({
    * Held by both `admin` and `staff`, which is what makes the scopes-console
    * suite's central case expressible: `staff` reaches the console and is still
    * refused by the scope-admin RPCs and the audit trail, because those two
-   * areas are granted by `console-admin` and `audit-reader` alone. Both the
-   * `admin` and `pikku:console` areas are spelled out leaf by leaf rather than
-   * granted as their parent precisely so those two stay out — a bare `admin`
-   * would cover `admin:scopes:*` and `admin:audit:read` and collapse the seam.
+   * areas are granted by `console-admin` and `audit-reader` alone.
+   *
+   * `pikku:console` is granted whole — everything under it is the console's own
+   * surface. The `admin` tree is spelled out leaf by leaf instead, because it is
+   * where `admin:scopes:*` and `admin:audit:read` now live: a bare `admin` would
+   * cover both and collapse the seam.
    */
   'platform-admin': {
     displayName: 'Platform administrator',
@@ -33,28 +35,9 @@ defineSystemRole({
       'admin:users:sessions',
       'admin:users:password',
       'admin:credentials:link',
-      'pikku:console:addons:read',
-      'pikku:console:addons:install',
       'admin:credentials:read',
       'admin:credentials:manage',
-      'pikku:console:secrets:read',
-      'pikku:console:secrets:write',
-      'pikku:console:variables:read',
-      'pikku:console:variables:write',
-      'pikku:console:wirings:read',
-      'pikku:console:security:read',
-      'pikku:console:security:run',
-      'pikku:console:workflows:read',
-      'pikku:console:workflows:manage',
-      'pikku:console:scenarios:read',
-      'pikku:console:scenarios:manage',
-      'pikku:console:agents:read',
-      'pikku:console:agents:manage',
-      'pikku:console:db:read',
-      'pikku:console:knowledge:read',
-      'pikku:console:emails:read',
-      'pikku:console:emails:write',
-      'pikku:console:code:write',
+      'pikku:console',
     ],
   },
   /**

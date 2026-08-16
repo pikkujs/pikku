@@ -36,6 +36,7 @@ const PASSWORD = 'pikkuAdminSetUserPassword'
  * So the addon is proven here, over RPC, and the scaffold in the browser by
  * `user-admin-console.feature.ts`. Neither surface is left to the other's word.
  */
+const ADDON_LIST = 'admin:listUsers'
 const ADDON_CREATE = 'admin:createUser'
 const ADDON_BAN = 'admin:setUserBanned'
 const ADDON_REMOVE = 'admin:removeUser'
@@ -601,10 +602,12 @@ export const userAdminCannotActOnSelfScenario = pikkuScenario<
     )
 
     // The refusals must have been refusals, not a delete that half-happened.
+    // Read-only on purpose: revoking the admin's own sessions to prove the
+    // point would sign it out of every scenario that runs after this one.
     const stillThere = await scenario.when(
-      'the admin acts on itself again',
+      'the admin reads the directory',
       'invokesRpcRaw',
-      { rpcName: ADDON_SESSIONS, data: { userId: me.userId } },
+      { rpcName: ADDON_LIST, data: {} },
       { actor: actors.admin }
     )
     await scenario.then(
