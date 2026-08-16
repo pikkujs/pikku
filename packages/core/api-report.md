@@ -19,7 +19,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 130 | 19 | 70 |
-| `.` | 206 | 40 | 40 |
+| `.` | 206 | 39 | 40 |
 | `./ecosystem/scenario` | 31 | 11 | 55 |
 | `./scenario` | 42 | 25 | 33 |
 | `./workflow` | 76 | 19 | 29 |
@@ -45,12 +45,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./safe-fetch` | 6 | 4 | 0 |
 | `./ecosystem/channel/serverless` | 6 | 1 | 3 |
 | `./ecosystem/errors` | 47 | 1 | 3 |
-| `./cli` | 14 | 3 | 0 |
 | `./schema` | 6 | 3 | 0 |
 | `./dev` | 5 | 1 | 2 |
 | `./middleware` | 12 | 2 | 0 |
 | `./scheduler` | 6 | 2 | 0 |
 | `./mcp` | 20 | 2 | 0 |
+| `./cli` | 14 | 2 | 0 |
 | `./cli/channel` | 7 | 2 | 0 |
 | `./credential` | 5 | 2 | 0 |
 | `./node-host-resolver` | 2 | 1 | 0 |
@@ -73,7 +73,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem/agent-scorer` | 13 | 0 | 0 |
 | `./ecosystem/channel` | 17 | 0 | 0 |
 | `./ecosystem/channel/local` | 3 | 0 | 0 |
-| `./ecosystem/cli` | 13 | 0 | 0 |
+| `./ecosystem/cli` | 14 | 0 | 0 |
 | `./ecosystem/cli/channel` | 15 | 0 | 0 |
 | `./ecosystem/credential` | 5 | 0 | 0 |
 | `./ecosystem/crypto-utils` | 7 | 0 | 0 |
@@ -105,7 +105,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem/services/v8-coverage` | 1 | 0 | 0 |
 | `./ecosystem/testing` | 2 | 0 | 0 |
 | `./ecosystem/trigger` | 6 | 0 | 0 |
-| `./ecosystem/types` | 41 | 0 | 0 |
+| `./ecosystem/types` | 42 | 0 | 0 |
 | `./ecosystem/variable` | 7 | 0 | 0 |
 | `./ecosystem/virtual-user` | 32 | 0 | 0 |
 | `./ecosystem/workflow` | 54 | 0 | 0 |
@@ -6541,6 +6541,7 @@ export type CreateWireServices<
 executeCLI: ({ programName, args, createConfig, createSingletonServices, createWireServices, }: { programName: string; args?: string[] | undefined; createConfig?: CreateConfig<any, any> | undefined; createSingletonServices: CreateSingletonServices<any, any>; createWireServices?: CreateWireServices<any, any, any> | undefined; }) => Promise<void>
 generateCommandHelp: (programName: string, allMeta: CLIMeta, commandPath?: string[]) => string
 pikkuCLIRender: <Data, Services extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Session extends CoreUserSession = CoreUserSession>(renderer: (services: Services, data: Data, session?: Session | undefined) => void | Promise<void>) => CorePikkuCLIRender<Data, Services, Session>
+runCLICommand: ({ program, commandPath, data, singletonServices, createWireServices, onOutput, session, transport, }: { program: string; commandPath: string[]; data: Record<string, any>; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<any>
 ```
 
 ## ./ecosystem/cli/channel
@@ -9010,6 +9011,7 @@ export abstract class PikkuRequest<In = any> {
   constructor(data: In)
   public async data(): Promise<In>
 }
+pikkuServerLifecycle: <SS extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>>(lifecycle: ServerLifecycle<SS>) => ServerLifecycle<SS>
 export type PikkuWire<
   In = unknown,
   Out = unknown,
