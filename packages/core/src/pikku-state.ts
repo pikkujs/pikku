@@ -1,4 +1,4 @@
-import type { PikkuPackageState } from './index.js'
+import type { PikkuPackageState } from './types/state.types.js'
 import type {
   CoreSingletonServices,
   CreateWireServices,
@@ -202,3 +202,5 @@ export const addPackageServiceFactories = (
 ): void => {
   pikkuState(packageName, 'package', 'factories', factories)
 }
+
+export type { PikkuPackageState } from './types/state.types.js'

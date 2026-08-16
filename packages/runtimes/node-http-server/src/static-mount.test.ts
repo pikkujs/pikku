@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, test } from 'node:test'
 
-import { pikkuState, resetPikkuState } from '@pikku/core/ecosystem'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
 
 import { PikkuNodeHTTPServer } from './pikku-node-http-server.js'
 

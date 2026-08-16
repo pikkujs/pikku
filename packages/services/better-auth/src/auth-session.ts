@@ -1,9 +1,9 @@
-import { pikkuMiddleware } from '@pikku/core/ecosystem/middleware'
+import { pikkuMiddleware } from '@pikku/core/types'
 import type {
   CorePikkuMiddleware,
   CoreServices,
   CoreUserSession,
-} from '@pikku/core/ecosystem/types'
+} from '@pikku/core/types'
 import type { BetterAuthInstance } from './define-auth.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 import {

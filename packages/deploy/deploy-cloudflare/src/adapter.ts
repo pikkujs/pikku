@@ -298,7 +298,7 @@ export class CloudflareProviderAdapter {
     const lines: string[] = [
       `// Generated server (container) entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
-      `import { pikkuState } from '@pikku/core/ecosystem'`,
+      `import { pikkuState } from '@pikku/core/state'`,
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       ...this.contributorImports(platform),
@@ -548,7 +548,7 @@ export class CloudflareProviderAdapter {
             `import type { DurableObjectNamespace${isWorkflowRole ? ', DurableObjectStorage' : ''} } from '@cloudflare/workers-types'`,
             ...(isWorkflowRole
               ? [
-                  `import type { WorkflowRunWire } from '@pikku/core/ecosystem/workflow'`,
+                  `import type { WorkflowRunWire } from '@pikku/core/workflow'`,
                 ]
               : []),
           ]

@@ -1,4 +1,4 @@
-import { runChannelDisconnect } from '@pikku/core/ecosystem/channel/serverless'
+import { runChannelDisconnect } from '@pikku/core/channel/serverless'
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 
 import { getServerlessDependencies } from './utils.js'

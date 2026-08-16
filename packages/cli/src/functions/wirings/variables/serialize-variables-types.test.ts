@@ -2,7 +2,7 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import ts from 'typescript'
 import { serializeVariablesTypes } from './serialize-variables-types.js'
-import type { VariableDefinitions } from '@pikku/core/ecosystem/variable'
+import type { VariableDefinitions } from '@pikku/core/variable'
 import type { SchemaRef } from '@pikku/inspector'
 
 const serialize = (

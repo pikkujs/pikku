@@ -1,4 +1,4 @@
-import { pikkuAgentMiddleware } from '@pikku/core'
+import { pikkuAgentMiddleware } from '@pikku/core/types'
 
 export const uppercaseMiddleware = pikkuAgentMiddleware({
   modifyOutputStream: (_services, { event }) => {

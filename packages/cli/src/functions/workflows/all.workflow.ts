@@ -102,6 +102,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuScopeDefinitionTypes',
         null
       )
+      await workflow.do('Bootstrap error types', 'pikkuErrorTypes', null)
       await workflow.do('Bootstrap scopes', 'pikkuScopes', { bootstrap: true })
       await workflow.do('Bootstrap roles', 'pikkuRoles', { bootstrap: true })
       await workflow.do('Bootstrap personas', 'pikkuPersonas', {
@@ -256,6 +257,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Emails', 'pikkuEmails', null),
+      workflow.do('Error types', 'pikkuErrorTypes', null),
       workflow.do(
         'Secret definition types',
         'pikkuSecretDefinitionTypes',

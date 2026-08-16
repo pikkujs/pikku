@@ -1,9 +1,9 @@
-import type { HTTPWiringsMeta } from '@pikku/core/ecosystem/http'
+import type { HTTPWiringsMeta } from '@pikku/core/http'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { MetaInputTypes, TypesMap } from '@pikku/inspector'
 import { generateCustomTypes } from '@pikku/inspector'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import type { Logger } from '@pikku/core/services'
 
 export const serializeTypedHTTPWiringsMap = (
   logger: Logger,

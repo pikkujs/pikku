@@ -749,7 +749,9 @@ export async function generateSchemaTypes(
     ``,
     `import type { ColumnType } from 'kysely'`,
     ...(usedFormBrands.length > 0
-      ? [`import type { ${usedFormBrands.join(', ')} } from '@pikku/core'`]
+      ? [
+          `import type { ${usedFormBrands.join(', ')} } from '@pikku/core/data-classification'`,
+        ]
       : []),
     ``,
     `export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>`,

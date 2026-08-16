@@ -2,7 +2,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import ts from 'typescript'
 import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
-import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
+import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 
 const parseErrors = (source: string) => {

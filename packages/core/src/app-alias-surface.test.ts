@@ -18,11 +18,19 @@ import { fileURLToPath } from 'node:url'
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 const appTrees = ['templates', 'e2e', 'verifiers']
-const skipped = new Set(['node_modules', 'dist', '.pikku', '.next', 'build'])
+const skipped = new Set(['node_modules', 'dist', '.next', 'build'])
+
+/**
+ * `outDir` is a project's own setting, so the generated tree is not always
+ * `.pikku` — the treeshake verifier writes one output tree per scenario under
+ * `.pikku-shake`. Matching the prefix keeps a leaf's generated `index.ts`, which
+ * carries no `.gen.` in its name, from reading as hand-written app code.
+ */
+const isGeneratedTree = (entry: string) => entry.startsWith('.pikku')
 
 const walkApp = (dir: string, out: string[] = []): string[] => {
   for (const entry of readdirSync(dir)) {
-    if (skipped.has(entry)) continue
+    if (skipped.has(entry) || isGeneratedTree(entry)) continue
     const path = join(dir, entry)
     if (statSync(path).isDirectory()) walkApp(path, out)
     else if (path.endsWith('.ts') || path.endsWith('.tsx')) out.push(path)

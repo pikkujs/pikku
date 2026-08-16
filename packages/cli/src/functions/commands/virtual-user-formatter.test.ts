@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
-import type { VirtualUserRunResult } from '@pikku/core/ecosystem/virtual-user'
+import type { VirtualUserRunResult } from '@pikku/core/virtual-user'
 
 const context = {
   persona: 'orgAdmin',

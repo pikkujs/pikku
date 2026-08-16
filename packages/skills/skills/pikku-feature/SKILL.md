@@ -121,7 +121,7 @@ in-app features don't.
   queue-dispatched.
 - **Auth checks belong on the function or wiring**, not in function bodies.
   Use the `permissions` field with a `pikkuPermission` factory.
-- **Throw typed errors** from `@pikku/core/errors` — `NotFoundError`,
+- **Throw typed errors** from `#pikku/error` — `NotFoundError`,
   `ConflictError`, `BadRequestError`. Never bare `Error`.
 - **Migrations are inline SQL files** in the project's migrations dir
   (typically `sql/`). Use a numbered prefix matching existing files.

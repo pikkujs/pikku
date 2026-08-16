@@ -55,8 +55,8 @@ const inspectSources = async (sources: Record<string, string>) => {
 }
 
 const IMPORTS = [
-  "import { defineScope } from '@pikku/core/ecosystem/scope'",
-  "import { defineSystemRole } from '@pikku/core/ecosystem/role'",
+  "import { defineScope } from '@pikku/core/scope'",
+  "import { defineSystemRole } from '@pikku/core/role'",
 ]
 
 const withScopes = (...lines: string[]) =>
@@ -132,7 +132,7 @@ describe('addSystemRole inspector', () => {
         "defineSystemRole({ buyer: { scopes: ['catalogue:read'] } })"
       ),
       'more-roles.ts': [
-        "import { defineSystemRole } from '@pikku/core/ecosystem/role'",
+        "import { defineSystemRole } from '@pikku/core/role'",
         "defineSystemRole({ admin: { scopes: ['admin'] } })",
       ].join('\n'),
     })
@@ -153,7 +153,7 @@ describe('addSystemRole inspector', () => {
   test('a generated declaration neither claims the slot nor conflicts', async () => {
     const { state, criticals } = await inspectSources({
       'roles.gen.ts': [
-        "import { defineSystemRole } from '@pikku/core/ecosystem/role'",
+        "import { defineSystemRole } from '@pikku/core/role'",
         'defineSystemRole({ admin: { scopes: [] } })',
       ].join('\n'),
       'roles.ts': withScopes(

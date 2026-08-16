@@ -1,4 +1,4 @@
-import { runPikkuFunc } from '@pikku/core/ecosystem'
+import { runPikkuFunc } from '@pikku/core/function'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
 

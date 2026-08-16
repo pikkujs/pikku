@@ -1,4 +1,4 @@
-import type { GatewaysMeta } from '@pikku/core/ecosystem/gateway'
+import type { GatewaysMeta } from '@pikku/core/gateway'
 import { serializeMetaTS } from '../../../utils/serialize-meta-ts.js'
 
 export const serializeGatewayMeta = (gatewayMeta: GatewaysMeta) => {

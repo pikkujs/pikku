@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import type { CoreServices, CoreUserSession } from '@pikku/core/ecosystem/types'
+import type { CoreServices, CoreUserSession } from '@pikku/core/types'
 import { withResolvedScopes } from './auth-session-scopes.js'
 
 const scopeService = (

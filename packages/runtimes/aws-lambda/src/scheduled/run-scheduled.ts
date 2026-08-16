@@ -7,8 +7,8 @@
  */
 
 import type { ScheduledEvent } from 'aws-lambda'
-import { runScheduledTask } from '@pikku/core/ecosystem/scheduler'
-import { getScheduledTasks } from '@pikku/core/ecosystem/scheduler'
+import { runScheduledTask } from '@pikku/core/scheduler'
+import { getScheduledTasks } from '@pikku/core/scheduler'
 
 export const runLambdaScheduled = async (
   _event: ScheduledEvent

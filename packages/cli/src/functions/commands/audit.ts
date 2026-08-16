@@ -6,7 +6,7 @@ import type {
   SecurityAuditIssue,
   SecurityAuditReport,
   SecurityAuditUpdate,
-} from '@pikku/core/ecosystem/types'
+} from '@pikku/core/types'
 
 // `pikku audit` — dependency security audit. Security advisories are always
 // reported; `--outdated` additionally reports available dependency updates.

@@ -12,7 +12,7 @@ import {
 import { ChevronRight } from 'lucide-react'
 import { asI18n, type I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import type { VirtualUserDisposition } from '@pikku/core/ecosystem/virtual-user'
+import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
 import type { VirtualUserDoc } from './virtual-user-model'
 import styles from './virtual-users.module.css'
 

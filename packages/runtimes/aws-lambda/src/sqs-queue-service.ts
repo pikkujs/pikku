@@ -8,8 +8,8 @@
  */
 
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
-import type { QueueService, QueueJob } from '@pikku/core/ecosystem/queue'
-import type { JobOptions } from '@pikku/core/ecosystem/queue'
+import type { QueueService, QueueJob } from '@pikku/core/queue'
+import type { JobOptions } from '@pikku/core/queue'
 
 export class SQSQueueService implements QueueService {
   readonly supportsResults = false

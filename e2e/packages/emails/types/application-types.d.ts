@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { EmailStore } from '../src/email-store.service.js'
 
 export interface Config extends CoreConfig {}

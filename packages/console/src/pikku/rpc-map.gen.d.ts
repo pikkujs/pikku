@@ -75,7 +75,7 @@ type FlattenedAgentMap =
 
 
 import type { PikkuRPC } from '@pikku/core/rpc'
-import type { AgentInput } from '@pikku/core/ecosystem/agent'
+import type { AgentInput } from '@pikku/core/agent'
 
 export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,

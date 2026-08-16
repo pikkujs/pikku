@@ -1,4 +1,4 @@
-import { NotFoundError } from '@pikku/core'
+import { NotFoundError } from '#pikku/error'
 import {
   pikkuMCPPromptFunc,
   pikkuMCPResourceFunc,

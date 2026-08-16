@@ -104,7 +104,7 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       cliWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/ecosystem'\nimport { CLIMeta } from '@pikku/core/ecosystem/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
+      `import { pikkuState } from '@pikku/core/state'\nimport { CLIMeta } from '@pikku/core/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
     )
 
     return true

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, test } from 'node:test'
-import { setSingletonServices } from '@pikku/core/ecosystem'
-import { wireHTTP } from '@pikku/core/ecosystem/http'
-import { httpRouter, pikkuState, resetPikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import { setSingletonServices } from '@pikku/core/state'
+import { wireHTTP } from '@pikku/core/http'
+import { httpRouter } from '@pikku/core/http'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
+import type { Logger } from '@pikku/core/services'
 
 import { PikkuNextJS } from './pikku-next.js'
 

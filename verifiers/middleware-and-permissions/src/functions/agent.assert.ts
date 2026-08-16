@@ -20,7 +20,7 @@ import {
   type ExpectedEvent,
 } from '../assert-combined.js'
 import { randomUUID } from 'crypto'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuState } from '@pikku/core/state'
 import { unsupportedChannelRemote } from '@pikku/core/channel'
 
 class MockAgentRunner implements AgentRunnerService {

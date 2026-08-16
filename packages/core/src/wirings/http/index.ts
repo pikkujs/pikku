@@ -9,6 +9,7 @@ export { fetch, fetchData, wireHTTP, addHTTPMiddleware } from './http-runner.js'
 
 export { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
 export { toWebRequest, applyWebResponse } from './web-request.js'
+export { httpRouter } from './routers/http-router.js'
 
 export type {
   AssertHTTPWiringParams,

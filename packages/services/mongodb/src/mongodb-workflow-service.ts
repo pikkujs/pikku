@@ -1,5 +1,5 @@
-import type { SerializedError } from '@pikku/core/ecosystem/types'
-import { PikkuWorkflowService } from '@pikku/core/ecosystem/workflow'
+import type { SerializedError } from '@pikku/core/types'
+import { PikkuWorkflowService } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
   WorkflowQueueOptions,
@@ -9,7 +9,7 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
-} from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/workflow'
 import type { Db, Collection } from 'mongodb'
 import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
 

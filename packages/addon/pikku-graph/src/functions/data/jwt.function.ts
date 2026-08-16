@@ -1,4 +1,4 @@
-import { MissingServiceError } from '@pikku/core/ecosystem/errors'
+import { MissingServiceError } from '#pikku/error'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/function'
 

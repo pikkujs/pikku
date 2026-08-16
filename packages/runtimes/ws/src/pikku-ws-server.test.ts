@@ -3,10 +3,7 @@ import { createServer, type Server } from 'node:http'
 import { connect, type Socket } from 'node:net'
 import { after, before, describe, test } from 'node:test'
 import { WebSocket, WebSocketServer } from 'ws'
-import {
-  getSingletonServices,
-  setSingletonServices,
-} from '@pikku/core/ecosystem'
+import { getSingletonServices, setSingletonServices } from '@pikku/core/state'
 
 import {
   DEFAULT_WS_MAX_PAYLOAD,

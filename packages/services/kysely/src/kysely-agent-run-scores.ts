@@ -1,7 +1,7 @@
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import type { AgentRunScore } from '@pikku/core/ecosystem/agent-scorer'
-import type { SaveScoreInput } from '@pikku/core/ecosystem/agent'
+import type { AgentRunScore } from '@pikku/core/agent-scorer'
+import type { SaveScoreInput } from '@pikku/core/services'
 import { parseJson } from './kysely-json.js'
 
 /**

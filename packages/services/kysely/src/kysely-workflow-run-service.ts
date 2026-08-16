@@ -3,7 +3,7 @@ import type {
   StepState,
   WorkflowStatus,
   WorkflowRunService,
-} from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'

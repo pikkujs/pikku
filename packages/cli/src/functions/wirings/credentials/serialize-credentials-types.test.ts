@@ -2,7 +2,7 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import ts from 'typescript'
 import { serializeCredentialsTypes } from './serialize-credentials-types.js'
-import type { CredentialDefinitions } from '@pikku/core/ecosystem/credential'
+import type { CredentialDefinitions } from '@pikku/core/credential'
 
 const serialize = (definitions: CredentialDefinitions) =>
   serializeCredentialsTypes({

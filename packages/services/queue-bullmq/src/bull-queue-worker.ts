@@ -6,14 +6,14 @@ import type {
   PikkuWorkerConfig,
   QueueConfigMapping,
   ConfigValidationResult,
-} from '@pikku/core/ecosystem/queue'
-import { runQueueJob } from '@pikku/core/ecosystem/queue'
+} from '@pikku/core/queue'
+import { runQueueJob } from '@pikku/core/queue'
 import {
   registerQueueWorkers,
   QueueJobFailedError,
   QueueJobDiscardedError,
-} from '@pikku/core/ecosystem/queue'
-import { pikkuState } from '@pikku/core/ecosystem'
+} from '@pikku/core/queue'
+import { pikkuState } from '@pikku/core/state'
 import { mapBullJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToBull = (

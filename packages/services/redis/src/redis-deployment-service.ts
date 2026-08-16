@@ -1,12 +1,12 @@
-import { buildRemoteHeaders } from '@pikku/core/ecosystem/remote'
+import { buildRemoteHeaders } from '@pikku/core/remote'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-} from '@pikku/core/ecosystem/services'
-import type { JWTService } from '@pikku/core/ecosystem/services'
-import type { SecretService } from '@pikku/core/ecosystem/secret'
-import { getAllFunctionNames } from '@pikku/core/ecosystem/function'
+} from '@pikku/core/services'
+import type { JWTService } from '@pikku/core/services'
+import type { SecretService } from '@pikku/core/services'
+import { getAllFunctionNames } from '@pikku/core/function'
 import { Redis, type RedisOptions } from 'ioredis'
 
 export class RedisDeploymentService implements DeploymentService {

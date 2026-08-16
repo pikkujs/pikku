@@ -24,7 +24,7 @@ export const serializePackageFactories = (
   declaredSecrets?: string[]
 ) => {
   const imports: string[] = [
-    `import { pikkuState } from '@pikku/core/ecosystem'`,
+    `import { pikkuState } from '@pikku/core/state'`,
   ]
 
   const factoryEntries: string[] = []

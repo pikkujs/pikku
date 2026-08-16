@@ -34,8 +34,11 @@ export const serializeScenarioTypes = (
   scenarioStepMapImportPath: string,
   personasImportPath: string
 ) => {
-  return `import type { PikkuScenarioWire, ScenarioStepOptions } from '@pikku/core/ecosystem/scenario'
-import type { PikkuWorkflowWire } from '@pikku/core/ecosystem/workflow'
+  return `import type {
+  PikkuScenarioWire,
+  ScenarioStepOptions,
+} from '@pikku/core/scenario'
+import type { PikkuWorkflowWire } from '@pikku/core/workflow'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { PikkuError } from '@pikku/core/errors'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig, WiredServices, InferSchemaOutput, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
@@ -58,17 +61,14 @@ export {
   pollUntil,
   requireActor,
   requireScenarioEnv,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
 export type {
   PikkuBrowserWire,
   ScenarioSurface,
   TestIdSelector,
-} from '@pikku/core/ecosystem/scenario'
-export {
-  postScenarioJson,
-  readScenarioHttpResponse,
-} from '@pikku/core/ecosystem/persona'
-export type { ScenarioHttpResponse } from '@pikku/core/ecosystem/persona'
+} from '@pikku/core/scenario'
+export { postScenarioJson, readScenarioHttpResponse } from '@pikku/core/persona'
+export type { ScenarioHttpResponse } from '@pikku/core/scenario'
 
 /**
  * The typed half of a scenario wire: \`given\`/\`when\`/\`then\`, narrowed to the

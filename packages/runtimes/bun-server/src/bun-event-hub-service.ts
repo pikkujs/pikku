@@ -1,7 +1,7 @@
 import type { ServerWebSocket, Server } from 'bun'
 
 type AnyServer = Server<unknown>
-import type { EventHubService } from '@pikku/core/ecosystem/channel'
+import type { EventHubService } from '@pikku/core/channel'
 
 export class BunEventHubService<
   Mappings extends Record<string, unknown> = {},

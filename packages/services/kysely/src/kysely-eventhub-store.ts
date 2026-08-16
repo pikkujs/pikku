@@ -1,4 +1,4 @@
-import { EventHubStore } from '@pikku/core/ecosystem/channel'
+import { EventHubStore } from '@pikku/core/channel'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 

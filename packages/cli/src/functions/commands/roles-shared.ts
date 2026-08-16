@@ -1,9 +1,6 @@
 import { readFile } from 'node:fs/promises'
-import type {
-  SystemRole,
-  SystemRoleDefinitionsMeta,
-} from '@pikku/core/ecosystem/role'
-import { flattenSystemRoleDefinitions } from '@pikku/core/ecosystem/role'
+import type { SystemRole, SystemRoleDefinitionsMeta } from '@pikku/core/role'
+import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import { loadDeclaredScopes, openScopeService } from './scopes-shared.js'
 import type { OpenedScopeService } from './scopes-shared.js'
 

@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 
-import { fetch } from '@pikku/core'
+import { fetch } from '@pikku/core/http'
 import { runQueueJob } from '@pikku/core/queue'
 import { runScheduledTask } from '@pikku/core/scheduler'
 import { pikkuDevReloader } from '@pikku/core/dev'

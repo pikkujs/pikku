@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
-import { BadRequestError } from '@pikku/core/ecosystem/errors'
+import { BadRequestError } from '#pikku/error'
 
 /** Anchoring the first character on npm's no-leading-dot rule is what excludes
  *  `.` and `..`; a trailing `[a-z0-9._-]+` alone matches both. */

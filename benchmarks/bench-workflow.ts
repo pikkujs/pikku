@@ -23,8 +23,8 @@
  *   tsx benchmarks/bench-workflow.ts --queue --runs 200 --steps 16
  */
 
-import { addFunction } from '@pikku/core/ecosystem'
-import { pikkuState, resetPikkuState } from '@pikku/core/ecosystem'
+import { addFunction } from '@pikku/core/function'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
 import {
   InMemoryWorkflowService,
   InMemoryQueueService,

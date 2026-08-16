@@ -1,5 +1,5 @@
-import type { SecretValue } from '@pikku/core/ecosystem/types'
-import type { OAuth2CredentialConfig } from '@pikku/core/ecosystem/secret'
+import type { SecretValue } from '@pikku/core/secret-value'
+import type { OAuth2CredentialConfig } from '@pikku/core/secret'
 
 export type CredentialOAuth2Configs = Record<
   string,

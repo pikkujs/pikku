@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import type { FunctionServicesMeta } from '@pikku/core/ecosystem/types'
+import type { FunctionServicesMeta } from '@pikku/core/types'
 import type { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'

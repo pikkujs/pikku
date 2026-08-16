@@ -1,6 +1,6 @@
 import { KyselyWorkflowService } from '@pikku/kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import type { WorkflowQueueOptions } from '@pikku/core/ecosystem/workflow'
+import type { WorkflowQueueOptions } from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
 

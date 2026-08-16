@@ -1,7 +1,7 @@
 import { describe, test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import Redis from 'ioredis-mock'
-import { defineServiceTests } from '@pikku/core/ecosystem/testing'
+import { defineServiceTests } from '@pikku/core/testing'
 import { RedisSecretService } from './redis-secret-service.js'
 
 describe('RedisSecretService', () => {

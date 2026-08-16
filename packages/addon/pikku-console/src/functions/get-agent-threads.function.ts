@@ -1,5 +1,5 @@
-import { hasScopes } from '@pikku/core/ecosystem/scope'
-import { threadOwnerConstraint } from '@pikku/core/ecosystem/agent'
+import { hasScopes } from '@pikku/core/scope'
+import { threadOwnerConstraint } from '@pikku/core/agent'
 import { pikkuFunc } from '#pikku/function'
 
 const ADMIN_SCOPE_ROOT = 'admin'

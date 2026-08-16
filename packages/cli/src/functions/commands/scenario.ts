@@ -3,21 +3,18 @@ import { resolve, join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
-import { FileScenarioRunStore } from '@pikku/core/ecosystem/scenario'
-import { createHttpPersonas } from '@pikku/core/ecosystem/persona'
+import { InMemoryWorkflowService } from '@pikku/core/services'
+import { FileScenarioRunStore } from '@pikku/core/services'
+import { createHttpPersonas } from '@pikku/core/persona'
 import {
   PikkuScenarioService,
   resolveFeatureScenarios,
   SCENARIO_SURFACES,
-} from '@pikku/core/ecosystem/scenario'
-import { pikkuState, getAllPackageStates } from '@pikku/core/ecosystem'
-import type { PikkuRPC } from '@pikku/core/ecosystem/rpc'
-import type { CoreWorkflow } from '@pikku/core/ecosystem/workflow'
-import type {
-  CoreFeature,
-  ScenarioSurface,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
+import { pikkuState, getAllPackageStates } from '@pikku/core/state'
+import type { PikkuRPC } from '@pikku/core/rpc'
+import type { CoreWorkflow } from '@pikku/core/workflow'
+import type { CoreFeature, ScenarioSurface } from '@pikku/core/scenario'
 
 import { loadScenarioBootstrap } from './load-user-project.js'
 import {
@@ -32,7 +29,7 @@ import { formatScenarioReport } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
   ScenarioResult,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
 import {
   resolveScenarioBrowserProvider,
   scenarioBrowserLifecycle,

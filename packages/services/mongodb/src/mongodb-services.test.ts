@@ -2,7 +2,7 @@ import { describe, test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { MongoClient, type Db } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
-import { defineServiceTests } from '@pikku/core/ecosystem/testing'
+import { defineServiceTests } from '@pikku/core/testing'
 
 import { MongoDBChannelStore } from './mongodb-channel-store.js'
 import { MongoDBEventHubStore } from './mongodb-eventhub-store.js'

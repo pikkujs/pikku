@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku/function'
-import type { ScenarioRunRecord } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioRunRecord } from '@pikku/core/scenario'
 
 export const getScenarioRun = pikkuFunc<
   { runId: string },

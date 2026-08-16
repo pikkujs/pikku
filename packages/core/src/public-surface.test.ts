@@ -19,11 +19,12 @@ const subpaths = packageJson.exports as Record<string, string>
 /**
  * `exports` entries, with a wildcard subpath replaced by the files it matches.
  *
- * `./ecosystem/*` publishes one sub-barrel per area, so pinning it as written
- * would pin a pattern rather than a surface — and a new barrel would appear in
- * the published API without a diff. Expanding it is what keeps each area's
- * exports in `public-surface.json` under the same guarantee as every other
- * entry point's.
+ * A wildcard subpath would pin a pattern rather than a surface, and a module
+ * dropped into the matched directory would appear in the published API without
+ * a diff. Expanding it is what keeps every entry point's exports in
+ * `public-surface.json` under the same guarantee. `exports` declares none today
+ * — `./ecosystem/*` was the last one — and this keeps that from being a
+ * silent assumption.
  */
 const entryPoints = (): [string, string][] =>
   Object.entries(subpaths).flatMap(([subpath, dist]) => {

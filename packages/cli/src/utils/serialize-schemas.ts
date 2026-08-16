@@ -7,7 +7,7 @@ import {
   unlink,
   writeFile,
 } from 'fs/promises'
-import type { JSONValue } from '@pikku/core/ecosystem/types'
+import type { JSONValue } from '@pikku/core/types'
 import type { CLILogger } from '../services/cli-logger.service.js'
 
 const SCHEMA_FILE_SUFFIX = '.schema.json'
@@ -174,7 +174,7 @@ addSchema('${schema}', ${identifier}${packageNameArg})
 
   const importStatement =
     availableSchemas.length > 0
-      ? `import { addSchema } from '@pikku/core/ecosystem/schema'`
+      ? `import { addSchema } from '@pikku/core/schema'`
       : '// No schemas to register'
 
   await writeFileInDir(

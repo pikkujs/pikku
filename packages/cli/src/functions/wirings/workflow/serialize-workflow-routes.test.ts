@@ -52,7 +52,7 @@ describe('serializeWorkflowRoutes', () => {
 
     assert.match(
       result,
-      /import \{ assertWorkflowRunOwner \} from '@pikku\/core\/ecosystem\/workflow'/
+      /import \{ assertWorkflowRunOwner \} from '@pikku\/core\/workflow'/
     )
     const ownershipChecks =
       result.match(/assertWorkflowRunOwner\(run\.wire, session\)/g) ?? []

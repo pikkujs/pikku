@@ -1,8 +1,8 @@
 import * as pino from 'pino'
 
-import { LogLevel } from '@pikku/core/ecosystem/services'
-import type { Logger } from '@pikku/core/ecosystem/services'
-import type { Safe } from '@pikku/core/ecosystem/types'
+import { LogLevel } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/services'
+import type { Safe } from '@pikku/core/secret-value'
 
 export class PinoLogger implements Logger {
   public pino: pino.Logger

@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { NoopService } from '../src/services/noop-service.js'
 
 export interface Config extends CoreConfig {}

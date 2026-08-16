@@ -1,5 +1,5 @@
-import type { SessionStore } from '@pikku/core/ecosystem/services'
-import type { CoreUserSession } from '@pikku/core/ecosystem/types'
+import type { SessionStore } from '@pikku/core/services'
+import type { CoreUserSession } from '@pikku/core/types'
 import type { Db, Collection } from 'mongodb'
 
 interface SessionDoc {

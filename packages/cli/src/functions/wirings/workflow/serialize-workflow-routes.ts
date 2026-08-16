@@ -47,7 +47,7 @@ export const Acknowledged = z.object({ ok: z.literal(true) })
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTPRoutes } from '${leaf('http')}'
 import { MissingServiceError } from '@pikku/core/errors'
-import { assertWorkflowRunOwner } from '@pikku/core/ecosystem/workflow'
+import { assertWorkflowRunOwner } from '@pikku/core/workflow'
 import {
   WorkflowStart,
   WorkflowRunRef,

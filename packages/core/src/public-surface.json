@@ -1,92 +1,14 @@
 {
-  ".": [
-    "AIProviderAuthError",
-    "AIProviderNotConfiguredError",
-    "AbandonedError",
-    "BadGatewayError",
-    "BadRequestError",
-    "ConflictError",
-    "ExpectationFailedError",
-    "ForbiddenError",
-    "GatewayTimeoutError",
-    "GoneError",
-    "HTTPVersionNotSupportedError",
-    "InternalServerError",
-    "InvalidMiddlewareWireError",
-    "InvalidOriginError",
-    "InvalidSessionError",
-    "LengthRequiredError",
-    "LocalEnvironmentOnlyError",
-    "LockedError",
-    "MaxComputeTimeReachedError",
-    "MethodNotAllowedError",
-    "MissingCredentialError",
-    "MissingSchemaError",
-    "MissingScopeError",
-    "MissingServiceError",
-    "MissingSessionError",
-    "NoopAuditService",
-    "NotAcceptableError",
-    "NotFoundError",
-    "NotImplementedError",
-    "PayloadTooLargeError",
-    "PaymentRequiredError",
-    "PikkuError",
-    "PikkuMissingMetaError",
-    "PikkuRequest",
-    "PreconditionFailedError",
-    "ProxyAuthenticationRequiredError",
-    "REDACTED",
-    "RangeNotSatisfiableError",
-    "ReadonlySessionError",
-    "RequestTimeoutError",
-    "SchedulerService",
-    "SecretAccessDeniedError",
-    "SecretCoercionError",
-    "SecretHostNotAllowedError",
-    "ServiceUnavailableError",
-    "TooManyRequestsError",
-    "URITooLongError",
-    "UnauthorizedError",
-    "UnprocessableContentError",
-    "UnsupportedMediaTypeError",
-    "addGlobalPermission",
-    "addTagMiddleware",
-    "assertSecretAllowedForHost",
-    "checkAuthPermissions",
-    "clearPikkuRuntimeState",
-    "createGraph",
-    "createInvocationAudit",
-    "createSecretValue",
-    "fetch",
-    "formatVersionedId",
-    "getAllFunctionNames",
-    "getRelativeTimeOffsetFromNow",
-    "hasScopes",
-    "hashToken",
-    "isExpectedError",
-    "isSecretValue",
-    "isSerializable",
-    "isVersionedId",
-    "parseDurationString",
-    "parseVersionedId",
+  ".": [],
+  "./ecosystem": [
+    "pikkuState"
+  ],
+  "./types": [
     "pikkuAgentMiddleware",
-    "pikkuApprovalDescription",
-    "pikkuAuth",
-    "pikkuCLIRender",
     "pikkuChannelMiddleware",
     "pikkuChannelMiddlewareFactory",
     "pikkuMiddleware",
-    "pikkuMiddlewareFactory",
-    "pikkuPermission",
-    "pikkuPermissionFactory",
-    "pikkuServerLifecycle",
-    "runMiddleware",
-    "stopSingletonServices",
-    "verifyScopes",
-    "wireAddon",
-    "wireRemoteAddon",
-    "withoutSecrets"
+    "pikkuMiddlewareFactory"
   ],
   "./middleware": [
     "addGlobalMiddleware",
@@ -103,12 +25,15 @@
     "telemetryOuter"
   ],
   "./function": [
+    "AbandonedError",
     "addFunction",
+    "checkAuthPermissions",
     "getAllFunctionNames",
     "pikkuApprovalDescription",
     "pikkuAuth",
     "pikkuPermission",
-    "pikkuPermissionFactory"
+    "pikkuPermissionFactory",
+    "runPikkuFunc"
   ],
   "./channel": [
     "ChannelDeploymentService",
@@ -139,6 +64,7 @@
     "addWorkflow",
     "assertWorkflowRunOwner",
     "buildRunTimeline",
+    "createGraph",
     "deriveInvocationId",
     "isRef",
     "pikkuWorkflowGraph",
@@ -173,7 +99,9 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./actor-flow": ["runConversation"],
+  "./actor-flow": [
+    "runConversation"
+  ],
   "./virtual-user": [
     "DISPOSITIONS",
     "IntentStack",
@@ -211,12 +139,15 @@
     "defineHTTPRoutes",
     "fetch",
     "fetchData",
+    "httpRouter",
     "logRoutes",
     "toWebRequest",
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": ["buildRemoteHeaders"],
+  "./remote": [
+    "buildRemoteHeaders"
+  ],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -231,7 +162,11 @@
     "runScheduledTask",
     "wireScheduler"
   ],
-  "./trigger": ["PikkuTriggerService", "wireTrigger", "wireTriggerSource"],
+  "./trigger": [
+    "PikkuTriggerService",
+    "wireTrigger",
+    "wireTriggerSource"
+  ],
   "./rpc": [
     "PikkuRPCService",
     "RPCNotFoundError",
@@ -249,7 +184,10 @@
     "safeFetch",
     "setDefaultHostResolver"
   ],
-  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
+  "./node-host-resolver": [
+    "installNodeHostResolver",
+    "nodeHostResolver"
+  ],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -317,7 +255,10 @@
     "runCLICommand",
     "wireCLI"
   ],
-  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
+  "./cli/command-parser": [
+    "generateCommandHelp",
+    "parseCLIArguments"
+  ],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -331,7 +272,9 @@
   "./scope": [
     "defineScope",
     "flattenScopeDefinitions",
-    "validateAndBuildScopeDefinitionsMeta"
+    "hasScopes",
+    "validateAndBuildScopeDefinitionsMeta",
+    "verifyScopes"
   ],
   "./role": [
     "defineSystemRole",
@@ -354,8 +297,14 @@
     "validateAndBuildPersonasMeta",
     "verifyPersonaRoles"
   ],
-  "./secret": ["defineSecret", "validateAndBuildSecretDefinitionsMeta"],
-  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
+  "./secret": [
+    "defineSecret",
+    "validateAndBuildSecretDefinitionsMeta"
+  ],
+  "./variable": [
+    "defineVariable",
+    "validateAndBuildVariableDefinitionsMeta"
+  ],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -403,7 +352,8 @@
     "UnprocessableContentError",
     "UnsupportedMediaTypeError",
     "WeakKeyMaterialError",
-    "addError"
+    "addError",
+    "isExpectedError"
   ],
   "./services": [
     "ConsoleLogger",
@@ -426,8 +376,10 @@
     "PikkuCredentialWireService",
     "PikkuSessionService",
     "QueueWebhookService",
+    "SchedulerService",
     "ScopedCredentialService",
     "ScopedSecretService",
+    "SecretAccessDeniedError",
     "SecretHostNotAllowedError",
     "StubTracker",
     "TypedCredentialService",
@@ -444,12 +396,22 @@
     "scenarioArtifactContentType",
     "scenarioRunSummary",
     "spy",
-    "stub"
+    "stub",
+    "withoutSecrets"
   ],
-  "./services/local-meta": ["LocalMetaService"],
-  "./services/v8-coverage": ["V8CoverageService"],
-  "./services/istanbul-coverage": ["IstanbulCoverageService"],
-  "./services/local-content": ["LocalContent", "signedContentPath"],
+  "./services/local-meta": [
+    "LocalMetaService"
+  ],
+  "./services/v8-coverage": [
+    "V8CoverageService"
+  ],
+  "./services/istanbul-coverage": [
+    "IstanbulCoverageService"
+  ],
+  "./services/local-content": [
+    "LocalContent",
+    "signedContentPath"
+  ],
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
@@ -479,290 +441,56 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
-  "./ecosystem": [
-    "addFunction",
-    "addGlobalMiddleware",
-    "addMiddleware",
+  "./hmac": [
+    "hmacSha256Hex",
+    "timingSafeStringEqual"
+  ],
+  "./state": [
+    "addPackageServiceFactories",
     "getAllPackageStates",
     "getCreateWireServices",
     "getSingletonServices",
-    "httpRouter",
+    "initializePikkuState",
     "pikkuState",
     "resetPikkuState",
-    "runPikkuFunc",
     "setSingletonServices"
   ],
-  "./ecosystem/agent": [
-    "addAgent",
-    "agent",
-    "agentApprove",
-    "agentResume",
-    "agentStream",
-    "canAccessThread",
-    "isOwnedByPrincipal",
-    "resolveModelAlias",
-    "threadOwnerConstraint",
-    "voiceInput",
-    "voiceOutput"
-  ],
-  "./ecosystem/agent-scorer": [
-    "addAgentScorer",
-    "enableScoreSnapshots",
-    "getScoreSnapshot",
-    "gradeRun",
-    "pikkuAgentJudge",
-    "pikkuAgentScorer",
-    "wireAgentScorerQueueWorkers"
-  ],
-  "./ecosystem/channel": [
-    "ChannelStore",
-    "EventHubStore",
-    "PikkuAbstractChannelHandler",
-    "addChannelMiddleware",
-    "logChannels"
-  ],
-  "./ecosystem/channel/local": [
-    "LocalEventHubService",
-    "PikkuLocalChannelHandler",
-    "runLocalChannel"
-  ],
-  "./ecosystem/channel/serverless": [
-    "runChannelConnect",
-    "runChannelDisconnect",
-    "runChannelMessage"
-  ],
-  "./ecosystem/cli": [
-    "CLIError",
-    "executeCLI",
-    "generateCommandHelp",
-    "pikkuCLIRender"
-  ],
-  "./ecosystem/cli/channel": ["executeRawCLIViaChannel", "handleRawCLI"],
-  "./ecosystem/credential": ["validateAndBuildCredentialDefinitionsMeta"],
-  "./ecosystem/crypto-utils": [
-    "deriveKEK",
-    "envelopeDecrypt",
-    "envelopeEncrypt",
-    "envelopeRewrap",
-    "generateKEKSalt"
-  ],
-  "./ecosystem/dev": [
-    "pikkuDevReloader",
-    "reconcileAddonRegistry",
-    "reloadGeneratedMeta"
-  ],
-  "./ecosystem/errors": [
-    "AIProviderAuthError",
-    "AIProviderNotConfiguredError",
-    "BadGatewayError",
-    "BadRequestError",
-    "ConflictError",
-    "ExpectationFailedError",
-    "ForbiddenError",
-    "GatewayTimeoutError",
-    "GoneError",
-    "HTTPVersionNotSupportedError",
-    "InternalServerError",
-    "InvalidMiddlewareWireError",
-    "InvalidOriginError",
-    "InvalidSessionError",
-    "LengthRequiredError",
-    "LocalEnvironmentOnlyError",
-    "LockedError",
-    "MaxComputeTimeReachedError",
-    "MethodNotAllowedError",
-    "MissingCredentialError",
-    "MissingSchemaError",
-    "MissingScopeError",
-    "MissingServiceError",
-    "MissingSessionError",
-    "NotAcceptableError",
-    "NotFoundError",
-    "NotImplementedError",
-    "PayloadTooLargeError",
-    "PaymentRequiredError",
-    "PikkuError",
-    "PikkuMissingMetaError",
-    "PreconditionFailedError",
-    "ProxyAuthenticationRequiredError",
-    "RangeNotSatisfiableError",
-    "ReadonlySessionError",
-    "RequestTimeoutError",
-    "ServiceUnavailableError",
-    "SystemRoleImmutableError",
-    "SystemRoleShadowedError",
-    "TooManyRequestsError",
-    "URITooLongError",
-    "UnauthorizedError",
-    "UnprocessableContentError",
-    "UnsupportedMediaTypeError",
-    "WeakKeyMaterialError",
-    "addError"
-  ],
-  "./ecosystem/function": ["addFunction", "getAllFunctionNames", "pikkuAuth"],
-  "./ecosystem/gateway": [],
-  "./ecosystem/hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
-  "./ecosystem/http": [
-    "DEFAULT_MAX_BODY_SIZE",
-    "PikkuFetchHTTPRequest",
-    "PikkuFetchHTTPResponse",
-    "fetch",
-    "fetchData",
-    "logRoutes",
-    "toWebRequest",
-    "wireHTTP"
-  ],
-  "./ecosystem/mcp": [
-    "MCPEndpointRegistry",
-    "MCPError",
-    "getMCPPromptsMeta",
-    "getMCPResourcesMeta",
-    "getMCPToolsMeta",
-    "runMCPPrompt",
-    "runMCPResource",
-    "runMCPTool"
-  ],
-  "./ecosystem/middleware": [
-    "addGlobalMiddleware",
-    "addGlobalPermission",
-    "authAPIKey",
-    "authCookie",
-    "pikkuMiddleware",
-    "pikkuRemoteAuthMiddleware",
-    "runMiddleware",
-    "telemetryInner",
-    "telemetryOuter"
-  ],
-  "./ecosystem/node": [],
-  "./ecosystem/node-host-resolver": ["installNodeHostResolver"],
-  "./ecosystem/oauth2": [],
-  "./ecosystem/persona": [
-    "HttpPersona",
-    "createHttpPersonas",
-    "isRunnablePersona",
-    "personaEmails",
-    "personaEnvironmentErrors",
-    "personaEnvironmentRefusal",
-    "postScenarioJson",
-    "readScenarioHttpResponse",
-    "roleMismatchMessage",
-    "validateAndBuildPersonasMeta",
-    "verifyPersonaRoles"
-  ],
-  "./ecosystem/queue": [
-    "InMemoryQueueService",
-    "QueueJobDiscardedError",
-    "QueueJobFailedError",
-    "QueueWebhookService",
-    "registerQueueWorkers",
-    "runQueueJob"
-  ],
-  "./ecosystem/remote": ["buildRemoteHeaders"],
-  "./ecosystem/role": [
-    "defineSystemRole",
-    "flattenSystemRoleDefinitions",
-    "validateAndBuildSystemRoleDefinitionsMeta"
-  ],
-  "./ecosystem/rpc": ["rpcService", "wireAddon", "wireRemoteAddon"],
-  "./ecosystem/safe-fetch": ["safeFetch"],
-  "./ecosystem/scenario": [
-    "FileScenarioRunStore",
-    "PikkuScenarioService",
-    "SCENARIO_SURFACES",
-    "addFeature",
-    "composeStepProse",
-    "createCookieJar",
-    "createScenarioRunner",
-    "pollUntil",
-    "requireActor",
-    "requireScenarioEnv",
-    "resolveFeatureScenarios"
-  ],
-  "./ecosystem/scheduler": [
-    "SchedulerService",
-    "getScheduledTasks",
-    "runScheduledTask"
-  ],
-  "./ecosystem/schema": ["addSchema", "compileAllSchemas", "getSchema"],
-  "./ecosystem/scope": [
-    "defineScope",
-    "flattenScopeDefinitions",
-    "hasScopes",
-    "validateAndBuildScopeDefinitionsMeta",
-    "verifyScopes"
-  ],
-  "./ecosystem/secret": [
-    "assertSecretAllowedForHost",
-    "validateAndBuildSecretDefinitionsMeta"
-  ],
-  "./ecosystem/services": [
-    "ConsoleLogger",
-    "InMemoryAgentRunStateService",
-    "LocalEmailService",
-    "LocalSecretService",
-    "LocalVariablesService",
-    "LogLevel",
-    "NoopAuditService",
-    "PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME",
-    "PikkuSessionService",
-    "TypedVariablesService",
-    "createMiddlewareSessionWireProps",
-    "getStubTracker",
-    "isTestRun",
-    "pikkuWebhookWorkerFunc",
-    "spy"
-  ],
-  "./ecosystem/services/istanbul-coverage": ["IstanbulCoverageService"],
-  "./ecosystem/services/local-content": ["LocalContent", "signedContentPath"],
-  "./ecosystem/services/local-content-request-handler": [
-    "createLocalContentRequestHandler",
-    "verifySignedContentRequest"
-  ],
-  "./ecosystem/services/local-meta": ["LocalMetaService"],
-  "./ecosystem/services/v8-coverage": ["V8CoverageService"],
-  "./ecosystem/testing": ["defineServiceTests"],
-  "./ecosystem/trigger": ["InMemoryTriggerService"],
-  "./ecosystem/types": [
-    "PikkuRequest",
+  "./secret-value": [
+    "REDACTED",
+    "SecretCoercionError",
     "SecretValue",
     "createSecretValue",
-    "formatVersionedId",
+    "isSecretValue"
+  ],
+  "./data-classification": [],
+  "./column-form": [
+    "hashToken",
+    "unsafeAsHashed",
+    "unsafeAsSealed",
+    "unsafeAsWrapped"
+  ],
+  "./request": [
+    "PikkuRequest"
+  ],
+  "./time-utils": [
+    "getDurationInMilliseconds",
+    "getRelativeTimeOffset",
     "getRelativeTimeOffsetFromNow",
-    "isExpectedError",
-    "isSecretValue",
-    "isSerializable",
+    "parseDurationString"
+  ],
+  "./version": [
+    "formatVersionedId",
     "isVersionedId",
-    "parseDurationString",
-    "parseVersionedId",
+    "parseVersionedId"
+  ],
+  "./utils": [
+    "closeWireServices",
+    "createWeakUID",
+    "freezeDedupe",
+    "getTagGroups",
+    "isSerializable",
+    "pikkuServerLifecycle",
     "stopSingletonServices"
-  ],
-  "./ecosystem/variable": ["validateAndBuildVariableDefinitionsMeta"],
-  "./ecosystem/virtual-user": [
-    "DISPOSITIONS",
-    "PRODUCTION_DISPOSITION",
-    "catalogueClassification",
-    "deriveCatalogue",
-    "deriveIntents",
-    "dispositionProfile",
-    "intentsForPersona",
-    "isReadOnly",
-    "personaScopes",
-    "personaVirtualUserTarget",
-    "prepareVirtualUserRun",
-    "reachableCatalogue",
-    "runVirtualUser",
-    "unreachableCatalogue"
-  ],
-  "./ecosystem/workflow": [
-    "InMemoryWorkflowService",
-    "PikkuWorkflowService",
-    "assertWorkflowRunOwner",
-    "buildRunTimeline",
-    "isRef",
-    "reconstructFinalState",
-    "reconstructStateAt",
-    "template"
   ],
   "./schema": [
     "addSchema",
@@ -772,6 +500,13 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": ["defineServiceTests"],
-  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
+  "./testing": [
+    "clearPikkuRuntimeState",
+    "defineServiceTests"
+  ],
+  "./dev": [
+    "pikkuDevReloader",
+    "reconcileAddonRegistry",
+    "reloadGeneratedMeta"
+  ]
 }

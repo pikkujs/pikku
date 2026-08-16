@@ -879,7 +879,7 @@ export const test${pascalName} = pikkuSessionlessFunc<Test${pascalName}Input, Te
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stopSingletonServices } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core/utils'
 import { rpcService } from '@pikku/core/rpc'
 import { LocalSecretService } from '@pikku/core/services'
 import { createSingletonServices } from './services.js'

@@ -1,17 +1,14 @@
 import type * as uWS from 'uWebSockets.js'
 
-import type { Logger } from '@pikku/core/ecosystem/services'
-import type {
-  HTTPMethod,
-  RunHTTPWiringOptions,
-} from '@pikku/core/ecosystem/http'
-import { fetchData } from '@pikku/core/ecosystem/http'
+import type { Logger } from '@pikku/core/services'
+import type { HTTPMethod, RunHTTPWiringOptions } from '@pikku/core/http'
+import { fetchData } from '@pikku/core/http'
 import {
   DEFAULT_MAX_BODY_SIZE,
   logRoutes as logRegisterRoutes,
-} from '@pikku/core/ecosystem/http'
-import { PayloadTooLargeError } from '@pikku/core/ecosystem/errors'
-import { compileAllSchemas } from '@pikku/core/ecosystem/schema'
+} from '@pikku/core/http'
+import { PayloadTooLargeError } from '@pikku/core/errors'
+import { compileAllSchemas } from '@pikku/core/schema'
 
 import { UWSPikkuHTTPRequest } from './uws-pikku-http-request.js'
 import { UWSPikkuHTTPResponse } from './uws-pikku-http-response.js'

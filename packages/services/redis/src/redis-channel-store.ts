@@ -1,5 +1,5 @@
-import { ChannelStore } from '@pikku/core/ecosystem/channel'
-import type { Channel } from '@pikku/core/ecosystem/channel'
+import { ChannelStore } from '@pikku/core/channel'
+import type { Channel } from '@pikku/core/channel'
 import { Redis, type RedisOptions } from 'ioredis'
 
 /**

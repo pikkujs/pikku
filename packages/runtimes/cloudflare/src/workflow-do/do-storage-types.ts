@@ -3,8 +3,8 @@ import type {
   StepStatus,
   WorkflowRun,
   WorkflowVersionStatus,
-} from '@pikku/core/ecosystem/workflow'
-import type { SerializedError } from '@pikku/core/ecosystem/types'
+} from '@pikku/core/workflow'
+import type { SerializedError } from '@pikku/core/types'
 
 /** Stored under the `run` key. */
 export interface DoRunRecord extends Omit<

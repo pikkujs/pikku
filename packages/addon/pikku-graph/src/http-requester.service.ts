@@ -1,8 +1,8 @@
-import { assertSecretAllowedForHost } from '@pikku/core/ecosystem/secret'
-import type { CredentialService } from '@pikku/core/ecosystem/credential'
-import type { SecretService } from '@pikku/core/ecosystem/secret'
-import { safeFetch } from '@pikku/core/ecosystem/safe-fetch'
-import type { MetaService } from '@pikku/core/ecosystem/services'
+import { assertSecretAllowedForHost } from '@pikku/core/services'
+import type { CredentialService } from '@pikku/core/services'
+import type { SecretService } from '@pikku/core/services'
+import { safeFetch } from '@pikku/core/safe-fetch'
+import type { MetaService } from '@pikku/core/services'
 
 /** How a credential is applied to a request. Carries names only, never values. */
 export type HttpRequestAuth = {

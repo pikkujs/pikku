@@ -1,7 +1,7 @@
 export const serializeQueueWrapper = (queueMapPath: string) => {
   return `
 import type { QueueService, QueueJob } from '@pikku/core/queue'
-import type { Safe } from '@pikku/core'
+import type { Safe } from '@pikku/core/secret-value'
 import type { QueueMap, TypedPikkuQueue } from '${queueMapPath}'
 
 export class PikkuQueue implements TypedPikkuQueue {

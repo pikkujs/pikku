@@ -1,8 +1,8 @@
 import { parse as parseQuery } from 'picoquery'
 import { parseCookie } from 'cookie'
-import type { PikkuHTTPRequest } from '@pikku/core/ecosystem/http'
-import type { HTTPMethod, PikkuQuery } from '@pikku/core/ecosystem/http'
-import { UnprocessableContentError } from '@pikku/core/ecosystem/errors'
+import type { PikkuHTTPRequest } from '@pikku/core/http'
+import type { HTTPMethod, PikkuQuery } from '@pikku/core/http'
+import { UnprocessableContentError } from '@pikku/core/errors'
 
 export class UWSPikkuHTTPRequest<In = unknown> implements PikkuHTTPRequest<In> {
   #cookies: Partial<Record<string, string>> | undefined

@@ -1,15 +1,15 @@
-import { runMiddleware } from '@pikku/core/ecosystem/middleware'
+import { runMiddleware } from '@pikku/core/middleware'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
-} from '@pikku/core/ecosystem/services'
-import { PikkuFetchHTTPRequest } from '@pikku/core/ecosystem/http'
+} from '@pikku/core/services'
+import { PikkuFetchHTTPRequest } from '@pikku/core/http'
 import type {
   CoreSingletonServices,
   CoreUserSession,
   CorePikkuMiddleware,
-} from '@pikku/core/ecosystem/types'
-import type { PikkuWire } from '@pikku/core/ecosystem/types'
+} from '@pikku/core/types'
+import type { PikkuWire } from '@pikku/core/types'
 
 /**
  * Retrieves the user session from the request via the middleware provided.

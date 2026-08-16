@@ -73,8 +73,8 @@ export type { SessionService } from './user-session-service.js'
 export type {
   ScheduledTaskSummary,
   ScheduledTaskInfo,
-  SchedulerService,
 } from './scheduler-service.js'
+export { SchedulerService } from './scheduler-service.js'
 export type { TriggerService } from './trigger-service.js'
 export type { GatewayService } from './gateway-service.js'
 export type {
@@ -157,3 +157,9 @@ export {
   SecretHostNotAllowedError,
   assertSecretAllowedForHost,
 } from './secret-host-binding.js'
+export type {
+  AuditFacets,
+  AuditQuery,
+  AuditQueryResult,
+} from './audit-service.js'
+export { SecretAccessDeniedError, withoutSecrets } from './secretless.js'

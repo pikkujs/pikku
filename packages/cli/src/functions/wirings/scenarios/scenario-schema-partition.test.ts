@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { describe, test } from 'node:test'
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import type { FunctionsMeta } from '@pikku/core/services'
 import { partitionRequiredSchemas } from './scenario-schema-partition.js'
 
 const identity = (name: string) => name

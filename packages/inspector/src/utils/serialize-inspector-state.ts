@@ -1,5 +1,5 @@
 import type { SecretUsage } from './extract-secret-usage.js'
-import type { JSONValue } from '@pikku/core/ecosystem/types'
+import type { JSONValue } from '@pikku/core/types'
 import type {
   InspectorDiagnostic,
   InspectorFeature,

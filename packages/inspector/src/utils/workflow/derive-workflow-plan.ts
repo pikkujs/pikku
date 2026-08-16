@@ -1,7 +1,7 @@
 import type {
   WorkflowStepMeta,
   WorkflowPlannedStep,
-} from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/workflow'
 
 /**
  * Derive the static UI plan for a DSL workflow from its extracted step tree.

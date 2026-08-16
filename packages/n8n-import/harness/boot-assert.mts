@@ -18,9 +18,10 @@ async function main() {
   // Importing the bootstrap runs all registration side-effects.
   await import(abs('.pikku/pikku-bootstrap.gen.ts'))
 
-  const core: any = await import('@pikku/core')
-  const internal: any = await import('@pikku/core/ecosystem')
-  const ai: any = await import('@pikku/core/ai-agent')
+  const core: any = await import('@pikku/core/utils')
+  const fns: any = await import('@pikku/core/function')
+  const internal: any = await import('@pikku/core/state')
+  const ai: any = await import('@pikku/core/agent')
   const rpc: any = await import('@pikku/core/rpc')
   const svc: any = await import(abs('src/services.ts'))
 
@@ -32,10 +33,10 @@ async function main() {
   }
 
   const functionNames: string[] =
-    typeof core.getAllFunctionNames === 'function'
-      ? [...core.getAllFunctionNames()]
-      : typeof core.getFunctionNames === 'function'
-        ? [...core.getFunctionNames()]
+    typeof fns.getAllFunctionNames === 'function'
+      ? [...fns.getAllFunctionNames()]
+      : typeof fns.getFunctionNames === 'function'
+        ? [...fns.getFunctionNames()]
         : []
   const agentNames = keysOf(ai.getAIAgents?.())
   const graphNames = keysOf(

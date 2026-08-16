@@ -1,7 +1,7 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes } from '@pikku/inspector'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import type { Logger } from '@pikku/core/services'
 
 type WireAddonDeclarations = Map<
   string,
@@ -93,7 +93,7 @@ ${generateAddonAgentImports(wireAddonDeclarations)}
 ${generateMergedAgentMap(wireAddonDeclarations)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
-import type { AgentInput } from '@pikku/core/ecosystem/agent'
+import type { AgentInput } from '@pikku/core/agent'
 
 export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,

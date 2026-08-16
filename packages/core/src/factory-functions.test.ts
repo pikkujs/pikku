@@ -3,10 +3,9 @@ import assert from 'node:assert'
 import {
   pikkuAuth,
   pikkuPermission,
-  pikkuMiddleware,
   pikkuPermissionFactory,
-  pikkuMiddlewareFactory,
-} from './index.js'
+} from './function/functions.types.js'
+import { pikkuMiddleware, pikkuMiddlewareFactory } from './types/core.types.js'
 
 test('pikkuPermission returns the same function', async () => {
   const originalFn = async () => true

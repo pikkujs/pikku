@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { setSingletonServices } from '@pikku/core/ecosystem'
-import { resetPikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import { setSingletonServices } from '@pikku/core/state'
+import { resetPikkuState } from '@pikku/core/state'
+import type { Logger } from '@pikku/core/services'
 import { PikkuBunServer } from './pikku-bun-server.js'
 
 const noopLogger = {

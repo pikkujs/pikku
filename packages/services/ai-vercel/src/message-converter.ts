@@ -1,5 +1,5 @@
-import type { AgentMessage } from '@pikku/core/ecosystem/agent'
-import type { AgentStep, AgentContentPart } from '@pikku/core/ecosystem/agent'
+import type { AgentMessage } from '@pikku/core/agent'
+import type { AgentStep, AgentContentPart } from '@pikku/core/agent'
 import type { ModelMessage } from 'ai'
 
 export async function convertToSDKMessages(

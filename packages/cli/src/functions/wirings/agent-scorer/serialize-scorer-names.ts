@@ -1,4 +1,4 @@
-import type { ScorerMeta } from '@pikku/core/ecosystem/agent-scorer'
+import type { ScorerMeta } from '@pikku/core/agent-scorer'
 
 /**
  * The names an agent may ask to be graded by.

@@ -10,7 +10,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
+import type { SecurityAuditReport } from '@pikku/core/types'
 import { updateDependency } from './update-dependency.function.js'
 
 /**

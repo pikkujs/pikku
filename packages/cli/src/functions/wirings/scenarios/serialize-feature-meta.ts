@@ -1,4 +1,4 @@
-import type { FeaturesMeta } from '@pikku/core/ecosystem/scenario'
+import type { FeaturesMeta } from '@pikku/core/scenario'
 import type { InspectorFeature } from '@pikku/inspector'
 
 /**

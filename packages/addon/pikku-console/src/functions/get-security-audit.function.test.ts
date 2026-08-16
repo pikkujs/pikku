@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import { getSecurityAudit } from './get-security-audit.function.js'
-import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
+import type { SecurityAuditReport } from '@pikku/core/types'
 
 const REPORT: SecurityAuditReport = {
   schemaVersion: 1,

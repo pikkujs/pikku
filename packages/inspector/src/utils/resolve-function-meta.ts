@@ -1,7 +1,4 @@
-import type {
-  FunctionMeta,
-  FunctionsMeta,
-} from '@pikku/core/ecosystem/services'
+import type { FunctionMeta, FunctionsMeta } from '@pikku/core/services'
 
 /**
  * Look up function metadata by pikkuFuncId, checking both local functions

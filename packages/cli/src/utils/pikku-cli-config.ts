@@ -892,6 +892,11 @@ const _getPikkuCLIConfig = async (
     if (!result.addonTypesFile) {
       result.addonTypesFile = join(addonDir, 'pikku-addon-types.gen.ts')
     }
+    const errorDir = join(result.outDir, 'error')
+    if (!result.errorTypesFile) {
+      result.errorTypesFile = join(errorDir, 'pikku-error-types.gen.ts')
+    }
+
     // Secrets (typed wrapper for SecretService)
     const secretsDir = join(result.outDir, 'secrets')
     if (!result.secretTypesFile) {

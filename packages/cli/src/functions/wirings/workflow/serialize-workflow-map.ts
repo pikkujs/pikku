@@ -1,12 +1,12 @@
 /**
  * Generate workflow map type definitions for type-safe client API
  */
-import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
+import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
-import type { FunctionsMeta, Logger } from '@pikku/core/ecosystem/services'
-import { parseVersionedId } from '@pikku/core/ecosystem/types'
+import type { FunctionsMeta, Logger } from '@pikku/core/services'
+import { parseVersionedId } from '@pikku/core/version'
 
 /**
  * A workflow or graph node name is free-form prose written by a human, so an

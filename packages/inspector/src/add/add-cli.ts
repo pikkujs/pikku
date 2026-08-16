@@ -6,7 +6,7 @@ import type {
   InspectorOptions,
   InspectorState,
 } from '../types.js'
-import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/ecosystem/cli'
+import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
 import {
   extractFunctionName,
   makeContextBasedId,

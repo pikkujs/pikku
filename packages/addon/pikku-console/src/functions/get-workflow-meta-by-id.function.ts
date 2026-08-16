@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku/function'
-import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
+import type { WorkflowsMeta } from '@pikku/core/workflow'
 
 export const getWorkflowMetaById = pikkuFunc<
   { workflowId: string },

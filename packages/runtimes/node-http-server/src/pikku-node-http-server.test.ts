@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, test } from 'node:test'
 
-import { pikkuState, resetPikkuState } from '@pikku/core/ecosystem'
-import { LocalContent } from '@pikku/core/ecosystem/services/local-content'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
+import { LocalContent } from '@pikku/core/services/local-content'
 
 import { PikkuNodeHTTPServer } from './pikku-node-http-server.js'
 

@@ -1,4 +1,4 @@
-import type { CoreUserSession } from '@pikku/core/ecosystem/types'
+import type { CoreUserSession } from '@pikku/core/types'
 
 /** Propagate the better-auth `actor` user column into the pikku session */
 export const stampActorFlag = <S extends CoreUserSession>(

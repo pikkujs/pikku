@@ -20,8 +20,8 @@ describe('serializeWebhook', () => {
       'expected the worker to delegate to the core pikkuWebhookWorkerFunc'
     )
     assert.ok(
-      functions.includes('@pikku/core/ecosystem/services'),
-      'expected the core worker function to be imported from @pikku/core/ecosystem/services'
+      functions.includes('@pikku/core/services'),
+      'expected the core worker function to be imported from @pikku/core/services'
     )
     assert.ok(functions.includes("tags: ['pikku']"))
   })

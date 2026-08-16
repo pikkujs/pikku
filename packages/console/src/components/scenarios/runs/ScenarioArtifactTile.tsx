@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, Center, Loader, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import type { ScenarioArtifact } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioArtifact } from '@pikku/core/scenario'
 import { useScenarioArtifact } from '../../../hooks/useScenarioRuns'
 
 type ScenarioArtifactTileProps = {

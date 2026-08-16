@@ -1,5 +1,5 @@
 import type { TypesMap } from '../types-map.js'
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import type { FunctionsMeta } from '@pikku/core/services'
 
 export function resolveFunctionIOTypes(
   pikkuFuncId: string,

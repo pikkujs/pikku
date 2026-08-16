@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { pikkuFunc } from '#pikku/function'
-import type { SecurityAuditReport } from '@pikku/core/ecosystem/types'
+import type { SecurityAuditReport } from '@pikku/core/types'
 import {
   readAuditReport,
   runPikkuAudit,

@@ -1,8 +1,5 @@
 import { z } from 'zod'
-import {
-  BadRequestError,
-  UnauthorizedError,
-} from '@pikku/core/ecosystem/errors'
+import { BadRequestError, UnauthorizedError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'

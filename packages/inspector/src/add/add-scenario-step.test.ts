@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
 import type { InspectorLogger } from '../types.js'
-import type { WorkflowStepMeta } from '@pikku/core/ecosystem/workflow'
-import type { ScenarioStepMeta } from '@pikku/core/ecosystem/scenario'
+import type { WorkflowStepMeta } from '@pikku/core/workflow'
+import type { ScenarioStepMeta } from '@pikku/core/scenario'
 
 function makeLogger(
   criticals: Array<{ code: string; message: string }>

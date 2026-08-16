@@ -8,7 +8,7 @@ import type {
   EntryGenerationContext,
 } from '../../deploy/provider-adapter.js'
 import type { InspectorState } from '@pikku/inspector'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import type { Logger } from '@pikku/core/services'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'
 
 function toRelativeImport(fromDir: string, toFile: string): string {

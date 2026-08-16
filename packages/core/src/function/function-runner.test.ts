@@ -6,7 +6,8 @@ import {
   getFunctionNames,
   runPikkuFunc,
 } from './function-runner.js'
-import { addGlobalPermission, addTagMiddleware } from '../index.js'
+import { addGlobalPermission } from '../permissions.js'
+import { addTagMiddleware } from '../middleware-runner.js'
 import { addSchema } from '../schema.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'

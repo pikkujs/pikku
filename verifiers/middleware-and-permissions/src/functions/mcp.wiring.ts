@@ -4,7 +4,7 @@ import { wireMiddleware } from '../middleware/wire.js'
 import { tagMiddleware } from '../middleware/tag.js'
 import { functionMiddleware } from '../middleware/function.js'
 import { functionPermission } from '../permissions/function.js'
-import type { MCPResourceResponse, MCPPromptResponse } from '@pikku/core'
+import type { MCPResourceResponse, MCPPromptResponse } from '@pikku/core/mcp'
 
 export const mcpTagMiddleware = () =>
   addTagMiddleware('mcp', [tagMiddleware('mcp')])

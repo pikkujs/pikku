@@ -1,4 +1,4 @@
-import { EventHubStore } from '@pikku/core/ecosystem/channel'
+import { EventHubStore } from '@pikku/core/channel'
 import type { Db, Collection } from 'mongodb'
 
 interface ChannelSubscriptionDoc {

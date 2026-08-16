@@ -4,8 +4,8 @@ import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
 import type { Kysely } from 'kysely'
 import { PIKKU_BETTER_AUTH } from '@pikku/better-auth'
-import { createSecretValue } from '@pikku/core/ecosystem/types'
-import { LocalVariablesService } from '@pikku/core/ecosystem/services'
+import { createSecretValue } from '@pikku/core/secret-value'
+import { LocalVariablesService } from '@pikku/core/services'
 import { loadUserModule } from '../commands/load-user-project.js'
 
 type AuthFactoryLike = (services: unknown) => unknown

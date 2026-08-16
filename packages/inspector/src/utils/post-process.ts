@@ -9,7 +9,7 @@ import type {
   FunctionServicesMeta,
   MiddlewareMetadata,
   PermissionMetadata,
-} from '@pikku/core/ecosystem/types'
+} from '@pikku/core/types'
 import type ts from 'typescript'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -18,8 +18,8 @@ import { ErrorCode } from '../error-codes.js'
 import { findSecretAliasServices } from './secret-alias-services.js'
 import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
-import { flattenScopeDefinitions } from '@pikku/core/ecosystem/scope'
-import type { WorkflowStepMeta } from '@pikku/core/ecosystem/workflow'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
+import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import { DYNAMIC_SCENARIO_STEP_TARGET } from './workflow/dsl/patterns.js'
 
 /**

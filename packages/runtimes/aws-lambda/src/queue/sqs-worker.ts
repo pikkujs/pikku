@@ -1,11 +1,8 @@
 import type { SQSBatchResponse, SQSEvent, SQSRecord } from 'aws-lambda'
-import { runQueueJob } from '@pikku/core/ecosystem/queue'
-import {
-  QueueJobFailedError,
-  QueueJobDiscardedError,
-} from '@pikku/core/ecosystem/queue'
-import type { Logger } from '@pikku/core/ecosystem/services'
-import type { QueueJob, QueueJobStatus } from '@pikku/core/ecosystem/queue'
+import { runQueueJob } from '@pikku/core/queue'
+import { QueueJobFailedError, QueueJobDiscardedError } from '@pikku/core/queue'
+import type { Logger } from '@pikku/core/services'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 
 /**
  * Enhanced version with additional SQS-specific features

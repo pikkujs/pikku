@@ -1,5 +1,5 @@
-import type { SecretService } from '@pikku/core/ecosystem/secret'
-import type { VariablesService } from '@pikku/core/ecosystem/variable'
+import type { SecretService } from '@pikku/core/services'
+import type { VariablesService } from '@pikku/core/services'
 import {
   checkAddonReadiness,
   type AddonReadiness,

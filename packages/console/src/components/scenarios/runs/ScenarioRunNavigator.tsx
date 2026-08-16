@@ -1,7 +1,7 @@
 import React from 'react'
 import { Center, Loader, ScrollArea, Stack, Text } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
-import type { ScenarioRunSummary } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioRunSummary } from '@pikku/core/scenario'
 import { ScenarioRunRow } from './ScenarioRunRow'
 
 type ScenarioRunNavigatorProps = {

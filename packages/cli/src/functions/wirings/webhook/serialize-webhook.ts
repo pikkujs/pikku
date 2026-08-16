@@ -33,7 +33,7 @@ export const WebhookDelivery = z.object({
  */
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireQueueWorker } from '${leaf('queue')}'
-import { pikkuWebhookWorkerFunc } from '@pikku/core/ecosystem/services'
+import { pikkuWebhookWorkerFunc } from '@pikku/core/services'
 import { WebhookDelivery } from './webhook.schemas.gen.js'
 
 wireQueueWorker({

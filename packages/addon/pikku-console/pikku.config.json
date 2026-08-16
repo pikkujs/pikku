@@ -4,10 +4,10 @@
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
   "packageMappings": {
-    "core/dist/types/core.types.d.ts": "@pikku/core",
+    "core/dist/types/core.types.d.ts": "@pikku/core/types",
     "core/dist/wirings/workflow/workflow.types.d.ts": "@pikku/core/workflow/types",
-    "core/dist/wirings/workflow/scenario-step.types.d.ts": "@pikku/core/ecosystem/scenario",
-    "core/dist/wirings/workflow/scenario-run.types.d.ts": "@pikku/core/ecosystem/scenario",
+    "core/dist/wirings/workflow/scenario-step.types.d.ts": "@pikku/core/scenario",
+    "core/dist/wirings/workflow/scenario-run.types.d.ts": "@pikku/core/scenario",
     "core/dist/wirings/workflow/dsl/workflow-dsl.types.d.ts": "@pikku/core/workflow",
     "core/dist/services/audit-service.d.ts": "@pikku/core/services",
     "core/dist/services/webhook-service.d.ts": "@pikku/core/services",

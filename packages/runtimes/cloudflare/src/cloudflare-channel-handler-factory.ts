@@ -1,11 +1,11 @@
-import { isSerializable } from '@pikku/core/ecosystem/types'
-import type { ChannelStore } from '@pikku/core/ecosystem/channel'
+import { isSerializable } from '@pikku/core/utils'
+import type { ChannelStore } from '@pikku/core/channel'
 import type {
   BinaryData,
   PikkuChannelHandlerFactory,
-} from '@pikku/core/ecosystem/channel'
-import { PikkuAbstractChannelHandler } from '@pikku/core/ecosystem/channel'
-import type { Logger } from '@pikku/core/ecosystem/services'
+} from '@pikku/core/channel'
+import { PikkuAbstractChannelHandler } from '@pikku/core/channel'
+import type { Logger } from '@pikku/core/services'
 import type { WebSocket } from '@cloudflare/workers-types'
 class CloudflareChannelHandler<
   OpeningData = unknown,

@@ -6,7 +6,7 @@
 import { PgKyselyWorkflowService } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuState } from '@pikku/core/state'
 import { Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'

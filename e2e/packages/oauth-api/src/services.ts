@@ -1,5 +1,5 @@
 import { pikkuAddonWireServices } from '#pikku/addon'
-import { MissingCredentialError } from '@pikku/core/errors'
+import { MissingCredentialError } from '#pikku/error'
 import { OAuthApiClient } from './oauth-api-client.js'
 
 export const createWireServices = pikkuAddonWireServices(

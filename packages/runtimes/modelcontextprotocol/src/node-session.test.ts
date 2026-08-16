@@ -3,9 +3,9 @@ import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { beforeEach, describe, test } from 'node:test'
 
-import { pikkuState, resetPikkuState } from '@pikku/core/ecosystem'
-import { addFunction } from '@pikku/core/ecosystem/function'
-import { addGlobalMiddleware } from '@pikku/core/ecosystem/middleware'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
+import { addFunction } from '@pikku/core/function'
+import { addGlobalMiddleware } from '@pikku/core/middleware'
 
 import { PikkuMCPServer } from './index.js'
 

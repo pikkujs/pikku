@@ -1,8 +1,8 @@
-import type { QueueWorkersMeta } from '@pikku/core/ecosystem/queue'
+import type { QueueWorkersMeta } from '@pikku/core/queue'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes } from '@pikku/inspector'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import type { Logger } from '@pikku/core/services'
 
 export const serializeQueueMap = (
   logger: Logger,
@@ -36,7 +36,7 @@ ${serializedImportMap}
 ${serializedCustomTypes}
 
 import type { QueueJob } from '@pikku/core/queue'
-import type { Safe } from '@pikku/core'
+import type { Safe } from '@pikku/core/secret-value'
 
 interface QueueHandler<I, O> {
     input: I;

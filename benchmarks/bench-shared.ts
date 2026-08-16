@@ -1,7 +1,9 @@
-import { fetch, type CorePikkuMiddleware } from '@pikku/core'
-import { addFunction } from '@pikku/core/ecosystem'
+import { fetch } from '@pikku/core/http'
+import type { CorePikkuMiddleware } from '@pikku/core/types'
+import { addFunction } from '@pikku/core/function'
 import { wireHTTP } from '@pikku/core/http'
-import { pikkuState, resetPikkuState, httpRouter } from '@pikku/core/ecosystem'
+import { httpRouter } from '@pikku/core/http'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
 
 const noopLogger = {
   info: () => {},

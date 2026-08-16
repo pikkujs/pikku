@@ -54,7 +54,7 @@ The `wire` object gives you:
 - `wire.getSession()` — read the current session
 - `wire.session` — the session set so far (may be undefined)
 
-Throw a typed error to abort: `UnauthorizedError`, `ForbiddenError`, etc. from `@pikku/core/errors`.
+Throw a typed error to abort: `UnauthorizedError`, `ForbiddenError`, etc. from `#pikku/error`.
 
 ## Scoping: Five Levels
 
@@ -203,7 +203,7 @@ export const getToken = () => _token
 // wirings/http.wiring.ts
 import { timingSafeEqual } from 'node:crypto'
 import { addTagMiddleware, pikkuMiddleware } from '#pikku/function'
-import { UnauthorizedError } from '@pikku/core/errors'
+import { UnauthorizedError } from '#pikku/error'
 import { getToken } from '../lib/host-token.js'
 
 const bearerAuth = pikkuMiddleware(async (_services, { http }, next) => {

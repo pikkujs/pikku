@@ -107,7 +107,7 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
     await writeFileInDir(
       logger,
       channelsWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/ecosystem'\nimport type { ChannelsMeta } from '@pikku/core/ecosystem/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
+      `import { pikkuState } from '@pikku/core/state'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
     )
 
     return true

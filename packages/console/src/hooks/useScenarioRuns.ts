@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   ScenarioRunRecord,
   ScenarioRunSummary,
-} from '@pikku/core/ecosystem/scenario'
+} from '@pikku/core/scenario'
 import { usePikkuHTTP, usePikkuRPC } from '../context/PikkuRpcProvider'
 import {
   SCENARIO_RUN_POLL_MS,

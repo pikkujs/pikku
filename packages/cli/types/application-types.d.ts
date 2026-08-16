@@ -3,8 +3,8 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
-import type { WorkflowService } from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/types'
+import type { WorkflowService } from '@pikku/core/workflow'
 import type { CLILogger } from '../src/services/cli-logger.service.js'
 import type { PikkuCLIConfig } from '../types/config.d.ts'
 import type { InspectorState } from '@pikku/inspector'

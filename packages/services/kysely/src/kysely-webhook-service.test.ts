@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely'
 import Database from 'better-sqlite3'
-import { setSingletonServices } from '@pikku/core/ecosystem'
+import { setSingletonServices } from '@pikku/core/state'
 
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { SerializePlugin } from './serialize-plugin.js'

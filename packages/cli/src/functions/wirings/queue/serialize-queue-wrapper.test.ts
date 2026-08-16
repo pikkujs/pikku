@@ -12,6 +12,6 @@ describe('serializeQueueWrapper', () => {
     // parameter as the identical `Safe<...>` both fixes the forward and puts the
     // guard on the API users actually call.
     assert.match(output, /data: Safe<QueueMap\[Name\]\['input'\]>/)
-    assert.match(output, /import type \{ Safe \} from '@pikku\/core'/)
+    assert.match(output, /import type \{ Safe \} from '@pikku\/core\/secret-value'/)
   })
 })

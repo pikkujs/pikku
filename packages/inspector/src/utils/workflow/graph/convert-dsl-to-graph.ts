@@ -1,10 +1,7 @@
 /**
  * Converts DSL (Domain Specific Language) step-based format to graph node format
  */
-import type {
-  WorkflowStepMeta,
-  WorkflowsMeta,
-} from '@pikku/core/ecosystem/workflow'
+import type { WorkflowStepMeta, WorkflowsMeta } from '@pikku/core/workflow'
 import type {
   SerializedGraphNode,
   SerializedWorkflowGraph,

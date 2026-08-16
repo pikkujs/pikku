@@ -46,7 +46,7 @@ test('linear set/code/integration workflow → pure graph', () => {
   // template import pulled in
   assert.match(
     graph,
-    /import \{ template \} from '@pikku\/core\/ecosystem\/workflow'/
+    /import \{ template \} from '@pikku\/core\/workflow'/
   )
 
   // no passthrough stub — Set nodes use @pikku/addon-graph's editFields

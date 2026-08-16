@@ -1,6 +1,6 @@
 import type { InspectorFilters } from '@pikku/inspector'
 import type { OpenAPISpecInfo } from '@pikku/inspector'
-import { PikkuWiringTypes } from '@pikku/core/ecosystem/types'
+import { PikkuWiringTypes } from '@pikku/core/types'
 
 /**
  * Whether a generated surface exists, where it is written, and whether it
@@ -210,6 +210,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Addon types (pikkuAddonConfig, pikkuAddonServices, etc.)
   addonTypesFile: string
+
+  // Error catalogue (the leaf `#pikku/error` resolves to)
+  errorTypesFile: string
 
   // Secrets
   secretTypesFile: string

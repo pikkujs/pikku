@@ -13,6 +13,7 @@ import { serializeLeafIndex } from './serialize-leaf-index.js'
  */
 const leafEntries = [
   ['function', 'functionTypesFile'],
+  ['error', 'errorTypesFile'],
   ['http', 'httpTypesFile'],
   ['channel', 'channelsTypesFile'],
   ['gateway', 'gatewaysTypesFile'],

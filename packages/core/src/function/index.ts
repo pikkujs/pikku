@@ -1,4 +1,8 @@
-export { addFunction, getAllFunctionNames } from './function-runner.js'
+export {
+  addFunction,
+  getAllFunctionNames,
+  runPikkuFunc,
+} from './function-runner.js'
 export {
   pikkuAuth,
   pikkuPermission,
@@ -15,3 +19,12 @@ export type {
   CorePikkuPermission,
 } from './functions.types.js'
 export type { ListInput, ListOutput, Filter } from './list.types.js'
+export { AbandonedError } from './abort-scope.js'
+export type { AbortScope } from './abort-scope.js'
+export { checkAuthPermissions } from '../permissions.js'
+export type {
+  CorePermissionGroup,
+  CorePikkuApprovalDescription,
+  CorePikkuPermissionConfig,
+  CorePikkuPermissionFactory,
+} from './functions.types.js'

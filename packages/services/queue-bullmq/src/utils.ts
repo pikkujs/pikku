@@ -1,4 +1,4 @@
-import type { QueueJob, QueueJobStatus } from '@pikku/core/ecosystem/queue'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import type { ConnectionOptions, Job } from 'bullmq'
 import { QueueEvents } from 'bullmq'
 

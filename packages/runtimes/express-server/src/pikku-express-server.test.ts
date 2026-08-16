@@ -3,8 +3,8 @@ import { after, before, describe, test } from 'node:test'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { setSingletonServices, resetPikkuState } from '@pikku/core/ecosystem'
-import type { Logger } from '@pikku/core/ecosystem/services'
+import { setSingletonServices, resetPikkuState } from '@pikku/core/state'
+import type { Logger } from '@pikku/core/services'
 
 import { PikkuExpressServer } from './pikku-express-server.js'
 

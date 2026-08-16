@@ -4,10 +4,10 @@ import {
   envelopeEncrypt,
   envelopeRewrap,
   generateKEKSalt,
-} from '@pikku/core/ecosystem/crypto-utils'
-import { createSecretValue, isSecretValue } from '@pikku/core/ecosystem/types'
-import type { SecretService, SecretValues } from '@pikku/core/ecosystem/secret'
-import type { SecretValue } from '@pikku/core/ecosystem/types'
+} from '@pikku/core/crypto-utils'
+import { createSecretValue, isSecretValue } from '@pikku/core/secret-value'
+import type { SecretService, SecretValues } from '@pikku/core/services'
+import type { SecretValue } from '@pikku/core/secret-value'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { ensurePikkuSchema } from './schema/index.js'

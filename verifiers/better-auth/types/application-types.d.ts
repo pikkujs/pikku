@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 

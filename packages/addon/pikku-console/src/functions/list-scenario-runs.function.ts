@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku/function'
-import type { ScenarioRunSummary } from '@pikku/core/ecosystem/scenario'
+import type { ScenarioRunSummary } from '@pikku/core/scenario'
 
 export const listScenarioRuns = pikkuFunc<
   { limit?: number },

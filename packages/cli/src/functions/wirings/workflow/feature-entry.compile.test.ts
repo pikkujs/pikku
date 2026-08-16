@@ -42,8 +42,8 @@ const featureTypes = (): string => {
 }
 
 const PRELUDE = `
-import type { CorePikkuFunctionSessionless } from '@pikku/core/ecosystem/function'
-import type { CorePikkuFunctionConfig } from '@pikku/core/ecosystem/function'
+import type { CorePikkuFunctionSessionless } from '@pikku/core/function'
+import type { CorePikkuFunctionConfig } from '@pikku/core/function'
 
 type PikkuFunctionScenario<In = unknown, Out = never> = CorePikkuFunctionSessionless<In, Out>
 
@@ -169,7 +169,7 @@ export const feature = pikkuFeature({
     // which a mutable `CoreFeatureScenario[]` would reject.
     assert.deepEqual(
       typeErrors(`
-import { addFeature } from '@pikku/core/ecosystem/scenario'
+import { addFeature } from '@pikku/core/scenario'
 
 export const feature = pikkuFeature({
   name: 'F',

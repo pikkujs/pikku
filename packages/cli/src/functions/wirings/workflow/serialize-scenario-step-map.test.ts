@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { TypesMap } from '@pikku/inspector'
-import type { FunctionsMeta } from '@pikku/core/ecosystem/services'
+import type { FunctionsMeta } from '@pikku/core/services'
 import { serializeScenarioStepMap } from './serialize-scenario-step-map.js'
 
 /**

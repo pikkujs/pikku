@@ -2,8 +2,8 @@ import {
   BadRequestError,
   ConflictError,
   LocalEnvironmentOnlyError,
-} from '@pikku/core/ecosystem/errors'
-import { pikkuState } from '@pikku/core/ecosystem'
+} from '#pikku/error'
+import { pikkuState } from '@pikku/core/state'
 import { pikkuFunc } from '#pikku/function'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {

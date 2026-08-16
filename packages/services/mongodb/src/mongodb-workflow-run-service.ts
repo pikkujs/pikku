@@ -4,7 +4,7 @@ import type {
   StepState,
   WorkflowStatus,
   WorkflowRunService,
-} from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/workflow'
 import type { Db, Collection } from 'mongodb'
 
 interface WorkflowRunDoc {

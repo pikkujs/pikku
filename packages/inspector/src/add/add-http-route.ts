@@ -4,7 +4,7 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import type { HTTPMethod } from '@pikku/core/ecosystem/http'
+import type { HTTPMethod } from '@pikku/core/http'
 import {
   extractFunctionName,
   makeContextBasedId,

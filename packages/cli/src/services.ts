@@ -4,19 +4,19 @@ import type {
   SingletonServices,
   UserSession,
 } from '../types/application-types.js'
-import type { CreateConfig } from '@pikku/core/ecosystem/types'
+import type { CreateConfig } from '@pikku/core/types'
 import type {
   CreateWireServices,
   CreateSingletonServices,
-} from '@pikku/core/ecosystem'
-import { pikkuCLIRender } from '@pikku/core/ecosystem/cli'
+} from '@pikku/core/types'
+import { pikkuCLIRender } from '@pikku/core/cli'
 import {
   LocalVariablesService,
   LocalSecretService,
   LogLevel,
   NoopAuditService,
-} from '@pikku/core/ecosystem/services'
-import { InMemoryWorkflowService } from '@pikku/core/ecosystem/workflow'
+} from '@pikku/core/services'
+import { InMemoryWorkflowService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
@@ -234,7 +234,7 @@ export const createSingletonServices: CreateSingletonServices<
     // In bootstrap mode, return a minimal "zero state" with core types
     // This allows bootstrap to run immediately without inspecting the codebase
     if (bootstrapMode) {
-      const corePackagePath = '@pikku/core'
+      const corePackagePath = '@pikku/core/types'
       const initialState = getInitialInspectorState(rootDir)
 
       // Populate filesAndMethods with core types from @pikku/core

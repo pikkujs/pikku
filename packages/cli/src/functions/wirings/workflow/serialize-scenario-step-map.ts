@@ -9,7 +9,7 @@
  */
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
-import type { FunctionsMeta, Logger } from '@pikku/core/ecosystem/services'
+import type { FunctionsMeta, Logger } from '@pikku/core/services'
 
 /**
  * All three step wrappers. A scenario calls a platform or addon step by name

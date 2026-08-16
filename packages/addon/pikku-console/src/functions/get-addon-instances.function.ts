@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku/function'
-import { pikkuState } from '@pikku/core/ecosystem'
+import { pikkuState } from '@pikku/core/state'
 
 export interface AddonInstance {
   /** The `wireAddon` name / RPC namespace for this instance. */

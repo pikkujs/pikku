@@ -5,7 +5,7 @@ import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { ExternalLink, GitBranch } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
-import type { WorkflowsMeta } from '@pikku/core/ecosystem/workflow'
+import type { WorkflowsMeta } from '@pikku/core/workflow'
 
 type FilterValue = 'all' | 'dsl' | 'graph'
 type Workflow = WorkflowsMeta[string] & {

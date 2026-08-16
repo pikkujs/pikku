@@ -1,4 +1,4 @@
-import type { QueueWorkersMeta } from '@pikku/core/ecosystem/queue'
+import type { QueueWorkersMeta } from '@pikku/core/queue'
 import { serializeMetaTS } from '../../../utils/serialize-meta-ts.js'
 
 export const serializeQueueMeta = (queueWorkersMeta: QueueWorkersMeta) => {

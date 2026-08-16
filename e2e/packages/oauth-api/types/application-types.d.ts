@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { OAuthApiClient } from '../src/oauth-api-client.js'
 
 export interface Config extends CoreConfig {}

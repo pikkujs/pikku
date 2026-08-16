@@ -472,7 +472,7 @@ if (!canEdit(user, todo)) {
 **Pikku:**
 
 ```typescript
-import { NotFoundError, ForbiddenError } from '@pikku/core/errors'
+import { NotFoundError, ForbiddenError } from '#pikku/error'
 
 const updateTodo = pikkuFunc(async (services, { id, title }, wire) => {
   const todo = services.todoStore.getTodo(id)

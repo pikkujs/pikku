@@ -2,7 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeRolesTypes } from './serialize-roles-types.js'
-import { validateAndBuildSystemRoleDefinitionsMeta } from '@pikku/core/ecosystem/role'
+import { validateAndBuildSystemRoleDefinitionsMeta } from '@pikku/core/role'
 
 export const pikkuRoles = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
   func: async ({ logger, config, getInspectorState }, data) => {

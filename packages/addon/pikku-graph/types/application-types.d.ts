@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { HttpRequesterService } from '../src/http-requester.service.js'
 
 export interface Config extends CoreConfig {}
