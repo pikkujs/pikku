@@ -10,6 +10,7 @@
     "resolveJsonModule": true,
     "strict": true,
     "paths": {
+      "#pikku/scenario": ["./.pikku/scenarios/pikku-scenario-types.gen.ts"],
       "#pikku/*": ["./.pikku/*"],
       "@pikku/e2e": ["."],
       "@pikku/e2e-functions": ["./packages/functions"]
