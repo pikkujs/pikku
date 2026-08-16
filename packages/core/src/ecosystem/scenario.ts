@@ -2,6 +2,8 @@ export type {
   PikkuScenarioWire,
   ScenarioStepMeta,
 } from '../wirings/workflow/dsl/workflow-dsl.types.js'
+export { FileScenarioRunStore } from '../services/file-scenario-run-store.js'
+export type { FileScenarioRunStoreOptions } from '../services/file-scenario-run-store.js'
 export {
   addFeature,
   resolveFeatureScenarios,
@@ -21,6 +23,19 @@ export type {
   CoreFeature,
   FeaturesMeta,
 } from '../wirings/workflow/scenario.types.js'
+export type {
+  ScenarioArtifact,
+  ScenarioArtifactKind,
+  ScenarioFailureDetail,
+  ScenarioResult,
+  ScenarioRunRecord,
+  ScenarioRunReport,
+  ScenarioRunStatus,
+  ScenarioRunStore,
+  ScenarioRunSummary,
+  ScenarioSkip,
+  ScenarioStepRow,
+} from '../wirings/workflow/scenario-run.types.js'
 
 /**
  * Types the exports above mention but do not themselves export. Without

@@ -1,3 +1,4 @@
+import { existsSync } from 'fs'
 import { readFile, readdir } from 'fs/promises'
 import { createRequire } from 'module'
 import { join, dirname } from 'path'
@@ -142,6 +143,44 @@ const resolveAddonMeta = (
 }
 
 /**
+ * Give the addon's input/output type names a declaration file to be imported
+ * from, so a wiring that references an addon function can name its contract.
+ *
+ * Without this the only thing that knows where `GetScenarioArtifactInput` lives
+ * is the type checker, and it only knows once the consumer's *own* rpc map has
+ * already been generated with the addon's routes in it — which is to say on the
+ * second run. A first, cold run resolved `ref('console:getScenarioArtifact')`
+ * against a map that did not mention it yet and fell back to the whole
+ * `FlattenedRPCMap`, so the same source produced a different http-map depending
+ * on whether `.pikku` happened to be there. The addon publishes these types at a
+ * fixed subpath; reading them from the metadata makes the first run agree with
+ * the second.
+ */
+const registerAddonTypes = (
+  state: InspectorState,
+  metaPath: string,
+  meta: Record<string, any>
+): void => {
+  // Derived from the metadata's own location rather than resolved as a package
+  // subpath: the addon exports that declaration under a `types`-only condition,
+  // which `require.resolve` will not follow.
+  const typesPath = join(
+    dirname(metaPath),
+    '..',
+    'rpc',
+    'pikku-rpc-wirings-map.internal.gen.d.ts'
+  )
+  if (!existsSync(typesPath)) return
+
+  for (const funcMeta of Object.values(meta)) {
+    for (const name of [funcMeta.inputSchemaName, funcMeta.outputSchemaName]) {
+      if (!name || state.functions.typesMap.exists(name, typesPath)) continue
+      state.functions.typesMap.addType(name, typesPath)
+    }
+  }
+}
+
+/**
  * After the setup sweep discovers wireAddon() declarations, load each addon
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
@@ -177,6 +216,7 @@ export async function loadAddonFunctionsMeta(
       logger.debug(
         `Loaded ${Object.keys(meta).length} addon functions for '${namespace}' from ${decl.package}`
       )
+      registerAddonTypes(state, metaPath, meta)
 
       // If wireAddon has mcp: true, expose addon functions with mcp: true as MCP tools
       if (decl.mcp) {

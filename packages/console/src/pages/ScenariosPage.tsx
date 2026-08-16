@@ -3,7 +3,10 @@ import { Center, Loader } from '@pikku/mantine/core'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ScenariosWorkspace } from '../components/scenarios/ScenariosWorkspace'
+import { ScenarioRunsWorkspace } from '../components/scenarios/runs/ScenarioRunsWorkspace'
+import type { ScenarioView } from '../components/scenarios/scenario-view'
 import type { ScenariosBrowse } from '../hooks/useScenariosBrowse'
+import { useSearchParams } from '../router'
 import {
   ConsoleNavigatorCtx,
   OSSConsoleNavigator,
@@ -15,13 +18,26 @@ const SCENARIOS_BASE_PATH = '/scenarios'
  * A scenario has no detail view of its own: it is documented where it is
  * declared, as the prose it was written in. The workflow graph a scenario
  * compiles to is an implementation detail of running it, not how it reads.
+ *
+ * Past runs are the same subject read the other way round, so they are a view
+ * of this page rather than a page of their own — and the view lives in the URL
+ * so a failing run is something you can send someone.
  */
 const ScenariosPageInner: React.FC<ScenariosPageProps> = ({ browse }) => {
   useLocale()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view: ScenarioView =
+    searchParams.get('view') === 'runs' ? 'runs' : 'features'
+  const changeView = (next: ScenarioView) =>
+    setSearchParams(next === 'runs' ? { view: 'runs' } : {})
 
   return (
     <ConsoleSurface>
-      <ScenariosWorkspace browse={browse} />
+      {view === 'runs' ? (
+        <ScenarioRunsWorkspace onViewChange={changeView} />
+      ) : (
+        <ScenariosWorkspace browse={browse} onViewChange={changeView} />
+      )}
     </ConsoleSurface>
   )
 }

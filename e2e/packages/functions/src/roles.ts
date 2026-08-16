@@ -39,6 +39,8 @@ defineSystemRole({
       'pikku:console:security:run',
       'pikku:console:workflows:read',
       'pikku:console:workflows:manage',
+      'pikku:console:scenarios:read',
+      'pikku:console:scenarios:manage',
       'pikku:console:agents:read',
       'pikku:console:agents:manage',
       'pikku:console:db:read',

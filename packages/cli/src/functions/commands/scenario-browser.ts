@@ -8,6 +8,7 @@
  * unconditionally.
  */
 import type {
+  ScenarioArtifact,
   ScenarioBrowserFailure,
   ScenarioBrowserProvider,
 } from '@pikku/core/ecosystem/scenario'
@@ -20,7 +21,6 @@ export interface ScenarioBrowserDriverOptions {
   secret: string
   actors: Record<string, ResolvedPersona>
   signInPath?: string
-  failureDir?: string
   capture?: ScenarioCaptureOptions
   config: unknown
 }
@@ -65,8 +65,10 @@ export interface ScenarioCaptureOptions {
   dir: string
   /** The invocation these artifacts belong to. */
   runId: string
-  /** Record a video per scenario. */
-  video?: boolean
+  /** Write the screenshots a scenario asks for by name. */
+  screenshots?: boolean
+  /** Which scenarios keep their recording. */
+  video?: 'off' | 'failed' | 'all'
   /** Re-encode with ffmpeg when available. Defaults on — the footage is nearly static. */
   compress?: boolean
 }
@@ -79,12 +81,11 @@ export interface ResolveScenarioBrowserProviderOptions {
   secret: string
   actors: Record<string, ResolvedPersona>
   signInPath?: string
-  /** Where failure screenshots are written. */
-  failureDir: string
   /**
-   * Artifacts for this run — named screenshots, and optionally a video per
-   * scenario. Undefined leaves capture off, which is the default: most runs
-   * ask a pass/fail question and writing video to answer it is waste.
+   * Artifacts for this run — named screenshots, failure screenshots, and a
+   * video per scenario kept according to its retention. Undefined leaves
+   * capture off entirely, which is what a driver used outside
+   * `pikku scenario run` gets.
    */
   capture?: ScenarioCaptureOptions
   /** The scenarios that declared browser steps, named in the missing-driver error. */
@@ -123,7 +124,6 @@ export const resolveScenarioBrowserProvider = async ({
   secret,
   actors,
   signInPath,
-  failureDir,
   capture,
   browserScenarios,
   driver = DEFAULT_BROWSER_DRIVER,
@@ -154,7 +154,6 @@ export const resolveScenarioBrowserProvider = async ({
     secret,
     actors,
     signInPath,
-    failureDir,
     capture,
     config,
   }
@@ -172,13 +171,16 @@ export const resolveScenarioBrowserProvider = async ({
 }
 
 /**
- * The three calls the run loop makes, safe against a run with no browser and
- * against a driver that implements neither optional member.
+ * The calls the run loop makes, safe against a run with no browser and against
+ * a driver that implements none of the optional members.
  */
 export interface ScenarioBrowserLifecycle {
   reset(): Promise<void>
   beginScenario(scenario: string): void
+  endScenario(outcome: 'passed' | 'failed'): void
   captureFailure(label: string): Promise<ScenarioBrowserFailure[]>
+  /** What the run filed, complete only once `close()` has been called. */
+  artifacts(): ScenarioArtifact[]
   close(): Promise<void>
 }
 
@@ -194,6 +196,9 @@ export const scenarioBrowserLifecycle = (
   beginScenario: (scenario) => {
     provider?.beginScenario?.(scenario)
   },
+  endScenario: (outcome) => {
+    provider?.endScenario?.(outcome)
+  },
   captureFailure: async (label) => {
     try {
       return (await provider?.captureFailure?.(label)) ?? []
@@ -203,6 +208,7 @@ export const scenarioBrowserLifecycle = (
       return []
     }
   },
+  artifacts: () => provider?.artifacts?.() ?? [],
   close: async () => {
     await provider?.close()
   },

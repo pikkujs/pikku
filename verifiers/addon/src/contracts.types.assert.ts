@@ -13,6 +13,8 @@ type Expect<T extends true> = T
 
 type AddonHttpInput = HTTPWiringsMap['/api/ext/hello']['GET']['input']
 type AddonHttpOutput = HTTPWiringsMap['/api/ext/hello']['GET']['output']
+type RefHttpInput = HTTPWiringsMap['/api/local/goodbye']['GET']['input']
+type RefHttpOutput = HTTPWiringsMap['/api/local/goodbye']['GET']['output']
 type AddonChannelInput =
   ChannelsMap['ext-events']['routes']['action']['hello']['input']
 type AddonChannelOutput =
@@ -31,11 +33,26 @@ type _ChannelOutputTyped = Expect<
   AddonChannelOutput extends { message: string } ? true : false
 >
 
+/**
+ * A locally shaped route pointed at an addon function through `ref()` keeps the
+ * addon's contract too. Widening to the RPC map still satisfies `extends
+ * { name: string }` nowhere, so this is the assertion that a cold generation
+ * resolved the reference rather than falling back.
+ */
+type _RefHttpInputTyped = Expect<
+  RefHttpInput extends { name: string } ? true : false
+>
+type _RefHttpOutputTyped = Expect<
+  RefHttpOutput extends { message: string } ? true : false
+>
+
 export type {
   _HttpInputTyped,
   _HttpOutputTyped,
   _ChannelInputTyped,
   _ChannelOutputTyped,
+  _RefHttpInputTyped,
+  _RefHttpOutputTyped,
 }
 
 /**

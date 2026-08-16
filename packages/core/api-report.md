@@ -5,21 +5,22 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2589 observable things**: 828 exported names, plus
-1761 members on the classes and interfaces among them.
+**2673 observable things**: 843 exported names, plus
+1830 members on the classes and interfaces among them.
 
 | tier | entry points | names | members |
 | --- | ---: | ---: | ---: |
-| stable | 48 | 814 | 1753 |
-| ecosystem | 44 | 14 | 8 |
+| stable | 48 | 818 | 1767 |
+| ecosystem | 44 | 25 | 63 |
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 126 | 17 | 70 |
+| `./services` | 130 | 19 | 70 |
 | `.` | 206 | 40 | 40 |
+| `./ecosystem/scenario` | 31 | 11 | 55 |
 | `./scenario` | 42 | 25 | 33 |
 | `./workflow` | 76 | 19 | 29 |
 | `./agent` | 48 | 22 | 26 |
@@ -92,7 +93,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./ecosystem/role` | 10 | 0 | 0 |
 | `./ecosystem/rpc` | 7 | 0 | 0 |
 | `./ecosystem/safe-fetch` | 2 | 0 | 0 |
-| `./ecosystem/scenario` | 18 | 0 | 0 |
 | `./ecosystem/scheduler` | 5 | 0 | 0 |
 | `./ecosystem/schema` | 4 | 0 | 0 |
 | `./ecosystem/scope` | 13 | 0 | 0 |
@@ -2106,7 +2106,9 @@ export interface ScenarioBrowserProvider {
   sessionFor(actorName: string): Promise<PikkuBrowserWire>
   reset?(): Promise<void>
   beginScenario?(scenario: string): void
+  endScenario?(outcome: 'passed' | 'failed'): void
   captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
+  artifacts?(): ScenarioArtifact[]
   close(): Promise<void>
 }
 export class ScenarioBrowserUnavailable extends PikkuError {
@@ -4080,6 +4082,7 @@ export type CoreCLICommandConfig<
       description?: string
       short?: string
       default?: ExtractFunctionInput<FuncConfig>[K]
+      choices?: ReadonlyArray<ExtractFunctionInput<FuncConfig>[K]>
     }
   }
   middleware?: PikkuMiddleware[]
@@ -4751,6 +4754,22 @@ export interface EmailTemplateMeta {
   hasText: boolean
   locales: Record<string, EmailTemplateLocaleMeta>
 }
+export class FileScenarioRunStore implements ScenarioRunStore {
+  constructor(private readonly options: FileScenarioRunStoreOptions)
+  async start(record: ScenarioRunRecord): Promise<void>
+  async recordScenario(runId: string, result: ScenarioResult): Promise<void>
+  async attachArtifacts(runId: string, artifacts: ScenarioArtifact[]): Promise<void>
+  async finish(runId: string, outcome: Pick< ScenarioRunRecord, 'status' | 'finishedAt' | 'skipped' | 'hookFailures' >): Promise<void>
+  async readArtifact(runId: string, path: string): Promise< { body: Uint8Array<ArrayBuffer>; contentType: string } | undefined >
+  async list(options: { limit?: number } = {}): Promise<ScenarioRunSummary[]>
+  async get(runId: string): Promise<ScenarioRunRecord | undefined>
+  async remove(runId: string): Promise<void>
+  runDir(runId: string): string
+}
+export interface FileScenarioRunStoreOptions {
+  dir: string
+  keep?: number
+}
 export interface FunctionCoverageEntry {
   name: string
   sourceFile: string
@@ -5072,6 +5091,7 @@ export interface Role {
 }
 export type RPCMetaRecord = Record<string, string>
 export type SaveScoreInput = Omit<AgentRunScore, 'createdAt'>
+scenarioArtifactContentType: (path: string) => string
 export interface ScenarioPersona< TAgentName extends string = string, TRpcMap extends ScenarioRpcMap = ScenarioRpcMap, > {
   readonly name: string
   readonly email: string
@@ -5081,6 +5101,7 @@ export interface ScenarioPersona< TAgentName extends string = string, TRpcMap ex
   sessionRoles(): Promise<string[] | null>
 }
 export type ScenarioPersonas = Record<string, ScenarioPersona>
+scenarioRunSummary: (record: ScenarioRunRecord) => ScenarioRunSummary
 export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   data?: any
   session?: CoreUserSession
@@ -6480,6 +6501,7 @@ export type CoreCLICommandConfig<
       description?: string
       short?: string
       default?: ExtractFunctionInput<FuncConfig>[K]
+      choices?: ReadonlyArray<ExtractFunctionInput<FuncConfig>[K]>
     }
   }
   middleware?: PikkuMiddleware[]
@@ -7848,6 +7870,22 @@ export type FeaturePlanEntry = {
   tags: string[]
 }
 export type FeaturesMeta = Record<string, FeatureMeta>
+export class FileScenarioRunStore implements ScenarioRunStore {
+  constructor(private readonly options: FileScenarioRunStoreOptions)
+  async start(record: ScenarioRunRecord): Promise<void>
+  async recordScenario(runId: string, result: ScenarioResult): Promise<void>
+  async attachArtifacts(runId: string, artifacts: ScenarioArtifact[]): Promise<void>
+  async finish(runId: string, outcome: Pick< ScenarioRunRecord, 'status' | 'finishedAt' | 'skipped' | 'hookFailures' >): Promise<void>
+  async readArtifact(runId: string, path: string): Promise< { body: Uint8Array<ArrayBuffer>; contentType: string } | undefined >
+  async list(options: { limit?: number } = {}): Promise<ScenarioRunSummary[]>
+  async get(runId: string): Promise<ScenarioRunRecord | undefined>
+  async remove(runId: string): Promise<void>
+  runDir(runId: string): string
+}
+export interface FileScenarioRunStoreOptions {
+  dir: string
+  keep?: number
+}
 export interface PikkuBrowserWire {
   readonly actor: string
   goto(url: string): Promise<void>
@@ -7883,6 +7921,14 @@ export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
 }
 resolveFeatureScenarios: (features: Map<string, CoreFeature>, registrations: Map<string, CoreWorkflow>) => { entries: FeaturePlanEntry[]; unresolved: { featureId: string; index: number; }[]; }
 SCENARIO_SURFACES: readonly ScenarioSurface[]
+export interface ScenarioArtifact {
+  scenario: string
+  kind: ScenarioArtifactKind
+  path: string
+  actor?: string
+  name?: string
+}
+export type ScenarioArtifactKind = 'screenshot' | 'failure' | 'video'
 export interface ScenarioBrowserFailure {
   actor: string
   url?: string
@@ -7896,8 +7942,71 @@ export interface ScenarioBrowserProvider {
   sessionFor(actorName: string): Promise<PikkuBrowserWire>
   reset?(): Promise<void>
   beginScenario?(scenario: string): void
+  endScenario?(outcome: 'passed' | 'failed'): void
   captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
+  artifacts?(): ScenarioArtifact[]
   close(): Promise<void>
+}
+export interface ScenarioFailureDetail {
+  sentence?: string
+  message: string
+  stack?: string
+  expected?: boolean
+  browser?: ScenarioBrowserFailure[]
+}
+export interface ScenarioResult {
+  name: string
+  status: 'passed' | 'failed'
+  durationMs: number
+  output?: unknown
+  error?: string
+  steps?: ScenarioStepRow[]
+  failure?: ScenarioFailureDetail
+  scenarioName?: string
+  feature?: string
+  tags?: string[]
+  artifacts?: ScenarioArtifact[]
+}
+export interface ScenarioRunRecord extends ScenarioRunReport {
+  runId: string
+  status: ScenarioRunStatus
+  surface: string
+  startedAt: string
+  finishedAt?: string
+}
+export interface ScenarioRunReport {
+  environment: string
+  results: ScenarioResult[]
+  skipped: ScenarioSkip[]
+  hookFailures: string[]
+}
+export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
+export interface ScenarioRunStore {
+  start(record: ScenarioRunRecord): Promise<void>
+  recordScenario(runId: string, result: ScenarioResult): Promise<void>
+  attachArtifacts(runId: string, artifacts: ScenarioArtifact[]): Promise<void>
+  finish(runId: string, outcome: Pick< ScenarioRunRecord, 'status' | 'finishedAt' | 'skipped' | 'hookFailures' >): Promise<void>
+  readArtifact(runId: string, path: string): Promise<{ body: Uint8Array<ArrayBuffer>; contentType: string } | undefined>
+  list(options?: { limit?: number }): Promise<ScenarioRunSummary[]>
+  get(runId: string): Promise<ScenarioRunRecord | undefined>
+  remove(runId: string): Promise<void>
+}
+export interface ScenarioRunSummary {
+  runId: string
+  environment: string
+  surface: string
+  status: ScenarioRunStatus
+  startedAt: string
+  finishedAt?: string
+  durationMs?: number
+  passed: number
+  failed: number
+  skipped: number
+  artifacts: number
+}
+export interface ScenarioSkip {
+  name: string
+  reason: string
 }
 export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
 export interface ScenarioStepMeta {
@@ -7918,6 +8027,12 @@ export interface ScenarioStepOptions {
   retryDelay?: number | string
 }
 export type ScenarioStepPhase = 'given' | 'when' | 'then'
+export interface ScenarioStepRow {
+  sentence: string
+  status: string
+  durationMs?: number
+  error?: string
+}
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
 ```
 
