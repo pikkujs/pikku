@@ -264,11 +264,24 @@ export function registerHTTPRoute({
 
   // Propagate sessionless from the addon target so the runtime can correctly
   // determine whether a session is required for ref()-based routes.
+  //
+  // The contract comes from the same place, and for the same reason the
+  // metadata is authoritative where the checker is not: `ref('ns:fn')` only
+  // types precisely once the consumer's own rpc map already lists the addon's
+  // functions, so a cold run inferred the whole `FlattenedRPCMap` and a warm one
+  // inferred the real input. The addon's own metadata says which it is either
+  // way.
   if (refAddonTarget) {
     const targetMeta = resolveFunctionMeta(state, refAddonTarget)
     const inlineMeta = state.functions.meta[funcName]
-    if (targetMeta && inlineMeta && targetMeta.sessionless !== undefined) {
-      inlineMeta.sessionless = targetMeta.sessionless
+    if (targetMeta && inlineMeta) {
+      if (targetMeta.sessionless !== undefined) {
+        inlineMeta.sessionless = targetMeta.sessionless
+      }
+      inlineMeta.inputSchemaName = targetMeta.inputSchemaName ?? null
+      inlineMeta.outputSchemaName = targetMeta.outputSchemaName ?? null
+      inlineMeta.inputs = targetMeta.inputs
+      inlineMeta.outputs = targetMeta.outputs
     }
   }
 

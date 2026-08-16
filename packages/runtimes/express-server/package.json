@@ -22,16 +22,15 @@
   },
   "dependencies": {
     "@pikku/express-middleware": "^0.12.7",
-    "@types/content-type": "^1.1.9",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5",
     "@types/express-serve-static-core": "^5.1.3",
-    "content-type": "^1.0.5",
+    "content-type": "^2.1.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "express": "^5",
-    "raw-body": "^3.0.2"
+    "raw-body": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

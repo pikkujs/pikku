@@ -8,5 +8,5 @@
     "target": "es2015",
     "moduleResolution": "node"
   },
-  "exclude": ["**/*.test.ts", "node_modules", "dist"]
+  "exclude": ["src/vite.ts", "**/*.test.ts", "node_modules", "dist"]
 }

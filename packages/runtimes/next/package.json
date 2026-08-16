@@ -30,7 +30,7 @@
     "react-dom": "^18 || ^19"
   },
   "dependencies": {
-    "cookie": "^1.1.1",
+    "cookie": "^2.0.1",
     "eventemitter3": "^5.0.4",
     "path-to-regexp": "^8.4.2"
   },

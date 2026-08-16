@@ -82,7 +82,7 @@
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
     "@types/json-schema": "^7.0.15",
-    "cookie": "^1.1.1",
+    "cookie": "^2.0.1",
     "json-schema": "^0.4.0",
     "path-to-regexp": "^8.4.2",
     "picoquery": "^2.5.0"

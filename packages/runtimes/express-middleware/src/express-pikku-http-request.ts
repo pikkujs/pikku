@@ -1,4 +1,4 @@
-import { parse as parseCookie } from 'cookie'
+import { parseCookie } from 'cookie'
 import type { Request as ExpressRequest } from 'express'
 import type { PikkuHTTPRequest } from '@pikku/core/ecosystem/http'
 import type { HTTPMethod, PikkuQuery } from '@pikku/core/ecosystem/http'

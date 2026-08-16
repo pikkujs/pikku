@@ -13,11 +13,15 @@ import { useScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import type { ScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
+import { scenarioViewSelection, type ScenarioView } from './scenario-view'
 
 export interface ScenariosWorkspaceProps {
   /** Browse state owned by the host (see `useScenariosBrowse`). Supplying it
    *  means the host mounts the feature rail itself, so this drops its own. */
   browse?: ScenariosBrowse
+  /** Renders the features/runs switch in the header when supplied. A host with
+   *  its own navigation omits it and routes to the runs surface itself. */
+  onViewChange?: (view: ScenarioView) => void
 }
 
 /**
@@ -27,6 +31,7 @@ export interface ScenariosWorkspaceProps {
  */
 export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   browse: hostBrowse,
+  onViewChange,
 }) => {
   const [stepWorkflow, setStepWorkflow] = useState<unknown>()
   const { personas } = useScenarioPersonaEntries()
@@ -87,6 +92,11 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
             title={m.nav_scenarios()}
             description={m.scenarios_page_description()}
             docsHref="https://pikku.dev/docs/wiring/workflows"
+            selection={
+              onViewChange
+                ? scenarioViewSelection('features', onViewChange)
+                : undefined
+            }
             filters={
               <Group gap="sm" wrap="wrap">
                 <TextInput

@@ -11,7 +11,7 @@
     "@pikku/jose": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/templates-function-addon": "workspace:*",
-    "eventsource": "^4.1.1",
+    "eventsource": "^5.1.0",
     "ws": "^8.21.3",
     "zod": "^4"
   },
@@ -24,7 +24,7 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/ws": "^8",
-    "concurrently": "^9.2.4",
+    "concurrently": "^10.0.5",
     "react": "^19",
     "react-dom": "^19",
     "tsx": "^4.23.12",

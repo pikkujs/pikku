@@ -652,8 +652,9 @@ wireCLI({
             },
             video: {
               description:
-                'Record a video per scenario alongside the screenshots (implies --screenshots)',
-              default: false,
+                'Which scenarios keep their recording: "failed" (the default), "all", or "off" to record nothing. Recording is decided when a window opens, before the outcome is known, so keeping only failures still records every scenario and discards the passes',
+              choices: ['off', 'failed', 'all'],
+              default: 'failed',
             },
             apiUrl: {
               description:

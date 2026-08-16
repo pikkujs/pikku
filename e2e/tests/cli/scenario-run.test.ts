@@ -14,7 +14,7 @@
 import { after, before, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { startBackend } from '../../bin/backend-harness.js'
@@ -208,19 +208,68 @@ describe('pikku scenario run', () => {
    * being run without it — `browser.screenshot()` returns the bytes and writes
    * nothing. Without this, taking a picture would silently become a dependency
    * on a flag, and every plain run of the suite would fail.
+   *
+   * Every run files a record whether or not it captured anything, which is what
+   * makes the history a history. That record is all a run without `--screenshots`
+   * is allowed to leave behind.
    */
-  test('the same scenario passes with capture off, writing nothing', async () => {
-    const before = existsSync(CAPTURE_ROOT)
-      ? readdirSync(CAPTURE_ROOT).length
-      : 0
+  test('the same scenario passes with capture off, writing only its record', async () => {
+    const before = new Set(
+      existsSync(CAPTURE_ROOT) ? readdirSync(CAPTURE_ROOT) : []
+    )
+
+    const result = await runScenario('captureScenario', ['--run', 'browser'])
+    assertAllPassed(result)
+
+    assert.doesNotMatch(
+      result.output,
+      /Captures →/,
+      `a run that filed nothing must not announce a capture directory:\n${result.output}`
+    )
+    const added = readdirSync(CAPTURE_ROOT).filter((name) => !before.has(name))
+    assert.equal(added.length, 1, 'one run leaves one folder')
+    assert.deepEqual(
+      readdirSync(join(CAPTURE_ROOT, added[0]!)),
+      ['run.json'],
+      'a run without --screenshots must write no images'
+    )
+  })
+
+  /**
+   * A run is history, and history that only exists for the runs somebody
+   * remembered to flag is not history. The record is the console's whole read
+   * path, so it has to be there for an ordinary run with no flags at all.
+   */
+  test('every run files a record naming its scenarios and their steps', async () => {
+    const before = new Set(
+      existsSync(CAPTURE_ROOT) ? readdirSync(CAPTURE_ROOT) : []
+    )
+
     assertAllPassed(await runScenario('captureScenario', ['--run', 'browser']))
-    const after = existsSync(CAPTURE_ROOT)
-      ? readdirSync(CAPTURE_ROOT).length
-      : 0
-    assert.equal(
-      after,
-      before,
-      'a run without --screenshots must write no captures'
+
+    const [added] = readdirSync(CAPTURE_ROOT).filter(
+      (name) => !before.has(name)
+    )
+    const record = JSON.parse(
+      readFileSync(join(CAPTURE_ROOT, added!, 'run.json'), 'utf-8')
+    )
+
+    assert.equal(record.runId, added)
+    assert.equal(record.status, 'passed')
+    assert.equal(record.environment, 'local')
+    assert.equal(record.surface, 'browser')
+    assert.ok(record.finishedAt, 'a finished run says when it finished')
+
+    const [scenario] = record.results
+    assert.equal(scenario.scenarioName, 'captureScenario')
+    assert.equal(scenario.status, 'passed')
+    assert.ok(
+      scenario.steps.length > 0,
+      'the ladder is snapshotted, not re-derived from source that has moved on'
+    )
+    assert.ok(
+      scenario.steps.every((step: { sentence: string }) => step.sentence),
+      'every step carries the sentence it was declared with'
     )
   })
 

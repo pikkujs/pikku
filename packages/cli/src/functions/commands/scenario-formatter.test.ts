@@ -82,7 +82,7 @@ describe('formatScenarioFailure', () => {
             pageErrors: [],
             failedRequests: [],
             apiErrors: ['500 /api/rpc/console:readFunctionSource'],
-            screenshot: '.pikku/scenario-failures/code-editor-admin.png',
+            screenshot: '.pikku/scenario-runs/run-1/code-editor/failure-admin.png',
           },
         ],
       },
@@ -93,7 +93,7 @@ describe('formatScenarioFailure', () => {
     // Labels are padded to the widest of them, so the values line up.
     assert.match(block, /console: {4}TypeError: x is not a function/)
     assert.match(block, /api: {8}500 \/api\/rpc\/console:readFunctionSource/)
-    assert.match(block, /screenshot: \.pikku\/scenario-failures/)
+    assert.match(block, /screenshot: \.pikku\/scenario-runs/)
   })
 
   test('a clean browser window contributes only its url, not empty headings', () => {

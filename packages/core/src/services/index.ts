@@ -22,6 +22,12 @@ export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
 export { LocalGatewayService } from './local-gateway-service.js'
+export {
+  FileScenarioRunStore,
+  scenarioArtifactContentType,
+  scenarioRunSummary,
+  type FileScenarioRunStoreOptions,
+} from './file-scenario-run-store.js'
 export type {
   ContentService,
   SignContentKeyArgs,

@@ -1,6 +1,6 @@
 import type { PikkuHTTPResponse } from './http.types.js'
 import type { SerializeOptions as CookieSerializeOptions } from 'cookie'
-import { serialize as serializeCookie } from 'cookie'
+import { stringifySetCookie } from 'cookie'
 
 export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #statusCode: number = 200
@@ -116,7 +116,8 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
 
   public toResponse(args?: Record<string, any>): Response {
     const cookieHeader = Array.from(this.#cookies.entries()).map(
-      ([name, { value, flags }]) => serializeCookie(name, value, flags)
+      ([name, { value, flags }]) =>
+        stringifySetCookie({ name, value, ...flags }, flags)
     )
     cookieHeader.forEach((cookie) => this.#headers.append('Set-Cookie', cookie))
     return new Response(this.#body, {

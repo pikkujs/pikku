@@ -19,7 +19,7 @@ import { KEYWORD_WIDTH } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
   ScenarioStepRow,
-} from './scenario-formatter.js'
+} from '@pikku/core/ecosystem/scenario'
 
 export interface ScenarioStepProse {
   phase: ScenarioStepPhase
