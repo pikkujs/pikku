@@ -195,6 +195,15 @@ export const expectsText = pikkuScenarioStep<
 })
 
 /**
+ * The console's first paint, not an assertion about how fast it should be. The
+ * functions page takes north of 20s to put its table up from a cold bundle on
+ * an unloaded laptop, so the old 15s left CI failing this step on page load
+ * rather than on anything the scenario is about. Lower it again when the page
+ * itself gets faster.
+ */
+const CONSOLE_PAGE_READY_TIMEOUT = 60_000
+
+/**
  * Opens a console page and waits for it to have rendered something.
  *
  * `waitFor` names the element by test id, the way every other browser step
@@ -215,7 +224,7 @@ export const opensConsolePage = pikkuScenarioStep<
       await browser
         .locate(waitFor)
         .first()
-        .waitFor({ state: 'visible', timeout: 15_000 })
+        .waitFor({ state: 'visible', timeout: CONSOLE_PAGE_READY_TIMEOUT })
     }
     return { url: browser.page.url() }
   },
