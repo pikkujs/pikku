@@ -37,7 +37,20 @@ directory without granting the ability to ban anyone. Note the absence of
 `scopes` on `wireAddon`: addon scopes are required *in addition to* a function's
 own, so declaring `admin` there would force the umbrella grant on every caller.
 
-`admin:users:*` needs better-auth wired with its `admin()` plugin;
+`admin:users:*` needs better-auth wired, and banning additionally needs its
+`ban()` plugin from `@pikku/better-auth` for the columns to exist:
+
+```ts
+import { ban } from '@pikku/better-auth'
+
+betterAuth({ plugins: [ban()] })
+```
+
+better-auth's own `admin()` plugin is neither needed nor wanted here. These
+functions work through the internal adapter, and each is already gated by its
+own `admin:*` scope — `admin()` would only add a second check against a `role`
+column that has to be kept in step with the scopes it duplicates.
+
 `admin:audit:read` needs an audit sink that can be read back. Both report their
 absence rather than failing.
 

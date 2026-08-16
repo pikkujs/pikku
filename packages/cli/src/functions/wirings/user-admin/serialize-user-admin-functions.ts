@@ -5,7 +5,7 @@ export interface UserAdminGenOutput {
 
 /**
  * Generate the user-management functions into the project scaffold: the
- * directory read plus the writes that wrap better-auth's `admin()` endpoints.
+ * directory read plus the writes that administer it.
  *
  * Superseded by `@pikku/addon-admin`, which ships these same functions plus
  * roles, credentials and the audit trail, and which an app can wire without
@@ -13,9 +13,9 @@ export interface UserAdminGenOutput {
  * below must stay byte-identical to the addon's, or an app with both fails
  * codegen on conflicting declarations.
  *
- * Each function is gated on its own `admin:users:*` scope. The writes are only
- * meaningful where `admin()` is wired, which is why this file is generated only
- * in that case.
+ * Each function is gated on its own `admin:users:*` scope, and works through
+ * better-auth's internal adapter. Banning additionally needs the `ban()` plugin
+ * from `@pikku/better-auth` for the columns it writes to exist.
  *
  * Emitted as two files. The schemas are zod, and the inspector reads a zod
  * schema by importing the module that declares it — which it cannot do for the
@@ -37,9 +37,9 @@ import { z } from 'zod'
 
 /**
  * A user, as the directory sees one. Ban state is optional because those
- * columns belong to better-auth's \`admin()\` plugin: a host without it reports
- * no ban state at all, which a client can render as "unknown" rather than as a
- * misleading "not banned".
+ * columns belong to the \`ban()\` plugin: a host without it reports no ban state
+ * at all, which a client can render as "unknown" rather than as a misleading
+ * "not banned".
  */
 export const User = z.object({
   id: z.string(),
@@ -99,7 +99,13 @@ export const Success = z.object({
  */
 import { pikkuFunc } from '${leaf('function')}'
 import { defineScope } from '${leaf('scopes')}'
-import { callAdminApi } from '@pikku/better-auth'
+import {
+  createAuthUser,
+  deleteAuthUser,
+  revokeAuthUserSessions,
+  setAuthUserBanned,
+  setAuthUserPassword,
+} from '@pikku/better-auth'
 import {
   CreateUserInput,
   CreateUserOutput,
@@ -177,7 +183,7 @@ export const pikkuAdminListUsers = pikkuFunc({
   tags: ['pikku'],
   title: 'List Users',
   description:
-    'Lists and searches the user directory, read through the auth adapter rather than an admin endpoint so it works on any database better-auth supports.',
+    'Lists and searches the user directory, read through the auth adapter so it works on any database better-auth supports.',
   expose: true,
   auth: ${authFlag},
   scopes: ['admin:users:list'],
@@ -216,28 +222,22 @@ export const pikkuAdminCreateUser = pikkuFunc({
   tags: ['pikku'],
   title: 'Create User',
   description:
-    'Creates a user directly, for provisioning an account out of band rather than through your sign-up flow. better-auth enforces the configured password bounds and rejects a duplicate email.',
+    'Creates a user directly, for provisioning an account out of band rather than through your sign-up flow. Enforces the configured password bounds and rejects a duplicate email.',
   expose: true,
   auth: ${authFlag},
   scopes: ['admin:users:create'],
   input: CreateUserInput,
   output: CreateUserOutput,
-  func: async ({ auth }, { email, password, name }, { http }) => {
-    const created: any = await callAdminApi(auth, http, (api, headers) =>
-      api.createUser!({
-        body: { email, password, name: name ?? email },
-        headers,
-      })
-    )
-    return { userId: created?.user?.id ?? created?.id }
-  },
+  func: async ({ auth }, { email, password, name }) => ({
+    userId: await createAuthUser(auth, { email, password, name }),
+  }),
 })
 
 export const pikkuAdminSetUserBanned = pikkuFunc({
   tags: ['pikku'],
   title: 'Ban or Unban User',
   description:
-    'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted.',
+    'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted. Requires better-auth wired with the \`ban()\` plugin.',
   expose: true,
   auth: ${authFlag},
   scopes: ['admin:users:ban'],
@@ -246,16 +246,12 @@ export const pikkuAdminSetUserBanned = pikkuFunc({
   func: async (
     { auth },
     { userId, banned, reason, expiresInSeconds },
-    { http }
+    { session }
   ) => {
-    await callAdminApi(auth, http, (api, headers) =>
-      banned
-        ? api.banUser!({
-            body: { userId, banReason: reason, banExpiresIn: expiresInSeconds },
-            headers,
-          })
-        : api.unbanUser!({ body: { userId }, headers })
-    )
+    if (banned && userId === session?.userId) {
+      throw new Error('You cannot ban yourself')
+    }
+    await setAuthUserBanned(auth, { userId, banned, reason, expiresInSeconds })
     return { success: true }
   },
 })
@@ -270,10 +266,11 @@ export const pikkuAdminRemoveUser = pikkuFunc({
   scopes: ['admin:users:remove'],
   input: UserRef,
   output: Success,
-  func: async ({ auth }, { userId }, { http }) => {
-    await callAdminApi(auth, http, (api, headers) =>
-      api.removeUser!({ body: { userId }, headers })
-    )
+  func: async ({ auth }, { userId }, { session }) => {
+    if (userId === session?.userId) {
+      throw new Error('You cannot delete yourself')
+    }
+    await deleteAuthUser(auth, userId)
     return { success: true }
   },
 })
@@ -288,10 +285,8 @@ export const pikkuAdminRevokeUserSessions = pikkuFunc({
   scopes: ['admin:users:sessions'],
   input: UserRef,
   output: Success,
-  func: async ({ auth }, { userId }, { http }) => {
-    await callAdminApi(auth, http, (api, headers) =>
-      api.revokeUserSessions!({ body: { userId }, headers })
-    )
+  func: async ({ auth }, { userId }) => {
+    await revokeAuthUserSessions(auth, userId)
     return { success: true }
   },
 })
@@ -300,16 +295,14 @@ export const pikkuAdminSetUserPassword = pikkuFunc({
   tags: ['pikku'],
   title: "Set User's Password",
   description:
-    'Sets a user password out of band, for when they cannot complete a reset themselves. better-auth enforces the configured length bounds.',
+    'Sets a user password out of band, for when they cannot complete a reset themselves. Enforces the configured length bounds, and gives a user who only ever signed in socially a credential account.',
   expose: true,
   auth: ${authFlag},
   scopes: ['admin:users:password'],
   input: SetUserPasswordInput,
   output: Success,
-  func: async ({ auth }, { userId, newPassword }, { http }) => {
-    await callAdminApi(auth, http, (api, headers) =>
-      api.setUserPassword!({ body: { userId, newPassword }, headers })
-    )
+  func: async ({ auth }, { userId, newPassword }) => {
+    await setAuthUserPassword(auth, { userId, newPassword })
     return { success: true }
   },
 })

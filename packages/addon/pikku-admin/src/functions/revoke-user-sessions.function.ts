@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku/function'
-import { callAdminApi } from '@pikku/better-auth'
+import { revokeAuthUserSessions } from '@pikku/better-auth'
 import { Success, UserRef } from '../lib/user.schemas.js'
 
 export const revokeUserSessions = pikkuFunc({
@@ -10,10 +10,8 @@ export const revokeUserSessions = pikkuFunc({
   scopes: ['admin:users:sessions'],
   input: UserRef,
   output: Success,
-  func: async ({ auth }, { userId }, { http }) => {
-    await callAdminApi(auth, http, (api, headers) =>
-      api.revokeUserSessions!({ body: { userId }, headers })
-    )
+  func: async ({ auth }, { userId }) => {
+    await revokeAuthUserSessions(auth, userId)
     return { success: true }
   },
 })

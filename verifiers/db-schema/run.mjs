@@ -347,7 +347,7 @@ contains(authSql, '"two_factor"', 'twoFactor() table')
 for (const column of [
   '"banned"',
   '"ban_reason"',
-  '"impersonated_by"',
+  '"ban_expires"',
   '"two_factor_enabled"',
 ]) {
   contains(authSql, column, 'plugin column on an existing table')

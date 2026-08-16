@@ -2,9 +2,9 @@ import { z } from 'zod'
 
 /**
  * A user, as the directory sees one. Ban state is optional because those
- * columns belong to better-auth's `admin()` plugin: a host without it reports
- * no ban state at all, which a client can render as "unknown" rather than as a
- * misleading "not banned".
+ * columns belong to the `ban()` plugin: a host without it reports no ban state
+ * at all, which a client can render as "unknown" rather than as a misleading
+ * "not banned".
  */
 export const User = z.object({
   id: z.string(),

@@ -5,7 +5,7 @@ import { ListUsersInput, ListUsersOutput } from '../lib/user.schemas.js'
 export const listUsers = pikkuFunc({
   title: 'List Users',
   description:
-    'Lists and searches the user directory, read through the auth adapter rather than an admin endpoint so it works on any database better-auth supports.',
+    'Lists and searches the user directory, read through the auth adapter so it works on any database better-auth supports.',
   expose: true,
   scopes: ['admin:users:list'],
   input: ListUsersInput,

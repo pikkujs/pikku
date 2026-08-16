@@ -89,7 +89,7 @@ const readArrayProp = (
 
 /**
  * Read the callee name of a `plugins: [...]` entry. better-auth plugins are
- * factory calls (`bearer()`, `twoFactor({ ... })`, `admin()`); the entry's id
+ * factory calls (`bearer()`, `twoFactor({ ... })`, `ban()`); the entry's id
  * is the called function's name. Member-expression callees (`foo.bar()`) and
  * non-call entries are ignored.
  */

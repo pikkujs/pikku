@@ -15,8 +15,8 @@ export interface AuthUser {
   image?: string | null
   createdAt?: string | Date | null
   /**
-   * Ban state, owned by better-auth's `admin()` plugin. Undefined when the host
-   * does not wire it — distinct from `false`, so the UI can leave the column out
+   * Ban state, owned by the `ban()` plugin. Undefined when the host does not
+   * wire it — distinct from `false`, so the UI can leave the column out
    * entirely rather than claiming everyone is in good standing.
    */
   banned?: boolean

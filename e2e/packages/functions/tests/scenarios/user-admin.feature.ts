@@ -1,14 +1,12 @@
 /**
- * Banning, deleting, signing out and password-setting are implemented by
- * better-auth's `admin()` plugin, but pikku exposes them as scaffolded functions
- * in the host app — no console required — each gated on its own
+ * Banning, deleting, signing out and password-setting, exposed as scaffolded
+ * functions in the host app — no console required — each gated on its own
  * `admin:users:*` scope.
  *
- * Those endpoints authorize on better-auth's own `user.role`, which pikku never
- * grants directly: it is projected from the scope store at the session boundary.
- * A caller holding a user-management scope is `role: 'admin'` to better-auth; a
- * caller who is not, is not. That makes the scopes the single source of truth
- * and these scenarios the proof that the projection actually reaches the plugin.
+ * The scope on the function is the whole authorization decision. They drive
+ * better-auth's internal adapter directly, so there is no second gate on a
+ * `user.role` column behind them, and these scenarios are the proof that the
+ * one gate that remains actually holds.
  *
  * The `admin` actor holds the umbrella `admin` scope, which covers every
  * `admin:users:*` leaf by pikku's parent-grant rule. The `guest` actor holds

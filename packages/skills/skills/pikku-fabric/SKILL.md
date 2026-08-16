@@ -115,7 +115,7 @@ and refuses a database outside the runtime directory. Anything a real environmen
 needs — accounts, role grants — is provisioning, not seeding, and belongs in
 `pikku persona sync` or a migration.
 
-A Better Auth app has a second constraint: the plugins you enable (`admin()`,
+A Better Auth app has a second constraint: the plugins you enable (`ban()`,
 `actor()`, …) each declare columns, and `pikku db migrate` refuses to run while
 the applied schema is missing any of them. `pikku db generate` writes the
 migration that closes the gap.

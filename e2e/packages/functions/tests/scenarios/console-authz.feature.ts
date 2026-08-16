@@ -148,8 +148,7 @@ export const consoleAuthzAdminMetadataScenario = pikkuScenario<
 })
 
 /**
- * The user directory replaces better-auth's `admin()` list-users endpoint. It
- * additionally declares `admin:users:list`, which the umbrella `admin` grant
+ * The user directory reads through better-auth's adapter. It declares `admin:users:list`, which the umbrella `admin` grant
  * covers — a caller holding neither gets nothing back.
  */
 export const consoleAuthzNonAdminDirectoryScenario = pikkuScenario<

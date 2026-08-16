@@ -11,12 +11,18 @@ export {
   ADMIN_SCOPES,
   ADMIN_SCOPE_ROOT,
   ADMIN_SCOPE_TREE,
-  projectedAdminRole,
   resolvedUserHoldsScopes,
 } from './auth-scopes.js'
-export { syncProjectedAdminRole } from './admin-role-sync.js'
-export { callAdminApi } from './admin-api.js'
-export type { AdminApiHttpWire } from './admin-api.js'
+export {
+  createAuthUser,
+  deleteAuthUser,
+  revokeAuthUserSessions,
+  setAuthUserBanned,
+  setAuthUserPassword,
+} from './admin-users.js'
+export type { AuthGetter } from './admin-users.js'
+export { ban } from './ban-plugin.js'
+export type { BanPluginOptions } from './ban-plugin.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export { fabric } from './fabric-plugin.js'

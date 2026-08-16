@@ -1,5 +1,8 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { serializeUserAdminFunctions } from './serialize-user-admin-functions.js'
 import { pikkuUserAdminFunctions } from './pikku-command-user-admin-functions.js'
 
@@ -10,8 +13,10 @@ const ADMIN_DEFINITION = {
   sourceFile: '/app/src/auth.ts',
   basePath: '/api/auth',
   hasCredentials: true,
-  plugins: ['bearer', 'admin'],
+  plugins: ['bearer', 'ban'],
 }
+
+const writeDir = mkdtempSync(join(tmpdir(), 'pikku-user-admin-'))
 
 const services = (
   definition: unknown,
@@ -22,8 +27,9 @@ const services = (
     logger: { debug() {}, info() {}, warn() {}, error() {} },
     config: {
       scaffold,
-      userAdminFunctionsFile: '/app/src/scaffold/admin/user-admin.gen.ts',
-      userAdminSchemasFile: '/app/src/scaffold/admin/user-admin.schemas.gen.ts',
+      // A real directory: the tests that get past the guards write for real.
+      userAdminFunctionsFile: join(writeDir, 'user-admin.gen.ts'),
+      userAdminSchemasFile: join(writeDir, 'user-admin.schemas.gen.ts'),
       outDir: '/app/.pikku',
       packageMappings: {},
     },
@@ -67,8 +73,17 @@ describe('serializeUserAdminFunctions', () => {
     assert.match(out, /link: \{ description:/)
   })
 
-  test('brokers through the shared helper rather than reimplementing auth', () => {
-    assert.match(out, /import \{ callAdminApi \} from '@pikku\/better-auth'/)
+  test('brokers through the shared helpers rather than reimplementing auth', () => {
+    for (const helper of [
+      'createAuthUser',
+      'deleteAuthUser',
+      'revokeAuthUserSessions',
+      'setAuthUserBanned',
+      'setAuthUserPassword',
+    ]) {
+      assert.match(out, new RegExp(`\\b${helper}\\b`))
+    }
+    assert.match(out, /from '@pikku\/better-auth'/)
     assert.doesNotMatch(out, /internalAdapter/)
   })
 
@@ -122,35 +137,30 @@ describe('pikkuUserAdminFunctions', () => {
     assert.equal(result, false)
   })
 
-  // The whole reason the guard exists: without admin() these four RPCs throw on
-  // every call and the four scopes grant nothing, so codegen must refuse.
-  test('fails when better-auth is wired without the admin() plugin', async () => {
-    await assert.rejects(
-      (pikkuUserAdminFunctions as any).func(
-        services({ ...ADMIN_DEFINITION, plugins: ['bearer'] }, []),
-        undefined,
-        {}
-      ),
-      /without the admin\(\) plugin/
+  // Ban is one capability of six, so a missing ban() warns and generates the
+  // rest rather than refusing — but it must say so, naming the file to fix.
+  test('warns, and still generates, when ban() is not wired', async () => {
+    const warnings: string[] = []
+    const svc = services({ ...ADMIN_DEFINITION, plugins: ['bearer'] }, [])
+    svc.logger.warn = (message: string) => warnings.push(message)
+
+    assert.equal(
+      await (pikkuUserAdminFunctions as any).func(svc, undefined, {}),
+      true
     )
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0]!, /without the ban\(\) plugin/)
+    assert.match(warnings[0]!, /\/app\/src\/auth\.ts/)
+    assert.match(warnings[0]!, /import \{ ban \} from '@pikku\/better-auth'/)
   })
 
-  test('the failure names the file to fix and how', async () => {
-    await assert.rejects(
-      (pikkuUserAdminFunctions as any).func(
-        services({ ...ADMIN_DEFINITION, plugins: [] }, []),
-        undefined,
-        {}
-      ),
-      (e: Error) => {
-        assert.match(e.message, /\/app\/src\/auth\.ts/)
-        assert.match(
-          e.message,
-          /import \{ admin \} from 'better-auth\/plugins'/
-        )
-        return true
-      }
-    )
+  test('says nothing when ban() is wired', async () => {
+    const warnings: string[] = []
+    const svc = services(ADMIN_DEFINITION, [])
+    svc.logger.warn = (message: string) => warnings.push(message)
+
+    await (pikkuUserAdminFunctions as any).func(svc, undefined, {})
+    assert.deepEqual(warnings, [])
   })
 
   test('fails when there is no better-auth at all', async () => {

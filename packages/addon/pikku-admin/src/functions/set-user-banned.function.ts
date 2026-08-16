@@ -1,11 +1,11 @@
 import { pikkuFunc } from '#pikku/function'
-import { callAdminApi } from '@pikku/better-auth'
+import { setAuthUserBanned } from '@pikku/better-auth'
 import { SetUserBannedInput, Success } from '../lib/user.schemas.js'
 
 export const setUserBanned = pikkuFunc({
   title: 'Ban or Unban User',
   description:
-    'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted.',
+    'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted. Requires better-auth wired with the `ban()` plugin.',
   expose: true,
   scopes: ['admin:users:ban'],
   input: SetUserBannedInput,
@@ -13,16 +13,12 @@ export const setUserBanned = pikkuFunc({
   func: async (
     { auth },
     { userId, banned, reason, expiresInSeconds },
-    { http }
+    { session }
   ) => {
-    await callAdminApi(auth, http, (api, headers) =>
-      banned
-        ? api.banUser!({
-            body: { userId, banReason: reason, banExpiresIn: expiresInSeconds },
-            headers,
-          })
-        : api.unbanUser!({ body: { userId }, headers })
-    )
+    if (banned && userId === session?.userId) {
+      throw new Error('You cannot ban yourself')
+    }
+    await setAuthUserBanned(auth, { userId, banned, reason, expiresInSeconds })
     return { success: true }
   },
 })
