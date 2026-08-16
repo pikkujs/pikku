@@ -1,3 +1,39 @@
+/**
+ * Waits for the server to be *routable*, not merely listening.
+ *
+ * An accepted socket says nothing about this test: `remoteGreet` resolves its
+ * target through the deployment registry, and both servers register themselves
+ * after they start serving. A call made during that window lands on an empty
+ * registry and fails with "No deployment found" — which is the race, not a bug
+ * in the routing this test is about.
+ */
+async function waitForRemoteRouting(
+  port: number,
+  timeoutMs = 15000
+): Promise<void> {
+  const start = Date.now()
+  let lastError = 'no response'
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(`http://localhost:${port}/rpc/remoteGreet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { name: 'Ready', greeting: 'Hi' } }),
+      })
+      if (res.ok) {
+        return
+      }
+      lastError = `${res.status} ${await res.text()}`
+    } catch (e: any) {
+      lastError = e.message
+    }
+    await new Promise((r) => setTimeout(r, 250))
+  }
+  throw new Error(
+    `Server on port ${port} not routable after ${timeoutMs}ms: ${lastError}`
+  )
+}
+
 async function testRemoteRpc(
   fromPort: number,
   expectOtherPort: number
@@ -37,6 +73,10 @@ async function testRemoteRpc(
 async function main(): Promise<void> {
   console.log('Remote RPC Two-Server Test')
   console.log('==========================\n')
+
+  console.log('Waiting for both servers...')
+  await Promise.all([waitForRemoteRouting(3001), waitForRemoteRouting(3002)])
+  console.log('Both servers ready.\n')
 
   console.log('Test 1: Call /rpc/remoteGreet on port 3001')
   console.log(
