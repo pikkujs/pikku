@@ -1,4 +1,5 @@
 import { existsSync } from 'fs'
+import { unresolvedSchemaReferences } from '@pikku/inspector'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
 import { warnOnSplitTypeIdentity } from '../validate/type-identity-checks.js'
@@ -337,6 +338,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
+    const hadRPCInternalMap = existsSync(config.rpcInternalMapDeclarationFile)
+
     const [, , , workflows] = await Promise.all([
       workflow.do('RPC internal map', 'pikkuRPCInternalMap', null),
       workflow.do('RPC exposed map', 'pikkuRPCExposedMap', null),
@@ -359,7 +362,28 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
-    if (workflows || remoteRPC || webhook || workflowRoutes) {
+    // A contract type reaches the schema generator only through a file that
+    // imports it, and for a type exported by nothing but its own function file
+    // that file is the RPC internal map — written just above, after schemas.
+    // A first build has no map to read yet, so those schemas come out missing
+    // from a run that otherwise succeeds and the RPC dies with
+    // MissingSchemaError on its first call. The map exists now, so
+    // re-inspecting resolves them.
+    //
+    // Only on the build that created the map: a project whose references are
+    // unresolved for some other reason would otherwise pay a second inspection
+    // on every run for a re-generation that cannot help it.
+    const unresolvedSchemas =
+      !hadRPCInternalMap &&
+      unresolvedSchemaReferences(await getInspectorState()).length > 0
+
+    if (
+      workflows ||
+      remoteRPC ||
+      webhook ||
+      workflowRoutes ||
+      unresolvedSchemas
+    ) {
       await workflow.do('Re-inspect after workflows', async () => {
         await getInspectorState(true)
       })
