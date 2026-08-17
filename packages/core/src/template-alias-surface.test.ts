@@ -148,6 +148,64 @@ describe('templates ship the #pikku alias', () => {
   })
 
   /**
+   * Every `#pikku/…` pattern shares the prefix `#pikku/`, and TypeScript picks
+   * the matching pattern with the longest prefix, ignoring the suffix and
+   * breaking the tie in favour of the first key. So a suffix-specific pattern
+   * such as `#pikku/*.json` only ever wins by being listed before the bare one
+   * — an ordering that does not survive `create-pikku` deep-merging the runtime
+   * template's tsconfig with the functions template's.
+   *
+   * The bare pattern therefore has to resolve a file as well as a directory
+   * index, which a target list does: `#pikku/mcp/mcp.gen.json` misses
+   * `.pikku/mcp/mcp.gen.json/index.ts` and lands on the file behind it.
+   */
+  test('the bare #pikku pattern resolves a file, not only a directory index', () => {
+    const offenders: string[] = []
+
+    for (const template of templateNames()) {
+      const declare = (
+        source: string,
+        targets: string | string[] | undefined
+      ) => {
+        if (targets === undefined) return
+        const list = Array.isArray(targets) ? targets : [targets]
+        // A directory-index target ends in the index file; anything else names
+        // whatever the alias was pointed at, which is what a file needs.
+        if (list.every((target) => /\/index\.[cm]?[jt]s$/.test(target))) {
+          offenders.push(`${source}  ${list.join(', ')}`)
+        }
+      }
+
+      const tsconfigPath = join(templatesDir, template, 'tsconfig.json')
+      if (existsSync(tsconfigPath)) {
+        const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'))
+        declare(
+          `templates/${template}/tsconfig.json`,
+          tsconfig.compilerOptions?.paths?.['#pikku/*']
+        )
+      }
+
+      const pkg = JSON.parse(
+        readFileSync(join(templatesDir, template, 'package.json'), 'utf8')
+      )
+      declare(
+        `templates/${template}/package.json`,
+        pkg.imports?.['#pikku/*'] as string | string[] | undefined
+      )
+    }
+
+    assert.deepStrictEqual(
+      offenders,
+      [],
+      `The bare '#pikku/*' pattern must list a file target alongside the ` +
+        `directory index, because a suffix-specific pattern like ` +
+        `'#pikku/*.json' loses to it whenever it is not listed first — and ` +
+        `create-pikku's merge decides that order.\n\n` +
+        offenders.join('\n')
+    )
+  })
+
+  /**
    * Node rejects an internal-imports target that is not './'-relative or a
    * bare package specifier, so a '../' target throws ERR_INVALID_PACKAGE_TARGET
    * rather than resolving. A runtime template reaching the functions template
