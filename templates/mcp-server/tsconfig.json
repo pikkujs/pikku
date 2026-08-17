@@ -6,6 +6,7 @@
     "module": "node18",
     "skipLibCheck": true,
     "paths": {
+      "#pikku/*.json": ["../functions/.pikku/*.json"],
       "#pikku/*.js": ["../functions/.pikku/*.ts"],
       "#pikku/*": ["../functions/.pikku/*/index.ts"]
     }
