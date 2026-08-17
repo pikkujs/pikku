@@ -16,14 +16,22 @@ import type {
 import type { ChannelRemote, PikkuChannel } from '../channel/channel.types.js'
 
 /**
+ * The shape an option's value is parsed into. `'string[]'` splits a single
+ * value on commas; every other type consumes one token verbatim, so a value
+ * may start with `-`. Left unset, it is inferred from `default` and otherwise
+ * falls back to `'string'`.
+ */
+export type CLIOptionType = 'string' | 'number' | 'boolean' | 'string[]'
+
+/**
  * CLI option definition
  */
 export interface CLIOption<T = any> {
   description: string
   short?: string
+  type?: CLIOptionType
   default?: T
   choices?: T[]
-  array?: boolean
   required?: boolean
 }
 
@@ -224,6 +232,7 @@ export type CoreCLICommandConfig<
     [K in keyof ExtractFunctionInput<FuncConfig>]?: {
       description?: string
       short?: string
+      type?: CLIOptionType
       default?: ExtractFunctionInput<FuncConfig>[K]
       /**
        * The values this option accepts. Rejected by the parser and listed in

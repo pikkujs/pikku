@@ -199,57 +199,72 @@ wireCLI({
         filter: {
           description:
             'Named filter(s) from pikku.config.json filters map (comma-separated)',
+          type: 'string[]',
         },
         tags: {
           description: 'Include functions by tags (comma-separated)',
           short: 't',
+          type: 'string[]',
         },
         wires: {
           description: 'Filter direct wirings by category (comma-separated)',
+          type: 'string[]',
         },
         excludeWires: {
           description: 'Exclude direct wirings by category (comma-separated)',
+          type: 'string[]',
         },
         excludeTags: {
           description: 'Exclude functions by tags (comma-separated)',
+          type: 'string[]',
         },
         directories: {
           description: 'Include functions by directories (comma-separated)',
           short: 'd',
+          type: 'string[]',
         },
         excludeDirectories: {
           description: 'Exclude functions by directories (comma-separated)',
+          type: 'string[]',
         },
         httpMethods: {
           description: 'Include HTTP routes by methods (comma-separated)',
+          type: 'string[]',
         },
         excludeHttpMethods: {
           description: 'Exclude HTTP routes by methods (comma-separated)',
+          type: 'string[]',
         },
         httpRoutes: {
           description:
             'Include HTTP routes by route patterns (comma-separated)',
+          type: 'string[]',
         },
         excludeHttpRoutes: {
           description:
             'Exclude HTTP routes by route patterns (comma-separated)',
+          type: 'string[]',
         },
         names: {
           description:
             'Include functions by name patterns (supports wildcards)',
           short: 'n',
+          type: 'string[]',
         },
         excludeNames: {
           description:
             'Exclude functions by name patterns (supports wildcards)',
+          type: 'string[]',
         },
         target: {
           description:
             'Include functions by deploy target (comma-separated: serverless, server)',
+          type: 'string[]',
         },
         excludeTarget: {
           description:
             'Exclude functions by deploy target (comma-separated: serverless, server)',
+          type: 'string[]',
         },
         forceRelativeImports: {
           description:
@@ -451,6 +466,7 @@ wireCLI({
           options: {
             force: {
               description: 'Overwrite an existing email scaffold',
+              type: 'boolean',
             },
           },
         }),
@@ -711,10 +727,12 @@ wireCLI({
             allowApproval: {
               description:
                 'Offer the endpoints the app marked as needing a human\u2019s approval. Off by default: those are the ones that spend money',
+              type: 'boolean',
             },
             skipRoleCheck: {
               description:
                 'Start without verifying the declared roles against the stage. For a target whose auth reports roles somewhere pikku cannot read — findings from an unverified run may be seed drift rather than product bugs',
+              type: 'boolean',
             },
             apiUrl: {
               description:
@@ -735,6 +753,7 @@ wireCLI({
             dryRun: {
               description:
                 'Report who would be provisioned, with which roles, and why anyone was skipped — without touching anything',
+              type: 'boolean',
             },
             apiUrl: {
               description:
@@ -1018,6 +1037,7 @@ wireCLI({
           options: {
             force: {
               description: 'Overwrite existing manifest',
+              type: 'boolean',
             },
           },
         }),

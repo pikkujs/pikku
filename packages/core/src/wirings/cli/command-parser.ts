@@ -4,6 +4,7 @@ import type {
   CLICommandMeta,
   CLIPositional,
   CLIOption,
+  CLIOptionType,
 } from './cli.types.js'
 
 /** "from-plan" → "fromPlan"; the parser accepts either spelling. */
@@ -94,6 +95,44 @@ export interface ParsedCommand {
  * one error per character.
  */
 const MAX_SHORT_FLAG_CLUSTER = 64
+
+function resolveOptionType(optionDef: CLIOption): CLIOptionType {
+  if (optionDef.type) {
+    return optionDef.type
+  }
+  if (typeof optionDef.default === 'boolean') {
+    return 'boolean'
+  }
+  if (typeof optionDef.default === 'number') {
+    return 'number'
+  }
+  return 'string'
+}
+
+function readOptionValue(raw: string, optionDef: CLIOption): any {
+  if (resolveOptionType(optionDef) !== 'string[]') {
+    return parseOptionValue(raw, optionDef)
+  }
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .map((item) => parseOptionValue(item, optionDef))
+}
+
+/** A repeated array option accumulates rather than replacing. */
+function assignOptionValue(
+  optionArgs: Record<string, any>,
+  key: string,
+  value: any
+) {
+  const existing = optionArgs[key]
+  if (Array.isArray(existing) && Array.isArray(value)) {
+    optionArgs[key] = [...existing, ...value]
+  } else {
+    optionArgs[key] = value
+  }
+}
 
 export function parseCLIArguments(
   args: string[],
@@ -201,9 +240,10 @@ export function parseCLIArguments(
       const equalIndex = arg.indexOf('=')
       if (
         negatedKey &&
-        typeof availableOptions[negatedKey]?.default === 'boolean'
+        availableOptions[negatedKey] &&
+        resolveOptionType(availableOptions[negatedKey]) === 'boolean'
       ) {
-        // Requiring a boolean default keeps a literal `--no-something` option
+        // Requiring a boolean type keeps a literal `--no-something` option
         // name parsing as itself rather than as a negation.
         optionArgs[negatedKey] = false
       } else if (equalIndex > 0) {
@@ -215,7 +255,11 @@ export function parseCLIArguments(
         }
 
         const value = arg.slice(equalIndex + 1)
-        optionArgs[key] = parseOptionValue(value, optionDef)
+        if (optionDef) {
+          assignOptionValue(optionArgs, key, readOptionValue(value, optionDef))
+        } else {
+          optionArgs[key] = parseOptionValue(value, optionDef)
+        }
       } else {
         const key = toCamelCase(arg.slice(2))
         const optionDef = availableOptions[key]
@@ -224,24 +268,27 @@ export function parseCLIArguments(
           warnUnknownOption(arg.slice(2), availableOptions, result)
         }
 
-        if (optionDef && optionDef.array) {
-          currentIndex++
-          const values: any[] = []
-          while (
-            currentIndex < args.length &&
-            !args[currentIndex].startsWith('-')
+        if (!optionDef) {
+          // With no spec there is nothing to consult, so the lookahead
+          // heuristic is all that is left.
+          if (
+            currentIndex + 1 < args.length &&
+            !args[currentIndex + 1].startsWith('-')
           ) {
-            values.push(parseOptionValue(args[currentIndex], optionDef))
             currentIndex++
+            optionArgs[key] = parseOptionValue(args[currentIndex], optionDef)
+          } else {
+            optionArgs[key] = true
           }
-          currentIndex-- // Back up one since we'll increment at loop end
-          optionArgs[key] = values
-        } else if (
-          currentIndex + 1 < args.length &&
-          !args[currentIndex + 1].startsWith('-')
-        ) {
+        } else if (resolveOptionType(optionDef) === 'boolean') {
+          optionArgs[key] = true
+        } else if (currentIndex + 1 < args.length) {
           currentIndex++
-          optionArgs[key] = parseOptionValue(args[currentIndex], optionDef)
+          assignOptionValue(
+            optionArgs,
+            key,
+            readOptionValue(args[currentIndex], optionDef)
+          )
         } else {
           optionArgs[key] = true
         }
@@ -259,16 +306,18 @@ export function parseCLIArguments(
 
         const longOption = findLongOption(shortFlag, availableOptions)
         if (longOption) {
+          const optionDef = availableOptions[longOption]
           // Only the last flag in a cluster can take a value.
           if (
             i === arg.length - 1 &&
-            currentIndex + 1 < args.length &&
-            !args[currentIndex + 1].startsWith('-')
+            resolveOptionType(optionDef) !== 'boolean' &&
+            currentIndex + 1 < args.length
           ) {
             currentIndex++
-            optionArgs[longOption] = parseOptionValue(
-              args[currentIndex],
-              availableOptions[longOption]
+            assignOptionValue(
+              optionArgs,
+              longOption,
+              readOptionValue(args[currentIndex], optionDef)
             )
           } else {
             optionArgs[longOption] = true

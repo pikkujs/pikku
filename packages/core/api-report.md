@@ -3668,6 +3668,7 @@ export type CoreCLICommandConfig<
     [K in keyof ExtractFunctionInput<FuncConfig>]?: {
       description?: string
       short?: string
+      type?: CLIOptionType
       default?: ExtractFunctionInput<FuncConfig>[K]
       choices?: ReadonlyArray<ExtractFunctionInput<FuncConfig>[K]>
     }

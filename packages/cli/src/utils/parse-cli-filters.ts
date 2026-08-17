@@ -10,31 +10,6 @@ export type CLIFilters = InspectorFilters & {
 }
 
 /**
- * Parse a comma-separated string or array into an array of trimmed, non-empty strings
- * Returns undefined if the input is empty/undefined or results in an empty array
- */
-function parseCommaSeparated(
-  value: string | string[] | undefined
-): string[] | undefined {
-  if (!value) return undefined
-
-  if (Array.isArray(value)) {
-    const flattened = value
-      .flatMap((item) => item.split(','))
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-    return flattened.length > 0 ? flattened : undefined
-  }
-
-  const parsed = value
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-
-  return parsed.length > 0 ? parsed : undefined
-}
-
-/**
  * Parse CLI filter arguments into InspectorFilters format
  */
 export function parseCLIFilters(
@@ -81,7 +56,8 @@ export function parseCLIFilters(
   }
 
   const namedFilters = cliConfig?.namedFilters ?? {}
-  const requestedNamedFilters = parseCommaSeparated(data.filter ?? data.filters)
+  const requestedNamedFilters: string[] | undefined =
+    data.filter ?? (data.filters ? [data.filters] : undefined)
   if (requestedNamedFilters && requestedNamedFilters.length > 0) {
     for (const name of requestedNamedFilters) {
       const preset = namedFilters[name]
@@ -98,22 +74,20 @@ export function parseCLIFilters(
   }
 
   mergeFilter({
-    names: parseCommaSeparated(data.names),
-    tags: parseCommaSeparated(data.tags),
-    wires: parseCommaSeparated(data.wires),
-    directories: parseCommaSeparated(data.directories),
-    httpRoutes: parseCommaSeparated(data.httpRoutes),
-    httpMethods: parseCommaSeparated(data.httpMethods),
-    target: parseCommaSeparated(data.target) as Array<'serverless' | 'server'>,
-    excludeNames: parseCommaSeparated(data.excludeNames),
-    excludeTags: parseCommaSeparated(data.excludeTags),
-    excludeWires: parseCommaSeparated(data.excludeWires),
-    excludeDirectories: parseCommaSeparated(data.excludeDirectories),
-    excludeHttpRoutes: parseCommaSeparated(data.excludeHttpRoutes),
-    excludeHttpMethods: parseCommaSeparated(data.excludeHttpMethods),
-    excludeTarget: parseCommaSeparated(data.excludeTarget) as Array<
-      'serverless' | 'server'
-    >,
+    names: data.names,
+    tags: data.tags,
+    wires: data.wires,
+    directories: data.directories,
+    httpRoutes: data.httpRoutes,
+    httpMethods: data.httpMethods,
+    target: data.target,
+    excludeNames: data.excludeNames,
+    excludeTags: data.excludeTags,
+    excludeWires: data.excludeWires,
+    excludeDirectories: data.excludeDirectories,
+    excludeHttpRoutes: data.excludeHttpRoutes,
+    excludeHttpMethods: data.excludeHttpMethods,
+    excludeTarget: data.excludeTarget,
   })
 
   const validateTargetList = (

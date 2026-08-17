@@ -88,6 +88,30 @@ const testMeta: CLIMeta = {
             },
           },
         },
+        deploy: {
+          pikkuFuncId: 'deployFunc',
+          positionals: [],
+          options: {
+            token: {
+              description: 'Auth token',
+              short: 'k',
+              type: 'string',
+            },
+            tags: {
+              description: 'Tags to include',
+              short: 't',
+              type: 'string[]',
+            },
+            note: {
+              description: 'Free-form note',
+            },
+            dryRun: {
+              description: 'Report without deploying',
+              type: 'boolean',
+              short: 'D',
+            },
+          },
+        },
       },
     },
   },
@@ -728,6 +752,141 @@ describe('Command Parser', () => {
         )
         assert.ok(result.errors.some((e) => e.includes('too long')))
       })
+    })
+  })
+
+  describe('the option spec drives value consumption', () => {
+    test('a string option takes the next token verbatim, even leading with a dash', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--token', '-PumP_kL0'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.token, '-PumP_kL0')
+    })
+
+    test('an untyped option with no boolean/number default is still a string', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--note', '-dash-leading'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.note, '-dash-leading')
+    })
+
+    test('a comma list into an array option splits, trims and drops blanks', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha, beta ,,gamma'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta', 'gamma'])
+    })
+
+    test('an array option splits the --opt=value form too', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags=alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+    })
+
+    test('an array option consumes exactly one token', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha,beta', '--note', 'hello'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+      assert.strictEqual(result.options.note, 'hello')
+    })
+
+    test('a repeated array option accumulates', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha', '--tags', 'beta,gamma'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta', 'gamma'])
+    })
+
+    test('an array option takes a dash-leading value verbatim', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', '-alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.options.tags, ['-alpha', 'beta'])
+    })
+
+    test('a comma in a non-array option stays one literal string', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--note', 'alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.strictEqual(result.options.note, 'alpha,beta')
+    })
+
+    test('a boolean option never consumes the following token', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--dry-run', '--note', 'hello'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, true)
+      assert.strictEqual(result.options.note, 'hello')
+    })
+
+    test('a short flag follows its option spec for dash-leading values', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-k', '-PumP_kL0'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.token, '-PumP_kL0')
+    })
+
+    test('a short flag for an array option splits on commas', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-t', 'alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+    })
+
+    test('a boolean short flag in a cluster does not swallow the next token', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-D', 'positional-would-error'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.strictEqual(result.options.dryRun, true)
+      assert.ok(
+        result.errors.some((e) => e.includes('Unexpected arguments')),
+        `expected the token to stay a positional, got: ${result.errors.join(', ')}`
+      )
     })
   })
 })
