@@ -4773,6 +4773,25 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@pikku/addon-admin@npm:^0.12.0, @pikku/addon-admin@workspace:*, @pikku/addon-admin@workspace:packages/addon/pikku-admin":
+  version: 0.0.0-use.local
+  resolution: "@pikku/addon-admin@workspace:packages/addon/pikku-admin"
+  dependencies:
+    "@pikku/better-auth": "npm:^0.12.25"
+    "@pikku/cli": "npm:^0.12.105"
+    "@pikku/core": "npm:*"
+    typescript: "npm:^6.0.3"
+    zod: "npm:^4"
+  peerDependencies:
+    "@pikku/better-auth": ^0.12.25
+    "@pikku/core": ^0.12.84
+    zod: ^4
+  peerDependenciesMeta:
+    "@pikku/better-auth":
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@pikku/addon-console@npm:^0.12.42, @pikku/addon-console@workspace:*, @pikku/addon-console@workspace:packages/addon/pikku-console":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
@@ -5173,6 +5192,7 @@ __metadata:
     "@mantine/hooks": "npm:^9.5.1"
     "@mantine/notifications": "npm:^9.5.1"
     "@mantine/spotlight": "npm:^9.5.1"
+    "@pikku/addon-admin": "npm:^0.12.0"
     "@pikku/addon-console": "npm:^0.12.42"
     "@pikku/assistant-ui": "npm:^0.12.11"
     "@pikku/cli": "npm:^0.12.105"
@@ -5307,6 +5327,7 @@ __metadata:
   dependencies:
     "@ai-sdk/openai": "npm:^4.0.42"
     "@ai-sdk/openai-compatible": "npm:^3.0.30"
+    "@pikku/addon-admin": "workspace:*"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-email-send": "npm:0.1.2"
     "@pikku/addon-gmail": "npm:0.1.2"

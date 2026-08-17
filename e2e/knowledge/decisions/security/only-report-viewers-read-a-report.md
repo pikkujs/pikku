@@ -3,7 +3,7 @@ type: decision
 title: Only report-viewers read a report
 description: The scope gate is the only way in, and no role or admin grant substitutes for it
 tags: scopes
-resource: func:getReport, scope:reports:read, scope:admin
+resource: func:getReport, scope:reports:read, scope:admin:impersonate
 ---
 
 # Only report-viewers read a report
@@ -13,10 +13,9 @@ from the session at the boundary, before the body is parsed, so nothing inside
 the function can loosen it.
 
 **What this rules out:** an admin reading the report because they are an admin.
-The umbrella `admin` scope in this project reaches impersonation and the user
-directory; it deliberately does not reach `reports:read`. Scopes narrow, never
-widen — no passing permission and no role hierarchy substitutes for a declared
-scope.
+The `admin` scopes this project grants reach impersonation and the user
+directory; none of them reaches `reports:read`. Scopes narrow, never widen — no
+passing permission and no role hierarchy substitutes for a declared scope.
 
 That is why the seed grants `reports:read` to `guest` and withholds it from
 `admin`: it makes the admin the _authenticated-but-unscoped_ caller, which is

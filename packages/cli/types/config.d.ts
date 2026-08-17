@@ -95,7 +95,7 @@ export interface PikkuCLICoreOutputFiles {
   scenariosFunctionsFile: string
   scenariosSchemasFile?: string
 
-  // better-auth admin() wrappers (derived from scaffold.pikkuDir when scaffold.userAdmin is enabled).
+  // User administration functions (derived from scaffold.pikkuDir when scaffold.userAdmin is enabled).
   // Optional: left undefined when scaffold.userAdmin is not enabled, so consumers must guard.
   userAdminFunctionsFile?: string
   userAdminSchemasFile?: string
@@ -520,9 +520,10 @@ export type PikkuCLIInput = {
     console?: PikkuScaffoldFeature
     scenarios?: PikkuScaffoldFeature
     /**
-     * Ban, delete, session-revocation and set-password functions wrapping
-     * better-auth's admin() endpoints. Requires that plugin to be wired —
-     * codegen fails if it is not.
+     * List, create, ban, delete, session-revocation and set-password functions
+     * driving better-auth's internal adapter. Requires better-auth to be wired —
+     * codegen fails if it is not — and banning additionally requires the ban()
+     * plugin from @pikku/better-auth.
      */
     userAdmin?: PikkuScaffoldFeature
     /**

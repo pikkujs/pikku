@@ -724,10 +724,7 @@ export function computeRequiredSchemas(
  * the functions that are actually invoked, so this blocks CI through
  * `--fail-on-error` without failing a dev server over a function nobody calls.
  */
-export function validateSchemaReferences(
-  logger: InspectorLogger,
-  state: InspectorState
-): void {
+export function unresolvedSchemaReferences(state: InspectorState): string[] {
   const { functions, schemas } = state
   const available = new Set(Object.keys(schemas ?? {}))
   const unresolved: string[] = []
@@ -751,6 +748,15 @@ export function validateSchemaReferences(
       unresolved.push(`${funcName}.${role} → '${resolved}'`)
     }
   }
+
+  return unresolved
+}
+
+export function validateSchemaReferences(
+  logger: InspectorLogger,
+  state: InspectorState
+): void {
+  const unresolved = unresolvedSchemaReferences(state)
 
   if (unresolved.length === 0) return
 

@@ -88,7 +88,7 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
                 </Group>
               ),
             },
-            // Only shown where the host wires `admin()`; without it the server
+            // Only shown where the host wires `ban()`; without it the server
             // reports no ban state and an always-empty column is just noise.
             ...(users.some((u) => u.banned !== undefined)
               ? [

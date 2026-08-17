@@ -63,7 +63,7 @@ export function useDeclaredScopes() {
   return useQuery({
     queryKey: DECLARED_KEY,
     queryFn: async () =>
-      (await rpc.invoke('console:scopeListDeclared')) as {
+      (await rpc.invoke('admin:scopeListDeclared')) as {
         scopes: DeclaredScope[]
       },
   })
@@ -74,7 +74,7 @@ export function useRoles() {
   return useQuery({
     queryKey: ROLES_KEY,
     queryFn: async () =>
-      (await rpc.invoke('console:scopeListRoles')) as { roles: Role[] },
+      (await rpc.invoke('admin:scopeListRoles')) as { roles: Role[] },
   })
 }
 
@@ -83,7 +83,7 @@ export function useUserRoles(userId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: userRolesKey(userId ?? ''),
     queryFn: async () =>
-      (await rpc.invoke('console:scopeListUserRoles', {
+      (await rpc.invoke('admin:scopeListUserRoles', {
         userId: userId!,
       })) as UserRolesData,
     enabled: !!userId && enabled,
@@ -98,7 +98,7 @@ export function useCreateRole() {
       name: string
       description?: string
       scopes: string[]
-    }) => rpc.invoke('console:scopeCreateRole', input),
+    }) => rpc.invoke('admin:scopeCreateRole', input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
   })
 }
@@ -108,7 +108,7 @@ export function useSetRoleScopes() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { name: string; scopes: string[] }) =>
-      rpc.invoke('console:scopeSetRoleScopes', input),
+      rpc.invoke('admin:scopeSetRoleScopes', input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
   })
 }
@@ -118,7 +118,7 @@ export function useDeleteRole() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (name: string) =>
-      rpc.invoke('console:scopeDeleteRole', { name }),
+      rpc.invoke('admin:scopeDeleteRole', { name }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
   })
 }
@@ -128,7 +128,7 @@ export function useAddUserToRole() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { userId: string; role: string }) =>
-      rpc.invoke('console:scopeAddUserToRole', input),
+      rpc.invoke('admin:scopeAddUserToRole', input),
     ...optimisticUserRoles(queryClient, (data, { role }) => ({
       ...data,
       roles: data.roles.includes(role) ? data.roles : [...data.roles, role],
@@ -141,7 +141,7 @@ export function useRemoveUserFromRole() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { userId: string; role: string }) =>
-      rpc.invoke('console:scopeRemoveUserFromRole', input),
+      rpc.invoke('admin:scopeRemoveUserFromRole', input),
     ...optimisticUserRoles(queryClient, (data, { role }) => ({
       ...data,
       roles: data.roles.filter((r) => r !== role),
@@ -154,7 +154,7 @@ export function useAddScopeToUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { userId: string; scope: string }) =>
-      rpc.invoke('console:scopeAddScopeToUser', input),
+      rpc.invoke('admin:scopeAddScopeToUser', input),
     ...optimisticUserRoles(queryClient, (data, { scope }) => ({
       ...data,
       directScopes: withScope(data.directScopes, scope),
@@ -168,7 +168,7 @@ export function useRemoveScopeFromUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { userId: string; scope: string }) =>
-      rpc.invoke('console:scopeRemoveScopeFromUser', input),
+      rpc.invoke('admin:scopeRemoveScopeFromUser', input),
     ...optimisticUserRoles(queryClient, (data, { scope }) => ({
       ...data,
       directScopes: data.directScopes.filter((s) => s !== scope),

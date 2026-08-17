@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, test } from 'node:test'
 import { createAuthHandler } from './auth-handler.js'
-import { callAdminApi } from './admin-api.js'
 import { getAuthSession } from './auth-api.js'
-import type { BetterAuthInstance } from './define-auth.js'
 import {
   CROSS_SITE_COOKIE_HEADER,
   CROSS_SITE_SET_COOKIE_HEADER,
@@ -182,24 +180,7 @@ describe('cross-site cookies', () => {
   })
 
   // Resolving the session in middleware and losing it one call later is the
-  // half-authenticated failure these two exist to prevent.
-
-  test('callAdminApi forwards the relayed cookies', async () => {
-    withFlag('true')
-    const auth = async () =>
-      ({ api: { banUser: async () => ({}) } }) as unknown as BetterAuthInstance
-    const http = {
-      request: {
-        headers: () => ({
-          [CROSS_SITE_COOKIE_HEADER]: '__Secure-better-auth.session_token=tok',
-        }),
-      },
-    }
-    const forwarded = await callAdminApi(auth, http, async (_api, headers) =>
-      headers.get('cookie')
-    )
-    assert.equal(forwarded, '__Secure-better-auth.session_token=tok')
-  })
+  // half-authenticated failure this exists to prevent.
 
   test('getAuthSession forwards the relayed cookies', async () => {
     withFlag('true')

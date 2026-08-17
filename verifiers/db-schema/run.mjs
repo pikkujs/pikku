@@ -347,11 +347,24 @@ contains(authSql, '"two_factor"', 'twoFactor() table')
 for (const column of [
   '"banned"',
   '"ban_reason"',
-  '"impersonated_by"',
+  '"ban_expires"',
   '"two_factor_enabled"',
 ]) {
   contains(authSql, column, 'plugin column on an existing table')
 }
+// `ban()` replaced better-auth's `admin()`, which is no longer wired anywhere.
+// These are the columns it used to add. `user.role` is checked inside the user
+// statement rather than across the file, because `organization()` legitimately
+// puts a `role` on `member`.
+const userStatement = /create table "user" \([^;]*/i.exec(authSql)?.[0]
+check(
+  Boolean(userStatement) && !userStatement.includes('"role"'),
+  'no admin() column on user: "role"'
+)
+check(
+  !authSql.includes('"impersonated_by"'),
+  'no admin() column on session: "impersonated_by"'
+)
 check(
   usePostgres
     ? /create table "user" \("id" uuid\b/i.test(authSql)

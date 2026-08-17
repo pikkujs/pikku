@@ -29,7 +29,7 @@ for (const [name, installer] of installers) {
       () =>
         verifyScopes(installer.scopes, {
           userId: 'alice',
-          scopes: ['pikku:console:scopes:read'],
+          scopes: ['pikku:console:wirings:read'],
         }),
       MissingScopeError
     )

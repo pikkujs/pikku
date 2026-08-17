@@ -12,10 +12,17 @@ test('serializeConsoleFunctions includes console HTTP route wiring', () => {
   assert.match(functions, /wireAddon\(\{/)
 })
 
-test('serializeConsoleFunctions gates the console addon behind the admin scope', () => {
+// The console's own root rather than `admin`, which now belongs to
+// @pikku/addon-admin: a host may hand someone the console without handing them
+// the user directory, and the two grants say nothing about each other.
+test('serializeConsoleFunctions gates the console addon behind the console scope', () => {
   const { functions } = serializeConsoleFunctions(leaf, '#agents', '/api')
 
-  assert.match(functions, /wireAddon\(\{[^}]*scopes: \['admin'\][^}]*\}\)/)
+  assert.match(
+    functions,
+    /wireAddon\(\{[^}]*scopes: \['pikku:console'\][^}]*\}\)/
+  )
+  assert.doesNotMatch(functions, /scopes: \['admin'\]/)
   assert.ok(
     !functions.includes('addGlobalPermission'),
     'the gate is declared on the addon, not recommended in a comment'

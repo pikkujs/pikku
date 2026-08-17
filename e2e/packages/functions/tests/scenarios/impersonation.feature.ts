@@ -131,7 +131,7 @@ export const impersonationScopeIsTheGateScenario = pikkuScenario<
 
     await scenario.do(
       'grants admin:impersonate to the guest',
-      'console:scopeAddScopeToUser',
+      'admin:scopeAddScopeToUser',
       { userId: guest.userId, scope: SCOPE },
       { actor: actors.admin }
     )
@@ -150,7 +150,7 @@ export const impersonationScopeIsTheGateScenario = pikkuScenario<
 
     await scenario.do(
       'revokes the scope',
-      'console:scopeRemoveScopeFromUser',
+      'admin:scopeRemoveScopeFromUser',
       { userId: guest.userId, scope: SCOPE },
       { actor: actors.admin }
     )

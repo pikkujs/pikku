@@ -98,14 +98,18 @@ export const consoleRoutes = defineHTTPRoutes({
   },
 })
 
+// The console's own root, not \`admin\`: administering the application (users,
+// roles, credentials, the audit trail) is \`@pikku/addon-admin\` under the
+// \`admin\` tree, and the two are granted separately. Addon scopes union with
+// each function's, so this is the floor for reaching the console at all.
 wireAddon({
   name: 'console',
   package: '@pikku/addon-console',
-  scopes: ['admin'],
+  scopes: ['pikku:console'],
   globalSecrets:
     'the console administers secrets an operator names at runtime, so no static declaration can cover them',
   globalCredentials:
-    'the console lists and links credentials across every user, so it cannot be scoped to a declared set',
+    'the console reports whether the caller has connected the OAuth credentials an agent needs, which are declared by other addons',
 })
 wireHTTPRoutes({ basePath: '${globalHTTPPrefix}', routes: { console: consoleRoutes } })
 `

@@ -8,6 +8,8 @@ import {
 import { usePikkuRPC } from './PikkuRpcProvider'
 import { getServerUrl, setServerUrl as persistServerUrl } from './serverUrl'
 
+const CONSOLE_SCOPE_ROOT = 'pikku:console'
+
 export interface AuthUser {
   id: string
   email: string
@@ -15,8 +17,8 @@ export interface AuthUser {
   image?: string | null
   createdAt?: string | Date | null
   /**
-   * Ban state, owned by better-auth's `admin()` plugin. Undefined when the host
-   * does not wire it — distinct from `false`, so the UI can leave the column out
+   * Ban state, owned by the `ban()` plugin. Undefined when the host does not
+   * wire it — distinct from `false`, so the UI can leave the column out
    * entirely rather than claiming everyone is in good standing.
    */
   banned?: boolean
@@ -34,12 +36,17 @@ export interface AuthContextValue {
   /**
    * Whether the caller holds `scope`, honouring pikku's parent-grant rule — a
    * user holding `admin` satisfies `admin:impersonate`. Prefer this over
-   * {@link AuthContextValue.isAdmin} wherever a specific capability is what
+   * {@link AuthContextValue.canUseConsole} wherever a specific capability is what
    * actually matters.
    */
   can: (scope: string) => boolean
-  /** Whether the caller holds the umbrella `admin` scope. */
-  isAdmin: boolean
+  /**
+   * Whether the caller may reach the console at all — the `pikku:console` root,
+   * which is what `@pikku/addon-console` itself is wired to require. Not
+   * `admin`: administering the application is `@pikku/addon-admin`'s tree, and
+   * a host may grant one without the other.
+   */
+  canUseConsole: boolean
   /** The pikku instance URL auth + RPC/meta point at (persisted in localStorage). */
   serverUrl: string
   /** Persist a new instance URL; rebuilds the auth client + refetches the session. */
@@ -160,12 +167,12 @@ export const AuthProvider: React.FC<{
       client,
       user,
       // Scopes arrive a round-trip after the session, so a gate that reads
-      // `isAdmin` must keep waiting or it flashes not-authorized at every
-      // admin who is in fact authorized.
+      // `canUseConsole` must keep waiting or it flashes not-authorized at every
+      // caller who is in fact authorized.
       loading: sessionQuery.isLoading || (!!userId && accessQuery.isLoading),
       scopes,
       can,
-      isAdmin: hasScopes(['admin'], scopes),
+      canUseConsole: hasScopes([CONSOLE_SCOPE_ROOT], scopes),
       serverUrl: activeUrl,
       setServerUrl,
       refetchSession,

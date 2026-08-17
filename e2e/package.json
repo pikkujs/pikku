@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.42",
+    "@pikku/addon-admin": "workspace:*",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-email-send": "0.1.2",
     "@pikku/addon-gmail": "0.1.2",

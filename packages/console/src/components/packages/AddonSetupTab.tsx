@@ -64,7 +64,7 @@ export const AddonSetupTab: React.FC<{
   const { data: credStatus } = useQuery({
     queryKey: [CRED_STATUS_KEY, [...resolvedCredNames].sort()],
     queryFn: async () => {
-      const result = await rpc.invoke('console:credentialStatus', {
+      const result = await rpc.invoke('admin:credentialStatus', {
         names: resolvedCredNames,
       })
       return (result.statuses ?? {}) as Record<string, boolean>
@@ -191,7 +191,7 @@ const OAuthRequirementCard: React.FC<{
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await rpc.invoke('console:credentialDelete', { name: resolvedName })
+      await rpc.invoke('admin:credentialDelete', { name: resolvedName })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [CRED_STATUS_KEY] })

@@ -21,7 +21,7 @@ export const GUEST_USER: SeedUser = {
 /**
  * A console admin (granted the umbrella `admin` scope directly, so the console
  * AuthGate lets them in) who holds NO scope role — so the self-hosting scope
- * RPCs, which additionally require `pikku:console:scopes:read`, refuse them with a 403.
+ * RPCs, which additionally require `admin:scopes:read`, refuse them with a 403.
  * Exists to exercise the "you don't have permission" state, distinct from a
  * real outage.
  */

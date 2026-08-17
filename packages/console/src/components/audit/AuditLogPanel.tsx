@@ -53,7 +53,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
 
   const filtersQuery = useQuery({
     queryKey: ['audit-filters'],
-    queryFn: async () => await rpc.invoke('console:getAuditFilters'),
+    queryFn: async () => await rpc.invoke('admin:getAuditFilters'),
     staleTime: 60 * 1000,
     retry: false,
   })
@@ -69,7 +69,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ emptyHero }) => {
     queryKey: ['audits', { userIds, types }],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) =>
-      await rpc.invoke('console:getAudits', {
+      await rpc.invoke('admin:getAudits', {
         limit: PAGE_SIZE,
         offset: pageParam,
         // Omitted rather than sent empty: an empty array is a real filter that

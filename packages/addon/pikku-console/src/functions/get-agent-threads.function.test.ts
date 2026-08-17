@@ -27,7 +27,7 @@ test('a non-admin session lists only the threads its principals own', async () =
       session: {
         userId: 'alice',
         orgId: 'org-x',
-        scopes: ['pikku:console:scopes:read'],
+        scopes: ['pikku:console:wirings:read'],
       },
     } as never
   )

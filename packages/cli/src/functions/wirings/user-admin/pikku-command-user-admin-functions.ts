@@ -22,27 +22,28 @@ export const pikkuUserAdminFunctions = pikkuSessionlessFunc<void, boolean>({
 
     const { definition } = (await getInspectorState()).auth
 
-    // These functions are thin wrappers over better-auth's admin() endpoints.
-    // Without that plugin the endpoints do not exist, so the scaffold would
-    // generate four RPCs that throw on every call and four scopes that grant
-    // nothing. Fail the codegen instead of shipping that.
+    // Every one of these functions drives better-auth's internal adapter, so
+    // without a better-auth instance the scaffold would generate RPCs that
+    // throw on every call and scopes that grant nothing. Fail the codegen
+    // instead of shipping that.
     if (!definition) {
       throw new Error(
         `"scaffold.userAdmin" is enabled but no pikkuBetterAuth(...) was found in the project.\n` +
-          `User management wraps better-auth's admin() endpoints, so there is nothing to wrap.\n` +
+          `User management works through better-auth's internal adapter, so there is nothing to manage.\n` +
           `Fix: set up Better Auth before scaffolding user management, or remove ` +
           `"scaffold.userAdmin" from pikku.config.json.`
       )
     }
-    if (!definition.plugins.includes('admin')) {
-      throw new Error(
-        `"scaffold.userAdmin" is enabled but better-auth is configured without the admin() plugin.\n` +
-          `Ban, delete, session-revocation and set-password are implemented by that plugin — without it ` +
-          `the generated functions would fail on every call.\n` +
-          `Fix: add admin() to the plugins array in ${definition.sourceFile}:\n` +
-          `  import { admin } from 'better-auth/plugins'\n` +
-          `  betterAuth({ plugins: [admin()] })\n` +
-          `Then re-run codegen. Or remove "scaffold.userAdmin" from pikku.config.json.`
+    // Ban is the one capability with a schema requirement of its own, and it is
+    // only one of the six — a warning rather than a failure, so an app that
+    // never bans anyone is not forced to carry the columns.
+    if (!definition.plugins.includes('ban')) {
+      logger.warn(
+        `"scaffold.userAdmin" is enabled but better-auth is configured without the ban() plugin, ` +
+          `so the banned/banReason/banExpires columns do not exist and setUserBanned will fail.\n` +
+          `Fix: add ban() to the plugins array in ${definition.sourceFile}:\n` +
+          `  import { ban } from '@pikku/better-auth'\n` +
+          `  betterAuth({ plugins: [ban()] })`
       )
     }
 

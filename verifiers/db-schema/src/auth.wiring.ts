@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
-import { admin, organization, twoFactor } from 'better-auth/plugins'
+import { organization, twoFactor } from 'better-auth/plugins'
+import { ban } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 
 /**
@@ -7,9 +8,9 @@ import { pikkuBetterAuth } from '#pikku/auth'
  *
  * A four-table core is easy to hardcode and would pass a test that only ever
  * saw one. `organization()` adds three tables of its own, `twoFactor()` a
- * fourth, and `admin()` adds columns to `user` and `session` rather than tables
- * — so a generator that special-cases table creation but not column addition
- * fails here. The auth source has to be the schema Better Auth materializes.
+ * fourth, and `ban()` adds columns to `user` rather than tables of its own — so a
+ * generator that special-cases table creation but not column addition fails
+ * here. The auth source has to be the schema Better Auth materializes.
  *
  * `type` decides which dialect's DDL Better Auth emits, and it has to agree with
  * the scratch database the CLI hands over — PGlite for postgres, sqlite
@@ -36,6 +37,6 @@ export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) =>
     },
     emailAndPassword: { enabled: true },
     advanced: { database: { generateId: 'uuid' } },
-    plugins: [organization(), admin(), twoFactor()],
+    plugins: [organization(), ban(), twoFactor()],
   })
 )

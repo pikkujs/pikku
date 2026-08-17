@@ -21,6 +21,7 @@ export {
   generateCustomTypes,
   sanitizeTypeName,
 } from './utils/custom-types-generator.js'
+export { unresolvedSchemaReferences } from './utils/post-process.js'
 export {
   createEmptyManifest,
   serializeManifest,

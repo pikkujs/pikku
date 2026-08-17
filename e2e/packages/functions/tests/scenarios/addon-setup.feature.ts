@@ -36,7 +36,7 @@ const INSTANCE_SELECT = 'addon-instance-select'
  */
 const disconnectsFakeCrm = pikkuScenarioHook(
   async (_services, _data, { actors }) => {
-    await actors.admin.invoke('console:credentialDelete', {
+    await actors.admin.invoke('admin:credentialDelete', {
       name: 'fake-crm',
     })
   }

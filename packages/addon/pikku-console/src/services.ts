@@ -28,9 +28,7 @@ export const createSingletonServices = pikkuAddonServices(
       deploymentService,
       credentialService,
       coverageService,
-      scopeService,
       webhookService,
-      audit,
       auth,
     }
   ) => {
@@ -95,13 +93,7 @@ export const createSingletonServices = pikkuAddonServices(
       schedulerService,
       credentialService,
       coverageService,
-      scopeService,
       webhookService,
-      // Forwarded rather than constructed: the sink is the application's
-      // choice, and an addon that made its own would read a trail nobody
-      // writes to. Absent when the app configured none, which is what
-      // `getAudits` reports as `readable: false`.
-      audit,
       codeEditService,
       stateDiffService,
       dbSchemaService,

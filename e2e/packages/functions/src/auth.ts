@@ -1,8 +1,9 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
-import { admin, bearer } from 'better-auth/plugins'
+import { bearer } from 'better-auth/plugins'
 import {
   actor,
+  ban,
   credentialOAuth,
   credentialOAuthProviders,
   resolvedUserHoldsScopes,
@@ -48,18 +49,16 @@ export const auth = pikkuBetterAuth(
       socialProviders: {
         github: (await secrets.getSecret('GITHUB_OAUTH')).reveal(),
       },
-      // Admin capabilities (impersonation, the user directory, singleton
-      // credential links) are gated on the `admin` scope tree, not on
-      // better-auth's admin() plugin. The tree itself is declared by
-      // @pikku/addon-console's defineScope, which this app inherits.
+      // Every admin capability — impersonation, the user directory, ban,
+      // delete, session revocation, set-password, singleton credential links —
+      // is gated on the `admin` scope tree, declared by @pikku/addon-admin's
+      // defineScope, which this app inherits.
       //
-      // admin() is wired only for what pikku does NOT implement itself: ban,
-      // delete, session revocation and set-password. Its `role` column is never
-      // read as an authorization signal — `syncProjectedAdminRole` maintains it
-      // as a projection of the caller's `admin:users:*` scopes so those
-      // endpoints unlock for exactly the people the scope store says they should.
+      // ban() carries no authorization of its own: it adds the three columns a
+      // ban lives in and refuses a session for a banned user. Who may ban is
+      // decided by `admin:users:ban` on the RPC.
       plugins: [
-        admin(),
+        ban(),
         bearer(),
         actor({
           secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',

@@ -10,7 +10,8 @@ import type { CoreServices } from '@pikku/core/types'
  * the tree an app must `defineScope` is discoverable from one place. Every one
  * hangs off the `admin` root, which means a single `admin` grant covers the
  * lot — pikku's parent-grant rule makes it the direct replacement for what
- * better-auth's `admin()` plugin expressed as `role === 'admin'`.
+ * better-auth's `admin()` plugin expressed as `role === 'admin'`, without a
+ * column that has to be kept in step with the grants it is checked against.
  */
 /** The umbrella grant: holding it satisfies every scope beneath it. */
 export const ADMIN_SCOPE_ROOT = 'admin'
@@ -35,31 +36,13 @@ export const ADMIN_SCOPES = {
 } as const
 
 /**
- * The scopes whose capabilities are implemented by better-auth's `admin()`
- * plugin rather than by pikku, and which therefore need `user.role` to say
- * `'admin'` before the underlying endpoint will run.
- *
- * Deliberately *not* every `admin:*` scope. `impersonate` is pikku's own
- * header-based mechanism and `users:list` reads through the adapter, so neither
- * needs the role — projecting them onto it would hand out ban and delete rights
- * to someone granted only the ability to look. See {@link projectedAdminRole}.
- */
-export const ADMIN_ROLE_SCOPES = [
-  ADMIN_SCOPES.usersCreate,
-  ADMIN_SCOPES.usersBan,
-  ADMIN_SCOPES.usersRemove,
-  ADMIN_SCOPES.usersSessions,
-  ADMIN_SCOPES.usersPassword,
-] as const
-
-/**
  * The `admin` scope tree the framework's gates check, ready to spread into a
  * host's own `defineScope({ ... })` call.
  *
  * Scopes are declared by the app, not the framework — the CLI extracts them
  * from `defineScope` by AST, so this is documentation-as-code rather than a
- * registration hook. `@pikku/addon-console` declares the same tree, so an app
- * wiring the console inherits it and need not repeat this.
+ * registration hook. `@pikku/addon-admin` declares the same tree, so an app
+ * wiring that addon inherits it and need not repeat this.
  */
 export const ADMIN_SCOPE_TREE = {
   admin: {
@@ -71,6 +54,8 @@ export const ADMIN_SCOPE_TREE = {
         description: 'Application-wide credentials',
         scopes: {
           link: { description: 'Bind a shared credential for every user' },
+          read: { description: 'Read credential values and who holds them' },
+          manage: { description: 'Set and delete credentials' },
         },
       },
       users: {
@@ -84,32 +69,30 @@ export const ADMIN_SCOPE_TREE = {
           password: { description: "Set a user's password" },
         },
       },
+      scopes: {
+        description: 'Authorization management',
+        scopes: {
+          read: {
+            description: 'View declared scopes, roles, and who holds them',
+          },
+          manage: {
+            description:
+              'Create and delete roles, change their scopes, and grant roles to users',
+          },
+        },
+      },
+      audit: {
+        description: 'The audit trail',
+        scopes: {
+          read: {
+            description:
+              'Read the audit trail — every recorded action, and which user took it',
+          },
+        },
+      },
     },
   },
 }
-
-/**
- * The value `user.role` should hold for a caller with these scopes: `'admin'`
- * if any {@link ADMIN_ROLE_SCOPES} entry is held, otherwise better-auth's own
- * `defaultRole`.
- *
- * The role is a *projection* of the scope set, never a grant in its own right.
- * Scopes remain the single source of truth for what a user may do; the column
- * exists only because better-auth's `admin()` endpoints authorize against it,
- * and nothing in pikku ever reads it.
- *
- * Any one of the role scopes is enough — they are alternatives, not a
- * conjunction. Fine-grained separation between them is enforced by the pikku
- * gate on each individual capability, not by the column, which better-auth
- * only ever compares against `adminRoles`.
- */
-export const projectedAdminRole = (
-  scopes: Iterable<string> | undefined,
-  defaultRole: string
-): string =>
-  ADMIN_ROLE_SCOPES.some((scope) => hasScopes([scope], scopes))
-    ? ADMIN_SCOPE_ROOT
-    : defaultRole
 
 /**
  * Whether `userId` holds every one of `required`, resolved through a

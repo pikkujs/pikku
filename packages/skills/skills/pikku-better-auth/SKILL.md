@@ -147,6 +147,11 @@ strings):
 | delete a user and their data                                         | `admin:users:remove`     |
 | revoke a user's sessions                                             | `admin:users:sessions`   |
 | set a user's password                                                | `admin:users:password`   |
+| read credential values and who holds them                            | `admin:credentials:read` |
+| set and delete credentials                                           | `admin:credentials:manage` |
+| view declared scopes, roles, and who holds them                      | `admin:scopes:read`      |
+| create roles, change their scopes, grant them                        | `admin:scopes:manage`    |
+| read the audit trail                                                 | `admin:audit:read`       |
 
 Holding the bare `admin` scope satisfies all of them — a parent grant covers
 everything nested beneath it — so `admin` is the direct replacement for the old
@@ -167,6 +172,8 @@ defineScope({
         description: 'Application-wide credentials',
         scopes: {
           link: { description: 'Bind a shared credential for every user' },
+          read: { description: 'Read credential values and who holds them' },
+          manage: { description: 'Set and delete credentials' },
         },
       },
       users: {
@@ -178,6 +185,27 @@ defineScope({
           remove: { description: 'Delete users and all their data' },
           sessions: { description: "Revoke a user's sessions" },
           password: { description: "Set a user's password" },
+        },
+      },
+      scopes: {
+        description: 'Authorization management',
+        scopes: {
+          read: {
+            description: 'View declared scopes, roles, and who holds them',
+          },
+          manage: {
+            description:
+              'Create and delete roles, change their scopes, and grant roles to users',
+          },
+        },
+      },
+      audit: {
+        description: 'The audit trail',
+        scopes: {
+          read: {
+            description:
+              'Read the audit trail — every recorded action, and which user took it',
+          },
         },
       },
     },
@@ -192,22 +220,32 @@ a scope, so nothing is authorized, and the denial is logged at `warn` because
 that is a configuration bug rather than a permissions decision. Pass your own
 `canImpersonate` / `canLinkSingleton` to override the default entirely.
 
-### If you do wire better-auth's `admin()` plugin
+### Do not wire better-auth's `admin()` plugin
 
-The last five capabilities in the table are implemented by better-auth's own
-`admin()` endpoints, which authorize against `user.role` — a column pikku
-otherwise ignores. Rather than making you maintain two grant systems,
-`syncProjectedAdminRole` keeps that column as a _projection_ of the scope set:
-at the session boundary it writes `role = 'admin'` when the user holds any of
-`admin:users:{create,ban,remove,sessions,password}`, and the plugin's
-`defaultRole` otherwise. `projectedAdminRole(scopes, defaultRole)` computes the
-value if you need it yourself.
+Every capability in the table is pikku's own, gated by the scope next to it and
+implemented against better-auth's internal adapter — `createAuthUser`,
+`setAuthUserPassword`, `setAuthUserBanned`, `deleteAuthUser` and
+`revokeAuthUserSessions`, all exported from `@pikku/better-auth`.
 
-The projection is deliberately not "any `admin:*` scope": `impersonate` and
-`users:list` are pikku's own gates, and rolling them in would hand ban and delete
-rights to someone granted only the ability to look. The plugin is auto-detected
-from the live instance, so an app without it never writes to a column that does
-not exist.
+`admin()` would add a second gate on a `user.role` column that pikku otherwise
+ignores, which means maintaining two grant systems that have to agree — and the
+column loses, since the scope store is what the rest of the framework reads.
+Pikku used to project scopes onto it for exactly that reason; dropping the
+plugin dropped the projection with it.
+
+Banning is the one capability with a schema requirement, and it has its own
+small plugin:
+
+```typescript
+import { ban } from '@pikku/better-auth'
+
+betterAuth({ plugins: [ban()] })
+```
+
+`ban()` adds `banned`, `banReason` and `banExpires` to `user` and refuses to
+create a session for a banned user, lapsing an expired ban as it goes. It makes
+no authorization decision — who may ban is decided by `admin:users:ban` — so it
+never needs to know about scopes or roles.
 
 ### 2. Production database adapter
 

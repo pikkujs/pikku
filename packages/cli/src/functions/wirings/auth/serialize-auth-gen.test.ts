@@ -286,10 +286,13 @@ describe('serializeAuthGen', () => {
       )
     })
 
-    // `wireAddon({ name: 'console', ..., scopes: ['admin'] })` gates every
-    // console:* RPC, and the console's own functions additionally sit under the
-    // `pikku` root. A token session without both authenticates but authorizes
-    // nothing, which reads as a broken console rather than a missing grant.
+    // `wireAddon({ name: 'console', ..., scopes: ['pikku:console'] })` gates
+    // every console:* RPC under the `pikku` root, and the console also calls
+    // the `admin:*` RPCs @pikku/addon-admin ships. The two grants are
+    // independent — `pikku:console` authorizes the console RPCs, the matching
+    // `admin:*` scope authorizes each admin one — so a token session holding
+    // neither authenticates but authorizes nothing, which reads as a broken
+    // console rather than a missing grant.
     test('the token session holds the scope roots the console addon gates on', () => {
       for (const emitted of [
         genConsole(statelessDef).middleware!,

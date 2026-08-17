@@ -1,7 +1,7 @@
 /**
  * The @pikku/addon-console package ships credential, source-editing and install
  * RPCs with no authorization of their own — so, before this gate, any signed-in
- * user could read another user's OAuth token via `console:credentialGet` by
+ * user could read another user's OAuth token via `admin:credentialGet` by
  * passing their userId. A single global permission registered under the addon's
  * package namespace (see `src/console-authz.ts`) gates every one of its
  * functions at once: a signed-in non-admin is refused, only an admin passes.
@@ -12,7 +12,7 @@
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
-const CREDENTIAL_GET = 'console:credentialGet'
+const CREDENTIAL_GET = 'admin:credentialGet'
 const FUNCTIONS_META = 'console:getFunctionsMeta'
 const DIRECTORY = 'pikkuAdminListUsers'
 const SCENARIO_RUNS = 'console:listScenarioRuns'
@@ -148,8 +148,7 @@ export const consoleAuthzAdminMetadataScenario = pikkuScenario<
 })
 
 /**
- * The user directory replaces better-auth's `admin()` list-users endpoint. It
- * additionally declares `admin:users:list`, which the umbrella `admin` grant
+ * The user directory reads through better-auth's adapter. It declares `admin:users:list`, which the umbrella `admin` grant
  * covers — a caller holding neither gets nothing back.
  */
 export const consoleAuthzNonAdminDirectoryScenario = pikkuScenario<

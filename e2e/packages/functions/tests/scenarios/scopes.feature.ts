@@ -98,7 +98,7 @@ export const scopesDirectGrantOpensTheGateScenario = pikkuScenario<
 
     await scenario.do(
       'grants the scope directly',
-      'console:scopeAddScopeToUser',
+      'admin:scopeAddScopeToUser',
       { userId: admin.userId, scope: SCOPE },
       { actor: actors.admin }
     )
@@ -117,7 +117,7 @@ export const scopesDirectGrantOpensTheGateScenario = pikkuScenario<
 
     await scenario.do(
       'revokes the scope',
-      'console:scopeRemoveScopeFromUser',
+      'admin:scopeRemoveScopeFromUser',
       { userId: admin.userId, scope: SCOPE },
       { actor: actors.admin }
     )

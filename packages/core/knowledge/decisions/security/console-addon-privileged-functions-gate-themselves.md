@@ -62,9 +62,10 @@ checked whether or not the host registered a global permission — an app that
 hand-wires `wireAddon({ name: 'console', package: '@pikku/addon-console' })`
 still cannot reach `execFileSync` unauthenticated.
 
-The scopes are spelled as literals here because they are scope ids in the
-addon's own `wireScope` tree — the same tree the `pikku:console:scopes:*` gates
-on the scope-admin functions come from. The generated secret and variable
+The scopes are spelled as literals here because they are scope ids in this
+addon's own `wireScope` tree. The `admin:scopes:*` gates on the scope-admin
+functions come from a different tree — those functions now live in
+`@pikku/addon-admin`, which declares its own. The generated secret and variable
 brokers live in the app's own scaffold rather than the addon, so the addon
 boundary never covered them; they carry `pikku:console:secrets:*` and
 `pikku:console:variables:*` themselves.

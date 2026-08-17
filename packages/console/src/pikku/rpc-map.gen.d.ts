@@ -31,6 +31,7 @@ export type RPCMap = {
 
 // Addon package RPC maps
 import type { RPCMap as ConsoleRPCMap } from '@pikku/addon-console/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
+import type { RPCMap as AdminRPCMap } from '@pikku/addon-admin/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 
 
 // Utility type to prefix keys with namespace (skips 'any' to prevent type poisoning)
@@ -40,7 +41,7 @@ type PrefixKeys<T, Prefix extends string> = unknown extends T ? {} : {
 
 // Merge all RPC maps with namespace prefixes
 export type FlattenedRPCMap =
-  RPCMap & PrefixKeys<ConsoleRPCMap, 'console'>
+  RPCMap & PrefixKeys<ConsoleRPCMap, 'console'> & PrefixKeys<AdminRPCMap, 'admin'>
 
 type IsAny<T> = 0 extends (1 & T) ? true : false
 type IsVoidishInput<T> = IsAny<T> extends true
@@ -68,10 +69,11 @@ import type { AgentMap } from '../../backend/.pikku/agent/pikku-agent-map.gen.d.
 
 // Addon package Agent maps
 import type { AgentMap as ConsoleAgentMap } from '@pikku/addon-console/.pikku/agent/pikku-agent-map.gen.d.js'
+import type { AgentMap as AdminAgentMap } from '@pikku/addon-admin/.pikku/agent/pikku-agent-map.gen.d.js'
 
 
 type FlattenedAgentMap =
-  AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
+  AgentMap & PrefixKeys<ConsoleAgentMap, 'console'> & PrefixKeys<AdminAgentMap, 'admin'>
 
 
 import type { PikkuRPC } from '@pikku/core/rpc'
