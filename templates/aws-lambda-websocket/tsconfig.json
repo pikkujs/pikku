@@ -6,7 +6,7 @@
     "resolveJsonModule": true,
     "paths": {
       "#pikku/*.js": ["../functions/.pikku/*.ts"],
-      "#pikku/*": ["../functions/.pikku/*/index.ts"]
+      "#pikku/*": ["../functions/.pikku/*/index.ts", "../functions/.pikku/*"]
     }
   },
   "include": ["src/", ".pikku/*"],
