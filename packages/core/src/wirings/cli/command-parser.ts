@@ -109,6 +109,27 @@ function resolveOptionType(optionDef: CLIOption): CLIOptionType {
   return 'string'
 }
 
+const BOOLEAN_LITERALS = new Map<string, boolean>([
+  ['true', true],
+  ['false', false],
+  ['1', true],
+  ['0', false],
+  ['yes', true],
+  ['no', false],
+])
+
+/**
+ * A boolean option is a flag, but `--watch false` is how scripts and CI turn a
+ * default-on flag off, so an explicit literal directly after the flag is taken
+ * as its value rather than left behind as a positional.
+ */
+function readBooleanLiteral(raw: string | undefined): boolean | undefined {
+  if (raw === undefined) {
+    return undefined
+  }
+  return BOOLEAN_LITERALS.get(raw.toLowerCase())
+}
+
 function readOptionValue(raw: string, optionDef: CLIOption): any {
   if (resolveOptionType(optionDef) !== 'string[]') {
     return parseOptionValue(raw, optionDef)
@@ -281,7 +302,13 @@ export function parseCLIArguments(
             optionArgs[key] = true
           }
         } else if (resolveOptionType(optionDef) === 'boolean') {
-          optionArgs[key] = true
+          const literal = readBooleanLiteral(args[currentIndex + 1])
+          if (literal === undefined) {
+            optionArgs[key] = true
+          } else {
+            currentIndex++
+            optionArgs[key] = literal
+          }
         } else if (currentIndex + 1 < args.length) {
           currentIndex++
           assignOptionValue(
@@ -308,8 +335,17 @@ export function parseCLIArguments(
         if (longOption) {
           const optionDef = availableOptions[longOption]
           // Only the last flag in a cluster can take a value.
-          if (
-            i === arg.length - 1 &&
+          const isLast = i === arg.length - 1
+          const literal =
+            isLast && resolveOptionType(optionDef) === 'boolean'
+              ? readBooleanLiteral(args[currentIndex + 1])
+              : undefined
+
+          if (literal !== undefined) {
+            currentIndex++
+            optionArgs[longOption] = literal
+          } else if (
+            isLast &&
             resolveOptionType(optionDef) !== 'boolean' &&
             currentIndex + 1 < args.length
           ) {
@@ -411,11 +447,11 @@ function parseOptionValue(value: string, optionDef?: CLIOption): any {
     return value
   }
 
-  const defaultValue = optionDef.default
-  if (typeof defaultValue === 'boolean') {
-    return value === 'true' || value === '1' || value === 'yes'
+  const optionType = resolveOptionType(optionDef)
+  if (optionType === 'boolean') {
+    return readBooleanLiteral(value) ?? false
   }
-  if (typeof defaultValue === 'number') {
+  if (optionType === 'number') {
     return parseFloat(value)
   }
 

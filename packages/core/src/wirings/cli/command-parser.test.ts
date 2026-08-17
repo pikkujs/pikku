@@ -842,7 +842,7 @@ describe('Command Parser', () => {
       assert.strictEqual(result.options.note, 'alpha,beta')
     })
 
-    test('a boolean option never consumes the following token', () => {
+    test('a boolean option does not consume a following non-literal token', () => {
       const result = parseCLIArguments(
         ['deploy', '--dry-run', '--note', 'hello'],
         'test-cli',
@@ -852,6 +852,85 @@ describe('Command Parser', () => {
       assert.deepStrictEqual(result.errors, [])
       assert.strictEqual(result.options.dryRun, true)
       assert.strictEqual(result.options.note, 'hello')
+    })
+
+    test('boolean options take an explicit literal instead of leaking positionals', () => {
+      const devMeta: CLIMeta = {
+        programs: {
+          'dev-cli': {
+            program: 'dev-cli',
+            options: {},
+            commands: {
+              dev: {
+                pikkuFuncId: 'devFunc',
+                positionals: [],
+                options: {
+                  port: {
+                    description: 'Port for the dev server',
+                    default: '3000',
+                    short: 'p',
+                  },
+                  watch: {
+                    description: 'Watch for file changes and regenerate',
+                    default: true,
+                  },
+                  hmr: {
+                    description: 'Enable hot module reload',
+                    default: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        renderers: {},
+      }
+
+      const result = parseCLIArguments(
+        ['dev', '--port', '4077', '--watch', 'false', '--hmr', 'false'],
+        'dev-cli',
+        devMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.positionals, {})
+      assert.strictEqual(result.options.port, '4077')
+      assert.strictEqual(result.options.watch, false)
+      assert.strictEqual(result.options.hmr, false)
+    })
+
+    test('a typed boolean option with no default takes an explicit literal', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--dry-run', 'false', '--note', 'hello'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, false)
+      assert.strictEqual(result.options.note, 'hello')
+    })
+
+    test('a boolean option takes an explicit literal in the --opt=value form', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--dry-run=false'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, false)
+    })
+
+    test('a boolean short flag takes an explicit literal', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-D', 'false'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, false)
     })
 
     test('a short flag follows its option spec for dash-leading values', () => {

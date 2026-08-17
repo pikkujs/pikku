@@ -17,9 +17,10 @@ import type { ChannelRemote, PikkuChannel } from '../channel/channel.types.js'
 
 /**
  * The shape an option's value is parsed into. `'string[]'` splits a single
- * value on commas; every other type consumes one token verbatim, so a value
- * may start with `-`. Left unset, it is inferred from `default` and otherwise
- * falls back to `'string'`.
+ * value on commas; `'boolean'` is a flag that consumes the next token only
+ * when it is an explicit literal (`true`/`false`/`1`/`0`/`yes`/`no`); every
+ * other type consumes one token verbatim, so a value may start with `-`. Left
+ * unset, it is inferred from `default` and otherwise falls back to `'string'`.
  */
 export type CLIOptionType = 'string' | 'number' | 'boolean' | 'string[]'
 
