@@ -3,14 +3,14 @@
  */
 export const serializeGatewayTypes = (
   singletonServicesTypeImport: string,
-  singletonServicesTypeName: string
+  singletonServicesTypeName: string,
+  { addon = false }: { addon?: boolean } = {}
 ) => {
   return `/**
  * Gateway-specific type definitions for tree-shaking optimization
  */
 
-import { wireGateway as wireGatewayCore } from '@pikku/core/gateway'
-import type { CoreGateway, GatewayAdapter, GatewayInboundMessage, GatewayOutboundMessage, GatewayTransportType, WebhookVerificationResult } from '@pikku/core/gateway'
+${addon ? '' : `import { wireGateway as wireGatewayCore } from '@pikku/core/gateway'\n`}import type { CoreGateway, GatewayAdapter, GatewayInboundMessage, GatewayOutboundMessage, GatewayTransportType, WebhookVerificationResult } from '@pikku/core/gateway'
 ${singletonServicesTypeImport}
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
@@ -32,6 +32,10 @@ export type PikkuGatewayAdapterFactory = (
  */
 export type GatewayWiring = CoreGateway
 
+${
+  addon
+    ? ''
+    : `
 /**
  * Registers a gateway with the Pikku framework.
  * Runs everywhere — inspector extracts at build time.
@@ -53,4 +57,5 @@ export const wireGateway = (
   wireGatewayCore(gateway as any)
 }
 `
+}`
 }

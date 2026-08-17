@@ -66,10 +66,14 @@ export const serializeVariablesTypes = ({
   )
   imports.push(`import type { VariablesService } from '@pikku/core/services'`)
   imports.push(
-    `import type { VariableDefinitionsMeta } from '@pikku/core/variable'`
-  )
-  imports.push(
-    `import variablesMeta from './pikku-variables-meta.gen.json' with { type: 'json' }`
+    `/**
+ * Side-effect import of the metadata sidecar, so that tsc emits the .json
+ * alongside this file. An addon publishes only its compiled output, and a host
+ * reads that .json off disk to discover the addon's declared variables — an
+ * uncopied sidecar leaves them invisible to the host. Nothing binds it: the
+ * sidecar is not part of \`#pikku/variables\`.
+ */
+import './pikku-variables-meta.gen.json' with { type: 'json' }`
   )
 
   if (needsZod) {
@@ -87,17 +91,6 @@ export const serializeVariablesTypes = ({
   }
 
   return `${imports.join('\n')}
-
-/**
- * Every variable declared in this package.
- *
- * Read from the metadata sidecar rather than inlined, so that the import above
- * forces tsc to emit the .json alongside this file. An addon publishes only its
- * compiled output, and a host reads that .json to discover the addon's declared
- * variables — an uncopied sidecar leaves them invisible to the host.
- */
-export const VARIABLES_META: VariableDefinitionsMeta =
-  variablesMeta as VariableDefinitionsMeta
 
 export interface VariablesMap {
 ${mapEntries.join('\n')}

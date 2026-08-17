@@ -1,14 +1,16 @@
 /**
  * Generates type definitions for HTTP wirings
  */
-export const serializeHTTPTypes = (functionTypesImportPath: string) => {
+export const serializeHTTPTypes = (
+  functionTypesImportPath: string,
+  { addon = false }: { addon?: boolean } = {}
+) => {
   return `/**
  * HTTP-specific type definitions for tree-shaking optimization
  */
 
-import { wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, wireHTTPRoutes as wireHTTPRoutesCore, defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
-import { AssertHTTPWiringParams } from '@pikku/core/http'
-export { cors } from '@pikku/core/middleware'
+import { ${addon ? '' : 'wireHTTP as wireHTTPCore, '}addHTTPMiddleware as addHTTPMiddlewareCore, ${addon ? '' : 'wireHTTPRoutes as wireHTTPRoutesCore, '}defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
+${addon ? '' : `import { AssertHTTPWiringParams } from '@pikku/core/http'\n`}export { cors } from '@pikku/core/middleware'
 import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type {
   CoreHTTPFunctionWiring,
@@ -16,7 +18,10 @@ import type {
   HTTPRouteBaseConfig,
 } from '@pikku/core/http'
 
-/**
+${
+  addon
+    ? ''
+    : `/**
  * Type definition for HTTP API wirings with type-safe path parameters.
  * Supports both authenticated and unauthenticated functions.
  *
@@ -39,7 +44,8 @@ export const wireHTTP = <In, Out, Route extends string>(
 ) => {
   wireHTTPCore(httpWiring as any)
 }
-
+`
+}
 /**
  * Registers HTTP middleware either globally or for a specific route pattern.
  *
@@ -102,13 +108,17 @@ type TypedHTTPRoutesGroupConfig = {
   middleware?: PikkuMiddleware[]
 }
 
-/**
+${
+  addon
+    ? ''
+    : `/**
  * Full config for wireHTTPRoutes
  */
 type TypedWireHTTPRoutesConfig = TypedHTTPRoutesGroupConfig & {
   routes: TypedHTTPRouteMap | HTTPRouteConfig[]
 }
-
+`
+}
 /**
  * Type-safe helper for defining route contracts that can be composed.
  */
@@ -118,6 +128,10 @@ export function defineHTTPRoutes<T extends TypedHTTPRouteMap>(configOrRoutes: T 
   return defineHTTPRoutesCore(configOrRoutes as any) as unknown as TypedHTTPRouteContract<T>
 }
 
+${
+  addon
+    ? ''
+    : `
 /**
  * Wires multiple HTTP routes from a nested map or array configuration.
  */
@@ -125,4 +139,5 @@ export const wireHTTPRoutes = (config: TypedWireHTTPRoutesConfig): void => {
   wireHTTPRoutesCore(config as any)
 }
 `
+}`
 }

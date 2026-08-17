@@ -68,7 +68,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       undefined,
       typeof config.addon === 'object' ? config.addon?.categories : undefined,
       `import type { ScopeId } from '${getFileImportRelativePath(functionTypesFile, config.scopesFile, packageMappings)}'`,
-      credentialsTypeImport
+      credentialsTypeImport,
+      { addon: !!config.addon }
     )
 
     const addonRefs = serializeAddonRefs({

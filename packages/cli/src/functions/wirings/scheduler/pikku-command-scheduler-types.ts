@@ -13,7 +13,9 @@ export const pikkuSchedulerTypes = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       packageMappings
     )
-    const content = serializeSchedulerTypes(functionTypesImportPath)
+    const content = serializeSchedulerTypes(functionTypesImportPath, {
+      addon: !!config.addon,
+    })
     await writeFileInDir(logger, schedulersTypesFile, content)
   },
   middleware: [

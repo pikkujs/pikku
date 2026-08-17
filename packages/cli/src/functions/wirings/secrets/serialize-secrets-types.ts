@@ -76,10 +76,14 @@ import type { CredentialMeta } from '@pikku/core/services'`
   )
   imports.push(`import type { SecretService } from '@pikku/core/services'`)
   imports.push(
-    `import type { SecretDefinitionsMeta } from '@pikku/core/secret'`
-  )
-  imports.push(
-    `import secretsMeta from './pikku-secrets-meta.gen.json' with { type: 'json' }`
+    `/**
+ * Side-effect import of the metadata sidecar, so that tsc emits the .json
+ * alongside this file. An addon publishes only its compiled output, and a host
+ * reads that .json off disk to discover the addon's declared secrets — an
+ * uncopied sidecar leaves them invisible to the host. Nothing binds it: the
+ * sidecar is not part of \`#pikku/secrets\`.
+ */
+import './pikku-secrets-meta.gen.json' with { type: 'json' }`
   )
 
   if (needsZod) {
@@ -103,17 +107,6 @@ import type { CredentialMeta } from '@pikku/core/services'`
   }
 
   return `${imports.join('\n')}
-
-/**
- * Every secret declared in this package.
- *
- * Read from the metadata sidecar rather than inlined, so that the import above
- * forces tsc to emit the .json alongside this file. An addon publishes only its
- * compiled output, and a host reads that .json to discover the addon's declared
- * secrets — an uncopied sidecar leaves them invisible to the host.
- */
-export const SECRETS_META: SecretDefinitionsMeta =
-  secretsMeta as SecretDefinitionsMeta
 
 export interface CredentialsMap {
 ${mapEntries.join('\n')}

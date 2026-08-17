@@ -3,7 +3,8 @@
  */
 export const serializeChannelTypes = (
   functionTypesImportPath: string,
-  packageName?: string
+  packageName?: string,
+  { addon = false }: { addon?: boolean } = {}
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
 
@@ -11,15 +12,14 @@ export const serializeChannelTypes = (
  * Channel-specific type definitions for tree-shaking optimization
  */
 
-import { wireChannel as wireChannelCore, defineChannelRoutes as defineChannelRoutesCore } from '@pikku/core/channel'
+import { ${addon ? '' : 'wireChannel as wireChannelCore, '}defineChannelRoutes as defineChannelRoutesCore } from '@pikku/core/channel'
 import {
   CoreChannel,
   CorePikkuChannelMiddleware,
   CorePikkuChannelMiddlewareFactory,
   addChannelMiddleware as addChannelMiddlewareCore,
 } from '@pikku/core/channel'
-import { AssertHTTPWiringParams } from '@pikku/core/http'
-import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, Services } from '${functionTypesImportPath}'
+${addon ? '' : `import { AssertHTTPWiringParams } from '@pikku/core/http'\n`}import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, Services } from '${functionTypesImportPath}'
 import type { CorePermissionGroup } from '@pikku/core/function'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -146,7 +146,10 @@ export function pikkuChannelFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
-/**
+${
+  addon
+    ? ''
+    : `/**
  * Registers a WebSocket channel with the Pikku framework.
  *
  * @template ChannelData - Type of data associated with the channel
@@ -158,7 +161,8 @@ export const wireChannel = <ChannelData, Channel extends string>(
 ) => {
   wireChannelCore(channel as any)
 }
-
+`
+}
 /**
  * Type-safe helper for defining channel message routes that can be composed.
  * Returns the routes record as-is for use with wireChannel's onMessageWiring.

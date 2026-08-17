@@ -13,7 +13,9 @@ export const pikkuMCPTypes = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       packageMappings
     )
-    const content = serializeMCPTypes(functionTypesImportPath)
+    const content = serializeMCPTypes(functionTypesImportPath, {
+      addon: !!config.addon,
+    })
     await writeFileInDir(logger, mcpTypesFile, content)
   },
   middleware: [

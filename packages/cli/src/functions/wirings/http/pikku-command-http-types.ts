@@ -13,7 +13,9 @@ export const pikkuHTTPTypes = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       packageMappings
     )
-    const content = serializeHTTPTypes(functionTypesImportPath)
+    const content = serializeHTTPTypes(functionTypesImportPath, {
+      addon: !!config.addon,
+    })
     await writeFileInDir(logger, httpTypesFile, content)
   },
   middleware: [

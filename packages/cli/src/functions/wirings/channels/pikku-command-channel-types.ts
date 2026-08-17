@@ -14,7 +14,9 @@ export const pikkuChannelTypes = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       packageMappings
     )
-    const content = serializeChannelTypes(functionTypesImportPath, addonName)
+    const content = serializeChannelTypes(functionTypesImportPath, addonName, {
+      addon: !!config.addon,
+    })
     await writeFileInDir(logger, channelsTypesFile, content)
   },
   middleware: [

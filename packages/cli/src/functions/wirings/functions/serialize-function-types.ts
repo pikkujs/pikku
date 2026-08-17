@@ -15,7 +15,8 @@ export const serializeFunctionTypes = (
   workflowTypesImport?: string,
   nodeCategories?: string[],
   scopesTypeImport?: string,
-  credentialsTypeImport?: string
+  credentialsTypeImport?: string,
+  { addon = false }: { addon?: boolean } = {}
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
   const nodeCategoryType = nodeCategories?.length
@@ -815,6 +816,5 @@ export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGro
   addGlobalPermissionCore(permissions as any, ${packageNameValue})
 }
 
-export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'
-`
+${addon ? '' : `export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'\n`}`
 }

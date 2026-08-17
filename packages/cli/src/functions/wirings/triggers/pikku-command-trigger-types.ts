@@ -26,7 +26,8 @@ export const pikkuTriggerTypes = pikkuSessionlessFunc<
 
     const content = serializeTriggerTypes(
       singletonServicesTypeImport,
-      singletonServicesType.type
+      singletonServicesType.type,
+      { addon: !!config.addon }
     )
     await writeFileInDir(logger, triggersTypesFile, content)
   },

@@ -53,16 +53,18 @@ describe('serializeSecretsTypes — shipping the declared set', () => {
 
     assert.match(
       output,
-      /import .* from '\.\/pikku-secrets-meta\.gen\.json' with \{ type: 'json' \}/
+      /import '\.\/pikku-secrets-meta\.gen\.json' with \{ type: 'json' \}/
     )
   })
 
-  test('exports the declared metadata for a host to read', () => {
+  // The sidecar is read off disk by the host, never imported from the leaf, so
+  // binding it to a name would put a symbol nothing calls into `#pikku/secrets`.
+  test('keeps the sidecar out of the package surface', () => {
     const output = serialize([
       { name: 'stripe', displayName: 'Stripe', secretId: 'STRIPE_KEY' },
     ])
 
-    assert.match(output, /export const SECRETS_META/)
+    assert.doesNotMatch(output, /export const SECRETS_META/)
   })
 
   // The import must be there even with nothing declared: an addon that declares
@@ -99,8 +101,22 @@ describe('serializeSecretsTypes — shipping the declared set', () => {
 
 describe('serializeSecretsTypes — optional secrets', () => {
   const schemaLookup = new Map([
-    ['SecretSchema_scenarioActor', { variableName: 'ActorSchema', sourceFile: '/project/src/schemas.ts', vendor: 'zod' as const }],
-    ['SecretSchema_stripe', { variableName: 'StripeSchema', sourceFile: '/project/src/schemas.ts', vendor: 'zod' as const }],
+    [
+      'SecretSchema_scenarioActor',
+      {
+        variableName: 'ActorSchema',
+        sourceFile: '/project/src/schemas.ts',
+        vendor: 'zod' as const,
+      },
+    ],
+    [
+      'SecretSchema_stripe',
+      {
+        variableName: 'StripeSchema',
+        sourceFile: '/project/src/schemas.ts',
+        vendor: 'zod' as const,
+      },
+    ],
   ])
 
   const output = serializeSecretsTypes({
@@ -127,7 +143,10 @@ describe('serializeSecretsTypes — optional secrets', () => {
   // The `?` is what puts `undefined` in getSecret's return type — without it the
   // caller is typed as always having a value the deploy is allowed to omit.
   test('declares an optional secret as an optional map property', () => {
-    assert.match(output, /'SCENARIO_ACTOR_SECRET'\?: z\.infer<typeof ActorSchema>/)
+    assert.match(
+      output,
+      /'SCENARIO_ACTOR_SECRET'\?: z\.infer<typeof ActorSchema>/
+    )
   })
 
   test('leaves a required secret as a required map property', () => {
@@ -137,8 +156,14 @@ describe('serializeSecretsTypes — optional secrets', () => {
   // TypedSecretService reads this at runtime to decide whether to resolve
   // undefined or let the underlying throw through.
   test('marks the entry optional in the runtime credentials meta', () => {
-    assert.match(output, /'SCENARIO_ACTOR_SECRET': \{ name: 'scenarioActor', displayName: "Scenario Actor Secret", optional: true \}/)
-    assert.match(output, /'STRIPE_KEY': \{ name: 'stripe', displayName: "Stripe" \}/)
+    assert.match(
+      output,
+      /'SCENARIO_ACTOR_SECRET': \{ name: 'scenarioActor', displayName: "Scenario Actor Secret", optional: true \}/
+    )
+    assert.match(
+      output,
+      /'STRIPE_KEY': \{ name: 'stripe', displayName: "Stripe" \}/
+    )
   })
 
   test('the generated file still parses', () => {
