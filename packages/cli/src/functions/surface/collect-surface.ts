@@ -111,11 +111,22 @@ const sourceForTarget = (
 const expandWildcard = (
   packageDir: string,
   subpath: string,
-  target: string
+  target: string,
+  outDir: string
 ): Array<{ subpath: string; target: string }> => {
   const targetDir = target.replace(/^\.\//, '').split('*')[0] ?? ''
   const suffix = target.slice(target.indexOf('*') + 1)
-  const absolute = join(packageDir, targetDir)
+  const suffixStem = wildcardStem(suffix) ?? suffix
+  // A package that points its subpaths at the build output has nothing to walk
+  // until it is built, so the sources the output would be compiled from stand
+  // in for it. `sourceForTarget` strips the same prefix, so the target stays
+  // the declared one and only the directory being read changes.
+  const scanDir =
+    existsSync(join(packageDir, targetDir)) ||
+    !targetDir.startsWith(`${outDir}/`)
+      ? targetDir
+      : targetDir.slice(outDir.length + 1)
+  const absolute = join(packageDir, scanDir)
   if (!existsSync(absolute)) return []
 
   const expanded: Array<{ subpath: string; target: string }> = []
@@ -131,14 +142,17 @@ const expandWildcard = (
       // the file name, so `#pikku/*` → `./.pikku/*/index.ts` captures the leaf
       // directory rather than failing to match `index.ts` against `/index.ts`.
       const relativePath = `${prefix}${entry.name}`
-      if (suffix && !relativePath.endsWith(suffix)) continue
-      const captured = suffix
-        ? relativePath.slice(0, -suffix.length)
-        : `${prefix}${wildcardStem(entry.name)}`
+      // Matched without extensions, so a `*/index.js` target still finds the
+      // `index.ts` it would have been compiled from.
+      const pathStem = `${prefix}${wildcardStem(entry.name)}`
+      if (suffixStem && !pathStem.endsWith(suffixStem)) continue
+      const captured = suffixStem
+        ? pathStem.slice(0, -suffixStem.length)
+        : pathStem
       if (!captured) continue
       expanded.push({
         subpath: subpath.replace('*', captured),
-        target: `${targetDir}${relativePath}`,
+        target: `${scanDir}${relativePath}`,
       })
     }
   }
@@ -334,7 +348,7 @@ export const collectSurface = async (
     if (!target || !publishesCode(target)) continue
 
     const declared = target.includes('*')
-      ? expandWildcard(root, subpath, target)
+      ? expandWildcard(root, subpath, target, outDir)
       : [{ subpath, target }]
 
     for (const each of declared) {
