@@ -5,6 +5,7 @@ import type {
 } from '../types.js'
 import type { PikkuWiringTypes } from '@pikku/core/types'
 import { parseVersionedId } from '@pikku/core/utils'
+import { makeContextBasedId } from './extract-function-name.js'
 import { aggregateRequiredServices } from './post-process.js'
 import { resolveDeployTarget } from './resolve-deploy-target.js'
 
@@ -97,6 +98,13 @@ function matchesFilters(
   meta: {
     type: PikkuWiringTypes
     name: string
+    /**
+     * Further ids the `--names` filter may address this wiring by. An HTTP
+     * route wired with `ref('ns:fn')` carries the addon's own function id as
+     * its name, so its `http:<method>:<route>` wiring id is the only id that
+     * names this route rather than every wiring onto that addon function.
+     */
+    altNames?: string[]
     tags?: string[]
     filePath?: string
     httpRoute?: string
@@ -188,10 +196,15 @@ function matchesFilters(
     }
   }
 
-  const { baseName } = parseVersionedId(meta.name)
+  const candidateNames = [meta.name, ...(meta.altNames ?? [])]
   const matchesNamePattern = (pattern: string) =>
-    matchesWildcard(meta.name, pattern) ||
-    (baseName !== meta.name && matchesWildcard(baseName, pattern))
+    candidateNames.some((candidate) => {
+      const { baseName } = parseVersionedId(candidate)
+      return (
+        matchesWildcard(candidate, pattern) ||
+        (baseName !== candidate && matchesWildcard(baseName, pattern))
+      )
+    })
 
   // Check name include filter (match against both full ID and base name for versioned functions)
   if (filters.names && filters.names.length > 0) {
@@ -459,6 +472,7 @@ export function filterInspectorState(
         {
           type: 'http' as PikkuWiringTypes,
           name: routeMeta.pikkuFuncId, // Use function name, not route
+          altNames: [makeContextBasedId('http', method, routeMeta.route)],
           tags: routeMeta.tags,
           filePath,
           httpRoute: routeMeta.route,

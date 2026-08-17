@@ -1726,6 +1726,31 @@ describe('addon bootstrap tree-shake', () => {
     )
   })
 
+  test('keeps a ref()-wired route selected by its wiring id', () => {
+    const state = withAddon((s) => {
+      s.http.meta.get['/workflow-run/stream'] = {
+        pikkuFuncId: 'console:streamWorkflowRun',
+        packageName: '@pikku/console',
+        route: '/workflow-run/stream',
+        method: 'GET',
+        tags: [],
+        middleware: [],
+        permissions: [],
+      } as any
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['http:get:/workflow-run/stream'] },
+      mockLogger
+    )
+    assert.ok(filtered.http.meta.get['/workflow-run/stream'])
+    assert.ok(
+      filtered.serviceAggregation.usedFunctions.has('console:streamWorkflowRun')
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+    assert.ok(filtered.rpc.wireAddonDeclarations.has('console'))
+  })
+
   test('drops the addon when the ref()-wired route is filtered out', () => {
     const state = withAddon((s) => {
       s.http.meta.get['/workflow-run/stream'] = {
