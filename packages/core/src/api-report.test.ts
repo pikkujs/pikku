@@ -1,7 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
 
@@ -89,39 +90,42 @@ describe('merging the API report is not hand work', () => {
     )
   })
 
-  test('the setup script registers the driver .gitattributes names', () => {
-    execFileSync(
-      'node',
-      [join(repoRoot, 'scripts', 'setup-merge-drivers.mjs')],
-      { cwd: repoRoot, stdio: 'pipe' }
-    )
-    const driver = execFileSync('git', ['config', 'merge.api-report.driver'], {
-      cwd: repoRoot,
-      stdio: 'pipe',
-    })
-      .toString()
-      .trim()
+  test('the setup script registers the driver as a plain take-one-side', () => {
+    // Against a throwaway repository rather than this one: a driver is written
+    // to `.git/config`, which every worktree of a checkout shares, so running
+    // this in place would reach into whatever else is checked out beside it.
+    const sandbox = mkdtempSync(join(tmpdir(), 'pikku-merge-driver-'))
+    try {
+      execFileSync('git', ['init', '--quiet', sandbox], { stdio: 'pipe' })
+      execFileSync(
+        'node',
+        [join(repoRoot, 'scripts', 'setup-merge-drivers.mjs')],
+        { cwd: sandbox, stdio: 'pipe' }
+      )
+      const driver = execFileSync(
+        'git',
+        ['config', '--local', 'merge.api-report.driver'],
+        { cwd: sandbox, stdio: 'pipe' }
+      )
+        .toString()
+        .trim()
 
-    assert.notEqual(driver, '', 'a driver git has never heard of is inert')
-  })
-
-  test('the driver does not regenerate the report mid-merge', () => {
-    // The tempting driver regenerates from the merged sources. Git runs it
-    // while the rest of the tree is still unmerged, so it reads the old
-    // sources and resolves to a report missing exactly the API the incoming
-    // branch adds — conflict-free and wrong, which is worse than a conflict.
-    const setup = readFileSync(
-      join(repoRoot, 'scripts', 'setup-merge-drivers.mjs'),
-      'utf-8'
-    )
-    const driver = /driver: '([^']*)'/.exec(setup)?.[1] ?? ''
-
-    assert.doesNotMatch(
-      driver,
-      /api-report/,
-      'the driver must not run the generator — the guard above regenerates ' +
-        'once the merge is finished and the sources are actually complete'
-    )
+      // `true` writes nothing and succeeds, which is how a driver tells git to
+      // keep the side already in %A. Anything that regenerates the report is
+      // the trap this pins shut: git runs a driver while merging that one
+      // path, with the rest of the tree still unmerged, so the generator reads
+      // the old sources and resolves to a report missing exactly the API the
+      // incoming branch adds — conflict-free and wrong, which is worse than a
+      // conflict. The regeneration belongs to the guard above, which runs
+      // against a finished tree.
+      assert.equal(
+        driver,
+        'true',
+        'the driver must resolve to one side verbatim and run nothing'
+      )
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true })
+    }
   })
 
   test('postinstall runs the setup, so a fresh clone is not left without it', () => {
