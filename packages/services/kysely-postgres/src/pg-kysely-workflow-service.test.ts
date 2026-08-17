@@ -350,11 +350,6 @@ describe('advisory locks', () => {
     assert.equal(result, 42)
   })
 
-  /**
-   * `bodyEntered` is what the lock tests wait on, rather than a delay: it
-   * resolves once the lock is taken and the body is running, which is the state
-   * they assert about.
-   */
   const heldBody = () => {
     let release!: () => void
     let entered!: () => void
@@ -374,11 +369,7 @@ describe('advisory locks', () => {
     }
   }
 
-  /**
-   * The one connection PGlite hands out stands in for a saturated pool: a run
-   * lock taken on the query connection makes every other query wait for the
-   * whole workflow body, which is how concurrent runs wedged a real server.
-   */
+  /** PGlite's single connection stands in for a saturated pool. */
   test('a run lock on the query pool blocks unrelated queries', async () => {
     let queryFinished = false
     const { run, bodyEntered, release } = heldBody()
@@ -398,10 +389,8 @@ describe('advisory locks', () => {
   })
 
   /**
-   * `lockDb` is a second PGlite instance, so this shows the query pool staying
-   * free rather than two workers contending. Contention needs two pools on one
-   * database, which PGlite cannot give: each instance is its own database and
-   * takes a single session.
+   * Each PGlite instance is its own single-session database, so this can only
+   * show the query pool staying free, not two workers contending for the lock.
    */
   test('a run lock on lockDb leaves the query pool free', async () => {
     const lockDb = createDb()

@@ -6,35 +6,18 @@ import { sql } from 'kysely'
 
 export interface PgWorkflowQueueOptions extends WorkflowQueueOptions {
   /**
-   * A second Kysely instance, on its own connection pool, used only to hold the
-   * run lock. A Postgres advisory lock lives on a connection, and `withRunLock`
-   * spans the whole workflow body — so without this, N concurrent runs occupy N
-   * connections of the pool the rest of the app queries through, and at N =
-   * pool size every other request queues forever behind them. Point this at a
-   * small dedicated pool and that pool's size becomes the cap on concurrent
-   * runs per process: run N+1 waits for a lock connection instead of starving
-   * request serving.
-   *
-   * Size it above the deepest chain of runs that start each other inline — a
-   * parent holding a lock connection while a child asks for one is a deadlock,
-   * not a wait.
-   *
-   * It must connect to the same Postgres database as every other worker's lock
-   * pool. `pg_advisory_xact_lock` is scoped to a database, so two workers whose
-   * lock pools point at different databases never contend and the same run
-   * executes twice.
+   * A dedicated pool for the run lock, which is held for the whole workflow
+   * body. Its size caps concurrent runs per process; size it above the deepest
+   * chain of runs that start each other inline, or a parent waiting on a child
+   * deadlocks. Every worker's lock pool must point at the same database —
+   * `pg_advisory_xact_lock` is database-scoped, so pools on different databases
+   * never contend and the same run executes twice. Defaults to `db`.
    */
   lockDb?: Kysely<KyselyPikkuDB>
   /**
-   * Milliseconds a run waits for the advisory lock itself, via `lock_timeout`,
-   * once its transaction already holds a connection. `0` (the default) waits
-   * forever, which is what a blocked run did before this option existed. Set it
-   * to surface a jam as a failed run rather than a process that never finishes
-   * one.
-   *
-   * It does not bound checking a connection out of `lockDb`: a saturated lock
-   * pool still queues without a limit, which is the backpressure the pool is
-   * there to apply.
+   * `lock_timeout` for the advisory lock, so a jam surfaces as a failed run.
+   * `0` (the default) waits forever. Does not bound checking a connection out
+   * of `lockDb` — that queue is the backpressure the pool exists to apply.
    */
   lockTimeoutMs?: number
 }
@@ -92,9 +75,6 @@ export class PgKyselyWorkflowService extends KyselyWorkflowService {
     return hash
   }
 
-  /**
-   * Held for the whole workflow body, so it runs on `lockDb` — see the option.
-   */
   async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const lockId = this.hashStringToInt(`run:${id}`)
     return this.lockDb.transaction().execute(async (trx) => {
@@ -109,9 +89,8 @@ export class PgKyselyWorkflowService extends KyselyWorkflowService {
   }
 
   /**
-   * Stays on the query pool: the caller only claims the step under this lock
-   * and runs the step itself outside it, so the connection is held for a few
-   * statements rather than for the step's work.
+   * Stays on the query pool: the caller claims the step under this lock and
+   * runs it outside, so the connection is held for a few statements.
    */
   async withStepLock<T>(
     runId: string,
