@@ -42,7 +42,11 @@ const DOC: SurfaceDoc = {
 const USAGE: SurfaceUsage = {
   bySpecifier: {
     '#pikku/function': {
-      pikkuFunc: { imports: 12, seenIn: ['src/todo.functions.ts'] },
+      pikkuFunc: {
+        imports: 12,
+        seenIn: ['src'],
+        files: ['src/todo.functions.ts'],
+      },
     },
   },
 }

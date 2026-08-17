@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "imports": {
-    "#pikku/scenario": "../../.pikku/scenarios/pikku-scenario-types.gen.ts",
-    "#pikku/*.js": "../../.pikku/*.ts",
-    "#pikku/*": "../../.pikku/*/index.ts"
+    "#pikku/scenario": "@pikku/e2e/.pikku/scenarios/pikku-scenario-types.gen.js",
+    "#pikku/*.js": "@pikku/e2e/.pikku/*.js",
+    "#pikku/*": "@pikku/e2e/.pikku/*/index.js"
   },
   "scripts": {
     "tsc": "tsc --noEmit"
@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@pikku/core": "*",
+    "@pikku/e2e": "workspace:*",
     "@types/node": "^22",
     "typescript": "^6.0.3"
   }

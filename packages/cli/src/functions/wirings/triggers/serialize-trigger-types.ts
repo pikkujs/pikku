@@ -73,7 +73,10 @@ type PikkuTriggerFunctionConfigWithSchema<
  * Declares a trigger name and its target pikku function.
  */
 ${addon ? '' : `type TriggerWiring = CoreTrigger\n`}
-/**
+${
+  addon
+    ? ''
+    : `/**
  * A trigger source with the subscription function, using project-specific services.
  *
  * @template TInput - Input type passed to the trigger function
@@ -86,7 +89,8 @@ type TriggerSource<
   name: string
   func: PikkuTriggerFunctionConfig<TInput, TOutput>
 } & (unknown extends TInput ? { input?: TInput } : { input: TInput })
-
+`
+}
 /**
  * Creates a trigger function configuration.
  * Use this to define trigger functions that set up subscriptions.

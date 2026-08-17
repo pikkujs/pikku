@@ -119,7 +119,7 @@ export const installAddon = pikkuFunc<
     // generated types regardless of where the addon wiring physically sits (a
     // relative guess breaks the moment scaffold.pikkuDir and the real .pikku
     // location diverge).
-    const wiringContent = `import { wireAddon } from '#pikku/function'
+    const wiringContent = `import { wireAddon } from '#pikku/addon'
 
 wireAddon(${serializeWireAddon(namespace, packageName, overrides)})
 `

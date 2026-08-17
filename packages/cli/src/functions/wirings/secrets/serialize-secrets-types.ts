@@ -108,7 +108,7 @@ import './pikku-secrets-meta.gen.json' with { type: 'json' }`
 
   return `${imports.join('\n')}
 
-export interface CredentialsMap {
+export type CredentialsMap = {
 ${mapEntries.join('\n')}
 }
 

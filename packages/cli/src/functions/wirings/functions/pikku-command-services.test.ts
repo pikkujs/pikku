@@ -171,4 +171,26 @@ describe('pikkuServices', () => {
     const content = await readFile(servicesFile, 'utf8')
     assert.match(content, /'auth': true,/)
   })
+
+  // An unresolved `SingletonServices` used to be written out as an empty map,
+  // which made every service optional downstream and surfaced as a scatter of
+  // "possibly undefined" errors in files that had not changed. The type is
+  // never genuinely empty, so an empty list is the failure itself.
+  test('refuses to write a services map when the singleton type did not resolve', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'pikku-command-services-'))
+    const servicesFile = join(outDir, 'pikku-services.gen.ts')
+    const context = await createContext(servicesFile)
+    const visitState = await context.getInspectorState()
+    visitState.serviceAggregation.allSingletonServices = []
+
+    await assert.rejects(
+      () =>
+        (pikkuServices as any).func(
+          { ...context, getInspectorState: async () => visitState },
+          undefined,
+          {}
+        ),
+      /PKU724/
+    )
+  })
 })

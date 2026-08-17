@@ -35,8 +35,19 @@ export const pikkuAgentTypes = pikkuSessionlessFunc<void, void>({
       scorerNamesDeclarationFile,
       packageMappings
     )
+    const middlewareTypesImportPath = getFileImportRelativePath(
+      agentTypesFile,
+      config.middlewareTypesFile,
+      packageMappings
+    )
     const content = serializeAgentTypes(
       functionTypesImportPath,
+      middlewareTypesImportPath,
+      getFileImportRelativePath(
+        agentTypesFile,
+        config.authGuardsFile,
+        packageMappings
+      ),
       agentMapImportPath,
       scopesImportPath,
       scorerNamesImportPath

@@ -1,4 +1,5 @@
-import { addTagMiddleware, pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/function'
+import { addTagMiddleware } from '#pikku/middleware'
 import { pikkuMCPToolFunc, wireMCPPrompt, wireMCPResource } from '#pikku/mcp'
 import { wireMiddleware } from '../middleware/wire.js'
 import { tagMiddleware } from '../middleware/tag.js'

@@ -1,4 +1,5 @@
 import { m } from '@/i18n/messages'
+import type { I18nString } from '@pikku/react'
 import type {
   SurfaceEntryPointId,
   SurfaceOrigin,
@@ -31,7 +32,8 @@ export const STEP_PROSE: Record<SurfaceStep, () => string> = {
   'test it': m.surface_step_test_it,
 }
 
-export const ENTRY_POINT_LABEL: Record<SurfaceEntryPointId, () => string> = {
-  app: m.surface_entry_app,
-  addon: m.surface_entry_addon,
-}
+export const ENTRY_POINT_LABEL: Record<SurfaceEntryPointId, () => I18nString> =
+  {
+    app: m.surface_entry_app,
+    addon: m.surface_entry_addon,
+  }

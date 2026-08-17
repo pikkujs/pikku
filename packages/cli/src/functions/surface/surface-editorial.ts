@@ -26,10 +26,20 @@ export type EntryPointEditorial = {
  * what a leaf is for.
  */
 export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
+  setup: {
+    step: 'create a function',
+    summary:
+      'The three factories an application declares exactly once — its config, its singleton services and its per-wire services. Everything else on this page is imported by features; these are imported by bootstrap and then left alone.',
+  },
   function: {
     step: 'create a function',
     summary:
-      'The function definers every wiring eventually points at, along with the middleware and permission types they are typed against.',
+      'The function definers every wiring eventually points at, and the types they are written against.',
+  },
+  middleware: {
+    step: 'enhance it',
+    summary:
+      'Middleware is one concept regardless of what it ends up attached to, so it is one import: define it here, then register it globally, against a tag, or against an HTTP route or channel.',
   },
   error: {
     step: 'enhance it',
@@ -54,7 +64,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   addon: {
     step: 'enhance it',
     summary:
-      'The addons this project installs and the typed services they contribute to every function.',
+      'Addons from both ends: installing one into an application, declaring one as a package, and the typed services either way contributes to every function.',
   },
   http: {
     step: 'wire it up',
@@ -98,7 +108,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   auth: {
     step: 'guard it',
     summary:
-      'The project session type every authenticated function is typed against, and the gate that produces it.',
+      'Who may call a function, and what the call is made with: permissions that see the request, auth gates that run before it, and the credentials a function borrows rather than holds.',
   },
   scopes: {
     step: 'guard it',

@@ -169,4 +169,15 @@ describe('serializeSecretsTypes — optional secrets', () => {
   test('the generated file still parses', () => {
     assert.deepEqual(parseErrors(output), [])
   })
+
+  // An interface has no implicit index signature, so `CredentialsMap` was not
+  // assignable to the `Record<string, unknown>` that `GetCredential` is
+  // constrained by — every generated project reported the same two errors on
+  // its own function types. A type alias carries one.
+  test('the credentials map is a type alias, so it satisfies Record<string, unknown>', () => {
+    const source = serialize(oauth2Secret('Stripe'))
+
+    assert.match(source, /export type CredentialsMap = \{/)
+    assert.doesNotMatch(source, /export interface CredentialsMap/)
+  })
 })

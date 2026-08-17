@@ -9,6 +9,7 @@ import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 import { usePanelContext } from '../../context/PanelContext'
 import { SurfaceNavigator } from './SurfaceNavigator'
+import { ENTRY_POINT_LABEL } from './surface-copy'
 import { SurfaceLeafDocument } from './SurfaceLeafDocument'
 import { stepsOf } from './surface-steps'
 import type { SurfaceDoc, SurfaceUsage } from './surface.types'
@@ -64,11 +65,35 @@ export const SurfaceWorkspace: React.FC<SurfaceWorkspaceProps> = ({
     if (activePanel) closePanel(activePanel)
   }
 
+  // Which door you came through reframes every leaf and every export below it,
+  // so it belongs beside the title rather than at the top of the leaf list —
+  // and the header's measured collapse folds it to a cycle button on narrow
+  // widths, which a segmented control in the sidebar never did.
+  const selectEntryPoint = (id: string) => {
+    setEntryPointId(id)
+    setSpecifier(null)
+    leave()
+  }
+
   const header = (
     <ListPageHeader
       title={m.surface_title()}
       description={m.surface_description()}
       docsHref={DOCS_HREF}
+      selection={
+        doc && entryPoint && doc.entryPoints.length > 1
+          ? {
+              ariaLabel: m.surface_entry_point_label(),
+              value: entryPoint.id,
+              onChange: selectEntryPoint,
+              options: doc.entryPoints.map((each) => ({
+                value: each.id,
+                label: ENTRY_POINT_LABEL[each.id](),
+                'data-testid': `surface-entry-${each.id}`,
+              })),
+            }
+          : undefined
+      }
       search={{
         placeholder: m.surface_search_placeholder(),
         value: search,
@@ -98,13 +123,7 @@ export const SurfaceWorkspace: React.FC<SurfaceWorkspaceProps> = ({
         doc && entryPoint ? (
           <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
             <SurfaceNavigator
-              doc={doc}
               entryPoint={entryPoint}
-              onSelectEntryPoint={(id) => {
-                setEntryPointId(id)
-                setSpecifier(null)
-                leave()
-              }}
               selectedSpecifier={leaf?.specifier ?? null}
               onSelectLeaf={(next) => {
                 setSpecifier(next)

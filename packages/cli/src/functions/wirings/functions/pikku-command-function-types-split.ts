@@ -5,6 +5,9 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeFunctionTypes } from './serialize-function-types.js'
 import { serializeAddonRefs } from './serialize-addon-refs.js'
+import { serializeMiddlewareTypes } from '../middleware/serialize-middleware-types.js'
+import { serializeSetupTypes } from '../setup/serialize-setup-types.js'
+import { serializeAuthGuards } from '../auth/serialize-auth-guards.js'
 
 export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
   { bootstrap?: boolean },
@@ -18,6 +21,9 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
     )
     const {
       functionTypesFile,
+      middlewareTypesFile,
+      setupTypesFile,
+      authGuardsFile,
       packageMappings,
       rpcInternalMapDeclarationFile,
       servicesFile,
@@ -62,14 +68,66 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, wireServicesType.typePath, packageMappings)}'`,
       wireServicesType.type,
       `import type { TypedPikkuRPC, FlattenedRPCMap } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
-      `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
+      `import type { RequiredSingletonServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
       configTypeImport,
-      config.addonName,
+      getFileImportRelativePath(
+        functionTypesFile,
+        authGuardsFile,
+        packageMappings
+      ),
       undefined,
       typeof config.addon === 'object' ? config.addon?.categories : undefined,
       `import type { ScopeId } from '${getFileImportRelativePath(functionTypesFile, config.scopesFile, packageMappings)}'`,
       credentialsTypeImport,
+      getFileImportRelativePath(
+        functionTypesFile,
+        middlewareTypesFile,
+        packageMappings
+      ),
       { addon: !!config.addon }
+    )
+
+    await writeFileInDir(
+      logger,
+      middlewareTypesFile,
+      serializeMiddlewareTypes(
+        getFileImportRelativePath(
+          middlewareTypesFile,
+          functionTypesFile,
+          packageMappings
+        ),
+        config.addonName
+      )
+    )
+
+    await writeFileInDir(
+      logger,
+      setupTypesFile,
+      serializeSetupTypes(
+        getFileImportRelativePath(
+          setupTypesFile,
+          functionTypesFile,
+          packageMappings
+        ),
+        pikkuConfigType
+          ? `import type { ${pikkuConfigType.type} } from '${getFileImportRelativePath(setupTypesFile, pikkuConfigType.typePath, packageMappings)}'`
+          : '// Config type not found, will use fallback',
+        pikkuConfigType?.type,
+        `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(setupTypesFile, servicesFile, packageMappings)}'`
+      )
+    )
+
+    await writeFileInDir(
+      logger,
+      authGuardsFile,
+      serializeAuthGuards(
+        getFileImportRelativePath(
+          authGuardsFile,
+          functionTypesFile,
+          packageMappings
+        ),
+        config.addonName
+      )
     )
 
     const addonRefs = serializeAddonRefs({

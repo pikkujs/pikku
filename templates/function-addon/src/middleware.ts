@@ -1,4 +1,4 @@
-import { addTagMiddleware, pikkuMiddlewareFactory } from '#pikku/function'
+import { addTagMiddleware, pikkuMiddlewareFactory } from '#pikku/middleware'
 
 /**
  * Addon package middleware that logs when addon functions are called

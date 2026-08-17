@@ -1,4 +1,4 @@
-import { wireAddon } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 
 // A SECOND instance of @pikku/addon-emails (wirings/emails.wirings.ts is the
 // first). Two instances of one package must not share a secret, so this

@@ -3,7 +3,8 @@
  * Verifies that addon functions can be called via RPC with proper typing
  */
 
-import { pikkuSessionlessFunc, wireAddon } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 
 wireAddon({ name: 'ext', package: '@pikku/templates-function-addon' })
 

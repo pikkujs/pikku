@@ -2,34 +2,29 @@ import React from 'react'
 import {
   Box,
   ScrollArea,
-  SegmentedControl,
   Stack,
   Text,
   UnstyledButton,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { ENTRY_POINT_LABEL } from './surface-copy'
 import { stepsOf } from './surface-steps'
-import type { SurfaceDoc, SurfaceEntryPoint } from './surface.types'
+import type { SurfaceEntryPoint } from './surface.types'
 import classes from '../ui/console.module.css'
 
 type SurfaceNavigatorProps = {
-  doc: SurfaceDoc
   entryPoint: SurfaceEntryPoint
-  onSelectEntryPoint: (id: string) => void
   selectedSpecifier: string | null
   onSelectLeaf: (specifier: string) => void
 }
 
 /**
- * The three doors into core, and under the chosen one its leaves in build order
- * rather than alphabetically — the order decides what the page teaches, so it is
- * the navigation rather than a heading above it.
+ * The leaves of the chosen door, in build order rather than alphabetically — the
+ * order decides what the page teaches, so it is the navigation rather than a
+ * heading above it. Which door you are behind is the header's question, not
+ * this list's: it reframes everything on the page, so it sits with the title.
  */
 export const SurfaceNavigator: React.FC<SurfaceNavigatorProps> = ({
-  doc,
   entryPoint,
-  onSelectEntryPoint,
   selectedSpecifier,
   onSelectLeaf,
 }) => {
@@ -38,18 +33,6 @@ export const SurfaceNavigator: React.FC<SurfaceNavigatorProps> = ({
   return (
     <ScrollArea style={{ height: '100%' }} data-testid="surface-navigator">
       <Stack gap="xs" p="xs">
-        <SegmentedControl
-          fullWidth
-          size="xs"
-          orientation="vertical"
-          value={entryPoint.id}
-          onChange={onSelectEntryPoint}
-          data={doc.entryPoints.map((each) => ({
-            value: each.id,
-            label: ENTRY_POINT_LABEL[each.id](),
-          }))}
-        />
-
         {groups.map((group) => (
           <Stack gap={2} key={group.step}>
             <Box className={classes.knowledgeRow} style={{ paddingLeft: 10 }}>

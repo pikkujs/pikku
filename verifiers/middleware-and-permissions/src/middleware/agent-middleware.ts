@@ -1,4 +1,4 @@
-import { pikkuAgentMiddleware } from '#pikku/agent/pikku-agent-types.gen.js'
+import { pikkuAgentMiddleware } from '#pikku/middleware'
 
 export const testAgentMiddleware = pikkuAgentMiddleware<{ count: number }>({
   modifyInput: async ({ logger }, { messages, instructions }) => {

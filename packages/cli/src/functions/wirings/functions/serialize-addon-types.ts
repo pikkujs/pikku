@@ -1,3 +1,17 @@
+/**
+ * The install side of `#pikku/addon`, written for an application rather than an
+ * addon. Installing an addon and authoring one are the same concept approached
+ * from opposite ends, so they are one import; which half a project gets is
+ * decided by which kind of project it is.
+ */
+export const serializeAddonInstallTypes = () =>
+  `/**
+ * Installing an addon into this application
+ */
+
+export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'
+`
+
 export const serializeAddonTypes = (
   singletonServicesTypeImport: string,
   singletonServicesTypeName: string,

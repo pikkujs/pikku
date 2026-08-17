@@ -1,6 +1,6 @@
 import { LogLevel } from '@pikku/core/services'
 
-import { pikkuConfig } from '#pikku/function'
+import { pikkuConfig } from '#pikku/setup'
 
 export const createConfig = pikkuConfig(async () => ({
   port: Number(process.env.PORT ?? 4002),

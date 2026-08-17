@@ -9,8 +9,10 @@ export const serializeQueueTypes = (
  * Queue-specific type definitions for tree-shaking optimization
  */
 
-${addon ? '' : `import { wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'\n`}import { CoreQueueWorker } from '@pikku/core/queue'
-import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
+${addon ? '' : `import { wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'\n`}${
+    addon
+      ? ''
+      : `import { CoreQueueWorker } from '@pikku/core/queue'\nimport type { PikkuFunctionConfig } from '${functionTypesImportPath}'
 
 /**
  * Type definition for queue workers that process background jobs.
@@ -19,10 +21,11 @@ import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
  * @template Out - Output type for the queue job
  */
 type QueueWiring<In, Out> = CoreQueueWorker<PikkuFunctionConfig<In, Out, 'session' | 'rpc'>>
-${
-  addon
-    ? ''
-    : `
+`
+  }${
+    addon
+      ? ''
+      : `
 /**
  * Registers a queue worker with the Pikku framework.
  * Workers process background jobs from queues.
@@ -33,5 +36,5 @@ export const wireQueueWorker = (queueWorker: QueueWiring<any, any>) => {
   wireQueueWorkerCore(queueWorker as any)
 }
 `
-}`
+  }`
 }

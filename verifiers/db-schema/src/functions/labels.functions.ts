@@ -7,7 +7,8 @@
  * through `wireRemoteAddon` runs against another host's database and would
  * contribute nothing here.
  */
-import { pikkuSessionlessFunc, wireAddon } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 import { wireHTTP } from '#pikku/http'
 
 wireAddon({ name: 'labels', package: '@pikku/verifier-db-addon' })

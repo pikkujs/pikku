@@ -1,8 +1,5 @@
-import {
-  pikkuAuth,
-  pikkuPermission,
-  pikkuSessionlessFunc,
-} from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuAuth, pikkuPermission } from '#pikku/auth'
 
 /**
  * Session-only, so it can be evaluated with no request data.

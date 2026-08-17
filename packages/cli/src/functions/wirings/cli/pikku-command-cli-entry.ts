@@ -91,6 +91,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
             config.packageMappings,
             config.channelsTypesFile,
             config.functionTypesFile,
+            config.middlewareTypesFile,
             channelName,
             channelRoute,
             config.globalHTTPPrefix || '',

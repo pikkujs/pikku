@@ -1,4 +1,4 @@
-import { defineCredential } from '#pikku/credentials'
+import { defineCredential } from '#pikku/auth'
 import { z } from 'zod'
 
 defineCredential({

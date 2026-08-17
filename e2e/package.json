@@ -7,6 +7,7 @@
   "type": "module",
   "main": "bin/start.ts",
   "imports": {
+    "#pikku/scenario": "./.pikku/scenarios/pikku-scenario-types.gen.ts",
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"
   },
@@ -70,6 +71,8 @@
     "ws": "^8.21.3"
   },
   "exports": {
-    ".": "./bin/start.ts"
+    ".": "./bin/start.ts",
+    "./.pikku/*.js": "./.pikku/*.ts",
+    "./.pikku/*": "./.pikku/*"
   }
 }

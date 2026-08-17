@@ -20,7 +20,8 @@ const serialize = (auth?: boolean): string =>
     new Map(),
     {},
     '#channelTypes',
-    '#functionTypes'
+    '#functionTypes',
+    '#middlewareTypes'
   )
 
 describe('serializeChannelCLI auth default', () => {

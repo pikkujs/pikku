@@ -40,7 +40,7 @@ See `pikku-concepts` for the core mental model.
 Register an addon in the consuming project:
 
 ```typescript
-import { wireAddon } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 
 wireAddon({
   name: string,                    // Namespace for addon functions (e.g. 'todos')
@@ -269,7 +269,7 @@ yarn add @my-org/addon-todos
 
 ```typescript
 // wirings/todos.wirings.ts
-import { wireAddon } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 
 wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 ```

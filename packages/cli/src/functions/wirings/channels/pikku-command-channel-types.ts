@@ -6,17 +6,35 @@ import { serializeChannelTypes } from './serialize-channel-types.js'
 
 export const pikkuChannelTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const { channelsTypesFile, functionTypesFile, packageMappings, addonName } =
-      config
+    const {
+      channelsTypesFile,
+      functionTypesFile,
+      middlewareTypesFile,
+      packageMappings,
+    } = config
 
     const functionTypesImportPath = getFileImportRelativePath(
       channelsTypesFile,
       functionTypesFile,
       packageMappings
     )
-    const content = serializeChannelTypes(functionTypesImportPath, addonName, {
-      addon: !!config.addon,
-    })
+    const middlewareTypesImportPath = getFileImportRelativePath(
+      channelsTypesFile,
+      middlewareTypesFile,
+      packageMappings
+    )
+    const content = serializeChannelTypes(
+      functionTypesImportPath,
+      middlewareTypesImportPath,
+      getFileImportRelativePath(
+        channelsTypesFile,
+        config.authGuardsFile,
+        packageMappings
+      ),
+      {
+        addon: !!config.addon,
+      }
+    )
     await writeFileInDir(logger, channelsTypesFile, content)
   },
   middleware: [

@@ -15,6 +15,7 @@ export function serializeChannelCLI(
   packageMappings: Record<string, string>,
   channelTypesFile: string,
   functionTypesFile: string,
+  middlewareTypesFile: string,
   channelName?: string,
   channelRoute?: string,
   globalHTTPPrefix: string = '',
@@ -103,11 +104,18 @@ export function serializeChannelCLI(
     packageMappings
   )
 
+  const middlewareTypesPath = getFileImportRelativePath(
+    channelFile,
+    middlewareTypesFile,
+    packageMappings
+  )
+
   return `/**
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
+import { ${hasAddonFuncs ? 'ref, ' : ''}pikkuSessionlessFunc } from '${functionTypesPath}'
+import { pikkuMiddleware } from '${middlewareTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
 import { handleRawCLI, type RawCLIFrame } from '@pikku/core/cli/channel'
 import {

@@ -7,7 +7,7 @@ export const serializeGraphWirings = (leaf: (name: string) => string) => {
  * @pikku/addon-graph wiring
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { wireAddon } from '${leaf('function')}'
+import { wireAddon } from '${leaf('addon')}'
 
 wireAddon({ name: 'graph', package: '@pikku/addon-graph' })
 `

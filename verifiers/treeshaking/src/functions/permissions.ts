@@ -1,4 +1,4 @@
-import { pikkuPermission, pikkuPermissionFactory } from '#pikku/function'
+import { pikkuPermission, pikkuPermissionFactory } from '#pikku/auth'
 
 export const canSendEmail = pikkuPermission(async ({ email }) => {
   // Check email quota or something

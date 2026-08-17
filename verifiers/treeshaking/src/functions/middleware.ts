@@ -1,4 +1,4 @@
-import { pikkuMiddleware, pikkuMiddlewareFactory } from '#pikku/function'
+import { pikkuMiddleware, pikkuMiddlewareFactory } from '#pikku/middleware'
 
 export const logRequest = pikkuMiddleware(async ({ logger }) => {
   logger.info('Request logged')

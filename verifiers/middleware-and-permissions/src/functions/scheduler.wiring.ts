@@ -1,4 +1,4 @@
-import { addTagMiddleware } from '#pikku/function'
+import { addTagMiddleware } from '#pikku/middleware'
 import { wireScheduler } from '#pikku/scheduler'
 import { tagMiddleware } from '../middleware/tag.js'
 import { wireMiddleware } from '../middleware/wire.js'

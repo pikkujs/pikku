@@ -1,4 +1,4 @@
-import { pikkuMiddlewareFactory } from '#pikku/function'
+import { pikkuMiddlewareFactory } from '#pikku/middleware'
 
 export const wireMiddleware = pikkuMiddlewareFactory(
   (name: string) =>

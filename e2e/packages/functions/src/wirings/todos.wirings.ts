@@ -1,3 +1,3 @@
-import { wireAddon } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 
 wireAddon({ name: 'todos', package: '@pikku/addon-todos' })

@@ -29,11 +29,11 @@
  */
 
 // @ts-expect-error - PikkuPermissionConfig is an overload parameter, not API
-import type { PikkuPermissionConfig } from '#pikku/function'
+import type { PikkuPermissionConfig } from '#pikku/auth'
 // @ts-expect-error - PikkuAuthConfig is an overload parameter, not API
-import type { PikkuAuthConfig } from '#pikku/function'
+import type { PikkuAuthConfig } from '#pikku/auth'
 // @ts-expect-error - PikkuMiddlewareConfig is an overload parameter, not API
-import type { PikkuMiddlewareConfig } from '#pikku/function'
+import type { PikkuMiddlewareConfig } from '#pikku/middleware'
 // @ts-expect-error - PikkuFunctionSessionlessConfig is an overload parameter, not API
 import type { PikkuFunctionSessionlessConfig } from '#pikku/function'
 // @ts-expect-error - PikkuFunctionConfigWithSchema is an overload parameter, not API
@@ -41,11 +41,9 @@ import type { PikkuFunctionConfigWithSchema } from '#pikku/function'
 // @ts-expect-error - PikkuFunctionSessionlessConfigWithSchema is an overload parameter, not API
 import type { PikkuFunctionSessionlessConfigWithSchema } from '#pikku/function'
 // @ts-expect-error - PikkuAuth is an overload parameter, not API
-import type { PikkuAuth } from '#pikku/function'
+import type { PikkuAuth } from '#pikku/auth'
 // @ts-expect-error - WiredAuthServices only supplies a generic default, not API
-import type { WiredAuthServices } from '#pikku/function'
-// @ts-expect-error - WiredSingletonServices is inlined structurally, not API
-import type { WiredSingletonServices } from '#pikku/function'
+import type { WiredAuthServices } from '#pikku/auth'
 // @ts-expect-error - PikkuListFunction was referenced by nothing; pikkuListFunc is the API
 import type { PikkuListFunction } from '#pikku/function'
 // @ts-expect-error - PikkuTriggerFunctionConfigWithSchema is an overload parameter, not API
@@ -120,7 +118,6 @@ export type _SessionlessConfigWithSchema =
   PikkuFunctionSessionlessConfigWithSchema
 export type _Auth = PikkuAuth
 export type _WiredAuthServices = WiredAuthServices
-export type _WiredSingletonServices = WiredSingletonServices
 export type _ListFunction = PikkuListFunction
 export type _TriggerFunctionConfigWithSchema =
   PikkuTriggerFunctionConfigWithSchema
@@ -154,11 +151,11 @@ export type _SystemRoleDefinitionsMeta = SystemRoleDefinitionsMeta
 import {
   pikkuFunc,
   pikkuListFunc,
-  pikkuMiddleware,
-  pikkuPermission,
   pikkuSessionlessFunc,
   pikkuVoidFunc,
 } from '#pikku/function'
+import { pikkuPermission } from '#pikku/auth'
+import { pikkuMiddleware } from '#pikku/middleware'
 import { pikkuTriggerFunc } from '#pikku/trigger'
 
 void pikkuFunc
