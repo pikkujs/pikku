@@ -2,3 +2,14 @@
 /.yarn/releases/*    binary
 /.yarn/plugins/**/*  binary
 /.pnp.*              binary linguist-generated
+
+# `api-report.md` is generated from packages/core's public surface, so any two
+# branches that touch that surface rewrite the same ~9000 lines and collide on
+# every rebase. Resolving that by hand is busywork with no right answer in it:
+# neither side is correct, only a regeneration from the merged sources is.
+#
+# The driver scripts/setup-merge-drivers.mjs registers keeps one side verbatim
+# so the merge completes, and `api-report.test.ts` is what then fails until the
+# report is regenerated. Without the driver registered, git falls back to an
+# ordinary conflict, which is annoying rather than wrong.
+packages/core/api-report.md  merge=api-report linguist-generated

@@ -22,7 +22,7 @@
     ]
   },
   "scripts": {
-    "postinstall": "husky",
+    "postinstall": "husky && node scripts/setup-merge-drivers.mjs",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
     "pre-commit": "yarn test && yarn prettier && yarn lint && yarn typedoc",

@@ -67,3 +67,68 @@ describe('the API report matches the code', () => {
     )
   })
 })
+
+/**
+ * Every branch that touches the public surface rewrites the whole report, so
+ * two of them meeting is a ~9000-line conflict with no meaningful resolution
+ * in it. A merge driver takes the conflict away; the test above is what still
+ * insists on a report that matches the code.
+ *
+ * knowledge: decisions/internals/the-api-report-pins-members-not-just-names.md
+ */
+describe('merging the API report is not hand work', () => {
+  const repoRoot = join(packageRoot, '..', '..')
+
+  test('.gitattributes routes the report through the driver', () => {
+    const attributes = readFileSync(join(repoRoot, '.gitattributes'), 'utf-8')
+
+    assert.match(
+      attributes,
+      /^packages\/core\/api-report\.md\s+merge=api-report\b/m,
+      'the report must name the merge driver, or git conflicts on it as usual'
+    )
+  })
+
+  test('the setup script registers the driver .gitattributes names', () => {
+    execFileSync(
+      'node',
+      [join(repoRoot, 'scripts', 'setup-merge-drivers.mjs')],
+      { cwd: repoRoot, stdio: 'pipe' }
+    )
+    const driver = execFileSync('git', ['config', 'merge.api-report.driver'], {
+      cwd: repoRoot,
+      stdio: 'pipe',
+    })
+      .toString()
+      .trim()
+
+    assert.notEqual(driver, '', 'a driver git has never heard of is inert')
+  })
+
+  test('the driver does not regenerate the report mid-merge', () => {
+    // The tempting driver regenerates from the merged sources. Git runs it
+    // while the rest of the tree is still unmerged, so it reads the old
+    // sources and resolves to a report missing exactly the API the incoming
+    // branch adds — conflict-free and wrong, which is worse than a conflict.
+    const setup = readFileSync(
+      join(repoRoot, 'scripts', 'setup-merge-drivers.mjs'),
+      'utf-8'
+    )
+    const driver = /driver: '([^']*)'/.exec(setup)?.[1] ?? ''
+
+    assert.doesNotMatch(
+      driver,
+      /api-report/,
+      'the driver must not run the generator — the guard above regenerates ' +
+        'once the merge is finished and the sources are actually complete'
+    )
+  })
+
+  test('postinstall runs the setup, so a fresh clone is not left without it', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(repoRoot, 'package.json'), 'utf-8')
+    )
+
+    assert.match(manifest.scripts.postinstall, /setup-merge-drivers\.mjs/)
+  })
+})
