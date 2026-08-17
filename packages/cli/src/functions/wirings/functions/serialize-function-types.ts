@@ -33,6 +33,7 @@ import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-t
  */
 
 import type { CorePikkuMiddleware } from '@pikku/core/middleware'
+import type { MiddlewarePriority } from '@pikku/core/middleware'
 import type { PickRequired } from '@pikku/core/utils'
 import type { ListInput, ListOutput } from '@pikku/core/function'
 import type { CorePermissionGroup } from '@pikku/core/function'
@@ -45,7 +46,7 @@ import type {
   CorePikkuPermission,
 } from '@pikku/core/function'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
-import { addTagMiddleware as addTagMiddlewareCore, addGlobalMiddleware as addGlobalMiddlewareCore } from '@pikku/core/middleware'
+import { addTagMiddleware as addTagMiddlewareCore, addGlobalMiddleware as addGlobalMiddlewareCore, pikkuMiddleware as pikkuMiddlewareCore } from '@pikku/core/middleware'
 import {
   addGlobalPermission as addGlobalPermissionCore,
 } from '@pikku/core/middleware'
@@ -204,7 +205,11 @@ type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSin
   name?: string
   /** Optional description of what the middleware does */
   description?: string
+  /** Execution priority. \`highest\` runs first (outermost). Defaults to 'medium'. */
+  priority?: MiddlewarePriority
 }
+
+export type { MiddlewarePriority }
 
 /**
  * Factory function for creating middleware with tree-shaking support.
@@ -222,6 +227,7 @@ type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSin
  * const logMiddleware = pikkuMiddleware({
  *   name: 'Request Logger',
  *   description: 'Logs all incoming requests',
+ *   priority: 'high',
  *   func: async ({ logger }, wires, next) => {
  *     logger.info('Request started')
  *     await next()
@@ -232,7 +238,7 @@ type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSin
 export const pikkuMiddleware = <RequiredServices extends SingletonServices = WiredSingletonServices>(
   middleware: PikkuMiddleware<RequiredServices> | PikkuMiddlewareConfig<RequiredServices>
 ): PikkuMiddleware<RequiredServices> => {
-  return typeof middleware === 'function' ? middleware : middleware.func
+  return pikkuMiddlewareCore(middleware)
 }
 
 /**

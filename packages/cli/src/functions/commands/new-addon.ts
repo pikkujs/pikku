@@ -635,7 +635,7 @@ export interface Services extends CoreServices<SingletonServices> {}
   // Conditional: credential / secret file
   if (flags.credential === 'apikey') {
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { defineCredential } from '@pikku/core/credential'
+import { defineCredential } from '#pikku/credentials'
 
 export const ${camelName}CredentialSchema = z.object({
   apiKey: z.string().describe(${literal(`${displayName} API key`)}),
@@ -656,7 +656,7 @@ defineCredential({
   tenantId: z.string().optional().describe('Upstream tenant id'),`
       : `  token: z.string().describe(${literal(`${displayName} bearer token`)}),`
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { defineCredential } from '@pikku/core/credential'
+import { defineCredential } from '#pikku/credentials'
 
 export const ${camelName}CredentialSchema = z.object({
 ${credentialFields}
@@ -672,8 +672,8 @@ defineCredential({
 `
   } else if (flags.oauth || flags.credential === 'oauth2') {
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { defineCredential } from '@pikku/core/credential'
-import { defineSecret } from '@pikku/core/secret'
+import { defineCredential } from '#pikku/credentials'
+import { defineSecret } from '#pikku/secrets'
 
 export const ${camelName}TokenSchema = z.object({
   accessToken: z.string(),
@@ -704,7 +704,7 @@ defineSecret({
 `
   } else if (flags.secret) {
     files[`src/${name}.secret.ts`] = `import { z } from 'zod'
-import { defineSecret } from '@pikku/core/secret'
+import { defineSecret } from '#pikku/secrets'
 
 export const ${camelName}SecretsSchema = z.object({
   apiKey: z.string().describe(${literal(`${displayName} API key`)}),
@@ -726,7 +726,7 @@ defineSecret({
   // Conditional: variable file
   if (flags.variable) {
     files[`src/${name}.variable.ts`] = `import { z } from 'zod'
-import { defineVariable } from '@pikku/core/variable'
+import { defineVariable } from '#pikku/variables'
 
 export const ${camelName}VariableSchema = z.string().optional().describe('TODO: describe this variable')
 

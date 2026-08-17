@@ -143,6 +143,16 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuSecretDefinitionTypes',
         null
       )
+      await workflow.do(
+        'Bootstrap Credential definition types',
+        'pikkuCredentialDefinitionTypes',
+        null
+      )
+      await workflow.do(
+        'Bootstrap Variable definition types',
+        'pikkuVariableDefinitionTypes',
+        null
+      )
       if (!config.addon) {
         await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', {
           bootstrap: true,
@@ -174,6 +184,30 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         await workflow.do(`Scaffold ${generator}`, generator, null)
       }
     }
+
+    // Before the leaf indexes, because an index only re-exports entry files that
+    // exist when it is written. These four are pure — they read `config` and
+    // nothing else — so nothing holds them back to the inspected pass below, and
+    // running them there would leave the first run after an upgrade with a
+    // `#pikku/credentials` that resolves but is missing `defineCredential`.
+    await Promise.all([
+      workflow.do(
+        'Secret definition types',
+        'pikkuSecretDefinitionTypes',
+        null
+      ),
+      workflow.do(
+        'Credential definition types',
+        'pikkuCredentialDefinitionTypes',
+        null
+      ),
+      workflow.do('Scope definition types', 'pikkuScopeDefinitionTypes', null),
+      workflow.do(
+        'Variable definition types',
+        'pikkuVariableDefinitionTypes',
+        null
+      ),
+    ])
 
     await workflow.do('Function types split', 'pikkuFunctionTypesSplit', {})
     await workflow.do('Leaf subpath entries', 'pikkuLeafIndexes', null)
@@ -258,23 +292,12 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Emails', 'pikkuEmails', null),
       workflow.do('Error types', 'pikkuErrorTypes', null),
-      workflow.do(
-        'Secret definition types',
-        'pikkuSecretDefinitionTypes',
-        null
-      ),
       workflow.do('Auth', 'pikkuAuth', {}),
       workflow.do('Secrets', 'pikkuSecrets', null),
       workflow.do('Credentials', 'pikkuCredentials', null),
-      workflow.do('Scope definition types', 'pikkuScopeDefinitionTypes', null),
       workflow.do('Scopes', 'pikkuScopes', {}),
       workflow.do('Roles', 'pikkuRoles', {}),
       workflow.do('Personas', 'pikkuPersonas', {}),
-      workflow.do(
-        'Variable definition types',
-        'pikkuVariableDefinitionTypes',
-        null
-      ),
       workflow.do('Variables', 'pikkuVariables', null),
       workflow.do('Addon types', 'pikkuAddonTypes', null),
     ])
