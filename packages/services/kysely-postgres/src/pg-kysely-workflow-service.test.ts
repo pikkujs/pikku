@@ -349,4 +349,79 @@ describe('advisory locks', () => {
     const result = await service.withStepLock('run-1', 'step-1', async () => 42)
     assert.equal(result, 42)
   })
+
+  const heldBody = () => {
+    let release!: () => void
+    let entered!: () => void
+    const body = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const bodyEntered = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    return {
+      run: () => {
+        entered()
+        return body
+      },
+      bodyEntered,
+      release,
+    }
+  }
+
+  /** PGlite's single connection stands in for a saturated pool. */
+  test('a run lock on the query pool blocks unrelated queries', async () => {
+    let queryFinished = false
+    const { run, bodyEntered, release } = heldBody()
+
+    const held = service.withRunLock('run-1', run)
+    await bodyEntered
+
+    const query = sql`select 1`.execute(db).then(() => {
+      queryFinished = true
+    })
+    await new Promise((r) => setImmediate(r))
+    assert.equal(queryFinished, false)
+
+    release()
+    await Promise.all([held, query])
+    assert.equal(queryFinished, true)
+  })
+
+  /**
+   * Each PGlite instance is its own single-session database, so this can only
+   * show the query pool staying free, not two workers contending for the lock.
+   */
+  test('a run lock on lockDb leaves the query pool free', async () => {
+    const lockDb = createDb()
+    const isolated = new PgKyselyWorkflowService(db, {
+      wireQueues: false,
+      lockDb,
+    } as any)
+    await isolated.init()
+
+    const { run, bodyEntered, release } = heldBody()
+
+    const held = isolated.withRunLock('run-1', run)
+    await bodyEntered
+
+    const rows = await sql<{
+      one: number
+    }>`select 1 as one`.execute(db)
+    assert.equal(rows.rows[0]!.one, 1)
+
+    release()
+    await held
+  })
+
+  test('a non-finite lock timeout is rejected', () => {
+    assert.throws(
+      () =>
+        new PgKyselyWorkflowService(db, {
+          wireQueues: false,
+          lockTimeoutMs: Number.NaN,
+        } as any),
+      RangeError
+    )
+  })
 })
