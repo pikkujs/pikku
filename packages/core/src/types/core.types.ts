@@ -197,6 +197,22 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   auth?: () => Promise<AuthInstance>
 }
 
+/**
+ * Reads a single credential. The first signature resolves the value type from
+ * the project's generated `CredentialsMap`; the second keeps a name the map
+ * does not know callable with an explicit type.
+ *
+ * `TCredentials` is unconstrained because the generated map is an interface,
+ * which has no implicit index signature and so cannot satisfy
+ * `Record<string, unknown>`.
+ */
+export type GetCredential<TCredentials = Record<string, unknown>> = {
+  <K extends keyof TCredentials & string>(
+    name: K
+  ): TCredentials[K] | null | Promise<TCredentials[K] | null>
+  <T = unknown>(name: string): T | null | Promise<T | null>
+}
+
 export type PikkuWire<
   In = unknown,
   Out = unknown,
@@ -212,6 +228,7 @@ export type PikkuWire<
   // `ScenarioContext`.
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
   TypedActors extends ScenarioPersonas = ScenarioPersonas,
+  TypedCredentials = Record<string, unknown>,
 > = {
   /** Always present — lazily initialised on first access for every function invocation */
   rpc: TypedRPC
@@ -271,7 +288,7 @@ export type PikkuWire<
   /** Set a credential value (available in middleware) */
   setCredential: (name: string, value: unknown) => void
   /** Get a single credential by name — lazy-loads from CredentialService on first call, sync thereafter */
-  getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
+  getCredential: GetCredential<TypedCredentials>
   /** Get all resolved credentials — lazy-loads from CredentialService on first call, sync thereafter */
   getCredentials: () =>
     Record<string, unknown> | Promise<Record<string, unknown>>

@@ -14,7 +14,8 @@ export const serializeFunctionTypes = (
   packageName?: string,
   workflowTypesImport?: string,
   nodeCategories?: string[],
-  scopesTypeImport?: string
+  scopesTypeImport?: string,
+  credentialsTypeImport?: string
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
   const nodeCategoryType = nodeCategories?.length
@@ -27,6 +28,11 @@ import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-t
   // Falls back to `string` when a project has no scopes codegen, so that
   // `scopes` stays usable rather than resolving to an unbound type name.
   const scopesImport = scopesTypeImport || `type ScopeId = string`
+  // Same fallback reasoning as scopes: a project that declares no credentials
+  // never has a credentials leaf to import from, and `wire.getCredential` stays
+  // callable with an explicit type argument.
+  const credentialsImport =
+    credentialsTypeImport || `type CredentialsMap = Record<string, unknown>`
 
   return `/**
  * Core function, middleware, and permission types for all wirings
@@ -54,6 +60,7 @@ import { pikkuState as __pikkuState } from '@pikku/core/state'
 import { CreateWireServices } from '@pikku/core/types'
 import type { NodeType } from '@pikku/core/node'
 ${scopesImport}
+${credentialsImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import {
   CorePikkuFunction,
@@ -343,7 +350,7 @@ export type PikkuFunctionSessionless<
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario<ScenarioOut>, TypedPersonas>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario<ScenarioOut>, TypedPersonas, CredentialsMap>, RequiredWires>
   >
 
 /**
@@ -364,7 +371,7 @@ export type PikkuFunction<
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario, TypedPersonas>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario, TypedPersonas, CredentialsMap>, RequiredWires>
   >
 
 /**

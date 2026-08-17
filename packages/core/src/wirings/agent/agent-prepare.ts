@@ -1,4 +1,8 @@
-import type { PikkuRawWire, CoreUserSession } from '../../types/core.types.js'
+import type {
+  PikkuRawWire,
+  CoreUserSession,
+  GetCredential,
+} from '../../types/core.types.js'
 import type {
   CoreAgent,
   AgentInput,
@@ -42,7 +46,7 @@ import { resolveModelConfig } from './agent-model-config.js'
 export type RunAgentParams = {
   sessionService?: SessionService<CoreUserSession>
   /** Credential accessor for the current request — used to read per-user overrides (e.g. AI_API_KEY). */
-  getCredential?: <T = unknown>(name: string) => T | null | Promise<T | null>
+  getCredential?: GetCredential
   /** Ephemeral owner identity minted for a sessionless request; never client-supplied, never reused across requests. */
   anonymousOwnerResourceId?: string
 }
