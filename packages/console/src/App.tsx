@@ -27,6 +27,7 @@ import { ScenariosPage } from './pages/ScenariosPage'
 import { PersonasPage } from './pages/PersonasPage'
 import { VirtualUsersPage } from './pages/VirtualUsersPage'
 import { KnowledgePage } from './pages/KnowledgePage'
+import { ProjectSurfacePage } from './pages/ProjectSurfacePage'
 import { DatabasePage } from './pages/DatabasePage'
 import { AuthProvidersPage } from './pages/AuthProvidersPage'
 import { SecurityPage } from './pages/SecurityPage'
@@ -58,6 +59,7 @@ export const App: React.FC = () => {
         <Route path="/personas" element={<PersonasPage />} />
         <Route path="/virtual-users" element={<VirtualUsersPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
+        <Route path="/surface" element={<ProjectSurfacePage />} />
         <Route path="/database" element={<DatabasePage />} />
         <Route path="/apis" element={<ApisPage />} />
         <Route path="/jobs" element={<JobsPage />} />

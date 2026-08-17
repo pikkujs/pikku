@@ -51,6 +51,7 @@ import {
   Sparkles,
   Target,
   Network,
+  DoorOpen,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
@@ -158,6 +159,12 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/knowledge',
           icon: BookOpen,
           matchPrefix: '/knowledge',
+        },
+        {
+          label: m.nav_surface(),
+          href: '/surface',
+          icon: DoorOpen,
+          matchPrefix: '/surface',
         },
       ],
     },
