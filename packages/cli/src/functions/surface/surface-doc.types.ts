@@ -64,7 +64,10 @@ export type SurfaceDoc = {
 
 export type SurfaceSymbolUsage = {
   imports: number
+  /** The workspace packages or top-level source directories it is imported in. */
   seenIn: string[]
+  /** The project-relative files the imports are written in. */
+  files: string[]
 }
 
 /**

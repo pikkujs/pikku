@@ -13,14 +13,15 @@ const countsFor = (
 ): SurfaceUsageCounts => {
   const counts: SurfaceUsageCounts = {}
   files.forEach(({ area, source }, index) => {
+    const file = `src/file-${index}.ts`
     accumulateSurfaceUsage(
       ts.createSourceFile(
-        `/project/src/file-${index}.ts`,
+        `/project/${file}`,
         source,
         ts.ScriptTarget.Latest,
         true
       ),
-      area,
+      { area, file },
       counts
     )
   })
@@ -39,8 +40,16 @@ describe('accumulateSurfaceUsage', () => {
     ])
 
     assert.deepStrictEqual(counts['#pikku/function'], {
-      pikkuFunc: { imports: 2, seenIn: ['src'] },
-      pikkuSessionlessFunc: { imports: 1, seenIn: ['src'] },
+      pikkuFunc: {
+        imports: 2,
+        seenIn: ['src'],
+        files: ['src/file-0.ts', 'src/file-1.ts'],
+      },
+      pikkuSessionlessFunc: {
+        imports: 1,
+        seenIn: ['src'],
+        files: ['src/file-0.ts'],
+      },
     })
   })
 
@@ -58,7 +67,11 @@ describe('accumulateSurfaceUsage', () => {
     ])
 
     assert.deepStrictEqual(counts['#pikku/workflow'], {
-      pikkuWorkflowFunc: { imports: 2, seenIn: ['src', 'workers'] },
+      pikkuWorkflowFunc: {
+        imports: 2,
+        seenIn: ['src', 'workers'],
+        files: ['src/file-0.ts', 'src/file-1.ts'],
+      },
     })
   })
 
@@ -71,7 +84,7 @@ describe('accumulateSurfaceUsage', () => {
     ])
 
     assert.deepStrictEqual(counts['#pikku/http'], {
-      cors: { imports: 1, seenIn: ['src'] },
+      cors: { imports: 1, seenIn: ['src'], files: ['src/file-0.ts'] },
     })
   })
 

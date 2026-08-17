@@ -4,11 +4,8 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { docBlocks } from './surface-docs'
-import type {
-  SurfaceOrigin,
-  SurfaceSymbol,
-  SurfaceSymbolUsage,
-} from './surface.types'
+import { originText } from './surface-copy'
+import type { SurfaceSymbol, SurfaceSymbolUsage } from './surface.types'
 
 export type SurfaceSymbolDetailProps = {
   symbol: SurfaceSymbol
@@ -26,16 +23,6 @@ const WRAP: React.CSSProperties = {
 
 /** A fenced example keeps the indentation its author wrote. */
 const DOCS: React.CSSProperties = { whiteSpace: 'pre-wrap' }
-
-const originText = (origin: SurfaceOrigin): string => {
-  if (origin.via === 'core') {
-    return m.surface_origin_core({ subpath: origin.subpath })
-  }
-  if (origin.via === 'package') {
-    return m.surface_origin_package({ packageName: origin.packageName })
-  }
-  return m.surface_origin_generated()
-}
 
 /**
  * One export, answered in the order the questions arrive: how do I import it,
@@ -99,16 +86,30 @@ export const SurfaceSymbolDetail: React.FC<SurfaceSymbolDetailProps> = ({
     </Text>
 
     {usage && (
-      <Stack gap={4}>
+      <Stack gap={6}>
         <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-          {m.surface_column_seen_in()}
+          {m.surface_used_in()}
         </Text>
-        <Text size="sm">
-          {usage.imports ? asI18n(usage.seenIn.join(', ')) : m.surface_unused()}
-        </Text>
-        <Text size="xs" c="dimmed">
-          {m.surface_imports_count({ count: usage.imports })}
-        </Text>
+        {usage.imports === 0 ? (
+          <Text size="sm" c="dimmed" fs="italic">
+            {m.surface_unused()}
+          </Text>
+        ) : (
+          <>
+            <Text size="xs" c="dimmed">
+              {usage.imports === 1
+                ? m.surface_imports_count_one()
+                : m.surface_imports_count({ count: usage.imports })}
+            </Text>
+            <Stack gap={2}>
+              {usage.files.map((file) => (
+                <Text key={file} size="xs" ff="monospace" style={WRAP}>
+                  {asI18n(file)}
+                </Text>
+              ))}
+            </Stack>
+          </>
+        )}
       </Stack>
     )}
   </Stack>

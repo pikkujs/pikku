@@ -27,7 +27,7 @@ export const mergeSurfaceUsage = ({
       if (!leaf.specifier.startsWith('#pikku/')) continue
       const symbols = (bySpecifier[leaf.specifier] ??= {})
       for (const symbol of leaf.symbols) {
-        symbols[symbol.name] ??= { imports: 0, seenIn: [] }
+        symbols[symbol.name] ??= { imports: 0, seenIn: [], files: [] }
       }
     }
   }
@@ -38,6 +38,7 @@ export const mergeSurfaceUsage = ({
       merged[name] = {
         imports: usage.imports,
         seenIn: [...usage.seenIn].sort(),
+        files: [...usage.files].sort(),
       }
     }
   }

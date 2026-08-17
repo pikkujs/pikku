@@ -1,5 +1,20 @@
 import { m } from '@/i18n/messages'
-import type { SurfaceEntryPointId, SurfaceStep } from './surface.types'
+import type {
+  SurfaceEntryPointId,
+  SurfaceOrigin,
+  SurfaceStep,
+} from './surface.types'
+
+/** Where a symbol was declared, as a sentence rather than a path. */
+export const originText = (origin: SurfaceOrigin): string => {
+  if (origin.via === 'core') {
+    return m.surface_origin_core({ subpath: origin.subpath })
+  }
+  if (origin.via === 'package') {
+    return m.surface_origin_package({ packageName: origin.packageName })
+  }
+  return m.surface_origin_generated()
+}
 
 /**
  * A step's prose is fixed UI copy, so it is a message rather than a string in

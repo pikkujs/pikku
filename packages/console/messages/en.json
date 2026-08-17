@@ -1040,7 +1040,11 @@
   "surface_column_kind": "KIND",
   "surface_column_imports": "IMPORTS",
   "surface_column_seen_in": "SEEN IN",
-  "surface_unused": "nowhere yet",
+  "surface_used_in": "Used in",
+  "surface_more_files": "+{count} more",
+  "surface_used_in_one_file": "Used in 1 file",
+  "surface_used_in_files": "Used in {files} files",
+  "surface_unused": "Nothing in this project imports it yet",
   "surface_empty_title": "No surface to read",
   "surface_empty_description": "The surface ships with @pikku/cli. Update it to a version that includes one, then reload.",
   "surface_exports_count": "{count} exports",
@@ -1050,5 +1054,6 @@
   "surface_origin_package": "Re-exported from {packageName}",
   "surface_import_hint": "Import it from",
   "surface_undocumented": "Not documented yet",
-  "surface_imports_count": "{count} imports across this project"
+  "surface_imports_count_one": "Imported once in this project",
+  "surface_imports_count": "Imported {count} times in this project"
 }

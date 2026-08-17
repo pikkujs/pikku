@@ -56,6 +56,7 @@ export type SurfaceDoc = {
 export type SurfaceSymbolUsage = {
   imports: number
   seenIn: string[]
+  files: string[]
 }
 
 export type SurfaceUsage = {

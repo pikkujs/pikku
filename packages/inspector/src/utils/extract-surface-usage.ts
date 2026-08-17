@@ -3,13 +3,14 @@ import { basename, dirname, relative, sep } from 'path'
 import ts from 'typescript'
 
 /**
- * How often each `#pikku/*` export is imported, and the source areas it was
- * imported from. Counters only: this is accumulated during the sweep that
- * already visits every source file, so nothing here may retain a node.
+ * How often each `#pikku/*` export is imported, the source areas it was
+ * imported from, and the files those imports are written in. Counters only:
+ * this is accumulated during the sweep that already visits every source file,
+ * so nothing here may retain a node.
  */
 export type SurfaceUsageCounts = Record<
   string,
-  Record<string, { imports: number; seenIn: string[] }>
+  Record<string, { imports: number; seenIn: string[]; files: string[] }>
 >
 
 /**
@@ -88,7 +89,7 @@ const namesOf = (
  */
 export const accumulateSurfaceUsage = (
   sourceFile: ts.SourceFile,
-  area: string,
+  { area, file }: { area: string; file: string },
   into: SurfaceUsageCounts
 ): void => {
   for (const statement of sourceFile.statements) {
@@ -111,9 +112,10 @@ export const accumulateSurfaceUsage = (
 
     const symbols = (into[leaf] ??= {})
     for (const name of names) {
-      const usage = (symbols[name] ??= { imports: 0, seenIn: [] })
+      const usage = (symbols[name] ??= { imports: 0, seenIn: [], files: [] })
       usage.imports += 1
       if (!usage.seenIn.includes(area)) usage.seenIn.push(area)
+      if (!usage.files.includes(file)) usage.files.push(file)
     }
   }
 }

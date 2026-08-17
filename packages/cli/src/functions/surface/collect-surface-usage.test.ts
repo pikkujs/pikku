@@ -35,13 +35,17 @@ const doc: SurfaceDoc = {
 describe('mergeSurfaceUsage', () => {
   test('reports an export nothing imports as unused rather than omitting it', () => {
     const usage = mergeSurfaceUsage({
-      counts: { '#pikku/http': { wireHTTP: { imports: 3, seenIn: ['src'] } } },
+      counts: {
+        '#pikku/http': {
+          wireHTTP: { imports: 3, seenIn: ['src'], files: ['src/http.ts'] },
+        },
+      },
       doc,
     })
 
     assert.deepStrictEqual(usage.bySpecifier['#pikku/http'], {
-      cors: { imports: 0, seenIn: [] },
-      wireHTTP: { imports: 3, seenIn: ['src'] },
+      cors: { imports: 0, seenIn: [], files: [] },
+      wireHTTP: { imports: 3, seenIn: ['src'], files: ['src/http.ts'] },
     })
   })
 
@@ -49,7 +53,11 @@ describe('mergeSurfaceUsage', () => {
     const usage = mergeSurfaceUsage({
       counts: {
         '#pikku/http': {
-          wireHTTP: { imports: 2, seenIn: ['services', '@app/api'] },
+          wireHTTP: {
+            imports: 2,
+            seenIn: ['services', '@app/api'],
+            files: ['src/wirings/todo.ts', 'src/http.ts'],
+          },
         },
       },
       doc,
@@ -58,23 +66,32 @@ describe('mergeSurfaceUsage', () => {
     assert.deepStrictEqual(usage.bySpecifier['#pikku/http']!.wireHTTP, {
       imports: 2,
       seenIn: ['@app/api', 'services'],
+      files: ['src/http.ts', 'src/wirings/todo.ts'],
     })
   })
 
   test('keeps an import of something the doc does not describe', () => {
     const usage = mergeSurfaceUsage({
-      counts: { '#pikku/mystery': { thing: { imports: 1, seenIn: ['src'] } } },
+      counts: {
+        '#pikku/mystery': {
+          thing: { imports: 1, seenIn: ['src'], files: ['src/thing.ts'] },
+        },
+      },
       doc,
     })
 
     assert.deepStrictEqual(usage.bySpecifier['#pikku/mystery'], {
-      thing: { imports: 1, seenIn: ['src'] },
+      thing: { imports: 1, seenIn: ['src'], files: ['src/thing.ts'] },
     })
   })
 
   test('without a doc it reports only what was measured', () => {
     const usage = mergeSurfaceUsage({
-      counts: { '#pikku/http': { wireHTTP: { imports: 1, seenIn: ['src'] } } },
+      counts: {
+        '#pikku/http': {
+          wireHTTP: { imports: 1, seenIn: ['src'], files: ['src/http.ts'] },
+        },
+      },
     })
 
     assert.deepStrictEqual(Object.keys(usage.bySpecifier), ['#pikku/http'])

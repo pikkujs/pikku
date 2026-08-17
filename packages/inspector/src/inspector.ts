@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { performance } from 'perf_hooks'
-import { dirname, resolve } from 'path'
+import { dirname, relative, resolve } from 'path'
 import { visitSetup, visitFunctions, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import type {
@@ -394,7 +394,10 @@ export const inspect = async (
     // over its source.
     accumulateSurfaceUsage(
       sourceFile,
-      surfaceUsageArea(sourceFile.fileName, rootDir, surfaceAreaCache),
+      {
+        area: surfaceUsageArea(sourceFile.fileName, rootDir, surfaceAreaCache),
+        file: relative(rootDir, sourceFile.fileName),
+      },
       state.surfaceUsage
     )
   }
