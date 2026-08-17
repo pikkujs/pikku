@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2690 observable things**: 857 exported names, plus
+**2691 observable things**: 858 exported names, plus
 1833 members on the classes and interfaces among them, reachable
 through 52 entry points.
 
@@ -20,7 +20,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
 | `./channel` | 32 | 32 | 84 |
-| `./types` | 25 | 22 | 74 |
+| `./types` | 26 | 23 | 74 |
 | `./queue` | 22 | 22 | 71 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
@@ -105,6 +105,7 @@ export type PikkuWire<
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
   TypedActors extends ScenarioPersonas = ScenarioPersonas,
+  TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
 } & Partial<{
@@ -141,7 +142,7 @@ export type PikkuWire<
   hasSessionChanged: () => boolean
   pikkuUserId: string
   setCredential: (name: string, value: unknown) => void
-  getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
+  getCredential: GetCredential<TypedCredentials>
   getCredentials: () =>
     Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
@@ -250,6 +251,12 @@ export type CreateWireServices<
   services: SingletonServices,
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
+export type GetCredential<TCredentials = Record<string, unknown>> = {
+  <K extends keyof TCredentials & string>(
+    name: K
+  ): TCredentials[K] | null | Promise<TCredentials[K] | null>
+  <T = unknown>(name: string): T | null | Promise<T | null>
+}
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
@@ -283,6 +290,7 @@ export type PikkuWire<
   TriggerOutput = unknown,
   TypedScenario extends PikkuScenarioWire<any> | never = PikkuScenarioWire<any>,
   TypedActors extends ScenarioPersonas = ScenarioPersonas,
+  TypedCredentials = Record<string, unknown>,
 > = {
   rpc: TypedRPC
 } & Partial<{
@@ -319,7 +327,7 @@ export type PikkuWire<
   hasSessionChanged: () => boolean
   pikkuUserId: string
   setCredential: (name: string, value: unknown) => void
-  getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
+  getCredential: GetCredential<TypedCredentials>
   getCredentials: () =>
     Record<string, unknown> | Promise<Record<string, unknown>>
   audit: {
@@ -3421,7 +3429,7 @@ resumeAgentSync: (runId: string, approvals: { toolCallId: string; approved: bool
 runAgent: (agentName: string, input: AgentInput, params: RunAgentParams, agentSessionMap?: Map<string, string> | undefined) => Promise<AgentOutput>
 export type RunAgentParams = {
   sessionService?: SessionService<CoreUserSession>
-  getCredential?: <T = unknown>(name: string) => T | null | Promise<T | null>
+  getCredential?: GetCredential
   anonymousOwnerResourceId?: string
 }
 signalRunInterrupt: (runId: string, interruption?: AgentInterruption) => boolean

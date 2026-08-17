@@ -21,6 +21,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       packageMappings,
       rpcInternalMapDeclarationFile,
       servicesFile,
+      credentialsFile,
     } = config
 
     // Check for required types
@@ -41,6 +42,14 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       throw new Error('Required types not found')
     }
 
+    // The credentials leaf is only written when the project declares at least
+    // one credential, so importing from it unconditionally would emit a broken
+    // import for every project that declares none.
+    const credentialsTypeImport =
+      credentialsFile && visitState.credentials?.definitions.length
+        ? `import type { CredentialsMap } from '${getFileImportRelativePath(functionTypesFile, credentialsFile, packageMappings)}'`
+        : undefined
+
     const configTypeImport = pikkuConfigType
       ? `import type { ${pikkuConfigType.type} } from '${getFileImportRelativePath(functionTypesFile, pikkuConfigType.typePath, packageMappings)}'`
       : '// Config type not found, will use fallback'
@@ -58,7 +67,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       config.addonName,
       undefined,
       typeof config.addon === 'object' ? config.addon?.categories : undefined,
-      `import type { ScopeId } from '${getFileImportRelativePath(functionTypesFile, config.scopesFile, packageMappings)}'`
+      `import type { ScopeId } from '${getFileImportRelativePath(functionTypesFile, config.scopesFile, packageMappings)}'`,
+      credentialsTypeImport
     )
 
     const addonRefs = serializeAddonRefs({

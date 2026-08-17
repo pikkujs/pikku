@@ -2,7 +2,7 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { serializeFunctionTypes } from './serialize-function-types.js'
 
-const emit = (nodeCategories?: string[]) =>
+const emit = (nodeCategories?: string[], credentialsTypeImport?: string) =>
   serializeFunctionTypes(
     "import type { Session } from './session.js'",
     'Session',
@@ -15,7 +15,9 @@ const emit = (nodeCategories?: string[]) =>
     "import type { Config } from './config.js'",
     undefined,
     undefined,
-    nodeCategories
+    nodeCategories,
+    undefined,
+    credentialsTypeImport
   )
 
 describe('serializeFunctionTypes', () => {
@@ -83,6 +85,40 @@ describe('serializeFunctionTypes', () => {
         content,
         /type PikkuMiddlewareConfig<[^]*?priority\?: MiddlewarePriority/
       )
+    })
+  })
+
+  // `wire.getCredential('slack')` is only as typed as the map bound to the wire,
+  // so the generated wire type has to pass `CredentialsMap` into `PikkuWire`.
+  describe('credentials', () => {
+    test('binds the generated CredentialsMap to every function wire', () => {
+      const content = emit(
+        undefined,
+        "import type { CredentialsMap } from './credentials.js'"
+      )
+
+      assert.match(
+        content,
+        /import type \{ CredentialsMap \} from '\.\/credentials\.js'/
+      )
+      assert.doesNotMatch(
+        content,
+        /type CredentialsMap = Record<string, unknown>/
+      )
+      for (const wire of [
+        /PikkuWire<In, Out, false, Session,.*TypedScenario<ScenarioOut>, TypedPersonas, CredentialsMap>/,
+        /PikkuWire<In, Out, true, Session,.*TypedScenario, TypedPersonas, CredentialsMap>/,
+      ]) {
+        assert.match(content, wire)
+      }
+    })
+
+    test('falls back to an untyped map when the project declares none', () => {
+      const content = emit()
+
+      assert.match(content, /type CredentialsMap = Record<string, unknown>/)
+      assert.doesNotMatch(content, /import type \{ CredentialsMap \}/)
+      assert.match(content, /TypedPersonas, CredentialsMap>/)
     })
   })
 

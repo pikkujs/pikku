@@ -6,5 +6,8 @@
     "declaration": false,
     "declarationMap": false
   },
-  "files": ["src/classification/secret-value.test.ts"]
+  "files": [
+    "src/classification/secret-value.test.ts",
+    "src/types/typed-credentials.test.ts"
+  ]
 }
