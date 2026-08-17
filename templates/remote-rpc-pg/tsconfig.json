@@ -3,7 +3,11 @@
   "compilerOptions": {
     "skipLibCheck": true,
     "noEmit": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "#pikku/*.js": ["../functions/.pikku/*.ts"],
+      "#pikku/*": ["../functions/.pikku/*/index.ts"]
+    }
   },
   "include": ["src/", "client/"],
   "files": []

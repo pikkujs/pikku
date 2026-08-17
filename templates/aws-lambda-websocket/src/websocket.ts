@@ -1,4 +1,4 @@
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 import type { APIGatewayEvent, APIGatewayProxyHandler } from 'aws-lambda'
 
 import {

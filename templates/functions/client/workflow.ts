@@ -1,4 +1,4 @@
-import { PikkuRPC } from '../.pikku/pikku-rpc.gen.js'
+import { PikkuRPC } from '#pikku/pikku-rpc.gen.js'
 
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
 const rpc = new PikkuRPC()

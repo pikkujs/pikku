@@ -6,7 +6,11 @@
     "module": "Node18",
     "moduleResolution": "NodeNext",
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "#pikku/*.js": ["./.pikku/*.ts"],
+      "#pikku/*": ["./.pikku/*"]
+    }
   },
   "include": ["src/", ".pikku/*", "types/eventhub-topics.d.ts"],
   "files": []

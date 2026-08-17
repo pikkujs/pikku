@@ -5,7 +5,7 @@ import { runFetch } from '@pikku/lambda/http'
 import { runSQSQueueWorker } from '@pikku/lambda/queue'
 import { coldStart } from './cold-start.js'
 
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 
 export const httpRoute = async (event: APIGatewayProxyEvent) => {
   await coldStart()

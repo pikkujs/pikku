@@ -7,7 +7,7 @@ import {
   createConfig,
   createSingletonServices,
 } from '../../functions/src/services.js'
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 
 const connectionString =
   process.env.DATABASE_URL ||

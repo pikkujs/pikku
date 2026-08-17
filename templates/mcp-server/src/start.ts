@@ -6,8 +6,8 @@ import {
   createConfig,
 } from '../../functions/src/services.js'
 
-import mcpJSON from '../../functions/.pikku/mcp/mcp.gen.json' with { type: 'json' }
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import mcpJSON from '#pikku/mcp/mcp.gen.json' with { type: 'json' }
+import '#pikku/pikku-bootstrap.gen.js'
 
 async function main() {
   try {

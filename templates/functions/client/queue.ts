@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { runQueueJob } from '@pikku/core/queue'
 import { pikkuState } from '@pikku/core/state'
-import '../.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
   createSingletonServices,

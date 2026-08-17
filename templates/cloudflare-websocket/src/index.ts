@@ -1,4 +1,4 @@
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 
 import { runFetch, runScheduled } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'

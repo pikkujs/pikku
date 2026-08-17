@@ -4,7 +4,12 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "module": "node18",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "#pikku/*.json": ["../functions/.pikku/*.json"],
+      "#pikku/*.js": ["../functions/.pikku/*.ts"],
+      "#pikku/*": ["../functions/.pikku/*/index.ts"]
+    }
   },
   "include": ["src/", ".pikku/*", "client/mcp.ts", "client/mcp-server.test.ts"],
   "files": []

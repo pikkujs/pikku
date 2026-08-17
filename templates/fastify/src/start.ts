@@ -1,6 +1,6 @@
 import { PikkuFastifyServer } from '@pikku/fastify'
 
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
   createSingletonServices,
