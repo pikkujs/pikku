@@ -1,4 +1,4 @@
-import { isRef } from '@pikku/core/workflow'
+import { isRef, template } from '@pikku/core/workflow'
 import type {
   SerializedWorkflowGraph,
   SerializedGraphNode,
@@ -34,6 +34,26 @@ function serializeInputMapping(
   }
 
   return result
+}
+
+/**
+ * Convert a `forEach` source — a bare node id, a ref, or a `(ref) => ref(...)`
+ * callback — to the serialized DataRef form
+ */
+function serializeForEach(
+  forEach: unknown,
+  createRef: (nodeId: string, path?: string) => { nodeId: string; path?: string }
+): DataRef | undefined {
+  if (forEach === undefined) return undefined
+  if (typeof forEach === 'string') return { $ref: forEach }
+  if (typeof forEach === 'function') {
+    return serializeForEach(
+      (forEach as (ref: unknown) => unknown)(createRef),
+      createRef
+    )
+  }
+  if (isRef(forEach)) return convertRef(forEach)
+  return undefined
 }
 
 /**
@@ -73,7 +93,9 @@ export function serializeWorkflowGraph(
       string,
       {
         func: { name?: string }
-        input?: (ref: any) => Record<string, unknown>
+        input?: (ref: any, template?: any, $item?: any) => Record<string, unknown>
+        forEach?: string | { nodeId: string; path?: string } | ((ref: any) => unknown)
+        mode?: 'parallel' | 'sequential'
         next?: string | string[] | Record<string, string | string[]>
         onError?: string | string[]
         notes?: string
@@ -95,6 +117,8 @@ export function serializeWorkflowGraph(
     nodeId,
     path,
   })
+
+  const createItemRef = (path?: string) => createRef('$item', path)
 
   // Track which nodes have incoming edges
   const hasIncomingEdge = new Set<string>()
@@ -124,7 +148,7 @@ export function serializeWorkflowGraph(
     // Evaluate input callback to get the mapping
     let input: Record<string, unknown | DataRef> = {}
     if (node.input) {
-      const rawInput = node.input(createRef)
+      const rawInput = node.input(createRef, template, createItemRef)
       input = serializeInputMapping(rawInput)
     }
 
@@ -137,6 +161,13 @@ export function serializeWorkflowGraph(
       input,
       next: serializeNext(node.next),
       onError: node.onError,
+    }
+    const forEach = serializeForEach(node.forEach, createRef)
+    if (forEach) {
+      funcNode.forEach = forEach
+      if (node.mode !== undefined) {
+        funcNode.mode = node.mode
+      }
     }
     if (node.notes !== undefined) {
       funcNode.notes = node.notes

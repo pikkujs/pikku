@@ -141,11 +141,21 @@ interface BaseNode {
 /**
  * Function node - calls an RPC
  */
+/** How the per-item instances of a `forEach` node run */
+export type ForEachMode = 'parallel' | 'sequential'
+
 export interface FunctionNode extends BaseNode {
   /** RPC function name */
   rpcName: string
   /** Input mapping - values can be literals or DataRefs */
   input?: Record<string, unknown | DataRef>
+  /**
+   * Run this node once per element of the referenced array. The node's own
+   * result becomes the ordered array of per-item results.
+   */
+  forEach?: DataRef
+  /** How the per-item instances run. Defaults to 'parallel'. */
+  mode?: ForEachMode
   /** Output variable name for storing result */
   outputVar?: string
   /** Hash of nodeId + RPC input/output schemas for version detection */

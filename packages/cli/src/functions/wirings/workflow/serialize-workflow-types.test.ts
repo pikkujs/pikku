@@ -29,6 +29,20 @@ describe('serializeWorkflowTypes', () => {
     assert.match(result, /keyof FlattenedAgentMap & string/)
   })
 
+  test('a graph node can declare a forEach source and a fanout mode', () => {
+    const result = emit()
+    assert.match(result, /forEach\?: ForEachConfig<FuncMap>/)
+    assert.match(result, /mode\?: 'parallel' \| 'sequential'/)
+  })
+
+  test("$item is appended after template so neither existing input shape shifts", () => {
+    const result = emit()
+    assert.match(
+      result,
+      /\(ref: RefFunction<FuncMap>, template: TemplateFunction, \$item: ItemFunction\)/
+    )
+  })
+
   test('ref() resolves output keys for an agent-name node', () => {
     const result = emit()
     assert.match(

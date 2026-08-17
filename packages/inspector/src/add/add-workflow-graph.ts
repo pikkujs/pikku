@@ -10,7 +10,8 @@ import type {
 function extractAstValue(
   expr: ts.Expression,
   refParamName: string,
-  templateParamName: string | undefined
+  templateParamName: string | undefined,
+  itemParamName?: string
 ): unknown {
   // `'GET' as const` / parenthesised values wrap the real initializer — see
   // through them or the whole property is silently dropped from the meta.
@@ -43,6 +44,12 @@ function extractAstValue(
           args[1] && ts.isStringLiteral(args[1]) ? args[1].text : undefined
         return { $ref: nodeId, path } as DataRef
       }
+      if (itemParamName && callee.text === itemParamName) {
+        const pathArg = expr.arguments[0]
+        const path =
+          pathArg && ts.isStringLiteral(pathArg) ? pathArg.text : undefined
+        return { $ref: '$item', path } as DataRef
+      }
       if (templateParamName && callee.text === templateParamName) {
         const templateStr =
           expr.arguments[0] && ts.isStringLiteral(expr.arguments[0])
@@ -55,7 +62,8 @@ function extractAstValue(
             const resolved = extractAstValue(
               el,
               refParamName,
-              templateParamName
+              templateParamName,
+              itemParamName
             )
             if (
               typeof resolved === 'object' &&
@@ -84,7 +92,7 @@ function extractAstValue(
   }
   if (ts.isArrayLiteralExpression(expr)) {
     return expr.elements.map((el) =>
-      extractAstValue(el, refParamName, templateParamName)
+      extractAstValue(el, refParamName, templateParamName, itemParamName)
     )
   }
   if (ts.isObjectLiteralExpression(expr)) {
@@ -100,7 +108,8 @@ function extractAstValue(
       obj[key] = extractAstValue(
         prop.initializer,
         refParamName,
-        templateParamName
+        templateParamName,
+        itemParamName
       )
     }
     return obj
@@ -160,6 +169,13 @@ function extractInputMapping(
       ? node.parameters[1].name.text
       : 'template'
 
+  // `$item` is appended after `template` so neither existing arrow shape —
+  // `(ref) => ...` nor `(ref, template) => ...` — shifts a parameter.
+  const itemParamName =
+    node.parameters.length > 2 && ts.isIdentifier(node.parameters[2].name)
+      ? node.parameters[2].name.text
+      : undefined
+
   const input: Record<string, unknown | DataRef> = {}
 
   for (const prop of bodyObj.properties) {
@@ -176,7 +192,8 @@ function extractInputMapping(
     const value = extractAstValue(
       prop.initializer,
       refParamName,
-      templateParamName
+      templateParamName,
+      itemParamName
     )
     if (value !== undefined) {
       input[key] = value
@@ -184,6 +201,49 @@ function extractInputMapping(
   }
 
   return input
+}
+
+/**
+ * Extract a `forEach` source, authored either as a bare node id (`'listRows'`)
+ * or as a callback returning a ref (`(ref) => ref('listRows', 'rows')`).
+ */
+function extractForEachConfig(node: ts.Node): DataRef | undefined {
+  while (ts.isAsExpression(node) || ts.isParenthesizedExpression(node)) {
+    node = node.expression
+  }
+
+  if (ts.isStringLiteral(node)) {
+    return { $ref: node.text }
+  }
+
+  if (ts.isArrowFunction(node)) {
+    const refParamName =
+      node.parameters.length > 0 && ts.isIdentifier(node.parameters[0].name)
+        ? node.parameters[0].name.text
+        : 'ref'
+
+    let body: ts.Node = node.body
+    if (ts.isBlock(body)) {
+      for (const stmt of body.statements) {
+        if (ts.isReturnStatement(stmt) && stmt.expression) {
+          body = stmt.expression
+        }
+      }
+    }
+    if (!ts.isExpression(body)) return undefined
+
+    const value = extractAstValue(body, refParamName, undefined)
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      '$ref' in value &&
+      typeof (value as DataRef).$ref === 'string'
+    ) {
+      return value as DataRef
+    }
+  }
+
+  return undefined
 }
 
 /**
@@ -380,6 +440,8 @@ function extractGraphFromNewFormat(
       nodeId,
       rpcName,
       input: {},
+      forEach: undefined,
+      mode: undefined,
       next: undefined,
       onError: undefined,
       retries: undefined,
@@ -410,6 +472,8 @@ function extractGraphFromNewFormat(
           nodes[nodeId].next = nodeConfig.next
           nodes[nodeId].onError = nodeConfig.onError
           nodes[nodeId].input = nodeConfig.input
+          nodes[nodeId].forEach = nodeConfig.forEach
+          nodes[nodeId].mode = nodeConfig.mode
           nodes[nodeId].retries = nodeConfig.retries
           nodes[nodeId].retryDelay = nodeConfig.retryDelay
           nodes[nodeId].notes = nodeConfig.notes
@@ -431,6 +495,8 @@ function extractNodeConfigFromObject(
   next: any
   onError: any
   input: Record<string, any>
+  forEach: DataRef | undefined
+  mode: string | undefined
   retries: number | undefined
   retryDelay: string | number | undefined
   notes: string | undefined
@@ -438,6 +504,8 @@ function extractNodeConfigFromObject(
   let next: any = undefined
   let onError: any = undefined
   let input: Record<string, any> = {}
+  let forEach: DataRef | undefined = undefined
+  let mode: string | undefined = undefined
   let retries: number | undefined = undefined
   let retryDelay: string | number | undefined = undefined
   let notes: string | undefined = undefined
@@ -453,6 +521,10 @@ function extractNodeConfigFromObject(
       onError = extractNextConfig(prop.initializer, checker)
     } else if (propName === 'input') {
       input = extractInputMapping(prop.initializer, checker)
+    } else if (propName === 'forEach') {
+      forEach = extractForEachConfig(prop.initializer)
+    } else if (propName === 'mode') {
+      mode = extractStringLiteral(prop.initializer, checker)
     } else if (propName === 'retries') {
       if (ts.isNumericLiteral(prop.initializer)) {
         retries = Number(prop.initializer.text)
@@ -468,7 +540,7 @@ function extractNodeConfigFromObject(
     }
   }
 
-  return { next, onError, input, retries, retryDelay, notes }
+  return { next, onError, input, forEach, mode, retries, retryDelay, notes }
 }
 
 /**

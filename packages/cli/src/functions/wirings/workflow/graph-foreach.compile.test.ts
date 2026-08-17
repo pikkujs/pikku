@@ -6,10 +6,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 /**
- * The graph type machinery emitted by serializeWorkflowTypes, paired with stub
- * RPC / workflow / agent maps. Kept in lockstep with the emitter — the sibling
- * serialize-workflow-types.test.ts pins that the emitter still produces these
- * exact constructs, while this file proves they compile and enforce the union.
+ * The same emitted graph machinery as agent-graph-node.compile.test.ts, used
+ * here to prove the forEach fanout surface is purely additive: the existing
+ * `(ref) => ...` and `(ref, template) => ...` input shapes must still compile
+ * unchanged alongside the appended `$item` parameter.
  */
 const MACHINERY = `
 type FlattenedRPCMap = {
@@ -83,7 +83,7 @@ declare function pikkuWorkflowGraph<
 `
 
 const typeErrors = (consumer: string): string[] => {
-  const dir = mkdtempSync(join(tmpdir(), 'pikku-agent-graph-'))
+  const dir = mkdtempSync(join(tmpdir(), 'pikku-graph-foreach-'))
   try {
     const file = join(dir, 'fixture.ts')
     writeFileSync(file, `${MACHINERY}\n${consumer}\n`)
@@ -104,18 +104,18 @@ const typeErrors = (consumer: string): string[] => {
   }
 }
 
-describe('pikkuWorkflowGraph agent-name nodes', () => {
-  test('an agent-name node compiles and a downstream node refs its output', () => {
+describe('pikkuWorkflowGraph forEach fanout', () => {
+  test('a forEach node id with $item() input compiles', () => {
     const errors = typeErrors(`
 export const g = pikkuWorkflowGraph({
-  nodes: { entry: 'userCreate', classify: 'summarize', notify: 'emailSend' },
+  nodes: { entry: 'userCreate', notify: 'emailSend' },
   config: {
-    entry: { next: 'classify' },
-    classify: { next: 'notify', input: (ref) => ({ message: ref('entry', 'email') }) },
+    entry: { next: 'notify' },
     notify: {
-      input: (ref) => ({
-        to: ref('entry', 'email'),
-        subject: ref('classify', 'summary'),
+      forEach: 'entry',
+      input: (ref, template, $item) => ({
+        to: $item('email'),
+        subject: $item(),
         body: 'hi',
       }),
     },
@@ -125,35 +125,77 @@ export const g = pikkuWorkflowGraph({
     assert.deepEqual(errors, [])
   })
 
-  test('a sub-workflow name is also accepted as a node func', () => {
-    const errors = typeErrors(
-      `export const g = pikkuWorkflowGraph({ nodes: { a: 'onboardWorkflow' } })`
-    )
+  test('forEach also accepts a (ref) callback, with a sequential mode', () => {
+    const errors = typeErrors(`
+export const g = pikkuWorkflowGraph({
+  nodes: { entry: 'userCreate', notify: 'emailSend' },
+  config: {
+    entry: { next: 'notify' },
+    notify: {
+      forEach: (ref) => ref('entry', 'email'),
+      mode: 'sequential',
+      input: (ref, template, $item) => ({ to: $item(), subject: 's', body: 'b' }),
+    },
+  },
+})
+`)
     assert.deepEqual(errors, [])
   })
 
-  test('an unknown node func name (not an rpc, workflow, or agent) is rejected', () => {
-    const errors = typeErrors(
-      `export const g = pikkuWorkflowGraph({ nodes: { x: 'notARealThing' } })`
-    )
-    assert.ok(
-      errors.some((e) => e.includes('notARealThing')),
-      `expected a rejection mentioning notARealThing, got ${JSON.stringify(errors)}`
-    )
-  })
-
-  test('ref() against a non-existent agent output key is rejected', () => {
+  test('forEach rejects a node id that is not in the graph', () => {
     const errors = typeErrors(`
 export const g = pikkuWorkflowGraph({
-  nodes: { classify: 'summarize', notify: 'emailSend' },
-  config: {
-    notify: { input: (ref) => ({ to: ref('classify', 'nope'), subject: 's', body: 'b' }) },
-  },
+  nodes: { entry: 'userCreate', notify: 'emailSend' },
+  config: { notify: { forEach: 'nope' } },
 })
 `)
     assert.ok(
       errors.length > 0,
-      'expected ref() to reject an unknown agent output key'
+      'expected forEach to reject an unknown node id'
     )
+  })
+
+  test('mode rejects an unknown value', () => {
+    const errors = typeErrors(`
+export const g = pikkuWorkflowGraph({
+  nodes: { entry: 'userCreate', notify: 'emailSend' },
+  config: { notify: { forEach: 'entry', mode: 'batched' } },
+})
+`)
+    assert.ok(errors.length > 0, 'expected mode to reject an unknown value')
+  })
+
+  test('an existing single-param (ref) => ... node still compiles untouched', () => {
+    const errors = typeErrors(`
+export const g = pikkuWorkflowGraph({
+  nodes: { entry: 'userCreate', notify: 'emailSend' },
+  config: {
+    entry: { next: 'notify' },
+    notify: {
+      input: (ref) => ({ to: ref('entry', 'email'), subject: 's', body: 'b' }),
+    },
+  },
+})
+`)
+    assert.deepEqual(errors, [])
+  })
+
+  test('an existing (ref, template) => ... node still compiles untouched', () => {
+    const errors = typeErrors(`
+export const g = pikkuWorkflowGraph({
+  nodes: { entry: 'userCreate', notify: 'emailSend' },
+  config: {
+    entry: { next: 'notify' },
+    notify: {
+      input: (ref, template) => ({
+        to: ref('entry', 'email'),
+        subject: template('hi $0', [ref('entry', 'id')]),
+        body: 'b',
+      }),
+    },
+  },
+})
+`)
+    assert.deepEqual(errors, [])
   })
 })

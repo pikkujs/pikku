@@ -1,7 +1,11 @@
 import type {
+  ForEachConfig,
+  ForEachMode,
   GraphNodeConfig,
+  ItemFn,
   NextConfig,
   RefValue,
+  TemplateFn,
 } from './workflow-graph.types.js'
 
 export interface RPCHandler<I = any, O = any> {
@@ -65,6 +69,8 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
     for (const [nodeId, def] of Object.entries(nodes) as [string, any][]) {
       result[nodeId] = {
         func: funcMap[nodeId] as string,
+        forEach: def?.forEach,
+        mode: def?.mode,
         input: def?.input,
         next: def?.next,
         onError: def?.onError,
@@ -83,6 +89,13 @@ type GraphNodeConfigMap<
 > = {
   [K in Extract<keyof FuncMap, string>]?: {
     next?: NextConfig<Extract<keyof FuncMap, string>>
+    /**
+     * Run this node once per element of an upstream array. The node's own
+     * result becomes the ordered array of per-item results.
+     */
+    forEach?: ForEachConfig<Extract<keyof FuncMap, string>>
+    /** How the per-item instances run. Defaults to 'parallel'. */
+    mode?: ForEachMode
     input?: (
       ref: <
         N extends Extract<keyof FuncMap, string>,
@@ -90,7 +103,9 @@ type GraphNodeConfigMap<
       >(
         nodeId: N,
         path: P
-      ) => TypedRef<ComputeNodeOutputs<FuncMap, RPCMap>[N][P]>
+      ) => TypedRef<ComputeNodeOutputs<FuncMap, RPCMap>[N][P]>,
+      template: TemplateFn,
+      $item: ItemFn
     ) => InputWithRefs<ComputeNodeInputs<FuncMap, RPCMap>[K]>
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
     retries?: number

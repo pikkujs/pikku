@@ -151,13 +151,23 @@ type RefFunction<FuncMap extends Record<string, string>> = {
 
 type TemplateFunction = (templateStr: string, refs: TypedRef<unknown>[]) => TemplateString
 
+type ItemFunction = (path?: string) => TypedRef<unknown>
+
+type ForEachConfig<FuncMap extends Record<string, string>> =
+  | Extract<keyof FuncMap, string>
+  | ((ref: RefFunction<FuncMap>) => TypedRef<unknown>)
+
 type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
   [K in Extract<keyof FuncMap, string>]?: {
     next?: NextConfig<Extract<keyof FuncMap, string>>
+    /** Run this node once per element of an upstream array. Its result becomes the ordered array of per-item results. */
+    forEach?: ForEachConfig<FuncMap>
+    /** How the per-item instances of a forEach node run. Defaults to 'parallel'. */
+    mode?: 'parallel' | 'sequential'
     input?:
       | NodeInputType<FuncMap, K>
       | (() => NodeInputType<FuncMap, K>)
-      | ((ref: RefFunction<FuncMap>, template: TemplateFunction) => NodeInputType<FuncMap, K>)
+      | ((ref: RefFunction<FuncMap>, template: TemplateFunction, $item: ItemFunction) => NodeInputType<FuncMap, K>)
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
     /** Free-text node documentation. Non-semantic — excluded from graphHash. */
     notes?: string

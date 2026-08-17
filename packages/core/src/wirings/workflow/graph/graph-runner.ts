@@ -29,10 +29,28 @@ function buildTemplateRegex(nodeId: string): RegExp | null {
   return new RegExp(`^${escaped}$`)
 }
 
-function stripInstanceOrdinal(name: string): string {
-  const hash = name.lastIndexOf('#')
-  if (hash <= 0) return name
-  return /^\d+$/.test(name.slice(hash + 1)) ? name.slice(0, hash) : name
+const FANOUT_INSTANCE = /^(.+)\[(\d+)\]$/
+
+function fanoutInstanceKey(base: string, index: number): string {
+  return `${base}[${index}]`
+}
+
+function splitFanoutInstance(
+  name: string
+): { base: string; index: number } | null {
+  const match = FANOUT_INSTANCE.exec(name)
+  if (!match) return null
+  return { base: match[1]!, index: Number(match[2]!) }
+}
+
+export function stripInstanceOrdinal(name: string): string {
+  const fanout = splitFanoutInstance(name)
+  const withoutItem = fanout ? fanout.base : name
+  const hash = withoutItem.lastIndexOf('#')
+  if (hash <= 0) return withoutItem
+  return /^\d+$/.test(withoutItem.slice(hash + 1))
+    ? withoutItem.slice(0, hash)
+    : withoutItem
 }
 
 function remapStepNamesToNodeIds(
@@ -84,14 +102,22 @@ function closesCycle(
   return false
 }
 
+interface GraphFireInstruction {
+  logical: string
+  instanceKey: string
+  fromStepName?: string
+  itemIndex?: number
+}
+
 function planGraphTransitions(
   nodes: Record<string, any>,
   instances: Array<{ stepName: string; status: string; fromStepName?: string }>,
   branchByStep: Record<string, string>,
   entryNodeIds: string[],
-  graphName: string
+  graphName: string,
+  fanoutWidths: Record<string, number> = {}
 ): {
-  toFire: Array<{ logical: string; instanceKey: string; fromStepName?: string }>
+  toFire: GraphFireInstruction[]
   hasInFlight: boolean
   blockedWaiting: boolean
 } {
@@ -99,15 +125,37 @@ function planGraphTransitions(
     remapStepNamesToNodeIds([name], nodes, graphName)[0]!
 
   const countByLogical: Record<string, number> = {}
+  const instancesByLogical: Record<
+    string,
+    Array<{ stepName: string; status: string }>
+  > = {}
   const consumed = new Set<string>()
   for (const inst of instances) {
     const logical = toLogical(inst.stepName)
     countByLogical[logical] = (countByLogical[logical] ?? 0) + 1
+    ;(instancesByLogical[logical] ??= []).push(inst)
     consumed.add(`${inst.fromStepName ?? ENTRY_FROM}->${logical}`)
   }
 
+  const isFanned = (nodeId: string) => Boolean(nodes[nodeId]?.forEach)
+  const fanoutComplete = (nodeId: string) => {
+    const width = fanoutWidths[nodeId]
+    if (width === undefined) return false
+    const succeeded = (instancesByLogical[nodeId] ?? []).filter(
+      (i) => i.status === 'succeeded'
+    ).length
+    return succeeded >= width
+  }
+
   const completed = instances.filter((i) => i.status === 'succeeded')
-  const completedLogical = new Set(completed.map((i) => toLogical(i.stepName)))
+  const completedLogical = new Set<string>()
+  for (const inst of completed) {
+    const logical = toLogical(inst.stepName)
+    if (!isFanned(logical)) completedLogical.add(logical)
+  }
+  for (const nodeId of Object.keys(fanoutWidths)) {
+    if (isFanned(nodeId) && fanoutComplete(nodeId)) completedLogical.add(nodeId)
+  }
 
   const edges: Array<{
     from?: string
@@ -118,32 +166,88 @@ function planGraphTransitions(
   for (const entryId of entryNodeIds) {
     edges.push({ fromKey: ENTRY_FROM, target: entryId })
   }
+  const fannedEdgesEmitted = new Set<string>()
   for (const inst of completed) {
     const fromLogical = toLogical(inst.stepName)
     const node = nodes[fromLogical]
     if (!node?.next) continue
+    let from = inst.stepName
+    let branchKey = branchByStep[inst.stepName]
+    if (isFanned(fromLogical)) {
+      if (!completedLogical.has(fromLogical)) continue
+      if (fannedEdgesEmitted.has(fromLogical)) continue
+      fannedEdgesEmitted.add(fromLogical)
+      from = fromLogical
+      branchKey = branchByStep[fromLogical] ?? branchByStep[inst.stepName]
+    }
+    for (const target of resolveNextFromConfig(node.next, branchKey)) {
+      edges.push({ from, fromKey: from, fromLogical, target })
+    }
+  }
+  // A zero-width fanout produces no instances at all, so its outgoing edges
+  // have no completed instance to hang off — emit them from the logical node.
+  for (const [nodeId, width] of Object.entries(fanoutWidths)) {
+    if (width !== 0 || fannedEdgesEmitted.has(nodeId)) continue
+    const node = nodes[nodeId]
+    if (!node?.next) continue
+    fannedEdgesEmitted.add(nodeId)
     for (const target of resolveNextFromConfig(
       node.next,
-      branchByStep[inst.stepName]
+      branchByStep[nodeId]
     )) {
-      edges.push({
-        from: inst.stepName,
-        fromKey: inst.stepName,
-        fromLogical,
-        target,
-      })
+      edges.push({ from: nodeId, fromKey: nodeId, fromLogical: nodeId, target })
     }
   }
 
-  const toFire: Array<{
-    logical: string
-    instanceKey: string
-    fromStepName?: string
-  }> = []
+  const toFire: GraphFireInstruction[] = []
+  const plannedFanout = new Set<string>()
   let blockedWaiting = false
   for (const edge of edges) {
     const target = edge.target
     const edgeKey = `${edge.fromKey}->${target}`
+
+    if (isFanned(target)) {
+      if (plannedFanout.has(target)) continue
+      plannedFanout.add(target)
+      if (!areDependenciesSatisfied(nodes[target] ?? {}, completedLogical)) {
+        blockedWaiting = true
+        continue
+      }
+      const width = fanoutWidths[target]
+      if (width === undefined) {
+        blockedWaiting = true
+        continue
+      }
+      const existing = instancesByLogical[target] ?? []
+      const existingIndexes = new Set(
+        existing
+          .map((i) => splitFanoutInstance(i.stepName)?.index)
+          .filter((index): index is number => index !== undefined)
+      )
+      const pending: number[] = []
+      for (let index = 0; index < width; index++) {
+        if (!existingIndexes.has(index)) pending.push(index)
+      }
+      if (pending.length === 0) continue
+      const sequential = nodes[target]?.mode === 'sequential'
+      const anyInFlight = existing.some((i) => i.status !== 'succeeded')
+      const emit = sequential
+        ? anyInFlight
+          ? []
+          : pending.slice(0, 1)
+        : pending
+      for (const index of emit) {
+        toFire.push({
+          logical: target,
+          instanceKey: fanoutInstanceKey(target, index),
+          fromStepName: edge.from,
+          itemIndex: index,
+        })
+      }
+      if (emit.length === 0) blockedWaiting = true
+      continue
+    }
+
     if (consumed.has(edgeKey)) continue
     const visits = countByLogical[target] ?? 0
     const isBackEdge =
@@ -298,7 +402,7 @@ function resolveTemplate(
 
 function resolveValue(value: unknown, nodeResults: Record<string, any>): any {
   if (isDataRef(value)) {
-    if (value.$ref === '$item') {
+    if (value.$ref === '$item' && !('$item' in nodeResults)) {
       return value
     }
     const source = nodeResults[value.$ref]
@@ -364,6 +468,8 @@ function extractReferencedNodeIds(
 
 const IGNORED_REFS = new Set(['trigger', '$item', 'unknown'])
 
+const FOREACH_MODES = new Set(['parallel', 'sequential'])
+
 function normalizeNodeTargets(value: unknown): string[] {
   if (!value) return []
   if (typeof value === 'string') return [value]
@@ -407,6 +513,29 @@ function validateGraphReferences(
       }
     }
 
+    if (node.forEach !== undefined) {
+      const source = forEachSource(node)
+      if (!source) {
+        throw new Error(
+          `Workflow graph '${graphName}': node '${nodeId}' forEach must reference a node`
+        )
+      }
+      if (!IGNORED_REFS.has(source.$ref) && !nodeIds.has(source.$ref)) {
+        throw new Error(
+          `Workflow graph '${graphName}': node '${nodeId}' references unknown node '${source.$ref}' in forEach`
+        )
+      }
+      if (node.mode !== undefined && !FOREACH_MODES.has(node.mode)) {
+        throw new Error(
+          `Workflow graph '${graphName}': node '${nodeId}' has an unknown forEach mode '${node.mode}'`
+        )
+      }
+    } else if (node.mode !== undefined) {
+      throw new Error(
+        `Workflow graph '${graphName}': node '${nodeId}' sets mode '${node.mode}' without a forEach`
+      )
+    }
+
     const nextTargets = normalizeNodeTargets(node.next)
     for (const nextId of nextTargets) {
       if (!nodeIds.has(nextId)) {
@@ -427,14 +556,145 @@ function validateGraphReferences(
   }
 }
 
+function forEachSource(node: {
+  forEach?: unknown
+}): { $ref: string; path?: string } | undefined {
+  return isDataRef(node.forEach) ? node.forEach : undefined
+}
+
+function nodeDependencies(node: {
+  input?: Record<string, unknown>
+  forEach?: unknown
+}): string[] {
+  const deps = extractReferencedNodeIds(node.input)
+  const source = forEachSource(node)
+  if (source) deps.push(source.$ref)
+  return [...new Set(deps)].filter((id) => !IGNORED_REFS.has(id))
+}
+
+function describeValue(value: unknown): string {
+  if (value === null) return 'null'
+  if (value === undefined) return 'undefined'
+  return typeof value
+}
+
+function resolveForEachItems(
+  graphName: string,
+  nodeId: string,
+  node: { forEach?: unknown },
+  nodeResults: Record<string, any>
+): unknown[] {
+  const source = forEachSource(node)
+  if (!source) {
+    throw new Error(
+      `Workflow graph '${graphName}': node '${nodeId}' has an unusable forEach configuration`
+    )
+  }
+  const raw = nodeResults[source.$ref]
+  const value = source.path ? getValueAtPath(raw, source.path) : raw
+  if (!Array.isArray(value)) {
+    const label = source.path ? `${source.$ref}.${source.path}` : source.$ref
+    throw new Error(
+      `Workflow graph '${graphName}': node '${nodeId}' forEach source '${label}' resolved to ${describeValue(
+        value
+      )}, expected an array`
+    )
+  }
+  return value
+}
+
 function areDependenciesSatisfied(
-  node: { input?: Record<string, unknown> },
+  node: { input?: Record<string, unknown>; forEach?: unknown },
   completedNodeIds: Set<string>
 ): boolean {
-  const deps = extractReferencedNodeIds(node.input).filter(
-    (id) => !IGNORED_REFS.has(id)
+  return nodeDependencies(node).every((dep) => completedNodeIds.has(dep))
+}
+
+interface GraphResultReader {
+  /** Per-item source arrays, keyed by fanned node id, for every ready fanout. */
+  fanoutItems: Record<string, unknown[]>
+  fanoutWidths: Record<string, number>
+  /** Reads node results, aggregating a fanned node into its ordered item array. */
+  read: (nodeIds: string[]) => Promise<Record<string, any>>
+}
+
+async function createGraphResultReader(
+  workflowService: PikkuWorkflowService,
+  runId: string,
+  graphName: string,
+  nodes: Record<string, any>,
+  triggerInput: any,
+  instances: Array<{ stepName: string; status: string }>
+): Promise<GraphResultReader> {
+  const succeeded = new Set(
+    instances.filter((i) => i.status === 'succeeded').map((i) => i.stepName)
   )
-  return deps.every((dep) => completedNodeIds.has(dep))
+  const fanoutItems: Record<string, unknown[]> = {}
+  const fanoutWidths: Record<string, number> = {}
+  const resultCache = new Map<string, any>()
+  const resolving = new Set<string>()
+
+  const readResult = async (nodeId: string): Promise<any> => {
+    if (nodeId === 'trigger') return triggerInput
+    if (resultCache.has(nodeId)) return resultCache.get(nodeId)
+    if (resolving.has(nodeId)) return undefined
+    resolving.add(nodeId)
+    try {
+      let value: any
+      if (nodes[nodeId]?.forEach) {
+        const items = await readFanoutItems(nodeId)
+        if (items === undefined) return undefined
+        const keys = items.map((_, index) => fanoutInstanceKey(nodeId, index))
+        if (keys.some((key) => !succeeded.has(key))) return undefined
+        const fetched = keys.length
+          ? await workflowService.getNodeResults(runId, keys)
+          : {}
+        value = keys.map((key) => fetched[key])
+      } else {
+        if (!succeeded.has(nodeId)) return undefined
+        const fetched = await workflowService.getNodeResults(runId, [nodeId])
+        value = fetched[nodeId]
+      }
+      resultCache.set(nodeId, value)
+      return value
+    } finally {
+      resolving.delete(nodeId)
+    }
+  }
+
+  const readFanoutItems = async (
+    nodeId: string
+  ): Promise<unknown[] | undefined> => {
+    if (fanoutItems[nodeId]) return fanoutItems[nodeId]
+    const node = nodes[nodeId]
+    const source = forEachSource(node)
+    if (!source) return undefined
+    const sourceValue = await readResult(source.$ref)
+    if (sourceValue === undefined) return undefined
+    const items = resolveForEachItems(graphName, nodeId, node, {
+      [source.$ref]: sourceValue,
+    })
+    fanoutItems[nodeId] = items
+    fanoutWidths[nodeId] = items.length
+    return items
+  }
+
+  for (const nodeId of Object.keys(nodes)) {
+    if (nodes[nodeId]?.forEach) await readFanoutItems(nodeId)
+  }
+
+  return {
+    fanoutItems,
+    fanoutWidths,
+    read: async (nodeIds: string[]) => {
+      const results: Record<string, any> = {}
+      for (const nodeId of nodeIds) {
+        const value = await readResult(nodeId)
+        if (value !== undefined) results[nodeId] = value
+      }
+      return results
+    },
+  }
 }
 
 async function queueGraphNode(
@@ -508,12 +768,22 @@ export async function continueGraph(
   }
 
   const instances = await workflowService.getStepInstances(runId)
+  const triggerInput = currentRun?.input
+  const reader = await createGraphResultReader(
+    workflowService,
+    runId,
+    graphName,
+    nodes,
+    triggerInput,
+    instances
+  )
   const plan = planGraphTransitions(
     nodes,
     instances,
     branchByStep,
     meta.entryNodeIds ?? [],
-    graphName
+    graphName,
+    reader.fanoutWidths
   )
 
   if (plan.toFire.length === 0) {
@@ -523,8 +793,6 @@ export async function continueGraph(
     return
   }
 
-  const triggerInput = currentRun?.input
-
   for (const fire of plan.toFire) {
     const node = nodes[fire.logical]
     if (!node?.rpcName) continue
@@ -532,11 +800,14 @@ export async function continueGraph(
     const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
       (id) => !IGNORED_REFS.has(id)
     )
-    const fetchedResults = await workflowService.getNodeResults(
-      runId,
-      referencedNodeIds
-    )
-    const nodeResults = { trigger: triggerInput, ...fetchedResults }
+    const fetchedResults = await reader.read(referencedNodeIds)
+    const nodeResults: Record<string, any> = {
+      trigger: triggerInput,
+      ...fetchedResults,
+    }
+    if (fire.itemIndex !== undefined) {
+      nodeResults['$item'] = reader.fanoutItems[fire.logical]?.[fire.itemIndex]
+    }
     const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
     await queueGraphNode(
@@ -855,12 +1126,21 @@ async function continueGraphInline(
     }
 
     const instances = await workflowService.getStepInstances(runId)
+    const reader = await createGraphResultReader(
+      workflowService,
+      runId,
+      graphName,
+      nodes,
+      triggerInput,
+      instances
+    )
     const plan = planGraphTransitions(
       nodes,
       instances,
       branchByStep,
       entryNodeIds,
-      graphName
+      graphName,
+      reader.fanoutWidths
     )
 
     if (plan.toFire.length === 0) {
@@ -879,11 +1159,15 @@ async function continueGraphInline(
         const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
           (id) => !IGNORED_REFS.has(id)
         )
-        const fetchedResults = await workflowService.getNodeResults(
-          runId,
-          referencedNodeIds
-        )
-        const nodeResults = { trigger: triggerInput, ...fetchedResults }
+        const fetchedResults = await reader.read(referencedNodeIds)
+        const nodeResults: Record<string, any> = {
+          trigger: triggerInput,
+          ...fetchedResults,
+        }
+        if (fire.itemIndex !== undefined) {
+          nodeResults['$item'] =
+            reader.fanoutItems[fire.logical]?.[fire.itemIndex]
+        }
         const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
         executed++
@@ -902,6 +1186,36 @@ async function continueGraphInline(
     )
     if (executed === 0) return
   }
+}
+
+function planEntryFirings(
+  graphName: string,
+  nodeId: string,
+  node: Record<string, any>,
+  triggerNodeResults: Record<string, any>,
+  triggerInput: any
+): Array<{ instanceKey: string; input: any }> {
+  if (!node.forEach) {
+    const input =
+      node.input && Object.keys(node.input).length > 0
+        ? resolveSerializedInput(node.input, triggerNodeResults)
+        : triggerInput
+    return [{ instanceKey: nodeId, input }]
+  }
+
+  const items = resolveForEachItems(graphName, nodeId, node, triggerNodeResults)
+  const width = node.mode === 'sequential' ? Math.min(items.length, 1) : items.length
+  const firings: Array<{ instanceKey: string; input: any }> = []
+  for (let index = 0; index < width; index++) {
+    firings.push({
+      instanceKey: fanoutInstanceKey(nodeId, index),
+      input: resolveSerializedInput(node.input, {
+        ...triggerNodeResults,
+        $item: items[index],
+      }),
+    })
+  }
+  return firings
 }
 
 export async function runWorkflowGraph(
@@ -977,20 +1291,27 @@ export async function runWorkflowGraph(
             const node = nodes[nodeId]
             if (!node?.rpcName) return
 
-            const resolvedInput =
-              node.input && Object.keys(node.input).length > 0
-                ? resolveSerializedInput(node.input, triggerNodeResults)
-                : triggerInput
-
-            await executeGraphNodeInline(
-              workflowService,
-              rpcService,
-              runId,
+            const firings = planEntryFirings(
               graphName,
               nodeId,
-              nodeId,
-              resolvedInput,
-              nodes
+              node,
+              triggerNodeResults,
+              triggerInput
+            )
+
+            await Promise.all(
+              firings.map((firing) =>
+                executeGraphNodeInline(
+                  workflowService,
+                  rpcService,
+                  runId,
+                  graphName,
+                  nodeId,
+                  firing.instanceKey,
+                  firing.input,
+                  nodes
+                )
+              )
             )
           })
         )
@@ -1026,20 +1347,25 @@ export async function runWorkflowGraph(
       const node = nodes[nodeId]
       if (!node?.rpcName) continue
 
-      const resolvedInput =
-        node.input && Object.keys(node.input).length > 0
-          ? resolveSerializedInput(node.input, triggerNodeResults)
-          : triggerInput
-
-      await queueGraphNode(
-        workflowService,
-        runId,
+      const firings = planEntryFirings(
         graphName,
         nodeId,
-        node.rpcName,
-        resolvedInput,
-        node
+        node,
+        triggerNodeResults,
+        triggerInput
       )
+
+      for (const firing of firings) {
+        await queueGraphNode(
+          workflowService,
+          runId,
+          graphName,
+          firing.instanceKey,
+          node.rpcName,
+          firing.input,
+          node
+        )
+      }
     }
     if (inline) {
       workflowService.unregisterInlineRun(runId)
