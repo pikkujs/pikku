@@ -35,8 +35,12 @@ describe('serializeScenarioTypes', () => {
       // browser binding sees `wire.browser` and a cli binding does not.
       assert.match(
         result,
-        /Surface extends 'default' \? 'scenarioStep' : 'scenarioStep' \| Surface/
+        /\| \(Surface extends 'default' \? never : Surface\)/
       )
+      // And a step that runs as somebody gets the actor as a required wire
+      // member — which is the whole reason it is a member and not a property of
+      // `scenarioStep`, where it could only ever be optional for everyone.
+      assert.match(result, /\| \(HasActor extends true \? 'actor' : never\)/)
       for (const surface of ['browser', 'cli', 'default']) {
         assert.match(
           result,
@@ -62,13 +66,15 @@ describe('serializeScenarioTypes', () => {
     // arrives" — so the config has exactly one witness by construction.
     test('neither takes surface bindings — one `func`, no witnesses to disagree', () => {
       const result = emit()
+      // `actor` goes with them: nobody is behind "the platform expired the
+      // trial", so there is no persona to declare.
       assert.match(
         result,
-        /PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>,\n  'browser' \| 'cli' \| 'default'\n> & \{\n  func:/
+        /PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>,\n  'browser' \| 'cli' \| 'default' \| 'actor'\n> & \{\n  func:/
       )
       assert.match(
         result,
-        /Omit<PikkuScenarioStepConfig<In, Out>, 'browser' \| 'cli' \| 'default'> & \{\n    func:/
+        /Omit<PikkuScenarioStepConfig<In, Out>, 'browser' \| 'cli' \| 'default' \| 'actor'> & \{\n    func:/
       )
     })
 

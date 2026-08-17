@@ -6,7 +6,7 @@
  * judging the task against the standard it was given. The steps here are thin
  * because the interesting machinery lives on the actor, not in the test.
  */
-import { pikkuScenarioStep, requireActor } from '#pikku/scenario'
+import { pikkuScenarioStep } from '#pikku/scenario'
 
 /**
  * The part of an actor's verdict that survives being a step result.
@@ -26,10 +26,10 @@ export const conversesWithAgent = pikkuScenarioStep<
   ActorVerdict
 >({
   name: 'conversesWithAgent',
+  actor: true,
   description: 'converses with an agent in persona and returns a verdict',
   template: 'converses with {agent}',
-  default: async (_services, { agent, task, evaluate }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { agent, task, evaluate }, { actor }) => {
     // `always` because the agent's tools are approval-gated and there is nobody
     // at a keyboard: the persona is standing in for the user who would say yes.
     const verdict = await actor.converse({
@@ -82,10 +82,10 @@ export const expectsTodoTitled = pikkuScenarioStep<
   { titles: string[] }
 >({
   name: 'expectsTodoTitled',
+  actor: true,
   description: 'expects the todo store to hold a todo with a given title',
   template: 'expects the store to hold a todo titled {title}',
-  default: async (_services, { title }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { title }, { actor }) => {
     const { todos } = (await actor.invoke(
       'todos:listTodos' as never,
       {} as never
@@ -119,10 +119,10 @@ export const expectsTodoCompleted = pikkuScenarioStep<
   { completed: boolean }
 >({
   name: 'expectsTodoCompleted',
+  actor: true,
   description: 'expects the todo store to hold a completed todo with a title',
   template: 'expects the store to hold a completed todo titled {title}',
-  default: async (_services, { title }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { title }, { actor }) => {
     const { todos } = (await actor.invoke(
       'todos:listTodos' as never,
       {} as never

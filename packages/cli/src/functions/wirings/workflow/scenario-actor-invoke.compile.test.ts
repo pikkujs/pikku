@@ -172,7 +172,7 @@ export type Wire = PikkuWire<
   any,
   TypedPersonas
 >
-export const stepActor = (wire: Wire) => wire.scenarioStep?.actor
+export const stepActor = (wire: Wire) => wire.actor
 `)
     assert.deepEqual(errors, [])
   })

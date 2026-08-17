@@ -593,6 +593,7 @@ export const addFunctions: AddWiring = (
   let workflowRetries: number | undefined
   let workflowTimeout: string | undefined
   let scenarioStepSurfaces: ScenarioSurface[] | undefined
+  let scenarioStepRequiresActor: boolean | undefined
   let scenarioStepAddon: string | undefined
   let scenarioStepTemplate: string | undefined
   let scopes: string[] | undefined
@@ -772,6 +773,13 @@ export const addFunctions: AddWiring = (
       scenarioStepSurfaces = declaredSurfaces.length
         ? declaredSurfaces
         : undefined
+      // A browser binding cannot be provisioned without a window to open, so it
+      // requires an actor whether or not the step said so.
+      scenarioStepRequiresActor =
+        getPropertyValue(firstArg, 'actor') === true ||
+        declaredSurfaces.includes('browser')
+          ? true
+          : undefined
     }
     scenarioStepTemplate = getPropertyValue(firstArg, 'template') as
       string | undefined
@@ -1365,6 +1373,7 @@ export const addFunctions: AddWiring = (
     workflowRetries: workflowRetries ?? undefined,
     workflowTimeout: workflowTimeout ?? undefined,
     scenarioStepSurfaces,
+    scenarioStepRequiresActor,
     // `persona` is the default reading of an unmarked step, so it is left off
     // rather than written into every step meta a project already has.
     scenarioStepKind:

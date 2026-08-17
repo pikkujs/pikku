@@ -46,7 +46,7 @@ Scenarios live in `srcDirectories` like any other function — by convention `*.
 `pikkuScenario` comes from the **generated** workflow types, not `@pikku/core`:
 
 ```typescript
-import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenario } from '#pikku/scenario'
 
 export const orderSupportScenario = pikkuScenario<
   { value?: number },
@@ -175,7 +175,7 @@ Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs 
 `pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip:
 
 ```typescript
-import { pikkuFeature } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuFeature } from '#pikku/scenario'
 import {
   credentialLazyLoadScenario,
   credentialRoundTripScenario,
@@ -240,7 +240,7 @@ Utilities are **not steps**. They are plain exported functions, they take the br
 
 ```typescript
 // shop.browser.ts — shared actions. Not steps: nothing here is an intent.
-import type { PikkuBrowserWire } from '@pikku/core/workflow'
+import type { PikkuBrowserWire } from '#pikku/scenario'
 import type {} from '@pikku/playwright'
 
 /** Arrive on the shop, from wherever the browser happens to be. */
@@ -377,6 +377,9 @@ export const seesTheOrderConfirmed = pikkuScenarioStep<
   { status: string }
 >({
   name: 'seesTheOrderConfirmed',
+  // Both bindings run as the persona, so the step declares one and the runner
+  // injects `wire.actor` — non-optional in every binding.
+  actor: true,
   template: 'sees order {orderId} confirmed',
   // Both run on `--run browser`. Each returns what it observed, and the runner
   // compares them — so this fails when the page disagrees with the database.
@@ -385,8 +388,9 @@ export const seesTheOrderConfirmed = pikkuScenarioStep<
       .locate({ testId: 'order-status', where: { 'data-order': orderId } })
       .getAttribute('data-status'),
   }),
-  default: async ({ rpc }, { orderId }) => ({
-    status: (await rpc.invoke('getOrder', { orderId })).status,
+  // Through the actor, not through a `rpc` service — see "What a step is given".
+  default: async (_services, { orderId }, { actor }) => ({
+    status: (await actor.invoke('getOrder', { orderId })).status,
   }),
 })
 ```
@@ -408,8 +412,7 @@ Assertions with no possible browser witness are a different thing and should not
 `scenario.do` can only name an RPC. A **step** is a named, typed unit of scenario behaviour whose body is an ordinary pikku function — so it can call several RPCs as its actor, assert, or drive a browser.
 
 ```typescript
-import { pikkuScenarioStep } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { requireActor } from '@pikku/core/workflow'
+import { pikkuScenarioStep } from '#pikku/scenario'
 
 export const buysAnApple = pikkuScenarioStep<
   { qty: number },
@@ -418,8 +421,9 @@ export const buysAnApple = pikkuScenarioStep<
   name: 'buysAnApple',
   description: 'buys an apple',
   template: 'buys {qty} apples',
-  default: async (_services, { qty }, { scenarioStep }) => {
-    return await requireActor(scenarioStep).invoke('placeOrder', { qty })
+  actor: true,
+  default: async (_services, { qty }, { actor }) => {
+    return await actor.invoke('placeOrder', { qty })
   },
 })
 ```
@@ -443,11 +447,62 @@ Rules that bite:
 - **The step is referenced by its typed string name, not by importing the const** — exactly like `workflow.do`. The name is the step's `pikkuFuncId` and is checked against the generated step map. A non-literal target is a critical error (`PKU678`).
 - **Steps are not RPCs.** They are deliberately never network-callable — a browser-driving step must not be.
 - **`actor.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `actor.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal _is_ the assertion.
-- **`actor` and `env` are optional on the wire**, because a pure assertion step needs neither. Narrow them with `requireActor(scenarioStep)` and `requireScenarioEnv(scenarioStep)` from `@pikku/core/workflow` rather than a local guard — both name the step and say what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
+- **A step that runs as somebody declares `actor: true`**, and the runner injects `wire.actor` — non-optional inside every binding, with no guard to write and nothing to unwrap. A `browser` binding implies it, because a window is opened as somebody. Leave it off for a step with no persona to be: an assertion over what an earlier step returned, or one that posts credentials precisely because it must not reuse an actor's session. Dispatching a step that declared it without `{ actor: actors.x }` fails before the body runs (`ScenarioActorRequired`); a step that did not declare it has no `actor` on its wire at all.
+- **`env` is optional on the wire**, because most steps need nothing from it. Narrow it with `requireScenarioEnv(scenarioStep)` from `#pikku/scenario` rather than a local guard — it names the step and says what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
 - **Steps default to `retries: 0`**, unlike ordinary workflow steps. Retrying a failed assertion is wrong; pass `retries` explicitly if a step is genuinely flaky-by-nature.
 - **Step results are persisted**, so return JSON-serialisable data — never a `Locator` or a client object.
 - **`description` documents the step; `template` is what the report renders.** `template`'s `{placeholders}` are filled from the input the step was called with, so one step reads differently for each call — `sees {state} addon {packageName}` reports as "sees available addon @pikku/addon-stripe". Reflect every input field in the template, and type the values so they read as words (`state?: 'installed' | 'available'`, not `installed?: boolean`). A placeholder with no value renders as nothing and the whitespace collapses.
 - Prose precedence is `options.description` → the step's `template` → the step's own `description` → the positional step name. Repeated names get `#1`, `#2` ordinals, so a `for` loop over a data set is how you write a Scenario Outline. A loop-generated step name is not statically known, so it is matched back to its declaration by step function instead — which works as long as that function's call sites agree on their phase, actor and prose. Two call sites that disagree make the loop step report under its bare runtime name.
+
+#### What a step is given
+
+A step has the signature of an ordinary pikku function, which makes it look as
+though it runs where the application runs. It does not — **it runs in the CLI
+process**, and the services object is built there, by hand:
+
+```typescript
+{ logger, workflowService, workflowRunService, agentRunner? }
+```
+
+That is the whole list. There is no `kysely`, no `variables`, no `secrets`, and
+none of the project's own singleton or wire services. A step that destructures
+one gets `undefined` and fails on first use — `Cannot read properties of
+undefined (reading 'selectFrom')` — which reads like a broken container and is
+not.
+
+`rpc` is the trap worth naming, because it is present and it throws. It is a
+`guardRpc` whose every member refuses:
+
+> Scenario tried to run 'getOrder' as an internal step. Every workflow.do in a
+> scenario must carry { actor: actors.x } so it executes against 'local'.
+
+The same guard covers `rpc.agent.run/stream/resume/approve/interrupt` and
+`startWorkflow`.
+
+This is the design, not a gap: **everything a step touches of the application
+goes over the wire as somebody.** A test that could reach into the database
+would be testing a different program from the one a person uses. So there are
+exactly three ways in, and they are all through the actor:
+
+- `actor.invoke(name, data)` — typed over the exposed RPC map, carrying the
+  actor's session. Declare `actor: true` and destructure it off the wire.
+- `.invokeRaw(name, data, { headers })` — same call, reporting
+  `{ status, ok, body }`, for when the refusal is the assertion.
+- a plain `fetch` against `requireScenarioEnv(scenarioStep).apiUrl`, for
+  anything not an RPC — a websocket, a file upload, a webhook.
+
+Two consequences follow, and both shape how steps get written:
+
+- **A step cannot observe anything the app does not publish.** If a test needs a
+  fact the client never sees, the fix is to emit it on the stream or expose it
+  as an RPC — which usually improves the product, since a client debugging the
+  same problem needed it too.
+- **`agentRunner` is conditional.** It is built only when the project declares
+  agents, and `createDevAgentRunner` needs a base URL *and* a key together
+  (`OPENAI_BASE_URL` + `OPENAI_API_KEY`, or the LiteLLM pair). With a key alone
+  it returns nothing and `agentRunner` is `undefined`, so `actor.converse`
+  fails before the persona says anything. A suite that would rather own its own
+  model can pass an `llm` to `runConversation` instead of relying on this one.
 
 ### Browser steps
 
@@ -468,7 +523,9 @@ export const opensTheCart = pikkuScenarioStep<
     await browser.goto(path)
     return { url: browser.page.url() }
   },
-  default: async ({ rpc }) => ({ url: (await rpc.invoke('getCart', {})).url }),
+  default: async (_services, _data, { actor }) => ({
+    url: (await actor.invoke('getCart', {})).url,
+  }),
 })
 ```
 
@@ -524,6 +581,44 @@ A **persona** is a kind of person; an **actor** is one body that signs in as one
 A persona holds only what is true of that kind of person for the app's whole lifetime — `description`, `primary` (whose experience the product is), `kind`, `proficiency`. What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
 
 `kind: "system"` is the app acting on its own — a schedule, a cleanup, a send. It gets **no actor**: there is nobody to sign in. Give it one by hand only if it genuinely has a service account.
+
+#### Declaring personas in TypeScript
+
+`definePersonas({ … })` is the code form of the block above, and there may be
+**one call in the whole codebase** — one place to read the set from, one place
+to add to it. A second anywhere, including in the same file, is a critical.
+Generated files are exempt and never claim the slot.
+
+> [!WARNING]
+> The declaration is **read from source, never evaluated** — the CLI writes it
+> to JSON that a deployed stage carries without the app. So every value has to
+> be statically knowable, and a value that is not comes out as `undefined`
+> rather than as an error. Only `name` is checked, so a computed `personality`,
+> `jobTitle` or `description` is dropped in silence and the persona runs with a
+> blank temperament.
+
+What that admits and what it does not:
+
+```typescript
+personality: 'Wound up and short with it.'      // read
+personality: `Wound up and short with it.
+  Says what she wants in a few blunt words.`    // read — no ${} in it
+personality: 'Wound up. ' + 'Short with it.'    // dropped, silently
+personality: TEMPERAMENTS.impatient             // dropped, silently
+```
+
+A no-substitution template literal is a string literal as far as the reader is
+concerned, so it is the way to write a long personality across several lines —
+not a concatenation, and not a `prettier-ignore`d single line. Its newlines and
+leading indentation are kept verbatim and reach the model that way, which is
+harmless but worth knowing before you align it to the surrounding code.
+
+One more thing worth knowing before writing a rich persona: **`actor.converse`
+builds its prompt from `name`, `jobTitle`, `personality` and the scenario's
+`task` only.** Fields like `disposition`, `goals` and `roles` are read and
+stored, and the console shows them, but they do not reach the conversing
+persona's instructions. Anything that must shape how someone talks belongs in
+`personality` or in the task.
 
 An actor with no `persona` is its own persona, so a project that never declares any keeps working unchanged.
 

@@ -48,17 +48,19 @@ const fakeActor = (
   const calls: Array<{ rpcName: string; data: any }> = []
   const invokeRaw = async (rpcName: string, data: any) => {
     calls.push({ rpcName, data })
+    const body = {
+      id: data.orderId,
+      customerId: 'customer-1',
+      items: [],
+      total: 0,
+      status: 'processing',
+      createdAt: 'now',
+    }
     return {
       status: 200,
       ok: true,
-      body: {
-        id: data.orderId,
-        customerId: 'customer-1',
-        items: [],
-        total: 0,
-        status: 'processing',
-        createdAt: 'now',
-      },
+      body,
+      serialized: JSON.stringify(body),
     }
   }
   return {
@@ -73,6 +75,7 @@ const fakeActor = (
         `[verifier] actor '${name}' has no agent — this verifier only exercises actor RPC steps`
       )
     },
+    sessionRoles: async () => null,
   }
 }
 
@@ -192,7 +195,8 @@ describe('pikkuScenario verification', () => {
 const runScenario = async (
   workflowName: string,
   input: unknown,
-  surface: ScenarioSurface
+  surface: ScenarioSurface,
+  actors?: Record<string, ScenarioPersona>
 ) => {
   resetSurfaceLog()
   const { workflowService, scenarioService } = createScenarioRunner()
@@ -219,7 +223,8 @@ const runScenario = async (
       workflowName,
       input,
       { type: 'test' },
-      rpc
+      rpc,
+      actors ? { actors } : undefined
     ))
   } catch (err) {
     thrown = err
@@ -339,6 +344,22 @@ describe('pikkuScenarioStep surface bindings', () => {
       surface: 'default',
       observed: { status: 'pending' },
     })
+  })
+
+  test('a step that declares an actor is given it on the wire', async () => {
+    const customer = fakeActor('customer')
+    const { run } = await runScenario(
+      'actorGreetingScenario',
+      undefined,
+      'default',
+      { customer }
+    )
+    assert.equal(run?.status, 'completed', `run failed: ${run?.error}`)
+    assert.deepEqual(run?.output, { actor: 'customer' })
+    assert.ok(
+      surfaceLog.includes('greetsAsItsActor:customer'),
+      `the body ran as the persona it was passed, got: ${surfaceLog.join(', ')}`
+    )
   })
 
   test('an action with no binding for the run and no default fails loudly', async () => {

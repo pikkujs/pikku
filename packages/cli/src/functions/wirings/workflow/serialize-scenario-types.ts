@@ -59,7 +59,6 @@ export {
   createCookieJar,
   createScenarioRunner,
   pollUntil,
-  requireActor,
   requireScenarioEnv,
 } from '@pikku/core/scenario'
 export type {
@@ -276,19 +275,35 @@ export function pikkuFeature<const Scenarios extends readonly unknown[]>(
 export type PikkuFunctionScenarioStep<
   In = unknown,
   Out = never,
-  Surface extends 'browser' | 'cli' | 'default' = 'default'
+  Surface extends 'browser' | 'cli' | 'default' = 'default',
+  HasActor extends boolean = false
 > = PikkuFunctionSessionless<
   In,
   Out,
-  Surface extends 'default' ? 'scenarioStep' : 'scenarioStep' | Surface
+  | 'scenarioStep'
+  | (Surface extends 'default' ? never : Surface)
+  | (HasActor extends true ? 'actor' : never)
 >
 
 type PikkuScenarioStepConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
-  OutputSchema extends StandardSchemaV1 | undefined = undefined
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  HasActor extends boolean = false
 > = {
   /** Registered name — this is the string \`scenario.given()\` references. */
   name: string
+  /**
+   * This step is driven by a persona, so \`wire.actor\` is injected and
+   * non-optional inside every binding, and the runner refuses to dispatch it
+   * without one.
+   *
+   * A \`browser\` binding implies it — a window is opened as somebody. Declare it
+   * for a server-side step that calls RPCs as its actor. Leave it off for a step
+   * that has no persona to be: an assertion over a value an earlier step
+   * returned, or one that posts credentials precisely because it must not reuse
+   * an actor's session.
+   */
+  actor?: HasActor
   /**
    * What this step does, for the console and for whoever reads the source. It
    * is also the fallback prose when no \`template\` is declared, in which case a
@@ -320,13 +335,17 @@ type PikkuScenarioStepConfigWithSchema<
   browser?: PikkuFunctionScenarioStep<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
-    'browser'
+    'browser',
+    // A window is opened as somebody, so a browser binding has an actor whether
+    // or not the step declared one.
+    true
   >
   /** Drive this step remotely, over the websocket. */
   cli?: PikkuFunctionScenarioStep<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
-    'cli'
+    'cli',
+    HasActor
   >
   /**
    * The server-side path — the fast suite, and the floor every other surface
@@ -340,15 +359,16 @@ type PikkuScenarioStepConfigWithSchema<
   default?: PikkuFunctionScenarioStep<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
-    'default'
+    'default',
+    HasActor
   >
 }
 
-type PikkuScenarioStepConfig<In, Out> =
-  Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined>, 'browser' | 'cli' | 'default' | 'input' | 'output'> & {
-    browser?: PikkuFunctionScenarioStep<In, Out, 'browser'>
-    cli?: PikkuFunctionScenarioStep<In, Out, 'cli'>
-    default?: PikkuFunctionScenarioStep<In, Out, 'default'>
+type PikkuScenarioStepConfig<In, Out, HasActor extends boolean = false> =
+  Omit<PikkuScenarioStepConfigWithSchema<undefined, undefined, HasActor>, 'browser' | 'cli' | 'default' | 'input' | 'output'> & {
+    browser?: PikkuFunctionScenarioStep<In, Out, 'browser', true>
+    cli?: PikkuFunctionScenarioStep<In, Out, 'cli', HasActor>
+    default?: PikkuFunctionScenarioStep<In, Out, 'default', HasActor>
   }
 
 /**
@@ -363,6 +383,24 @@ type PikkuScenarioStepConfig<In, Out> =
  * Steps are deliberately NOT registered as RPCs: a browser-driving step must
  * never be network-callable.
  */
+export function pikkuScenarioStep<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema, true> & { actor: true }
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenarioStep' | 'browser' | 'cli', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'browser' | 'cli' | 'default'>, InputSchema, OutputSchema>
+export function pikkuScenarioStep<In, Out = unknown>(
+  config: PikkuScenarioStepConfig<In, Out, true> & { actor: true }
+): PikkuFunctionConfig<In, Out, 'scenarioStep' | 'browser' | 'cli'>
+export function pikkuScenarioStep<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema, true> & { browser: {} }
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenarioStep' | 'browser' | 'cli', PikkuFunctionScenarioStep<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'browser' | 'cli' | 'default'>, InputSchema, OutputSchema>
+export function pikkuScenarioStep<In, Out = unknown>(
+  config: PikkuScenarioStepConfig<In, Out, true> & { browser: {} }
+): PikkuFunctionConfig<In, Out, 'scenarioStep' | 'browser' | 'cli'>
 export function pikkuScenarioStep<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
@@ -384,6 +422,7 @@ export function pikkuScenarioStep(config: any) {
   return {
     ...config,
     surfaces,
+    requiresActor: config.actor === true || surfaces.includes('browser'),
     // The runner sets the surface on the wire and calls this once per binding it
     // resolved — every witness of a \`then\`, exactly one for an action step.
     func: (services: any, data: any, wire: any) => {
@@ -409,7 +448,7 @@ type PikkuSubjectScenarioStepConfigWithSchema<
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = Omit<
   PikkuScenarioStepConfigWithSchema<InputSchema, OutputSchema>,
-  'browser' | 'cli' | 'default'
+  'browser' | 'cli' | 'default' | 'actor'
 > & {
   func: PikkuFunctionScenarioStep<
     InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
@@ -419,7 +458,7 @@ type PikkuSubjectScenarioStepConfigWithSchema<
 }
 
 type PikkuSubjectScenarioStepConfig<In, Out> =
-  Omit<PikkuScenarioStepConfig<In, Out>, 'browser' | 'cli' | 'default'> & {
+  Omit<PikkuScenarioStepConfig<In, Out>, 'browser' | 'cli' | 'default' | 'actor'> & {
     func: PikkuFunctionScenarioStep<In, Out, 'default'>
   }
 
