@@ -9,7 +9,11 @@ import type {
 } from '../../deploy/provider-adapter.js'
 import type { InspectorState } from '@pikku/inspector'
 import type { Logger } from '@pikku/core/services'
-import { runBuildPipeline } from '../../deploy/build-pipeline.js'
+import {
+  runBuildPipeline,
+  describeBuildFailure,
+  PikkuDeployBuildFailedError,
+} from '../../deploy/build-pipeline.js'
 
 function toRelativeImport(fromDir: string, toFile: string): string {
   let rel = relative(fromDir, toFile).replace(/\\/g, '/')
@@ -328,6 +332,19 @@ export const deployApply = pikkuSessionlessFunc<
         errors: [],
       })
       return
+    }
+
+    const buildFailure = describeBuildFailure(buildResult)
+    if (buildFailure) {
+      await writeResultFile(resultFile, {
+        success: false,
+        errors: buildResult.bundleErrors.map((e) => ({
+          step: 'bundle',
+          error: `${e.unitName}: ${e.error}`,
+        })),
+        codegenErrors: buildResult.codegenErrors,
+      })
+      throw new PikkuDeployBuildFailedError(buildFailure)
     }
 
     const { providerDir, bundled } = buildResult

@@ -9,6 +9,7 @@ import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
+import { PikkuError } from '@pikku/core/errors'
 
 import { analyzeDeployment } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
@@ -38,6 +39,30 @@ export interface BuildPipelineResult {
   bundled: BundleResult[]
   bundleErrors: Array<{ unitName: string; error: string }>
   codegenErrors: Array<{ unitName: string; error: string }>
+}
+
+/**
+ * A unit that failed codegen or bundling is an expected build outcome (the
+ * gate did its job) — a PikkuError makes the runner log the message alone,
+ * without a stack trace.
+ */
+export class PikkuDeployBuildFailedError extends PikkuError {}
+
+/**
+ * The message for a build that produced an incomplete artifact, or `null`
+ * when every unit was generated and bundled.
+ */
+export function describeBuildFailure(
+  result: Pick<BuildPipelineResult, 'bundleErrors' | 'codegenErrors'>
+): string | null {
+  const failures = [
+    ...result.codegenErrors.map((e) => `codegen ${e.unitName}: ${e.error}`),
+    ...result.bundleErrors.map((e) => `bundle ${e.unitName}: ${e.error}`),
+  ]
+  if (failures.length === 0) {
+    return null
+  }
+  return `Deploy build failed — ${failures.length} unit(s) did not build:\n  ${failures.join('\n  ')}`
 }
 
 const MERGED_SERVER_UNIT_NAME = 'pikku-server-container'

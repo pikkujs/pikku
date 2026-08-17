@@ -4,7 +4,11 @@ import { readFile } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { generatePlan } from '../../deploy/plan/index.js'
 import { formatPlan } from '../../deploy/plan/formatter.js'
-import { runBuildPipeline } from '../../deploy/build-pipeline.js'
+import {
+  runBuildPipeline,
+  describeBuildFailure,
+  PikkuDeployBuildFailedError,
+} from '../../deploy/build-pipeline.js'
 import type { DeployProvider } from '../../deploy/plan/provider.js'
 import { resolveProvider, getEntryContext } from './deploy-apply.js'
 
@@ -143,6 +147,11 @@ export const deployPlan = pikkuSessionlessFunc<
         ),
         'utf-8'
       )
+    }
+
+    const buildFailure = describeBuildFailure(result)
+    if (buildFailure) {
+      throw new PikkuDeployBuildFailedError(buildFailure)
     }
   },
 })
