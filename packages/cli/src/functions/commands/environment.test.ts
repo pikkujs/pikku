@@ -131,4 +131,49 @@ describe('resolveEnvironment', () => {
 
     assert.equal(env.appUrl, 'https://preview-a1b2.example.com')
   })
+
+  test('--app-url takes a url per app, so each actor browses their own', () => {
+    const env = resolveEnvironment({
+      environment: 'local',
+      environments,
+      appUrl:
+        'workshop=https://host.test/,storefront=https://host.test/_frontend/storefront/',
+    })
+
+    assert.deepEqual(env.appUrls, {
+      workshop: 'https://host.test/',
+      storefront: 'https://host.test/_frontend/storefront/',
+    })
+    assert.equal(
+      env.appUrl,
+      'http://localhost:5001',
+      'the configured fallback stands for a persona naming no app'
+    )
+  })
+
+  test('a bare url among the pairs is the fallback, not an app called nothing', () => {
+    const env = resolveEnvironment({
+      environment: 'local',
+      environments,
+      appUrl:
+        'https://host.test/,storefront=https://host.test/_frontend/storefront/',
+    })
+
+    assert.equal(env.appUrl, 'https://host.test/')
+    assert.deepEqual(env.appUrls, {
+      storefront: 'https://host.test/_frontend/storefront/',
+    })
+  })
+
+  test("an app's url is checked like any other, and names the app when it is wrong", () => {
+    assert.throws(
+      () =>
+        resolveEnvironment({
+          environment: 'local',
+          environments,
+          appUrl: 'storefront=/_frontend/storefront/',
+        }),
+      /--app-url storefront '\/_frontend\/storefront\/' is not a valid absolute URL/
+    )
+  })
 })

@@ -107,6 +107,18 @@ export type CorePersona = {
    * into a flaky suite.
    */
   runnable?: boolean
+  /**
+   * The app this person signs into, when the product is more than one frontend.
+   *
+   * A person uses one of them — staff their app, customers theirs — and that is
+   * what decides where a browser step navigates: `/dashboard` is a different
+   * page in each, so the actor settles which one without the scenario saying.
+   * The runner takes the base url per app (`--app-url <app>=<url>`, or
+   * `appUrls` on the environment) and each actor browses against its own.
+   *
+   * Omitted is the normal case: one app, one url, nothing to say.
+   */
+  app?: string
 }
 
 /** Personas to declare, keyed by id. */
@@ -135,6 +147,8 @@ export type PersonaMeta = {
   /** Absent means "everywhere but production", which is resolved, not stored. */
   environments?: string[]
   runnable: boolean
+  /** The app this person signs into; picks their base url on a browser run. */
+  app?: string
   sourceFile?: string
 }
 

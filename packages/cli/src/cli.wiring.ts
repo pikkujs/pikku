@@ -662,7 +662,7 @@ wireCLI({
             },
             appUrl: {
               description:
-                "Override the environment's appUrl for this run (the frontend browser steps navigate against)",
+                "Override the environment's appUrl for this run (the frontend browser steps navigate against). One url for everybody, or `<app>=<url>` pairs for a product whose personas sign into different apps — comma-separated, and a bare url is the fallback",
             },
           },
         }),

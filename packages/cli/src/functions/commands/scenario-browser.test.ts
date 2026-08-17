@@ -178,6 +178,56 @@ describe('resolveScenarioBrowserProvider', () => {
     assert.equal(seen.config.appUrl, 'https://sandbox-a1b2.example.com')
   })
 
+  test('the app urls reach the driver, so each actor browses their own', async () => {
+    const d = driver()
+    await resolveScenarioBrowserProvider({
+      ...options({
+        appUrls: {
+          workshop: 'http://localhost:4077/',
+          storefront: 'http://localhost:4077/_frontend/storefront/',
+        },
+        actors: {
+          mechanic: { email: 'mechanic@test', app: 'workshop' },
+          customer: { email: 'customer@test', app: 'storefront' },
+        },
+      }),
+      importDriver: d.importDriver,
+    } as any)
+
+    assert.deepEqual(d.built[0].config.appUrls, {
+      workshop: 'http://localhost:4077/',
+      storefront: 'http://localhost:4077/_frontend/storefront/',
+    })
+  })
+
+  test('an app nobody gave a url for is refused, not quietly browsed as another app', async () => {
+    await assert.rejects(
+      resolveScenarioBrowserProvider({
+        ...options({
+          appUrls: { workshop: 'http://localhost:4077/' },
+          actors: {
+            mechanic: { email: 'mechanic@test', app: 'workshop' },
+            customer: { email: 'customer@test', app: 'storefront' },
+          },
+        }),
+        importDriver: driver().importDriver,
+      } as any),
+      /No app url for 'storefront'[\s\S]*--app-url storefront=<url>/
+    )
+  })
+
+  test('with no app urls at all, one appUrl covers everybody as it always did', async () => {
+    const d = driver()
+    await resolveScenarioBrowserProvider({
+      ...options({
+        actors: { mechanic: { email: 'mechanic@test', app: 'workshop' } },
+      }),
+      importDriver: d.importDriver,
+    } as any)
+
+    assert.equal(d.built[0].config.appUrl, 'http://localhost:4077/console')
+  })
+
   test('a driver falling back to its own placeholder is reported as a missing appUrl', async () => {
     await assert.rejects(
       resolveScenarioBrowserProvider({

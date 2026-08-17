@@ -441,6 +441,7 @@ export const scenarioRun = pikkuSessionlessFunc<
               environment,
               apiUrl: env.apiUrl,
               appUrl: env.appUrl,
+              appUrls: env.appUrls,
               secret,
               actors: scenarioActors,
               signInPath: env.signInPath,

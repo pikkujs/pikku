@@ -108,6 +108,30 @@ describe('addPersonas inspector', () => {
     assert.equal(susan.runnable, true)
   })
 
+  test('the app a person signs into survives into the meta', async () => {
+    const { state, criticals } = await inspectSource(
+      withRoles(
+        'definePersonas({',
+        '  susan: {',
+        "    name: 'Susan',",
+        "    app: 'storefront',",
+        '  },',
+        '})'
+      )
+    )
+
+    assert.deepEqual(criticals, [])
+    assert.equal(state.personas.definitions[0]!.app, 'storefront')
+  })
+
+  test('a person who names no app has none, rather than a guessed one', async () => {
+    const { state } = await inspectSource(
+      withRoles('definePersonas({', "  susan: { name: 'Susan' },", '})')
+    )
+
+    assert.equal(state.personas.definitions[0]!.app, undefined)
+  })
+
   test('extracts a declared avatar', async () => {
     const { state } = await inspectSource(
       withRoles(

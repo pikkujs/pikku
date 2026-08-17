@@ -156,6 +156,52 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     assert.equal(contexts.length, 1)
   })
 
+  test('an actor browses the app their persona signs into', async () => {
+    const { browser } = fakeBrowser()
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config({
+        appUrls: {
+          workshop: 'https://app.test',
+          storefront: 'https://app.test/_frontend/storefront',
+        },
+      }),
+      secret: 's',
+      actors: {
+        mechanic: { email: 'mechanic@test', app: 'workshop' },
+        customer: { email: 'customer@test', app: 'storefront' },
+      },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+    } as any)
+
+    const mechanic = await provider.sessionFor('mechanic')
+    const customer = await provider.sessionFor('customer')
+
+    assert.equal(mechanic.url('/jobs'), 'https://app.test/jobs')
+    assert.equal(
+      customer.url('/jobs'),
+      'https://app.test/_frontend/storefront/jobs',
+      'the same path is a different page in each app'
+    )
+  })
+
+  test('a persona naming no app browses the single appUrl', async () => {
+    const { browser } = fakeBrowser()
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config({
+        appUrls: { storefront: 'https://app.test/_frontend/storefront' },
+      }),
+      secret: 's',
+      actors: { shopper: { email: 'shopper@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+    } as any)
+
+    const shopper = await provider.sessionFor('shopper')
+
+    assert.equal(shopper.url('/jobs'), 'https://app.test/jobs')
+  })
+
   test('an unregistered actor is a clear error, not a silent anonymous window', async () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({

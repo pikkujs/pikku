@@ -21,6 +21,12 @@ export interface BrowserConfig {
    * misconfiguration rather than silently testing localhost.
    */
   appUrlSource?: 'override' | 'env' | 'default'
+  /**
+   * Where each app is served, keyed by the `app` its personas declare. A
+   * session navigates against its own actor's app; `appUrl` covers a persona
+   * that names none.
+   */
+  appUrls?: Record<string, string>
   /** Base URL of the API (default: same origin under /api). */
   apiUrl: string
   /** Per-action Playwright timeout (ms). */
@@ -63,6 +69,7 @@ export function browserConfigFromEnv(
   return {
     appUrl,
     appUrlSource: overrides.appUrl ? 'override' : envAppUrl ? 'env' : 'default',
+    ...(overrides.appUrls ? { appUrls: overrides.appUrls } : {}),
     apiUrl:
       overrides.apiUrl ?? env.E2E_API_URL ?? env.API_URL ?? `${appUrl}/api`,
     timeout: overrides.timeout ?? Number(env.E2E_TIMEOUT ?? 30_000),
