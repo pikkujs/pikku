@@ -5,7 +5,7 @@ import { serializeTypedHTTPWiringsMap } from './serialize-typed-http-map.js'
 
 export const pikkuHTTPMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { http, functions, resolvedIOTypes } = await getInspectorState()
+    const { http, functions, resolvedIOTypes, rpc } = await getInspectorState()
     const {
       httpMapDeclarationFile,
       rpcInternalMapDeclarationFile,
@@ -20,7 +20,8 @@ export const pikkuHTTPMap = pikkuSessionlessFunc<void, void>({
       http.meta,
       http.metaInputTypes,
       resolvedIOTypes,
-      rpcInternalMapDeclarationFile
+      rpcInternalMapDeclarationFile,
+      rpc?.wireAddonDeclarations
     )
     await writeFileInDir(logger, httpMapDeclarationFile, content)
   },

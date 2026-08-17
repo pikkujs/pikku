@@ -5,6 +5,8 @@ import type { MetaInputTypes, TypesMap } from '@pikku/inspector'
 import { generateCustomTypes } from '@pikku/inspector'
 import type { Logger } from '@pikku/core/services'
 
+type WireAddonDeclarations = Map<string, { package: string }>
+
 export const serializeTypedHTTPWiringsMap = (
   logger: Logger,
   relativeToPath: string,
@@ -13,7 +15,8 @@ export const serializeTypedHTTPWiringsMap = (
   wiringsMeta: HTTPWiringsMeta,
   metaTypes: MetaInputTypes,
   resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
-  rpcInternalMapDeclarationFile: string
+  rpcInternalMapDeclarationFile: string,
+  wireAddonDeclarations?: WireAddonDeclarations
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -25,7 +28,8 @@ export const serializeTypedHTTPWiringsMap = (
   const serializedHTTPWirings = generateHTTPWirings(
     wiringsMeta,
     resolvedIOTypes,
-    requiredTypes
+    requiredTypes,
+    wireAddonDeclarations
   )
 
   const needsFlattenedRPCMap = Array.from(requiredTypes).some((t) =>
@@ -86,7 +90,8 @@ export type HTTPWiringsWithMethod<Method extends string> = {
 function generateHTTPWirings(
   routesMeta: HTTPWiringsMeta,
   resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
-  requiredTypes: Set<string>
+  requiredTypes: Set<string>,
+  wireAddonDeclarations?: WireAddonDeclarations
 ) {
   const routesObj: Record<
     string,
@@ -103,7 +108,8 @@ function generateHTTPWirings(
 
       const resolved = resolvedIOTypes[pikkuFuncId]
       if (!resolved) {
-        if (meta.packageName) {
+        const namespace = pikkuFuncId.slice(0, pikkuFuncId.indexOf(':'))
+        if (namespace && wireAddonDeclarations?.has(namespace)) {
           // Addon functions aren't in the consumer's local resolvedIOTypes, but
           // their real types are reachable through the generated FlattenedRPCMap
           // (the addon's RPC map is merged in under its namespace). Adding these
