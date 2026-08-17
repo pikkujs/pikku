@@ -96,3 +96,52 @@ describe('serializeSecretsTypes — shipping the declared set', () => {
     assert.match(output, /export class TypedSecretService/)
   })
 })
+
+describe('serializeSecretsTypes — optional secrets', () => {
+  const schemaLookup = new Map([
+    ['SecretSchema_scenarioActor', { variableName: 'ActorSchema', sourceFile: '/project/src/schemas.ts', vendor: 'zod' as const }],
+    ['SecretSchema_stripe', { variableName: 'StripeSchema', sourceFile: '/project/src/schemas.ts', vendor: 'zod' as const }],
+  ])
+
+  const output = serializeSecretsTypes({
+    definitions: [
+      {
+        name: 'scenarioActor',
+        displayName: 'Scenario Actor Secret',
+        secretId: 'SCENARIO_ACTOR_SECRET',
+        schema: 'SecretSchema_scenarioActor',
+        optional: true,
+      },
+      {
+        name: 'stripe',
+        displayName: 'Stripe',
+        secretId: 'STRIPE_KEY',
+        schema: 'SecretSchema_stripe',
+      },
+    ],
+    schemaLookup: schemaLookup as any,
+    secretsFile: '/project/.pikku/secrets/pikku-secrets.gen.ts',
+    packageMappings: {},
+  })
+
+  // The `?` is what puts `undefined` in getSecret's return type — without it the
+  // caller is typed as always having a value the deploy is allowed to omit.
+  test('declares an optional secret as an optional map property', () => {
+    assert.match(output, /'SCENARIO_ACTOR_SECRET'\?: z\.infer<typeof ActorSchema>/)
+  })
+
+  test('leaves a required secret as a required map property', () => {
+    assert.match(output, /'STRIPE_KEY': z\.infer<typeof StripeSchema>/)
+  })
+
+  // TypedSecretService reads this at runtime to decide whether to resolve
+  // undefined or let the underlying throw through.
+  test('marks the entry optional in the runtime credentials meta', () => {
+    assert.match(output, /'SCENARIO_ACTOR_SECRET': \{ name: 'scenarioActor', displayName: "Scenario Actor Secret", optional: true \}/)
+    assert.match(output, /'STRIPE_KEY': \{ name: 'stripe', displayName: "Stripe" \}/)
+  })
+
+  test('the generated file still parses', () => {
+    assert.deepEqual(parseErrors(output), [])
+  })
+})

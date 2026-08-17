@@ -167,3 +167,97 @@ describe('config value metadata (docsUrl)', () => {
     }
   })
 })
+
+/**
+ * `optional` and `required` are the deploy gate's whole input. A flag the
+ * inspector drops leaves the gate seeing a bare declaration, which is how an
+ * optional secret suspends a deploy over a value production is meant NOT to
+ * have.
+ */
+describe('config value gating flags', () => {
+  test('carries optional from defineSecret into the definition', async () => {
+    const rootDir = await mkdtemp(`${fixtureRoot}-secret-optional-`)
+    const file = join(rootDir, 'secret.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { defineSecret } from '@pikku/core'",
+        "import { z } from 'zod'",
+        'export const ActorSchema = z.string()',
+        'export const StripeSchema = z.string()',
+        'defineSecret({',
+        "  name: 'scenarioActor',",
+        "  displayName: 'Scenario Actor Secret',",
+        "  secretId: 'SCENARIO_ACTOR_SECRET',",
+        '  optional: true,',
+        '  schema: ActorSchema,',
+        '})',
+        'defineSecret({',
+        "  name: 'stripe',",
+        "  displayName: 'Stripe',",
+        "  secretId: 'STRIPE_KEY',",
+        '  schema: StripeSchema,',
+        '})',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      const optional = state.secrets.definitions.find(
+        (d) => d.secretId === 'SCENARIO_ACTOR_SECRET'
+      )
+      const required = state.secrets.definitions.find(
+        (d) => d.secretId === 'STRIPE_KEY'
+      )
+      assert.equal(optional!.optional, true)
+      assert.equal(required!.optional, undefined)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('carries required from defineVariable into the definition', async () => {
+    const rootDir = await mkdtemp(`${fixtureRoot}-variable-required-`)
+    const file = join(rootDir, 'variable.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { defineVariable } from '@pikku/core'",
+        "import { z } from 'zod'",
+        'export const ConsoleUrlSchema = z.string()',
+        'export const CorsSchema = z.string()',
+        'defineVariable({',
+        "  name: 'consoleUrl',",
+        "  displayName: 'Console URL',",
+        "  variableId: 'CONSOLE_URL',",
+        '  required: true,',
+        '  schema: ConsoleUrlSchema,',
+        '})',
+        'defineVariable({',
+        "  name: 'corsOrigins',",
+        "  displayName: 'Allowed Browser Origins',",
+        "  variableId: 'CORS_ORIGINS',",
+        '  schema: CorsSchema,',
+        '})',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      const required = state.variables.definitions.find(
+        (d) => d.variableId === 'CONSOLE_URL'
+      )
+      const optional = state.variables.definitions.find(
+        (d) => d.variableId === 'CORS_ORIGINS'
+      )
+      assert.equal(required!.required, true)
+      assert.equal(optional!.required, undefined)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+})

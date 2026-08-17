@@ -59,10 +59,10 @@ export const serializeSecretsTypes = ({
         schemaImports.get(schemaRef.sourceFile)!.add(schemaRef.variableName)
 
         mapEntries.push(
-          `  '${meta.secretId}': z.infer<typeof ${schemaRef.variableName}>`
+          `  '${meta.secretId}'${meta.optional ? '?' : ''}: z.infer<typeof ${schemaRef.variableName}>`
         )
         metaEntries.push(
-          `  '${meta.secretId}': { name: '${name}', displayName: ${literal(meta.displayName)} }`
+          `  '${meta.secretId}': { name: '${name}', displayName: ${literal(meta.displayName)}${meta.optional ? ', optional: true' : ''} }`
         )
       }
     }

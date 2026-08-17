@@ -5,5 +5,6 @@ export const addSecret = createAddKeyedWiring({
   idField: 'secretId',
   label: 'Secret',
   schemaPrefix: 'SecretSchema',
+  flagField: 'optional',
   getState: (state) => state.secrets,
 })
