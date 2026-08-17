@@ -8,7 +8,7 @@ import { addFunction } from '../../function/function-runner.js'
 import type { ScenarioPersona } from '../../services/personas-service.js'
 import type { PikkuWire } from '../../types/core.types.js'
 import type { ScenarioSurface } from './scenario-step.types.js'
-import { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
+import { requireScenarioEnv } from './scenario-step-guards.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
@@ -145,6 +145,7 @@ const registerStep = (
   config: {
     description?: string
     surfaces?: ScenarioSurface[]
+    requiresActor?: boolean
     func: (services: any, data: any, wire: PikkuWire) => Promise<unknown>
   }
 ) => {
@@ -215,7 +216,7 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
     let received: unknown
     registerStep('checksOut', {
       func: async (_services, _data, wire) => {
-        received = wire.scenarioStep!.actor
+        received = wire.actor
         return null
       },
     })
@@ -712,16 +713,17 @@ describe('the scenario environment reaches the step wire', () => {
   })
 })
 
-describe('requireActor / requireScenarioEnv', () => {
+describe('a step driven by a persona is given its actor', () => {
   beforeEach(() => resetPikkuState())
 
-  test('requireActor returns the actor a step was called with', async () => {
+  test('the actor is on the wire, not something the body unwraps', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     const shopper = fakeActor('shopper', async () => null)
     let resolved: unknown
     registerStep('needsAnActor', {
+      requiresActor: true,
       func: async (_services, _data, wire) => {
-        resolved = requireActor(wire.scenarioStep)
+        resolved = wire.actor
         return null
       },
     })
@@ -735,10 +737,15 @@ describe('requireActor / requireScenarioEnv', () => {
     assert.equal(resolved, shopper)
   })
 
-  test('requireActor names the step when it was called without one', async () => {
+  test('one dispatched without an actor is refused before its body runs', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
+    let bodyRan = false
     registerStep('needsAnActor', {
-      func: async (_services, _data, wire) => requireActor(wire.scenarioStep),
+      requiresActor: true,
+      func: async () => {
+        bodyRan = true
+        return null
+      },
     })
 
     const runId = await setup(ws)
@@ -747,6 +754,24 @@ describe('requireActor / requireScenarioEnv', () => {
       wire.when('nobody acts', 'needsAnActor'),
       /needsAnActor.*actor/s
     )
+    assert.equal(bodyRan, false)
+  })
+
+  test('a step that declares no persona runs without one', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    let seen: unknown = 'unset'
+    registerStep('assertsSomething', {
+      func: async (_services, _data, wire) => {
+        seen = wire.actor
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.then('it holds', 'assertsSomething')
+
+    assert.equal(seen, undefined)
   })
 
   test('requireScenarioEnv returns the environment, or says how to declare one', async () => {

@@ -5,7 +5,7 @@
  * effect goes through the step's actor, so the RPC calls and the browser
  * session are the same signed-in identity.
  */
-import { pikkuScenarioStep, requireActor, type TestIdSelector, type TypedPersonas } from '#pikku/scenario'
+import { pikkuScenarioStep, type TestIdSelector, type TypedPersonas } from '#pikku/scenario'
 import { describeValue } from './support.js'
 import type {} from '@pikku/playwright'
 
@@ -59,9 +59,9 @@ export const readsFunctionSource = pikkuScenarioStep<
   { wrapperName: string; config: Record<string, unknown>; body: string }
 >({
   name: 'readsFunctionSource',
+  actor: true,
   description: 'reads a function definition in the console',
-  default: async (_services, { functionName }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { functionName }, { actor }) => {
     const location = await functionLocation(actor, functionName)
     return (await actor.invoke('console:readFunctionSource', location)) as {
       wrapperName: string
@@ -76,9 +76,9 @@ export const readsFunctionBody = pikkuScenarioStep<
   { body: string }
 >({
   name: 'readsFunctionBody',
+  actor: true,
   description: 'reads a function body in the console',
-  default: async (_services, { functionName }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { functionName }, { actor }) => {
     const location = await functionLocation(actor, functionName)
     return (await actor.invoke('console:readFunctionBody', location)) as {
       body: string
@@ -91,9 +91,9 @@ export const updatesFunctionConfig = pikkuScenarioStep<
   { success: boolean }
 >({
   name: 'updatesFunctionConfig',
+  actor: true,
   description: 'edits a function config in the console',
-  default: async (_services, { functionName, changes }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { functionName, changes }, { actor }) => {
     const location = await functionLocation(actor, functionName)
     const result = (await actor.invoke('console:updateFunctionConfig', {
       ...location,
@@ -111,9 +111,9 @@ export const updatesFunctionBody = pikkuScenarioStep<
   { success: boolean }
 >({
   name: 'updatesFunctionBody',
+  actor: true,
   description: 'rewrites a function body in the console',
-  default: async (_services, { functionName, body }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { functionName, body }, { actor }) => {
     const location = await functionLocation(actor, functionName)
     const result = (await actor.invoke('console:updateFunctionBody', {
       ...location,
@@ -131,9 +131,9 @@ export const readsAgentSource = pikkuScenarioStep<
   { config: Record<string, unknown> }
 >({
   name: 'readsAgentSource',
+  actor: true,
   description: 'reads an agent definition in the console',
-  default: async (_services, { agentKey }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { agentKey }, { actor }) => {
     const location = await agentLocation(actor, agentKey)
     return (await actor.invoke('console:readAgentSource', location)) as {
       config: Record<string, unknown>
@@ -146,9 +146,9 @@ export const updatesAgentConfig = pikkuScenarioStep<
   { success: boolean }
 >({
   name: 'updatesAgentConfig',
+  actor: true,
   description: 'edits an agent config in the console',
-  default: async (_services, { agentKey, changes }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { agentKey, changes }, { actor }) => {
     const location = await agentLocation(actor, agentKey)
     const result = (await actor.invoke('console:updateAgentConfig', {
       ...location,

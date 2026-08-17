@@ -73,7 +73,7 @@
   "./scenario": [
     "PikkuScenarioService",
     "SCENARIO_SURFACES",
-    "ScenarioBrowserActorRequired",
+    "ScenarioActorRequired",
     "ScenarioBrowserUnavailable",
     "ScenarioHookError",
     "ScenarioNoSurfaceBinding",
@@ -85,7 +85,6 @@
     "createScenarioRunner",
     "pollUntil",
     "renderStepTemplate",
-    "requireActor",
     "requireScenarioEnv",
     "resolveFeatureScenarios",
     "resolveScenarioSurfaces"

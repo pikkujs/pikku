@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2692 observable things**: 858 exported names, plus
-1834 members on the classes and interfaces among them, reachable
+**2690 observable things**: 857 exported names, plus
+1833 members on the classes and interfaces among them, reachable
 through 52 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -15,7 +15,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 135 | 110 | 396 |
-| `./scenario` | 53 | 53 | 142 |
+| `./scenario` | 52 | 52 | 141 |
 | `./workflow` | 78 | 29 | 131 |
 | `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
@@ -125,7 +125,8 @@ export type PikkuWire<
   workflow: TypedWorkflow
   scenario: TypedScenario
   actors: TypedActors
-  scenarioStep: PikkuScenarioStepWire<ScenarioPersonaOf<TypedActors>>
+  actor: ScenarioPersonaOf<TypedActors>
+  scenarioStep: PikkuScenarioStepWire
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire
@@ -302,7 +303,8 @@ export type PikkuWire<
   workflow: TypedWorkflow
   scenario: TypedScenario
   actors: TypedActors
-  scenarioStep: PikkuScenarioStepWire<ScenarioPersonaOf<TypedActors>>
+  actor: ScenarioPersonaOf<TypedActors>
+  scenarioStep: PikkuScenarioStepWire
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire
@@ -558,6 +560,7 @@ export type CorePikkuFunctionConfig<
   workflowRetries?: number
   workflowTimeout?: string
   surfaces?: ScenarioSurface[]
+  requiresActor?: boolean
   audit?:
     | boolean
     | {
@@ -678,6 +681,7 @@ export type FunctionRuntimeMeta = {
   workflowRetries?: number
   workflowTimeout?: string
   scenarioStepSurfaces?: ScenarioSurface[]
+  scenarioStepRequiresActor?: boolean
   scenarioStepKind?: ScenarioStepKind
   scenarioStepAddon?: string
   scenarioStepTemplate?: string
@@ -1544,13 +1548,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public async resolvePersonas(): Promise<ScenarioPersonas | undefined>
   public decorateWorkflowWire(wire: PikkuWorkflowWire, context: { name: string; runId: string; rpcService: any; addonNamespace?: string | null }): void
 }
-export interface PikkuScenarioStepWire<TActor = ScenarioPersona> {
+export interface PikkuScenarioStepWire {
   name: string
   stepName: string
   runId: string
   phase: ScenarioStepPhase
   surface: ScenarioSurface
-  actor?: TActor
   env?: ScenarioEnvironment
 }
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
@@ -1570,11 +1573,13 @@ export interface PollOptions {
 }
 pollUntil: <T>(attempt: () => T | Promise<T | undefined> | undefined, { timeoutMs, intervalMs }?: PollOptions) => Promise<T | undefined>
 renderStepTemplate: (template: string, input: unknown) => string
-requireActor: <TActor>(scenarioStep: PikkuScenarioStepWire<TActor> | undefined) => TActor
-requireScenarioEnv: (scenarioStep: PikkuScenarioStepWire<unknown> | undefined) => ScenarioEnvironment
+requireScenarioEnv: (scenarioStep: PikkuScenarioStepWire | undefined) => ScenarioEnvironment
 resolveFeatureScenarios: (features: Map<string, CoreFeature>, registrations: Map<string, CoreWorkflow>) => { entries: FeaturePlanEntry[]; unresolved: { featureId: string; index: number; }[]; }
 resolveScenarioSurfaces: (phase: ScenarioStepPhase, declared: readonly ScenarioSurface[], runSurface: ScenarioSurface) => ScenarioSurfaceResolution
 SCENARIO_SURFACES: readonly ScenarioSurface[]
+export class ScenarioActorRequired extends PikkuError {
+  constructor(public readonly stepFunc: string)
+}
 export interface ScenarioArtifact {
   scenario: string
   kind: ScenarioArtifactKind
@@ -1583,9 +1588,6 @@ export interface ScenarioArtifact {
   name?: string
 }
 export type ScenarioArtifactKind = 'screenshot' | 'failure' | 'video'
-export class ScenarioBrowserActorRequired extends PikkuError {
-  constructor(public readonly stepFunc: string)
-}
 export interface ScenarioBrowserFailure {
   actor: string
   url?: string

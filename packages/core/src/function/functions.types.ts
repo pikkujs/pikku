@@ -230,6 +230,12 @@ export type CorePikkuFunctionConfig<
    * and report how much of the flow each surface actually covers.
    */
   surfaces?: ScenarioSurface[]
+  /**
+   * Scenario steps only: this step is driven by a persona, so the runner injects
+   * `wire.actor` and refuses to dispatch it without one. Set by the definer from
+   * a `browser` binding or an explicit `actor: true`, never written by hand.
+   */
+  requiresActor?: boolean
   audit?:
     | boolean
     | {

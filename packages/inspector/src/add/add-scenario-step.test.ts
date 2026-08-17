@@ -39,6 +39,12 @@ const STEPS = [
   "  description: 'sees a receipt',",
   '  default: async ({ logger }) => ({ ok: true }),',
   '})',
+  'export const asksForTheReceipt = pikkuScenarioStep({',
+  "  name: 'asksForTheReceipt',",
+  "  description: 'asks for the receipt',",
+  '  actor: true,',
+  '  default: async ({ logger }) => ({ ok: true }),',
+  '})',
 ].join('\n')
 
 const scenarioSource = (body: string[], preamble: string[] = []) =>
@@ -204,6 +210,35 @@ describe('pikkuScenarioStep', () => {
       assert.ok(
         criticals.find((c) => c.code === 'PKU677'),
         `expected a PKU677 critical for a browser step without an actor, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a step declaring `actor: true` called without one is a PKU677 critical', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.then('asks for the receipt', 'asksForTheReceipt', {})",
+    ])
+    try {
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU677'),
+        `a step that says it runs as somebody must be given somebody, browser binding or not, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a step that declares no actor is not flagged for running without one', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.then('sees a receipt', 'seesAReceipt', {})",
+    ])
+    try {
+      assert.equal(
+        criticals.filter((c) => c.code === 'PKU677').length,
+        0,
+        `an assertion over an earlier step's value has nobody to be, got: ${JSON.stringify(criticals)}`
       )
     } finally {
       await cleanup()

@@ -1,4 +1,3 @@
-import type { ScenarioPersona } from '../../services/personas-service.js'
 import type { ScenarioArtifact } from './scenario-run.types.js'
 
 /**
@@ -100,7 +99,10 @@ export type ScenarioSurfaceResolution =
  * default to no retries.
  */
 export interface ScenarioStepOptions {
-  /** The actor this step runs as. Required for steps declaring a `browser` binding. */
+  /**
+   * The actor this step runs as. Required for a step that declares `actor: true`
+   * or a `browser` binding; the runner refuses to dispatch one without it.
+   */
   actor?: unknown
   /** Overrides the step's own `description` for this call site only. */
   description?: string
@@ -123,11 +125,12 @@ export interface ScenarioEnvironment {
 /**
  * The `scenarioStep` wire, present on every scenario step invocation.
  *
- * `TActor` is the project's own actor type, so a step reaches only the RPCs its
- * actors can actually call. It defaults to the open `ScenarioPersona` for a
- * project that declares no registry.
+ * The persona a step runs as is not here: it arrives as `wire.actor`, injected
+ * by the runner and typed as present exactly on the bindings that declared they
+ * need one. Keeping it off this interface is what makes that possible — a wire
+ * member can be required per binding, a property of one cannot.
  */
-export interface PikkuScenarioStepWire<TActor = ScenarioPersona> {
+export interface PikkuScenarioStepWire {
   /** Registered step name (also its pikkuFuncId) */
   name: string
   /** Durable key within the run; may carry an `#ordinal` suffix when repeated */
@@ -139,12 +142,6 @@ export interface PikkuScenarioStepWire<TActor = ScenarioPersona> {
    * per witness, so its body sees this change between invocations.
    */
   surface: ScenarioSurface
-  /**
-   * The actor this step runs as, when one was given. Call RPCs through it
-   * (`actor.invoke(...)`) so they run against the target environment as that
-   * persona.
-   */
-  actor?: TActor
   /**
    * The environment this run targets. A step runs in the CLI process, where
    * there is no `variables` service — this is how a raw-HTTP step learns the

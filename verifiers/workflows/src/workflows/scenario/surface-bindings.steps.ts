@@ -31,6 +31,21 @@ export const submitsTheOrder = pikkuScenarioStep<
 })
 
 /**
+ * A step that runs as somebody. `actor: true` is what puts the actor on the
+ * wire — non-optional, with nothing to unwrap — and what makes a call site that
+ * omits one fail before this body runs.
+ */
+export const greetsAsItsActor = pikkuScenarioStep<void, { actor: string }>({
+  name: 'greetsAsItsActor',
+  description: 'reports which persona it is running as',
+  actor: true,
+  default: async (_services, _data, { actor }) => {
+    surfaceLog.push(`greetsAsItsActor:${actor.name}`)
+    return { actor: actor.name }
+  },
+})
+
+/**
  * An action with no `default`. A run that does not target `cli` has nothing to
  * fall back to, which is the failure `ScenarioNoSurfaceBinding` names.
  */

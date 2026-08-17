@@ -848,10 +848,11 @@ export function validateScenarioServices(
  *
  * - the step target must be a static string literal (PKU678) — otherwise it
  *   can't be bundled, typed or drawn;
- * - a step declaring a `browser` binding must be given an actor (PKU677), since
- *   the browser context signs in as that persona. It is checked statically even
- *   though the binding only runs on a browser run: a step that can never be
- *   driven by a human is a latent failure, not a passing default run.
+ * - a step that runs as a persona must be given one (PKU677) — declared by
+ *   `actor: true`, or implied by a `browser` binding, since the browser context
+ *   signs in as that persona. It is checked statically even though a browser
+ *   binding only runs on a browser run: a step that can never be driven by a
+ *   human is a latent failure, not a passing default run.
  * - a scenario written as a step ladder must assert something (PKU680).
  *
  * It also marks the step's function as used, so `scenario run` boots the
@@ -878,14 +879,14 @@ export function validateScenarioSteps(
         }
         state.serviceAggregation.usedFunctions.add(step.stepFunc)
         const stepMeta = state.functions.meta[step.stepFunc]
-        if (
-          stepMeta?.scenarioStepSurfaces?.includes('browser') &&
-          !step.actor
-        ) {
+        if (stepMeta?.scenarioStepRequiresActor && !step.actor) {
+          const why = stepMeta.scenarioStepSurfaces?.includes('browser')
+            ? 'declares a browser binding'
+            : 'is driven by a persona'
           logger.critical(
-            ErrorCode.SCENARIO_BROWSER_STEP_NEEDS_ACTOR,
-            `Scenario '${workflowName}' calls step '${step.stepFunc}', which declares a browser binding, without an actor. ` +
-              `Pass { actor: actors.<name> } so the browser context signs in as that persona.`
+            ErrorCode.SCENARIO_STEP_NEEDS_ACTOR,
+            `Scenario '${workflowName}' calls step '${step.stepFunc}', which ${why}, without an actor. ` +
+              `Pass { actor: actors.<name> } so it runs as that persona.`
           )
         }
         continue

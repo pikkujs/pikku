@@ -9,7 +9,7 @@
  * location rather than from a working directory that a remote run would not
  * share.
  */
-import { pikkuScenarioStep, pollUntil, requireActor, requireScenarioEnv } from '#pikku/scenario'
+import { pikkuScenarioStep, pollUntil, requireScenarioEnv } from '#pikku/scenario'
 import type {} from '@pikku/playwright'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -166,10 +166,10 @@ export const triggersWebhookDelivery = pikkuScenarioStep<
   { sinkUrl: string; status: string }
 >({
   name: 'triggersWebhookDelivery',
+  actor: true,
   description: 'delivers a webhook to the app’s own sink',
   template: 'triggers a webhook delivery',
-  default: async (_services, { timeoutMs }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { timeoutMs }, { scenarioStep, actor }) => {
     const sinkUrl = `${requireScenarioEnv(scenarioStep).apiUrl}/api/webhook/sink`
     await actor.invoke('triggerWebhook' as never, { url: sinkUrl } as never)
 

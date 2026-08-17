@@ -71,7 +71,7 @@ export { createCookieJar } from './scenario-cookie-jar.js'
 export type { ScenarioCookieJar } from './scenario-cookie-jar.js'
 export { composeStepProse, renderStepTemplate } from './scenario-prose.js'
 
-export { requireActor, requireScenarioEnv } from './scenario-step-guards.js'
+export { requireScenarioEnv } from './scenario-step-guards.js'
 
 export type {
   ScenarioHttpResponse,
@@ -192,20 +192,24 @@ addError(ScenarioBrowserUnavailable, {
 })
 
 /**
- * A browser binding was reached without an actor, so there is no persona whose
- * window it would run in.
+ * A step that is driven by a persona was dispatched without one.
+ *
+ * Raised before the body runs rather than partway through it: the step declared
+ * that it needs an actor — by having a `browser` binding, which cannot be
+ * provisioned without a window to open, or by `actor: true` — so a call site
+ * that omits one is a mistake at the call site.
  */
-export class ScenarioBrowserActorRequired extends PikkuError {
+export class ScenarioActorRequired extends PikkuError {
   constructor(public readonly stepFunc: string) {
     super(
-      `[scenario] step '${stepFunc}' resolved to its browser binding but was called without an actor. ` +
-        `Pass { actor: actors.<name> } so the browser signs in as that persona.`
+      `[scenario] step '${stepFunc}' is driven by a persona but was called without an actor. ` +
+        `Pass { actor: actors.<name> } so it runs as that persona.`
     )
   }
 }
-addError(ScenarioBrowserActorRequired, {
+addError(ScenarioActorRequired, {
   status: 500,
-  message: 'A browser binding needs an actor.',
+  message: 'This step needs an actor.',
 })
 
 /**
@@ -834,6 +838,10 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       this.scenarioStepDescription(packageName, resolvedStepFunc) ??
       stepName
 
+    if (!actor && this.requiresActor(packageName, resolvedStepFunc)) {
+      throw new ScenarioActorRequired(resolvedStepFunc)
+    }
+
     const declared = this.declaredSurfaces(packageName, resolvedStepFunc)
     const resolution = resolveScenarioSurfaces(phase, declared, this.runSurface)
 
@@ -848,13 +856,13 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             scenario: workflowWire,
             pikkuUserId: workflowWire.pikkuUserId,
             actors: this.runActors.get(runId),
+            ...(actor ? { actor } : {}),
             scenarioStep: {
               name: resolvedStepFunc,
               stepName,
               runId,
               phase,
               surface,
-              actor,
               env: this.scenarioEnvironment,
             },
           }
@@ -862,11 +870,10 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             if (!this.scenarioBrowserProvider) {
               throw new ScenarioBrowserUnavailable(resolvedStepFunc)
             }
-            if (!actor) {
-              throw new ScenarioBrowserActorRequired(resolvedStepFunc)
-            }
+            // The dispatch guard above already refused an actor-less call, and a
+            // browser binding always requires one.
             wire.browser = await this.scenarioBrowserProvider.sessionFor(
-              actor.name
+              actor!.name
             )
           }
           return await runPikkuFunc(
@@ -966,5 +973,18 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   ): ScenarioSurface[] {
     const surfaces = this.scenarioStepConfig(packageName, stepFunc)?.surfaces
     return surfaces?.length ? surfaces : ['default']
+  }
+
+  /**
+   * Whether a step is driven by a persona, and so must be given one. Stamped by
+   * the definer from a `browser` binding or an explicit `actor: true`.
+   */
+  private requiresActor(
+    packageName: string | null,
+    stepFunc: string
+  ): boolean {
+    return (
+      this.scenarioStepConfig(packageName, stepFunc)?.requiresActor === true
+    )
   }
 }

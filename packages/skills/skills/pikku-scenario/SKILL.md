@@ -372,13 +372,14 @@ On a `then`, they are not two implementations of one assertion. They are two _di
 The gap between them is the bug nobody catches: 200 OK, database correct, user still watching a spinner. So a `then` runs **every** binding it declares and fails if they disagree.
 
 ```typescript
-import { requireActor } from '#pikku/scenario'
-
 export const seesTheOrderConfirmed = pikkuScenarioStep<
   { orderId: string },
   { status: string }
 >({
   name: 'seesTheOrderConfirmed',
+  // Both bindings run as the persona, so the step declares one and the runner
+  // injects `wire.actor` — non-optional in every binding.
+  actor: true,
   template: 'sees order {orderId} confirmed',
   // Both run on `--run browser`. Each returns what it observed, and the runner
   // compares them — so this fails when the page disagrees with the database.
@@ -388,9 +389,8 @@ export const seesTheOrderConfirmed = pikkuScenarioStep<
       .getAttribute('data-status'),
   }),
   // Through the actor, not through a `rpc` service — see "What a step is given".
-  default: async (_services, { orderId }, { scenarioStep }) => ({
-    status: (await requireActor(scenarioStep).invoke('getOrder', { orderId }))
-      .status,
+  default: async (_services, { orderId }, { actor }) => ({
+    status: (await actor.invoke('getOrder', { orderId })).status,
   }),
 })
 ```
@@ -413,7 +413,6 @@ Assertions with no possible browser witness are a different thing and should not
 
 ```typescript
 import { pikkuScenarioStep } from '#pikku/scenario'
-import { requireActor } from '#pikku/scenario'
 
 export const buysAnApple = pikkuScenarioStep<
   { qty: number },
@@ -422,8 +421,9 @@ export const buysAnApple = pikkuScenarioStep<
   name: 'buysAnApple',
   description: 'buys an apple',
   template: 'buys {qty} apples',
-  default: async (_services, { qty }, { scenarioStep }) => {
-    return await requireActor(scenarioStep).invoke('placeOrder', { qty })
+  actor: true,
+  default: async (_services, { qty }, { actor }) => {
+    return await actor.invoke('placeOrder', { qty })
   },
 })
 ```
@@ -447,7 +447,8 @@ Rules that bite:
 - **The step is referenced by its typed string name, not by importing the const** — exactly like `workflow.do`. The name is the step's `pikkuFuncId` and is checked against the generated step map. A non-literal target is a critical error (`PKU678`).
 - **Steps are not RPCs.** They are deliberately never network-callable — a browser-driving step must not be.
 - **`actor.invoke` is typed over the exposed RPC map**, so the name and the payload are checked and the result comes back narrowed — no cast. `actor.invokeRaw(name, data, { headers })` is the same call reporting `{ status, ok, body }` instead of throwing; use it whenever the refusal _is_ the assertion.
-- **`actor` and `env` are optional on the wire**, because a pure assertion step needs neither. Narrow them with `requireActor(scenarioStep)` and `requireScenarioEnv(scenarioStep)` from `#pikku/scenario` rather than a local guard — both name the step and say what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
+- **A step that runs as somebody declares `actor: true`**, and the runner injects `wire.actor` — non-optional inside every binding, with no guard to write and nothing to unwrap. A `browser` binding implies it, because a window is opened as somebody. Leave it off for a step with no persona to be: an assertion over what an earlier step returned, or one that posts credentials precisely because it must not reuse an actor's session. Dispatching a step that declared it without `{ actor: actors.x }` fails before the body runs (`ScenarioActorRequired`); a step that did not declare it has no `actor` on its wire at all.
+- **`env` is optional on the wire**, because most steps need nothing from it. Narrow it with `requireScenarioEnv(scenarioStep)` from `#pikku/scenario` rather than a local guard — it names the step and says what to pass. `env` is `{ apiUrl, appUrl? }` from the environment the run targets, and is how a raw-HTTP step learns the target's URL: a step runs in the CLI process, where there is no `variables` service and `process.env` is not the answer.
 - **Steps default to `retries: 0`**, unlike ordinary workflow steps. Retrying a failed assertion is wrong; pass `retries` explicitly if a step is genuinely flaky-by-nature.
 - **Step results are persisted**, so return JSON-serialisable data — never a `Locator` or a client object.
 - **`description` documents the step; `template` is what the report renders.** `template`'s `{placeholders}` are filled from the input the step was called with, so one step reads differently for each call — `sees {state} addon {packageName}` reports as "sees available addon @pikku/addon-stripe". Reflect every input field in the template, and type the values so they read as words (`state?: 'installed' | 'available'`, not `installed?: boolean`). A placeholder with no value renders as nothing and the whitespace collapses.
@@ -483,8 +484,8 @@ goes over the wire as somebody.** A test that could reach into the database
 would be testing a different program from the one a person uses. So there are
 exactly three ways in, and they are all through the actor:
 
-- `requireActor(scenarioStep).invoke(name, data)` — typed over the exposed RPC
-  map, carrying the actor's session.
+- `actor.invoke(name, data)` — typed over the exposed RPC map, carrying the
+  actor's session. Declare `actor: true` and destructure it off the wire.
 - `.invokeRaw(name, data, { headers })` — same call, reporting
   `{ status, ok, body }`, for when the refusal is the assertion.
 - a plain `fetch` against `requireScenarioEnv(scenarioStep).apiUrl`, for
@@ -522,8 +523,8 @@ export const opensTheCart = pikkuScenarioStep<
     await browser.goto(path)
     return { url: browser.page.url() }
   },
-  default: async (_services, _data, { scenarioStep }) => ({
-    url: (await requireActor(scenarioStep).invoke('getCart', {})).url,
+  default: async (_services, _data, { actor }) => ({
+    url: (await actor.invoke('getCart', {})).url,
   }),
 })
 ```

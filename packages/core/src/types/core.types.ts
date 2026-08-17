@@ -241,8 +241,18 @@ export type PikkuWire<
   workflow: TypedWorkflow
   scenario: TypedScenario
   actors: TypedActors
+  /**
+   * The persona this step runs as, injected by the runner.
+   *
+   * Required on a `browser` binding, which cannot be provisioned without one,
+   * and on any binding whose step declares `actor: true`. A step that declares
+   * neither has no `actor` on its wire at all rather than an optional one —
+   * a pure assertion has nobody to be, and `attemptsSignIn` deliberately posts
+   * credentials instead of reusing an actor's session.
+   */
+  actor: ScenarioPersonaOf<TypedActors>
   /** Present on every scenario step invocation */
-  scenarioStep: PikkuScenarioStepWire<ScenarioPersonaOf<TypedActors>>
+  scenarioStep: PikkuScenarioStepWire
   /** Present only when the runner provisioned a browser for this step */
   browser: PikkuBrowserWire
   workflowStep: WorkflowStepWire

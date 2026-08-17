@@ -11,7 +11,7 @@ the main hub would crowd it for every app that never writes a scenario. They
 get their own sub-entry instead.
 
 The generated scenario barrel now re-exports the helpers a step file reaches
-for — `requireScenarioEnv`, `requireActor`, `createCookieJar`, `pollUntil`,
+for — `requireScenarioEnv`, `createCookieJar`, `pollUntil`,
 `createScenarioRunner`, `postScenarioJson`, `readScenarioHttpResponse` and the
 types beside them — so a scenario file has one specifier to import from and
 never has to know whether a helper is typed against this project or shipped by

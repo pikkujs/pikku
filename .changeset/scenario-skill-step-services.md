@@ -9,7 +9,7 @@ services and called `rpc.invoke`. That is exactly what the scenario runner
 refuses: steps run in the CLI process, and `guardRpc` answers every member with
 *"Scenario tried to run 'getOrder' as an internal step. Every workflow.do in a
 scenario must carry { actor: actors.x }"*. Both examples now go through
-`requireActor(scenarioStep).invoke`, which is the path the surrounding prose
+`actor.invoke` off the step's wire, which is the path the surrounding prose
 already described.
 
 Adds a **What a step is given** section, because nothing said it. The services

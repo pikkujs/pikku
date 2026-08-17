@@ -14,7 +14,7 @@
  * The step target is a static literal and the RPC name it dispatches is
  * ordinary step data, which is what keeps it PKU678-clean.
  */
-import { pikkuScenarioStep, requireActor, type ScenarioHttpResponse } from '#pikku/scenario'
+import { pikkuScenarioStep, type ScenarioHttpResponse } from '#pikku/scenario'
 import { describeValue } from './support.js'
 
 export const invokesRpcRaw = pikkuScenarioStep<
@@ -26,10 +26,10 @@ export const invokesRpcRaw = pikkuScenarioStep<
   ScenarioHttpResponse
 >({
   name: 'invokesRpcRaw',
+  actor: true,
   description: 'invokes an RPC and reports what the transport answered',
   template: 'invokes {rpcName}',
-  default: async (_services, { rpcName, data, headers }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { rpcName, data, headers }, { actor }) => {
     const response = await actor.invokeRaw(
       rpcName as never,
       (data ?? null) as never,
@@ -95,10 +95,10 @@ export const readsUserIdByEmail = pikkuScenarioStep<
   { userId: string }
 >({
   name: 'readsUserIdByEmail',
+  actor: true,
   description: 'resolves a seeded user id from an email via the directory',
   template: 'resolves {email}',
-  default: async (_services, { email }, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, { email }, { actor }) => {
     const directory = (await actor.invoke(
       'pikkuAdminListUsers' as never,
       {
@@ -129,10 +129,10 @@ export const readsUserIdByEmail = pikkuScenarioStep<
  */
 export const readsActorUserId = pikkuScenarioStep<void, { userId: string }>({
   name: 'readsActorUserId',
+  actor: true,
   description: 'reads the user id of the acting actor from its own session',
   template: 'reads its own user id',
-  default: async (_services, _data, { scenarioStep }) => {
-    const actor = requireActor(scenarioStep)
+  default: async (_services, _data, { actor }) => {
     const session = (await actor.invoke('whoAmI' as never, null as never)) as {
       userId?: string
     }

@@ -3,21 +3,8 @@ import type {
   ScenarioEnvironment,
 } from './scenario-step.types.js'
 
-export const requireActor = <TActor>(
-  scenarioStep: PikkuScenarioStepWire<TActor> | undefined
-): TActor => {
-  const actor = scenarioStep?.actor
-  if (!actor) {
-    throw new Error(
-      `[scenario] step '${scenarioStep?.name ?? 'unknown'}' was called without an actor. ` +
-        `Pass { actor: actors.<name> } so it runs as that persona.`
-    )
-  }
-  return actor
-}
-
 export const requireScenarioEnv = (
-  scenarioStep: PikkuScenarioStepWire<unknown> | undefined
+  scenarioStep: PikkuScenarioStepWire | undefined
 ): ScenarioEnvironment => {
   const env = scenarioStep?.env
   if (!env) {
