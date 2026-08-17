@@ -27,6 +27,7 @@ export type PanelType =
   | 'persona'
   | 'addon'
   | 'workflowCanvas'
+  | 'surfaceSymbol'
 
 export interface PanelData {
   type: PanelType
