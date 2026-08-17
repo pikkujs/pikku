@@ -48,17 +48,19 @@ const fakeActor = (
   const calls: Array<{ rpcName: string; data: any }> = []
   const invokeRaw = async (rpcName: string, data: any) => {
     calls.push({ rpcName, data })
+    const body = {
+      id: data.orderId,
+      customerId: 'customer-1',
+      items: [],
+      total: 0,
+      status: 'processing',
+      createdAt: 'now',
+    }
     return {
       status: 200,
       ok: true,
-      body: {
-        id: data.orderId,
-        customerId: 'customer-1',
-        items: [],
-        total: 0,
-        status: 'processing',
-        createdAt: 'now',
-      },
+      body,
+      serialized: JSON.stringify(body),
     }
   }
   return {
@@ -73,6 +75,7 @@ const fakeActor = (
         `[verifier] actor '${name}' has no agent — this verifier only exercises actor RPC steps`
       )
     },
+    sessionRoles: async () => null,
   }
 }
 
