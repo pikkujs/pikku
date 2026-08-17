@@ -124,4 +124,56 @@ describe('TypedSecretService', () => {
     assert.strictEqual(missing.length, 1)
     assert.strictEqual(missing[0].secretId, 'GITHUB_TOKEN')
   })
+
+  test('an optional secret that is missing resolves undefined instead of throwing', async () => {
+    // getSecret throws for a missing secret, which is right for a required one:
+    // the app cannot run without it. An optional secret's absence is a supported
+    // state, so throwing forces every caller into a `.catch(() => null)` that
+    // also swallows a real vault failure.
+    const service = new TypedSecretService(createMockSecrets(), {
+      SCENARIO_ACTOR_SECRET: {
+        name: 'scenarioActor',
+        displayName: 'Scenario Actor Secret',
+        optional: true,
+      },
+    })
+    assert.strictEqual(await service.getSecret('SCENARIO_ACTOR_SECRET'), undefined)
+  })
+
+  test('an optional secret that IS set resolves its value', async () => {
+    const store = new Map([['SCENARIO_ACTOR_SECRET', '"shh"']])
+    const service = new TypedSecretService(createMockSecrets(store), {
+      SCENARIO_ACTOR_SECRET: {
+        name: 'scenarioActor',
+        displayName: 'Scenario Actor Secret',
+        optional: true,
+      },
+    })
+    assert.strictEqual(await service.getSecret('SCENARIO_ACTOR_SECRET'), 'shh')
+  })
+
+  test('a missing secret still throws unless it declared itself optional', async () => {
+    const service = new TypedSecretService(createMockSecrets(), {
+      STRIPE_KEY: { name: 'stripe', displayName: 'Stripe' },
+    })
+    await assert.rejects(() => service.getSecret('STRIPE_KEY'))
+  })
+
+  test('an optional secret does not re-hit the store once resolved', async () => {
+    let reads = 0
+    const base = createMockSecrets()
+    const service = new TypedSecretService(
+      {
+        ...base,
+        hasSecret: async (key: string) => {
+          reads++
+          return base.hasSecret(key)
+        },
+      },
+      { OPTIONAL: { name: 'opt', displayName: 'Optional', optional: true } }
+    )
+    await service.getSecret('OPTIONAL')
+    await service.getSecret('OPTIONAL')
+    assert.strictEqual(reads, 1)
+  })
 })

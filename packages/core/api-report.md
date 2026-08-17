@@ -3936,6 +3936,7 @@ export type CoreSecret<T = unknown> = {
   description?: string
   secretId: string
   schema: T
+  optional?: boolean
   docsUrl?: string
   rotationPeriod?: string
   allowedHosts?: string[]
@@ -3955,6 +3956,7 @@ export type SecretDefinitionMeta = {
   description?: string
   secretId: string
   schema?: Record<string, unknown> | string
+  optional?: boolean
   docsUrl?: string
   oauth2?: OAuth2CredentialConfig
   rotationPeriod?: string
@@ -3975,6 +3977,7 @@ export type CoreVariable<T = unknown> = {
   description?: string
   variableId: string
   schema: T
+  required?: boolean
   docsUrl?: string
 }
 defineVariable: <T>(_config: CoreVariable<T>) => void
@@ -3985,6 +3988,7 @@ export type VariableDefinitionMeta = {
   description?: string
   variableId: string
   schema?: Record<string, unknown> | string
+  required?: boolean
   docsUrl?: string
   sourceFile?: string
 }
@@ -4306,6 +4310,7 @@ createStubProxy: (tracker: StubTracker) => Record<string, unknown>
 export type CredentialMeta = {
   name: string
   displayName: string
+  optional?: boolean
   oauth2?: { tokenSecretId: string }
 }
 export type CredentialMetaInfo = {
@@ -4891,7 +4896,7 @@ export class TypedCredentialService< TMap = Record<string, unknown>, > implement
 }
 export class TypedSecretService< TMap = Record<string, unknown>, > implements SecretService {
   constructor(private secrets: SecretService, private credentialsMeta: Record<string, CredentialMeta>)
-  async getSecret<K extends keyof TMap & string>(key: K): Promise<SecretValue<TMap[K]>>
+  async getSecret<K extends keyof TMap & string>(key: K): Promise<SecretResult<TMap[K]>>
   async getSecret<T = string>(key: string): Promise<SecretValue<T>>
   async getSecret(key: string): Promise<unknown>
   async hasSecret(key: string): Promise<boolean>

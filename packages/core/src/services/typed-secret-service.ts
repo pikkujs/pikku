@@ -1,6 +1,17 @@
 import type { SecretValue } from '../classification/secret-value.js'
 import type { SecretService, SecretValues } from './secret-service.js'
 
+/**
+ * The wrapper, or `undefined` when the generated map declares the key as an
+ * optional property. The `undefined` has to be lifted OUT of `SecretValue` —
+ * a missing optional secret resolves to `undefined` itself, not to a wrapper
+ * around it, so `SecretValue<T | undefined>` would type a value that never
+ * exists and hide the `undefined` behind a `.reveal()` the caller never reaches.
+ */
+export type SecretResult<T> = undefined extends T
+  ? SecretValue<Exclude<T, undefined>> | undefined
+  : SecretValue<T>
+
 export interface CredentialStatus {
   secretId: string
   name: string
@@ -12,6 +23,12 @@ export interface CredentialStatus {
 export type CredentialMeta = {
   name: string
   displayName: string
+  /**
+   * Declared `optional: true`, so absence is a supported state rather than a
+   * misconfiguration. The generated map types the key as an optional property,
+   * which is what puts `undefined` in `getSecret`'s return type.
+   */
+  optional?: boolean
   oauth2?: { tokenSecretId: string }
 }
 
@@ -28,11 +45,18 @@ export class TypedSecretService<
 
   async getSecret<K extends keyof TMap & string>(
     key: K
-  ): Promise<SecretValue<TMap[K]>>
+  ): Promise<SecretResult<TMap[K]>>
   async getSecret<T = string>(key: string): Promise<SecretValue<T>>
   async getSecret(key: string): Promise<unknown> {
     if (this.cache.has(key)) {
       return this.cache.get(key)
+    }
+    if (
+      this.credentialsMeta[key]?.optional &&
+      !(await this.secrets.hasSecret(key))
+    ) {
+      this.cache.set(key, undefined)
+      return undefined
     }
     const value = await this.secrets.getSecret(key)
     this.cache.set(key, value)

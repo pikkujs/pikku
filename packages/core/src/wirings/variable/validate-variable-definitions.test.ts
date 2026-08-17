@@ -88,4 +88,27 @@ describe('validateAndBuildVariableDefinitionsMeta', () => {
     const result = validateAndBuildVariableDefinitionsMeta([], new Map())
     assert.deepStrictEqual(result, {})
   })
+
+  test('carries required into the meta so only the opted-in ones block a deploy', () => {
+    const result = validateAndBuildVariableDefinitionsMeta(
+      [
+        {
+          name: 'consoleUrl',
+          displayName: 'Console URL',
+          variableId: 'CONSOLE_URL',
+          required: true,
+          sourceFile: 'a.ts',
+        },
+        {
+          name: 'corsOrigins',
+          displayName: 'Allowed Browser Origins',
+          variableId: 'CORS_ORIGINS',
+          sourceFile: 'a.ts',
+        },
+      ] as any,
+      new Map()
+    )
+    assert.strictEqual(result['consoleUrl']!.required, true)
+    assert.strictEqual(result['corsOrigins']!.required, undefined)
+  })
 })

@@ -43,6 +43,7 @@ export function validateAndBuildVariableDefinitionsMeta(
           description: def.description,
           variableId: def.variableId,
           schema: def.schema,
+          required: def.required,
           docsUrl: def.docsUrl,
           sourceFile: def.sourceFile,
         }
@@ -59,6 +60,7 @@ export function validateAndBuildVariableDefinitionsMeta(
         description: def.description,
         variableId: def.variableId,
         schema: def.schema,
+        required: def.required,
         docsUrl: def.docsUrl,
         sourceFile: def.sourceFile,
       }

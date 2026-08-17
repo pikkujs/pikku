@@ -14,6 +14,8 @@ export interface KeyedWiringConfig {
   idField: string
   label: string
   schemaPrefix: string
+  /** Boolean property carrying this wiring kind's deploy-gate opt-in/opt-out. */
+  flagField: string
   getState: (state: InspectorState) => {
     definitions: any[]
     files: Set<string>
@@ -57,6 +59,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
       const docsUrlValue = getPropertyValue(obj, 'docsUrl') as string | null
       const allowedHostsValue = getArrayPropertyValue(obj, 'allowedHosts')
       const idValue = getPropertyValue(obj, config.idField) as string | null
+      const flagValue = getPropertyValue(obj, config.flagField) === true
 
       let schemaVariableName: string | null = null
       let schemaSourceFile: string | null = null
@@ -168,6 +171,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         docsUrl: docsUrlValue || undefined,
         allowedHosts: allowedHostsValue || undefined,
         [config.idField]: idValue,
+        [config.flagField]: flagValue || undefined,
         schema: schemaLookupName,
         sourceFile,
       })

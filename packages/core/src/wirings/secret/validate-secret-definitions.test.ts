@@ -206,4 +206,27 @@ describe('validateAndBuildSecretDefinitionsMeta', () => {
     assert.ok(result['same'])
     assert.strictEqual(result['same'].secretId, 'KEY1')
   })
+
+  test('carries optional into the meta so the deploy gate can stop blocking on it', () => {
+    const result = validateAndBuildSecretDefinitionsMeta(
+      [
+        {
+          name: 'scenarioActor',
+          displayName: 'Scenario Actor Secret',
+          secretId: 'SCENARIO_ACTOR_SECRET',
+          optional: true,
+          sourceFile: 'a.ts',
+        },
+        {
+          name: 'stripe',
+          displayName: 'Stripe',
+          secretId: 'STRIPE_KEY',
+          sourceFile: 'a.ts',
+        },
+      ] as any,
+      new Map()
+    )
+    assert.strictEqual(result['scenarioActor']!.optional, true)
+    assert.strictEqual(result['stripe']!.optional, undefined)
+  })
 })
