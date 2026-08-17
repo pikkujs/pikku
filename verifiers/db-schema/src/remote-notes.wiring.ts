@@ -14,7 +14,7 @@
  * `db generate` writes, and the host does not have to exist for the declaration
  * to be wrong to act on.
  */
-import { wireRemoteAddon } from '#pikku/function'
+import { wireRemoteAddon } from '#pikku/addon'
 
 wireRemoteAddon({
   name: 'notes',

@@ -1,7 +1,6 @@
 import { test, describe } from 'node:test'
 import * as assert from 'assert'
 import {
-  serializeCredentialDefinitionTypes,
   serializeScopeDefinitionTypes,
   serializeSecretDefinitionTypes,
   serializeVariableDefinitionTypes,
@@ -13,13 +12,6 @@ import {
  * generator already puts in front of it.
  */
 describe('definition types', () => {
-  test('the credentials leaf carries defineCredential', () => {
-    assert.match(
-      serializeCredentialDefinitionTypes(),
-      /export \{ defineCredential \} from '@pikku\/core\/credential'/
-    )
-  })
-
   test('the secrets leaf carries defineSecret', () => {
     assert.match(
       serializeSecretDefinitionTypes(),

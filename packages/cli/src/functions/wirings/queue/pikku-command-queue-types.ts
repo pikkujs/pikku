@@ -13,7 +13,9 @@ export const pikkuQueueTypes = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       packageMappings
     )
-    const content = serializeQueueTypes(functionTypesImportPath)
+    const content = serializeQueueTypes(functionTypesImportPath, {
+      addon: !!config.addon,
+    })
     await writeFileInDir(logger, queueTypesFile, content)
   },
   middleware: [

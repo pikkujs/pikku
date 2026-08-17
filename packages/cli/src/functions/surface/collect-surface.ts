@@ -10,7 +10,15 @@ export type SurfaceSymbol = {
   name: string
   kind: SurfaceKind
   declaredAt: string
+  /** Absolute path of the declaring file, or null when it could not be found. */
+  declaredIn: string | null
   deprecated: boolean
+  /** The text of the `@deprecated` tag, when it carries one. */
+  deprecatedReason?: string
+  /** First paragraph of the symbol's JSDoc. */
+  summary?: string
+  /** The symbol's JSDoc in full, paragraphs and examples included. */
+  docs?: string
 }
 
 export type SurfaceEntrypoint = {
@@ -20,9 +28,21 @@ export type SurfaceEntrypoint = {
   symbols: SurfaceSymbol[]
 }
 
+export type CollectSurfaceOptions = {
+  /**
+   * Read the package's `imports` map instead of its `exports` map, taking the
+   * one key given — `#pikku/*` is what an application reaches its generated
+   * leaves through, and it is a private specifier rather than a published one.
+   */
+  importsSubpath?: string
+  /** Restrict collection to these subpaths, so the program stays small. */
+  subpaths?: string[]
+}
+
 type PackageJson = {
   name?: string
   exports?: Record<string, unknown> | string
+  imports?: Record<string, unknown>
 }
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
@@ -91,11 +111,22 @@ const sourceForTarget = (
 const expandWildcard = (
   packageDir: string,
   subpath: string,
-  target: string
+  target: string,
+  outDir: string
 ): Array<{ subpath: string; target: string }> => {
   const targetDir = target.replace(/^\.\//, '').split('*')[0] ?? ''
   const suffix = target.slice(target.indexOf('*') + 1)
-  const absolute = join(packageDir, targetDir)
+  const suffixStem = wildcardStem(suffix) ?? suffix
+  // A package that points its subpaths at the build output has nothing to walk
+  // until it is built, so the sources the output would be compiled from stand
+  // in for it. `sourceForTarget` strips the same prefix, so the target stays
+  // the declared one and only the directory being read changes.
+  const scanDir =
+    existsSync(join(packageDir, targetDir)) ||
+    !targetDir.startsWith(`${outDir}/`)
+      ? targetDir
+      : targetDir.slice(outDir.length + 1)
+  const absolute = join(packageDir, scanDir)
   if (!existsSync(absolute)) return []
 
   const expanded: Array<{ subpath: string; target: string }> = []
@@ -106,12 +137,22 @@ const expandWildcard = (
         continue
       }
       if (!entry.isFile()) continue
-      if (suffix && !entry.name.endsWith(suffix)) continue
-      const stem = wildcardStem(entry.name)
-      if (stem === null) continue
+      if (wildcardStem(entry.name) === null) continue
+      // The suffix is matched against the path the wildcard stands in for, not
+      // the file name, so `#pikku/*` → `./.pikku/*/index.ts` captures the leaf
+      // directory rather than failing to match `index.ts` against `/index.ts`.
+      const relativePath = `${prefix}${entry.name}`
+      // Matched without extensions, so a `*/index.js` target still finds the
+      // `index.ts` it would have been compiled from.
+      const pathStem = `${prefix}${wildcardStem(entry.name)}`
+      if (suffixStem && !pathStem.endsWith(suffixStem)) continue
+      const captured = suffixStem
+        ? pathStem.slice(0, -suffixStem.length)
+        : pathStem
+      if (!captured) continue
       expanded.push({
-        subpath: subpath.replace('*', `${prefix}${stem}`),
-        target: `${targetDir}${prefix}${entry.name}`,
+        subpath: subpath.replace('*', captured),
+        target: `${scanDir}${relativePath}`,
       })
     }
   }
@@ -121,6 +162,15 @@ const expandWildcard = (
 
 const targetOf = (value: unknown): string | null => {
   if (typeof value === 'string') return value
+  // A fallback array declares the same specifier several ways; the first entry
+  // is the one a resolver reaches for, and the rest only matter when it misses.
+  if (Array.isArray(value)) {
+    for (const candidate of value) {
+      const resolved = targetOf(candidate)
+      if (resolved) return resolved
+    }
+    return null
+  }
   if (!value || typeof value !== 'object') return null
   const conditions = value as Record<string, unknown>
   for (const key of ['types', 'import', 'default', 'require']) {
@@ -197,6 +247,48 @@ const kindOf = (symbol: ts.Symbol, checker: ts.TypeChecker): SurfaceKind => {
 const isDeprecated = (symbol: ts.Symbol): boolean =>
   symbol.getJsDocTags().some((tag) => tag.name === 'deprecated')
 
+const deprecationReason = (symbol: ts.Symbol): string | undefined => {
+  const tag = symbol.getJsDocTags().find((each) => each.name === 'deprecated')
+  if (!tag) return undefined
+  const text = ts.displayPartsToString(tag.text).trim()
+  return text.length > 0 ? text : undefined
+}
+
+/**
+ * The doc comment as written. A leaf re-exports through `export *`, so the
+ * symbol reached here is an alias carrying no documentation of its own, and an
+ * overloaded function documents whichever overload the author chose to explain
+ * — hence the walk through the aliased symbol and then every declaration.
+ */
+const documentationOf = (
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker
+): string | undefined => {
+  const targets = [symbol]
+  if (symbol.flags & ts.SymbolFlags.Alias) {
+    targets.push(checker.getAliasedSymbol(symbol))
+  }
+  for (const target of targets) {
+    const documentation = ts
+      .displayPartsToString(target.getDocumentationComment(checker))
+      .trim()
+    if (documentation.length > 0) return documentation
+  }
+  return undefined
+}
+
+/**
+ * The first paragraph of the doc comment. A symbol's JSDoc regularly runs to
+ * several paragraphs of examples, and a list row shows one line.
+ */
+const summaryOf = (documentation: string | undefined): string | undefined => {
+  if (!documentation) return undefined
+  return documentation
+    .split(/\n\s*\n/)[0]!
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 const declarationFileOf = (
   symbol: ts.Symbol,
   checker: ts.TypeChecker
@@ -210,11 +302,21 @@ const declarationFileOf = (
 }
 
 export const collectSurface = async (
-  packageDir: string
+  packageDir: string,
+  { importsSubpath, subpaths }: CollectSurfaceOptions = {}
 ): Promise<SurfaceEntrypoint[]> => {
   const root = resolve(packageDir)
   const packageJson = await readJson<PackageJson>(join(root, 'package.json'))
-  if (!packageJson?.exports) return []
+  if (!packageJson) return []
+
+  const declaredMap = importsSubpath
+    ? packageJson.imports?.[importsSubpath] !== undefined
+      ? { [importsSubpath]: packageJson.imports[importsSubpath] }
+      : {}
+    : packageJson.exports
+      ? subpathMap(packageJson.exports)
+      : {}
+  if (Object.keys(declaredMap).length === 0) return []
 
   const { outDir, paths } = await readCompilerOptions(root)
   const packageName = packageJson.name ?? ''
@@ -227,25 +329,25 @@ export const collectSurface = async (
 
   const seenEntryFiles = new Set<string>()
 
-  for (const [subpath, value] of Object.entries(
-    subpathMap(packageJson.exports)
-  )) {
-    if (!subpath.startsWith('.')) continue
+  for (const [subpath, value] of Object.entries(declaredMap)) {
+    if (!importsSubpath && !subpath.startsWith('.')) continue
     const target = targetOf(value)
     if (!target || !publishesCode(target)) continue
 
     const declared = target.includes('*')
-      ? expandWildcard(root, subpath, target)
+      ? expandWildcard(root, subpath, target, outDir)
       : [{ subpath, target }]
 
     for (const each of declared) {
+      if (subpaths && !subpaths.includes(each.subpath)) continue
       const entryFile = sourceForTarget(root, each.target, outDir)
       if (!entryFile || seenEntryFiles.has(entryFile)) continue
       seenEntryFiles.add(entryFile)
       entries.push({
         subpath: each.subpath,
-        specifier:
-          each.subpath === '.'
+        specifier: importsSubpath
+          ? each.subpath
+          : each.subpath === '.'
             ? packageName
             : `${packageName}${each.subpath.slice(1)}`,
         entryFile,
@@ -282,11 +384,17 @@ export const collectSurface = async (
       ? checker.getExportsOfModule(moduleSymbol)
       : []) {
       const file = declarationFileOf(symbol, checker)
+      const kind = kindOf(symbol, checker)
+      const docs = documentationOf(symbol, checker)
       symbols.push({
         name: symbol.getName(),
-        kind: kindOf(symbol, checker),
+        kind,
         declaredAt: file ? relative(root, file) : entry.entryFile,
+        declaredIn: file,
         deprecated: isDeprecated(symbol),
+        deprecatedReason: deprecationReason(symbol),
+        summary: summaryOf(docs),
+        docs,
       })
     }
 

@@ -3,17 +3,16 @@
  */
 export const serializeTriggerTypes = (
   singletonServicesTypeImport: string,
-  singletonServicesTypeName: string
+  singletonServicesTypeName: string,
+  { addon = false }: { addon?: boolean } = {}
 ) => {
   return `/**
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'
-import {
+${addon ? '' : `import { wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'\n`}import {
   CorePikkuTriggerFunction,
-  CorePikkuTriggerFunctionConfig,
-  CoreTrigger,
+  CorePikkuTriggerFunctionConfig,${addon ? '' : `\n  CoreTrigger,`}
 } from '@pikku/core/trigger'
 import type { CoreNodeConfig } from '@pikku/core/node'
 ${singletonServicesTypeImport}
@@ -73,9 +72,11 @@ type PikkuTriggerFunctionConfigWithSchema<
  * Type definition for trigger wirings.
  * Declares a trigger name and its target pikku function.
  */
-type TriggerWiring = CoreTrigger
-
-/**
+${addon ? '' : `type TriggerWiring = CoreTrigger\n`}
+${
+  addon
+    ? ''
+    : `/**
  * A trigger source with the subscription function, using project-specific services.
  *
  * @template TInput - Input type passed to the trigger function
@@ -88,7 +89,8 @@ type TriggerSource<
   name: string
   func: PikkuTriggerFunctionConfig<TInput, TOutput>
 } & (unknown extends TInput ? { input?: TInput } : { input: TInput })
-
+`
+}
 /**
  * Creates a trigger function configuration.
  * Use this to define trigger functions that set up subscriptions.
@@ -142,6 +144,10 @@ export function pikkuTriggerFunc(triggerOrConfig: any) {
   return triggerOrConfig
 }
 
+${
+  addon
+    ? ''
+    : `
 /**
  * Registers a trigger with the Pikku framework.
  * Declares a trigger name and its target pikku function.
@@ -168,4 +174,5 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   wireTriggerSourceCore(source as any)
 }
 `
+}`
 }

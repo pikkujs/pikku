@@ -85,7 +85,8 @@
   "files": [
     "dist",
     "console-app",
-    "cli.schema.json"
+    "cli.schema.json",
+    "surface.json"
   ],
   "engines": {
     "node": ">=24"
@@ -93,7 +94,8 @@
   "exports": {
     ".": "./dist/bin/pikku.js",
     "./server/spawn-dev-server": "./dist/src/server/spawn-dev-server.js",
-    "./server/server-ready": "./dist/src/server/server-ready.js"
+    "./server/server-ready": "./dist/src/server/server-ready.js",
+    "./surface.json": "./surface.json"
   },
   "peerDependenciesMeta": {
     "@pikku/playwright": {

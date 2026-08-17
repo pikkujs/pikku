@@ -1,4 +1,4 @@
-import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/function'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
 import {
   ConsoleLogger,
   InMemoryQueueService,

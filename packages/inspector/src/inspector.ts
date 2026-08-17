@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { performance } from 'perf_hooks'
-import { dirname, resolve } from 'path'
+import { dirname, relative, resolve } from 'path'
 import { visitSetup, visitFunctions, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import type {
@@ -51,6 +51,10 @@ import {
 } from './utils/workflow/graph/finalize-workflow-wires.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
 import { extractSecretUsage } from './utils/extract-secret-usage.js'
+import {
+  accumulateSurfaceUsage,
+  surfaceUsageArea,
+} from './utils/extract-surface-usage.js'
 import {
   loadAddonFunctionsMeta,
   loadAddonSchemas,
@@ -186,6 +190,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
       usage: new Map(),
     },
+    surfaceUsage: {},
     credentials: {
       definitions: [],
       files: new Set(),
@@ -378,11 +383,23 @@ export const inspect = async (
 
   const state = getInitialInspectorState(rootDir)
 
+  const surfaceAreaCache = new Map<string, string | null>()
   for (const sourceFile of sourceFiles) {
     const usage = extractSecretUsage(sourceFile)
     if (usage.keys.length > 0 || usage.dynamic.length > 0) {
       state.secrets.usage.set(sourceFile.fileName, usage)
     }
+    // Counted in the sweep that already has this file open. The public surface
+    // is documentation, and documentation may not cost a project a second pass
+    // over its source.
+    accumulateSurfaceUsage(
+      sourceFile,
+      {
+        area: surfaceUsageArea(sourceFile.fileName, rootDir, surfaceAreaCache),
+        file: relative(rootDir, sourceFile.fileName),
+      },
+      state.surfaceUsage
+    )
   }
 
   // First sweep: add all functions

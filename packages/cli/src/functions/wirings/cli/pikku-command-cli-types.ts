@@ -42,6 +42,11 @@ export const pikkuCLITypes = pikkuSessionlessFunc<CLITypesCommandInput, void>({
 
     const content = serializeCLITypes(
       functionTypesImportPath,
+      getFileImportRelativePath(
+        cliTypesFile,
+        config.middlewareTypesFile,
+        packageMappings
+      ),
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(cliTypesFile, userSessionType.typePath, packageMappings)}'`,
       userSessionType.type,
       `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(cliTypesFile, singletonServicesType.typePath, packageMappings)}'`,

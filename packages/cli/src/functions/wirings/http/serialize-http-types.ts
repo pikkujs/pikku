@@ -1,22 +1,28 @@
 /**
  * Generates type definitions for HTTP wirings
  */
-export const serializeHTTPTypes = (functionTypesImportPath: string) => {
+export const serializeHTTPTypes = (
+  functionTypesImportPath: string,
+  middlewareTypesImportPath: string,
+  authTypesImportPath: string,
+  { addon = false }: { addon?: boolean } = {}
+) => {
   return `/**
  * HTTP-specific type definitions for tree-shaking optimization
  */
 
-import { wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, wireHTTPRoutes as wireHTTPRoutesCore, defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
-import { AssertHTTPWiringParams } from '@pikku/core/http'
-export { cors } from '@pikku/core/middleware'
-import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import { ${addon ? '' : 'wireHTTP as wireHTTPCore, '}${addon ? '' : 'wireHTTPRoutes as wireHTTPRoutesCore, '}defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
+${addon ? '' : `import { AssertHTTPWiringParams } from '@pikku/core/http'\n`}import type { ${addon ? '' : 'PikkuFunction, PikkuFunctionSessionless, '}PikkuFunctionConfig } from '${functionTypesImportPath}'
+${addon ? '' : `import type { PikkuPermission } from '${authTypesImportPath}'\n`}import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 import type {
-  CoreHTTPFunctionWiring,
-  HTTPMethod,
+${addon ? '' : '  CoreHTTPFunctionWiring,\n'}  HTTPMethod,
   HTTPRouteBaseConfig,
 } from '@pikku/core/http'
 
-/**
+${
+  addon
+    ? ''
+    : `/**
  * Type definition for HTTP API wirings with type-safe path parameters.
  * Supports both authenticated and unauthenticated functions.
  *
@@ -39,33 +45,8 @@ export const wireHTTP = <In, Out, Route extends string>(
 ) => {
   wireHTTPCore(httpWiring as any)
 }
-
-/**
- * Registers HTTP middleware either globally or for a specific route pattern.
- *
- * When a string route pattern is provided along with middleware, the middleware
- * is applied only to that route. Otherwise, if an array is provided, it is treated
- * as global middleware (applied to all routes).
- *
- * @param routeOrMiddleware - Either a global middleware array or a route pattern string
- * @param middleware - The middleware array to apply when a route pattern is specified
- *
- * @example
- * \`\`\`typescript
- * // Add global HTTP middleware
- * addHTTPMiddleware([authMiddleware, loggingMiddleware])
- *
- * // Add route-specific middleware
- * addHTTPMiddleware('/api/admin/*', [adminAuthMiddleware])
- * \`\`\`
- */
-export const addHTTPMiddleware = (
-  routeOrMiddleware: PikkuMiddleware[] | string,
-  middleware?: PikkuMiddleware[]
-) => {
-  addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any)
+`
 }
-
 /**
  * Route configuration for wireHTTPRoutes with proper typing
  */
@@ -102,13 +83,17 @@ type TypedHTTPRoutesGroupConfig = {
   middleware?: PikkuMiddleware[]
 }
 
-/**
+${
+  addon
+    ? ''
+    : `/**
  * Full config for wireHTTPRoutes
  */
 type TypedWireHTTPRoutesConfig = TypedHTTPRoutesGroupConfig & {
   routes: TypedHTTPRouteMap | HTTPRouteConfig[]
 }
-
+`
+}
 /**
  * Type-safe helper for defining route contracts that can be composed.
  */
@@ -118,6 +103,10 @@ export function defineHTTPRoutes<T extends TypedHTTPRouteMap>(configOrRoutes: T 
   return defineHTTPRoutesCore(configOrRoutes as any) as unknown as TypedHTTPRouteContract<T>
 }
 
+${
+  addon
+    ? ''
+    : `
 /**
  * Wires multiple HTTP routes from a nested map or array configuration.
  */
@@ -125,4 +114,5 @@ export const wireHTTPRoutes = (config: TypedWireHTTPRoutesConfig): void => {
   wireHTTPRoutesCore(config as any)
 }
 `
+}`
 }

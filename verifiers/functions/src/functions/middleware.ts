@@ -1,4 +1,4 @@
-import { pikkuMiddleware } from '#pikku/function'
+import { pikkuMiddleware } from '#pikku/middleware'
 
 /**
  * Logging middleware that works across all wiring types

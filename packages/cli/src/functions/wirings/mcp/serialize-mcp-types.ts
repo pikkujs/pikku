@@ -1,24 +1,31 @@
 /**
  * Generates type definitions for MCP wirings
  */
-export const serializeMCPTypes = (functionTypesImportPath: string) => {
+export const serializeMCPTypes = (
+  functionTypesImportPath: string,
+  middlewareTypesImportPath: string,
+  authTypesImportPath: string,
+  { addon = false }: { addon?: boolean } = {}
+) => {
   return `/**
  * MCP-specific type definitions for tree-shaking optimization
  */
 
-import { wireMCPResource as wireMCPResourceCore, wireMCPPrompt as wireMCPPromptCore, MCPResourceResponse, MCPPromptResponse } from '@pikku/core/mcp'
+import { ${addon ? '' : 'wireMCPResource as wireMCPResourceCore, wireMCPPrompt as wireMCPPromptCore, '}MCPResourceResponse, MCPPromptResponse } from '@pikku/core/mcp'
 import {
-  CoreMCPResource,
-  CoreMCPPrompt,
-  MCPToolResponse,
-  AssertMCPResourceURIParams,
+${addon ? '' : `  CoreMCPResource,\n  CoreMCPPrompt,\n`}  MCPToolResponse,${addon ? '' : `\n  AssertMCPResourceURIParams,`}
 } from '@pikku/core/mcp'
 
-import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuMiddleware, PikkuPermission, InferSchemaOutput } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuFunctionSessionless, InferSchemaOutput } from '${functionTypesImportPath}'
+import type { PikkuPermission } from '${authTypesImportPath}'
+import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 import type { CorePermissionGroup } from '@pikku/core/function'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-/**
+${
+  addon
+    ? ''
+    : `/**
  * Type definition for MCP resources that provide data to AI models.
  *
  * @template In - Input type for the resource request
@@ -32,8 +39,12 @@ type MCPResourceWiring<In, URI extends string> = CoreMCPResource<PikkuFunctionCo
  * @template In - Input type for the prompt parameters
  */
 type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionConfig<In, MCPPromptResponse, 'rpc' | 'session' | 'mcp'>>
-
-/**
+`
+}
+${
+  addon
+    ? ''
+    : `/**
  * Registers an MCP resource with the Pikku framework.
  * Resources provide data that AI models can access.
  *
@@ -59,7 +70,8 @@ export const wireMCPPrompt = <In>(
 ) => {
   wireMCPPromptCore(mcpPrompt as any)
 }
-
+`
+}
 /**
  * Configuration for MCP prompt with Zod schema input validation.
  */

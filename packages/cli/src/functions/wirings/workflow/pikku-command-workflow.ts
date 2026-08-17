@@ -232,6 +232,16 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       workflowTypesFile,
       serializeWorkflowTypes(
         functionTypesImportPath,
+        getFileImportRelativePath(
+          workflowTypesFile,
+          config.middlewareTypesFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(
+          workflowTypesFile,
+          config.authGuardsFile,
+          packageMappings
+        ),
         rpcMapImportPath,
         workflowMapImportPath,
         agentMapImportPath,
@@ -249,6 +259,11 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         getFileImportRelativePath(
           config.scenarioTypesFile,
           functionTypesFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(
+          config.scenarioTypesFile,
+          config.middlewareTypesFile,
           packageMappings
         ),
         getFileImportRelativePath(

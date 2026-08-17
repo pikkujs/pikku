@@ -1,4 +1,5 @@
-import { addTagMiddleware, pikkuVoidFunc } from '#pikku/function'
+import { pikkuVoidFunc } from '#pikku/function'
+import { addTagMiddleware } from '#pikku/middleware'
 import { functionMiddleware } from '../middleware/function.js'
 import { tagMiddleware } from '../middleware/tag.js'
 import { functionPermission } from '../permissions/function.js'

@@ -3,6 +3,7 @@
  */
 export const serializeCLITypes = (
   functionTypesImportPath: string,
+  middlewareTypesImportPath: string,
   userSessionTypeImport: string,
   userSessionTypeName: string,
   singletonServicesTypeImport: string,
@@ -19,7 +20,8 @@ import {
   CorePikkuCLIRender,
   CoreCLICommandConfig,
 } from '@pikku/core/cli'
-import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
 

@@ -1,4 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { ErrorCode } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
@@ -142,6 +143,23 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
     if (!wireServicesType || !singletonServicesType) {
       throw new Error(
         'Required types not found: wireServicesType or singletonServicesType'
+      )
+    }
+
+    // `SingletonServices` always carries the framework's own singletons, so an
+    // empty list is never a project with no services — it is the inspector's
+    // program failing to resolve the type, usually because a `#pikku/*` leaf it
+    // imports does not exist yet. Written out, every service becomes optional in
+    // `RequiredSingletonServices`, and the failure resurfaces as dozens of
+    // unrelated "possibly undefined" errors in files nobody touched.
+    if (visitState.serviceAggregation.allSingletonServices.length === 0) {
+      throw new Error(
+        `[${ErrorCode.SINGLETON_SERVICES_TYPE_UNRESOLVED}] '${singletonServicesType.type}' resolved to no services at all, which means it did not resolve.\n` +
+          `Declared in ${singletonServicesType.typePath}.\n\n` +
+          'This is usually a stale or partial generated tree: a source file imports a ' +
+          '`#pikku/*` leaf that the current output no longer writes, so the type it ' +
+          'feeds resolves to an error type. Delete the output directory and re-run to ' +
+          'rebuild it from scratch.'
       )
     }
 

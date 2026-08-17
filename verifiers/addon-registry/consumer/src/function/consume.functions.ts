@@ -3,7 +3,8 @@
  * not the workspace source — and calls its `hello` function over RPC through
  * the `ext:` namespace that `wireAddon` sets up.
  */
-import { pikkuSessionlessFunc, wireAddon } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 import { wireHTTP } from '#pikku/http'
 
 wireAddon({ name: 'ext', package: '@pikku/verifier-registry-addon' })

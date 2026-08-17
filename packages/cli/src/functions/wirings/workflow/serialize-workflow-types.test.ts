@@ -6,6 +6,8 @@ describe('serializeWorkflowTypes', () => {
   const emit = () =>
     serializeWorkflowTypes(
       './pikku-function-types.gen.js',
+      './pikku-middleware-types.gen.js',
+      './pikku-auth-types.gen.js',
       './pikku-rpc-map.gen.js',
       './pikku-workflow-map.gen.js',
       './pikku-agent-map.gen.js',

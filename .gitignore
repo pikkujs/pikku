@@ -26,6 +26,7 @@ my-app
 .tmp-pii-gate-*
 console-app
 cli.schema.json
+packages/cli/surface.json
 .playwright-mcp
 
 # Logs

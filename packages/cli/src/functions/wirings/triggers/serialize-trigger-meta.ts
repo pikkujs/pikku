@@ -15,9 +15,7 @@ export const serializeTriggerMetaTS = (
 
   const serializedOutput: string[] = []
   serializedOutput.push("import { pikkuState } from '@pikku/core/state'")
-  serializedOutput.push(
-    "import { TriggerMeta } from '@pikku/core/trigger'"
-  )
+  serializedOutput.push("import { TriggerMeta } from '@pikku/core/trigger'")
   serializedOutput.push(importStatement)
   serializedOutput.push('')
   serializedOutput.push(

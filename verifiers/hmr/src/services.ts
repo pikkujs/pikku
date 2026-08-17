@@ -1,4 +1,4 @@
-import { pikkuConfig, pikkuServices } from '#pikku/function'
+import { pikkuConfig, pikkuServices } from '#pikku/setup'
 import {
   ConsoleLogger,
   LocalSecretService,

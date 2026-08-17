@@ -2,7 +2,8 @@
  * Tests for addon RPC invocations with middleware and permissions
  */
 
-import { pikkuSessionlessFunc, wireAddon } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 import { functionMiddleware } from './middleware/function.js'
 import { functionPermission } from './permissions/function.js'
 

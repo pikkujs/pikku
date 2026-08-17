@@ -1,4 +1,4 @@
-import { pikkuConfig } from '#pikku/function'
+import { pikkuConfig } from '#pikku/setup'
 
 /**
  * The database the `pikku db` commands operate on.

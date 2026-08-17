@@ -460,3 +460,32 @@ describe('collectSurface on a package published straight from source', () => {
     }
   })
 })
+
+describe('collectSurface on a project that has not been built yet', () => {
+  test('reads the generated leaves an addon points at through its build output', async () => {
+    const tmp = await makeTmp()
+    try {
+      await write(
+        tmp,
+        'package.json',
+        JSON.stringify({
+          name: '@scope/addon',
+          imports: {
+            '#pikku/*.js': './dist/.pikku/*.js',
+            '#pikku/*': ['./dist/.pikku/*/index.js', './dist/.pikku/*'],
+          },
+        })
+      )
+      await write(tmp, 'tsconfig.json', TSCONFIG)
+      await write(tmp, '.pikku/http/index.ts', 'export const wireHTTP = 1\n')
+
+      const surface = await collectSurface(tmp, {
+        importsSubpath: '#pikku/*',
+      })
+
+      assert.deepStrictEqual(namesOf(surface, '#pikku/http'), ['wireHTTP'])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})

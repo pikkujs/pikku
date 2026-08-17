@@ -63,16 +63,19 @@ describe('serializeVariablesTypes — shipping the declared set', () => {
 
     assert.match(
       output,
-      /import .* from '\.\/pikku-variables-meta\.gen\.json' with \{ type: 'json' \}/
+      /import '\.\/pikku-variables-meta\.gen\.json' with \{ type: 'json' \}/
     )
   })
 
-  test('exports the declared metadata for a host to read', () => {
+  // The sidecar is read off disk by the host, never imported from the leaf, so
+  // binding it to a name would put a symbol nothing calls into
+  // `#pikku/variables`.
+  test('keeps the sidecar out of the package surface', () => {
     const output = serialize([
       { name: 'apiUrl', displayName: 'API URL', variableId: 'API_URL' },
     ])
 
-    assert.match(output, /export const VARIABLES_META/)
+    assert.doesNotMatch(output, /export const VARIABLES_META/)
   })
 
   test('imports the sidecar even when nothing is declared', () => {

@@ -5,7 +5,10 @@
   "type": "module",
   "imports": {
     "#pikku/*.js": "./dist/.pikku/*.js",
-    "#pikku/*": ["./dist/.pikku/*/index.js", "./dist/.pikku/*"]
+    "#pikku/*": [
+      "./dist/.pikku/*/index.js",
+      "./dist/.pikku/*"
+    ]
   },
   "exports": {
     "./types": {

@@ -6,6 +6,7 @@ describe('serializeScenarioTypes', () => {
   const emit = () =>
     serializeScenarioTypes(
       '../function/pikku-function-types.gen.js',
+      '../middleware/pikku-middleware-types.gen.js',
       '../workflow/pikku-workflow-types.gen.js',
       '../workflow/pikku-scenario-step-map.gen.js',
       './pikku-personas.gen.js'

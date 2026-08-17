@@ -1,7 +1,7 @@
 import {
   pikkuChannelMiddleware,
   pikkuChannelMiddlewareFactory,
-} from '#pikku/channel'
+} from '#pikku/middleware'
 
 export const channelTagMiddleware = pikkuChannelMiddlewareFactory(
   (name: string) =>

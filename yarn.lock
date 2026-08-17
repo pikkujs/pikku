@@ -5310,6 +5310,7 @@ __metadata:
     "@ai-sdk/provider": "npm:^4.0.7"
     "@pikku/better-auth": "workspace:*"
     "@pikku/core": "npm:*"
+    "@pikku/e2e": "workspace:*"
     "@pikku/voice-agents": "workspace:*"
     "@types/node": "npm:^22"
     ai: "npm:^7.0.66"
@@ -5321,7 +5322,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/e2e@workspace:e2e":
+"@pikku/e2e@workspace:*, @pikku/e2e@workspace:e2e":
   version: 0.0.0-use.local
   resolution: "@pikku/e2e@workspace:e2e"
   dependencies:

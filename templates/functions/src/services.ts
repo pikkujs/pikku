@@ -9,7 +9,7 @@ import {
 import { LocalEventHubService } from '@pikku/core/channel/local'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { JoseJWTService } from '@pikku/jose'
-import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/function'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
 import { TodoStore } from './services/store.service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 

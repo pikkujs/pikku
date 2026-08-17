@@ -198,6 +198,15 @@ export interface PikkuCLICoreOutputFiles {
   middlewareFile: string
   middlewareGroupsMetaJsonFile: string
 
+  // Middleware authoring surface (the leaf `#pikku/middleware` resolves to)
+  middlewareTypesFile: string
+
+  // Config and service factories (the leaf `#pikku/setup` resolves to)
+  setupTypesFile: string
+
+  // Permissions, auth gates and credential definitions (part of `#pikku/auth`)
+  authGuardsFile: string
+
   // Permissions
   permissionsFile: string
   permissionsGroupsMetaJsonFile: string
@@ -222,9 +231,6 @@ export interface PikkuCLICoreOutputFiles {
 
   // Secrets metadata JSON
   secretsMetaJsonFile: string
-
-  // Credentials
-  credentialTypesFile: string
 
   // Credentials (typed wrapper for CredentialService)
   credentialsFile: string

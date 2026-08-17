@@ -113,7 +113,7 @@ export const installOpenapiAddon = pikkuFunc<
       if (!existsSync(wiringFile)) {
         writeFileSync(
           wiringFile,
-          `import { wireAddon } from '#pikku/function'\n\nwireAddon({ name: '${name}', package: '@pikku/addon-${name}' })\n`,
+          `import { wireAddon } from '#pikku/addon'\n\nwireAddon({ name: '${name}', package: '@pikku/addon-${name}' })\n`,
           'utf-8'
         )
       }

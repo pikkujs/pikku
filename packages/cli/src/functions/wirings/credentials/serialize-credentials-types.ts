@@ -1,7 +1,5 @@
 import type { CredentialDefinitions } from '@pikku/core/credential'
-import {
-  validateAndBuildCredentialDefinitionsMeta,
-} from '@pikku/core/credential'
+import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/credential'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
@@ -119,7 +117,7 @@ ${oauth2Entries.join(',\n')}
 
   return `${imports.join('\n')}
 
-export interface CredentialsMap {
+export type CredentialsMap = {
 ${mapEntries.join('\n')}
 }
 

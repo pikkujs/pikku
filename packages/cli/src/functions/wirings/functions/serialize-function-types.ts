@@ -1,5 +1,8 @@
 /**
- * Generates core function, middleware, and permission type definitions
+ * Generates the function authoring surface — the definers every wiring points
+ * at and the types they are written against. Middleware, permissions and the
+ * bootstrap factories used to live here too; each is its own decision taken at
+ * its own time, so each is now its own leaf.
  */
 export const serializeFunctionTypes = (
   userSessionTypeImport: string,
@@ -11,13 +14,14 @@ export const serializeFunctionTypes = (
   rpcMapTypeImport: string,
   requiredServicesTypeImport: string,
   configTypeImport: string,
-  packageName?: string,
+  authTypesImportPath = '../auth/pikku-auth-types.gen.js',
   workflowTypesImport?: string,
   nodeCategories?: string[],
   scopesTypeImport?: string,
-  credentialsTypeImport?: string
+  credentialsTypeImport?: string,
+  middlewareTypesImportPath = '../middleware/pikku-middleware-types.gen.js',
+  { addon = false }: { addon?: boolean } = {}
 ) => {
-  const packageNameValue = packageName ? `'${packageName}'` : 'null'
   const nodeCategoryType = nodeCategories?.length
     ? nodeCategories.map((c) => `'${c}'`).join(' | ')
     : 'string'
@@ -35,11 +39,9 @@ import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-t
     credentialsTypeImport || `type CredentialsMap = Record<string, unknown>`
 
   return `/**
- * Core function, middleware, and permission types for all wirings
+ * Core function types for all wirings
  */
 
-import type { CorePikkuMiddleware } from '@pikku/core/middleware'
-import type { MiddlewarePriority } from '@pikku/core/middleware'
 import type { PickRequired } from '@pikku/core/utils'
 import type { ListInput, ListOutput } from '@pikku/core/function'
 import type { CorePermissionGroup } from '@pikku/core/function'
@@ -47,18 +49,11 @@ import type { PikkuWire, SecretlessServices } from '@pikku/core/types'
 import type {
   CorePikkuFunctionConfig,
   CorePikkuSessionlessFunctionConfig,
-  CorePikkuAuth,
-  CorePikkuAuthConfig,
   CorePikkuPermission,
 } from '@pikku/core/function'
-import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
-import { addTagMiddleware as addTagMiddlewareCore, addGlobalMiddleware as addGlobalMiddlewareCore, pikkuMiddleware as pikkuMiddlewareCore } from '@pikku/core/middleware'
-import {
-  addGlobalPermission as addGlobalPermissionCore,
-} from '@pikku/core/middleware'
-import { pikkuState as __pikkuState } from '@pikku/core/state'
-import { CreateWireServices } from '@pikku/core/types'
 import type { NodeType } from '@pikku/core/node'
+import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
+import type { PikkuPermission } from '${authTypesImportPath}'
 ${scopesImport}
 ${credentialsImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -70,7 +65,6 @@ import {
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
 ${wireServicesTypeImport}
-${configTypeImport}
 ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 ${workflowImport}
@@ -78,7 +72,6 @@ ${workflowImport}
 ${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServices = ${singletonServicesTypeName}` : `export type { ${singletonServicesTypeName} as SingletonServices }`}
 ${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
 ${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeName}` : `export type { ${userSessionTypeName} as Session }`}
-${configTypeImport.includes('Config type not found') ? 'export type Config = any' : ''}
 
 /**
  * The services a wired function actually receives. The inspector records which
@@ -88,11 +81,8 @@ ${configTypeImport.includes('Config type not found') ? 'export type Config = any
  * nothing destructures it — in which case it is never created either. This is
  * why an \`if (!service)\` guard inside a function body is always dead code.
  */
-type WiredSingletonServices = RequiredSingletonServices & SingletonServices
+export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
 export type WiredServices = SecretlessServices<RequiredSingletonServices & Services>
-
-/** \`WiredSingletonServices\` without \`secrets\`, for auth gates. */
-type WiredAuthServices = SecretlessServices<WiredSingletonServices>
 
 /**
  * Inline node configuration for function definitions.
@@ -102,198 +92,6 @@ export type NodeConfig = {
   category: ${nodeCategoryType}
   type: NodeType
   errorOutput?: boolean
-}
-
-/**
- * Type-safe API permission definition that integrates with your application's session type.
- * Use this to define authorization logic for your API endpoints.
- *
- * @template In - The input type that the permission check will receive
- * @template RequiredServices - The services required for this permission check
- */
-export type PikkuPermission<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, false, Session>>
-
-/**
- * Type-safe middleware definition that can access your application's services and session.
- * Use this to define reusable middleware that can be applied to multiple wirings.
- *
- * @template RequiredServices - The services required for this middleware
- */
-export type PikkuMiddleware<RequiredServices extends SingletonServices = WiredSingletonServices> = CorePikkuMiddleware<RequiredServices>
-
-/**
- * Configuration object for creating a permission with metadata
- */
-type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices> = {
-  /** The permission function */
-  func: PikkuPermission<In, RequiredServices>
-  /** Optional human-readable name for the permission */
-  name?: string
-  /** Optional description of what the permission checks */
-  description?: string
-}
-
-/**
- * Factory function for creating permissions with tree-shaking support.
- * Supports both direct function and configuration object syntax.
- *
- * @example
- * \`\`\`typescript
- * // Direct function syntax
- * const permission = pikkuPermission(async ({ logger }, data, { session }) => {
- *   const session = await session?.get()
- *   return session?.role === 'admin'
- * })
- *
- * // Configuration object syntax with metadata
- * const adminPermission = pikkuPermission({
- *   name: 'Admin Permission',
- *   description: 'Checks if user has admin role',
- *   func: async ({ logger }, data, { session }) => {
- *     const session = await session?.get()
- *     return session?.role === 'admin'
- *   }
- * })
- * \`\`\`
- */
-export const pikkuPermission = <In>(
-  permission: PikkuPermission<In> | PikkuPermissionConfig<In>
-): PikkuPermission<In> => {
-  return typeof permission === 'function' ? permission : permission.func
-}
-
-/**
- * Type-safe auth-only permission that only needs services and session.
- * Use this for upfront authorization gates (MCP tools, AI agents, workflows)
- * where request data isn't available yet.
- *
- * @template RequiredServices - The services required for this auth check
- */
-type PikkuAuth<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuth<RequiredServices, Session>
-
-/**
- * Configuration object for creating an auth permission with metadata
- */
-type PikkuAuthConfig<RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices> = CorePikkuAuthConfig<RequiredServices, Session>
-
-/**
- * Factory function for creating auth-only permissions with tree-shaking support.
- * Auth permissions only receive services and session (no request data),
- * making them evaluable before request data is available.
- *
- * @example
- * \\\`\\\`\\\`typescript
- * const isAuthenticated = pikkuAuth(async ({ logger }, session) => {
- *   return !!session
- * })
- *
- * const isAdmin = pikkuAuth({
- *   name: 'Admin Auth',
- *   description: 'Checks if user is an admin',
- *   func: async ({ logger }, session) => {
- *     return session?.role === 'admin'
- *   }
- * })
- * \\\`\\\`\\\`
- */
-export const pikkuAuth = <RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices>(
-  auth: PikkuAuth<RequiredServices> | PikkuAuthConfig<RequiredServices>
-): PikkuPermission<any, any> => {
-  return pikkuAuthCore(auth as any) as any
-}
-
-/**
- * Configuration object for creating middleware with metadata
- */
-type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = WiredSingletonServices> = {
-  /** The middleware function */
-  func: PikkuMiddleware<RequiredServices>
-  /** Optional human-readable name for the middleware */
-  name?: string
-  /** Optional description of what the middleware does */
-  description?: string
-  /** Execution priority. \`highest\` runs first (outermost). Defaults to 'medium'. */
-  priority?: MiddlewarePriority
-}
-
-export type { MiddlewarePriority }
-
-/**
- * Factory function for creating middleware with tree-shaking support.
- * Supports both direct function and configuration object syntax.
- *
- * @example
- * \`\`\`typescript
- * // Direct function syntax
- * const middleware = pikkuMiddleware(({ logger }, wires, next) => {
- *   logger.info('Middleware executed')
- *   await next()
- * })
- *
- * // Configuration object syntax with metadata
- * const logMiddleware = pikkuMiddleware({
- *   name: 'Request Logger',
- *   description: 'Logs all incoming requests',
- *   priority: 'high',
- *   func: async ({ logger }, wires, next) => {
- *     logger.info('Request started')
- *     await next()
- *   }
- * })
- * \`\`\`
- */
-export const pikkuMiddleware = <RequiredServices extends SingletonServices = WiredSingletonServices>(
-  middleware: PikkuMiddleware<RequiredServices> | PikkuMiddlewareConfig<RequiredServices>
-): PikkuMiddleware<RequiredServices> => {
-  return pikkuMiddlewareCore(middleware)
-}
-
-/**
- * Factory function for creating middleware factories
- * Use this when your middleware needs configuration/input parameters
- *
- * @example
- * \`\`\`typescript
- * export const logMiddleware = pikkuMiddlewareFactory<LogOptions>(({
- *   message,
- *   level = 'info'
- * }) => {
- *   return pikkuMiddleware(async ({ logger }, next) => {
- *     logger[level](message)
- *     await next()
- *   })
- * })
- * \`\`\`
- */
-export const pikkuMiddlewareFactory = <In = any>(
-  factory: (input: In) => PikkuMiddleware
-): ((input: In) => PikkuMiddleware) => {
-  return factory
-}
-
-/**
- * Factory function for creating permission factories
- * Use this when your permission needs configuration/input parameters
- *
- * @example
- * \`\`\`typescript
- * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
- *   role
- * }) => {
- *   return pikkuPermission(async ({ logger }, data, { session }) => {
- *     if (!session || session.role !== role) {
- *       logger.warn(\`Permission denied: required role '\${role}'\`)
- *       return false
- *     }
- *     return true
- *   })
- * })
- * \`\`\`
- */
-export const pikkuPermissionFactory = <In = any>(
-  factory: (input: In) => PikkuPermission<any>
-): ((input: In) => PikkuPermission<any>) => {
-  return factory
 }
 
 /**
@@ -686,135 +484,6 @@ export function pikkuRemoteChannelFunc<
   } as any
 }
 
-/**
- * Creates a Pikku config factory.
- * Use this to define your application's configuration factory.
- *
- * @param func - Config factory function that returns your application's config
- * @returns The config factory function
- *
- * @example
- * \`\`\`typescript
- * export const createConfig = pikkuConfig(async () => {
- *   return {
- *     apiUrl: process.env.API_URL || 'http://localhost:3000',
- *     dbUrl: process.env.DATABASE_URL
- *   }
- * })
- * \`\`\`
- */
-export const pikkuConfig = (
-  func: (variables?: any, ...args: any[]) => Promise<Config>
-) => func
 
-
-/**
- * Creates a Pikku singleton services factory.
- * Use this to define services that are created once and shared across all requests.
- *
- * @param func - Singleton services factory function
- * @returns The singleton services factory function
- *
- * @example
- * \`\`\`typescript
- * export const createSingletonServices = pikkuServices(async (config, existingServices) => {
- *   return {
- *     config,
- *     logger: new CustomLogger(),
- *     db: await createDatabaseConnection(config.dbUrl)
- *   }
- * })
- * \`\`\`
- */
-export const pikkuServices = (
-  func: (config: Config, existingServices: Partial<SingletonServices>) => Promise<Partial<Omit<RequiredSingletonServices, 'auth'>>>
-) => {
-  return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
-    const createdServices = await func(config, existingServices)
-    const services = { ...existingServices, ...createdServices }
-    const authFactory = __pikkuState(null, 'package', 'authFactory')
-    if (authFactory) {
-      let authInstance: Promise<unknown> | undefined
-      ;(services as any).auth = () => {
-        authInstance ??= Promise.resolve()
-          .then(() => authFactory(services as any))
-          .catch((error) => {
-            authInstance = undefined
-            throw error
-          })
-        return authInstance
-      }
-    }
-    const resolved = services as RequiredSingletonServices
-    __pikkuState(null, 'package', 'singletonServices', resolved as any)
-    return resolved
-  }
-}
-
-/**
- * Creates a Pikku wire services factory.
- * Use this to define services that are created per-request/session.
- *
- * @param func - Wire services factory function
- * @returns The wire services factory function
- *
- * @example
- * \`\`\`typescript
- * export const createWireServices = pikkuWireServices(async (services, wire) => {
- *   const session = await wire.session?.get()
- *   return {
- *     userCache: new UserCache(session?.userId)
- *   }
- * })
- * \`\`\`
- */
-export const pikkuWireServices = (
-  func: (
-    services: SingletonServices,
-    wire: any
-  ) => Promise<RequiredWireServices>
-): CreateWireServices => {
-  const factories = __pikkuState(null, 'package', 'factories')
-  __pikkuState(null, 'package', 'factories', { ...factories, createWireServices: func as any })
-  return func as unknown as CreateWireServices
-}
-
-/**
- * Tag-scoped middleware. Applies to any wiring that carries the matching tag.
- *
- * @example
- * addTagMiddleware('admin', [adminMiddleware])
- */
-export const addTagMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
-  addTagMiddlewareCore(tag, middleware as any, ${packageNameValue})
-}
-
-/**
- * Wire-agnostic global middleware. Runs at the top of every wiring's
- * middleware chain — before wire-, tag-, and function-level entries.
- *
- * Resolution order: global -> wire -> tag -> function.
- *
- * @example
- * addGlobalMiddleware([telemetryMiddleware])
- */
-export const addGlobalMiddleware = (middleware: PikkuMiddleware[]) => {
-  addGlobalMiddlewareCore(middleware as any, ${packageNameValue})
-}
-
-/**
- * Wire-agnostic global permissions. Runs at the top of every wiring's
- * permission resolution — before wire-, tag-, and function-level entries.
- *
- * Resolution order: global -> wire -> tag -> function.
- *
- * @example
- * addGlobalPermission([signedInUser])
- */
-export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
-  addGlobalPermissionCore(permissions as any, ${packageNameValue})
-}
-
-export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'
 `
 }

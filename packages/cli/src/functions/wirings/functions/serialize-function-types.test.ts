@@ -13,14 +13,40 @@ const emit = (nodeCategories?: string[], credentialsTypeImport?: string) =>
     "import type { FlattenedRPCMap, TypedPikkuRPC } from './rpc-map.js'",
     "import type { RequiredSingletonServices, RequiredWireServices } from './required-services.js'",
     "import type { Config } from './config.js'",
-    undefined,
+    './pikku-auth-types.gen.js',
     undefined,
     nodeCategories,
     undefined,
-    credentialsTypeImport
+    credentialsTypeImport,
+    './pikku-middleware-types.gen.js'
   )
 
 describe('serializeFunctionTypes', () => {
+  // The permission and auth gates left for `#pikku/auth`. `PikkuPermission` is
+  // still referenced by every function config, so it has to come back as a
+  // type-only import — a value import would be a runtime cycle between the two
+  // generated leaves.
+  test('leaves the gates to the auth leaf and types against them', () => {
+    const content = emit()
+
+    assert.match(
+      content,
+      /import type \{ PikkuPermission \} from '\.\/pikku-auth-types\.gen\.js'/
+    )
+    for (const name of [
+      'pikkuPermission',
+      'pikkuPermissionFactory',
+      'pikkuAuth',
+      'addGlobalPermission',
+    ]) {
+      assert.doesNotMatch(
+        content,
+        new RegExp(`export const ${name}\\b`),
+        `expected '${name}' to have moved to the auth leaf`
+      )
+    }
+  })
+
   test('emits pikkuListFunc without a named list-function type', () => {
     const content = emit()
 
@@ -40,7 +66,6 @@ describe('serializeFunctionTypes', () => {
     const content = emit()
 
     for (const [name, subpath] of [
-      ['CorePikkuMiddleware', 'middleware'],
       ['PickRequired', 'utils'],
       ['ListInput, ListOutput', 'function'],
       ['CorePermissionGroup', 'function'],
@@ -52,40 +77,6 @@ describe('serializeFunctionTypes', () => {
         `expected '${name}' to come from '@pikku/core/${subpath}'`
       )
     }
-  })
-
-  // Re-implementing a core factory means the generated copy drifts from it. The
-  // `__priority` stamp the middleware runner orders by is applied by core's
-  // `pikkuMiddleware` alone, so a generated one that rebuilds the body instead
-  // of calling it silently drops every priority an app declares.
-  describe('pikkuMiddleware', () => {
-    test('delegates to core rather than re-implementing it', () => {
-      const content = emit()
-
-      assert.match(
-        content,
-        /import \{[^}]*pikkuMiddleware as pikkuMiddlewareCore[^}]*\} from '@pikku\/core\/middleware'/s
-      )
-      assert.match(content, /pikkuMiddlewareCore\(middleware\)/)
-      assert.doesNotMatch(
-        content,
-        /typeof middleware === 'function' \? middleware : middleware\.func/
-      )
-    })
-
-    test('accepts and emits the priority the runtime orders by', () => {
-      const content = emit()
-
-      assert.match(
-        content,
-        /import type \{[^}]*MiddlewarePriority[^}]*\} from '@pikku\/core\/middleware'/s
-      )
-      assert.match(content, /export type \{ MiddlewarePriority \}/)
-      assert.match(
-        content,
-        /type PikkuMiddlewareConfig<[^]*?priority\?: MiddlewarePriority/
-      )
-    })
   })
 
   // `wire.getCredential('slack')` is only as typed as the map bound to the wire,

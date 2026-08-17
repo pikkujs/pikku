@@ -2,6 +2,8 @@ import { sharedWorkflowConfigFields } from './serialize-scenario-types.js'
 
 export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
+  middlewareTypesImportPath: string,
+  authTypesImportPath: string,
   rpcMapImportPath: string,
   workflowMapImportPath: string,
   agentMapImportPath: string,
@@ -47,7 +49,9 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
 }
 
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { InferSchemaOutput, PikkuPermission, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
+import type { InferSchemaOutput, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
+import type { PikkuPermission } from '${authTypesImportPath}'
+import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 import type { ScopeId } from '${scopesImportPath}'
 import { PikkuError } from '@pikku/core/errors'
 import type { CorePermissionGroup } from '@pikku/core/function'

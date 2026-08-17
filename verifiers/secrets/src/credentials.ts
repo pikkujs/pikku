@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { defineSecret } from '#pikku/secrets'
-import { defineCredential } from '#pikku/credentials'
+import { defineCredential } from '#pikku/auth'
 
 /**
  * Example API credentials using defineSecret with Zod schema.

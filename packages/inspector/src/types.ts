@@ -1,5 +1,6 @@
 import type * as ts from 'typescript'
 import type { SecretUsage } from './utils/extract-secret-usage.js'
+import type { SurfaceUsageCounts } from './utils/extract-surface-usage.js'
 import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -654,6 +655,8 @@ export interface InspectorState {
     /** Secret reads found per source file, keyed by absolute path. */
     usage: Map<string, SecretUsage>
   }
+  /** How often each `#pikku/*` export is imported, and from where. */
+  surfaceUsage: SurfaceUsageCounts
   credentials: {
     definitions: CredentialDefinitions
     files: Set<string>

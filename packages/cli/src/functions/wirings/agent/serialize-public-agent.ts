@@ -66,7 +66,8 @@ export const ThreadDeleted = z.object({ deleted: z.boolean() })
 `
 
   const functions = `import { canAccessThread, threadOwnerConstraint } from '@pikku/core/agent'
-import { pikkuPermission, pikkuSessionlessFunc } from '${leaf('function')}'
+import { pikkuSessionlessFunc } from '${leaf('function')}'
+import { pikkuPermission } from '${leaf('auth')}'
 import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
 import {
   AgentCall,

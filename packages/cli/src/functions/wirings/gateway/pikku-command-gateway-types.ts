@@ -26,7 +26,8 @@ export const pikkuGatewayTypes = pikkuSessionlessFunc<
 
     const content = serializeGatewayTypes(
       singletonServicesTypeImport,
-      singletonServicesType.type
+      singletonServicesType.type,
+      { addon: !!config.addon }
     )
     await writeFileInDir(logger, gatewaysTypesFile, content)
   },

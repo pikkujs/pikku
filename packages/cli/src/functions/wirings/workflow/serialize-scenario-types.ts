@@ -30,6 +30,7 @@ export const sharedWorkflowConfigFields = SHARED_CONFIG_FIELDS
 
 export const serializeScenarioTypes = (
   functionTypesImportPath: string,
+  middlewareTypesImportPath: string,
   workflowTypesImportPath: string,
   scenarioStepMapImportPath: string,
   personasImportPath: string
@@ -41,7 +42,8 @@ export const serializeScenarioTypes = (
 import type { PikkuWorkflowWire } from '@pikku/core/workflow'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { PikkuError } from '@pikku/core/errors'
-import type { PikkuFunctionSessionless, PikkuFunctionConfig, WiredServices, InferSchemaOutput, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
+import type { PikkuFunctionSessionless, PikkuFunctionConfig, WiredServices, InferSchemaOutput, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
+import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 import type { TypedWorkflow } from '${workflowTypesImportPath}'
 import type { FlattenedScenarioStepMap } from '${scenarioStepMapImportPath}'
 import type { TypedPersonas } from '${personasImportPath}'

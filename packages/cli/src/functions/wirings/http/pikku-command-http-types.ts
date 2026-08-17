@@ -6,14 +6,36 @@ import { serializeHTTPTypes } from './serialize-http-types.js'
 
 export const pikkuHTTPTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const { httpTypesFile, functionTypesFile, packageMappings } = config
+    const {
+      httpTypesFile,
+      functionTypesFile,
+      middlewareTypesFile,
+      packageMappings,
+    } = config
 
     const functionTypesImportPath = getFileImportRelativePath(
       httpTypesFile,
       functionTypesFile,
       packageMappings
     )
-    const content = serializeHTTPTypes(functionTypesImportPath)
+    const middlewareTypesImportPath = getFileImportRelativePath(
+      httpTypesFile,
+      middlewareTypesFile,
+      packageMappings
+    )
+    const authTypesImportPath = getFileImportRelativePath(
+      httpTypesFile,
+      config.authGuardsFile,
+      packageMappings
+    )
+    const content = serializeHTTPTypes(
+      functionTypesImportPath,
+      middlewareTypesImportPath,
+      authTypesImportPath,
+      {
+        addon: !!config.addon,
+      }
+    )
     await writeFileInDir(logger, httpTypesFile, content)
   },
   middleware: [

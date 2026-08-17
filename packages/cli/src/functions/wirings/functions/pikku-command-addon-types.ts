@@ -3,7 +3,10 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializeAddonTypes } from './serialize-addon-types.js'
+import {
+  serializeAddonInstallTypes,
+  serializeAddonTypes,
+} from './serialize-addon-types.js'
 
 type AddonTypesCommandInput = {
   bootstrap?: boolean
@@ -14,10 +17,6 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config, getInspectorState }, input) => {
-    if (!config.addon) {
-      return
-    }
-
     const {
       addonTypesFile,
       packageMappings,
@@ -26,6 +25,14 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<
       credentialsFile,
       variablesFile,
     } = config
+
+    // An application installs addons; an addon package declares itself. Both
+    // halves are static, so the app half needs no inspector pass and is written
+    // on the bootstrap run as readily as on the full one.
+    if (!config.addon) {
+      await writeFileInDir(logger, addonTypesFile, serializeAddonInstallTypes())
+      return
+    }
 
     const bootstrap = input?.bootstrap === true
     if (bootstrap) {

@@ -26,7 +26,7 @@ export const pikkuNewPermission = pikkuSessionlessFunc<
 
     switch (type) {
       case 'factory':
-        content = `import { pikkuPermissionFactory } from '#pikku/function'
+        content = `import { pikkuPermissionFactory } from '#pikku/auth'
 
 export const ${name} = pikkuPermissionFactory(
   (param: string) =>
@@ -40,7 +40,7 @@ export const ${name} = pikkuPermissionFactory(
 
       case 'simple':
       default:
-        content = `import { pikkuPermission } from '#pikku/function'
+        content = `import { pikkuPermission } from '#pikku/auth'
 
 export const ${name} = pikkuPermission(
   async ({ logger }, _data, { session }) => {

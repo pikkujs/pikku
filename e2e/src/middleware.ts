@@ -1,4 +1,4 @@
-import { addHTTPMiddleware, cors } from '#pikku/http'
+import { addHTTPMiddleware, cors } from '#pikku/middleware'
 import { pikkuMiddleware } from '@pikku/core/middleware'
 import type { CoreSingletonServices } from '@pikku/core/types'
 import type { CorePikkuMiddleware } from '@pikku/core/middleware'

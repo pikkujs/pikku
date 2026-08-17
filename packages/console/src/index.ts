@@ -343,6 +343,40 @@ export { ConsoleInspectorPanel } from './components/console/ConsoleInspectorPane
 export type { ConsoleInspectorPanelProps } from './components/console/ConsoleInspectorPanel'
 export { usePanelContextSafe } from './context/PanelContext'
 
+// The public surface as documentation. The website mounts the workspace with a
+// surface doc and no usage, the console adds the usage it can measure; the
+// affordances that read usage simply do not render without it.
+export { SurfaceWorkspace } from './components/surface/SurfaceWorkspace'
+export type { SurfaceWorkspaceProps } from './components/surface/SurfaceWorkspace'
+export { SurfaceNavigator } from './components/surface/SurfaceNavigator'
+export { SurfaceLeafDocument } from './components/surface/SurfaceLeafDocument'
+export { SurfaceSymbolDetail } from './components/surface/SurfaceSymbolDetail'
+export type { SurfaceSymbolDetailProps } from './components/surface/SurfaceSymbolDetail'
+export {
+  STEPS,
+  STEP_ORDER,
+  stepsOf,
+  exportsIn,
+  isEntrypoint,
+  entrypointsOf,
+} from './components/surface/surface-steps'
+export type {
+  StepDefinition,
+  StepGroup,
+} from './components/surface/surface-steps'
+export type {
+  SurfaceDoc,
+  SurfaceEntryPoint,
+  SurfaceEntryPointId,
+  SurfaceKind,
+  SurfaceLeaf,
+  SurfaceOrigin,
+  SurfaceStep,
+  SurfaceSymbol,
+  SurfaceSymbolUsage,
+  SurfaceUsage,
+} from './components/surface/surface.types'
+
 // A host that already cards its screens and has its own end-edge panel wraps the
 // console page in `HostConsoleChrome`: the page's surfaces then render flush
 // inside the host's card, and the layout stops docking its own panel column, so

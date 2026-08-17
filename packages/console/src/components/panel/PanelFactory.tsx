@@ -19,6 +19,7 @@ import { FunctionTabbedPanel } from '../project/panels/FunctionDetailsForm'
 import { PersonaDetail } from '../personas/PersonaDetail'
 import { SubjectDetail } from '../personas/SubjectDetail'
 import { AddonDetail } from '../packages/AddonDetail'
+import { SurfaceSymbolDetail } from '../surface/SurfaceSymbolDetail'
 import { createCanvasDrawerContent } from '../canvas-drawer/CanvasDrawerFactory'
 import {
   WorkflowStepConfiguration,
@@ -650,6 +651,23 @@ export const createPanelChildren = (
               // see WorkflowCanvasDrawer, whose standalone Drawer also gives it
               // an unpadded body.
               content: createCanvasDrawerContent(panelData.metadata.data),
+            },
+          ]
+        : []
+
+    case 'surfaceSymbol':
+      return panelData.metadata?.symbol
+        ? [
+            {
+              id: 'surfaceSymbol',
+              title: 'Export',
+              content: (
+                <SurfaceSymbolDetail
+                  symbol={panelData.metadata.symbol}
+                  specifier={panelData.metadata.specifier}
+                  usage={panelData.metadata.usage}
+                />
+              ),
             },
           ]
         : []

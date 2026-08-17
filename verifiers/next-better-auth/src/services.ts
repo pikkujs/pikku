@@ -1,7 +1,4 @@
-import {
-  pikkuConfig,
-  pikkuServices,
-} from '#pikku/function/pikku-function-types.gen.js'
+import { pikkuConfig, pikkuServices } from '#pikku/setup'
 import { ConsoleLogger, LocalSecretService } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import Database from 'better-sqlite3'

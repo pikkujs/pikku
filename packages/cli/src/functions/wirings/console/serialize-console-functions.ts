@@ -29,7 +29,8 @@ export const ValueResult = z.object({
 export const Success = z.object({ success: z.boolean() })
 `
 
-  const functions = `import { pikkuFunc, ref, wireAddon } from '${leaf('function')}'
+  const functions = `import { pikkuFunc, ref } from '${leaf('function')}'
+import { wireAddon } from '${leaf('addon')}'
 import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
 import {
   VariableRef,

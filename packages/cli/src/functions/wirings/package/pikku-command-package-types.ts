@@ -2,7 +2,6 @@ import { pikkuVoidFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
-  serializeCredentialDefinitionTypes,
   serializeScopeDefinitionTypes,
   serializeSecretDefinitionTypes,
   serializeVariableDefinitionTypes,
@@ -18,20 +17,6 @@ export const pikkuSecretDefinitionTypes = pikkuVoidFunc({
     logCommandInfoAndTime({
       commandStart: 'Creating Secret definition types',
       commandEnd: 'Created Secret definition types',
-    }),
-  ],
-})
-
-export const pikkuCredentialDefinitionTypes = pikkuVoidFunc({
-  func: async ({ logger, config }) => {
-    const { credentialTypesFile } = config
-    const content = serializeCredentialDefinitionTypes()
-    await writeFileInDir(logger, credentialTypesFile, content)
-  },
-  middleware: [
-    logCommandInfoAndTime({
-      commandStart: 'Creating Credential definition types',
-      commandEnd: 'Created Credential definition types',
     }),
   ],
 })

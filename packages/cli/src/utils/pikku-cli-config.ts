@@ -198,6 +198,29 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    if (!result.middlewareTypesFile) {
+      result.middlewareTypesFile = join(
+        middlewareDir,
+        'pikku-middleware-types.gen.ts'
+      )
+    }
+
+    const setupDir = join(result.outDir, 'setup')
+    if (!result.setupTypesFile) {
+      result.setupTypesFile = join(setupDir, 'pikku-setup-types.gen.ts')
+    }
+
+    // Sits in the same directory as the better-auth wrapper so both reach the
+    // reader as `#pikku/auth`, but is written unconditionally: every project
+    // decides who may call a function, only some projects use better-auth.
+    if (!result.authGuardsFile) {
+      result.authGuardsFile = join(
+        result.outDir,
+        'auth',
+        'pikku-auth-types.gen.ts'
+      )
+    }
+
     // HTTP
     if (!result.httpWiringsFile) {
       result.httpWiringsFile = join(httpDir, 'pikku-http-wirings.gen.ts')
@@ -914,12 +937,6 @@ const _getPikkuCLIConfig = async (
 
     // Credentials (typed wrapper for CredentialService)
     const credentialsDir = join(result.outDir, 'credentials')
-    if (!result.credentialTypesFile) {
-      result.credentialTypesFile = join(
-        credentialsDir,
-        'pikku-credential-types.gen.ts'
-      )
-    }
     if (!result.credentialsFile) {
       result.credentialsFile = join(credentialsDir, 'pikku-credentials.gen.ts')
     }

@@ -1,10 +1,12 @@
 export const serializeAgentTypes = (
   functionTypesImportPath: string,
+  middlewareTypesImportPath: string,
+  authTypesImportPath: string,
   agentMapImportPath: string,
   scopesImportPath: string,
   scorerNamesImportPath: string
 ) => {
-  return `import { CoreAgent, PikkuAgentMiddlewareHooks } from '@pikku/core/agent'
+  return `import { CoreAgent } from '@pikku/core/agent'
 import {
   agent as coreAgent,
   agentStream as coreAgentStream,
@@ -15,7 +17,9 @@ import {
   pikkuAgentScorer as corePikkuAgentScorer,
   pikkuAgentJudge as corePikkuAgentJudge,
 } from '@pikku/core/agent-scorer'
-import type { PikkuPermission, PikkuMiddleware, Services, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { Services, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { PikkuPermission } from '${authTypesImportPath}'
+import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { AgentMemoryConfig, AgentInput } from '@pikku/core/agent'
 import type { AgentMap } from '${agentMapImportPath}'
@@ -51,12 +55,7 @@ export const pikkuAgentJudge = (
   config: Parameters<typeof corePikkuAgentJudge<Services>>[0]
 ) => corePikkuAgentJudge<Services>(config)
 
-export const pikkuAgentMiddleware = <
-  State extends Record<string, unknown> = Record<string, unknown>,
-  RequiredServices extends Services = Services,
->(
-  hooks: PikkuAgentMiddlewareHooks<State, RequiredServices>
-): PikkuAgentMiddlewareHooks<State, RequiredServices> => hooks
+
 
 export const agent = <Name extends keyof AgentMap>(
   agentName: Name
