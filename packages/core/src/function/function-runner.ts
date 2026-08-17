@@ -45,7 +45,7 @@ import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { getOrCreatePackageSingletonServices } from '../wirings/addon/addon-runner.js'
 import {
   resolveAddonAuth,
-  resolveAddonLocalFunctionName,
+  resolveAddonFunctionTarget,
   resolveAddonScopes,
   resolveAddonTagMiddleware,
 } from '../wirings/addon/wire-addon.js'
@@ -172,10 +172,16 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   if (!funcMeta) {
-    const addonLocalName = resolveAddonLocalFunctionName(funcName, packageName)
-    if (addonLocalName) {
-      funcConfig = funcConfig || funcMap.get(addonLocalName)
-      funcMeta = allMeta[addonLocalName]
+    const addonTarget = resolveAddonFunctionTarget(funcName, packageName)
+    if (addonTarget) {
+      funcConfig =
+        funcConfig ||
+        pikkuState(addonTarget.packageName, 'function', 'functions').get(
+          addonTarget.localName
+        )
+      funcMeta = pikkuState(addonTarget.packageName, 'function', 'meta')[
+        addonTarget.localName
+      ]
     }
   }
 

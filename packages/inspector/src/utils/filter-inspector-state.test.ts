@@ -1862,6 +1862,65 @@ describe('addon bootstrap tree-shake', () => {
     const filtered = filterInspectorState(state, {}, mockLogger)
     assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
   })
+
+  const withRefWiredAddonRoute = (
+    addonFuncMeta: Record<string, unknown> = { services: [], optimized: false }
+  ) =>
+    withAddon((s) => {
+      s.http.meta.get['/workflow-run/stream'] = {
+        pikkuFuncId: 'console:streamWorkflowRun',
+        packageName: '@pikku/addon-console',
+        route: '/workflow-run/stream',
+        method: 'GET',
+        tags: [],
+        middleware: [],
+        permissions: [],
+      } as any
+      s.addonFunctions = {
+        console: { streamWorkflowRun: addonFuncMeta as any },
+      }
+    })
+
+  test('the deploy filter keeps a ref()-wired route onto a serverless addon function', () => {
+    const filtered = filterInspectorState(
+      withRefWiredAddonRoute(),
+      { target: ['serverless'] },
+      mockLogger
+    )
+    assert.ok(filtered.http.meta.get['/workflow-run/stream'])
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+    assert.ok(filtered.rpc.wireAddonDeclarations.has('console'))
+  })
+
+  test('the deploy filter drops a ref()-wired route onto a server-only addon function', () => {
+    const filtered = filterInspectorState(
+      withRefWiredAddonRoute({
+        services: [],
+        optimized: false,
+        deploy: 'server',
+      }),
+      { target: ['serverless'] },
+      mockLogger
+    )
+    assert.ok(!filtered.http.meta.get['/workflow-run/stream'])
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 0)
+  })
+
+  test("the deploy filter honours the addon's own serverlessIncompatible services", () => {
+    const state = withRefWiredAddonRoute({
+      services: { services: ['FfmpegService'] },
+      optimized: false,
+    })
+    state.addonServerlessIncompatible = new Map([
+      ['console', ['FfmpegService']],
+    ])
+    const filtered = filterInspectorState(
+      state,
+      { target: ['serverless'] },
+      mockLogger
+    )
+    assert.ok(!filtered.http.meta.get['/workflow-run/stream'])
+  })
 })
 
 describe('invokedFunctionsByFile serialization', () => {

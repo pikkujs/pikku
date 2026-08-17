@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test'
 import * as assert from 'assert'
-import { fetch, wireHTTP } from './http-runner.js'
+import { addHTTPMiddleware, fetch, wireHTTP } from './http-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { PikkuMockRequest } from '../channel/local/local-channel-runner.test.js'
 import { httpRouter } from './routers/http-router.js'
@@ -55,7 +55,6 @@ const setRouteMeta = (
   const meta = pikkuState(null, 'http', 'meta')
   meta[method][route] = {
     pikkuFuncId: TARGET,
-    packageName: ADDON_PACKAGE,
     route,
     method,
     ...extra,
@@ -128,6 +127,45 @@ describe('http routes wired with ref() to an addon function', () => {
     assert.deepStrictEqual(await withParam.json(), { id: '42' })
     assert.deepStrictEqual(await withoutParam.json(), {})
     assert.deepEqual(seen, [{ id: '42' }, {}])
+  })
+
+  test("runs the consuming app's middleware, not the addon package's", async () => {
+    registerAddon()
+    setRouteMeta('/addon/greet-mw', 'get', {
+      auth: false,
+      middleware: [{ type: 'http', route: '*' }],
+    })
+
+    const ran: string[] = []
+    addHTTPMiddleware('*', [
+      async (_services, _wire, next) => {
+        ran.push('app')
+        await next()
+      },
+    ] as never)
+    addHTTPMiddleware(
+      '*',
+      [
+        async (_services: never, _wire: never, next: () => Promise<void>) => {
+          ran.push('addon')
+          await next()
+        },
+      ] as never,
+      ADDON_PACKAGE
+    )
+
+    wireHTTP({
+      route: '/addon/greet-mw',
+      method: 'get',
+      auth: false,
+      func: { func: async () => ({ message: 'hello' }) },
+    } as CoreHTTPFunctionWiring<unknown, unknown, string>)
+    httpRouter.initialize()
+
+    const response = await fetch(new ParamsRequest('/addon/greet-mw', 'get'))
+
+    assert.strictEqual(response.status, 200)
+    assert.deepStrictEqual(ran, ['app'])
   })
 
   test('honours the addon function metadata when a session is required', async () => {

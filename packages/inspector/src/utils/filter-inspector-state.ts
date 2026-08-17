@@ -355,16 +355,37 @@ export function filterInspectorState(
     const incompatible = new Set(filters.serverlessIncompatible ?? [])
     const defaultTarget = filters.defaultTarget ?? 'serverless'
     keptByDeploy = new Set<string>()
-    for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
+    const keepByTarget = (
+      funcId: string,
+      funcMeta: unknown,
+      incompatibleServices: Set<string>
+    ) => {
       const target = resolveDeployTarget(
         funcMeta as any,
-        incompatible,
+        incompatibleServices,
         funcId,
         defaultTarget
       )
-      if (allowed && !allowed.has(target)) continue
-      if (excluded && excluded.has(target)) continue
-      keptByDeploy.add(funcId)
+      if (allowed && !allowed.has(target)) return
+      if (excluded && excluded.has(target)) return
+      keptByDeploy!.add(funcId)
+    }
+    for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
+      keepByTarget(funcId, funcMeta, incompatible)
+    }
+    // A wiring onto an addon function records the addon's own id, so the
+    // addon's published metadata is the only place its deploy target can be
+    // read from. Its serverlessIncompatible services are namespace-scoped —
+    // a service name means whatever the addon that declared it means.
+    for (const [namespace, addonMeta] of Object.entries(
+      state.addonFunctions ?? {}
+    )) {
+      const addonIncompatible = new Set(
+        state.addonServerlessIncompatible?.get(namespace) ?? []
+      )
+      for (const [funcName, funcMeta] of Object.entries(addonMeta)) {
+        keepByTarget(`${namespace}:${funcName}`, funcMeta, addonIncompatible)
+      }
     }
   }
 

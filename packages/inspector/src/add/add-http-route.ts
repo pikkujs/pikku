@@ -235,7 +235,7 @@ export function registerHTTPRoute({
     }
   }
 
-  let packageName = ts.isIdentifier(funcInitializer)
+  const packageName = ts.isIdentifier(funcInitializer)
     ? resolveAddonName(
         funcInitializer,
         checker,
@@ -249,6 +249,11 @@ export function registerHTTPRoute({
   // types precisely once the consumer's own rpc map already lists the addon's
   // functions, so a cold run inferred the whole `FlattenedRPCMap` and a warm one
   // inferred the real input. The addon's metadata says which it is either way.
+  //
+  // The route stays the consuming app's all the same, so it records no
+  // packageName: that names the package a wire *runs in*, and running this one
+  // inside the addon would hand it the addon's middleware and services instead
+  // of the app's. `ref` reaches the addon over RPC, which enters it properly.
   if (refAddonTarget) {
     const targetMeta = resolveFunctionMeta(state, refAddonTarget)
     if (!targetMeta) {
@@ -258,9 +263,6 @@ export function registerHTTPRoute({
       return
     }
     funcName = refAddonTarget
-    const namespace = refAddonTarget.slice(0, refAddonTarget.indexOf(':'))
-    packageName =
-      state.rpc.wireAddonDeclarations.get(namespace)?.package ?? packageName
   } else {
     ensureFunctionMetadata(
       state,

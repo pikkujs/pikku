@@ -111,9 +111,13 @@ describe('an HTTP route wired with ref() to an addon function', () => {
     assert.equal(state.http.meta.post['/greet']?.pikkuFuncId, TARGET)
   })
 
-  test('tags the route with the addon package', () => {
-    assert.equal(state.http.meta.get['/greet/:id']?.packageName, ADDON_PACKAGE)
-    assert.equal(state.http.meta.post['/greet']?.packageName, ADDON_PACKAGE)
+  // packageName names the package a wire runs in — its middleware, its
+  // services, its scoped credentials. The route belongs to the consuming app
+  // however its function is reached, so tagging it with the addon's package
+  // would silently swap the app's global middleware for the addon's.
+  test("leaves the route in the consuming app's package", () => {
+    assert.equal(state.http.meta.get['/greet/:id']?.packageName, undefined)
+    assert.equal(state.http.meta.post['/greet']?.packageName, undefined)
   })
 
   test('mints no wrapper function metadata for the route', () => {
