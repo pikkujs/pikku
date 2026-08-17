@@ -1,4 +1,5 @@
 import type { InspectorState } from '../types.js'
+import { resolveFunctionMeta } from './resolve-function-meta.js'
 
 /**
  * Resolve, per HTTP route, whether reaching it requires a session.
@@ -25,7 +26,7 @@ export function annotateHttpRouteAuth(state: InspectorState): void {
 
   for (const routes of Object.values(state.http?.meta ?? {})) {
     for (const route of Object.values(routes)) {
-      const meta = state.functions.meta[route.refTarget ?? route.pikkuFuncId]
+      const meta = resolveFunctionMeta(state, route.pikkuFuncId)
 
       route.requiresSession =
         // A pikkuFunc always requires a session, on every path.

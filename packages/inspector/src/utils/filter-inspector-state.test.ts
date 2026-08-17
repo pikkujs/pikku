@@ -1705,21 +1705,18 @@ describe('addon bootstrap tree-shake', () => {
   test('keeps an addon when a kept route ref()-targets one of its functions', () => {
     const state = withAddon((s) => {
       s.http.meta.get['/workflow-run/stream'] = {
-        pikkuFuncId: 'http:get:/workflow-run/stream',
-        refTarget: 'console:streamWorkflowRun',
+        pikkuFuncId: 'console:streamWorkflowRun',
+        packageName: '@pikku/console',
         route: '/workflow-run/stream',
         method: 'GET',
-        tags: [],
+        tags: ['stream'],
         middleware: [],
         permissions: [],
-      } as any
-      s.functions.meta['http:get:/workflow-run/stream'] = {
-        services: { optimized: false, services: [] },
       } as any
     })
     const filtered = filterInspectorState(
       state,
-      { names: ['http:get:/workflow-run/stream'] },
+      { tags: ['stream'] },
       mockLogger
     )
     assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
@@ -1732,16 +1729,13 @@ describe('addon bootstrap tree-shake', () => {
   test('drops the addon when the ref()-wired route is filtered out', () => {
     const state = withAddon((s) => {
       s.http.meta.get['/workflow-run/stream'] = {
-        pikkuFuncId: 'http:get:/workflow-run/stream',
-        refTarget: 'console:streamWorkflowRun',
+        pikkuFuncId: 'console:streamWorkflowRun',
+        packageName: '@pikku/console',
         route: '/workflow-run/stream',
         method: 'GET',
         tags: [],
         middleware: [],
         permissions: [],
-      } as any
-      s.functions.meta['http:get:/workflow-run/stream'] = {
-        services: { optimized: false, services: [] },
       } as any
     })
     const filtered = filterInspectorState(

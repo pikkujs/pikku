@@ -143,6 +143,34 @@ export const resolveAddonAuth = (
   )
 
 /**
+ * The addon-local name behind a namespaced function id, when the namespace
+ * names an instance of this package.
+ *
+ * A wiring that points at an addon function through `ref('ns:fn')` records
+ * `ns:fn` as its own function id — the same id every other wire type records —
+ * but the addon publishes its metadata under the bare `fn`. Without this the
+ * wire finds the function it registered and no metadata to run it by.
+ */
+export const resolveAddonLocalFunctionName = (
+  funcName: string,
+  packageName: string | null
+): string | null => {
+  if (!packageName) {
+    return null
+  }
+  const separator = funcName.indexOf(':')
+  if (separator === -1) {
+    return null
+  }
+  const namespace = funcName.slice(0, separator)
+  const config = pikkuState(null, 'addons', 'packages').get(namespace)
+  if (config?.package !== packageName) {
+    return null
+  }
+  return funcName.slice(separator + 1)
+}
+
+/**
  * Addon tags name middleware the *consuming app* registered, so they resolve
  * against the root tag groups rather than the addon package's own.
  *

@@ -102,7 +102,11 @@ export const wireHTTP = <
     return
   }
   if (httpWiring.func) {
-    addFunction(routeMeta.pikkuFuncId, httpWiring.func)
+    addFunction(
+      routeMeta.pikkuFuncId,
+      httpWiring.func,
+      routeMeta.packageName ?? null
+    )
   }
   const routes = pikkuState(null, 'http', 'routes')
   if (!routes.has(httpWiring.method)) {
