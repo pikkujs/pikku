@@ -1,4 +1,4 @@
-import { wireAddon } from '#pikku/pikku-types.gen.js'
+import { wireAddon } from '#pikku/function'
 
 wireAddon({
   name: 'admin',
