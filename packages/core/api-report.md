@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2691 observable things**: 858 exported names, plus
-1833 members on the classes and interfaces among them, reachable
+**2697 observable things**: 862 exported names, plus
+1835 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 135 | 110 | 396 |
 | `./scenario` | 52 | 52 | 141 |
-| `./workflow` | 78 | 29 | 131 |
+| `./workflow` | 82 | 33 | 133 |
 | `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
 | `./channel` | 32 | 32 | 84 |
@@ -1041,9 +1041,16 @@ export interface FilterStepMeta {
   condition: Condition
   outputVar?: string
 }
+export type ForEachConfig<NodeIds extends string = string> =
+  | NodeIds
+  | RefValue
+  | ((ref: RefFn<NodeIds>) => RefValue)
+export type ForEachMode = 'parallel' | 'sequential'
 export interface GraphNodeConfig<NodeIds extends string = string> {
   func: string
-  input?: (ref: RefFn<NodeIds>) => Record<string, unknown>
+  forEach?: ForEachConfig<NodeIds>
+  mode?: ForEachMode
+  input?: (ref: RefFn<NodeIds>, template: TemplateFn, $item: ItemFn) => Record<string, unknown>
   next?: NextConfig<NodeIds>
   onError?: NodeIds | NodeIds[]
   retries?: number
@@ -1063,6 +1070,7 @@ export type InputSource =
   | { from: 'literal'; value: unknown }
   | { from: 'template'; parts: string[]; expressions: InputSource[] }
 isRef: (value: unknown) => value is RefValue
+export type ItemFn = (path?: string) => RefValue
 export type OutputBinding =
   | { from: 'outputVar'; name: string; path?: string }
   | { from: 'stateVar'; name: string; path?: string }
@@ -1273,6 +1281,10 @@ export interface SwitchStepMeta {
   defaultSteps?: WorkflowStepMeta[]
 }
 template: (templateStr: string, refs: { $ref: string; path?: string | undefined; }[]) => TemplateString
+export type TemplateFn = (
+  templateStr: string,
+  refs: Array<{ $ref: string; path?: string }>
+) => TemplateString
 export type TemplateString = {
   $template: {
     parts: string[]
