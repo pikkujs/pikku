@@ -10,7 +10,15 @@ export type SurfaceSymbol = {
   name: string
   kind: SurfaceKind
   declaredAt: string
+  /** Absolute path of the declaring file, or null when it could not be found. */
+  declaredIn: string | null
   deprecated: boolean
+  /** The text of the `@deprecated` tag, when it carries one. */
+  deprecatedReason?: string
+  /** First paragraph of the symbol's JSDoc. */
+  summary?: string
+  /** How the type checker renders the symbol's type. */
+  signature?: string
 }
 
 export type SurfaceEntrypoint = {
@@ -20,9 +28,21 @@ export type SurfaceEntrypoint = {
   symbols: SurfaceSymbol[]
 }
 
+export type CollectSurfaceOptions = {
+  /**
+   * Read the package's `imports` map instead of its `exports` map, taking the
+   * one key given — `#pikku/*` is what an application reaches its generated
+   * leaves through, and it is a private specifier rather than a published one.
+   */
+  importsSubpath?: string
+  /** Restrict collection to these subpaths, so the program stays small. */
+  subpaths?: string[]
+}
+
 type PackageJson = {
   name?: string
   exports?: Record<string, unknown> | string
+  imports?: Record<string, unknown>
 }
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
@@ -106,12 +126,19 @@ const expandWildcard = (
         continue
       }
       if (!entry.isFile()) continue
-      if (suffix && !entry.name.endsWith(suffix)) continue
-      const stem = wildcardStem(entry.name)
-      if (stem === null) continue
+      if (wildcardStem(entry.name) === null) continue
+      // The suffix is matched against the path the wildcard stands in for, not
+      // the file name, so `#pikku/*` → `./.pikku/*/index.ts` captures the leaf
+      // directory rather than failing to match `index.ts` against `/index.ts`.
+      const relativePath = `${prefix}${entry.name}`
+      if (suffix && !relativePath.endsWith(suffix)) continue
+      const captured = suffix
+        ? relativePath.slice(0, -suffix.length)
+        : `${prefix}${wildcardStem(entry.name)}`
+      if (!captured) continue
       expanded.push({
-        subpath: subpath.replace('*', `${prefix}${stem}`),
-        target: `${targetDir}${prefix}${entry.name}`,
+        subpath: subpath.replace('*', captured),
+        target: `${targetDir}${relativePath}`,
       })
     }
   }
@@ -121,6 +148,15 @@ const expandWildcard = (
 
 const targetOf = (value: unknown): string | null => {
   if (typeof value === 'string') return value
+  // A fallback array declares the same specifier several ways; the first entry
+  // is the one a resolver reaches for, and the rest only matter when it misses.
+  if (Array.isArray(value)) {
+    for (const candidate of value) {
+      const resolved = targetOf(candidate)
+      if (resolved) return resolved
+    }
+    return null
+  }
   if (!value || typeof value !== 'object') return null
   const conditions = value as Record<string, unknown>
   for (const key of ['types', 'import', 'default', 'require']) {
@@ -197,6 +233,61 @@ const kindOf = (symbol: ts.Symbol, checker: ts.TypeChecker): SurfaceKind => {
 const isDeprecated = (symbol: ts.Symbol): boolean =>
   symbol.getJsDocTags().some((tag) => tag.name === 'deprecated')
 
+const deprecationReason = (symbol: ts.Symbol): string | undefined => {
+  const tag = symbol.getJsDocTags().find((each) => each.name === 'deprecated')
+  if (!tag) return undefined
+  const text = ts.displayPartsToString(tag.text).trim()
+  return text.length > 0 ? text : undefined
+}
+
+/**
+ * The first paragraph of the doc comment. A symbol's JSDoc regularly runs to
+ * several paragraphs of examples, and the console shows one line.
+ */
+const summaryOf = (
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker
+): string | undefined => {
+  const documentation = ts
+    .displayPartsToString(symbol.getDocumentationComment(checker))
+    .trim()
+  if (documentation.length === 0) return undefined
+  return documentation
+    .split(/\n\s*\n/)[0]!
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const SIGNED_KINDS: ReadonlySet<SurfaceKind> = new Set<SurfaceKind>([
+  'function',
+  'const',
+  'class',
+])
+
+const signatureOf = (
+  symbol: ts.Symbol,
+  kind: SurfaceKind,
+  checker: ts.TypeChecker
+): string | undefined => {
+  if (!SIGNED_KINDS.has(kind)) return undefined
+  const target =
+    symbol.flags & ts.SymbolFlags.Alias
+      ? checker.getAliasedSymbol(symbol)
+      : symbol
+  const declaration = target.declarations?.[0]
+  if (!declaration) return undefined
+  try {
+    const rendered = checker.typeToString(
+      checker.getTypeOfSymbolAtLocation(target, declaration),
+      declaration,
+      ts.TypeFormatFlags.NoTruncation
+    )
+    return rendered === 'any' || rendered === 'error' ? undefined : rendered
+  } catch {
+    return undefined
+  }
+}
+
 const declarationFileOf = (
   symbol: ts.Symbol,
   checker: ts.TypeChecker
@@ -210,11 +301,21 @@ const declarationFileOf = (
 }
 
 export const collectSurface = async (
-  packageDir: string
+  packageDir: string,
+  { importsSubpath, subpaths }: CollectSurfaceOptions = {}
 ): Promise<SurfaceEntrypoint[]> => {
   const root = resolve(packageDir)
   const packageJson = await readJson<PackageJson>(join(root, 'package.json'))
-  if (!packageJson?.exports) return []
+  if (!packageJson) return []
+
+  const declaredMap = importsSubpath
+    ? packageJson.imports?.[importsSubpath] !== undefined
+      ? { [importsSubpath]: packageJson.imports[importsSubpath] }
+      : {}
+    : packageJson.exports
+      ? subpathMap(packageJson.exports)
+      : {}
+  if (Object.keys(declaredMap).length === 0) return []
 
   const { outDir, paths } = await readCompilerOptions(root)
   const packageName = packageJson.name ?? ''
@@ -227,10 +328,8 @@ export const collectSurface = async (
 
   const seenEntryFiles = new Set<string>()
 
-  for (const [subpath, value] of Object.entries(
-    subpathMap(packageJson.exports)
-  )) {
-    if (!subpath.startsWith('.')) continue
+  for (const [subpath, value] of Object.entries(declaredMap)) {
+    if (!importsSubpath && !subpath.startsWith('.')) continue
     const target = targetOf(value)
     if (!target || !publishesCode(target)) continue
 
@@ -239,13 +338,15 @@ export const collectSurface = async (
       : [{ subpath, target }]
 
     for (const each of declared) {
+      if (subpaths && !subpaths.includes(each.subpath)) continue
       const entryFile = sourceForTarget(root, each.target, outDir)
       if (!entryFile || seenEntryFiles.has(entryFile)) continue
       seenEntryFiles.add(entryFile)
       entries.push({
         subpath: each.subpath,
-        specifier:
-          each.subpath === '.'
+        specifier: importsSubpath
+          ? each.subpath
+          : each.subpath === '.'
             ? packageName
             : `${packageName}${each.subpath.slice(1)}`,
         entryFile,
@@ -282,11 +383,16 @@ export const collectSurface = async (
       ? checker.getExportsOfModule(moduleSymbol)
       : []) {
       const file = declarationFileOf(symbol, checker)
+      const kind = kindOf(symbol, checker)
       symbols.push({
         name: symbol.getName(),
-        kind: kindOf(symbol, checker),
+        kind,
         declaredAt: file ? relative(root, file) : entry.entryFile,
+        declaredIn: file,
         deprecated: isDeprecated(symbol),
+        deprecatedReason: deprecationReason(symbol),
+        summary: summaryOf(symbol, checker),
+        signature: signatureOf(symbol, kind, checker),
       })
     }
 

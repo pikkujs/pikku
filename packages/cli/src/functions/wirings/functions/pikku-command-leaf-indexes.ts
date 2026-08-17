@@ -15,7 +15,7 @@ import { serializeLeafIndex } from './serialize-leaf-index.js'
  * definer from their typed-service map across two generated files, and an app
  * imports from both — so each is listed and the index re-exports all of them.
  */
-const leafEntries = [
+export const leafEntries = [
   ['function', ['functionTypesFile']],
   ['error', ['errorTypesFile']],
   ['http', ['httpTypesFile']],

@@ -8,6 +8,7 @@ import {
   refreshScaffoldsImportingRemovedEntryPoints,
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
+import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -557,6 +558,13 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // actually generated — that absence is what makes `#pikku/http` fail to
     // resolve in an addon rather than resolve to a module missing the export.
     await workflow.do('Leaf subpath entries', 'pikkuLeafIndexes', null)
+
+    // Reads the counters the inspector accumulated during the sweep it already
+    // makes — no second pass over the project's source, and nothing retained.
+    await workflow.do('Surface usage', async () => {
+      const { surfaceUsage } = await getInspectorState()
+      await writeSurfaceUsage(logger, config, surfaceUsage ?? {})
+    })
 
     await workflow.do('Bootstrap', 'pikkuBootstrap', { allImports })
     await workflow.do('Summary', 'pikkuSummary', null)

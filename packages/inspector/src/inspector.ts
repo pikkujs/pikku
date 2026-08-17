@@ -52,6 +52,10 @@ import {
 import { generateAllSchemas } from './utils/schema-generator.js'
 import { extractSecretUsage } from './utils/extract-secret-usage.js'
 import {
+  accumulateSurfaceUsage,
+  surfaceUsageArea,
+} from './utils/extract-surface-usage.js'
+import {
   loadAddonFunctionsMeta,
   loadAddonSchemas,
 } from './utils/load-addon-functions-meta.js'
@@ -186,6 +190,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
       usage: new Map(),
     },
+    surfaceUsage: {},
     credentials: {
       definitions: [],
       files: new Set(),
@@ -378,11 +383,20 @@ export const inspect = async (
 
   const state = getInitialInspectorState(rootDir)
 
+  const surfaceAreaCache = new Map<string, string | null>()
   for (const sourceFile of sourceFiles) {
     const usage = extractSecretUsage(sourceFile)
     if (usage.keys.length > 0 || usage.dynamic.length > 0) {
       state.secrets.usage.set(sourceFile.fileName, usage)
     }
+    // Counted in the sweep that already has this file open. The public surface
+    // is documentation, and documentation may not cost a project a second pass
+    // over its source.
+    accumulateSurfaceUsage(
+      sourceFile,
+      surfaceUsageArea(sourceFile.fileName, rootDir, surfaceAreaCache),
+      state.surfaceUsage
+    )
   }
 
   // First sweep: add all functions

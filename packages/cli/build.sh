@@ -254,6 +254,27 @@ npx tsc -b
 # at comes out non-executable and every `npx pikku` exits 126.
 chmod +x dist/bin/pikku.js
 
+# Generate the public surface doc.
+#
+# The surface comes in two halves. This one describes the framework — which
+# `#pikku/*` leaves an application gets, which an addon gets, and what each one
+# exports — so it is the same for every project on a given CLI version, and
+# computing it here costs users nothing. The other half, the per-project usage
+# overlay, is written by `pikku all` into a project's own outDir.
+#
+# Both modes are generated rather than listed: the app/addon difference lives in
+# the codegen (an addon's leaves omit `wireHTTP` and friends), so the only
+# honest way to describe it is to run the codegen twice and read what came out.
+echo "Generating the public surface doc..."
+_cli_bin="$PWD/dist/bin/pikku.js"
+(cd ../../templates/function-addon && node "$_cli_bin")
+(cd ../../templates/functions && node "$_cli_bin")
+node dist/src/functions/surface/generate-surface-doc.js \
+  --app ../../templates/functions \
+  --addon ../../templates/function-addon \
+  --core ../core \
+  --out surface.json
+
 # Copy schema file
 echo "Copying schema file..."
 schema_src=$(find .pikku/schemas -maxdepth 2 -name "PikkuCLIConfig.schema.json" | head -1)
