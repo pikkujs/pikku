@@ -23,8 +23,10 @@ export type SurfaceDocSymbol = {
   name: string
   kind: SurfaceKind
   origin: SurfaceOrigin
-  signature?: string
+  /** One line, for a list row. */
   summary?: string
+  /** The full documentation, for the panel that reads one export. */
+  docs?: string
   deprecated?: string
 }
 
@@ -37,7 +39,7 @@ export type SurfaceLeaf = {
   symbols: SurfaceDocSymbol[]
 }
 
-export type SurfaceEntryPointId = 'app' | 'addon' | 'ecosystem'
+export type SurfaceEntryPointId = 'app' | 'addon'
 
 export type SurfaceEntryPoint = {
   id: SurfaceEntryPointId

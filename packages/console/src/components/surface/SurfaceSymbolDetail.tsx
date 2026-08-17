@@ -3,6 +3,7 @@ import { Alert, Code, Divider, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { PikkuBadge } from '../ui/PikkuBadge'
+import { docBlocks } from './surface-docs'
 import type {
   SurfaceOrigin,
   SurfaceSymbol,
@@ -16,12 +17,15 @@ export type SurfaceSymbolDetailProps = {
   usage?: SurfaceSymbolUsage
 }
 
-/** A signature is one long line; the panel is narrow, so let it wrap rather
- *  than clip the half that says what the call takes. */
+/** An import line is one long line; the panel is narrow, so let it wrap rather
+ *  than clip the half that says where the export comes from. */
 const WRAP: React.CSSProperties = {
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
 }
+
+/** A fenced example keeps the indentation its author wrote. */
+const DOCS: React.CSSProperties = { whiteSpace: 'pre-wrap' }
 
 const originText = (origin: SurfaceOrigin): string => {
   if (origin.via === 'core') {
@@ -59,7 +63,25 @@ export const SurfaceSymbolDetail: React.FC<SurfaceSymbolDetailProps> = ({
       </Alert>
     )}
 
-    {symbol.summary && <Text size="sm">{asI18n(symbol.summary)}</Text>}
+    {symbol.docs ? (
+      <Stack gap="sm">
+        {docBlocks(symbol.docs).map((block, index) =>
+          block.kind === 'code' ? (
+            <Code key={index} block style={DOCS}>
+              {block.text}
+            </Code>
+          ) : (
+            <Text key={index} size="sm">
+              {asI18n(block.text)}
+            </Text>
+          )
+        )}
+      </Stack>
+    ) : (
+      <Text size="sm" c="dimmed" fs="italic">
+        {m.surface_undocumented()}
+      </Text>
+    )}
 
     <Stack gap={4}>
       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
@@ -69,17 +91,6 @@ export const SurfaceSymbolDetail: React.FC<SurfaceSymbolDetailProps> = ({
         {`import { ${symbol.name} } from '${specifier}'`}
       </Code>
     </Stack>
-
-    {symbol.signature && (
-      <Stack gap={4}>
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-          {m.surface_signature()}
-        </Text>
-        <Code block style={WRAP}>
-          {symbol.signature}
-        </Code>
-      </Stack>
-    )}
 
     <Divider />
 

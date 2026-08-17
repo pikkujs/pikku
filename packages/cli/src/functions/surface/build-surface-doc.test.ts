@@ -247,13 +247,13 @@ describe('buildSurfaceDoc origins', () => {
     }
   })
 
-  test('carries the signature and the deprecation the type checker knows about', async () => {
+  test('carries the documentation and the deprecation the type checker knows about', async () => {
     const root = await makeProject('@fixture/details', {
       function: [
         '/**',
         ' * Defines a function.',
         ' *',
-        ' * More prose the console does not show.',
+        ' * More prose, which only the panel that reads one export shows.',
         ' */',
         'export const pikkuFunc = (name: string): number => name.length',
         '/** @deprecated use pikkuFunc instead */',
@@ -273,7 +273,10 @@ describe('buildSurfaceDoc origins', () => {
 
       const defined = symbols?.find((symbol) => symbol.name === 'pikkuFunc')
       assert.strictEqual(defined?.summary, 'Defines a function.')
-      assert.strictEqual(defined?.signature, '(name: string) => number')
+      assert.strictEqual(
+        defined?.docs,
+        'Defines a function.\n\nMore prose, which only the panel that reads one export shows.'
+      )
       assert.strictEqual(defined?.deprecated, undefined)
       assert.strictEqual(
         symbols?.find((symbol) => symbol.name === 'oldFunc')?.deprecated,

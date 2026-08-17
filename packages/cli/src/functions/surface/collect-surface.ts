@@ -17,8 +17,8 @@ export type SurfaceSymbol = {
   deprecatedReason?: string
   /** First paragraph of the symbol's JSDoc. */
   summary?: string
-  /** How the type checker renders the symbol's type. */
-  signature?: string
+  /** The symbol's JSDoc in full, paragraphs and examples included. */
+  docs?: string
 }
 
 export type SurfaceEntrypoint = {
@@ -255,51 +255,38 @@ const deprecationReason = (symbol: ts.Symbol): string | undefined => {
 }
 
 /**
- * The first paragraph of the doc comment. A symbol's JSDoc regularly runs to
- * several paragraphs of examples, and the console shows one line.
+ * The doc comment as written. A leaf re-exports through `export *`, so the
+ * symbol reached here is an alias carrying no documentation of its own, and an
+ * overloaded function documents whichever overload the author chose to explain
+ * — hence the walk through the aliased symbol and then every declaration.
  */
-const summaryOf = (
+const documentationOf = (
   symbol: ts.Symbol,
   checker: ts.TypeChecker
 ): string | undefined => {
-  const documentation = ts
-    .displayPartsToString(symbol.getDocumentationComment(checker))
-    .trim()
-  if (documentation.length === 0) return undefined
+  const targets = [symbol]
+  if (symbol.flags & ts.SymbolFlags.Alias) {
+    targets.push(checker.getAliasedSymbol(symbol))
+  }
+  for (const target of targets) {
+    const documentation = ts
+      .displayPartsToString(target.getDocumentationComment(checker))
+      .trim()
+    if (documentation.length > 0) return documentation
+  }
+  return undefined
+}
+
+/**
+ * The first paragraph of the doc comment. A symbol's JSDoc regularly runs to
+ * several paragraphs of examples, and a list row shows one line.
+ */
+const summaryOf = (documentation: string | undefined): string | undefined => {
+  if (!documentation) return undefined
   return documentation
     .split(/\n\s*\n/)[0]!
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-const SIGNED_KINDS: ReadonlySet<SurfaceKind> = new Set<SurfaceKind>([
-  'function',
-  'const',
-  'class',
-])
-
-const signatureOf = (
-  symbol: ts.Symbol,
-  kind: SurfaceKind,
-  checker: ts.TypeChecker
-): string | undefined => {
-  if (!SIGNED_KINDS.has(kind)) return undefined
-  const target =
-    symbol.flags & ts.SymbolFlags.Alias
-      ? checker.getAliasedSymbol(symbol)
-      : symbol
-  const declaration = target.declarations?.[0]
-  if (!declaration) return undefined
-  try {
-    const rendered = checker.typeToString(
-      checker.getTypeOfSymbolAtLocation(target, declaration),
-      declaration,
-      ts.TypeFormatFlags.NoTruncation
-    )
-    return rendered === 'any' || rendered === 'error' ? undefined : rendered
-  } catch {
-    return undefined
-  }
 }
 
 const declarationFileOf = (
@@ -398,6 +385,7 @@ export const collectSurface = async (
       : []) {
       const file = declarationFileOf(symbol, checker)
       const kind = kindOf(symbol, checker)
+      const docs = documentationOf(symbol, checker)
       symbols.push({
         name: symbol.getName(),
         kind,
@@ -405,8 +393,8 @@ export const collectSurface = async (
         declaredIn: file,
         deprecated: isDeprecated(symbol),
         deprecatedReason: deprecationReason(symbol),
-        summary: summaryOf(symbol, checker),
-        signature: signatureOf(symbol, kind, checker),
+        summary: summaryOf(docs),
+        docs,
       })
     }
 

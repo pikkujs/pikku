@@ -36,7 +36,8 @@ export const SurfaceLeafDocument: React.FC<SurfaceLeafDocumentProps> = ({
     const base = [
       {
         key: 'name',
-        header: 'EXPORT',
+        header: m.surface_column_export(),
+        width: 240,
         render: (symbol: SurfaceSymbol) => (
           <Text
             fw={500}
@@ -50,8 +51,22 @@ export const SurfaceLeafDocument: React.FC<SurfaceLeafDocumentProps> = ({
         ),
       },
       {
+        key: 'summary',
+        header: m.surface_column_summary(),
+        render: (symbol: SurfaceSymbol) =>
+          symbol.summary ? (
+            <Text size="sm" lineClamp={2}>
+              {asI18n(symbol.summary)}
+            </Text>
+          ) : (
+            <Text size="sm" c="dimmed" fs="italic">
+              {m.surface_undocumented()}
+            </Text>
+          ),
+      },
+      {
         key: 'kind',
-        header: 'KIND',
+        header: m.surface_column_kind(),
         width: 120,
         render: (symbol: SurfaceSymbol) => (
           <PikkuBadge
@@ -71,7 +86,7 @@ export const SurfaceLeafDocument: React.FC<SurfaceLeafDocumentProps> = ({
       ...base,
       {
         key: 'imports',
-        header: 'IMPORTS',
+        header: m.surface_column_imports(),
         align: 'right' as const,
         width: 90,
         render: (symbol: SurfaceSymbol) => {

@@ -19,5 +19,4 @@ export const STEP_PROSE: Record<SurfaceStep, () => string> = {
 export const ENTRY_POINT_LABEL: Record<SurfaceEntryPointId, () => string> = {
   app: m.surface_entry_app,
   addon: m.surface_entry_addon,
-  ecosystem: m.surface_entry_ecosystem,
 }

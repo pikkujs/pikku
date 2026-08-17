@@ -272,7 +272,6 @@ _cli_bin="$PWD/dist/bin/pikku.js"
 node dist/src/functions/surface/generate-surface-doc.js \
   --app ../../templates/functions \
   --addon ../../templates/function-addon \
-  --core ../core \
   --out surface.json
 
 # Copy schema file

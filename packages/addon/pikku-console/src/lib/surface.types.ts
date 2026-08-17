@@ -25,8 +25,8 @@ export type SurfaceSymbol = {
   name: string
   kind: SurfaceKind
   origin: SurfaceOrigin
-  signature?: string
   summary?: string
+  docs?: string
   deprecated?: string
 }
 
@@ -38,7 +38,7 @@ export type SurfaceLeaf = {
   symbols: SurfaceSymbol[]
 }
 
-export type SurfaceEntryPointId = 'app' | 'addon' | 'ecosystem'
+export type SurfaceEntryPointId = 'app' | 'addon'
 
 export type SurfaceEntryPoint = {
   id: SurfaceEntryPointId

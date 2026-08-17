@@ -3,7 +3,6 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 
 import { collectSurface, type SurfaceEntrypoint } from './collect-surface.js'
 import {
-  ECOSYSTEM_LEAF_EDITORIAL,
   ENTRY_POINT_EDITORIAL,
   LEAF_EDITORIAL,
   type LeafEditorial,
@@ -39,11 +38,7 @@ export class MissingSurfaceEditorialError extends Error {
         leaves.length === 1 ? '' : 'es'
       } with no editorial entry: ${leaves.join(', ')}. Add ${
         leaves.length === 1 ? 'it' : 'them'
-      } to ${
-        entryPoint === 'ecosystem'
-          ? 'ECOSYSTEM_LEAF_EDITORIAL'
-          : 'LEAF_EDITORIAL'
-      } in src/functions/surface/surface-editorial.ts.`
+      } to LEAF_EDITORIAL in src/functions/surface/surface-editorial.ts.`
     )
     this.name = 'MissingSurfaceEditorialError'
   }
@@ -139,8 +134,8 @@ const toDocSymbols = (
       name: symbol.name,
       kind: symbol.kind,
       origin: originOf(symbol.declaredIn, generatedRoot),
-      ...(symbol.signature ? { signature: symbol.signature } : {}),
       ...(symbol.summary ? { summary: symbol.summary } : {}),
+      ...(symbol.docs ? { docs: symbol.docs } : {}),
       ...(symbol.deprecated
         ? { deprecated: symbol.deprecatedReason ?? 'Deprecated' }
         : {}),
@@ -200,8 +195,6 @@ export type BuildSurfaceDocOptions = {
   version: string
   app: SurfaceProject
   addon: SurfaceProject
-  /** The `@pikku/core` package directory. Omitted, `ecosystem` is left out. */
-  ecosystemDir?: string
 }
 
 const projectEntryPoint = async (
@@ -226,40 +219,14 @@ const projectEntryPoint = async (
   }
 }
 
-const ecosystemEntryPoint = async (
-  packageDir: string
-): Promise<SurfaceEntryPoint> => {
-  const entrypoints = await collectSurface(packageDir, {
-    subpaths: Object.keys(ECOSYSTEM_LEAF_EDITORIAL),
-  })
-  return {
-    id: 'ecosystem',
-    ...ENTRY_POINT_EDITORIAL.ecosystem,
-    specifierBase: CORE_PACKAGE_NAME,
-    leaves: toLeaves(
-      'ecosystem',
-      entrypoints.map((entrypoint) => ({
-        ...entrypoint,
-        specifier: entrypoint.subpath.replace('.', CORE_PACKAGE_NAME),
-      })),
-      (subpath) => ECOSYSTEM_LEAF_EDITORIAL[subpath],
-      null
-    ),
-  }
-}
-
 export const buildSurfaceDoc = async ({
   version,
   app,
   addon,
-  ecosystemDir,
-}: BuildSurfaceDocOptions): Promise<SurfaceDoc> => {
-  const entryPoints = [
+}: BuildSurfaceDocOptions): Promise<SurfaceDoc> => ({
+  version,
+  entryPoints: [
     await projectEntryPoint('app', app),
     await projectEntryPoint('addon', addon),
-  ]
-  if (ecosystemDir) {
-    entryPoints.push(await ecosystemEntryPoint(ecosystemDir))
-  }
-  return { version, entryPoints }
-}
+  ],
+})

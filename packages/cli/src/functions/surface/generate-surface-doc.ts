@@ -11,7 +11,7 @@ import { buildSurfaceDoc } from './build-surface-doc.js'
  * `build.sh` generates the two projects it reads — one application, one addon —
  * and points this at them.
  */
-const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> [--core <dir>] --out <file>`
+const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> --out <file>`
 
 const parseArgs = (argv: string[]): Record<string, string> => {
   const parsed: Record<string, string> = {}
@@ -28,14 +28,13 @@ const parseArgs = (argv: string[]): Record<string, string> => {
 
 const main = async (argv: string[]): Promise<void> => {
   const args = parseArgs(argv)
-  const { app, addon, core, out } = args
+  const { app, addon, out } = args
   if (!app || !addon || !out) throw new Error(usage)
 
   const doc = await buildSurfaceDoc({
     version: getCLIVersion(),
     app: { projectDir: app },
     addon: { projectDir: addon },
-    ...(core ? { ecosystemDir: core } : {}),
   })
 
   const outFile = resolve(out)

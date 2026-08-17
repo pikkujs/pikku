@@ -1029,7 +1029,6 @@
   "surface_select_item": "Select an export to see where it comes from",
   "surface_entry_app": "Building an app",
   "surface_entry_addon": "Building an addon",
-  "surface_entry_ecosystem": "Building on the ecosystem",
   "surface_step_create_a_function": "Everything starts as a function. It receives its data without knowing whether that arrived as a path param, a query string, a message body or a queue job, so nothing you write here has to be rewritten when the transport changes.",
   "surface_step_enhance_it": "Give it the things a function needs to be worth calling: typed errors it can throw, configuration it can read, and secrets and credentials it never has to hold itself.",
   "surface_step_wire_it_up": "Now decide how the outside world reaches it. Each wiring is one call, and a function can carry several — the same handler answering an HTTP route, a queue job and an MCP tool.",
@@ -1037,6 +1036,7 @@
   "surface_step_orchestrate_it": "Compose functions into something longer-running: a workflow with durable steps and retries, or an agent that chooses which of them to call.",
   "surface_step_test_it": "Drive the whole thing the way a user would, in scenarios that run against a real server rather than a mocked one.",
   "surface_column_export": "EXPORT",
+  "surface_column_summary": "WHAT IT DOES",
   "surface_column_kind": "KIND",
   "surface_column_imports": "IMPORTS",
   "surface_column_seen_in": "SEEN IN",
@@ -1049,6 +1049,6 @@
   "surface_origin_core": "Re-exported from {subpath}",
   "surface_origin_package": "Re-exported from {packageName}",
   "surface_import_hint": "Import it from",
-  "surface_signature": "Signature",
+  "surface_undocumented": "Not documented yet",
   "surface_imports_count": "{count} imports across this project"
 }
