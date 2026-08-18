@@ -3852,6 +3852,7 @@ export type CorePersona = {
   linkedAccounts?: Record<string, CorePersonaAccount>
   environments?: string[]
   runnable?: boolean
+  app?: string
 }
 export type CorePersonas = Record<string, CorePersona>
 createHttpPersonas: (config: HttpPersonasConfig) => ScenarioPersonas
@@ -3915,6 +3916,7 @@ export type PersonaMeta = {
   linkedAccounts?: Record<string, PersonaAccountMeta>
   environments?: string[]
   runnable: boolean
+  app?: string
   sourceFile?: string
 }
 export type PersonasMeta = Record<string, PersonaMeta>
