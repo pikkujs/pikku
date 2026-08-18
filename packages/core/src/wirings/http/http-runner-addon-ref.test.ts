@@ -2,6 +2,7 @@ import { test, describe, beforeEach } from 'node:test'
 import * as assert from 'assert'
 import { addHTTPMiddleware, fetch, wireHTTP } from './http-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
+import { addSchema } from '../../schema.js'
 import { PikkuMockRequest } from '../channel/local/local-channel-runner.test.js'
 import { httpRouter } from './routers/http-router.js'
 import type { CoreHTTPFunctionWiring, HTTPMethod } from './http.types.js'
@@ -19,7 +20,10 @@ class ParamsRequest extends PikkuMockRequest {
   }
 }
 
-const registerAddon = (sessionless = true) => {
+const registerAddon = (
+  sessionless = true,
+  inputSchemaName: string | null = null
+) => {
   pikkuState(null, 'addons', 'packages').set(ADDON_NAMESPACE, {
     package: ADDON_PACKAGE,
   } as never)
@@ -28,7 +32,7 @@ const registerAddon = (sessionless = true) => {
       pikkuFuncId: 'greet',
       name: 'greet',
       sessionless,
-      inputSchemaName: null,
+      inputSchemaName,
       outputSchemaName: null,
       inputs: [],
       outputs: [],
@@ -127,6 +131,54 @@ describe('http routes wired with ref() to an addon function', () => {
     assert.deepStrictEqual(await withParam.json(), { id: '42' })
     assert.deepStrictEqual(await withoutParam.json(), {})
     assert.deepEqual(seen, [{ id: '42' }, {}])
+  })
+
+  /**
+   * The addon registers its schemas in its own package state, and the name the
+   * runner validates against comes from the addon's metadata. Resolving the
+   * target's metadata by namespace while still reading the schema registry of
+   * the wire's package looks the name up under 'main', where the addon never
+   * put it — the route then answers 500 for every input it was given.
+   */
+  test("validates input against the addon package's schema registry", async () => {
+    registerAddon(true, 'GreetInput')
+    addSchema(
+      'GreetInput',
+      { type: 'object', properties: { id: { type: 'string' } } },
+      ADDON_PACKAGE
+    )
+    setRouteMeta('/addon/greet-schema/:id', 'get', {
+      auth: false,
+      params: ['id'],
+    })
+
+    const compiled: string[] = []
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { info: () => {}, warn: () => {}, error: () => {} },
+      schema: {
+        compileSchema: (key: string) => {
+          compiled.push(key)
+        },
+        validateSchema: () => {},
+        getSchemaKeys: () => [],
+      },
+    } as never)
+
+    wireHTTP({
+      route: '/addon/greet-schema/:id',
+      method: 'get',
+      auth: false,
+      func: { func: async (_s: never, data: unknown) => data },
+    } as unknown as CoreHTTPFunctionWiring<unknown, unknown, string>)
+    httpRouter.initialize()
+
+    const response = await fetch(
+      new ParamsRequest('/addon/greet-schema/42', 'get')
+    )
+
+    assert.strictEqual(response.status, 200)
+    assert.deepStrictEqual(await response.json(), { id: '42' })
+    assert.deepStrictEqual(compiled.length > 0, true)
   })
 
   test("runs the consuming app's middleware, not the addon package's", async () => {
