@@ -1,7 +1,7 @@
 {
   "name": "@pikku/core",
   "version": "0.12.84",
-  "description": "The Pikku runtime — functions, wirings, services, middleware and types",
+  "description": "The Pikku runtime \u2014 functions, wirings, services, middleware and types",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
@@ -19,7 +19,7 @@
   "sideEffects": [
     "./dist/errors/errors.js",
     "./dist/wirings/rpc/rpc-runner.js",
-    "./dist/wirings/rpc/remote-addon-auth.js",
+    "./dist/wirings/addon/remote-addon-auth.js",
     "./dist/wirings/workflow/workflow-approval-policy.js",
     "./dist/wirings/workflow/workflow-errors.js",
     "./dist/wirings/workflow/workflow-run-ownership.js",
@@ -45,6 +45,7 @@
     "./scheduler": "./dist/wirings/scheduler/index.js",
     "./trigger": "./dist/wirings/trigger/index.js",
     "./rpc": "./dist/wirings/rpc/index.js",
+    "./addon": "./dist/wirings/addon/index.js",
     "./safe-fetch": "./dist/utils/safe-fetch.js",
     "./node-host-resolver": "./dist/utils/node-host-resolver.js",
     "./mcp": "./dist/wirings/mcp/index.js",

@@ -10,9 +10,9 @@ import {
   resolveNamespace,
   rpcService,
 } from './rpc-runner.js'
-import { RemoteAddonAuthError } from './remote-addon-auth.js'
-import { wireAddon } from './wire-addon.js'
-import { wireRemoteAddon } from './wire-remote-addon.js'
+import { RemoteAddonAuthError } from '../addon/remote-addon-auth.js'
+import { wireAddon } from '../addon/wire-addon.js'
+import { wireRemoteAddon } from '../addon/wire-remote-addon.js'
 import { createSecretValue } from '../../classification/secret-value.js'
 
 const createLogger = () => ({

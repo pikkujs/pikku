@@ -1,4 +1,4 @@
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 import { MissingCredentialError } from '#pikku/error'
 import { OAuthApiClient } from './oauth-api-client.js'
 

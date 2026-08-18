@@ -34,6 +34,7 @@ export const leafEntries = [
   ['agent', ['agentTypesFile']],
   ['cli', ['cliTypesFile']],
   ['addon', ['addonTypesFile']],
+  ['addon/setup', ['addonSetupTypesFile']],
   ['secrets', ['secretTypesFile', 'secretsFile']],
   ['credentials', ['credentialsFile']],
   ['scopes', ['scopeTypesFile']],

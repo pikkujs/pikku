@@ -1,5 +1,5 @@
 import { EmailStore } from './email-store.service.js'
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(async () => {
   const emailStore = new EmailStore()

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 
 import { pikkuState, resetPikkuState } from '../pikku-state.js'
 import { getSchema } from '../schema.js'
-import { wireAddon } from '../wirings/rpc/wire-addon.js'
+import { wireAddon } from '../wirings/addon/wire-addon.js'
 import { reloadGeneratedMeta, reconcileAddonRegistry } from './reload-meta.js'
 
 const createMockLogger = () => {

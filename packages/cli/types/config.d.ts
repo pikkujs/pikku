@@ -217,8 +217,11 @@ export interface PikkuCLICoreOutputFiles {
   // Package service factories (for addon packages)
   packageFile: string
 
-  // Addon types (pikkuAddonConfig, pikkuAddonServices, etc.)
+  // Addon install surface, for an application (the leaf `#pikku/addon`)
   addonTypesFile: string
+
+  // Addon authoring surface, for an addon package (the leaf `#pikku/addon/setup`)
+  addonSetupTypesFile: string
 
   // Error catalogue (the leaf `#pikku/error` resolves to)
   errorTypesFile: string

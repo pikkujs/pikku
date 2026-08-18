@@ -42,13 +42,13 @@ import {
   type AuditLog,
 } from '../services/audit-service.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
-import { getOrCreatePackageSingletonServices } from '../wirings/rpc/addon-runner.js'
+import { getOrCreatePackageSingletonServices } from '../wirings/addon/addon-runner.js'
 import {
   resolveAddonAuth,
   resolveAddonScopes,
   resolveAddonTagMiddleware,
-} from '../wirings/rpc/wire-addon.js'
-import type { AddonInstance } from '../wirings/rpc/addon-runner.js'
+} from '../wirings/addon/wire-addon.js'
+import type { AddonInstance } from '../wirings/addon/addon-runner.js'
 import { closeWireServices } from '../utils.js'
 
 async function resolveSession(

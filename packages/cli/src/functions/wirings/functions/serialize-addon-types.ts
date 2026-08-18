@@ -1,15 +1,21 @@
 /**
  * The install side of `#pikku/addon`, written for an application rather than an
  * addon. Installing an addon and authoring one are the same concept approached
- * from opposite ends, so they are one import; which half a project gets is
- * decided by which kind of project it is.
+ * from opposite ends, and a project is only ever one of the two — but they
+ * cannot share a specifier, because a runtime template maps `#pikku/*` onto a
+ * sibling package through tsconfig `paths`, and `paths` are global to a tsx
+ * process rather than scoped to the package that declared them. A linked
+ * addon's own `#pikku/addon` would resolve against this leaf and find none of
+ * the authoring exports, so the authoring half sits a level down at
+ * `#pikku/addon/setup`, where an application's flat `.pikku` has nothing to
+ * match and the resolver falls back to Node.
  */
 export const serializeAddonInstallTypes = () =>
   `/**
  * Installing an addon into this application
  */
 
-export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'
+export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'
 `
 
 export const serializeAddonTypes = (

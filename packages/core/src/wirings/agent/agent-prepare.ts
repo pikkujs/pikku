@@ -35,7 +35,7 @@ import {
   resolveNamespace,
   ContextAwareRPCService,
 } from '../../wirings/rpc/rpc-runner.js'
-import { getOrCreatePackageSingletonServices } from '../../wirings/rpc/addon-runner.js'
+import { getOrCreatePackageSingletonServices } from '../../wirings/addon/addon-runner.js'
 import {
   resolveMemoryServices,
   loadContextMessages,

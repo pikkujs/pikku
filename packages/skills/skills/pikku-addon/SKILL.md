@@ -146,7 +146,7 @@ second argument is always present — an addon never falls back to its own logge
 variables or secrets; the consuming app supplies them:
 
 ```typescript
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, { secrets, logger }) => {
@@ -167,7 +167,7 @@ config object.
 Define per-request services for an addon package (created fresh per HTTP request, queue job, etc.):
 
 ```typescript
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async (singletonServices, wire) => {
@@ -195,7 +195,7 @@ This generates `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json
 
 ```typescript
 // src/services.ts
-import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/addon/setup'
 import { TodoStore } from './todo-store.service.js'
 
 export const createSingletonServices = pikkuAddonServices(async () => {

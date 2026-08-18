@@ -25,13 +25,16 @@ const ALLOWED: Record<string, string[]> = {
   http: ['channel'],
   cli: ['channel'],
   // An agent streams over a channel and is invoked over rpc, and grades itself
-  // as the last thing a finished run does.
-  agent: ['channel', 'rpc', 'agent-scorer'],
+  // as the last thing a finished run does. Its own functions may come from an
+  // installed addon, so it builds that addon's services the same way rpc does.
+  agent: ['channel', 'rpc', 'agent-scorer', 'addon'],
   // A judge is a degenerate agent — it builds agent messages and runs them —
   // and a grade is dispatched to a queue.
   'agent-scorer': ['agent', 'queue'],
   // `wire.rpc.agent` — the facade lives with the agent runtime it delegates to.
-  rpc: ['agent'],
+  // An rpc call is how an installed addon's function is reached, so the runner
+  // resolves the addon instance that owns the namespace.
+  rpc: ['agent', 'addon'],
   gateway: ['http'],
   mcp: ['rpc'],
   trigger: ['rpc'],

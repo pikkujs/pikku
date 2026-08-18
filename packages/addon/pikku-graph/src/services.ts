@@ -1,4 +1,4 @@
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 import { PikkuHttpRequesterService } from './http-requester.service.js'
 
 export const createSingletonServices = pikkuAddonServices(

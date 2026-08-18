@@ -158,11 +158,13 @@
   "./rpc": [
     "PikkuRPCService",
     "RPCNotFoundError",
-    "RemoteAddonAuthError",
     "RemoteAddonConfigError",
     "RemoteAddonRequestError",
+    "rpcService"
+  ],
+  "./addon": [
+    "RemoteAddonAuthError",
     "resolveRemoteAddonToken",
-    "rpcService",
     "wireAddon",
     "wireRemoteAddon"
   ],

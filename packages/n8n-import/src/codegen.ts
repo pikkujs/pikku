@@ -1511,7 +1511,7 @@ function emitAddonsFile(
       ].join('\n')
     )
   return [
-    `import { wireAddon } from '@pikku/core/rpc'`,
+    `import { wireAddon } from '@pikku/core/addon'`,
     ``,
     `// TODO(n8n): verify each addon package + credential key — packages are`,
     `// inferred from the n8n credential type and refined by the addon-map step.`,

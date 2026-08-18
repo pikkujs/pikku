@@ -307,7 +307,7 @@ function runBatch(
     )
     writeFileSync(
       join(batchDir, 'src', '_addons.gen.ts'),
-      `import { wireAddon } from '@pikku/core/rpc'\n\n${blocks.join('\n')}\n`
+      `import { wireAddon } from '@pikku/core/addon'\n\n${blocks.join('\n')}\n`
     )
   }
   const scope = join(batchDir, 'node_modules', '@pikku')

@@ -7,7 +7,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 **2691 observable things**: 858 exported names, plus
 1833 members on the classes and interfaces among them, reachable
-through 52 entry points.
+through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -33,7 +33,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./gateway` | 11 | 11 | 14 |
-| `./rpc` | 15 | 15 | 8 |
 | `./middleware` | 24 | 22 | 0 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./utils` | 21 | 20 | 2 |
@@ -42,10 +41,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/timeline` | 9 | 4 | 14 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 45 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
+| `./addon` | 8 | 8 | 2 |
 | `./dev` | 5 | 5 | 5 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./role` | 9 | 9 | 0 |
@@ -2876,6 +2877,28 @@ export type PikkuRPC<
 export class PikkuRPCService< Services extends CoreServices, TypedRPC = PikkuRPC, > {
   getContextRPCService(services: Services, wire: PikkuRawWire, requiresAuthOrOptions?: | boolean | { requiresAuth?: boolean; sessionService?: SessionService<CoreUserSession> } | undefined, depth: number = 0, packageName: string | null = null): TypedRPC
 }
+export class RemoteAddonConfigError extends PikkuError {
+  constructor(namespace: string, detail: string)
+}
+export class RemoteAddonRequestError extends PikkuError {
+  public readonly httpStatus: number
+  constructor(namespace: string, fnName: string, status: number, detail: string)
+}
+export type RPCMeta = {
+  pikkuFuncId: string
+  expose: boolean
+  remote?: boolean
+}
+export class RPCNotFoundError extends PikkuError {
+  public readonly rpcName: string
+  constructor(rpcName: string)
+}
+rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, PikkuRPC>
+```
+
+## ./addon
+
+```ts
 export type RemoteAddonAuth =
   | { credentialId: string }
   | { secretId: string }
@@ -2898,24 +2921,7 @@ export class RemoteAddonAuthError extends PikkuError {
   public readonly namespace: string
   constructor(namespace: string, detail: string)
 }
-export class RemoteAddonConfigError extends PikkuError {
-  constructor(namespace: string, detail: string)
-}
-export class RemoteAddonRequestError extends PikkuError {
-  public readonly httpStatus: number
-  constructor(namespace: string, fnName: string, status: number, detail: string)
-}
 resolveRemoteAddonToken: (auth: RemoteAddonAuthBinding | undefined, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, wire: PikkuRawWire, namespace: string) => Promise<string | null>
-export type RPCMeta = {
-  pikkuFuncId: string
-  expose: boolean
-  remote?: boolean
-}
-export class RPCNotFoundError extends PikkuError {
-  public readonly rpcName: string
-  constructor(rpcName: string)
-}
-rpcService: PikkuRPCService<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, PikkuRPC>
 wireAddon: (config: WireAddonConfig) => void
 export type WireAddonConfig = {
   name: string

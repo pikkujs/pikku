@@ -64,7 +64,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   addon: {
     step: 'enhance it',
     summary:
-      'Addons from both ends: installing one into an application, declaring one as a package, and the typed services either way contributes to every function.',
+      'Installs an addon into this application, on its own or over rpc against a remote one.',
+  },
+  'addon/setup': {
+    step: 'create a function',
+    summary:
+      'The setup leaf an addon declares itself through — its config, singleton services and per-wire services, each handed the logger, variables and secrets the host application already built. It sits a level below the install leaf because a project is one or the other, and a linked addon resolving #pikku/addon against its host would find the wrong half.',
   },
   http: {
     step: 'wire it up',

@@ -301,7 +301,7 @@ ${description}
     files['src/services.ts'] =
       `import { UnauthorizedError } from '@pikku/core/errors'
 import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -326,7 +326,7 @@ export const createWireServices = pikkuAddonWireServices(
     const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -350,7 +350,7 @@ export const createWireServices = pikkuAddonWireServices(
     files['src/services.ts'] =
       `import { UnauthorizedError } from '@pikku/core/errors'
 import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -371,7 +371,7 @@ export const createWireServices = pikkuAddonWireServices(
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
 import type { ${pascalName}Secrets } from './${name}.secret.js'
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
@@ -386,7 +386,7 @@ export const createSingletonServices = pikkuAddonServices(async (
   } else {
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,

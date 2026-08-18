@@ -85,7 +85,7 @@ I't```
 ### Singleton Services — `pikkuAddonServices()`
 
 ```typescript
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, parentServices) => {
@@ -107,7 +107,7 @@ Key differences from main app services:
 ### Wire Services — `pikkuAddonWireServices()` (optional)
 
 ```typescript
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async (singletonServices, wire) => {
@@ -120,7 +120,7 @@ export const createWireServices = pikkuAddonWireServices(
 ### Config — `pikkuAddonConfig()` (optional)
 
 ```typescript
-import { pikkuAddonConfig } from '#pikku/addon'
+import { pikkuAddonConfig } from '#pikku/addon/setup'
 
 export const createConfig = pikkuAddonConfig(async (services) => {
   const baseUrl = await services.variables.get('API_BASE_URL')

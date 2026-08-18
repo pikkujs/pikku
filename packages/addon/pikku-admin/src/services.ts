@@ -1,4 +1,4 @@
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 /**
  * Forwarded, never constructed. Every one of them is the application's choice:
