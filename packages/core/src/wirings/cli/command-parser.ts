@@ -6,6 +6,7 @@ import type {
   CLIOption,
   CLIOptionType,
 } from './cli.types.js'
+import { pikkuState } from '../../pikku-state.js'
 
 /** "from-plan" → "fromPlan"; the parser accepts either spelling. */
 function toCamelCase(str: string): string {
@@ -107,6 +108,77 @@ function resolveOptionType(optionDef: CLIOption): CLIOptionType {
     return 'number'
   }
   return 'string'
+}
+
+/**
+ * A command's options are keys of its function's input, so the input schema
+ * already records what each one is. Reading it here means a declaration never
+ * has to repeat — or contradict — the type the function is validated against.
+ * An explicit `type` still wins, and an option the schema says nothing about
+ * (a program-level option belonging to no function input) is left untouched.
+ */
+function applySchemaOptionTypes(
+  options: Record<string, CLIOption>,
+  commandMeta: CLICommandMeta
+): Record<string, CLIOption> {
+  const properties = commandInputProperties(commandMeta)
+  if (!properties) {
+    return options
+  }
+
+  const typed: Record<string, CLIOption> = { ...options }
+  for (const [name, option] of Object.entries(typed)) {
+    if (option.type) {
+      continue
+    }
+    const schemaType = optionTypeFromSchema(properties[name])
+    if (schemaType) {
+      typed[name] = { ...option, type: schemaType }
+    }
+  }
+  return typed
+}
+
+function commandInputProperties(
+  commandMeta: CLICommandMeta
+): Record<string, any> | null {
+  const funcMeta = pikkuState(null, 'function', 'meta')[commandMeta.pikkuFuncId]
+  const schemaName = funcMeta?.inputSchemaName
+  if (!schemaName) {
+    return null
+  }
+  const schema = pikkuState(
+    funcMeta.packageName ?? null,
+    'misc',
+    'schemas'
+  ).get(schemaName)
+  const properties = schema?.properties
+  return properties && typeof properties === 'object' ? properties : null
+}
+
+function optionTypeFromSchema(property: any): CLIOptionType | undefined {
+  if (!property || typeof property !== 'object') {
+    return undefined
+  }
+  // An optional field can arrive as a union with null, which is not a shape the
+  // parser can read a value into.
+  const declared = Array.isArray(property.type)
+    ? property.type.filter((entry: unknown) => entry !== 'null')[0]
+    : property.type
+
+  switch (declared) {
+    case 'array':
+      return 'string[]'
+    case 'number':
+    case 'integer':
+      return 'number'
+    case 'boolean':
+      return 'boolean'
+    case 'string':
+      return 'string'
+    default:
+      return undefined
+  }
 }
 
 const BOOLEAN_LITERALS = new Map<string, boolean>([
@@ -246,7 +318,10 @@ export function parseCLIArguments(
     return result
   }
 
-  const availableOptions = collectAvailableOptions(meta, result.commandPath)
+  const availableOptions = applySchemaOptionTypes(
+    collectAvailableOptions(meta, result.commandPath),
+    commandMeta
+  )
 
   const positionalArgs: string[] = []
   const optionArgs: Record<string, any> = {}

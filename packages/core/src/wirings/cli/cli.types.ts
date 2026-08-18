@@ -20,7 +20,10 @@ import type { ChannelRemote, PikkuChannel } from '../channel/channel.types.js'
  * value on commas; `'boolean'` is a flag that consumes the next token only
  * when it is an explicit literal (`true`/`false`/`1`/`0`/`yes`/`no`); every
  * other type consumes one token verbatim, so a value may start with `-`. Left
- * unset, it is inferred from `default` and otherwise falls back to `'string'`.
+ * unset — which is the usual case — it is read from the command function's
+ * input schema, then from `default`, and otherwise falls back to `'string'`.
+ * Declare it only where neither can say: an option belonging to no function
+ * input, such as one the config factory reads straight off the CLI data.
  */
 export type CLIOptionType = 'string' | 'number' | 'boolean' | 'string[]'
 

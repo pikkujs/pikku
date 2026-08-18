@@ -466,7 +466,6 @@ wireCLI({
           options: {
             force: {
               description: 'Overwrite an existing email scaffold',
-              type: 'boolean',
             },
           },
         }),
@@ -727,12 +726,10 @@ wireCLI({
             allowApproval: {
               description:
                 'Offer the endpoints the app marked as needing a human\u2019s approval. Off by default: those are the ones that spend money',
-              type: 'boolean',
             },
             skipRoleCheck: {
               description:
                 'Start without verifying the declared roles against the stage. For a target whose auth reports roles somewhere pikku cannot read — findings from an unverified run may be seed drift rather than product bugs',
-              type: 'boolean',
             },
             apiUrl: {
               description:
@@ -753,7 +750,6 @@ wireCLI({
             dryRun: {
               description:
                 'Report who would be provisioned, with which roles, and why anyone was skipped — without touching anything',
-              type: 'boolean',
             },
             apiUrl: {
               description:
@@ -1037,7 +1033,6 @@ wireCLI({
           options: {
             force: {
               description: 'Overwrite existing manifest',
-              type: 'boolean',
             },
           },
         }),

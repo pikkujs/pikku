@@ -1,7 +1,8 @@
-import { test, describe } from 'node:test'
+import { test, describe, beforeEach, after } from 'node:test'
 import * as assert from 'assert'
 import { parseCLIArguments, generateCommandHelp } from './command-parser.js'
 import type { CLIMeta } from './cli.types.js'
+import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 
 const testMeta: CLIMeta = {
   programs: {
@@ -967,5 +968,132 @@ describe('Command Parser', () => {
         `expected the token to stay a positional, got: ${result.errors.join(', ')}`
       )
     })
+  })
+})
+
+describe('option types come from the function input schema', () => {
+  const schemaMeta: CLIMeta = {
+    programs: {
+      'test-cli': {
+        program: 'test-cli',
+        options: {},
+        commands: {
+          serve: {
+            pikkuFuncId: 'serveFunc',
+            positionals: [],
+            options: {
+              console: { description: 'Serve the console' },
+              port: { description: 'Port to listen on' },
+              tags: { description: 'Tags to include' },
+              retries: { description: 'How many times to retry' },
+              declared: {
+                description: 'Declared against the schema',
+                type: 'string',
+              },
+            },
+          },
+        },
+      },
+    },
+    renderers: {},
+  }
+
+  const registerSchema = (properties: Record<string, unknown>) => {
+    pikkuState(null, 'function', 'meta')['serveFunc'] = {
+      pikkuFuncId: 'serveFunc',
+      inputSchemaName: 'ServeInput',
+      outputSchemaName: null,
+      sessionless: true,
+    } as any
+    pikkuState(null, 'misc', 'schemas').set('ServeInput', {
+      type: 'object',
+      properties,
+    })
+  }
+
+  beforeEach(() => {
+    resetPikkuState()
+    registerSchema({
+      console: { type: 'boolean' },
+      port: { type: 'string' },
+      tags: { type: 'array', items: { type: 'string' } },
+      retries: { type: 'number' },
+      declared: { type: 'boolean' },
+    })
+  })
+
+  after(() => {
+    resetPikkuState()
+  })
+
+  test('a boolean in the schema is a flag, and does not swallow the next option', () => {
+    const result = parseCLIArguments(
+      ['serve', '--console', '--port', '4077'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.deepStrictEqual(result.errors, [])
+    assert.strictEqual(result.options.console, true)
+    assert.strictEqual(result.options.port, '4077')
+  })
+
+  test('an array in the schema splits on commas without being declared', () => {
+    const result = parseCLIArguments(
+      ['serve', '--tags', 'alpha,beta'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+  })
+
+  test('a number in the schema is coerced', () => {
+    const result = parseCLIArguments(
+      ['serve', '--retries', '3'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.retries, 3)
+  })
+
+  test('a declared type wins over the schema', () => {
+    const result = parseCLIArguments(
+      ['serve', '--declared', 'true'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.declared, 'true')
+  })
+
+  test('an option the schema does not mention keeps the string default', () => {
+    registerSchema({ console: { type: 'boolean' } })
+
+    const result = parseCLIArguments(
+      ['serve', '--port', '4077'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.port, '4077')
+  })
+
+  test('a command with no input schema parses as it did before', () => {
+    pikkuState(null, 'function', 'meta')['serveFunc'] = {
+      pikkuFuncId: 'serveFunc',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+    } as any
+
+    const result = parseCLIArguments(
+      ['serve', '--tags', 'alpha,beta'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.tags, 'alpha,beta')
   })
 })
