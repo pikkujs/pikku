@@ -336,7 +336,8 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     actorConfig: ResolvedPersona
   ): Promise<ActorSession> {
     const { browser } = await this.browser()
-    const session = new ActorSession(actorName, this.config)
+    const config = this.configFor(actorConfig)
+    const session = new ActorSession(actorName, config)
     const capture = this.options.capture
     await session.open(
       browser,
@@ -356,12 +357,29 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
         secret: this.options.secret,
       },
       {
-        apiUrl: this.config.apiUrl,
-        appUrl: this.config.appUrl,
+        apiUrl: config.apiUrl,
+        appUrl: config.appUrl,
         signInPath: this.options.signInPath ?? '/auth/sign-in/actor',
       }
     )
     return session
+  }
+
+  /**
+   * The config this actor browses with — their own app's base url.
+   *
+   * A person signs into one app, so the persona's `app` is the whole answer: it
+   * decides what `/dashboard` means for them, and which origin their session
+   * cookie is planted on. Everything downstream (`url()`, `gotoApp`, the
+   * sign-in Origin header, `parseCookie`) reads it off the session's config, so
+   * choosing it here is the only place that has to know.
+   *
+   * An unnamed app, or one no url was given for, falls back to the single
+   * `appUrl` — which is the whole story for the common one-app project.
+   */
+  private configFor(persona: ResolvedPersona): BrowserConfig {
+    const appUrl = persona.app ? this.config.appUrls?.[persona.app] : undefined
+    return appUrl ? { ...this.config, appUrl } : this.config
   }
 
   private browser(): Promise<BrowserConnection> {

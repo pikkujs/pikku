@@ -51,6 +51,7 @@ export interface ScenarioBrowserDriver {
    */
   browserConfigFromEnv?: (overrides: {
     appUrl?: string
+    appUrls?: Record<string, string>
     apiUrl: string
   }) => unknown
 }
@@ -78,6 +79,8 @@ export interface ResolveScenarioBrowserProviderOptions {
   environment: string
   apiUrl: string
   appUrl?: string
+  /** Base url per app, for a product whose personas sign into more than one. */
+  appUrls?: Record<string, string>
   secret: string
   actors: Record<string, ResolvedPersona>
   signInPath?: string
@@ -102,6 +105,7 @@ export interface ResolveScenarioBrowserProviderOptions {
  */
 interface ResolvedBrowserConfig {
   appUrl?: string
+  appUrls?: Record<string, string>
   appUrlSource?: 'override' | 'env' | 'default'
 }
 
@@ -121,6 +125,7 @@ export const resolveScenarioBrowserProvider = async ({
   environment,
   apiUrl,
   appUrl,
+  appUrls,
   secret,
   actors,
   signInPath,
@@ -140,14 +145,30 @@ export const resolveScenarioBrowserProvider = async ({
         `${install}, or run with --no-browser to skip them.`
     )
   })
-  const config = (module.browserConfigFromEnv?.({ appUrl, apiUrl }) ?? {
-    appUrl,
-    apiUrl,
-  }) as ResolvedBrowserConfig
+  const overrides = { appUrl, apiUrl, ...(appUrls ? { appUrls } : {}) }
+  const config = (module.browserConfigFromEnv?.(overrides) ??
+    overrides) as ResolvedBrowserConfig
   if (!config.appUrl || config.appUrlSource === 'default') {
     throw new Error(
       `Scenario environment '${environment}' has browser steps but no 'appUrl', and '${driver}' resolved none from the environment. ` +
         `Add it to environments.${environment} in pikku.config.json, pass --app-url for a target that only exists at run time, or run with --no-browser to skip them.`
+    )
+  }
+
+  // An actor whose app has no url would browse the fallback: the wrong app's
+  // pages, loading fine, asserting nothing about the app the scenario meant.
+  // Cheaper to refuse now than to read a green run that proved one app twice.
+  const unmapped = [
+    ...new Set(
+      Object.values(actors)
+        .map((persona) => persona.app)
+        .filter((app): app is string => !!app && !config.appUrls?.[app])
+    ),
+  ]
+  if (unmapped.length > 0 && Object.keys(config.appUrls ?? {}).length > 0) {
+    throw new Error(
+      `No app url for ${unmapped.map((app) => `'${app}'`).join(', ')}, which ${unmapped.length > 1 ? 'personas sign' : 'a persona signs'} into. ` +
+        `Pass --app-url ${unmapped[0]}=<url> (repeatable, comma-separated) or add it to environments.${environment}.appUrls in pikku.config.json.`
     )
   }
   const options: ScenarioBrowserDriverOptions = {

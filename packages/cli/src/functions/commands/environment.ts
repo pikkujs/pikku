@@ -14,6 +14,18 @@ export interface PikkuEnvironment {
   signInPath?: string
   rpcPath?: string
   appUrl?: string
+  /**
+   * Where each app is served, keyed by the `app` its personas declare.
+   *
+   * A product can be more than one frontend — staff in one, customers in
+   * another — and the two are usually different paths on one host. A browser
+   * step navigates as its actor, so the actor's app decides which of these it
+   * navigates against, and `appUrl` is the fallback for a persona that names
+   * no app. Without this a run has one base for everybody: whichever app owns
+   * it is proved twice and the other never, silently, because both sets of
+   * paths resolve against the wrong app and load.
+   */
+  appUrls?: Record<string, string>
   /** Real consequences: only an `accountable` persona may run against it. */
   production?: boolean
 }
@@ -96,9 +108,44 @@ export const resolveEnvironment = ({
   }
 
   if (appUrl !== undefined) {
-    assertAbsoluteUrl('--app-url', appUrl)
-    resolved.appUrl = appUrl
+    const { base, byApp } = parseAppUrls(appUrl)
+    if (base !== undefined) resolved.appUrl = base
+    if (Object.keys(byApp).length > 0) {
+      resolved.appUrls = { ...resolved.appUrls, ...byApp }
+    }
   }
 
   return resolved
+}
+
+/**
+ * `--app-url` as one url, or as `<app>=<url>` pairs, or both.
+ *
+ *   --app-url https://host/
+ *   --app-url workshop=https://host/,storefront=https://host/_frontend/storefront/
+ *   --app-url https://host/,storefront=https://host/_frontend/storefront/
+ *
+ * Comma-separated to match `--flows` and `--tags` rather than taking the flag
+ * repeatedly, which the option parser types as a single string. A bare url is
+ * the fallback for personas naming no app; a pair binds one app.
+ */
+export const parseAppUrls = (
+  value: string
+): { base?: string; byApp: Record<string, string> } => {
+  const byApp: Record<string, string> = {}
+  let base: string | undefined
+  for (const raw of value.split(',')) {
+    const segment = raw.trim()
+    if (!segment) continue
+    const pair = /^([a-z0-9][a-z0-9-]*)=(.+)$/i.exec(segment)
+    if (!pair) {
+      assertAbsoluteUrl('--app-url', segment)
+      base = segment
+      continue
+    }
+    const [, app, url] = pair as unknown as [string, string, string]
+    assertAbsoluteUrl(`--app-url ${app}`, url)
+    byApp[app] = url
+  }
+  return { base, byApp }
 }
