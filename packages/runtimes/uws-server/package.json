@@ -1,6 +1,6 @@
 {
   "name": "@pikku/uws",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "description": "uWebSockets.js server for Pikku, wrapping @pikku/uws-handler",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -21,16 +21,16 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.84"
+    "@pikku/core": "^0.12.85"
   },
   "dependencies": {
-    "@pikku/uws-handler": "^0.12.7",
+    "@pikku/uws-handler": "^0.12.8",
     "@types/qs": "^6",
     "qs": "^6.15.3",
     "uWebSockets.js": "uNetworking/uWebSockets.js#v20.69.0"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.84",
+    "@pikku/core": "^0.12.85",
     "typescript": "^6.0.3"
   },
   "engines": {

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/ai-vercel",
-  "version": "0.12.11",
+  "version": "0.12.12",
   "description": "Vercel AI SDK agent runner for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -20,7 +20,7 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.84",
+    "@pikku/core": "^0.12.85",
     "ai": "^7.0.0"
   },
   "devDependencies": {

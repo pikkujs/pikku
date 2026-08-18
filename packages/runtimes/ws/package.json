@@ -1,6 +1,6 @@
 {
   "name": "@pikku/ws",
-  "version": "0.12.7",
+  "version": "0.12.8",
   "description": "WebSocket server for Pikku, built on ws",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,7 +18,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.84",
+    "@pikku/core": "^0.12.85",
     "ws": "^8.18.0"
   },
   "devDependencies": {

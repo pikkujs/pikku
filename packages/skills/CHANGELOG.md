@@ -1,5 +1,203 @@
 # @pikku/skills
 
+## 0.12.11
+
+### Patch Changes
+
+- 7722ceb: Split the addon leaf so an application cannot shadow a linked addon's own
+
+  An addon authored its services through `#pikku/addon`, and so did an
+  application installing one. Node keeps those apart — `#pikku/*` is a
+  package-private subpath import, resolved against the addon's own
+  `package.json` — but tsconfig `paths` are global to a tsx process, and every
+  runtime template maps `#pikku/*` onto a sibling package. A linked addon's
+  `#pikku/addon` was resolved against the _application's_ leaf, which holds the
+  install half and none of the authoring exports, and every template failed to
+  boot with `does not provide an export named 'pikkuAddonServices'`.
+
+  The authoring half now sits at `#pikku/addon/setup`. An application generates a
+  flat `.pikku/<leaf>`, so there is nothing there for that specifier to match and
+  the resolver falls back to Node, which reads the addon's own imports. Addons
+  declaring themselves import `pikkuAddonConfig`, `pikkuAddonServices` and
+  `pikkuAddonWireServices` from `#pikku/addon/setup`; `wireAddon` and
+  `wireRemoteAddon` stay at `#pikku/addon`.
+
+  `wireAddon` and `wireRemoteAddon` also move off `@pikku/core/rpc` onto
+  `@pikku/core/addon`. Being reached over rpc is how an addon is called rather
+  than what it is, and it put the whole addon surface behind the rpc subpath for
+  consumers that only wanted to install one.
+
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+- 3b1164a: feat(react,mantine): ship the dev actor switcher instead of making every app copy it
+
+  The dev-only "Sign in as …" control — one click signs in as a declared scenario
+  persona, no password — was hand-copied into every app that needed it, because
+  `pikku fabric validate` requires any frontend with a login screen to have one.
+  The `devActors()` / `signInAsActor()` pair was byte-identical everywhere it
+  landed, including the `import.meta.env.DEV` gate that keeps the shared secret out
+  of production bundles. That is not a thing each app should be re-deriving from a
+  copy-paste.
+
+  Split along the dependency line:
+
+  - `@pikku/react` gains `useDevActors()`, `signInAsActor()` and `parseDevActors()`.
+    UI-free, so it stays inside the package's react-only dependency budget.
+  - `@pikku/mantine/dev` gains `<DevActorSwitcher />`, built on that hook. It is a
+    new entry point rather than part of `/core`, because `/core`'s contract is
+    "drop-in alias for `@mantine/core`" and exporting a component Mantine has no
+    counterpart for would break it.
+
+  The component takes `onSignedIn` rather than depending on a router, and the
+  actors/secret are passed in rather than read from env — how env is spelled is a
+  bundler fact (`import.meta.env.VITE_*` vs `process.env.NEXT_PUBLIC_*`), and a
+  package that guesses gets it wrong for half its consumers.
+
+  The skills document it in the four places an agent would look: `pikku-better-auth`
+  for the `actor` plugin's endpoint (which had only `/dev/quick-login` before, and
+  so sent agents to the wrong control), `pikku-scenario` for the actor list being
+  the same one a human signs in through, `pikku-react` for the hook, and
+  `pikku-fabric` for the validate rule that requires it.
+
+  `fabric validate` now also accepts a `useDevActors()` call site as evidence the
+  control is wired, so apps that want their own UI on the shared logic pass. The
+  hand-rolled shape still passes too — nothing existing breaks. Its fix text no
+  longer tells you to hand-write the helper, which would have become wrong advice
+  the day this shipped.
+
+- 266e3bc: `#pikku` is a namespace, not a module: one subpath per wiring
+
+  The bare `#pikku` specifier resolved to `.pikku/pikku-types.gen.ts`, a hub that
+  re-exported all twelve wiring leaves with `export *` — undoing the split the
+  leaves exist for, each of which still says so in its own generated header
+  ("HTTP-specific type definitions for tree-shaking optimization"). Reaching that
+  hub put 33 distinct `@pikku/core` subpaths into the module graph, and neither
+  consumer could drop them again: bundlers keep `export *` chains because the app
+  declares no `sideEffects`, and Node and tsx do not tree-shake at all, so an app
+  with no queues still executed `@pikku/core/queue` at boot.
+
+  The hub is gone. An app now imports the leaf the name belongs to —
+  `#pikku/function`, `#pikku/http`, `#pikku/workflow` — and a project's `imports`
+  map declares two patterns, because both resolvers pick the more specific one:
+
+  ```json
+  "#pikku/*.js": "./.pikku/*.ts",
+  "#pikku/*": "./.pikku/*/index.ts"
+  ```
+
+  A source tree names the `.ts` on both. Webpack, esbuild and Bun all rewrite a
+  `.js` specifier to the `.ts` beside it for a relative import but not for an
+  imports-map target, so a `.js` target there resolves to a file that does not
+  exist. The two places that keep `.js` are the ones where it is the real file: a
+  published addon, whose map points into `dist`, and a project that imports a
+  declaration-only generated file such as `pikku-rpc-wirings-map.gen.d.ts`, where
+  naming the `.js` lets the type resolver's own mapping reach the `.d.ts`.
+
+  `pikku` generates the leaf indexes and removes the hub, and `pikku validate`
+  reports a barrel import as an error. The split also turns the addon boundary
+  from advice into a rule: an addon never generates the wiring leaves, so
+  `#pikku/http` fails at the specifier rather than yielding "no exported member"
+  from a hub that quietly dropped the re-export.
+
+- 9fce0f1: Give a persona step its actor instead of making it unwrap one
+
+  `requireActor(scenarioStep)` was the first line of every step that acts as
+  somebody, and it existed because the actor lived on the `scenarioStep` wire as
+  an optional property. A property of a wire member is either optional for every
+  binding or required for all of them, so the only expressible answer was
+  "optional", and each step paid for it with a guard.
+
+  The actor is now its own wire member, `wire.actor`, injected by the runner. Wire
+  members can be required per binding, so a step declares whether it runs as
+  somebody and the type follows:
+
+  ```typescript
+  export const buysAnApple = pikkuScenarioStep<
+    { qty: number },
+    { orderId: string }
+  >({
+    name: 'buysAnApple',
+    actor: true,
+    default: async (_services, { qty }, { actor }) =>
+      actor.invoke('placeOrder', { qty }),
+  })
+  ```
+
+  A `browser` binding implies it — a window is opened as somebody, so every
+  binding of a step that has one gets the actor too. A step that declares neither
+  has no `actor` on its wire at all, rather than an optional one: a pure assertion
+  over what an earlier step returned has nobody to be, and `attemptsSignIn`
+  deliberately posts credentials instead of reusing an actor's established
+  session. That distinction is why the requirement is declared per step rather
+  than inferred from the step being a persona step — "persona step ⇒ has an actor"
+  is false, and a guard built on it rejects the 61 steps in the e2e suite that
+  correctly run without one.
+
+  Dispatching a step that declared an actor without `{ actor: actors.x }` now
+  fails before the body runs, with `ScenarioActorRequired` naming the step.
+  `ScenarioBrowserActorRequired` is replaced by it, and `requireActor` is gone
+  from `@pikku/core/scenario` and the generated `#pikku/scenario` barrel.
+
+- 9fce0f1: Say what a scenario step is actually given, and stop the skill teaching an RPC call that throws
+
+  The `pikku-scenario` skill's two `default` witnesses destructured `rpc` from
+  services and called `rpc.invoke`. That is exactly what the scenario runner
+  refuses: steps run in the CLI process, and `guardRpc` answers every member with
+  _"Scenario tried to run 'getOrder' as an internal step. Every workflow.do in a
+  scenario must carry { actor: actors.x }"_. Both examples now go through
+  `actor.invoke` off the step's wire, which is the path the surrounding prose
+  already described.
+
+  Adds a **What a step is given** section, because nothing said it. The services
+  object is built by hand in `scenario.ts` and holds `logger`, `workflowService`,
+  `workflowRunService` and — only when the project declares agents — `agentRunner`.
+  There is no `kysely`, no `variables`, no `secrets` and none of the project's own
+  services, so a step that destructures one gets `undefined` and fails on first
+  use, which reads like a broken container and is not. The section names the three
+  ways in (`invoke`, `invokeRaw`, a plain `fetch` at `env.apiUrl`), the two
+  consequences that shape how steps get written, and the condition on
+  `agentRunner` — `createDevAgentRunner` needs a base URL _and_ a key together, so
+  a project with only `OPENAI_API_KEY` set gets `undefined` and every conversing
+  scenario fails before the persona says anything.
+
+  Adds **Declaring personas in TypeScript**, covering the one-call rule and the
+  trap underneath it: `definePersonas` is read from source and never evaluated, so
+  every value must be statically knowable — but only `name` is validated. A
+  computed `personality` is dropped in silence and the persona runs with a blank
+  temperament. `stringProperty` accepts `ts.isStringLiteralLike`, so a
+  no-substitution template literal is read and is the way to write a long
+  personality across several lines; a `+` concatenation is not. Also records that
+  `actorInstructions` builds the conversing persona's prompt from `name`,
+  `jobTitle`, `personality` and the scenario's `task` only — `disposition`,
+  `goals` and `roles` are stored and shown but never reach it.
+
+  Finally, the three `import ... from '#pikku/workflow/pikku-workflow-types.gen.js'`
+  lines now point at `#pikku/scenarios/pikku-scenario-types.gen.js`, which is where
+  the scenario surface moved when the barrel was split.
+
+  Also corrects three import specifiers the skill still taught from before the
+  `#pikku` leaves landed: `#pikku/scenarios/pikku-scenario-types.gen.js` and
+  `@pikku/core/workflow` both become `#pikku/scenario`, which is the one door the
+  leaf exists to be and the specifier every step file in the e2e suite already
+  uses.
+
+- 727671b: `wireAddon` and `wireRemoteAddon` move from `#pikku/function` to `#pikku/addon`.
+
+  Installing an addon and authoring one are the same concept from opposite ends,
+  so they are one import: an application's `#pikku/addon` carries the two install
+  functions, an addon package's carries `pikkuAddonConfig`, `pikkuAddonServices`,
+  `pikkuAddonWireServices` and `AddonBaseServices`.
+
+  Two generation fixes came with it:
+
+  - `CredentialsMap` is generated as a type alias rather than an interface. An
+    interface has no implicit index signature, so it was never assignable to the
+    `Record<string, unknown>` that `GetCredential` is constrained by, and every
+    generated project reported two errors on its own function types.
+  - An unresolved `SingletonServices` type is now `PKU724` instead of a services
+    map with no entries in it. Written out, the empty map made every service
+    optional and the real failure resurfaced as unrelated "possibly undefined"
+    errors in files nobody had touched.
+
 ## 0.12.10
 
 ### Patch Changes

@@ -1,5 +1,205 @@
 # @pikku/better-auth
 
+## 0.12.26
+
+### Patch Changes
+
+- 20d8a39: Split application administration out of the console addon into a new
+  `@pikku/addon-admin`.
+
+  `@pikku/addon-console` reads generated metadata, project source and knowledge
+  notes from disk, so it only ever runs where there is a project checkout and a
+  dev server. That made the console the only way to reach capabilities that have
+  nothing to do with a console — listing users, composing roles, granting scopes,
+  managing credentials, reading the audit trail — none of which touch a
+  filesystem. Those now live in `@pikku/addon-admin`, which depends on nothing but
+  `@pikku/core` and `@pikku/better-auth` and can be wired into a deployed
+  serverless unit:
+
+  ```ts
+  wireAddon({ name: 'admin', package: '@pikku/addon-admin' })
+  ```
+
+  It ships the user directory (`admin:listUsers`, `createUser`, `setUserBanned`,
+  `removeUser`, `revokeUserSessions`, `setUserPassword`), role and scope
+  administration, credential administration and the audit trail.
+  `console:getMyAccess` stays where it is: the console reads it to decide what to
+  render, and it must not need a second addon wired to boot.
+  Each function carries its own `admin:*` scope; the addon deliberately declares
+  no `scopes` on `wireAddon`, because addon scopes are required _in addition to_ a
+  function's own and an addon-level `admin` would force the umbrella grant on a
+  caller granted only `admin:users:list`.
+
+  Breaking for anyone calling these RPCs by name or granting their scopes:
+
+  - `console:getAudits`, `console:getAuditFilters`, `console:scope*` and
+    `console:credential*` are now `admin:*`.
+  - `pikku:console:audit:read` is now `admin:audit:read`,
+    `pikku:console:scopes:{read,manage}` are now `admin:scopes:{read,manage}`, and
+    `pikku:console:credentials:{read,manage}` are now
+    `admin:credentials:{read,manage}`.
+  - The `admin` scope tree gains `credentials:{read,manage}`, `scopes` and
+    `audit`. A bare `admin` grant now also covers reading the audit trail and
+    administering roles; a role that means to exclude those must spell out the
+    leaves it wants.
+  - `scaffold.console` gates the console addon on `pikku:console` rather than
+    `admin`, since `admin` is now the other addon's tree, and `@pikku/console`'s
+    own `AuthGate` requires the same root (`isAdmin` on the auth context is now
+    `canUseConsole`). Grant `pikku:console` to whoever should reach the console —
+    the two are separate decisions, and a host may hand someone the console
+    without handing them the user directory.
+
+  `credentialListUsers` now reports the credentials each user actually holds
+  rather than a matrix against the declared set, which is what removed its last
+  dependency on the on-disk metadata.
+
+  The `scaffold.userAdmin` generator is superseded by the addon and left in place
+  for hosts still on it. Its copy of the `admin` scope tree — and the one exported
+  as `ADMIN_SCOPE_TREE` from `@pikku/better-auth` — stay byte-identical to the
+  addon's, as pikku still requires of a shared scope root.
+
+- 266e3bc: One door per name: `@pikku/core/ecosystem/*` and the package root are gone
+
+  `@pikku/core` published every module twice. `ecosystem/http` re-exported
+  `./http`, `ecosystem/services` re-exported `./services`, and a name was
+  reachable through either — so every addition had to be made in two places, and a
+  consumer's import said nothing about what it actually used. The package root was
+  the same problem at a larger scale: a single barrel of 206 names that no bundler
+  could take apart, and the one specifier that revealed nothing at all.
+
+  Both are deleted. Every name now lives on the subpath that owns it, and every
+  import carries that subpath — `@pikku/core/http`, `@pikku/core/services`,
+  `@pikku/core/errors`, `@pikku/core/types`.
+
+  Deleting the facades meant the raw subpaths had to become a superset of them,
+  which they were not: the facade tree had accumulated 25 names with no raw home
+  and about 26 more filed under a different area than the module they came from.
+  Those names moved to the area that owns them, and three areas were published as
+  new entry points rather than left on a root that is going away — `./types` (the
+  shared type surface, the largest single destination), `./state` and
+  `./classification`.
+
+  `./classification` is one door onto one subject: what a value is and how it must
+  be handled. Its three halves would each have been an entry point — the brands
+  and manifest types, the stored-form helpers (`hashToken`, `unsafeAsSealed` and
+  friends), and `SecretValue` — split by whether a name happens to be a type or a
+  value, which is the same defect as the facades. The duration and versioned-id
+  helpers went to `./utils`, which already published, and `PikkuRequest` went to
+  `./function`: it is the transport-agnostic request base, not an HTTP one — HTTP
+  has `PikkuHTTPAbstractRequest`, and the only thing outside core that extends
+  `PikkuRequest` is Azure's timer request.
+
+  `./types` inherited the root barrel's habit before it inherited its contents, so
+  the names with an owner elsewhere were moved off it. The middleware types and the
+  five middleware factories — `pikkuMiddleware`, `pikkuMiddlewareFactory`,
+  `pikkuChannelMiddleware`, `pikkuChannelMiddlewareFactory` and
+  `pikkuAgentMiddleware`, runtime values on a types entry point — are now
+  `@pikku/core/middleware`; the function meta types are `@pikku/core/function`;
+  `SerializedError` is `@pikku/core/errors`; and the generic TypeScript helpers
+  (`MakeRequired`, `PickRequired`, `PickOptional`, `RequireAtLeastOne`,
+  `JSONPrimitive`, `JSONValue`) are `@pikku/core/utils`. What is left on `./types`
+  is the vocabulary the wirings share, which no single module owns.
+
+  `pikku` was itself a root barrel — `export * from '@pikku/core'` — and
+  now exports only the services it bundles.
+
+  One module survives at the old specifier, and only for the bootstrap:
+  `packages/cli` is generated by the _published_ CLI pinned in its `build.sh`, and
+  that CLI still writes a bare `@pikku/core` into the files it generates for the
+  CLI itself. `bootstrap-compat/root.ts` carries the eight types it names, a test
+  in core fails if that list grows, and it goes when the pin moves to a CLI
+  released from this branch. The adapter names the pinned CLI reaches for —
+  `pikkuState` and `CreateWireServices` — are rewritten to `@pikku/core/state` and
+  `@pikku/core/types` by the same `build.sh` patch pass, so no second shim is
+  needed for them.
+
+  A guard test keeps the root shut: it parses imports and rejects a bare
+  `@pikku/core` rather than grepping for it, because several tests hold a user's
+  file as a template literal, where `import … from '@pikku/core'` is fixture text
+  rather than an import this repo makes.
+
+  An agent scaffold a project generated under an older CLI is refreshed rather
+  than left to fail: `pikku all` already deleted one importing an entry point
+  `@pikku/core` no longer publishes, and the `#pikku` hub joins that list.
+  Without it a project that scaffolds the agent endpoint but
+  declares no agents keeps the old file forever — the generator that would rewrite
+  it only runs when agents exist, and the file being present is what stops it
+  being regenerated as missing.
+
+  `pikku new addon` also wrote a tsconfig `paths` map naming only the deleted hub.
+  An addon's `imports` map points into `dist`, so `paths` is what resolves
+  `#pikku/<leaf>` for the addon's own source build — it now names the two leaf
+  patterns, in both the addon and its test harness.
+
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+- 20d8a39: Drop better-auth's `admin()` plugin.
+
+  `admin()` bundles three unrelated things: a `role` column, fifteen HTTP
+  endpoints authorized against that column, and the enforcement that stops a
+  banned user from getting a session. Pikku only ever wanted the third. The
+  endpoints were never reachable directly — each sat behind a pikku function with
+  its own `admin:users:*` scope — so all the plugin added was a second gate on a
+  column that had to be kept in step with the scopes it duplicated. That sync
+  (`syncProjectedAdminRole`, run on every authenticated request) is now gone
+  along with the column.
+
+  User administration is implemented against better-auth's internal adapter
+  instead, exported from `@pikku/better-auth` so `@pikku/addon-admin` and the
+  `scaffold.userAdmin` generator share one implementation:
+
+  ```ts
+  import {
+    createAuthUser,
+    deleteAuthUser,
+    revokeAuthUserSessions,
+    setAuthUserBanned,
+    setAuthUserPassword,
+  } from '@pikku/better-auth'
+  ```
+
+  Ban keeps its schema and its enforcement, in a plugin that does nothing else:
+
+  ```ts
+  import { ban } from '@pikku/better-auth'
+
+  betterAuth({ plugins: [ban()] })
+  ```
+
+  `ban()` adds `banned`, `banReason` and `banExpires` to `user`, refuses to create
+  a session for a banned user, and lapses an expired ban at the sign-in that would
+  otherwise be refused. It makes no authorization decision of its own, so it never
+  needs to know about scopes.
+
+  Breaking:
+
+  - Remove `admin()` from your better-auth `plugins`, and add `ban()` if you ban
+    users. `pikku db generate` writes the migration; `user.role` and
+    `session.impersonatedBy` are no longer declared by anything.
+  - `callAdminApi`, `AdminApiHttpWire`, `syncProjectedAdminRole`,
+    `projectedAdminRole` and `ADMIN_ROLE_SCOPES` are removed. `ADMIN_SCOPES`,
+    `ADMIN_SCOPE_ROOT` and `ADMIN_SCOPE_TREE` are unchanged.
+  - The `scaffold.userAdmin` codegen no longer fails without `admin()`. It now
+    fails only when there is no better-auth at all, and warns when `ban()` is
+    missing — banning is one capability of six, so the other five still generate.
+  - The scope on each function is now the whole authorization decision. Anywhere
+    that relied on `user.role` as a backstop no longer has one.
+
+- Updated dependencies [7722ceb]
+- Updated dependencies [02a70cd]
+- Updated dependencies [266e3bc]
+- Updated dependencies [02a70cd]
+- Updated dependencies [786dae5]
+- Updated dependencies [6eef0a0]
+- Updated dependencies [02a70cd]
+- Updated dependencies [9537f74]
+- Updated dependencies [266e3bc]
+- Updated dependencies [9fce0f1]
+- Updated dependencies [83683a0]
+- Updated dependencies [456c88b]
+- Updated dependencies [456c88b]
+- Updated dependencies [c127273]
+  - @pikku/core@0.12.85
+
 ## 0.12.25
 
 ### Patch Changes
