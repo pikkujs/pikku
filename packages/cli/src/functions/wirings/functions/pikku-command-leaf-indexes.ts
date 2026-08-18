@@ -12,15 +12,16 @@ import { serializeLeafIndex } from './serialize-leaf-index.js'
  * fails to resolve rather than resolving to a module missing the export.
  *
  * Most leaves have a single entry. `secrets` and `variables` split their definer
- * from their typed-service map across two generated files, and `auth` pairs its
+ * from their typed-service map across two generated files, `auth` pairs its
  * always-written permission surface with a better-auth wrapper only some
- * projects have — so each entry is listed and the index re-exports whichever of
- * them the project actually generated.
+ * projects have, and `setup` holds the application's definers or the addon's —
+ * a project being only ever one kind — so each entry is listed and the index
+ * re-exports whichever of them the project actually generated.
  */
 export const leafEntries = [
   ['function', ['functionTypesFile']],
   ['middleware', ['middlewareTypesFile']],
-  ['setup', ['setupTypesFile']],
+  ['setup', ['setupTypesFile', 'addonSetupTypesFile']],
   ['error', ['errorTypesFile']],
   ['http', ['httpTypesFile']],
   ['channel', ['channelsTypesFile']],

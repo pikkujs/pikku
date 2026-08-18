@@ -1,5 +1,5 @@
 import type { WebhookDeliveryRecord } from '@pikku/core/services'
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const listWebhookDeliveries = pikkuFunc<
   { organizationId?: string; limit?: number },

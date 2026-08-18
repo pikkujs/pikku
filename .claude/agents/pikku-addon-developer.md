@@ -85,7 +85,7 @@ I't```
 ### Singleton Services — `pikkuAddonServices()`
 
 ```typescript
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, parentServices) => {
@@ -107,7 +107,7 @@ Key differences from main app services:
 ### Wire Services — `pikkuAddonWireServices()` (optional)
 
 ```typescript
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async (singletonServices, wire) => {
@@ -120,7 +120,7 @@ export const createWireServices = pikkuAddonWireServices(
 ### Config — `pikkuAddonConfig()` (optional)
 
 ```typescript
-import { pikkuAddonConfig } from '#pikku/addon'
+import { pikkuAddonConfig } from '#pikku/addon/setup'
 
 export const createConfig = pikkuAddonConfig(async (services) => {
   const baseUrl = await services.variables.get('API_BASE_URL')
@@ -130,10 +130,12 @@ export const createConfig = pikkuAddonConfig(async (services) => {
 
 ## Addon Functions
 
-Functions use `pikkuSessionlessFunc` or `pikkuFunc` from `#pikku`:
+Functions use `pikkuSessionlessFunc` or `pikkuFunc` from `#pikku/addon`. An
+addon generates its whole tree under `#pikku/addon/*` — the prefix is what keeps
+a linked addon's leaves from resolving against the host application's:
 
 ```typescript
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { z } from 'zod'
 
 const Input = z.object({ title: z.string() })
@@ -178,7 +180,7 @@ This parses the spec and generates: functions for each endpoint, a typed API ser
 ### Registration
 
 ```typescript
-import { wireAddon } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 
 wireAddon({
   name: 'todos',

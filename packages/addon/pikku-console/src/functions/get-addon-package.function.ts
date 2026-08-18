@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { AddonPackageInfo } from '../services/addon.service.js'
 
 export const getAddonCommunityPackage = pikkuFunc<

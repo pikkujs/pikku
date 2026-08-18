@@ -1,8 +1,10 @@
 import assert from 'node:assert'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { describe, test, afterEach } from 'node:test'
+import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import {
   getAddonFiles,
@@ -189,6 +191,70 @@ describe('getAddonFiles', () => {
       '#pikku/*.js': ['./.pikku/*.ts'],
       '#pikku/*': ['./.pikku/*/index.ts'],
     })
+  })
+
+  /**
+   * The application types live behind `@pikku/core/types`, not the package
+   * root. A scaffold naming the root still parses, so every check above stays
+   * green while `SingletonServices` extends an unresolved name — which the
+   * inspector reads as an addon declaring no services at all.
+   */
+  test('the scaffolded application types name a subpath that exports them', () => {
+    const applicationTypes = getAddonFiles(vars('Acme CRM', 'desc'), {
+      secret: false,
+      variable: false,
+      oauth: false,
+    })['types/application-types.d.ts']!
+
+    const specifier = applicationTypes.match(
+      /import type \{[^}]*\} from '(@pikku\/core[^']*)'/
+    )?.[1]
+    assert.ok(specifier, 'the scaffold imports the core application types')
+
+    const coreRoot = join(
+      dirname(fileURLToPath(import.meta.url)),
+      '..',
+      '..',
+      '..',
+      '..',
+      'core'
+    )
+    const subpath = specifier.slice('@pikku/core'.length) || '.'
+    const target: string = JSON.parse(
+      readFileSync(join(coreRoot, 'package.json'), 'utf8')
+    ).exports[subpath === '.' ? '.' : `.${subpath}`]
+    assert.ok(target, `@pikku/core does not export ${specifier}`)
+
+    // The entry point is a barrel of `export *`, so what it carries is only
+    // visible by walking the chain — the names are declared in the same file
+    // either way, and a check on the declaration passes for a subpath that
+    // does not re-export them.
+    const reachable = (entry: string, seen = new Set<string>()): string => {
+      if (seen.has(entry)) return ''
+      seen.add(entry)
+      const source = readFileSync(entry, 'utf8')
+      let text = source
+      for (const star of source.matchAll(
+        /export (?:type )?\* from '(\.[^']*)'/g
+      )) {
+        text += reachable(
+          join(dirname(entry), star[1]!.replace(/\.js$/, '.ts')),
+          seen
+        )
+      }
+      return text
+    }
+
+    const exported = reachable(
+      join(coreRoot, target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts'))
+    )
+    for (const name of applicationTypes.matchAll(/\bCore[A-Za-z]+/g)) {
+      assert.match(
+        exported,
+        new RegExp(`\\bexport (?:interface|type) ${name[0]}\\b`),
+        `${name[0]} is not reachable from ${specifier}`
+      )
+    }
   })
 
   test('keeps composed prose in a single string literal', () => {

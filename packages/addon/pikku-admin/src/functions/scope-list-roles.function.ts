@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { Role } from '@pikku/core/services'
 
 export const scopeListRoles = pikkuFunc<null, { roles: Role[] }>({

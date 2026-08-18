@@ -156,6 +156,7 @@ while IFS= read -r -d '' f; do
       -e 's|wireSecret|defineSecret|g' \
       -e 's|wireVariable|defineVariable|g' \
       -e 's|wireCredential|defineCredential|g' \
+      -e "s|export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'|export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'|g" \
       -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|import { pikkuState as __pikkuState } from '@pikku/core/state'\nimport type { CreateWireServices } from '@pikku/core/types'|g" \
       -e "s|@pikku/core/internal|@pikku/core/state|g" \
       "$f" > "$tmp" && mv "$tmp" "$f"
@@ -215,6 +216,7 @@ while IFS= read -r -d '' f; do
       -e 's|wireSecret|defineSecret|g' \
       -e 's|wireVariable|defineVariable|g' \
       -e 's|wireCredential|defineCredential|g' \
+      -e "s|export { wireAddon, wireRemoteAddon } from '@pikku/core/rpc'|export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'|g" \
       -e "/metaDir/d" \
       -e "/^try {$/d" \
       -e "/^} catch.*{.*}$/d" \

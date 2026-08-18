@@ -146,7 +146,13 @@ const byStepThenName = (a: SurfaceLeaf, b: SurfaceLeaf): number =>
   a.name.localeCompare(b.name)
 
 const leafNameOf = (subpath: string): string =>
-  subpath.replace(/^#pikku\//, '').replace(/^\.\//, '')
+  subpath
+    .replace(/^#pikku\//, '')
+    .replace(/^\.\//, '')
+    // An addon's whole tree roots under `addon/`, so the prefix locates a leaf
+    // rather than naming one — `#pikku/addon/http` is the http leaf as an addon
+    // reaches it. The application's install leaf is bare `addon` and stays.
+    .replace(/^addon\/(?=.)/, '')
 
 const toLeaves = (
   entryPoint: SurfaceEntryPointId,

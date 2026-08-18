@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const getWorkflowRunNames = pikkuFunc<null, string[]>({
   title: 'Get Workflow Run Names',

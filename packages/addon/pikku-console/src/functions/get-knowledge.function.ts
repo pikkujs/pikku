@@ -1,5 +1,5 @@
-import { LocalEnvironmentOnlyError } from '#pikku/error'
-import { pikkuFunc } from '#pikku/function'
+import { LocalEnvironmentOnlyError } from '#pikku/addon/error'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { KnowledgeBundle } from '../services/knowledge.service.js'
 
 export const getKnowledge = pikkuFunc<null, KnowledgeBundle | null>({

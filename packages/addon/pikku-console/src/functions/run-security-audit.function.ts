@@ -1,5 +1,5 @@
 import { dirname } from 'node:path'
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { SecurityAuditReport } from '@pikku/core/types'
 import { readAuditReport, runPikkuAudit } from '../lib/audit-exec.js'
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { LocalEnvironmentOnlyError } from '#pikku/error'
+import { LocalEnvironmentOnlyError } from '#pikku/addon/error'
 
 import { getKnowledge } from './get-knowledge.function.js'
 import type { KnowledgeBundle } from '../services/knowledge.service.js'

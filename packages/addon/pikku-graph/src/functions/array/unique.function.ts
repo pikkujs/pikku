@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const UniqueInput = z.object({
   items: z.array(z.unknown()).describe('The array to get unique values from'),

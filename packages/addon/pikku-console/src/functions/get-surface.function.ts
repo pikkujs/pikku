@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { readSurface } from '../lib/surface.js'
 import type { SurfaceResult } from '../lib/surface.js'
 

@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { setAuthUserPassword } from '@pikku/better-auth'
 import { SetUserPasswordInput, Success } from '../lib/user.schemas.js'
 

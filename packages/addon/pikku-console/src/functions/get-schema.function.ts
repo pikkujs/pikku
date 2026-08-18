@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { JSONSchema7 } from 'json-schema'
 
 export const getSchema = pikkuFunc<{ schemaName: string }, JSONSchema7 | null>({

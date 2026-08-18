@@ -2,9 +2,9 @@ import {
   BadRequestError,
   ConflictError,
   LocalEnvironmentOnlyError,
-} from '#pikku/error'
+} from '#pikku/addon/error'
 import { pikkuState } from '@pikku/core/state'
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { findProjectRoot } from '../lib/find-project-root.js'
 import {
   assertAddonPackageName,

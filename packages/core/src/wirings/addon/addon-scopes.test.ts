@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { MissingScopeError } from '../../errors/errors.js'
-import { ContextAwareRPCService } from './rpc-runner.js'
+import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
 import { wireAddon } from './wire-addon.js'
 
 const ADDON_PACKAGE = '@addon/console'

@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { pikkuState } from '@pikku/core/state'
 
 export interface AddonInstance {

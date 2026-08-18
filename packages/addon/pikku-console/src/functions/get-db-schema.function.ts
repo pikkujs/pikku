@@ -1,5 +1,5 @@
-import { LocalEnvironmentOnlyError } from '#pikku/error'
-import { pikkuFunc } from '#pikku/function'
+import { LocalEnvironmentOnlyError } from '#pikku/addon/error'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { DbSchema } from '../services/db-schema.service.js'
 
 export const getDbSchema = pikkuFunc<null, DbSchema | null>({

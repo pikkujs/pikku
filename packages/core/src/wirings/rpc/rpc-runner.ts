@@ -6,13 +6,13 @@ import type {
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
-import type { AddonInstance } from './addon-runner.js'
-import { addonInstanceForNamespace } from './addon-runner.js'
+import type { AddonInstance } from '../addon/addon-runner.js'
+import { addonInstanceForNamespace } from '../addon/addon-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
-import { resolveRemoteAddonToken } from './remote-addon-auth.js'
+import { resolveRemoteAddonToken } from '../addon/remote-addon-auth.js'
 import { createAgentRPC } from '../agent/agent-rpc.js'
 
 /**

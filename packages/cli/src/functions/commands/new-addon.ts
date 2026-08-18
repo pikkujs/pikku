@@ -301,7 +301,7 @@ ${description}
     files['src/services.ts'] =
       `import { UnauthorizedError } from '@pikku/core/errors'
 import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -326,7 +326,7 @@ export const createWireServices = pikkuAddonWireServices(
     const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -350,7 +350,7 @@ export const createWireServices = pikkuAddonWireServices(
     files['src/services.ts'] =
       `import { UnauthorizedError } from '@pikku/core/errors'
 import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
@@ -371,7 +371,7 @@ export const createWireServices = pikkuAddonWireServices(
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
 import type { ${pascalName}Secrets } from './${name}.secret.js'
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
@@ -386,7 +386,7 @@ export const createSingletonServices = pikkuAddonServices(async (
   } else {
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonServices } from '#pikku/addon'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
@@ -459,7 +459,7 @@ export class ${pascalName}Service {
     // The access token is resolved (and refreshed) by the platform credential
     // service and injected via createWireServices — this service just uses it.
     files[`src/${name}-api.service.ts`] =
-      `import type { TypedVariablesService } from '#pikku/variables/pikku-variables.gen.js'
+      `import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'
 
 const BASE_URL = 'https://api.example.com/v1'
 
@@ -618,7 +618,7 @@ export type ${pascalName}Resource = z.infer<typeof ${pascalName}ResourceSchema>
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { ${pascalName}Service } from '../src/${name}-api.service.js'
 
 export interface Config extends CoreConfig {}
@@ -635,7 +635,7 @@ export interface Services extends CoreServices<SingletonServices> {}
   // Conditional: credential / secret file
   if (flags.credential === 'apikey') {
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { defineCredential } from '#pikku/auth'
+import { defineCredential } from '#pikku/addon/auth'
 
 export const ${camelName}CredentialSchema = z.object({
   apiKey: z.string().describe(${literal(`${displayName} API key`)}),
@@ -656,7 +656,7 @@ defineCredential({
   tenantId: z.string().optional().describe('Upstream tenant id'),`
       : `  token: z.string().describe(${literal(`${displayName} bearer token`)}),`
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { defineCredential } from '#pikku/auth'
+import { defineCredential } from '#pikku/addon/auth'
 
 export const ${camelName}CredentialSchema = z.object({
 ${credentialFields}
@@ -672,8 +672,8 @@ defineCredential({
 `
   } else if (flags.oauth || flags.credential === 'oauth2') {
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
-import { defineCredential } from '#pikku/auth'
-import { defineSecret } from '#pikku/secrets'
+import { defineCredential } from '#pikku/addon/auth'
+import { defineSecret } from '#pikku/addon/secrets'
 
 export const ${camelName}TokenSchema = z.object({
   accessToken: z.string(),
@@ -704,7 +704,7 @@ defineSecret({
 `
   } else if (flags.secret) {
     files[`src/${name}.secret.ts`] = `import { z } from 'zod'
-import { defineSecret } from '#pikku/secrets'
+import { defineSecret } from '#pikku/addon/secrets'
 
 export const ${camelName}SecretsSchema = z.object({
   apiKey: z.string().describe(${literal(`${displayName} API key`)}),
@@ -726,7 +726,7 @@ defineSecret({
   // Conditional: variable file
   if (flags.variable) {
     files[`src/${name}.variable.ts`] = `import { z } from 'zod'
-import { defineVariable } from '#pikku/variables'
+import { defineVariable } from '#pikku/addon/variables'
 
 export const ${camelName}VariableSchema = z.string().optional().describe('TODO: describe this variable')
 

@@ -11,7 +11,7 @@
  * codegen on an undeclared category — the inspector would kill `pikku all`
  * before tsc ever ran.
  */
-import { pikkuSessionlessFunc } from '../.pikku/function/index.js'
+import { pikkuSessionlessFunc } from '../.pikku/addon/function/index.js'
 
 export const undeclaredCategory = pikkuSessionlessFunc<void, void>({
   func: async () => {},

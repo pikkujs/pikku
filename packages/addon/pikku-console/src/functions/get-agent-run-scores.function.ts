@@ -1,7 +1,7 @@
-import { NotFoundError } from '#pikku/error'
+import { NotFoundError } from '#pikku/addon/error'
 import { hasScopes } from '@pikku/core/scope'
 import { canAccessThread } from '@pikku/core/agent'
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 const ADMIN_SCOPE_ROOT = 'admin'
 

@@ -6,7 +6,7 @@
  * on a schema the consumer's migrations own. `pikku db export` publishes the
  * table instead, and `pikku db generate` folds it into the consumer's history.
  */
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const listLabels = pikkuSessionlessFunc<
   void,

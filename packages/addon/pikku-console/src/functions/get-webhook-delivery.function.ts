@@ -1,5 +1,5 @@
 import type { WebhookDeliveryWithAttempts } from '@pikku/core/services'
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const getWebhookDelivery = pikkuFunc<
   { deliveryId: string },

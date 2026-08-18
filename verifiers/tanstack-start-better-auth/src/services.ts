@@ -1,7 +1,4 @@
-import {
-  pikkuConfig,
-  pikkuServices,
-} from '#pikku/function/pikku-function-types.gen.js'
+import { pikkuConfig, pikkuServices } from '#pikku/setup'
 import {
   ConsoleLogger,
   LocalSecretService,

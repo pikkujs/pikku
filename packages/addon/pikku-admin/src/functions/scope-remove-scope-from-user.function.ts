@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const scopeRemoveScopeFromUser = pikkuFunc<
   { userId: string; scope: string },

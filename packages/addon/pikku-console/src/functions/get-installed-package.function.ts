@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { pikkuState } from '@pikku/core/state'
 
 import type { AddonPackageInfo } from '../services/addon.service.js'
@@ -23,8 +23,15 @@ export const getAddonInstalledPackage = pikkuFunc<
     // Read from the ADDON PACKAGE's own `.pikku` (resolved from node_modules),
     // not the app's — otherwise every addon returns the app-wide secrets/wirings
     // and the requirements view can't show what THIS addon actually needs.
+    // An addon roots its whole generated tree at `.pikku/addon`, so that every
+    // leaf it authors is reached as `#pikku/addon/<leaf>` and cannot be shadowed
+    // by the host application's flat one. `readPackageFile` starts from the
+    // package's `.pikku`, which is the right base for an ordinary package, so
+    // the extra segment belongs here rather than in the reader.
+    const addonLeaf = (rel: string) => `addon/${rel}`
     const readPkgFile = (rel: string) =>
-      metaService.readPackageFile?.(packageName, rel) ?? Promise.resolve(null)
+      metaService.readPackageFile?.(packageName, addonLeaf(rel)) ??
+      Promise.resolve(null)
     const readJson = async <T>(path: string): Promise<T | null> => {
       const content = await readPkgFile(path)
       return content ? (JSON.parse(content) as T) : null
@@ -61,7 +68,10 @@ export const getAddonInstalledPackage = pikkuFunc<
     // Read all schemas from the addon's schemas directory
     const schemas: Record<string, unknown> = {}
     const schemaFiles =
-      (await metaService.readPackageDir?.(packageName, 'schemas/schemas')) ?? []
+      (await metaService.readPackageDir?.(
+        packageName,
+        addonLeaf('schemas/schemas')
+      )) ?? []
     for (const file of schemaFiles) {
       if (file.endsWith('.schema.json')) {
         const name = file.replace('.schema.json', '')

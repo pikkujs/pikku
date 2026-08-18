@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const getWorkflowRuns = pikkuFunc<
   { workflowName?: string; status?: string; limit?: number; offset?: number },

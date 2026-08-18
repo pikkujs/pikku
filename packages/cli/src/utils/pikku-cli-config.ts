@@ -157,6 +157,18 @@ const _getPikkuCLIConfig = async (
         : resolve(result.rootDir, outDirOverride)
     }
 
+    // An addon's whole generated tree roots one level down, so every leaf it
+    // authors is reached as `#pikku/addon/<leaf>`. tsconfig `paths` are global
+    // to a tsx process rather than scoped to the package that declared them, so
+    // a linked addon's `#pikku/function` would otherwise match the *host
+    // application's* flat leaf and type the addon's functions against the
+    // host's services. An application generates nothing at this depth, so the
+    // pattern finds no candidate and resolution falls back to Node's
+    // per-package `imports`, which is package-scoped by definition.
+    if (result.addon) {
+      result.outDir = join(result.outDir, 'addon')
+    }
+
     // Create transport/event directories
     const functionDir = join(result.outDir, 'function')
     const httpDir = join(result.outDir, 'http')
@@ -208,6 +220,12 @@ const _getPikkuCLIConfig = async (
     const setupDir = join(result.outDir, 'setup')
     if (!result.setupTypesFile) {
       result.setupTypesFile = join(setupDir, 'pikku-setup-types.gen.ts')
+    }
+    if (!result.addonSetupTypesFile) {
+      result.addonSetupTypesFile = join(
+        setupDir,
+        'pikku-addon-setup-types.gen.ts'
+      )
     }
 
     // Sits in the same directory as the better-auth wrapper so both reach the
@@ -910,7 +928,10 @@ const _getPikkuCLIConfig = async (
 
     const addonDir = join(result.outDir, 'addon')
     if (!result.packageFile) {
-      result.packageFile = join(addonDir, 'pikku-package.gen.ts')
+      result.packageFile = join(
+        result.addon ? result.outDir : addonDir,
+        'pikku-package.gen.ts'
+      )
     }
     if (!result.addonTypesFile) {
       result.addonTypesFile = join(addonDir, 'pikku-addon-types.gen.ts')
