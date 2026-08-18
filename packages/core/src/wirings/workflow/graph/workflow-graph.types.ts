@@ -1,3 +1,5 @@
+import type { TemplateString } from './template.js'
+
 export interface RefValue {
   __isRef: true
   nodeId: string
@@ -24,9 +26,34 @@ export type RefFn<NodeIds extends string = string> = (
 export type NextConfig<NodeIds extends string = string> =
   NodeIds | NodeIds[] | Record<string, NodeIds | NodeIds[]>
 
+export type TemplateFn = (
+  templateStr: string,
+  refs: Array<{ $ref: string; path?: string }>
+) => TemplateString
+
+export type ItemFn = (path?: string) => RefValue
+
+export type ForEachConfig<NodeIds extends string = string> =
+  | NodeIds
+  | RefValue
+  | ((ref: RefFn<NodeIds>) => RefValue)
+
+export type ForEachMode = 'parallel' | 'sequential'
+
 export interface GraphNodeConfig<NodeIds extends string = string> {
   func: string
-  input?: (ref: RefFn<NodeIds>) => Record<string, unknown>
+  /**
+   * Run this node once per element of an upstream array. The node's own result
+   * becomes the ordered array of per-item results.
+   */
+  forEach?: ForEachConfig<NodeIds>
+  /** How the per-item instances of a `forEach` node run. Defaults to 'parallel'. */
+  mode?: ForEachMode
+  input?: (
+    ref: RefFn<NodeIds>,
+    template: TemplateFn,
+    $item: ItemFn
+  ) => Record<string, unknown>
   next?: NextConfig<NodeIds>
   onError?: NodeIds | NodeIds[]
   retries?: number

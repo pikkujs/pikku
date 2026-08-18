@@ -94,4 +94,10 @@ export type {
   PikkuWorkflowWire,
 } from './workflow.types.js'
 export { createGraph } from './graph/graph-node.js'
-export type { GraphNodeConfig } from './graph/workflow-graph.types.js'
+export type {
+  GraphNodeConfig,
+  ForEachConfig,
+  ForEachMode,
+  ItemFn,
+  TemplateFn,
+} from './graph/workflow-graph.types.js'

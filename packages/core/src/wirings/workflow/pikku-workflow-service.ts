@@ -36,6 +36,7 @@ import {
   executeGraphStep,
   runWorkflowGraph,
   runFromMeta,
+  stripInstanceOrdinal,
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
 import type { ScenarioPersonas } from '../../services/personas-service.js'
@@ -1349,9 +1350,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         if (stepName in workflowMeta.nodes) {
           graphNodeId = stepName
         } else {
-          const hash = stepName.lastIndexOf('#')
-          const base = hash > 0 ? stepName.slice(0, hash) : undefined
-          if (base && base in workflowMeta.nodes) graphNodeId = base
+          const base = stripInstanceOrdinal(stepName)
+          if (base !== stepName && base in workflowMeta.nodes)
+            graphNodeId = base
         }
       }
       if (graphNodeId) {
