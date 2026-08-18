@@ -812,6 +812,27 @@ describe('Command Parser', () => {
       assert.strictEqual(result.options.note, 'hello')
     })
 
+    /**
+     * `--tags alpha beta` cannot be told apart from an option followed by a
+     * positional, so consuming tokens until the next flag would make an array
+     * option swallow arguments meant for the command. The two unambiguous
+     * forms — one comma list, or the flag repeated — cover the same ground,
+     * and the leftover token is reported rather than silently dropped.
+     */
+    test('an array option leaves a following bare token to the positionals', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha', 'beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha'])
+      assert.ok(
+        result.errors.some((error) => error.includes('Unexpected arguments')),
+        `expected the stray token to be reported, got: ${JSON.stringify(result.errors)}`
+      )
+    })
+
     test('a repeated array option accumulates', () => {
       const result = parseCLIArguments(
         ['deploy', '--tags', 'alpha', '--tags', 'beta,gamma'],
