@@ -37,7 +37,36 @@ export const getPikkuCLIConfig = async (
   return config
 }
 
-async function findConfigFile(): Promise<string> {
+/**
+ * Like `getPikkuCLIConfig`, but returns null when the project has no config at
+ * all rather than throwing.
+ *
+ * Some commands are meant to run *outside* a Pikku project: `pikku skills
+ * install` seeds a repo's agent skills, which is something you do before there
+ * is a pikku.config.json to read. Requiring one to find out there isn't one is
+ * a chicken-and-egg. A config that exists but is broken still throws — that is
+ * a real error, and staying quiet about it would hide it.
+ */
+export const tryGetPikkuCLIConfig = async (
+  logger: CLILogger,
+  configFile: string | undefined = undefined,
+  requiredFields: Array<keyof PikkuCLIConfig>,
+  outDirOverride?: string
+): Promise<PikkuCLIConfig | null> => {
+  const resolved = configFile ?? (await findConfigFileOrNull())
+  if (!resolved) {
+    return null
+  }
+  return await getPikkuCLIConfig(
+    logger,
+    resolved,
+    requiredFields,
+    false,
+    outDirOverride
+  )
+}
+
+async function findConfigFileOrNull(): Promise<string | null> {
   let dir = process.cwd()
   const { root } = parsePath(dir)
   while (true) {
@@ -49,7 +78,15 @@ async function findConfigFile(): Promise<string> {
     if (hasGit || dir === root) break
     dir = dirname(dir)
   }
-  throw new Error('Config file pikku.config.json not found')
+  return null
+}
+
+async function findConfigFile(): Promise<string> {
+  const configFile = await findConfigFileOrNull()
+  if (!configFile) {
+    throw new Error('Config file pikku.config.json not found')
+  }
+  return configFile
 }
 
 /** A config that was found and parsed, but says something impossible. */
@@ -1105,7 +1142,9 @@ const _getPikkuCLIConfig = async (
       throw e
     }
     logger.error(e)
-    throw new Error(`Config file not found: ${configFile}`)
+    // The file was found and read; it is the loading that failed. Reporting
+    // that as "not found" sends the reader hunting for a file that is there.
+    throw new Error(`Failed to load config file: ${configFile}`)
   }
 }
 

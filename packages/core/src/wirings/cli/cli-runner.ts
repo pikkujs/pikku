@@ -506,8 +506,15 @@ export async function executeCLI({
 
     const data = { ...parsed.positionals, ...parsed.options }
 
+    // The command path is passed through so a config factory can tell which
+    // command is about to run. Some commands are meant to work outside a
+    // project, and cannot be gated behind loading that project's config.
     const config = createConfig
-      ? await createConfig(new LocalVariablesService(), data)
+      ? await createConfig(
+          new LocalVariablesService(),
+          data,
+          parsed.commandPath
+        )
       : ({} as CoreConfig)
 
     const singletonServices = await createSingletonServices(config)
