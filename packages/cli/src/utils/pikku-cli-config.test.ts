@@ -8,6 +8,7 @@ import {
   PikkuCLIConfigError,
   assertSchemaDirectoriesAreDistinct,
   getPikkuCLIConfig,
+  tryGetPikkuCLIConfig,
 } from './pikku-cli-config.js'
 
 describe('getPikkuCLIConfig', () => {
@@ -161,6 +162,65 @@ describe('assertSchemaDirectoriesAreDistinct', () => {
           scenarioSchemaDirectory: '/app/.pikku/scenarios/../schemas',
         }),
       PikkuCLIConfigError
+    )
+  })
+})
+
+describe('tryGetPikkuCLIConfig', () => {
+  const tempDirs: string[] = []
+  const cwd = process.cwd()
+
+  after(() => {
+    process.chdir(cwd)
+    for (const dir of tempDirs) {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  const silentLogger = { error() {}, warn() {}, info() {} } as never
+
+  test('returns null in a repo that is not a Pikku project', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-no-config-'))
+    tempDirs.push(root)
+    // The upward walk stops at a repo root, so this pins the search to `root`
+    // instead of letting it escape into whatever contains the temp directory.
+    await mkdir(join(root, '.git'), { recursive: true })
+
+    process.chdir(root)
+    assert.equal(await tryGetPikkuCLIConfig(silentLogger, undefined, []), null)
+  })
+
+  test('returns the config when the project has one', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-config-'))
+    tempDirs.push(root)
+    await mkdir(join(root, '.git'), { recursive: true })
+    await mkdir(join(root, 'src'), { recursive: true })
+    await writeFile(
+      join(root, 'pikku.config.json'),
+      JSON.stringify({
+        rootDir: '.',
+        srcDirectories: ['src'],
+        packageMappings: {},
+        outDir: '.pikku',
+        tsconfig: 'tsconfig.json',
+        filters: {},
+      })
+    )
+
+    process.chdir(root)
+    const config = await tryGetPikkuCLIConfig(silentLogger, undefined, [])
+    assert.deepEqual(config?.srcDirectories, ['src'])
+  })
+
+  test('still throws when a config exists but cannot be loaded', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-bad-config-'))
+    tempDirs.push(root)
+    await mkdir(join(root, '.git'), { recursive: true })
+    await writeFile(join(root, 'pikku.config.json'), '{ not json')
+
+    process.chdir(root)
+    await assert.rejects(() =>
+      tryGetPikkuCLIConfig(silentLogger, undefined, [])
     )
   })
 })

@@ -18,7 +18,10 @@ import {
 } from '@pikku/core/services'
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
-import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
+import {
+  getPikkuCLIConfig,
+  tryGetPikkuCLIConfig,
+} from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
   inspect,
@@ -104,10 +107,21 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
   }
 )
 
-export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
-  _variablesService,
-  data
-) => {
+/**
+ * Commands that must work in a directory that is not a Pikku project.
+ * `skills install` writes agent skills into a repo that has no pikku.config.json
+ * yet — that is the whole point of it — so it cannot require one to start.
+ */
+const CONFIG_FREE_COMMANDS = new Set([
+  'skills',
+  'skills.list',
+  'skills.install',
+])
+
+export const createConfig: CreateConfig<
+  Config,
+  [PikkuCLIConfig, string[]?]
+> = async (_variablesService, data, commandPath = []) => {
   // Determine log level based on CLI flags with precedence:
   // --silent > --loglevel > --verbose > --info > default (info)
   let logLevel: LogLevel = LogLevel.info // default
@@ -153,13 +167,13 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
     logger.logLogo()
   }
 
-  const cliConfig = await getPikkuCLIConfig(
-    logger,
-    data.configFile,
-    [],
-    true,
-    data.outDir
-  )
+  // A config-free command still uses the project config when one is there, so
+  // it behaves the same inside a project; it just does not demand one.
+  const configFree = CONFIG_FREE_COMMANDS.has(commandPath.join('.'))
+  const cliConfig = configFree
+    ? ((await tryGetPikkuCLIConfig(logger, data.configFile, [], data.outDir)) ??
+      ({} as PikkuCLIConfig))
+    : await getPikkuCLIConfig(logger, data.configFile, [], true, data.outDir)
 
   // Load inspector state from file if stateInput is provided
   let preloadedInspectorState: Omit<InspectorState, 'typesLookup'> | undefined =
