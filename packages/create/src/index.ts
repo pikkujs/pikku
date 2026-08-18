@@ -26,6 +26,7 @@ import {
   replaceFunctionReferences,
   serverlessChanges,
   updatePackageJSONScripts,
+  withNetworkRetry,
   wranglerChanges,
 } from './utils.js'
 import { program } from 'commander'
@@ -290,8 +291,8 @@ async function setupTemplate(cliOptions: CliOptions) {
     const functionsPath = `${tmpDirPrefix}/pikku/functions`
     const templatePath = `${tmpDirPrefix}/pikku/template`
 
-    await downloadTemplate(functionsUrl, { dir: functionsPath, force: true })
-    await downloadTemplate(templateUrl, { dir: templatePath, force: true })
+    await downloadWithRetry(functionsUrl, functionsPath, spinner)
+    await downloadWithRetry(templateUrl, templatePath, spinner)
 
     spinner.success()
 
@@ -356,6 +357,29 @@ async function setupTemplate(cliOptions: CliOptions) {
   console.log(chalk.bold(`cd ${name}`))
 }
 
+/**
+ * api.github.com answers a tarball request with a 504 often enough that a
+ * single attempt makes a whole scaffold — and every CI job that scaffolds —
+ * fail on the weather. A missing template still fails at once; only the blips
+ * are asked again.
+ */
+async function downloadWithRetry(
+  source: string,
+  dir: string,
+  spinner: ReturnType<typeof createSpinner>
+) {
+  return withNetworkRetry(
+    () => downloadTemplate(source, { dir, force: true }),
+    {
+      onRetry: (error, attempt) => {
+        spinner.update({
+          text: `Downloading template... (retry ${attempt} after ${(error as Error).message})`,
+        })
+      },
+    }
+  )
+}
+
 async function cloneRepo(cliOptions: CliOptions, repoName: string) {
   const { version, name } = cliOptions
   const targetPath = path.join(process.cwd(), name)
@@ -366,10 +390,11 @@ async function cloneRepo(cliOptions: CliOptions, repoName: string) {
   try {
     const tmpDirPrefix = tmpdir()
     const repoDirPath = `${tmpDirPrefix}/pikku/${repoName}`
-    await downloadTemplate(`gh:pikkujs/${repoName}${versionRef}`, {
-      dir: repoDirPath,
-      force: true,
-    })
+    await downloadWithRetry(
+      `gh:pikkujs/${repoName}${versionRef}`,
+      repoDirPath,
+      spinner
+    )
     lazymkdir(targetPath)
     mergeDirectories(repoDirPath, targetPath)
 

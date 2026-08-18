@@ -26,5 +26,21 @@ runs:
       uses: actions/download-artifact@v8
       with:
         name: build-output
-    - run: yarn install
+    # A dependency whose postinstall downloads a release binary (serverless,
+    # workerd, esbuild) fails the whole install when that fetch blips, and the
+    # job then reads as a broken pull request. Yarn resumes from what it
+    # already resolved, so a repeat attempt is cheap.
+    - name: Install dependencies
       shell: bash
+      run: |
+        for attempt in 1 2 3; do
+          if yarn install; then
+            exit 0
+          fi
+          if [ "$attempt" = 3 ]; then
+            echo "::error::yarn install failed after $attempt attempts"
+            exit 1
+          fi
+          echo "::warning::yarn install failed (attempt $attempt), retrying"
+          sleep $((attempt * 15))
+        done
