@@ -93,7 +93,7 @@ function setupProject() {
 
   writeFileSync(
     resolve(PROJECT_DIR, 'types/application-types.ts'),
-    `import type { CoreUserSession, CoreSingletonServices, CoreServices, CoreConfig } from '@pikku/core'
+    `import type { CoreUserSession, CoreSingletonServices, CoreServices, CoreConfig } from '@pikku/core/types'
 export interface UserSession extends CoreUserSession { userId: string }
 export interface SingletonServices extends CoreSingletonServices {}
 export interface Services extends CoreServices {}

@@ -618,7 +618,7 @@ export type ${pascalName}Resource = z.infer<typeof ${pascalName}ResourceSchema>
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
+} from '@pikku/core/types'
 import type { ${pascalName}Service } from '../src/${name}-api.service.js'
 
 export interface Config extends CoreConfig {}
