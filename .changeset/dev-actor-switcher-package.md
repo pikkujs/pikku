@@ -1,6 +1,6 @@
 ---
-'@pikku/react': minor
-'@pikku/mantine': minor
+'@pikku/react': patch
+'@pikku/mantine': patch
 '@pikku/cli': patch
 '@pikku/skills': patch
 ---
