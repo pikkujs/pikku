@@ -4,11 +4,11 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeRemoteRPC } from './serialize-remote-rpc.js'
+import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
 
 export const pikkuRemoteRPC = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, variables }) => {
-    const deployCodegenFlag = await variables.get('PIKKU_DEPLOY_CODEGEN')
-    if (deployCodegenFlag === '1') {
+    if (await isDeployCodegen(variables)) {
       return false
     }
 

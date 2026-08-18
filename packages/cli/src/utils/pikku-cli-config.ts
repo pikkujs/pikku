@@ -6,6 +6,7 @@ import type {
 } from '../../types/config.js'
 import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
+import { setScaffoldWriteGuard } from './file-writer.js'
 
 const CLIENT_FILE_KEYS = [
   'fetchFile',
@@ -423,6 +424,17 @@ const _getPikkuCLIConfig = async (
     const resolvedScaffoldDir = isAbsolute(scaffoldDir)
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)
+
+    // Per-unit deploy codegen re-runs the whole of `pikku all` with `--outDir`
+    // pointed at one unit's `.pikku`. It needs the `.pikku` artifacts and
+    // nothing else — the scaffold is project source, and regenerating it under
+    // a redirected outDir rewrites the developer's imports to point inside
+    // `.deploy/`. Read straight from the environment rather than through the
+    // variables service: that service JSON-parses, so `'1'` arrives as the
+    // number 1 and every `=== '1'` check against it silently never matched.
+    setScaffoldWriteGuard(
+      process.env.PIKKU_DEPLOY_CODEGEN === '1' ? resolvedScaffoldDir : undefined
+    )
 
     // Read every scaffold feature once, here, so a legacy 'auth'/'no-auth'
     // fails at load with the migration named, rather than downstream where the

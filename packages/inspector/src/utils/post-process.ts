@@ -480,10 +480,22 @@ export function validateVariableOverrides(
 }
 
 /**
+ * Every wired addon must be installed, in the bucket matching how it is used.
+ *
  * A `wireRemoteAddon` package ships types only — its handlers run on the host —
  * so it MUST be a devDependency, not a production dependency (a prod dep would
- * drag in the runtime deps remote consumption exists to avoid). This is the
- * mirror image of `wireAddon`, which requires a production dependency.
+ * drag in the runtime deps remote consumption exists to avoid).
+ *
+ * A plain `wireAddon` is the mirror image: its handlers run in *this* app, so
+ * it must be a production dependency. That half used to go unchecked, and the
+ * failure it allowed is quiet in a way the remote one is not — a missing addon
+ * package makes `resolveAddonMeta` return null, which is caught and downgraded
+ * to a warning, so every `ref('<namespace>:…')` the scaffold emitted resolves
+ * against nothing and the surface is simply dead at runtime. The generated
+ * console is the common case: `scaffold.console` emits
+ * `wireAddon({ package: '@pikku/addon-console' })` and refs into it, and a
+ * project that never installed the package gets a console that 404s with
+ * nothing in the build output saying why.
  */
 export function validateRemoteAddonDependencies(
   logger: InspectorLogger,
@@ -491,11 +503,6 @@ export function validateRemoteAddonDependencies(
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
-
-  const hasRemote = Array.from(wireAddonDeclarations.values()).some(
-    (d) => d.remote
-  )
-  if (!hasRemote) return
 
   const pkgJsonPath = join(state.rootDir, 'package.json')
   if (!existsSync(pkgJsonPath)) return // no manifest to check (e.g. some tests)
@@ -517,7 +524,18 @@ export function validateRemoteAddonDependencies(
   const devDeps = pkgJson.devDependencies ?? {}
 
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    if (!decl.remote) continue
+    if (!decl.remote) {
+      // Local addon: the handlers run here, so it has to be installed and it
+      // has to be a production dependency. devDependencies is accepted rather
+      // than flagged — it is wrong for a deployed app but it does resolve, and
+      // the failure this check exists to catch is the package being absent.
+      if (decl.package in prodDeps || decl.package in devDeps) continue
+      logger.critical(
+        ErrorCode.ADDON_NOT_INSTALLED,
+        `Addon '${namespace}' ('${decl.package}') is wired with wireAddon but is not installed — every ref('${namespace}:…') will resolve to nothing and the surface will be dead at runtime. Install it, or remove the wireAddon call.`
+      )
+      continue
+    }
     if (decl.package in devDeps) continue // correct
 
     if (decl.package in prodDeps) {

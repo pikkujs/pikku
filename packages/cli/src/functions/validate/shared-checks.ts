@@ -97,10 +97,24 @@ async function hasAuthSessionMiddleware(fnDir: string): Promise<boolean> {
   )
 }
 
-function migrationCreatesTable(sql: string, tableName: string): boolean {
+/**
+ * Does any statement in `sql` create `tableName`?
+ *
+ * Every dialect quotes identifiers differently and Kysely's schema builder
+ * always quotes, so an unquoted-only match reports a table as missing on the
+ * exact projects most likely to have it. Accept each dialect's pair — and only
+ * a matching pair, via the backreference, so `"audit'` is not a hit — plus an
+ * optional schema qualifier, since `main.audit` is the same table.
+ */
+export function migrationCreatesTable(sql: string, tableName: string): boolean {
   const escapedTable = tableName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
+  const qualifier = `(?:(?:["'\`]?\\w+["'\`]?|\\[\\w+\\])\\.)?`
+  // The word boundary belongs to the bare alternative only: a trailing `\b`
+  // after a closing quote would demand a word character next, so `"audit" (`
+  // would not match.
+  const quoted = `(?:(["'\`])${escapedTable}\\1|\\[${escapedTable}\\]|${escapedTable}\\b)`
   const re = new RegExp(
-    `\\bcreate\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?["'\`]?${escapedTable}["'\`]?\\b`,
+    `\\bcreate\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?${qualifier}${quoted}`,
     'i'
   )
   return re.test(sql)
