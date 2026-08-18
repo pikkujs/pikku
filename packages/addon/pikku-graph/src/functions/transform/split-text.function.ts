@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const SplitTextInput = z.object({
   text: z.string().describe('The text to split into chunks'),

@@ -22,7 +22,7 @@ const DOC: SurfaceDoc = {
       summary: 'Everything an app imports.',
       leaves: [
         {
-          specifier: '#pikku/function',
+          specifier: '#pikku/addon/function',
           name: 'function',
           step: 'create a function',
           summary: 'The core abstraction.',
@@ -41,7 +41,7 @@ const DOC: SurfaceDoc = {
 
 const USAGE: SurfaceUsage = {
   bySpecifier: {
-    '#pikku/function': {
+    '#pikku/addon/function': {
       pikkuFunc: {
         imports: 12,
         seenIn: ['src'],

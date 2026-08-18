@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const scopeListUserRoles = pikkuFunc<
   { userId: string },

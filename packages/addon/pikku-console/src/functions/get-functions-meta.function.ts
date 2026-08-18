@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { FunctionMeta } from '../services/wiring.service.js'
 
 export interface FunctionVersionEntry {

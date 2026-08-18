@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { ConflictError, MissingScopeError } from '#pikku/error'
+import { ConflictError, MissingScopeError } from '#pikku/addon/error'
 import { verifyScopes } from '@pikku/core/scope'
 import { pikkuState } from '@pikku/core/state'
 

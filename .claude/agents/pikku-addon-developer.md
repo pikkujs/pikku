@@ -130,10 +130,12 @@ export const createConfig = pikkuAddonConfig(async (services) => {
 
 ## Addon Functions
 
-Functions use `pikkuSessionlessFunc` or `pikkuFunc` from `#pikku`:
+Functions use `pikkuSessionlessFunc` or `pikkuFunc` from `#pikku/addon`. An
+addon generates its whole tree under `#pikku/addon/*` — the prefix is what keeps
+a linked addon's leaves from resolving against the host application's:
 
 ```typescript
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { z } from 'zod'
 
 const Input = z.object({ title: z.string() })
@@ -178,7 +180,7 @@ This parses the spec and generates: functions for each endpoint, a typed API ser
 ### Registration
 
 ```typescript
-import { wireAddon } from '#pikku/function'
+import { wireAddon } from '#pikku/addon'
 
 wireAddon({
   name: 'todos',

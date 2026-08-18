@@ -29,7 +29,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   setup: {
     step: 'create a function',
     summary:
-      'The three factories an application declares exactly once — its config, its singleton services and its per-wire services. Everything else on this page is imported by features; these are imported by bootstrap and then left alone.',
+      'The three factories a project declares exactly once — its config, its singleton services and its per-wire services. An addon declares the same three in its own flavour, handed the logger, variables and secrets the host application already built. Everything else on this page is imported by features; these are imported by bootstrap and then left alone.',
   },
   function: {
     step: 'create a function',
@@ -65,11 +65,6 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'enhance it',
     summary:
       'Installs an addon into this application, on its own or over rpc against a remote one.',
-  },
-  'addon/setup': {
-    step: 'create a function',
-    summary:
-      'The setup leaf an addon declares itself through — its config, singleton services and per-wire services, each handed the logger, variables and secrets the host application already built. It sits a level below the install leaf because a project is one or the other, and a linked addon resolving #pikku/addon against its host would find the wrong half.',
   },
   http: {
     step: 'wire it up',
@@ -149,6 +144,6 @@ export const ENTRY_POINT_EDITORIAL: Record<
   addon: {
     job: 'build an addon',
     summary:
-      'An addon declares functions and contracts; the host application decides how the world reaches them. The same #pikku barrels are generated, minus every wiring — an addon that called wireHTTP would be registering a route in a registry it does not own.',
+      'An addon declares functions and contracts; the host application decides how the world reaches them. The same barrels are generated under #pikku/addon/*, minus every wiring — an addon that called wireHTTP would be registering a route in a registry it does not own.',
   },
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const CoalesceInput = z.object({
   values: z.array(z.unknown()).describe('Values to check in order'),

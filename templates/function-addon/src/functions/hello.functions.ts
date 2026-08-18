@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { addonMiddleware } from '../middleware.js'
 import { addonPermission } from '../permission.js'
 

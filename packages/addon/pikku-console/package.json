@@ -8,11 +8,11 @@
     "#pikku/*": "./dist/.pikku/*/index.js"
   },
   "exports": {
-    ".": "./dist/.pikku/pikku-bootstrap.gen.js",
-    "./.pikku/*": "./dist/.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
+    ".": "./dist/.pikku/addon/pikku-bootstrap.gen.js",
+    "./.pikku/*": "./dist/.pikku/addon/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/addon/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     },
     "./services": {
       "types": "./dist/src/services/wiring.service.d.ts",
@@ -29,7 +29,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc && (cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null || true) && (cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true) && (cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/function && cp .pikku/function/*-verbose.gen.json dist/.pikku/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/)",
+    "build": "pikku all && tsc && (cp .pikku/addon/rpc/*.d.ts dist/.pikku/addon/rpc/ 2>/dev/null || true) && (cp .pikku/addon/agent/*.d.ts dist/.pikku/addon/agent/ 2>/dev/null || true) && (cp .pikku/addon/workflow/*.d.ts dist/.pikku/addon/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/addon/function && cp .pikku/addon/function/*-verbose.gen.json dist/.pikku/addon/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/)",
     "pikku": "pikku all",
     "pretest": "pikku all",
     "test": "tsc --noEmit",

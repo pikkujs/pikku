@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const goodbye = pikkuSessionlessFunc<
   { name: string },

@@ -2,13 +2,13 @@
  * The install side of `#pikku/addon`, written for an application rather than an
  * addon. Installing an addon and authoring one are the same concept approached
  * from opposite ends, and a project is only ever one of the two — but they
- * cannot share a specifier, because a runtime template maps `#pikku/*` onto a
+ * cannot share a tree, because a runtime template maps `#pikku/*` onto a
  * sibling package through tsconfig `paths`, and `paths` are global to a tsx
  * process rather than scoped to the package that declared them. A linked
- * addon's own `#pikku/addon` would resolve against this leaf and find none of
- * the authoring exports, so the authoring half sits a level down at
- * `#pikku/addon/setup`, where an application's flat `.pikku` has nothing to
- * match and the resolver falls back to Node.
+ * addon's leaves would otherwise resolve against the host application's, so an
+ * addon generates its whole tree one level down and authors against
+ * `#pikku/addon/<leaf>` — a depth at which an application has nothing to match,
+ * leaving the resolver to fall back to Node's per-package `imports`.
  */
 export const serializeAddonInstallTypes = () =>
   `/**

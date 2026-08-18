@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const LimitInput = z.object({
   items: z.array(z.unknown()).describe('The array of items to limit'),

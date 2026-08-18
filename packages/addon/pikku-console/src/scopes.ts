@@ -1,4 +1,4 @@
-import { defineScope } from '#pikku/scopes'
+import { defineScope } from '#pikku/addon/scopes'
 
 /**
  * Scopes the console's own surface requires.

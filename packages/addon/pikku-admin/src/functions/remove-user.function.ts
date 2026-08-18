@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { deleteAuthUser } from '@pikku/better-auth'
 import { Success, UserRef } from '../lib/user.schemas.js'
 

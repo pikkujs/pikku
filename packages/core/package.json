@@ -1,7 +1,7 @@
 {
   "name": "@pikku/core",
   "version": "0.12.84",
-  "description": "The Pikku runtime \u2014 functions, wirings, services, middleware and types",
+  "description": "The Pikku runtime — functions, wirings, services, middleware and types",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",

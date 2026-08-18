@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 /**
  * How to authenticate the request. Carries only NAMES and static constants — the

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 const BranchCondition = z.object({
   left: z.unknown().describe('Left-hand operand (resolved before evaluation)'),

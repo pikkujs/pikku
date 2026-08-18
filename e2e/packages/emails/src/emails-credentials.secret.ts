@@ -1,4 +1,4 @@
-import { defineSecret } from '#pikku/secrets'
+import { defineSecret } from '#pikku/addon/secrets'
 import { z } from 'zod'
 
 export const EmailsCredentialsSchema = z.string()

@@ -243,8 +243,17 @@ run(
 )
 
 console.log('\n▶ assert: the published artifact describes the addon’s table')
-const artifactPath = join(addonDir, '.pikku', 'db', 'pikku-db-meta.gen.json')
-check(existsSync(artifactPath), 'pikku db export wrote .pikku/db')
+// An addon roots its whole generated tree under `.pikku/addon`, so that every
+// leaf it authors is reached as `#pikku/addon/<leaf>` and cannot be shadowed by
+// the host application's flat one.
+const artifactPath = join(
+  addonDir,
+  '.pikku',
+  'addon',
+  'db',
+  'pikku-db-meta.gen.json'
+)
+check(existsSync(artifactPath), 'pikku db export wrote .pikku/addon/db')
 const artifact = JSON.parse(readFileSync(artifactPath, 'utf8'))
 check(
   Object.keys(artifact).sort().join(',') === 'postgres,sqlite',
@@ -267,6 +276,7 @@ contains(
 const remoteArtifactPath = join(
   remoteAddonDir,
   '.pikku',
+  'addon',
   'db',
   'pikku-db-meta.gen.json'
 )

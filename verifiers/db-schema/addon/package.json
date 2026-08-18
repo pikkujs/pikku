@@ -12,11 +12,11 @@
     "./types": {
       "types": "./types/application-types.d.ts"
     },
-    "./.pikku/*": "./.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
-    "./.pikku/db/pikku-db-meta.gen.json": "./.pikku/db/pikku-db-meta.gen.json",
+    "./.pikku/*": "./.pikku/addon/*",
+    "./.pikku/pikku-metadata.gen.json": "./.pikku/addon/pikku-metadata.gen.json",
+    "./.pikku/db/pikku-db-meta.gen.json": "./.pikku/addon/db/pikku-db-meta.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     }
   },
   "files": [

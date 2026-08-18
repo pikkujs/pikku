@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const getOpenapiCategories = pikkuFunc<null, Record<string, number>>({
   title: 'Get OpenAPI Categories',

@@ -1,4 +1,4 @@
-import { defineScope } from '#pikku/scopes'
+import { defineScope } from '#pikku/addon/scopes'
 
 /**
  * The `admin` tree: every capability that acts on the application as a whole.

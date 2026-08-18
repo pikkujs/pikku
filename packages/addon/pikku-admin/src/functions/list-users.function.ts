@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { isPerson } from '../lib/is-person.js'
 import { ListUsersInput, ListUsersOutput } from '../lib/user.schemas.js'
 

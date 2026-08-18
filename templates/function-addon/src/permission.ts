@@ -1,4 +1,4 @@
-import { pikkuPermission } from '#pikku/auth'
+import { pikkuPermission } from '#pikku/addon/auth'
 
 /**
  * Addon package permission that logs permission checks

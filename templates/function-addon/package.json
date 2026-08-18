@@ -19,10 +19,10 @@
       "types": "./dist/src/functions/hello.contracts.d.ts",
       "import": "./dist/src/functions/hello.contracts.js"
     },
-    "./.pikku/*": "./dist/.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
+    "./.pikku/*": "./dist/.pikku/addon/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/addon/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     }
   },
   "files": [

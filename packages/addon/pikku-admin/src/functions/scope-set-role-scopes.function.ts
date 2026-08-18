@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const scopeSetRoleScopes = pikkuFunc<
   { name: string; scopes: string[] },

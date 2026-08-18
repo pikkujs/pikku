@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 export const credentialStatus = pikkuFunc<
   { names: string[]; userId?: string },

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const OmitInput = z.object({
   item: z.record(z.string(), z.unknown()).describe('The input object'),

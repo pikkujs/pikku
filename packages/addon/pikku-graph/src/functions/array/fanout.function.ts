@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { WorkflowWireDoRPC } from '@pikku/core/workflow'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 export const FanoutInput = z.object({
   items: z

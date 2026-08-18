@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 
 /**
  * Serves one screenshot or recording as itself, over HTTP rather than as RPC

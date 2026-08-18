@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import type { ScenarioRunSummary } from '@pikku/core/scenario'
 
 export const listScenarioRuns = pikkuFunc<

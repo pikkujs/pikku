@@ -1,4 +1,4 @@
-import { pikkuFunc } from '#pikku/function'
+import { pikkuFunc } from '#pikku/addon/function'
 import { setAuthUserBanned } from '@pikku/better-auth'
 import { SetUserBannedInput, Success } from '../lib/user.schemas.js'
 

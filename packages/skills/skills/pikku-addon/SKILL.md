@@ -213,10 +213,14 @@ export const createWireServices = pikkuAddonWireServices(
 
 ### Functions
 
+An addon generates its whole tree under `#pikku/addon/*`, so it authors against
+`#pikku/addon/function`, `#pikku/addon/http` and so on. An application's leaves
+stay flat, which is what stops a linked addon resolving against its host.
+
 ```typescript
 // src/functions/addTodo.function.ts
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
 
 const AddTodoInput = z.object({ title: z.string() })
 const AddTodoOutput = z.object({ id: z.string(), title: z.string() })

@@ -1,5 +1,5 @@
-import { pikkuFunc } from '#pikku/function'
-import { NotFoundError } from '#pikku/error'
+import { pikkuFunc } from '#pikku/addon/function'
+import { NotFoundError } from '#pikku/addon/error'
 import type { EmailTemplateMeta } from '@pikku/core/services'
 import {
   getNestedValue,

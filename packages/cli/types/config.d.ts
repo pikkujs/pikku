@@ -220,7 +220,8 @@ export interface PikkuCLICoreOutputFiles {
   // Addon install surface, for an application (the leaf `#pikku/addon`)
   addonTypesFile: string
 
-  // Addon authoring surface, for an addon package (the leaf `#pikku/addon/setup`)
+  // Addon authoring surface, joining the setup leaf of an addon's own tree
+  // (`#pikku/addon/setup`) where an application writes the app-flavoured one
   addonSetupTypesFile: string
 
   // Error catalogue (the leaf `#pikku/error` resolves to)
