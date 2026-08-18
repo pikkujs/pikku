@@ -171,6 +171,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
   }
 
+  /**
+   * The package the *function* belongs to, which is the wire's own until a
+   * `ref()` resolves the target into an addon. The wiring stays the consuming
+   * app's — that is what keeps the app's middleware running rather than the
+   * addon's — but everything the function is declared with lives in the addon's
+   * package state, so its schemas, services and permissions are read from here.
+   */
+  let funcPackageName = packageName
+
   if (!funcMeta) {
     const addonTarget = resolveAddonFunctionTarget(funcName, packageName)
     if (addonTarget) {
@@ -182,6 +191,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
       funcMeta = pikkuState(addonTarget.packageName, 'function', 'meta')[
         addonTarget.localName
       ]
+      if (funcMeta) {
+        funcPackageName = addonTarget.packageName
+      }
     }
   }
 
@@ -194,17 +206,17 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   const resolvedFunctionId = funcMeta.pikkuFuncId ?? funcName
 
-  const resolvedSingletonServices = packageName
+  const resolvedSingletonServices = funcPackageName
     ? await getOrCreatePackageSingletonServices(
-        packageName,
+        funcPackageName,
         singletonServices,
         addonInstance
       )
     : singletonServices
 
   let resolvedCreateWireServices = createWireServices
-  if (packageName) {
-    const factories = pikkuState(packageName, 'package', 'factories')
+  if (funcPackageName) {
+    const factories = pikkuState(funcPackageName, 'package', 'factories')
     if (factories?.createWireServices) {
       resolvedCreateWireServices = factories.createWireServices
     }
@@ -362,17 +374,21 @@ export const runPikkuFunc = async <In = any, Out = any>(
       actualData = applyDefaultsFromSchema(
         inputSchemaName,
         actualData,
-        packageName
+        funcPackageName
       )
       if (coerceDataFromSchema) {
-        coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
+        coerceTopLevelDataFromSchema(
+          inputSchemaName,
+          actualData,
+          funcPackageName
+        )
       }
       await validateSchema(
         resolvedSingletonServices.logger,
         resolvedSingletonServices.schema,
         inputSchemaName,
         actualData,
-        packageName
+        funcPackageName
       )
     }
 
@@ -385,7 +401,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       // knowledge: decisions/security/a-permission-gets-a-wire-it-cannot-reply-on.md
       wire: invocationWire as PermissionWire,
       data: actualData,
-      packageName,
+      packageName: funcPackageName,
     })
 
     let wireServices: Record<string, unknown> | undefined
@@ -412,7 +428,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
         services = { ...services, auditLog: invocationAuditLog }
       }
-      const callerPackageName = packageName
+      const callerPackageName = funcPackageName
       Object.defineProperty(invocationWire, 'rpc', {
         get() {
           const rpc = rpcService.getContextRPCService(
