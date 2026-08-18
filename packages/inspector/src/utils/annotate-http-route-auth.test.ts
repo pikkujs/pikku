@@ -108,18 +108,16 @@ describe('annotateHttpRouteAuth', () => {
 
   test('a ref route resolves against its target', () => {
     const state = {
-      functions: {
-        meta: {
-          inline: { pikkuFuncId: 'inline', sessionless: true },
-          target: { pikkuFuncId: 'target', sessionless: false },
-        },
+      functions: { meta: {} },
+      addonFunctions: {
+        console: { target: { pikkuFuncId: 'target', sessionless: false } },
       },
       http: {
         meta: {
           get: {
             '/thing': {
-              pikkuFuncId: 'inline',
-              refTarget: 'target',
+              pikkuFuncId: 'console:target',
+              packageName: ADDON_PACKAGE,
               route: '/thing',
               method: 'get',
             },

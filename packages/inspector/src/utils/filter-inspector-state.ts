@@ -5,6 +5,7 @@ import type {
 } from '../types.js'
 import type { PikkuWiringTypes } from '@pikku/core/types'
 import { parseVersionedId } from '@pikku/core/utils'
+import { makeContextBasedId } from './extract-function-name.js'
 import { aggregateRequiredServices } from './post-process.js'
 import { resolveDeployTarget } from './resolve-deploy-target.js'
 
@@ -97,6 +98,13 @@ function matchesFilters(
   meta: {
     type: PikkuWiringTypes
     name: string
+    /**
+     * Further ids the `--names` filter may address this wiring by. An HTTP
+     * route wired with `ref('ns:fn')` carries the addon's own function id as
+     * its name, so its `http:<method>:<route>` wiring id is the only id that
+     * names this route rather than every wiring onto that addon function.
+     */
+    altNames?: string[]
     tags?: string[]
     filePath?: string
     httpRoute?: string
@@ -188,10 +196,15 @@ function matchesFilters(
     }
   }
 
-  const { baseName } = parseVersionedId(meta.name)
+  const candidateNames = [meta.name, ...(meta.altNames ?? [])]
   const matchesNamePattern = (pattern: string) =>
-    matchesWildcard(meta.name, pattern) ||
-    (baseName !== meta.name && matchesWildcard(baseName, pattern))
+    candidateNames.some((candidate) => {
+      const { baseName } = parseVersionedId(candidate)
+      return (
+        matchesWildcard(candidate, pattern) ||
+        (baseName !== candidate && matchesWildcard(baseName, pattern))
+      )
+    })
 
   // Check name include filter (match against both full ID and base name for versioned functions)
   if (filters.names && filters.names.length > 0) {
@@ -342,16 +355,37 @@ export function filterInspectorState(
     const incompatible = new Set(filters.serverlessIncompatible ?? [])
     const defaultTarget = filters.defaultTarget ?? 'serverless'
     keptByDeploy = new Set<string>()
-    for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
+    const keepByTarget = (
+      funcId: string,
+      funcMeta: unknown,
+      incompatibleServices: Set<string>
+    ) => {
       const target = resolveDeployTarget(
         funcMeta as any,
-        incompatible,
+        incompatibleServices,
         funcId,
         defaultTarget
       )
-      if (allowed && !allowed.has(target)) continue
-      if (excluded && excluded.has(target)) continue
-      keptByDeploy.add(funcId)
+      if (allowed && !allowed.has(target)) return
+      if (excluded && excluded.has(target)) return
+      keptByDeploy!.add(funcId)
+    }
+    for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
+      keepByTarget(funcId, funcMeta, incompatible)
+    }
+    // A wiring onto an addon function records the addon's own id, so the
+    // addon's published metadata is the only place its deploy target can be
+    // read from. Its serverlessIncompatible services are namespace-scoped —
+    // a service name means whatever the addon that declared it means.
+    for (const [namespace, addonMeta] of Object.entries(
+      state.addonFunctions ?? {}
+    )) {
+      const addonIncompatible = new Set(
+        state.addonServerlessIncompatible?.get(namespace) ?? []
+      )
+      for (const [funcName, funcMeta] of Object.entries(addonMeta)) {
+        keepByTarget(`${namespace}:${funcName}`, funcMeta, addonIncompatible)
+      }
     }
   }
 
@@ -459,6 +493,7 @@ export function filterInspectorState(
         {
           type: 'http' as PikkuWiringTypes,
           name: routeMeta.pikkuFuncId, // Use function name, not route
+          altNames: [makeContextBasedId('http', method, routeMeta.route)],
           tags: routeMeta.tags,
           filePath,
           httpRoute: routeMeta.route,
@@ -478,11 +513,6 @@ export function filterInspectorState(
           filteredState.serviceAggregation.usedFunctions.add(
             routeMeta.pikkuFuncId
           )
-          if (routeMeta.refTarget) {
-            filteredState.serviceAggregation.usedFunctions.add(
-              routeMeta.refTarget
-            )
-          }
           // For workflow/agent routes, also add the base name
           // so the workflow/agent definition survives pruning
           const colonIdx = routeMeta.pikkuFuncId.indexOf(':')

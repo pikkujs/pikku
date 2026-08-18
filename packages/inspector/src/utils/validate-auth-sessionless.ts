@@ -2,6 +2,7 @@ import type * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger, InspectorState } from '../types.js'
+import { resolveFunctionMeta } from './resolve-function-meta.js'
 
 export function validateAuthSessionless(
   logger: InspectorLogger,
@@ -11,7 +12,7 @@ export function validateAuthSessionless(
   wireDescription: string,
   inheritedAuth?: boolean
 ): boolean {
-  const fnMeta = state.functions.meta[funcName]
+  const fnMeta = resolveFunctionMeta(state, funcName)
   if (!fnMeta) return true
 
   const routeAuth = getPropertyValue(obj, 'auth')

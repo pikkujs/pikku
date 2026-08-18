@@ -243,6 +243,17 @@ export function registerHTTPRoute({
       )
     : null
 
+  // A ref()-wired route points straight at the addon function, the same way the
+  // CLI and channel adders record one. The addon's own metadata is the contract
+  // — and it is authoritative where the checker is not: `ref('ns:fn')` only
+  // types precisely once the consumer's own rpc map already lists the addon's
+  // functions, so a cold run inferred the whole `FlattenedRPCMap` and a warm one
+  // inferred the real input. The addon's metadata says which it is either way.
+  //
+  // The route stays the consuming app's all the same, so it records no
+  // packageName: that names the package a wire *runs in*, and running this one
+  // inside the addon would hand it the addon's middleware and services instead
+  // of the app's. `ref` reaches the addon over RPC, which enters it properly.
   if (refAddonTarget) {
     const targetMeta = resolveFunctionMeta(state, refAddonTarget)
     if (!targetMeta) {
@@ -251,38 +262,16 @@ export function registerHTTPRoute({
       )
       return
     }
-  }
-
-  ensureFunctionMetadata(
-    state,
-    funcName,
-    fullRoute,
-    funcInitializer,
-    checker,
-    extracted.isHelper
-  )
-
-  // Propagate sessionless from the addon target so the runtime can correctly
-  // determine whether a session is required for ref()-based routes.
-  //
-  // The contract comes from the same place, and for the same reason the
-  // metadata is authoritative where the checker is not: `ref('ns:fn')` only
-  // types precisely once the consumer's own rpc map already lists the addon's
-  // functions, so a cold run inferred the whole `FlattenedRPCMap` and a warm one
-  // inferred the real input. The addon's own metadata says which it is either
-  // way.
-  if (refAddonTarget) {
-    const targetMeta = resolveFunctionMeta(state, refAddonTarget)
-    const inlineMeta = state.functions.meta[funcName]
-    if (targetMeta && inlineMeta) {
-      if (targetMeta.sessionless !== undefined) {
-        inlineMeta.sessionless = targetMeta.sessionless
-      }
-      inlineMeta.inputSchemaName = targetMeta.inputSchemaName ?? null
-      inlineMeta.outputSchemaName = targetMeta.outputSchemaName ?? null
-      inlineMeta.inputs = targetMeta.inputs
-      inlineMeta.outputs = targetMeta.outputs
-    }
+    funcName = refAddonTarget
+  } else {
+    ensureFunctionMetadata(
+      state,
+      funcName,
+      fullRoute,
+      funcInitializer,
+      checker,
+      extracted.isHelper
+    )
   }
 
   // The route's own `auth`, falling back to the group's. Recorded on the meta
@@ -335,13 +324,12 @@ export function registerHTTPRoute({
   const input = fnMeta.inputs?.[0] || null
 
   const getRouteInputKeys = (): string[] | null => {
-    const targetFuncName = refAddonTarget ?? funcName
-    const inputTypes = state.typesLookup.get(targetFuncName)
+    const inputTypes = state.typesLookup.get(funcName)
     if (inputTypes && inputTypes.length > 0) {
       return extractTypeKeys(inputTypes[0])
     }
 
-    const targetMeta = resolveFunctionMeta(state, targetFuncName)
+    const targetMeta = resolveFunctionMeta(state, funcName)
     if (targetMeta?.inputSchemaName) {
       const schema = state.schemas[targetMeta.inputSchemaName] as any
       const properties = schema?.properties
@@ -367,7 +355,7 @@ export function registerHTTPRoute({
           logger.critical(
             ErrorCode.ROUTE_PARAM_MISMATCH,
             `Route '${fullRoute}' has path parameter(s) [${missingParams.join(', ')}] ` +
-              `not found in function '${refAddonTarget ?? funcName}' input type. ` +
+              `not found in function '${funcName}' input type. ` +
               `Input type has: [${inputKeys.join(', ')}]`
           )
           return
@@ -381,7 +369,7 @@ export function registerHTTPRoute({
           logger.critical(
             ErrorCode.ROUTE_QUERY_MISMATCH,
             `Route '${fullRoute}' has query parameter(s) [${missingQuery.join(', ')}] ` +
-              `not found in function '${refAddonTarget ?? funcName}' input type. ` +
+              `not found in function '${funcName}' input type. ` +
               `Input type has: [${inputKeys.join(', ')}]`
           )
           return
@@ -406,9 +394,6 @@ export function registerHTTPRoute({
   const permissions = resolvePermissions(state, obj, tags, checker)
 
   state.serviceAggregation.usedFunctions.add(funcName)
-  if (refAddonTarget) {
-    state.serviceAggregation.usedFunctions.add(refAddonTarget)
-  }
   extractWireNames(middleware).forEach((name) =>
     state.serviceAggregation.usedMiddleware.add(name)
   )
@@ -433,7 +418,6 @@ export function registerHTTPRoute({
   state.http.files.add(sourceFile.fileName)
   state.http.meta[method][fullRoute] = {
     pikkuFuncId: funcName,
-    ...(refAddonTarget && { refTarget: refAddonTarget }),
     ...(packageName && { packageName }),
     route: fullRoute,
     sourceFile: sourceFile.fileName,

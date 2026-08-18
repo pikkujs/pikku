@@ -185,7 +185,6 @@ export type HTTPWiringMeta = CommonWireMeta & {
    * join wrong reads an open route as a closed one.
    */
   requiresSession?: boolean
-  refTarget?: string
   params?: string[]
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes

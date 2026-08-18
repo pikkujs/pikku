@@ -143,6 +143,42 @@ export const resolveAddonAuth = (
   )
 
 /**
+ * The package a namespaced function id belongs to, and the name that package
+ * publishes it under.
+ *
+ * A wiring that points at an addon function through `ref('ns:fn')` records
+ * `ns:fn` as its own function id — the same id every other wire type records —
+ * but the addon publishes its metadata under the bare `fn`, in its own package
+ * state. Without this the wire finds the function it registered and no metadata
+ * to run it by.
+ *
+ * The wiring itself stays the consuming app's, so `packageName` is the package
+ * the *wire* runs in, not the target's: it is null for a `ref()` the app wired,
+ * and only narrows the lookup when a wire really does run inside the addon.
+ */
+export const resolveAddonFunctionTarget = (
+  funcName: string,
+  packageName: string | null
+): { packageName: string; localName: string } | null => {
+  const separator = funcName.indexOf(':')
+  if (separator === -1) {
+    return null
+  }
+  const namespace = funcName.slice(0, separator)
+  const config = pikkuState(null, 'addons', 'packages').get(namespace)
+  if (!config) {
+    return null
+  }
+  if (packageName && config.package !== packageName) {
+    return null
+  }
+  return {
+    packageName: config.package,
+    localName: funcName.slice(separator + 1),
+  }
+}
+
+/**
  * Addon tags name middleware the *consuming app* registered, so they resolve
  * against the root tag groups rather than the addon package's own.
  *
