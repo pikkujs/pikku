@@ -12,6 +12,7 @@ import type {
 import type { MiddlewareMetadata } from '@pikku/core/middleware'
 import type ts from 'typescript'
 import { existsSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
@@ -480,22 +481,56 @@ export function validateVariableOverrides(
 }
 
 /**
+ * Can `pkg` be resolved from `rootDir`, by any means the loader would use?
+ *
+ * Resolution is attempted against `<pkg>/package.json` first and the bare
+ * specifier second, because neither alone is conclusive. A package with a
+ * restrictive `exports` map refuses the first with
+ * `ERR_PACKAGE_PATH_NOT_EXPORTED` — which is not a failure at all: reaching the
+ * exports map means the package was found. Only a module-not-found from both
+ * attempts means it is genuinely absent.
+ */
+const isPackageResolvable = (pkg: string, rootDir: string): boolean => {
+  const NOT_FOUND = new Set(['MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND'])
+  let req: ReturnType<typeof createRequire>
+  try {
+    req = createRequire(join(rootDir, 'package.json'))
+  } catch {
+    return true // cannot ask; do not accuse
+  }
+  for (const specifier of [`${pkg}/package.json`, pkg]) {
+    try {
+      req.resolve(specifier)
+      return true
+    } catch (e: any) {
+      if (!NOT_FOUND.has(e?.code)) return true
+    }
+  }
+  return false
+}
+
+/**
  * Every wired addon must be installed, in the bucket matching how it is used.
  *
  * A `wireRemoteAddon` package ships types only — its handlers run on the host —
  * so it MUST be a devDependency, not a production dependency (a prod dep would
  * drag in the runtime deps remote consumption exists to avoid).
  *
- * A plain `wireAddon` is the mirror image: its handlers run in *this* app, so
- * it must be a production dependency. That half used to go unchecked, and the
- * failure it allowed is quiet in a way the remote one is not — a missing addon
- * package makes `resolveAddonMeta` return null, which is caught and downgraded
- * to a warning, so every `ref('<namespace>:…')` the scaffold emitted resolves
- * against nothing and the surface is simply dead at runtime. The generated
- * console is the common case: `scaffold.console` emits
+ * A plain `wireAddon` only has to be *resolvable*. The failure it allows is
+ * quiet in a way the remote one is not — an absent package makes the metadata
+ * load fail, which is caught and downgraded to a warning, so every
+ * `ref('<namespace>:…')` resolves against nothing and the surface is dead at
+ * runtime. The generated console is the common case: `scaffold.console` emits
  * `wireAddon({ package: '@pikku/addon-console' })` and refs into it, and a
  * project that never installed the package gets a console that 404s with
  * nothing in the build output saying why.
+ *
+ * Deliberately a resolution check and not a `package.json` one. An addon is
+ * discovered because it is *wired*, not because it is a declared dependency —
+ * addons arrive by workspace link, by a local `addons/` directory recorded in
+ * `pikku-addons.json`, and by plain install, and only the last of those shows
+ * up in `dependencies`. Asking the resolver is the only question that matches
+ * what the loader will actually do.
  */
 export function validateRemoteAddonDependencies(
   logger: InspectorLogger,
@@ -503,6 +538,20 @@ export function validateRemoteAddonDependencies(
 ): void {
   const { wireAddonDeclarations } = state.rpc
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+
+  // Local addons first, and independently of the manifest below: their check
+  // asks the resolver, not `package.json`, so a project without a manifest (as
+  // in some tests) must not skip it.
+  for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+    if (decl.remote) continue
+    if (isPackageResolvable(decl.package, state.rootDir)) continue
+    logger.critical(
+      ErrorCode.ADDON_NOT_INSTALLED,
+      `Addon '${namespace}' ('${decl.package}') is wired with wireAddon but cannot be resolved — every ref('${namespace}:…') will resolve to nothing and the surface will be dead at runtime. Install it, or remove the wireAddon call.`
+    )
+  }
+
+  if (!Array.from(wireAddonDeclarations.values()).some((d) => d.remote)) return
 
   const pkgJsonPath = join(state.rootDir, 'package.json')
   if (!existsSync(pkgJsonPath)) return // no manifest to check (e.g. some tests)
@@ -524,18 +573,7 @@ export function validateRemoteAddonDependencies(
   const devDeps = pkgJson.devDependencies ?? {}
 
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    if (!decl.remote) {
-      // Local addon: the handlers run here, so it has to be installed and it
-      // has to be a production dependency. devDependencies is accepted rather
-      // than flagged — it is wrong for a deployed app but it does resolve, and
-      // the failure this check exists to catch is the package being absent.
-      if (decl.package in prodDeps || decl.package in devDeps) continue
-      logger.critical(
-        ErrorCode.ADDON_NOT_INSTALLED,
-        `Addon '${namespace}' ('${decl.package}') is wired with wireAddon but is not installed — every ref('${namespace}:…') will resolve to nothing and the surface will be dead at runtime. Install it, or remove the wireAddon call.`
-      )
-      continue
-    }
+    if (!decl.remote) continue
     if (decl.package in devDeps) continue // correct
 
     if (decl.package in prodDeps) {

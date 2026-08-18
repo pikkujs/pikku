@@ -16,7 +16,7 @@ A guard for this already existed in four generators and had never once fired:
 `LocalVariablesService.get` runs values through `JSON.parse`, so
 `PIKKU_DEPLOY_CODEGEN=1` arrived as the number `1` and every `=== '1'` test
 was false. The comparison is fixed behind a shared `isDeployCodegen`, and the
-real guard now sits in the file writer, which refuses writes *and removals*
+real guard now sits in the file writer, which refuses writes _and removals_
 under the scaffold directory for the duration of a per-unit run. Guarding the
 writer rather than each generator matters here: seven further generators had no
 guard at all, several write scaffold source and `.pikku` artifacts in the same

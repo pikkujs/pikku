@@ -1827,10 +1827,15 @@ export const renderValidate = (
       console.log(
         added('✓') +
           '  ' +
-          dim('no errors — but the project is not linked, so it cannot deploy yet')
+          dim(
+            'no errors — but the project is not linked, so it cannot deploy yet'
+          )
       )
       console.log(
-        '   ' + dim(`${notLinked.message.split(' — ')[0]}. Run \`pikku fabric link\`.`)
+        '   ' +
+          dim(
+            `${notLinked.message.split(' — ')[0]}. Run \`pikku fabric link\`.`
+          )
       )
     } else {
       console.log(

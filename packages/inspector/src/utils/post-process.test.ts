@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -579,10 +579,67 @@ describe('validateRemoteAddonDependencies (wireRemoteAddon must be a devDependen
     }
   })
 
-  test('ignores a non-remote (wireAddon) declaration', () => {
+  test('a non-remote (wireAddon) declaration is judged on resolvability, not package.json', () => {
+    // Being listed as a dependency is not what makes an addon usable — it is
+    // discovered because it is wired, and it can arrive by workspace link or a
+    // local addons/ directory without ever appearing here. So a declared but
+    // absent package is still an error.
     const { logger, criticals } = makeCriticalLogger()
     const dir = writePkg({ '@addon/local': '1.0.0' }, {})
     try {
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(dir, { package: '@addon/local' })
+      )
+      assert.equal(criticals.length, 1)
+      assert.equal(criticals[0]!.code, ErrorCode.ADDON_NOT_INSTALLED)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('a non-remote addon present only in node_modules passes', () => {
+    // The inverse, and the case that matters: installed by link, absent from
+    // package.json. Reported as missing, this would fail every project whose
+    // addon lives in a local addons/ directory.
+    const { logger, criticals } = makeCriticalLogger()
+    const dir = writePkg({}, {})
+    try {
+      const pkgDir = join(dir, 'node_modules', '@addon', 'local')
+      mkdirSync(pkgDir, { recursive: true })
+      writeFileSync(
+        join(pkgDir, 'package.json'),
+        JSON.stringify({ name: '@addon/local', version: '1.0.0' })
+      )
+      validateRemoteAddonDependencies(
+        logger,
+        makeRemoteState(dir, { package: '@addon/local' })
+      )
+      assert.deepEqual(criticals, [])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('an exports map that refuses package.json is not read as missing', () => {
+    // `require.resolve('<pkg>/package.json')` throws ERR_PACKAGE_PATH_NOT_EXPORTED
+    // on a package with a restrictive exports map. Reaching the exports map
+    // means the package was found, so that must not count as absent.
+    const { logger, criticals } = makeCriticalLogger()
+    const dir = writePkg({}, {})
+    try {
+      const pkgDir = join(dir, 'node_modules', '@addon', 'local')
+      mkdirSync(pkgDir, { recursive: true })
+      writeFileSync(
+        join(pkgDir, 'package.json'),
+        JSON.stringify({
+          name: '@addon/local',
+          version: '1.0.0',
+          main: 'index.js',
+          exports: { '.': './index.js' },
+        })
+      )
+      writeFileSync(join(pkgDir, 'index.js'), 'module.exports = {}\n')
       validateRemoteAddonDependencies(
         logger,
         makeRemoteState(dir, { package: '@addon/local' })
