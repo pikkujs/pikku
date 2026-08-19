@@ -6,7 +6,7 @@
   "clientFiles": {
     "fetchFile": "./src/lib/pikku-fetch.gen.ts",
     "rpcWiringsFile": "./src/lib/pikku-rpc.gen.ts",
-    "startServerFnsFile": "./src/lib/pikku-start.gen.ts"
+    "tanstackStartFile": "./src/lib/pikku-start.gen.ts"
   },
   "schema": {
     "supportsImportAttributes": true

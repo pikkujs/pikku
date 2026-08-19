@@ -343,7 +343,7 @@ export type PikkuCLIInput = {
      * URL from `import.meta.env.VITE_API_URL` (throws if unset). Requires
      * `rpcWiringsFile` (where the `PikkuRPC` class is generated).
      */
-    startServerFnsFile?: string
+    tanstackStartFile?: string
   }
 
   /** Directory containing email templates, locales, partials, and theme.json. */

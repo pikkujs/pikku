@@ -41,6 +41,34 @@ describe('getPikkuCLIConfig', () => {
     return root
   }
 
+  test('rejects the old startServerFnsFile key by name', async () => {
+    const root = await writeConfig({
+      clientFiles: { startServerFnsFile: './src/lib/pikku-start.gen.ts' },
+    })
+
+    await assert.rejects(
+      () => getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /startServerFnsFile is now clientFiles\.tanstackStartFile/
+    )
+  })
+
+  test('resolves tanstackStartFile relative to the config', async () => {
+    const root = await writeConfig({
+      clientFiles: { tanstackStartFile: './src/lib/pikku-start.gen.ts' },
+    })
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+
+    assert.equal(
+      config.clientFiles?.tanstackStartFile,
+      join(root, 'src/lib/pikku-start.gen.ts')
+    )
+  })
+
   test('preserves db.engine and db.pgVersion from pikku.config.json', async () => {
     const root = await mkdtemp(join(tmpdir(), 'pikku-config-'))
     tempDirs.push(root)
