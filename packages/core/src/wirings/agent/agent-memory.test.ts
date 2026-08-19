@@ -74,6 +74,72 @@ describe('agent-memory', () => {
     })
   })
 
+  test('deepMergeWorkingMemory replaces an array re-emitted in full', () => {
+    const result = deepMergeWorkingMemory(
+      { steps: [{ id: 1 }, { id: 2 }], other: 'kept' },
+      { steps: [{ id: 1 }, { id: 2 }, { id: 3 }] }
+    )
+
+    assert.deepEqual(result, {
+      steps: [{ id: 1 }, { id: 2 }, { id: 3 }],
+      other: 'kept',
+    })
+  })
+
+  test('deepMergeWorkingMemory replaces rather than appends a partial array', () => {
+    const result = deepMergeWorkingMemory(
+      { steps: [{ id: 1 }, { id: 2 }] },
+      { steps: [{ id: 3 }] }
+    )
+
+    assert.deepEqual(result, { steps: [{ id: 3 }] })
+  })
+
+  test('deepMergeWorkingMemory clears an array field set to null', () => {
+    const result = deepMergeWorkingMemory(
+      { steps: [1, 2, 3], city: 'Berlin' },
+      {
+        steps: null,
+      }
+    )
+
+    assert.deepEqual(result, { city: 'Berlin' })
+  })
+
+  test('deepMergeWorkingMemory replaces arrays nested inside merged objects', () => {
+    const result = deepMergeWorkingMemory(
+      {
+        profile: {
+          name: 'Yasser',
+          tags: ['a', 'b'],
+        },
+      },
+      {
+        profile: {
+          tags: ['c'],
+        },
+      }
+    )
+
+    assert.deepEqual(result, {
+      profile: {
+        name: 'Yasser',
+        tags: ['c'],
+      },
+    })
+  })
+
+  test('deepMergeWorkingMemory replaces across array and object shape changes', () => {
+    assert.deepEqual(
+      deepMergeWorkingMemory({ value: { a: 1 } }, { value: [1, 2] }),
+      { value: [1, 2] }
+    )
+    assert.deepEqual(
+      deepMergeWorkingMemory({ value: [1, 2] }, { value: { a: 1 } }),
+      { value: { a: 1 } }
+    )
+  })
+
   test('deepMergeWorkingMemory ignores prototype-polluting keys', () => {
     const before = ({} as any).isAdmin
     deepMergeWorkingMemory(
@@ -105,6 +171,13 @@ describe('agent-memory', () => {
     assert.match(prompt, /age \(number\)/)
     assert.match(prompt, /Current working memory:\n\{"city":"Berlin"\}/)
     assert.match(prompt, /<working_memory>/)
+  })
+
+  test('buildWorkingMemoryPrompt tells the model arrays are replaced whole', () => {
+    const prompt = buildWorkingMemoryPrompt({ steps: [1] })
+
+    assert.match(prompt, /Arrays are replaced, not merged/)
+    assert.match(prompt, /repeat every item you want to keep/)
   })
 
   test('buildWorkingMemoryPrompt marks empty memory explicitly', () => {

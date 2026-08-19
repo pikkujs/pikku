@@ -645,3 +645,36 @@ export const expectsResultObject = pikkuScenarioStep<
     return { fields: Object.keys(fields) }
   },
 })
+
+/**
+ * What a thread's working memory array holds, read back through
+ * `agentWorkingMemory`.
+ *
+ * Matching is substring and case-insensitive because the entries are the
+ * model's own wording — "Milk" or "2 litres of milk" are the same item as far
+ * as this assertion is concerned. What it is actually asking is whether the
+ * entry survived the turn at all.
+ */
+export const expectsWorkingMemoryList = pikkuScenarioStep<
+  { call: { body: unknown }; field: string; holds: string[] },
+  { items: string[] }
+>({
+  name: 'expectsWorkingMemoryList',
+  description: 'expects which entries a working memory array still holds',
+  template: 'expects {field} to still hold every entry',
+  default: async (_services, { call, field, holds }) => {
+    const memory = (call.body ?? null) as Record<string, unknown> | null
+    const raw = memory?.[field]
+    const items = Array.isArray(raw) ? raw.map((entry) => String(entry)) : []
+    const missing = holds.filter(
+      (needle) =>
+        !items.some((item) => item.toLowerCase().includes(needle.toLowerCase()))
+    )
+    if (missing.length > 0) {
+      throw new Error(
+        `Expected working memory "${field}" to still hold ${describeValue(missing)}, got ${describeValue(items)}`
+      )
+    }
+    return { items }
+  },
+})
