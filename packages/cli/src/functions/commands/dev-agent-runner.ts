@@ -74,28 +74,78 @@ export async function createDevAgentRunner({
   // copy of `@ai-sdk/provider` handed to a runner built against another is the
   // one combination that fails at call time rather than at load time, with an
   // error about the model spec that names neither package.
+  const PAIR = ['@pikku/ai-vercel', '@ai-sdk/openai-compatible'] as const
+
+  // `projectRoot` is the root package.json, and under an isolated node_modules
+  // layout (bun, pnpm) that resolves only what the *root* declares — a monorepo
+  // that installed the pair in the workspace using it still misses here. Say so
+  // rather than silently swapping in our own copies: the failure that follows
+  // names neither package, so the log line is the only thing connecting it back.
+  const resolveFromProject = (name: string) => {
+    try {
+      return pathToFileURL(fromProject.resolve(name)).href
+    } catch {
+      return undefined
+    }
+  }
+
   const loadPair = async () => {
-    const project = ['@pikku/ai-vercel', '@ai-sdk/openai-compatible'].map(
-      (name) => {
-        try {
-          return pathToFileURL(fromProject.resolve(name)).href
-        } catch {
-          return undefined
-        }
-      }
+    const project = PAIR.map(resolveFromProject)
+    const complete = project.every(Boolean)
+    if (!complete && project.some(Boolean)) {
+      const missing = PAIR.filter((_, index) => !project[index])
+      logger.warn(
+        `pikku dev: ${missing.join(' and ')} could not be resolved from ${join(
+          projectRoot,
+          'package.json'
+        )}, so the CLI's own AI SDK copies are being used for all of ${PAIR.join(
+          ' and '
+        )}. In a monorepo with an isolated node_modules layout, declare them at the root.`
+      )
+    }
+    const [runner, provider] = complete ? (project as string[]) : PAIR
+    return Promise.all([import(runner!), import(provider!)] as const).then(
+      (modules) =>
+        [...modules, complete ? (project as string[]) : undefined] as const
     )
-    const [runner, provider] = project.every(Boolean)
-      ? (project as string[])
-      : ['@pikku/ai-vercel', '@ai-sdk/openai-compatible']
-    return Promise.all([import(runner!), import(provider!)])
+  }
+
+  // The runner and the provider each hold their own `@ai-sdk/provider`. When the
+  // majors differ the provider builds a model whose `specificationVersion` the
+  // runner's `ai` refuses, and the throw arrives at the first model call reading
+  // `Unsupported model version …` — naming the model and the gateway, but not
+  // the two packages that actually disagree. Check it here instead, where both
+  // paths are in hand.
+  const providerSpecVersion = (from: string | undefined) => {
+    if (!from) {
+      return undefined
+    }
+    try {
+      return createRequire(from)('@ai-sdk/provider/package.json')
+        .version as string
+    } catch {
+      return undefined
+    }
   }
 
   let VercelAgentRunner: any
   let createOpenAICompatible: any
   try {
-    const [runnerModule, providerModule] = await loadPair()
+    const [runnerModule, providerModule, resolved] = await loadPair()
     ;({ VercelAgentRunner } = runnerModule)
     ;({ createOpenAICompatible } = providerModule)
+
+    const [runnerSpec, providerSpec] = (resolved ?? []).map(providerSpecVersion)
+    if (
+      runnerSpec &&
+      providerSpec &&
+      runnerSpec.split('.')[0] !== providerSpec.split('.')[0]
+    ) {
+      logger.error(
+        `pikku dev: AI agents disabled — @pikku/ai-vercel resolves @ai-sdk/provider@${runnerSpec} but @ai-sdk/openai-compatible resolves @ai-sdk/provider@${providerSpec}. Those majors are incompatible: the provider builds models the runner's \`ai\` refuses. @ai-sdk/openai-compatible publishes one line per major of \`ai\` (npm dist-tags ai-v5/ai-v6/latest) — install the line matching the \`ai\` your @pikku/ai-vercel peer-depends on.`
+      )
+      return undefined
+    }
   } catch (error) {
     logger.warn(
       `pikku dev: AI provider env is set but the AI SDK packages could not be loaded — AI agents disabled: ${
