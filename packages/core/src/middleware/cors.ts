@@ -5,7 +5,9 @@ import {
 /**
  * Sets CORS headers on every response and short-circuits OPTIONS preflight
  * with a 204. `origin: true` reflects the request origin; an array reflects a
- * matching origin and otherwise falls back to its first entry.
+ * matching origin and otherwise sends no `Access-Control-Allow-Origin` at all,
+ * so the browser reports "origin not allowed" rather than an origin mismatch
+ * against whichever entry happened to be first.
  */
 export const cors = pikkuMiddlewareFactory<{
   origin?: string | string[] | true
@@ -31,7 +33,7 @@ export const cors = pikkuMiddlewareFactory<{
     return pikkuMiddleware({
       name: 'CORS',
       description: 'Handles cross-origin requests including OPTIONS preflight',
-      func: async (_services, wires, next) => {
+      func: async (services, wires, next) => {
         const request = wires.http?.request
         const response = wires.http?.response
 
@@ -41,19 +43,26 @@ export const cors = pikkuMiddlewareFactory<{
 
         const requestOrigin = request.header('origin')
 
-        let allowedOrigin: string
+        let allowedOrigin: string | undefined
         if (origin === true) {
           allowedOrigin = requestOrigin || '*'
         } else if (Array.isArray(origin)) {
           allowedOrigin =
             requestOrigin && origin.includes(requestOrigin)
               ? requestOrigin
-              : origin[0]
+              : undefined
+          if (requestOrigin && !allowedOrigin) {
+            services.logger.debug(
+              `CORS: origin '${requestOrigin}' is not in the allowed list, omitting Access-Control-Allow-Origin`
+            )
+          }
         } else {
           allowedOrigin = origin
         }
 
-        response.header('Access-Control-Allow-Origin', allowedOrigin)
+        if (allowedOrigin) {
+          response.header('Access-Control-Allow-Origin', allowedOrigin)
+        }
         response.header('Access-Control-Allow-Methods', methods.join(', '))
         response.header('Access-Control-Allow-Headers', headers.join(', '))
 
@@ -64,7 +73,7 @@ export const cors = pikkuMiddlewareFactory<{
           )
         }
 
-        if (credentials) {
+        if (credentials && allowedOrigin) {
           response.header('Access-Control-Allow-Credentials', 'true')
         }
 

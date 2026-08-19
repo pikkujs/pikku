@@ -15,6 +15,21 @@ const createMockRequest = (method = 'get', origin?: string) => ({
   },
 })
 
+const createMockServices = () => {
+  const debugMessages: string[] = []
+  return {
+    logger: {
+      debug: (message: string) => {
+        debugMessages.push(message)
+      },
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+    },
+    _debugMessages: debugMessages,
+  }
+}
+
 const createMockResponse = () => {
   const headers: Record<string, string> = {}
   let statusCode: number | undefined
@@ -125,30 +140,113 @@ describe('cors', () => {
       )
     })
 
-    test('should use first origin when request origin not in array', async () => {
+    test('should omit Access-Control-Allow-Origin when request origin not in array', async () => {
       const middleware = cors({ origin: ['https://a.com', 'https://b.com'] })
       const request = createMockRequest('get', 'https://unknown.com')
       const response = createMockResponse()
+      const services = createMockServices()
 
       await middleware(
-        {} as any,
+        services as any,
         { http: { request, response } } as any,
         async () => {}
       )
 
       assert.strictEqual(
         response._headers['Access-Control-Allow-Origin'],
-        'https://a.com'
+        undefined
       )
     })
 
-    test('should use first origin when no request origin header', async () => {
+    test('should log the rejected origin at debug level', async () => {
+      const middleware = cors({ origin: ['https://a.com', 'https://b.com'] })
+      const request = createMockRequest('get', 'https://unknown.com')
+      const response = createMockResponse()
+      const services = createMockServices()
+
+      await middleware(
+        services as any,
+        { http: { request, response } } as any,
+        async () => {}
+      )
+
+      assert.strictEqual(services._debugMessages.length, 1)
+      assert.match(services._debugMessages[0]!, /https:\/\/unknown\.com/)
+    })
+
+    test('should omit Access-Control-Allow-Origin when no request origin header', async () => {
       const middleware = cors({ origin: ['https://a.com', 'https://b.com'] })
       const request = createMockRequest('get')
       const response = createMockResponse()
+      const services = createMockServices()
 
       await middleware(
-        {} as any,
+        services as any,
+        { http: { request, response } } as any,
+        async () => {}
+      )
+
+      assert.strictEqual(
+        response._headers['Access-Control-Allow-Origin'],
+        undefined
+      )
+      assert.strictEqual(services._debugMessages.length, 0)
+    })
+
+    test('should still call next for a disallowed origin', async () => {
+      const middleware = cors({ origin: ['https://a.com'] })
+      const request = createMockRequest('get', 'https://unknown.com')
+      const response = createMockResponse()
+      const services = createMockServices()
+      let nextCalled = false
+
+      await middleware(
+        services as any,
+        { http: { request, response } } as any,
+        async () => {
+          nextCalled = true
+        }
+      )
+
+      assert.strictEqual(nextCalled, true)
+    })
+
+    test('should omit Access-Control-Allow-Credentials for a disallowed origin', async () => {
+      const middleware = cors({
+        origin: ['https://a.com'],
+        credentials: true,
+      })
+      const request = createMockRequest('get', 'https://unknown.com')
+      const response = createMockResponse()
+      const services = createMockServices()
+
+      await middleware(
+        services as any,
+        { http: { request, response } } as any,
+        async () => {}
+      )
+
+      assert.strictEqual(
+        response._headers['Access-Control-Allow-Origin'],
+        undefined
+      )
+      assert.strictEqual(
+        response._headers['Access-Control-Allow-Credentials'],
+        undefined
+      )
+    })
+
+    test('should set credentials header for an allowed array origin', async () => {
+      const middleware = cors({
+        origin: ['https://a.com'],
+        credentials: true,
+      })
+      const request = createMockRequest('get', 'https://a.com')
+      const response = createMockResponse()
+      const services = createMockServices()
+
+      await middleware(
+        services as any,
         { http: { request, response } } as any,
         async () => {}
       )
@@ -157,6 +255,29 @@ describe('cors', () => {
         response._headers['Access-Control-Allow-Origin'],
         'https://a.com'
       )
+      assert.strictEqual(
+        response._headers['Access-Control-Allow-Credentials'],
+        'true'
+      )
+    })
+
+    test('should omit Access-Control-Allow-Origin on a disallowed preflight but still return 204', async () => {
+      const middleware = cors({ origin: ['https://a.com'] })
+      const request = createMockRequest('options', 'https://unknown.com')
+      const response = createMockResponse()
+      const services = createMockServices()
+
+      await middleware(
+        services as any,
+        { http: { request, response } } as any,
+        async () => {}
+      )
+
+      assert.strictEqual(
+        response._headers['Access-Control-Allow-Origin'],
+        undefined
+      )
+      assert.strictEqual(response._getStatus(), 204)
     })
 
     test('should set Vary: Origin header when origin is array', async () => {
