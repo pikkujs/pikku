@@ -754,12 +754,17 @@ export class CloudflareProviderAdapter {
   }
 
   getStubModules(): string[] {
-    // CF Workers use a libsql/Turso Kysely dialect; the `postgres` driver and
-    // its `kysely-postgres-js` dialect are only reached on a `postgres://` URL,
-    // which CF never has. Stub them so the (~130KB) Postgres driver doesn't
-    // ship in every worker bundle. The postgres branch is URL-gated at runtime
-    // and never taken on CF, so the empty stub is never executed.
-    return ['^postgres$', '^kysely-postgres-js$']
+    // CF Workers use a libsql/Turso Kysely dialect; the Postgres drivers and
+    // their Kysely dialects are only reached on a `postgres://` URL, which CF
+    // never has. Stub them so the (~130KB) Postgres driver doesn't ship in
+    // every worker bundle. The postgres branch is URL-gated at runtime and
+    // never taken on CF, so the empty stub is never executed.
+    //
+    // `pg` belongs here as much as `postgres` does: it is the more common of
+    // the two in application code, it is equally unreachable on CF, and it
+    // additionally reaches for `net`/`tls` and `pg-native`, which a worker
+    // build cannot resolve at all.
+    return ['^postgres$', '^kysely-postgres-js$', '^pg$', '^pg-native$']
   }
 
   getAliases(): Record<string, string> {

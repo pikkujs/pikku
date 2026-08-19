@@ -34,6 +34,7 @@ export enum ErrorCode {
   // Remote addon (wireRemoteAddon) validation
   REMOTE_ADDON_NOT_DEV_DEPENDENCY = 'PKU338',
   REMOTE_ADDON_AUTH_UNRESOLVED = 'PKU339',
+  ADDON_NOT_INSTALLED = 'PKU340',
 
   // Database schema codegen warnings
   DB_COLUMN_NAME_TYPE_CONTRADICTION = 'PKU480',

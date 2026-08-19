@@ -12,6 +12,8 @@ import {
   runSharedProjectChecks,
 } from '../../functions/validate/shared-checks.js'
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
+import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
+import { isGitRepo, isTracked } from '../lib/git.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -303,6 +305,30 @@ export async function runValidate(
         '  "projectId": "<your-project-id>"',
         '}',
         'If you do not know the id yet, run `pikku fabric link`.'
+      )
+    )
+  } else if (
+    (await isGitRepo(root)) &&
+    !(await isTracked('pikkufabric.config.json', root))
+  ) {
+    // An error, unlike the three states around it. Those describe a project
+    // that has not been linked yet, which is a legitimate thing to validate.
+    // This one is a project that *is* linked and still cannot deploy: the build
+    // container clones the repository, so a config that exists only in the
+    // working tree is absent the moment it matters. Locally everything passes;
+    // remotely the deploy aborts with "pikkufabric.config.json not found in
+    // repository root". Nothing downstream of here can detect that, which is
+    // why it is caught at the one point that can.
+    e(
+      'fabric-config-untracked',
+      'pikkufabric.config.json is not committed — deploy clones the repository, so the build container will not see it and aborts with "pikkufabric.config.json not found in repository root"',
+      fabricConfigPath,
+      lines(
+        'Commit the file:',
+        '  git add pikkufabric.config.json && git commit -m "chore: link to fabric"',
+        'Then check it is not being excluded:',
+        '  git check-ignore -v pikkufabric.config.json',
+        'A .gitignore rule such as `*.config.json` or a broad `*.json` will swallow it.'
       )
     )
   } else if (fabricConfig.projectId === '__PROJECT_ID__') {
@@ -1085,11 +1111,7 @@ export async function runValidate(
           await Promise.all(
             migFiles.map((f) => readTextSafe(join(migrationsDir, f)))
           )
-        ).some(
-          (sql) =>
-            sql &&
-            /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?audit\b/i.test(sql)
-        )
+        ).some((sql) => !!sql && migrationCreatesTable(sql, 'audit'))
 
         if (!hasAuditTable) {
           info(
@@ -1788,8 +1810,37 @@ export const renderValidate = (
   console.log(counts.join('  '))
   if (ok) {
     console.log()
-    console.log(
-      added('✓') + '  ' + dim('no errors — project can be linked to fabric')
+    // "can be linked" is not "will deploy", and conflating them is how a green
+    // validate is followed straight by a failed deploy. The three
+    // fabric-config findings are info on purpose — an unlinked project is
+    // still worth validating — but reporting unqualified success while the
+    // build container is guaranteed to abort on a missing config is the part
+    // that misleads. So the success line says which of the two it earned.
+    const notLinked = findings.find((f) =>
+      [
+        'fabric-config-missing',
+        'fabric-config-no-project-id',
+        'fabric-config-placeholder-project-id',
+      ].includes(f.id)
     )
+    if (notLinked) {
+      console.log(
+        added('✓') +
+          '  ' +
+          dim(
+            'no errors — but the project is not linked, so it cannot deploy yet'
+          )
+      )
+      console.log(
+        '   ' +
+          dim(
+            `${notLinked.message.split(' — ')[0]}. Run \`pikku fabric link\`.`
+          )
+      )
+    } else {
+      console.log(
+        added('✓') + '  ' + dim('no errors — project can be linked to fabric')
+      )
+    }
   }
 }

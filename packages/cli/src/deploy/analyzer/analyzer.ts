@@ -497,13 +497,28 @@ export function analyzeDeployment(
     }
   }
 
-  const secrets: SecretDeclaration[] = state.secrets.definitions.map((s) => ({
-    secretId: s.secretId,
-    displayName: s.displayName,
-    description: s.description,
-    allowedHosts: s.allowedHosts,
-    read: readSecretIds.has(s.secretId),
-  }))
+  // Keyed by `secretId`, because the manifest describes *provisioned resources*
+  // and the secretId is the resource. Two `defineSecret` calls may legally name
+  // the same secretId under different local `name`s — the auth scaffold's
+  // `betterAuthSecret` and a hand-written `authSecret` both pointing at
+  // BETTER_AUTH_SECRET is the everyday case — and validation permits it. Mapped
+  // straight through, that emitted the same secret twice, so the plan printed
+  // two identical `create` lines for one resource and `countUnchanged` counted
+  // it twice. First definition wins, matching validate-secret-definitions.
+  // Variables are already collapsed downstream in the planner; doing both here
+  // keeps the manifest itself canonical rather than relying on each consumer.
+  const secretsById = new Map<string, SecretDeclaration>()
+  for (const s of state.secrets.definitions) {
+    if (secretsById.has(s.secretId)) continue
+    secretsById.set(s.secretId, {
+      secretId: s.secretId,
+      displayName: s.displayName,
+      description: s.description,
+      allowedHosts: s.allowedHosts,
+      read: readSecretIds.has(s.secretId),
+    })
+  }
+  const secrets: SecretDeclaration[] = [...secretsById.values()]
 
   const unscopedSecretAddons: UnscopedAddon[] = []
   const unscopedCredentialAddons: UnscopedAddon[] = []
@@ -556,13 +571,16 @@ export function analyzeDeployment(
     b: UnscopedAddon | GrantedAddon
   ) => a.namespace.localeCompare(b.namespace)
 
-  const variables: VariableDeclaration[] = state.variables.definitions.map(
-    (v) => ({
+  const variablesById = new Map<string, VariableDeclaration>()
+  for (const v of state.variables.definitions) {
+    if (variablesById.has(v.variableId)) continue
+    variablesById.set(v.variableId, {
       variableId: v.variableId,
       displayName: v.displayName,
       description: v.description,
     })
-  )
+  }
+  const variables: VariableDeclaration[] = [...variablesById.values()]
 
   return {
     projectId: options.projectId,

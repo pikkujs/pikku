@@ -127,6 +127,46 @@ export const assertStringLiteralProperty = (
   }
 }
 
+/**
+ * Fold a node that is a compile-time constant string down to its value.
+ *
+ * The fallback below this is `getText()`, which returns the node's *source*.
+ * For a lone `'…'` that is indistinguishable from the value, so nobody noticed
+ * that anything written as an expression comes through raw: a `description`
+ * split across lines as `'Fetch the thing ' + 'from upstream'` reaches
+ * `infra.json` with the quotes and the `+` still in it, and is rendered that
+ * way in the fabric console.
+ *
+ * Deliberately checker-free, unlike `extractStringLiteral`. Every value this
+ * resolves is a literal in the same expression, so no symbol resolution is
+ * needed, and `getPropertyValue` is called from a dozen places that have no
+ * checker to hand. Anything it cannot fold — an identifier, a template with a
+ * substitution — returns `undefined` and takes the old path, so this only ever
+ * turns a wrong answer into a right one.
+ */
+const foldStaticString = (node: ts.Node): string | undefined => {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text
+  }
+  if (ts.isParenthesizedExpression(node)) {
+    return foldStaticString(node.expression)
+  }
+  if (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) {
+    return foldStaticString(node.expression)
+  }
+  if (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    const left = foldStaticString(node.left)
+    if (left === undefined) return undefined
+    const right = foldStaticString(node.right)
+    if (right === undefined) return undefined
+    return left + right
+  }
+  return undefined
+}
+
 export const getPropertyValue = (
   obj: ts.ObjectLiteralExpression,
   propertyName: string
@@ -174,11 +214,9 @@ export const getPropertyValue = (
       return Number(initializer.text)
     }
 
-    if (
-      ts.isStringLiteral(initializer) ||
-      ts.isNoSubstitutionTemplateLiteral(initializer)
-    ) {
-      return initializer.text
+    const staticString = foldStaticString(initializer)
+    if (staticString !== undefined) {
+      return staticString
     }
 
     return initializer.getText()

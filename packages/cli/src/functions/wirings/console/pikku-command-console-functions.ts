@@ -6,11 +6,11 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { projectDeclaresBetterAuth } from '../../../utils/detect-better-auth.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeConsoleFunctions } from './serialize-console-functions.js'
+import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
 
 export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, variables }) => {
-    const deployCodegenFlag = await variables.get('PIKKU_DEPLOY_CODEGEN')
-    if (deployCodegenFlag === '1') {
+    if (await isDeployCodegen(variables)) {
       return false
     }
 

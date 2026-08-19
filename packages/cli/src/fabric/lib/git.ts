@@ -206,3 +206,45 @@ export async function assertNamedBranchDeploySafety(
 
   return { branch, headSha: head, upstream, remoteSha: remote }
 }
+
+/**
+ * Is `relPath` tracked by git in `cwd`?
+ *
+ * Deploy clones the repository rather than uploading the working tree, so a
+ * file that exists only on disk does not exist for the build container. Any
+ * check that reads a required file locally has to ask this too, or it passes
+ * on the developer's machine and fails after the clone.
+ *
+ * Returns false rather than throwing when `cwd` is not a git repository. Note
+ * what that means for a caller: "not tracked" and "no repository at all" are
+ * the same answer, and only the first is a problem worth reporting — a project
+ * with no repository cannot be deployed by a clone in any case, and flagging an
+ * uncommitted file there is noise. Pair this with `isGitRepo` when the
+ * distinction matters.
+ */
+export async function isTracked(
+  relPath: string,
+  cwd = process.cwd()
+): Promise<boolean> {
+  try {
+    await git(['ls-files', '--error-unmatch', '--', relPath], cwd)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Is `cwd` inside a git working tree?
+ *
+ * Separate from `isTracked` so a caller can tell "this repository does not have
+ * the file" from "there is no repository", which are the same `false` there.
+ */
+export async function isGitRepo(cwd = process.cwd()): Promise<boolean> {
+  try {
+    const out = await git(['rev-parse', '--is-inside-work-tree'], cwd)
+    return out.trim() === 'true'
+  } catch {
+    return false
+  }
+}
