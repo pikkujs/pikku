@@ -22,7 +22,7 @@ import {
 import { headSha, isWorkingTreeClean } from '../lib/git.js'
 import { added, changed, dim, removed } from '../lib/output.js'
 
-const DEFAULT_YARN_VERSION = 'yarn@4.9.2'
+const DEFAULT_BUN_VERSION = 'bun@1.3.14'
 const DEFAULT_STEP_TIMEOUT_SECONDS = 300
 const DEFAULT_STARTUP_TIMEOUT_SECONDS = 60
 const DEV_LOG_TAIL_BYTES = 16_000
@@ -227,8 +227,8 @@ function rewriteFrontendCommand(command: string[]): {
 
   if (command[0] === 'yarn') {
     return {
-      command: 'yarn',
-      args: command.slice(1),
+      command: 'bun',
+      args: ['run', ...command.slice(1)],
     }
   }
 
@@ -350,8 +350,8 @@ async function runFrontendChecks(args: {
     for (const script of scriptOrder) {
       const result = await runCommandStep({
         name: `frontend:${slug}:${script}`,
-        command: 'yarn',
-        commandArgs: [script],
+        command: 'bun',
+        commandArgs: ['run', script],
         cwd,
         env: args.env,
         timeoutMs: args.timeoutMs,
@@ -363,7 +363,7 @@ async function runFrontendChecks(args: {
         detail: result.ok
           ? `${slug} ${script} passed`
           : `${slug} ${script} failed`,
-        command: commandLabel('yarn', [script]),
+        command: commandLabel('bun', ['run', script]),
       })
 
       if (!result.ok) {
@@ -742,7 +742,7 @@ export const FabricSmoke = pikkuSessionlessFunc({
     const packageJson = await readJsonSafe<RootPackageJson>(
       join(tempDir, 'package.json')
     )
-    const packageManager = packageJson?.packageManager ?? DEFAULT_YARN_VERSION
+    const packageManager = packageJson?.packageManager ?? DEFAULT_BUN_VERSION
     const pikkuBin = resolvePikkuBin()
     const currentCliPackageRoot = resolveCurrentCliPackageRoot(pikkuBin)
     const env = {
@@ -756,7 +756,7 @@ export const FabricSmoke = pikkuSessionlessFunc({
       )
     }
 
-    if (!packageManager.startsWith('yarn@')) {
+    if (!packageManager.startsWith('bun@')) {
       const result = {
         ok: false,
         root,
@@ -767,7 +767,7 @@ export const FabricSmoke = pikkuSessionlessFunc({
         steps,
         failure: `Unsupported packageManager for Fabric smoke: ${packageManager}`,
         logTail:
-          'Fabric smoke expects package.json to declare a Yarn packageManager like "yarn@4.9.2".',
+          'Fabric is bun-only, so smoke runs the same way the build container does. Declare "packageManager": "bun@1.3.14" in package.json.',
       }
       process.exitCode = 1
       return result
@@ -827,9 +827,9 @@ export const FabricSmoke = pikkuSessionlessFunc({
 
       for (const step of [
         {
-          name: 'yarn install',
-          command: 'yarn',
-          commandArgs: ['install', '--mode=skip-build'],
+          name: 'bun install',
+          command: 'bun',
+          commandArgs: ['install', '--ignore-scripts'],
         },
         {
           name: 'pikku bootstrap',

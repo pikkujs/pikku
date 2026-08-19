@@ -39,6 +39,7 @@ async function makeValidProject(root: string) {
     environments: { local: { apiUrl: 'http://localhost:4002' } },
   })
   await writeJson(join(root, 'package.json'), {
+    packageManager: 'bun@1.3.14',
     workspaces: ['packages/*', 'apps/*'],
     dependencies: { '@pikku/core': '^1.0.0' },
   })
@@ -528,12 +529,100 @@ describe('pikku fabric validate', () => {
     })
   })
 
+  describe('packageManager', () => {
+    test('yarn → error (Fabric is bun-only)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'yarn@4.6.0',
+          workspaces: ['packages/*', 'apps/*'],
+          dependencies: { '@pikku/core': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'package-manager-not-bun'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('undeclared → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          workspaces: ['packages/*', 'apps/*'],
+          dependencies: { '@pikku/core': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) => f.id === 'package-manager-undeclared')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('bun → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id.startsWith('package-manager-'))
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('@pikku/cloudflare floor', () => {
+    test('0.12.19 → error (imports @pikku/core/internal, bundles 0 workers)', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
+          dependencies: {
+            '@pikku/cloudflare': '^0.12.19',
+            '@pikku/schema-cfworker': '^0.12.0',
+            '@pikku/kysely': '^0.12.0',
+            '@pikku/addon-console': '^0.12.0',
+            '@pikku/better-auth': '^0.12.0',
+            zod: '^4',
+          },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some(
+            (f) => f.id === 'pikku-version-below-min--pikku-cloudflare'
+          )
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
   describe('root package.json', () => {
     test('missing @pikku/core → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
           workspaces: ['packages/*'],
           dependencies: {},
           devDependencies: { '@pikku/fabric-cli': '^1.0.0' },
@@ -551,6 +640,7 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
           dependencies: { '@pikku/core': '^1.0.0' },
           devDependencies: { '@pikku/fabric-cli': '^1.0.0' },
         })
@@ -571,6 +661,7 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
           workspaces: ['packages/*'],
           dependencies: {
             '@pikku/core': 'file:./vendor/pikku-core.tgz',
@@ -601,6 +692,7 @@ describe('pikku fabric validate', () => {
         await mkdir(join(tmp, 'vendor'), { recursive: true })
         await writeFile(join(tmp, 'vendor', 'pikku-core.tgz'), 'fake', 'utf8')
         await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
           workspaces: ['packages/*'],
           dependencies: { '@pikku/core': 'file:./vendor/pikku-core.tgz' },
           devDependencies: { '@pikku/fabric-cli': '^1.0.0' },
@@ -626,7 +718,7 @@ describe('pikku fabric validate', () => {
             '#pikku/*': './.pikku/*/index.ts',
           },
           dependencies: {
-            '@pikku/cloudflare': '^0.12.6',
+            '@pikku/cloudflare': '^0.12.20',
             '@pikku/schema-cfworker': '^0.12.0',
             '@pikku/kysely': '^0.12.0',
             '@pikku/addon-console': '^0.12.0',
@@ -823,6 +915,7 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'package.json'), {
+          packageManager: 'bun@1.3.14',
           workspaces: ['packages/*'],
           dependencies: {
             '@pikku/core': '^1.0.0',
