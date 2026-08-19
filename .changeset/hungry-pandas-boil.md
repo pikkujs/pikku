@@ -1,5 +1,6 @@
 ---
 '@pikku/core': patch
+'@pikku/ai-vercel': patch
 ---
 
 fix: collect working memory from a delegate-mode parent agent
@@ -14,3 +15,8 @@ client, the thread history and user channel middleware still see nothing.
 The resume path built no delegate filter at all and streamed a delegating
 parent's text to the client after an approval; it now suppresses text the same
 way the initial path does.
+
+The AI SDK rejects a system message inside `messages` outright, so the working
+memory prompt the framework injects as one failed every run that enabled
+working memory at all. The runner now lifts system messages onto the `system`
+option, after the agent's own instructions.

@@ -146,6 +146,35 @@ export const MOCK_LLM_SCRIPTS: Record<string, MockLlmScript> = {
     ],
   },
 
+  /**
+   * A parent turn that delegates and then writes to its working-memory notepad
+   * in the same reply. The notepad block is emitted by the step *after* the
+   * hand-off, which is the text a delegating parent keeps to itself.
+   */
+  'delegate-then-working-memory': {
+    steps: [
+      {
+        kind: 'tool',
+        toolName: 'deterministicSubAgent',
+        input: { message: 'handle the task', session: 'default' },
+      },
+      {
+        kind: 'text',
+        text: 'Noted. <working_memory>{"topic":"cerulean-9137"}</working_memory>',
+      },
+    ],
+  },
+
+  /** Writes to the notepad without ever handing off. */
+  'working-memory-only': {
+    steps: [
+      {
+        kind: 'text',
+        text: 'Noted. <working_memory>{"topic":"vermilion-4412"}</working_memory>',
+      },
+    ],
+  },
+
   'forge-approval-then-text': {
     steps: [
       { kind: 'tool', toolName: 'forgeApproval', input: {} },

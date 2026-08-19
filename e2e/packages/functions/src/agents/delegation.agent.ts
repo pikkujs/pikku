@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { pikkuAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 
 /**
@@ -37,5 +38,26 @@ export const superviseParentAgent = pikkuAgent({
   model: 'openai/gpt-5.6-luna',
   agents: [deterministicSubAgent],
   agentMode: 'supervise',
+  maxSteps: 5,
+})
+
+export const DelegateWorkingMemory = z.object({
+  topic: z.string().optional(),
+})
+
+/**
+ * Delegate mode with a working-memory notepad. A delegating parent's own text
+ * is hidden from the client, but the `<working_memory>` blocks it writes there
+ * still have to be collected — including the ones it writes after it has handed
+ * off, which is what separates this agent from `delegateParentAgent`.
+ */
+export const workingMemoryDelegateParentAgent = pikkuAgent({
+  name: 'working-memory-delegate-parent-agent',
+  description:
+    'Delegates to a sub-agent while keeping a working-memory notepad',
+  goal: 'You route the request to your sub-agent and keep notes.',
+  model: 'openai/gpt-5.6-luna',
+  agents: [deterministicSubAgent],
+  memory: { workingMemory: DelegateWorkingMemory },
   maxSteps: 5,
 })

@@ -22,7 +22,10 @@ import type {
   AgentStepResult,
 } from '@pikku/core/services'
 import { resolveModelAlias } from '@pikku/core/agent'
-import { convertToSDKMessages } from './message-converter.js'
+import {
+  convertToSDKMessages,
+  liftSystemMessages,
+} from './message-converter.js'
 
 type AIProviderOptions = Record<string, Record<string, unknown>>
 type AITranscriptionParams = {
@@ -420,7 +423,10 @@ export class VercelAgentRunner implements AgentRunnerService {
     const sdkModel = this.getModel(params.model, 'language')
     const { modelName } = this.parseModel(params.model)
     const agentTools = this.buildTools(params)
-    const messages = await convertToSDKMessages(params.messages)
+    const { system, messages } = liftSystemMessages(
+      await convertToSDKMessages(params.messages),
+      params.instructions
+    )
     const useStructuredOutput =
       !!params.outputSchema && params.tools.length === 0
 
@@ -434,7 +440,7 @@ export class VercelAgentRunner implements AgentRunnerService {
 
     const result = streamText({
       model: sdkModel,
-      system: params.instructions,
+      system,
       messages,
       tools: agentTools,
       stopWhen: stepCountIs(1),
@@ -593,11 +599,14 @@ export class VercelAgentRunner implements AgentRunnerService {
   async run(params: AgentRunnerParams): Promise<AgentStepResult> {
     const sdkModel = this.getModel(params.model, 'language')
     const agentTools = this.buildTools(params)
-    const messages = await convertToSDKMessages(params.messages)
+    const { system, messages } = liftSystemMessages(
+      await convertToSDKMessages(params.messages),
+      params.instructions
+    )
 
     const result = await generateText({
       model: sdkModel,
-      system: params.instructions,
+      system,
       messages,
       tools: agentTools,
       stopWhen: stepCountIs(1),
