@@ -5,13 +5,19 @@ export type CoreVariable<T = unknown> = {
   variableId: string
   schema: T
   /**
-   * A variable is OPTIONAL by default because `variables.get` returns
-   * `T | undefined` and never throws — every caller already handles absence, so
-   * a deploy gate that blocks on one contradicts the API. Mark a variable
-   * `required` for the few whose absence genuinely breaks the app; only those
-   * block a deploy.
+   * A variable is REQUIRED by default, and marking it `optional` is how a
+   * declaration says its absence is a supported state. Same flag, same
+   * polarity and same meaning as `CoreSecret.optional` — one word to learn
+   * rather than two with opposite senses.
+   *
+   * Defaulting to required rather than following `variables.get`'s
+   * `T | undefined` return is deliberate. That signature describes what a
+   * caller must HANDLE, not whether a deployment is correct without the value:
+   * an undefined feature flag is fine, an undefined API base URL is an outage
+   * that the type system cannot tell apart. Declaring the difference is the
+   * point of the flag, and the safe default for an undeclared one is to ask.
    */
-  required?: boolean
+  optional?: boolean
   docsUrl?: string
 }
 
@@ -21,7 +27,7 @@ export type VariableDefinitionMeta = {
   description?: string
   variableId: string
   schema?: Record<string, unknown> | string
-  required?: boolean
+  optional?: boolean
   docsUrl?: string
   sourceFile?: string
 }
