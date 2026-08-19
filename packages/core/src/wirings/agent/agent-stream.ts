@@ -20,6 +20,8 @@ import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
 } from '../channel/channel-middleware-runner.js'
+import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
+import type { CoreSingletonServices } from '../../types/core.types.js'
 import type { AgentStorageService } from '../../services/agent-storage-service.js'
 import type {
   AgentRunnerParams,
@@ -299,6 +301,64 @@ async function postStreamCleanup(
     usage: persistingChannel.totalUsage,
   })
 }
+
+/**
+ * Adapts `modifyOutputStream` hooks to channel middleware, one closure per
+ * hook so each keeps its own `state` and event log for the whole run.
+ */
+const toChannelStreamMiddleware = (
+  hooks: PikkuAgentMiddlewareHooks[],
+  sharedNotes: Record<string, unknown>,
+  signal: AbortSignal
+) =>
+  hooks
+    .filter((mw) => mw.modifyOutputStream)
+    .map((mw) => {
+      const state: Record<string, unknown> = {}
+      const allEvents: AgentStreamEvent[] = []
+      return async (services: any, event: any, next: any) => {
+        allEvents.push(event)
+        const result = await mw.modifyOutputStream!(services, {
+          event,
+          allEvents,
+          state,
+          shared: sharedNotes,
+          // Sends downstream directly, so a hook can hand back the fast event
+          // now and push the slow one when it is ready.
+          emit: next,
+          signal,
+        })
+        if (result == null) return
+        if (Array.isArray(result)) {
+          for (const r of result) await next(r)
+        } else {
+          await next(result)
+        }
+      }
+    })
+
+/**
+ * The branch a delegating parent's own spoken text is routed down once it has
+ * handed off: the same working-memory hook instances as the main chain, so the
+ * in-band `<working_memory>` blocks are still collected, ending in a sink so
+ * neither the client, the thread history, nor user channel middleware sees
+ * text the parent was supposed to keep to itself.
+ *
+ * Routing at ingress rather than dropping further down the chain keeps the
+ * decision synchronous with the send: the working-memory hook is async, so a
+ * hand-off landing mid-flight would otherwise retroactively suppress text the
+ * parent spoke before it.
+ */
+const createWorkingMemoryOnlyChannel = (
+  channel: AgentStreamChannel,
+  services: CoreSingletonServices,
+  workingMemoryMiddleware: readonly CorePikkuChannelMiddleware[]
+): AgentStreamChannel =>
+  wrapChannelWithMiddleware(
+    { channel: { ...channel, send: () => {} } as AgentStreamChannel },
+    services,
+    workingMemoryMiddleware
+  ).channel as AgentStreamChannel
 
 type StepLoopParams = {
   agent: CoreAgent
@@ -720,13 +780,18 @@ export async function streamAgent(
     return ''
   }
 
-  const agentMiddlewares: PikkuAgentMiddlewareHooks[] = [
-    ...getWorkingMemoryMiddleware(memoryConfig, storage, {
+  const workingMemoryMiddleware = getWorkingMemoryMiddleware(
+    memoryConfig,
+    storage,
+    {
       threadId,
       workingMemorySchemaName,
       logger: singletonServices.logger,
       schemaService: singletonServices.schema,
-    }),
+    }
+  )
+  const agentMiddlewares: PikkuAgentMiddlewareHooks[] = [
+    ...workingMemoryMiddleware,
     ...(agent.agentMiddleware ?? []),
   ]
 
@@ -785,45 +850,36 @@ export async function streamAgent(
     singletonServices.logger
   )
 
-  const streamMiddleware = agentMiddlewares
-    .filter((mw) => mw.modifyOutputStream)
-    .map((mw) => {
-      const state: Record<string, unknown> = {}
-      const allEvents: AgentStreamEvent[] = []
-      return async (services: any, event: any, next: any) => {
-        allEvents.push(event)
-        const result = await mw.modifyOutputStream!(services, {
-          event,
-          allEvents,
-          state,
-          shared: sharedNotes,
-          // Sends downstream directly, so a hook can hand back the fast event
-          // now and push the slow one when it is ready.
-          emit: next,
-          signal: interruptHandle.signal,
-        })
-        if (result == null) return
-        if (Array.isArray(result)) {
-          for (const r of result) await next(r)
-        } else {
-          await next(result)
-        }
-      }
-    })
+  const workingMemoryStreamMiddleware = toChannelStreamMiddleware(
+    workingMemoryMiddleware,
+    sharedNotes,
+    interruptHandle.signal
+  )
+  const streamMiddleware = toChannelStreamMiddleware(
+    agent.agentMiddleware ?? [],
+    sharedNotes,
+    interruptHandle.signal
+  )
 
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
   const meta = agentsMeta[resolvedName]
-  const allChannelMiddleware = combineChannelMiddleware(
-    'agent',
-    `stream:${agentName}`,
-    {
+
+  const isDelegateMode = agent.agentMode !== 'supervise' && meta?.agents?.length
+  const delegateState = { delegated: false }
+  if (isDelegateMode) {
+    streamContext.delegateState = delegateState
+  }
+
+  const allChannelMiddleware = [
+    ...workingMemoryStreamMiddleware,
+    ...combineChannelMiddleware('agent', `stream:${agentName}`, {
       wireInheritedChannelMiddleware: meta?.channelMiddleware,
       wireChannelMiddleware: [
         ...(agent.channelMiddleware ?? []),
         ...streamMiddleware,
       ],
-    }
-  )
+    }),
+  ]
 
   const persistingChannel = createPersistingChannel(
     channel,
@@ -857,23 +913,27 @@ export async function streamAgent(
     },
   }
 
-  const isDelegateMode = agent.agentMode !== 'supervise' && meta?.agents?.length
-  const delegateState = { delegated: false }
-  if (isDelegateMode) {
-    streamContext.delegateState = delegateState
-  }
-  const outputChannel = isDelegateMode
+  const workingMemoryOnlyChannel =
+    isDelegateMode && workingMemoryStreamMiddleware.length > 0
+      ? createWorkingMemoryOnlyChannel(
+          channel,
+          singletonServices,
+          workingMemoryStreamMiddleware
+        )
+      : undefined
+
+  const outputChannel: AgentStreamChannel = isDelegateMode
     ? {
         ...credentialFilteredChannel,
         send: (event: AgentStreamEvent) => {
           if (
             delegateState.delegated &&
             (event.type === 'text-delta' || event.type === 'reasoning-delta')
-          )
-            return
+          ) {
+            return workingMemoryOnlyChannel?.send(event)
+          }
           return credentialFilteredChannel.send(event)
         },
-        delegateState,
       }
     : credentialFilteredChannel
 
@@ -1350,13 +1410,18 @@ async function continueAfterToolResult(
 
   const instructions = await buildInstructions(resolvedName, packageName)
 
-  const agentMiddlewares: PikkuAgentMiddlewareHooks[] = [
-    ...getWorkingMemoryMiddleware(memoryConfig, storage, {
+  const workingMemoryMiddleware = getWorkingMemoryMiddleware(
+    memoryConfig,
+    storage,
+    {
       threadId: run.threadId,
       workingMemorySchemaName,
       logger: singletonServices.logger,
       schemaService: singletonServices.schema,
-    }),
+    }
+  )
+  const agentMiddlewares: PikkuAgentMiddlewareHooks[] = [
+    ...workingMemoryMiddleware,
     ...(agent.agentMiddleware ?? []),
   ]
   // One bag per run, shared by every middleware — see PikkuAgentMiddlewareHooks.
@@ -1379,43 +1444,27 @@ async function continueAfterToolResult(
     singletonServices.logger
   )
 
-  const streamMiddleware = agentMiddlewares
-    .filter((mw) => mw.modifyOutputStream)
-    .map((mw) => {
-      const state: Record<string, unknown> = {}
-      const allEvents: AgentStreamEvent[] = []
-      return async (services: any, event: any, next: any) => {
-        allEvents.push(event)
-        const result = await mw.modifyOutputStream!(services, {
-          event,
-          allEvents,
-          state,
-          shared: sharedNotes,
-          // Sends downstream directly, so a hook can hand back the fast event
-          // now and push the slow one when it is ready.
-          emit: next,
-          signal: interruptHandle.signal,
-        })
-        if (result == null) return
-        if (Array.isArray(result)) {
-          for (const r of result) await next(r)
-        } else {
-          await next(result)
-        }
-      }
-    })
+  const workingMemoryStreamMiddleware = toChannelStreamMiddleware(
+    workingMemoryMiddleware,
+    sharedNotes,
+    interruptHandle.signal
+  )
+  const streamMiddleware = toChannelStreamMiddleware(
+    agent.agentMiddleware ?? [],
+    sharedNotes,
+    interruptHandle.signal
+  )
 
-  const allChannelMiddleware = combineChannelMiddleware(
-    'agent',
-    `stream:${run.agentName}`,
-    {
+  const allChannelMiddleware = [
+    ...workingMemoryStreamMiddleware,
+    ...combineChannelMiddleware('agent', `stream:${run.agentName}`, {
       wireInheritedChannelMiddleware: meta?.channelMiddleware,
       wireChannelMiddleware: [
         ...(agent.channelMiddleware ?? []),
         ...streamMiddleware,
       ],
-    }
-  )
+    }),
+  ]
 
   const persistingChannel = createPersistingChannel(
     channel,
@@ -1433,7 +1482,38 @@ async function continueAfterToolResult(
         ).channel as AgentStreamChannel)
       : persistingChannel
 
+  const isDelegateMode = agent.agentMode !== 'supervise' && meta?.agents?.length
+  const delegateState = { delegated: false }
+
   const streamContext: StreamContext = { channel, options }
+  if (isDelegateMode) {
+    streamContext.delegateState = delegateState
+  }
+
+  const workingMemoryOnlyChannel =
+    isDelegateMode && workingMemoryStreamMiddleware.length > 0
+      ? createWorkingMemoryOnlyChannel(
+          channel,
+          singletonServices,
+          workingMemoryStreamMiddleware
+        )
+      : undefined
+
+  const outputChannel: AgentStreamChannel = isDelegateMode
+    ? {
+        ...wrappedChannel,
+        send: (event: AgentStreamEvent) => {
+          if (
+            delegateState.delegated &&
+            (event.type === 'text-delta' || event.type === 'reasoning-delta')
+          ) {
+            return workingMemoryOnlyChannel?.send(event)
+          }
+          return wrappedChannel.send(event)
+        },
+      }
+    : wrappedChannel
+
   const resumeTools = (
     await buildToolDefs(
       params,
@@ -1472,7 +1552,7 @@ async function continueAfterToolResult(
       runnerParams,
       maxSteps,
       agentRunner,
-      streamChannel: wrappedChannel,
+      streamChannel: outputChannel,
       persistingChannel,
       channel,
       agentMiddlewares,

@@ -26,6 +26,13 @@ export type MockLlmCall = {
   userMessage: string
   instructions: string | undefined
   messages: unknown[]
+  /**
+   * Every system message in the prompt, in order. `instructions` is only the
+   * first of them and `messages` drops them all, so the context the framework
+   * injects as further system messages — the working memory prompt among them —
+   * is only visible here.
+   */
+  systemMessages: string[]
   toolNames: string[]
   toolSchemas: Record<string, unknown>
   toolChoice: unknown
@@ -138,6 +145,9 @@ const recordAndResolve = (
     instructions: options.prompt.find((m) => m.role === 'system')?.content as
       string | undefined,
     messages: options.prompt.filter((m) => m.role !== 'system'),
+    systemMessages: options.prompt
+      .filter((m) => m.role === 'system')
+      .map((m) => String(m.content)),
     toolNames: tools.map((t) => t.name),
     toolSchemas: Object.fromEntries(
       tools.map((t) => [t.name, 'inputSchema' in t ? t.inputSchema : undefined])

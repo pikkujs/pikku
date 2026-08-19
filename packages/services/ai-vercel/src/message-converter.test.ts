@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   convertToSDKMessages,
   convertFromSDKStep,
+  liftSystemMessages,
 } from './message-converter.js'
 import type { AgentMessage } from '@pikku/core/agent'
 
@@ -285,5 +286,32 @@ describe('convertFromSDKStep', () => {
       toolResults: [],
     })
     assert.equal(step.toolCalls![0].result, JSON.stringify(''))
+  })
+})
+
+/**
+ * The SDK rejects a system message inside `messages`, so anything the framework
+ * injects as one — the working memory prompt above all — reaches the model only
+ * if it is lifted onto the `system` option first.
+ */
+describe('liftSystemMessages', () => {
+  test('a system message is appended to the instructions and removed', () => {
+    const { system, messages } = liftSystemMessages(
+      [
+        { role: 'system', content: 'Current working memory: {"topic":"blue"}' },
+        { role: 'user', content: 'what is the topic' },
+      ],
+      'be terse'
+    )
+    assert.equal(system, 'be terse\n\nCurrent working memory: {"topic":"blue"}')
+    assert.deepEqual(messages, [{ role: 'user', content: 'what is the topic' }])
+  })
+
+  test('without instructions or system messages the system option is undefined', () => {
+    const { system, messages } = liftSystemMessages([
+      { role: 'user', content: 'hello' },
+    ])
+    assert.equal(system, undefined)
+    assert.deepEqual(messages, [{ role: 'user', content: 'hello' }])
   })
 })

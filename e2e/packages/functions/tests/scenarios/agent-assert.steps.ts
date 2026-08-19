@@ -156,6 +156,7 @@ export const expectsModelCall = pikkuScenarioStep<
     modelId?: string
     instructionsNonEmpty?: boolean
     instructionsInclude?: string
+    systemInclude?: string
     messagesInclude?: string
     hasNonTextPart?: boolean
     attachmentMediaType?: string
@@ -175,6 +176,7 @@ export const expectsModelCall = pikkuScenarioStep<
       modelId,
       instructionsNonEmpty,
       instructionsInclude,
+      systemInclude,
       messagesInclude,
       hasNonTextPart,
       attachmentMediaType,
@@ -207,6 +209,14 @@ export const expectsModelCall = pikkuScenarioStep<
       throw new Error(
         `Expected call ${index} instructions to include "${instructionsInclude}", got ${describeValue(call.instructions)}`
       )
+    }
+    if (systemInclude !== undefined) {
+      const system = (call.systemMessages ?? []).join('\n')
+      if (!system.includes(systemInclude)) {
+        throw new Error(
+          `Expected call ${index} system context to include "${systemInclude}", got ${describeValue(system)}`
+        )
+      }
     }
     if (messagesInclude !== undefined) {
       const history = JSON.stringify(call.messages ?? [])

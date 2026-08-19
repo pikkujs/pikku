@@ -8,6 +8,31 @@ export async function convertToSDKMessages(
   return messages.map(convertToSDKMessage)
 }
 
+/**
+ * Lifts system messages out of the prompt and onto the `system` option.
+ *
+ * The SDK rejects a system message inside `messages` outright and points the
+ * caller at `system` instead, so context the framework injects as a system
+ * message — the working memory prompt among it — only reaches the model from
+ * here. It is appended after the agent's own instructions, which is the order
+ * the two were assembled in.
+ */
+export function liftSystemMessages(
+  messages: ModelMessage[],
+  instructions?: string
+): { system: string | undefined; messages: ModelMessage[] } {
+  const system = [
+    ...(instructions ? [instructions] : []),
+    ...messages
+      .filter((message) => message.role === 'system')
+      .map((message) => String(message.content)),
+  ]
+  return {
+    system: system.length > 0 ? system.join('\n\n') : undefined,
+    messages: messages.filter((message) => message.role !== 'system'),
+  }
+}
+
 function parseIfString<T>(value: T | string | null | undefined): T | undefined {
   if (value == null) return undefined
   if (typeof value === 'string') {
