@@ -4,7 +4,6 @@ import type { EmailTemplateMeta } from '@pikku/core/services'
 import {
   getNestedValue,
   renderTemplate,
-  renderPartial,
 } from './render-email-template.utils.js'
 
 type EmailPrimitive = string | number | boolean | null | undefined
@@ -68,40 +67,46 @@ export const renderEmailPreview = pikkuFunc<
       appName,
     }
 
-    const subject = renderTemplate(assets.subject, baseContext).trim()
-    const htmlWithPartials = assets.html.replace(
-      /\{\{\s*>\s*([a-zA-Z0-9-_/.]+)\s*\}\}/g,
-      (_match, partialName) => `@@PARTIAL:${String(partialName).trim()}@@`
-    )
+    const subject = renderTemplate(
+      assets.subject,
+      baseContext,
+      assets.partials,
+      false
+    ).trim()
 
-    let htmlBody = renderTemplate(htmlWithPartials, {
-      ...baseContext,
-      subject,
-    })
-
-    const partialMatches = [...htmlBody.matchAll(/@@PARTIAL:([^@]+)@@/g)]
-    for (const match of partialMatches) {
-      if (!match[1]) continue
-      const rendered = renderPartial(match[1], assets.partials, {
+    const htmlBody = renderTemplate(
+      assets.html,
+      {
         ...baseContext,
         subject,
-      })
-      htmlBody = htmlBody.replace(match[0], rendered)
-    }
+      },
+      assets.partials,
+      true
+    )
 
     const html = assets.layout
-      ? renderTemplate(assets.layout, {
-          ...baseContext,
-          subject,
-          content: htmlBody,
-        })
+      ? renderTemplate(
+          assets.layout,
+          {
+            ...baseContext,
+            subject,
+            content: htmlBody,
+          },
+          assets.partials,
+          true
+        )
       : htmlBody
 
     const text = assets.text
-      ? renderTemplate(assets.text, {
-          ...baseContext,
-          subject,
-        }).trim()
+      ? renderTemplate(
+          assets.text,
+          {
+            ...baseContext,
+            subject,
+          },
+          assets.partials,
+          false
+        ).trim()
       : undefined
 
     return {
