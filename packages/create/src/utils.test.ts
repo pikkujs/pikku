@@ -17,6 +17,8 @@ import {
   updatePackageJSONScripts,
   deepMerge,
   filterFilesByFeatures,
+  withNetworkRetry,
+  isTransientNetworkError,
 } from './utils.js'
 
 describe('Functions Test Suite', () => {
@@ -777,5 +779,83 @@ describe('Functions Test Suite', () => {
       !remainingClientFiles.includes('websocket.ts'),
       'websocket.ts should be removed'
     )
+  })
+})
+
+/**
+ * A template download is one fetch against api.github.com, and a 504 from it
+ * failed the whole scaffold — which in CI reads as a broken pull request
+ * rather than as the blip it was. Retrying is only safe if a genuinely missing
+ * template still fails at once: a 404 for a branch that was deleted is an
+ * answer, not an outage, and burning three attempts on it turns a clear error
+ * into a slow one.
+ */
+describe('retrying a transient download', () => {
+  test('a gateway timeout is retried and the later attempt is the result', async () => {
+    let attempts = 0
+
+    const result = await withNetworkRetry(
+      async () => {
+        attempts++
+        if (attempts < 3) {
+          throw new Error(
+            'Failed to download https://api.github.com/repos/pikkujs/pikku/tarball/main: 504 Gateway Timeout'
+          )
+        }
+        return 'downloaded'
+      },
+      { attempts: 3, delayMs: 0 }
+    )
+
+    assert.equal(result, 'downloaded')
+    assert.equal(attempts, 3)
+  })
+
+  test("a postinstall's failed fetch is transient too", () => {
+    assert.equal(
+      isTransientNetworkError(
+        new Error('Error fetching release: fetch failed')
+      ),
+      true
+    )
+    assert.equal(isTransientNetworkError(new Error('read ECONNRESET')), true)
+    assert.equal(
+      isTransientNetworkError(new Error('503 Service Unavailable')),
+      true
+    )
+  })
+
+  test('a missing template fails on the first attempt', async () => {
+    let attempts = 0
+
+    await assert.rejects(
+      withNetworkRetry(
+        async () => {
+          attempts++
+          throw new Error(
+            'Failed to download https://api.github.com/repos/pikkujs/pikku/tarball/gone: 404 Not Found'
+          )
+        },
+        { attempts: 3, delayMs: 0 }
+      ),
+      /404 Not Found/
+    )
+    assert.equal(attempts, 1)
+  })
+
+  test('the last error survives when every attempt is transient', async () => {
+    let attempts = 0
+
+    await assert.rejects(
+      withNetworkRetry(
+        async () => {
+          attempts++
+          throw new Error(`502 Bad Gateway (attempt ${attempts})`)
+        },
+        { attempts: 3, delayMs: 0 }
+      ),
+      /attempt 3/
+    )
+    assert.equal(attempts, 3)
   })
 })

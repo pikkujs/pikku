@@ -21,6 +21,22 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# An install pulls binaries from registries and release hosts, and a single
+# blip on any of them fails a template job that has nothing wrong with it.
+retry() {
+    local attempt
+    for attempt in 1 2 3; do
+        if "$@"; then
+            return 0
+        fi
+        if [ "$attempt" = 3 ]; then
+            return 1
+        fi
+        log_warning "'$*' failed (attempt $attempt), retrying"
+        sleep $((attempt * 15))
+    done
+}
+
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -131,7 +147,7 @@ if [ "$PACKAGE_MANAGER" = "yarn" ]; then
 
     # Install dependencies (refreshes node_modules with the linked packages)
     log_info "Installing dependencies..."
-    if ! yarn install; then
+    if ! retry yarn install; then
         log_error "Failed to install dependencies"
         exit 1
     fi
@@ -258,7 +274,7 @@ Object.entries(all)
     # different half-written file every run. No template imports better-sqlite3,
     # none of them declare a postinstall, and codegen is re-run explicitly below.
     log_info "Installing dependencies..."
-    if ! "$PACKAGE_MANAGER" install --ignore-scripts; then
+    if ! retry "$PACKAGE_MANAGER" install --ignore-scripts; then
         log_error "Failed to install dependencies"
         exit 1
     fi

@@ -525,3 +525,74 @@ export function preparePackageJsonForYarnLink(targetPath: string): void {
 
   fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2))
 }
+
+const transientNetworkSignals = [
+  'fetch failed',
+  'socket hang up',
+  'network',
+  'timeout',
+  'timed out',
+  'econnreset',
+  'econnrefused',
+  'enotfound',
+  'eai_again',
+  'epipe',
+  'etimedout',
+  '408',
+  '425',
+  '429',
+  '500',
+  '502',
+  '503',
+  '504',
+]
+
+/**
+ * A download that failed because the far end was briefly unavailable is worth
+ * asking again; one that failed because the thing is not there is an answer.
+ * The distinction matters most for a deleted branch, whose 404 must surface
+ * immediately rather than after a round of retries.
+ */
+export function isTransientNetworkError(error: unknown): boolean {
+  const message = (
+    error instanceof Error ? error.message : String(error)
+  ).toLowerCase()
+
+  if (message.includes('404') || message.includes('not found')) {
+    return false
+  }
+
+  return transientNetworkSignals.some((signal) => message.includes(signal))
+}
+
+export type NetworkRetryOptions = {
+  attempts?: number
+  delayMs?: number
+  onRetry?: (error: unknown, attempt: number) => void
+}
+
+export async function withNetworkRetry<T>(
+  operation: () => Promise<T>,
+  { attempts = 3, delayMs = 1000, onRetry }: NetworkRetryOptions = {}
+): Promise<T> {
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error
+      if (attempt === attempts || !isTransientNetworkError(error)) {
+        throw error
+      }
+      onRetry?.(error, attempt)
+      if (delayMs > 0) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, delayMs * 2 ** (attempt - 1))
+        )
+      }
+    }
+  }
+
+  throw lastError
+}
