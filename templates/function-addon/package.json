@@ -34,12 +34,12 @@
     "pikku": "pikku all"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.85",
+    "@pikku/core": "^0.12.86",
     "zod": "^4"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.106",
-    "@pikku/core": "^0.12.85",
+    "@pikku/cli": "^0.12.107",
+    "@pikku/core": "^0.12.86",
     "typescript": "^6.0.3",
     "zod": "^4"
   }
