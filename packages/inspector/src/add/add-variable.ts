@@ -5,6 +5,6 @@ export const addVariable = createAddKeyedWiring({
   idField: 'variableId',
   label: 'Variable',
   schemaPrefix: 'VariableSchema',
-  flagField: 'required',
+  flagField: 'optional',
   getState: (state) => state.variables,
 })

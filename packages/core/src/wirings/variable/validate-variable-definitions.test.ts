@@ -89,26 +89,27 @@ describe('validateAndBuildVariableDefinitionsMeta', () => {
     assert.deepStrictEqual(result, {})
   })
 
-  test('carries required into the meta so only the opted-in ones block a deploy', () => {
+  test('carries optional into the meta so only the opted-out ones skip the gate', () => {
     const result = validateAndBuildVariableDefinitionsMeta(
       [
-        {
-          name: 'consoleUrl',
-          displayName: 'Console URL',
-          variableId: 'CONSOLE_URL',
-          required: true,
-          sourceFile: 'a.ts',
-        },
         {
           name: 'corsOrigins',
           displayName: 'Allowed Browser Origins',
           variableId: 'CORS_ORIGINS',
+          optional: true,
+          sourceFile: 'a.ts',
+        },
+        {
+          name: 'consoleUrl',
+          displayName: 'Console URL',
+          variableId: 'CONSOLE_URL',
           sourceFile: 'a.ts',
         },
       ] as any,
       new Map()
     )
-    assert.strictEqual(result['consoleUrl']!.required, true)
-    assert.strictEqual(result['corsOrigins']!.required, undefined)
+    assert.strictEqual(result['corsOrigins']!.optional, true)
+    // Undeclared means required, which is what makes the gate ask by default.
+    assert.strictEqual(result['consoleUrl']!.optional, undefined)
   })
 })
