@@ -1199,6 +1199,7 @@ export async function runValidate(
     dir: string
     deploy: boolean
   }> = []
+  let hasMantineFrontend = false
   /** every syntactically valid cwd, including ones whose directory is missing */
   const declaredCwdList: string[] = []
   const rawFrontends = fabricConfig?.frontends
@@ -1345,6 +1346,9 @@ export async function runValidate(
         appAllDeps['@pikku/mantine'] ||
         appAllDeps['react']
       )
+      if (appAllDeps['@mantine/core'] || appAllDeps['@pikku/mantine']) {
+        hasMantineFrontend = true
+      }
       if (isReactFrontend) {
         const srcFiles = await listSourceFiles(join(appPath, 'src'))
         let usesMessages = false
@@ -1663,11 +1667,14 @@ export async function runValidate(
 
   // ── packages/theme + packages/components ──────────────────────────────
   const designDocUrl = 'https://pikkufabric.dev/docs/design'
+  const designSeverity = hasMantineFrontend ? w : info
   const themePkgDir = join(root, 'packages', 'mantine-theme')
   if (!existsSync(themePkgDir)) {
-    info(
+    designSeverity(
       'theme-missing',
-      'packages/mantine-theme/ not found — Fabric design features require a theme package',
+      hasMantineFrontend
+        ? 'packages/mantine-theme/ not found — the Fabric console Design tab has no themes to list and reports "No themes yet"'
+        : 'packages/mantine-theme/ not found — Fabric design features require a theme package',
       themePkgDir,
       `Create packages/mantine-theme/ with your Mantine theme tokens. See ${designDocUrl}`
     )
@@ -1692,7 +1699,7 @@ export async function runValidate(
       }
     }
     if (specIds.length === 0) {
-      info(
+      designSeverity(
         'theme-no-spec',
         'packages/mantine-theme/ has no themes/<id>.json spec — the Fabric console Design tab reports "no theme set" (and cannot edit the theme) even if the app is branded via a hand-written createTheme()',
         themesDir,
@@ -1739,12 +1746,39 @@ export async function runValidate(
       }
     }
   }
-  if (!existsSync(join(root, 'packages', 'components'))) {
-    info(
-      'components-missing',
-      'packages/components/ not found — Fabric design features require a components package',
-      join(root, 'packages', 'components'),
-      `Create packages/components/ with your shared UI components. See ${designDocUrl}`
+  // The design server globs stories from apps/*/src/components, not packages/components.
+  const storyFiles: string[] = []
+  let hasComponentKit = false
+  for (const name of existsSync(appsDir) ? await readdir(appsDir) : []) {
+    const kitDir = join(appsDir, name, 'src', 'components')
+    if (!existsSync(kitDir)) continue
+    hasComponentKit = true
+    for (const file of await listSourceFiles(kitDir)) {
+      if (file.endsWith('.stories.tsx')) storyFiles.push(file)
+    }
+  }
+  if (hasComponentKit && storyFiles.length === 0) {
+    designSeverity(
+      'design-no-stories',
+      "no apps/*/src/components/**/*.stories.tsx found — the Fabric console Design tab's Library and App lenses have nothing to show",
+      join(appsDir, '*', 'src', 'components'),
+      lines(
+        'Add a story beside a component. The Library lens reads <Name>.stories.tsx',
+        '(each named export is a visual variant); the App lens reads',
+        '<Name>.app.stories.tsx (each named export is one data state of the query',
+        'or mutation the page drives it with). A minimal Library story:',
+        '',
+        "  import type { Story, StoryMeta } from './csf.types'",
+        "  import { Wordmark } from './Wordmark'",
+        '',
+        '  export default {',
+        "    title: 'Wordmark',",
+        '    component: Wordmark,',
+        '  } satisfies StoryMeta',
+        '',
+        "  export const Default: Story = { args: { name: 'Acme' } }",
+        `See ${designDocUrl}`
+      )
     )
   }
 

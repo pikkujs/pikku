@@ -1258,20 +1258,106 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('missing packages/components → info', async () => {
+    const addMantineApp = async (root: string) => {
+      await mkdir(join(root, 'apps', 'web', 'src', 'components'), {
+        recursive: true,
+      })
+      await writeJson(join(root, 'apps', 'web', 'package.json'), {
+        name: '@project/web',
+        type: 'module',
+        dependencies: {
+          react: '^19.0.0',
+          '@mantine/core': '^9.0.0',
+          '@pikku/mantine': '^0.12.5',
+        },
+      })
+    }
+
+    test('missing packages/mantine-theme with a Mantine frontend → warn', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'components'), {
+        await addMantineApp(tmp)
+        await rm(join(tmp, 'packages', 'mantine-theme'), {
           recursive: true,
           force: true,
         })
         const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-missing')
+        assert.ok(finding, 'expected theme-missing finding')
+        assert.strictEqual(finding!.severity, 'warn')
+        assert.match(finding!.message, /No themes yet/)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('theme package but no spec, with a Mantine frontend → theme-no-spec warn', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await addMantineApp(tmp)
+        await rm(join(tmp, 'packages', 'mantine-theme', 'themes'), {
+          recursive: true,
+          force: true,
+        })
+        await rm(join(tmp, 'packages', 'mantine-theme', 'active.json'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-no-spec')
+        assert.ok(finding, 'expected theme-no-spec finding')
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('an app with components but no stories → design-no-stories', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await addMantineApp(tmp)
+        const result = await runValidate(tmp)
         const finding = result.findings.find(
-          (f) => f.id === 'components-missing'
+          (f) => f.id === 'design-no-stories'
         )
-        assert.ok(finding, 'expected components-missing finding')
-        assert.strictEqual(finding!.severity, 'info')
+        assert.ok(finding, 'expected design-no-stories finding')
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a story beside a component clears it', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await addMantineApp(tmp)
+        await writeFile(
+          join(tmp, 'apps', 'web', 'src', 'components', 'Wordmark.stories.tsx'),
+          "export default { title: 'Wordmark' }\nexport const Default = {}\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'design-no-stories'),
+          'design-no-stories should not fire when a story exists'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('no apps at all → silence, there is nothing to story', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'design-no-stories'),
+          'design-no-stories should not fire without a component kit'
+        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
