@@ -88,6 +88,24 @@ describe('serializeMiddlewareTypes', () => {
     )
   })
 
+  // Agent middleware hooks a run, and a run is not a request — it can start
+  // from a scheduler or a workflow with no wire behind it. The runtime has
+  // always passed the singleton services alone, so a signature promising the
+  // wider `Services` let a middleware destructure a wire service, typecheck,
+  // and silently receive `undefined`.
+  test('agent middleware is typed against the singleton services', () => {
+    const content = emit()
+
+    assert.match(
+      content,
+      /export const pikkuAgentMiddleware = <\s*State extends Record<string, unknown> = Record<string, unknown>,\s*RequiredServices extends SingletonServices = WiredSingletonServices,\s*>/
+    )
+    assert.doesNotMatch(
+      content,
+      /export const pikkuAgentMiddleware = <[^]*?RequiredServices extends Services = Services/
+    )
+  })
+
   test('types against the function leaf without importing a value from it', () => {
     assert.match(
       emit(),

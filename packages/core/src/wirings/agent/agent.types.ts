@@ -6,6 +6,7 @@ import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
 } from '../../middleware/middleware.types.js'
+import type { CoreSingletonServices } from '../../types/core.types.js'
 import type { PermissionMetadata } from '../../function/function-meta.types.js'
 import type { AIProviderOptions } from '../../services/agent-runner-service.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
@@ -178,12 +179,21 @@ export interface AgentToolDef extends Partial<ApprovalPolicy> {
   forwardsApproval?: boolean
 }
 
+/**
+ * Hooks on an agent *run*, not on a request.
+ *
+ * Every hook receives the singleton services only. A run is not a wire: it can
+ * start from a scheduler or a workflow with no request behind it, so there are
+ * no per-request services to hand a middleware. A tool call inside the run is a
+ * real function call and does get its own wire services — through
+ * `runPikkuFunc`, not through here.
+ */
 export interface PikkuAgentMiddlewareHooks<
   State extends Record<string, unknown> = Record<string, unknown>,
-  Services = any,
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > {
   modifyInput?: (
-    services: Services,
+    services: SingletonServices,
     ctx: {
       messages: AgentMessage[]
       instructions: string
@@ -210,7 +220,7 @@ export interface PikkuAgentMiddlewareHooks<
     | { messages: AgentMessage[]; instructions: string }
 
   modifyOutputStream?: (
-    services: Services,
+    services: SingletonServices,
     ctx: {
       event: AgentStreamEvent
       allEvents: readonly AgentStreamEvent[]
@@ -262,7 +272,7 @@ export interface PikkuAgentMiddlewareHooks<
    * leaves them untouched.
    */
   modifyOutput?: (
-    services: Services,
+    services: SingletonServices,
     ctx: {
       text: string
       messages: AgentMessage[]
@@ -282,7 +292,7 @@ export interface PikkuAgentMiddlewareHooks<
       }
 
   beforeToolCall?: (
-    services: Services,
+    services: SingletonServices,
     ctx: {
       toolName: string
       toolCallId: string
@@ -294,7 +304,7 @@ export interface PikkuAgentMiddlewareHooks<
     | void
 
   afterToolCall?: (
-    services: Services,
+    services: SingletonServices,
     ctx: {
       toolName: string
       toolCallId: string
@@ -305,7 +315,7 @@ export interface PikkuAgentMiddlewareHooks<
   ) => Promise<{ result: unknown } | void> | { result: unknown } | void
 
   afterStep?: (
-    services: Services,
+    services: SingletonServices,
     ctx: {
       stepNumber: number
       text: string
@@ -323,7 +333,7 @@ export interface PikkuAgentMiddlewareHooks<
   ) => Promise<void> | void
 
   onError?: (
-    services: Services,
+    services: SingletonServices,
     ctx: {
       error: Error
       stepNumber: number
