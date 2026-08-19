@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
-import { hasScopes as coreHasScopes } from '@pikku/core'
+import { hasScopes as coreHasScopes } from '@pikku/core/scope'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import { serializeScopesClient } from './serialize-scopes-client.js'
 
