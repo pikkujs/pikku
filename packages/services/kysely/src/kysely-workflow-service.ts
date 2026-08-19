@@ -1,5 +1,8 @@
 import type { SerializedError } from '@pikku/core/errors'
-import { PikkuWorkflowService } from '@pikku/core/workflow'
+import {
+  PikkuWorkflowService,
+  WorkflowStepFunctionMismatchError,
+} from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
   WorkflowQueueOptions,
@@ -460,12 +463,95 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return fn()
   }
 
+  /**
+   * A pass-through, and deliberately so: the one decision that must exclude —
+   * claiming a step to execute it — is made by `claimStepForExecution` below as
+   * a single conditional write, which needs no lock to be exclusive.
+   *
+   * What is left are the suspend and approval sections in the engine, where the
+   * lock is genuine mutual exclusion rather than a claim. A dialect with a real
+   * primitive overrides this to cover them — `kysely-postgres` with
+   * `pg_advisory_xact_lock`, `kysely-mysql` with `GET_LOCK`.
+   */
   async withStepLock<T>(
     _runId: string,
     _stepName: string,
     fn: () => Promise<T>
   ): Promise<T> {
     return fn()
+  }
+
+  /**
+   * Claim the step with a status-guarded `UPDATE` and read the affected-row
+   * count: the database decides the winner in one statement, so two dispatches
+   * racing for the same step cannot both proceed.
+   *
+   * This replaces the read-then-write the base engine does under `withStepLock`,
+   * which is only as exclusive as that lock — and every dialect but Postgres and
+   * MySQL inherits a pass-through. A conditional update needs no advisory-lock
+   * primitive, so every SQL dialect gets the same guarantee.
+   *
+   * The winner then goes through the ordinary transition methods, so history
+   * rows and the mirror see exactly what they saw before.
+   */
+  protected override async claimStepForExecution(
+    runId: string,
+    stepName: string,
+    rpcName: string
+  ): Promise<StepState | null> {
+    const stepState = await this.getStepState(runId, stepName)
+
+    // knowledge: decisions/security/a-step-runs-the-function-the-workflow-dispatched-it-with.md
+    if (
+      stepState.rpcName !== undefined &&
+      stepState.rpcName !== (rpcName ?? null)
+    ) {
+      throw new WorkflowStepFunctionMismatchError(runId, stepName)
+    }
+
+    if (stepState.status === 'succeeded' || stepState.status === 'running') {
+      return null
+    }
+
+    if (stepState.status === 'failed') {
+      if (!(await this.claimStepStatus(stepState.stepId, ['failed']))) {
+        return null
+      }
+      return this.createRetryAttempt(stepState.stepId, 'running')
+    }
+
+    if (stepState.status === 'pending' || stepState.status === 'scheduled') {
+      if (
+        !(await this.claimStepStatus(stepState.stepId, [
+          'pending',
+          'scheduled',
+        ]))
+      ) {
+        return null
+      }
+      await this.setStepRunning(stepState.stepId)
+      return { ...stepState, status: 'running' }
+    }
+
+    return stepState
+  }
+
+  /**
+   * Move a step to `running` only if it is still in one of `from`, reporting
+   * whether this caller is the one that moved it.
+   */
+  private async claimStepStatus(
+    stepId: string,
+    from: StepStatus[]
+  ): Promise<boolean> {
+    const claimed = await this.db
+      .updateTable('workflowStep')
+      .set({ status: 'running', updatedAt: new Date() })
+      .where('workflowStepId', '=', stepId)
+      .where('status', 'in', from)
+      .executeTakeFirst()
+
+    return Number(claimed?.numUpdatedRows ?? 0n) > 0
   }
 
   async getCompletedGraphState(runId: string): Promise<{
@@ -606,16 +692,18 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * The undispatched-step query, shared by the dialects that can safely relay.
+   * The undispatched-step query, shared by every dialect.
    *
-   * Deliberately NOT an override of `findUndispatchedSteps`: this class's
-   * `withStepLock` is a pass-through, so a subclass inheriting it (kysely-sqlite)
-   * has no atomic claim, and the relay's redundant dispatches would become
-   * double executions. A dialect opts in by overriding `findUndispatchedSteps`
-   * to call this — which `kysely-postgres` and `kysely-mysql` do, having real
-   * locks.
+   * It used to be deliberately NOT an override, because this class's
+   * `withStepLock` is a pass-through: a subclass inheriting it (kysely-sqlite)
+   * had no atomic claim, so the relay's redundant dispatches would have become
+   * double executions, and only `kysely-postgres` and `kysely-mysql` opted in
+   * on the strength of their real locks. `claimStepForExecution` no longer
+   * needs that lock — the claim is a status-guarded `UPDATE`, atomic in every
+   * dialect — so the relay is safe here for all of them and the override lives
+   * in the base.
    */
-  protected async queryUndispatchedSteps(
+  protected override async findUndispatchedSteps(
     before: Date,
     limit: number
   ): Promise<Array<{ runId: string; stepId: string }>> {

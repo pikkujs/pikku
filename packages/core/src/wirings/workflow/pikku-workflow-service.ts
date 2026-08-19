@@ -68,7 +68,6 @@ import {
   WorkflowRunCancelledError,
   WorkflowRunFailedError,
   WorkflowRunNotFoundError,
-  WorkflowStepFunctionMismatchError,
   WorkflowStepNameNotString,
   WorkflowSuspendedException,
 } from './workflow-errors.js'
@@ -95,6 +94,7 @@ import {
 } from './workflow-approval.js'
 import { auditApprovalDecision } from './workflow-approval-audit.js'
 import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
+import { claimStepByReadThenWrite } from './workflow-step-claim.js'
 import {
   RedispatchBackoff,
   sweepStalledRuns,
@@ -639,12 +639,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    *
    * Returns nothing by default so a store that cannot express the query keeps
    * working unchanged — and, because it does not opt in, gains no re-dispatches
-   * either. A store must have an atomic `withStepLock` before overriding this,
-   * or no concurrency for one to exclude: the relay makes duplicate dispatch
-   * routine, and the claim in `executeWorkflowStepInner` is what keeps a
-   * duplicate from becoming a second execution. `kysely-postgres` and
-   * `kysely-mysql` qualify on the lock, `in-memory` on being inline and
-   * single-process; `mongodb` and `kysely-sqlite` qualify on neither.
+   * either. A store must have an atomic `claimStepForExecution` before
+   * overriding this, or no concurrency for one to exclude: the relay makes
+   * duplicate dispatch routine, and the claim is what keeps a duplicate from
+   * becoming a second execution. Every `@pikku/kysely` dialect qualifies on its
+   * status-guarded claim, `in-memory` on being inline and single-process;
+   * `mongodb` still qualifies on neither.
    */
   protected async findUndispatchedSteps(
     _before: Date,
@@ -1300,6 +1300,29 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  /**
+   * Take sole ownership of a step before it runs, returning the state to run
+   * under — or `null` when another dispatch already owns it.
+   *
+   * Dispatch is at-least-once by design: the relay re-dispatches steps it
+   * believes were dropped, and a queue can redeliver a job it already handed
+   * out. This is the one place that keeps a duplicate dispatch from becoming a
+   * second execution of a side-effecting step, so it is only as strong as the
+   * exclusion it is built on — and `withStepLock` excludes nothing unless the
+   * store backs it with a real primitive. A store able to express the decision
+   * as one conditional write should override this rather than reach for a lock,
+   * which is what `@pikku/kysely` does with a status-guarded `UPDATE`.
+   */
+  protected async claimStepForExecution(
+    runId: string,
+    stepName: string,
+    rpcName: string
+  ): Promise<StepState | null> {
+    return this.withStepLock(runId, stepName, () =>
+      claimStepByReadThenWrite(this, runId, stepName, rpcName)
+    )
+  }
+
   private async executeWorkflowStepInner(
     runId: string,
     stepName: string,
@@ -1307,26 +1330,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: PikkuRPC
   ): Promise<void> {
-    const claimed = await this.withStepLock(runId, stepName, async () => {
-      const stepState = await this.getStepState(runId, stepName)
-      // knowledge: decisions/security/a-step-runs-the-function-the-workflow-dispatched-it-with.md
-      if (
-        stepState.rpcName !== undefined &&
-        stepState.rpcName !== (rpcName ?? null)
-      ) {
-        throw new WorkflowStepFunctionMismatchError(runId, stepName)
-      }
-      if (stepState.status === 'succeeded' || stepState.status === 'running') {
-        return null
-      }
-      if (stepState.status === 'failed') {
-        return this.createRetryAttempt(stepState.stepId, 'running')
-      }
-      if (stepState.status === 'pending' || stepState.status === 'scheduled') {
-        await this.setStepRunning(stepState.stepId)
-      }
-      return stepState
-    })
+    const claimed = await this.claimStepForExecution(runId, stepName, rpcName)
 
     if (!claimed) {
       return

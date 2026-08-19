@@ -12,17 +12,6 @@ export class MySQLKyselyWorkflowService extends KyselyWorkflowService {
   }
 
   /**
-   * Safe to opt in: `withStepLock` below takes a real `GET_LOCK`, so the relay's
-   * redundant dispatches lose the claim instead of executing twice.
-   */
-  protected override async findUndispatchedSteps(
-    before: Date,
-    limit: number
-  ): Promise<Array<{ runId: string; stepId: string }>> {
-    return this.queryUndispatchedSteps(before, limit)
-  }
-
-  /**
    * MySQL has `JSON_SET` but no `json()`; a JSON literal is cast instead, so
    * the value lands as a JSON value rather than as a quoted string.
    */
