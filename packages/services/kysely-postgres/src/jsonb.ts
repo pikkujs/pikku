@@ -16,9 +16,20 @@ export const jsonbText = (json: string): RawBuilder<unknown> =>
 
 /**
  * Binds a JavaScript value as a `jsonb` parameter, safely for every driver.
+ *
+ * `JSON.stringify` yields `undefined` rather than JSON text for `undefined`,
+ * functions and symbols, which would otherwise reach the driver as a non-string
+ * bind and fail far from the call that caused it.
  */
-export const jsonbValue = (value: unknown): RawBuilder<unknown> =>
-  jsonbText(JSON.stringify(value))
+export const jsonbValue = (value: unknown): RawBuilder<unknown> => {
+  const json = JSON.stringify(value)
+  if (json === undefined) {
+    throw new TypeError(
+      `Cannot bind ${typeof value} as jsonb: it has no JSON representation.`
+    )
+  }
+  return jsonbText(json)
+}
 
 /**
  * Merges a patch into a `jsonb` column, creating keys that are not already

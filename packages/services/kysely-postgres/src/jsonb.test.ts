@@ -195,4 +195,19 @@ describe('jsonb helpers', () => {
 
     assert.deepEqual(await readMetadata(), [{ role: 'user' }, '{"plan":"pro"}'])
   })
+
+  test('jsonbValue refuses a value with no JSON representation', () => {
+    for (const value of [undefined, () => {}, Symbol('nope')]) {
+      assert.throws(() => jsonbValue(value), TypeError)
+    }
+  })
+
+  test('jsonbMerge refuses a patch with no JSON representation', () => {
+    assert.throws(() => jsonbMerge(sql`metadata` as any, undefined), TypeError)
+  })
+
+  test('jsonbValue still binds null and false, which are valid JSON', () => {
+    assert.doesNotThrow(() => jsonbValue(null))
+    assert.doesNotThrow(() => jsonbValue(false))
+  })
 })
