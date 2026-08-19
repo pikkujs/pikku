@@ -2,4 +2,7 @@
  * @module @pikku/ws
  */
 
-export * from './pikku-ws-server.js'
+export {
+  DEFAULT_WS_MAX_PAYLOAD,
+  pikkuWebsocketHandler,
+} from './pikku-ws-server.js'

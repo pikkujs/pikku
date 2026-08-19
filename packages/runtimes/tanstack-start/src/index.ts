@@ -1,1 +1,1 @@
-export * from './pikku-tanstack-start.js'
+export { toTanStackStartAuthHandler } from './pikku-tanstack-start.js'

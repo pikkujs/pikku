@@ -11,7 +11,7 @@ import type { Logger } from '../services/logger.js'
 import type { CorePikkuFunctionConfig } from '../function/functions.types.js'
 import { createModuleRunner } from './module-runner.js'
 
-export * from './reload-meta.js'
+export { reloadGeneratedMeta, reconcileAddonRegistry } from './reload-meta.js'
 
 interface PikkuDevReloaderOptions {
   srcDirectories: string[]

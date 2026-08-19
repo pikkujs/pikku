@@ -59,8 +59,34 @@ const assertionStep = <T extends WorkflowStepOptions>(
   ({ ...options, retries: options?.retries ?? 0 }) as T & { retries: number }
 
 export { addFeature, resolveFeatureScenarios } from './feature.js'
-export type * from './scenario.types.js'
-export type * from './scenario-run.types.js'
+export type {
+  CoreFeature,
+  CoreFeatureScenario,
+  FeatureMeta,
+  FeaturesMeta,
+  PikkuBrowserWire,
+  PikkuScenarioWire,
+  ScenarioBrowserFailure,
+  ScenarioBrowserProvider,
+  ScenarioEnvironment,
+  ScenarioStepKind,
+  ScenarioStepMeta,
+  ScenarioStepOptions,
+  ScenarioStepPhase,
+  ScenarioSurface,
+  TestIdSelector,
+} from './scenario.types.js'
+export type {
+  ScenarioArtifact,
+  ScenarioFailureDetail,
+  ScenarioResult,
+  ScenarioRunRecord,
+  ScenarioRunReport,
+  ScenarioRunStatus,
+  ScenarioRunStore,
+  ScenarioRunSummary,
+  ScenarioStepRow,
+} from './scenario-run.types.js'
 export { SCENARIO_SURFACES } from './scenario-step.types.js'
 
 // Which of a step's bindings run: one for an action, every witness for a `then`
@@ -979,10 +1005,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
    * Whether a step is driven by a persona, and so must be given one. Stamped by
    * the definer from a `browser` binding or an explicit `actor: true`.
    */
-  private requiresActor(
-    packageName: string | null,
-    stepFunc: string
-  ): boolean {
+  private requiresActor(packageName: string | null, stepFunc: string): boolean {
     return (
       this.scenarioStepConfig(packageName, stepFunc)?.requiresActor === true
     )

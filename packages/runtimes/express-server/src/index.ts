@@ -2,4 +2,4 @@
  * @module @pikku/express
  */
 
-export * from './pikku-express-server.js'
+export { PikkuExpressServer } from './pikku-express-server.js'
