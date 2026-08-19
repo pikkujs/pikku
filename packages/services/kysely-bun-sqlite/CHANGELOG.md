@@ -1,5 +1,34 @@
 # @pikku/kysely-bun-sqlite
 
+## 0.12.6
+
+### Patch Changes
+
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+- Updated dependencies [7722ceb]
+- Updated dependencies [375c1ff]
+- Updated dependencies [02a70cd]
+- Updated dependencies [aeef159]
+- Updated dependencies [a281de6]
+- Updated dependencies [266e3bc]
+- Updated dependencies [02a70cd]
+- Updated dependencies [786dae5]
+- Updated dependencies [6eef0a0]
+- Updated dependencies [3561d67]
+- Updated dependencies [a91c433]
+- Updated dependencies [02a70cd]
+- Updated dependencies [9537f74]
+- Updated dependencies [2b57ca8]
+- Updated dependencies [266e3bc]
+- Updated dependencies [9fce0f1]
+- Updated dependencies [83683a0]
+- Updated dependencies [456c88b]
+- Updated dependencies [456c88b]
+- Updated dependencies [c127273]
+  - @pikku/core@0.12.85
+  - @pikku/kysely@0.13.17
+  - @pikku/kysely-sqlite@0.12.13
+
 ## 0.12.5
 
 ### Patch Changes

@@ -1,3 +1,299 @@
+## 0.12.43
+
+### Patch Changes
+
+- 7722ceb: Split the addon leaf so an application cannot shadow a linked addon's own
+
+  An addon authored its services through `#pikku/addon`, and so did an
+  application installing one. Node keeps those apart — `#pikku/*` is a
+  package-private subpath import, resolved against the addon's own
+  `package.json` — but tsconfig `paths` are global to a tsx process, and every
+  runtime template maps `#pikku/*` onto a sibling package. A linked addon's
+  `#pikku/addon` was resolved against the _application's_ leaf, which holds the
+  install half and none of the authoring exports, and every template failed to
+  boot with `does not provide an export named 'pikkuAddonServices'`.
+
+  The authoring half now sits at `#pikku/addon/setup`. An application generates a
+  flat `.pikku/<leaf>`, so there is nothing there for that specifier to match and
+  the resolver falls back to Node, which reads the addon's own imports. Addons
+  declaring themselves import `pikkuAddonConfig`, `pikkuAddonServices` and
+  `pikkuAddonWireServices` from `#pikku/addon/setup`; `wireAddon` and
+  `wireRemoteAddon` stay at `#pikku/addon`.
+
+  `wireAddon` and `wireRemoteAddon` also move off `@pikku/core/rpc` onto
+  `@pikku/core/addon`. Being reached over rpc is how an addon is called rather
+  than what it is, and it put the whole addon surface behind the rpc subpath for
+  consumers that only wanted to install one.
+
+- 20d8a39: Split application administration out of the console addon into a new
+  `@pikku/addon-admin`.
+
+  `@pikku/addon-console` reads generated metadata, project source and knowledge
+  notes from disk, so it only ever runs where there is a project checkout and a
+  dev server. That made the console the only way to reach capabilities that have
+  nothing to do with a console — listing users, composing roles, granting scopes,
+  managing credentials, reading the audit trail — none of which touch a
+  filesystem. Those now live in `@pikku/addon-admin`, which depends on nothing but
+  `@pikku/core` and `@pikku/better-auth` and can be wired into a deployed
+  serverless unit:
+
+  ```ts
+  wireAddon({ name: 'admin', package: '@pikku/addon-admin' })
+  ```
+
+  It ships the user directory (`admin:listUsers`, `createUser`, `setUserBanned`,
+  `removeUser`, `revokeUserSessions`, `setUserPassword`), role and scope
+  administration, credential administration and the audit trail.
+  `console:getMyAccess` stays where it is: the console reads it to decide what to
+  render, and it must not need a second addon wired to boot.
+  Each function carries its own `admin:*` scope; the addon deliberately declares
+  no `scopes` on `wireAddon`, because addon scopes are required _in addition to_ a
+  function's own and an addon-level `admin` would force the umbrella grant on a
+  caller granted only `admin:users:list`.
+
+  Breaking for anyone calling these RPCs by name or granting their scopes:
+
+  - `console:getAudits`, `console:getAuditFilters`, `console:scope*` and
+    `console:credential*` are now `admin:*`.
+  - `pikku:console:audit:read` is now `admin:audit:read`,
+    `pikku:console:scopes:{read,manage}` are now `admin:scopes:{read,manage}`, and
+    `pikku:console:credentials:{read,manage}` are now
+    `admin:credentials:{read,manage}`.
+  - The `admin` scope tree gains `credentials:{read,manage}`, `scopes` and
+    `audit`. A bare `admin` grant now also covers reading the audit trail and
+    administering roles; a role that means to exclude those must spell out the
+    leaves it wants.
+  - `scaffold.console` gates the console addon on `pikku:console` rather than
+    `admin`, since `admin` is now the other addon's tree, and `@pikku/console`'s
+    own `AuthGate` requires the same root (`isAdmin` on the auth context is now
+    `canUseConsole`). Grant `pikku:console` to whoever should reach the console —
+    the two are separate decisions, and a host may hand someone the console
+    without handing them the user directory.
+
+  `credentialListUsers` now reports the credentials each user actually holds
+  rather than a matrix against the declared set, which is what removed its last
+  dependency on the on-disk metadata.
+
+  The `scaffold.userAdmin` generator is superseded by the addon and left in place
+  for hosts still on it. Its copy of the `admin` scope tree — and the one exported
+  as `ADMIN_SCOPE_TREE` from `@pikku/better-auth` — stay byte-identical to the
+  addon's, as pikku still requires of a shared scope root.
+
+- 266e3bc: One door per name: `@pikku/core/ecosystem/*` and the package root are gone
+
+  `@pikku/core` published every module twice. `ecosystem/http` re-exported
+  `./http`, `ecosystem/services` re-exported `./services`, and a name was
+  reachable through either — so every addition had to be made in two places, and a
+  consumer's import said nothing about what it actually used. The package root was
+  the same problem at a larger scale: a single barrel of 206 names that no bundler
+  could take apart, and the one specifier that revealed nothing at all.
+
+  Both are deleted. Every name now lives on the subpath that owns it, and every
+  import carries that subpath — `@pikku/core/http`, `@pikku/core/services`,
+  `@pikku/core/errors`, `@pikku/core/types`.
+
+  Deleting the facades meant the raw subpaths had to become a superset of them,
+  which they were not: the facade tree had accumulated 25 names with no raw home
+  and about 26 more filed under a different area than the module they came from.
+  Those names moved to the area that owns them, and three areas were published as
+  new entry points rather than left on a root that is going away — `./types` (the
+  shared type surface, the largest single destination), `./state` and
+  `./classification`.
+
+  `./classification` is one door onto one subject: what a value is and how it must
+  be handled. Its three halves would each have been an entry point — the brands
+  and manifest types, the stored-form helpers (`hashToken`, `unsafeAsSealed` and
+  friends), and `SecretValue` — split by whether a name happens to be a type or a
+  value, which is the same defect as the facades. The duration and versioned-id
+  helpers went to `./utils`, which already published, and `PikkuRequest` went to
+  `./function`: it is the transport-agnostic request base, not an HTTP one — HTTP
+  has `PikkuHTTPAbstractRequest`, and the only thing outside core that extends
+  `PikkuRequest` is Azure's timer request.
+
+  `./types` inherited the root barrel's habit before it inherited its contents, so
+  the names with an owner elsewhere were moved off it. The middleware types and the
+  five middleware factories — `pikkuMiddleware`, `pikkuMiddlewareFactory`,
+  `pikkuChannelMiddleware`, `pikkuChannelMiddlewareFactory` and
+  `pikkuAgentMiddleware`, runtime values on a types entry point — are now
+  `@pikku/core/middleware`; the function meta types are `@pikku/core/function`;
+  `SerializedError` is `@pikku/core/errors`; and the generic TypeScript helpers
+  (`MakeRequired`, `PickRequired`, `PickOptional`, `RequireAtLeastOne`,
+  `JSONPrimitive`, `JSONValue`) are `@pikku/core/utils`. What is left on `./types`
+  is the vocabulary the wirings share, which no single module owns.
+
+  `pikku` was itself a root barrel — `export * from '@pikku/core'` — and
+  now exports only the services it bundles.
+
+  One module survives at the old specifier, and only for the bootstrap:
+  `packages/cli` is generated by the _published_ CLI pinned in its `build.sh`, and
+  that CLI still writes a bare `@pikku/core` into the files it generates for the
+  CLI itself. `bootstrap-compat/root.ts` carries the eight types it names, a test
+  in core fails if that list grows, and it goes when the pin moves to a CLI
+  released from this branch. The adapter names the pinned CLI reaches for —
+  `pikkuState` and `CreateWireServices` — are rewritten to `@pikku/core/state` and
+  `@pikku/core/types` by the same `build.sh` patch pass, so no second shim is
+  needed for them.
+
+  A guard test keeps the root shut: it parses imports and rejects a bare
+  `@pikku/core` rather than grepping for it, because several tests hold a user's
+  file as a template literal, where `import … from '@pikku/core'` is fixture text
+  rather than an import this repo makes.
+
+  An agent scaffold a project generated under an older CLI is refreshed rather
+  than left to fail: `pikku all` already deleted one importing an entry point
+  `@pikku/core` no longer publishes, and the `#pikku` hub joins that list.
+  Without it a project that scaffolds the agent endpoint but
+  declares no agents keeps the old file forever — the generator that would rewrite
+  it only runs when agents exist, and the file being present is what stops it
+  being regenerated as missing.
+
+  `pikku new addon` also wrote a tsconfig `paths` map naming only the deleted hub.
+  An addon's `imports` map points into `dist`, so `paths` is what resolves
+  `#pikku/<leaf>` for the addon's own source build — it now names the two leaf
+  patterns, in both the addon and its test harness.
+
+- 786dae5: Bump every dependency whose latest release is a major across the monorepo, and
+  port the code the majors broke: `cookie` 2's `parseCookie`/`stringifySetCookie`
+  API in `@pikku/core` and the three runtime HTTP adapters, and assistant-ui 0.15's
+  store client in `@pikku/assistant-ui`.
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+- 892100b: Generate the meta service under `services/` and reach it through `#pikku`
+
+  `pikku-meta-service.gen.ts` was written loose at the root of the output dir
+  while every wiring type sat in its own subdir, and both call sites that consume
+  it reached past the `#pikku` imports map to a relative path into the generated
+  tree — `e2e/src/services.ts` with a static import, the `functions` template with
+  a dynamic `await import('../.pikku/pikku-meta-service.gen.js')`. It now lands at
+  `services/pikku-meta-service.gen.ts` and is imported as
+  `#pikku/services/pikku-meta-service.gen.js`, matching the `<dir>/pikku-<x>.gen.js`
+  shape the rest of the generated tree already uses. Bootstrap prunes the old root
+  file, since a project generated before the move would otherwise keep compiling
+  it. The console addon's "metaService is required" error names the new path.
+
+  The `functions` template had no `imports` map at all, so its generated-code
+  imports were all relative; it now declares `"#pikku/*": "./.pikku/*"` and its
+  `services.ts` goes through it.
+
+- f4cd54e: Find the package manager at the workspace root, and stop the impersonation banner covering the page
+
+  Installing an addon from the console detected the package manager by looking
+  only in the pikku root — the directory holding `pikku.config.json`. In a
+  monorepo that is a package directory carrying neither a `packageManager` field
+  nor a lockfile, so detection fell through to its `npm` default and ran
+  `npm install` inside a yarn workspace, which dies on
+  `Unsupported URL Type "workspace:"`. Detection now walks up to the workspace
+  root, where both signals actually live, and a declared manager anywhere up the
+  tree outranks a lockfile below it — a stray `package-lock.json` in a
+  sub-package no longer overrides the root's declared yarn.
+
+  The impersonation banner is fixed to the top of the window but reserved no
+  space, so it painted over the top ~34px of every page and swallowed clicks on
+  anything the page put there. It now publishes its measured height as
+  `--app-banner-inset-top` and the app layout pads by it, following the same
+  idiom the nav dock already uses for the edges it takes.
+
+- 266e3bc: `#pikku` is a namespace, not a module: one subpath per wiring
+
+  The bare `#pikku` specifier resolved to `.pikku/pikku-types.gen.ts`, a hub that
+  re-exported all twelve wiring leaves with `export *` — undoing the split the
+  leaves exist for, each of which still says so in its own generated header
+  ("HTTP-specific type definitions for tree-shaking optimization"). Reaching that
+  hub put 33 distinct `@pikku/core` subpaths into the module graph, and neither
+  consumer could drop them again: bundlers keep `export *` chains because the app
+  declares no `sideEffects`, and Node and tsx do not tree-shake at all, so an app
+  with no queues still executed `@pikku/core/queue` at boot.
+
+  The hub is gone. An app now imports the leaf the name belongs to —
+  `#pikku/function`, `#pikku/http`, `#pikku/workflow` — and a project's `imports`
+  map declares two patterns, because both resolvers pick the more specific one:
+
+  ```json
+  "#pikku/*.js": "./.pikku/*.ts",
+  "#pikku/*": "./.pikku/*/index.ts"
+  ```
+
+  A source tree names the `.ts` on both. Webpack, esbuild and Bun all rewrite a
+  `.js` specifier to the `.ts` beside it for a relative import but not for an
+  imports-map target, so a `.js` target there resolves to a file that does not
+  exist. The two places that keep `.js` are the ones where it is the real file: a
+  published addon, whose map points into `dist`, and a project that imports a
+  declaration-only generated file such as `pikku-rpc-wirings-map.gen.d.ts`, where
+  naming the `.js` lets the type resolver's own mapping reach the `.d.ts`.
+
+  `pikku` generates the leaf indexes and removes the hub, and `pikku validate`
+  reports a barrel import as an error. The split also turns the addon boundary
+  from advice into a rule: an addon never generates the wiring leaves, so
+  `#pikku/http` fails at the specifier rather than yielding "no exported member"
+  from a hub that quietly dropped the re-export.
+
+- 456c88b: Scenario runs are now kept, and the console reads them back.
+
+  Every `pikku scenario run` files a record: the run's outcome and counts, each
+  scenario's result with the prose of the steps as they read at the time, and the
+  screenshots and video it left behind. The steps are snapshotted rather than
+  referenced, so a run still reads correctly after the scenario that produced it
+  has been rewritten.
+
+  `ScenarioRunStore` is the interface, `FileScenarioRunStore` the on-disk
+  implementation the CLI writes to — one folder per run, `run.json` beside its
+  artifacts, under `<outDir>/scenario-runs`. It is a store in its own right rather
+  than a corner of the workflow service, so a hosted console can keep the same
+  records in a database and its footage in object storage without the functions
+  that read them knowing the difference.
+
+  The console's Scenarios page gained a Runs view (`?view=runs`) listing past
+  runs, with a run's results, its step ladder, failures, and the screenshots and
+  video inline. Reading and deleting runs are gated by the new
+  `pikku:console:scenarios:read` and `pikku:console:scenarios:manage` scopes.
+
+- 727671b: Serve the public surface to the console. `console:getSurface` reads the doc
+  shipped inside `@pikku/cli` and the usage the inspector measured into the
+  project's outDir, each half optional, and `/surface` renders it from
+  `useSurface()`. Both files are read on demand when the page asks, never at boot.
+- 727671b: `wireAddon` and `wireRemoteAddon` move from `#pikku/function` to `#pikku/addon`.
+
+  Installing an addon and authoring one are the same concept from opposite ends,
+  so they are one import: an application's `#pikku/addon` carries the two install
+  functions, an addon package's carries `pikkuAddonConfig`, `pikkuAddonServices`,
+  `pikkuAddonWireServices` and `AddonBaseServices`.
+
+  Two generation fixes came with it:
+
+  - `CredentialsMap` is generated as a type alias rather than an interface. An
+    interface has no implicit index signature, so it was never assignable to the
+    `Record<string, unknown>` that `GetCredential` is constrained by, and every
+    generated project reported two errors on its own function types.
+  - An unresolved `SingletonServices` type is now `PKU724` instead of a services
+    map with no entries in it. Written out, the empty map made every service
+    optional and the real failure resurfaced as unrelated "possibly undefined"
+    errors in files nobody had touched.
+
+- Updated dependencies [7722ceb]
+- Updated dependencies [375c1ff]
+- Updated dependencies [20d8a39]
+- Updated dependencies [02a70cd]
+- Updated dependencies [aeef159]
+- Updated dependencies [a281de6]
+- Updated dependencies [266e3bc]
+- Updated dependencies [02a70cd]
+- Updated dependencies [786dae5]
+- Updated dependencies [6eef0a0]
+- Updated dependencies [20d8a39]
+- Updated dependencies [3561d67]
+- Updated dependencies [a91c433]
+- Updated dependencies [02a70cd]
+- Updated dependencies [9537f74]
+- Updated dependencies [2b57ca8]
+- Updated dependencies [266e3bc]
+- Updated dependencies [9fce0f1]
+- Updated dependencies [83683a0]
+- Updated dependencies [456c88b]
+- Updated dependencies [456c88b]
+- Updated dependencies [c127273]
+  - @pikku/core@0.12.85
+  - @pikku/better-auth@0.12.26
+  - @pikku/knowledge@0.12.7
+
 ## 0.12.42
 
 ### Patch Changes

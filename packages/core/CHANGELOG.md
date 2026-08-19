@@ -1,3 +1,401 @@
+## 0.12.85
+
+### Patch Changes
+
+- 7722ceb: Split the addon leaf so an application cannot shadow a linked addon's own
+
+  An addon authored its services through `#pikku/addon`, and so did an
+  application installing one. Node keeps those apart — `#pikku/*` is a
+  package-private subpath import, resolved against the addon's own
+  `package.json` — but tsconfig `paths` are global to a tsx process, and every
+  runtime template maps `#pikku/*` onto a sibling package. A linked addon's
+  `#pikku/addon` was resolved against the _application's_ leaf, which holds the
+  install half and none of the authoring exports, and every template failed to
+  boot with `does not provide an export named 'pikkuAddonServices'`.
+
+  The authoring half now sits at `#pikku/addon/setup`. An application generates a
+  flat `.pikku/<leaf>`, so there is nothing there for that specifier to match and
+  the resolver falls back to Node, which reads the addon's own imports. Addons
+  declaring themselves import `pikkuAddonConfig`, `pikkuAddonServices` and
+  `pikkuAddonWireServices` from `#pikku/addon/setup`; `wireAddon` and
+  `wireRemoteAddon` stay at `#pikku/addon`.
+
+  `wireAddon` and `wireRemoteAddon` also move off `@pikku/core/rpc` onto
+  `@pikku/core/addon`. Being reached over rpc is how an addon is called rather
+  than what it is, and it put the whole addon surface behind the rpc subpath for
+  consumers that only wanted to install one.
+
+- 375c1ff: A `ref()`-wired addon route now reads the function's schemas, services and permissions from the addon's package rather than the consuming app's.
+
+  Resolving a namespaced target by namespace re-pointed the function's config and metadata into the addon's package state but left every other package-scoped lookup on the wire's package. The addon registers `SignDataInput` under its own package, so the runner looked it up under `main`, and the route answered 500 for every input it was given — along with the addon's package singleton services, which is what left its credentials unreachable.
+
+  The wiring itself is still the consuming app's, so middleware, addon tags, addon auth and addon scopes keep resolving against the app: those read the declarations the app made about the addon, and moving them would put back the unrun credential and session middleware that resolving by namespace was introduced to fix.
+
+- 02a70cd: fix(core): a scenario assertion is attempted once, not six times
+
+  `given`, `when` and `then` already opted out of the workflow-wide retry
+  default, with a comment saying why: retrying a failed assertion is the wrong
+  behaviour for a test primitive. The `expect*` family did not. It passed its
+  options straight through to the step engine and inherited
+  `DEFAULT_STEP_RETRIES`, so every `expectError`, `expectService`,
+  `expectEventually` and `expectScore` got six attempts.
+
+  What that buys is not resilience:
+
+  - `expectError` re-invokes the RPC it is asserting against, five more times,
+    after it has already done the thing it was not supposed to do.
+  - `expectEventually` restarts a poll that has already spent its own `within`
+    deadline, so a 30s bound is really 3 minutes.
+  - `expectScore` re-runs an LLM judge until a grade lands inside the band. That
+    is the one that found this: a judge scored a deliberately useless answer a
+    full 1, and the scenario went green on the next attempt.
+
+  An assertion now defaults to `retries: 0` like every other scenario step, and
+  a caller that genuinely wants attempts still asks for them. The unit tests for
+  these helpers had each been passing `retries: 0` by hand to make a failure fail
+  promptly; those workarounds are gone.
+
+  A scenario that was only passing because an assertion was retried will now
+  report it.
+
+- aeef159: fix(cli): let commands that seed a project run outside one
+
+  Every `pikku` invocation loaded `pikku.config.json` before the command was
+  dispatched — `createConfig` in the CLI's service factory called
+  `getPikkuCLIConfig` unconditionally. In a directory that is not a Pikku project
+  the upward search stops at the repo root and throws `Config file
+pikku.config.json not found`, so the command never ran. That is right for
+  commands that read a project, and wrong for `pikku skills install`, whose entire
+  job is to write agent skills into a repo that has no Pikku config yet. The
+  command needed the thing it exists to precede.
+
+  `executeCLI` now passes the resolved command path to `createConfig`, and the CLI
+  treats `skills` as config-free: it still uses a project config when one is there,
+  so behaviour inside a project is unchanged, and falls back to an empty config
+  when there is none. Commands that read a project are untouched and still refuse
+  to run without one.
+
+  Also stops a lie in the failure path. A config that was found but could not be
+  loaded — a missing field tripping the resolver, malformed JSON — was reported as
+  `Config file not found: <path>`, naming a file that was sitting right there and
+  sending the reader to look for it. It now reads `Failed to load config file`.
+
+- a281de6: A CLI option's type now drives how it is parsed, and it comes from the command function's input schema rather than a second hand-written declaration.
+
+  `CLIOption` gains `type?: 'string' | 'number' | 'boolean' | 'string[]'` (replacing the never-honoured `array` flag). Declared, it wins over whatever the schema says; left unset, the parser reads the type off the command function's input schema — the same schema the function is validated against — falling back to `default` and then to `'string'`. A `'string[]'` option consumes one token and splits it on commas; every other non-boolean option consumes the next token verbatim, so values that begin with `-` (base64url tokens, negative numbers, dash-leading name patterns) parse correctly. A boolean option is a flag: it consumes the next token only when that token is an explicit literal (`true`/`false`/`1`/`0`/`yes`/`no`), so `--watch false` still turns a default-on flag off instead of leaving `false` behind as a positional.
+
+  Because the schema is now what types an option, `pikku serve --console --port 4077` no longer reads `--port` as the value of `--console`, and a numeric option arrives as a number instead of a string. An explicit `type` is mostly needed for options that belong to no function input — the `pikku all` filters, which the config factory reads straight off the CLI data, are declared `string[]`, and the CLI's ad-hoc `parseCommaSeparated` normalisation is gone.
+
+  An array option takes either one comma list or the flag repeated. It never consumes more than one token, because `--tags alpha beta` cannot be told apart from an option followed by a positional; the stray token is reported as an unexpected argument rather than dropped.
+
+- 266e3bc: One door per name: `@pikku/core/ecosystem/*` and the package root are gone
+
+  `@pikku/core` published every module twice. `ecosystem/http` re-exported
+  `./http`, `ecosystem/services` re-exported `./services`, and a name was
+  reachable through either — so every addition had to be made in two places, and a
+  consumer's import said nothing about what it actually used. The package root was
+  the same problem at a larger scale: a single barrel of 206 names that no bundler
+  could take apart, and the one specifier that revealed nothing at all.
+
+  Both are deleted. Every name now lives on the subpath that owns it, and every
+  import carries that subpath — `@pikku/core/http`, `@pikku/core/services`,
+  `@pikku/core/errors`, `@pikku/core/types`.
+
+  Deleting the facades meant the raw subpaths had to become a superset of them,
+  which they were not: the facade tree had accumulated 25 names with no raw home
+  and about 26 more filed under a different area than the module they came from.
+  Those names moved to the area that owns them, and three areas were published as
+  new entry points rather than left on a root that is going away — `./types` (the
+  shared type surface, the largest single destination), `./state` and
+  `./classification`.
+
+  `./classification` is one door onto one subject: what a value is and how it must
+  be handled. Its three halves would each have been an entry point — the brands
+  and manifest types, the stored-form helpers (`hashToken`, `unsafeAsSealed` and
+  friends), and `SecretValue` — split by whether a name happens to be a type or a
+  value, which is the same defect as the facades. The duration and versioned-id
+  helpers went to `./utils`, which already published, and `PikkuRequest` went to
+  `./function`: it is the transport-agnostic request base, not an HTTP one — HTTP
+  has `PikkuHTTPAbstractRequest`, and the only thing outside core that extends
+  `PikkuRequest` is Azure's timer request.
+
+  `./types` inherited the root barrel's habit before it inherited its contents, so
+  the names with an owner elsewhere were moved off it. The middleware types and the
+  five middleware factories — `pikkuMiddleware`, `pikkuMiddlewareFactory`,
+  `pikkuChannelMiddleware`, `pikkuChannelMiddlewareFactory` and
+  `pikkuAgentMiddleware`, runtime values on a types entry point — are now
+  `@pikku/core/middleware`; the function meta types are `@pikku/core/function`;
+  `SerializedError` is `@pikku/core/errors`; and the generic TypeScript helpers
+  (`MakeRequired`, `PickRequired`, `PickOptional`, `RequireAtLeastOne`,
+  `JSONPrimitive`, `JSONValue`) are `@pikku/core/utils`. What is left on `./types`
+  is the vocabulary the wirings share, which no single module owns.
+
+  `pikku` was itself a root barrel — `export * from '@pikku/core'` — and
+  now exports only the services it bundles.
+
+  One module survives at the old specifier, and only for the bootstrap:
+  `packages/cli` is generated by the _published_ CLI pinned in its `build.sh`, and
+  that CLI still writes a bare `@pikku/core` into the files it generates for the
+  CLI itself. `bootstrap-compat/root.ts` carries the eight types it names, a test
+  in core fails if that list grows, and it goes when the pin moves to a CLI
+  released from this branch. The adapter names the pinned CLI reaches for —
+  `pikkuState` and `CreateWireServices` — are rewritten to `@pikku/core/state` and
+  `@pikku/core/types` by the same `build.sh` patch pass, so no second shim is
+  needed for them.
+
+  A guard test keeps the root shut: it parses imports and rejects a bare
+  `@pikku/core` rather than grepping for it, because several tests hold a user's
+  file as a template literal, where `import … from '@pikku/core'` is fixture text
+  rather than an import this repo makes.
+
+  An agent scaffold a project generated under an older CLI is refreshed rather
+  than left to fail: `pikku all` already deleted one importing an entry point
+  `@pikku/core` no longer publishes, and the `#pikku` hub joins that list.
+  Without it a project that scaffolds the agent endpoint but
+  declares no agents keeps the old file forever — the generator that would rewrite
+  it only runs when agents exist, and the file being present is what stops it
+  being regenerated as missing.
+
+  `pikku new addon` also wrote a tsconfig `paths` map naming only the deleted hub.
+  An addon's `imports` map points into `dist`, so `paths` is what resolves
+  `#pikku/<leaf>` for the addon's own source build — it now names the two leaf
+  patterns, in both the addon and its test harness.
+
+- 02a70cd: fix(core): a denied tool call still reads as denied after a reload
+
+  The result stored for a denied approval was a bare sentence written for the
+  model. A client has no way to tell that apart from a tool that succeeded and
+  returned prose, so it could only show the denial from what it had just done
+  itself — the optimistic `{ approved: false }` it writes when the deny button is
+  clicked. The moment the thread re-rendered from storage, that local knowledge
+  was gone and the denied call came back as a successful one, green badge and all.
+  In a delegated run, where the parent keeps streaming after the denial, this was
+  the only state a user ever saw.
+
+  The stored and streamed result now carries `approved: false` alongside the same
+  sentence, so the denial survives the round trip and both readers get what they
+  need. The action was never actually performed in either case; only the reporting
+  of it was wrong.
+
+- 786dae5: Bump every dependency whose latest release is a major across the monorepo, and
+  port the code the majors broke: `cookie` 2's `parseCookie`/`stringifySetCookie`
+  API in `@pikku/core` and the three runtime HTTP adapters, and assistant-ui 0.15's
+  store client in `@pikku/assistant-ui`.
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+- 3561d67: feat(graph): per-item `forEach` fanout for declarative workflow graphs
+
+  A graph node can now run once per element of an upstream array:
+
+  ```ts
+  postVideo: {
+    forEach: 'getMyVideo',              // or (ref) => ref('getMyVideo', 'rows')
+    mode: 'sequential',                 // optional, defaults to 'parallel'
+    input: (ref, template, $item) => ({ url: $item('URL VIDEO') }),
+  }
+  ```
+
+  Each element runs as its own step instance (`postVideo[0]`, `postVideo[1]`, …)
+  and the node's result is the ordered array of per-item results, so a fanned node
+  chains straight into another `forEach`. Downstream nodes wait for every item. A
+  non-array source fails the run loudly instead of coercing.
+
+  The change is additive: `forEach` and `mode` are new optional node fields, and
+  `$item` is appended after `template` so existing `input: (ref) => …` and
+  `input: (ref, template) => …` nodes are unchanged.
+
+- a91c433: HTTP routes wired with `ref('ns:fn')` now record the addon function id as their own `pikkuFuncId`, the same way the CLI and channel wirings already do, instead of minting a per-route wrapper function and linking it back through `refTarget`. The `refTarget` field is gone from `HTTPWiringMeta`, and the runtime resolves a namespaced route function against the addon package's own metadata.
+- 02a70cd: fix(core): a judge grades the run, not just the sentence it ended with
+
+  The prompt built for an LLM judge carried the user's question, the agent's
+  answer and, for a reference-based judge, the answer key — but never the tool
+  calls, although `ScorerInput` has always carried them and heuristic scorers
+  read them.
+
+  An answer produced from a tool and the same sentence invented by the model are
+  identical in the output alone; they differ only in what the run did to get
+  there. Asked to grade a todo agent that had just listed the user's todos
+  correctly, a judge given only the answer called it "a plausible-looking list"
+  that "offers no real access to your actual list, making it effectively a guess",
+  and scored 0.2 what it scored 1 on other runs with near-identical answers. It
+  was applying its rubric correctly to the evidence it had; the evidence was the
+  problem.
+
+  The default prompt now names the tools the run called, and marks the ones that
+  failed. `pikkuAgentJudge` takes a `toolCalls` option for how much of the
+  trajectory to disclose:
+
+  - `names` (default) — which tools ran and which failed. No arguments, no
+    results, no error text. Enough to settle whether the run had real access,
+    which is what the 0.2 was doubting.
+  - `full` — arguments and results too, truncated so one fat result cannot crowd
+    the answer out of the judge's context. For a judge that grades the answer
+    _against_ what the tool returned.
+  - `off` — no trajectory at all.
+
+  A judge is a third-party model, and a tool's arguments and results are the most
+  sensitive thing a run touches, so the default discloses the least that fixes
+  the bug. Output middleware still has its pass first either way: a scorer sees
+  the post-middleware snapshot, so anything a `modifyOutput` redacted is already
+  gone before `toolCalls` is consulted.
+
+  A run that called nothing gets no section rather than an empty one, and a
+  scorer supplying its own `prompt` is unaffected. `ScorerJudgeConfig.toolCalls`
+  is required — `pikkuAgentJudge` resolves the default, so only code building
+  that type by hand is affected.
+
+- 9537f74: Every definer an app calls is now reachable through its `#pikku` leaf.
+
+  `defineCredential` had no generated door, so a credential file had to name
+  `@pikku/core/credential` directly — the one import in an otherwise
+  `#pikku`-only wiring that reached past the leaf. It is now generated into the
+  project's own `.pikku` alongside `defineSecret`, `defineVariable` and
+  `defineScope`, and `cors` joins the names the `#pikku/http` leaf carries.
+
+  A leaf index re-exports every entry file the leaf has rather than only the
+  first, so the definer and the typed service map are both reachable through
+  `#pikku/<leaf>` instead of one of them being left behind a relative path into
+  `.pikku`.
+
+  The definition types are also generated before the leaf indexes are written,
+  not after. They read only `config`, so nothing held them back to the inspected
+  pass, and running them there left the first codegen after an upgrade with a
+  `#pikku/credentials` that resolved but was missing `defineCredential`.
+
+- 2b57ca8: A persona can name the `app` they sign into, and a browser run takes a url per app (`--app-url <app>=<url>`, or `appUrls` on the environment). Each actor's browser context navigates against its own app's base, so a product that is more than one frontend can be proved in one run — including a scenario that crosses from one app to the other. A run whose personas name an app nobody gave a url for is refused rather than browsing the wrong app's pages.
+- 266e3bc: `#pikku` is a namespace, not a module: one subpath per wiring
+
+  The bare `#pikku` specifier resolved to `.pikku/pikku-types.gen.ts`, a hub that
+  re-exported all twelve wiring leaves with `export *` — undoing the split the
+  leaves exist for, each of which still says so in its own generated header
+  ("HTTP-specific type definitions for tree-shaking optimization"). Reaching that
+  hub put 33 distinct `@pikku/core` subpaths into the module graph, and neither
+  consumer could drop them again: bundlers keep `export *` chains because the app
+  declares no `sideEffects`, and Node and tsx do not tree-shake at all, so an app
+  with no queues still executed `@pikku/core/queue` at boot.
+
+  The hub is gone. An app now imports the leaf the name belongs to —
+  `#pikku/function`, `#pikku/http`, `#pikku/workflow` — and a project's `imports`
+  map declares two patterns, because both resolvers pick the more specific one:
+
+  ```json
+  "#pikku/*.js": "./.pikku/*.ts",
+  "#pikku/*": "./.pikku/*/index.ts"
+  ```
+
+  A source tree names the `.ts` on both. Webpack, esbuild and Bun all rewrite a
+  `.js` specifier to the `.ts` beside it for a relative import but not for an
+  imports-map target, so a `.js` target there resolves to a file that does not
+  exist. The two places that keep `.js` are the ones where it is the real file: a
+  published addon, whose map points into `dist`, and a project that imports a
+  declaration-only generated file such as `pikku-rpc-wirings-map.gen.d.ts`, where
+  naming the `.js` lets the type resolver's own mapping reach the `.d.ts`.
+
+  `pikku` generates the leaf indexes and removes the hub, and `pikku validate`
+  reports a barrel import as an error. The split also turns the addon boundary
+  from advice into a rule: an addon never generates the wiring leaves, so
+  `#pikku/http` fails at the specifier rather than yielding "no exported member"
+  from a hub that quietly dropped the re-export.
+
+- 9fce0f1: Give a persona step its actor instead of making it unwrap one
+
+  `requireActor(scenarioStep)` was the first line of every step that acts as
+  somebody, and it existed because the actor lived on the `scenarioStep` wire as
+  an optional property. A property of a wire member is either optional for every
+  binding or required for all of them, so the only expressible answer was
+  "optional", and each step paid for it with a guard.
+
+  The actor is now its own wire member, `wire.actor`, injected by the runner. Wire
+  members can be required per binding, so a step declares whether it runs as
+  somebody and the type follows:
+
+  ```typescript
+  export const buysAnApple = pikkuScenarioStep<
+    { qty: number },
+    { orderId: string }
+  >({
+    name: 'buysAnApple',
+    actor: true,
+    default: async (_services, { qty }, { actor }) =>
+      actor.invoke('placeOrder', { qty }),
+  })
+  ```
+
+  A `browser` binding implies it — a window is opened as somebody, so every
+  binding of a step that has one gets the actor too. A step that declares neither
+  has no `actor` on its wire at all, rather than an optional one: a pure assertion
+  over what an earlier step returned has nobody to be, and `attemptsSignIn`
+  deliberately posts credentials instead of reusing an actor's established
+  session. That distinction is why the requirement is declared per step rather
+  than inferred from the step being a persona step — "persona step ⇒ has an actor"
+  is false, and a guard built on it rejects the 61 steps in the e2e suite that
+  correctly run without one.
+
+  Dispatching a step that declared an actor without `{ actor: actors.x }` now
+  fails before the body runs, with `ScenarioActorRequired` naming the step.
+  `ScenarioBrowserActorRequired` is replaced by it, and `requireActor` is gone
+  from `@pikku/core/scenario` and the generated `#pikku/scenario` barrel.
+
+- 83683a0: Give the scenario test surface its own `#pikku/scenario` entry
+
+  Scenario files are app code, so they belong inside the generated alias — but
+  they are a distinct surface from wiring, and folding ~11 test-only names into
+  the main hub would crowd it for every app that never writes a scenario. They
+  get their own sub-entry instead.
+
+  The generated scenario barrel now re-exports the helpers a step file reaches
+  for — `requireScenarioEnv`, `createCookieJar`, `pollUntil`,
+  `createScenarioRunner`, `postScenarioJson`, `readScenarioHttpResponse` and the
+  types beside them — so a scenario file has one specifier to import from and
+  never has to know whether a helper is typed against this project or shipped by
+  the framework. The names come from the `@pikku/core/scenario` and
+  `@pikku/core/persona` subpaths that own them.
+
+- 456c88b: Scenario runs are now kept, and the console reads them back.
+
+  Every `pikku scenario run` files a record: the run's outcome and counts, each
+  scenario's result with the prose of the steps as they read at the time, and the
+  screenshots and video it left behind. The steps are snapshotted rather than
+  referenced, so a run still reads correctly after the scenario that produced it
+  has been rewritten.
+
+  `ScenarioRunStore` is the interface, `FileScenarioRunStore` the on-disk
+  implementation the CLI writes to — one folder per run, `run.json` beside its
+  artifacts, under `<outDir>/scenario-runs`. It is a store in its own right rather
+  than a corner of the workflow service, so a hosted console can keep the same
+  records in a database and its footage in object storage without the functions
+  that read them knowing the difference.
+
+  The console's Scenarios page gained a Runs view (`?view=runs`) listing past
+  runs, with a run's results, its step ladder, failures, and the screenshots and
+  video inline. Reading and deleting runs are gated by the new
+  `pikku:console:scenarios:read` and `pikku:console:scenarios:manage` scopes.
+
+- 456c88b: Scenario runs now record video by default and keep the footage that is worth watching.
+
+  Playwright decides recording when a window opens, which is before anyone knows
+  whether the scenario passed — so `--video failed` (the new default) records every
+  scenario and discards the passes. `--video all` keeps everything, `--video off`
+  records nothing. Recording costs ~0.1-0.5s per actor context, nearly all of it
+  finalising the file on close; only kept videos are encoded, so a green run pays
+  no encoding at all.
+
+  Kept recordings are filed under `<run>/<scenario>/<actor>` alongside that
+  scenario's screenshots, rather than landing in one flat folder under
+  Playwright's own generated filenames.
+
+  Encoding is now h264/mp4 rather than VP9/webm: measured on scenario footage it
+  runs ~11x faster and lands ~30% smaller, and mp4 plays in every browser.
+
+  `--screenshots` is unchanged and still opt-in.
+
+- c127273: fix: type `wire.getCredential` from the generated `CredentialsMap`
+
+  `wire.getCredential('slack')` now resolves its value type from the project's
+  credentials codegen, the way `services.credentials.get('slack')` already did.
+  `PikkuWire` takes a `TypedCredentials` parameter and the generated function
+  types bind `CredentialsMap` into it; a name the map does not know stays callable
+  with an explicit type argument.
+
 ## 0.12.84
 
 ### Patch Changes

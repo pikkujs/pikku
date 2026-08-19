@@ -1,6 +1,6 @@
 {
   "name": "@pikku/mantine",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "description": "Mantine components with i18n-tightened types for Pikku — zero runtime added",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -30,7 +30,7 @@
   "peerDependencies": {
     "@mantine/core": "^9.2.1",
     "@mantine/hooks": "^9.2.1",
-    "@pikku/react": "^0.12.5",
+    "@pikku/react": "^0.12.6",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
   },

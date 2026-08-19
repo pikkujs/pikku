@@ -1,5 +1,11 @@
 # @pikku/knowledge
 
+## 0.12.7
+
+### Patch Changes
+
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+
 ## 0.12.6
 
 ### Patch Changes

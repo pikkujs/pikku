@@ -1,3 +1,9 @@
+## 0.12.4
+
+### Patch Changes
+
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+
 ## 0.12.3
 
 ### Patch Changes
