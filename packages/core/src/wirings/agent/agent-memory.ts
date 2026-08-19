@@ -39,6 +39,17 @@ export function isWorkingMemoryEnabled(
   return !!memoryConfig?.workingMemory && !!storage
 }
 
+/**
+ * Merges a model-emitted working memory update into the stored state.
+ *
+ * Objects merge key by key, and `null` deletes a key. Arrays are replaced
+ * wholesale — deliberately, not as a side effect of the object guard below.
+ * The full state is echoed back to the model every turn by
+ * {@link buildWorkingMemoryPrompt}, so it can always re-emit an array in full,
+ * and appending instead would duplicate every item each time it did.
+ * `buildWorkingMemoryPrompt` states this contract to the model; the two must
+ * stay in agreement.
+ */
 export function deepMergeWorkingMemory(
   existing: Record<string, unknown>,
   updates: Record<string, unknown>
@@ -51,9 +62,10 @@ export function deepMergeWorkingMemory(
     const value = updates[key]
     if (value === null) {
       delete result[key]
+    } else if (Array.isArray(value)) {
+      result[key] = value
     } else if (
       typeof value === 'object' &&
-      !Array.isArray(value) &&
       typeof result[key] === 'object' &&
       result[key] !== null &&
       !Array.isArray(result[key])
@@ -100,7 +112,9 @@ export function buildWorkingMemoryPrompt(
     'When you learn new information, output a partial JSON update in <working_memory> tags. ' +
       'Only include durable facts you have actually derived or the user has confirmed. ' +
       'Do not output templates, placeholders, or narration. ' +
-      'Only include changed fields. Leave unknown fields untouched. Set a field to null to delete it.'
+      'Only include changed fields. Leave unknown fields untouched. Set a field to null to delete it. ' +
+      'Arrays are replaced, not merged: to change one, repeat every item you want to keep alongside the new ones, ' +
+      'because any item you leave out is deleted.'
   )
 
   return parts.join('\n\n')
