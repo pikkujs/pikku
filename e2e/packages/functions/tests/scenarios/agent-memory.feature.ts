@@ -155,9 +155,9 @@ export const agentMemoryKeepsNotesWrittenBeforeHandOffScenario = pikkuScenario<
   tags: ['scenario', 'agent-protocol', 'agent-memory'],
   func: async (_services, _data, { scenario }) => {
     const thread = await scenario.given('opens a thread', 'startsAgentThread')
-    await scenario.given('takes a note without delegating', 'streamsAgent', {
+    await scenario.given('takes a note, then hands off', 'streamsAgent', {
       agent: DELEGATING_AGENT,
-      script: 'working-memory-only',
+      script: 'working-memory-then-delegate',
       message: 'remember the topic',
       threadId: thread.threadId,
       resourceId: RESOURCE_ID,

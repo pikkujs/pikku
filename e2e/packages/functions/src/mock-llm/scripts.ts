@@ -165,12 +165,21 @@ export const MOCK_LLM_SCRIPTS: Record<string, MockLlmScript> = {
     ],
   },
 
-  /** Writes to the notepad without ever handing off. */
-  'working-memory-only': {
+  /**
+   * The parent takes a note and only then hands off. The block is emitted while
+   * the parent is still undelegated, so it travels the ordinary path — the
+   * control for the case where the hand-off has already happened.
+   */
+  'working-memory-then-delegate': {
     steps: [
       {
         kind: 'text',
         text: 'Noted. <working_memory>{"topic":"vermilion-4412"}</working_memory>',
+      },
+      {
+        kind: 'tool',
+        toolName: 'deterministicSubAgent',
+        input: { message: 'handle the task', session: 'default' },
       },
     ],
   },

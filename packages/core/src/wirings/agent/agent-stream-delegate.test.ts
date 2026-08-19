@@ -162,8 +162,10 @@ const makeServices = (
     agentStorage: {
       createThread: async () => {},
       getMessages: async () => [],
-      saveMessages: async (_threadId: string, messages: any[]) => {
-        savedMessages.push(...messages)
+      saveMessages: async (threadId: string, messages: any[]) => {
+        savedMessages.push(
+          ...messages.map((message) => ({ threadId, message }))
+        )
       },
       getWorkingMemory: async () => stored,
       saveWorkingMemory: async (
@@ -246,9 +248,24 @@ describe('delegate mode and working memory', () => {
 
   test('the parent assistant text persisted stays suppressed', async () => {
     wireDelegatingPair('delegate')
-    const { fullText } = await runParent()
+    const { fullText, savedMessages } = await runParent()
 
     assert.equal(fullText, 'Planning. ')
+    const assistantText = savedMessages
+      .filter(
+        ({ threadId, message }: any) =>
+          threadId === 't1' && message.role === 'assistant'
+      )
+      .map(({ message }: any) =>
+        typeof message.content === 'string'
+          ? message.content
+          : (message.content ?? [])
+              .filter((part: any) => part.type === 'text')
+              .map((part: any) => part.text)
+              .join('')
+      )
+      .join('')
+    assert.equal(assistantText, 'Planning. ')
   })
 
   test('supervise mode streams every parent delta and collects every update', async () => {
