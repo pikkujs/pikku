@@ -1,5 +1,30 @@
 # @pikku/kysely-postgres
 
+## 0.12.21
+
+### Patch Changes
+
+- f1f7df2: the Postgres run lock is now a session advisory lock, so a long workflow body no longer parks its connection `idle in transaction`
+- 2d21628: fix(kysely): claim a workflow step atomically in every SQL dialect
+
+  The workflow engine's "atomic claim" was a read-then-write guarded by
+  `withStepLock`, and `@pikku/kysely` inherited a silent pass-through for that
+  lock — so on every dialect but Postgres and MySQL a redelivered queue job could
+  claim a step another dispatch was already running, executing a side-effecting
+  step twice.
+
+  `@pikku/kysely` now claims the step with a status-guarded `UPDATE` and reads the
+  affected-row count, which is atomic in every SQL dialect without an
+  advisory-lock primitive. Relay redispatch is enabled for all Kysely dialects as
+  a result, not just Postgres and MySQL.
+
+- Updated dependencies [9687ad1]
+- Updated dependencies [2d21628]
+- Updated dependencies [985b87b]
+- Updated dependencies [3a83f85]
+  - @pikku/core@0.12.87
+  - @pikku/kysely@0.13.19
+
 ## 0.12.20
 
 ### Patch Changes

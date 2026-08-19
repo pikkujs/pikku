@@ -1,3 +1,45 @@
+## 0.12.87
+
+### Patch Changes
+
+- 9687ad1: fix: hand agent middleware the singleton services its type promises
+
+  `PikkuAgentMiddlewareHooks` typed its `services` parameter as the project's full
+  wire `Services`, while every runtime call site has only ever passed the singleton
+  services. A middleware that destructured a wire service typechecked and silently
+  received `undefined`.
+
+  The hooks are now bounded by `CoreSingletonServices` in core, and the generated
+  `pikkuAgentMiddleware` defaults to `WiredSingletonServices` like the other
+  middleware definers. Nothing changes at runtime: agent middleware hooks a _run_,
+  and a run is not a request — it can start from a scheduler or a workflow with no
+  wire behind it. A tool the run calls is an ordinary function call and still gets
+  its own wire services through `runPikkuFunc`.
+
+- 2d21628: fix(kysely): claim a workflow step atomically in every SQL dialect
+
+  The workflow engine's "atomic claim" was a read-then-write guarded by
+  `withStepLock`, and `@pikku/kysely` inherited a silent pass-through for that
+  lock — so on every dialect but Postgres and MySQL a redelivered queue job could
+  claim a step another dispatch was already running, executing a side-effecting
+  step twice.
+
+  `@pikku/kysely` now claims the step with a status-guarded `UPDATE` and reads the
+  affected-row count, which is atomic in every SQL dialect without an
+  advisory-lock primitive. Relay redispatch is enabled for all Kysely dialects as
+  a result, not just Postgres and MySQL.
+
+- 985b87b: Follow through on the variable `required` → `optional` rename: regenerate the
+  core API report and update the inspector's `defineVariable` gating-flag test,
+  both of which #1369 left describing the deleted `required` flag.
+- 3a83f85: Stop re-exporting package internals through entry points
+
+  66 names reached consumers only because an `export *` in an entry point swept
+  them up. Each one is referenced solely inside its own package, so the star is
+  now an explicit named re-export listing what is genuinely public. The
+  declarations themselves are untouched — this narrows the entry point, not the
+  module.
+
 ## 0.12.86
 
 ### Patch Changes
