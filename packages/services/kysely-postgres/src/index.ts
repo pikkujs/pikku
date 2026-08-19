@@ -9,6 +9,7 @@ export { PgKyselyEventHubStore } from './pg-kysely-eventhub-store.js'
 export { PgEventHubService } from './pg-eventhub-service.js'
 export { PgKyselySecretService } from './pg-kysely-secret-service.js'
 export { PikkuKysely } from './pikku-kysely.js'
+export { jsonbText, jsonbValue, jsonbMerge } from './jsonb.js'
 
 export { KyselyCredentialService } from '@pikku/kysely'
 export type { KyselyPikkuDB } from '@pikku/kysely'
