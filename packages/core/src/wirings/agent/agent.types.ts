@@ -179,15 +179,6 @@ export interface AgentToolDef extends Partial<ApprovalPolicy> {
   forwardsApproval?: boolean
 }
 
-/**
- * Hooks on an agent *run*, not on a request.
- *
- * Every hook receives the singleton services only. A run is not a wire: it can
- * start from a scheduler or a workflow with no request behind it, so there are
- * no per-request services to hand a middleware. A tool call inside the run is a
- * real function call and does get its own wire services — through
- * `runPikkuFunc`, not through here.
- */
 export interface PikkuAgentMiddlewareHooks<
   State extends Record<string, unknown> = Record<string, unknown>,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,

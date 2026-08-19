@@ -145,10 +145,7 @@ const instrumentation: Record<
  *
  * They are registered sessionless with `auth: true`, so a caller still needs a
  * session: the `/rpc/:rpcName` dispatcher declines to gate, which leaves each
- * function to answer for itself, and these answer that they are not public.
- * Only `pikku dev` and `pikku serve` register them at all, so they exist on a
- * development process and nowhere else — a deployed bootstrap never imports
- * them — but that is a second line, not the first.
+ * function to answer for itself.
  */
 export const registerScenarioInstrumentation = () => {
   const meta = pikkuState(null, 'function', 'meta') as FunctionsMeta

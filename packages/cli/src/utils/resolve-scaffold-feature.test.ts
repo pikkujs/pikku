@@ -36,8 +36,6 @@ describe('resolveScaffoldFeature', () => {
   })
 
   test('says nothing about auth', () => {
-    // The scaffold flag decides whether a surface exists, never who may reach
-    // it — so nothing it resolves to may be read as an auth answer.
     for (const value of [undefined, false, true, { path: 'a/b.ts' }] as const) {
       assert.ok(
         !('auth' in resolveScaffoldFeature('rpc', value)),
