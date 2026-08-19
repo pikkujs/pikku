@@ -54,7 +54,7 @@
   position: fixed;
   inset-inline: 0;
   bottom: 0;
-  z-index: 300;
+  z-index: var(--mantine-z-index-app);
   height: calc(var(--app-card-gutter) + var(--safe-bottom));
   display: flex;
   align-items: flex-end;
