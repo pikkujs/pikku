@@ -82,10 +82,31 @@ Placeholders are `{{ ... }}`. Resolution order inside a template:
 - `{{> footer}}` — include a partial from `partials/`.
 - `{{content}}` / `{{subject}}` — only meaningful inside `partials/layout.html`
   (the rendered body and subject). `layout.html` wraps every template if present.
+- `{{{verifyUrl}}}` — the same value **unescaped**. See below.
 
 Locale strings may themselves contain variables and partial-free placeholders, e.g.
-`"subject": "{{inviterName}} invited you to join {{organizationName}}"`. These are
-resolved in the same pass, so a subject of `{{t.invitation.subject}}` expands fully.
+`"subject": "{{inviterName}} invited you to join {{organizationName}}"`. Locale files
+and `theme.json` ship alongside the templates, so they are expanded first and a subject
+of `{{t.invitation.subject}}` expands fully.
+
+## Escaping
+
+Values are HTML-escaped (`& < > " '`) on the way into `.html` output, so a URL, a
+display name or a font stack containing quotes lands inside its attribute instead of
+breaking out of it. `.subject.txt` and `.text.txt` are plain text and are never escaped.
+
+Rendering is **layered by trust**, and the layers do not leak into each other:
+
+- Partials are inlined first — a `data` value that happens to contain `{{> footer}}`
+  is not an include.
+- `theme.*` and `t.*` are template-author input: expanded next, escaped, and allowed
+  to contain further placeholders (up to 5 levels).
+- Everything else is caller data: substituted in **one pass**, escaped, and never
+  rescanned — a `data` value containing `{{...}}` renders as those literal characters.
+
+`{{content}}` and partials are template-authored markup and stay raw. For a value you
+genuinely want inserted as markup, use the explicit `{{{value}}}` form — it is opt-in,
+it bypasses escaping entirely, and it is only safe for HTML you control.
 
 ## Typed variables (per template)
 

@@ -38,8 +38,10 @@ function collectTemplateVariables(
   while (queue.length > 0) {
     const source = queue.shift()
     if (!source) continue
-    for (const match of source.matchAll(/\{\{\s*([^}]+?)\s*\}\}/g)) {
-      const key = String(match[1]).trim()
+    for (const match of source.matchAll(
+      /\{\{\{\s*([^{}]+?)\s*\}\}\}|\{\{\s*([^}]+?)\s*\}\}/g
+    )) {
+      const key = String(match[1] ?? match[2]).trim()
       if (!key) continue
       if (key.startsWith('>')) {
         const name = key.slice(1).trim()

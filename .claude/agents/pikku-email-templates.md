@@ -230,6 +230,16 @@ So `{{confirmUrl}}` and `{{email}}` in the example above become typed fields on 
 
 ---
 
+## Escaping
+
+Substituted values are HTML-escaped (`& < > " '`) in `.html` output and left raw in `.subject.txt` / `.text.txt`, which are plain text. That is what keeps a URL, a display name or a font stack containing quotes inside its attribute instead of breaking out of it.
+
+Rendering is layered by trust: partials are inlined first, then `theme.*` and `t.*` (template-author files, so they may contain further placeholders), then caller `data` in a **single pass** that is never rescanned. A `data` value containing `{{...}}` or `{{> partial}}` therefore renders as those literal characters rather than being expanded.
+
+`{{content}}` and partials are template-authored markup and stay raw. To insert a value as markup on purpose, use the explicit `{{{value}}}` form — it bypasses escaping and is only safe for HTML you control.
+
+---
+
 ## Wiring the email service
 
 After scaffolding, wire `GeneratedTemplateEmailService` into `services.ts`. This class wraps any real `EmailService` delegate and handles template rendering automatically.
