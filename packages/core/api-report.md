@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2856 observable things**: 901 exported names, plus
-1955 members on the classes and interfaces among them, reachable
+**2883 observable things**: 904 exported names, plus
+1979 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 141 | 115 | 413 |
+| `./services` | 144 | 118 | 437 |
 | `./virtual-user` | 66 | 66 | 210 |
 | `./scenario` | 45 | 45 | 133 |
 | `./workflow` | 84 | 35 | 140 |
@@ -4551,6 +4551,36 @@ export interface GroupMeta {
   count: number
   instanceIds: string[]
   isFactory: boolean
+}
+export interface InboundEmail {
+  source: string
+  messageId: string
+  receivedAt: string
+  mailbox?: string
+  from: InboundEmailAddress
+  to: InboundEmailAddress[]
+  cc?: InboundEmailAddress[]
+  replyTo?: InboundEmailAddress[]
+  subject?: string
+  sentAt?: string
+  inReplyTo?: string
+  references?: string[]
+  headers: Record<string, string>
+  text?: string
+  html?: string
+  attachments: InboundEmailAttachment[]
+}
+export interface InboundEmailAddress {
+  address: string
+  name?: string
+}
+export interface InboundEmailAttachment {
+  filename?: string
+  contentType: string
+  size: number
+  contentId?: string
+  inline: boolean
+  content: string
 }
 export class InMemoryAgentRunStateService implements AgentRunStateService {
   async createRun(run: CreateRunInput): Promise<string>

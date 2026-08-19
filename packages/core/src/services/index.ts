@@ -53,6 +53,11 @@ export type {
   SendTemplateEmailInput,
   SendTextEmailInput,
 } from './email-service.js'
+export type {
+  InboundEmail,
+  InboundEmailAddress,
+  InboundEmailAttachment,
+} from './inbound-email.js'
 export {
   renderEmail,
   type EmailAssets,
