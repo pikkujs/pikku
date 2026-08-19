@@ -11,7 +11,7 @@ export interface PgWorkflowQueueOptions extends WorkflowQueueOptions {
    * body. Its size caps concurrent runs per process; size it above the deepest
    * chain of runs that start each other inline, or a parent waiting on a child
    * deadlocks. Every worker's lock pool must point at the same database —
-   * `pg_advisory_xact_lock` is database-scoped, so pools on different databases
+   * `pg_advisory_lock` is database-scoped, so pools on different databases
    * never contend and the same run executes twice. Defaults to `db`.
    */
   lockDb?: Kysely<KyselyPikkuDB>
@@ -72,16 +72,37 @@ export class PgKyselyWorkflowService extends KyselyWorkflowService {
     return hash
   }
 
+  /**
+   * A session lock, not a transaction one: the critical section is the whole
+   * workflow body, so it may await a build, an LLM or a webhook for minutes.
+   * Under `pg_advisory_xact_lock` that left the connection `idle in
+   * transaction` for the duration — an xid Postgres cannot vacuum past, and a
+   * shape that turns one wedged run into a pool outage. `pg_advisory_lock`
+   * holds the same lock without an open transaction; the session still dies
+   * with the connection, so a crashed holder still releases.
+   *
+   * `lock_timeout` is set and reset rather than `SET LOCAL`, which only exists
+   * inside a transaction, and the reset is what stops the setting from riding
+   * the connection back into the pool.
+   */
   async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const lockId = this.hashStringToInt(`run:${id}`)
-    return this.lockDb.transaction().execute(async (trx) => {
-      if (this.lockTimeoutMs > 0) {
-        await sql
-          .raw(`SET LOCAL lock_timeout = ${this.lockTimeoutMs}`)
-          .execute(trx)
+    return this.lockDb.connection().execute(async (conn) => {
+      try {
+        if (this.lockTimeoutMs > 0) {
+          await sql.raw(`SET lock_timeout = ${this.lockTimeoutMs}`).execute(conn)
+        }
+        await sql`SELECT pg_advisory_lock(${lockId})`.execute(conn)
+        try {
+          return await fn()
+        } finally {
+          await sql`SELECT pg_advisory_unlock(${lockId})`.execute(conn)
+        }
+      } finally {
+        if (this.lockTimeoutMs > 0) {
+          await sql.raw('RESET lock_timeout').execute(conn)
+        }
       }
-      await sql`SELECT pg_advisory_xact_lock(${lockId})`.execute(trx)
-      return fn()
     })
   }
 
