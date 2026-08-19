@@ -201,8 +201,7 @@ export const todoAgent = pikkuAgent({
 ### Scaffold the HTTP surface
 
 ```bash
-pikku enable agent            # session required
-pikku enable agent --noAuth   # public
+pikku enable agent
 ```
 
 The next `pikku all` generates `agent.gen.ts` — run/stream/approve/resume

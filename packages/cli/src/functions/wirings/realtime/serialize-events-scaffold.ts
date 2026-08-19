@@ -23,11 +23,8 @@ export interface EventsGenOutput {
  * pikku-realtime skill.
  */
 export const serializeEventsScaffold = (
-  authRequired: boolean,
   leaf: (name: string) => string
 ): EventsGenOutput => {
-  const auth = authRequired ? 'true' : 'false'
-
   const schemas = `/**
  * Auto-generated realtime event schemas
  * Do not edit manually - regenerate with 'npx pikku'
@@ -77,7 +74,7 @@ export const realtimeRoutes = defineChannelRoutes({
 wireChannel({
   name: 'events',
   route: '/events',
-  auth: ${auth},
+  auth: false,
   onMessageWiring: {
     action: realtimeRoutes,
   },
@@ -105,7 +102,7 @@ wireHTTP({
   method: 'get',
   route: '/events/:topic',
   func: realtimeEventStream,
-  auth: ${auth},
+  auth: false,
   sse: true,
   tags: ['pikku:realtime', 'sse'],
 })

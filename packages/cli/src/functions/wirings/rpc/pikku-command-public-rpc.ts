@@ -4,7 +4,6 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializePublicRPC } from './serialize-public-rpc.js'
-import { resolveScaffoldFeature } from '../../../utils/resolve-scaffold-feature.js'
 import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
 
 export const pikkuPublicRPC = pikkuSessionlessFunc<void, boolean>({
@@ -18,7 +17,6 @@ export const pikkuPublicRPC = pikkuSessionlessFunc<void, boolean>({
         getLeafImportPath(config.publicRpcFile, name, config)
       const { schemas, functions } = serializePublicRPC(
         leaf,
-        resolveScaffoldFeature('rpc', config.scaffold.rpc).auth,
         config.globalHTTPPrefix || ''
       )
       await writeFileInDir(logger, config.publicRpcSchemasFile, schemas)

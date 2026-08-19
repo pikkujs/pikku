@@ -75,9 +75,11 @@ The `POST /rpc/:rpcName` endpoint that dispatches every `expose: true` function
 is **generated, not hand-written**. Turn it on and let codegen own it:
 
 ```bash
-pikku enable rpc            # sets scaffold.rpc = true (auth required)
-pikku enable rpc --noAuth   # sets scaffold.rpc = { auth: false } (public)
+pikku enable rpc            # sets scaffold.rpc = true
 ```
+
+The flag says the endpoint exists, not who may call it — each exposed function
+is gated by its own `auth`, permissions and scopes.
 
 This writes `rpc-public.gen.ts` with an `rpcCaller` function and its `wireHTTP`
 call already wired. Do not write that wiring yourself — a hand-rolled copy

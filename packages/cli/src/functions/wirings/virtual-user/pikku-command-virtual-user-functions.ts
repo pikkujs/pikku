@@ -4,7 +4,6 @@ import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeVirtualUserFunctions } from './serialize-virtual-user-functions.js'
-import { resolveScaffoldFeature } from '../../../utils/resolve-scaffold-feature.js'
 
 export const pikkuVirtualUserFunctions = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -45,8 +44,7 @@ export const pikkuVirtualUserFunctions = pikkuSessionlessFunc<void, boolean>({
     )
     const { schemas, functions } = serializeVirtualUserFunctions(
       leaf,
-      pathToPersonas,
-      resolveScaffoldFeature('virtualUser', config.scaffold.virtualUser).auth
+      pathToPersonas
     )
     await writeFileInDir(logger, config.virtualUserSchemasFile, schemas)
     await writeFileInDir(logger, config.virtualUserFunctionsFile, functions)

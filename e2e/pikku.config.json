@@ -37,17 +37,11 @@
   "scaffold": {
     "pikkuDir": "packages/functions/src/pikku",
     "addonDir": "packages",
-    "rpc": {
-      "auth": false
-    },
+    "rpc": true,
     "console": true,
     "scenarios": true,
-    "agent": {
-      "auth": false
-    },
-    "workflow": {
-      "auth": false
-    },
+    "agent": true,
+    "workflow": true,
     "webhook": true,
     "userAdmin": true
   },

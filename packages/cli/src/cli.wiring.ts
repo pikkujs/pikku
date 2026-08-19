@@ -812,74 +812,32 @@ wireCLI({
         rpc: pikkuCLICommand({
           func: enableRpc,
           description: 'Enable public RPC endpoint',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
         console: pikkuCLICommand({
           func: enableConsole,
           description: 'Enable console functions',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
         scenarios: pikkuCLICommand({
           func: enableScenarios,
           description: 'Enable scenario instrumentation functions',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
         agent: pikkuCLICommand({
           func: enableAgent,
           description: 'Enable public agent endpoints',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
         workflow: pikkuCLICommand({
           func: enableWorkflow,
           description: 'Enable workflow workers',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
         events: pikkuCLICommand({
           func: enableEvents,
           description:
             'Enable the realtime events channel + SSE stream (scaffolds events.gen.ts)',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
         'remote-rpc': pikkuCLICommand({
           func: enableRemoteRpc,
           description:
             'Enable the remote internal RPC queue worker + HTTP endpoint (scaffolds rpc-remote.gen.ts)',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
         }),
         webhook: pikkuCLICommand({
           func: enableWebhook,

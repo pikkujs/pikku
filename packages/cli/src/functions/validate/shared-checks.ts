@@ -251,7 +251,6 @@ export async function runSharedProjectChecks(
           '  "pikkuDir": "packages/functions/src/scaffold",',
           `  "${s.key}": true`,
           '}',
-          'true means enabled and authenticated; write { "auth": false } to go public.',
           'Then re-run codegen (`pikku all`) and restart the dev server.'
         )
       )

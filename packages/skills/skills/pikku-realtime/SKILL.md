@@ -66,8 +66,7 @@ see `pikku-services`.
 ## 2. Enable the server side
 
 ```bash
-yarn pikku enable events           # auth required by default
-yarn pikku enable events --noAuth  # public events
+yarn pikku enable events
 ```
 
 This sets `scaffold.events` in `pikku.config.json`. The next `pikku all` generates

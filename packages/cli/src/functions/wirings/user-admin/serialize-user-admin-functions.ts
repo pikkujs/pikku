@@ -24,11 +24,8 @@ export interface UserAdminGenOutput {
  * zod sidesteps that entirely.
  */
 export const serializeUserAdminFunctions = (
-  leaf: (name: string) => string,
-  requireAuth: boolean = true
+  leaf: (name: string) => string
 ): UserAdminGenOutput => {
-  const authFlag = requireAuth ? 'true' : 'false'
-
   const schemas = `/**
  * Auto-generated user management schemas
  * Do not edit manually - regenerate with 'npx pikku'
@@ -185,7 +182,6 @@ export const pikkuAdminListUsers = pikkuFunc({
   description:
     'Lists and searches the user directory, read through the auth adapter so it works on any database better-auth supports.',
   expose: true,
-  auth: ${authFlag},
   scopes: ['admin:users:list'],
   input: ListUsersInput,
   output: ListUsersOutput,
@@ -224,7 +220,6 @@ export const pikkuAdminCreateUser = pikkuFunc({
   description:
     'Creates a user directly, for provisioning an account out of band rather than through your sign-up flow. Enforces the configured password bounds and rejects a duplicate email.',
   expose: true,
-  auth: ${authFlag},
   scopes: ['admin:users:create'],
   input: CreateUserInput,
   output: CreateUserOutput,
@@ -239,7 +234,6 @@ export const pikkuAdminSetUserBanned = pikkuFunc({
   description:
     'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted. Requires better-auth wired with the \`ban()\` plugin.',
   expose: true,
-  auth: ${authFlag},
   scopes: ['admin:users:ban'],
   input: SetUserBannedInput,
   output: Success,
@@ -262,7 +256,6 @@ export const pikkuAdminRemoveUser = pikkuFunc({
   description:
     'Permanently deletes a user along with their sessions and linked accounts. Cannot be undone.',
   expose: true,
-  auth: ${authFlag},
   scopes: ['admin:users:remove'],
   input: UserRef,
   output: Success,
@@ -281,7 +274,6 @@ export const pikkuAdminRevokeUserSessions = pikkuFunc({
   description:
     'Signs a user out of every device by deleting all of their sessions. They keep their account and can sign in again.',
   expose: true,
-  auth: ${authFlag},
   scopes: ['admin:users:sessions'],
   input: UserRef,
   output: Success,
@@ -297,7 +289,6 @@ export const pikkuAdminSetUserPassword = pikkuFunc({
   description:
     'Sets a user password out of band, for when they cannot complete a reset themselves. Enforces the configured length bounds, and gives a user who only ever signed in socially a credential account.',
   expose: true,
-  auth: ${authFlag},
   scopes: ['admin:users:password'],
   input: SetUserPasswordInput,
   output: Success,

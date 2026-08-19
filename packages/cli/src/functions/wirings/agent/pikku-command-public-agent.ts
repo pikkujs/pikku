@@ -4,7 +4,6 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializePublicAgent } from './serialize-public-agent.js'
-import { resolveScaffoldFeature } from '../../../utils/resolve-scaffold-feature.js'
 
 export const pikkuPublicAgent = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
@@ -13,7 +12,6 @@ export const pikkuPublicAgent = pikkuSessionlessFunc<void, boolean>({
         getLeafImportPath(config.publicAgentFile, name, config)
       const { schemas, functions } = serializePublicAgent(
         leaf,
-        resolveScaffoldFeature('agent', config.scaffold.agent).auth,
         config.globalHTTPPrefix || ''
       )
       await writeFileInDir(logger, config.publicAgentSchemasFile, schemas)
