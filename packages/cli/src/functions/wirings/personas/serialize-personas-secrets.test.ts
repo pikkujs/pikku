@@ -12,6 +12,12 @@ describe('serializePersonasSecrets', () => {
     assert.match(content, /displayName: '[^']+'/)
   })
 
+  test('is optional, because a stage that runs no scenarios is supported', () => {
+    const content = serializePersonasSecrets()
+
+    assert.match(content, /optional: true,/)
+  })
+
   test('schema is a variable reference, which is what the inspector accepts', () => {
     const content = serializePersonasSecrets()
 

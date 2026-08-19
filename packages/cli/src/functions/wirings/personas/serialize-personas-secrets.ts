@@ -10,6 +10,11 @@
  * regardless of what the user wired should be collected by the platform, not
  * discovered missing at the first sign-in.
  *
+ * It is `optional` because a stage that runs no scenarios is a supported state:
+ * the actor sign-in then refuses every request, which is how the surface is
+ * switched off. A required declaration fails the deploy config gate on every
+ * such stage instead.
+ *
  * The schema is a named const because the inspector only accepts a variable
  * reference for `schema`, never an inline expression.
  */
@@ -27,6 +32,7 @@ defineSecret({
   displayName: 'Scenario Actor Secret',
   description:
     'Signing secret that lets scenarios and virtual users sign in as a declared persona',
+  optional: true,
   secretId: 'SCENARIO_ACTOR_SECRET',
   schema: ScenarioActorSecretSchema,
 })
