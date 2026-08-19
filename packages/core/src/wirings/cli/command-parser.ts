@@ -4,7 +4,9 @@ import type {
   CLICommandMeta,
   CLIPositional,
   CLIOption,
+  CLIOptionType,
 } from './cli.types.js'
+import { pikkuState } from '../../pikku-state.js'
 
 /** "from-plan" → "fromPlan"; the parser accepts either spelling. */
 function toCamelCase(str: string): string {
@@ -94,6 +96,136 @@ export interface ParsedCommand {
  * one error per character.
  */
 const MAX_SHORT_FLAG_CLUSTER = 64
+
+function resolveOptionType(optionDef: CLIOption): CLIOptionType {
+  if (optionDef.type) {
+    return optionDef.type
+  }
+  if (typeof optionDef.default === 'boolean') {
+    return 'boolean'
+  }
+  if (typeof optionDef.default === 'number') {
+    return 'number'
+  }
+  return 'string'
+}
+
+/**
+ * A command's options are keys of its function's input, so the input schema
+ * already records what each one is. Reading it here means a declaration never
+ * has to repeat — or contradict — the type the function is validated against.
+ * An explicit `type` still wins, and an option the schema says nothing about
+ * (a program-level option belonging to no function input) is left untouched.
+ */
+function applySchemaOptionTypes(
+  options: Record<string, CLIOption>,
+  commandMeta: CLICommandMeta
+): Record<string, CLIOption> {
+  const properties = commandInputProperties(commandMeta)
+  if (!properties) {
+    return options
+  }
+
+  const typed: Record<string, CLIOption> = { ...options }
+  for (const [name, option] of Object.entries(typed)) {
+    if (option.type) {
+      continue
+    }
+    const schemaType = optionTypeFromSchema(properties[name])
+    if (schemaType) {
+      typed[name] = { ...option, type: schemaType }
+    }
+  }
+  return typed
+}
+
+function commandInputProperties(
+  commandMeta: CLICommandMeta
+): Record<string, any> | null {
+  const funcMeta = pikkuState(null, 'function', 'meta')[commandMeta.pikkuFuncId]
+  const schemaName = funcMeta?.inputSchemaName
+  if (!schemaName) {
+    return null
+  }
+  const schema = pikkuState(
+    funcMeta.packageName ?? null,
+    'misc',
+    'schemas'
+  ).get(schemaName)
+  const properties = schema?.properties
+  return properties && typeof properties === 'object' ? properties : null
+}
+
+function optionTypeFromSchema(property: any): CLIOptionType | undefined {
+  if (!property || typeof property !== 'object') {
+    return undefined
+  }
+  // An optional field can arrive as a union with null, which is not a shape the
+  // parser can read a value into.
+  const declared = Array.isArray(property.type)
+    ? property.type.filter((entry: unknown) => entry !== 'null')[0]
+    : property.type
+
+  switch (declared) {
+    case 'array':
+      return 'string[]'
+    case 'number':
+    case 'integer':
+      return 'number'
+    case 'boolean':
+      return 'boolean'
+    case 'string':
+      return 'string'
+    default:
+      return undefined
+  }
+}
+
+const BOOLEAN_LITERALS = new Map<string, boolean>([
+  ['true', true],
+  ['false', false],
+  ['1', true],
+  ['0', false],
+  ['yes', true],
+  ['no', false],
+])
+
+/**
+ * A boolean option is a flag, but `--watch false` is how scripts and CI turn a
+ * default-on flag off, so an explicit literal directly after the flag is taken
+ * as its value rather than left behind as a positional.
+ */
+function readBooleanLiteral(raw: string | undefined): boolean | undefined {
+  if (raw === undefined) {
+    return undefined
+  }
+  return BOOLEAN_LITERALS.get(raw.toLowerCase())
+}
+
+function readOptionValue(raw: string, optionDef: CLIOption): any {
+  if (resolveOptionType(optionDef) !== 'string[]') {
+    return parseOptionValue(raw, optionDef)
+  }
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .map((item) => parseOptionValue(item, optionDef))
+}
+
+/** A repeated array option accumulates rather than replacing. */
+function assignOptionValue(
+  optionArgs: Record<string, any>,
+  key: string,
+  value: any
+) {
+  const existing = optionArgs[key]
+  if (Array.isArray(existing) && Array.isArray(value)) {
+    optionArgs[key] = [...existing, ...value]
+  } else {
+    optionArgs[key] = value
+  }
+}
 
 export function parseCLIArguments(
   args: string[],
@@ -186,7 +318,10 @@ export function parseCLIArguments(
     return result
   }
 
-  const availableOptions = collectAvailableOptions(meta, result.commandPath)
+  const availableOptions = applySchemaOptionTypes(
+    collectAvailableOptions(meta, result.commandPath),
+    commandMeta
+  )
 
   const positionalArgs: string[] = []
   const optionArgs: Record<string, any> = {}
@@ -201,9 +336,10 @@ export function parseCLIArguments(
       const equalIndex = arg.indexOf('=')
       if (
         negatedKey &&
-        typeof availableOptions[negatedKey]?.default === 'boolean'
+        availableOptions[negatedKey] &&
+        resolveOptionType(availableOptions[negatedKey]) === 'boolean'
       ) {
-        // Requiring a boolean default keeps a literal `--no-something` option
+        // Requiring a boolean type keeps a literal `--no-something` option
         // name parsing as itself rather than as a negation.
         optionArgs[negatedKey] = false
       } else if (equalIndex > 0) {
@@ -215,7 +351,11 @@ export function parseCLIArguments(
         }
 
         const value = arg.slice(equalIndex + 1)
-        optionArgs[key] = parseOptionValue(value, optionDef)
+        if (optionDef) {
+          assignOptionValue(optionArgs, key, readOptionValue(value, optionDef))
+        } else {
+          optionArgs[key] = parseOptionValue(value, optionDef)
+        }
       } else {
         const key = toCamelCase(arg.slice(2))
         const optionDef = availableOptions[key]
@@ -224,24 +364,33 @@ export function parseCLIArguments(
           warnUnknownOption(arg.slice(2), availableOptions, result)
         }
 
-        if (optionDef && optionDef.array) {
-          currentIndex++
-          const values: any[] = []
-          while (
-            currentIndex < args.length &&
-            !args[currentIndex].startsWith('-')
+        if (!optionDef) {
+          // With no spec there is nothing to consult, so the lookahead
+          // heuristic is all that is left.
+          if (
+            currentIndex + 1 < args.length &&
+            !args[currentIndex + 1].startsWith('-')
           ) {
-            values.push(parseOptionValue(args[currentIndex], optionDef))
             currentIndex++
+            optionArgs[key] = parseOptionValue(args[currentIndex], optionDef)
+          } else {
+            optionArgs[key] = true
           }
-          currentIndex-- // Back up one since we'll increment at loop end
-          optionArgs[key] = values
-        } else if (
-          currentIndex + 1 < args.length &&
-          !args[currentIndex + 1].startsWith('-')
-        ) {
+        } else if (resolveOptionType(optionDef) === 'boolean') {
+          const literal = readBooleanLiteral(args[currentIndex + 1])
+          if (literal === undefined) {
+            optionArgs[key] = true
+          } else {
+            currentIndex++
+            optionArgs[key] = literal
+          }
+        } else if (currentIndex + 1 < args.length) {
           currentIndex++
-          optionArgs[key] = parseOptionValue(args[currentIndex], optionDef)
+          assignOptionValue(
+            optionArgs,
+            key,
+            readOptionValue(args[currentIndex], optionDef)
+          )
         } else {
           optionArgs[key] = true
         }
@@ -259,16 +408,27 @@ export function parseCLIArguments(
 
         const longOption = findLongOption(shortFlag, availableOptions)
         if (longOption) {
+          const optionDef = availableOptions[longOption]
           // Only the last flag in a cluster can take a value.
-          if (
-            i === arg.length - 1 &&
-            currentIndex + 1 < args.length &&
-            !args[currentIndex + 1].startsWith('-')
+          const isLast = i === arg.length - 1
+          const literal =
+            isLast && resolveOptionType(optionDef) === 'boolean'
+              ? readBooleanLiteral(args[currentIndex + 1])
+              : undefined
+
+          if (literal !== undefined) {
+            currentIndex++
+            optionArgs[longOption] = literal
+          } else if (
+            isLast &&
+            resolveOptionType(optionDef) !== 'boolean' &&
+            currentIndex + 1 < args.length
           ) {
             currentIndex++
-            optionArgs[longOption] = parseOptionValue(
-              args[currentIndex],
-              availableOptions[longOption]
+            assignOptionValue(
+              optionArgs,
+              longOption,
+              readOptionValue(args[currentIndex], optionDef)
             )
           } else {
             optionArgs[longOption] = true
@@ -362,11 +522,11 @@ function parseOptionValue(value: string, optionDef?: CLIOption): any {
     return value
   }
 
-  const defaultValue = optionDef.default
-  if (typeof defaultValue === 'boolean') {
-    return value === 'true' || value === '1' || value === 'yes'
+  const optionType = resolveOptionType(optionDef)
+  if (optionType === 'boolean') {
+    return readBooleanLiteral(value) ?? false
   }
-  if (typeof defaultValue === 'number') {
+  if (optionType === 'number') {
     return parseFloat(value)
   }
 

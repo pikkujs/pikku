@@ -1,7 +1,8 @@
-import { test, describe } from 'node:test'
+import { test, describe, beforeEach, after } from 'node:test'
 import * as assert from 'assert'
 import { parseCLIArguments, generateCommandHelp } from './command-parser.js'
 import type { CLIMeta } from './cli.types.js'
+import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 
 const testMeta: CLIMeta = {
   programs: {
@@ -85,6 +86,30 @@ const testMeta: CLIMeta = {
             port: {
               description: 'Port to listen on',
               default: 8080,
+            },
+          },
+        },
+        deploy: {
+          pikkuFuncId: 'deployFunc',
+          positionals: [],
+          options: {
+            token: {
+              description: 'Auth token',
+              short: 'k',
+              type: 'string',
+            },
+            tags: {
+              description: 'Tags to include',
+              short: 't',
+              type: 'string[]',
+            },
+            note: {
+              description: 'Free-form note',
+            },
+            dryRun: {
+              description: 'Report without deploying',
+              type: 'boolean',
+              short: 'D',
             },
           },
         },
@@ -729,5 +754,367 @@ describe('Command Parser', () => {
         assert.ok(result.errors.some((e) => e.includes('too long')))
       })
     })
+  })
+
+  describe('the option spec drives value consumption', () => {
+    test('a string option takes the next token verbatim, even leading with a dash', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--token', '-PumP_kL0'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.token, '-PumP_kL0')
+    })
+
+    test('an untyped option with no boolean/number default is still a string', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--note', '-dash-leading'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.note, '-dash-leading')
+    })
+
+    test('a comma list into an array option splits, trims and drops blanks', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha, beta ,,gamma'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta', 'gamma'])
+    })
+
+    test('an array option splits the --opt=value form too', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags=alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+    })
+
+    test('an array option consumes exactly one token', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha,beta', '--note', 'hello'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+      assert.strictEqual(result.options.note, 'hello')
+    })
+
+    /**
+     * `--tags alpha beta` cannot be told apart from an option followed by a
+     * positional, so consuming tokens until the next flag would make an array
+     * option swallow arguments meant for the command. The two unambiguous
+     * forms — one comma list, or the flag repeated — cover the same ground,
+     * and the leftover token is reported rather than silently dropped.
+     */
+    test('an array option leaves a following bare token to the positionals', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha', 'beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha'])
+      assert.ok(
+        result.errors.some((error) => error.includes('Unexpected arguments')),
+        `expected the stray token to be reported, got: ${JSON.stringify(result.errors)}`
+      )
+    })
+
+    test('a repeated array option accumulates', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', 'alpha', '--tags', 'beta,gamma'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta', 'gamma'])
+    })
+
+    test('an array option takes a dash-leading value verbatim', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--tags', '-alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.options.tags, ['-alpha', 'beta'])
+    })
+
+    test('a comma in a non-array option stays one literal string', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--note', 'alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.strictEqual(result.options.note, 'alpha,beta')
+    })
+
+    test('a boolean option does not consume a following non-literal token', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--dry-run', '--note', 'hello'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, true)
+      assert.strictEqual(result.options.note, 'hello')
+    })
+
+    test('boolean options take an explicit literal instead of leaking positionals', () => {
+      const devMeta: CLIMeta = {
+        programs: {
+          'dev-cli': {
+            program: 'dev-cli',
+            options: {},
+            commands: {
+              dev: {
+                pikkuFuncId: 'devFunc',
+                positionals: [],
+                options: {
+                  port: {
+                    description: 'Port for the dev server',
+                    default: '3000',
+                    short: 'p',
+                  },
+                  watch: {
+                    description: 'Watch for file changes and regenerate',
+                    default: true,
+                  },
+                  hmr: {
+                    description: 'Enable hot module reload',
+                    default: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        renderers: {},
+      }
+
+      const result = parseCLIArguments(
+        ['dev', '--port', '4077', '--watch', 'false', '--hmr', 'false'],
+        'dev-cli',
+        devMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.deepStrictEqual(result.positionals, {})
+      assert.strictEqual(result.options.port, '4077')
+      assert.strictEqual(result.options.watch, false)
+      assert.strictEqual(result.options.hmr, false)
+    })
+
+    test('a typed boolean option with no default takes an explicit literal', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--dry-run', 'false', '--note', 'hello'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, false)
+      assert.strictEqual(result.options.note, 'hello')
+    })
+
+    test('a boolean option takes an explicit literal in the --opt=value form', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--dry-run=false'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, false)
+    })
+
+    test('a boolean short flag takes an explicit literal', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-D', 'false'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.dryRun, false)
+    })
+
+    test('a short flag follows its option spec for dash-leading values', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-k', '-PumP_kL0'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.errors, [])
+      assert.strictEqual(result.options.token, '-PumP_kL0')
+    })
+
+    test('a short flag for an array option splits on commas', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-t', 'alpha,beta'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+    })
+
+    test('a boolean short flag in a cluster does not swallow the next token', () => {
+      const result = parseCLIArguments(
+        ['deploy', '-D', 'positional-would-error'],
+        'test-cli',
+        testMeta
+      )
+
+      assert.strictEqual(result.options.dryRun, true)
+      assert.ok(
+        result.errors.some((e) => e.includes('Unexpected arguments')),
+        `expected the token to stay a positional, got: ${result.errors.join(', ')}`
+      )
+    })
+  })
+})
+
+describe('option types come from the function input schema', () => {
+  const schemaMeta: CLIMeta = {
+    programs: {
+      'test-cli': {
+        program: 'test-cli',
+        options: {},
+        commands: {
+          serve: {
+            pikkuFuncId: 'serveFunc',
+            positionals: [],
+            options: {
+              console: { description: 'Serve the console' },
+              port: { description: 'Port to listen on' },
+              tags: { description: 'Tags to include' },
+              retries: { description: 'How many times to retry' },
+              declared: {
+                description: 'Declared against the schema',
+                type: 'string',
+              },
+            },
+          },
+        },
+      },
+    },
+    renderers: {},
+  }
+
+  const registerSchema = (properties: Record<string, unknown>) => {
+    pikkuState(null, 'function', 'meta')['serveFunc'] = {
+      pikkuFuncId: 'serveFunc',
+      inputSchemaName: 'ServeInput',
+      outputSchemaName: null,
+      sessionless: true,
+    } as any
+    pikkuState(null, 'misc', 'schemas').set('ServeInput', {
+      type: 'object',
+      properties,
+    })
+  }
+
+  beforeEach(() => {
+    resetPikkuState()
+    registerSchema({
+      console: { type: 'boolean' },
+      port: { type: 'string' },
+      tags: { type: 'array', items: { type: 'string' } },
+      retries: { type: 'number' },
+      declared: { type: 'boolean' },
+    })
+  })
+
+  after(() => {
+    resetPikkuState()
+  })
+
+  test('a boolean in the schema is a flag, and does not swallow the next option', () => {
+    const result = parseCLIArguments(
+      ['serve', '--console', '--port', '4077'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.deepStrictEqual(result.errors, [])
+    assert.strictEqual(result.options.console, true)
+    assert.strictEqual(result.options.port, '4077')
+  })
+
+  test('an array in the schema splits on commas without being declared', () => {
+    const result = parseCLIArguments(
+      ['serve', '--tags', 'alpha,beta'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.deepStrictEqual(result.options.tags, ['alpha', 'beta'])
+  })
+
+  test('a number in the schema is coerced', () => {
+    const result = parseCLIArguments(
+      ['serve', '--retries', '3'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.retries, 3)
+  })
+
+  test('a declared type wins over the schema', () => {
+    const result = parseCLIArguments(
+      ['serve', '--declared', 'true'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.declared, 'true')
+  })
+
+  test('an option the schema does not mention keeps the string default', () => {
+    registerSchema({ console: { type: 'boolean' } })
+
+    const result = parseCLIArguments(
+      ['serve', '--port', '4077'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.port, '4077')
+  })
+
+  test('a command with no input schema parses as it did before', () => {
+    pikkuState(null, 'function', 'meta')['serveFunc'] = {
+      pikkuFuncId: 'serveFunc',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+    } as any
+
+    const result = parseCLIArguments(
+      ['serve', '--tags', 'alpha,beta'],
+      'test-cli',
+      schemaMeta
+    )
+
+    assert.strictEqual(result.options.tags, 'alpha,beta')
   })
 })

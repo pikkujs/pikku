@@ -630,6 +630,12 @@ function processOptions(
             }
             break
 
+          case 'type':
+            if (ts.isStringLiteral(optProp.initializer)) {
+              option.type = optProp.initializer.text
+            }
+            break
+
           case 'default':
             // Extract default value from expression
             if (ts.isStringLiteral(optProp.initializer)) {

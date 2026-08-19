@@ -199,57 +199,72 @@ wireCLI({
         filter: {
           description:
             'Named filter(s) from pikku.config.json filters map (comma-separated)',
+          type: 'string[]',
         },
         tags: {
           description: 'Include functions by tags (comma-separated)',
           short: 't',
+          type: 'string[]',
         },
         wires: {
           description: 'Filter direct wirings by category (comma-separated)',
+          type: 'string[]',
         },
         excludeWires: {
           description: 'Exclude direct wirings by category (comma-separated)',
+          type: 'string[]',
         },
         excludeTags: {
           description: 'Exclude functions by tags (comma-separated)',
+          type: 'string[]',
         },
         directories: {
           description: 'Include functions by directories (comma-separated)',
           short: 'd',
+          type: 'string[]',
         },
         excludeDirectories: {
           description: 'Exclude functions by directories (comma-separated)',
+          type: 'string[]',
         },
         httpMethods: {
           description: 'Include HTTP routes by methods (comma-separated)',
+          type: 'string[]',
         },
         excludeHttpMethods: {
           description: 'Exclude HTTP routes by methods (comma-separated)',
+          type: 'string[]',
         },
         httpRoutes: {
           description:
             'Include HTTP routes by route patterns (comma-separated)',
+          type: 'string[]',
         },
         excludeHttpRoutes: {
           description:
             'Exclude HTTP routes by route patterns (comma-separated)',
+          type: 'string[]',
         },
         names: {
           description:
             'Include functions by name patterns (supports wildcards)',
           short: 'n',
+          type: 'string[]',
         },
         excludeNames: {
           description:
             'Exclude functions by name patterns (supports wildcards)',
+          type: 'string[]',
         },
         target: {
           description:
             'Include functions by deploy target (comma-separated: serverless, server)',
+          type: 'string[]',
         },
         excludeTarget: {
           description:
             'Exclude functions by deploy target (comma-separated: serverless, server)',
+          type: 'string[]',
         },
         forceRelativeImports: {
           description:

@@ -5,10 +5,10 @@ import { parseCLIFilters as parse } from '../utils/parse-cli-filters.js'
 test('parseCLIFilters merges named filter and CLI includes/excludes', () => {
   const filters = parse(
     {
-      filter: 'api',
-      tags: 'shared',
-      excludeTags: 'internal',
-      excludeNames: '*deprecated*',
+      filter: ['api'],
+      tags: ['shared'],
+      excludeTags: ['internal'],
+      excludeNames: ['*deprecated*'],
     },
     {
       namedFilters: {
@@ -28,11 +28,18 @@ test('parseCLIFilters merges named filter and CLI includes/excludes', () => {
   assert.deepStrictEqual(filters.excludeNames, ['*deprecated*'])
 })
 
+test('parseCLIFilters leaves splitting to the parser and re-splits nothing', () => {
+  const filters = parse({ tags: ['a,b'], names: ['send*'] }, {})
+
+  assert.deepStrictEqual(filters.tags, ['a,b'])
+  assert.deepStrictEqual(filters.names, ['send*'])
+})
+
 test('parseCLIFilters throws on unknown named filter', () => {
   assert.throws(
     () =>
       parse(
-        { filter: 'missing' },
+        { filter: ['missing'] },
         {
           namedFilters: {
             api: { tags: ['api'] },
@@ -45,18 +52,18 @@ test('parseCLIFilters throws on unknown named filter', () => {
 
 test('parseCLIFilters validates target and excludeTarget values', () => {
   assert.throws(
-    () => parse({ target: 'edge' }, {}),
+    () => parse({ target: ['edge'] }, {}),
     /Invalid --target value\(s\): \[edge\]/
   )
   assert.throws(
-    () => parse({ excludeTarget: 'edge' }, {}),
+    () => parse({ excludeTarget: ['edge'] }, {}),
     /Invalid --exclude-target value\(s\): \[edge\]/
   )
 
   const filters = parse(
     {
-      target: 'serverless',
-      excludeTarget: 'server',
+      target: ['serverless'],
+      excludeTarget: ['server'],
     },
     {
       deploy: { serverlessIncompatible: ['db'] },
@@ -70,7 +77,7 @@ test('parseCLIFilters validates target and excludeTarget values', () => {
 
 test('parseCLIFilters threads deploy.defaultTarget when a target filter is set', () => {
   const filters = parse(
-    { target: 'server' },
+    { target: ['server'] },
     { deploy: { providers: {}, defaultTarget: 'server' } }
   )
   assert.deepStrictEqual(filters.target, ['server'])
@@ -79,7 +86,7 @@ test('parseCLIFilters threads deploy.defaultTarget when a target filter is set',
 
 test('parseCLIFilters omits defaultTarget when no target filter is set', () => {
   const filters = parse(
-    { tags: 'api' },
+    { tags: ['api'] },
     { deploy: { providers: {}, defaultTarget: 'server' } }
   )
   assert.strictEqual(filters.defaultTarget, undefined)
@@ -87,7 +94,7 @@ test('parseCLIFilters omits defaultTarget when no target filter is set', () => {
 
 test('parseCLIFilters merges addon.serverlessIncompatible with deploy.serverlessIncompatible', () => {
   const filters = parse(
-    { target: 'serverless' },
+    { target: ['serverless'] },
     {
       deploy: { serverlessIncompatible: ['DbService'] },
       addon: { serverlessIncompatible: ['FfmpegService'] },
@@ -101,21 +108,21 @@ test('parseCLIFilters merges addon.serverlessIncompatible with deploy.serverless
 
 test('parseCLIFilters uses addon.serverlessIncompatible alone when no deploy config', () => {
   const filters = parse(
-    { target: 'server' },
+    { target: ['server'] },
     { addon: { serverlessIncompatible: ['HumanDesignService'] } }
   )
   assert.deepStrictEqual(filters.serverlessIncompatible, ['HumanDesignService'])
 })
 
 test('parseCLIFilters ignores addon.serverlessIncompatible when addon is boolean true', () => {
-  const filters = parse({ target: 'serverless' }, { addon: true })
+  const filters = parse({ target: ['serverless'] }, { addon: true })
   assert.strictEqual(filters.serverlessIncompatible, undefined)
 })
 
 test('parseCLIFilters does not set serverlessIncompatible when no target filter is active', () => {
   // serverlessIncompatible should only appear when --target / --exclude-target is set
   const filters = parse(
-    { tags: 'api' },
+    { tags: ['api'] },
     {
       deploy: { serverlessIncompatible: ['DbService'] },
       addon: { serverlessIncompatible: ['FfmpegService'] },
