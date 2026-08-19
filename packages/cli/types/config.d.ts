@@ -344,6 +344,13 @@ export type PikkuCLIInput = {
      * `rpcWiringsFile` (where the `PikkuRPC` class is generated).
      */
     tanstackStartFile?: string
+    /**
+     * Emit the browser-side scope client into this file: the project's
+     * `ScopeId` union and a `hasScopes(required, held)` for deciding what a UI
+     * renders. It has no imports, so a frontend never has to reach into
+     * `@pikku/core` — a server package — to check a permission.
+     */
+    scopesFile?: string
   }
 
   /** Directory containing email templates, locales, partials, and theme.json. */

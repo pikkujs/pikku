@@ -19,6 +19,7 @@ const CLIENT_FILE_KEYS = [
   'nextBackendFile',
   'nextHTTPFile',
   'tanstackStartFile',
+  'scopesFile',
 ] as const
 
 export const getPikkuCLIConfig = async (

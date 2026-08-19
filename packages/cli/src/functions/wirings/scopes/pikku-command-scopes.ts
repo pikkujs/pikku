@@ -1,21 +1,22 @@
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeScopesTypes } from './serialize-scopes-types.js'
-import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/scope'
+import { serializeScopesClient } from './serialize-scopes-client.js'
+import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/ecosystem/scope'
 
 export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
   func: async ({ logger, config, getInspectorState }, data) => {
     const { scopesFile, scopesMetaJsonFile } = config
+    const scopesClientFile = config.clientFiles?.scopesFile
 
     if (!scopesFile) {
       return
     }
 
-    // On a cold .pikku this runs before the function leaf exists, so it must
+    // On a cold .pikku this runs before pikku-types.gen.ts exists, so it must
     // take the zero state rather than a full inspect — inspecting here would
-    // try to import the project's zod schemas, which resolve '#pikku/function'
-    // and fail.
+    // try to import the project's zod schemas, which resolve '#pikku' and fail.
     // The file only has to exist so function types can import ScopeId; the real
     // Scopes step regenerates it with the declarations once setup has run.
     const bootstrap = data?.bootstrap ?? false
@@ -25,6 +26,14 @@ export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       definitions: state.scopes.definitions,
     })
     await writeFileInDir(logger, scopesFile, content)
+
+    if (scopesClientFile) {
+      await writeFileInDir(
+        logger,
+        scopesClientFile,
+        serializeScopesClient({ definitions: state.scopes.definitions })
+      )
+    }
 
     if (scopesMetaJsonFile) {
       const meta = validateAndBuildScopeDefinitionsMeta(
