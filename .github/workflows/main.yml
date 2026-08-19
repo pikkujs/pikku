@@ -439,6 +439,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           HUSKY: '0'
       - name: Upload CLI native binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'
