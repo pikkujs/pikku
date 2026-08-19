@@ -88,8 +88,6 @@ describe('serializeUserAdminFunctions', () => {
   })
 
   test('gates on the session and the scope, never on a scaffold flag', () => {
-    // `pikkuFunc` already refuses a call with no session, and each function
-    // names the scope it needs — so the generated surface asserts no `auth`.
     assert.match(out, /pikkuAdminListUsers = pikkuFunc\(/)
     assert.match(out, /scopes: \['admin:users:list'\]/)
     assert.doesNotMatch(out, /^\s*auth: (true|false),?$/m)

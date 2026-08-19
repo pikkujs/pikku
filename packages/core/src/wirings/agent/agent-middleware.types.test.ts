@@ -1,14 +1,4 @@
-/**
- * Type-level tests: no runtime assertions — valid shapes must compile and
- * invalid shapes must fail with `@ts-expect-error`. Type-checked by
- * `tsconfig.type-tests.json`, which lists this file.
- *
- * Agent middleware hooks a run rather than a request, and a run can start with
- * no wire behind it, so the hooks are handed the singleton services alone. The
- * types used to promise the wider wire services while the runtime passed only
- * the singletons, which let a middleware destructure a wire service, typecheck,
- * and silently receive `undefined`.
- */
+// Type-checked via tsconfig.type-tests.json; no runtime assertions.
 
 import { pikkuAgentMiddleware } from '../../middleware/middleware-factories.js'
 import type { PikkuAgentMiddlewareHooks } from './agent.types.js'

@@ -12,13 +12,6 @@ const leaf = (name: string) => `#pikku/${name}`
 const authFields = (output: string) =>
   output.match(/^\s*auth: (true|false),?$/gm)?.map((line) => line.trim()) ?? []
 
-/**
- * The dispatcher surfaces forward to whichever function the caller named, so
- * they decline to gate: every emitted `pikkuSessionlessFunc` and every emitted
- * wiring says `auth: false`. Omitting the field would not be neutral — a wiring
- * with no `auth` defaults to requiring a session, and the wrapper would then
- * reject the call before the function it forwards to ever answers for itself.
- */
 describe('the scaffold dispatchers decline to gate', () => {
   const dispatchers: Array<[string, string]> = [
     ['public rpc', serializePublicRPC(leaf).functions],
@@ -44,13 +37,6 @@ describe('the scaffold dispatchers decline to gate', () => {
   }
 })
 
-/**
- * The scoped admin surfaces are not dispatchers — they are the functions that
- * decide. They are `pikkuFunc`, which requires a session by construction, and
- * they carry their own `scopes`. Emitting `auth` there says nothing new, and
- * `auth: false` on a sessioned function is refused by `runPikkuFunc` with a
- * warning telling you to use `pikkuSessionlessFunc` instead.
- */
 describe('the scoped admin surfaces emit no auth field', () => {
   const surfaces: Array<[string, string]> = [
     ['user admin', serializeUserAdminFunctions(leaf).functions],

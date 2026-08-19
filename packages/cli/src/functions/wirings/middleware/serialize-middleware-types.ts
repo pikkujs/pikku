@@ -170,12 +170,6 @@ export const pikkuChannelMiddlewareFactory = <In = any>(
 export const addChannelMiddleware = (tag: string, middleware: PikkuChannelMiddleware[]) =>
   addChannelMiddlewareCore(tag, middleware, ${packageNameValue})
 
-/**
- * Agent middleware hooks a *run*, not a request, so it is handed the singleton
- * services alone — a run can start from a scheduler or a workflow with nothing
- * wire-shaped behind it. A tool the run calls is an ordinary function call and
- * still receives its own wire services.
- */
 export const pikkuAgentMiddleware = <
   State extends Record<string, unknown> = Record<string, unknown>,
   RequiredServices extends SingletonServices = WiredSingletonServices,

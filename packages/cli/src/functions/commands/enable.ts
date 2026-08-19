@@ -3,7 +3,6 @@ import { join } from 'path'
 import { pikkuVoidFunc } from '#pikku/function'
 import type { PikkuScaffoldFeature } from '../../../types/config.js'
 
-/** Features that scaffold a surface. */
 type SurfaceFeature =
   | 'rpc'
   | 'console'
@@ -13,7 +12,6 @@ type SurfaceFeature =
   | 'events'
   | 'remoteRpc'
 
-/** Features that scaffold a worker rather than a surface. */
 type WorkerFeature = 'webhook'
 
 type Feature = SurfaceFeature | WorkerFeature
@@ -35,9 +33,6 @@ async function enableFeature(
     json.scaffold.pikkuDir = 'pikku'
   }
 
-  // The flag says the surface exists, nothing more. Who may call what it
-  // generates is declared on the function, its wiring, its scopes and its
-  // addon, and enforced there on every call.
   const value: PikkuScaffoldFeature = true
 
   json.scaffold[feature] = value
