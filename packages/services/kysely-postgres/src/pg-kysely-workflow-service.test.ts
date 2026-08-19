@@ -41,6 +41,7 @@ class PGliteDriver implements Driver {
         sql: string
         parameters: readonly unknown[]
       }): Promise<QueryResult<R>> => {
+        executedSql.push(compiled.sql)
         const result = await this.pglite.query<R>(compiled.sql, [
           ...compiled.parameters,
         ])
@@ -91,6 +92,10 @@ class PGliteDriver implements Driver {
 }
 
 const releases = new Map<DatabaseConnection, Array<() => void>>()
+
+/** Every statement the dialect issued, so a test can assert on the shape of a
+ *  critical section rather than only on its result. */
+const executedSql: string[] = []
 
 class PGliteDialect implements Dialect {
   constructor(private readonly pglite: PGlite) {}
@@ -412,6 +417,59 @@ describe('advisory locks', () => {
 
     release()
     await held
+  })
+
+  /**
+   * The bug this guards: the run lock used to be `pg_advisory_xact_lock` inside
+   * `lockDb.transaction()`, so a workflow body awaiting a build or an LLM left
+   * the connection `idle in transaction` for as long as it ran. On a shared
+   * pool that starves every other caller, and Postgres cannot vacuum past the
+   * pinned xid.
+   */
+  test('a run lock holds no transaction while the body runs', async () => {
+    const { run, bodyEntered, release } = heldBody()
+
+    executedSql.length = 0
+    const held = service.withRunLock('run-1', run)
+    await bodyEntered
+
+    assert.deepEqual(
+      executedSql.filter((statement) => statement === 'begin'),
+      [],
+      'the run lock opened a transaction around the workflow body'
+    )
+    assert.ok(
+      executedSql.some((statement) => statement.includes('pg_advisory_lock')),
+      'the run lock was never taken'
+    )
+
+    release()
+    await held
+
+    assert.ok(
+      executedSql.some((statement) => statement.includes('pg_advisory_unlock')),
+      'the run lock was never released'
+    )
+  })
+
+  test('a lock timeout is reset before the connection goes back', async () => {
+    const timed = new PgKyselyWorkflowService(db, {
+      wireQueues: false,
+      lockTimeoutMs: 250,
+    } as any)
+    await timed.init()
+
+    executedSql.length = 0
+    await timed.withRunLock('run-1', async () => 'done')
+
+    assert.ok(
+      executedSql.some((statement) => statement === 'SET lock_timeout = 250'),
+      'lock_timeout was never applied'
+    )
+    assert.ok(
+      executedSql.some((statement) => statement === 'RESET lock_timeout'),
+      'lock_timeout rode the connection back into the pool'
+    )
   })
 
   test('a non-finite lock timeout is rejected', () => {
