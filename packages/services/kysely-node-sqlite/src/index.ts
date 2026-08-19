@@ -11,5 +11,6 @@ export {
 export {
   createCoercionPlugin,
   type ColumnKind,
+  type CoercionMap,
   type CreateCoercionPluginOptions,
-} from './coercion-plugin.js'
+} from '@pikku/kysely'

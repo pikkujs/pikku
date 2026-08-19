@@ -26,12 +26,17 @@ Key files (all under `packages/cli/src/functions/db/`):
 
 | File                                            | Responsibility                                                                              |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `annotation-parser.ts`                          | `ColAnnotation` shape; `loadAnnotations()` reads + validates the sidecar                    |
+| `annotation-parser.ts`                          | `ColAnnotation` shape; `AnnotationKind`; `loadAnnotations()` reads + validates the sidecar  |
 | `db-introspector.ts`                            | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces                                       |
 | `postgres/postgres-introspector.ts`, `sqlite/…` | per-dialect introspection                                                                   |
 | `db-codegen.ts`                                 | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping**  |
 | `zod-codegen.ts`                                | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
-| `coercion-plugin.ts`                            | runtime Kysely plugin; `ColumnKind` + `fromDb()` coercion                                   |
+
+The runtime Kysely plugin lives outside the CLI, in `@pikku/kysely`
+(`packages/services/kysely/src/coercion-plugin.ts`): `ColumnKind`, `CoercionMap`
+and the `fromDb()` coercion. The CLI, `@pikku/kysely-node-sqlite` and
+`@pikku/kysely-bun-sqlite` all use that one implementation, so a fix cannot
+land in one and miss the others.
 
 ## Two axes: what changes the _type_ vs only the _validator_
 
@@ -85,10 +90,12 @@ type, it's a `kind`, not a `format`.
 
 Example: `kind: 'bigint'` typing a column as `bigint` + `z.bigint()`.
 
-1. **`coercion-plugin.ts` — `ColumnKind`**: add `'bigint'`. If it needs runtime
-   coercion (DB returns a string/number you must convert), add a `case` to
-   `fromDb()`. If the driver already returns the right JS type, skip coercion
-   and exclude it in db-codegen's coercion loop (as `uuid` is excluded).
+1. **`annotation-parser.ts` — `AnnotationKind`**: add `'bigint'`. If it needs
+   runtime coercion (DB returns a string/number you must convert), it is also a
+   `ColumnKind`: add it to the union in `@pikku/kysely`'s `coercion-plugin.ts`
+   and add a `case` to `fromDb()`. If the driver already returns the right JS
+   type, leave `ColumnKind` alone and exclude the kind in db-codegen's coercion
+   loop (as `uuid` is excluded).
 2. **`annotation-parser.ts` — `loadAnnotations()`**: add `'bigint'` to the
    `ann.kind === …` acceptance list.
 3. **`db-codegen.ts`**:
@@ -154,9 +161,13 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
   `zod-codegen` (`INTERFACE_RE`'s `\w+` won't match a dotted name). Enum
   matching is by bare `udtName`, which can collide across schemas. Fixing this
   is a separate, worthwhile task.
-- **`ColumnKind` is shared** between typing and runtime coercion. A kind that
-  needs no coercion (like `uuid`) must be excluded from the coercion map in
-  `db-codegen` _and_ handled defensively in `fromDb()`.
+- **Typing kinds and coercion kinds are two unions, not one.** `AnnotationKind`
+  (`annotation-parser.ts`) is what a column may declare in `db/annotations.ts`;
+  `ColumnKind` (`@pikku/kysely`) is the value type of the generated
+  `CoercionMap`, so it may only name kinds `fromDb()` actually acts on.
+  `AnnotationKind` is the superset: `uuid` types a column as `Uuid` but needs no
+  coercion, so it is excluded from the coercion map in `db-codegen` and absent
+  from `ColumnKind` — the runtime never has to defend against it.
 - **Keep `@pikku/core`'s `classification/data-classification.ts` in lockstep** with the brand
   aliases emitted in the `schema.gen.d.ts` header (`Private`/`Pii`/`Secret` use an
   optional `__classification__?` marker so plain values stay assignable).

@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createBunSqliteKysely, createCoercionPlugin } from './index.js'
+import { createNodeSqliteKysely, createCoercionPlugin } from './index.js'
 import type { CoercionMap } from './index.js'
 import { sql, type Kysely } from 'kysely'
 
@@ -33,9 +33,9 @@ const seed = async (db: Kysely<TestDB>) => {
   await sql`insert into posts (id, settings) values (1, 1)`.execute(db)
 }
 
-describe('bun-sqlite coercion plugin', () => {
+describe('node-sqlite coercion plugin', () => {
   test('resolves a colliding column against the queried table', async () => {
-    const db = createBunSqliteKysely<TestDB>({
+    const db = createNodeSqliteKysely<TestDB>({
       filename: ':memory:',
       plugins: [createCoercionPlugin({ map })],
     })
@@ -57,7 +57,7 @@ describe('bun-sqlite coercion plugin', () => {
   })
 
   test('coerces date, bool and json columns read back from SQLite', async () => {
-    const db = createBunSqliteKysely<{
+    const db = createNodeSqliteKysely<{
       rows: { created_at: unknown; is_active: unknown; meta: unknown }
     }>({
       filename: ':memory:',

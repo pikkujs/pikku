@@ -5102,7 +5102,6 @@ __metadata:
     "@pikku/inspector": "npm:^0.12.61"
     "@pikku/knowledge": "npm:^0.12.7"
     "@pikku/kysely": "npm:^0.13.17"
-    "@pikku/kysely-node-sqlite": "npm:^0.12.6"
     "@pikku/n8n-import": "npm:^0.0.7"
     "@pikku/node-http-server": "npm:^0.12.11"
     "@pikku/openapi-parser": "npm:^0.12.20"
@@ -5524,7 +5523,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-node-sqlite@npm:^0.12.6, @pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite":
+"@pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite"
   dependencies:

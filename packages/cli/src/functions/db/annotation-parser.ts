@@ -1,7 +1,16 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ColumnKind } from './coercion-plugin.js'
+import type { ColumnKind } from '@pikku/kysely'
 import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
+
+/**
+ * The kinds a column may declare in `db/annotations.ts`. A strict superset of
+ * the runtime `ColumnKind`, which is the value type of the generated
+ * `CoercionMap`: `uuid` selects the generated `Uuid` TypeScript type but needs
+ * no runtime coercion (a UUID is a string in both Postgres and SQLite), so the
+ * codegen never emits it into `coercion.gen.ts`.
+ */
+export type AnnotationKind = ColumnKind | 'uuid'
 
 type Classification = 'public' | 'private' | 'pii' | 'secret'
 type AnonymizeStrategy = 'fake:email' | 'fake:name' | 'hash' | 'keep' | null
@@ -16,7 +25,7 @@ export const COLUMN_FORMS = [
 
 export interface ColAnnotation {
   /** Column kind override: `date`, `bool`, `json`, or `uuid`. */
-  kind?: ColumnKind
+  kind?: AnnotationKind
   /** TypeScript type string that overrides the inferred column type, e.g. `string[]`. */
   tsType?: string
   /**
@@ -44,7 +53,7 @@ export type AnnotationMap = Record<string, Record<string, ColAnnotation>>
  * `kind` but none is declared in `db/annotations.ts`, so the developer can opt
  * in explicitly. Returns the *suggested* kind, or null.
  */
-export function nameSuggestsKind(colName: string): ColumnKind | null {
+export function nameSuggestsKind(colName: string): AnnotationKind | null {
   if (/_at$|_on$/.test(colName)) return 'date'
   if (/^is_|^has_|^can_/.test(colName)) return 'bool'
   return null
