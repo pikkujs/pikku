@@ -7,11 +7,8 @@ export interface WorkflowRoutesGenOutput {
  * Generate catch-all HTTP routes for workflow operations
  */
 export const serializeWorkflowRoutes = (
-  leaf: (name: string) => string,
-  requireAuth: boolean = true
+  leaf: (name: string) => string
 ): WorkflowRoutesGenOutput => {
-  const authFlag = requireAuth ? 'true' : 'false'
-
   const schemas = `/**
  * Auto-generated workflow route schemas
  * Do not edit manually - regenerate with 'npx pikku'
@@ -66,7 +63,7 @@ function assertWorkflowRunService(workflowRunService: unknown): asserts workflow
 
 export const workflowStarter = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: WorkflowStart,
   output: WorkflowRunId,
   // workflowService is destructured (even though we delegate via rpc) so the
@@ -80,7 +77,7 @@ export const workflowStarter = pikkuSessionlessFunc({
 
 export const workflowRunner = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: WorkflowStart,
   func: async ({ workflowService }, { workflowName, data }, { rpc }) => {
     assertWorkflowService(workflowService)
@@ -90,7 +87,7 @@ export const workflowRunner = pikkuSessionlessFunc({
 
 export const workflowStatusChecker = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: WorkflowRunRef,
   func: async ({ workflowService }, { runId }, { session }) => {
     assertWorkflowService(workflowService)
@@ -109,7 +106,7 @@ export const workflowStatusChecker = pikkuSessionlessFunc({
  */
 export const workflowStatusStream = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: WorkflowRunRef,
   func: async ({ workflowRunService }, { runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
@@ -195,7 +192,7 @@ export const workflowStatusStream = pikkuSessionlessFunc({
  */
 export const workflowStatusStreamFull = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: WorkflowRunRef,
   func: async ({ workflowRunService }, { runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
@@ -300,7 +297,7 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
  */
 export const workflowApprover = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: WorkflowApproval,
   output: Acknowledged,
   // See workflowStarter — destructure workflowService so the analyzer
@@ -314,7 +311,7 @@ export const workflowApprover = pikkuSessionlessFunc({
 
 wireHTTPRoutes({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   routes: {
     workflowStart: {
       route: '/workflow/:workflowName/start',

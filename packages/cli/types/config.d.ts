@@ -3,23 +3,21 @@ import type { OpenAPISpecInfo } from '@pikku/inspector'
 import { PikkuWiringTypes } from '@pikku/core/types'
 
 /**
- * Whether a generated surface exists, where it is written, and whether it
- * requires a session.
+ * Whether a generated surface exists and where it is written.
  *
- * `true` enables it **authenticated** at the path derived from `pikkuDir`.
- * Going public is an explicit `{ auth: false }` — the gate starts closed and is
- * opened by typing it out, never by omission.
+ * `true` enables it at the path derived from `pikkuDir`; an object enables it
+ * and overrides that path. It says nothing about who may call the surface —
+ * authentication is declared on the function, its wiring, its scopes and its
+ * addon, and is enforced there on every call. A scaffold flag that also opened
+ * or closed the door would only stack a coarser gate in front of that one.
  *
- * The legacy `'auth' | 'no-auth'` strings are rejected by the loader rather
- * than reinterpreted: under a shape where a string could plausibly mean a path,
- * silently reading `'no-auth'` as a filename would be worse than failing. See
- * `resolveScaffoldFeature`.
+ * A bare string is refused by the loader rather than reinterpreted: under this
+ * shape a string could plausibly mean a path, so guessing one would be worse
+ * than failing. See `resolveScaffoldFeature`.
  */
 export type PikkuScaffoldFeature =
   | boolean
   | {
-      /** Require a session on the generated surface. Defaults to true. */
-      auth?: boolean
       /** Write the generated file here instead of deriving it from `pikkuDir`. */
       path?: string
     }
@@ -548,8 +546,8 @@ export type PikkuCLIInput = {
     events?: PikkuScaffoldFeature
     remoteRpc?: PikkuScaffoldFeature
     /**
-     * The outgoing webhook delivery worker exposes no endpoint of its own, so
-     * it has no auth dimension — it is on or off.
+     * The outgoing webhook delivery worker exposes no endpoint of its own and
+     * has no output path to override — it is on or off.
      */
     webhook?: boolean
   }

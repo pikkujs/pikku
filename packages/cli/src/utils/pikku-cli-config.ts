@@ -436,9 +436,9 @@ const _getPikkuCLIConfig = async (
       process.env.PIKKU_DEPLOY_CODEGEN === '1' ? resolvedScaffoldDir : undefined
     )
 
-    // Read every scaffold feature once, here, so a legacy 'auth'/'no-auth'
-    // fails at load with the migration named, rather than downstream where the
-    // value has already been coerced into something plausible.
+    // Read every scaffold feature once, here, so a malformed value fails at
+    // load rather than downstream where it has already been coerced into
+    // something plausible.
     //
     // An explicit `path` is written onto the feature's output field before the
     // derivations below run. Each of those is guarded by `!result.<field>`, so

@@ -87,12 +87,12 @@ describe('serializeUserAdminFunctions', () => {
     assert.doesNotMatch(out, /internalAdapter/)
   })
 
-  test('requires auth by default and honours the sessionless opt-out', () => {
-    assert.match(serializeUserAdminFunctions(leaf).functions, /auth: true/)
-    assert.match(
-      serializeUserAdminFunctions(leaf, false).functions,
-      /auth: false/
-    )
+  test('gates on the session and the scope, never on a scaffold flag', () => {
+    // `pikkuFunc` already refuses a call with no session, and each function
+    // names the scope it needs — so the generated surface asserts no `auth`.
+    assert.match(out, /pikkuAdminListUsers = pikkuFunc\(/)
+    assert.match(out, /scopes: \['admin:users:list'\]/)
+    assert.doesNotMatch(out, /^\s*auth: (true|false),?$/m)
   })
 
   // The inspector reads a zod schema by importing the module that declares it.

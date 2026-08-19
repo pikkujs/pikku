@@ -11,11 +11,7 @@
   },
   "scaffold": {
     "pikkuDir": "src",
-    "rpc": {
-      "auth": false
-    },
-    "workflow": {
-      "auth": false
-    }
+    "rpc": true,
+    "workflow": true
   }
 }

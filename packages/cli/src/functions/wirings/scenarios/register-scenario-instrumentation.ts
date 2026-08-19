@@ -143,12 +143,14 @@ const instrumentation: Record<
  * Register the instrumentation into the running dev server's state, so the
  * scenario runner can reach it over `/rpc/<name>` exactly as before.
  *
- * They are registered sessionless: `auth` decides whether a session is
- * *required*, and a sessioned function would demand one regardless of the flag.
- * `scaffold.scenarios: true` therefore requires a session; `{ auth: false }` is
- * what opens them.
+ * They are registered sessionless with `auth: true`, so a caller still needs a
+ * session: the `/rpc/:rpcName` dispatcher declines to gate, which leaves each
+ * function to answer for itself, and these answer that they are not public.
+ * Only `pikku dev` and `pikku serve` register them at all, so they exist on a
+ * development process and nowhere else — a deployed bootstrap never imports
+ * them — but that is a second line, not the first.
  */
-export const registerScenarioInstrumentation = (requireAuth: boolean) => {
+export const registerScenarioInstrumentation = () => {
   const meta = pikkuState(null, 'function', 'meta') as FunctionsMeta
 
   // Retaining finished runs is what makes them gradeable, and this is the only
@@ -159,7 +161,7 @@ export const registerScenarioInstrumentation = (requireAuth: boolean) => {
   for (const [name, { func, title, description }] of Object.entries(
     instrumentation
   )) {
-    addFunction(name, { func, auth: requireAuth } as any)
+    addFunction(name, { func, auth: true } as any)
     meta[name] = {
       pikkuFuncId: name,
       inputSchemaName: null,

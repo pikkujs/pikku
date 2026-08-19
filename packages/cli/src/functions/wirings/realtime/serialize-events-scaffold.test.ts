@@ -3,33 +3,8 @@ import assert from 'node:assert'
 import { serializeEventsScaffold } from './serialize-events-scaffold.js'
 
 describe('serializeEventsScaffold', () => {
-  test('emits auth: true when authRequired is true', () => {
-    const { functions: out } = serializeEventsScaffold(
-      true,
-      (name: string) => `./${name}/index.js`
-    )
-    assert.match(out, /name: 'events',\s*route: '\/events',\s*auth: true,/)
-    assert.match(
-      out,
-      /route: '\/events\/:topic',\s*func: realtimeEventStream,\s*auth: true,/
-    )
-  })
-
-  test('emits auth: false when authRequired is false', () => {
-    const { functions: out } = serializeEventsScaffold(
-      false,
-      (name: string) => `./${name}/index.js`
-    )
-    assert.match(out, /name: 'events',\s*route: '\/events',\s*auth: false,/)
-    assert.match(
-      out,
-      /route: '\/events\/:topic',\s*func: realtimeEventStream,\s*auth: false,/
-    )
-  })
-
   test('wires both transports against eventHub', () => {
     const { functions: out } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     // WebSocket channel
@@ -43,7 +18,6 @@ describe('serializeEventsScaffold', () => {
 
   test('defines subscribe/unsubscribe via defineChannelRoutes', () => {
     const { functions: out } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     assert.match(
@@ -54,7 +28,6 @@ describe('serializeEventsScaffold', () => {
 
   test('subscribe/unsubscribe handlers fail loudly if eventHub is missing', () => {
     const { functions: out } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     assert.match(out, /eventHub\?\.subscribe\(topic, channel\.channelId\)/)
@@ -63,7 +36,6 @@ describe('serializeEventsScaffold', () => {
 
   test('SSE handler subscribes and lets eventHub fan out', () => {
     const { functions: out } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     assert.match(out, /eventHub\?\.subscribe\(topic, channel\.channelId\)/)
@@ -72,7 +44,6 @@ describe('serializeEventsScaffold', () => {
 
   test('tags include realtime and sse on the right routes', () => {
     const { functions: out } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     assert.match(out, /tags: \['pikku:realtime'\]/)
@@ -81,7 +52,6 @@ describe('serializeEventsScaffold', () => {
 
   test('imports each name from the leaf it belongs to', () => {
     const { functions: out } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     assert.match(
@@ -111,7 +81,6 @@ describe('serializeEventsScaffold', () => {
 
   test('shares one zod TopicRef across every handler', () => {
     const { schemas, functions } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     assert.match(schemas, /import \{ z \} from 'zod'/)
@@ -130,7 +99,6 @@ describe('serializeEventsScaffold', () => {
 
   test('keeps the schemas module free of anything but zod', () => {
     const { schemas } = serializeEventsScaffold(
-      false,
       (name: string) => `./${name}/index.js`
     )
     assert.ok(

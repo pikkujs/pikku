@@ -31,7 +31,6 @@ import {
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
-import { resolveScaffoldFeature } from '../../utils/resolve-scaffold-feature.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
@@ -73,9 +72,7 @@ export const serve = pikkuSessionlessFunc<
     // into the project — an app bootstrap is what a deployed bundle imports,
     // and coverage endpoints have no business in one.
     if (config.scaffold?.scenarios) {
-      registerScenarioInstrumentation(
-        resolveScaffoldFeature('scenarios', config.scaffold.scenarios).auth
-      )
+      registerScenarioInstrumentation()
     }
 
     const workflowService = new InMemoryWorkflowService()

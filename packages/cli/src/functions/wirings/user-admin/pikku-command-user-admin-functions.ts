@@ -3,7 +3,6 @@ import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeUserAdminFunctions } from './serialize-user-admin-functions.js'
-import { resolveScaffoldFeature } from '../../../utils/resolve-scaffold-feature.js'
 
 export const pikkuUserAdminFunctions = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -49,10 +48,7 @@ export const pikkuUserAdminFunctions = pikkuSessionlessFunc<void, boolean>({
 
     const leaf = (name: string) =>
       getLeafImportPath(config.userAdminFunctionsFile!, name, config)
-    const { schemas, functions } = serializeUserAdminFunctions(
-      leaf,
-      resolveScaffoldFeature('userAdmin', config.scaffold.userAdmin).auth
-    )
+    const { schemas, functions } = serializeUserAdminFunctions(leaf)
     await writeFileInDir(logger, config.userAdminSchemasFile, schemas)
     await writeFileInDir(logger, config.userAdminFunctionsFile, functions)
     return true

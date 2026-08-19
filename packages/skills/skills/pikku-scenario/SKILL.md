@@ -682,14 +682,13 @@ Coverage is attributed by running scenarios against a server that is collecting 
 Prerequisite in `pikku.config.json`:
 
 ```bash
-pikku enable scenarios            # sets scaffold.scenarios = true (session required)
-pikku enable scenarios --noAuth   # sets scaffold.scenarios = { "auth": false }
+pikku enable scenarios            # sets scaffold.scenarios = true
 ```
 
-`scaffold.scenarios` is a boolean or `{ auth?, path? }`. The legacy string forms
-(`"auth"` / `"no-auth"`) are **rejected by the config loader**, not reinterpreted —
-under a shape where a string could be a path, silently reading one as a flag
-would be worse than failing.
+`scaffold.scenarios` is a boolean or `{ path? }` — whether the surface exists
+and where it is written. A bare string is **rejected by the config loader**, not
+reinterpreted: under a shape where a string could be a path, silently reading
+one as a flag would be worse than failing.
 
 `scaffold.scenarios` generates the coverage and stub RPCs into your project (`pikkuScenarioTakeLiveCoverage`, `pikkuScenarioResetLiveCoverage`, `pikkuScenarioResetStubs`, `pikkuScenarioGetStubCalls`), so scenario runs work against any server. The coverage RPC reads `<outDir>/function/pikku-functions-meta-verbose.gen.json` off disk at request time — codegen always writes it, but it has to be deployed alongside the app or the RPC returns `null`.
 

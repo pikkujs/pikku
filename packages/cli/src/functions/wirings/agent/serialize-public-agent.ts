@@ -5,11 +5,8 @@ export interface PublicAgentGenOutput {
 
 export const serializePublicAgent = (
   leaf: (name: string) => string,
-  requireAuth: boolean = true,
   globalHTTPPrefix: string = ''
 ): PublicAgentGenOutput => {
-  const authFlag = requireAuth ? 'true' : 'false'
-
   const schemas = `/**
  * Auto-generated public agent schemas
  * Do not edit manually - regenerate with 'npx pikku'
@@ -96,7 +93,7 @@ export const isThreadOwner = pikkuPermission<{ threadId: string }>(
 export const agentCaller = pikkuSessionlessFunc({
   description: 'Run a named AI agent with a message and return its reply',
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
     return await rpc.agent.run(data.agentName as any, {
@@ -113,7 +110,7 @@ export const agentCaller = pikkuSessionlessFunc({
 
 export const agentStreamCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
     await rpc.agent.stream(data.agentName as any, {
@@ -130,7 +127,7 @@ export const agentStreamCaller = pikkuSessionlessFunc({
 
 export const agentApproveCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: AgentApproval,
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
     return await rpc.agent.approve(runId, approvals, agentName)
@@ -139,7 +136,7 @@ export const agentApproveCaller = pikkuSessionlessFunc({
 
 export const agentResumeCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: AgentResume,
   func: async (_services, data, { rpc }) => {
     await rpc.agent.resume(data.runId, {
@@ -156,7 +153,7 @@ export const getAgentThreads = pikkuSessionlessFunc({
   description:
     'Returns the caller\\'s AI agent threads from storage. Accepts optional filters: agentName, resourceId, limit, and offset for pagination.',
   expose: true,
-  auth: ${authFlag},
+  auth: false,
   func: async ({ agentRunService }, input, { session }) => {
     // \`owners\` is an authorization constraint derived from the session, never
     // from input — \`resourceId\` remains a caller-supplied filter within it.
@@ -177,7 +174,7 @@ export const getAgentThreadMessages = pikkuSessionlessFunc({
   description:
     'Returns all messages for a given AI agent thread, ordered by creation time.',
   expose: true,
-  auth: ${authFlag},
+  auth: false,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
     return await agentRunService.getThreadMessages(input.threadId)
@@ -191,7 +188,7 @@ export const getAgentThreadRuns = pikkuSessionlessFunc({
   description:
     'Returns the run history for a given AI agent thread, ordered by creation time.',
   expose: true,
-  auth: ${authFlag},
+  auth: false,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
     return await agentRunService.getThreadRuns(input.threadId)
@@ -206,7 +203,7 @@ export const deleteAgentThread = pikkuSessionlessFunc({
   description:
     'Deletes an AI agent thread and all of its persisted state.',
   expose: true,
-  auth: ${authFlag},
+  auth: false,
   permissions: { owner: isThreadOwner },
   func: async ({ agentRunService }, input) => {
     const deleted = await agentRunService.deleteThread(input.threadId)
@@ -215,7 +212,7 @@ export const deleteAgentThread = pikkuSessionlessFunc({
 })
 
 export const agentRoutes = defineHTTPRoutes({
-  auth: ${authFlag},
+  auth: false,
   tags: ['pikku:public'],
   routes: {
     agentRun: {

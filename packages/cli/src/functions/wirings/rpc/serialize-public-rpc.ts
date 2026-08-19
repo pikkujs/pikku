@@ -8,11 +8,8 @@ export interface PublicRPCGenOutput {
  */
 export const serializePublicRPC = (
   leaf: (name: string) => string,
-  requireAuth: boolean = true,
   globalHTTPPrefix: string = ''
 ): PublicRPCGenOutput => {
-  const authFlag = requireAuth ? 'true' : 'false'
-
   const schemas = `/**
  * Auto-generated public RPC endpoint schemas
  * Do not edit manually - regenerate with 'npx pikku'
@@ -35,7 +32,7 @@ import { RPCCall } from './rpc-public.schemas.gen.js'
 
 export const rpcCaller = pikkuSessionlessFunc({
   tags: ['pikku'],
-  auth: ${authFlag},
+  auth: false,
   input: RPCCall,
   func: async (_services, { rpcName, data }, { rpc }) => {
     return await rpc.exposed(rpcName, data)
@@ -45,7 +42,7 @@ export const rpcCaller = pikkuSessionlessFunc({
 wireHTTP({
   route: '${globalHTTPPrefix}/rpc/:rpcName',
   method: 'post',
-  auth: ${authFlag},
+  auth: false,
   tags: ['pikku'],
   func: rpcCaller,
 })

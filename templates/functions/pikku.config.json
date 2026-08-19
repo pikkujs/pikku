@@ -23,22 +23,12 @@
     ]
   },
   "scaffold": {
-    "rpc": {
-      "auth": false
-    },
-    "agent": {
-      "auth": false
-    },
-    "workflow": {
-      "auth": false
-    },
+    "rpc": true,
+    "agent": true,
+    "workflow": true,
     "console": true,
-    "events": {
-      "auth": false
-    },
-    "remoteRpc": {
-      "auth": false
-    },
+    "events": true,
+    "remoteRpc": true,
     "webhook": true,
     "pikkuDir": "pikku"
   },

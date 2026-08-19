@@ -28,11 +28,8 @@ export interface VirtualUserGenOutput {
  */
 export const serializeVirtualUserFunctions = (
   leaf: (name: string) => string,
-  pathToPersonas: string,
-  requireAuth: boolean = true
+  pathToPersonas: string
 ): VirtualUserGenOutput => {
-  const authFlag = requireAuth ? 'true' : 'false'
-
   const schemas = `/**
  * Auto-generated virtual user schemas
  * Do not edit manually - regenerate with 'npx pikku'
@@ -188,7 +185,6 @@ export const runVirtualUser = pikkuFunc({
   description:
     'Turns a declared persona loose on this application and records what it finds. Returns immediately with a run id; read the result back with getVirtualUserRun.',
   expose: true,
-  auth: ${authFlag},
   scopes: ['virtualUser:run'],
   input: RunVirtualUserInput,
   output: RunVirtualUserOutput,
@@ -276,7 +272,6 @@ export const getVirtualUserRun = pikkuFunc({
   description:
     'Reads a run back: its status, what it found, and the counts the engine kept.',
   expose: true,
-  auth: ${authFlag},
   // Its own scope, and not the one that starts a run: an adversarial run's
   // findings are working exploits carrying live ids, so reading them is the
   // more sensitive of the two.

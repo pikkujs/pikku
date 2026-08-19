@@ -6,35 +6,26 @@ describe('resolveScaffoldFeature', () => {
   test('an absent feature is off', () => {
     assert.deepEqual(resolveScaffoldFeature('rpc', undefined), {
       enabled: false,
-      auth: true,
     })
   })
 
   test('false is off', () => {
     assert.deepEqual(resolveScaffoldFeature('rpc', false), {
       enabled: false,
-      auth: true,
     })
   })
 
-  test('true enables the surface WITH a session required', () => {
-    // The whole point: the short form is the safe one.
+  test('true enables the surface', () => {
     assert.deepEqual(resolveScaffoldFeature('rpc', true), {
       enabled: true,
-      auth: true,
     })
   })
 
-  test('going public requires typing it out', () => {
-    assert.deepEqual(resolveScaffoldFeature('rpc', { auth: false }), {
+  test('an object enables the surface', () => {
+    assert.deepEqual(resolveScaffoldFeature('rpc', {}), {
       enabled: true,
-      auth: false,
       path: undefined,
     })
-  })
-
-  test('an object without auth is still authenticated', () => {
-    assert.equal(resolveScaffoldFeature('rpc', { path: 'a/b.ts' }).auth, true)
   })
 
   test('carries an explicit output path', () => {
@@ -44,37 +35,27 @@ describe('resolveScaffoldFeature', () => {
     )
   })
 
-  describe('the legacy string form', () => {
-    test('"no-auth" is refused, not coerced to a path', () => {
-      assert.throws(
-        () => resolveScaffoldFeature('rpc', 'no-auth' as never),
-        (error: Error) => {
-          assert.match(error.message, /scaffold\.rpc/)
-          assert.match(error.message, /no longer a mode/)
-          assert.match(error.message, /"rpc": \{ "auth": false \}/)
-          return true
-        }
+  test('says nothing about auth', () => {
+    // The scaffold flag decides whether a surface exists, never who may reach
+    // it — so nothing it resolves to may be read as an auth answer.
+    for (const value of [undefined, false, true, { path: 'a/b.ts' }] as const) {
+      assert.ok(
+        !('auth' in resolveScaffoldFeature('rpc', value)),
+        `expected no auth key for ${JSON.stringify(value)}`
       )
-    })
+    }
+  })
 
-    test('"auth" is refused and maps to true', () => {
-      assert.throws(
-        () => resolveScaffoldFeature('console', 'auth' as never),
-        (error: Error) => {
-          assert.match(error.message, /"console": true/)
-          return true
-        }
-      )
-    })
-
-    test('any other string is refused too', () => {
-      // Under boolean | object a bare string is never valid, so an unrecognised
-      // one must not fall through as a path.
-      assert.throws(
-        () => resolveScaffoldFeature('rpc', 'src/rpc.gen.ts' as never),
-        /must be true, false, or an object/
-      )
-    })
+  test('a bare string is refused, not read as a path', () => {
+    assert.throws(
+      () => resolveScaffoldFeature('rpc', 'src/rpc.gen.ts' as never),
+      (error: Error) => {
+        assert.match(error.message, /scaffold\.rpc/)
+        assert.match(error.message, /must be true, false, or an object/)
+        assert.match(error.message, /never a shorthand for a path/)
+        return true
+      }
+    )
   })
 
   test('a nonsense value is refused', () => {

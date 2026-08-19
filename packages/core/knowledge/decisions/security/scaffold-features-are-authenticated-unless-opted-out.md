@@ -7,6 +7,12 @@ tags: config, authorization, codegen, scaffold
 
 # A scaffolded surface is authenticated unless the config opts out in writing
 
+**Superseded by
+[[a-scaffold-flag-says-a-surface-exists-not-who-may-call-it]]**: the `auth`
+field is gone entirely, because the function runner already enforces each
+generated function's own auth. The reasoning below still explains why the
+legacy `'auth' | 'no-auth'` strings are refused rather than coerced.
+
 `scaffold.<feature>` was `'auth' | 'no-auth' | false`. Two things were wrong
 with it, and they compounded.
 
