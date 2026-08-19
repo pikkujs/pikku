@@ -6,14 +6,14 @@ import { serializeTanStackStartShim } from './serialize-tanstack-start-shim.js'
 
 export const pikkuTanStackStart = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const startServerFnsFile = config.clientFiles?.startServerFnsFile
+    const tanstackStartFile = config.clientFiles?.tanstackStartFile
     const rpcWiringsFile = config.clientFiles?.rpcWiringsFile
     const { packageMappings } = config
 
-    if (!startServerFnsFile) {
+    if (!tanstackStartFile) {
       logger.debug({
         message:
-          "Skipping generating TanStack Start shim since startServerFnsFile isn't set in the pikku config.",
+          "Skipping generating TanStack Start shim since tanstackStartFile isn't set in the pikku config.",
         type: 'skip',
       })
       return
@@ -21,19 +21,19 @@ export const pikkuTanStackStart = pikkuSessionlessFunc<void, void>({
 
     if (!rpcWiringsFile) {
       logger.warn(
-        'Skipping TanStack Start shim: startServerFnsFile is set but rpcWiringsFile is not — the shim imports the PikkuRPC class from rpcWiringsFile.'
+        'Skipping TanStack Start shim: tanstackStartFile is set but rpcWiringsFile is not — the shim imports the PikkuRPC class from rpcWiringsFile.'
       )
       return
     }
 
     const rpcWiringsPath = getFileImportRelativePath(
-      startServerFnsFile,
+      tanstackStartFile,
       rpcWiringsFile,
       packageMappings
     )
 
     const content = serializeTanStackStartShim(rpcWiringsPath)
-    await writeFileInDir(logger, startServerFnsFile, content)
+    await writeFileInDir(logger, tanstackStartFile, content)
   },
   middleware: [
     logCommandInfoAndTime({

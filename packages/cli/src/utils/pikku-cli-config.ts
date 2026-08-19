@@ -18,7 +18,7 @@ const CLIENT_FILE_KEYS = [
   'mcpJsonFile',
   'nextBackendFile',
   'nextHTTPFile',
-  'startServerFnsFile',
+  'tanstackStartFile',
 ] as const
 
 export const getPikkuCLIConfig = async (
@@ -1093,6 +1093,11 @@ const _getPikkuCLIConfig = async (
 
     // Resolve clientFiles paths relative to configDir
     if (result.clientFiles) {
+      if ('startServerFnsFile' in result.clientFiles) {
+        throw new PikkuCLIConfigError(
+          `clientFiles.startServerFnsFile is now clientFiles.tanstackStartFile — rename it in ${result.configDir}/pikku.config.json`
+        )
+      }
       for (const key of CLIENT_FILE_KEYS) {
         const val = result.clientFiles[key]
         if (val && typeof val === 'string' && !isAbsolute(val)) {
