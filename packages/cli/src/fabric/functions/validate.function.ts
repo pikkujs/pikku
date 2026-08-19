@@ -174,9 +174,14 @@ const ACTOR_QUICK_LOGIN_PATTERNS = [
 //     listening (the sandbox never serves routes).
 //   - @pikku/core mismatches split pikkuState into duplicate copies, so app
 //     and console routes 404; pin the floor that matches the runtime.
+//   - @pikku/cloudflare < 0.12.20 imports '@pikku/core/internal', a subpath no
+//     published @pikku/core exports, so every worker fails to resolve and the
+//     deploy ends at "0 workers bundled (0B total)". The broken import is in
+//     the dependency's own dist, which no source-level check can see.
 const PIKKU_MIN_VERSIONS: Record<string, string> = {
   '@pikku/cli': '0.12.43',
   '@pikku/core': '0.12.34',
+  '@pikku/cloudflare': '0.12.20',
 }
 
 type Semver = [number, number, number]
@@ -269,9 +274,45 @@ export async function runValidate(
   const pikkuConfigPath = join(root, 'pikku.config.json')
   const rootPkgPath = join(root, 'package.json')
   const rootPkg = await readJsonSafe<{
+    packageManager?: string
     dependencies?: Record<string, string>
     devDependencies?: Record<string, string>
   }>(rootPkgPath)
+
+  // ── packageManager ─────────────────────────────────────────────────────
+  // The build container is bun-only end to end — install, pikku codegen and
+  // the frontend build all run under bun — and it refuses the repository
+  // before cloning finishes if package.json declares anything else. Nothing
+  // else in validate reads packageManager, so a yarn or pnpm project passed
+  // every check here and then died on the first line of the deploy.
+  {
+    const declared = rootPkg?.packageManager
+    if (!declared) {
+      e(
+        'package-manager-undeclared',
+        'package.json does not declare "packageManager" — Fabric is bun-only and the build container aborts with "Unsupported packageManager"',
+        rootPkgPath,
+        lines(
+          'Add it to the root package.json:',
+          '  "packageManager": "bun@1.3.14"',
+          'then run `bun install` to generate bun.lock and commit both.'
+        )
+      )
+    } else if (!declared.startsWith('bun@')) {
+      e(
+        'package-manager-not-bun',
+        `package.json declares packageManager "${declared}" — Fabric is bun-only and the build container aborts with "Unsupported packageManager"`,
+        rootPkgPath,
+        lines(
+          'Set the root package.json to bun:',
+          '  "packageManager": "bun@1.3.14"',
+          'then migrate the lockfile:',
+          '  bun install && rm -f yarn.lock pnpm-lock.yaml package-lock.json',
+          'and commit bun.lock.'
+        )
+      )
+    }
+  }
 
   // ── pikkufabric.config.json ────────────────────────────────────────────
   // Not required to run validate — downgraded to info so any pikku project
@@ -460,8 +501,8 @@ export async function runValidate(
           seen.manifest,
           lines(
             `Bump ${pkg} to ^${floorStr} (or newer) and reinstall:`,
-            `  yarn up ${pkg}@^${floorStr}`,
-            'Then run `yarn install` and re-run `pikku fabric validate`.'
+            `  bun add ${pkg}@^${floorStr}`,
+            'Then run `bun install` and re-run `pikku fabric validate`.'
           )
         )
       }
@@ -818,7 +859,7 @@ export async function runValidate(
           'missing-schema-cfworker',
           '@pikku/schema-cfworker is not in packages/functions dependencies — every Cloudflare worker entry requires it',
           fnPkgPath,
-          'Run `yarn add @pikku/schema-cfworker` in packages/functions — must be in dependencies, not devDependencies'
+          'Run `bun add @pikku/schema-cfworker` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
       if (!fnPkg.dependencies?.['@pikku/kysely']) {
@@ -826,7 +867,7 @@ export async function runValidate(
           'missing-pikku-kysely',
           '@pikku/kysely is not in packages/functions dependencies — every Cloudflare worker entry requires it (KyselySecretService)',
           fnPkgPath,
-          'Run `yarn add @pikku/kysely` in packages/functions — must be in dependencies, not devDependencies'
+          'Run `bun add @pikku/kysely` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
     }
@@ -843,7 +884,7 @@ export async function runValidate(
           'missing-ai-vercel',
           'Project declares agent units but @pikku/ai-vercel is not in packages/functions dependencies',
           fnPkgPath,
-          'Run `yarn add @pikku/ai-vercel` in packages/functions — must be in dependencies, not devDependencies'
+          'Run `bun add @pikku/ai-vercel` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
       if (!fnPkg?.dependencies?.['@ai-sdk/openai-compatible']) {
@@ -851,7 +892,7 @@ export async function runValidate(
           'missing-ai-sdk-openai-compatible',
           'Project declares agent units but @ai-sdk/openai-compatible is not in packages/functions dependencies',
           fnPkgPath,
-          'Run `yarn add @ai-sdk/openai-compatible` in packages/functions — must be in dependencies, not devDependencies'
+          'Run `bun add @ai-sdk/openai-compatible` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
       // `ai` is a peer dep of @pikku/ai-vercel — not auto-installed. Without it
@@ -862,7 +903,7 @@ export async function runValidate(
           'missing-ai-sdk-core',
           'Project declares agent units but `ai` (the Vercel AI SDK) is not in packages/functions dependencies — it is a peer dependency of @pikku/ai-vercel and is not installed automatically',
           fnPkgPath,
-          'Run `yarn add ai` in packages/functions — must be in dependencies, not devDependencies'
+          'Run `bun add ai` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
     }
@@ -1526,7 +1567,7 @@ export async function runValidate(
             appPath,
             lines(
               `"${pkg}" is installed more than once (e.g. one hoisted to the repo root and one nested under apps/${name}).`,
-              `Declare "${pkg}" in exactly ONE workspace manifest (the root OR apps/${name}, not both), delete yarn.lock, and reinstall so it hoists to a single copy.`,
+              `Declare "${pkg}" in exactly ONE workspace manifest (the root OR apps/${name}, not both), delete bun.lock, and reinstall so it hoists to a single copy.`,
               '`resolutions` version-pins do NOT collapse a peer-virtualized duplicate.'
             )
           )
