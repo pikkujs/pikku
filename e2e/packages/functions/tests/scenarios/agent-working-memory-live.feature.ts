@@ -1,31 +1,31 @@
 /**
- * Working memory arrays, against a real model.
+ * Working memory, against a real model.
  *
  * The unit tests around `deepMergeWorkingMemory` pin what the merge does with
  * an array — it replaces one wholesale — and one of them pins that the prompt
- * says so. Neither can answer the question issue #1331 was actually about:
- * whether a model, handed that prompt, stops emitting only the item it just
- * learned and wiping the rest of the list.
+ * says so. None of them exercise the path a real run takes: the notepad reaches
+ * the runner as a system-role context message, and until that was lifted onto
+ * the `system` option every run that declared `memory.workingMemory` answered
+ * 500 with "System messages are not allowed in the prompt or messages fields."
+ * This scenario is the only thing that catches that, and it is what the title
+ * claims — a round trip, not a verdict on the prompt.
  *
- * That is a decision only a model makes, so this is `ai-live`. It is also not a
- * browser scenario: the console renders the working memory *schema* and never
- * its value, and the model call log the deterministic agent suite asserts on
+ * It is deliberately not the evidence for the prompt's array wording. Measured
+ * against `gpt-4.1-mini`, that wording changes nothing: the model keeps the
+ * whole list without it, over three items and over seven with an edit-style
+ * turn. `gpt-4.1-nano` fails either way, and fails by never writing the notepad
+ * at all, which is a different thing entirely. The wording is defensible
+ * guidance for weaker models; it is not something this test can show.
+ *
+ * It is `ai-live` because only a model can make the decision, and not a browser
+ * scenario: the console renders the working memory *schema* and never its
+ * value, and the model call log the deterministic agent suite asserts on
  * belongs to the mock provider, which does not exist once the runs are real.
  * The notepad is read back directly instead.
  *
- * A single run of a non-deterministic model is weak evidence on its own — a
- * pass here means the prompt was enough this time, not that it is enough
- * always. It is still the only evidence of the kind that matters.
- *
- * Unverified at the time of writing, for want of a key. What a mocked dry run
- * did show is that declaring `memory.workingMemory` at all makes a run answer
- * 500 with "System messages are not allowed in the prompt or messages fields.
- * Use the instructions option instead" — the notepad reaches the runner as a
- * system-role context message, which the AI SDK in that checkout rejected
- * inside `messages`. Whether that is the repo's bug or that checkout's
- * dependency drift is undetermined: the deterministic agent suite was red
- * beside it, most of it reporting no model calls at all. No agent here declared
- * working memory before this one, so nothing had ever exercised the path.
+ * The runner-side lift lands in the delegate-mode change stacked on top of this
+ * branch, so this scenario passes there and not here. `ai-live` runs in no CI
+ * suite, so nothing goes red in the meantime.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
@@ -37,9 +37,9 @@ export const workingMemoryArrayKeepsEarlierItemsScenario = pikkuScenario<
   void,
   { items: string[] }
 >({
-  title: 'Adding to a remembered list does not delete what was already on it',
+  title: 'A thread’s notepad round-trips through a real model',
   description:
-    'A second turn adds one item, and the two from the first turn are still there',
+    'A second turn adds an item and the notepad comes back holding all of them',
   tags: ['scenario', 'agent-working-memory-live', 'ai-live'],
   func: async (_services, _data, { scenario }) => {
     const thread = await scenario.given('opens a thread', 'startsAgentThread')
@@ -85,9 +85,9 @@ export const workingMemoryArrayKeepsEarlierItemsScenario = pikkuScenario<
 })
 
 export const agentWorkingMemoryLiveFeature = pikkuFeature({
-  name: 'Working memory arrays survive a real model’s update',
+  name: 'Working memory round-trips against a real model',
   description:
-    'A model told that arrays are replaced repeats the items it is keeping',
+    'The notepad survives a real run, which no mocked scenario can show',
   tags: ['agent-working-memory-live', 'ai-live'],
   scenarios: [workingMemoryArrayKeepsEarlierItemsScenario],
 })
