@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import type { ColumnKind, CoercionMap } from './coercion-plugin.js'
 import type { DbIntrospector, ColumnInfo } from './db-introspector.js'
 import {
   loadAnnotations,
   nameSuggestsKind,
+  type AnnotationKind,
   type AnnotationMap,
   type ColAnnotation,
 } from './annotation-parser.js'
@@ -14,6 +14,7 @@ import {
   readMigrationProvenance,
 } from './migration-provenance.js'
 import { ErrorCode, type CodedDiagnostic } from '@pikku/inspector'
+import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ type Dialect = 'sqlite' | 'postgres'
  * derive nothing (return null). Used both to auto-type Postgres dates and to
  * detect name↔type contradictions for warnings.
  */
-function realKind(dialect: Dialect, sqlType: string): ColumnKind | null {
+function realKind(dialect: Dialect, sqlType: string): AnnotationKind | null {
   if (dialect !== 'postgres') return null
   const u = sqlType.toUpperCase()
   // Array types carry no scalar kind — an array of timestamps is not a `date`.
@@ -110,7 +111,7 @@ function mapType(sqlType: string): string {
 // ─── Type expression ─────────────────────────────────────────────────────────
 
 function selectBase(
-  annotation: { kind?: ColumnKind; tsType?: string } | null,
+  annotation: { kind?: AnnotationKind; tsType?: string } | null,
   col: ColumnInfo
 ): string {
   // An explicit `tsType` is a general type override and wins over everything.
@@ -123,7 +124,7 @@ function selectBase(
 }
 
 function insertBase(
-  annotation: { kind?: ColumnKind; tsType?: string } | null,
+  annotation: { kind?: AnnotationKind; tsType?: string } | null,
   col: ColumnInfo
 ): string {
   if (annotation?.tsType) return annotation.tsType
@@ -167,7 +168,7 @@ function formBrand(form: ColumnForm | undefined): string | null {
 
 function columnTypeExpression(
   col: ColumnInfo,
-  annotation: { kind?: ColumnKind; tsType?: string } | null,
+  annotation: { kind?: AnnotationKind; tsType?: string } | null,
   classification: Classification,
   form?: ColumnForm
 ): string {
@@ -280,7 +281,7 @@ function emitInterface(
       const real = realKind(dialect, col.type)
       const derived =
         !ann?.tsType && (real === 'date' || real === 'uuid') ? real : undefined
-      const typingKind: ColumnKind | undefined = ann?.kind ?? derived
+      const typingKind: AnnotationKind | undefined = ann?.kind ?? derived
 
       // Warn (don't force) only on a genuine contradiction the real type can
       // prove: a column NAMED like a date/bool whose actual type disagrees
@@ -315,7 +316,7 @@ function emitInterface(
       const effectiveTsType =
         ann?.tsType ?? (typingKind ? undefined : (enumUnion ?? undefined))
 
-      const typeAnn: { kind?: ColumnKind; tsType?: string } | null =
+      const typeAnn: { kind?: AnnotationKind; tsType?: string } | null =
         typingKind || effectiveTsType
           ? { kind: typingKind, tsType: effectiveTsType }
           : null
@@ -785,7 +786,7 @@ export async function generateSchemaTypes(
       // Coercion is driven only by an explicit `kind` in db/annotations.ts —
       // no name inference. An unannotated `*_at` column is not coerced. `uuid`
       // is a string in both dialects, so it needs no runtime coercion.
-      const kind: ColumnKind | undefined = tableCols[col.name]?.kind
+      const kind: AnnotationKind | undefined = tableCols[col.name]?.kind
       if (kind && kind !== 'uuid') {
         // Keyed by the name the query is written against, since that is what
         // the runtime plugin sees on the Kysely node.

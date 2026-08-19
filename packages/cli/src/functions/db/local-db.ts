@@ -24,13 +24,14 @@ import {
   compilePikkuSchemas,
   pikkuSchemas,
   resolveRequirements,
+  createCoercionPlugin,
   type PikkuSchema,
   type RequiredTypes,
+  type CoercionMap,
 } from '@pikku/kysely'
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
-import { createCoercionPlugin, type CoercionMap } from './coercion-plugin.js'
 import { tableCreationSql } from './schema-sql.js'
 import { SqliteMigrationExecutor } from './sqlite/sqlite-migrator.js'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'

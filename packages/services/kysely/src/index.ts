@@ -26,6 +26,12 @@ export {
   type Deserializer,
 } from './serialize-plugin.js'
 export {
+  createCoercionPlugin,
+  type ColumnKind,
+  type CoercionMap,
+  type CreateCoercionPluginOptions,
+} from './coercion-plugin.js'
+export {
   auditSchema,
   pikkuSchemas,
   applyPikkuSchemas,
