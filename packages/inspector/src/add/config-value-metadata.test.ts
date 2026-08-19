@@ -169,7 +169,7 @@ describe('config value metadata (docsUrl)', () => {
 })
 
 /**
- * `optional` and `required` are the deploy gate's whole input. A flag the
+ * `optional` is the deploy gate's whole input. A flag the
  * inspector drops leaves the gate seeing a bare declaration, which is how an
  * optional secret suspends a deploy over a value production is meant NOT to
  * have.
@@ -218,8 +218,8 @@ describe('config value gating flags', () => {
     }
   })
 
-  test('carries required from defineVariable into the definition', async () => {
-    const rootDir = await mkdtemp(`${fixtureRoot}-variable-required-`)
+  test('carries optional from defineVariable into the definition', async () => {
+    const rootDir = await mkdtemp(`${fixtureRoot}-variable-optional-`)
     const file = join(rootDir, 'variable.ts')
 
     await writeFile(
@@ -233,7 +233,7 @@ describe('config value gating flags', () => {
         "  name: 'consoleUrl',",
         "  displayName: 'Console URL',",
         "  variableId: 'CONSOLE_URL',",
-        '  required: true,',
+        '  optional: true,',
         '  schema: ConsoleUrlSchema,',
         '})',
         'defineVariable({',
@@ -248,14 +248,14 @@ describe('config value gating flags', () => {
     const criticals: Array<{ code: ErrorCode; message: string }> = []
     try {
       const state = await inspect(makeLogger(criticals), [file], { rootDir })
-      const required = state.variables.definitions.find(
+      const optional = state.variables.definitions.find(
         (d) => d.variableId === 'CONSOLE_URL'
       )
-      const optional = state.variables.definitions.find(
+      const required = state.variables.definitions.find(
         (d) => d.variableId === 'CORS_ORIGINS'
       )
-      assert.equal(required!.required, true)
-      assert.equal(optional!.required, undefined)
+      assert.equal(optional!.optional, true)
+      assert.equal(required!.optional, undefined)
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
