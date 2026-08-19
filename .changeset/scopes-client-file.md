@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 feat(cli): generate a browser-safe scope client
