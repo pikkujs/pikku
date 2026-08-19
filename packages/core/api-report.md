@@ -3960,7 +3960,7 @@ export type CoreVariable<T = unknown> = {
   description?: string
   variableId: string
   schema: T
-  required?: boolean
+  optional?: boolean
   docsUrl?: string
 }
 defineVariable: <T>(_config: CoreVariable<T>) => void
@@ -3971,7 +3971,7 @@ export type VariableDefinitionMeta = {
   description?: string
   variableId: string
   schema?: Record<string, unknown> | string
-  required?: boolean
+  optional?: boolean
   docsUrl?: string
   sourceFile?: string
 }
