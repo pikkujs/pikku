@@ -1614,6 +1614,54 @@ describe('addonServerlessIncompatible scoping', () => {
   })
 })
 
+describe("an addon's own deploy conflict is the consumer's only when used", () => {
+  // An addon publishes metadata for everything it exports. A function it marks
+  // `deploy: 'serverless'` while also naming one of its services
+  // serverless-incompatible is the addon author's contradiction — but the
+  // deploy scan walks every published function, so without care it fails the
+  // build of a consumer that never wires that function.
+  const withConflictingAddonFunction = (route?: string) => {
+    const state = createMockInspectorState()
+    ;(state as any).addonFunctions = {
+      ffmpeg: {
+        transcode: {
+          deploy: 'serverless',
+          services: { services: ['FfmpegService'] },
+        },
+      },
+    }
+    state.addonServerlessIncompatible = new Map([['ffmpeg', ['FfmpegService']]])
+    if (route) {
+      ;(state.http.meta.get as any)[route] = {
+        pikkuFuncId: 'ffmpeg:transcode',
+        route,
+        method: 'GET',
+        tags: [],
+        middleware: [],
+        permissions: [],
+      }
+    }
+    return state
+  }
+
+  test('a conflicting addon function nothing wires does not fail the build', () => {
+    const state = withConflictingAddonFunction()
+
+    assert.doesNotThrow(() =>
+      filterInspectorState(state, { target: ['serverless'] }, mockLogger)
+    )
+  })
+
+  test('wiring that same function reports the conflict', () => {
+    const state = withConflictingAddonFunction('/transcode')
+
+    assert.throws(
+      () => filterInspectorState(state, { target: ['serverless'] }, mockLogger),
+      /FfmpegService/
+    )
+  })
+})
+
 describe('addonServerlessIncompatible serialization roundtrip', () => {
   // Uses getInitialInspectorState to guarantee all Map fields are initialized —
   // the lightweight mock in createMockInspectorState() omits fields like

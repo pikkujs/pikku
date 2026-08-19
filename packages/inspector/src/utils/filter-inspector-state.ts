@@ -7,7 +7,19 @@ import type { PikkuWiringTypes } from '@pikku/core/types'
 import { parseVersionedId } from '@pikku/core/utils'
 import { makeContextBasedId } from './extract-function-name.js'
 import { aggregateRequiredServices } from './post-process.js'
-import { resolveDeployTarget } from './resolve-deploy-target.js'
+import {
+  IncompatibleDeployTargetError,
+  resolveDeployTarget,
+} from './resolve-deploy-target.js'
+
+/**
+ * The deploy filter, asked about one function at a time rather than handed over
+ * as a set, so that a function's own deploy conflict is raised only if this app
+ * turns out to wire it.
+ */
+type DeployFilter = {
+  has(pikkuFuncId: string): boolean
+}
 
 // Module-level Set to track warned groups across multiple filter calls
 const globalWarnedGroups = new Set<string>()
@@ -113,9 +125,10 @@ function matchesFilters(
   },
   logger: InspectorLogger,
   warnedGroups?: Set<string>,
-  // Set of pikkuFuncIds to keep based on the deploy filter; null when
-  // the deploy filter is inactive.
-  keptByDeploy?: Set<string> | null
+  // Kept pikkuFuncIds under the deploy filter; null when the filter is
+  // inactive. Asked about one id at a time, which is what lets a conflict in an
+  // addon's own metadata surface only for a function this app actually wires.
+  keptByDeploy?: DeployFilter | null
 ): boolean {
   // If no filters, allow everything
   if (Object.keys(filters).length === 0) return true
@@ -343,7 +356,7 @@ export function filterInspectorState(
   // Precompute kept-function set for the deploy filter (if active).
   // resolveDeployTarget throws IncompatibleDeployTargetError when an
   // explicit deploy: 'serverless' clashes with serverlessIncompatible.
-  let keptByDeploy: Set<string> | null = null
+  let keptByDeploy: DeployFilter | null = null
   if (
     (filters.target && filters.target.length > 0) ||
     (filters.excludeTarget && filters.excludeTarget.length > 0)
@@ -354,7 +367,19 @@ export function filterInspectorState(
       : null
     const incompatible = new Set(filters.serverlessIncompatible ?? [])
     const defaultTarget = filters.defaultTarget ?? 'serverless'
-    keptByDeploy = new Set<string>()
+    const kept = new Set<string>()
+    // An addon publishes metadata for everything it exports, so a conflict in a
+    // function this app never wires is not this app's build error. Holding it
+    // here and raising it from `has` reports it at the one place the app is
+    // known to depend on that function.
+    const conflicts = new Map<string, IncompatibleDeployTargetError>()
+    keptByDeploy = {
+      has: (funcId: string) => {
+        const conflict = conflicts.get(funcId)
+        if (conflict) throw conflict
+        return kept.has(funcId)
+      },
+    }
     const keepByTarget = (
       funcId: string,
       funcMeta: unknown,
@@ -368,7 +393,7 @@ export function filterInspectorState(
       )
       if (allowed && !allowed.has(target)) return
       if (excluded && excluded.has(target)) return
-      keptByDeploy!.add(funcId)
+      kept.add(funcId)
     }
     for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
       keepByTarget(funcId, funcMeta, incompatible)
@@ -384,7 +409,13 @@ export function filterInspectorState(
         state.addonServerlessIncompatible?.get(namespace) ?? []
       )
       for (const [funcName, funcMeta] of Object.entries(addonMeta)) {
-        keepByTarget(`${namespace}:${funcName}`, funcMeta, addonIncompatible)
+        const funcId = `${namespace}:${funcName}`
+        try {
+          keepByTarget(funcId, funcMeta, addonIncompatible)
+        } catch (e) {
+          if (!(e instanceof IncompatibleDeployTargetError)) throw e
+          conflicts.set(funcId, e)
+        }
       }
     }
   }
