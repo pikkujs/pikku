@@ -1,5 +1,5 @@
-import type { ScopeDefinitions } from '@pikku/core/ecosystem/scope'
-import { flattenScopeDefinitions } from '@pikku/core/ecosystem/scope'
+import type { ScopeDefinitions } from '@pikku/core/scope'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
 
 export interface SerializeScopesClientOptions {
   definitions: ScopeDefinitions

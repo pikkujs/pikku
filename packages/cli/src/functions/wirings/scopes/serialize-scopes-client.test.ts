@@ -5,7 +5,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { hasScopes as coreHasScopes } from '@pikku/core'
-import type { ScopeDefinitions } from '@pikku/core/ecosystem/scope'
+import type { ScopeDefinitions } from '@pikku/core/scope'
 import { serializeScopesClient } from './serialize-scopes-client.js'
 
 const definitions: ScopeDefinitions = [
