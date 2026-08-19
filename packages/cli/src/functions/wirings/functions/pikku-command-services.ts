@@ -67,7 +67,7 @@ export const serializeServicesMap = (
 
   // Create singleton services map: all singleton services with true/false based on usage
   const singletonServicesMap: Record<string, boolean> = {}
-  allSingletonServices.forEach((service) => {
+  new Set([...allSingletonServices, ...defaultServices]).forEach((service) => {
     singletonServicesMap[service] = usedServices.has(service)
   })
 

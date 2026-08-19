@@ -61,6 +61,91 @@ describe('serializeServicesMap', () => {
     assert.match(content, /Required<Pick<Services,[^>]*'customWire'/)
   })
 
+  test('marks the framework singletons required for an addon build', () => {
+    const content = serializeServicesMap(
+      ['stripe', 'stripeWebhookVerifier'],
+      [],
+      new Set(['stripe']),
+      [],
+      SERVICES_IMPORT,
+      WIRE_IMPORT,
+      [],
+      false,
+      false
+    )
+
+    assert.doesNotMatch(
+      content,
+      /export type RequiredSingletonServices = Partial<SingletonServices>/
+    )
+    for (const service of [
+      'config',
+      'logger',
+      'variables',
+      'schema',
+      'secrets',
+    ]) {
+      assert.match(content, new RegExp(`'${service}': true,`))
+      assert.match(
+        content,
+        new RegExp(`Required<Pick<SingletonServices,[^>]*'${service}'`)
+      )
+    }
+    assert.match(content, /'stripe': true,/)
+    assert.match(content, /'stripeWebhookVerifier': false,/)
+  })
+
+  test('emits an unchanged map for an app build that already declares the framework singletons', () => {
+    const content = serializeServicesMap(
+      [
+        'config',
+        'logger',
+        'variables',
+        'schema',
+        'secrets',
+        'kysely',
+        'todoStore',
+      ],
+      [],
+      new Set(['kysely']),
+      [],
+      SERVICES_IMPORT,
+      WIRE_IMPORT,
+      [],
+      false,
+      false
+    )
+
+    assert.equal(
+      content,
+      [
+        SERVICES_IMPORT,
+        WIRE_IMPORT,
+        '',
+        '// Singleton services map: true if required, false if available but unused',
+        'export const requiredSingletonServices = {',
+        "  'config': true,",
+        "  'kysely': true,",
+        "  'logger': true,",
+        "  'schema': true,",
+        "  'secrets': true,",
+        "  'todoStore': false,",
+        "  'variables': true,",
+        '} as const',
+        '',
+        '// Wire services map: true if required, false if available but unused',
+        'export const requiredWireServices = {',
+        '} as const',
+        '',
+        '// Type exports',
+        "export type RequiredSingletonServices = Required<Pick<SingletonServices, 'config' | 'kysely' | 'logger' | 'schema' | 'secrets' | 'variables'>> & Partial<Omit<SingletonServices, 'config' | 'kysely' | 'logger' | 'schema' | 'secrets' | 'variables'>>",
+        '',
+        'export type RequiredWireServices = Partial<Services>',
+        '',
+      ].join('\n')
+    )
+  })
+
   test('leaves agentRunService optional when no agent scaffold is configured', () => {
     const content = serializeServicesMap(
       ['agentRunService', 'todoStore'],
