@@ -1,6 +1,6 @@
 {
   "name": "@pikku/inspector",
-  "version": "0.12.61",
+  "version": "0.12.62",
   "description": "TypeScript inspector for Pikku — discovers functions and wirings to drive code generation",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
@@ -45,10 +45,10 @@
     "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.85"
+    "@pikku/core": "^0.12.87"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.85",
+    "@pikku/core": "^0.12.87",
     "@types/node": "^24.13.3"
   },
   "engines": {

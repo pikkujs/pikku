@@ -1,5 +1,17 @@
 # @pikku/browser
 
+## 0.12.46
+
+### Patch Changes
+
+- 3a83f85: Stop re-exporting package internals through entry points
+
+  66 names reached consumers only because an `export *` in an entry point swept
+  them up. Each one is referenced solely inside its own package, so the star is
+  now an explicit named re-export listing what is genuinely public. The
+  declarations themselves are untouched — this narrows the entry point, not the
+  module.
+
 ## 0.12.45
 
 ### Patch Changes

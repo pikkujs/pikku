@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cloudflare",
-  "version": "0.12.21",
+  "version": "0.12.22",
   "description": "Cloudflare Workers runtime for Pikku — fetch, scheduled, queues, D1 and hibernating WebSockets",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -36,15 +36,15 @@
     "kysely-d1": "^0.4.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.85",
-    "@pikku/kysely": "^0.13.17",
+    "@pikku/core": "^0.12.87",
+    "@pikku/kysely": "^0.13.19",
     "kysely": "^0.29.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.21.3",
     "@cloudflare/workers-types": "^5.20260815.1",
-    "@pikku/core": "^0.12.85",
-    "@pikku/kysely": "^0.13.17",
+    "@pikku/core": "^0.12.87",
+    "@pikku/kysely": "^0.13.19",
     "@vitest/runner": "^4.1.10",
     "@vitest/snapshot": "^4.1.10",
     "kysely": "^0.29.5",

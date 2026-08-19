@@ -1,3 +1,21 @@
+## 0.12.14
+
+### Patch Changes
+
+- 3a83f85: Stop re-exporting package internals through entry points
+
+  66 names reached consumers only because an `export *` in an entry point swept
+  them up. Each one is referenced solely inside its own package, so the star is
+  now an explicit named re-export listing what is genuinely public. The
+  declarations themselves are untouched — this narrows the entry point, not the
+  module.
+
+- Updated dependencies [9687ad1]
+- Updated dependencies [2d21628]
+- Updated dependencies [985b87b]
+- Updated dependencies [3a83f85]
+  - @pikku/core@0.12.87
+
 ## 0.12.13
 
 ### Patch Changes

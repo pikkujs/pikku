@@ -14,8 +14,8 @@
     "test:http-fetch": "tsx client/test-remote-rpc.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.86",
-    "@pikku/express": "^0.12.13",
+    "@pikku/core": "^0.12.87",
+    "@pikku/express": "^0.12.14",
     "@pikku/jose": "^0.12.6",
     "@pikku/redis": "^0.12.19",
     "@pikku/schema-cfworker": "^0.12.6",
@@ -26,7 +26,7 @@
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.107",
+    "@pikku/cli": "^0.12.108",
     "@types/node": "^24"
   },
   "exports": {

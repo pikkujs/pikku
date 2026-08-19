@@ -1,3 +1,114 @@
+## 0.12.108
+
+### Patch Changes
+
+- 9687ad1: fix: hand agent middleware the singleton services its type promises
+
+  `PikkuAgentMiddlewareHooks` typed its `services` parameter as the project's full
+  wire `Services`, while every runtime call site has only ever passed the singleton
+  services. A middleware that destructured a wire service typechecked and silently
+  received `undefined`.
+
+  The hooks are now bounded by `CoreSingletonServices` in core, and the generated
+  `pikkuAgentMiddleware` defaults to `WiredSingletonServices` like the other
+  middleware definers. Nothing changes at runtime: agent middleware hooks a _run_,
+  and a run is not a request — it can start from a scheduler or a workflow with no
+  wire behind it. A tool the run calls is an ordinary function call and still gets
+  its own wire services through `runPikkuFunc`.
+
+- 13ee73f: Generate `SCENARIO_ACTOR_SECRET` as an optional secret. A stage that runs no
+  scenarios is a supported state — the actor sign-in refuses every request — but
+  the required declaration failed the deploy config gate on every such stage.
+- 8d6a6bc: fix(cli): a scaffold flag says a surface exists, not who may call it
+
+  `scaffold.<feature>` accepted an `auth` field, and the generated wrapper emitted
+  it onto the wired function. That put authentication in two places at once: the
+  target function already declares whether it needs a session, its wiring, its
+  scopes and its addon gate already refine it, and `runPikkuFunc` already enforces
+  all of that on every call. The scaffold flag only stacked a coarser gate in
+  front of the one that actually decides, and — being a config field — it could
+  disagree with the function it was gating.
+
+  `PikkuScaffoldFeature` is now `boolean | { path?: string }`. It answers two
+  things and no more: whether the surface is generated, and where the file is
+  written. A feature that was `{ "auth": false }` becomes plain `true`, and
+  `pikku enable` loses its `--noAuth` flag along with the dimension it set.
+
+  The six generators that took the flag no longer take one. The four that generate
+  a dispatcher — public RPC, public agent, workflow routes and the events channel
+  — now emit a fixed `auth: false`. That is the wrapper declining to gate, not the
+  scaffold declaring the surface public: `rpcCaller` forwards to whichever
+  function the caller named, and that function's own `auth`, permissions, scopes
+  and addon gate are what decide. Emitting nothing would not be neutral, since a
+  wiring without `auth` requires a session and would reject the call before the
+  gate that decides ever ran. The two that generate scoped admin functions — user
+  admin and virtual users — emit no `auth`, because they are `pikkuFunc` with
+  their own `scopes`: session-required by construction, and the deciding function
+  rather than a wrapper in front of one.
+
+  The legacy `'auth'` / `'no-auth'` string values are gone with it. A bare string
+  is still refused rather than read as a `path`: under `boolean | object` no
+  string is valid, so guessing one would turn a typo into a generated file nobody
+  asked for.
+
+- 5fa28a5: `pikku dev`: say which AI SDK copies the agent runner is using, and refuse a mismatched pair up front
+
+  Resolving `@pikku/ai-vercel` and `@ai-sdk/openai-compatible` from the project's root `package.json` is all-or-nothing, and under an isolated `node_modules` layout (bun, pnpm) the root resolves only what the root itself declares. A monorepo that installed the pair in the workspace that uses them silently got the CLI's own copies instead — which then threw `Unsupported model version v4 …` at the first model call, naming the model and the gateway but neither of the packages that actually disagreed. That case now logs a warning naming the package that could not be resolved.
+
+  When the pair does come from the project, their `@ai-sdk/provider` majors are compared before the runner is built. A mismatch disables agents with a message naming both versions and pointing at `@ai-sdk/openai-compatible`'s per-`ai`-major dist-tags, instead of surfacing as a model-spec error later.
+
+- 2783d93: refactor(cli)!: `clientFiles.startServerFnsFile` is now `clientFiles.tanstackStartFile`
+
+  The old name read as "start the server fns" when it meant "the TanStack **Start**
+  server-fns file". A config still using it now fails to load with the new name in
+  the message, rather than silently generating nothing.
+
+- 3a83f85: Stop re-exporting package internals through entry points
+
+  66 names reached consumers only because an `export *` in an entry point swept
+  them up. Each one is referenced solely inside its own package, so the star is
+  now an explicit named re-export listing what is genuinely public. The
+  declarations themselves are untouched — this narrows the entry point, not the
+  module.
+
+- d21ab7b: fix(cli): validate flags a dead Design tab instead of mentioning it
+
+  A project that renders Mantine but has no `packages/mantine-theme/` (or no
+  `themes/<id>.json`) gets a Design tab that renders "No themes yet". That was
+  reported at info, under a summary ending "no errors". It is now a warning when
+  an app depends on `@mantine/core` or `@pikku/mantine`, and stays info otherwise.
+
+  The `components-missing` check is replaced by `design-no-stories`, which looks
+  where the design server actually globs stories — `apps/*/src/components/**/*.stories.tsx`
+  — rather than at `packages/components/`.
+
+- 31ad85f: fix(emails): escape substituted values in the generated email renderer
+
+  `renderEmailTemplate` spliced values into HTML unescaped and looped substitution
+  until it reached a fixed point, so a value containing `"` broke out of the
+  attribute it landed in, a value containing markup was injected verbatim, and a
+  value containing `{{...}}` was re-expanded as a template on the next pass. An
+  ordinary CSS font stack from `theme.json` was enough to corrupt the document.
+
+  Rendering is now layered by trust. Partials are inlined first; `theme.*` and
+  `t.*` are expanded next as template-author input; caller `data` is substituted in
+  a single pass that is never rescanned. Values are HTML-escaped in `.html` output
+  and left raw in `.subject.txt` / `.text.txt`. `{{content}}` and partials stay
+  raw, and `{{{value}}}` is a new opt-in raw form. The console's email preview uses
+  the same renderer, so previews match what is sent.
+
+- Updated dependencies [9687ad1]
+- Updated dependencies [2d21628]
+- Updated dependencies [8d6a6bc]
+- Updated dependencies [985b87b]
+- Updated dependencies [3a83f85]
+- Updated dependencies [31ad85f]
+  - @pikku/core@0.12.87
+  - @pikku/kysely@0.13.19
+  - @pikku/skills@0.12.12
+  - @pikku/inspector@0.12.62
+  - @pikku/ws@0.12.9
+
 ## 0.12.107
 
 ### Patch Changes
