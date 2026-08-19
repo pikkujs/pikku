@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect, sql } from 'kysely'
 import Database from 'better-sqlite3'
 
+import type { StepState } from '@pikku/core/ecosystem/workflow'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { SerializePlugin } from './serialize-plugin.js'
 import { KyselyWorkflowService } from './kysely-workflow-service.js'
@@ -426,5 +427,116 @@ describe('KyselyWorkflowService — a transition that addresses no history row',
       'each transition appended a row instead of updating the one already there'
     )
     assert.equal(history[0]!.status, 'succeeded')
+  })
+})
+
+/**
+ * Dispatch is at-least-once — the relay re-dispatches a step it believes was
+ * dropped, and a queue can redeliver a job it already handed out — so the claim
+ * is the only thing standing between a duplicate dispatch and a second
+ * execution of a side-effecting step.
+ */
+describe('KyselyWorkflowService — claiming a step for execution', () => {
+  const claim = (runId: string, stepName: string, rpcName = 'rpc.fn') =>
+    (service as any).claimStepForExecution(
+      runId,
+      stepName,
+      rpcName
+    ) as Promise<StepState | null>
+
+  test('two dispatches racing for the same pending step: exactly one wins', async () => {
+    const runId = await seedRun()
+    await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+    const winners = claims.filter((c) => c !== null)
+
+    assert.equal(
+      winners.length,
+      1,
+      `both dispatches claimed the step, so a side-effecting step would run twice: ${JSON.stringify(claims)}`
+    )
+    assert.equal((await service.getStepState(runId, 's1')).status, 'running')
+  })
+
+  test('two dispatches racing to retry the same failed step: exactly one wins', async () => {
+    const runId = await seedRun()
+    const step = await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await service.setStepRunning(step.stepId)
+    await service.setStepError(step.stepId, new Error('boom'))
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+    const winners = claims.filter((c) => c !== null)
+
+    assert.equal(
+      winners.length,
+      1,
+      `both dispatches started a retry, so the failed step would be retried twice concurrently: ${JSON.stringify(claims)}`
+    )
+    assert.equal(
+      (await service.getStepState(runId, 's1')).attemptCount,
+      2,
+      'the retry raced itself and burned more than one attempt'
+    )
+  })
+
+  test('a step already claimed is not claimable again', async () => {
+    const runId = await seedRun()
+    await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    assert.notEqual(await claim(runId, 's1'), null)
+    assert.equal(
+      await claim(runId, 's1'),
+      null,
+      'a redelivered job re-claimed a step that is already running'
+    )
+  })
+
+  test('a succeeded step is not claimable', async () => {
+    const runId = await seedRun()
+    const step = await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await service.setStepRunning(step.stepId)
+    await service.setStepResult(step.stepId, { ok: true })
+
+    assert.equal(await claim(runId, 's1'), null)
+  })
+
+  test('a claim that fails releases the step, so it is retryable', async () => {
+    const runId = await seedRun()
+    const step = await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    const first = await claim(runId, 's1')
+    assert.notEqual(first, null)
+    await service.setStepError(step.stepId, new Error('boom'))
+
+    const retry = await claim(runId, 's1')
+    assert.notEqual(
+      retry,
+      null,
+      'the failed step stayed claimed, so it can never be retried'
+    )
+    assert.equal(retry?.status, 'running')
+    assert.equal(retry?.attemptCount, 2)
+  })
+
+  test('a claim for a different function than the step was dispatched with is refused', async () => {
+    const runId = await seedRun()
+    await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    await assert.rejects(() => claim(runId, 's1', 'rpc.other'))
+    assert.equal(
+      (await service.getStepState(runId, 's1')).status,
+      'pending',
+      'the mismatched claim moved the step anyway'
+    )
+  })
+
+  test('a scheduled step is claimable, and only once', async () => {
+    const runId = await seedRun()
+    const step = await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await service.setStepScheduled(step.stepId)
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+    assert.equal(claims.filter((c) => c !== null).length, 1)
   })
 })

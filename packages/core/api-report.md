@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2697 observable things**: 862 exported names, plus
-1835 members on the classes and interfaces among them, reachable
+**2698 observable things**: 862 exported names, plus
+1836 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 135 | 110 | 396 |
 | `./scenario` | 52 | 52 | 141 |
-| `./workflow` | 82 | 33 | 133 |
+| `./workflow` | 82 | 33 | 134 |
 | `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
 | `./channel` | 32 | 32 | 84 |
@@ -1179,6 +1179,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async runWorkflowJob(runId: string, rpcService: PikkuRPC): Promise<void>
   protected async onChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
   public async executeWorkflowStep(runId: string, stepName: string, rpcName: string, data: any, rpcService: PikkuRPC): Promise<void>
+  protected async claimStepForExecution(runId: string, stepName: string, rpcName: string): Promise<StepState | null>
   public async orchestrateWorkflow(runId: string, rpcService: PikkuRPC): Promise<void>
   protected async inlineStep(runId: string, logicalStepName: string, fn: Function, stepOptions?: WorkflowStepOptions, data: any = null, rpcName: string | null = null): Promise<any>
   public async approveStep(runId: string, reason: string, decision: unknown, session?: CoreUserSession): Promise<void>
