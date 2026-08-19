@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.107",
+  "version": "0.12.108",
   "description": "Pikku CLI — code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
@@ -42,7 +42,7 @@
     "@pikku/node-http-server": "^0.12.11",
     "@pikku/openapi-parser": "^0.12.20",
     "@pikku/schedule": "^0.12.7",
-    "@pikku/skills": "^0.12.11",
+    "@pikku/skills": "^0.12.12",
     "@pikku/ws": "^0.12.8",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",

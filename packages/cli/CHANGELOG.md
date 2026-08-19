@@ -1,3 +1,31 @@
+## 0.12.108
+
+### Patch Changes
+
+- 5fa28a5: `pikku dev`: say which AI SDK copies the agent runner is using, and refuse a mismatched pair up front
+
+  Resolving `@pikku/ai-vercel` and `@ai-sdk/openai-compatible` from the project's root `package.json` is all-or-nothing, and under an isolated `node_modules` layout (bun, pnpm) the root resolves only what the root itself declares. A monorepo that installed the pair in the workspace that uses them silently got the CLI's own copies instead — which then threw `Unsupported model version v4 …` at the first model call, naming the model and the gateway but neither of the packages that actually disagreed. That case now logs a warning naming the package that could not be resolved.
+
+  When the pair does come from the project, their `@ai-sdk/provider` majors are compared before the runner is built. A mismatch disables agents with a message naming both versions and pointing at `@ai-sdk/openai-compatible`'s per-`ai`-major dist-tags, instead of surfacing as a model-spec error later.
+
+- 31ad85f: fix(emails): escape substituted values in the generated email renderer
+
+  `renderEmailTemplate` spliced values into HTML unescaped and looped substitution
+  until it reached a fixed point, so a value containing `"` broke out of the
+  attribute it landed in, a value containing markup was injected verbatim, and a
+  value containing `{{...}}` was re-expanded as a template on the next pass. An
+  ordinary CSS font stack from `theme.json` was enough to corrupt the document.
+
+  Rendering is now layered by trust. Partials are inlined first; `theme.*` and
+  `t.*` are expanded next as template-author input; caller `data` is substituted in
+  a single pass that is never rescanned. Values are HTML-escaped in `.html` output
+  and left raw in `.subject.txt` / `.text.txt`. `{{content}}` and partials stay
+  raw, and `{{{value}}}` is a new opt-in raw form. The console's email preview uses
+  the same renderer, so previews match what is sent.
+
+- Updated dependencies [31ad85f]
+  - @pikku/skills@0.12.12
+
 ## 0.12.107
 
 ### Patch Changes

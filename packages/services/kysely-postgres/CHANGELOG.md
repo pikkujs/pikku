@@ -1,5 +1,11 @@
 # @pikku/kysely-postgres
 
+## 0.12.21
+
+### Patch Changes
+
+- f1f7df2: the Postgres run lock is now a session advisory lock, so a long workflow body no longer parks its connection `idle in transaction`
+
 ## 0.12.20
 
 ### Patch Changes
