@@ -1,6 +1,6 @@
 {
   "name": "@pikku/pino",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "description": "Pino logger for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -15,7 +15,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.76",
+    "@pikku/core": "^0.12.85",
     "pino": "^9.5.0"
   },
   "devDependencies": {

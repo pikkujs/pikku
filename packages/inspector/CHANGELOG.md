@@ -1,3 +1,304 @@
+## 0.12.61
+
+### Patch Changes
+
+- ab52d8e: Raise an addon's deploy conflict only where the consuming app wires it. A
+  function an addon publishes as `deploy: 'serverless'` while naming one of its
+  own services serverless-incompatible previously failed the build of any app
+  that merely declared the addon, whether or not that function was used.
+- a281de6: A CLI option's type now drives how it is parsed, and it comes from the command function's input schema rather than a second hand-written declaration.
+
+  `CLIOption` gains `type?: 'string' | 'number' | 'boolean' | 'string[]'` (replacing the never-honoured `array` flag). Declared, it wins over whatever the schema says; left unset, the parser reads the type off the command function's input schema — the same schema the function is validated against — falling back to `default` and then to `'string'`. A `'string[]'` option consumes one token and splits it on commas; every other non-boolean option consumes the next token verbatim, so values that begin with `-` (base64url tokens, negative numbers, dash-leading name patterns) parse correctly. A boolean option is a flag: it consumes the next token only when that token is an explicit literal (`true`/`false`/`1`/`0`/`yes`/`no`), so `--watch false` still turns a default-on flag off instead of leaving `false` behind as a positional.
+
+  Because the schema is now what types an option, `pikku serve --console --port 4077` no longer reads `--port` as the value of `--console`, and a numeric option arrives as a number instead of a string. An explicit `type` is mostly needed for options that belong to no function input — the `pikku all` filters, which the config factory reads straight off the CLI data, are declared `string[]`, and the CLI's ad-hoc `parseCommaSeparated` normalisation is gone.
+
+  An array option takes either one comma list or the flag repeated. It never consumes more than one token, because `--tags alpha beta` cannot be told apart from an option followed by a positional; the stray token is reported as an unexpected argument rather than dropped.
+
+- 266e3bc: One door per name: `@pikku/core/ecosystem/*` and the package root are gone
+
+  `@pikku/core` published every module twice. `ecosystem/http` re-exported
+  `./http`, `ecosystem/services` re-exported `./services`, and a name was
+  reachable through either — so every addition had to be made in two places, and a
+  consumer's import said nothing about what it actually used. The package root was
+  the same problem at a larger scale: a single barrel of 206 names that no bundler
+  could take apart, and the one specifier that revealed nothing at all.
+
+  Both are deleted. Every name now lives on the subpath that owns it, and every
+  import carries that subpath — `@pikku/core/http`, `@pikku/core/services`,
+  `@pikku/core/errors`, `@pikku/core/types`.
+
+  Deleting the facades meant the raw subpaths had to become a superset of them,
+  which they were not: the facade tree had accumulated 25 names with no raw home
+  and about 26 more filed under a different area than the module they came from.
+  Those names moved to the area that owns them, and three areas were published as
+  new entry points rather than left on a root that is going away — `./types` (the
+  shared type surface, the largest single destination), `./state` and
+  `./classification`.
+
+  `./classification` is one door onto one subject: what a value is and how it must
+  be handled. Its three halves would each have been an entry point — the brands
+  and manifest types, the stored-form helpers (`hashToken`, `unsafeAsSealed` and
+  friends), and `SecretValue` — split by whether a name happens to be a type or a
+  value, which is the same defect as the facades. The duration and versioned-id
+  helpers went to `./utils`, which already published, and `PikkuRequest` went to
+  `./function`: it is the transport-agnostic request base, not an HTTP one — HTTP
+  has `PikkuHTTPAbstractRequest`, and the only thing outside core that extends
+  `PikkuRequest` is Azure's timer request.
+
+  `./types` inherited the root barrel's habit before it inherited its contents, so
+  the names with an owner elsewhere were moved off it. The middleware types and the
+  five middleware factories — `pikkuMiddleware`, `pikkuMiddlewareFactory`,
+  `pikkuChannelMiddleware`, `pikkuChannelMiddlewareFactory` and
+  `pikkuAgentMiddleware`, runtime values on a types entry point — are now
+  `@pikku/core/middleware`; the function meta types are `@pikku/core/function`;
+  `SerializedError` is `@pikku/core/errors`; and the generic TypeScript helpers
+  (`MakeRequired`, `PickRequired`, `PickOptional`, `RequireAtLeastOne`,
+  `JSONPrimitive`, `JSONValue`) are `@pikku/core/utils`. What is left on `./types`
+  is the vocabulary the wirings share, which no single module owns.
+
+  `pikku` was itself a root barrel — `export * from '@pikku/core'` — and
+  now exports only the services it bundles.
+
+  One module survives at the old specifier, and only for the bootstrap:
+  `packages/cli` is generated by the _published_ CLI pinned in its `build.sh`, and
+  that CLI still writes a bare `@pikku/core` into the files it generates for the
+  CLI itself. `bootstrap-compat/root.ts` carries the eight types it names, a test
+  in core fails if that list grows, and it goes when the pin moves to a CLI
+  released from this branch. The adapter names the pinned CLI reaches for —
+  `pikkuState` and `CreateWireServices` — are rewritten to `@pikku/core/state` and
+  `@pikku/core/types` by the same `build.sh` patch pass, so no second shim is
+  needed for them.
+
+  A guard test keeps the root shut: it parses imports and rejects a bare
+  `@pikku/core` rather than grepping for it, because several tests hold a user's
+  file as a template literal, where `import … from '@pikku/core'` is fixture text
+  rather than an import this repo makes.
+
+  An agent scaffold a project generated under an older CLI is refreshed rather
+  than left to fail: `pikku all` already deleted one importing an entry point
+  `@pikku/core` no longer publishes, and the `#pikku` hub joins that list.
+  Without it a project that scaffolds the agent endpoint but
+  declares no agents keeps the old file forever — the generator that would rewrite
+  it only runs when agents exist, and the file being present is what stops it
+  being regenerated as missing.
+
+  `pikku new addon` also wrote a tsconfig `paths` map naming only the deleted hub.
+  An addon's `imports` map points into `dist`, so `paths` is what resolves
+  `#pikku/<leaf>` for the addon's own source build — it now names the two leaf
+  patterns, in both the addon and its test harness.
+
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+- 20d8a39: Drop better-auth's `admin()` plugin.
+
+  `admin()` bundles three unrelated things: a `role` column, fifteen HTTP
+  endpoints authorized against that column, and the enforcement that stops a
+  banned user from getting a session. Pikku only ever wanted the third. The
+  endpoints were never reachable directly — each sat behind a pikku function with
+  its own `admin:users:*` scope — so all the plugin added was a second gate on a
+  column that had to be kept in step with the scopes it duplicated. That sync
+  (`syncProjectedAdminRole`, run on every authenticated request) is now gone
+  along with the column.
+
+  User administration is implemented against better-auth's internal adapter
+  instead, exported from `@pikku/better-auth` so `@pikku/addon-admin` and the
+  `scaffold.userAdmin` generator share one implementation:
+
+  ```ts
+  import {
+    createAuthUser,
+    deleteAuthUser,
+    revokeAuthUserSessions,
+    setAuthUserBanned,
+    setAuthUserPassword,
+  } from '@pikku/better-auth'
+  ```
+
+  Ban keeps its schema and its enforcement, in a plugin that does nothing else:
+
+  ```ts
+  import { ban } from '@pikku/better-auth'
+
+  betterAuth({ plugins: [ban()] })
+  ```
+
+  `ban()` adds `banned`, `banReason` and `banExpires` to `user`, refuses to create
+  a session for a banned user, and lapses an expired ban at the sign-in that would
+  otherwise be refused. It makes no authorization decision of its own, so it never
+  needs to know about scopes.
+
+  Breaking:
+
+  - Remove `admin()` from your better-auth `plugins`, and add `ban()` if you ban
+    users. `pikku db generate` writes the migration; `user.role` and
+    `session.impersonatedBy` are no longer declared by anything.
+  - `callAdminApi`, `AdminApiHttpWire`, `syncProjectedAdminRole`,
+    `projectedAdminRole` and `ADMIN_ROLE_SCOPES` are removed. `ADMIN_SCOPES`,
+    `ADMIN_SCOPE_ROOT` and `ADMIN_SCOPE_TREE` are unchanged.
+  - The `scaffold.userAdmin` codegen no longer fails without `admin()`. It now
+    fails only when there is no better-auth at all, and warns when `ban()` is
+    missing — banning is one capability of six, so the other five still generate.
+  - The scope on each function is now the whole authorization decision. Anywhere
+    that relied on `user.role` as a backstop no longer has one.
+
+- 727671b: Make the public surface an artifact the CLI produces.
+
+  `@pikku/cli` now ships `surface.json`, computed when the CLI is built by
+  generating one application and one addon and reading what each `#pikku/*` leaf
+  exports, plus a curated `@pikku/core` entry point for people building on the
+  ecosystem. Consumers resolve it as `@pikku/cli/surface.json`.
+
+  `pikku all` writes the matching per-project overlay to
+  `<outDir>/surface-usage.gen.json`: how often each export is imported and which
+  source areas it was seen in. The counting happens inside the sweep the inspector
+  already makes over every source file, so a prebuild pays no extra pass.
+
+- f25f4a2: Fix seven defects found taking one project through `pikku fabric` to deploy
+
+  **`deploy plan` rewrote the project's own scaffold.** Per-unit codegen re-runs
+  `pikku all` with `--outDir` pointed at a unit's `.pikku`, and scaffold imports
+  are computed against `config.outDir` — so `console.gen.ts` came back importing
+  `../../../../../.deploy/cloudflare/units/<unit>/.pikku/pikku-types.gen.js` and
+  the source stopped typechecking until the next ordinary `pikku all`.
+
+  A guard for this already existed in four generators and had never once fired:
+  `LocalVariablesService.get` runs values through `JSON.parse`, so
+  `PIKKU_DEPLOY_CODEGEN=1` arrived as the number `1` and every `=== '1'` test
+  was false. The comparison is fixed behind a shared `isDeployCodegen`, and the
+  real guard now sits in the file writer, which refuses writes _and removals_
+  under the scaffold directory for the duration of a per-unit run. Guarding the
+  writer rather than each generator matters here: seven further generators had no
+  guard at all, several write scaffold source and `.pikku` artifacts in the same
+  pass (so an early return would skip too much), and the legacy-scaffold pruners
+  delete from the source tree without going through a generator.
+
+  **`fabric validate` passed on a project that could not deploy.** Deploy clones
+  the repository, so a `pikkufabric.config.json` that exists only in the working
+  tree is absent exactly when it is needed, and the build container aborts with
+  `pikkufabric.config.json not found in repository root`. Validate now reports
+  that as an error, and its success line distinguishes "can be linked" from
+  "will deploy" instead of reporting unqualified success at a project that is not
+  linked yet.
+
+  **`description` reached `infra.json` as raw source.** `getPropertyValue` fell
+  back to `node.getText()`, which is indistinguishable from the value for a lone
+  literal — so nobody noticed that a description written as `'a ' + 'b'` arrived
+  with the quotes and the `+` still in it, and rendered that way in the console.
+  Compile-time constant strings are now folded, checker-free, so a node that
+  cannot be resolved statically still takes the old path.
+
+  **A wired addon that was not installed failed silently.** A missing package
+  makes `resolveAddonMeta` return null, which was caught and downgraded to a
+  warning; every `ref('<namespace>:…')` then resolved to nothing and the surface
+  was dead at runtime with nothing in the build output saying why. The generated
+  console is the common case. `wireAddon` now requires its package to be
+  installed (`PKU340`), the mirror of the existing `wireRemoteAddon` check whose
+  own docs already described this half as if it existed.
+
+  **The audit-table check demanded an unquoted identifier.** Kysely's schema
+  builder always quotes, so `create table "audit"` read as missing on the
+  projects most likely to have it. Both this and the better-auth table checks now
+  share one matcher that accepts each dialect's quoting — matched pairs only, so
+  `"audit'` is not a hit — plus an optional schema qualifier.
+
+  **Cloudflare bundles kept `pg`.** `getStubModules()` named `postgres` and
+  `kysely-postgres-js` but not `pg`, which is the more common driver in
+  application code, equally unreachable on a Worker, and additionally pulls at
+  `net`/`tls` and `pg-native`, which a Worker build cannot resolve at all.
+
+  **The deploy plan listed one secret twice.** Two `defineSecret` calls may
+  legally share a `secretId` under different local names — the auth scaffold's
+  `betterAuthSecret` alongside a hand-written one is the everyday case — and the
+  manifest mapped them straight through, so the plan printed two identical
+  `create` lines for one resource and `countUnchanged` counted it twice. Secrets
+  and variables are now deduplicated in the manifest itself, where variables were
+  already being collapsed by accident downstream.
+
+- 20d8a39: Generate the schemas a first build used to leave out.
+
+  A contract type reaches the schema generator only through a file that imports
+  it, and for a type exported by nothing but its own function file that file is
+  the RPC internal map — which `pikku all` writes _after_ schemas. On a first
+  build there is no map to read yet, so those schemas came out missing from a run
+  that otherwise succeeded, and the RPC failed with `MissingSchemaError` on its
+  first call in a deployment. A second `pikku all` fixed it, which is why this
+  only ever bit fresh checkouts and CI.
+
+  `pikku all` now re-inspects and re-generates schemas when the build that just
+  wrote the RPC internal map for the first time left contract references
+  unresolved — the condition PKU463 already reports. Confined to that build: a
+  project whose references are unresolved for some other reason would otherwise
+  pay a second inspection on every run for a re-generation that cannot help it.
+
+  `@pikku/inspector` exports `unresolvedSchemaReferences(state)`, the check behind
+  PKU463, so the decision can be made without re-deriving it.
+
+- 3561d67: feat(graph): per-item `forEach` fanout for declarative workflow graphs
+
+  A graph node can now run once per element of an upstream array:
+
+  ```ts
+  postVideo: {
+    forEach: 'getMyVideo',              // or (ref) => ref('getMyVideo', 'rows')
+    mode: 'sequential',                 // optional, defaults to 'parallel'
+    input: (ref, template, $item) => ({ url: $item('URL VIDEO') }),
+  }
+  ```
+
+  Each element runs as its own step instance (`postVideo[0]`, `postVideo[1]`, …)
+  and the node's result is the ordered array of per-item results, so a fanned node
+  chains straight into another `forEach`. Downstream nodes wait for every item. A
+  non-array source fails the run loudly instead of coercing.
+
+  The change is additive: `forEach` and `mode` are new optional node fields, and
+  `$item` is appended after `template` so existing `input: (ref) => …` and
+  `input: (ref, template) => …` nodes are unchanged.
+
+- a91c433: HTTP routes wired with `ref('ns:fn')` now record the addon function id as their own `pikkuFuncId`, the same way the CLI and channel wirings already do, instead of minting a per-route wrapper function and linking it back through `refTarget`. The `refTarget` field is gone from `HTTPWiringMeta`, and the runtime resolves a namespaced route function against the addon package's own metadata.
+- 2b57ca8: A persona can name the `app` they sign into, and a browser run takes a url per app (`--app-url <app>=<url>`, or `appUrls` on the environment). Each actor's browser context navigates against its own app's base, so a product that is more than one frontend can be proved in one run — including a scenario that crosses from one app to the other. A run whose personas name an app nobody gave a url for is refused rather than browsing the wrong app's pages.
+- 456c88b: Keep an addon function's contract on a route that reaches it through `ref()`, whether or not `.pikku` already exists.
+
+  The input and output types were read off the type checker, which can only see them once the consumer's own RPC map already lists the addon's functions — that is, on the second run. A first, cold generation widened the route's input to the whole `FlattenedRPCMap`, so the same sources produced a different http-map on CI than on a developer's machine, and a client compiled against the good one failed to build against the other. The addon's own metadata says what the contract is either way, and its published declaration file is where those names live.
+
+- 727671b: `wireAddon` and `wireRemoteAddon` move from `#pikku/function` to `#pikku/addon`.
+
+  Installing an addon and authoring one are the same concept from opposite ends,
+  so they are one import: an application's `#pikku/addon` carries the two install
+  functions, an addon package's carries `pikkuAddonConfig`, `pikkuAddonServices`,
+  `pikkuAddonWireServices` and `AddonBaseServices`.
+
+  Two generation fixes came with it:
+
+  - `CredentialsMap` is generated as a type alias rather than an interface. An
+    interface has no implicit index signature, so it was never assignable to the
+    `Record<string, unknown>` that `GetCredential` is constrained by, and every
+    generated project reported two errors on its own function types.
+  - An unresolved `SingletonServices` type is now `PKU724` instead of a services
+    map with no entries in it. Written out, the empty map made every service
+    optional and the real failure resurfaced as unrelated "possibly undefined"
+    errors in files nobody had touched.
+
+- Updated dependencies [7722ceb]
+- Updated dependencies [375c1ff]
+- Updated dependencies [02a70cd]
+- Updated dependencies [aeef159]
+- Updated dependencies [a281de6]
+- Updated dependencies [266e3bc]
+- Updated dependencies [02a70cd]
+- Updated dependencies [786dae5]
+- Updated dependencies [6eef0a0]
+- Updated dependencies [3561d67]
+- Updated dependencies [a91c433]
+- Updated dependencies [02a70cd]
+- Updated dependencies [9537f74]
+- Updated dependencies [2b57ca8]
+- Updated dependencies [266e3bc]
+- Updated dependencies [9fce0f1]
+- Updated dependencies [83683a0]
+- Updated dependencies [456c88b]
+- Updated dependencies [456c88b]
+- Updated dependencies [c127273]
+  - @pikku/core@0.12.85
+
 ## 0.12.60
 
 ### Patch Changes

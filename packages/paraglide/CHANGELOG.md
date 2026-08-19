@@ -1,5 +1,14 @@
 # @pikku/paraglide
 
+## 0.12.4
+
+### Patch Changes
+
+- 786dae5: Bump every dependency whose latest release is a major across the monorepo, and
+  port the code the majors broke: `cookie` 2's `parseCookie`/`stringifySetCookie`
+  API in `@pikku/core` and the three runtime HTTP adapters, and assistant-ui 0.15's
+  store client in `@pikku/assistant-ui`.
+
 ## 0.12.3
 
 ### Patch Changes

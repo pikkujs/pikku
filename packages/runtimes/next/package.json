@@ -1,6 +1,6 @@
 {
   "name": "@pikku/next",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "description": "Next.js runtime for Pikku — SSR, route handlers, server actions and Better Auth integration",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -23,8 +23,8 @@
     "./pikku-session": "./dist/pikku-session.js"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.25",
-    "@pikku/core": "^0.12.84",
+    "@pikku/better-auth": "^0.12.26",
+    "@pikku/core": "^0.12.85",
     "better-auth": "^1.6.0",
     "next": "^15",
     "react-dom": "^18 || ^19"
@@ -35,8 +35,8 @@
     "path-to-regexp": "^8.4.2"
   },
   "devDependencies": {
-    "@pikku/better-auth": "^0.12.25",
-    "@pikku/core": "^0.12.84",
+    "@pikku/better-auth": "^0.12.26",
+    "@pikku/core": "^0.12.85",
     "@types/react": "^19",
     "better-auth": "^1.6.29",
     "next": "15.5.23",

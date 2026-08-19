@@ -1,5 +1,15 @@
 # @pikku/browser
 
+## 0.12.45
+
+### Patch Changes
+
+- 786dae5: Bump every dependency whose latest release is a major across the monorepo, and
+  port the code the majors broke: `cookie` 2's `parseCookie`/`stringifySetCookie`
+  API in `@pikku/core` and the three runtime HTTP adapters, and assistant-ui 0.15's
+  store client in `@pikku/assistant-ui`.
+- 6eef0a0: Bump every dependency to its latest compatible minor/patch across the monorepo.
+
 ## 0.12.44
 
 ### Patch Changes

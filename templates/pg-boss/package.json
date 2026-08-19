@@ -14,8 +14,8 @@
     "test:queue": "npx tsx client/queue-worker.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.84",
-    "@pikku/queue-pg-boss": "^0.12.9",
+    "@pikku/core": "^0.12.85",
+    "@pikku/queue-pg-boss": "^0.12.10",
     "tslib": "^2.8.1",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3"
