@@ -225,28 +225,45 @@ describe('getAddonFiles', () => {
     ).exports[subpath === '.' ? '.' : `.${subpath}`]
     assert.ok(target, `@pikku/core does not export ${specifier}`)
 
-    // The entry point is a barrel of `export *`, so what it carries is only
-    // visible by walking the chain — the names are declared in the same file
-    // either way, and a check on the declaration passes for a subpath that
-    // does not re-export them.
+    // The entry point re-exports rather than declares, so what it carries is
+    // only visible by walking the chain — the names are declared in the same
+    // file either way, and a check on the declaration passes for a subpath
+    // that does not re-export them.
     const reachable = (entry: string, seen = new Set<string>()): string => {
       if (seen.has(entry)) return ''
       seen.add(entry)
       const source = readFileSync(entry, 'utf8')
+      const resolve = (specifier: string) =>
+        join(dirname(entry), specifier.replace(/\.js$/, '.ts'))
       let text = source
       for (const star of source.matchAll(
         /export (?:type )?\* from '(\.[^']*)'/g
       )) {
-        text += reachable(
-          join(dirname(entry), star[1]!.replace(/\.js$/, '.ts')),
-          seen
-        )
+        text += reachable(resolve(star[1]!), seen)
+      }
+      for (const named of source.matchAll(
+        /export (?:type )?\{([^}]*)\} from '(\.[^']*)'/g
+      )) {
+        const carried = reachable(resolve(named[2]!), new Set(seen))
+        for (const name of named[1]!.split(',')) {
+          const exported = name.trim().split(/\s+as\s+/)[0]
+          if (!exported) continue
+          const declaration = carried.match(
+            new RegExp(
+              `\\bexport (?:interface|type|const|class) ${exported}\\b`
+            )
+          )
+          if (declaration) text += `\n${declaration[0]}`
+        }
       }
       return text
     }
 
     const exported = reachable(
-      join(coreRoot, target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts'))
+      join(
+        coreRoot,
+        target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts')
+      )
     )
     for (const name of applicationTypes.matchAll(/\bCore[A-Za-z]+/g)) {
       assert.match(

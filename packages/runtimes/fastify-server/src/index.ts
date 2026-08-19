@@ -6,4 +6,4 @@
  * @module @pikku/fastify
  */
 
-export * from './pikku-fastify-server.js'
+export { PikkuFastifyServer } from './pikku-fastify-server.js'

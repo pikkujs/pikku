@@ -2,4 +2,4 @@
  * @module @pikku/uws
  */
 
-export * from './pikku-uws-server.js'
+export { PikkuUWSServer } from './pikku-uws-server.js'

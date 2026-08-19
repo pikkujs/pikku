@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2698 observable things**: 862 exported names, plus
-1836 members on the classes and interfaces among them, reachable
+**2674 observable things**: 851 exported names, plus
+1823 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -15,13 +15,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 135 | 110 | 396 |
-| `./scenario` | 52 | 52 | 141 |
+| `./scenario` | 45 | 45 | 133 |
 | `./workflow` | 82 | 33 | 134 |
 | `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
 | `./channel` | 32 | 32 | 84 |
-| `./types` | 26 | 23 | 74 |
 | `./queue` | 22 | 22 | 71 |
+| `./types` | 23 | 20 | 72 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
 | `./persona` | 27 | 27 | 34 |
@@ -47,7 +47,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./addon` | 8 | 8 | 2 |
-| `./dev` | 5 | 5 | 5 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./role` | 9 | 9 | 0 |
 | `./state` | 9 | 8 | 0 |
@@ -57,6 +56,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scheduler` | 6 | 6 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
+| `./dev` | 4 | 4 | 2 |
 | `./credential` | 5 | 5 | 0 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
@@ -189,9 +189,6 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   webhook?: WebhookServiceConfig
   postgres?: PostgresConfig
 } & Config
-export type CoreSecretlessSingletonServices<
-  Config extends CoreConfig = CoreConfig,
-> = SecretlessServices<CoreSingletonServices<Config>>
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices
 export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
@@ -278,7 +275,6 @@ export interface PikkuPackageState {
   misc: { errors: Map<PikkuErrorConstructor, ErrorDetails>; schemas: Map<string, any>; middleware: Record<string, CorePikkuMiddleware[]>; channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>; permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]> }
   package: { factories: { createConfig?: CreateConfig<CoreConfig>; createSingletonServices?: CreateSingletonServices< CoreConfig, CoreSingletonServices >; createWireServices?: CreateWireServices< CoreSingletonServices, CoreServices, CoreUserSession > } | null; singletonServices: CoreSingletonServices | null; authFactory:; ((services: CoreSingletonServices) => unknown | Promise<unknown>) | null; credentialsMeta: Record< string, { name: string; displayName: string; type: string; oauth2?: boolean } > | null; requiredParentServices: string[] | null; declaredSecrets: string[] | null }
 }
-export type PikkuRawWire = Omit<PikkuWire, 'rpc'>
 export type PikkuWire<
   In = unknown,
   Out = unknown,
@@ -355,10 +351,6 @@ export interface PostgresConfig {
   maxLifetime?: number
   statementTimeout?: number
   prepare?: boolean
-}
-export interface SchemaRefLike {
-  variableName: string
-  sourceFile: string
 }
 export type SecretlessServices<Services> = Omit<Services, 'secrets'>
 export interface SecurityAuditIssue {
@@ -1536,17 +1528,6 @@ export type FeatureMeta = {
   hasBefore: boolean
   hasAfter: boolean
 }
-export type FeatureMetaEntry = {
-  scenario: string
-  data?: unknown
-}
-export type FeaturePlanEntry = {
-  featureId: string
-  featureName: string
-  scenarioName: string
-  data?: unknown
-  tags: string[]
-}
 export type FeaturesMeta = Record<string, FeatureMeta>
 export interface PikkuBrowserWire {
   readonly actor: string
@@ -1569,14 +1550,6 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public async onAfterRunFunc(context: RunLifecycleContext, outcome: 'completed' | 'failed' | 'interrupted', failure: unknown): Promise<void>
   public async resolvePersonas(): Promise<ScenarioPersonas | undefined>
   public decorateWorkflowWire(wire: PikkuWorkflowWire, context: { name: string; runId: string; rpcService: any; addonNamespace?: string | null }): void
-}
-export interface PikkuScenarioStepWire {
-  name: string
-  stepName: string
-  runId: string
-  phase: ScenarioStepPhase
-  surface: ScenarioSurface
-  env?: ScenarioEnvironment
 }
 export interface PikkuScenarioWire<Out = unknown> extends PikkuWorkflowWire {
   context: ScenarioContext<Out>
@@ -1609,7 +1582,6 @@ export interface ScenarioArtifact {
   actor?: string
   name?: string
 }
-export type ScenarioArtifactKind = 'screenshot' | 'failure' | 'video'
 export interface ScenarioBrowserFailure {
   actor: string
   url?: string
@@ -1718,16 +1690,6 @@ export interface ScenarioRunSummary {
   skipped: number
   artifacts: number
 }
-export interface ScenarioSkip {
-  name: string
-  reason: string
-}
-export type ScenarioStepInvocation = <TOutput = any, TInput = any>(
-  stepName: string,
-  stepFunc: string,
-  data?: TInput,
-  options?: ScenarioStepOptions
-) => Promise<TOutput>
 export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
 export interface ScenarioStepMeta {
   type: 'scenarioStep'
@@ -1754,17 +1716,6 @@ export interface ScenarioStepRow {
   error?: string
 }
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
-export type ScenarioSurfaceResolution =
-  | {
-      kind: 'action'
-      surface: ScenarioSurface
-      fellBack: boolean
-    }
-  | {
-      kind: 'witness'
-      surfaces: ScenarioSurface[]
-      unwitnessed: boolean
-    }
 export class ScenarioWitnessDisagreement extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly expected: { surface: ScenarioSurface; observed: unknown }, public readonly actual: { surface: ScenarioSurface; observed: unknown })
 }
@@ -5590,9 +5541,4 @@ export interface PikkuDevReloaderHandle {
 }
 reconcileAddonRegistry: (declaredNamespaces: Iterable<string>, logger?: Logger | undefined) => void
 reloadGeneratedMeta: (options: ReloadGeneratedMetaOptions) => Promise<void>
-export interface ReloadGeneratedMetaOptions {
-  pikkuDir: string
-  logger: Logger
-  schemaService?: SchemaService
-}
 ```
