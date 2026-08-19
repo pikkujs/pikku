@@ -183,7 +183,14 @@ export function NavDock({
     // The capsule's max-width is border-box, so its usable interior is 2px less
     // than the budget — comparing against the outer number left 2px clipped at
     // exactly the width where the loop declared victory.
-    const avail = (vertical ? window.innerHeight : window.innerWidth) - 26
+    //
+    // The budget is the SHORTER window edge whichever way the dock is turned, so
+    // the tile — and with it the capsule's thickness — is the same at every
+    // side. Measured per-axis, a row along a 1440px width kept full-size tiles
+    // while the same row down a 900px height had to shrink, and moving the dock
+    // to the side visibly thinned it. A dock that changes size when you move it
+    // reads as a different object, not the same one on another edge.
+    const avail = Math.min(window.innerWidth, window.innerHeight) - 26
     const measure = () => (vertical ? el.scrollHeight : el.scrollWidth)
     let t = TILE_MAX
     applyTile(el, t)
@@ -205,8 +212,9 @@ export function NavDock({
     fit()
   }, [fit, contextual, pinned, utility, condensed, side])
 
-  /* A row that fitted along the window's width will not fit along its height, so
-     the condense decision is made again from scratch on every move. */
+  /* The condense decision is made again from scratch on every move: the budget
+     is shared across sides, but the measurement is not — the row is laid out
+     along the new axis before it is measured. */
   useEffect(() => {
     setCondensed(false)
   }, [side])

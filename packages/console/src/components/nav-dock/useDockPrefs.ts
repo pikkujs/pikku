@@ -21,9 +21,12 @@ export function useDockPrefs() {
     defaultValue: 'bottom',
     getInitialValueInEffect: false,
   })
+  /* Held open until someone says otherwise. A dock that starts hidden is a
+     navigation system nobody can see, and the reveal is only worth learning once
+     you know there is something to reveal. */
   const [alwaysVisible, setAlwaysVisible] = useLocalStorage({
     key: 'nav-dock-pinned',
-    defaultValue: false,
+    defaultValue: true,
     getInitialValueInEffect: false,
   })
   return { side, setSide, alwaysVisible, setAlwaysVisible }
