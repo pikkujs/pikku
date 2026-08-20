@@ -1,3 +1,40 @@
+## 0.12.88
+
+### Patch Changes
+
+- 4712e73: fix: collect working memory from a delegate-mode parent agent
+
+  A delegating parent's `text-delta` events were dropped at the outermost output
+  channel, above the working-memory hook, so every `<working_memory>` block it
+  wrote from its first hand-off onward was discarded before anything could read
+  it. The parent's text is now routed through the working-memory hook and into a
+  sink instead of being dropped outright, so the blocks are collected while the
+  client, the thread history and user channel middleware still see nothing.
+
+  The resume path built no delegate filter at all and streamed a delegating
+  parent's text to the client after an approval; it now suppresses text the same
+  way the initial path does.
+
+  The AI SDK rejects a system message inside `messages` outright, so the working
+  memory prompt the framework injects as one failed every run that enabled
+  working memory at all. The runner now lifts system messages onto the `system`
+  option, after the agent's own instructions.
+
+- 082403f: fix(agent): make working-memory array semantics explicit
+
+  `deepMergeWorkingMemory` replaced arrays wholesale as a side effect of its
+  object-recursion guard, so nothing in the code said whether that was the
+  contract or an accident. The merge now handles arrays in an explicit,
+  documented branch. Replace is kept over append: the full state is echoed back
+  every turn, so appending would duplicate every item whenever the model re-emitted
+  the array.
+
+  `buildWorkingMemoryPrompt` now states that contract to the model rather than
+  leaving "only include changed fields" to be read as permission to send a partial
+  array. This is defensive: measured against `gpt-4.1-mini` the wording changes
+  nothing, because that model already re-emits the whole list. It is there for
+  models that do not.
+
 ## 0.12.87
 
 ### Patch Changes

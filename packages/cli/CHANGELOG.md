@@ -1,3 +1,19 @@
+## 0.12.109
+
+### Patch Changes
+
+- a6bdc52: feat(cli): generate a browser-safe scope client
+
+  `clientFiles.scopesFile` emits the project's `ScopeId` union and a
+  `hasScopes(required, held)` with the cascade inlined, so a frontend deciding
+  what to render no longer imports `@pikku/core` — a server package that drags
+  AsyncLocalStorage and the wiring runtime into the bundle.
+
+- Updated dependencies [4712e73]
+- Updated dependencies [082403f]
+  - @pikku/core@0.12.88
+  - @pikku/ai-vercel@0.12.13
+
 ## 0.12.108
 
 ### Patch Changes
