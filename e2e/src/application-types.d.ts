@@ -18,6 +18,13 @@ export interface Config extends CoreConfig {
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   kysely: Kysely<KyselyPikkuDB>
+  /**
+   * The scope service's own Kysely — same database as `kysely`, but with the
+   * CamelCase/Serialize plugins its query builders expect. Exposed because the
+   * scope tables are written after Better Auth has created `user`, which
+   * happens in `afterStart`, long after this factory has returned.
+   */
+  scopeDb: Kysely<KyselyPikkuDB>
   scopeService: KyselyScopeService
 }
 

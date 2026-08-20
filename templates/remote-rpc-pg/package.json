@@ -10,7 +10,8 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "start": "tsx src/start.ts",
     "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid",
-    "test": "bash ../functions/run-tests.sh --url http://localhost:3001 --http",
+    "migrate": "pikku db generate && pikku db migrate",
+    "test": "npm run migrate && bash ../functions/run-tests.sh --url http://localhost:3001 --http",
     "test:http-fetch": "tsx client/test-remote-rpc.ts"
   },
   "dependencies": {

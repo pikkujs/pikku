@@ -5,7 +5,8 @@ import { pikkuState } from '@pikku/core/state'
 import { rpcService } from '@pikku/core/rpc'
 import type { QueueService } from '@pikku/core/queue'
 
-import { createConfig, createSingletonServices } from '../services.js'
+import { createSingletonServices } from '../services.js'
+import { createConfig, connectionString } from '../config.js'
 import { workflowTestData } from './workflow-test-data.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
@@ -33,9 +34,6 @@ async function createWorkflowService(backend: Backend): Promise<{
     const postgres = (await import('postgres')).default
     const { Kysely } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')
-    const connectionString =
-      process.env.DATABASE_URL ||
-      'postgres://postgres:password@localhost:5432/pikku_queue'
     const sql = postgres(connectionString)
     const db = new Kysely<KyselyPikkuDB>({
       dialect: new PostgresJSDialect({ postgres: sql }),

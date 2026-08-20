@@ -1,9 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { InMemorySchedulerService } from '@pikku/schedule'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 import '#pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {

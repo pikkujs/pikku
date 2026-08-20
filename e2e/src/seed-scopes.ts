@@ -1,3 +1,4 @@
+import { applyPikkuSchemas, scopeSchema } from '@pikku/kysely'
 import type { SingletonServices } from './application-types.js'
 import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
@@ -71,7 +72,8 @@ const userIdByEmail = async (
  * Runs after Better Auth has created the `user` table (lifecycle.afterStart).
  */
 export const seedScopes = async (services: SingletonServices) => {
-  const { scopeService } = services
+  const { scopeDb, scopeService } = services
+  await applyPikkuSchemas(scopeDb, [scopeSchema])
   await scopeService.init()
   await scopeService.syncScopes(SCOPES)
   await scopeService.syncSystemRoles(SYSTEM_ROLES)

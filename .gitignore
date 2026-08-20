@@ -166,6 +166,11 @@ verifiers/addon-registry/consumer/pikku-addons.json
 verifiers/db-schema/db/
 verifiers/db-schema/.pikku-runtime/
 
+# The workflow verifier's runtime migration is written by `pikku db generate`
+# at the start of every db-backed run, against whatever postgres the run points
+# at. Committing it would freeze a copy that nothing reads.
+verifiers/workflows/db/
+
 # This repo's OWN OKF knowledge bundle: untracked on purpose. It holds commercial
 # strategy, open security findings and memories from unrelated repos, and
 # pikkujs/pikku is public.

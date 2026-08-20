@@ -1,4 +1,4 @@
-import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
+import { pikkuServices, pikkuWireServices } from '#pikku/setup'
 import type { JWTService } from '@pikku/core/services'
 import {
   ConsoleLogger,
@@ -8,10 +8,6 @@ import {
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
-
-export const createConfig = pikkuConfig(async () => {
-  return {}
-})
 
 /**
  * This function creates the singleton services used by the application and is created once on start.

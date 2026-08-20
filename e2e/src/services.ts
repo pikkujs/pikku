@@ -8,6 +8,7 @@ import {
   stub,
 } from '@pikku/core/services'
 import type { EmailService } from '@pikku/core/services'
+import { existsSync } from 'node:fs'
 import { pikkuServices } from '#pikku/setup'
 import { pikkuState } from '@pikku/core/state'
 import { BetterAuthCredentialService } from '@pikku/better-auth'
@@ -18,7 +19,14 @@ import { createDeepInfra } from '@pikku/ai-deepinfra'
 import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import { KyselyScopeService } from '@pikku/kysely'
+import {
+  KyselyScopeService,
+  agentSchema,
+  applyPikkuSchemas,
+  auditSchema,
+  webhookSchema,
+  workflowSchema,
+} from '@pikku/kysely'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '#pikku/services/pikku-meta-service.gen.js'
 
@@ -93,10 +101,18 @@ export const createSingletonServices = pikkuServices(
       // report "Run not found" and never distinguishes a framework that
       // resumes correctly from one that does not.
       const sqlitePath = process.env.SQLITE_PATH ?? ':memory:'
+      // The runtime creates no schema, so the harness — which owns this
+      // database outright — writes it before the services that require it boot.
+      // Only on a database that does not exist yet: SQLITE_PATH pointing at a
+      // file the last run left behind already has these tables.
+      const freshDb = sqlitePath === ':memory:' || !existsSync(sqlitePath)
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new SqliteDialect({ database: new Database(sqlitePath) }),
         plugins: [new CamelCasePlugin(), new SerializePlugin()],
       })
+      if (freshDb) {
+        await applyPikkuSchemas(db, [workflowSchema, agentSchema])
+      }
       agentStorage = new SQLiteKyselyAgentStorageService(db)
       await agentStorage.init()
       agentRunService = new SQLiteKyselyAgentRunService(db)
@@ -206,12 +222,13 @@ export const createSingletonServices = pikkuServices(
     })
     const queueService = new InMemoryQueueService()
     const webhookService = new KyselyWebhookService(queueService, webhookDb)
+    await applyPikkuSchemas(webhookDb, [webhookSchema])
     await webhookService.init()
 
     // A durable audit sink, on its own database for the same reason the webhook
     // one is: the suite must be able to read the trail back, and a Noop sink
-    // would make every audit assertion pass by recording nothing. `init()`
-    // creates the `audit` table, which is not part of the runtime schema.
+    // would make every audit assertion pass by recording nothing. The `audit`
+    // table is written here rather than by `init()`, which only requires it.
     const { KyselyAuditService } = await import('@pikku/kysely')
     const auditDb = new WebhookKysely<KyselyPikkuDB>({
       dialect: new WebhookSqliteDialect({
@@ -220,6 +237,7 @@ export const createSingletonServices = pikkuServices(
       plugins: [new WebhookCamelCasePlugin(), new WebhookSerializePlugin()],
     })
     const audit = new KyselyAuditService(auditDb)
+    await applyPikkuSchemas(auditDb, [auditSchema])
     await audit.init()
 
     // OAuth2 credentials resolve through better-auth's account table (linked via
@@ -286,6 +304,7 @@ export const createSingletonServices = pikkuServices(
       secrets,
       emailService: email,
       kysely,
+      scopeDb,
       scopeService,
       credentialService,
       jwt,

@@ -9,18 +9,9 @@ import {
 import { LocalEventHubService } from '@pikku/core/channel/local'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { JoseJWTService } from '@pikku/jose'
-import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku/setup'
+import { pikkuServices, pikkuWireServices } from '#pikku/setup'
 import { TodoStore } from './services/store.service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
-
-export const createConfig = pikkuConfig(async () => {
-  return {
-    awsRegion: 'us-east-1',
-    jwtSecrets: {
-      remote: 'PIKKU_REMOTE_SECRET',
-    },
-  }
-})
 
 /**
  * Creates singleton services for the todo app.

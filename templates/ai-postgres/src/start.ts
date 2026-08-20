@@ -8,10 +8,8 @@ import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { VercelAgentRunner } from '@pikku/ai-vercel'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig, connectionString } from './config.js'
 import '#pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {
@@ -19,11 +17,7 @@ async function main(): Promise<void> {
     const config = await createConfig()
     const logger = new ConsoleLogger()
 
-    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(
-      logger,
-      process.env.DATABASE_URL ||
-        'postgres://postgres:password@localhost:5432/pikku_ai'
-    )
+    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger, connectionString)
     await pikkuKysely.init()
     const pgAiStorage = new PgKyselyAgentStorageService(pikkuKysely.kysely)
     await pgAiStorage.init()

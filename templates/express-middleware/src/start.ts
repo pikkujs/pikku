@@ -1,8 +1,6 @@
 import '#pikku/pikku-bootstrap.gen.js'
-import {
-  createSingletonServices,
-  createConfig,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import express from 'express'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'

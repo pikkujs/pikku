@@ -3,10 +3,8 @@ import { cors } from '@pikku/core/middleware'
 import { addHTTPMiddleware } from '@pikku/core/http'
 
 import '#pikku/pikku-bootstrap.gen.js'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 
 addHTTPMiddleware('*', [cors({ origin: true, credentials: true })])
 

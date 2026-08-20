@@ -19,7 +19,8 @@ import { InMemoryWorkflowService } from '@pikku/core/services'
 import { rpcService } from '@pikku/core/rpc'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
-import { createConfig, createSingletonServices } from '../services.js'
+import { createSingletonServices } from '../services.js'
+import { createConfig } from '../config.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const META_DIR = join(__dirname, '../../.pikku/workflow/meta')

@@ -11,7 +11,8 @@ import { RedisWorkflowService } from '@pikku/redis'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { pikkuState } from '@pikku/core/state'
 
-import { createConfig, createSingletonServices } from '../services.js'
+import { createSingletonServices } from '../services.js'
+import { createConfig } from '../config.js'
 import { workflowTestData } from './workflow-test-data.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'

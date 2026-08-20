@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { InMemoryTriggerService } from '@pikku/core/services'
-import { createConfig, createSingletonServices } from '../src/services.js'
+import { createSingletonServices } from '../src/services.js'
+import { createConfig } from '../src/config.js'
 import '#pikku/pikku-bootstrap.gen.js'
 import { TodoStore } from '../src/services/store.service.js'
 

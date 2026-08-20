@@ -39,3 +39,13 @@ the generated auth layer is what reaches it.
 Drift keeps asking the unscoped question. A table already in a database has to
 stay recognisable as a runtime table after the service that needed it is
 dropped — scoping it there would report those tables as unexplained.
+
+Every project in this repo that had been relying on boot-time creation now says
+where its tables come from. `createConfig` moves into its own `config.ts` in the
+templates — `pikku db` looks for it there — and the three postgres templates plus
+the workflow verifier declare `postgresUrl` and run `pikku db generate && pikku
+db migrate` before the server starts, from the single connection string their
+runtime opens. The e2e harness cannot: its databases are in-memory sqlite built
+inside the services factory, so nothing outside the process can migrate them. It
+applies the schemas it owns with `applyPikkuSchemas` instead — the same DDL, run
+by the one process that has the database.

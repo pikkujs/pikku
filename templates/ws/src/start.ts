@@ -5,10 +5,8 @@ import { Server } from 'http'
 import { WebSocketServer } from 'ws'
 
 import '#pikku/pikku-bootstrap.gen.js'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 
 async function main(): Promise<void> {
   try {
