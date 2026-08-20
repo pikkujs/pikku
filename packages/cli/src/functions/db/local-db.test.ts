@@ -28,7 +28,6 @@ import {
   reset as runReset,
   createKysely,
 } from './local-db.js'
-import type { PikkuSchemaWiring } from '@pikku/kysely'
 import type { ColumnInfo } from './db-introspector.js'
 import { MigrationDriftError } from './db-migrator.js'
 import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
@@ -1292,7 +1291,7 @@ describe('db.schema', () => {
    * The half of #713 that survived: a project's migrations should carry the
    * runtime tables it has a use for, not all nine schemas unconditionally.
    */
-  test('the declaration narrows to the wirings the project has', async () => {
+  test('the declaration narrows to the services the project reaches', async () => {
     usePostgresProject()
     const resolved = resolveDb({}, root, root)!
     const logger = {
@@ -1304,18 +1303,18 @@ describe('db.schema', () => {
       root,
       ['src'],
       logger,
-      new Set<PikkuSchemaWiring>(['workflow'])
+      new Set(['workflowService'])
     )
 
-    assert.ok(runtime.tables.has('workflow_step'), 'the wiring it has')
-    assert.ok(!runtime.tables.has('agent_run'), 'a wiring it does not have')
+    assert.ok(runtime.tables.has('workflow_step'), 'the service it wires')
+    assert.ok(!runtime.tables.has('agent_run'), 'a service it does not wire')
     assert.ok(!runtime.tables.has('channels'))
     assert.ok(!runtime.tables.has('webhook_delivery'))
+    assert.ok(!runtime.tables.has('credentials'))
 
-    // Nothing in a project's source implies these, so they are never gated off.
+    // No service owns these, so they are never gated off.
     assert.ok(runtime.tables.has('pikku_user_sessions'))
     assert.ok(runtime.tables.has('secrets'))
-    assert.ok(runtime.tables.has('credentials'))
     assert.ok(runtime.tables.has('pikku_deployments'))
   })
 

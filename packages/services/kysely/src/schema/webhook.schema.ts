@@ -4,7 +4,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 /** Webhook deliveries and one row per delivery attempt. */
 export const webhookSchema: PikkuSchema = {
   name: 'webhook',
-  wiredBy: 'webhook',
+  ownedBy: ['webhookService'],
   statements: [
     (db) =>
       db.schema

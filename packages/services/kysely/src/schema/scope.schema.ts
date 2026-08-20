@@ -19,7 +19,7 @@ import { requiredType, type PikkuSchema } from './pikku-schema.types.js'
  */
 export const scopeSchema: PikkuSchema = {
   name: 'scope',
-  wiredBy: 'scope',
+  ownedBy: ['scopeService'],
   requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
   statements: [
     (db) =>

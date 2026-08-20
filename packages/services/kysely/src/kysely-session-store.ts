@@ -3,7 +3,7 @@ import type { CoreUserSession } from '@pikku/core/types'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { sessionSchema } from './schema/session.schema.js'
 
 export class KyselySessionStore implements SessionStore {
@@ -13,7 +13,7 @@ export class KyselySessionStore implements SessionStore {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, sessionSchema)
+    await requirePikkuSchema(this.db, sessionSchema)
     this.initialized = true
   }
 

@@ -324,6 +324,34 @@ export interface VirtualUserRunTable {
   finishedAt: Date | string | null
 }
 
+/**
+ * One audit event. Every column is text on every engine so a locally-run
+ * project and a deployed stage write rows the same reader can read; the JSON
+ * columns (`tables`, `changedCols`, `event`, `old`, `data`) are serialised by
+ * {@link KyselyAuditService} rather than by a plugin.
+ */
+export interface AuditTable {
+  auditId: string
+  /** ISO 8601, because string ordering is chronological ordering. */
+  occurredAt: string
+  type: string
+  source: Generated<string>
+  outcome: string | null
+  functionId: string | null
+  wireType: string | null
+  traceId: string | null
+  transactionId: string | null
+  queryId: string | null
+  userId: string | null
+  orgId: string | null
+  pikkuUserId: string | null
+  tables: string | null
+  changedCols: string | null
+  event: string | null
+  old: string | null
+  data: string | null
+}
+
 export interface KyselyPikkuDB {
   pikkuScopes: PikkuScopesTable
   pikkuRoles: PikkuRolesTable
@@ -354,4 +382,5 @@ export interface KyselyPikkuDB {
   webhookDelivery: WebhookDeliveryTable
   webhookDeliveryAttempt: WebhookDeliveryAttemptTable
   virtualUserRun: VirtualUserRunTable
+  audit: AuditTable
 }

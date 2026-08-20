@@ -18,6 +18,30 @@ import { KyselyAgentRunService } from './kysely-agent-run-service.js'
 import { KyselySecretService } from './kysely-secret-service.js'
 import { KyselyCredentialService } from './kysely-credential-service.js'
 import { KyselySessionStore } from './kysely-session-store.js'
+import {
+  agentSchema,
+  applyPikkuSchemas,
+  channelSchema,
+  credentialSchema,
+  deploymentSchema,
+  secretSchema,
+  sessionSchema,
+  workflowSchema,
+} from './schema/index.js'
+
+/**
+ * Every schema the services under test boot against. They no longer create
+ * their own tables, so the harness stands in for `pikku db migrate`.
+ */
+const SERVICE_SCHEMAS = [
+  channelSchema,
+  workflowSchema,
+  deploymentSchema,
+  agentSchema,
+  secretSchema,
+  credentialSchema,
+  sessionSchema,
+]
 
 function createSqliteDb(): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
@@ -345,6 +369,7 @@ describe('Kysely Services - SQLite', () => {
 
   before(async () => {
     db = createSqliteDb()
+    await applyPikkuSchemas(db, SERVICE_SCHEMAS)
   })
 
   after(async () => {
@@ -365,6 +390,7 @@ describe(
     before(async () => {
       db = createPostgresDb()!
       await dropAllTables(db)
+      await applyPikkuSchemas(db, SERVICE_SCHEMAS)
     })
 
     after(async () => {

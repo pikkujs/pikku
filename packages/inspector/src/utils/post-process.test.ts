@@ -94,6 +94,7 @@ function makeState(
     addonRequiredParentServices?: string[]
     authServices?: string[]
     graphMeta?: Record<string, any>
+    scopeDefinitions?: any[]
   } = {}
 ): Omit<InspectorState, 'typesLookup'> {
   return {
@@ -128,6 +129,7 @@ function makeState(
     workflows: { meta: {}, graphMeta: overrides.graphMeta ?? {} },
     wireServicesMeta: new Map(),
     rpc: { internalMeta: {}, exposedMeta: {} },
+    scopes: { definitions: overrides.scopeDefinitions ?? [] },
     addonFunctions: overrides.addonFunctions ?? {},
     addonRequiredParentServices: overrides.addonRequiredParentServices ?? [],
     auth: overrides.authServices
@@ -389,6 +391,24 @@ describe('aggregateRequiredServices — the auth factory’s own services', () =
     const state = makeState()
     aggregateRequiredServices(state)
     assert.equal(state.serviceAggregation.requiredServices.size, 0)
+  })
+})
+
+describe('aggregateRequiredServices — scopes imply the service that resolves them', () => {
+  // Nothing in a project destructures `scopeService` — the generated auth layer
+  // reaches it — so the declaration is the only signal there is. Without this,
+  // `pikku db generate` would leave a project that declares scopes with no
+  // tables to grant them in.
+  test('a declared scope requires scopeService', () => {
+    const state = makeState({ scopeDefinitions: [{ id: 'admin' }] })
+    aggregateRequiredServices(state)
+    assert.ok(state.serviceAggregation.requiredServices.has('scopeService'))
+  })
+
+  test('a project that declares none does not', () => {
+    const state = makeState()
+    aggregateRequiredServices(state)
+    assert.ok(!state.serviceAggregation.requiredServices.has('scopeService'))
   })
 })
 

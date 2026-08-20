@@ -309,21 +309,13 @@ describe('KyselyAuditService against a CamelCasePlugin connection', () => {
 })
 
 describe('KyselyAuditService.init', () => {
-  test('creates the audit table on a database that has none', async () => {
+  test('refuses to boot against a database that has none', async () => {
     const fresh = new Kysely<any>({
       dialect: new SqliteDialect({ database: new Database(':memory:') }),
       plugins: [new CamelCasePlugin()],
     })
     const freshService = new KyselyAuditService(fresh)
-    await freshService.init()
-    await freshService.write([
-      event({ eventId: 'e1', type: 't', occurredAt: '2026-01-01' }),
-    ])
-    const { events } = await freshService.query()
-    assert.deepEqual(
-      events.map((e) => e.eventId),
-      ['e1']
-    )
+    await assert.rejects(freshService.init(), /pikku db generate/)
   })
 
   // Two boots against one database, and the second must not wipe the first.

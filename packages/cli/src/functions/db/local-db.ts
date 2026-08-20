@@ -23,11 +23,10 @@ import {
   applyPikkuSchemas,
   compilePikkuSchemas,
   pikkuSchemas,
-  wiredPikkuSchemas,
+  requiredPikkuSchemas,
   resolveRequirements,
   createCoercionPlugin,
   type PikkuSchema,
-  type PikkuSchemaWiring,
   type RequiredTypes,
   type CoercionMap,
 } from '@pikku/kysely'
@@ -1174,21 +1173,22 @@ export interface DesiredRuntimeSchema extends DesiredSchema {
  * `skipped` — reported rather than dropped, because the tables they would have
  * recognised now have nothing to explain them.
  *
- * `wired` narrows the declaration to the schemas a project's own wirings imply,
- * for the caller that is about to write a migration: a project with no agents
- * should not carry `agent_threads` in its migrations forever. Omit it and the
- * whole declaration answers, which is what the caller that is *recognising*
- * tables wants — a table created by a wiring that has since been removed still
- * has to read as a runtime table rather than as an unexplained one.
+ * `services` narrows the declaration to the schemas the services a project's
+ * code actually reaches own, for the caller that is about to write a migration:
+ * a project with no agents should not carry `agent_threads` in its migrations
+ * forever. Omit it and the whole declaration answers, which is what the caller
+ * that is *recognising* tables wants — a table created by a service that has
+ * since been dropped still has to read as a runtime table rather than as an
+ * unexplained one.
  */
 export async function desiredRuntimeSchema(
   resolved: ResolvedDb,
   rootDir: string,
   srcDirectories: string[],
   logger: { error: (msg: string) => void },
-  wired?: ReadonlySet<PikkuSchemaWiring>
+  services?: ReadonlySet<string>
 ): Promise<DesiredRuntimeSchema> {
-  const declared = wired ? wiredPikkuSchemas(wired) : pikkuSchemas
+  const declared = services ? requiredPikkuSchemas(services) : pikkuSchemas
   const skipped: SkippedRuntimeSchema[] = []
 
   const collect = async (
@@ -1699,7 +1699,7 @@ export async function schemaSources(
   srcDirectories: string[],
   logger: { error: (msg: string) => void },
   addons: AddonDeclaration[] = [],
-  wired?: ReadonlySet<PikkuSchemaWiring>
+  services?: ReadonlySet<string>
 ): Promise<SchemaSource[]> {
   const sources: SchemaSource[] = []
 
@@ -1722,7 +1722,7 @@ export async function schemaSources(
     rootDir,
     srcDirectories,
     logger,
-    wired
+    services
   )
   if (runtime.tables.size > 0) {
     sources.push({
@@ -1820,7 +1820,7 @@ export async function generateMigrations(
   srcDirectories: string[],
   logger: { error: (msg: string) => void },
   addons: AddonDeclaration[] = [],
-  wired?: ReadonlySet<PikkuSchemaWiring>
+  services?: ReadonlySet<string>
 ): Promise<GenerateResult> {
   const sources = await schemaSources(
     resolved,
@@ -1828,7 +1828,7 @@ export async function generateMigrations(
     srcDirectories,
     logger,
     addons,
-    wired
+    services
   )
   const result: GenerateResult = { upToDate: [], written: [] }
 

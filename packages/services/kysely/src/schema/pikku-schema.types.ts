@@ -102,31 +102,26 @@ export interface PikkuSchema {
    */
   requires?: SchemaRequirement[]
   /**
-   * The wiring that implies these tables, for a schema only some projects need.
+   * The singleton services whose `init()` requires these tables, or absent for
+   * a schema every project needs.
    *
-   * Absent means every project needs it: a session store, a secret store, a
-   * credential store and the deployment record are wired by the runtime itself,
-   * so no wiring in a project's source implies them and their absence would
-   * have to be guessed at. Present means `pikku db generate` writes the schema
-   * only for a project that wires that thing — the alternative is a project
-   * with no agents carrying `agent_threads` in its migrations forever.
+   * Named as services rather than as wirings because a service is what the
+   * tables actually belong to: one `requirePikkuSchema` call site per service,
+   * and `pikku db generate` writes the schema for a project whose functions
+   * reach any of them. A wiring is a poor proxy — a project can construct
+   * `KyselyWorkflowService` and wire no workflows at all.
    *
-   * Only generation reads this. Drift keeps the whole list, because a table
-   * already in the database has to stay recognisable as a runtime table even
-   * after the wiring that created it is gone.
+   * Absent means unconditional. `secrets` is on every project and the session
+   * and deployment stores are reached by generated code rather than by
+   * functions, so nothing a project writes implies them and their absence
+   * cannot be inferred.
+   *
+   * Under-naming is safe now that the runtime creates nothing: a schema left
+   * out of the migration is a sentence at startup, not a table conjured behind
+   * your back. Over-naming costs an unused table. Prefer over-naming.
    */
-  wiredBy?: PikkuSchemaWiring
+  ownedBy?: string[]
 }
-
-/**
- * The wirings a schema can be gated on.
- *
- * A closed union rather than a string: the CLI answers each of these from
- * inspector state, so a schema naming a wiring nothing detects would silently
- * never be generated.
- */
-export type PikkuSchemaWiring =
-  'agent' | 'channel' | 'scope' | 'webhook' | 'workflow'
 
 /**
  * A column another source owns, which one of these schemas depends on.

@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import { KyselyScopeService } from '@pikku/kysely'
+import {
+  KyselyScopeService,
+  applyPikkuSchemas,
+  scopeSchema,
+} from '@pikku/kysely'
 import { createKysely } from '../db/local-db.js'
 import { scopesPrune } from './scopes-prune.js'
 import { scopesAudit } from './scopes-audit.js'
@@ -80,6 +84,7 @@ beforeEach(async () => {
     .ifNotExists()
     .addColumn('id', 'text', (col) => col.primaryKey())
     .execute()
+  await applyPikkuSchemas(db, [scopeSchema])
   const service = new KyselyScopeService(db)
   await service.init()
   await service.syncScopes([

@@ -5,6 +5,7 @@ import Database from 'better-sqlite3'
 import { SerializePlugin } from './serialize-plugin.js'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyScopeService } from './kysely-scope-service.js'
+import { applyPikkuSchemas, scopeSchema } from './schema/index.js'
 
 const SCOPES = [
   { id: 'admin' },
@@ -41,6 +42,7 @@ beforeEach(async () => {
     plugins: [new CamelCasePlugin(), new SerializePlugin()],
   })
   await createUserTable(db)
+  await applyPikkuSchemas(db, [scopeSchema])
   service = new KyselyScopeService(db)
   await service.init()
   await service.syncScopes(SCOPES)

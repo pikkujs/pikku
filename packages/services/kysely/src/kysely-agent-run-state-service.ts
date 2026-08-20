@@ -9,7 +9,7 @@ import type {
   SaveScoreInput,
 } from '@pikku/core/services'
 import type { PendingApproval } from '@pikku/core/agent'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { agentSchema } from './schema/agent.schema.js'
 import { getRunScores, saveRunScore } from './kysely-agent-run-scores.js'
 
@@ -20,7 +20,7 @@ export class KyselyAgentRunStateService implements AgentRunStateService {
 
   async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, agentSchema)
+    await requirePikkuSchema(this.db, agentSchema)
     this.initialized = true
   }
 

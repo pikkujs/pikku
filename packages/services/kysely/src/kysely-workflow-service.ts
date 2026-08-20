@@ -17,7 +17,7 @@ import { sql, type Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { parseJson } from './kysely-json.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { workflowSchema } from './schema/workflow.schema.js'
 
 export class KyselyWorkflowService extends PikkuWorkflowService {
@@ -34,7 +34,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, workflowSchema)
+    await requirePikkuSchema(this.db, workflowSchema)
     this.initialized = true
   }
 

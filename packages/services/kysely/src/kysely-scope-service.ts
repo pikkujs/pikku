@@ -8,7 +8,7 @@ import {
 } from '@pikku/core/errors'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { scopeSchema } from './schema/scope.schema.js'
 
 /**
@@ -30,7 +30,7 @@ export class KyselyScopeService implements ScopeService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, scopeSchema)
+    await requirePikkuSchema(this.db, scopeSchema)
     this.initialized = true
   }
 

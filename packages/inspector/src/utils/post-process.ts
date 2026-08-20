@@ -322,6 +322,13 @@ export function aggregateRequiredServices(
     requiredServices.add('eventHub')
   }
 
+  // Declared scopes need scopeService to resolve a grant. Nothing in a project
+  // destructures it — the generated auth layer reaches it — so the declaration
+  // is the only signal there is.
+  if ((state.scopes?.definitions?.length ?? 0) > 0) {
+    requiredServices.add('scopeService')
+  }
+
   // 7. Services that consumed addons need from the parent project.
   const addonFnServices = new Map<string, string[] | undefined>()
   for (const [namespace, fns] of Object.entries(state.addonFunctions ?? {})) {

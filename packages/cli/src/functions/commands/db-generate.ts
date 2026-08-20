@@ -1,7 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { resolveDb, generateMigrations } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
-import { wiredSchemasOf } from '../db/wired-schemas.js'
 
 export const dbGenerate = pikkuSessionlessFunc<{}, void>({
   remote: true,
@@ -34,7 +33,7 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       config.srcDirectories,
       logger,
       addons,
-      wiredSchemasOf(state)
+      state.serviceAggregation.requiredServices
     )
 
     for (const source of upToDate) {

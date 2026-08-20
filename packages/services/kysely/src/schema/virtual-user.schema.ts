@@ -19,7 +19,8 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  * week's does not depend on which database they were found in.
  */
 export const virtualUserSchema: PikkuSchema = {
-  name: 'virtualUser',
+  name: 'virtual-user',
+  ownedBy: ['virtualUserRunStore'],
   statements: [
     (db) =>
       db.schema

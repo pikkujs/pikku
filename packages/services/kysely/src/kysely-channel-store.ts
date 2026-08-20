@@ -3,7 +3,7 @@ import type { Channel } from '@pikku/core/channel'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { channelSchema } from './schema/channel.schema.js'
 
 export class KyselyChannelStore extends ChannelStore {
@@ -15,7 +15,7 @@ export class KyselyChannelStore extends ChannelStore {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, channelSchema)
+    await requirePikkuSchema(this.db, channelSchema)
     this.initialized = true
   }
 

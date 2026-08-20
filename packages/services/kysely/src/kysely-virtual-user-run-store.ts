@@ -9,7 +9,7 @@ import type {
 } from '@pikku/core/virtual-user'
 import type { KyselyPikkuDB, VirtualUserRunTable } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { virtualUserSchema } from './schema/virtual-user.schema.js'
 
 /**
@@ -43,7 +43,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
    */
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, virtualUserSchema)
+    await requirePikkuSchema(this.db, virtualUserSchema)
     this.initialized = true
   }
 
