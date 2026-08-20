@@ -8,6 +8,7 @@
  */
 export const serializeMiddlewareTypes = (
   functionTypesImportPath: string,
+  requiredServicesTypeImport: string,
   packageName?: string
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
@@ -25,10 +26,18 @@ import {
   addChannelMiddleware as addChannelMiddlewareCore,
 } from '@pikku/core/channel'
 import type { PikkuAgentMiddlewareHooks } from '@pikku/core/agent'
-import type { Services, SingletonServices, WiredSingletonServices } from '${functionTypesImportPath}'
+import type { Services, SingletonServices } from '${functionTypesImportPath}'
+${requiredServicesTypeImport}
 
 export { cors } from '@pikku/core/middleware'
 export type { MiddlewarePriority }
+
+/**
+ * Derived here rather than imported: nothing outside a generated leaf ever
+ * names this intersection, so the function leaf keeps it to itself and the
+ * leaves that want it spell it out.
+ */
+type WiredSingletonServices = RequiredSingletonServices & SingletonServices
 
 /**
  * Type-safe middleware definition that can access your application's services and session.

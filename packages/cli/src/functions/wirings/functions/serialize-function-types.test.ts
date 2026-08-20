@@ -150,4 +150,15 @@ describe('serializeFunctionTypes', () => {
       }
     })
   })
+  // Which intersection this leaf carries is measured, not chosen: emit
+  // declarations and `WiredServices` is named by 147 `.d.ts` files, while the
+  // singleton intersection is named by none outside the leaves that declare it.
+  // So that one moved to the leaves that use it, and this one stays exported —
+  // unexport it and every wired module inlines it and fails TS2883 per member.
+  test('only the intersection declaration emit names lives here', () => {
+    const content = emit()
+
+    assert.match(content, /^export type WiredServices =/m)
+    assert.doesNotMatch(content, /WiredSingletonServices/)
+  })
 })

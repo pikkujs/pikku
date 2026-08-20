@@ -80,8 +80,18 @@ ${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeNa
  * services **non-optional** at every call site. A service is optional only when
  * nothing destructures it — in which case it is never created either. This is
  * why an \`if (!service)\` guard inside a function body is always dead code.
+ *
+ * Only the wire-services half lives here. The singleton half is declared by the
+ * auth and middleware leaves that use it, because whether a name earns its
+ * export is measured rather than chosen: emit declarations for a project and
+ * \`WiredServices\` is named by 147 of its \`.d.ts\` files, while the singleton
+ * intersection is named by none outside the leaves that declare it. Export the
+ * latter and it is a compatibility promise nothing asked for; unexport
+ * \`WiredServices\` and every wired module inlines the intersection instead,
+ * which asks it to name each member service through a specifier it does not
+ * have — 3308 TS2883s. \`--noEmit\` cannot surface any of that, so re-check with
+ * \`tsc --declaration --emitDeclarationOnly\` before moving either one.
  */
-export type WiredSingletonServices = RequiredSingletonServices & SingletonServices
 export type WiredServices = SecretlessServices<RequiredSingletonServices & Services>
 
 /**

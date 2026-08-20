@@ -96,6 +96,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
           functionTypesFile,
           packageMappings
         ),
+        `import type { RequiredSingletonServices } from '${getFileImportRelativePath(middlewareTypesFile, servicesFile, packageMappings)}'`,
         config.addonName
       )
     )
@@ -126,6 +127,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
           functionTypesFile,
           packageMappings
         ),
+        `import type { RequiredSingletonServices } from '${getFileImportRelativePath(authGuardsFile, servicesFile, packageMappings)}'`,
         config.addonName
       )
     )

@@ -5,6 +5,7 @@ import { serializeMiddlewareTypes } from './serialize-middleware-types.js'
 const emit = () =>
   serializeMiddlewareTypes(
     '../function/pikku-function-types.gen.js',
+    "import type { RequiredSingletonServices } from '../pikku-services.gen.js'",
     'my-addon'
   )
 
@@ -104,7 +105,23 @@ describe('serializeMiddlewareTypes', () => {
   test('types against the function leaf without importing a value from it', () => {
     assert.match(
       emit(),
-      /import type \{ Services, SingletonServices, WiredSingletonServices \} from '\.\.\/function\/pikku-function-types\.gen\.js'/
+      /import type \{ Services, SingletonServices \} from '\.\.\/function\/pikku-function-types\.gen\.js'/
+    )
+  })
+
+  // `WiredSingletonServices` is named by no `.d.ts` outside the leaves that
+  // declare it, so the function leaf keeps it private and this leaf derives its
+  // own from the services file.
+  test('derives the wired singleton intersection rather than importing it', () => {
+    const content = emit()
+
+    assert.match(
+      content,
+      /import type \{ RequiredSingletonServices \} from '\.\.\/pikku-services\.gen\.js'/
+    )
+    assert.match(
+      content,
+      /^type WiredSingletonServices = RequiredSingletonServices & SingletonServices$/m
     )
   })
 })

@@ -3,7 +3,11 @@ import { describe, test } from 'node:test'
 import { serializeAuthGuards } from './serialize-auth-guards.js'
 
 const emit = () =>
-  serializeAuthGuards('../function/pikku-function-types.gen.js', 'my-addon')
+  serializeAuthGuards(
+    '../function/pikku-function-types.gen.js',
+    "import type { RequiredSingletonServices } from '../pikku-services.gen.js'",
+    'my-addon'
+  )
 
 describe('serializeAuthGuards', () => {
   // Who may call a function is a decision taken once and reused across wirings,
@@ -61,7 +65,27 @@ describe('serializeAuthGuards', () => {
   test('types against the function leaf without importing a value from it', () => {
     assert.match(
       emit(),
-      /import type \{[^}]*WiredSingletonServices,?[^}]*\} from '\.\.\/function\/pikku-function-types\.gen\.js'/s
+      /import type \{[^}]*WiredServices,?[^}]*\} from '\.\.\/function\/pikku-function-types\.gen\.js'/s
+    )
+  })
+
+  // `WiredSingletonServices` is named by no `.d.ts` outside the leaves that
+  // declare it, so the function leaf keeps it private and this leaf derives its
+  // own. `WiredServices` is named by 147 of them and stays imported.
+  test('derives the wired singleton intersection rather than importing it', () => {
+    const content = emit()
+
+    assert.match(
+      content,
+      /import type \{ RequiredSingletonServices \} from '\.\.\/pikku-services\.gen\.js'/
+    )
+    assert.match(
+      content,
+      /^type WiredSingletonServices = RequiredSingletonServices & SingletonServices$/m
+    )
+    assert.doesNotMatch(
+      content,
+      /import type \{[^}]*WiredSingletonServices[^}]*\} from/s
     )
   })
 })

@@ -44,6 +44,15 @@ import type { PikkuFunctionSessionlessConfigWithSchema } from '#pikku/function'
 import type { PikkuAuth } from '#pikku/auth'
 // @ts-expect-error - WiredAuthServices only supplies a generic default, not API
 import type { WiredAuthServices } from '#pikku/auth'
+/**
+ * `WiredServices` is the counter-example on this page: it stays exported
+ * because declaration emit genuinely names it, in 147 `.d.ts` files of a
+ * project this size. `WiredSingletonServices` is named by none of them — only
+ * by the generated leaves themselves — so it is private and each leaf that
+ * wants the intersection derives its own.
+ */
+// @ts-expect-error - WiredSingletonServices is named by no consumer's .d.ts, not API
+import type { WiredSingletonServices } from '#pikku/function'
 // @ts-expect-error - PikkuListFunction was referenced by nothing; pikkuListFunc is the API
 import type { PikkuListFunction } from '#pikku/function'
 // @ts-expect-error - PikkuTriggerFunctionConfigWithSchema is an overload parameter, not API
@@ -118,6 +127,7 @@ export type _SessionlessConfigWithSchema =
   PikkuFunctionSessionlessConfigWithSchema
 export type _Auth = PikkuAuth
 export type _WiredAuthServices = WiredAuthServices
+export type _WiredSingletonServices = WiredSingletonServices
 export type _ListFunction = PikkuListFunction
 export type _TriggerFunctionConfigWithSchema =
   PikkuTriggerFunctionConfigWithSchema

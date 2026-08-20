@@ -11,6 +11,7 @@
  */
 export const serializeAuthGuards = (
   functionTypesImportPath: string,
+  requiredServicesTypeImport: string,
   packageName?: string
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
@@ -33,10 +34,17 @@ import type {
   Session,
   SingletonServices,
   WiredServices,
-  WiredSingletonServices,
 } from '${functionTypesImportPath}'
+${requiredServicesTypeImport}
 
 export { defineCredential } from '@pikku/core/credential'
+
+/**
+ * Derived here rather than imported: nothing outside a generated leaf ever
+ * names this intersection, so the function leaf keeps it to itself and the
+ * leaves that want it spell it out.
+ */
+type WiredSingletonServices = RequiredSingletonServices & SingletonServices
 
 /** \`WiredSingletonServices\` without \`secrets\`, for auth gates. */
 type WiredAuthServices = SecretlessServices<WiredSingletonServices>
