@@ -14,6 +14,7 @@ import {
 } from 'kysely'
 import { PGlite } from '@electric-sql/pglite'
 import type { KyselyPikkuDB } from '@pikku/kysely'
+import { applyPikkuSchemas, workflowSchema } from '@pikku/kysely'
 
 import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
 
@@ -132,6 +133,7 @@ const createDb = () => {
 beforeEach(async () => {
   open = []
   db = createDb()
+  await applyPikkuSchemas(db, [workflowSchema])
   service = new PgKyselyWorkflowService(db, { wireQueues: false } as any)
   await service.init()
 })
@@ -154,7 +156,7 @@ const seedStep = async () => {
 }
 
 describe('the schema Postgres actually gets', () => {
-  test('init creates every workflow table', async () => {
+  test('the migration creates every workflow table', async () => {
     const { rows } = await sql<{ tablename: string }>`
       SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `.execute(db)
@@ -168,7 +170,7 @@ describe('the schema Postgres actually gets', () => {
     ])
   })
 
-  test('init creates the indexes the engine reads by', async () => {
+  test('the migration creates the indexes the engine reads by', async () => {
     const { rows } = await sql<{ indexname: string }>`
       SELECT indexname FROM pg_indexes WHERE schemaname = 'public'
     `.execute(db)
@@ -188,7 +190,7 @@ describe('the schema Postgres actually gets', () => {
     }
   })
 
-  test('init is idempotent, so a second boot does not throw', async () => {
+  test('boot is idempotent, so a second one does not throw', async () => {
     const again = new PgKyselyWorkflowService(db, { wireQueues: false } as any)
     await again.init()
   })
