@@ -2,11 +2,13 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeScopesTypes } from './serialize-scopes-types.js'
+import { serializeScopesClient } from './serialize-scopes-client.js'
 import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/scope'
 
 export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
   func: async ({ logger, config, getInspectorState }, data) => {
     const { scopesFile, scopesMetaJsonFile } = config
+    const scopesClientFile = config.clientFiles?.scopesFile
 
     if (!scopesFile) {
       return
@@ -25,6 +27,14 @@ export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       definitions: state.scopes.definitions,
     })
     await writeFileInDir(logger, scopesFile, content)
+
+    if (scopesClientFile) {
+      await writeFileInDir(
+        logger,
+        scopesClientFile,
+        serializeScopesClient({ definitions: state.scopes.definitions })
+      )
+    }
 
     if (scopesMetaJsonFile) {
       const meta = validateAndBuildScopeDefinitionsMeta(
