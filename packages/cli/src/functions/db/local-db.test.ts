@@ -28,6 +28,7 @@ import {
   reset as runReset,
   createKysely,
 } from './local-db.js'
+import type { PikkuSchemaWiring } from '@pikku/kysely'
 import type { ColumnInfo } from './db-introspector.js'
 import { MigrationDriftError } from './db-migrator.js'
 import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
@@ -1285,6 +1286,54 @@ describe('db.schema', () => {
         ),
       /db\.schema is set to 'app'.*sqlite/s
     )
+  })
+
+  /**
+   * The half of #713 that survived: a project's migrations should carry the
+   * runtime tables it has a use for, not all nine schemas unconditionally.
+   */
+  test('the declaration narrows to the wirings the project has', async () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root)!
+    const logger = {
+      error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+    }
+
+    const runtime = await desiredRuntimeSchema(
+      resolved,
+      root,
+      ['src'],
+      logger,
+      new Set<PikkuSchemaWiring>(['workflow'])
+    )
+
+    assert.ok(runtime.tables.has('workflow_step'), 'the wiring it has')
+    assert.ok(!runtime.tables.has('agent_run'), 'a wiring it does not have')
+    assert.ok(!runtime.tables.has('channels'))
+    assert.ok(!runtime.tables.has('webhook_delivery'))
+
+    // Nothing in a project's source implies these, so they are never gated off.
+    assert.ok(runtime.tables.has('pikku_user_sessions'))
+    assert.ok(runtime.tables.has('secrets'))
+    assert.ok(runtime.tables.has('credentials'))
+    assert.ok(runtime.tables.has('pikku_deployments'))
+  })
+
+  /**
+   * Drift recognises rather than requires, so it asks the unscoped question.
+   * A table created by a wiring that has since been deleted is still a runtime
+   * table, and scoping the declaration here would report it as unexplained.
+   */
+  test('omitting the wirings keeps the whole declaration', async () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root)!
+    const runtime = await desiredRuntimeSchema(resolved, root, ['src'], {
+      error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+    })
+
+    assert.ok(runtime.tables.has('agent_run'))
+    assert.ok(runtime.tables.has('channels'))
+    assert.ok(runtime.tables.has('workflow_step'))
   })
 
   test('the runtime SQL is qualified while the table names stay bare', async () => {

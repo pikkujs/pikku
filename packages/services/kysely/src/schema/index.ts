@@ -2,6 +2,7 @@ import { CamelCasePlugin, type Kysely } from 'kysely'
 import {
   schemaContext,
   type PikkuSchema,
+  type PikkuSchemaWiring,
   type RequiredTypes,
   type SchemaContext,
   type SchemaRequirement,
@@ -18,6 +19,7 @@ import { workflowSchema } from './workflow.schema.js'
 
 export type {
   PikkuSchema,
+  PikkuSchemaWiring,
   RequiredTypes,
   SchemaContext,
   SchemaRequirement,
@@ -56,6 +58,19 @@ export const pikkuSchemas: PikkuSchema[] = [
   agentSchema,
   scopeSchema,
 ]
+
+/**
+ * The schemas a project needs, given the wirings it actually has.
+ *
+ * The gate is one-sided on purpose: a schema declaring no `wiredBy` is always
+ * in, because nothing in a project's source implies it and leaving it out would
+ * be a guess. Only a schema that names the wiring it belongs to can be left out
+ * by not finding that wiring.
+ */
+export const wiredPikkuSchemas = (
+  wired: ReadonlySet<PikkuSchemaWiring>
+): PikkuSchema[] =>
+  pikkuSchemas.filter((schema) => !schema.wiredBy || wired.has(schema.wiredBy))
 
 /**
  * Bind a declaration to a database.

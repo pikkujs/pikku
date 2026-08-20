@@ -14,6 +14,7 @@ import {
 import Database from 'better-sqlite3'
 import {
   pikkuSchemas,
+  wiredPikkuSchemas,
   compilePikkuSchemas,
   applyPikkuSchemas,
   ensurePikkuSchema,
@@ -529,6 +530,45 @@ describe('compiling into a schema', () => {
     assert.match(
       db.schema.createTable('after').addColumn('id', 'text').compile().sql,
       /create table "after"/
+    )
+  })
+})
+
+describe('wiredPikkuSchemas', () => {
+  test('a project that wires nothing still gets the schemas nothing implies', () => {
+    const names = wiredPikkuSchemas(new Set()).map((s) => s.name)
+    assert.deepEqual(names, ['session', 'secret', 'credential', 'deployment'])
+  })
+
+  test('a wiring brings in its own schema, in the declared order', () => {
+    const names = wiredPikkuSchemas(new Set(['channel', 'workflow'])).map(
+      (s) => s.name
+    )
+    assert.deepEqual(names, [
+      'channel',
+      'session',
+      'secret',
+      'credential',
+      'deployment',
+      'workflow',
+    ])
+  })
+
+  test('every wiring can name a schema — and every gated schema a wiring', () => {
+    // The two lists are one contract. A `wiredBy` no caller can produce is a
+    // schema that is never generated; a wiring no schema names is dead.
+    const gated = pikkuSchemas.flatMap((s) => (s.wiredBy ? [s.wiredBy] : []))
+    assert.deepEqual([...new Set(gated)].sort(), [
+      'agent',
+      'channel',
+      'scope',
+      'webhook',
+      'workflow',
+    ])
+    assert.equal(
+      wiredPikkuSchemas(new Set(gated)).length,
+      pikkuSchemas.length,
+      'naming every wiring asks for everything'
     )
   })
 })

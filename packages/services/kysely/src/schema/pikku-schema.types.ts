@@ -101,7 +101,32 @@ export interface PikkuSchema {
    * database — or, worse, a stub table conjured up to make the error go away.
    */
   requires?: SchemaRequirement[]
+  /**
+   * The wiring that implies these tables, for a schema only some projects need.
+   *
+   * Absent means every project needs it: a session store, a secret store, a
+   * credential store and the deployment record are wired by the runtime itself,
+   * so no wiring in a project's source implies them and their absence would
+   * have to be guessed at. Present means `pikku db generate` writes the schema
+   * only for a project that wires that thing — the alternative is a project
+   * with no agents carrying `agent_threads` in its migrations forever.
+   *
+   * Only generation reads this. Drift keeps the whole list, because a table
+   * already in the database has to stay recognisable as a runtime table even
+   * after the wiring that created it is gone.
+   */
+  wiredBy?: PikkuSchemaWiring
 }
+
+/**
+ * The wirings a schema can be gated on.
+ *
+ * A closed union rather than a string: the CLI answers each of these from
+ * inspector state, so a schema naming a wiring nothing detects would silently
+ * never be generated.
+ */
+export type PikkuSchemaWiring =
+  'agent' | 'channel' | 'scope' | 'webhook' | 'workflow'
 
 /**
  * A column another source owns, which one of these schemas depends on.

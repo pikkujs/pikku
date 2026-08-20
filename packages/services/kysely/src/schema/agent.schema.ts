@@ -13,6 +13,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  */
 export const agentSchema: PikkuSchema = {
   name: 'agent',
+  wiredBy: 'agent',
   statements: [
     (db) =>
       db.schema

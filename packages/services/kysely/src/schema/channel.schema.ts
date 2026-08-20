@@ -4,6 +4,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 /** Channels and their topic subscriptions, also read by the event-hub store. */
 export const channelSchema: PikkuSchema = {
   name: 'channel',
+  wiredBy: 'channel',
   statements: [
     (db) =>
       db.schema
