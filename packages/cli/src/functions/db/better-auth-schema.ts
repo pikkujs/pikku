@@ -117,6 +117,14 @@ function fakeSecretService() {
   const placeholder = 'schema-introspection-only'
   return {
     getSecret: async () => createSecretValue(placeholder),
+    // Every key resolves, for the same reason `hasSecret` says yes to all of
+    // them: an auth factory that batches its secrets must come back with the
+    // whole batch, or it throws on the one it considers required and the
+    // schema is never read at all.
+    getSecrets: async (keys: string[]) =>
+      Object.fromEntries(
+        keys.map((key) => [key, createSecretValue(placeholder)])
+      ),
     hasSecret: async () => true,
     setSecret: async () => {},
   }
