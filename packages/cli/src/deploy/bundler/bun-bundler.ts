@@ -69,6 +69,9 @@ function getBun(): BunBuildApi {
   return bun
 }
 
+const escapeRegExp = (s: string): string =>
+  s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const pkgHead = (spec: string): string =>
   spec.startsWith('@')
     ? spec.split('/').slice(0, 2).join('/')
@@ -83,6 +86,13 @@ const pkgHead = (spec: string): string =>
  *   - `externals`: keep external (node:*, cloudflare:*, declared npm deps) and
  *     CAPTURE the real npm package names — Bun's metafile omits external
  *     imports, so capture is how per-unit dependency extraction works.
+ *
+ * The `onResolve` filter is built from exactly those three lists, so the callback
+ * only ever runs on a specifier it rewrites. It must never fire and then return
+ * undefined to defer to Bun: a deferred bare specifier that resolves through a
+ * package.json `exports` subpath (`@pikku/core/workflow`) silently bundles as an
+ * empty module, and the worker dies at startup on `ReferenceError: X is not
+ * defined` for every binding it exported.
  */
 function createBunResolvePlugin(opts: {
   aliases?: Record<string, string>
@@ -98,10 +108,22 @@ function createBunResolvePlugin(opts: {
     }
     return (s: string) => s === pat || s.startsWith(pat + '/')
   })
+  const filter = new RegExp(
+    [
+      ...Object.keys(aliases ?? {}).map((name) => `^${escapeRegExp(name)}$`),
+      ...stubPatterns.map((re) => re.source),
+      '^node:',
+      ...externals.map((pat) =>
+        pat.endsWith('*')
+          ? `^${escapeRegExp(pat.slice(0, -1))}`
+          : `^${escapeRegExp(pat)}($|\\/)`
+      ),
+    ].join('|')
+  )
   return {
     name: 'pikku-bun-resolve',
     setup(build) {
-      build.onResolve({ filter: /.*/ }, (args) => {
+      build.onResolve({ filter }, (args) => {
         let path = args.path
         // Relative / absolute → let Bun resolve natively.
         if (path.startsWith('.') || path.startsWith('/')) return
@@ -119,7 +141,7 @@ function createBunResolvePlugin(opts: {
           if (!path.includes(':')) captured.add(pkgHead(path))
           return { path, external: true }
         }
-        // Everything else → Bun bundles it (resolving the .bun store natively).
+        // Unreachable: the filter above is built from these same three lists.
         return
       })
       build.onLoad({ filter: /.*/, namespace: 'pikku-stub' }, () => ({
