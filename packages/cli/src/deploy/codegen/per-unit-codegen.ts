@@ -17,10 +17,7 @@ import { promisify } from 'node:util'
 
 import type { InspectorState } from '@pikku/inspector'
 import { serializeInspectorState } from '@pikku/inspector'
-import type {
-  DeploymentManifest,
-  DeploymentUnit,
-} from '../analyzer/manifest.js'
+import type { DeploymentManifest, DeploymentUnit } from '@pikku/deploy'
 import { toSafeKebab } from '../analyzer/analyzer.js'
 
 const execFileAsync = promisify(execFile)

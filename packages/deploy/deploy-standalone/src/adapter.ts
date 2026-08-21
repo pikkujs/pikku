@@ -16,6 +16,8 @@
  *   compiles the bundle into a single self-contained executable via
  *   `bun build --compile`. No runtime needed on the target host.
  */
+import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
+import { nodeBuiltinExternals } from '@pikku/deploy'
 
 export type StandaloneRuntime = 'node' | 'bun'
 
@@ -23,39 +25,7 @@ export interface StandaloneProviderAdapterOptions {
   runtime?: StandaloneRuntime
 }
 
-type DeploymentHandler =
-  | {
-      type: 'fetch'
-      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
-    }
-  | { type: 'queue'; queueName: string }
-  | { type: 'scheduled'; schedule: string; taskName: string }
-
-interface DeploymentUnit {
-  name: string
-  role: string
-  functionIds: string[]
-  services: Array<{ capability: string; sourceServiceName: string }>
-  dependsOn: string[]
-  handlers: DeploymentHandler[]
-  tags: string[]
-}
-
-interface EntryGenerationContext {
-  unit: DeploymentUnit
-  unitDir: string
-  bootstrapPath: string
-  configImport: string
-  configVar: string
-  servicesImport: string
-  servicesVar: string
-  singletonServicesImport: string
-  servicesType: string
-  mcpImport: string
-  mcpServerOption: string
-}
-
-export class StandaloneProviderAdapter {
+export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
@@ -207,29 +177,7 @@ export class StandaloneProviderAdapter {
   }
 
   getExternals(): string[] {
-    const externals = [
-      'node:*',
-      'child_process',
-      'crypto',
-      'fs',
-      'http',
-      'https',
-      'net',
-      'os',
-      'path',
-      'stream',
-      'url',
-      'util',
-      'zlib',
-      'events',
-      'buffer',
-      'querystring',
-      'tls',
-      'dns',
-      'dgram',
-      'cluster',
-      'worker_threads',
-    ]
+    const externals = nodeBuiltinExternals()
     if (this.runtime === 'bun') {
       // Bun-native builtins are provided by the runtime and resolved by
       // `bun build --compile` — leave them as imports rather than inlining.
@@ -341,7 +289,7 @@ export class StandaloneProviderAdapter {
 
     return {
       success: true,
-      workersDeployed: [{ name: appName }],
+      workersDeployed: [appName],
       resourcesCreated: [],
       errors: [],
     }

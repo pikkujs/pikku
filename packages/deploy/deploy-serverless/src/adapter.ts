@@ -9,70 +9,14 @@
 
 import { generateServerlessYml } from './serverless-yml.js'
 import { generateInfraManifest } from './infra-manifest.js'
+import type {
+  DeploymentManifest,
+  DeploymentUnit,
+  EntryGenerationContext,
+  ProviderAdapter,
+} from '@pikku/deploy'
+import { nodeBuiltinExternals } from '@pikku/deploy'
 
-type DeploymentHandler =
-  | {
-      type: 'fetch'
-      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
-    }
-  | { type: 'queue'; queueName: string }
-  | { type: 'scheduled'; schedule: string; taskName: string }
-
-interface DeploymentUnit {
-  name: string
-  role: string
-  functionIds: string[]
-  services: Array<{ capability: string; sourceServiceName: string }>
-  dependsOn: string[]
-  handlers: DeploymentHandler[]
-  tags: string[]
-}
-
-interface DeploymentManifest {
-  projectId: string
-  units: DeploymentUnit[]
-  queues: Array<{
-    name: string
-    consumerUnit: string
-    consumerFunctionId: string
-  }>
-  scheduledTasks: Array<{
-    name: string
-    schedule: string
-    unitName: string
-    functionId: string
-  }>
-  channels: Array<{ name: string; route: string; unitName: string }>
-  agents: Array<{ name: string; unitName: string; model: string }>
-  mcpEndpoints: Array<{ unitName: string }>
-  workflows: Array<{ name: string; orchestratorUnit: string }>
-  secrets: Array<{
-    secretId: string
-    displayName: string
-    description?: string
-  }>
-  variables: Array<{
-    variableId: string
-    displayName: string
-    description?: string
-  }>
-}
-
-interface EntryGenerationContext {
-  unit: DeploymentUnit
-  unitDir: string
-  bootstrapPath: string
-  configImport: string
-  configVar: string
-  servicesImport: string
-  servicesVar: string
-  singletonServicesImport: string
-  servicesType: string
-}
-
-/**
- * Extracts the unique handler types from a unit's handlers array.
- */
 function getHandlerTypes(unit: DeploymentUnit): string[] {
   const types = new Set<string>()
   for (const handler of unit.handlers) {
@@ -81,7 +25,7 @@ function getHandlerTypes(unit: DeploymentUnit): string[] {
   return [...types]
 }
 
-export class ServerlessProviderAdapter {
+export class ServerlessProviderAdapter implements ProviderAdapter {
   readonly name = 'serverless'
   readonly deployDirName = 'serverless'
 
@@ -95,34 +39,7 @@ export class ServerlessProviderAdapter {
    * dependencies like @smithy/* that use require('buffer')).
    */
   getExternals(): string[] {
-    const builtins = [
-      'buffer',
-      'crypto',
-      'events',
-      'fs',
-      'http',
-      'https',
-      'net',
-      'os',
-      'path',
-      'querystring',
-      'stream',
-      'string_decoder',
-      'tls',
-      'url',
-      'util',
-      'zlib',
-      'child_process',
-      'worker_threads',
-      'assert',
-      'dns',
-      'dgram',
-      'readline',
-      'tty',
-      'v8',
-      'vm',
-    ]
-    return ['node:*', ...builtins, '@aws-sdk/*', '@smithy/*']
+    return nodeBuiltinExternals('@aws-sdk/*', '@smithy/*')
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {

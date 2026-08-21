@@ -3,10 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import type {
-  ProviderAdapter,
-  EntryGenerationContext,
-} from '../../deploy/provider-adapter.js'
+import type { ProviderAdapter, EntryGenerationContext } from '@pikku/deploy'
 import type { InspectorState } from '@pikku/inspector'
 import type { Logger } from '@pikku/core/services'
 import {

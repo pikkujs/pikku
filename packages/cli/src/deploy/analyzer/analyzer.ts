@@ -40,7 +40,7 @@ import type {
   UnscopedAddon,
   GrantedAddon,
   VariableDeclaration,
-} from './manifest.js'
+} from '@pikku/deploy'
 
 // ---------------------------------------------------------------------------
 // Public API

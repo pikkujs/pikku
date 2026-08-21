@@ -5097,6 +5097,7 @@ __metadata:
     "@pikku/better-auth": "npm:^0.12.26"
     "@pikku/bun-server": "npm:^0.12.8"
     "@pikku/core": "npm:^0.12.88"
+    "@pikku/deploy": "npm:^0.12.0"
     "@pikku/deploy-cloudflare": "npm:^0.12.12"
     "@pikku/fetch": "npm:^0.12.9"
     "@pikku/inspector": "npm:^0.12.62"
@@ -5274,6 +5275,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-azure@workspace:packages/deploy/deploy-azure"
   dependencies:
+    "@pikku/deploy": "npm:^0.12.0"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
@@ -5282,6 +5284,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare"
   dependencies:
+    "@pikku/deploy": "npm:^0.12.0"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
@@ -5290,6 +5293,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-serverless@workspace:packages/deploy/deploy-serverless"
   dependencies:
+    "@pikku/deploy": "npm:^0.12.0"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
@@ -5298,6 +5302,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
   dependencies:
+    "@pikku/deploy": "npm:^0.12.0"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/deploy@npm:^0.12.0, @pikku/deploy@workspace:packages/deploy/deploy-core":
+  version: 0.0.0-use.local
+  resolution: "@pikku/deploy@workspace:packages/deploy/deploy-core"
+  dependencies:
+    tsx: "npm:^4.23.12"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft

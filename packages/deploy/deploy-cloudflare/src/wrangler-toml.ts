@@ -8,31 +8,7 @@
  * Fabric's own deploy pipeline uses the CF API directly for speed,
  * but these files ensure every unit is also deployable via wrangler.
  */
-
-type DeploymentHandler =
-  | {
-      type: 'fetch'
-      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
-    }
-  | { type: 'queue'; queueName: string }
-  | { type: 'scheduled'; schedule: string; taskName: string }
-
-interface DeploymentUnit {
-  name: string
-  role: string
-  services: Array<{ capability: string; sourceServiceName: string }>
-  dependsOn: string[]
-  handlers: DeploymentHandler[]
-}
-
-interface DeploymentManifest {
-  projectId: string
-  units: DeploymentUnit[]
-  queues: Array<{ name: string; consumerUnit: string }>
-  scheduledTasks: Array<{ name: string; schedule: string; unitName: string }>
-  secrets: Array<{ secretId: string }>
-  variables: Array<{ variableId: string }>
-}
+import type { DeploymentManifest, DeploymentUnit } from '@pikku/deploy'
 
 const COMPAT_DATE = '2024-12-18'
 const COMPAT_FLAGS = ['nodejs_compat_v2']

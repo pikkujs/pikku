@@ -7,7 +7,7 @@ export type {
   DeploymentManifest,
   DeploymentUnit,
   DeploymentUnitRole,
-} from '../analyzer/manifest.js'
+} from '@pikku/deploy'
 
 export interface BundleResult {
   unitName: string

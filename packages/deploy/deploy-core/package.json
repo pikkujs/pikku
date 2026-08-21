@@ -1,0 +1,20 @@
+{
+  "name": "@pikku/deploy",
+  "version": "0.12.0",
+  "description": "Shared deploy contract for Pikku — the deployment manifest types, the provider adapter interface, and the helpers every provider adapter needs",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "tsc": "tsc --noEmit",
+    "test": "node --test --import tsx src/*.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "license": "MIT"
+}

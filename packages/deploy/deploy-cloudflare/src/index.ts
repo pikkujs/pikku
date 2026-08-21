@@ -45,9 +45,6 @@ import { CloudflareProviderAdapter } from './adapter.js'
 import type { CloudflareProviderAdapterOptions } from './adapter.js'
 export { CloudflareProviderAdapter }
 export type {
-  DeploymentUnit,
-  DeploymentManifest,
-  EntryGenerationContext,
   PlatformServiceContributor,
   CloudflareProviderAdapterOptions,
 } from './adapter.js'

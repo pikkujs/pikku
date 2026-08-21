@@ -13,67 +13,12 @@ import {
   generateServerProxyBundle,
   serverProxyConstants,
 } from './server-proxy-entry.js'
-
-export type DeploymentHandler =
-  | {
-      type: 'fetch'
-      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
-    }
-  | { type: 'queue'; queueName: string }
-  | { type: 'scheduled'; schedule: string; taskName: string }
-
-export interface DeploymentUnit {
-  name: string
-  role: string
-  target: 'serverless' | 'server'
-  functionIds: string[]
-  services: Array<{ capability: string; sourceServiceName: string }>
-  dependsOn: string[]
-  handlers: DeploymentHandler[]
-  tags: string[]
-}
-
-export interface DeploymentManifest {
-  projectId: string
-  units: DeploymentUnit[]
-  queues: Array<{
-    name: string
-    consumerUnit: string
-    consumerFunctionId: string
-  }>
-  scheduledTasks: Array<{
-    name: string
-    schedule: string
-    unitName: string
-    functionId: string
-  }>
-  channels: Array<{ name: string; route: string; unitName: string }>
-  agents: Array<{ name: string; unitName: string; model: string }>
-  mcpEndpoints: Array<{ unitName: string }>
-  workflows: Array<{ name: string; orchestratorUnit: string }>
-  secrets: Array<{
-    secretId: string
-    displayName: string
-    description?: string
-  }>
-  variables: Array<{
-    variableId: string
-    displayName: string
-    description?: string
-  }>
-}
-
-export interface EntryGenerationContext {
-  unit: DeploymentUnit
-  unitDir: string
-  bootstrapPath: string
-  configImport: string
-  configVar: string
-  servicesImport: string
-  servicesVar: string
-  singletonServicesImport: string
-  servicesType: string
-}
+import type {
+  DeploymentManifest,
+  DeploymentUnit,
+  EntryGenerationContext,
+  ProviderAdapter,
+} from '@pikku/deploy'
 
 export type PlatformImports = {
   cfImports: string[]
@@ -154,7 +99,7 @@ function getHandlerTypes(unit: DeploymentUnit): string[] {
   return [...types]
 }
 
-export class CloudflareProviderAdapter {
+export class CloudflareProviderAdapter implements ProviderAdapter {
   readonly name = 'cloudflare'
   readonly deployDirName = 'cloudflare'
   /**
@@ -547,9 +492,7 @@ export class CloudflareProviderAdapter {
             `import { PikkuWorkflowDoClient${isWorkflowRole ? ', PikkuWorkflowDO, PikkuWorkflowDoService' : ''} } from '@pikku/cloudflare/workflow-do'`,
             `import type { DurableObjectNamespace${isWorkflowRole ? ', DurableObjectStorage' : ''} } from '@cloudflare/workers-types'`,
             ...(isWorkflowRole
-              ? [
-                  `import type { WorkflowRunWire } from '@pikku/core/workflow'`,
-                ]
+              ? [`import type { WorkflowRunWire } from '@pikku/core/workflow'`]
               : []),
           ]
         : []),
