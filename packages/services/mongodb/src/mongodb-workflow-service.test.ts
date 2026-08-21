@@ -174,6 +174,22 @@ describe('claiming a step for execution', () => {
     )
   })
 
+  test('two dispatches racing for the same scheduled step: exactly one wins', async () => {
+    const runId = await seedRun()
+    const step = await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await ws.setStepScheduled(step.stepId)
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+    const winners = claims.filter((c) => c !== null)
+
+    assert.equal(
+      winners.length,
+      1,
+      `both dispatches claimed the queued step, so a redelivered job would run it a second time: ${JSON.stringify(claims)}`
+    )
+    assert.equal((await ws.getStepState(runId, 's1')).status, 'running')
+  })
+
   test('a step already claimed is not claimable again', async () => {
     const runId = await seedRun()
     await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
