@@ -654,6 +654,48 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
       ['unknownNs:someFunc', { value: 1 }, undefined, 'trace-ns-wire'],
     ])
   })
+
+  test('the deployment fallback runs under the wire the caller passed, not the ambient one', async () => {
+    const remoteCalls: unknown[][] = []
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      {
+        traceId: 'ambient-trace',
+        session: { userId: 'ambient-user' },
+      } as never,
+      {}
+    )
+
+    const result = await service.rpcWithWire(
+      'unknownNs:someFunc',
+      { value: 1 },
+      {
+        traceId: 'caller-trace',
+        session: { userId: 'caller-user' },
+      } as never
+    )
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(
+      remoteCalls,
+      [
+        [
+          'unknownNs:someFunc',
+          { value: 1 },
+          { userId: 'caller-user' },
+          'caller-trace',
+        ],
+      ],
+      'the remote hop ran under the ambient wire, so an explicit wire is honoured locally but dropped across the deployment boundary'
+    )
+  })
 })
 
 describe('ContextAwareRPCService.startWorkflow', () => {

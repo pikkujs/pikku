@@ -407,12 +407,12 @@ export class ContextAwareRPCService {
       resolved = resolvePikkuFunction(rpcName, this.packageName)
     } catch (e) {
       if (e instanceof RPCNotFoundError && this.services.deploymentService) {
-        const session = await resolveWireSession(this.wire)
+        const session = await resolveWireSession(mergedWire)
         return this.services.deploymentService.invoke(
           rpcName,
           data,
           session,
-          this.wire.traceId
+          mergedWire.traceId
         ) as Promise<Out>
       }
       throw e
