@@ -35,6 +35,7 @@ import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
+import { disableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { applyModelAliasOverride } from '../../utils/model-alias-override.js'
 
 export const serve = pikkuSessionlessFunc<
@@ -47,6 +48,7 @@ export const serve = pikkuSessionlessFunc<
     { port, console: serveConsole, model }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    disableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
