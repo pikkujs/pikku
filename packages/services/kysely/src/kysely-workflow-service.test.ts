@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect, sql } from 'kysely'
 import Database from 'better-sqlite3'
 
-import type { StepState } from '@pikku/core/ecosystem/workflow'
+import type { StepState } from '@pikku/core/workflow'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { SerializePlugin } from './serialize-plugin.js'
 import { KyselyWorkflowService } from './kysely-workflow-service.js'

@@ -28,8 +28,8 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 /**
  * Membership is discovered, not listed: every directory holding a
  * `pikku.config.json` is a Pikku project, so a project added later arrives
- * guarded rather than invisible. Listing them by hand is how the ecosystem
- * guard reported green on four packages it had never scanned.
+ * guarded rather than invisible. Listing them by hand is how an earlier
+ * version of this guard reported green on four packages it had never scanned.
  */
 const skipped = new Set([
   'node_modules',
