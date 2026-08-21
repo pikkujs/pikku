@@ -183,8 +183,11 @@ export const runPersonaChecks = async (
         'Wire the actor plugin where better-auth is configured:',
         "  import { actor } from '@pikku/better-auth'",
         '  plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]',
-        'The plugin refuses every sign-in while the secret is unset, so a stage',
-        'that must not run scenarios simply leaves SCENARIO_ACTOR_SECRET out.'
+        '`pikku dev` turns the endpoint on and mints the secret itself, so there',
+        'is nothing to configure locally. A deployed stage that must run',
+        'scenarios opts in with',
+        'PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in; everywhere else',
+        'the endpoint stays off whatever the environment happens to contain.'
       )
     )
   }

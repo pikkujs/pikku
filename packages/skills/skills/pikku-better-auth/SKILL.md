@@ -137,21 +137,21 @@ resolves the caller's scopes through the registered `ScopeService` and checks th
 `admin:*` tree (`ADMIN_SCOPES` exports the ids so you never spell them as bare
 strings):
 
-| Gate                                                                 | Scope required           |
-| -------------------------------------------------------------------- | ------------------------ |
-| `impersonation` (`betterAuthSession` / `betterAuthStatelessSession`) | `admin:impersonate`      |
-| `credentialOAuth`'s `canLinkSingleton`                               | `admin:credentials:link` |
-| the console's user directory                                         | `admin:users:list`       |
-| create a user out of band                                            | `admin:users:create`     |
-| ban / unban                                                          | `admin:users:ban`        |
-| delete a user and their data                                         | `admin:users:remove`     |
-| revoke a user's sessions                                             | `admin:users:sessions`   |
-| set a user's password                                                | `admin:users:password`   |
-| read credential values and who holds them                            | `admin:credentials:read` |
+| Gate                                                                 | Scope required             |
+| -------------------------------------------------------------------- | -------------------------- |
+| `impersonation` (`betterAuthSession` / `betterAuthStatelessSession`) | `admin:impersonate`        |
+| `credentialOAuth`'s `canLinkSingleton`                               | `admin:credentials:link`   |
+| the console's user directory                                         | `admin:users:list`         |
+| create a user out of band                                            | `admin:users:create`       |
+| ban / unban                                                          | `admin:users:ban`          |
+| delete a user and their data                                         | `admin:users:remove`       |
+| revoke a user's sessions                                             | `admin:users:sessions`     |
+| set a user's password                                                | `admin:users:password`     |
+| read credential values and who holds them                            | `admin:credentials:read`   |
 | set and delete credentials                                           | `admin:credentials:manage` |
-| view declared scopes, roles, and who holds them                      | `admin:scopes:read`      |
-| create roles, change their scopes, grant them                        | `admin:scopes:manage`    |
-| read the audit trail                                                 | `admin:audit:read`       |
+| view declared scopes, roles, and who holds them                      | `admin:scopes:read`        |
+| create roles, change their scopes, grant them                        | `admin:scopes:manage`      |
+| read the audit trail                                                 | `admin:audit:read`         |
 
 Holding the bare `admin` scope satisfies all of them — a parent grant covers
 everything nested beneath it — so `admin` is the direct replacement for the old
@@ -371,14 +371,25 @@ plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]
 session cookie. `secret` may also be a (possibly async) function, so it can come
 off the secrets service instead of a captured value.
 
+**Which command is running decides whether it works, not whether a secret is
+set.** `pikku dev` sets `PIKKU_DEV_ACTOR_SIGN_IN` and mints an ephemeral
+`SCENARIO_ACTOR_SECRET` for the run, so local development needs no configuration
+at all. Everywhere else the endpoint refuses (`Actor sign-in is disabled outside
+\`pikku dev\``) — `pikku serve` clears the marker outright, so a secret that
+leaked into a production environment enables nothing and gets a warning naming
+itself instead.
+
+A stage that genuinely must run scenarios opts in on purpose, with
+`PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in` or
+`actor({ secret, allowOutsideDev: true })`. Any other value of that variable is
+ignored and warned about, so the hatch cannot be opened by copying a `true` from
+the line above.
+
 **`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
 persona.** `pikku persona sync` grants declared roles to actor accounts, so an
-`admin` persona is an actor holding real admin — anyone with the secret can take
-a session as one. Keep the endpoint **off outside development and sandbox
-deployments**: leave the secret unset on any stage that should not run scenarios,
-which is the supported switch (`Actor sign-in is not configured`), rather than
-conditionally registering the plugin. Do not treat "actors only" as a licence to
-enable it in production.
+`admin` persona is an actor holding real admin — anyone with the secret _and_ the
+opt-in can take a session as one. Do not treat "actors only" as a licence to open
+the hatch in production.
 
 Within that boundary, three properties bound the damage:
 
