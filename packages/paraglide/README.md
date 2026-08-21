@@ -120,3 +120,63 @@ For CI / non-Vite flows, run right after `paraglide-js compile`:
 # paraglide-enums <catalog.json> <out.gen.ts> [messagesImport] [enums.gen.ts]
 paraglide-enums ./messages/en.json ./src/i18n/i18n-enum.gen.ts ./messages.js ./packages/functions/.pikku/db/enums.gen.ts
 ```
+
+## The i18n-debug mask locale
+
+`tsc` catches an invalid message, and the `@pikku/mantine` `I18nNode` gate catches a raw
+string literal on a gated prop. Neither sees a hardcoded string in plain JSX, an
+`aria-label`, an `alt`, a `document.title`, or anything handed to a non-Mantine component.
+
+i18n-debug covers that gap: render every message as block glyphs, and whatever is still
+readable on screen never went through a message.
+
+```
+████ ███████        ← a message
+Save changes        ← a hardcoded string
+```
+
+The mask is a **locale**, not a runtime wrapper. Wrapping the `m` namespace so each
+message pipes through a `mask()` touches every export, which is exactly what stops a
+bundler tree-shaking unused messages; it also adds a check to every call and forces every
+component to import `m` from the wrapper rather than from Paraglide. Masked text is just
+text, and rendering different text per locale is what Paraglide already does.
+
+Place the plugin **before** `paraglideVitePlugin` — it writes into the catalog directory
+that Paraglide then compiles:
+
+```ts
+import { paraglideVitePlugin } from '@inlang/paraglide-js'
+import { paraglideMaskLocale } from '@pikku/paraglide/vite'
+
+export default defineConfig({
+  plugins: [
+    paraglideMaskLocale({
+      catalog: './messages/en.json',
+      locale: 'zz', // writes messages/zz.json
+    }),
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/paraglide',
+    }),
+  ],
+})
+```
+
+Switching is then one line in the locale bridge — see `createLocaleStore` in
+`@pikku/react`, whose `debugLocale` option does exactly this:
+
+```ts
+overwriteGetLocale(() => (isI18nDebug() ? 'zz' : activeLocale))
+```
+
+Two properties worth keeping:
+
+- **Keep the locale out of the app's own supported list.** That list drives URL prefixes,
+  hreflang and any backend `locale` param, none of which should ever see it.
+- **It costs the bundle effectively nothing.** On a build the catalogue is deleted rather
+  than written, so Paraglide compiles the locale to aliases of the base locale — one
+  `const` per message, no duplicated strings.
+
+`{placeholders}` are left intact: they are message inputs rather than copy, and mangling
+one changes the compiled function's signature. Whitespace is left alone too, so masked
+text keeps the shape of the original and a layout bug still looks like a layout bug.
