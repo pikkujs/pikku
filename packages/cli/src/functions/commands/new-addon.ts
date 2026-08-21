@@ -187,18 +187,22 @@ export function getAddonFiles(
       // these never have to point at the source tree.
       imports: {
         '#pikku/*.js': './dist/.pikku/*.js',
-        '#pikku/*': './dist/.pikku/*/index.js',
+        '#pikku/*': ['./dist/.pikku/*/index.js', './dist/.pikku/*'],
       },
+      // An addon's generated tree roots at `.pikku/addon/`, but a consumer
+      // reaches it by the same subpath an application would — the leaf is the
+      // package's business, not its callers'.
       exports: {
         '.': {
           types: './dist/src/index.d.ts',
           import: './dist/src/index.js',
         },
-        './.pikku/*': './dist/.pikku/*',
+        './.pikku/*': './dist/.pikku/addon/*',
         './.pikku/pikku-metadata.gen.json':
-          './dist/.pikku/pikku-metadata.gen.json',
+          './dist/.pikku/addon/pikku-metadata.gen.json',
         './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js': {
-          types: './dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
+          types:
+            './dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
         },
       },
       files: ['dist'],
@@ -264,7 +268,7 @@ export function getAddonFiles(
         resolveJsonModule: true,
         paths: {
           '#pikku/*.js': ['./.pikku/*.ts'],
-          '#pikku/*': ['./.pikku/*/index.ts'],
+          '#pikku/*': ['./.pikku/*/index.ts', './.pikku/*'],
         },
       },
       include: ['src/**/*', 'types/**/*', '.pikku/**/*.ts'],
@@ -384,15 +388,14 @@ export const createSingletonServices = pikkuAddonServices(async (
 })
 `
   } else {
+    // The plain service takes no constructor argument — the secret, credential
+    // and oauth variants are the ones handed something to authenticate with.
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
 import { pikkuAddonServices } from '#pikku/addon/setup'
 
-export const createSingletonServices = pikkuAddonServices(async (
-  config,
-  { variables }
-) => {
-  const ${camelName} = new ${pascalName}Service(variables)
+export const createSingletonServices = pikkuAddonServices(async () => {
+  const ${camelName} = new ${pascalName}Service()
 
   return { ${camelName} }
 })
@@ -755,7 +758,7 @@ export function getTestFiles(vars: AddonVars): Record<string, string> {
       type: 'module',
       imports: {
         '#pikku/*.js': './.pikku/*.ts',
-        '#pikku/*': './.pikku/*/index.ts',
+        '#pikku/*': ['./.pikku/*/index.ts', './.pikku/*'],
       },
       scripts: {
         pretest: 'pikku all',
@@ -805,7 +808,7 @@ export function getTestFiles(vars: AddonVars): Record<string, string> {
         types: ['node'],
         paths: {
           '#pikku/*.js': ['./.pikku/*.ts'],
-          '#pikku/*': ['./.pikku/*/index.ts'],
+          '#pikku/*': ['./.pikku/*/index.ts', './.pikku/*'],
         },
       },
       include: ['src/*', '.pikku/**/*', 'types/**/*'],

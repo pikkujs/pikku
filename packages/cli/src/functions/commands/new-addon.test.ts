@@ -178,8 +178,30 @@ describe('getAddonFiles', () => {
 
     assert.deepEqual(addonPaths, {
       '#pikku/*.js': ['./.pikku/*.ts'],
-      '#pikku/*': ['./.pikku/*/index.ts'],
+      '#pikku/*': ['./.pikku/*/index.ts', './.pikku/*'],
     })
+  })
+
+  /**
+   * `pikku all` roots an addon's generated tree one level down, at
+   * `.pikku/addon/`, so every published target has to carry that segment. The
+   * subpath a consumer writes does not: it names `.pikku/rpc/...` exactly as it
+   * would for an application, and the leaf stays the package's own business.
+   */
+  test('the published exports resolve into the addon leaf', () => {
+    const exports = JSON.parse(
+      getAddonFiles(vars('Acme CRM', 'desc'), {
+        secret: false,
+        variable: false,
+        oauth: false,
+      })['package.json']!
+    ).exports
+
+    assert.equal(exports['./.pikku/*'], './dist/.pikku/addon/*')
+    assert.equal(
+      exports['./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'].types,
+      './dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts'
+    )
   })
 
   test('the test harness tsconfig resolves the leaves too', () => {
@@ -189,7 +211,7 @@ describe('getAddonFiles', () => {
 
     assert.deepEqual(testPaths, {
       '#pikku/*.js': ['./.pikku/*.ts'],
-      '#pikku/*': ['./.pikku/*/index.ts'],
+      '#pikku/*': ['./.pikku/*/index.ts', './.pikku/*'],
     })
   })
 
