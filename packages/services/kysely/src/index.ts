@@ -18,6 +18,7 @@ export {
 } from './create-audited-kysely.js'
 export { KyselyAuditService } from './kysely-audit-service.js'
 export { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'
+export { KyselyVirtualUserScheduleStore } from './kysely-virtual-user-schedule-store.js'
 
 export {
   SerializePlugin,
@@ -61,4 +62,6 @@ export type { AgentRunService, AgentRunRow } from '@pikku/core/agent'
 export type {
   VirtualUserRunStore,
   VirtualUserRunRecord,
+  VirtualUserScheduleStore,
+  VirtualUserScheduleRecord,
 } from '@pikku/core/virtual-user'

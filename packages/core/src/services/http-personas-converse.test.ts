@@ -180,8 +180,10 @@ describe('HttpPersona.converse', async () => {
     assert.deepEqual(target.approvalsSeen(), [
       [{ toolCallId: 'tc1', approved: true }],
     ])
-    // No-auth agent → converse never signs in (lazy login).
-    assert.equal(target.loginCount(), 0)
+    // Signed in even though the agent route is public: a thread minted under a
+    // fresh anonymous id per request belongs to nobody, so turn two comes back
+    // as somebody else's. A persona is a real account either way.
+    assert.equal(target.loginCount(), 1)
   })
 
   test('signs in lazily and retries once when an agent route returns 401', async () => {

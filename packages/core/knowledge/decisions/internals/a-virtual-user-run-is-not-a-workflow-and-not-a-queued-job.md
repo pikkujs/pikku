@@ -37,9 +37,14 @@ left at `running` is neither.
 
 The cost is real and is stated on the type: **a restart mid-run strands a record
 at `running` with nothing left to finish it.** A run older than its budget
-window and still `running` is dead, not working — that is a read-side rule, and
-it is cheaper than the two dependencies avoided. Nothing retries; a stranded run
-is started again, with its seed if the caller wants the same exploration.
+window and still `running` is dead, not working — a read-side rule, and cheaper
+than the two dependencies avoided. Nothing retries; a stranded run is started
+again, with its seed if the caller wants the same exploration.
+
+Where that rule is actually applied is
+[the schedule tick](a-virtual-user-cadence-is-a-row-not-a-timer.md), which has
+to: a record stuck at `running` would otherwise block its persona's cadence
+forever.
 
 **What this rules out:** dispatching the run through `startWorkflow`; a
 scaffolded queue worker; awaiting the engine inside the request (a run takes

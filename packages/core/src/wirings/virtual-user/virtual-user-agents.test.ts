@@ -4,16 +4,13 @@ import { reachableAgents } from './virtual-user-agents.js'
 
 const AGENTS = {
   'router-agent': {
-    name: 'router-agent',
     description: 'Routes requests to the right domain agent',
   },
   'social-poster': {
-    name: 'social-poster',
     description: 'Drafts and schedules posts',
     scopes: ['content:write'],
   },
   'refund-agent': {
-    name: 'refund-agent',
     scopes: ['billing:write'],
   },
 }
@@ -58,7 +55,14 @@ describe('reachableAgents', () => {
     assert.deepEqual(refund, { name: 'refund-agent' })
   })
 
-  test('falls back to the declaration key when an agent has no name', () => {
+  test('offers the registration key, not the display name the agent declares', () => {
+    assert.deepEqual(
+      reachableAgents({ adminAgent: { description: 'Runs the place' } }),
+      [{ name: 'adminAgent', description: 'Runs the place' }]
+    )
+  })
+
+  test('an agent carrying nothing but a key is still offered under it', () => {
     assert.deepEqual(reachableAgents({ orphan: {} }), [{ name: 'orphan' }])
   })
 

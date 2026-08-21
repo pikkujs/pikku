@@ -516,6 +516,48 @@ Provisioning is the third piece and is not engine work: `pikku persona sync` mir
 `syncSystemRoles` — additive, creates the row, applies the declared grants, never deletes.
 Seeding is test data; this is deployment, and the dev seed does not run in production.
 
+## A cadence, not a longer run
+
+A budget caps one outing. It is not the answer to "how often should this user use the
+app", and raising it does not become one — a 500-step run is one very long afternoon, and
+what tells you about a product is the same person coming back over a fortnight.
+
+So each persona gets a row, not a bigger budget:
+
+```ts
+await rpc.invoke('setVirtualUserSchedule', {
+  persona: 'guest',
+  enabled: true,
+  minIntervalMs: 4 * 60 * 60 * 1000,
+  maxIntervalMs: 12 * 60 * 60 * 1000,
+})
+```
+
+The interval is a range because a user who arrives at exactly 09:00 every day exercises
+one cache state and one cron neighbourhood. The gap is drawn fresh each time.
+
+Nothing runs until the project wires the tick, which is deliberate — a scaffolded cron
+would start spending model budget the moment somebody ran `pikku all`:
+
+```ts
+wireScheduler({ name: 'virtualUsers', schedule: '0 * * * *', func: tickVirtualUserSchedules })
+```
+
+Tick resolution bounds how *late* a due persona is, never how often it runs. Hourly is
+plenty for intervals measured in hours; the tick is one indexed query when nothing is due.
+
+Three things the tick does that are easy to leave out:
+
+- writes the next due time **before** dispatching, so a tick that dies halfway does not
+  hand the same persona to the next one;
+- skips a persona whose previous run is still going, because two copies of the same user
+  acting at once produce findings that cannot be reproduced;
+- fails a run still `running` after two hours, which is the only thing that stops one
+  mid-run restart from blocking that persona forever.
+
+`enabled` defaults to false, and a schedule with no store wired is simply absent — an app
+that only wants the runs it starts by hand wires nothing.
+
 ## Non-person subjects
 
 ### `kind: 'system'` should be deleted

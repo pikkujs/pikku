@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2674 observable things**: 851 exported names, plus
-1823 members on the classes and interfaces among them, reachable
+**2744 observable things**: 865 exported names, plus
+1879 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -15,13 +15,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 135 | 110 | 396 |
+| `./virtual-user` | 48 | 48 | 170 |
 | `./scenario` | 45 | 45 | 133 |
 | `./workflow` | 82 | 33 | 134 |
-| `./virtual-user` | 34 | 34 | 115 |
 | `./agent` | 49 | 47 | 81 |
 | `./channel` | 32 | 32 | 84 |
+| `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
-| `./types` | 23 | 20 | 72 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
 | `./persona` | 27 | 27 | 34 |
@@ -215,6 +215,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   webhookService?: WebhookService
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
+  virtualUserScheduleStore?: VirtualUserScheduleStore
   coverageService?: CoverageService
   audit?: AuditService
   auditLog?: AuditLog
@@ -2153,7 +2154,6 @@ export interface TargetAgentDriver {
 
 ```ts
 export interface AgentReachability {
-  name?: string
   description?: string
   scopes?: readonly string[]
   auth?: boolean
@@ -2172,6 +2172,8 @@ export interface ApiCatalogueEntry {
 }
 catalogueClassification: (entries: readonly ApiCatalogueEntry[]) => { total: number; annotated: number; inferred: number; }
 catalogueLookup: (index: Map<string, ApiCatalogueEntry>, rpcName: string) => ApiCatalogueEntry | undefined
+DEFAULT_MAX_INTERVAL_MS: number
+DEFAULT_MIN_INTERVAL_MS: number
 deriveCatalogue: (functions: FunctionsMeta, schemas?: SchemaMap) => ApiCatalogueEntry[]
 deriveIntents: (workflows: WorkflowsMeta, functions?: FunctionsMeta) => IntentSource[]
 dispositionProfile: (disposition?: VirtualUserDisposition, tuning?: VirtualUserTuning | undefined) => DispositionProfile
@@ -2186,6 +2188,15 @@ export interface DispositionProfile {
   invertedOracle: boolean
 }
 DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
+export interface IntentRecord {
+  id: string
+  sourceId: string
+  title: string
+  status: IntentStatus
+  steps: number[]
+  suspensions: number
+  summary?: string
+}
 intentsForPersona: (sources: readonly IntentSource[], personaId: string) => IntentSource[]
 export interface IntentSource {
   id: string
@@ -2202,7 +2213,9 @@ export class IntentStack {
   stuck(reason?: string): void
   records(): IntentRecord[]
 }
+isDue: (schedule: VirtualUserScheduleRecord, now: Date) => boolean
 isReadOnly: (entry: ApiCatalogueEntry) => boolean
+nextRunAt: (schedule: Pick<VirtualUserScheduleRecord, "minIntervalMs" | "maxIntervalMs">, now: Date, random: () => number) => Date
 personaScopes: (persona: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
 export interface PersonaTargetOptions {
   model?: string
@@ -2241,7 +2254,25 @@ export interface RunVirtualUserParams {
   maxStepsPerIntent?: number
 }
 export type SchemaMap = Record<string, Record<string, unknown> | undefined>
+STALE_RUN_AFTER_MS: number
+export interface StepRecord {
+  index: number
+  intentId?: string
+  action: VirtualUserAction | { kind: 'invalid'; detail: string }
+  status?: number
+  ok?: boolean
+  response?: string
+  findingKinds?: VirtualUserFindingKind[]
+  tokensIn: number
+  tokensOut: number
+}
+tickVirtualUserSchedules: ({ schedules, runs, dispatch, now, random, staleAfterMs, }: VirtualUserTickParams) => Promise<VirtualUserTickResult>
 unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
+export interface VirtualUserBudget {
+  steps?: number
+  mutations?: number
+  duration?: number | string
+}
 export type VirtualUserDisposition =
   | 'realistic'
   | 'careless'
@@ -2269,6 +2300,8 @@ export interface VirtualUserRunOutcome {
   tally: VirtualUserTally
   memory: Record<string, string>
   stoppedBy: string | null
+  intents: readonly IntentRecord[]
+  steps: readonly StepRecord[]
 }
 export interface VirtualUserRunRecord {
   runId: string
@@ -2279,6 +2312,7 @@ export interface VirtualUserRunRecord {
   goals: string[]
   memory: Record<string, string>
   findings: VirtualUserFinding[]
+  intents: IntentRecord[]
   tally: VirtualUserTally | null
   stoppedBy: string | null
   error: string | null
@@ -2309,11 +2343,55 @@ export interface VirtualUserRunStore {
   fail(runId: string, error: string): Promise<void>
   get(runId: string): Promise<VirtualUserRunRecord | null>
   list(options?: { persona?: string; limit?: number; offset?: number }): Promise<VirtualUserRunRecord[]>
+  steps(runId: string, options?: { limit?: number; offset?: number }): Promise<StepRecord[]>
+}
+export interface VirtualUserScheduleInput {
+  persona: string
+  enabled?: boolean
+  disposition?: VirtualUserDisposition
+  goals?: readonly string[]
+  budget?: VirtualUserBudget | null
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  nextRunAt?: Date
+}
+export interface VirtualUserScheduleRecord {
+  persona: string
+  enabled: boolean
+  disposition: VirtualUserDisposition
+  goals: string[]
+  budget: VirtualUserBudget | null
+  minIntervalMs: number
+  maxIntervalMs: number
+  nextRunAt: Date
+  lastRunId: string | null
+  lastRunAt: Date | null
+}
+export interface VirtualUserScheduleStore {
+  set(schedule: VirtualUserScheduleInput): Promise<VirtualUserScheduleRecord>
+  get(persona: string): Promise<VirtualUserScheduleRecord | null>
+  list(): Promise<VirtualUserScheduleRecord[]>
+  due(now: Date): Promise<VirtualUserScheduleRecord[]>
+  claim(persona: string, claim: { nextRunAt: Date; runId: string | null; at: Date }): Promise<void>
+  remove(persona: string): Promise<void>
 }
 export interface VirtualUserTarget {
   call(rpcName: string, args: unknown): Promise<ScenarioHttpResponse>
   talkTo?(agent: string, task: string): Promise<ActorFlowVerdict>
   upload?(file: string): Promise<ScenarioHttpResponse>
+}
+export interface VirtualUserTickParams {
+  schedules: VirtualUserScheduleStore
+  runs: VirtualUserRunStore
+  dispatch: (schedule: VirtualUserScheduleRecord) => Promise<string>
+  now?: Date
+  random?: () => number
+  staleAfterMs?: number
+}
+export interface VirtualUserTickResult {
+  dispatched: { persona: string; runId: string }[]
+  skipped: { persona: string; reason: VirtualUserSkipReason }[]
+  reaped: string[]
 }
 export interface VirtualUserTuning {
   moves?: Partial<DispositionProfile['moves']>
@@ -5322,7 +5400,7 @@ export type LocalContentRequestHandlerOptions = {
 }
 export type SignedContentVerification =
   { ok: true } | { ok: false; status: number; body: string }
-verifySignedContentRequest: (requestUrl: URL, jwt: JWTService | undefined, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
+verifySignedContentRequest: (requestUrl: URL, jwt: any, onMissingJWT?: (() => void) | undefined) => Promise<SignedContentVerification>
 ```
 
 ## ./services/temporary-file-service

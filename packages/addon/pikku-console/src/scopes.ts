@@ -101,6 +101,18 @@ defineScope({
               },
             },
           },
+          virtualUsers: {
+            description: 'Virtual user runs and their transcripts',
+            scopes: {
+              read: {
+                description:
+                  'Read what the virtual users found and every turn they took',
+              },
+              run: {
+                description: 'Turn a persona loose on this application',
+              },
+            },
+          },
           db: {
             description: 'The database schema',
             scopes: {

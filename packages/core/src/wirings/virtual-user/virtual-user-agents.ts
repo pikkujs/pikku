@@ -16,7 +16,6 @@ import { hasScopes } from '../../scopes.js'
 
 /** The part of an agent's meta this needs. */
 export interface AgentReachability {
-  name?: string
   description?: string
   scopes?: readonly string[]
   auth?: boolean
@@ -29,7 +28,13 @@ export interface ReachableAgent {
 }
 
 /**
- * The agents to offer, keyed by the name they are declared under.
+ * The agents to offer, named by the key they are registered under.
+ *
+ * That key is the export's own name, which is what `addAgent` stores and what
+ * `resolveAgent` looks up. The `name` an agent declares in its config is a
+ * display label and is frequently something else entirely — offering that one
+ * hands the persona a name the server cannot resolve, and the run dies on a
+ * 500 the moment it takes the offer.
  *
  * Like {@link reachableCatalogue}, this narrows *what is offered* and never
  * what is enforced: the server decides who may talk to what, and an agent
@@ -52,6 +57,6 @@ export const reachableAgents = (
       return hasScopes(agent.scopes, scopes)
     })
     .map(([id, agent]) => ({
-      name: agent.name ?? id,
+      name: id,
       ...(agent.description ? { description: agent.description } : {}),
     }))

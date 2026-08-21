@@ -30,6 +30,92 @@ describe('serializeVirtualUserFunctions', () => {
     '../../../.pikku/workflow/pikku-personas.gen.js'
   )
 
+  test('the transcript a run produced is stored, not discarded', () => {
+    assert.match(out, /intents: result\.intents/)
+    assert.match(out, /steps: result\.steps/)
+  })
+
+  test('offers a way to ask what the virtual users have been doing', () => {
+    assert.match(out, /export const listVirtualUserRuns = pikkuFunc\(/)
+    assert.match(
+      out,
+      /virtualUserRunStore\.list\(\{ persona, limit, offset \}\)/
+    )
+  })
+
+  // The steps are the bulk of a run, so a list that carried them would make
+  // reading the history cost a budget's worth of transcript per row.
+  test('the transcript is its own read, not a field on the run', () => {
+    assert.match(out, /export const getVirtualUserRunSteps = pikkuFunc\(/)
+    assert.match(
+      out,
+      /virtualUserRunStore\.steps\(runId, \{ limit, offset \}\)/
+    )
+    assert.doesNotMatch(schemas, /steps: z\.array\(Step\),\n  tally/)
+  })
+
+  // An adversarial run's transcript carries the live ids and payloads it
+  // actually sent — strictly more sensitive than the summary it belongs to.
+  test('reading a transcript needs the same scope as reading a finding', () => {
+    const stepsFn = out.slice(out.indexOf('getVirtualUserRunSteps'))
+    assert.match(stepsFn, /scopes: \['virtualUser:read'\]/)
+  })
+
+  test('a persona can be put on a clock rather than triggered by hand', () => {
+    assert.match(out, /export const setVirtualUserSchedule = pikkuFunc\(/)
+    assert.match(out, /virtualUserScheduleStore\.set\(/)
+  })
+
+  // Starting a run spends money once, with a caller present to see it. Writing
+  // a schedule spends it repeatedly with nobody there.
+  test('deciding a persona keeps running is its own scope', () => {
+    assert.match(out, /schedule: \{\n\s+description:/)
+    const setFn = out.slice(out.indexOf('setVirtualUserSchedule ='))
+    assert.match(setFn, /scopes: \['virtualUser:schedule'\]/)
+  })
+
+  // A codegen step does not get to decide that an app starts spending model
+  // budget; the project wires the tick when it means it.
+  test('the tick is emitted unwired, with no scaffolded cron behind it', () => {
+    assert.match(
+      out,
+      /tickVirtualUserSchedules = pikkuSessionlessFunc<void, void>/
+    )
+    // Only ever inside the doc comment showing how, never at the top level.
+    assert.doesNotMatch(out, /^wireScheduler\(/m)
+    const tickFn = out.slice(out.indexOf('tickVirtualUserSchedules ='))
+    assert.doesNotMatch(tickFn, /expose: true/)
+  })
+
+  test('an app with no schedule store wired still ticks harmlessly', () => {
+    const tickFn = out.slice(out.indexOf('tickVirtualUserSchedules ='))
+    assert.match(
+      tickFn,
+      /if \(!virtualUserScheduleStore \|\| !virtualUserRunStore\) \{\n\s+return/
+    )
+  })
+
+  // The checks are the point — an acted-upon persona has no session, and only
+  // one disposition may ever touch production. A second copy would drift.
+  test('a scheduled run goes through the same door a person does', () => {
+    assert.match(out, /const startVirtualUserRun = async \(/)
+    const tickFn = out.slice(out.indexOf('tickVirtualUserSchedules ='))
+    assert.match(tickFn, /dispatch: \(schedule\) =>\n\s+startVirtualUserRun\(/)
+  })
+
+  // A run is capped by a budget; how often runs happen is the schedule. The two
+  // were being confused for each other before this existed.
+  test('the cadence is a range, so the persona does not keep an appointment', () => {
+    assert.match(
+      schemas,
+      /minIntervalMs: z\.number\(\)\.int\(\)\.min\(60_000\)\.optional\(\)/
+    )
+    assert.match(
+      schemas,
+      /maxIntervalMs: z\.number\(\)\.int\(\)\.min\(60_000\)\.optional\(\)/
+    )
+  })
+
   test('gates starting a run and reading one on separate scopes', () => {
     assert.match(out, /scopes: \['virtualUser:run'\]/)
     assert.match(out, /scopes: \['virtualUser:read'\]/)
@@ -46,14 +132,14 @@ describe('serializeVirtualUserFunctions', () => {
   // for a workflow or a queue here would be recording it as something it isn't.
   test('dispatches without a workflow and without a queue', () => {
     assert.doesNotMatch(out, /startWorkflow|pikkuWorkflowFunc|wireQueueWorker/)
-    assert.match(out, /rpc!\s*\n?\s*\.invoke\('executeVirtualUserRun'/)
+    assert.match(out, /rpc\s*\n?\s*\.invoke\('executeVirtualUserRun'/)
   })
 
   // A held-open request survives neither a rollout nor a proxy timeout, so the
   // run must not be awaited — and an un-caught rejection from a promise nobody
   // awaits takes the process down with it.
   test('kicks the run off unawaited, with the rejection caught', () => {
-    assert.match(out, /void rpc!/)
+    assert.match(out, /void rpc\s*\n?\s*\.invoke\(/)
     assert.match(out, /\.catch\(\(\) => \{\}\)/)
   })
 

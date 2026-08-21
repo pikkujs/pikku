@@ -311,6 +311,7 @@ export interface VirtualUserRunTable {
   goals: Generated<string>
   memory: Generated<string>
   findings: Generated<string>
+  intents: Generated<string>
   tally: string | null
   stoppedBy: string | null
   error: string | null
@@ -352,6 +353,51 @@ export interface AuditTable {
   data: string | null
 }
 
+/**
+ * One turn of a run's transcript.
+ *
+ * Its own table rather than a column on {@link VirtualUserRunTable}: a run at a
+ * 500-step budget carries more transcript than every other column together, and
+ * the run list would pay for it on every row.
+ */
+export interface VirtualUserRunStepTable {
+  runId: string
+  /** The engine's step number. `stepIndex` because `index` is reserved in mysql. */
+  stepIndex: number
+  intentId: string | null
+  /** JSON: the action the engine scheduled, or the `invalid` shape. */
+  action: string
+  status: number | null
+  /** 0 or 1: not every driver in this package can bind a boolean. */
+  ok: number | null
+  /** JSON-encoded, so a brace-leading response is not read back as an object. */
+  response: string | null
+  /** JSON array, null when the turn produced no finding. */
+  findingKinds: string | null
+  tokensIn: Generated<number>
+  tokensOut: Generated<number>
+}
+
+/**
+ * One persona's cadence. Nullable timestamps and 0/1 flags for the same driver
+ * reasons as {@link VirtualUserRunTable}.
+ */
+export interface VirtualUserScheduleTable {
+  persona: string
+  /** 0 or 1: not every driver in this package can bind a boolean. */
+  enabled: Generated<number>
+  disposition: string
+  goals: Generated<string>
+  /** JSON, or null for the engine's own default budget. */
+  budget: string | null
+  /** BIGINT, so a driver may hand either back. */
+  minIntervalMs: string | number | bigint
+  maxIntervalMs: string | number | bigint
+  nextRunAt: Date | string
+  lastRunId: string | null
+  lastRunAt: Date | string | null
+}
+
 export interface KyselyPikkuDB {
   pikkuScopes: PikkuScopesTable
   pikkuRoles: PikkuRolesTable
@@ -382,5 +428,7 @@ export interface KyselyPikkuDB {
   webhookDelivery: WebhookDeliveryTable
   webhookDeliveryAttempt: WebhookDeliveryAttemptTable
   virtualUserRun: VirtualUserRunTable
+  virtualUserRunStep: VirtualUserRunStepTable
+  virtualUserSchedule: VirtualUserScheduleTable
   audit: AuditTable
 }

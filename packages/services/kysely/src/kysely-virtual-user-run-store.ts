@@ -1,13 +1,20 @@
 import type { Kysely, Selectable } from 'kysely'
 import { randomUUID } from 'node:crypto'
-import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
+import type {
+  StepRecord,
+  VirtualUserDisposition,
+} from '@pikku/core/virtual-user'
 import type {
   VirtualUserRunOutcome,
   VirtualUserRunRecord,
   VirtualUserRunStart,
   VirtualUserRunStore,
 } from '@pikku/core/virtual-user'
-import type { KyselyPikkuDB, VirtualUserRunTable } from './kysely-tables.js'
+import type {
+  KyselyPikkuDB,
+  VirtualUserRunStepTable,
+  VirtualUserRunTable,
+} from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 import { requirePikkuSchema } from './schema/index.js'
 import { virtualUserSchema } from './schema/virtual-user.schema.js'
@@ -31,6 +38,16 @@ import { virtualUserSchema } from './schema/virtual-user.schema.js'
  * ids. This is a privileged store; the scaffolded reads are scope-gated, and
  * exposing these rows more widely publishes your own exploits.
  */
+/**
+ * How many step rows go in one insert.
+ *
+ * Not a performance dial. A bare SQLite driver binds at most 999 variables per
+ * statement, and ten columns times a 500-step budget is five thousand — so an
+ * un-chunked insert does not fail on a long run, it fails on the *interesting*
+ * long run, which is the one nobody wants to lose.
+ */
+const STEP_INSERT_CHUNK = 50
+
 export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
   private initialized = false
 
@@ -71,7 +88,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
 
   async complete(runId: string, outcome: VirtualUserRunOutcome): Promise<void> {
     await this.init()
-    await this.db
+    const updated = await this.db
       .updateTable('virtualUserRun')
       .set({
         status: 'completed',
@@ -80,11 +97,16 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
         // Overwritten rather than merged: the engine's memory already carries
         // what it was given, plus what it learned on the way.
         memory: JSON.stringify(outcome.memory),
+        intents: JSON.stringify(outcome.intents),
         stoppedBy: outcome.stoppedBy,
         finishedAt: new Date().toISOString(),
       })
       .where('runId', '=', runId)
-      .execute()
+      .executeTakeFirst()
+    // Nothing owns steps written against a run that is not there, and nothing
+    // would ever read or reap them — there is no foreign key to refuse them.
+    if (updated.numUpdatedRows === 0n) return
+    await this.writeSteps(runId, outcome.steps)
   }
 
   async fail(runId: string, error: string): Promise<void> {
@@ -128,6 +150,69 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
     return rows.map((row) => this.toRecord(row))
   }
 
+  async steps(
+    runId: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<StepRecord[]> {
+    await this.init()
+    const rows = await this.db
+      .selectFrom('virtualUserRunStep')
+      .selectAll()
+      .where('runId', '=', runId)
+      .orderBy('stepIndex', 'asc')
+      .limit(options?.limit ?? 1000)
+      .offset(options?.offset ?? 0)
+      .execute()
+    return rows.map((row) => this.toStep(row))
+  }
+
+  private async writeSteps(
+    runId: string,
+    steps: readonly StepRecord[]
+  ): Promise<void> {
+    for (let at = 0; at < steps.length; at += STEP_INSERT_CHUNK) {
+      const chunk = steps.slice(at, at + STEP_INSERT_CHUNK)
+      await this.db
+        .insertInto('virtualUserRunStep')
+        .values(
+          chunk.map((step) => ({
+            runId,
+            stepIndex: step.index,
+            intentId: step.intentId ?? null,
+            action: JSON.stringify(step.action),
+            status: step.status ?? null,
+            ok: step.ok === undefined ? null : step.ok ? 1 : 0,
+            response:
+              step.response === undefined
+                ? null
+                : JSON.stringify(step.response),
+            findingKinds: step.findingKinds
+              ? JSON.stringify(step.findingKinds)
+              : null,
+            tokensIn: step.tokensIn,
+            tokensOut: step.tokensOut,
+          }))
+        )
+        .execute()
+    }
+  }
+
+  private toStep(row: Selectable<VirtualUserRunStepTable>): StepRecord {
+    return {
+      index: Number(row.stepIndex),
+      ...(row.intentId ? { intentId: row.intentId } : {}),
+      action: parseJson(row.action),
+      ...(row.status === null ? {} : { status: Number(row.status) }),
+      ...(row.ok === null ? {} : { ok: Boolean(row.ok) }),
+      ...(row.response === null ? {} : { response: parseJson(row.response) }),
+      ...(row.findingKinds
+        ? { findingKinds: parseJson(row.findingKinds) }
+        : {}),
+      tokensIn: Number(row.tokensIn),
+      tokensOut: Number(row.tokensOut),
+    }
+  }
+
   private toRecord(row: Selectable<VirtualUserRunTable>): VirtualUserRunRecord {
     return {
       runId: row.runId,
@@ -138,6 +223,7 @@ export class KyselyVirtualUserRunStore implements VirtualUserRunStore {
       goals: parseJson(row.goals) ?? [],
       memory: parseJson(row.memory) ?? {},
       findings: parseJson(row.findings) ?? [],
+      intents: parseJson(row.intents) ?? [],
       tally: row.tally ? (parseJson(row.tally) ?? null) : null,
       stoppedBy: row.stoppedBy,
       error: row.error,

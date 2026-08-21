@@ -41,6 +41,7 @@ import type { AgentRunService } from '../wirings/agent/agent.types.js'
 import type { MiddlewareMetadata } from '../middleware/middleware.types.js'
 import type { PermissionMetadata } from '../function/function-meta.types.js'
 import type { VirtualUserRunStore } from '../wirings/virtual-user/virtual-user-run-store.js'
+import type { VirtualUserScheduleStore } from '../wirings/virtual-user/virtual-user-schedule-store.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
@@ -173,6 +174,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
    * {@link VirtualUserRunStore}.
    */
   virtualUserRunStore?: VirtualUserRunStore
+  /**
+   * Each persona's cadence, for apps that want their virtual users to keep
+   * going without being asked. Separate from the run store on purpose: wiring
+   * nothing is how an app says it only wants the runs it starts itself.
+   */
+  virtualUserScheduleStore?: VirtualUserScheduleStore
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */
   coverageService?: CoverageService
   audit?: AuditService

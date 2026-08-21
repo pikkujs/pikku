@@ -14,6 +14,7 @@ import { asI18n, type I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
 import type { VirtualUserDoc } from './virtual-user-model'
+import { VirtualUserRuns } from './VirtualUserRuns'
 import styles from './virtual-users.module.css'
 
 /** One line saying what this disposition is, in a person's terms. */
@@ -622,6 +623,8 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
             </Text>
           )}
         </Section>
+
+        <VirtualUserRuns persona={user.id} />
 
         <Section title={m.virtual_users_run()} testId="virtual-user-run">
           <Text size="sm" ff="monospace" className={styles.command}>
