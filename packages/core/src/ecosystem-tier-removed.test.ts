@@ -2,7 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { join, dirname, relative, basename } from 'node:path'
+import { join, dirname, relative } from 'node:path'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 
@@ -34,6 +34,16 @@ const collectSourceFiles = (
 }
 
 /**
+ * A stale compiled `.test.js` next to this file would otherwise read as an
+ * offender of its own scan, which is how the sibling gopass guard reports a
+ * phantom failure on a dirty tree. Comparing paths with the extension dropped
+ * excludes this file and its build artifacts without excluding a neighbour
+ * that merely shares the prefix.
+ */
+const withoutExtension = (file: string): string =>
+  file.replace(/\.(ts|tsx|js|mjs|mts|cts)$/, '')
+
+/**
  * The `@pikku/core/ecosystem/*` tier was deleted in favour of one door per
  * name. Nothing resolves those specifiers any more, but a dead one is easy to
  * miss: a type-only import is erased before it can fail at runtime, and the
@@ -42,11 +52,11 @@ const collectSourceFiles = (
  */
 describe('the ecosystem entry-point tier is gone', () => {
   test('no source file imports from @pikku/core/ecosystem', () => {
-    const self = basename(fileURLToPath(import.meta.url)).replace(/\.ts$/, '')
+    const self = withoutExtension(fileURLToPath(import.meta.url))
     const offenders = collectSourceFiles(repoRoot)
       .filter(
         (file) =>
-          !basename(file).startsWith(self) &&
+          withoutExtension(file) !== self &&
           /@pikku\/core\/ecosystem/.test(readFileSync(file, 'utf-8'))
       )
       .map((file) => relative(repoRoot, file))
