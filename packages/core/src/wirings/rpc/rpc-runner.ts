@@ -393,10 +393,13 @@ export class ContextAwareRPCService {
 
     if (rpcName.includes(':')) {
       const addonCall = this.resolveAddonFunction(rpcName)
-      if (addonCall === NOT_RESOLVED) {
-        throw new RPCNotFoundError(rpcName)
+      if (addonCall !== NOT_RESOLVED) {
+        return await this.executeAddonFunction<In, Out>(
+          addonCall,
+          data,
+          mergedWire
+        )
       }
-      return this.executeAddonFunction<In, Out>(addonCall, data, mergedWire)
     }
 
     let resolved: { pikkuFuncId: string; packageName: string | null }
@@ -404,12 +407,12 @@ export class ContextAwareRPCService {
       resolved = resolvePikkuFunction(rpcName, this.packageName)
     } catch (e) {
       if (e instanceof RPCNotFoundError && this.services.deploymentService) {
-        const session = await resolveWireSession(this.wire)
+        const session = await resolveWireSession(mergedWire)
         return this.services.deploymentService.invoke(
           rpcName,
           data,
           session,
-          this.wire.traceId
+          mergedWire.traceId
         ) as Promise<Out>
       }
       throw e

@@ -1,5 +1,8 @@
 import type { SerializedError } from '@pikku/core/errors'
-import { PikkuWorkflowService } from '@pikku/core/workflow'
+import {
+  PikkuWorkflowService,
+  WorkflowStepFunctionMismatchError,
+} from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
   WorkflowQueueOptions,
@@ -444,12 +447,86 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return fn()
   }
 
+  /**
+   * A pass-through: MongoDB has no advisory-lock primitive to build one on.
+   * The one decision that must exclude — claiming a step to execute it — is
+   * made by `claimStepForExecution` below as a single conditional write, which
+   * needs no lock to be exclusive.
+   */
   async withStepLock<T>(
     _runId: string,
     _stepName: string,
     fn: () => Promise<T>
   ): Promise<T> {
     return fn()
+  }
+
+  /**
+   * Claim the step with a status-guarded update and read the modified count:
+   * a single-document update is atomic in MongoDB, so two dispatches racing for
+   * the same step cannot both proceed.
+   *
+   * This replaces the read-then-write the base engine does under
+   * `withStepLock`, which excludes nothing here — the lock above is a
+   * pass-through. The winner then goes through the ordinary transition methods,
+   * so history rows see exactly what they saw before.
+   */
+  protected override async claimStepForExecution(
+    runId: string,
+    stepName: string,
+    rpcName: string
+  ): Promise<StepState | null> {
+    const stepState = await this.getStepState(runId, stepName)
+
+    // knowledge: decisions/security/a-step-runs-the-function-the-workflow-dispatched-it-with.md
+    if (
+      stepState.rpcName !== undefined &&
+      stepState.rpcName !== (rpcName ?? null)
+    ) {
+      throw new WorkflowStepFunctionMismatchError(runId, stepName)
+    }
+
+    if (stepState.status === 'succeeded' || stepState.status === 'running') {
+      return null
+    }
+
+    if (stepState.status === 'failed') {
+      if (!(await this.claimStepStatus(stepState.stepId, ['failed']))) {
+        return null
+      }
+      return this.createRetryAttempt(stepState.stepId, 'running')
+    }
+
+    if (stepState.status === 'pending' || stepState.status === 'scheduled') {
+      if (
+        !(await this.claimStepStatus(stepState.stepId, [
+          'pending',
+          'scheduled',
+        ]))
+      ) {
+        return null
+      }
+      await this.setStepRunning(stepState.stepId)
+      return { ...stepState, status: 'running' }
+    }
+
+    return stepState
+  }
+
+  /**
+   * Move a step to `running` only if it is still in one of `from`, reporting
+   * whether this caller is the one that moved it.
+   */
+  private async claimStepStatus(
+    stepId: string,
+    from: StepStatus[]
+  ): Promise<boolean> {
+    const claimed = await this.steps.updateOne(
+      { _id: stepId, status: { $in: from } },
+      { $set: { status: 'running', updatedAt: new Date() } }
+    )
+
+    return claimed.modifiedCount > 0
   }
 
   async getCompletedGraphState(runId: string): Promise<{

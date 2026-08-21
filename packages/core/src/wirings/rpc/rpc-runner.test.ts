@@ -596,6 +596,106 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
       ['missingRpc', { value: 2 }, { userId: 'user-2' }, 'trace-3'],
     ])
   })
+
+  test('a missing namespaced rpc still reaches deploymentService through rpcWithWire', async () => {
+    const remoteCalls: unknown[][] = []
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as never)
+
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      { traceId: 'trace-addon-wire' } as never,
+      {}
+    )
+
+    const result = await service.rpcWithWire(
+      'stripe:missingFunc',
+      { value: 3 },
+      { custom: 'wire' } as never
+    )
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(remoteCalls, [
+      ['stripe:missingFunc', { value: 3 }, undefined, 'trace-addon-wire'],
+    ])
+  })
+
+  test('an unknown namespace still falls through to the local/remote lookup', async () => {
+    const remoteCalls: unknown[][] = []
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      { traceId: 'trace-ns-wire' } as never,
+      {}
+    )
+
+    const result = await service.rpcWithWire(
+      'unknownNs:someFunc',
+      { value: 1 },
+      { custom: 'wire' } as never
+    )
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(remoteCalls, [
+      ['unknownNs:someFunc', { value: 1 }, undefined, 'trace-ns-wire'],
+    ])
+  })
+
+  test('the deployment fallback runs under the wire the caller passed, not the ambient one', async () => {
+    const remoteCalls: unknown[][] = []
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      {
+        traceId: 'ambient-trace',
+        session: { userId: 'ambient-user' },
+      } as never,
+      {}
+    )
+
+    const result = await service.rpcWithWire(
+      'unknownNs:someFunc',
+      { value: 1 },
+      {
+        traceId: 'caller-trace',
+        session: { userId: 'caller-user' },
+      } as never
+    )
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(
+      remoteCalls,
+      [
+        [
+          'unknownNs:someFunc',
+          { value: 1 },
+          { userId: 'caller-user' },
+          'caller-trace',
+        ],
+      ],
+      'the remote hop ran under the ambient wire, so an explicit wire is honoured locally but dropped across the deployment boundary'
+    )
+  })
 })
 
 describe('ContextAwareRPCService.startWorkflow', () => {
