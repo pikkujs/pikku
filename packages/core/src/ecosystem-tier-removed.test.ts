@@ -35,10 +35,10 @@ const collectSourceFiles = (
 
 /**
  * A stale compiled `.test.js` next to this file would otherwise read as an
- * offender of its own scan, which is how the sibling gopass guard reports a
- * phantom failure on a dirty tree. Comparing paths with the extension dropped
- * excludes this file and its build artifacts without excluding a neighbour
- * that merely shares the prefix.
+ * offender of its own scan, which is how a sibling removal guard in this
+ * directory reports a phantom failure on a dirty tree. Comparing paths with
+ * the extension dropped excludes this file and its build artifacts without
+ * excluding a neighbour that merely shares the prefix.
  */
 const withoutExtension = (file: string): string =>
   file.replace(/\.(ts|tsx|js|mjs|mts|cts)$/, '')
