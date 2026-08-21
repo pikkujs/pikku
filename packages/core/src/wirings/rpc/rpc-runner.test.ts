@@ -900,7 +900,12 @@ describe('wireRemoteAddon dispatch', () => {
         calls[0]!.init.headers.authorization,
         'Bearer secret-value-for-REGISTRY_TOKEN'
       )
-      assert.equal(calls[0]!.init.headers['x-trace-id'], 'trace-r')
+      assert.equal(
+        calls[0]!.init.headers['x-request-id'],
+        'trace-r',
+        'a remote RPC must send the trace id under the header the receiving ' +
+          'runner reads, or the trace chain breaks at the hop'
+      )
     } finally {
       restoreFetch()
     }

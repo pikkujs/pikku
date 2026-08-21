@@ -240,7 +240,7 @@ export type PikkuWire<
    * sets it; services that log fall back to the singleton logger.
    */
   logger: Logger
-  /** Trace ID for distributed tracing — propagated across remote RPC calls via x-trace-id header */
+  /** Trace ID for distributed tracing — propagated across remote RPC calls via the x-request-id header */
   traceId: string
   functionId: string
   addonNamespace: string

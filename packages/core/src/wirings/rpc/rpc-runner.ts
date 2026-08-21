@@ -356,7 +356,7 @@ export class ContextAwareRPCService {
       headers.authorization = `Bearer ${token}`
     }
     if (this.wire.traceId) {
-      headers['x-trace-id'] = this.wire.traceId
+      headers['x-request-id'] = this.wire.traceId
     }
 
     const base = serverUrl.replace(/\/+$/, '')
