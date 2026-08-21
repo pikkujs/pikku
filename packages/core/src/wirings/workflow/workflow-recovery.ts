@@ -17,6 +17,15 @@ import {
  * owed a job, so holding off a single step while resuming its run would
  * suppress nothing.
  *
+ * For the same reason one instance is shared by every sweep rather than kept
+ * per sweep. The record is of the action, not of the signal that prompted it:
+ * a stalled run and an undispatched step are different observations, but both
+ * are answered by the one orchestrator message, so a run the relay re-drove a
+ * moment ago gains nothing from the stalled sweep re-driving it again. Sharing
+ * is what makes the guarantee a message-per-run-per-window instead of one per
+ * sweep, and no recovery is lost by it: whichever sweep gets there first
+ * performs the identical re-drive, and the cap keeps the delay at 10m.
+ *
  * Losing this on restart costs extra dispatches, never correctness.
  */
 export class RedispatchBackoff {
@@ -88,19 +97,40 @@ const resumeEach = async (
  * actually stuck costs an orchestration pass and changes nothing. That
  * idempotence is what makes an idle-time heuristic safe here; a run that is
  * legitimately mid-sleep is excluded anyway, since its step is `scheduled`.
+ *
+ * Idempotent is not free, though: a run stays stalled until something clears
+ * the reason it stalled, so an unconditional sweep re-queues the same runs on
+ * every tick forever. That is how a handful of wedged runs became a queue of
+ * thousands that could not drain — each pass added work the previous pass had
+ * not finished. The same per-run backoff the relay uses bounds it: a run is
+ * re-driven, then held off for a doubling delay, so a sweep costs at most one
+ * message per run per window rather than one per run per tick.
  */
 export const sweepStalledRuns = async (
   findStalledRunIds: (before: Date, limit: number) => Promise<string[]>,
+  backoff: RedispatchBackoff,
   options: { stalledAfterMs?: number; limit?: number } | undefined,
   deps: SweepDeps
 ): Promise<{ resumed: string[] }> => {
   const before = new Date(
     Date.now() - (options?.stalledAfterMs ?? DEFAULT_STALLED_RUN_MS)
   )
-  const runIds = await findStalledRunIds(
+  const found = await findStalledRunIds(
     before,
     options?.limit ?? DEFAULT_STALLED_RUN_LIMIT
   )
+
+  const now = Date.now()
+  const runIds: string[] = []
+  for (const runId of found) {
+    if (!backoff.isEligible(runId, now)) continue
+    // Noted before the resume, not after: a run whose resume throws is exactly
+    // the run most likely to still be here next tick, and re-driving it every
+    // tick is the amplification this backoff exists to stop.
+    backoff.note(runId, now)
+    runIds.push(runId)
+  }
+
   return {
     resumed: await resumeEach(
       runIds,

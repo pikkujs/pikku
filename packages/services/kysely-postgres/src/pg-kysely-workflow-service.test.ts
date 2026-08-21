@@ -32,17 +32,35 @@ import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
  * without the queue two overlapping transactions would interleave onto the one
  * underlying session and corrupt each other.
  */
+/**
+ * How a statement is treated instead of being run: `throw` stands in for a
+ * connection that broke mid-statement, `skip` records one PGlite must not
+ * actually execute — a single-session database cannot survive terminating its
+ * own backend.
+ */
+type Intercept = (statement: string) => 'throw' | 'skip' | undefined
+
 class PGliteDriver implements Driver {
   #connection: DatabaseConnection
   #queue: Promise<void> = Promise.resolve()
 
-  constructor(private readonly pglite: PGlite) {
+  constructor(
+    private readonly pglite: PGlite,
+    private readonly intercept?: Intercept
+  ) {
     this.#connection = {
       executeQuery: async <R>(compiled: {
         sql: string
         parameters: readonly unknown[]
       }): Promise<QueryResult<R>> => {
         executedSql.push(compiled.sql)
+        const intercepted = this.intercept?.(compiled.sql)
+        if (intercepted === 'throw') {
+          throw new Error(`connection is broken: ${compiled.sql}`)
+        }
+        if (intercepted === 'skip') {
+          return { rows: [], numAffectedRows: BigInt(0) }
+        }
         const result = await this.pglite.query<R>(compiled.sql, [
           ...compiled.parameters,
         ])
@@ -99,12 +117,15 @@ const releases = new Map<DatabaseConnection, Array<() => void>>()
 const executedSql: string[] = []
 
 class PGliteDialect implements Dialect {
-  constructor(private readonly pglite: PGlite) {}
+  constructor(
+    private readonly pglite: PGlite,
+    private readonly intercept?: Intercept
+  ) {}
   createAdapter() {
     return new PostgresAdapter()
   }
   createDriver() {
-    return new PGliteDriver(this.pglite)
+    return new PGliteDriver(this.pglite, this.intercept)
   }
   createIntrospector(db: Kysely<any>) {
     return new PostgresIntrospector(db)
@@ -118,9 +139,9 @@ let db: Kysely<KyselyPikkuDB>
 let service: PgKyselyWorkflowService
 let open: Kysely<KyselyPikkuDB>[] = []
 
-const createDb = () => {
+const createDb = (intercept?: Intercept) => {
   const created = new Kysely<KyselyPikkuDB>({
-    dialect: new PGliteDialect(new PGlite()),
+    dialect: new PGliteDialect(new PGlite(), intercept),
     // `CamelCasePlugin` alone, matching `PikkuKysely` — the SQLite-style
     // `SerializePlugin` is deliberately absent on Postgres, which takes JSON
     // and booleans natively.
@@ -471,6 +492,141 @@ describe('advisory locks', () => {
     assert.ok(
       executedSql.some((statement) => statement === 'RESET lock_timeout'),
       'lock_timeout rode the connection back into the pool'
+    )
+  })
+
+  /**
+   * The leak this guards, seen in production: a workflow body that never
+   * settles never reaches the `finally` that unlocks, so the session keeps the
+   * advisory lock and the pooled connection for as long as the process lives.
+   * Every later message for that run then blocks for the full `lock_timeout`
+   * before failing, and a bounded worker pool ends up entirely queued behind
+   * runs that will never finish.
+   */
+  test(
+    'takes the lock back from a body that never settles',
+    { timeout: 10_000 },
+    async () => {
+      const bounded = new PgKyselyWorkflowService(db, {
+        wireQueues: false,
+        maxLockHoldMs: 100,
+      } as any)
+      await bounded.init()
+
+      executedSql.length = 0
+      await assert.rejects(
+        bounded.withRunLock('run-1', () => new Promise<never>(() => {})),
+        (err: Error) => {
+          assert.equal(err.name, 'RunLockHoldTimeoutError')
+          return true
+        }
+      )
+
+      assert.ok(
+        executedSql.some((statement) =>
+          statement.includes('pg_advisory_unlock')
+        ),
+        'the abandoned body kept the run lock'
+      )
+      // The connection matters as much as the lock: PGlite's single session
+      // stands in for the pool the leak drains.
+      const rows = await sql<{ one: number }>`select 1 as one`.execute(db)
+      assert.equal(rows.rows[0]!.one, 1, 'the lock connection never came back')
+    }
+  )
+
+  test('an unbounded hold is still the default', async () => {
+    const { run, bodyEntered, release } = heldBody()
+
+    const held = service.withRunLock('run-1', run)
+    await bodyEntered
+    await new Promise((r) => setTimeout(r, 150))
+
+    release()
+    assert.equal(await held, undefined, 'a slow body was cut short')
+  })
+
+  /**
+   * `idle_session_timeout` is what reclaims a holder that went away without
+   * closing its connection, but on its own it cannot tell that holder from a
+   * body legitimately awaiting a twenty-minute build — both leave the session
+   * idle. The keepalive is what makes idleness mean something, so the two only
+   * ever ship together.
+   */
+  test('a keepalive keeps a long hold from reading as idle', async () => {
+    const kept = new PgKyselyWorkflowService(db, {
+      wireQueues: false,
+      lockIdleTimeoutMs: 3_000,
+    } as any)
+    await kept.init()
+    const { run, bodyEntered, release } = heldBody()
+
+    executedSql.length = 0
+    const held = kept.withRunLock('run-1', run)
+    await bodyEntered
+    await new Promise((r) => setTimeout(r, 2_200))
+    release()
+    await held
+
+    assert.ok(
+      executedSql.some(
+        (statement) => statement === 'SET idle_session_timeout = 3000'
+      ),
+      'the idle timeout was never applied'
+    )
+    const beats = executedSql.filter((statement) =>
+      statement.includes('pikku run lock heartbeat')
+    )
+    assert.ok(
+      beats.length >= 2,
+      `a 2.2s hold under a 3s idle timeout sent ${beats.length} keepalives, so the session read as idle`
+    )
+    assert.ok(
+      executedSql.some(
+        (statement) => statement === 'RESET idle_session_timeout'
+      ),
+      'the idle timeout rode the connection back into the pool'
+    )
+  })
+
+  /**
+   * A session lock outlives the statement that failed to release it, so an
+   * unlock that throws hands the next caller a pooled connection that still
+   * holds the run lock. Terminating our own backend is the release Postgres
+   * always honours.
+   */
+  test('a failed unlock kills the session rather than pool a held lock', async () => {
+    const brittle = createDb((statement) =>
+      statement.includes('pg_advisory_unlock')
+        ? 'throw'
+        : statement.includes('pg_terminate_backend')
+          ? 'skip'
+          : undefined
+    )
+    const unlucky = new PgKyselyWorkflowService(db, {
+      wireQueues: false,
+      lockDb: brittle,
+      lockTimeoutMs: 250,
+    } as any)
+    await unlucky.init()
+
+    executedSql.length = 0
+    const result = await unlucky.withRunLock('run-1', async () => 'done')
+
+    assert.equal(
+      result,
+      'done',
+      "the body's outcome was replaced by the unlock's own failure"
+    )
+    assert.ok(
+      executedSql.some((statement) =>
+        statement.includes('pg_terminate_backend')
+      ),
+      'a connection still holding the run lock went back to the pool'
+    )
+    assert.ok(
+      !executedSql.includes('RESET lock_timeout'),
+      'a terminated session was issued on anyway'
     )
   })
 

@@ -59,6 +59,7 @@ import {
   WORKFLOW_POLL_FACTOR,
   WORKFLOW_POLL_MIN_MS,
   WORKFLOW_TERMINAL_STATES,
+  isRunSettled,
 } from './workflow-constants.js'
 import {
   WorkflowAsyncException,
@@ -672,6 +673,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }): Promise<{ resumed: string[] }> {
     return sweepStalledRuns(
       (before, limit) => this.findStalledRunIds(before, limit),
+      this.redispatchBackoff,
       options,
       this.sweepDeps
     )
@@ -1084,6 +1086,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     if (!run) {
       throw new WorkflowRunNotFoundError(runId)
     }
+    if (isRunSettled(run.status)) return
 
     const resolved = resolveWorkflowMeta(run.workflow)
     const workflowMeta = resolved?.meta
