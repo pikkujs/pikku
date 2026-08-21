@@ -13,11 +13,11 @@ import { PikkuError } from '@pikku/core/errors'
 
 import { analyzeDeployment } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
-import type { DeploymentManifest } from './analyzer/manifest.js'
+import type { DeploymentManifest } from '@pikku/deploy'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import type { BundleResult } from './bundler/types.js'
-import type { ProviderAdapter } from './provider-adapter.js'
+import type { ProviderAdapter } from '@pikku/deploy'
 import {
   generateServerEntrySource,
   SERVER_DOCKERFILE,

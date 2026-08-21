@@ -8,66 +8,13 @@
 
 import { generateInfraManifest } from './infra-manifest.js'
 import { generateHostJson, generateLocalSettings } from './host-json.js'
-
-type DeploymentHandler =
-  | {
-      type: 'fetch'
-      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
-    }
-  | { type: 'queue'; queueName: string }
-  | { type: 'scheduled'; schedule: string; taskName: string }
-
-interface DeploymentUnit {
-  name: string
-  role: string
-  functionIds: string[]
-  services: Array<{ capability: string; sourceServiceName: string }>
-  dependsOn: string[]
-  handlers: DeploymentHandler[]
-  tags: string[]
-}
-
-interface DeploymentManifest {
-  projectId: string
-  units: DeploymentUnit[]
-  queues: Array<{
-    name: string
-    consumerUnit: string
-    consumerFunctionId: string
-  }>
-  scheduledTasks: Array<{
-    name: string
-    schedule: string
-    unitName: string
-    functionId: string
-  }>
-  channels: Array<{ name: string; route: string; unitName: string }>
-  agents: Array<{ name: string; unitName: string; model: string }>
-  mcpEndpoints: Array<{ unitName: string }>
-  workflows: Array<{ name: string; orchestratorUnit: string }>
-  secrets: Array<{
-    secretId: string
-    displayName: string
-    description?: string
-  }>
-  variables: Array<{
-    variableId: string
-    displayName: string
-    description?: string
-  }>
-}
-
-interface EntryGenerationContext {
-  unit: DeploymentUnit
-  unitDir: string
-  bootstrapPath: string
-  configImport: string
-  configVar: string
-  servicesImport: string
-  servicesVar: string
-  singletonServicesImport: string
-  servicesType: string
-}
+import type {
+  DeploymentManifest,
+  DeploymentUnit,
+  EntryGenerationContext,
+  ProviderAdapter,
+} from '@pikku/deploy'
+import { nodeBuiltinExternals } from '@pikku/deploy'
 
 function getHandlerTypes(unit: DeploymentUnit): string[] {
   const types = new Set<string>()
@@ -77,7 +24,7 @@ function getHandlerTypes(unit: DeploymentUnit): string[] {
   return [...types]
 }
 
-export class AzureProviderAdapter {
+export class AzureProviderAdapter implements ProviderAdapter {
   readonly name = 'azure'
   readonly deployDirName = 'azure'
 
@@ -86,34 +33,7 @@ export class AzureProviderAdapter {
    * Same as Lambda — node builtins + Azure SDK packages.
    */
   getExternals(): string[] {
-    const builtins = [
-      'buffer',
-      'crypto',
-      'events',
-      'fs',
-      'http',
-      'https',
-      'net',
-      'os',
-      'path',
-      'querystring',
-      'stream',
-      'string_decoder',
-      'tls',
-      'url',
-      'util',
-      'zlib',
-      'child_process',
-      'worker_threads',
-      'assert',
-      'dns',
-      'dgram',
-      'readline',
-      'tty',
-      'v8',
-      'vm',
-    ]
-    return ['node:*', ...builtins, '@azure/*']
+    return nodeBuiltinExternals('@azure/*')
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {

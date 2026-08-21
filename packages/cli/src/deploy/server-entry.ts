@@ -11,7 +11,7 @@
  * emitted by the provider adapter on top of this entry + bundle.js.
  */
 
-import type { EntryGenerationContext } from './provider-adapter.js'
+import type { EntryGenerationContext } from '@pikku/deploy'
 
 export function generateServerEntrySource(ctx: EntryGenerationContext): string {
   const lines: string[] = [

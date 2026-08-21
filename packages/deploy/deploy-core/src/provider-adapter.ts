@@ -8,7 +8,7 @@
  * The generic pipeline handles: analysis, codegen, bundling, plan/apply.
  */
 
-import type { DeploymentManifest, DeploymentUnit } from './analyzer/manifest.js'
+import type { DeploymentManifest, DeploymentUnit } from './manifest.js'
 
 export interface EntryGenerationContext {
   /** The unit being generated */
@@ -179,8 +179,10 @@ export interface ProviderAdapter {
     onProgress?: (step: string, detail: string) => void
   }): Promise<{
     success: boolean
-    workersDeployed?: Array<{ name: string }>
-    resourcesCreated?: Array<{ type: string; name: string }>
+    /** Names of the deployed units, as they appear on the provider. */
+    workersDeployed?: string[]
+    /** Identifiers of the resources provisioned for this deploy. */
+    resourcesCreated?: string[]
     errors: Array<{ step: string; error: string }>
   }>
 }

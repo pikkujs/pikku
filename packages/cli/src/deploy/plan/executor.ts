@@ -1,4 +1,4 @@
-import type { DeploymentManifest } from '../analyzer/manifest.js'
+import type { DeploymentManifest } from '@pikku/deploy'
 import type { DeployProvider } from './provider.js'
 import type { ApplyResult, DeploymentPlan, PlanChange } from './types.js'
 

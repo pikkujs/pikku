@@ -14,5 +14,8 @@
   "exports": {
     ".": "./dist/index.js"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@pikku/deploy": "^0.12.0"
+  }
 }

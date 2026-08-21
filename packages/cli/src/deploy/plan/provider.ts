@@ -1,4 +1,4 @@
-import type { DeploymentManifest } from '../analyzer/manifest.js'
+import type { DeploymentManifest } from '@pikku/deploy'
 import type { PlanChange } from './types.js'
 
 export interface CurrentState {

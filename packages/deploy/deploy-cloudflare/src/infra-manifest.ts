@@ -8,55 +8,7 @@
  */
 
 import { serverProxyConstants } from './server-proxy-entry.js'
-
-type DeploymentHandler =
-  | {
-      type: 'fetch'
-      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
-    }
-  | { type: 'queue'; queueName: string }
-  | { type: 'scheduled'; schedule: string; taskName: string }
-
-interface DeploymentUnit {
-  name: string
-  role: string
-  target: 'serverless' | 'server'
-  functionIds: string[]
-  services: Array<{ capability: string; sourceServiceName: string }>
-  dependsOn: string[]
-  handlers: DeploymentHandler[]
-  tags: string[]
-}
-
-interface DeploymentManifest {
-  projectId: string
-  units: DeploymentUnit[]
-  queues: Array<{
-    name: string
-    consumerUnit: string
-    consumerFunctionId: string
-  }>
-  scheduledTasks: Array<{
-    name: string
-    schedule: string
-    unitName: string
-    functionId: string
-  }>
-  channels: Array<{ name: string; route: string; unitName: string }>
-  agents: Array<{ name: string; unitName: string; model: string }>
-  mcpEndpoints: Array<{ unitName: string }>
-  workflows: Array<{ name: string; orchestratorUnit: string }>
-  secrets: Array<{
-    secretId: string
-    displayName: string
-    description?: string
-  }>
-  variables: Array<{
-    variableId: string
-    displayName: string
-    description?: string
-  }>
-}
+import type { DeploymentManifest } from '@pikku/deploy'
 
 export interface CloudflareInfraManifest {
   projectId: string
