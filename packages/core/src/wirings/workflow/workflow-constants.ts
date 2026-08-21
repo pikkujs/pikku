@@ -15,6 +15,25 @@ export const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'cancelled',
 ])
 
+/**
+ * True for a run that will never move again, whatever arrives for it.
+ *
+ * Worth checking before doing anything with an orchestrator message, because
+ * such a message is routine rather than exceptional: the queue is
+ * at-least-once, the relay re-dispatches on purpose, and a run can settle
+ * while a message for it is still in flight. Replaying one is not free —
+ * `runWorkflowJob` takes the run lock and re-enters the workflow body, and a
+ * body re-entered after its run failed can park on a wait that nothing will
+ * ever satisfy, holding the lock and the connection under it until something
+ * external gives up. Every leaked advisory lock seen in production traced back
+ * to that: a granted lock, an idle session, and a run already `failed`.
+ *
+ * Note `suspended` is deliberately absent. It ends a run's *current* pass but
+ * not the run, which resumes when its approval or signal arrives.
+ */
+export const isRunSettled = (status: string): boolean =>
+  WORKFLOW_TERMINAL_STATES.has(status)
+
 export const WORKFLOW_POLL_MIN_MS = 10
 
 export const WORKFLOW_POLL_FACTOR = 1.6

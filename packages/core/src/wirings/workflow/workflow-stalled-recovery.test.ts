@@ -89,6 +89,52 @@ describe('stalled run recovery', () => {
     assert.deepEqual(resumed, [], 'a run that just moved is not swept')
   })
 
+  test('backs off rather than re-resuming the same run every tick', async () => {
+    const resumes = trackResumes()
+    const ws = new InMemoryWorkflowService()
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    })
+    await ws.insertStepState(runId, 'Wait 15s', null, { duration: 15000 })
+    await backdate(ws, runId, 10 * 60_000)
+
+    const first = await ws.recoverStalledRuns()
+    // Still stalled: a resume does not clear whatever wedged the run, so an
+    // unconditional sweep would re-queue it on this tick and on every tick
+    // after it.
+    const second = await ws.recoverStalledRuns()
+
+    assert.deepEqual(first.resumed, [runId], 'the first sweep resumes it')
+    assert.deepEqual(
+      second.resumed,
+      [],
+      'the next sweep is held off by the backoff'
+    )
+    assert.deepEqual(resumes.runIds, [runId], 'only one queue message')
+  })
+
+  test('does not re-drive a run the relay has just re-dispatched', async () => {
+    const resumes = trackResumes()
+    const ws = new InMemoryWorkflowService()
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    })
+    // Old enough to read as both an undispatched step and a stalled run.
+    await ws.insertStepState(runId, 'Wait 15s', null, { duration: 15000 })
+    await backdate(ws, runId, 10 * 60_000)
+
+    const relayed = await ws.relayUndispatchedSteps()
+    const swept = await ws.recoverStalledRuns()
+
+    assert.deepEqual(relayed.redispatched, [runId], 'the relay re-drives it')
+    assert.deepEqual(
+      swept.resumed,
+      [],
+      'the sweep adds nothing the relay has not already queued'
+    )
+    assert.deepEqual(resumes.runIds, [runId], 'only one queue message')
+  })
+
   test('leaves a finished run alone', async () => {
     trackResumes()
     const ws = new InMemoryWorkflowService()
