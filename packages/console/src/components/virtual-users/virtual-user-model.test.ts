@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
-import { toVirtualUserDocs } from './virtual-user-model.js'
+import { describeAction, toVirtualUserDocs } from './virtual-user-model.js'
 
 // `expose: true` is what puts a function on the rpc transport, and only those
 // reach the catalogue. It is set on the step too, so that step's absence from
@@ -286,5 +286,34 @@ describe('the virtual user reading model', () => {
       docs.map((doc) => doc.name),
       ['Ada', 'Zoe']
     )
+  })
+})
+
+describe('describeAction', () => {
+  test('names a call by the rpc it made', () => {
+    assert.equal(
+      describeAction({ kind: 'call', rpcName: 'listDocs' }),
+      'listDocs'
+    )
+  })
+
+  test('an agent turn is named by the agent it talked to', () => {
+    assert.equal(
+      describeAction({ kind: 'agent', agent: 'adminAgent' }),
+      'adminAgent'
+    )
+  })
+
+  // The turn the model got wrong carries no name at all, and it is the one
+  // somebody reading a transcript is looking for.
+  test('falls back to the kind when there is no name', () => {
+    assert.equal(
+      describeAction({ kind: 'invalid', detail: 'no such rpc' }),
+      'invalid'
+    )
+  })
+
+  test('an action with neither is still a step', () => {
+    assert.equal(describeAction({}), 'step')
   })
 })

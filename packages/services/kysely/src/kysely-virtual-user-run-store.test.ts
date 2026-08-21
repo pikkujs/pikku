@@ -39,6 +39,28 @@ const FINDING = {
   step: 7,
 } as any
 
+const INTENT = {
+  id: 'intent_1',
+  sourceId: 'exportADoc',
+  title: 'Export a doc',
+  status: 'done',
+  steps: [0, 1],
+  suspensions: 0,
+} as any
+
+const step = (index: number, over: Record<string, unknown> = {}) =>
+  ({
+    index,
+    intentId: 'intent_1',
+    action: { kind: 'call', rpcName: 'listDocs', input: {} },
+    status: 200,
+    ok: true,
+    response: '{"docs":[]}',
+    tokensIn: 40,
+    tokensOut: 12,
+    ...over,
+  }) as any
+
 describe('KyselyVirtualUserRunStore', () => {
   let db: Kysely<KyselyPikkuDB>
   let store: KyselyVirtualUserRunStore
@@ -114,6 +136,8 @@ describe('KyselyVirtualUserRunStore', () => {
       tally: TALLY,
       memory: { docId: 'doc_1', orgId: 'org_9' },
       stoppedBy: 'budget-steps',
+      intents: [INTENT],
+      steps: [step(0), step(1)],
     })
 
     const run = await store.get(runId)
@@ -182,14 +206,17 @@ describe('KyselyVirtualUserRunStore', () => {
     assert.equal(runs[0]?.persona, 'susan')
   })
 
-  test('completing an unknown run does not throw', async () => {
+  test('completing an unknown run does not throw, and leaves no steps behind', async () => {
     await store.init()
     await store.complete('nope', {
       findings: [],
       tally: TALLY,
       memory: {},
       stoppedBy: 'exhausted',
+      intents: [INTENT],
+      steps: [step(0)],
     })
+    assert.deepEqual(await store.steps('nope'), [])
   })
 
   // Not every project installs SerializePlugin, and a bare SQLite driver cannot
@@ -214,6 +241,8 @@ describe('KyselyVirtualUserRunStore', () => {
       tally: TALLY,
       memory: { docId: 'doc_1' },
       stoppedBy: 'exhausted',
+      intents: [INTENT],
+      steps: [step(0)],
     })
 
     const run = await bareStore.get(runId)
@@ -224,5 +253,117 @@ describe('KyselyVirtualUserRunStore', () => {
     assert.equal(run?.findings[0]?.detail, FINDING.detail)
     assert.ok(run?.createdAt instanceof Date)
     assert.ok(run?.finishedAt instanceof Date)
+    assert.deepEqual(await bareStore.steps(runId), [step(0)])
+  })
+
+  test('the transcript comes back in the order it happened', async () => {
+    const runId = await store.start({
+      persona: 'susan',
+      disposition: 'realistic',
+      seed: 1,
+    })
+
+    await store.complete(runId, {
+      findings: [],
+      tally: TALLY,
+      memory: {},
+      stoppedBy: 'exhausted',
+      intents: [INTENT],
+      steps: [step(2), step(0), step(1)],
+    })
+
+    const steps = await store.steps(runId)
+    assert.deepEqual(
+      steps.map((one) => one.index),
+      [0, 1, 2]
+    )
+    assert.deepEqual(steps[0], step(0))
+  })
+
+  // The turn the model got wrong is the one worth reading, and it carries none
+  // of the fields a successful call does.
+  test('a turn with no response and no status survives the round trip', async () => {
+    const runId = await store.start({
+      persona: 'susan',
+      disposition: 'careless',
+      seed: 1,
+    })
+
+    const invalid = step(0, {
+      intentId: undefined,
+      action: { kind: 'invalid', detail: 'no such rpc: listDoc' },
+      status: undefined,
+      ok: undefined,
+      response: undefined,
+      findingKinds: ['invalid-action'],
+    })
+
+    await store.complete(runId, {
+      findings: [],
+      tally: TALLY,
+      memory: {},
+      stoppedBy: 'exhausted',
+      intents: [],
+      steps: [invalid],
+    })
+
+    const [stored] = await store.steps(runId)
+    assert.deepEqual(stored, {
+      index: 0,
+      action: { kind: 'invalid', detail: 'no such rpc: listDoc' },
+      findingKinds: ['invalid-action'],
+      tokensIn: 40,
+      tokensOut: 12,
+    })
+  })
+
+  // Ten columns times a 500-step budget is five thousand bound variables, and a
+  // bare sqlite driver takes 999 — so the long run is exactly the one that must
+  // not be lost.
+  test('a run longer than one insert can hold is stored whole', async () => {
+    const runId = await store.start({
+      persona: 'susan',
+      disposition: 'adversarial',
+      seed: 1,
+    })
+
+    const steps = Array.from({ length: 240 }, (_, index) => step(index))
+    await store.complete(runId, {
+      findings: [],
+      tally: TALLY,
+      memory: {},
+      stoppedBy: 'budget-steps',
+      intents: [],
+      steps,
+    })
+
+    assert.equal((await store.steps(runId, { limit: 500 })).length, 240)
+    assert.deepEqual(
+      (await store.steps(runId, { limit: 2, offset: 100 })).map(
+        (one) => one.index
+      ),
+      [100, 101]
+    )
+  })
+
+  test('intents ride on the run, not on the transcript', async () => {
+    const runId = await store.start({
+      persona: 'susan',
+      disposition: 'realistic',
+      seed: 1,
+    })
+
+    await store.complete(runId, {
+      findings: [],
+      tally: TALLY,
+      memory: {},
+      stoppedBy: 'exhausted',
+      intents: [INTENT],
+      steps: [],
+    })
+
+    const [listed] = await store.list({ persona: 'susan' })
+    assert.deepEqual(listed?.intents, [INTENT])
+    assert.deepEqual(await store.steps(runId), [])
   })
 })

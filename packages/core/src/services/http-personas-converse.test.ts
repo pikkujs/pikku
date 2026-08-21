@@ -17,6 +17,7 @@ const startAgentTarget = async () => {
   let logins = 0
   let authRequired = false
   let approvalsSeen: unknown[] = []
+  let firstAgentRequestAuthed: boolean | null = null
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = []
     req.on('data', (c) => chunks.push(c))
@@ -37,6 +38,11 @@ const startAgentTarget = async () => {
       }
 
       const isAgentRoute = req.url?.startsWith('/api/rpc/agent/')
+      if (isAgentRoute && firstAgentRequestAuthed === null) {
+        firstAgentRequestAuthed = (req.headers.cookie ?? '').includes(
+          'session='
+        )
+      }
       if (
         isAgentRoute &&
         authRequired &&
@@ -85,10 +91,13 @@ const startAgentTarget = async () => {
     apiUrl: `http://127.0.0.1:${port}/api`,
     loginCount: () => logins,
     approvalsSeen: () => approvalsSeen,
+    /** Whether the very first agent call carried a session, not merely that one was minted. */
+    firstAgentRequestAuthed: () => firstAgentRequestAuthed,
     reset: (opts?: { authRequired?: boolean }) => {
       agentRuns = 0
       logins = 0
       approvalsSeen = []
+      firstAgentRequestAuthed = null
       authRequired = opts?.authRequired ?? false
     },
   }
@@ -180,8 +189,13 @@ describe('HttpPersona.converse', async () => {
     assert.deepEqual(target.approvalsSeen(), [
       [{ toolCallId: 'tc1', approved: true }],
     ])
-    // No-auth agent → converse never signs in (lazy login).
-    assert.equal(target.loginCount(), 0)
+    // Signed in even though the agent route is public: a thread minted under a
+    // fresh anonymous id per request belongs to nobody, so turn two comes back
+    // as somebody else's. A persona is a real account either way — and it is
+    // the *first* call that has to carry the session, which a login count
+    // alone would not show.
+    assert.equal(target.loginCount(), 1)
+    assert.equal(target.firstAgentRequestAuthed(), true)
   })
 
   test('signs in lazily and retries once when an agent route returns 401', async () => {

@@ -18,7 +18,10 @@
  */
 export type {
   ApiCatalogueEntry,
+  IntentRecord,
   IntentSource,
+  StepRecord,
+  VirtualUserBudget,
   VirtualUserDisposition,
   VirtualUserFinding,
   VirtualUserRunResult,
@@ -40,6 +43,21 @@ export type {
   VirtualUserRunStart,
   VirtualUserRunStore,
 } from './virtual-user-run-store.js'
+export type {
+  VirtualUserScheduleInput,
+  VirtualUserScheduleRecord,
+  VirtualUserScheduleStore,
+} from './virtual-user-schedule-store.js'
+export {
+  DEFAULT_MAX_INTERVAL_MS,
+  DEFAULT_MIN_INTERVAL_MS,
+  isDue,
+  nextRunAt,
+  STALE_RUN_AFTER_MS,
+  tickVirtualUserSchedules,
+  type VirtualUserTickParams,
+  type VirtualUserTickResult,
+} from './virtual-user-schedule.js'
 export {
   DISPOSITIONS,
   dispositionProfile,

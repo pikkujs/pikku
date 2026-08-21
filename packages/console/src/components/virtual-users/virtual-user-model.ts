@@ -269,3 +269,22 @@ export const toVirtualUserDocs = ({
       .sort((a, b) => a.name.localeCompare(b.name))
   )
 }
+
+/**
+ * A step's action in one word.
+ *
+ * The engine records what it scheduled, not a fixed row shape, so this reads
+ * whichever name is there and falls back to the kind — which is all an
+ * `invalid` turn leaves behind, and that turn is the one worth reading.
+ */
+export const describeAction = (action: Record<string, unknown>): string => {
+  for (const candidate of [
+    action.rpcName,
+    action.name,
+    action.agent,
+    action.kind,
+  ]) {
+    if (typeof candidate === 'string' && candidate.length > 0) return candidate
+  }
+  return 'step'
+}

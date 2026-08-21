@@ -17,6 +17,7 @@ import { sessionSchema } from './session.schema.js'
 import { webhookSchema } from './webhook.schema.js'
 import { workflowSchema } from './workflow.schema.js'
 import { virtualUserSchema } from './virtual-user.schema.js'
+import { virtualUserScheduleSchema } from './virtual-user-schedule.schema.js'
 
 export type {
   PikkuSchema,
@@ -59,6 +60,7 @@ export const pikkuSchemas: PikkuSchema[] = [
   scopeSchema,
   auditSchema,
   virtualUserSchema,
+  virtualUserScheduleSchema,
 ]
 
 export { agentSchema } from './agent.schema.js'
@@ -70,6 +72,7 @@ export { scopeSchema } from './scope.schema.js'
 export { secretSchema } from './secret.schema.js'
 export { sessionSchema } from './session.schema.js'
 export { virtualUserSchema } from './virtual-user.schema.js'
+export { virtualUserScheduleSchema } from './virtual-user-schedule.schema.js'
 export { webhookSchema } from './webhook.schema.js'
 export { workflowSchema } from './workflow.schema.js'
 

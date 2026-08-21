@@ -47,6 +47,16 @@ export const Disposition = z.enum([
   'accountable',
 ])
 
+/**
+ * Where a run stops. Not a schedule: these cap one outing, and how often the
+ * outings happen is \`setVirtualUserSchedule\`'s business.
+ */
+export const Budget = z.object({
+  steps: z.number().int().min(1).max(500).optional(),
+  mutations: z.number().int().min(0).max(500).optional(),
+  durationMs: z.number().int().min(1000).max(3_600_000).optional(),
+})
+
 export const RunVirtualUserInput = z.object({
   /** A persona id from \`definePersonas()\`. */
   persona: z.string().min(1),
@@ -64,13 +74,7 @@ export const RunVirtualUserInput = z.object({
   memory: z.record(z.string(), z.string()).optional(),
   /** Overrides the persona's declared disposition for this run only. */
   disposition: Disposition.optional(),
-  budget: z
-    .object({
-      steps: z.number().int().min(1).max(500).optional(),
-      mutations: z.number().int().min(0).max(500).optional(),
-      durationMs: z.number().int().min(1000).max(3_600_000).optional(),
-    })
-    .optional(),
+  budget: Budget.optional(),
   /** Fixed seed, so a run replays into the same finding. */
   seed: z.number().int().optional(),
 })
@@ -98,7 +102,45 @@ export const Finding = z.object({
   step: z.number(),
 })
 
-export const GetVirtualUserRunOutput = z.object({
+/**
+ * What the user set out to do, and how far each one got. The spine a transcript
+ * hangs off — the steps alone are a list of calls with no account of what they
+ * were for.
+ */
+export const Intent = z.object({
+  id: z.string(),
+  sourceId: z.string(),
+  title: z.string(),
+  /** open | suspended | completed | abandoned | stuck, open-ended for the same
+   * reason a finding's \`kind\` is. */
+  status: z.string(),
+  /** Step indices at which this intent was the active one. */
+  steps: z.array(z.number()),
+  /** How many times it was put down and picked back up. */
+  suspensions: z.number(),
+  summary: z.string().optional(),
+})
+
+/** One turn: what the engine scheduled, what the model did, what came back. */
+export const Step = z.object({
+  index: z.number(),
+  intentId: z.string().optional(),
+  /** The call it chose, or the \`invalid\` shape for a turn it got wrong. */
+  action: z.record(z.string(), z.unknown()),
+  status: z.number().optional(),
+  ok: z.boolean().optional(),
+  /** Truncated by the engine, so a transcript stays readable. */
+  response: z.string().optional(),
+  findingKinds: z.array(z.string()).optional(),
+  tokensIn: z.number(),
+  tokensOut: z.number(),
+})
+
+/**
+ * Shared so a run reads the same whether it arrived one at a time or in a list.
+ * Not exported: the schemas the inspector names are the ones a function wires.
+ */
+const virtualUserRunFields = {
   runId: z.string(),
   persona: z.string(),
   disposition: Disposition,
@@ -107,12 +149,77 @@ export const GetVirtualUserRunOutput = z.object({
   goals: z.array(z.string()),
   memory: z.record(z.string(), z.string()),
   findings: z.array(Finding),
+  intents: z.array(Intent),
   /** Steps, calls, mutations, tokens and elapsed time, as the engine counted them. */
   tally: z.record(z.string(), z.unknown()).nullable(),
   stoppedBy: z.string().nullable(),
   error: z.string().nullable(),
   createdAt: z.string(),
   finishedAt: z.string().nullable(),
+}
+
+export const GetVirtualUserRunOutput = z.object(virtualUserRunFields)
+
+export const ListVirtualUserRunsInput = z.object({
+  /** Narrows to one persona's history. */
+  persona: z.string().min(1).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  offset: z.number().int().min(0).optional(),
+})
+
+export const ListVirtualUserRunsOutput = z.object({
+  /** Newest first. The transcript is not here — read it with getVirtualUserRunSteps. */
+  runs: z.array(z.object(virtualUserRunFields)),
+})
+
+export const GetVirtualUserRunStepsInput = z.object({
+  runId: z.string(),
+  limit: z.number().int().min(1).max(500).optional(),
+  offset: z.number().int().min(0).optional(),
+})
+
+export const GetVirtualUserRunStepsOutput = z.object({
+  steps: z.array(Step),
+})
+
+/**
+ * One persona's standing instruction to keep using the app.
+ *
+ * The interval is a range rather than a number: a user who arrives at exactly
+ * 09:00 every day exercises one cache state and one cron neighbourhood, and a
+ * real one does not keep an appointment.
+ */
+export const SetVirtualUserScheduleInput = z.object({
+  persona: z.string().min(1),
+  /** Off until something says otherwise — a schedule costs money on every tick. */
+  enabled: z.boolean().optional(),
+  disposition: Disposition.optional(),
+  goals: z.array(z.string().min(1)).max(20).optional(),
+  budget: Budget.nullable().optional(),
+  minIntervalMs: z.number().int().min(60_000).optional(),
+  maxIntervalMs: z.number().int().min(60_000).optional(),
+  /** ISO. Omitted on a new schedule means the persona is due at once. */
+  nextRunAt: z.string().optional(),
+})
+
+/** Not exported for the same reason the run fields are not. */
+const virtualUserScheduleFields = {
+  persona: z.string(),
+  enabled: z.boolean(),
+  disposition: Disposition,
+  goals: z.array(z.string()),
+  budget: Budget.nullable(),
+  minIntervalMs: z.number(),
+  maxIntervalMs: z.number(),
+  nextRunAt: z.string(),
+  lastRunId: z.string().nullable(),
+  lastRunAt: z.string().nullable(),
+}
+
+export const SetVirtualUserScheduleOutput = z.object(virtualUserScheduleFields)
+
+export const ListVirtualUserSchedulesOutput = z.object({
+  schedules: z.array(z.object(virtualUserScheduleFields)),
 })
 
 /** The internal dispatch payload — everything the run was resolved down to. */
@@ -147,6 +254,10 @@ import { personaVirtualUserTarget, runVirtualUser as runVirtualUserEngine, type 
 import {
   prepareVirtualUserRun,
   PRODUCTION_DISPOSITION,
+  tickVirtualUserSchedules as tick,
+  type VirtualUserRunRecord,
+  type VirtualUserRunStore,
+  type VirtualUserScheduleRecord,
 } from '@pikku/core/virtual-user'
 import { createPersonas, personaConfigs } from '${pathToPersonas}'
 import {
@@ -154,8 +265,15 @@ import {
   ExecuteVirtualUserRunOutput,
   GetVirtualUserRunInput,
   GetVirtualUserRunOutput,
+  GetVirtualUserRunStepsInput,
+  GetVirtualUserRunStepsOutput,
+  ListVirtualUserRunsInput,
+  ListVirtualUserRunsOutput,
+  ListVirtualUserSchedulesOutput,
   RunVirtualUserInput,
   RunVirtualUserOutput,
+  SetVirtualUserScheduleInput,
+  SetVirtualUserScheduleOutput,
 } from './virtual-user.schemas.gen.js'
 
 defineScope({
@@ -165,6 +283,9 @@ defineScope({
     scopes: {
       run: { description: 'Start a virtual user run' },
       read: { description: "Read a run's findings" },
+      schedule: {
+        description: 'Decide that a persona keeps running on its own',
+      },
     },
   },
 })
@@ -179,6 +300,141 @@ const API_URL_VARIABLE = 'VIRTUAL_USER_API_URL'
 const SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
 const MODEL_VARIABLE = 'VIRTUAL_USER_MODEL'
 
+/**
+ * One run on the wire. Findings and intents are free-form by design — the
+ * engine records what it noticed, not a fixed row shape — so they cross as the
+ * schema's open objects rather than being narrowed to whatever kinds exist
+ * today.
+ */
+const serializeRun = (run: VirtualUserRunRecord) => ({
+  runId: run.runId,
+  persona: run.persona,
+  disposition: run.disposition,
+  seed: run.seed,
+  status: run.status,
+  goals: run.goals,
+  memory: run.memory,
+  findings: run.findings.map((finding) => ({
+    kind: finding.kind as string,
+    detail: finding.detail,
+    rpcName: finding.rpcName,
+    status: finding.status,
+    intentId: finding.intentId,
+    step: finding.step,
+  })),
+  intents: run.intents.map((intent) => ({
+    id: intent.id,
+    sourceId: intent.sourceId,
+    title: intent.title,
+    status: intent.status as string,
+    steps: intent.steps,
+    suspensions: intent.suspensions,
+    summary: intent.summary,
+  })),
+  tally: (run.tally ?? null) as Record<string, unknown> | null,
+  stoppedBy: run.stoppedBy,
+  error: run.error,
+  createdAt: run.createdAt.toISOString(),
+  finishedAt: run.finishedAt ? run.finishedAt.toISOString() : null,
+})
+
+/**
+ * Resolves a persona down to a run and kicks it off, for the two callers that
+ * start one: a person with the scope, and the tick acting on a schedule.
+ *
+ * Shared rather than duplicated because the checks are the point — an acted-upon
+ * persona has no session, and only one disposition may ever touch production.
+ * A second copy of that would eventually disagree with this one.
+ */
+const startVirtualUserRun = async (
+  services: {
+    virtualUserRunStore?: VirtualUserRunStore
+    config: { nodeEnv?: string }
+  },
+  rpc: { invoke: (name: string, data: any) => Promise<unknown> },
+  input: {
+    persona: string
+    disposition?: string
+    goals?: string[]
+    memory?: Record<string, string>
+    budget?: { steps?: number; mutations?: number; durationMs?: number }
+    seed?: number
+    startedBy?: string | null
+  }
+): Promise<string> => {
+  const { virtualUserRunStore, config } = services
+  if (!virtualUserRunStore) {
+    throw new Error(
+      'No virtualUserRunStore is wired — a run has nowhere to be recorded. ' +
+        'Wire KyselyVirtualUserRunStore from @pikku/kysely, or your own implementation of VirtualUserRunStore.'
+    )
+  }
+
+  const persona = personaConfigs[input.persona as keyof typeof personaConfigs] as
+    | { id: string; runnable: boolean; disposition?: string }
+    | undefined
+  if (!persona) {
+    throw new Error(
+      \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
+    )
+  }
+  // An acted-upon persona has no session of its own, and running one would
+  // race whatever scenario acts on it.
+  if (!persona.runnable) {
+    throw new Error(
+      \`Persona "\${input.persona}" is declared as acted upon, never run\`
+    )
+  }
+
+  const disposition = (input.disposition ??
+    persona.disposition ??
+    'realistic') as VirtualUserDisposition
+  // Every disposition other than this one exists to find out what the product
+  // does wrong, which is not a thing to do to real customers' data. Checked
+  // against the effective disposition, so the override cannot smuggle one in.
+  if (
+    config.nodeEnv === 'production' &&
+    disposition !== PRODUCTION_DISPOSITION
+  ) {
+    throw new Error(
+      \`Only the '\${PRODUCTION_DISPOSITION}' disposition may run against production; "\${input.persona}" is \${disposition}\`
+    )
+  }
+
+  // Seeded here rather than inside the engine so the record carries the seed
+  // even if the run dies before returning — an unreproducible crash costs the
+  // most.
+  const seed = input.seed ?? Math.floor(Math.random() * 2_147_483_647)
+
+  const runId = await virtualUserRunStore.start({
+    persona: persona.id,
+    disposition,
+    seed,
+    goals: input.goals ?? [],
+    memory: input.memory ?? {},
+    startedBy: input.startedBy ?? null,
+  })
+
+  // Deliberately not awaited: a run takes minutes, and a held-open request
+  // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
+  // writes both outcomes to the record itself, so the only thing left to
+  // handle here is a rejection escaping the promise — without the catch it
+  // becomes an unhandled rejection and takes the process with it.
+  void rpc
+    .invoke('executeVirtualUserRun', {
+      runId,
+      persona: persona.id,
+      disposition,
+      goals: input.goals ?? [],
+      memory: input.memory ?? {},
+      budget: input.budget,
+      seed,
+    })
+    .catch(() => {})
+
+  return runId
+}
+
 export const runVirtualUser = pikkuFunc({
   tags: ['pikku'],
   title: 'Run a Virtual User',
@@ -188,80 +444,12 @@ export const runVirtualUser = pikkuFunc({
   scopes: ['virtualUser:run'],
   input: RunVirtualUserInput,
   output: RunVirtualUserOutput,
-  func: async (
-    { virtualUserRunStore, config },
-    input,
-    { session, rpc }
-  ) => {
-    if (!virtualUserRunStore) {
-      throw new Error(
-        'No virtualUserRunStore is wired — a run has nowhere to be recorded. ' +
-          'Wire KyselyVirtualUserRunStore from @pikku/kysely, or your own implementation of VirtualUserRunStore.'
-      )
-    }
-
-    const persona = personaConfigs[input.persona as keyof typeof personaConfigs] as
-      | { id: string; runnable: boolean; disposition?: string }
-      | undefined
-    if (!persona) {
-      throw new Error(
-        \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
-      )
-    }
-    // An acted-upon persona has no session of its own, and running one would
-    // race whatever scenario acts on it.
-    if (!persona.runnable) {
-      throw new Error(
-        \`Persona "\${input.persona}" is declared as acted upon, never run\`
-      )
-    }
-
-    const disposition = (input.disposition ??
-      persona.disposition ??
-      'realistic') as VirtualUserDisposition
-    // Every disposition other than this one exists to find out what the product
-    // does wrong, which is not a thing to do to real customers' data. Checked
-    // against the effective disposition, so the override cannot smuggle one in.
-    if (
-      config.nodeEnv === 'production' &&
-      disposition !== PRODUCTION_DISPOSITION
-    ) {
-      throw new Error(
-        \`Only the '\${PRODUCTION_DISPOSITION}' disposition may run against production; "\${input.persona}" is \${disposition}\`
-      )
-    }
-
-    // Seeded here rather than inside the engine so the record carries the seed
-    // even if the run dies before returning — an unreproducible crash costs the
-    // most.
-    const seed = input.seed ?? Math.floor(Math.random() * 2_147_483_647)
-
-    const runId = await virtualUserRunStore.start({
-      persona: persona.id,
-      disposition,
-      seed,
-      goals: input.goals ?? [],
-      memory: input.memory ?? {},
-      startedBy: session?.userId ?? null,
-    })
-
-    // Deliberately not awaited: a run takes minutes, and a held-open request
-    // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
-    // writes both outcomes to the record itself, so the only thing left to
-    // handle here is a rejection escaping the promise — without the catch it
-    // becomes an unhandled rejection and takes the process with it.
-    void rpc!
-      .invoke('executeVirtualUserRun', {
-        runId,
-        persona: persona.id,
-        disposition,
-        goals: input.goals ?? [],
-        memory: input.memory ?? {},
-        budget: input.budget,
-        seed,
-      })
-      .catch(() => {})
-
+  func: async ({ virtualUserRunStore, config }, input, { session, rpc }) => {
+    const runId = await startVirtualUserRun(
+      { virtualUserRunStore, config },
+      rpc!,
+      { ...input, startedBy: session?.userId ?? null }
+    )
     return { runId }
   },
 })
@@ -286,30 +474,223 @@ export const getVirtualUserRun = pikkuFunc({
     if (!run) {
       throw new Error(\`No virtual user run \${runId}\`)
     }
+    return serializeRun(run)
+  },
+})
+
+export const listVirtualUserRuns = pikkuFunc({
+  tags: ['pikku'],
+  title: 'List Virtual User Runs',
+  description:
+    "Reads back what the virtual users have been doing, newest first. Narrow with \`persona\` for one user's history.",
+  expose: true,
+  scopes: ['virtualUser:read'],
+  input: ListVirtualUserRunsInput,
+  output: ListVirtualUserRunsOutput,
+  func: async ({ virtualUserRunStore }, { persona, limit, offset }) => {
+    if (!virtualUserRunStore) {
+      throw new Error('No virtualUserRunStore is wired — there are no runs to read.')
+    }
+    const runs = await virtualUserRunStore.list({ persona, limit, offset })
+    return { runs: runs.map(serializeRun) }
+  },
+})
+
+export const getVirtualUserRunSteps = pikkuFunc({
+  tags: ['pikku'],
+  title: 'Read a Virtual User Transcript',
+  description:
+    'Every turn one run took, in order: what it called, what came back, and what that cost.',
+  expose: true,
+  // The transcript is strictly more sensitive than the summary it belongs to —
+  // it carries the live ids and payloads the run actually sent — so it sits
+  // behind the same read scope rather than a looser one.
+  scopes: ['virtualUser:read'],
+  input: GetVirtualUserRunStepsInput,
+  output: GetVirtualUserRunStepsOutput,
+  func: async ({ virtualUserRunStore }, { runId, limit, offset }) => {
+    if (!virtualUserRunStore) {
+      throw new Error('No virtualUserRunStore is wired — there are no runs to read.')
+    }
+    const steps = await virtualUserRunStore.steps(runId, { limit, offset })
     return {
-      runId: run.runId,
-      persona: run.persona,
-      disposition: run.disposition,
-      seed: run.seed,
-      status: run.status,
-      goals: run.goals,
-      memory: run.memory,
-      // Findings are free-form by design — the engine records what it noticed,
-      // not a fixed row shape — so they cross the wire as the schema's open
-      // object rather than being narrowed to whatever kinds exist today.
-      findings: run.findings.map((finding) => ({
-        kind: finding.kind as string,
-        detail: finding.detail,
-        rpcName: finding.rpcName,
-        status: finding.status,
-        intentId: finding.intentId,
-        step: finding.step,
+      steps: steps.map((step) => ({
+        index: step.index,
+        intentId: step.intentId,
+        action: step.action as unknown as Record<string, unknown>,
+        status: step.status,
+        ok: step.ok,
+        response: step.response,
+        findingKinds: step.findingKinds as string[] | undefined,
+        tokensIn: step.tokensIn,
+        tokensOut: step.tokensOut,
       })),
-      tally: (run.tally ?? null) as Record<string, unknown> | null,
-      stoppedBy: run.stoppedBy,
-      error: run.error,
-      createdAt: run.createdAt.toISOString(),
-      finishedAt: run.finishedAt ? run.finishedAt.toISOString() : null,
+    }
+  },
+})
+
+/**
+ * One schedule on the wire. The budget crosses as \`durationMs\` because that is
+ * what every other call here takes; the engine's own duration also accepts
+ * \`'30m'\`, which nothing on this side ever writes.
+ */
+const serializeSchedule = (schedule: VirtualUserScheduleRecord) => ({
+  persona: schedule.persona,
+  enabled: schedule.enabled,
+  disposition: schedule.disposition,
+  goals: schedule.goals,
+  budget: schedule.budget
+    ? {
+        steps: schedule.budget.steps,
+        mutations: schedule.budget.mutations,
+        durationMs:
+          typeof schedule.budget.duration === 'number'
+            ? schedule.budget.duration
+            : undefined,
+      }
+    : null,
+  minIntervalMs: schedule.minIntervalMs,
+  maxIntervalMs: schedule.maxIntervalMs,
+  nextRunAt: schedule.nextRunAt.toISOString(),
+  lastRunId: schedule.lastRunId,
+  lastRunAt: schedule.lastRunAt ? schedule.lastRunAt.toISOString() : null,
+})
+
+export const setVirtualUserSchedule = pikkuFunc({
+  tags: ['pikku'],
+  title: 'Put a Virtual User on a Clock',
+  description:
+    'Says how often a persona should use the application on its own. Off until enabled, and every field left out keeps what it already had.',
+  expose: true,
+  // Its own scope, and the most powerful one here: starting a run spends money
+  // once with a caller present to see it, while writing a schedule spends it
+  // repeatedly with nobody there.
+  scopes: ['virtualUser:schedule'],
+  input: SetVirtualUserScheduleInput,
+  output: SetVirtualUserScheduleOutput,
+  func: async ({ virtualUserScheduleStore }, input) => {
+    if (!virtualUserScheduleStore) {
+      throw new Error(
+        'No virtualUserScheduleStore is wired — a cadence has nowhere to live. ' +
+          'Wire KyselyVirtualUserScheduleStore from @pikku/kysely, or your own implementation of VirtualUserScheduleStore.'
+      )
+    }
+    const persona = personaConfigs[
+      input.persona as keyof typeof personaConfigs
+    ] as { runnable: boolean } | undefined
+    if (!persona) {
+      throw new Error(
+        \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
+      )
+    }
+    // The same rule \`runVirtualUser\` enforces, applied at the point the row is
+    // written rather than every hour afterwards: an acted-upon persona has no
+    // session, so a cadence for one is a tick that can only ever fail to start.
+    if (!persona.runnable) {
+      throw new Error(
+        \`Persona "\${input.persona}" is declared as acted upon, never run\`
+      )
+    }
+    const schedule = await virtualUserScheduleStore.set({
+      persona: input.persona,
+      enabled: input.enabled,
+      disposition: input.disposition as VirtualUserDisposition | undefined,
+      goals: input.goals,
+      budget:
+        input.budget === undefined
+          ? undefined
+          : input.budget === null
+            ? null
+            : {
+                steps: input.budget.steps,
+                mutations: input.budget.mutations,
+                duration: input.budget.durationMs,
+              },
+      minIntervalMs: input.minIntervalMs,
+      maxIntervalMs: input.maxIntervalMs,
+      nextRunAt: input.nextRunAt ? new Date(input.nextRunAt) : undefined,
+    })
+    return serializeSchedule(schedule)
+  },
+})
+
+export const listVirtualUserSchedules = pikkuFunc({
+  tags: ['pikku'],
+  title: 'List Virtual User Schedules',
+  description:
+    'Which personas are on a clock, how often they run, and when each is next due.',
+  expose: true,
+  scopes: ['virtualUser:read'],
+  input: null,
+  output: ListVirtualUserSchedulesOutput,
+  func: async ({ virtualUserScheduleStore }) => {
+    if (!virtualUserScheduleStore) {
+      return { schedules: [] }
+    }
+    const schedules = await virtualUserScheduleStore.list()
+    return { schedules: schedules.map(serializeSchedule) }
+  },
+})
+
+/**
+ * Acts on whichever personas are due, once.
+ *
+ * Not exposed, and not wired to anything: pikku does not start a timer on an
+ * application's behalf. A scaffolded scheduled task would begin spending model
+ * budget the moment a project ran \`pikku all\`, which is not a thing a codegen
+ * step gets to decide. Wire it when you mean it:
+ *
+ * \`\`\`ts
+ * wireScheduler({
+ *   name: 'virtualUsers',
+ *   schedule: '0 * * * *',
+ *   func: tickVirtualUserSchedules,
+ * })
+ * \`\`\`
+ *
+ * An hourly tick is plenty for intervals measured in hours: the tick
+ * decides nothing except which rows are already due, so running it more often
+ * costs a query and changes no cadence.
+ */
+export const tickVirtualUserSchedules = pikkuSessionlessFunc<void, void>({
+  tags: ['pikku'],
+  func: async (services, _data, { rpc }) => {
+    const { virtualUserScheduleStore, virtualUserRunStore, logger } = services
+    if (!virtualUserScheduleStore || !virtualUserRunStore) {
+      return
+    }
+    const result = await tick({
+      schedules: virtualUserScheduleStore,
+      runs: virtualUserRunStore,
+      dispatch: (schedule) =>
+        startVirtualUserRun(services, rpc!, {
+          persona: schedule.persona,
+          disposition: schedule.disposition,
+          goals: schedule.goals,
+          budget: schedule.budget
+            ? {
+                steps: schedule.budget.steps,
+                mutations: schedule.budget.mutations,
+                durationMs:
+                  typeof schedule.budget.duration === 'number'
+                    ? schedule.budget.duration
+                    : undefined,
+              }
+            : undefined,
+        }),
+    })
+    // Logged rather than returned: the caller is a cron, and a run this started
+    // is otherwise the only trace that a persona is still out there working.
+    for (const { persona, runId } of result.dispatched) {
+      logger.info(\`Virtual user \${persona} started run \${runId} on schedule\`)
+    }
+    for (const runId of result.reaped) {
+      logger.warn(
+        \`Virtual user run \${runId} was abandoned — marked failed so its persona can run again\`
+      )
+    }
+    for (const { persona, reason } of result.skipped) {
+      logger.info(\`Virtual user \${persona} skipped this tick: \${reason}\`)
     }
   },
 })
@@ -424,6 +805,8 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
         tally: result.tally,
         memory: result.memory,
         stoppedBy: result.stoppedBy ?? null,
+        intents: result.intents,
+        steps: result.steps,
       })
 
       return { findings: result.findings.length }

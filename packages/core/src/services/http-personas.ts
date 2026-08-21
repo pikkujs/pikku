@@ -111,6 +111,14 @@ export class HttpPersona implements ScenarioPersona {
     if (!agentRunner) {
       throw new AIProviderNotConfiguredError()
     }
+    // Signed in here rather than left to postAgent's 401 retry, which a public
+    // agent route never triggers. An unowned thread is minted under a fresh
+    // anonymous id per request, so turn one succeeds and turn two is refused as
+    // somebody else's — and a persona is a real account with real credentials,
+    // so there is no case where conversing as nobody is the intent.
+    if (!this.signedIn) {
+      await this.login()
+    }
     const model = options.model ?? this.config.model
     if (!model) {
       throw new Error(

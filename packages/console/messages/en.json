@@ -1056,5 +1056,15 @@
   "surface_import_hint": "Import it from",
   "surface_undocumented": "Not documented yet",
   "surface_imports_count_one": "Imported once in this project",
-  "surface_imports_count": "Imported {count} times in this project"
+  "surface_imports_count": "Imported {count} times in this project",
+  "virtual_users_runs": "Recent runs",
+  "virtual_users_runs_counts": "{steps} steps, {mutations} mutations",
+  "virtual_users_runs_findings": "{count} findings",
+  "virtual_users_runs_finding": "{kind} · step {step} · {detail}",
+  "virtual_users_runs_loading": "Reading the transcript…",
+  "virtual_users_runs_no_transcript": "This run recorded no turns.",
+  "virtual_users_runs_none": "Nobody has run this user yet.",
+  "virtual_users_runs_intent": "{title} · {status}",
+  "virtual_users_runs_seed": "{disposition} · seed {seed}",
+  "virtual_users_runs_start": "Run now"
 }

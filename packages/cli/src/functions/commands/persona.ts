@@ -16,6 +16,7 @@ import {
   DISPOSITIONS,
   prepareVirtualUserRun,
 } from '@pikku/core/virtual-user'
+import { getSingletonServices, setSingletonServices } from '@pikku/core/state'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolveEnvironment } from './environment.js'
@@ -176,6 +177,11 @@ export const personaRun = pikkuSessionlessFunc<
         'No AI provider is configured. Set OPENAI_BASE_URL + OPENAI_API_KEY (or LITELLM_PROXY_URL + LITELLM_API_KEY).'
       )
     }
+    // `talkTo` reaches the runner through the singleton registry rather than
+    // through the `llm` handed to the engine, so a persona offered an agent
+    // dies on its first word without this — and only for a persona whose
+    // scopes reach one, which is why it survives a run as anybody else.
+    setSingletonServices({ ...getSingletonServices(), agentRunner })
 
     // Shared with the scaffolded `runVirtualUser` RPC, which does the same
     // derivation from `metaService` at runtime — the two have to agree, or the

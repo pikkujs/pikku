@@ -2,7 +2,8 @@ import { sql } from 'kysely'
 import type { PikkuSchema } from './pikku-schema.types.js'
 
 /**
- * The `virtualUserRun` table {@link KyselyVirtualUserRunStore} writes to.
+ * The `virtualUserRun` and `virtualUserRunStep` tables
+ * {@link KyselyVirtualUserRunStore} writes to.
  *
  * Deliberately not in `pikkuSchemas`: the runtime never needs this table, only
  * a project that runs virtual users does, and creating it for everyone would
@@ -38,6 +39,10 @@ export const virtualUserSchema: PikkuSchema = {
         .addColumn('goals', 'text', (col) => col.defaultTo('[]').notNull())
         .addColumn('memory', 'text', (col) => col.defaultTo('{}').notNull())
         .addColumn('findings', 'text', (col) => col.defaultTo('[]').notNull())
+        // What the user set out to do and how far each one got. On the run row
+        // rather than beside the steps: there are a handful of them, and every
+        // read of the run wants them.
+        .addColumn('intents', 'text', (col) => col.defaultTo('[]').notNull())
         // Counts the engine kept: steps, calls, mutations, tokens, elapsed.
         .addColumn('tally', 'text')
         .addColumn('stoppedBy', 'varchar(255)')
@@ -62,5 +67,40 @@ export const virtualUserSchema: PikkuSchema = {
         .createIndex('idx_virtual_user_run_persona')
         .on('virtualUserRun')
         .columns(['persona', 'createdAt']),
+
+    // One row per turn, kept out of `virtualUserRun` so that listing runs does
+    // not drag a budget's worth of transcript along with it. No foreign key
+    // onto the run for the same reason `persona` is not one: this table is
+    // created by the store at boot on whatever engine the project uses, and a
+    // cascade that half the engines enforce differently is worse than the read
+    // rule that a step with no run is orphaned.
+    (db) =>
+      db.schema
+        .createTable('virtualUserRunStep')
+        .addColumn('runId', 'varchar(36)', (col) => col.notNull())
+        // The engine's own step number, which is what the intent records point
+        // at — not a surrogate key, so a transcript reads the same after paging.
+        // Spelled `stepIndex` because `index` is a reserved word in mysql.
+        .addColumn('stepIndex', 'integer', (col) => col.notNull())
+        .addColumn('intentId', 'varchar(255)')
+        // The action as the engine scheduled it, including the `invalid` shape
+        // for a turn the model got wrong — that turn is the interesting one.
+        .addColumn('action', 'text', (col) => col.notNull())
+        .addColumn('status', 'integer')
+        // 0 or 1 rather than a boolean, because a bare sqlite driver cannot
+        // bind one at all and `SerializePlugin` is not installed everywhere.
+        .addColumn('ok', 'integer')
+        // Already truncated by the engine, and stored JSON-encoded rather than
+        // raw: a truncated API response usually starts with a brace, which
+        // `SerializePlugin` would read back as an object rather than the string
+        // the engine actually saw.
+        .addColumn('response', 'text')
+        .addColumn('findingKinds', 'text')
+        .addColumn('tokensIn', 'integer', (col) => col.defaultTo(0).notNull())
+        .addColumn('tokensOut', 'integer', (col) => col.defaultTo(0).notNull())
+        .addPrimaryKeyConstraint('pk_virtual_user_run_step', [
+          'runId',
+          'stepIndex',
+        ]),
   ],
 }

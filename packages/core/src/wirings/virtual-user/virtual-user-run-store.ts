@@ -1,4 +1,6 @@
 import type {
+  IntentRecord,
+  StepRecord,
   VirtualUserDisposition,
   VirtualUserFinding,
   VirtualUserTally,
@@ -39,6 +41,16 @@ export interface VirtualUserRunRecord {
    */
   memory: Record<string, string>
   findings: VirtualUserFinding[]
+  /**
+   * What the user set out to do and how far each one got, which is the spine a
+   * transcript hangs off — the steps alone are a list of calls with no account
+   * of what they were for.
+   *
+   * Small and bounded, so it rides on the run row rather than in a table of its
+   * own: a run has as many intents as the app has scenarios, and every read of
+   * the run wants them.
+   */
+  intents: IntentRecord[]
   tally: VirtualUserTally | null
   /** Which budget or stopping rule ended the run. */
   stoppedBy: string | null
@@ -69,6 +81,16 @@ export interface VirtualUserRunOutcome {
   tally: VirtualUserTally
   memory: Record<string, string>
   stoppedBy: string | null
+  intents: readonly IntentRecord[]
+  /**
+   * Every turn the run took. Kept because a finding is an assertion until you
+   * can see what the user did before it, and because a run that found nothing
+   * is only readable as work through its steps.
+   *
+   * Stored apart from the run — see {@link VirtualUserRunStore.steps} — so
+   * listing runs does not drag a budget's worth of turns along with it.
+   */
+  steps: readonly StepRecord[]
 }
 
 /**
@@ -95,4 +117,15 @@ export interface VirtualUserRunStore {
     limit?: number
     offset?: number
   }): Promise<VirtualUserRunRecord[]>
+  /**
+   * One run's turns, in the order they happened.
+   *
+   * Its own call rather than a field on the record: a run at a 500-step budget
+   * carries more transcript than every other column put together, and `list`
+   * would pay for it on every row.
+   */
+  steps(
+    runId: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<StepRecord[]>
 }
