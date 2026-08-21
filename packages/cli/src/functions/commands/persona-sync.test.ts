@@ -6,7 +6,11 @@ import { join } from 'node:path'
 import { createServer, type Server } from 'node:http'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import { KyselyScopeService } from '@pikku/kysely'
+import {
+  KyselyScopeService,
+  applyPikkuSchemas,
+  scopeSchema,
+} from '@pikku/kysely'
 import { createKysely } from '../db/local-db.js'
 import { personaSync } from './persona-sync.js'
 
@@ -219,6 +223,7 @@ beforeEach(async () => {
     .addColumn('email', 'text')
     .addColumn('actor', 'integer')
     .execute()
+  await applyPikkuSchemas(db, [scopeSchema])
   const service = new KyselyScopeService(db)
   await service.init()
   await db.destroy()

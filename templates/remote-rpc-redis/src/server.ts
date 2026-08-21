@@ -1,9 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { RedisDeploymentService } from '@pikku/redis'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 import '#pikku/pikku-bootstrap.gen.js'
 
 const PORT = parseInt(process.env.PORT || '3001', 10)

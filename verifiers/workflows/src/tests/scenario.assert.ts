@@ -12,7 +12,8 @@ import '../../.pikku/pikku-bootstrap.gen.js'
 // Scenarios are not in the main bootstrap by design — a server must never
 // import a step body — so a test that runs one has to opt in explicitly.
 import '../../.pikku/pikku-bootstrap-scenarios.gen.js'
-import { createConfig, createSingletonServices } from '../services.js'
+import { createSingletonServices } from '../services.js'
+import { createConfig } from '../config.js'
 import {
   resetSurfaceLog,
   surfaceLog,

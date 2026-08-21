@@ -406,6 +406,22 @@ check(
 for (const table of ['workflow_runs', 'agent_run', 'secrets']) {
   contains(runtimeSql, table, 'runtime table')
 }
+
+// The other half of the gate: a schema whose owning service this project never
+// reaches is not written into its migrations at all. Without this, scoping is
+// unfalsifiable — everything would still be generated and still pass.
+for (const table of [
+  'channels',
+  'webhook_delivery',
+  'credentials',
+  'audit',
+  'virtual_user_run',
+]) {
+  check(
+    !new RegExp(`create table "${table}"`, 'i').test(runtimeSql),
+    `${table} is absent — no service here owns it`
+  )
+}
 check(
   !generated.includes('could not be recognised'),
   'no runtime schema was skipped for an unmet requirement'

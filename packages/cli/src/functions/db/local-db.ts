@@ -23,6 +23,7 @@ import {
   applyPikkuSchemas,
   compilePikkuSchemas,
   pikkuSchemas,
+  requiredPikkuSchemas,
   resolveRequirements,
   createCoercionPlugin,
   type PikkuSchema,
@@ -1171,13 +1172,23 @@ export interface DesiredRuntimeSchema extends DesiredSchema {
  * scope tables, so the schemas that wanted them are left out and returned in
  * `skipped` — reported rather than dropped, because the tables they would have
  * recognised now have nothing to explain them.
+ *
+ * `services` narrows the declaration to the schemas the services a project's
+ * code actually reaches own, for the caller that is about to write a migration:
+ * a project with no agents should not carry `agent_threads` in its migrations
+ * forever. Omit it and the whole declaration answers, which is what the caller
+ * that is *recognising* tables wants — a table created by a service that has
+ * since been dropped still has to read as a runtime table rather than as an
+ * unexplained one.
  */
 export async function desiredRuntimeSchema(
   resolved: ResolvedDb,
   rootDir: string,
   srcDirectories: string[],
-  logger: { error: (msg: string) => void }
+  logger: { error: (msg: string) => void },
+  services?: ReadonlySet<string>
 ): Promise<DesiredRuntimeSchema> {
+  const declared = services ? requiredPikkuSchemas(services) : pikkuSchemas
   const skipped: SkippedRuntimeSchema[] = []
 
   const collect = async (
@@ -1191,7 +1202,7 @@ export async function desiredRuntimeSchema(
     await applyAuthSchema(db, rootDir, srcDirectories, logger)
     const before = await introspect()
 
-    const { types, unmet } = await resolveRequirements(db)
+    const { types, unmet } = await resolveRequirements(db, declared)
     for (const { schema, requirement } of unmet) {
       skipped.push({
         schema: schema.name,
@@ -1200,7 +1211,7 @@ export async function desiredRuntimeSchema(
       })
     }
     const unavailable = new Set(unmet.map(({ schema }) => schema.name))
-    const schemas = pikkuSchemas.filter((s) => !unavailable.has(s.name))
+    const schemas = declared.filter((s) => !unavailable.has(s.name))
 
     await applyPikkuSchemas(db, schemas)
     const after = await introspect()
@@ -1687,7 +1698,8 @@ export async function schemaSources(
   rootDir: string,
   srcDirectories: string[],
   logger: { error: (msg: string) => void },
-  addons: AddonDeclaration[] = []
+  addons: AddonDeclaration[] = [],
+  services?: ReadonlySet<string>
 ): Promise<SchemaSource[]> {
   const sources: SchemaSource[] = []
 
@@ -1709,7 +1721,8 @@ export async function schemaSources(
     resolved,
     rootDir,
     srcDirectories,
-    logger
+    logger,
+    services
   )
   if (runtime.tables.size > 0) {
     sources.push({
@@ -1806,14 +1819,16 @@ export async function generateMigrations(
   rootDir: string,
   srcDirectories: string[],
   logger: { error: (msg: string) => void },
-  addons: AddonDeclaration[] = []
+  addons: AddonDeclaration[] = [],
+  services?: ReadonlySet<string>
 ): Promise<GenerateResult> {
   const sources = await schemaSources(
     resolved,
     rootDir,
     srcDirectories,
     logger,
-    addons
+    addons,
+    services
   )
   const result: GenerateResult = { upToDate: [], written: [] }
 

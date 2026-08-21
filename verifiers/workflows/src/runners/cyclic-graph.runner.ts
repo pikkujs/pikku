@@ -20,7 +20,8 @@
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
 import { rpcService } from '@pikku/core/rpc'
 
-import { createConfig, createSingletonServices } from '../services.js'
+import { createSingletonServices } from '../services.js'
+import { createConfig, connectionString } from '../config.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
 
@@ -49,9 +50,6 @@ async function setup(backend: Backend): Promise<{
     const { Kysely, CamelCasePlugin } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')
     const postgres = (await import('postgres')).default
-    const connectionString =
-      process.env.DATABASE_URL ||
-      'postgres://postgres:password@localhost:5432/pikku_queue'
 
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()

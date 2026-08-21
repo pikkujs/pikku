@@ -11,14 +11,11 @@ import { Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 
-import { createConfig, createSingletonServices } from '../services.js'
+import { createSingletonServices } from '../services.js'
+import { createConfig, connectionString } from '../config.js'
 import { workflowTestData } from './workflow-test-data.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
-
-const connectionString =
-  process.env.DATABASE_URL ||
-  'postgres://postgres:password@localhost:5432/pikku_queue'
 
 const POLL_INTERVAL_MS = 100
 const TIMEOUT_MS = 30_000

@@ -7,6 +7,7 @@ import type { StepState } from '@pikku/core/ecosystem/workflow'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { SerializePlugin } from './serialize-plugin.js'
 import { KyselyWorkflowService } from './kysely-workflow-service.js'
+import { applyPikkuSchemas, workflowSchema } from './schema/index.js'
 
 let db: Kysely<KyselyPikkuDB>
 let service: KyselyWorkflowService
@@ -31,6 +32,7 @@ const createDb = () => {
 
 beforeEach(async () => {
   db = createDb()
+  await applyPikkuSchemas(db, [workflowSchema])
   service = new KyselyWorkflowService(db, { wireQueues: false } as any)
   await service.init()
 })

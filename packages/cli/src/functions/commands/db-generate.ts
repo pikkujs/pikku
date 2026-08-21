@@ -32,7 +32,8 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       config.rootDir,
       config.srcDirectories,
       logger,
-      addons
+      addons,
+      state.serviceAggregation.requiredServices
     )
 
     for (const source of upToDate) {

@@ -101,6 +101,26 @@ export interface PikkuSchema {
    * database — or, worse, a stub table conjured up to make the error go away.
    */
   requires?: SchemaRequirement[]
+  /**
+   * The singleton services whose `init()` requires these tables, or absent for
+   * a schema every project needs.
+   *
+   * Named as services rather than as wirings because a service is what the
+   * tables actually belong to: one `requirePikkuSchema` call site per service,
+   * and `pikku db generate` writes the schema for a project whose functions
+   * reach any of them. A wiring is a poor proxy — a project can construct
+   * `KyselyWorkflowService` and wire no workflows at all.
+   *
+   * Absent means unconditional. `secrets` is on every project and the session
+   * and deployment stores are reached by generated code rather than by
+   * functions, so nothing a project writes implies them and their absence
+   * cannot be inferred.
+   *
+   * Under-naming is safe now that the runtime creates nothing: a schema left
+   * out of the migration is a sentence at startup, not a table conjured behind
+   * your back. Over-naming costs an unused table. Prefer over-naming.
+   */
+  ownedBy?: string[]
 }
 
 /**

@@ -7,6 +7,7 @@ import { setSingletonServices } from '@pikku/core/state'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { SerializePlugin } from './serialize-plugin.js'
 import { KyselyWebhookService } from './kysely-webhook-service.js'
+import { applyPikkuSchemas, webhookSchema } from './schema/index.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
@@ -50,6 +51,7 @@ describe('KyselyWebhookService', () => {
   test('send() inserts a pending delivery and enqueues with deliveryId === jobId', async () => {
     const db = createDb()
     const { added, queue } = createQueue()
+    await applyPikkuSchemas(db, [webhookSchema])
     const service = new KyselyWebhookService(queue as any, db)
     await service.init()
 
@@ -76,6 +78,7 @@ describe('KyselyWebhookService', () => {
   test('recordAttempt() appends attempts and rolls status forward', async () => {
     const db = createDb()
     const { queue } = createQueue()
+    await applyPikkuSchemas(db, [webhookSchema])
     const service = new KyselyWebhookService(queue as any, db)
     await service.init()
 
@@ -104,6 +107,7 @@ describe('KyselyWebhookService', () => {
   test('listDeliveries() filters by organization', async () => {
     const db = createDb()
     const { queue } = createQueue()
+    await applyPikkuSchemas(db, [webhookSchema])
     const service = new KyselyWebhookService(queue as any, db)
     await service.init()
 

@@ -1,9 +1,7 @@
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { stopSingletonServices } from '@pikku/core/utils'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 import '#pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {

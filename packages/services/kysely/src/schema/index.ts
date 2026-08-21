@@ -7,6 +7,7 @@ import {
   type SchemaRequirement,
 } from './pikku-schema.types.js'
 import { agentSchema } from './agent.schema.js'
+import { auditSchema } from './audit.schema.js'
 import { channelSchema } from './channel.schema.js'
 import { credentialSchema } from './credential.schema.js'
 import { deploymentSchema } from './deployment.schema.js'
@@ -15,6 +16,7 @@ import { secretSchema } from './secret.schema.js'
 import { sessionSchema } from './session.schema.js'
 import { webhookSchema } from './webhook.schema.js'
 import { workflowSchema } from './workflow.schema.js'
+import { virtualUserSchema } from './virtual-user.schema.js'
 
 export type {
   PikkuSchema,
@@ -32,18 +34,18 @@ export {
 } from './pikku-schema.types.js'
 
 /**
- * Opt-in, so it is named here rather than folded into `pikkuSchemas` — the
- * runtime works without an audit table, and `KyselyAuditService.init()` applies
- * this for the projects that wire the sink.
- */
-export { auditSchema } from './audit.schema.js'
-
-/**
- * Every table the pikku runtime needs, in dependency order.
+ * Every table any part of the pikku runtime can need, in dependency order.
  *
  * Order is load-bearing, not cosmetic: `scope` has foreign keys onto Better
  * Auth's `user`, and the tables within each schema reference each other. Sort
  * this list alphabetically and it stops applying.
+ *
+ * `audit` and `virtualUser` are in the list now. They used to be left out and
+ * created by their own services at boot, which was the only way they ever came
+ * into existence — so with the runtime no longer creating anything, leaving
+ * them out would mean a wired audit sink starting up against a table that
+ * nothing writes a migration for. Both are gated by `ownedBy`, so a project
+ * that wires neither still carries neither.
  */
 export const pikkuSchemas: PikkuSchema[] = [
   channelSchema,
@@ -55,7 +57,39 @@ export const pikkuSchemas: PikkuSchema[] = [
   workflowSchema,
   agentSchema,
   scopeSchema,
+  auditSchema,
+  virtualUserSchema,
 ]
+
+export { agentSchema } from './agent.schema.js'
+export { auditSchema } from './audit.schema.js'
+export { channelSchema } from './channel.schema.js'
+export { credentialSchema } from './credential.schema.js'
+export { deploymentSchema } from './deployment.schema.js'
+export { scopeSchema } from './scope.schema.js'
+export { secretSchema } from './secret.schema.js'
+export { sessionSchema } from './session.schema.js'
+export { virtualUserSchema } from './virtual-user.schema.js'
+export { webhookSchema } from './webhook.schema.js'
+export { workflowSchema } from './workflow.schema.js'
+
+/**
+ * The schemas a project needs, given the services its code actually reaches.
+ *
+ * `services` is the inspector's `requiredServices` — the same set that drives
+ * service tree-shaking, so a schema is written for exactly the projects whose
+ * functions, middleware or wirings reach the service that owns its tables.
+ *
+ * The gate is one-sided: a schema declaring no `ownedBy` is always in, because
+ * nothing a project writes implies it and leaving it out would be a guess.
+ */
+export const requiredPikkuSchemas = (
+  services: ReadonlySet<string>
+): PikkuSchema[] =>
+  pikkuSchemas.filter(
+    (schema) =>
+      !schema.ownedBy || schema.ownedBy.some((name) => services.has(name))
+  )
 
 /**
  * Bind a declaration to a database.
@@ -287,9 +321,6 @@ export const declaredTables = (
   return tables
 }
 
-/** What `ensurePikkuSchema` found when it looked. */
-export type EnsureOutcome = 'present' | 'created'
-
 /**
  * What `db` already has, indexed both ways.
  *
@@ -337,58 +368,42 @@ const isPresent = (existing: ExistingTables, table: DeclaredTable): boolean =>
     : existing.bare.has(table.name)
 
 /**
- * Make sure one schema's tables are there, creating them only if none are.
+ * Refuse to start unless one schema's tables are already there.
  *
- * What a service calls at boot. It looks before it creates, which is the whole
- * difference from the `.ifNotExists()` DDL this replaces: that spelling turned
- * every failure into a silent no-op, and hid a foreign key onto `user.id` that
- * postgres had been rejecting since the day it was written.
+ * What a service calls at boot, and it never issues DDL. The runtime is not an
+ * author of the schema: `pikku db generate` writes the declaration down as a
+ * migration and `pikku db migrate` applies it, and those two are the only way
+ * these tables come into existence. A service that finds them missing says so
+ * and stops.
  *
- * A partially-present schema is refused rather than completed. Half a schema
- * means something else already applied part of it — a migration, an older
- * version, a hand-run script — and creating the remainder at boot would leave
- * two authorities over one set of tables, which is the condition all of this
- * exists to end.
+ * This is the whole point of gating what `db generate` writes. While boot could
+ * still create, a schema that generation left out was created silently at
+ * startup instead — two authorities over one set of tables, which is the
+ * condition all of this exists to end. With creation gone, a schema generation
+ * missed is a sentence at startup naming the command that fixes it.
  *
- * Creating at boot is the fallback, not the intent. `pikku db generate` writes
- * the declaration down as a migration; a project that has done so takes the
- * `present` path and this never issues DDL at all.
+ * Half-present is not a distinct case any more. Every missing table is reported
+ * the same way, because the remedy is the same one either way.
  */
-export const ensurePikkuSchema = async (
+export const requirePikkuSchema = async (
   db: Kysely<any>,
   schema: PikkuSchema
-): Promise<EnsureOutcome> => {
+): Promise<void> => {
   const existing = await tablesOf(db)
   const declared = declaredTables(schema, db)
   const missing = declared.filter((table) => !isPresent(existing, table))
 
-  if (missing.length === 0) return 'present'
+  if (missing.length === 0) return
 
-  if (missing.length < declared.length) {
-    throw new Error(
-      `The '${schema.name}' schema is half applied: ${missing.map(displayName).join(', ')} missing, ` +
-        `${declared
-          .filter((table) => isPresent(existing, table))
-          .map(displayName)
-          .join(', ')} already there. ` +
-        'Something else owns part of it. Reconcile it with a migration — ' +
-        '`pikku db generate` writes the declaration down — rather than creating the rest at boot.'
-    )
-  }
-
-  try {
-    await applyPikkuSchemas(db, [schema])
-    return 'created'
-  } catch (error) {
-    // Two instances booting cold against one database can both see it empty
-    // before either has finished creating. If the other one got there, say so;
-    // anything else is a real failure and still throws. This is a courtesy, not
-    // a guarantee — a boot race is only fully answered by having run the
-    // migration, which is what `pikku db generate` is for.
-    const after = await tablesOf(db)
-    if (declared.every((table) => isPresent(after, table))) return 'present'
-    throw error
-  }
+  const present = declared.filter((table) => isPresent(existing, table))
+  throw new Error(
+    `The '${schema.name}' schema is not in this database: ${missing.map(displayName).join(', ')} missing` +
+      (present.length > 0
+        ? `, ${present.map(displayName).join(', ')} already there`
+        : '') +
+      '. The runtime does not create these — run `pikku db generate` to write the ' +
+      'migration, then `pikku db migrate` to apply it.'
+  )
 }
 
 /**

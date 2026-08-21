@@ -1287,6 +1287,54 @@ describe('db.schema', () => {
     )
   })
 
+  /**
+   * The half of #713 that survived: a project's migrations should carry the
+   * runtime tables it has a use for, not all nine schemas unconditionally.
+   */
+  test('the declaration narrows to the services the project reaches', async () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root)!
+    const logger = {
+      error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+    }
+
+    const runtime = await desiredRuntimeSchema(
+      resolved,
+      root,
+      ['src'],
+      logger,
+      new Set(['workflowService'])
+    )
+
+    assert.ok(runtime.tables.has('workflow_step'), 'the service it wires')
+    assert.ok(!runtime.tables.has('agent_run'), 'a service it does not wire')
+    assert.ok(!runtime.tables.has('channels'))
+    assert.ok(!runtime.tables.has('webhook_delivery'))
+    assert.ok(!runtime.tables.has('credentials'))
+
+    // No service owns these, so they are never gated off.
+    assert.ok(runtime.tables.has('pikku_user_sessions'))
+    assert.ok(runtime.tables.has('secrets'))
+    assert.ok(runtime.tables.has('pikku_deployments'))
+  })
+
+  /**
+   * Drift recognises rather than requires, so it asks the unscoped question.
+   * A table created by a wiring that has since been deleted is still a runtime
+   * table, and scoping the declaration here would report it as unexplained.
+   */
+  test('omitting the wirings keeps the whole declaration', async () => {
+    usePostgresProject()
+    const resolved = resolveDb({}, root, root)!
+    const runtime = await desiredRuntimeSchema(resolved, root, ['src'], {
+      error: (msg: string) => assert.fail(`unexpected error log: ${msg}`),
+    })
+
+    assert.ok(runtime.tables.has('agent_run'))
+    assert.ok(runtime.tables.has('channels'))
+    assert.ok(runtime.tables.has('workflow_step'))
+  })
+
   test('the runtime SQL is qualified while the table names stay bare', async () => {
     usePostgresProject()
     const resolved = resolveDb({}, root, root, undefined, 'app')!

@@ -7,6 +7,7 @@ import Database from 'better-sqlite3'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyWorkflowMirror } from './kysely-workflow-mirror.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
+import { applyPikkuSchemas, workflowSchema } from './schema/index.js'
 
 let db: Kysely<KyselyPikkuDB>
 let mirror: KyselyWorkflowMirror
@@ -20,6 +21,7 @@ beforeEach(async () => {
     dialect: new SqliteDialect({ database: new Database(':memory:') }),
     plugins: [new CamelCasePlugin(), new SerializePlugin()],
   })
+  await applyPikkuSchemas(db, [workflowSchema])
   mirror = new KyselyWorkflowMirror(db)
   await mirror.init()
   runService = new KyselyWorkflowRunService(db)

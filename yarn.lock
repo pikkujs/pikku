@@ -5910,6 +5910,7 @@ __metadata:
     "@ai-sdk/anthropic": "npm:^4.0.39"
     "@ai-sdk/openai": "npm:^4.0.42"
     "@pikku/ai-vercel": "npm:^0.12.13"
+    "@pikku/cli": "npm:^0.12.109"
     "@pikku/core": "npm:^0.12.88"
     "@pikku/express": "npm:^0.12.14"
     "@pikku/kysely-postgres": "npm:^0.12.21"

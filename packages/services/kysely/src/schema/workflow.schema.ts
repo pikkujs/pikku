@@ -18,6 +18,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  */
 export const workflowSchema: PikkuSchema = {
   name: 'workflow',
+  ownedBy: ['workflowService', 'workflowRunService'],
   statements: [
     (db) =>
       db.schema

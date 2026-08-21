@@ -2,10 +2,8 @@ import { PikkuExpressServer } from '@pikku/express'
 import { PikkuKysely, PgKyselyDeploymentService } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { ConsoleLogger } from '@pikku/core/services'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig, connectionString } from './config.js'
 import '#pikku/pikku-bootstrap.gen.js'
 
 const PORT = parseInt(process.env.PORT || '3001', 10)
@@ -16,11 +14,7 @@ async function main(): Promise<void> {
     const config = await createConfig()
     const logger = new ConsoleLogger()
 
-    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(
-      logger,
-      process.env.DATABASE_URL ||
-        'postgres://postgres:password@localhost:5432/pikku_remote_rpc'
-    )
+    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger, connectionString)
     await pikkuKysely.init()
 
     // Create singleton services first to get jwt + secrets

@@ -13,6 +13,7 @@ import { rawStatement, type PikkuSchema } from './pikku-schema.types.js'
  */
 export const credentialSchema: PikkuSchema = {
   name: 'credential',
+  ownedBy: ['credentialService'],
   statements: [
     (db) =>
       db.schema

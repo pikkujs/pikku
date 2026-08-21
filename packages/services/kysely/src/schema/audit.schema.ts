@@ -3,10 +3,11 @@ import type { PikkuSchema } from './pikku-schema.types.js'
 /**
  * The `audit` table {@link KyselyAuditService} writes to and reads back.
  *
- * Deliberately not in `pikkuSchemas`: the runtime never needs this table, only
- * a project that has wired a durable audit sink does, and creating it for
- * everyone would put an empty table in every database. `KyselyAuditService.init()`
- * applies it, so it arrives exactly when the sink that fills it does.
+ * Gated by `ownedBy` rather than written for everyone: only a project that has
+ * wired a durable audit sink needs this table, and generating it for the rest
+ * would put an empty table in every database. `KyselyAuditService.init()`
+ * requires it and never creates it, so it arrives with the migration `pikku db
+ * generate` writes for the sink that fills it.
  *
  * Every column is text on every engine, matching the platform audit-queue
  * consumer's row shape — a locally-run project and a deployed stage write rows
@@ -16,6 +17,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  */
 export const auditSchema: PikkuSchema = {
   name: 'audit',
+  ownedBy: ['audit', 'auditLog'],
   statements: [
     (db) =>
       db.schema

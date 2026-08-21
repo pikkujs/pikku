@@ -10,7 +10,7 @@ import type { SecretService, SecretValues } from '@pikku/core/services'
 import type { SecretValue } from '@pikku/core/classification'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { secretSchema } from './schema/secret.schema.js'
 
 export interface KyselySecretServiceConfig {
@@ -44,7 +44,7 @@ export class KyselySecretService implements SecretService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, secretSchema)
+    await requirePikkuSchema(this.db, secretSchema)
     this.initialized = true
   }
 

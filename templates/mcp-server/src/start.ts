@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
 import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
-import {
-  createSingletonServices,
-  createConfig,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 
 import mcpJSON from '#pikku/mcp/mcp.gen.json' with { type: 'json' }
 import '#pikku/pikku-bootstrap.gen.js'

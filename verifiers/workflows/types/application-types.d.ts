@@ -9,7 +9,10 @@ import type {
 } from '@pikku/core/types'
 import type { EventHubTopics } from './eventhub-topics.js'
 
-export interface Config extends CoreConfig {}
+export interface Config extends CoreConfig {
+  /** The postgres the db-backed runners share; `pikku db` reads it from here. */
+  postgresUrl: string
+}
 
 export interface UserSession extends CoreUserSession {
   userId: string

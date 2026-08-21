@@ -1,8 +1,6 @@
 import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 
 export const setupServices = async (
   env: Record<string, string | undefined>

@@ -6,7 +6,7 @@ import type {
   AuditQueryResult,
 } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { auditSchema } from './schema/audit.schema.js'
 
 const jsonOrNull = (v: unknown): string | null =>
@@ -103,7 +103,7 @@ export class KyselyAuditService implements AuditService {
    */
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, auditSchema)
+    await requirePikkuSchema(this.db, auditSchema)
     this.initialized = true
   }
 

@@ -10,7 +10,7 @@ import {
 } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { webhookSchema } from './schema/webhook.schema.js'
 
 /**
@@ -32,7 +32,7 @@ export class KyselyWebhookService extends QueueWebhookService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, webhookSchema)
+    await requirePikkuSchema(this.db, webhookSchema)
     this.initialized = true
   }
 

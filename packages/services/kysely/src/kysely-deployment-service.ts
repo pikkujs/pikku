@@ -9,7 +9,7 @@ import type { SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { deploymentSchema } from './schema/deployment.schema.js'
 
 export class KyselyDeploymentService implements DeploymentService {
@@ -31,7 +31,7 @@ export class KyselyDeploymentService implements DeploymentService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, deploymentSchema)
+    await requirePikkuSchema(this.db, deploymentSchema)
     this.initialized = true
   }
 

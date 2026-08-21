@@ -9,7 +9,7 @@ import type {
 } from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { workflowSchema } from './schema/workflow.schema.js'
 
 /**
@@ -33,14 +33,14 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
    * Create the underlying tables if none of them exist yet.
    *
    * Safe to call from either the mirror or `KyselyWorkflowService.init()` —
-   * both apply the same `workflowSchema`, and `ensurePikkuSchema` is a no-op
+   * both apply the same `workflowSchema`, and `requirePikkuSchema` is a no-op
    * once the tables are there. A database holding only *part* of the schema
    * throws rather than filling in the rest: something else owns those tables,
    * and boot is not where that gets reconciled.
    */
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, workflowSchema)
+    await requirePikkuSchema(this.db, workflowSchema)
     this.initialized = true
   }
 

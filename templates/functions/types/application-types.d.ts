@@ -22,6 +22,12 @@ export interface Config extends CoreConfig {
   awsRegion: string
   /** JWT signing keys, as key id -> the name of the secret holding its value. */
   jwtSecrets?: Record<string, string>
+  /**
+   * The database the runtime tables live in. `pikku db generate` and `pikku db
+   * migrate` read it from here, so a template that sets it is a template whose
+   * schema arrives by migration.
+   */
+  postgresUrl?: string
 }
 
 export interface UserSession extends CoreUserSession {

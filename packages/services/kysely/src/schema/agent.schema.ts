@@ -13,6 +13,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  */
 export const agentSchema: PikkuSchema = {
   name: 'agent',
+  ownedBy: ['agentStorage', 'agentRunState', 'agentRunService'],
   statements: [
     (db) =>
       db.schema

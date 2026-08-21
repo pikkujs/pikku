@@ -14,7 +14,7 @@ import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 import { getRunScores, saveRunScore } from './kysely-agent-run-scores.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { agentSchema } from './schema/agent.schema.js'
 
 export class KyselyAgentStorageService
@@ -26,7 +26,7 @@ export class KyselyAgentStorageService
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, agentSchema)
+    await requirePikkuSchema(this.db, agentSchema)
     this.initialized = true
   }
 

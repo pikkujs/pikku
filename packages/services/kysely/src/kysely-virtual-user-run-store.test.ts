@@ -6,6 +6,7 @@ import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely'
 import { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'
 import { SerializePlugin } from './serialize-plugin.js'
 import type { KyselyPikkuDB } from './kysely-tables.js'
+import { applyPikkuSchemas, virtualUserSchema } from './schema/index.js'
 
 // SerializePlugin is here because most projects in this package run with it, and
 // it is the harder case: it deserialises JSON columns the store has already
@@ -15,6 +16,12 @@ const newDb = () =>
     dialect: new SqliteDialect({ database: new Database(':memory:') }),
     plugins: [new CamelCasePlugin(), new SerializePlugin()],
   })
+
+const migratedDb = async () => {
+  const db = newDb()
+  await applyPikkuSchemas(db, [virtualUserSchema])
+  return db
+}
 
 const TALLY = {
   steps: 12,
@@ -36,15 +43,23 @@ describe('KyselyVirtualUserRunStore', () => {
   let db: Kysely<KyselyPikkuDB>
   let store: KyselyVirtualUserRunStore
 
-  beforeEach(() => {
-    db = newDb()
+  beforeEach(async () => {
+    db = await migratedDb()
     store = new KyselyVirtualUserRunStore(db)
   })
 
-  // The runtime never needs this table, so it arrives with the feature that
-  // fills it rather than in every database — which means the first write has to
-  // create it.
-  test('creates its table on first use', async () => {
+  // The runtime never creates this table, so a project that skipped the
+  // migration has to be told which command writes it rather than quietly
+  // getting one at first use.
+  test('refuses to start against a database that never migrated it', async () => {
+    const store = new KyselyVirtualUserRunStore(newDb())
+    await assert.rejects(
+      store.start({ persona: 'susan', disposition: 'realistic', seed: 42 }),
+      /pikku db generate/
+    )
+  })
+
+  test('writes against a migrated table', async () => {
     const runId = await store.start({
       persona: 'susan',
       disposition: 'realistic',
@@ -184,6 +199,7 @@ describe('KyselyVirtualUserRunStore', () => {
       dialect: new SqliteDialect({ database: new Database(':memory:') }),
       plugins: [new CamelCasePlugin()],
     })
+    await applyPikkuSchemas(bare, [virtualUserSchema])
     const bareStore = new KyselyVirtualUserRunStore(bare)
 
     const runId = await bareStore.start({

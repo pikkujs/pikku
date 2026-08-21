@@ -3,15 +3,9 @@ import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PikkuKysely, PgKyselyWorkflowService } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { InMemoryTriggerService, ConsoleLogger } from '@pikku/core/services'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig, connectionString } from './config.js'
 import '#pikku/pikku-bootstrap.gen.js'
-
-const connectionString =
-  process.env.DATABASE_URL ||
-  'postgres://postgres:password@localhost:5432/pikku_queue'
 
 async function main(): Promise<void> {
   try {

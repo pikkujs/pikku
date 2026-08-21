@@ -26,10 +26,20 @@ import { pikkuBetterAuth } from '#pikku/auth'
  *
  * Nothing runs migrations at boot. `pikku db generate` writes them down and
  * `pikku db migrate` applies them; that is the behaviour under test.
+ *
+ * The secret arrives through the batch `getSecrets`, the form an app reaching
+ * for more than one of them uses. Schema introspection runs this factory
+ * against a stub secret service, so every method a real factory might call has
+ * to be on it — a missing one throws before Better Auth is ever constructed,
+ * and the migration is never written.
  */
-export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) =>
-  betterAuth({
-    secret: (await secrets.getSecret('BETTER_AUTH_SECRET')).reveal(),
+export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) => {
+  const { BETTER_AUTH_SECRET } = await secrets.getSecrets<{
+    BETTER_AUTH_SECRET: string
+  }>(['BETTER_AUTH_SECRET'])
+
+  return betterAuth({
+    secret: BETTER_AUTH_SECRET!.reveal(),
     baseURL: 'http://localhost',
     database: {
       db: kysely,
@@ -39,4 +49,4 @@ export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) =>
     advanced: { database: { generateId: 'uuid' } },
     plugins: [organization(), ban(), twoFactor()],
   })
-)
+})

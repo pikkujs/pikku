@@ -1,9 +1,7 @@
 import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'
 import { InMemorySchedulerService } from '@pikku/schedule'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {

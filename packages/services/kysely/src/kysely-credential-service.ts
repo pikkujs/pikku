@@ -8,7 +8,7 @@ import {
 import type { CredentialService } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
-import { ensurePikkuSchema } from './schema/index.js'
+import { requirePikkuSchema } from './schema/index.js'
 import { credentialSchema } from './schema/credential.schema.js'
 
 export interface KyselyCredentialServiceConfig {
@@ -42,7 +42,7 @@ export class KyselyCredentialService implements CredentialService {
 
   public async init(): Promise<void> {
     if (this.initialized) return
-    await ensurePikkuSchema(this.db, credentialSchema)
+    await requirePikkuSchema(this.db, credentialSchema)
     this.initialized = true
   }
 

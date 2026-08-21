@@ -14,9 +14,10 @@ import {
 import Database from 'better-sqlite3'
 import {
   pikkuSchemas,
+  requiredPikkuSchemas,
   compilePikkuSchemas,
   applyPikkuSchemas,
-  ensurePikkuSchema,
+  requirePikkuSchema,
   declaredTables,
   unsatisfiedRequirements,
   type PikkuSchema,
@@ -238,17 +239,32 @@ describe('pikku runtime schema — prerequisites', () => {
   })
 })
 
-describe('ensurePikkuSchema — what a service does at boot', () => {
+describe('requirePikkuSchema — what a service does at boot', () => {
   const memoryDb = () =>
     new Kysely<any>({
       dialect: new SqliteDialect({ database: new Database(':memory:') }),
     })
 
-  test('creates the tables the first time and finds them the second', async () => {
+  test('refuses a database the migration never reached, naming the command', async () => {
     const db = memoryDb()
     try {
-      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'created')
-      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
+      await assert.rejects(
+        requirePikkuSchema(db, workflowSchema),
+        /The 'workflow' schema is not in this database.*pikku db generate/s
+      )
+    } finally {
+      await db.destroy()
+    }
+  })
+
+  test('creates nothing on the way to that refusal', async () => {
+    // The whole point: a service that finds its tables missing stops, and the
+    // database it stopped against is exactly as it was.
+    const db = memoryDb()
+    try {
+      await assert.rejects(requirePikkuSchema(db, workflowSchema))
+      const tables = await db.introspection.getTables()
+      assert.deepEqual(tables, [])
     } finally {
       await db.destroy()
     }
@@ -256,21 +272,22 @@ describe('ensurePikkuSchema — what a service does at boot', () => {
 
   test('two services declaring the same schema do not fight over it', async () => {
     // The workflow service and the workflow mirror both own these tables, and
-    // both call init(). Whoever runs second must find them and stop, rather
-    // than issuing DDL the database will reject.
+    // both call init(). Neither creates anything, so both find the migrated
+    // tables and return.
     const db = memoryDb()
     try {
-      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'created')
-      assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
+      await applyPikkuSchemas(db, [workflowSchema])
+      await assert.doesNotReject(requirePikkuSchema(db, workflowSchema))
+      await assert.doesNotReject(requirePikkuSchema(db, workflowSchema))
     } finally {
       await db.destroy()
     }
   })
 
-  test('refuses a half-applied schema rather than filling in the rest', async () => {
+  test('a half-applied schema is refused the same way a missing one is', async () => {
     // Something else already owns part of it — a migration, an older release,
-    // a hand-run script. Creating the remainder at boot leaves two authorities
-    // over one set of tables, which is the condition all of this exists to end.
+    // a hand-run script. Half-present is not a distinct case: the remedy is the
+    // same migration either way, so the sentence names both halves and stops.
     const db = memoryDb()
     try {
       await db.schema
@@ -279,8 +296,8 @@ describe('ensurePikkuSchema — what a service does at boot', () => {
         .execute()
 
       await assert.rejects(
-        ensurePikkuSchema(db, workflowSchema),
-        /The 'workflow' schema is half applied/
+        requirePikkuSchema(db, workflowSchema),
+        /workflow_step.*missing.*workflow_runs already there/s
       )
     } finally {
       await db.destroy()
@@ -288,7 +305,7 @@ describe('ensurePikkuSchema — what a service does at boot', () => {
   })
 })
 
-describe('ensurePikkuSchema — a connection bound to a schema', () => {
+describe('requirePikkuSchema — a connection bound to a schema', () => {
   const WORKFLOW_TABLES = [
     'workflow_runs',
     'workflow_step',
@@ -301,7 +318,7 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
    *
    * Stubbed rather than run against a real database because sqlite has one
    * schema and nothing else here speaks postgres — and introspection is the
-   * only thing `ensurePikkuSchema` reads before it decides. DummyDriver takes
+   * only thing `requirePikkuSchema` reads before it decides. DummyDriver takes
    * whatever DDL follows.
    */
   const introspecting = (
@@ -352,9 +369,8 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
       WORKFLOW_TABLES.map((name) => ({ schema: 'app', name }))
     )
 
-    assert.equal(
-      await ensurePikkuSchema(db.withSchema('app'), workflowSchema),
-      'present'
+    await assert.doesNotReject(
+      requirePikkuSchema(db.withSchema('app'), workflowSchema)
     )
   })
 
@@ -365,9 +381,9 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
       WORKFLOW_TABLES.map((name) => ({ schema: 'public', name }))
     )
 
-    assert.equal(
-      await ensurePikkuSchema(db.withSchema('app'), workflowSchema),
-      'created'
+    await assert.rejects(
+      requirePikkuSchema(db.withSchema('app'), workflowSchema),
+      /is not in this database/
     )
   })
 
@@ -376,7 +392,7 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
       WORKFLOW_TABLES.map((name) => ({ schema: 'public', name }))
     )
 
-    assert.equal(await ensurePikkuSchema(db, workflowSchema), 'present')
+    await assert.doesNotReject(requirePikkuSchema(db, workflowSchema))
   })
 
   test('matches on the bare name when the engine reports no schemas', async () => {
@@ -387,9 +403,8 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
       WORKFLOW_TABLES.map((name) => ({ schema: undefined, name }))
     )
 
-    assert.equal(
-      await ensurePikkuSchema(db.withSchema('main'), workflowSchema),
-      'present'
+    await assert.doesNotReject(
+      requirePikkuSchema(db.withSchema('main'), workflowSchema)
     )
   })
 
@@ -414,7 +429,7 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
     })
 
     await assert.rejects(
-      ensurePikkuSchema(db.withSchema('app'), workflowSchema),
+      applyPikkuSchemas(db.withSchema('app'), [workflowSchema]),
       (error: Error) => {
         assert.equal(error, pgError, 'the engine error must pass through as-is')
         return true
@@ -431,7 +446,7 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
     })
     try {
       await assert.rejects(
-        ensurePikkuSchema(db.withSchema('main'), workflowSchema),
+        applyPikkuSchemas(db.withSchema('main'), [workflowSchema]),
         (error: Error) => {
           assert.match(error.message, /bound to a schema/)
           assert.match(error.message, /takes a bare table name/i)
@@ -448,7 +463,7 @@ describe('ensurePikkuSchema — a connection bound to a schema', () => {
     const db = introspecting([{ schema: 'app', name: 'workflow_runs' }])
 
     await assert.rejects(
-      ensurePikkuSchema(db.withSchema('app'), workflowSchema),
+      requirePikkuSchema(db.withSchema('app'), workflowSchema),
       /app\.workflow_step.*missing.*app\.workflow_runs already there/s
     )
   })
@@ -529,6 +544,48 @@ describe('compiling into a schema', () => {
     assert.match(
       db.schema.createTable('after').addColumn('id', 'text').compile().sql,
       /create table "after"/
+    )
+  })
+})
+
+describe('requiredPikkuSchemas', () => {
+  test('a project that reaches no service still gets the ungated schemas', () => {
+    const names = requiredPikkuSchemas(new Set()).map((s) => s.name)
+    assert.deepEqual(names, ['session', 'secret', 'deployment'])
+  })
+
+  test('a service brings in its own schema, in the declared order', () => {
+    const names = requiredPikkuSchemas(
+      new Set(['channelStore', 'workflowService'])
+    ).map((s) => s.name)
+    assert.deepEqual(names, [
+      'channel',
+      'session',
+      'secret',
+      'deployment',
+      'workflow',
+    ])
+  })
+
+  test('any one of a schema s owners is enough to ask for it', () => {
+    // A schema several services share is needed as soon as one of them is.
+    assert.ok(
+      requiredPikkuSchemas(new Set(['workflowRunService'])).some(
+        (s) => s.name === 'workflow'
+      )
+    )
+    assert.ok(
+      requiredPikkuSchemas(new Set(['eventHub'])).some(
+        (s) => s.name === 'channel'
+      )
+    )
+  })
+
+  test('naming every owner asks for everything', () => {
+    const owners = pikkuSchemas.flatMap((s) => s.ownedBy ?? [])
+    assert.equal(
+      requiredPikkuSchemas(new Set(owners)).length,
+      pikkuSchemas.length
     )
   })
 })

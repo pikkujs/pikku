@@ -3,10 +3,8 @@ import type {
   Config,
   SingletonServices,
 } from '../../functions/types/application-types.d.js'
-import {
-  createConfig,
-  createSingletonServices,
-} from '../../functions/src/services.js'
+import { createSingletonServices } from '../../functions/src/services.js'
+import { createConfig } from '../../functions/src/config.js'
 
 let config: Config
 let singletonServices: SingletonServices
