@@ -47,8 +47,21 @@ describe('getPikkuCLIConfig', () => {
     })
 
     await assert.rejects(
-      () => getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      () =>
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
       /startServerFnsFile is now clientFiles\.tanstackStartFile/
+    )
+  })
+
+  test('rejects a console scaffold still carrying the removed auth key', async () => {
+    const root = await writeConfig({
+      scaffold: { console: { auth: false } },
+    })
+
+    await assert.rejects(
+      () =>
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /scaffold\.console no longer takes "auth"/
     )
   })
 

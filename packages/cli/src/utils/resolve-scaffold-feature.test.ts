@@ -62,4 +62,35 @@ describe('resolveScaffoldFeature', () => {
       /must be true, false, or an object/
     )
   })
+
+  test('the removed auth key is refused by name', () => {
+    assert.throws(
+      () => resolveScaffoldFeature('console', { auth: false } as never),
+      (error: Error) => {
+        assert.match(error.message, /scaffold\.console/)
+        assert.match(error.message, /no longer takes "auth"/)
+        assert.match(error.message, /who may call it/)
+        return true
+      }
+    )
+  })
+
+  test('an unknown key is refused rather than ignored', () => {
+    assert.throws(
+      () => resolveScaffoldFeature('rpc', { paths: 'src/rpc.gen.ts' } as never),
+      (error: Error) => {
+        assert.match(error.message, /scaffold\.rpc/)
+        assert.match(error.message, /"paths"/)
+        assert.match(error.message, /"path"/)
+        return true
+      }
+    )
+  })
+
+  test('null is off, not an empty object', () => {
+    assert.throws(
+      () => resolveScaffoldFeature('rpc', null as never),
+      /must be true, false, or an object/
+    )
+  })
 })
