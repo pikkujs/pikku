@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-postgres",
-  "version": "0.12.21",
+  "version": "0.12.22",
   "description": "Postgres services and connection factory for Pikku, backed by Kysely",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -17,17 +17,17 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.19",
+    "@pikku/kysely": "^0.13.20",
     "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
     "postgres": "^3.4.9"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.87"
+    "@pikku/core": "^0.12.89"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.5",
-    "@pikku/core": "^0.12.87",
+    "@pikku/core": "^0.12.89",
     "typescript": "^6.0.3"
   },
   "exports": {
