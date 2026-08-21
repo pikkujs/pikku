@@ -1,11 +1,18 @@
 import type { Plugin } from 'vite'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, relative, resolve } from 'node:path'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import {
   generateEnumsSource,
   parseDbEnums,
   type GenerateEnumsOptions,
 } from './generate-enums.js'
+import { maskCatalog } from './generate-mask-locale.js'
 
 export interface ParaglideEnumsOptions extends GenerateEnumsOptions {
   /** Base-locale catalog JSON. Default `'./messages/en.json'`. */
@@ -91,6 +98,75 @@ export function paraglideEnums(options: ParaglideEnumsOptions = {}): Plugin {
       }
       server.watcher.on('add', onChange)
       server.watcher.on('change', onChange)
+    },
+  }
+}
+
+export interface ParaglideMaskLocaleOptions {
+  /** Base-locale catalog JSON to mask. Default `'./messages/en.json'`. */
+  catalog?: string
+  /** The pseudo-locale's code. Default `'zz'`. */
+  locale?: string
+  /** Where to write it. Default `<locale>.json` beside the catalog. */
+  outFile?: string
+}
+
+/**
+ * Vite plugin that writes the i18n-debug pseudo-locale beside the base catalog,
+ * for Paraglide to compile like any other locale. Place it BEFORE
+ * `paraglideVitePlugin`, which reads the catalog directory it writes into.
+ *
+ * Dev only: on a build the catalogue is deleted rather than written, and
+ * Paraglide then compiles the locale to aliases of the base locale — one
+ * `const` per message, no duplicated strings — so shipping it costs the bundle
+ * effectively nothing. Keep the locale out of the app's own supported list
+ * either way: that list drives URL prefixes, hreflang and any backend `locale`
+ * param, none of which should ever see it.
+ *
+ * In dev the catalogue is rewritten when the base one changes. A stale mask
+ * renders a newly added message as readable text, which is indistinguishable
+ * from the hardcoded string this mode exists to find.
+ */
+export function paraglideMaskLocale(
+  options: ParaglideMaskLocaleOptions = {}
+): Plugin {
+  const catalog = options.catalog ?? './messages/en.json'
+  const locale = options.locale ?? 'zz'
+  const outFile =
+    options.outFile ?? join(dirname(resolve(catalog)), `${locale}.json`)
+
+  const generate = (isBuild: boolean): void => {
+    const outPath = resolve(outFile)
+    if (isBuild) {
+      if (existsSync(outPath)) rmSync(outPath)
+      return
+    }
+
+    const catalogPath = resolve(catalog)
+    if (!existsSync(catalogPath)) return
+
+    const masked = maskCatalog(
+      JSON.parse(readFileSync(catalogPath, 'utf8')) as Record<string, unknown>
+    )
+    const next = `${JSON.stringify(masked, null, 2)}\n`
+    const prev = existsSync(outPath) ? readFileSync(outPath, 'utf8') : null
+    if (prev === next) return
+    mkdirSync(dirname(outPath), { recursive: true })
+    writeFileSync(outPath, next)
+  }
+
+  return {
+    name: '@pikku/paraglide:mask-locale',
+    enforce: 'pre',
+    config(_config, { command }) {
+      generate(command === 'build')
+    },
+    configureServer(server) {
+      const catalogPath = resolve(catalog)
+      server.watcher.add(catalogPath)
+      server.watcher.on('change', (file: string) => {
+        if (resolve(file) === catalogPath) generate(false)
+      })
     },
   }
 }

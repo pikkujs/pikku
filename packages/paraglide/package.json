@@ -3,7 +3,7 @@
   "version": "0.12.5",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
-  "description": "Paraglide tooling for pikku apps — generates typed enum-lookup maps from `enum__*` message keys.",
+  "description": "Paraglide tooling for pikku apps — typed enum-lookup maps from `enum__*` message keys, and the i18n-debug mask locale.",
   "type": "module",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",

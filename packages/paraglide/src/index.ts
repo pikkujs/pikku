@@ -6,3 +6,5 @@ export {
   type EnumGroup,
   type DbEnum,
 } from './generate-enums.js'
+
+export { maskCatalog, maskMessage } from './generate-mask-locale.js'
