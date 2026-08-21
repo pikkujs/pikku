@@ -21,6 +21,7 @@ import {
   resolveExternalVersions,
   generateMinimalPackageJson,
 } from './dep-extractor.js'
+import { findNativeAddons, nativeAddonBundleError } from './native-addon.js'
 import type {
   DeploymentUnit,
   DeploymentManifest,
@@ -153,6 +154,27 @@ export abstract class BaseBundler implements Bundler {
     return { results, errors }
   }
 
+  /**
+   * A serverless compile, with a native addon reported as one. Without this the
+   * failure is the addon's wrapper failing to resolve `node:*`, which names
+   * neither the package nor the reason — see `native-addon.ts`.
+   */
+  private async compileForServerless(
+    input: CompileInput
+  ): Promise<CompileResult> {
+    try {
+      return await this.compile(input)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const hits = await findNativeAddons(message)
+      if (hits.length === 0) throw error
+      throw new Error(
+        `${nativeAddonBundleError(input.unitName, hits)}\n\n${message}`,
+        { cause: error }
+      )
+    }
+  }
+
   private async bundleUnit(
     unit: DeploymentUnit,
     entryPath: string,
@@ -198,7 +220,7 @@ export abstract class BaseBundler implements Bundler {
         ? `import { createRequire as __pikkuCreateRequire } from 'node:module'; import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'; import { dirname as __pikkuDirname } from 'node:path'; const require = __pikkuCreateRequire(import.meta.url); const __filename = __pikkuFileURLToPath(import.meta.url); const __dirname = __pikkuDirname(__filename);`
         : undefined
 
-    const { externalPackages, metafileJson } = await this.compile({
+    const compileInput: CompileInput = {
       unitName: unit.name,
       entryPath,
       bundlePath,
@@ -212,7 +234,11 @@ export abstract class BaseBundler implements Bundler {
       sourcemap,
       emitMetafile,
       deadPatterns,
-    })
+    }
+    const { externalPackages, metafileJson } =
+      platform === 'node'
+        ? await this.compile(compileInput)
+        : await this.compileForServerless(compileInput)
 
     // Metafile is large (~1.6MB/unit) and never needed at runtime — only
     // persisted for debugging.
