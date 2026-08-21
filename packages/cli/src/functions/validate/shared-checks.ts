@@ -61,10 +61,56 @@ export type SharedCheckResult = {
  * `pikku-config-missing` for a file that is right there — the one message
  * guaranteed to send you looking in the wrong place.
  */
+/**
+ * Comments and trailing commas out, string literals untouched.
+ *
+ * `tsconfig.json` is JSONC by definition -- TypeScript documents comments in it
+ * and real projects use them -- so a strict `JSON.parse` rejects a file the
+ * compiler itself accepts, and validate fails on a config that is not wrong.
+ */
+const stripJsonc = (text: string): string => {
+  let out = ''
+  let inString = false
+  let quote = ''
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!
+    const next = text[i + 1]
+    if (inString) {
+      out += ch
+      if (ch === '\\') {
+        out += next ?? ''
+        i++
+      } else if (ch === quote) {
+        inString = false
+      }
+      continue
+    }
+    if (ch === '"' || ch === "'") {
+      inString = true
+      quote = ch
+      out += ch
+      continue
+    }
+    if (ch === '/' && next === '/') {
+      while (i < text.length && text[i] !== '\n') i++
+      out += '\n'
+      continue
+    }
+    if (ch === '/' && next === '*') {
+      i += 2
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i++
+      i++
+      continue
+    }
+    out += ch
+  }
+  return out.replace(/,(\s*[}\]])/g, '$1')
+}
+
 export async function readJsonSafe<T>(path: string): Promise<T | null> {
   if (!existsSync(path)) return null
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T
+    return JSON.parse(stripJsonc(await readFile(path, 'utf8'))) as T
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     throw new Error(`Invalid JSON in ${path}: ${message}`)

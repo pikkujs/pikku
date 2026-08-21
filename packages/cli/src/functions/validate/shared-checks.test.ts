@@ -1,8 +1,12 @@
 import assert from 'node:assert'
-import { describe, test } from 'node:test'
+import { describe, test, beforeEach, afterEach } from 'node:test'
+import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import {
   betterAuthTableAliases,
   migrationCreatesTable,
+  readJsonSafe,
   staticStubbedImports,
 } from './shared-checks.js'
 
@@ -95,9 +99,7 @@ describe('staticStubbedImports', () => {
 
   test('ignores a dynamic import', () => {
     assert.deepStrictEqual(
-      staticStubbedImports(
-        "const aiVercel = await import('@pikku/ai-vercel')"
-      ),
+      staticStubbedImports("const aiVercel = await import('@pikku/ai-vercel')"),
       []
     )
   })
@@ -114,5 +116,70 @@ describe('staticStubbedImports', () => {
       staticStubbedImports("import { thing } from 'airtable'"),
       []
     )
+  })
+})
+
+describe('readJsonSafe', () => {
+  let dir: string
+  const write = async (name: string, body: string) => {
+    const path = join(dir, name)
+    await writeFile(path, body)
+    return path
+  }
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'pikku-read-json-'))
+  })
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('reads a tsconfig written as JSONC', async () => {
+    const path = await write(
+      'tsconfig.json',
+      `{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // "bun" as well as "node": the API runs on bun and imports \`bun:sqlite\`.
+    "types": ["node", "bun"],
+    "noEmit": true
+  },
+  /* tests are listed explicitly rather than pulled in transitively. */
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}`
+    )
+
+    const config = await readJsonSafe<{
+      compilerOptions?: { types?: string[] }
+      include?: string[]
+    }>(path)
+
+    assert.deepStrictEqual(config?.compilerOptions?.types, ['node', 'bun'])
+    assert.deepStrictEqual(config?.include, ['src/**/*.ts', 'tests/**/*.ts'])
+  })
+
+  test('a trailing comma is not a parse failure', async () => {
+    const path = await write('a.json', '{ "a": [1, 2,], "b": 3, }')
+    assert.deepStrictEqual(await readJsonSafe(path), { a: [1, 2], b: 3 })
+  })
+
+  test('comment-like text inside a string survives', async () => {
+    const path = await write(
+      'b.json',
+      '{ "url": "https://example.com/x", "glob": "src/**/*.ts" }'
+    )
+    assert.deepStrictEqual(await readJsonSafe(path), {
+      url: 'https://example.com/x',
+      glob: 'src/**/*.ts',
+    })
+  })
+
+  test('a genuinely malformed file is still named', async () => {
+    const path = await write('c.json', '{ "a": }')
+    await assert.rejects(() => readJsonSafe(path), /Invalid JSON in .*c\.json/)
+  })
+
+  test('a missing file is null, not a throw', async () => {
+    assert.strictEqual(await readJsonSafe(join(dir, 'gone.json')), null)
   })
 })
