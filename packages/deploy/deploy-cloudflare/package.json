@@ -1,6 +1,6 @@
 {
   "name": "@pikku/deploy-cloudflare",
-  "version": "0.12.12",
+  "version": "0.12.13",
   "description": "Cloudflare deploy adapter for Pikku — typed REST client for Workers, Queues, D1, R2, secrets and cron",
   "type": "module",
   "main": "dist/index.js",
@@ -16,6 +16,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@pikku/deploy": "^0.12.0"
+    "@pikku/deploy": "^0.12.1"
   }
 }

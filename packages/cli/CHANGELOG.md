@@ -1,3 +1,123 @@
+## 0.12.111
+
+### Patch Changes
+
+- 274cab3: The singleton intersection moves to the leaves that name it, the runtime stops
+  creating schema, and `db generate` writes only the runtime tables a project's
+  services own
+
+  `WiredSingletonServices` was exported from the generated function leaf so the
+  auth leaf could import it. Nothing outside a generated leaf ever names it —
+  emit declarations for a project of any size and it appears in none of them —
+  so the auth and middleware leaves derive the intersection themselves and the
+  function leaf keeps it private. `WiredServices` stays exported: 147 `.d.ts`
+  files name it, and unexporting it asks every wired module to name each member
+  service through a specifier it does not have.
+
+  `ensurePikkuSchema` is gone. `requirePikkuSchema` replaces it: a service calls
+  it at boot, it looks, and it issues no DDL at all. `pikku db generate` writes
+  the declaration down as a migration and `pikku db migrate` applies it, and
+  those two are now the only way pikku's runtime tables come into existence. A
+  service that finds them missing says so and stops, naming both commands.
+  Half-present is no longer a distinct case — the remedy is the same migration
+  either way. `audit` and `virtual-user` join `pikkuSchemas` as a consequence:
+  boot was the only thing that had ever created them.
+
+  `pikku db generate` applied all of `pikkuSchemas`, so a project with no agents,
+  no channels and no workflows still had `agent_threads`, `channels` and
+  `workflow_runs` written into its migrations, and then carried them forever. A
+  schema now names the services that own it, and generation gates on
+  `requiredServices` — the set the inspector already builds for service
+  tree-shaking. The gate is one-sided: a schema that names no owner is always
+  written, because the session and secret stores and the deployment record are
+  reached by the runtime itself and nothing in a project's source implies them.
+  Declared scopes now imply `scopeService`, which nothing destructures because
+  the generated auth layer is what reaches it.
+
+  Drift keeps asking the unscoped question. A table already in a database has to
+  stay recognisable as a runtime table after the service that needed it is
+  dropped — scoping it there would report those tables as unexplained.
+
+  Every project in this repo that had been relying on boot-time creation now says
+  where its tables come from. `createConfig` moves into its own `config.ts` in the
+  templates — `pikku db` looks for it there — and the three postgres templates plus
+  the workflow verifier declare `postgresUrl` and run `pikku db generate && pikku
+db migrate` before the server starts, from the single connection string their
+  runtime opens. The e2e harness cannot: its databases are in-memory sqlite built
+  inside the services factory, so nothing outside the process can migrate them. It
+  applies the schemas it owns with `applyPikkuSchemas` instead — the same DDL, run
+  by the one process that has the database.
+
+- 58cb0f8: Scaffold an addon whose exports point at the leaf its codegen actually writes
+
+  `pikku all` roots an addon's generated tree at `.pikku/addon/`, but `pikku new
+addon` still wrote the pre-split targets: `./.pikku/*` resolved to
+  `./dist/.pikku/*` and the internal RPC map to `./dist/.pikku/rpc/...`, neither of
+  which exists in the published package. The subpaths a consumer writes are
+  unchanged — only the targets gain the `addon` segment.
+
+  The addon manifest reference in the `pikku-addon` skill described the same
+  package.json one migration further back, with `imports` and `exports` naming the
+  source tree and `files: ["dist", ".pikku"]` shipping `.ts` files Node cannot
+  load. It now documents the built layout, and why `imports` and tsconfig `paths`
+  deliberately point at different trees.
+
+  The plain scaffold — no `--secret`, `--oauth` or `--credential` — built its API
+  service with `new XService(variables)` against a class declaring no constructor,
+  so `pikku new addon <name>` produced a package that did not typecheck until the
+  author deleted the argument. Only the authenticating variants take one.
+
+- 32616af: Give the deploy pipeline one shared contract instead of a copy per adapter
+
+  `DeploymentManifest`, `DeploymentUnit`, `EntryGenerationContext` and
+  `ProviderAdapter` were hand-copied into eleven source files across the four
+  provider adapters and the CLI — three copies inside `@pikku/deploy-cloudflare`
+  alone. Nothing compared the copies, so they had already drifted: several typed
+  `role` as a bare `string`, and none carried the manifest's addon-scoping fields.
+
+  They now live in a new zero-dependency `@pikku/deploy` package that every
+  adapter and the CLI import, and each adapter declares `implements
+ProviderAdapter` so the compiler checks it against the contract it claims to
+  satisfy. That check immediately caught a real disagreement: the deploy result's
+  `workersDeployed` and `resourcesCreated` were `string[]` from Cloudflare — the
+  shape the result file and the generated SDK types already record — but
+  `Array<{ name: string }>` from the standalone adapter. Both are now `string[]`.
+
+  The Lambda and Azure adapters also derived their esbuild externals from a
+  hand-written list of 25 node builtins, so anything outside it (`async_hooks`,
+  `perf_hooks`, `timers`, `http2`, …) was bundled instead of resolved from the
+  runtime. They now use `nodeBuiltinExternals()`, which reads `builtinModules`
+  from the running Node and cannot fall behind it.
+
+- c858555: fix(cli): a scaffold feature refuses the removed `auth` key instead of ignoring it
+
+  `scaffold.<feature>` stopped taking `auth` when a scaffold flag became a
+  statement about whether a surface is generated rather than about who may call
+  it. The key was removed from the type, but a `pikku.config.json` still carrying
+  it loaded clean and was silently dropped — a config that reads as if it closed
+  the console to anonymous callers while configuring nothing at all.
+
+  It is now refused at config load, by name, with the reason and the fix. Any
+  other unrecognised key is refused too, so a typo'd `paths` fails at load rather
+  than generating a file at the default location. `null` and arrays are refused
+  with the same message a bare string already got, rather than crashing on a
+  property read.
+
+  These arrive as `PikkuCLIConfigError`, so the message reaches the developer
+  verbatim rather than as "failed to load config file".
+
+- Updated dependencies [274cab3]
+- Updated dependencies [58cb0f8]
+- Updated dependencies [32616af]
+- Updated dependencies [32616af]
+- Updated dependencies [6848cd9]
+  - @pikku/kysely@0.13.20
+  - @pikku/inspector@0.12.63
+  - @pikku/skills@0.12.13
+  - @pikku/deploy@0.12.1
+  - @pikku/deploy-cloudflare@0.12.13
+  - @pikku/core@0.12.89
+
 ## 0.12.110
 
 ### Patch Changes
