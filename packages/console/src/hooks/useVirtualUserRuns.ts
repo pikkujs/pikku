@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 
+/** How often the list re-reads while a run is still going. */
+const RUNNING_POLL_MS = 5_000
+
 /**
  * What this persona has actually been doing.
  *
@@ -24,6 +27,16 @@ export function useVirtualUserRuns(persona?: string) {
         offset: 0,
       }),
     enabled: !!persona,
+    // A run is started and then let go of — the record it writes minutes later
+    // is the only thing that says how it went, and nothing pushes that back
+    // here. So the list watches its own rows: while one is still going it asks
+    // again, and the moment none is, it stops.
+    refetchInterval: (query) =>
+      (query.state.data as { status?: string }[] | undefined)?.some(
+        (run) => run.status === 'running'
+      )
+        ? RUNNING_POLL_MS
+        : false,
   })
 }
 
@@ -57,7 +70,8 @@ export function useVirtualUserRunSteps(runId?: string) {
  *
  * The run is dispatched, not awaited: it takes minutes, and the record it
  * writes is what the list is reading. Refetching once on success is enough to
- * show it as `running`.
+ * show it as `running`; `useVirtualUserRuns` keeps asking from there until it
+ * is not.
  */
 export function useStartVirtualUserRun(persona?: string) {
   const rpc = usePikkuRPC()

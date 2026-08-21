@@ -96,16 +96,16 @@ describe('KyselyVirtualUserScheduleStore', () => {
 
   test('claiming pushes the persona out of the due list', async () => {
     const now = new Date()
-    await store.set({
-      persona: 'guest',
-      enabled: true,
-      nextRunAt: new Date(now.getTime() - HOUR),
-    })
-    await store.claim('guest', {
+    const due = new Date(now.getTime() - HOUR)
+    await store.set({ persona: 'guest', enabled: true, nextRunAt: due })
+    const acquired = await store.claim('guest', {
+      from: due,
       nextRunAt: new Date(now.getTime() + HOUR),
       runId: 'run-1',
       at: now,
     })
+
+    assert.equal(acquired, true)
 
     assert.deepEqual(await store.due(now), [])
     const stored = await store.get('guest')
@@ -115,14 +115,46 @@ describe('KyselyVirtualUserScheduleStore', () => {
 
   test('the claim written before a run starts does not blank the last run', async () => {
     const now = new Date()
-    await store.set({ persona: 'guest', enabled: true })
-    await store.claim('guest', { nextRunAt: now, runId: 'run-1', at: now })
+    const written = await store.set({ persona: 'guest', enabled: true })
     await store.claim('guest', {
+      from: written.nextRunAt,
+      nextRunAt: now,
+      runId: 'run-1',
+      at: now,
+    })
+    await store.claim('guest', {
+      from: now,
       nextRunAt: new Date(now.getTime() + HOUR),
       runId: null,
       at: now,
     })
 
+    assert.equal((await store.get('guest'))?.lastRunId, 'run-1')
+  })
+
+  test('only one of two ticks holding the same due row can claim it', async () => {
+    const now = new Date()
+    const due = new Date(now.getTime() - HOUR)
+    await store.set({ persona: 'guest', enabled: true, nextRunAt: due })
+
+    const [first] = await store.due(now)
+    const [second] = await store.due(now)
+    assert.equal(first?.nextRunAt.getTime(), second?.nextRunAt.getTime())
+
+    const won = await store.claim('guest', {
+      from: first!.nextRunAt,
+      nextRunAt: new Date(now.getTime() + HOUR),
+      runId: 'run-1',
+      at: now,
+    })
+    const lost = await store.claim('guest', {
+      from: second!.nextRunAt,
+      nextRunAt: new Date(now.getTime() + 2 * HOUR),
+      runId: 'run-2',
+      at: now,
+    })
+
+    assert.deepEqual([won, lost], [true, false])
     assert.equal((await store.get('guest'))?.lastRunId, 'run-1')
   })
 

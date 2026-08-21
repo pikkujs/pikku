@@ -77,10 +77,17 @@ export interface VirtualUserScheduleStore {
    * dispatch which throws waits a full interval rather than retrying, which is
    * the right way round: a persona that is failing to start should not be
    * retried every minute for a week.
+   *
+   * `from` is the `nextRunAt` the caller read, and the write must match it to
+   * land — the claim is how a tick wins the persona, not just how it records
+   * winning. Two processes on the same cron read the same due row, and without
+   * the compare-and-set both would dispatch: the same user acting twice over,
+   * at twice the budget, producing findings neither run can reproduce. The
+   * loser is told `false` and leaves the persona to whoever got there first.
    */
   claim(
     persona: string,
-    claim: { nextRunAt: Date; runId: string | null; at: Date }
-  ): Promise<void>
+    claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }
+  ): Promise<boolean>
   remove(persona: string): Promise<void>
 }

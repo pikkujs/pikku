@@ -55,7 +55,8 @@ export const nextRunAt = (
   return new Date(now.getTime() + low + random() * (high - low))
 }
 
-export type VirtualUserSkipReason = 'in-flight' | 'dispatch-failed'
+export type VirtualUserSkipReason =
+  'in-flight' | 'dispatch-failed' | 'claimed-elsewhere'
 
 export interface VirtualUserTickResult {
   dispatched: { persona: string; runId: string }[]
@@ -84,7 +85,9 @@ export interface VirtualUserTickParams {
  *
  * A persona is skipped, not queued, while its previous run is still going. Two
  * copies of the same user acting at once is not a heavier test, it is a
- * different one, and every finding it produces is unreproducible.
+ * different one, and every finding it produces is unreproducible. Two ticks
+ * running at once are held to the same rule by the claim, which only lands for
+ * whichever of them still sees the `nextRunAt` it read.
  */
 export const tickVirtualUserSchedules = async ({
   schedules,
@@ -115,11 +118,19 @@ export const tickVirtualUserSchedules = async ({
     }
 
     const due = nextRunAt(schedule, now, random)
-    await schedules.claim(schedule.persona, {
+    const acquired = await schedules.claim(schedule.persona, {
+      from: schedule.nextRunAt,
       nextRunAt: due,
       runId: null,
       at: now,
     })
+    if (!acquired) {
+      result.skipped.push({
+        persona: schedule.persona,
+        reason: 'claimed-elsewhere',
+      })
+      continue
+    }
 
     let runId: string
     try {
@@ -132,7 +143,12 @@ export const tickVirtualUserSchedules = async ({
       continue
     }
 
-    await schedules.claim(schedule.persona, { nextRunAt: due, runId, at: now })
+    await schedules.claim(schedule.persona, {
+      from: due,
+      nextRunAt: due,
+      runId,
+      at: now,
+    })
     result.dispatched.push({ persona: schedule.persona, runId })
   }
 

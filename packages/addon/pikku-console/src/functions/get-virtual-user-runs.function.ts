@@ -12,6 +12,8 @@ import { pikkuFunc } from '#pikku/addon/function'
  * ids. This is a privileged read, which is why it has a scope of its own rather
  * than riding on the wirings one.
  */
+const MAX_RUNS = 100
+
 export const getVirtualUserRuns = pikkuFunc<
   { persona?: string; limit?: number; offset?: number },
   any[]
@@ -27,7 +29,10 @@ export const getVirtualUserRuns = pikkuFunc<
     }
     const runs = await virtualUserRunStore.list({
       persona: input?.persona,
-      limit: input?.limit,
+      // The scaffolded read bounds this through zod; nothing types a console
+      // function's input at runtime, so the ceiling is applied here instead of
+      // letting a caller ask the store for every run an app has ever recorded.
+      limit: Math.min(input?.limit ?? MAX_RUNS, MAX_RUNS),
       offset: input?.offset,
     })
     return runs.map((run) => ({

@@ -60,13 +60,32 @@ const stores = (
   schedules: VirtualUserScheduleRecord[],
   runs: VirtualUserRunRecord[]
 ) => {
-  const claims: { persona: string; nextRunAt: Date; runId: string | null }[] =
-    []
+  const claims: {
+    persona: string
+    from: Date
+    nextRunAt: Date
+    runId: string | null
+  }[] = []
   const failed: { runId: string; error: string }[] = []
   const scheduleStore = {
-    due: async (now: Date) => schedules.filter((s) => isDue(s, now)),
+    // Copies, as every real store hands back: a caller holding the row object
+    // itself would never see the value it read go stale underneath it.
+    due: async (now: Date) =>
+      schedules.filter((s) => isDue(s, now)).map((s) => ({ ...s })),
+    // The row is the lock, so the fake enforces the same compare-and-set the
+    // stores do: a claim lands only while the row still holds what was read.
     claim: async (persona, claim) => {
+      const row = schedules.find((s) => s.persona === persona)
+      if (!row || row.nextRunAt.getTime() !== claim.from.getTime()) {
+        return false
+      }
+      row.nextRunAt = claim.nextRunAt
+      if (claim.runId) {
+        row.lastRunId = claim.runId
+        row.lastRunAt = claim.at
+      }
       claims.push({ persona, ...claim })
+      return true
     },
   } as unknown as VirtualUserScheduleStore
   const runStore = {
@@ -118,7 +137,7 @@ describe('virtual user schedule', () => {
         ...scheduleStore,
         claim: async (persona, claim) => {
           order.push('claim')
-          claims.push({ persona, ...claim })
+          return await scheduleStore.claim(persona, claim)
         },
       } as VirtualUserScheduleStore,
       runs: runStore,
@@ -203,6 +222,37 @@ describe('virtual user schedule', () => {
     ])
     assert.equal(claims.length, 1)
     assert.ok(claims[0]!.nextRunAt.getTime() >= NOW.getTime() + HOUR)
+  })
+
+  test('two ticks racing over one persona produce a single run', async () => {
+    const row = schedule()
+    const { scheduleStore, runStore } = stores([row], [])
+    const dispatched: string[] = []
+    const tick = () =>
+      tickVirtualUserSchedules({
+        schedules: scheduleStore,
+        runs: runStore,
+        now: NOW,
+        random: () => 0.5,
+        dispatch: async ({ persona }) => {
+          const runId = `run-${dispatched.length + 1}`
+          dispatched.push(persona)
+          return runId
+        },
+      })
+
+    // Both read the row while it is still due — the state two cron processes
+    // are in the moment before either of them writes.
+    const [first, second] = await Promise.all([tick(), tick()])
+
+    assert.equal(dispatched.length, 1)
+    const [won, lost] =
+      first.dispatched.length > 0 ? [first, second] : [second, first]
+    assert.equal(won.dispatched.length, 1)
+    assert.deepEqual(lost.dispatched, [])
+    assert.deepEqual(lost.skipped, [
+      { persona: 'guest', reason: 'claimed-elsewhere' },
+    ])
   })
 
   test('one persona failing does not stop the others from running', async () => {

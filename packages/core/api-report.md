@@ -2372,7 +2372,7 @@ export interface VirtualUserScheduleStore {
   get(persona: string): Promise<VirtualUserScheduleRecord | null>
   list(): Promise<VirtualUserScheduleRecord[]>
   due(now: Date): Promise<VirtualUserScheduleRecord[]>
-  claim(persona: string, claim: { nextRunAt: Date; runId: string | null; at: Date }): Promise<void>
+  claim(persona: string, claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }): Promise<boolean>
   remove(persona: string): Promise<void>
 }
 export interface VirtualUserTarget {

@@ -575,9 +575,20 @@ export const setVirtualUserSchedule = pikkuFunc({
           'Wire KyselyVirtualUserScheduleStore from @pikku/kysely, or your own implementation of VirtualUserScheduleStore.'
       )
     }
-    if (!personaConfigs[input.persona as keyof typeof personaConfigs]) {
+    const persona = personaConfigs[
+      input.persona as keyof typeof personaConfigs
+    ] as { runnable: boolean } | undefined
+    if (!persona) {
       throw new Error(
         \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
+      )
+    }
+    // The same rule \`runVirtualUser\` enforces, applied at the point the row is
+    // written rather than every hour afterwards: an acted-upon persona has no
+    // session, so a cadence for one is a tick that can only ever fail to start.
+    if (!persona.runnable) {
+      throw new Error(
+        \`Persona "\${input.persona}" is declared as acted upon, never run\`
       )
     }
     const schedule = await virtualUserScheduleStore.set({

@@ -278,8 +278,13 @@ export const toVirtualUserDocs = ({
  * `invalid` turn leaves behind, and that turn is the one worth reading.
  */
 export const describeAction = (action: Record<string, unknown>): string => {
-  const named = action.rpcName ?? action.name ?? action.agent
-  if (typeof named === 'string' && named.length > 0) return named
-  const kind = action.kind
-  return typeof kind === 'string' && kind.length > 0 ? kind : 'step'
+  for (const candidate of [
+    action.rpcName,
+    action.name,
+    action.agent,
+    action.kind,
+  ]) {
+    if (typeof candidate === 'string' && candidate.length > 0) return candidate
+  }
+  return 'step'
 }

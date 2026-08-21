@@ -5,9 +5,8 @@ import { m } from '@/i18n/messages'
 import {
   useStartVirtualUserRun,
   useVirtualUserRuns,
-  useVirtualUserRunSteps,
 } from '../../hooks/useVirtualUserRuns'
-import { describeAction } from './virtual-user-model'
+import { VirtualUserTranscript } from './VirtualUserTranscript'
 import styles from './virtual-users.module.css'
 
 type RunRow = {
@@ -24,64 +23,10 @@ type RunRow = {
   tally: { steps?: number; calls?: number; mutations?: number } | null
 }
 
-type StepRow = {
-  index: number
-  action: Record<string, unknown>
-  status?: number
-  ok?: boolean
-  response?: string
-  findingKinds?: string[]
-}
-
 const STATUS_COLOUR: Record<RunRow['status'], string> = {
   running: 'blue',
   completed: 'green',
   failed: 'red',
-}
-
-const Transcript: React.FC<{ runId: string }> = ({ runId }) => {
-  const { data, isPending } = useVirtualUserRunSteps(runId)
-  const steps = (data ?? []) as StepRow[]
-
-  if (isPending) {
-    return (
-      <Text size="xs" c="dimmed">
-        {m.virtual_users_runs_loading()}
-      </Text>
-    )
-  }
-  if (steps.length === 0) {
-    return (
-      <Text size="xs" c="dimmed">
-        {m.virtual_users_runs_no_transcript()}
-      </Text>
-    )
-  }
-
-  return (
-    <Stack gap={2} data-testid="virtual-user-transcript">
-      {steps.map((step) => (
-        <Group key={step.index} gap={8} wrap="nowrap" align="baseline">
-          <Text size="xs" c="dimmed" ff="monospace" style={{ minWidth: 28 }}>
-            {asI18n(String(step.index))}
-          </Text>
-          <Text size="xs" ff="monospace">
-            {asI18n(describeAction(step.action))}
-          </Text>
-          {step.status !== undefined && (
-            <Text size="xs" c={step.ok === false ? 'red' : 'dimmed'}>
-              {asI18n(String(step.status))}
-            </Text>
-          )}
-          {step.findingKinds?.map((kind) => (
-            <Badge key={kind} size="xs" variant="light" color="orange" tt="none">
-              {asI18n(kind)}
-            </Badge>
-          ))}
-        </Group>
-      ))}
-    </Stack>
-  )
 }
 
 /**
@@ -92,7 +37,7 @@ const Transcript: React.FC<{ runId: string }> = ({ runId }) => {
  * persona nobody has ever run is exactly the one somebody wants to run.
  */
 export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
-  const { data } = useVirtualUserRuns(persona)
+  const { data, error } = useVirtualUserRuns(persona)
   const start = useStartVirtualUserRun(persona)
   const [openRun, setOpenRun] = React.useState<string>()
   const runs = (data ?? []) as RunRow[]
@@ -129,7 +74,12 @@ export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
           )}
         </Text>
       )}
-      {runs.length === 0 && (
+      {error && (
+        <Text size="xs" c="red">
+          {asI18n(error instanceof Error ? error.message : String(error))}
+        </Text>
+      )}
+      {!error && runs.length === 0 && (
         <Text size="xs" c="dimmed">
           {m.virtual_users_runs_none()}
         </Text>
@@ -171,7 +121,10 @@ export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
                   })}
                 </Text>
                 <Text size="xs" c="dimmed" ff="monospace">
-                  {asI18n(`${run.disposition} · seed ${run.seed}`)}
+                  {m.virtual_users_runs_seed({
+                    disposition: run.disposition,
+                    seed: run.seed,
+                  })}
                 </Text>
               </Group>
             </UnstyledButton>
@@ -184,7 +137,11 @@ export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
                 )}
                 {run.findings.map((finding, at) => (
                   <Text key={at} size="xs" c="orange">
-                    {asI18n(`${finding.kind} · step ${finding.step} · ${finding.detail}`)}
+                    {m.virtual_users_runs_finding({
+                      kind: finding.kind,
+                      step: finding.step,
+                      detail: finding.detail,
+                    })}
                   </Text>
                 ))}
                 {run.intents.length > 0 && (
@@ -197,12 +154,15 @@ export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
                         radius="sm"
                         tt="none"
                       >
-                        {asI18n(`${intent.title} · ${intent.status}`)}
+                        {m.virtual_users_runs_intent({
+                          title: intent.title,
+                          status: intent.status,
+                        })}
                       </Badge>
                     ))}
                   </Group>
                 )}
-                <Transcript runId={run.runId} />
+                <VirtualUserTranscript runId={run.runId} />
               </Stack>
             )}
           </Box>

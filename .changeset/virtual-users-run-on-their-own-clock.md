@@ -31,6 +31,9 @@ Three things it does that are easy to leave out:
 - The next due time is written **before** the run is dispatched, so a tick that
   dies halfway cannot hand the same persona to the next one. A dispatch that
   throws waits a full interval instead of retrying every minute for a week.
+  That write is a compare-and-set against the `nextRunAt` the tick read, so it
+  is also how a tick *wins* the persona: two processes on the same cron see the
+  same due row, and only the one whose claim lands dispatches.
 - A persona whose previous run is still `running` is skipped, not queued. Two
   copies of the same user acting at once is a different test, and its findings
   do not reproduce.

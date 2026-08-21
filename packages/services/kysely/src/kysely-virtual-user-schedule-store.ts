@@ -137,10 +137,10 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
 
   async claim(
     persona: string,
-    claim: { nextRunAt: Date; runId: string | null; at: Date }
-  ): Promise<void> {
+    claim: { from: Date; nextRunAt: Date; runId: string | null; at: Date }
+  ): Promise<boolean> {
     await this.init()
-    await this.db
+    const result = await this.db
       .updateTable('virtualUserSchedule')
       .set({
         nextRunAt: claim.nextRunAt.toISOString(),
@@ -151,7 +151,11 @@ export class KyselyVirtualUserScheduleStore implements VirtualUserScheduleStore 
           : {}),
       })
       .where('persona', '=', persona)
-      .execute()
+      // The compare-and-set: whoever writes first moves `nextRunAt`, and every
+      // other tick holding the value they read matches nothing.
+      .where('nextRunAt', '=', claim.from.toISOString())
+      .executeTakeFirst()
+    return Number(result.numUpdatedRows ?? 0) > 0
   }
 
   async remove(persona: string): Promise<void> {
