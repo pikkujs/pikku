@@ -393,10 +393,13 @@ export class ContextAwareRPCService {
 
     if (rpcName.includes(':')) {
       const addonCall = this.resolveAddonFunction(rpcName)
-      if (addonCall === NOT_RESOLVED) {
-        throw new RPCNotFoundError(rpcName)
+      if (addonCall !== NOT_RESOLVED) {
+        return await this.executeAddonFunction<In, Out>(
+          addonCall,
+          data,
+          mergedWire
+        )
       }
-      return this.executeAddonFunction<In, Out>(addonCall, data, mergedWire)
     }
 
     let resolved: { pikkuFuncId: string; packageName: string | null }

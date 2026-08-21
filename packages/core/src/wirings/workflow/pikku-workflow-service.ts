@@ -644,8 +644,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * overriding this, or no concurrency for one to exclude: the relay makes
    * duplicate dispatch routine, and the claim is what keeps a duplicate from
    * becoming a second execution. Every `@pikku/kysely` dialect qualifies on its
-   * status-guarded claim, `in-memory` on being inline and single-process;
-   * `mongodb` still qualifies on neither.
+   * status-guarded claim, `mongodb` on the same claim expressed as a
+   * single-document update, `in-memory` on being inline and single-process —
+   * none of them overrides this yet.
    */
   protected async findUndispatchedSteps(
     _before: Date,

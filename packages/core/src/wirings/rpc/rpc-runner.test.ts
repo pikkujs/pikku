@@ -596,6 +596,64 @@ describe('ContextAwareRPCService.rpcWithWire', () => {
       ['missingRpc', { value: 2 }, { userId: 'user-2' }, 'trace-3'],
     ])
   })
+
+  test('a missing namespaced rpc still reaches deploymentService through rpcWithWire', async () => {
+    const remoteCalls: unknown[][] = []
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as never)
+
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      { traceId: 'trace-addon-wire' } as never,
+      {}
+    )
+
+    const result = await service.rpcWithWire(
+      'stripe:missingFunc',
+      { value: 3 },
+      { custom: 'wire' } as never
+    )
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(remoteCalls, [
+      ['stripe:missingFunc', { value: 3 }, undefined, 'trace-addon-wire'],
+    ])
+  })
+
+  test('an unknown namespace still falls through to the local/remote lookup', async () => {
+    const remoteCalls: unknown[][] = []
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            remoteCalls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      { traceId: 'trace-ns-wire' } as never,
+      {}
+    )
+
+    const result = await service.rpcWithWire(
+      'unknownNs:someFunc',
+      { value: 1 },
+      { custom: 'wire' } as never
+    )
+
+    assert.deepEqual(result, { remote: true })
+    assert.deepEqual(remoteCalls, [
+      ['unknownNs:someFunc', { value: 1 }, undefined, 'trace-ns-wire'],
+    ])
+  })
 })
 
 describe('ContextAwareRPCService.startWorkflow', () => {

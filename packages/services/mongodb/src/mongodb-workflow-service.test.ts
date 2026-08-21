@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { MongoClient, type Db } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 
+import type { StepState } from '@pikku/core/workflow'
 import { MongoDBWorkflowService } from './mongodb-workflow-service.js'
 
 let mongod: MongoMemoryServer
@@ -117,5 +118,105 @@ describe('a step transition reaches the history', () => {
     assert.equal(state.result, 'second go')
     assert.equal(state.error, undefined)
     assert.equal(state.attemptCount, 2)
+  })
+})
+
+/**
+ * Dispatch is at-least-once — the relay re-dispatches a step it believes was
+ * dropped, and a queue can redeliver a job it already handed out — so the claim
+ * is the only thing standing between a duplicate dispatch and a second
+ * execution of a side-effecting step.
+ */
+describe('claiming a step for execution', () => {
+  const claim = (runId: string, stepName: string, rpcName = 'rpc.fn') =>
+    (ws as any).claimStepForExecution(
+      runId,
+      stepName,
+      rpcName
+    ) as Promise<StepState | null>
+
+  const seedRun = () =>
+    ws.createRun('flow', {}, false, 'hash', { type: 'test' } as any)
+
+  test('two dispatches racing for the same pending step: exactly one wins', async () => {
+    const runId = await seedRun()
+    await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+    const winners = claims.filter((c) => c !== null)
+
+    assert.equal(
+      winners.length,
+      1,
+      `both dispatches claimed the step, so a side-effecting step would run twice: ${JSON.stringify(claims)}`
+    )
+    assert.equal((await ws.getStepState(runId, 's1')).status, 'running')
+  })
+
+  test('two dispatches racing to retry the same failed step: exactly one wins', async () => {
+    const runId = await seedRun()
+    const step = await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepError(step.stepId, new Error('boom'))
+
+    const claims = await Promise.all([claim(runId, 's1'), claim(runId, 's1')])
+    const winners = claims.filter((c) => c !== null)
+
+    assert.equal(
+      winners.length,
+      1,
+      `both dispatches started a retry, so the failed step would be retried twice concurrently: ${JSON.stringify(claims)}`
+    )
+    assert.equal(
+      (await ws.getStepState(runId, 's1')).attemptCount,
+      2,
+      'the retry raced itself and burned more than one attempt'
+    )
+  })
+
+  test('a step already claimed is not claimable again', async () => {
+    const runId = await seedRun()
+    await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    assert.notEqual(await claim(runId, 's1'), null)
+    assert.equal(
+      await claim(runId, 's1'),
+      null,
+      'a redelivered job re-claimed a step that is already running'
+    )
+  })
+
+  test('a succeeded step is not claimable', async () => {
+    const runId = await seedRun()
+    const step = await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepResult(step.stepId, { ok: true })
+
+    assert.equal(await claim(runId, 's1'), null)
+  })
+
+  test('a claim that fails releases the step, so it is retryable', async () => {
+    const runId = await seedRun()
+    const step = await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    assert.notEqual(await claim(runId, 's1'), null)
+    await ws.setStepError(step.stepId, new Error('boom'))
+
+    const retry = await claim(runId, 's1')
+    assert.notEqual(
+      retry,
+      null,
+      'the failed step stayed claimed, so it can never be retried'
+    )
+    assert.equal(retry?.status, 'running')
+    assert.equal(retry?.attemptCount, 2)
+  })
+
+  test('a claim for a different function than the step was dispatched with is refused', async () => {
+    const runId = await seedRun()
+    await ws.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+
+    await assert.rejects(() => claim(runId, 's1', 'rpc.other'))
+    assert.equal((await ws.getStepState(runId, 's1')).status, 'pending')
   })
 })
