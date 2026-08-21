@@ -13,7 +13,9 @@ import { PikkuWiringTypes } from '@pikku/core/types'
  *
  * A bare string is refused by the loader rather than reinterpreted: under this
  * shape a string could plausibly mean a path, so guessing one would be worse
- * than failing. See `resolveScaffoldFeature`.
+ * than failing. So is any key other than `path` — including `auth`, which this
+ * type carried once and some configs still do, and which would otherwise load
+ * clean while configuring nothing. See `resolveScaffoldFeature`.
  */
 export type PikkuScaffoldFeature =
   | boolean

@@ -7,6 +7,7 @@ import type {
 import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
+import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 
 const CLIENT_FILE_KEYS = [
   'fetchFile',
@@ -91,8 +92,7 @@ async function findConfigFile(): Promise<string> {
   return configFile
 }
 
-/** A config that was found and parsed, but says something impossible. */
-export class PikkuCLIConfigError extends Error {}
+export { PikkuCLIConfigError }
 
 /**
  * The two schema registers must be two directories.
