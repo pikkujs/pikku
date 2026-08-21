@@ -1,3 +1,163 @@
+## 0.12.90
+
+### Patch Changes
+
+- 3c0012c: Gate console agent-thread reads and deletes on thread ownership, claim MongoDB workflow steps atomically, and reach the deployment fallback from `rpcWithWire`
+
+  `getAgentThreadMessages` and `deleteAgentThread` in the console addon took a
+  caller-supplied `threadId` straight to storage, while their siblings
+  `getAgentThreads` and `getAgentThreadRuns` already filtered to what the session
+  owns. Both now carry an `isThreadOwner` permission: an admin reaches any thread,
+  everyone else only their own, and a missing thread is refused rather than 404'd
+  so it is indistinguishable from someone else's.
+
+  `MongoDBWorkflowService` claimed a step by reading its status and then writing
+  it, under a `withStepLock` that is a pass-through — so two dispatches racing for
+  the same step could both proceed and run a side-effecting step twice. The claim
+  is now a single status-guarded update, atomic on one document.
+
+  `rpcWithWire` threw `RPCNotFoundError` for any unresolved namespaced call
+  instead of falling through to the deployment service, so a namespaced RPC that
+  `rpc()` would have dispatched remotely failed when called with an explicit wire.
+
+- 05e47cf: fix(personas): sign a persona in before it converses, not after a 401
+
+  `HttpPersona.converse` left authentication to `postAgent`'s 401-retry, which
+  only fires on a route that refuses an anonymous caller. An agent route wired
+  without `auth: true` never refuses one: turn one is accepted and the thread is
+  minted under a fresh anonymous id, turn two arrives under a different anonymous
+  id, and the persona is told the thread belongs to somebody else — intermittently,
+  because it depends on which turn the retry happened to run on.
+
+  The persona now logs in before the first turn if it has not already. A persona
+  is a declared account with real credentials in every case, so there was never a
+  run where conversing as nobody was what was wanted; the sign-in is the same one
+  `call` has always done, just no longer conditional on the server pushing back.
+
+- cfd364a: Remove the last `@pikku/core/ecosystem` references and guard against new ones
+
+  `@pikku/kysely`'s workflow-service test still imported `StepState` from
+  `@pikku/core/ecosystem/workflow`, a subpath that no longer exists in
+  `@pikku/core`'s `exports`. Nothing caught it: the import is type-only, so tsx
+  erases it before it can fail at runtime, and the package tsconfig excludes
+  `**/*.test.ts`, so `yarn tsc` never saw it either. It now imports from
+  `@pikku/core/workflow`.
+
+  A new guard test in `@pikku/core` scans the repository for the dead specifier
+  and fails if one comes back, so the next stale import is a red test rather than
+  a silent `any`.
+
+- 05e47cf: fix(virtual-user): offer agents under the name the server can resolve
+
+  `reachableAgents` named each offered agent `agent.name ?? id`, where `id` is the
+  key the agent is registered under and `agent.name` is the display label from its
+  config. Those are the same string only by coincidence. `addAgent` stores the
+  export's own name and `resolveAgent` looks the call up by it, so an agent
+  exported as `adminAgent` and declaring `name: 'admin-agent'` was advertised to a
+  virtual user as `admin-agent` — a name nothing has ever registered. The persona
+  took the offer on its first turn, the stage answered
+  `500 AI agent not found: admin-agent`, and the run died there. Every fixture in
+  the tests happened to use one string for both, so nothing caught it.
+
+  The offered name is now always the registration key. `AgentReachability.name` is
+  gone rather than ignored, so there is no longer a display label sitting in the
+  shape inviting the same mistake.
+
+- 05e47cf: feat(virtual-user): keep the transcript a run already produced
+
+  The engine returns `intents` and `steps` on every run — what the user set out
+  to do, and every turn it took getting there — and `VirtualUserRunOutcome` kept
+  neither. The record held counts and findings, so the one question anybody
+  actually asks of a completed run ("what did it _do_?") had no answer anywhere,
+  even though the answer had been computed and thrown away a moment earlier.
+
+  `VirtualUserRunOutcome` now carries both, and `VirtualUserRunStore` gains a
+  `steps(runId, options?)` read. Intents ride on the run record: there are a
+  handful of them and every read of the run wants them. Steps get their own
+  `virtualUserRunStep` table, because a run at a 500-step budget carries more
+  transcript than every other column together and `list()` would pay for it on
+  every row.
+
+  Three things the kysely store had to get right, all of them driver differences
+  rather than design:
+
+  - steps are inserted in chunks of 50, because a bare sqlite driver binds at
+    most 999 variables per statement and ten columns times a 500-step budget is
+    five thousand — an un-chunked insert fails on long runs, which are the
+    interesting ones;
+  - `ok` is stored as 0 or 1, since a bare driver cannot bind a boolean at all
+    and `SerializePlugin` is not installed everywhere;
+  - `response` is stored JSON-encoded, because a truncated API response usually
+    starts with a brace and `SerializePlugin` would otherwise read it back as an
+    object rather than the string the engine saw.
+
+  Completing a run that does not exist no longer writes steps: there is no
+  foreign key to refuse them and nothing would ever read or reap them.
+
+  **This adds a table to the `virtualUser` schema**, and the runtime creates
+  nothing: a database that already has `virtualUserRun` gets the store's own
+  refusal at startup until `pikku db generate` writes the migration and
+  `pikku db migrate` applies it. Landing it now costs nothing, because
+  `scaffold.virtualUser` is not yet switched on anywhere.
+
+- 05e47cf: feat(virtual-user): put each persona on its own clock
+
+  A budget says where one run stops. Nothing said how often a persona should use
+  the application, so in practice each one ran whenever somebody remembered — and
+  what actually tells you about a product is the same user coming back over a
+  fortnight.
+
+  Each persona now gets a row rather than a bigger budget. `virtualUserSchedule`
+  holds `enabled`, the disposition and goals to run with, an interval **range**,
+  and `nextRunAt`. `tickVirtualUserSchedules` acts on whichever rows are due:
+
+  ```ts
+  wireScheduler({
+    name: 'virtualUsers',
+    schedule: '0 * * * *',
+    func: tickVirtualUserSchedules,
+  })
+  ```
+
+  The tick is generated and wired by nobody, deliberately. A scaffolded
+  `wireScheduler` would start spending an application's model budget the moment
+  somebody ran `pikku all`, on a host that may not run schedulers at all. Tick
+  resolution bounds how late a due persona is, never how often it runs.
+
+  Three things it does that are easy to leave out:
+
+  - The next due time is written **before** the run is dispatched, so a tick that
+    dies halfway cannot hand the same persona to the next one. A dispatch that
+    throws waits a full interval instead of retrying every minute for a week.
+    That write is a compare-and-set against the `nextRunAt` the tick read, so it
+    is also how a tick _wins_ the persona: two processes on the same cron see the
+    same due row, and only the one whose claim lands dispatches.
+  - A persona whose previous run is still `running` is skipped, not queued. Two
+    copies of the same user acting at once is a different test, and its findings
+    do not reproduce.
+  - A run still `running` after two hours is failed. Without that, one restart
+    mid-run blocks that persona's schedule permanently — which is where the
+    stranded-record cost of not using a queue finally gets paid.
+
+  Reschedule-on-completion was the other candidate and is worse in exactly one
+  way, fatally: a crash between finishing and scheduling ends the persona forever,
+  and the evidence is an absence.
+
+  New: `VirtualUserScheduleStore` in core (with the tick, `isDue` and `nextRunAt`
+  as pure functions), `KyselyVirtualUserScheduleStore` and its own schema —
+  its own rather than a third table in `virtualUserSchema`, and owned by its own
+  store, so a project that records runs and never wants them unattended carries no
+  cadence table. `scaffold.virtualUser` gains `setVirtualUserSchedule`,
+  `listVirtualUserSchedules` and the tick, behind a new `virtualUser:schedule`
+  scope: starting a run spends money once with a caller watching, while writing a
+  schedule spends it repeatedly with nobody there.
+
+  The console's Virtual Users screen gains a **Run now** button beside a persona's
+  run history, gated on `pikku:console:virtualUsers:run`. It dispatches the
+  project's own `runVirtualUser` rather than starting a run itself, so a run the
+  application would refuse — an acted-upon persona, a non-accountable disposition
+  in production — is still refused.
+
 ## 0.12.89
 
 ### Patch Changes

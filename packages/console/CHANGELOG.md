@@ -1,3 +1,100 @@
+## 0.12.62
+
+### Patch Changes
+
+- 05e47cf: feat(virtual-user): make a run's history readable
+
+  There was no way to ask what the virtual users had been doing. The scaffold
+  generated a way to start a run and a way to read one back by id, and
+  `VirtualUserRunStore.list()` — which takes a persona filter — had no caller at
+  all. The console's Virtual Users screen was built entirely from static meta, so
+  it could say who a persona was and what they could reach, and nothing about
+  whether anybody had ever turned them loose.
+
+  The scaffold now also generates `listVirtualUserRuns` and
+  `getVirtualUserRunSteps`, both behind the existing `virtualUser:read` scope —
+  the transcript is strictly more sensitive than the summary it belongs to, since
+  it carries the live ids and payloads the run actually sent.
+
+  The console reads the same two things through the console addon
+  (`console:getVirtualUserRuns`, `console:getVirtualUserRunSteps`) off the host's
+  own `virtualUserRunStore`, under a new `pikku:console:virtualUsers:read` scope.
+  Going through the store rather than the scaffolded RPCs means a project's runs
+  show up whether or not it turned `scaffold.virtualUser` on — wiring the store is
+  all a run has ever needed. A host with no store answers with an empty list
+  rather than an error: it has no runs, which is a true answer.
+
+  Each persona now shows its recent runs under the declaration — status, when,
+  steps and mutations, findings, disposition and seed — and opening one fetches
+  its transcript. The steps are fetched only on open, because the history is read
+  far more often than any single run is.
+
+- 05e47cf: feat(virtual-user): put each persona on its own clock
+
+  A budget says where one run stops. Nothing said how often a persona should use
+  the application, so in practice each one ran whenever somebody remembered — and
+  what actually tells you about a product is the same user coming back over a
+  fortnight.
+
+  Each persona now gets a row rather than a bigger budget. `virtualUserSchedule`
+  holds `enabled`, the disposition and goals to run with, an interval **range**,
+  and `nextRunAt`. `tickVirtualUserSchedules` acts on whichever rows are due:
+
+  ```ts
+  wireScheduler({
+    name: 'virtualUsers',
+    schedule: '0 * * * *',
+    func: tickVirtualUserSchedules,
+  })
+  ```
+
+  The tick is generated and wired by nobody, deliberately. A scaffolded
+  `wireScheduler` would start spending an application's model budget the moment
+  somebody ran `pikku all`, on a host that may not run schedulers at all. Tick
+  resolution bounds how late a due persona is, never how often it runs.
+
+  Three things it does that are easy to leave out:
+
+  - The next due time is written **before** the run is dispatched, so a tick that
+    dies halfway cannot hand the same persona to the next one. A dispatch that
+    throws waits a full interval instead of retrying every minute for a week.
+    That write is a compare-and-set against the `nextRunAt` the tick read, so it
+    is also how a tick _wins_ the persona: two processes on the same cron see the
+    same due row, and only the one whose claim lands dispatches.
+  - A persona whose previous run is still `running` is skipped, not queued. Two
+    copies of the same user acting at once is a different test, and its findings
+    do not reproduce.
+  - A run still `running` after two hours is failed. Without that, one restart
+    mid-run blocks that persona's schedule permanently — which is where the
+    stranded-record cost of not using a queue finally gets paid.
+
+  Reschedule-on-completion was the other candidate and is worse in exactly one
+  way, fatally: a crash between finishing and scheduling ends the persona forever,
+  and the evidence is an absence.
+
+  New: `VirtualUserScheduleStore` in core (with the tick, `isDue` and `nextRunAt`
+  as pure functions), `KyselyVirtualUserScheduleStore` and its own schema —
+  its own rather than a third table in `virtualUserSchema`, and owned by its own
+  store, so a project that records runs and never wants them unattended carries no
+  cadence table. `scaffold.virtualUser` gains `setVirtualUserSchedule`,
+  `listVirtualUserSchedules` and the tick, behind a new `virtualUser:schedule`
+  scope: starting a run spends money once with a caller watching, while writing a
+  schedule spends it repeatedly with nobody there.
+
+  The console's Virtual Users screen gains a **Run now** button beside a persona's
+  run history, gated on `pikku:console:virtualUsers:run`. It dispatches the
+  project's own `runVirtualUser` rather than starting a run itself, so a run the
+  application would refuse — an acted-upon persona, a non-accountable disposition
+  in production — is still refused.
+
+- Updated dependencies [3c0012c]
+- Updated dependencies [05e47cf]
+- Updated dependencies [cfd364a]
+- Updated dependencies [05e47cf]
+- Updated dependencies [05e47cf]
+- Updated dependencies [05e47cf]
+  - @pikku/core@0.12.90
+
 ## 0.12.61
 
 ### Patch Changes
