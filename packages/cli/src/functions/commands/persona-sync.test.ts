@@ -169,7 +169,10 @@ const run = async (data: any, personas: unknown[] = PERSONAS) =>
       logger,
       config: config(),
       getInspectorState: async () => ({ personas: { definitions: personas } }),
-      variables: { get: async () => 'impersonation-secret' },
+      variables: {
+        get: async (key: string) =>
+          key === 'SCENARIO_ACTOR_SECRET' ? 'impersonation-secret' : undefined,
+      },
     } as any,
     data,
     {} as any
