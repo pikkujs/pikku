@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
 import { createHttpPersonas } from './http-personas.js'
+import { establishOperatorSession } from './persona-sign-in.js'
 
 const OPERATOR_TOKEN = 'operator.jwt.token'
 
@@ -30,6 +31,16 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
         res.setHeader('set-cookie', ['session=operator; Path=/; HttpOnly'])
         res.writeHead(200).end(JSON.stringify({ token: 'operator' }))
         return
+      }
+
+      // The admin plugin refuses an unauthenticated caller, and saying so here
+      // is the point: a handshake that dropped the operator session between
+      // sign-in and lookup would otherwise pass this stage happily.
+      if (url.pathname.startsWith('/api/auth/admin/')) {
+        if (!/(^|;\s*)session=operator(;|$)/.test(req.headers.cookie ?? '')) {
+          res.writeHead(401).end(JSON.stringify({ message: 'no session' }))
+          return
+        }
       }
 
       if (url.pathname === '/api/auth/admin/list-users') {
@@ -165,6 +176,21 @@ describe('operator persona sign-in', () => {
 
     await personas.customer!.invoke('whoami', {})
     assert.equal(minted, 1)
+  })
+
+  test('carries the operator session into the admin lookup', async () => {
+    const stage = await startStage([{ id: 'user-9', email: 'susan@acme.test' }])
+    servers.push(stage.server)
+
+    // Plain fetch keeps no cookies, which is the browser provider's situation:
+    // it plants them on a Playwright context only once this has returned.
+    const { userId } = await establishOperatorSession(
+      fetch,
+      stage.apiUrl,
+      persona('susan@acme.test'),
+      { token: OPERATOR_TOKEN }
+    )
+    assert.equal(userId, 'user-9')
   })
 
   test('a persona with neither credential is refused at construction', async () => {

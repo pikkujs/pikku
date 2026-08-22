@@ -1,5 +1,5 @@
 ---
-'@pikku/services-better-auth': minor
+'@pikku/services-better-auth': patch
 ---
 
 Let a Fabric operator token be scoped to one stage.

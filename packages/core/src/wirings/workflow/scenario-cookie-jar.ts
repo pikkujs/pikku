@@ -11,8 +11,19 @@ export const createCookieJar = (apiUrl: string): ScenarioCookieJar => {
     fetch: async (input, init) => {
       const headers = new Headers(init?.headers)
       headers.set('origin', origin)
-      const held = [...jar].map(([name, value]) => `${name}=${value}`)
+      // The caller's own cookie header wins per name: a request that already
+      // carries a session is stating which one it means, and emitting the jar's
+      // copy alongside it sends the same name twice.
       const caller = headers.get('cookie')
+      const named = new Set(
+        (caller ?? '')
+          .split(';')
+          .map((pair) => pair.split('=')[0]?.trim())
+          .filter(Boolean)
+      )
+      const held = [...jar]
+        .filter(([name]) => !named.has(name))
+        .map(([name, value]) => `${name}=${value}`)
       if (held.length > 0 || caller) {
         headers.set('cookie', [caller, ...held].filter(Boolean).join('; '))
       }

@@ -1,5 +1,5 @@
 ---
-'@pikku/core': minor
+'@pikku/core': patch
 ---
 
 Let personas run against a deployed stage.

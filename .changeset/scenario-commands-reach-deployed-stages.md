@@ -1,6 +1,6 @@
 ---
-'@pikku/cli': minor
-'@pikku/playwright': minor
+'@pikku/cli': patch
+'@pikku/playwright': patch
 ---
 
 Point `pikku scenario run`, `pikku persona`, and `pikku persona sync` at a

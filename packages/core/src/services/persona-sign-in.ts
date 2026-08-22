@@ -154,13 +154,19 @@ export const establishOperatorSession = async (
     )
   }
 
-  const userId = await resolveUserId(
-    fetchImpl,
-    apiUrl,
-    persona,
-    options,
-    extraHeaders
-  )
+  // The lookup runs on the session this handshake just established, and a
+  // plain `fetch` keeps no cookies — the browser path in particular hands the
+  // jar's contents to Playwright only after this returns. Forwarding them
+  // explicitly is what keeps the admin calls authenticated for every caller.
+  const session = setCookies
+    .map((raw) => raw.split(';')[0])
+    .filter((pair): pair is string => Boolean(pair))
+    .join('; ')
+
+  const userId = await resolveUserId(fetchImpl, apiUrl, persona, options, {
+    ...extraHeaders,
+    cookie: session,
+  })
   return { setCookies, userId }
 }
 

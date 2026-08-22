@@ -87,6 +87,36 @@ export interface PlaywrightScenarioBrowserProviderOptions {
  * `wire.browser` and `wire.scenarioStep.actor` are the same identity — a
  * browser step and an RPC step in one scenario act as one user.
  */
+/**
+ * Send the impersonation header to the product's own origins and nowhere else.
+ *
+ * `setExtraHTTPHeaders` would be one line, but it stamps every request the
+ * context makes — analytics, fonts, any third-party subresource a page pulls —
+ * and telling an unrelated host which user this run is acting as is not
+ * something a test should do. Routing is the origin-aware alternative, and
+ * `fallback` rather than `continue` so a project's own route handlers still see
+ * the request.
+ */
+const impersonateOn = async (
+  context: BrowserContext,
+  userId: string,
+  origins: string[]
+): Promise<void> => {
+  const trusted = new Set(origins.map((url) => new URL(url).origin))
+  await context.route('**/*', async (route) => {
+    const request = route.request()
+    if (!trusted.has(new URL(request.url()).origin)) {
+      return route.fallback()
+    }
+    return route.fallback({
+      headers: {
+        ...request.headers(),
+        [IMPERSONATE_USER_ID_HEADER]: userId,
+      },
+    })
+  })
+}
+
 export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvider {
   private readonly config: BrowserConfig
   private sessions = new Map<string, Promise<ActorSession>>()
@@ -364,7 +394,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     if (this.captureContext) {
       session.capture = this.captureContext
     }
-    const signIn = this.options.signIn ?? this.defaultSignIn()
+    const signIn = this.options.signIn ?? this.defaultSignIn(actorConfig)
     await signIn(
       session.context,
       {
@@ -386,21 +416,12 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * `signIn`. The operator path wins when both credentials are present, for the
    * same reason it does on the HTTP side: it is the stronger of the two.
    */
-  private defaultSignIn(): ActorSignIn {
+  private defaultSignIn(persona: ResolvedPersona): ActorSignIn {
     const operator = this.options.operator
     if (!operator) {
       return defaultActorSignIn
     }
-    return async (context, request, target) => {
-      const persona = this.options.actors[request.name] ?? {
-        id: request.name,
-        name: request.name,
-        email: request.email,
-        roles: [],
-        goals: [],
-        tags: [],
-        runnable: true,
-      }
+    return async (context, _request, target) => {
       const { setCookies, userId } = await establishOperatorSession(
         fetch,
         target.apiUrl,
@@ -411,11 +432,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       await context.addCookies(
         setCookies.map((raw: string) => parseCookie(raw, target.appUrl))
       )
-      // The page's own API calls carry this, which is what makes the browser
-      // session act as the persona rather than as the operator.
-      await context.setExtraHTTPHeaders({
-        [IMPERSONATE_USER_ID_HEADER]: userId,
-      })
+      await impersonateOn(context, userId, [target.apiUrl, target.appUrl])
     }
   }
 
