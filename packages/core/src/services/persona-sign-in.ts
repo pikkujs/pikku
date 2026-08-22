@@ -110,6 +110,130 @@ interface AdminUser {
   email?: unknown
 }
 
+/** What an operator handshake yields: the session, and who to act as. */
+export interface OperatorSessionResult {
+  /** `Set-Cookie` values the operator sign-in returned. */
+  setCookies: string[]
+  /** The target's own id for the persona, for the impersonation header. */
+  userId: string
+}
+
+/**
+ * Establish a Fabric operator session against `apiUrl` and resolve the target's
+ * own id for `persona`, which is what the impersonation header names.
+ *
+ * Takes the fetch to use rather than making one, because the two callers need
+ * the cookies to land in different places: an HTTP persona keeps them in its
+ * jar, a browser run plants them on a Playwright context. Both need the same
+ * handshake, and it is the kind of sequence that quietly diverges once it is
+ * written twice.
+ */
+export const establishOperatorSession = async (
+  fetchImpl: typeof fetch,
+  apiUrl: string,
+  persona: ResolvedPersona,
+  options: OperatorSignInOptions,
+  extraHeaders: Record<string, string> = {}
+): Promise<OperatorSessionResult> => {
+  const signInPath = options.signInPath ?? '/auth/sign-in/fabric'
+  const token =
+    typeof options.token === 'function' ? await options.token() : options.token
+
+  const res = await fetchImpl(`${apiUrl}${signInPath}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...extraHeaders },
+    body: JSON.stringify({ token }),
+  })
+  if (!res.ok) {
+    throw await failed('operator sign-in', persona.id, res)
+  }
+  const setCookies = res.headers.getSetCookie?.() ?? []
+  if (setCookies.length === 0) {
+    throw new Error(
+      `[scenario] operator sign-in for '${persona.id}' returned no session cookie`
+    )
+  }
+
+  const userId = await resolveUserId(
+    fetchImpl,
+    apiUrl,
+    persona,
+    options,
+    extraHeaders
+  )
+  return { setCookies, userId }
+}
+
+/**
+ * The target's own id for this persona's address, since impersonation names a
+ * user id and a persona only knows an email.
+ *
+ * Looked up before creating, so a persona that already exists is never
+ * duplicated and the run reads as "act as this person" rather than "make one".
+ */
+const resolveUserId = async (
+  fetchImpl: typeof fetch,
+  apiUrl: string,
+  persona: ResolvedPersona,
+  options: OperatorSignInOptions,
+  extraHeaders: Record<string, string>
+): Promise<string> => {
+  const adminPath = options.adminPath ?? '/auth/admin'
+  const query = new URLSearchParams({
+    filterField: 'email',
+    filterValue: persona.email,
+    filterOperator: 'eq',
+    limit: '1',
+  })
+  const found = await fetchImpl(`${apiUrl}${adminPath}/list-users?${query}`, {
+    headers: { accept: 'application/json', ...extraHeaders },
+  })
+  if (!found.ok) {
+    throw await failed('persona lookup', persona.id, found)
+  }
+  const listed = (await found.json().catch(() => null)) as {
+    users?: AdminUser[]
+  } | null
+  const existing = listed?.users?.find((u) => u.email === persona.email)
+  if (existing?.id) {
+    return String(existing.id)
+  }
+
+  if (!options.createMissing) {
+    throw new Error(
+      `[scenario] no account on the target for persona '${persona.id}' (${persona.email}) — ` +
+        'provision it, or set createMissing on the operator credentials'
+    )
+  }
+
+  const created = await fetchImpl(`${apiUrl}${adminPath}/create-user`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...extraHeaders },
+    body: JSON.stringify({
+      email: persona.email,
+      name: persona.name,
+      // Never used and never returned: the run impersonates rather than signs
+      // in, so the account is reachable only by someone already holding an
+      // operator token. A derivable password would undo exactly that.
+      password: globalThis.crypto.randomUUID(),
+      ...(persona.roles[0] ? { role: persona.roles[0] } : {}),
+    }),
+  })
+  if (!created.ok) {
+    throw await failed('persona creation', persona.id, created)
+  }
+  const body = (await created.json().catch(() => null)) as {
+    user?: AdminUser
+  } | null
+  const id = body?.user?.id
+  if (!id) {
+    throw new Error(
+      `[scenario] creating persona '${persona.id}' returned no user id`
+    )
+  }
+  return String(id)
+}
+
 /**
  * Sign a persona in on a DEPLOYED stage, by having a Fabric operator act as
  * them — the path that needs no test credential to exist anywhere.
@@ -134,27 +258,13 @@ export class OperatorSignIn implements PersonaSignIn {
   ) {}
 
   async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void> {
-    const signInPath = this.options.signInPath ?? '/auth/sign-in/fabric'
-    const token =
-      typeof this.options.token === 'function'
-        ? await this.options.token()
-        : this.options.token
-
-    const res = await jar.fetch(`${this.apiUrl}${signInPath}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ token }),
-    })
-    if (!res.ok) {
-      throw await failed('operator sign-in', persona.id, res)
-    }
-    if (res.headers.getSetCookie().length === 0) {
-      throw new Error(
-        `[scenario] operator sign-in for '${persona.id}' returned no session cookie`
-      )
-    }
-
-    this.userId = await this.resolveUserId(jar, persona)
+    const { userId } = await establishOperatorSession(
+      jar.fetch,
+      this.apiUrl,
+      persona,
+      this.options
+    )
+    this.userId = userId
   }
 
   headers(): Record<string, string> {
@@ -164,72 +274,5 @@ export class OperatorSignIn implements PersonaSignIn {
       )
     }
     return { [IMPERSONATE_USER_ID_HEADER]: this.userId }
-  }
-
-  /**
-   * The target's own id for this persona's address, since impersonation names a
-   * user id and a persona only knows an email.
-   *
-   * Looked up before creating, so a persona that already exists is never
-   * duplicated and the run reads as "act as this person" rather than "make one".
-   */
-  private async resolveUserId(
-    jar: ScenarioCookieJar,
-    persona: ResolvedPersona
-  ): Promise<string> {
-    const adminPath = this.options.adminPath ?? '/auth/admin'
-    const query = new URLSearchParams({
-      filterField: 'email',
-      filterValue: persona.email,
-      filterOperator: 'eq',
-      limit: '1',
-    })
-    const found = await jar.fetch(`${this.apiUrl}${adminPath}/list-users?${query}`, {
-      headers: { accept: 'application/json' },
-    })
-    if (!found.ok) {
-      throw await failed('persona lookup', persona.id, found)
-    }
-    const listed = (await found.json().catch(() => null)) as {
-      users?: AdminUser[]
-    } | null
-    const existing = listed?.users?.find((u) => u.email === persona.email)
-    if (existing?.id) {
-      return String(existing.id)
-    }
-
-    if (!this.options.createMissing) {
-      throw new Error(
-        `[scenario] no account on the target for persona '${persona.id}' (${persona.email}) — ` +
-          'provision it, or set createMissing on the operator credentials'
-      )
-    }
-
-    const created = await jar.fetch(`${this.apiUrl}${adminPath}/create-user`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        email: persona.email,
-        name: persona.name,
-        // Never used and never returned: the run impersonates rather than signs
-        // in, so the account is reachable only by someone already holding an
-        // operator token. A derivable password would undo exactly that.
-        password: globalThis.crypto.randomUUID(),
-        ...(persona.roles[0] ? { role: persona.roles[0] } : {}),
-      }),
-    })
-    if (!created.ok) {
-      throw await failed('persona creation', persona.id, created)
-    }
-    const body = (await created.json().catch(() => null)) as {
-      user?: AdminUser
-    } | null
-    const id = body?.user?.id
-    if (!id) {
-      throw new Error(
-        `[scenario] creating persona '${persona.id}' returned no user id`
-      )
-    }
-    return String(id)
   }
 }

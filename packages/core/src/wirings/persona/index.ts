@@ -48,9 +48,11 @@ export {
 export {
   ActorSignIn,
   OperatorSignIn,
+  establishOperatorSession,
   IMPERSONATE_USER_ID_HEADER,
   type PersonaSignIn,
   type OperatorSignInOptions,
+  type OperatorSessionResult,
 } from '../../services/persona-sign-in.js'
 export {
   postScenarioJson,

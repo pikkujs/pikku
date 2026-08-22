@@ -35,6 +35,7 @@ import {
   scenarioBrowserLifecycle,
 } from './scenario-browser.js'
 import { resolvePersonas } from '../../utils/resolve-personas.js'
+import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
@@ -262,13 +263,10 @@ export const scenarioRun = pikkuSessionlessFunc<
       return
     }
 
-    const secret = await variables.get('SCENARIO_ACTOR_SECRET')
-    if (!secret) {
-      throw new Error(
-        'SCENARIO_ACTOR_SECRET is not set — scenario actors cannot sign in. ' +
-          'Export it in the environment running this command (never put it in pikku.config.json).'
-      )
-    }
+    const credentials = await resolvePersonaCredentials(
+      variables,
+      'scenario actors'
+    )
     // Every declared persona, with its address filled in. Resolved once: the
     // HTTP personas and the Playwright provider below must see the same
     // registry, and codegen resolved the same way to type `PersonaName`.
@@ -278,7 +276,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     )
     const actors = createHttpPersonas({
       apiUrl: env.apiUrl,
-      secret,
+      ...credentials,
       personas: scenarioActors,
       signInPath: env.signInPath,
       rpcPath: env.rpcPath,
@@ -442,7 +440,7 @@ export const scenarioRun = pikkuSessionlessFunc<
               apiUrl: env.apiUrl,
               appUrl: env.appUrl,
               appUrls: env.appUrls,
-              secret,
+              ...credentials,
               actors: scenarioActors,
               signInPath: env.signInPath,
               capture,
