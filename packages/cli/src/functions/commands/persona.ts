@@ -19,6 +19,7 @@ import {
 import { getSingletonServices, setSingletonServices } from '@pikku/core/state'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
+import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { resolveEnvironment } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
@@ -153,13 +154,10 @@ export const personaRun = pikkuSessionlessFunc<
       throw new Error(refusal)
     }
 
-    const secret = await variables.get('SCENARIO_ACTOR_SECRET')
-    if (!secret) {
-      throw new Error(
-        'SCENARIO_ACTOR_SECRET is not set — a virtual user cannot sign in. ' +
-          'Export it in the environment running this command (never put it in pikku.config.json).'
-      )
-    }
+    const credentials = await resolvePersonaCredentials(
+      variables,
+      'a virtual user'
+    )
 
     const resolvedModel = model ?? config.scenarios?.model
     if (!resolvedModel) {
@@ -203,7 +201,7 @@ export const personaRun = pikkuSessionlessFunc<
 
     const signedIn = createHttpPersonas({
       apiUrl: env.apiUrl,
-      secret,
+      ...credentials,
       personas,
       signInPath: env.signInPath,
       rpcPath: env.rpcPath,

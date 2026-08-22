@@ -6,6 +6,7 @@ import type { ResolvedPersona } from '@pikku/core/services'
 import { personaEnvironmentRefusal } from '@pikku/core/persona'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
+import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { resolveEnvironment } from './environment.js'
 import { loadDeclaredRoles, openScopeServiceForRoles } from './roles-shared.js'
 
@@ -132,13 +133,10 @@ export const personaSync = pikkuSessionlessFunc<
       return
     }
 
-    const secret = await variables.get('SCENARIO_ACTOR_SECRET')
-    if (!secret) {
-      throw new Error(
-        'SCENARIO_ACTOR_SECRET is not set — a persona account cannot be created. ' +
-          'Export it in the environment running this command (never put it in pikku.config.json).'
-      )
-    }
+    const credentials = await resolvePersonaCredentials(
+      variables,
+      'a persona account'
+    )
 
     const declaredRoles = await loadDeclaredRoles(
       config.rolesMetaJsonFile,
@@ -150,7 +148,7 @@ export const personaSync = pikkuSessionlessFunc<
 
     const signedIn = createHttpPersonas({
       apiUrl: env.apiUrl,
-      secret,
+      ...credentials,
       personas: Object.fromEntries(eligible),
       signInPath: env.signInPath,
       rpcPath: env.rpcPath,

@@ -57,14 +57,15 @@ const makeScopeService = () => {
 const makeAuth = (
   db: Record<string, any[]>,
   key?: string,
-  scopeService?: any
+  scopeService?: any,
+  audience?: string
 ) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    plugins: [fabric({ publicKey: key, scopeService })],
+    plugins: [fabric({ publicKey: key, scopeService, audience })],
   })
 
 const signInFabric = (auth: ReturnType<typeof makeAuth>, token: string) =>
@@ -77,6 +78,68 @@ const signInFabric = (auth: ReturnType<typeof makeAuth>, token: string) =>
   )
 
 describe('better-auth fabric plugin', () => {
+  test('a stage-scoped token only works on the stage it names', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    })
+    const token = signToken(privateKey, { sub: 'op-1', aud: 'stage-a' })
+
+    const wrongStage = await signInFabric(
+      makeAuth(
+        { user: [], session: [], account: [] },
+        publicKey,
+        undefined,
+        'stage-b'
+      ),
+      token
+    )
+    assert.equal(wrongStage.status, 401)
+
+    const rightStage = await signInFabric(
+      makeAuth(
+        { user: [], session: [], account: [] },
+        publicKey,
+        undefined,
+        'stage-a'
+      ),
+      token
+    )
+    assert.equal(rightStage.status, 200)
+  })
+
+  test('a stage that does not know its own id refuses a scoped token', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    })
+    const res = await signInFabric(
+      makeAuth({ user: [], session: [], account: [] }, publicKey),
+      signToken(privateKey, { sub: 'op-1', aud: 'stage-a' })
+    )
+    assert.equal(res.status, 401)
+  })
+
+  test('an unscoped token is still accepted, so server-to-server callers keep working', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    })
+    const res = await signInFabric(
+      makeAuth(
+        { user: [], session: [], account: [] },
+        publicKey,
+        undefined,
+        'stage-a'
+      ),
+      signToken(privateKey, { sub: 'op-1' })
+    )
+    assert.equal(res.status, 200)
+  })
+
   test('mints an admin session for a synthetic fabric operator row', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const { granted, scopeService } = makeScopeService()

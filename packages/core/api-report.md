@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2744 observable things**: 865 exported names, plus
-1879 members on the classes and interfaces among them, reachable
+**2766 observable things**: 872 exported names, plus
+1894 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -22,9 +22,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
+| `./persona` | 34 | 34 | 49 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
-| `./persona` | 27 | 27 | 34 |
 | `./services/local-meta` | 22 | 3 | 46 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
@@ -3879,6 +3879,11 @@ validateAndBuildSystemRoleDefinitionsMeta: (definitions: SystemRoleDefinitions) 
 ## ./persona
 
 ```ts
+export class ActorSignIn implements PersonaSignIn {
+  constructor(private readonly apiUrl: string, private readonly secret: string, private readonly signInPath: string)
+  async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
+  headers(): Record<string, string>
+}
 export type CorePersona = {
   name: string
   jobTitle?: string
@@ -3900,6 +3905,7 @@ export type CorePersona = {
 export type CorePersonas = Record<string, CorePersona>
 createHttpPersonas: (config: HttpPersonasConfig) => ScenarioPersonas
 definePersonas: (_config: CorePersonas) => void
+establishOperatorSession: (fetchImpl: (input: URL | RequestInfo, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, persona: ResolvedPersona, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
 export class HttpPersona implements ScenarioPersona {
   constructor(readonly name: string, private persona: ResolvedPersona, private config: HttpPersonasConfig)
   get email(): string
@@ -3910,17 +3916,34 @@ export class HttpPersona implements ScenarioPersona {
 }
 export interface HttpPersonasConfig {
   apiUrl: string
-  secret: string
+  secret?: string
+  operator?: OperatorSignInOptions
   personas: Record<string, ResolvedPersona>
   signInPath?: string
   sessionPath?: string
   rpcPath?: string
   model?: string
 }
+IMPERSONATE_USER_ID_HEADER: "x-pikku-impersonate-user-id"
 isRunnablePersona: (persona: { runnable?: boolean | undefined; account?: { provider?: string | undefined; } | undefined; }) => boolean
 export interface MailboxAllowlist {
   senders: readonly string[]
   linkOrigins?: readonly string[]
+}
+export interface OperatorSessionResult {
+  setCookies: string[]
+  userId: string
+}
+export class OperatorSignIn implements PersonaSignIn {
+  constructor(private readonly apiUrl: string, private readonly options: OperatorSignInOptions)
+  async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
+  headers(): Record<string, string>
+}
+export interface OperatorSignInOptions {
+  token: string | (() => string | Promise<string>)
+  createMissing?: boolean
+  adminPath?: string
+  signInPath?: string
 }
 export type PersonaAccountMeta = {
   provider?: string
@@ -3961,6 +3984,10 @@ export type PersonaMeta = {
   runnable: boolean
   app?: string
   sourceFile?: string
+}
+export interface PersonaSignIn {
+  login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
+  headers(): Record<string, string>
 }
 export type PersonasMeta = Record<string, PersonaMeta>
 postScenarioJson: <T = unknown>(url: string, { body, headers, method, fetch: send, }?: ScenarioJsonRequest) => Promise<ScenarioHttpResponse<T>>

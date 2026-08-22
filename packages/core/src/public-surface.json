@@ -272,9 +272,13 @@
     "validateAndBuildSystemRoleDefinitionsMeta"
   ],
   "./persona": [
+    "ActorSignIn",
     "HttpPersona",
+    "IMPERSONATE_USER_ID_HEADER",
+    "OperatorSignIn",
     "createHttpPersonas",
     "definePersonas",
+    "establishOperatorSession",
     "isRunnablePersona",
     "personaEmail",
     "personaEmails",

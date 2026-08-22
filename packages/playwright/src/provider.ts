@@ -2,6 +2,11 @@ import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
 import type { ResolvedPersona } from '@pikku/core/services'
+import {
+  establishOperatorSession,
+  IMPERSONATE_USER_ID_HEADER,
+  type OperatorSignInOptions,
+} from '@pikku/core/persona'
 import type {
   ScenarioArtifact,
   ScenarioBrowserFailure,
@@ -24,7 +29,8 @@ const VIDEO_STAGING_DIR = '.video-raw'
 export interface ActorSignInRequest {
   email: string
   name: string
-  secret: string
+  /** Absent on a deployed stage, which has no actor secret to post. */
+  secret?: string
 }
 
 /** Where the actor sign-in endpoint lives, and which origin it is called from. */
@@ -46,8 +52,18 @@ export type ActorSignIn = (
 
 export interface PlaywrightScenarioBrowserProviderOptions {
   config?: BrowserConfig
-  /** The actor impersonation secret — the same SCENARIO_ACTOR_SECRET the HTTP actors use. */
-  secret: string
+  /**
+   * The actor impersonation secret — the same SCENARIO_ACTOR_SECRET the HTTP
+   * actors use. The local-development credential; a deployed stage passes
+   * {@link PlaywrightScenarioBrowserProviderOptions.operator} instead.
+   */
+  secret?: string
+  /**
+   * Fabric operator credentials, for browsing a DEPLOYED stage as a persona.
+   * Same handshake the HTTP personas use, so a browser step and an RPC step in
+   * one scenario still act as one user.
+   */
+  operator?: OperatorSignInOptions
   /** Actor name → the persona filling it, resolved from `definePersonas()`. */
   actors: Record<string, ResolvedPersona>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
@@ -71,6 +87,36 @@ export interface PlaywrightScenarioBrowserProviderOptions {
  * `wire.browser` and `wire.scenarioStep.actor` are the same identity — a
  * browser step and an RPC step in one scenario act as one user.
  */
+/**
+ * Send the impersonation header to the product's own origins and nowhere else.
+ *
+ * `setExtraHTTPHeaders` would be one line, but it stamps every request the
+ * context makes — analytics, fonts, any third-party subresource a page pulls —
+ * and telling an unrelated host which user this run is acting as is not
+ * something a test should do. Routing is the origin-aware alternative, and
+ * `fallback` rather than `continue` so a project's own route handlers still see
+ * the request.
+ */
+const impersonateOn = async (
+  context: BrowserContext,
+  userId: string,
+  origins: string[]
+): Promise<void> => {
+  const trusted = new Set(origins.map((url) => new URL(url).origin))
+  await context.route('**/*', async (route) => {
+    const request = route.request()
+    if (!trusted.has(new URL(request.url()).origin)) {
+      return route.fallback()
+    }
+    return route.fallback({
+      headers: {
+        ...request.headers(),
+        [IMPERSONATE_USER_ID_HEADER]: userId,
+      },
+    })
+  })
+}
+
 export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvider {
   private readonly config: BrowserConfig
   private sessions = new Map<string, Promise<ActorSession>>()
@@ -348,7 +394,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     if (this.captureContext) {
       session.capture = this.captureContext
     }
-    const signIn = this.options.signIn ?? defaultActorSignIn
+    const signIn = this.options.signIn ?? this.defaultSignIn(actorConfig)
     await signIn(
       session.context,
       {
@@ -363,6 +409,31 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       }
     )
     return session
+  }
+
+  /**
+   * How a context gets its session when the project has not supplied its own
+   * `signIn`. The operator path wins when both credentials are present, for the
+   * same reason it does on the HTTP side: it is the stronger of the two.
+   */
+  private defaultSignIn(persona: ResolvedPersona): ActorSignIn {
+    const operator = this.options.operator
+    if (!operator) {
+      return defaultActorSignIn
+    }
+    return async (context, _request, target) => {
+      const { setCookies, userId } = await establishOperatorSession(
+        fetch,
+        target.apiUrl,
+        persona,
+        operator,
+        { origin: new URL(target.appUrl).origin }
+      )
+      await context.addCookies(
+        setCookies.map((raw: string) => parseCookie(raw, target.appUrl))
+      )
+      await impersonateOn(context, userId, [target.apiUrl, target.appUrl])
+    }
   }
 
   /**
