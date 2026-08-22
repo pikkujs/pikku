@@ -11,6 +11,7 @@ import {
   changesAreEmpty,
   classifyStatus,
   describeDeployment,
+  destructiveMigrations,
   isApprovable,
   readDeploymentStatus,
   readWorkers,
@@ -18,6 +19,7 @@ import {
   waitForDeployment,
   type BlockedReason,
   type DeploymentStatus,
+  type MigrationRisk,
   type ProgressEvent,
 } from '../lib/deployment.js'
 
@@ -31,6 +33,7 @@ export const FabricDeployInput = z.object({
   deploymentId: z.string().optional(),
   sync: z.boolean().optional(),
   autoApprove: z.boolean().optional(),
+  allowDestructive: z.boolean().optional(),
   timeout: z.number().optional(),
   json: z.boolean().optional(),
 })
@@ -79,6 +82,13 @@ const Changes = z.object({
   secretsChanged: z.array(z.string()),
   variablesChanged: z.array(z.string()),
   pendingMigrations: z.array(z.string()),
+  migrationRisks: z.array(
+    z.object({
+      name: z.string(),
+      level: z.enum(['destructive', 'safe']),
+      reasons: z.array(z.string()),
+    })
+  ),
 })
 
 /**
@@ -109,6 +119,12 @@ export const FabricDeployApplyOutput = z.object({
     .optional(),
   missingSecrets: z.array(MissingConfig).optional(),
   missingVariables: z.array(MissingConfig).optional(),
+  /**
+   * `blocked` only, and only when the gate would otherwise have opened: the
+   * approval was ours to give and we declined to give it. Distinct from
+   * `blockedReason`, which says why fabric parked the deploy.
+   */
+  approvalWithheld: z.literal('destructive_migrations').optional(),
   /** Terminal reads only — what this deployment changes against the live one. */
   changes: Changes.optional(),
   /** `succeeded` only. */
@@ -295,21 +311,50 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       return { ...base, outcome: 'queued' as const }
     }
 
+    // Set when we, not fabric, kept the gate shut — see `approvalWithheld`.
+    let approvalWithheld: ApplyOutput['approvalWithheld']
+
     /**
      * Approving is a second decision, distinct from "create this deployment",
      * and `--auto-approve` answers both. Without it an interactive session is
      * asked and every other session is told, so a parked plan surfaces as
      * exit 3 rather than an auto-publish nobody sanctioned. `--json` never
      * prompts: its stdout belongs to the event stream.
+     *
+     * A destructive migration overrides all of that. `--auto-approve` is a
+     * standing "yes" written before anyone knew what the plan contained, and
+     * fabric's own risk verdict is the thing that could not have been known:
+     * a `DROP TABLE` deserves a decision taken with it in view, so it needs
+     * `--allow-destructive` said about this deploy, not a blanket yes.
      */
     const approveGate = async (status: DeploymentStatus): Promise<boolean> => {
-      if (input.autoApprove) return true
+      // Read the plan here rather than up front: the gate is the first moment
+      // it exists, and this callback runs at most once per deploy.
+      const described = await describeDeployment(rpc, projectId, deploymentId)
+      const destructive = destructiveMigrations(described?.changes)
+
+      if (destructive.length > 0 && !input.allowDestructive) {
+        // Nobody to show it to, or a standing yes that never saw it.
+        if (input.autoApprove || input.json || !process.stdin.isTTY) {
+          approvalWithheld = 'destructive_migrations'
+          return false
+        }
+      } else if (input.autoApprove) {
+        return true
+      }
       if (input.json || !process.stdin.isTTY) return false
+
+      // Interactive: the risk goes in the question, so the answer is given
+      // with it in view.
+      const warning =
+        destructive.length > 0
+          ? `\n${destructiveLines(destructive).join('\n')}\n`
+          : ''
       return promptConfirm(
         `Plan for ${branch ?? deploymentId} is ready to publish (${stateLabel(
           status.status,
           status.statusReason
-        )}). Approve?`
+        )}).${warning} Approve?`
       )
     }
 
@@ -375,6 +420,7 @@ export const FabricDeployApply = pikkuSessionlessFunc({
             blockedReason: waited.reason ?? 'unknown',
             missingSecrets: waited.missingSecrets,
             missingVariables: waited.missingVariables,
+            ...(approvalWithheld ? { approvalWithheld } : {}),
           }
         : {}),
       ...finished,
@@ -411,6 +457,19 @@ const shortList = (names: string[], limit = 8): string =>
     ? names.join(', ')
     : `${names.slice(0, limit).join(', ')} +${names.length - limit} more`
 
+/**
+ * One line per destructive migration, naming the reasons fabric gave. These
+ * are the lines a `--auto-approve` run is refusing on, so they have to stand
+ * on their own — not read as an addendum to the migration list above them.
+ */
+const destructiveLines = (risks: MigrationRisk[]): string[] =>
+  risks.map(
+    (r) =>
+      `  ${removed('! destructive')} ${r.name}${
+        r.reasons.length > 0 ? dim(` (${r.reasons.join(', ')})`) : ''
+      }`
+  )
+
 const changeLines = (changes: ApplyOutput['changes']): string[] => {
   if (!changes || changesAreEmpty(changes)) return []
   const lines: string[] = []
@@ -433,6 +492,7 @@ const changeLines = (changes: ApplyOutput['changes']): string[] => {
   add('~ secrets', changes.secretsChanged, changed)
   add('~ variables', changes.variablesChanged, changed)
   add('~ migrations', changes.pendingMigrations, changed)
+  lines.push(...destructiveLines(destructiveMigrations(changes)))
   return lines
 }
 
@@ -523,7 +583,18 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
       console.log(line)
     }
     for (const line of changeLines(changes)) console.log(line)
-    if (isApprovable(reason) && !approved) {
+    if (result.approvalWithheld === 'destructive_migrations') {
+      console.log(
+        dim(
+          'The plan drops or rewrites data. Nothing was published — review the migrations above, then re-run with `--allow-destructive` to accept them.'
+        )
+      )
+      console.log(
+        dim(
+          `\`pikku fabric deploy apply --deployment-id ${deploymentId} --sync --auto-approve --allow-destructive\``
+        )
+      )
+    } else if (isApprovable(reason) && !approved) {
       console.log(
         dim(
           `Approve it with \`pikku fabric deploy apply --deployment-id ${deploymentId} --sync --auto-approve\`.`

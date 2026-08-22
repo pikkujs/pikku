@@ -157,6 +157,55 @@ export async function approveDeployment(
   return resumed
 }
 
+/**
+ * Fabric's verdict on one pending migration, mirrored from
+ * `lib/deploy/migration-risk.ts`. `level` is the only field the gate reads;
+ * `reasons` exists so the CLI can say *why* a migration is destructive rather
+ * than just flagging it — "drop_table" is the difference between a shrug and
+ * a stop.
+ */
+export interface MigrationRisk {
+  name: string
+  level: 'destructive' | 'safe'
+  reasons: string[]
+}
+
+/**
+ * The plan block is typed `Record<string, unknown>` end to end — fabric writes
+ * it as `as never` and the generated SDK carries no shape for it — so every
+ * field has to be narrowed by hand. A malformed entry is dropped rather than
+ * thrown on: a plan we cannot parse must not take the deploy down with it.
+ */
+function parseMigrationRisks(plan: unknown): MigrationRisk[] {
+  const raw = (plan as Record<string, unknown> | null | undefined)
+    ?.migrationRisks
+  if (!Array.isArray(raw)) return []
+  const risks: MigrationRisk[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue
+    const { name, level, reasons } = entry as Record<string, unknown>
+    if (typeof name !== 'string') continue
+    if (level !== 'destructive' && level !== 'safe') continue
+    risks.push({
+      name,
+      level,
+      reasons: Array.isArray(reasons)
+        ? reasons.filter((r): r is string => typeof r === 'string')
+        : [],
+    })
+  }
+  return risks
+}
+
+/** The pending migrations fabric marked destructive, in plan order. */
+export function destructiveMigrations(
+  changes: DeploymentChanges | null | undefined
+): MigrationRisk[] {
+  return (changes?.migrationRisks ?? []).filter(
+    (r) => r.level === 'destructive'
+  )
+}
+
 /** What actually changed, from the deployment's `diff` block. */
 export interface DeploymentChanges {
   unitsAdded: string[]
@@ -171,6 +220,8 @@ export interface DeploymentChanges {
   secretsChanged: string[]
   variablesChanged: string[]
   pendingMigrations: string[]
+  /** Risk verdicts for `pendingMigrations`, one entry per migration fabric judged. */
+  migrationRisks: MigrationRisk[]
 }
 
 export function changesAreEmpty(changes: DeploymentChanges): boolean {
@@ -227,6 +278,13 @@ export async function describeDeployment(
             .filter((m) => !executed.has(m))
         : []
 
+      // Risks are scoped to what is still outstanding: a migration already
+      // applied by an earlier attempt is not a decision this run is making.
+      const pending = new Set(pendingMigrations)
+      const migrationRisks = parseMigrationRisks(deployment.plan).filter((r) =>
+        pending.has(r.name)
+      )
+
       const changes: DeploymentChanges | null = diff
         ? {
             unitsAdded: diff.units.added,
@@ -249,6 +307,7 @@ export async function describeDeployment(
               ...diff.variables.modified,
             ],
             pendingMigrations,
+            migrationRisks,
           }
         : pendingMigrations.length > 0
           ? {
@@ -264,6 +323,7 @@ export async function describeDeployment(
               secretsChanged: [],
               variablesChanged: [],
               pendingMigrations,
+              migrationRisks,
             }
           : null
 

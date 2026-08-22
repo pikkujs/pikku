@@ -4,6 +4,7 @@ import {
   blockedReason,
   classifyStatus,
   describeDeployment,
+  destructiveMigrations,
   isApprovable,
   stateLabel,
   waitForDeployment,
@@ -311,6 +312,99 @@ describe('describeDeployment', () => {
     assert.strictEqual(asked.includeDismissed, true)
     assert.strictEqual(found?.branch, 'main')
     assert.strictEqual(found?.status, 'cancelled')
+  })
+
+  test('scopes migration risks to what is still pending', async () => {
+    const rpc = {
+      invoke: async () => ({
+        stages: [
+          {
+            stageId: 'stage-1',
+            branch: 'main',
+            url: null,
+            deployments: [
+              {
+                deploymentId: 'dep-1',
+                status: 'suspended',
+                statusReason: 'awaiting_approval',
+                gitSha: 'abc1234',
+                diff: null,
+                plan: {
+                  pendingMigrations: ['0001_init', '0002_drop_users'],
+                  migrationRisks: [
+                    { name: '0001_init', level: 'safe', reasons: [] },
+                    {
+                      name: '0002_drop_users',
+                      level: 'destructive',
+                      reasons: ['drop_table'],
+                    },
+                    // Already applied by an earlier attempt — not a decision
+                    // this run is being asked to make.
+                    {
+                      name: '0000_old',
+                      level: 'destructive',
+                      reasons: ['truncate'],
+                    },
+                  ],
+                },
+                migrations: [{ migrationName: '0000_old' }],
+              },
+            ],
+          },
+        ],
+      }),
+    } as unknown as PikkuRPC
+
+    const found = await describeDeployment(rpc, 'proj-1', 'dep-1')
+    assert.deepStrictEqual(found?.changes?.pendingMigrations, [
+      '0001_init',
+      '0002_drop_users',
+    ])
+    assert.deepStrictEqual(
+      found?.changes?.migrationRisks.map((r) => r.name),
+      ['0001_init', '0002_drop_users']
+    )
+    assert.deepStrictEqual(destructiveMigrations(found?.changes), [
+      { name: '0002_drop_users', level: 'destructive', reasons: ['drop_table'] },
+    ])
+  })
+
+  test('drops malformed risk entries rather than failing the deploy', async () => {
+    const rpc = {
+      invoke: async () => ({
+        stages: [
+          {
+            stageId: 'stage-1',
+            branch: 'main',
+            url: null,
+            deployments: [
+              {
+                deploymentId: 'dep-1',
+                status: 'suspended',
+                statusReason: 'awaiting_approval',
+                gitSha: null,
+                diff: null,
+                plan: {
+                  pendingMigrations: ['0001_init'],
+                  migrationRisks: [
+                    null,
+                    { name: '0001_init', level: 'unheard-of' },
+                    { level: 'destructive', reasons: ['drop_table'] },
+                    { name: '0001_init', level: 'destructive', reasons: 'nope' },
+                  ],
+                },
+                migrations: [],
+              },
+            ],
+          },
+        ],
+      }),
+    } as unknown as PikkuRPC
+
+    const found = await describeDeployment(rpc, 'proj-1', 'dep-1')
+    assert.deepStrictEqual(found?.changes?.migrationRisks, [
+      { name: '0001_init', level: 'destructive', reasons: [] },
+    ])
   })
 
   test('returns null rather than throwing when the listing has no such row', async () => {

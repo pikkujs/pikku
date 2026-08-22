@@ -301,6 +301,11 @@ Why it parked is the whole story, and it is `statusReason`, not `status`:
 
 - `awaiting_approval` — the plan is fine, a human has to publish it.
   `--auto-approve` does that; without it you get exit 3 and the command to run.
+  One exception: if fabric marked any pending migration **destructive** — a
+  drop, a truncate, a rewrite — `--auto-approve` alone declines and exits 3,
+  because a standing yes was given before anyone knew the plan dropped a table.
+  The CLI lists the migrations and fabric's reasons; `--allow-destructive`
+  accepts them for that deploy.
 - `needs_config` — a declared secret or variable has no value covering the
   stage. The CLI names them. `--auto-approve` will **not** force this through;
   set the values (`pikku fabric secrets set <name>`) and re-attach.

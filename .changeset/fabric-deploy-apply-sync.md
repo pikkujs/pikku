@@ -12,7 +12,8 @@ no CI pipeline built on it could tell a green deploy from a red one.
 `--sync` polls the deployment to a terminal state and exits on the outcome: 0
 live, 2 failed, 3 blocked, 4 timed out (900s by default, `--timeout <seconds>`
 to move it). On success it prints what changed — units, handlers, functions,
-workflows, secrets, variables, pending migrations — and the workers now running.
+workflows, secrets, variables, pending migrations (destructive ones called out
+individually with fabric's reasons) — and the workers now running.
 Under `--json` the wait emits NDJSON progress events with the terminal result
 last.
 
@@ -27,6 +28,13 @@ instead, and only offers to approve a plan that is genuinely at the gate.
   decisions the flow has: confirm the create, and publish a plan parked at
   `awaiting_approval`. It deliberately will not force a `needs_config` or
   `needs_attention` plan through — fabric refuses those, and so do we.
+- `--allow-destructive` is required on top of `--auto-approve` when fabric's
+  plan marks a pending migration destructive (`drop_table`, `truncate`,
+  `delete_rows`, a column rewrite, …). `--auto-approve` is a standing yes
+  written before anyone knew what the plan contained, and the risk verdict is
+  exactly what could not have been known — so the CLI lists the migrations and
+  the reasons, exits 3, and waits to be told again with the plan in view. The
+  interactive prompt shows the same lines inside the question.
 - `--deployment-id <id>` attaches to an existing deployment instead of creating
   one, which is what lets one CI job kick a deploy off and a later one wait for
   it. It combines with `--sync` and `--auto-approve`, is rejected alongside

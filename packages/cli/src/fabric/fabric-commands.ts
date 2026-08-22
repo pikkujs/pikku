@@ -211,6 +211,11 @@ export const fabricCommands = defineCLICommands({
               'Answer the confirmation prompt and publish a plan parked at the approval gate',
             default: false,
           },
+          allowDestructive: {
+            description:
+              'Approve a plan whose migrations drop or rewrite data (--auto-approve alone will not)',
+            default: false,
+          },
           timeout: {
             description: 'Seconds to wait under --sync (default 900)',
           },
