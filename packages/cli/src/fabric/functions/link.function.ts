@@ -70,7 +70,12 @@ export const FabricLink = pikkuSessionlessFunc({
       }
     }
 
-    const project = await rpc.invoke('importProject', { repoUrl: remoteUrl })
+    const project = await rpc.invoke('importProject', {
+      repoUrl: remoteUrl,
+      // Optional server-side (`z.string().default('main')`); required in the
+      // generated type only because codegen emits zod's output type.
+      productionBranch: 'main',
+    })
 
     await writeProjectConfig(process.cwd(), {
       projectId: project.projectId,

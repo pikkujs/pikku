@@ -10,7 +10,8 @@ export const FabricSecretsRotateInput = z.object({
 })
 
 export const FabricSecretsRotateOutput = z.object({
-  retiredKeyId: z.string(),
+  // Nullable because fabric returns null when the stage had no key to retire.
+  retiredKeyId: z.string().nullable(),
 })
 
 export const FabricSecretsRotate = pikkuSessionlessFunc({
@@ -46,6 +47,8 @@ export const FabricSecretsRotate = pikkuSessionlessFunc({
     console.log(
       '[fabric] deploy the stage to issue a new key, then set its secrets again'
     )
-    return result
+    // `rotateStageSealingKey` returns the whole rotation report; this command
+    // declares only the retired key, so narrow rather than leak the rest.
+    return { retiredKeyId: result.retiredKeyId }
   },
 })

@@ -26,9 +26,7 @@ import { FabricLogin } from './functions/login.function.js'
 import { FabricInit } from './functions/init.function.js'
 import { FabricLink } from './functions/link.function.js'
 import {
-  FabricDeployPlan,
   FabricDeployApply,
-  renderDeployPlan,
   renderDeployApply,
 } from './functions/deploy.function.js'
 import {
@@ -183,36 +181,44 @@ export const fabricCommands = defineCLICommands({
     },
   },
   deploy: {
-    description: 'Plan and apply deploys for a named branch or production',
+    description: 'Apply and inspect deploys for a named branch or production',
     subcommands: {
-      plan: pikkuCLICommand({
-        func: FabricDeployPlan,
-        render: renderDeployPlan,
-        description: 'Resolve the target ref and report what a deploy would do',
-        options: {
-          branch: { description: 'Target branch to deploy', short: 'b' },
-          production: {
-            description: 'Plan production (always main)',
-            default: false,
-          },
-        },
-      }),
       apply: pikkuCLICommand({
         func: FabricDeployApply,
         render: renderDeployApply,
-        description: 'Build + deploy a named branch or production (main)',
+        description:
+          'Build + deploy a named branch or production (main), or attach to an existing deployment',
         options: {
           branch: { description: 'Target branch to deploy', short: 'b' },
           production: {
             description: 'Deploy production (always main)',
             default: false,
           },
-          message: {
-            description: 'Annotation stored on the deployment',
-            short: 'm',
+          ref: {
+            description: 'Deploy a specific ref instead of the branch head',
           },
-          autoApply: {
-            description: 'Deploy without the confirmation prompt',
+          deploymentId: {
+            description:
+              'Attach to an existing deployment instead of creating one (not with --branch/--production)',
+          },
+          sync: {
+            description:
+              'Wait for the deployment to finish and exit non-zero unless it went live',
+            default: false,
+          },
+          autoApprove: {
+            description:
+              'Answer the confirmation prompt and publish a plan parked at the approval gate',
+            default: false,
+          },
+          timeout: {
+            description: 'Seconds to wait under --sync (default 900)',
+          },
+          json: {
+            // No `short` here: the CLI's own global `-j, --json` already owns
+            // that letter and shadows a per-command one, exactly as on `logs`,
+            // `metrics` and `secrets list`.
+            description: 'Machine-readable output (NDJSON)',
             default: false,
           },
         },
