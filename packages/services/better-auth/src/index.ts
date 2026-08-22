@@ -25,6 +25,17 @@ export { ban } from './ban-plugin.js'
 export type { BanPluginOptions } from './ban-plugin.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
+export {
+  ACTOR_SIGN_IN_DISABLED_MESSAGE,
+  ACTOR_SIGN_IN_OPT_IN_ENV,
+  ACTOR_SIGN_IN_OPT_IN_VALUE,
+  DEV_ACTOR_SIGN_IN_ENV,
+  resolveActorSignIn,
+} from './actor-sign-in-gate.js'
+export type {
+  ActorSignInGate,
+  ActorSignInReason,
+} from './actor-sign-in-gate.js'
 export { fabric } from './fabric-plugin.js'
 export type { FabricPluginOptions } from './fabric-plugin.js'
 export type {
