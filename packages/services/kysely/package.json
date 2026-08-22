@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely",
-  "version": "0.13.20",
+  "version": "0.13.21",
   "description": "Kysely-backed Pikku services — workflow state, secrets, sessions, scopes and audit",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -21,7 +21,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.89"
+    "@pikku/core": "^0.12.90"
   },
   "dependencies": {
     "kysely": "^0.29.5"
