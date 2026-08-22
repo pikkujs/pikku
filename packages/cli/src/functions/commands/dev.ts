@@ -423,7 +423,6 @@ export const dev = pikkuSessionlessFunc<
 
     logger.info(serverReadyLine(hostname, resolvedPort))
 
-    let configWatcher: FSWatcher | undefined
     let watcher: FSWatcher | undefined
 
     process.once('SIGINT', async () => {
@@ -431,7 +430,6 @@ export const dev = pikkuSessionlessFunc<
       try {
         await lifecycle?.beforeStop?.(resolvedServices)
         await stopSingletonServices()
-        await configWatcher?.close()
         await watcher?.close()
         await pikkuServer.stop()
         await lifecycle?.afterStop?.(resolvedServices)
@@ -450,81 +448,91 @@ export const dev = pikkuSessionlessFunc<
     if (enableWatch) {
       const genIgnore = /\.gen\.tsx?$/
 
-      configWatcher = chokidar.watch(watchDirectories, {
+      logger.info(
+        `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
+      )
+      watcher = chokidar.watch(watchDirectories, {
         ignoreInitial: true,
         ignored: genIgnore,
       })
 
-      const generatorWatcher = () => {
-        watcher?.close()
+      watcher.on('ready', async () => {
+        const handle = async () => {
+          try {
+            const start = Date.now()
+            invalidateInspectorState()
+            await runAllWithCommandState()
+            workflowService.wireQueueWorkers()
+            wireAgentScorerQueueWorkers()
+            // Pull the regenerated meta + JSON schemas into the running
+            // process so new/changed functions are callable without a
+            // restart (the hot-reloader registers their implementations).
+            await reloadGeneratedMeta({
+              pikkuDir,
+              logger,
+              schemaService: resolvedServices.schema,
+            })
+            // Re-import recently changed files now that the fresh meta is
+            // in state: wire* calls skip routes whose meta doesn't exist,
+            // so a NEW route in a changed wiring file only registers on
+            // this post-codegen pass (the reloader's instant pass ran too
+            // early to see it).
+            await devReloader?.reimportPending()
+            // reimportPending only re-runs wire* for changed/added files, so a
+            // DELETED *.addon.ts leaves its wireAddon entry stranded in the
+            // live registry. Prune it against the inspection runAllWithCommandState
+            // already produced this pass — a plain read (no refresh) reuses that
+            // fresh post-change cache. Forcing refresh=true here re-inspected the
+            // whole project a SECOND time: the codegen writes after that inspection
+            // bump the ts-write generation, so refresh treats the cache as stale.
+            const { rpc } = await getInspectorState()
+            reconcileAddonRegistry(rpc.wireAddonDeclarations.keys(), logger)
+            logger.info({
+              message: `✓ Generated in ${Date.now() - start}ms`,
+              type: 'timing',
+            })
+          } catch (err) {
+            logger.error(`Error running watch: ${err}`)
+          }
+        }
 
-        logger.info(
-          `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
-        )
-        watcher = chokidar.watch(watchDirectories, {
-          ignoreInitial: true,
-          ignored: genIgnore,
-        })
+        // A codegen pass holds a whole ts.Program, so two overlapping passes
+        // double the peak RSS — enough to OOM a sandbox. Coalesce instead:
+        // changes arriving mid-pass schedule exactly one more run after it.
+        let inFlight: Promise<void> | undefined
+        let queued = false
 
-        watcher.on('ready', async () => {
-          const handle = async () => {
+        const runHandle = async (): Promise<void> => {
+          if (inFlight) {
+            queued = true
+            return
+          }
+          do {
+            queued = false
+            inFlight = handle()
             try {
-              const start = Date.now()
-              invalidateInspectorState()
-              await runAllWithCommandState()
-              workflowService.wireQueueWorkers()
-              wireAgentScorerQueueWorkers()
-              // Pull the regenerated meta + JSON schemas into the running
-              // process so new/changed functions are callable without a
-              // restart (the hot-reloader registers their implementations).
-              await reloadGeneratedMeta({
-                pikkuDir,
-                logger,
-                schemaService: resolvedServices.schema,
-              })
-              // Re-import recently changed files now that the fresh meta is
-              // in state: wire* calls skip routes whose meta doesn't exist,
-              // so a NEW route in a changed wiring file only registers on
-              // this post-codegen pass (the reloader's instant pass ran too
-              // early to see it).
-              await devReloader?.reimportPending()
-              // reimportPending only re-runs wire* for changed/added files, so a
-              // DELETED *.addon.ts leaves its wireAddon entry stranded in the
-              // live registry. Prune it against the inspection runAllWithCommandState
-              // already produced this pass — a plain read (no refresh) reuses that
-              // fresh post-change cache. Forcing refresh=true here re-inspected the
-              // whole project a SECOND time: the codegen writes after that inspection
-              // bump the ts-write generation, so refresh treats the cache as stale.
-              const { rpc } = await getInspectorState()
-              reconcileAddonRegistry(rpc.wireAddonDeclarations.keys(), logger)
-              logger.info({
-                message: `✓ Generated in ${Date.now() - start}ms`,
-                type: 'timing',
-              })
-            } catch (err) {
-              logger.error(`Error running watch: ${err}`)
+              await inFlight
+            } finally {
+              inFlight = undefined
             }
+          } while (queued)
+        }
+
+        await runHandle()
+
+        let timeout: ReturnType<typeof setTimeout> | undefined
+
+        const deduped = (_file: string) => {
+          if (timeout) {
+            clearTimeout(timeout)
           }
+          timeout = setTimeout(runHandle, 10)
+        }
 
-          await handle()
-
-          let timeout: ReturnType<typeof setTimeout> | undefined
-
-          const deduped = (_file: string) => {
-            if (timeout) {
-              clearTimeout(timeout)
-            }
-            timeout = setTimeout(handle, 10)
-          }
-
-          watcher?.on('change', deduped)
-          watcher?.on('add', deduped)
-          watcher?.on('unlink', deduped)
-        })
-      }
-
-      configWatcher.on('ready', generatorWatcher)
-      configWatcher.on('change', generatorWatcher)
+        watcher?.on('change', deduped)
+        watcher?.on('add', deduped)
+        watcher?.on('unlink', deduped)
+      })
     }
 
     await new Promise(() => {})
