@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2762 observable things**: 870 exported names, plus
-1892 members on the classes and interfaces among them, reachable
+**2766 observable things**: 872 exported names, plus
+1894 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 32 | 32 | 47 |
+| `./persona` | 34 | 34 | 49 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
 | `./services/local-meta` | 22 | 3 | 46 |
@@ -3905,6 +3905,7 @@ export type CorePersona = {
 export type CorePersonas = Record<string, CorePersona>
 createHttpPersonas: (config: HttpPersonasConfig) => ScenarioPersonas
 definePersonas: (_config: CorePersonas) => void
+establishOperatorSession: (fetchImpl: (input: URL | RequestInfo, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, persona: ResolvedPersona, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
 export class HttpPersona implements ScenarioPersona {
   constructor(readonly name: string, private persona: ResolvedPersona, private config: HttpPersonasConfig)
   get email(): string
@@ -3928,6 +3929,10 @@ isRunnablePersona: (persona: { runnable?: boolean | undefined; account?: { provi
 export interface MailboxAllowlist {
   senders: readonly string[]
   linkOrigins?: readonly string[]
+}
+export interface OperatorSessionResult {
+  setCookies: string[]
+  userId: string
 }
 export class OperatorSignIn implements PersonaSignIn {
   constructor(private readonly apiUrl: string, private readonly options: OperatorSignInOptions)
