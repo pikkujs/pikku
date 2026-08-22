@@ -21,6 +21,23 @@ export interface FabricPluginOptions {
   /** Reject tokens whose `purpose` claim isn't this. Defaults to `fabric-admin`. */
   purpose?: string
   /**
+   * This stage's own identity — in Fabric deploys, `FABRIC_STAGE_ID`.
+   *
+   * Every stage verifies against the same `FABRIC_AUTH_PUBLIC_KEY`, so without
+   * an audience an operator token is admin on all of them at once. That is
+   * tolerable while the token never leaves the control plane, and not at all
+   * once one is handed to something like CI.
+   *
+   * A token carrying `aud` is therefore refused unless this is configured and
+   * matches — fail closed, so a stage that has not been told who it is cannot
+   * be the weak one. Tokens without `aud` are unaffected, which is what keeps
+   * the existing server-to-server callers working.
+   */
+  audience?:
+    | string
+    | undefined
+    | (() => string | undefined | Promise<string | undefined>)
+  /**
    * Grants the operator's synthetic row the `admin` scope on creation, which is
    * what authorizes it against the framework's `admin:*` gates. Without one the
    * operator signs in but holds nothing.
@@ -54,6 +71,7 @@ interface FabricClaims {
   sub?: unknown
   name?: unknown
   purpose?: unknown
+  aud?: unknown
   exp?: unknown
 }
 
@@ -141,6 +159,8 @@ const grantOperatorAdmin = async (
  * `resolveImpersonatedSession`'s default `canImpersonate`.
  * The token's `sub` is the operator id; the synthetic email is namespaced so it
  * can never collide with a real user, and sign-in against a real row is refused.
+ * A token naming an audience is accepted only by the stage it names — see
+ * {@link FabricPluginOptions.audience}.
  *
  * Requires a {@link FabricPluginOptions.scopeService} for the grant to land.
  * Filter `fabric: true` rows out of any end-user listing.
@@ -197,6 +217,17 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
             throw new APIError('UNAUTHORIZED', {
               message: 'Fabric token has the wrong purpose',
             })
+          }
+          if (claims.aud !== undefined) {
+            const audience =
+              typeof options.audience === 'function'
+                ? await options.audience()
+                : options.audience
+            if (!audience || claims.aud !== audience) {
+              throw new APIError('UNAUTHORIZED', {
+                message: 'Fabric token was issued for another stage',
+              })
+            }
           }
           const fabricUserId = typeof claims.sub === 'string' ? claims.sub : ''
           if (!fabricUserId) {
