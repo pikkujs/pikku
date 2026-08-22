@@ -87,13 +87,23 @@ describe('better-auth fabric plugin', () => {
     const token = signToken(privateKey, { sub: 'op-1', aud: 'stage-a' })
 
     const wrongStage = await signInFabric(
-      makeAuth({ user: [], session: [], account: [] }, publicKey, undefined, 'stage-b'),
+      makeAuth(
+        { user: [], session: [], account: [] },
+        publicKey,
+        undefined,
+        'stage-b'
+      ),
       token
     )
     assert.equal(wrongStage.status, 401)
 
     const rightStage = await signInFabric(
-      makeAuth({ user: [], session: [], account: [] }, publicKey, undefined, 'stage-a'),
+      makeAuth(
+        { user: [], session: [], account: [] },
+        publicKey,
+        undefined,
+        'stage-a'
+      ),
       token
     )
     assert.equal(rightStage.status, 200)
@@ -119,7 +129,12 @@ describe('better-auth fabric plugin', () => {
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     })
     const res = await signInFabric(
-      makeAuth({ user: [], session: [], account: [] }, publicKey, undefined, 'stage-a'),
+      makeAuth(
+        { user: [], session: [], account: [] },
+        publicKey,
+        undefined,
+        'stage-a'
+      ),
       signToken(privateKey, { sub: 'op-1' })
     )
     assert.equal(res.status, 200)

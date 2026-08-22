@@ -34,9 +34,11 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
 
       if (url.pathname === '/api/auth/admin/list-users') {
         const wanted = url.searchParams.get('filterValue')
-        res.writeHead(200, { 'content-type': 'application/json' }).end(
-          JSON.stringify({ users: users.filter((u) => u.email === wanted) })
-        )
+        res
+          .writeHead(200, { 'content-type': 'application/json' })
+          .end(
+            JSON.stringify({ users: users.filter((u) => u.email === wanted) })
+          )
         return
       }
 

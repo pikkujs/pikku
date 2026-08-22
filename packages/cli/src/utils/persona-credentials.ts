@@ -8,10 +8,7 @@ export const ACTOR_SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
 /** Opt in to creating persona accounts the target does not already have. */
 export const CREATE_MISSING_VARIABLE = 'PIKKU_PERSONA_CREATE_MISSING'
 
-export type PersonaCredentials = Pick<
-  HttpPersonasConfig,
-  'secret' | 'operator'
->
+export type PersonaCredentials = Pick<HttpPersonasConfig, 'secret' | 'operator'>
 
 /**
  * How the personas in this run will sign in, decided by which credential the
