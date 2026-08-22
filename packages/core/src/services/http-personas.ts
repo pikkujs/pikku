@@ -16,6 +16,12 @@ import {
   createCookieJar,
   type ScenarioCookieJar,
 } from '../wirings/workflow/scenario-cookie-jar.js'
+import {
+  ActorSignIn,
+  OperatorSignIn,
+  type OperatorSignInOptions,
+  type PersonaSignIn,
+} from './persona-sign-in.js'
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
@@ -30,8 +36,19 @@ export interface HttpPersonasConfig {
   /**
    * The impersonation secret. Sign-in only ever works for user rows flagged
    * `actor: true` — knowing the secret never impersonates real users.
+   *
+   * The local-development credential. A deployed stage has none, and passes
+   * {@link HttpPersonasConfig.operator} instead.
    */
-  secret: string
+  secret?: string
+  /**
+   * Fabric operator credentials, for signing personas into a DEPLOYED stage.
+   *
+   * Mutually exclusive with {@link HttpPersonasConfig.secret}: the operator
+   * path acts as the persona through an admin session rather than logging in as
+   * them, so no test credential has to exist on the target at all.
+   */
+  operator?: OperatorSignInOptions
   /** Persona id → the declaration with its address filled in. */
   personas: Record<string, ResolvedPersona>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
@@ -49,12 +66,13 @@ export interface HttpPersonasConfig {
 }
 
 /**
- * Default HTTP-backed persona. Signs in lazily on first invoke via the Better
- * Auth actor plugin (`POST /auth/sign-in/actor` with `{ email, secret }` —
- * the plugin upserts the actor-flagged user row and mints a session whose
- * `actor` flag flows into audits/analytics). Holds the session cookies for
- * its lifetime; a 401 mid-run re-logs-in once (long health-check runs can
- * outlive a session).
+ * Default HTTP-backed persona. Signs in lazily on first invoke, holds the
+ * session cookies for its lifetime, and re-logs-in once on a 401 mid-run (long
+ * health-check runs can outlive a session).
+ *
+ * How it signs in depends on the target, and the two ways are not
+ * interchangeable — see {@link ActorSignIn} for local development and
+ * {@link OperatorSignIn} for a deployed stage.
  */
 export class HttpPersona implements ScenarioPersona {
   private jar: ScenarioCookieJar
@@ -65,6 +83,7 @@ export class HttpPersona implements ScenarioPersona {
    * established.
    */
   private signedIn = false
+  private signIn: PersonaSignIn
 
   constructor(
     readonly name: string,
@@ -72,6 +91,19 @@ export class HttpPersona implements ScenarioPersona {
     private config: HttpPersonasConfig
   ) {
     this.jar = createCookieJar(config.apiUrl)
+    if (config.operator) {
+      this.signIn = new OperatorSignIn(config.apiUrl, config.operator)
+    } else if (config.secret) {
+      this.signIn = new ActorSignIn(
+        config.apiUrl,
+        config.secret,
+        config.signInPath ?? '/auth/sign-in/actor'
+      )
+    } else {
+      throw new Error(
+        `[scenario] persona '${name}' has no way to sign in — set 'secret' for a dev target or 'operator' for a deployed one`
+      )
+    }
   }
 
   get email(): string {
@@ -161,7 +193,9 @@ export class HttpPersona implements ScenarioPersona {
       await this.login()
     }
     const sessionPath = this.config.sessionPath ?? '/auth/get-session'
-    const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`)
+    const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`, {
+      headers: this.signIn.headers(),
+    })
     if (!res.ok) {
       return null
     }
@@ -226,7 +260,10 @@ export class HttpPersona implements ScenarioPersona {
     const send = () =>
       this.jar.fetch(url, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...this.signIn.headers(),
+        },
         body: JSON.stringify(body),
       })
 
@@ -255,7 +292,11 @@ export class HttpPersona implements ScenarioPersona {
     const rpcPath = this.config.rpcPath ?? '/rpc'
     return this.jar.fetch(`${this.config.apiUrl}${rpcPath}/${rpcName}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...extraHeaders },
+      headers: {
+        'content-type': 'application/json',
+        ...this.signIn.headers(),
+        ...extraHeaders,
+      },
       body: JSON.stringify({ data }),
     })
   }
@@ -267,29 +308,7 @@ export class HttpPersona implements ScenarioPersona {
   }
 
   private async login(): Promise<void> {
-    const signInPath = this.config.signInPath ?? '/auth/sign-in/actor'
-    const res = await this.jar.fetch(`${this.config.apiUrl}${signInPath}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        email: this.persona.email,
-        name: this.persona.name,
-        secret: this.config.secret,
-      }),
-    })
-    if (!res.ok) {
-      const body = (await res.text().catch(() => '')).slice(0, 300)
-      throw new Error(
-        `[scenario] persona sign-in failed for '${this.name}' (${res.status}): ${body}`
-      )
-    }
-    // What proves a session was established is this response setting a cookie,
-    // not the jar being non-empty — the target may have set one earlier.
-    if (res.headers.getSetCookie().length === 0) {
-      throw new Error(
-        `[scenario] persona sign-in for '${this.name}' returned no session cookie`
-      )
-    }
+    await this.signIn.login(this.jar, this.persona)
     this.signedIn = true
   }
 }

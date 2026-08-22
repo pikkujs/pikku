@@ -46,6 +46,13 @@ export {
   type HttpPersonasConfig,
 } from '../../services/http-personas.js'
 export {
+  ActorSignIn,
+  OperatorSignIn,
+  IMPERSONATE_USER_ID_HEADER,
+  type PersonaSignIn,
+  type OperatorSignInOptions,
+} from '../../services/persona-sign-in.js'
+export {
   postScenarioJson,
   readScenarioHttpResponse,
 } from '../../services/personas-service.js'

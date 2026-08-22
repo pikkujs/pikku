@@ -1,0 +1,235 @@
+import type { ResolvedPersona } from './personas-service.js'
+import type { ScenarioCookieJar } from '../wirings/workflow/scenario-cookie-jar.js'
+
+/**
+ * The header `resolveImpersonatedSession` reads the target user id from.
+ *
+ * A wire value rather than a shared import: the reader lives in
+ * `@pikku/services-better-auth`, which depends on core, so core cannot import
+ * it back. The two agree by protocol, the way an HTTP header always does.
+ */
+export const IMPERSONATE_USER_ID_HEADER = 'x-pikku-impersonate-user-id'
+
+/**
+ * How a persona obtains a session on the target, and what every later request
+ * needs to carry to keep acting as them.
+ *
+ * Two answers exist because the two environments have opposite trust models,
+ * not because one is a fallback for the other. See {@link ActorSignIn} and
+ * {@link OperatorSignIn}.
+ */
+export interface PersonaSignIn {
+  /**
+   * Establish a session in `jar`. Throws on failure with a message naming the
+   * persona, since a run that continues unauthenticated fails later and
+   * somewhere less informative.
+   */
+  login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
+  /** Headers every request after `login` must carry. */
+  headers(): Record<string, string>
+}
+
+const failed = async (
+  what: string,
+  personaId: string,
+  res: Response
+): Promise<Error> => {
+  const body = (await res.text().catch(() => '')).slice(0, 300)
+  return new Error(
+    `[scenario] ${what} failed for '${personaId}' (${res.status}): ${body}`
+  )
+}
+
+/**
+ * Sign a persona in through the Better Auth actor plugin — the local-development
+ * path.
+ *
+ * `POST /auth/sign-in/actor` upserts an `actor: true` row and mints a session
+ * for it. Passwordless by design and refused for any row not carrying that flag,
+ * so the secret can never reach a real user's account; the plugin still declines
+ * to serve the endpoint at all outside `pikku dev`.
+ */
+export class ActorSignIn implements PersonaSignIn {
+  constructor(
+    private readonly apiUrl: string,
+    private readonly secret: string,
+    private readonly signInPath: string
+  ) {}
+
+  async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void> {
+    const res = await jar.fetch(`${this.apiUrl}${this.signInPath}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: persona.email,
+        name: persona.name,
+        secret: this.secret,
+      }),
+    })
+    if (!res.ok) {
+      throw await failed('persona sign-in', persona.id, res)
+    }
+    // What proves a session was established is this response setting a cookie,
+    // not the jar being non-empty — the target may have set one earlier.
+    if (res.headers.getSetCookie().length === 0) {
+      throw new Error(
+        `[scenario] persona sign-in for '${persona.id}' returned no session cookie`
+      )
+    }
+  }
+
+  headers(): Record<string, string> {
+    return {}
+  }
+}
+
+export interface OperatorSignInOptions {
+  /**
+   * The short-lived RS256 operator token, or a function that mints one. Prefer
+   * the function: tokens expire, and a long run re-logs-in after a 401.
+   */
+  token: string | (() => string | Promise<string>)
+  /**
+   * Create the persona's user row when the target has no account for that
+   * address.
+   *
+   * Off by default, which is the whole point of the deployed path: a persona is
+   * meant to be a real account somebody provisioned, and a test run that
+   * silently writes users into a live database is a side effect nobody asked
+   * for. Turn it on for throwaway stages.
+   */
+  createMissing?: boolean
+  /** Admin endpoint prefix under apiUrl. Default `/auth/admin`. */
+  adminPath?: string
+  /** Fabric operator sign-in path under apiUrl. Default `/auth/sign-in/fabric`. */
+  signInPath?: string
+}
+
+interface AdminUser {
+  id?: unknown
+  email?: unknown
+}
+
+/**
+ * Sign a persona in on a DEPLOYED stage, by having a Fabric operator act as
+ * them — the path that needs no test credential to exist anywhere.
+ *
+ * `POST /auth/sign-in/fabric` verifies an RS256 token against the stage's
+ * `FABRIC_AUTH_PUBLIC_KEY` and mints a session for a synthetic operator row
+ * granted the umbrella `admin` scope. Impersonation is then a header on each
+ * request rather than a second session, and its gate is that scope — not
+ * `user.role`, which is why this works without touching the app's roles.
+ *
+ * Asymmetric throughout: the stage can verify an operator token and never mint
+ * one, so nothing in a deployed environment is worth stealing. That is the
+ * property the actor secret cannot have, and the reason these are two classes
+ * instead of one with a flag.
+ */
+export class OperatorSignIn implements PersonaSignIn {
+  private userId: string | null = null
+
+  constructor(
+    private readonly apiUrl: string,
+    private readonly options: OperatorSignInOptions
+  ) {}
+
+  async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void> {
+    const signInPath = this.options.signInPath ?? '/auth/sign-in/fabric'
+    const token =
+      typeof this.options.token === 'function'
+        ? await this.options.token()
+        : this.options.token
+
+    const res = await jar.fetch(`${this.apiUrl}${signInPath}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+    if (!res.ok) {
+      throw await failed('operator sign-in', persona.id, res)
+    }
+    if (res.headers.getSetCookie().length === 0) {
+      throw new Error(
+        `[scenario] operator sign-in for '${persona.id}' returned no session cookie`
+      )
+    }
+
+    this.userId = await this.resolveUserId(jar, persona)
+  }
+
+  headers(): Record<string, string> {
+    if (!this.userId) {
+      throw new Error(
+        '[scenario] operator session has no persona to act as — login() first'
+      )
+    }
+    return { [IMPERSONATE_USER_ID_HEADER]: this.userId }
+  }
+
+  /**
+   * The target's own id for this persona's address, since impersonation names a
+   * user id and a persona only knows an email.
+   *
+   * Looked up before creating, so a persona that already exists is never
+   * duplicated and the run reads as "act as this person" rather than "make one".
+   */
+  private async resolveUserId(
+    jar: ScenarioCookieJar,
+    persona: ResolvedPersona
+  ): Promise<string> {
+    const adminPath = this.options.adminPath ?? '/auth/admin'
+    const query = new URLSearchParams({
+      filterField: 'email',
+      filterValue: persona.email,
+      filterOperator: 'eq',
+      limit: '1',
+    })
+    const found = await jar.fetch(`${this.apiUrl}${adminPath}/list-users?${query}`, {
+      headers: { accept: 'application/json' },
+    })
+    if (!found.ok) {
+      throw await failed('persona lookup', persona.id, found)
+    }
+    const listed = (await found.json().catch(() => null)) as {
+      users?: AdminUser[]
+    } | null
+    const existing = listed?.users?.find((u) => u.email === persona.email)
+    if (existing?.id) {
+      return String(existing.id)
+    }
+
+    if (!this.options.createMissing) {
+      throw new Error(
+        `[scenario] no account on the target for persona '${persona.id}' (${persona.email}) — ` +
+          'provision it, or set createMissing on the operator credentials'
+      )
+    }
+
+    const created = await jar.fetch(`${this.apiUrl}${adminPath}/create-user`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: persona.email,
+        name: persona.name,
+        // Never used and never returned: the run impersonates rather than signs
+        // in, so the account is reachable only by someone already holding an
+        // operator token. A derivable password would undo exactly that.
+        password: globalThis.crypto.randomUUID(),
+        ...(persona.roles[0] ? { role: persona.roles[0] } : {}),
+      }),
+    })
+    if (!created.ok) {
+      throw await failed('persona creation', persona.id, created)
+    }
+    const body = (await created.json().catch(() => null)) as {
+      user?: AdminUser
+    } | null
+    const id = body?.user?.id
+    if (!id) {
+      throw new Error(
+        `[scenario] creating persona '${persona.id}' returned no user id`
+      )
+    }
+    return String(id)
+  }
+}
