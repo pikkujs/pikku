@@ -163,9 +163,10 @@ const grantOperatorAdmin = async (
  * account somebody provisioned, and writing users into a live database is a
  * side effect nobody asked for.
  *
- * Roles are not set here. `pikku persona sync` grants them against the database
- * directly, which is the only path that still exists now that the `role` column
- * is gone.
+ * A `role` is written only when the caller names one. pikku no longer has a
+ * `role` column of its own, but an app is free to keep better-auth's `admin()`
+ * plugin, and those apps tend to constrain the column — creating a row without
+ * one fails their CHECK. The caller knows the persona's roles; this does not.
  */
 const resolveActAs = async (
   internalAdapter: {
@@ -176,6 +177,7 @@ const resolveActAs = async (
     email: string
     name?: string | undefined
     create?: boolean | undefined
+    role?: string | undefined
   }
 ): Promise<{ userId: string }> => {
   const email = actAs.email.toLowerCase()
@@ -192,6 +194,7 @@ const resolveActAs = async (
     email,
     emailVerified: true,
     name: actAs.name ?? actAs.email,
+    ...(actAs.role ? { role: actAs.role } : {}),
     createdAt: new Date(),
     updatedAt: new Date(),
   })
@@ -248,6 +251,7 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
                 email: z.string(),
                 name: z.string().optional(),
                 create: z.boolean().optional(),
+                role: z.string().optional(),
               })
               .optional(),
           }),

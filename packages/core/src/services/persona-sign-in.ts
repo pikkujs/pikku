@@ -141,6 +141,7 @@ export const establishOperatorSession = async (
         email: persona.email,
         name: persona.name,
         create: options.createMissing ?? false,
+        ...(persona.roles[0] ? { role: persona.roles[0] } : {}),
       },
     }),
   })
