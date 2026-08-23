@@ -1,7 +1,7 @@
 ---
 name: pikku-rtl
 description: 'Make a Pikku frontend work in both English (LTR) and Arabic / right-to-left languages. Direction is derived from the active locale, applied once at the document root, and the layout mirrors itself — but only if styling is written flow-relative (margin-inline-start, text-align: start, Mantine ms/me) instead of left/right. TRIGGER when: adding Arabic (or Hebrew/Farsi/Urdu), asked to "support RTL / right-to-left / bidi / mirror the layout", or writing layout styles in an app that may run RTL. Builds on pikku-i18n (an RTL language is just another locale file). DO NOT TRIGGER for backend functions or for LTR-only copy changes.'
-installGroups: [core]
+installGroups: [core, client]
 ---
 
 # Pikku RTL (Arabic + English)

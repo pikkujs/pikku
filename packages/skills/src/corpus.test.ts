@@ -14,7 +14,7 @@ import {
 assert.ok(skillsDir, 'expected a skills/ directory beside this package')
 const root = skillsDir
 
-const KNOWN_INSTALL_GROUPS = new Set(['core', 'fabric'])
+const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'fabric'])
 
 /**
  * Fabric group membership is deliberate and small, so it is pinned here rather

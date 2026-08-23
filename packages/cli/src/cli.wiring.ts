@@ -1112,6 +1112,11 @@ wireCLI({
                 'Install skills whose frontmatter includes installGroups: [fabric]',
               default: false,
             },
+            client: {
+              description:
+                'Install skills whose frontmatter includes installGroups: [client]',
+              default: false,
+            },
             update: {
               description: 'Overwrite existing skills if already installed',
               default: false,
