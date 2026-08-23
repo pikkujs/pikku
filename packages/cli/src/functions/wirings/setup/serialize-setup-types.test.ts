@@ -2,14 +2,15 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { serializeSetupTypes } from './serialize-setup-types.js'
 
-const emit = (configTypeName?: string) =>
+const emit = (configTypeName?: string, allowShadowedServices?: string[]) =>
   serializeSetupTypes(
     '../function/pikku-function-types.gen.js',
     configTypeName
       ? `import type { ${configTypeName} } from '../../src/application-types.js'`
       : '// Config type not found, will use fallback',
     configTypeName,
-    "import type { RequiredSingletonServices, RequiredWireServices } from '../pikku-services.gen.js'"
+    "import type { RequiredSingletonServices, RequiredWireServices } from '../pikku-services.gen.js'",
+    allowShadowedServices
   )
 
 describe('serializeSetupTypes', () => {
@@ -42,6 +43,24 @@ describe('serializeSetupTypes', () => {
     assert.match(content, /const shadowed = Object\.keys\(createdServices\)\.filter\(/)
     assert.match(content, /logger\?\.warn\?\.\(/)
     assert.match(content, /discarding what the host passed in/)
+  })
+
+  test('exempts nothing when the project opts none in', () => {
+    assert.match(emit('Config'), /const allowedToShadow = new Set\(\[\]\)/)
+  })
+
+  test('exempts the services pikku.config.json opts in', () => {
+    const content = emit('Config', ['kysely', 'secrets'])
+
+    assert.match(
+      content,
+      /const allowedToShadow = new Set\(\["kysely","secrets"\]\)/
+    )
+    assert.match(content, /!allowedToShadow\.has\(name\) &&/)
+  })
+
+  test('points at the config key as the way to silence the warning', () => {
+    assert.match(emit('Config'), /allowShadowedServices\\` in pikku\.config\.json/)
   })
 
   test('registers the wire services factory on pikku state', () => {

@@ -299,6 +299,13 @@ export type PikkuCLIInput = {
       }
   addonName?: string
 
+  /**
+   * Service names `createSingletonServices` is allowed to return even though
+   * the host already passed one in. Anything not listed warns at boot, because
+   * the host's instance is the configured one and the replacement starts empty.
+   */
+  allowShadowedServices?: string[]
+
   configDir: string
   tsconfig: string
 
