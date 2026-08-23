@@ -1,5 +1,43 @@
 # @pikku/skills
 
+## 0.12.14
+
+### Patch Changes
+
+- 4058c3a: A default skills install is now the seventeen that teach a `#pikku/*` door, not everything
+- 4058c3a: `pikku doc --ai` now names the skill that teaches each door, and pikku-concepts sends you there first
+- 4058c3a: Gate the door-to-skill table so it cannot name a skill a default install does not get
+- 9d48e8a: Fail `pikku fabric validate` when a scenario step hardcodes a string the message catalogue already owns.
+
+  A browser step that says `getByLabel('Full Name')` passes only while the app happens to render the base locale, and any copy edit turns it into a selector timeout that points at the wizard rather than at the rename that caused it. Validate now reads each `apps/<app>/messages/<baseLocale>.json` and errors on any string in a `*.steps.ts` / `*.scenario.ts` that is verbatim a catalogue value, naming the key to use.
+
+  It scans every literal rather than only the ones sitting in a `getBy*` call, because copy passed to a project helper — `pick('Where would you like to work?', …)` — reaches the DOM just the same. Comments are stripped first, since the prose around a step quotes the copy it is explaining. A project with no inlang app is not scanned, and a string the catalogue does not own (a test id, a fixture filename) is left alone.
+
+  The `pikku-scenario` skill gains the corresponding rule, including typing the lookup off the catalogue JSON rather than the generated Paraglide output, so a renamed key is a compile error instead of a run-time timeout.
+
+- 4058c3a: Add a `client` install group, so frontend-facing skills can be pulled without the whole `core` set: `pikku skills install --client`. `installGroups` has always been a list and the resolver installs a skill if _any_ requested group matches, so `[core, client]` keeps every existing `--core` install identical.
+
+  Tagged `[core, client]`: `pikku-react`, `pikku-react-query`, `pikku-workflows-client`, `pikku-paraglide`, `pikku-i18n`, `pikku-rtl`.
+
+- 4058c3a: Correct the `fabric` install group, which had drifted into a catch-all. It now holds only the two skills a Fabric sandbox agent actually needs: `pikku-fabric` and `pikku-ai-voice` (Fabric apps use voice I/O, and it was reaching nobody).
+
+  Moved to `core`, because they describe general Pikku work rather than anything Fabric-specific: `pikku-software-archaeology`, `pikku-product-second-opinion`, `pikku-schema-cfworker` (the Fabric template's Workers entry files are generated, so no agent ever writes `CFWorkerSchemaService`), `pikku-deploy-cloudflare` and `pikku-fabric-debug` (Fabric deploys and reads logs through CI, not through the app agent).
+
+  Deleted `pikku-tag-middleware`, a tombstone pointing at `pikku-middleware`. It carried no `installGroups`, so it never installed anywhere and only cost a name in the corpus.
+
+  Dropped `pikku-build-app`, `pikku-build-quick` and `pikku-build-platform` out of `core`. They are whole-app build procedures that duplicate whatever the host agent's own prompt already says, so auto-installing them into every project put three rival build modes in the picker. They still ship in the package and install with `--only`.
+
+- 4058c3a: Drop seven single-door skills out of the core install group
+
+  `--core` installed a reference skill for every transport whether or not a
+  project used one. The seven moved here (`pikku-services`, `pikku-queue`,
+  `pikku-cli`, `pikku-trigger`, `pikku-schedule`, `pikku-schema-ajv`,
+  `pikku-schema-cfworker`) join the deploy and adapter skills as `--only`
+  installs, so a project that wires a queue asks for the queue skill.
+
+  Measured against 24 fabric build runs, none of the seven was loaded once,
+  while their descriptions sat in the picker on every turn.
+
 ## 0.12.13
 
 ### Patch Changes
