@@ -314,6 +314,25 @@ const documentationOf = (
       .trim()
     if (documentation.length > 0) return documentation
   }
+  return exportDeclarationDocumentationOf(symbol)
+}
+
+/**
+ * A re-export the generator documents (`export type { Services }`) carries its
+ * JSDoc on the export statement, which TypeScript attaches to no symbol at all
+ * — so it is read off the node.
+ */
+const exportDeclarationDocumentationOf = (
+  symbol: ts.Symbol
+): string | undefined => {
+  for (const declaration of symbol.declarations ?? []) {
+    if (!ts.isExportSpecifier(declaration)) continue
+    const statement = declaration.parent.parent
+    const [comment] = ts.getJSDocCommentsAndTags(statement)
+    if (!comment || !ts.isJSDoc(comment)) continue
+    const documentation = ts.getTextOfJSDocComment(comment.comment)?.trim()
+    if (documentation && documentation.length > 0) return documentation
+  }
   return undefined
 }
 
