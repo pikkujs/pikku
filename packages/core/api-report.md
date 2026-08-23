@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2766 observable things**: 872 exported names, plus
-1894 members on the classes and interfaces among them, reachable
+**2765 observable things**: 872 exported names, plus
+1893 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 34 | 34 | 49 |
+| `./persona` | 34 | 34 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
 | `./services/local-meta` | 22 | 3 | 46 |
@@ -3942,7 +3942,6 @@ export class OperatorSignIn implements PersonaSignIn {
 export interface OperatorSignInOptions {
   token: string | (() => string | Promise<string>)
   createMissing?: boolean
-  adminPath?: string
   signInPath?: string
 }
 export type PersonaAccountMeta = {

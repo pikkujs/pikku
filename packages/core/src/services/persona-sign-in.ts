@@ -99,15 +99,8 @@ export interface OperatorSignInOptions {
    * for. Turn it on for throwaway stages.
    */
   createMissing?: boolean
-  /** Admin endpoint prefix under apiUrl. Default `/auth/admin`. */
-  adminPath?: string
   /** Fabric operator sign-in path under apiUrl. Default `/auth/sign-in/fabric`. */
   signInPath?: string
-}
-
-interface AdminUser {
-  id?: unknown
-  email?: unknown
 }
 
 /** What an operator handshake yields: the session, and who to act as. */
@@ -142,7 +135,14 @@ export const establishOperatorSession = async (
   const res = await fetchImpl(`${apiUrl}${signInPath}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...extraHeaders },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({
+      token,
+      actAs: {
+        email: persona.email,
+        name: persona.name,
+        create: options.createMissing ?? false,
+      },
+    }),
   })
   if (!res.ok) {
     throw await failed('operator sign-in', persona.id, res)
@@ -154,90 +154,17 @@ export const establishOperatorSession = async (
     )
   }
 
-  // The lookup runs on the session this handshake just established, and a
-  // plain `fetch` keeps no cookies — the browser path in particular hands the
-  // jar's contents to Playwright only after this returns. Forwarding them
-  // explicitly is what keeps the admin calls authenticated for every caller.
-  const session = setCookies
-    .map((raw) => raw.split(';')[0])
-    .filter((pair): pair is string => Boolean(pair))
-    .join('; ')
-
-  const userId = await resolveUserId(fetchImpl, apiUrl, persona, options, {
-    ...extraHeaders,
-    cookie: session,
-  })
-  return { setCookies, userId }
-}
-
-/**
- * The target's own id for this persona's address, since impersonation names a
- * user id and a persona only knows an email.
- *
- * Looked up before creating, so a persona that already exists is never
- * duplicated and the run reads as "act as this person" rather than "make one".
- */
-const resolveUserId = async (
-  fetchImpl: typeof fetch,
-  apiUrl: string,
-  persona: ResolvedPersona,
-  options: OperatorSignInOptions,
-  extraHeaders: Record<string, string>
-): Promise<string> => {
-  const adminPath = options.adminPath ?? '/auth/admin'
-  const query = new URLSearchParams({
-    filterField: 'email',
-    filterValue: persona.email,
-    filterOperator: 'eq',
-    limit: '1',
-  })
-  const found = await fetchImpl(`${apiUrl}${adminPath}/list-users?${query}`, {
-    headers: { accept: 'application/json', ...extraHeaders },
-  })
-  if (!found.ok) {
-    throw await failed('persona lookup', persona.id, found)
-  }
-  const listed = (await found.json().catch(() => null)) as {
-    users?: AdminUser[]
+  const body = (await res.json().catch(() => null)) as {
+    actAs?: { userId?: unknown }
   } | null
-  const existing = listed?.users?.find((u) => u.email === persona.email)
-  if (existing?.id) {
-    return String(existing.id)
-  }
-
-  if (!options.createMissing) {
+  const userId = body?.actAs?.userId
+  if (!userId) {
     throw new Error(
-      `[scenario] no account on the target for persona '${persona.id}' (${persona.email}) — ` +
-        'provision it, or set createMissing on the operator credentials'
+      `[scenario] operator sign-in for '${persona.id}' returned no user to act as — ` +
+        'the target is running a @pikku/better-auth too old to resolve one'
     )
   }
-
-  const created = await fetchImpl(`${apiUrl}${adminPath}/create-user`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...extraHeaders },
-    body: JSON.stringify({
-      email: persona.email,
-      name: persona.name,
-      // Never used and never returned: the run impersonates rather than signs
-      // in, so the account is reachable only by someone already holding an
-      // operator token. A derivable password would undo exactly that.
-      password: globalThis.crypto.randomUUID(),
-      ...(persona.roles[0] ? { role: persona.roles[0] } : {}),
-    }),
-  })
-  if (!created.ok) {
-    throw await failed('persona creation', persona.id, created)
-  }
-  const body = (await created.json().catch(() => null)) as {
-    user?: AdminUser
-  } | null
-  const id = body?.user?.id
-  if (!id) {
-    throw new Error(
-      `[scenario] creating persona '${persona.id}' returned no user id`
-    )
-  }
-  return String(id)
+  return { setCookies, userId: String(userId) }
 }
 
 /**

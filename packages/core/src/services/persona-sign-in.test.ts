@@ -8,8 +8,9 @@ import { establishOperatorSession } from './persona-sign-in.js'
 const OPERATOR_TOKEN = 'operator.jwt.token'
 
 /**
- * Minimal deployed stage: the fabric plugin's sign-in, the admin plugin's
- * user endpoints, and an RPC route that reports back who it was addressed as.
+ * Minimal deployed stage: the fabric plugin's sign-in, which resolves the
+ * account to act as in the same request, and an RPC route that reports back who
+ * it was addressed as.
  */
 const startStage = async (seeded: Array<{ id: string; email: string }>) => {
   const users = [...seeded]
@@ -28,38 +29,30 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
           res.writeHead(401).end(JSON.stringify({ message: 'bad token' }))
           return
         }
-        res.setHeader('set-cookie', ['session=operator; Path=/; HttpOnly'])
-        res.writeHead(200).end(JSON.stringify({ token: 'operator' }))
-        return
-      }
-
-      // The admin plugin refuses an unauthenticated caller, and saying so here
-      // is the point: a handshake that dropped the operator session between
-      // sign-in and lookup would otherwise pass this stage happily.
-      if (url.pathname.startsWith('/api/auth/admin/')) {
-        if (!/(^|;\s*)session=operator(;|$)/.test(req.headers.cookie ?? '')) {
-          res.writeHead(401).end(JSON.stringify({ message: 'no session' }))
-          return
+        let actAs: { userId: string } | undefined
+        if (body.actAs) {
+          let user = users.find((u) => u.email === body.actAs.email)
+          if (!user) {
+            if (!body.actAs.create) {
+              res
+                .writeHead(404)
+                .end(
+                  JSON.stringify({
+                    message: `No account on this stage for ${body.actAs.email}`,
+                  })
+                )
+              return
+            }
+            created++
+            user = { id: `made-${created}`, email: body.actAs.email }
+            users.push(user)
+          }
+          actAs = { userId: user.id }
         }
-      }
-
-      if (url.pathname === '/api/auth/admin/list-users') {
-        const wanted = url.searchParams.get('filterValue')
+        res.setHeader('set-cookie', ['session=operator; Path=/; HttpOnly'])
         res
           .writeHead(200, { 'content-type': 'application/json' })
-          .end(
-            JSON.stringify({ users: users.filter((u) => u.email === wanted) })
-          )
-        return
-      }
-
-      if (url.pathname === '/api/auth/admin/create-user') {
-        created++
-        const user = { id: `made-${created}`, email: body.email }
-        users.push(user)
-        res
-          .writeHead(200, { 'content-type': 'application/json' })
-          .end(JSON.stringify({ user, sawPassword: Boolean(body.password) }))
+          .end(JSON.stringify({ token: 'operator', actAs }))
         return
       }
 
@@ -134,7 +127,7 @@ describe('operator persona sign-in', () => {
 
     await assert.rejects(
       () => personas.customer!.invoke('whoami', {}),
-      /no account on the target for persona 'customer'/
+      /operator sign-in failed for 'customer' \(404\)/
     )
     assert.equal(stage.createdCount, 0)
   })
@@ -178,12 +171,13 @@ describe('operator persona sign-in', () => {
     assert.equal(minted, 1)
   })
 
-  test('carries the operator session into the admin lookup', async () => {
+  test('resolves the account to act as without a second request', async () => {
     const stage = await startStage([{ id: 'user-9', email: 'susan@acme.test' }])
     servers.push(stage.server)
 
     // Plain fetch keeps no cookies, which is the browser provider's situation:
-    // it plants them on a Playwright context only once this has returned.
+    // it plants them on a Playwright context only once this has returned. The
+    // handshake must not need a session of its own to resolve the persona.
     const { userId } = await establishOperatorSession(
       fetch,
       stage.apiUrl,
