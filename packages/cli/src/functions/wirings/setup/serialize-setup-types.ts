@@ -8,7 +8,8 @@ export const serializeSetupTypes = (
   functionTypesImportPath: string,
   configTypeImport: string,
   configTypeName: string | undefined,
-  requiredServicesTypeImport: string
+  requiredServicesTypeImport: string,
+  allowShadowedServices: string[] = []
 ) => {
   return `/**
  * Config and service factory definitions, declared once per application
@@ -66,6 +67,18 @@ export const pikkuServices = (
   return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
     const createdServices = await func(config, existingServices)
     const services = { ...existingServices, ...createdServices }
+    const allowedToShadow = new Set(${JSON.stringify(allowShadowedServices)})
+    const shadowed = Object.keys(createdServices).filter(
+      (name) =>
+        !allowedToShadow.has(name) &&
+        (existingServices as any)[name] !== undefined &&
+        (existingServices as any)[name] !== (createdServices as any)[name]
+    )
+    if (shadowed.length > 0) {
+      ;(services as any).logger?.warn?.(
+        \`createSingletonServices returned its own \${shadowed.join(', ')}, discarding what the host passed in. A host only passes a service it has already configured — a \\\`secrets\\\` holding this deployment's values, a \\\`kysely\\\` bound to its database — so the replacement starts empty and fails later somewhere unrelated. Write \\\`existingServices.<name> ?? new Own...\\\` to take the host's when there is one and still work standalone, or list the name under \\\`allowShadowedServices\\\` in pikku.config.json if replacing it is deliberate.\`
+      )
+    }
     const authFactory = __pikkuState(null, 'package', 'authFactory')
     if (authFactory) {
       let authInstance: Promise<unknown> | undefined
