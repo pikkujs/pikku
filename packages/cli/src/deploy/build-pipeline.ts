@@ -101,6 +101,7 @@ export async function runBuildPipeline(options: {
   inspectorState: InspectorState
   serverlessIncompatible?: string[]
   defaultTarget?: 'serverless' | 'server'
+  globalHTTPPrefix?: string
   getEntryContext: (
     unitDir: string,
     pikkuDir: string,
@@ -134,6 +135,7 @@ export async function runBuildPipeline(options: {
     projectId,
     serverlessIncompatible: options.serverlessIncompatible,
     defaultTarget: options.defaultTarget,
+    globalHTTPPrefix: options.globalHTTPPrefix,
     workflowQueues,
   })
 

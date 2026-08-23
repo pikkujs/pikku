@@ -375,3 +375,72 @@ describe('analyzeDeployment - agent identifier', () => {
     assert.equal(manifest.agents[0].unitName, 'agent-kanban-agent')
   })
 })
+
+function stateWithExposedFunctionAndAgent(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        getMe: { pikkuFuncId: 'getMe', name: 'getMe', expose: true },
+      },
+    },
+    http: { meta: {} },
+    agents: {
+      agentsMeta: {
+        helper: { name: 'helper', model: 'x', tools: [], tags: [] },
+      },
+    },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+const routesOf = (
+  manifest: ReturnType<typeof analyzeDeployment>,
+  unit: string
+) =>
+  (manifest.units.find((u) => u.name === unit)?.handlers ?? [])
+    .flatMap((h) => ('routes' in h ? h.routes : []))
+    .map((r) => r.route)
+
+describe('analyzeDeployment - globalHTTPPrefix', () => {
+  test('prefixes the synthesized RPC route', () => {
+    const manifest = analyzeDeployment(stateWithExposedFunctionAndAgent(), {
+      projectId: 'test',
+      globalHTTPPrefix: '/api',
+    })
+    assert.deepEqual(routesOf(manifest, 'get-me'), ['/api/rpc/getMe'])
+  })
+
+  test('prefixes the synthesized agent routes', () => {
+    const manifest = analyzeDeployment(stateWithExposedFunctionAndAgent(), {
+      projectId: 'test',
+      globalHTTPPrefix: '/api',
+    })
+    assert.deepEqual(routesOf(manifest, 'agent-helper'), [
+      '/api/rpc/agent/helper',
+      '/api/rpc/agent/helper/stream',
+      '/api/rpc/agent/helper/approve',
+      '/api/rpc/agent/helper/resume',
+    ])
+  })
+
+  test('a trailing slash on the prefix does not double up', () => {
+    const manifest = analyzeDeployment(stateWithExposedFunctionAndAgent(), {
+      projectId: 'test',
+      globalHTTPPrefix: '/api/',
+    })
+    assert.deepEqual(routesOf(manifest, 'get-me'), ['/api/rpc/getMe'])
+  })
+
+  test('no prefix leaves the routes as they were', () => {
+    const manifest = analyzeDeployment(stateWithExposedFunctionAndAgent(), {
+      projectId: 'test',
+    })
+    assert.deepEqual(routesOf(manifest, 'get-me'), ['/rpc/getMe'])
+  })
+})
