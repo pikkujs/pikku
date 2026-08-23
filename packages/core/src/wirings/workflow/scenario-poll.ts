@@ -3,6 +3,10 @@ export interface PollOptions {
   intervalMs?: number
 }
 
+/**
+ * Retries an assertion until it passes or the timeout runs out — for the
+ * eventually-consistent parts of a scenario (a queued job, a projection).
+ */
 export const pollUntil = async <T>(
   attempt: () => Promise<T | undefined> | T | undefined,
   { timeoutMs = 15_000, intervalMs = 250 }: PollOptions = {}

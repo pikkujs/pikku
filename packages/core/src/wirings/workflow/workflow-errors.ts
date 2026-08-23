@@ -15,6 +15,10 @@ export class WorkflowAsyncException extends Error {
   }
 }
 
+/**
+ * Thrown inside a workflow step when the run has been cancelled, so the step
+ * stops rather than finishing work nobody wants.
+ */
 export class WorkflowCancelledException extends Error {
   constructor(
     public readonly runId: string,

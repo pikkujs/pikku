@@ -3,6 +3,10 @@ import type {
   ScenarioEnvironment,
 } from './scenario-step.types.js'
 
+/**
+ * The environment the current scenario run targets, or a throw explaining that
+ * the run carries none. Use it in a step that needs the target's URLs.
+ */
 export const requireScenarioEnv = (
   scenarioStep: PikkuScenarioStepWire | undefined
 ): ScenarioEnvironment => {

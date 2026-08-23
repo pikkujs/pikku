@@ -29,6 +29,10 @@ export interface ErrorDetails {
 
 export type PikkuErrorConstructor = new (...args: any[]) => Error
 
+/**
+ * Registers one of your own error classes with the HTTP status and message it
+ * should produce, so throwing it maps to a real response instead of a 500.
+ */
 export const addError = (
   error: any,
   { status, message, mcpCode }: ErrorDetails

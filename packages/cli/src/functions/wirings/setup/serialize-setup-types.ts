@@ -19,6 +19,10 @@ import { CreateWireServices } from '@pikku/core/types'
 import type { SingletonServices } from '${functionTypesImportPath}'
 ${configTypeImport}
 ${requiredServicesTypeImport}
+/**
+ * This project's own config — whatever \`createConfig\` returns. Every singleton
+ * service is built from it.
+ */
 ${!configTypeName ? 'export type Config = any' : configTypeName === 'Config' ? 'export type { Config }' : `export type { ${configTypeName} as Config }`}
 
 /**

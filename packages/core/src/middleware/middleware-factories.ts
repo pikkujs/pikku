@@ -39,6 +39,10 @@ export const pikkuMiddlewareFactory = <In = any>(
   return factory
 }
 
+/**
+ * Declares middleware for a channel — it runs around the connection and its
+ * messages rather than around a single request.
+ */
 export const pikkuChannelMiddleware = <
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Event = unknown,
@@ -48,12 +52,20 @@ export const pikkuChannelMiddleware = <
   return middleware
 }
 
+/**
+ * Declares channel middleware that takes options, so one definition can be
+ * wired several times with different configuration.
+ */
 export const pikkuChannelMiddlewareFactory = <In = any>(
   factory: CorePikkuChannelMiddlewareFactory<In>
 ): CorePikkuChannelMiddlewareFactory<In> => {
   return factory
 }
 
+/**
+ * Declares middleware for an agent run — hooks around the model call, its tool
+ * calls and the run's state.
+ */
 export const pikkuAgentMiddleware = <
   State extends Record<string, unknown> = Record<string, unknown>,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,

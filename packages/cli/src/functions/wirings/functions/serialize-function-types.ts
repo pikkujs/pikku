@@ -69,8 +69,21 @@ ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 ${workflowImport}
 
+/**
+ * The services that live for the process — the ones built once in \`createConfig\`/
+ * \`createSingletonServices\` and shared by every request.
+ */
 ${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServices = ${singletonServicesTypeName}` : `export type { ${singletonServicesTypeName} as SingletonServices }`}
+/**
+ * Everything a function is handed as its first argument: the singleton services
+ * plus whatever is built per request. This is the type to widen when you add a
+ * service.
+ */
 ${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
+/**
+ * The signed-in user as this project defines it. Reached on the wire as
+ * \`session\`, and replaced with \`setSession\`.
+ */
 ${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeName}` : `export type { ${userSessionTypeName} as Session }`}
 
 /**
@@ -308,6 +321,11 @@ export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
+/**
+ * A \`pikkuFunc\` whose input and output are already the shared list shape —
+ * filters, sort, paging in; rows and a total out — so a listing endpoint pages
+ * the same way everywhere.
+ */
 export const pikkuListFunc = <
   F extends Record<string, unknown> = {},
   Row = unknown,

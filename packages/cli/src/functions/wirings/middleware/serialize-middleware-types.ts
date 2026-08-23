@@ -162,23 +162,43 @@ export const addHTTPMiddleware = (
   addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any)
 }
 
+/**
+ * The shape of channel middleware — it runs around the connection and its
+ * messages rather than around a single request.
+ */
 export type PikkuChannelMiddleware<RequiredServices extends Services = Services, Event = unknown> = CorePikkuChannelMiddleware<RequiredServices, Event>
 
+/**
+ * Declares middleware for a channel — it runs around the connection and its
+ * messages rather than around a single request.
+ */
 export const pikkuChannelMiddleware = <RequiredServices extends Services = Services, Event = unknown>(
   middleware: PikkuChannelMiddleware<RequiredServices, Event>
 ): PikkuChannelMiddleware<RequiredServices, Event> => {
   return middleware
 }
 
+/**
+ * Declares channel middleware that takes options, so one definition can be
+ * wired several times with different configuration.
+ */
 export const pikkuChannelMiddlewareFactory = <In = any>(
   factory: CorePikkuChannelMiddlewareFactory<In>
 ): CorePikkuChannelMiddlewareFactory<In> => {
   return factory
 }
 
+/**
+ * Attaches channel middleware to every channel carrying the given tag, so the
+ * channels themselves stay free of the wiring.
+ */
 export const addChannelMiddleware = (tag: string, middleware: PikkuChannelMiddleware[]) =>
   addChannelMiddlewareCore(tag, middleware, ${packageNameValue})
 
+/**
+ * Declares middleware for an agent run — hooks around the model call, its tool
+ * calls and the run's state.
+ */
 export const pikkuAgentMiddleware = <
   State extends Record<string, unknown> = Record<string, unknown>,
   RequiredServices extends SingletonServices = WiredSingletonServices,

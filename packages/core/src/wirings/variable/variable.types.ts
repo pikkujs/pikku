@@ -30,4 +30,9 @@ export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
 
 export type VariableDefinitions = VariableDefinitionMeta[]
 
+/**
+ * Declares an environment variable this project needs, with the shape of its
+ * value. The CLI collects every declaration into `VariablesMap`, which is what
+ * makes `variables.get('NAME')` return the right type instead of `unknown`.
+ */
 export const defineVariable = <T>(_config: CoreVariable<T>): void => {}

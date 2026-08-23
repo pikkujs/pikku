@@ -36,6 +36,10 @@ export type WireAddonConfig = {
   globalCredentials?: string
 }
 
+/**
+ * Installs an addon into this project: its functions, wirings and scopes become
+ * part of the app, under the namespace and options given here.
+ */
 export const wireAddon = (config: WireAddonConfig): void => {
   pikkuState(null, 'addons', 'packages').set(config.name, {
     package: config.package,
