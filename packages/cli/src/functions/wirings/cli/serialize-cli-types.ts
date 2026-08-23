@@ -46,12 +46,7 @@ type PikkuCLIRender<Data, RequiredServices extends SingletonServices = Singleton
  * @param render - Function that receives singleton services and data to render output
  * @returns A CLI renderer configuration
  *
- * @example
- * \`\`\`typescript
- * const myRenderer = pikkuCLIRender<MyData>(({ logger }, data) => {
- *   logger.info(data.message)
- * })
- * \`\`\`
+ * @example snippet: pikku-cli-render
  */
 export const pikkuCLIRender = <Data, RequiredServices extends SingletonServices = SingletonServices>(
   render: (services: SingletonServices, data: Data) => void | Promise<void>

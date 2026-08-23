@@ -119,23 +119,7 @@ type PikkuChannelFuncConfigWithSchema<
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * // Pattern 1: Using generic types
- * const handleMessage = pikkuChannelFunc<{text: string}, {received: boolean}>({
- *   func: async (_services, { text }) => ({ received: true })
- * })
- *
- * // Pattern 2: Using Zod schemas
- * const messageInput = z.object({ text: z.string() })
- * const messageOutput = z.object({ received: z.boolean() })
- *
- * const handleMessage = pikkuChannelFunc({
- *   input: messageInput,
- *   output: messageOutput,
- *   func: async (_services, { text }) => ({ received: true })
- * })
- * \`\`\`
+ * @example snippet: pikku-channel-func
  */
 export function pikkuChannelFunc<
   InputSchema extends StandardSchemaV1,

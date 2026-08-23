@@ -4,6 +4,7 @@ import type { Todo } from '../schemas.js'
 /**
  * Render todo list for CLI output.
  */
+// @snippet start pikku-cli-render
 export const todoListRenderer = pikkuCLIRender<{
   todos: Todo[]
   total: number
@@ -21,6 +22,7 @@ export const todoListRenderer = pikkuCLIRender<{
     console.log(`${status} ${priority} ${todo.id}: ${todo.title}${due}`)
   }
 })
+// @snippet end pikku-cli-render
 
 /**
  * Render single todo for CLI output.

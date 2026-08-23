@@ -10,6 +10,7 @@ import {
  * SSE stream that processes the authenticated user's todos and reports progress.
  * Sends started/processing events over SSE, returns complete when done.
  */
+// @snippet start pikku-func
 export const processTodosProgress = pikkuFunc({
   input: EmptyInputSchema,
   output: TodoProgressOutputSchema,
@@ -29,6 +30,7 @@ export const processTodosProgress = pikkuFunc({
     return { status: 'complete' as const, processed: total, total }
   },
 })
+// @snippet end pikku-func
 
 /**
  * SSE stream that sends todo updates periodically.

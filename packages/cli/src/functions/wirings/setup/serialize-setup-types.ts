@@ -32,15 +32,7 @@ ${!configTypeName ? 'export type Config = any' : configTypeName === 'Config' ? '
  * @param func - Config factory function that returns your application's config
  * @returns The config factory function
  *
- * @example
- * \`\`\`typescript
- * export const createConfig = pikkuConfig(async () => {
- *   return {
- *     apiUrl: process.env.API_URL || 'http://localhost:3000',
- *     dbUrl: process.env.DATABASE_URL
- *   }
- * })
- * \`\`\`
+ * @example snippet: pikku-config
  */
 export const pikkuConfig = (
   func: (variables?: any, ...args: any[]) => Promise<Config>
@@ -96,15 +88,7 @@ export const pikkuServices = (
  * @param func - Wire services factory function
  * @returns The wire services factory function
  *
- * @example
- * \`\`\`typescript
- * export const createWireServices = pikkuWireServices(async (services, wire) => {
- *   const session = await wire.session?.get()
- *   return {
- *     userCache: new UserCache(session?.userId)
- *   }
- * })
- * \`\`\`
+ * @example snippet: pikku-wire-services
  */
 export const pikkuWireServices = (
   func: (

@@ -290,21 +290,7 @@ type PikkuFunctionConfigWithSchema<
  * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * const createUserInput = z.object({ name: z.string(), email: z.string() })
- * const createUserOutput = z.object({ id: z.number() })
- *
- * const createUser = pikkuFunc({
- *   input: createUserInput,
- *   output: createUserOutput,
- *   func: async ({db}, input) => {
- *     // input is typed as { name: string, email: string }
- *     const user = await db.users.create(input)
- *     return { id: user.id } // must match output schema
- *   }
- * })
- * \`\`\`
+ * @example snippet: pikku-func
  */
 export function pikkuFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -386,19 +372,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
  * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * const greetInput = z.object({ name: z.string() })
- * const greetOutput = z.object({ message: z.string() })
- *
- * const greet = pikkuSessionlessFunc({
- *   input: greetInput,
- *   output: greetOutput,
- *   func: async (_services, { name }) => {
- *     return { message: \`Hello, \${name}!\` }
- *   }
- * })
- * \`\`\`
+ * @example snippet: pikku-sessionless-func
  */
 export function pikkuSessionlessFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -423,14 +397,7 @@ export function pikkuSessionlessFunc(func: any) {
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * const cleanupTempFiles = pikkuVoidFunc(async ({fileSystem, logger}) => {
- *     logger.info('Starting cleanup of temporary files')
- *     await fileSystem.deleteDirectory('/tmp/uploads')
- *     logger.info('Cleanup completed')
- * })
- * \`\`\`
+ * @example snippet: pikku-void-func
  */
 export const pikkuVoidFunc = (
   func:

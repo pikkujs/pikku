@@ -6,6 +6,7 @@ import {
 /**
  * Addon package middleware that logs when addon functions are called
  */
+// @snippet start pikku-middleware-factory
 export const addonMiddleware = pikkuMiddlewareFactory(
   (name: string) =>
     async ({ logger }, _data, next) => {
@@ -15,6 +16,7 @@ export const addonMiddleware = pikkuMiddlewareFactory(
       return result
     }
 )
+// @snippet end pikku-middleware-factory
 
 /**
  * Tag middleware for addon functions
@@ -33,5 +35,7 @@ export const tagMiddleware = pikkuMiddlewareFactory(
  * Register 'addon' tag middleware
  * This will apply to all functions with the 'addon' tag
  */
+// @snippet start add-tag-middleware
 export const addonTagMiddleware = () =>
   addTagMiddleware('addon', [tagMiddleware('addon')])
+// @snippet end add-tag-middleware

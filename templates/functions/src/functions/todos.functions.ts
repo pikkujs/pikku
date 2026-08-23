@@ -15,6 +15,7 @@ import type { Todo } from '../schemas.js'
 /**
  * List todos for a user with optional filters.
  */
+// @snippet start pikku-sessionless-func
 export const listTodos = pikkuSessionlessFunc({
   input: ListTodosWithUserInputSchema,
   output: TodoListResponseSchema,
@@ -25,6 +26,7 @@ export const listTodos = pikkuSessionlessFunc({
     return { todos, total: todos.length }
   },
 })
+// @snippet end pikku-sessionless-func
 
 /**
  * Get a single todo by ID.

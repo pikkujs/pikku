@@ -1,5 +1,6 @@
 import { pikkuConfig } from '#pikku/setup'
 
+// @snippet start pikku-config
 export const createConfig = pikkuConfig(async () => {
   return {
     awsRegion: 'us-east-1',
@@ -8,3 +9,4 @@ export const createConfig = pikkuConfig(async () => {
     },
   }
 })
+// @snippet end pikku-config

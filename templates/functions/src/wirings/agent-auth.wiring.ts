@@ -17,6 +17,7 @@ import { authBearer } from '@pikku/core/middleware'
  *
  * knowledge: decisions/security/agent-sessionless-deployments-have-no-thread-ownership.md
  */
+// @snippet start add-http-middleware
 export const agentDemoAuth = () =>
   addHTTPMiddleware('/rpc/*', [
     authBearer({
@@ -26,3 +27,4 @@ export const agentDemoAuth = () =>
       },
     }),
   ])
+// @snippet end add-http-middleware
