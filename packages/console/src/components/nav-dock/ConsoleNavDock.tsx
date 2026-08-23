@@ -15,6 +15,7 @@ import {
   Palette,
   PanelBottom,
   Pin,
+  Scaling,
   RefreshCw,
   Search,
   Share,
@@ -30,7 +31,14 @@ import {
   promptInstall,
   subscribeInstallPrompt,
 } from '../../lib/installPrompt'
-import { DOCK_SIDES, useDockPrefs, type DockSide } from './useDockPrefs'
+import {
+  DOCK_SCALE_MAX,
+  DOCK_SCALE_MIN,
+  DOCK_SCALE_STEP,
+  DOCK_SIDES,
+  useDockPrefs,
+  type DockSide,
+} from './useDockPrefs'
 import { useLocation, useNavigate } from '../../router'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
@@ -234,6 +242,19 @@ export function ConsoleNavDock({
             label: m.nav_dock_always_visible(),
             checked: dock.alwaysVisible,
             onSelect: () => dock.setAlwaysVisible(!dock.alwaysVisible),
+          },
+          {
+            key: 'scale',
+            Icon: Scaling,
+            label: m.nav_dock_size(),
+            slider: {
+              value: dock.scale,
+              min: DOCK_SCALE_MIN,
+              max: DOCK_SCALE_MAX,
+              step: DOCK_SCALE_STEP,
+              format: (value: number) => `${value}%`,
+              onChange: dock.setScale,
+            },
           },
           ...DOCK_SIDES.map((side) => ({
             key: `side-${side}`,

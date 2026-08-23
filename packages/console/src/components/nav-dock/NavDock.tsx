@@ -110,7 +110,7 @@ export function NavDock({
   /* Read here rather than taken as props: the menu that changes them is a tile
      inside the dock, so an app threading them through would only get a chance
      to disagree with the dock about where it is. */
-  const { side, alwaysVisible, setAlwaysVisible } = useDockPrefs()
+  const { side, alwaysVisible, setAlwaysVisible, scale } = useDockPrefs()
   const vertical = isVerticalDock(side)
   const [hovering, setHovering] = useState(false)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
@@ -192,12 +192,17 @@ export function NavDock({
     // reads as a different object, not the same one on another edge.
     const avail = Math.min(window.innerWidth, window.innerHeight) - 26
     const measure = () => (vertical ? el.scrollHeight : el.scrollWidth)
-    let t = TILE_MAX
+    // The user's scale moves the whole band, ceiling and floor together: it is
+    // the size they asked for, and the loop below still takes it back down to
+    // whatever the window can actually hold.
+    const max = Math.round(TILE_MAX * (scale / 100))
+    const min = Math.min(Math.round(TILE_MIN * (scale / 100)), max)
+    let t = max
     applyTile(el, t)
-    for (let i = 0; i < 5 && t > TILE_MIN; i++) {
+    for (let i = 0; i < 5 && t > min; i++) {
       const need = measure()
       if (need <= avail) break
-      t = Math.max(TILE_MIN, Math.floor(t * (avail / need)))
+      t = Math.max(min, Math.floor(t * (avail / need)))
       applyTile(el, t)
     }
     reserve(alwaysVisible ? t : null)
@@ -206,7 +211,7 @@ export function NavDock({
     // whole contextual zone collapses into one.
     if (over && contextual.length) setCondensed(true)
     setOverflow(over)
-  }, [contextual.length, vertical, alwaysVisible, reserve])
+  }, [contextual.length, vertical, alwaysVisible, reserve, scale])
 
   useLayoutEffect(() => {
     fit()

@@ -45,6 +45,19 @@ export interface FlyoutRow {
   /** Whether the setting is one of a set of alternatives (a radio) or a switch
    *  of its own (a checkbox) — which is what a screen reader announces. */
   exclusive?: boolean
+  /** A continuous setting rather than a choice between named ones: the row
+   *  draws a slider under its label and reports the live value as its hint. It
+   *  never closes the menu — you are dragging towards an answer, not picking
+   *  one. */
+  slider?: {
+    value: number
+    min: number
+    max: number
+    step: number
+    /** How the live value reads in the row's hint (e.g. `120%`). */
+    format?: (value: number) => string
+    onChange: (value: number) => void
+  }
   /** Child rows, drawn as a submenu. A row with children has no action of its
    *  own — opening it IS the action — so `onSelect` is ignored. */
   rows?: FlyoutRow[]
