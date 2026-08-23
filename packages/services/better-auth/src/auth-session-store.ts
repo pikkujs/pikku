@@ -10,6 +10,7 @@ import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { verifySessionCredential } from './session-credential.js'
 import type { SessionStore } from './session-store.js'
+import { isSecretNotFound } from './secret-not-found.js'
 
 type StoredSession = { session: any; user: any }
 
@@ -112,7 +113,7 @@ export const betterAuthStoreSession = (
           await (services as any).secrets?.getSecret(secretId)
         )?.reveal()
       } catch (e: any) {
-        if (e?.message !== 'Requested secret not found') {
+        if (!isSecretNotFound(e)) {
           throw e
         }
         services.logger?.error(

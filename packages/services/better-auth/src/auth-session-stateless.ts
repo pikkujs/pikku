@@ -9,6 +9,7 @@ import {
 import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
+import { isSecretNotFound } from './secret-not-found.js'
 
 type CachedSession = { session: any; user: any }
 
@@ -66,7 +67,7 @@ export const betterAuthStatelessSession = (
           await (services as any).secrets?.getSecret(secretId)
         )?.reveal()
       } catch (e: any) {
-        if (e?.message !== 'Requested secret not found') throw e
+        if (!isSecretNotFound(e)) throw e
         services.logger?.error(
           `betterAuthStatelessSession: secret '${secretId}' not found — session middleware skipped. Ensure ${secretId} is configured.`
         )

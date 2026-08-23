@@ -96,7 +96,7 @@ export class RedisSecretService implements SecretService {
 
   async getSecret<T = string>(key: string): Promise<SecretValue<T>> {
     const data = await this.redis.hgetall(this.secretKey(key))
-    if (!data.ciphertext) throw new Error('Requested secret not found')
+    if (!data.ciphertext) throw new Error(`Requested secret not found: ${key}`)
 
     const kek = await this.getKEK(Number(data.key_version))
     return createSecretValue(
