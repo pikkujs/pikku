@@ -5,7 +5,6 @@ description: >-
   request/response validation. TRIGGER when: code uses AjvSchemaService, user asks about AJV, JSON
   schema validation, or @pikku/schema-ajv. DO NOT TRIGGER when: user asks about Cloudflare Workers
   schema validation (use pikku-schema-cfworker).
-installGroups: [core]
 ---
 
 # Pikku Schema AJV (JSON Schema Validation)
