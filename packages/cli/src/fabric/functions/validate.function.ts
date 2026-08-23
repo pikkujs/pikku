@@ -1761,6 +1761,76 @@ export async function runValidate(
     }
   }
 
+  // ── scenario steps must locate by i18n key, not rendered copy ──────────
+  // A browser step that says getByLabel('Full Name') passes only while the app
+  // happens to render the base locale, and a copy edit breaks it as a timeout
+  // on a selector — the failure points at the wizard rather than at the rename
+  // that caused it. Any literal in a step file that is verbatim a value in the
+  // base catalogue is that mistake: the catalogue already holds the string
+  // under a key the test can read. Comments are stripped first, because the
+  // prose around a step quotes the copy it is explaining.
+  {
+    const relFile = (p: string): string =>
+      p.slice(root.length + 1).replace(/\\/g, '/')
+
+    const keysByValue = new Map<string, string[]>()
+    const appsRoot = join(root, 'apps')
+    if (existsSync(appsRoot)) {
+      for (const ent of await readdir(appsRoot, { withFileTypes: true })) {
+        if (!ent.isDirectory()) continue
+        const appPath = join(appsRoot, ent.name)
+        const settings = await readJsonSafe<{ baseLocale?: string }>(
+          join(appPath, 'project.inlang', 'settings.json')
+        )
+        if (!settings) continue
+        const catalogue = await readJsonSafe<Record<string, unknown>>(
+          join(appPath, 'messages', `${settings.baseLocale ?? 'en'}.json`)
+        )
+        if (!catalogue) continue
+        for (const [key, value] of Object.entries(catalogue)) {
+          if (typeof value !== 'string' || value.trim().length < 2) continue
+          const owners = keysByValue.get(value) ?? []
+          owners.push(key)
+          keysByValue.set(value, owners)
+        }
+      }
+    }
+
+    if (keysByValue.size > 0) {
+      const STRING_LITERAL =
+        /(?<![A-Za-z0-9_$])(['"])((?:[^\\\n]|\\.){2,200}?)\1/g
+      for (const file of await walkSourceFiles(root)) {
+        if (!/\.(steps|scenario)\.tsx?$/.test(file)) continue
+        const text = await readTextSafe(file)
+        if (!text) continue
+        const code = text
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1')
+        const hits: string[] = []
+        for (const match of code.matchAll(STRING_LITERAL)) {
+          const literal = match[2]
+          if (!literal) continue
+          const keys = keysByValue.get(literal)
+          if (keys) hits.push(`"${literal}" → ${keys.join(' | ')}`)
+        }
+        if (hits.length === 0) continue
+        e(
+          `scenario-hardcoded-copy-${relFile(file).replace(/[^a-z0-9]/gi, '-')}`,
+          `${relFile(file)} hardcodes ${hits.length} string(s) the message catalogue already owns — the step passes only while the app renders the base locale, and a copy edit breaks it as an unexplained selector timeout`,
+          file,
+          lines(
+            'Read each string from the catalogue instead of repeating it:',
+            ...hits.slice(0, 10).map((h) => `  - ${h}`),
+            ...(hits.length > 10 ? [`  …and ${hits.length - 10} more`] : []),
+            'Type the lookup off the catalogue so a renamed key is a compile error:',
+            "  import type messages from '<app>/messages/<baseLocale>.json'",
+            '  export type MessageKey = keyof typeof messages'
+          )
+        )
+      }
+    }
+  }
+
   // ── packages/theme + packages/components ──────────────────────────────
   const designDocUrl = 'https://pikkufabric.dev/docs/design'
   const designSeverity = hasMantineFrontend ? w : info

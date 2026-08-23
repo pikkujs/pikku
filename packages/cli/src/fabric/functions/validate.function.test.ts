@@ -2633,3 +2633,137 @@ describe('deployed frontend API base (live validate.function)', () => {
     }
   })
 })
+
+describe('scenario steps vs the message catalogue (live validate.function)', () => {
+  const writeCatalogue = async (
+    root: string,
+    messages: Record<string, string>
+  ) => {
+    await mkdir(join(root, 'apps', 'web', 'project.inlang'), {
+      recursive: true,
+    })
+    await mkdir(join(root, 'apps', 'web', 'messages'), { recursive: true })
+    await writeJson(join(root, 'apps', 'web', 'package.json'), {
+      name: '@project/web',
+      type: 'module',
+      dependencies: { react: '^19.0.0' },
+    })
+    await writeJson(join(root, 'apps', 'web', 'project.inlang', 'settings.json'), {
+      baseLocale: 'en',
+      locales: ['en', 'de'],
+    })
+    await writeJson(join(root, 'apps', 'web', 'messages', 'en.json'), messages)
+  }
+
+  const writeSteps = async (root: string, source: string) => {
+    const dir = join(root, 'packages', 'functions', 'tests', 'scenarios')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'application.steps.ts'), source, 'utf8')
+  }
+
+  const hardcoded = (findings: Array<{ id: string }>) =>
+    findings.filter((f) => f.id.startsWith('scenario-hardcoded-copy-'))
+
+  const ids = (findings: Array<{ id: string }>) =>
+    JSON.stringify(findings.map((f) => f.id))
+
+  test('a locator repeating catalogue copy → error naming the key', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { jobs_apply_fullname: 'Full Name' })
+      await writeSteps(tmp, `await page.getByLabel('Full Name').fill(name)\n`)
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.strictEqual(finding!.severity, 'error')
+      assert.match(finding!.fixHint, /jobs_apply_fullname/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('copy passed to a project helper is caught too', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, {
+        jobs_worklocation: 'Where would you like to work?',
+      })
+      await writeSteps(
+        tmp,
+        `await pick('Where would you like to work?', 'Berlin')\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        hardcoded(result.findings).length === 1,
+        `expected a finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('copy quoted in a comment is not a locator', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { common_yes: 'Yes' })
+      await writeSteps(
+        tmp,
+        [
+          `/**`,
+          ` * A dozen selects each offer "Yes", so the lookup is scoped.`,
+          ` */`,
+          `// the "Yes" option is ambiguous page-wide`,
+          `await scoped.getByRole('option', { name: yesLabel }).click()`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a string the catalogue does not own is left alone', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { jobs_apply_fullname: 'Full Name' })
+      await writeSteps(
+        tmp,
+        `await page.getByText('favicon-16x16.png').waitFor()\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a project with no inlang app is not scanned', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeSteps(tmp, `await page.getByLabel('Full Name').fill(name)\n`)
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
