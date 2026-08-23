@@ -227,16 +227,39 @@ export type CoreCLICommandConfig<
   >,
   Params extends string = string,
 > = {
+  /**
+   * Positional arguments, written the way `--help` prints them: `<env>` is
+   * required, `[region]` optional. Each name must be a key of the function's
+   * input schema, so a typo is a compile error rather than an argument that
+   * silently never arrives.
+   */
   parameters?: ValidateParameters<Params, ExtractFunctionInput<FuncConfig>>
+  /** The function to run. Omit it on a command that exists only to hold `subcommands`. */
   func?: FuncConfig
+  /** The heading shown above this command's own help. */
   title?: string
+  /** The one-line summary listed beside the command name. */
   description?: string
+  /**
+   * Prints the result. The function returns data and this is the only thing
+   * that writes to stdout, which is what lets one command serve both a human
+   * reading it and a script parsing it.
+   */
   render?: PikkuCLIRender
+  /**
+   * Flags, keyed by the input field each one fills. A field with no entry is
+   * still accepted as `--field`; an entry is how it gets a short form, a
+   * default, or help text.
+   */
   options?: {
     [K in keyof ExtractFunctionInput<FuncConfig>]?: {
+      /** What this flag is for, as `--help` prints it. */
       description?: string
+      /** A single-letter alias, so `--verbose` can also be `-v`. */
       short?: string
+      /** How the argument is parsed. Inferred from the input schema when omitted. */
       type?: CLIOptionType
+      /** Used when the flag is absent, and shown in `--help` so nobody has to guess it. */
       default?: ExtractFunctionInput<FuncConfig>[K]
       /**
        * The values this option accepts. Rejected by the parser and listed in
@@ -246,13 +269,18 @@ export type CoreCLICommandConfig<
       choices?: ReadonlyArray<ExtractFunctionInput<FuncConfig>[K]>
     }
   }
+  /** Wraps every run of this command. */
   middleware?: PikkuMiddleware[]
+  /** Nested commands, keyed by the word that selects them: `deploy plan` is `deploy` with a `plan` subcommand. */
   subcommands?: Record<
     string,
     CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender, any>
   >
+  /** Whether running this requires a logged-in session. Defaults to true — a command is closed unless it says otherwise. */
   auth?: boolean
+  /** Permission checks run before the function, for a command that not every logged-in user may run. */
   permissions?: any[]
+  /** Runs when the parent is invoked with no subcommand named. */
   isDefault?: boolean
 }
 

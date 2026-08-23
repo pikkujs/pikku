@@ -10,11 +10,17 @@ import {
  * against whichever entry happened to be first.
  */
 export const cors = pikkuMiddlewareFactory<{
+  /** Which origins may call. Defaults to `*`, which the browser rejects alongside `credentials: true` — name the origins instead. */
   origin?: string | string[] | true
+  /** Methods a cross-origin caller may use. Defaults to the common six; a method missing here fails preflight rather than the request. */
   methods?: string[]
+  /** Request headers a caller may send. Defaults to content-type, authorization and x-api-key. */
   headers?: string[]
+  /** Response headers the browser will let the caller's JavaScript read. Everything else is hidden from it even on a 200. */
   exposeHeaders?: string[]
+  /** Whether cookies and auth headers ride along. Requires a named origin, never `*`. */
   credentials?: boolean
+  /** Seconds the browser may cache this preflight. Defaults to a day. */
   maxAge?: number
 }>(
   ({

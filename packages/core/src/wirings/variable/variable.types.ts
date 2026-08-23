@@ -1,8 +1,13 @@
 export type CoreVariable<T = unknown> = {
+  /** How the variable is asked for in code. Generated into `VariablesMap`, so it is what `variables.get` autocompletes. */
   name: string
+  /** The name shown to whoever configures the deployment. */
   displayName: string
+  /** What the value does, for the person setting it rather than the one reading it. */
   description?: string
+  /** The environment variable this reads, which is the name that has to exist on the host. */
   variableId: string
+  /** The shape of the value. It arrives as a string, so this is also what parses it. */
   schema: T
   /**
    * A variable is REQUIRED by default, and marking it `optional` is how a
@@ -18,6 +23,7 @@ export type CoreVariable<T = unknown> = {
    * point of the flag, and the safe default for an undeclared one is to ask.
    */
   optional?: boolean
+  /** Where to go to work out what to set this to. */
   docsUrl?: string
 }
 

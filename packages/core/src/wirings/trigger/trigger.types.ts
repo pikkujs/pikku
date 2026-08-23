@@ -72,11 +72,14 @@ export const pikkuTriggerFunc = <
 }
 
 export interface CoreTrigger<PikkuFunctionConfig = any> {
+  /** What a `wireTriggerSource` points at to fire this trigger. It is the contract between the two, so both must spell it the same. */
   name: string
+  /** The function to run each time the trigger fires. */
   func: PikkuFunctionConfig
+  /** What firing this trigger means, for whoever is reading the wiring rather than writing it. */
   description?: string
+  /** Filters this trigger in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
-  graph?: true
 }
 
 export interface TriggerInstance {

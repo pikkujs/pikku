@@ -193,12 +193,17 @@ export type CorePikkuFunctionConfig<
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   Scope extends string = string,
 > = {
+  /** A human name for this function, shown wherever it is listed rather than called. */
   title?: string
+  /** What the function does. An agent choosing between tools reads this, so it is worth more care than a comment would be. */
   description?: string
   /** Explicit logical name override; lets multiple exports share a versioned base */
   override?: string
+  /** Which version of this contract this export is. Two exports sharing an `override` and differing here are the same function at two versions. */
   version?: number
+  /** Filters this function in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
+  /** Makes the function callable from outside as `POST /rpc/<name>`. Without a session requirement, a permission or an addon gate, that means callable by anyone. */
   expose?: boolean
   /**
    * The permission check for this function lives in its body — verifying a
@@ -213,10 +218,19 @@ export type CorePikkuFunctionConfig<
    * `allow.permissionsInBody` in `pikku.config.json`.
    */
   permissionsInBody?: boolean
+  /** Publishes the function in this package's remote surface, which is what a `wireRemoteAddon` consumer gets a typed client for. */
   remote?: boolean
+  /** Offers the function to MCP clients as a tool, without a separate `wireMCPTool`. */
   mcp?: boolean
+  /**
+   * Declares that the function only reads. It is enforced rather than
+   * decorative: a read-only session is refused any function without it, and an
+   * agent may call one without asking permission first.
+   */
   readonly?: boolean
+  /** Where this function is deployed when the build can go either way. `auto` lets the analyser decide from what the function touches. */
   deploy?: 'serverless' | 'server' | 'auto'
+  /** Under an agent's `explicit` approval policy, calling this pauses for a human to approve it. */
   approvalRequired?: boolean
   /** When true, workflow steps calling this function are dispatched via the queue. No queue service configured is a hard error. Defaults to false (inline). */
   workflowQueued?: boolean
@@ -236,12 +250,19 @@ export type CorePikkuFunctionConfig<
    * a `browser` binding or an explicit `actor: true`, never written by hand.
    */
   requiresActor?: boolean
+  /**
+   * Records every call in the audit log. `transactional` durability writes the
+   * entry in the same transaction as the work, so the two cannot disagree;
+   * `best-effort` does not hold the request up for it.
+   */
   audit?:
     | boolean
     | {
         durability?: 'best-effort' | 'transactional'
       }
+  /** Builds the sentence a human is shown when asked to approve a call, from that call's own input. */
   approvalDescription?: any
+  /** The body. Its first parameter is the services it needs, destructured inline so the build can tree-shake the rest away. */
   func: PikkuFunction
   /**
    * Scenarios only: runs before the scenario body, with the scenario's own
@@ -260,6 +281,7 @@ export type CorePikkuFunctionConfig<
    * as skipped rather than quietly omitted; naming it in `--flows` runs it.
    */
   skip?: string
+  /** Whether calling this requires a session, wherever it is wired. A wiring can be more permissive than the function, never less. */
   auth?: boolean
   /**
    * Scopes the session must hold; all are required (AND) and checked before
@@ -269,11 +291,17 @@ export type CorePikkuFunctionConfig<
    * {@link CorePikkuSessionlessFunctionConfig}.
    */
   scopes?: Scope[]
+  /** Checks that run before the body. Grouped names OR together, so any one passing admits the caller; use `scopes` to require rather than offer. */
   permissions?: CorePermissionGroup<PikkuPermission>
+  /** Wraps this function wherever it is called from, unlike wiring middleware which only wraps one route into it. */
   middleware?: PikkuMiddleware[]
+  /** The input schema, which is also the input type — there is no separate generic to keep in step with it. */
   input?: InputSchema
+  /** The output schema, which is also the return type. Naming a type here instead is what produces PKU463. */
   output?: OutputSchema
+  /** Presentation for this function as a node in a workflow graph. */
   node?: CoreNodeConfig
+  /** Error classes this may throw, so each one's registered HTTP status is used instead of a 500. */
   errors?: Array<typeof PikkuError>
 }
 
