@@ -12,7 +12,6 @@ description: >-
   workflows, queues, realtime or i18n (use pikku-build-platform); or the user is adding a feature
   to an app that already exists rather than building one from a fresh scaffold (use
   pikku-feature).
-installGroups: [core]
 ---
 
 # Build an app on Pikku, fast

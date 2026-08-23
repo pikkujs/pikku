@@ -9,7 +9,6 @@ description: >-
   built (use pikku-build-app), something quick (use pikku-build-quick), or one specific surface
   wired into an existing app — a single workflow, cron job or agent (use that surface's own skill,
   e.g. pikku-workflow, pikku-cron, pikku-agent).
-installGroups: [core]
 ---
 
 # Build a platform showcase on Pikku

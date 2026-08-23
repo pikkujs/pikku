@@ -10,7 +10,6 @@ description: >-
   something quick or throwaway (use pikku-build-quick), wants every platform surface demonstrated
   (use pikku-build-platform), or is adding one feature to an app that already has its knowledge
   base and milestones (use pikku-feature).
-installGroups: [core]
 ---
 
 # Build a product on open-source Pikku
