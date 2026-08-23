@@ -6,6 +6,7 @@ description: >-
   wireCLI/pikkuCLICommand, user asks about CLI commands, terminal tools, command-line interface,
   or adding subcommands. DO NOT TRIGGER when: user asks about the pikku CLI tool itself (use
   pikku-info) or HTTP endpoints (use pikku-http).
+installGroups: [core]
 ---
 
 # Pikku CLI Wiring

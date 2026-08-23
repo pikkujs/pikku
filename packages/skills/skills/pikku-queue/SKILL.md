@@ -6,6 +6,7 @@ description: >-
   adapters. TRIGGER when: code uses wireQueueWorker, user asks about background jobs, task queues,
   async processing, BullMQ, PgBoss, or job retries. DO NOT TRIGGER when: user asks about scheduled
   cron tasks (use pikku-cron) or event-driven triggers (use pikku-trigger).
+installGroups: [core]
 ---
 
 # Pikku Queue Wiring

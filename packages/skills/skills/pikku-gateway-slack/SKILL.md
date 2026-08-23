@@ -6,6 +6,7 @@ description: >-
   parseSlashCommand, buildSlackInstallUrl, or user asks about Slack integration, Slack bots, or
   @pikku/gateway-slack. DO NOT TRIGGER when: user asks about general gateway/webhook patterns (use
   pikku-trigger).
+installGroups: [core]
 ---
 
 # Pikku Gateway Slack

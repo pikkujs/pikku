@@ -100,7 +100,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   scheduler: {
     step: 'wire it up',
-    skill: 'pikku-schedule',
+    skill: 'pikku-cron',
     summary: 'Wires a function to a cron expression to run it on a schedule.',
   },
   trigger: {

@@ -7,6 +7,7 @@ description: >-
   asks about event-driven functions, Redis pub/sub, PostgreSQL LISTEN/NOTIFY, or reacting to
   external events. DO NOT TRIGGER when: user asks about scheduled tasks (use pikku-cron) or
   background job queues (use pikku-queue).
+installGroups: [core]
 ---
 
 # Pikku Trigger Wiring

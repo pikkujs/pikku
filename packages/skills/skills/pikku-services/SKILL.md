@@ -9,6 +9,7 @@ description: >-
   shutdown work, or built-in services (ConsoleLogger, JoseJWTService). DO NOT TRIGGER when: user asks
   about middleware (use pikku-middleware), auth strategies or sessions (use pikku-security),
   permissions (use pikku-permissions), or secrets/variables (use pikku-config).
+installGroups: [core]
 ---
 
 # Pikku Services (Dependency Injection)
