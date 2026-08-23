@@ -1,6 +1,6 @@
-import type { SurfaceKind } from './collect-surface.js'
+import type { SurfaceKind, SurfaceMember } from './collect-surface.js'
 
-export type { SurfaceKind }
+export type { SurfaceKind, SurfaceMember }
 
 /**
  * The order in which you meet these doors while building a service. It is the
@@ -28,6 +28,14 @@ export type SurfaceDocSymbol = {
   /** The full documentation, for the panel that reads one export. */
   docs?: string
   deprecated?: string
+  /** How it is called, printed from the compiler rather than from prose. */
+  signature?: string
+  /** The keys of the options object it takes, one per line. */
+  members?: SurfaceMember[]
+  /** `@example` blocks, which the summary and docs both leave out. */
+  examples?: string[]
+  /** For an error class, the HTTP status it was registered with. */
+  status?: number
 }
 
 export type SurfaceLeaf = {
@@ -36,6 +44,11 @@ export type SurfaceLeaf = {
   name: string
   step: SurfaceStep
   summary: string
+  /**
+   * The skill to load for how rather than what, or `null` where this page is
+   * the whole story. Never absent: a leaf must answer the question.
+   */
+  skill: string | null
   symbols: SurfaceDocSymbol[]
 }
 

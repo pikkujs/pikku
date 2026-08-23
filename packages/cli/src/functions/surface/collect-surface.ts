@@ -19,6 +19,18 @@ export type SurfaceSymbol = {
   summary?: string
   /** The symbol's JSDoc in full, paragraphs and examples included. */
   docs?: string
+  /** The type as the checker prints it, so a caller knows how to call it. */
+  signature?: string
+  /**
+   * The shape written at the call site, one `name?: type` per entry — the
+   * properties of the object a function takes, or of the type itself. The
+   * signature names that shape; this says what is in it.
+   */
+  members?: SurfaceMember[]
+  /** The `@example` blocks, which the documentation comment leaves out. */
+  examples?: string[]
+  /** The HTTP status an error class is registered with. */
+  status?: number
 }
 
 export type SurfaceEntrypoint = {
@@ -222,11 +234,20 @@ const KIND_BY_FLAG: Array<[ts.SymbolFlags, SurfaceKind]> = [
   [ts.SymbolFlags.Namespace, 'namespace'],
 ]
 
+/**
+ * A leaf re-exports through `export *`, so the symbol reached here is an alias
+ * that carries no kind, no documentation, no tags and no type of its own.
+ */
+const aliasTargetOf = (
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker
+): ts.Symbol =>
+  symbol.flags & ts.SymbolFlags.Alias
+    ? checker.getAliasedSymbol(symbol)
+    : symbol
+
 const kindOf = (symbol: ts.Symbol, checker: ts.TypeChecker): SurfaceKind => {
-  const target =
-    symbol.flags & ts.SymbolFlags.Alias
-      ? checker.getAliasedSymbol(symbol)
-      : symbol
+  const target = aliasTargetOf(symbol, checker)
 
   for (const [flag, kind] of KIND_BY_FLAG) {
     if (target.flags & flag) return kind
@@ -244,15 +265,34 @@ const kindOf = (symbol: ts.Symbol, checker: ts.TypeChecker): SurfaceKind => {
   return 'const'
 }
 
-const isDeprecated = (symbol: ts.Symbol): boolean =>
-  symbol.getJsDocTags().some((tag) => tag.name === 'deprecated')
+const jsDocTagsOf = (
+  symbol: ts.Symbol,
+  checker: ts.TypeChecker
+): ts.JSDocTagInfo[] => {
+  const own = symbol.getJsDocTags(checker)
+  if (own.length > 0) return own
+  return aliasTargetOf(symbol, checker).getJsDocTags(checker)
+}
 
-const deprecationReason = (symbol: ts.Symbol): string | undefined => {
-  const tag = symbol.getJsDocTags().find((each) => each.name === 'deprecated')
+const isDeprecated = (tags: ts.JSDocTagInfo[]): boolean =>
+  tags.some((tag) => tag.name === 'deprecated')
+
+const deprecationReason = (tags: ts.JSDocTagInfo[]): string | undefined => {
+  const tag = tags.find((each) => each.name === 'deprecated')
   if (!tag) return undefined
   const text = ts.displayPartsToString(tag.text).trim()
   return text.length > 0 ? text : undefined
 }
+
+/**
+ * The `@example` blocks. `getDocumentationComment` returns the description only,
+ * so an example an author wrote is dropped unless the tags are read separately.
+ */
+const examplesOf = (tags: ts.JSDocTagInfo[]): string[] =>
+  tags
+    .filter((tag) => tag.name === 'example')
+    .map((tag) => ts.displayPartsToString(tag.text).trim())
+    .filter((text) => text.length > 0)
 
 /**
  * The doc comment as written. A leaf re-exports through `export *`, so the
@@ -293,12 +333,275 @@ const declarationFileOf = (
   symbol: ts.Symbol,
   checker: ts.TypeChecker
 ): string | null => {
-  const target =
-    symbol.flags & ts.SymbolFlags.Alias
-      ? checker.getAliasedSymbol(symbol)
-      : symbol
+  const target = aliasTargetOf(symbol, checker)
   const declaration = target.declarations?.[0] ?? symbol.declarations?.[0]
   return declaration?.getSourceFile().fileName ?? null
+}
+
+/**
+ * `NoTruncation` is the load-bearing one: the default cuts a type off at ~160
+ * characters, which lands in the middle of the generics of every wiring helper.
+ * `UseAliasDefinedOutsideCurrentScope` keeps a named alias named instead of
+ * inlining its definition, which is what keeps the result readable.
+ */
+const SIGNATURE_FLAGS =
+  ts.TypeFormatFlags.NoTruncation |
+  ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope |
+  ts.TypeFormatFlags.WriteTypeArgumentsOfSignature
+
+const DECLARED_TYPE_KINDS = new Set<SurfaceKind>(['interface', 'type'])
+
+const typeOfSymbol = (
+  symbol: ts.Symbol,
+  kind: SurfaceKind,
+  checker: ts.TypeChecker
+): ts.Type | undefined => {
+  if (DECLARED_TYPE_KINDS.has(kind)) return checker.getDeclaredTypeOfSymbol(symbol)
+  const declaration = symbol.declarations?.[0]
+  return declaration
+    ? checker.getTypeOfSymbolAtLocation(symbol, declaration)
+    : undefined
+}
+
+const printType = (
+  type: ts.Type,
+  location: ts.Node | undefined,
+  checker: ts.TypeChecker
+): string => checker.typeToString(type, location, SIGNATURE_FLAGS).replace(/\s+/g, ' ')
+
+/**
+ * The widest an expanded type may print before its name is the better answer.
+ * A method verb or a content type says everything inline; a wiring object does
+ * not, and expanding it buries the keys that matter in the ones that do not.
+ */
+const INLINE_LIMIT = 72
+
+const EXPANDED_FLAGS =
+  SIGNATURE_FLAGS & ~ts.TypeFormatFlags.UseAliasDefinedOutsideCurrentScope
+
+const NOT_TERMINAL = /[{}]|=>/
+
+const collapse = (constituents: string[]): string[] => {
+  const collapsed = constituents.includes('true') && constituents.includes('false')
+    ? ['boolean', ...constituents.filter((c) => c !== 'true' && c !== 'false')]
+    : constituents
+  const isAbsent = (c: string) => c === 'undefined' || c === 'null'
+  return [...collapsed.filter((c) => !isAbsent(c)), ...collapsed.filter(isAbsent)]
+}
+
+/**
+ * A named type whose definition is a short union or an index signature costs a
+ * reader a second lookup to learn something that fits on the line they are
+ * already reading, so it is printed as its values rather than its name.
+ */
+const printResolved = (
+  type: ts.Type,
+  location: ts.Node | undefined,
+  checker: ts.TypeChecker,
+  optional = false
+): string => {
+  const constraint =
+    type.flags & ts.TypeFlags.TypeParameter
+      ? checker.getBaseConstraintOfType(type)
+      : undefined
+  if (constraint) {
+    return printResolved(constraint, location, checker, optional)
+  }
+  const named = printType(type, location, checker)
+  const expanded = type.isUnion()
+    ? collapse(
+        type.types.map((constituent) =>
+          checker.typeToString(constituent, location, EXPANDED_FLAGS)
+        )
+      ).join(' | ')
+    : checker.typeToString(type, location, EXPANDED_FLAGS).replace(/\s+/g, ' ')
+  const shed = optional ? / \| undefined$/ : /(?!)/
+  if (expanded === named || expanded.length > INLINE_LIMIT) {
+    return named.replace(shed, '')
+  }
+  return (NOT_TERMINAL.test(expanded) ? named : expanded).replace(shed, '')
+}
+
+/**
+ * A class prints as `typeof Foo`, which says nothing. Its construct signatures
+ * are what a caller needs, so they stand in for it.
+ */
+const constructorSignature = (
+  name: string,
+  type: ts.Type,
+  checker: ts.TypeChecker
+): string | undefined => {
+  const signatures = type.getConstructSignatures()
+  if (signatures.length === 0) return undefined
+  return signatures
+    .map(
+      (signature) =>
+        `new ${name}(${signature
+          .getParameters()
+          .map((parameter) => {
+            const declaration = parameter.valueDeclaration
+            const parameterType = declaration
+              ? checker.getTypeOfSymbolAtLocation(parameter, declaration)
+              : checker.getTypeOfSymbol(parameter)
+            const optional =
+              declaration && ts.isParameter(declaration) && declaration.questionToken
+                ? '?'
+                : ''
+            return `${parameter.getName()}${optional}: ${printResolved(parameterType, declaration, checker, optional === '?')}`
+          })
+          .join(', ')})`
+    )
+    .join(' | ')
+}
+
+const signatureOf = (
+  name: string,
+  type: ts.Type,
+  kind: SurfaceKind,
+  location: ts.Node | undefined,
+  checker: ts.TypeChecker
+): string | undefined => {
+  const printed =
+    kind === 'class'
+      ? constructorSignature(name, type, checker)
+      : printType(type, location, checker)
+  if (!printed || printed === 'any' || printed === 'error') return undefined
+  return collapseRuns(printed)
+}
+
+/**
+ * One key of an options object: how it is written, and — where the declaring
+ * type says so — what it means. `schedule: string` is a shape; "a cron
+ * expression" is what a caller actually needs, and only the JSDoc has it.
+ */
+export type SurfaceMember = {
+  line: string
+  doc?: string
+}
+
+/**
+ * A union parameterised by the project — every function name, every route —
+ * is unbounded and belongs to `pikku meta`, not to a framework doc that is the
+ * same for every project. Printed in full it buried one export under 4,000
+ * tokens of another project's identifiers.
+ */
+const LITERAL_RUN = /("[^"]*"(?: \| "[^"]*"){7,})/g
+
+const collapseRuns = (line: string): string =>
+  line.replace(LITERAL_RUN, (run) => `${run.split(' | ').length} names (pikku meta)`)
+
+const memberLine = (
+  property: ts.Symbol,
+  checker: ts.TypeChecker,
+  program: ts.Program
+): SurfaceMember | undefined => {
+  if (property.getName().startsWith('__')) return undefined
+  const declaration = property.valueDeclaration ?? property.declarations?.[0]
+  if (
+    declaration &&
+    program.isSourceFileDefaultLibrary(declaration.getSourceFile())
+  ) {
+    return undefined
+  }
+  const type = declaration
+    ? checker.getTypeOfSymbolAtLocation(property, declaration)
+    : checker.getTypeOfSymbol(property)
+  const optional = property.flags & ts.SymbolFlags.Optional ? '?' : ''
+  const doc = ts
+    .displayPartsToString(property.getDocumentationComment(checker))
+    .replace(/\s+/g, ' ')
+    .trim()
+  return {
+    line: collapseRuns(
+      `${property.getName()}${optional}: ${printResolved(type, declaration, checker, optional === '?')}`
+    ),
+    ...(doc ? { doc } : {}),
+  }
+}
+
+/**
+ * Every wiring and function helper takes one options object, so its signature
+ * can only name that object's type and the keys someone has to write sit one
+ * level below it. Anything else describes itself.
+ */
+const shapeOf = (
+  type: ts.Type,
+  kind: SurfaceKind,
+  checker: ts.TypeChecker
+): ts.Type | undefined => {
+  if (kind === 'class') {
+    return type.getConstructSignatures()[0]?.getReturnType()
+  }
+  if (kind !== 'function' && kind !== 'const') return type
+  const signature = type.getCallSignatures()[0]
+  if (!signature) return type
+  for (const parameter of signature.getParameters()) {
+    const declaration = parameter.valueDeclaration
+    const parameterType = declaration
+      ? checker.getTypeOfSymbolAtLocation(parameter, declaration)
+      : checker.getTypeOfSymbol(parameter)
+    if (checker.getPropertiesOfType(parameterType).length > 0) return parameterType
+  }
+  return undefined
+}
+
+const membersOf = (
+  type: ts.Type,
+  kind: SurfaceKind,
+  checker: ts.TypeChecker,
+  program: ts.Program
+): SurfaceMember[] => {
+  const shape = shapeOf(type, kind, checker)
+  if (!shape) return []
+  return checker
+    .getPropertiesOfType(shape)
+    .map((property) => memberLine(property, checker, program))
+    .filter((member): member is SurfaceMember => member !== undefined)
+    .sort((a, b) => a.line.localeCompare(b.line))
+}
+
+/**
+ * `addError(SomeError, { status })` is a runtime registration, so nothing about
+ * a class says what it maps to. The calls are top-level statements next to the
+ * classes they register, which makes the mapping readable from the program the
+ * surface is already walking rather than by importing and booting the runtime.
+ */
+const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
+  const statuses = new Map<string, number>()
+
+  const record = (name: ts.Expression, details: ts.Expression): void => {
+    if (!ts.isIdentifier(name) || !ts.isObjectLiteralExpression(details)) return
+    for (const property of details.properties) {
+      if (!ts.isPropertyAssignment(property)) continue
+      if (property.name.getText() !== 'status') continue
+      const status = Number(property.initializer.getText())
+      if (Number.isFinite(status)) statuses.set(name.text, status)
+    }
+  }
+
+  for (const sourceFile of program.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile) continue
+    for (const statement of sourceFile.statements) {
+      if (!ts.isExpressionStatement(statement)) continue
+      const call = statement.expression
+      if (!ts.isCallExpression(call) || !ts.isIdentifier(call.expression)) continue
+      if (call.expression.text === 'addError') {
+        const [name, details] = call.arguments
+        if (name && details) record(name, details)
+        continue
+      }
+      if (call.expression.text !== 'addErrors') continue
+      const [list] = call.arguments
+      if (!list || !ts.isArrayLiteralExpression(list)) continue
+      for (const entry of list.elements) {
+        if (!ts.isArrayLiteralExpression(entry)) continue
+        const [name, details] = entry.elements
+        if (name && details) record(name, details)
+      }
+    }
+  }
+
+  return statuses
 }
 
 export const collectSurface = async (
@@ -372,6 +675,7 @@ export const collectSurface = async (
     }
   )
   const checker = program.getTypeChecker()
+  const errorStatuses = collectErrorStatuses(program)
 
   return entries.map((entry) => {
     const sourceFile = program.getSourceFile(join(root, entry.entryFile))
@@ -386,15 +690,28 @@ export const collectSurface = async (
       const file = declarationFileOf(symbol, checker)
       const kind = kindOf(symbol, checker)
       const docs = documentationOf(symbol, checker)
+      const tags = jsDocTagsOf(symbol, checker)
+      const name = symbol.getName()
+      const target = aliasTargetOf(symbol, checker)
+      const type = typeOfSymbol(target, kind, checker)
+      const location = target.declarations?.[0]
+      const examples = examplesOf(tags)
+      const members = type ? membersOf(type, kind, checker, program) : []
       symbols.push({
-        name: symbol.getName(),
+        name,
         kind,
         declaredAt: file ? relative(root, file) : entry.entryFile,
         declaredIn: file,
-        deprecated: isDeprecated(symbol),
-        deprecatedReason: deprecationReason(symbol),
+        deprecated: isDeprecated(tags),
+        deprecatedReason: deprecationReason(tags),
         summary: summaryOf(docs),
         docs,
+        signature: type
+          ? signatureOf(name, type, kind, location, checker)
+          : undefined,
+        members: members.length > 0 ? members : undefined,
+        examples: examples.length > 0 ? examples : undefined,
+        status: errorStatuses.get(name),
       })
     }
 

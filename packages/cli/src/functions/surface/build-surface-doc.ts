@@ -139,6 +139,10 @@ const toDocSymbols = (
       ...(symbol.deprecated
         ? { deprecated: symbol.deprecatedReason ?? 'Deprecated' }
         : {}),
+      ...(symbol.signature ? { signature: symbol.signature } : {}),
+      ...(symbol.members?.length ? { members: symbol.members } : {}),
+      ...(symbol.examples?.length ? { examples: symbol.examples } : {}),
+      ...(symbol.status !== undefined ? { status: symbol.status } : {}),
     }))
 
 const byStepThenName = (a: SurfaceLeaf, b: SurfaceLeaf): number =>
@@ -175,6 +179,7 @@ const toLeaves = (
       name,
       step: copy.step,
       summary: copy.summary,
+      skill: copy.skill,
       symbols: toDocSymbols(entrypoint, generatedRoot),
     })
   }
