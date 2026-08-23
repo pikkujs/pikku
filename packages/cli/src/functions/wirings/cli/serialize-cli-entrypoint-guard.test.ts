@@ -10,13 +10,18 @@ import { DIRECT_EXECUTION_GUARD } from './serialize-cli-entrypoint-guard.js'
  * Writes the emitted guard into a module that reports what it decided, and runs
  * it both directly and through a symlinked bin — the shape every CLI installed
  * into node_modules/.bin actually takes.
+ *
+ * `String(...)` because `console.log` of a bare boolean goes through
+ * `util.inspect`, which wraps it in ANSI yellow whenever colour is forced — and
+ * `yarn` forces it, so these assertions compared `'\x1B[33mfalse\x1B[39m'`
+ * against `'false'` under the pre-push hook while passing when run by hand.
  */
 const runGuard = (): { direct: string; viaSymlink: string } => {
   const dir = mkdtempSync(join(tmpdir(), 'pikku-entry-guard-'))
   const entry = join(dir, 'entry.mjs')
   writeFileSync(
     entry,
-    `${DIRECT_EXECUTION_GUARD}\nconsole.log(isDirectExecution)\n`
+    `${DIRECT_EXECUTION_GUARD}\nconsole.log(String(isDirectExecution))\n`
   )
 
   const binDir = join(dir, 'bin')
@@ -45,7 +50,7 @@ describe('DIRECT_EXECUTION_GUARD', () => {
     const lib = join(dir, 'lib.mjs')
     writeFileSync(
       lib,
-      `${DIRECT_EXECUTION_GUARD}\nconsole.log(isDirectExecution)\n`
+      `${DIRECT_EXECUTION_GUARD}\nconsole.log(String(isDirectExecution))\n`
     )
     const main = join(dir, 'main.mjs')
     writeFileSync(main, `await import('./lib.mjs')\n`)
