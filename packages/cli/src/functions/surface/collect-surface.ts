@@ -465,7 +465,8 @@ const signatureOf = (
     kind === 'class'
       ? constructorSignature(name, type, checker)
       : printType(type, location, checker)
-  if (!printed || printed === 'any' || printed === 'error') return undefined
+  if (!printed || printed === 'any' || printed === 'error' || printed === name)
+    return undefined
   return collapseRuns(printed)
 }
 
@@ -490,16 +491,29 @@ const LITERAL_RUN = /("[^"]*"(?: \| "[^"]*"){7,})/g
 const collapseRuns = (line: string): string =>
   line.replace(LITERAL_RUN, (run) => `${run.split(' | ').length} names (pikku meta)`)
 
+/**
+ * A key declared by the project rather than by the framework — the services in
+ * its own `SingletonServices`, a type it wrote — is not part of the surface
+ * every project shares. Left in, the doc built from the sample project told
+ * every reader their singleton services hold a `todoStore`.
+ */
+const isProjectOwned = (declaration: ts.Declaration, root: string): boolean => {
+  const file = declaration.getSourceFile().fileName
+  return file.startsWith(root) && !file.includes('node_modules')
+}
+
 const memberLine = (
   property: ts.Symbol,
   checker: ts.TypeChecker,
-  program: ts.Program
+  program: ts.Program,
+  root: string
 ): SurfaceMember | undefined => {
   if (property.getName().startsWith('__')) return undefined
   const declaration = property.valueDeclaration ?? property.declarations?.[0]
   if (
     declaration &&
-    program.isSourceFileDefaultLibrary(declaration.getSourceFile())
+    (program.isSourceFileDefaultLibrary(declaration.getSourceFile()) ||
+      isProjectOwned(declaration, root))
   ) {
     return undefined
   }
@@ -549,13 +563,14 @@ const membersOf = (
   type: ts.Type,
   kind: SurfaceKind,
   checker: ts.TypeChecker,
-  program: ts.Program
+  program: ts.Program,
+  root: string
 ): SurfaceMember[] => {
   const shape = shapeOf(type, kind, checker)
   if (!shape) return []
   return checker
     .getPropertiesOfType(shape)
-    .map((property) => memberLine(property, checker, program))
+    .map((property) => memberLine(property, checker, program, root))
     .filter((member): member is SurfaceMember => member !== undefined)
     .sort((a, b) => a.line.localeCompare(b.line))
 }
@@ -696,7 +711,7 @@ export const collectSurface = async (
       const type = typeOfSymbol(target, kind, checker)
       const location = target.declarations?.[0]
       const examples = examplesOf(tags)
-      const members = type ? membersOf(type, kind, checker, program) : []
+      const members = type ? membersOf(type, kind, checker, program, root) : []
       symbols.push({
         name,
         kind,

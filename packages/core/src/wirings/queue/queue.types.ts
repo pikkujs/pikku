@@ -135,11 +135,17 @@ export type CoreQueueWorker<
   PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
     CorePikkuFunctionConfig<any, any, any>,
 > = {
+  /** The queue this worker consumes. Whoever enqueues a job names the same string, so it is the contract between producer and consumer. */
   name: string
+  /** The function to run per job. Its `input` schema is the job payload's schema — a job that does not match is rejected before the body runs. */
   func: PikkuFunctionConfig
+  /** Concurrency, retry and backoff, passed through to the queue service backing this worker. Defaults come from the service, not from here. */
   config?: PikkuWorkerConfig
+  /** Names of error classes that mean the job is bad rather than the run — thrown, they fail the job permanently instead of being retried. */
   errors?: string[]
+  /** Filters this worker in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
+  /** Wraps every job. There is no request to read from, so this is for tracing, locking and teardown rather than auth. */
   middleware?: PikkuFunctionConfig['middleware']
 }
 
