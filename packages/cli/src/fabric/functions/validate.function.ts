@@ -1259,6 +1259,8 @@ export async function runValidate(
     /['"`](?:https?|wss?):\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?[^'"`]*['"`]/
   const ENV_FALLBACK_RE =
     /(?:import\.meta\.env|process\.env)\s*(?:\.\w+|\[\s*['"][^'"]+['"]\s*\])\s*(?:\?\?|\|\|)\s*['"`](?:https?|wss?):\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)/
+  const API_ENV_READ_RE =
+    /(?:import\.meta\.env|process\.env)\s*(?:\.(\w*(?:API|BACKEND|SERVER)\w*)|\[\s*['"](\w*(?:API|BACKEND|SERVER)\w*)['"]\s*\])/g
 
   for (const fe of declaredFrontends) {
     if (!fe.deploy) continue
@@ -1269,6 +1271,8 @@ export async function runValidate(
     ]
     const envFallbackHits: string[] = []
     const bareHits: string[] = []
+    const apiEnvHits: string[] = []
+    const apiEnvNames = new Set<string>()
     let derivesOrigin = false
     for (const file of files) {
       const rel = file.slice(fe.dir.length + 1).replace(/\\/g, '/')
@@ -1290,6 +1294,12 @@ export async function runValidate(
           line.startsWith('/*')
         ) {
           continue
+        }
+        API_ENV_READ_RE.lastIndex = 0
+        let m: RegExpExecArray | null
+        while ((m = API_ENV_READ_RE.exec(line)) !== null) {
+          apiEnvNames.add((m[1] ?? m[2])!)
+          if (!apiEnvHits.includes(rel)) apiEnvHits.push(rel)
         }
         if (ENV_FALLBACK_RE.test(line)) {
           if (!envFallbackHits.includes(rel)) envFallbackHits.push(rel)
@@ -1319,13 +1329,20 @@ export async function runValidate(
     if (envFallbackHits.length > 0) {
       e(
         `frontend-env-fallback-localhost-${fe.slug}`,
-        `frontend "${fe.slug}" defaults a build-time env read to a localhost URL (${sample(envFallbackHits)}) — the deploy sets no VITE_*/NEXT_PUBLIC_* variable, so that fallback is what the production bundle ships and every call from a browser will time out`,
+        `frontend "${fe.slug}" defaults a build-time env read to a localhost URL (${sample(envFallbackHits)}) — the deploy sets no VITE_*/NEXT_PUBLIC_* variable at build time, so that fallback is what the production bundle ships and every call from a browser will time out`,
+        fe.dir,
+        originFix
+      )
+    } else if (apiEnvHits.length > 0 && !derivesOrigin) {
+      e(
+        `frontend-api-base-not-derived-${fe.slug}`,
+        `frontend "${fe.slug}" takes its API base from ${[...apiEnvNames].sort().join(', ')} (${sample(apiEnvHits)}) and never derives it from the page origin — fabric binds VITE_API_URL on the deployed Worker at runtime, so the build inlines nothing and whatever follows the read is what ships`,
         fe.dir,
         originFix
       )
     }
     if (bareHits.length > 0 && !derivesOrigin) {
-      w(
+      e(
         `frontend-localhost-url-${fe.slug}`,
         `frontend "${fe.slug}" hardcodes a localhost URL (${sample(bareHits)}) — unreachable from any deployed page`,
         fe.dir,

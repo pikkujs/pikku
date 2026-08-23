@@ -2482,7 +2482,7 @@ describe('deployed frontend API base (live validate.function)', () => {
     }
   })
 
-  test('a bare localhost URL, with no origin derivation anywhere → warn', async () => {
+  test('a bare localhost URL, with no origin derivation anywhere → error', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
@@ -2495,11 +2495,8 @@ describe('deployed frontend API base (live validate.function)', () => {
       const f = result.findings.find(
         (f) => f.id === 'frontend-localhost-url-web'
       )
-      assert.ok(
-        f,
-        `expected the bare-URL warning, got: ${ids(result.findings)}`
-      )
-      assert.strictEqual(f!.severity, 'warn')
+      assert.ok(f, `expected the bare-URL finding, got: ${ids(result.findings)}`)
+      assert.strictEqual(f!.severity, 'error')
       assert.match(f!.message, /src\/lib\/api\.ts/)
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -2516,6 +2513,92 @@ describe('deployed frontend API base (live validate.function)', () => {
         [
           `// locally the API is at http://localhost:3002, in prose only`,
           `export const API_URL = '/api'`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-')),
+        `expected no frontend findings, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read with a non-localhost fallback still fails — nothing injects it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? '/api'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-api-base-not-derived-web'
+      )
+      assert.ok(f, `expected the derivation finding, got: ${ids(result.findings)}`)
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /VITE_API_URL/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read with no fallback at all fails the same way', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some(
+          (f) => f.id === 'frontend-api-base-not-derived-web'
+        ),
+        `expected the derivation finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the finding names the variable the app actually read', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API = process.env.NEXT_PUBLIC_API_BASE ?? '/api'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-api-base-not-derived-web'
+      )
+      assert.ok(f, `expected the derivation finding, got: ${ids(result.findings)}`)
+      assert.match(f!.message, /NEXT_PUBLIC_API_BASE/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read is fine once the origin is the fallback', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `export function apiUrl(): string {`,
+          `  return import.meta.env.VITE_API_URL ?? window.location.origin + '/api'`,
+          `}`,
           ``,
         ].join('\n')
       )
