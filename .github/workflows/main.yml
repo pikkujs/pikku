@@ -129,7 +129,12 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    timeout-minutes: 15
+    # Nine live-model scenarios plus a browser run, and setup eats ~3 of the
+    # budget. At 15 the step was cancelled mid-run every time, which marks the
+    # whole Release run "cancelled" even though `release` does not need this
+    # job — so a green release was unreadable. The inner cap is what still
+    # catches a genuine hang.
+    timeout-minutes: 30
     needs: [e2e, e2e-agent, verifiers, templates]
     if: ${{ github.repository_owner == 'pikkujs' }}
     steps:
@@ -137,6 +142,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run live-model AI e2e tests
+        timeout-minutes: 22
         run: yarn test:e2e:ai-live
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
