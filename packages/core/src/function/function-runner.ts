@@ -29,7 +29,7 @@ import type { CorePikkuFunctionConfig } from './functions.types.js'
 import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
-import { ForbiddenError, ReadonlySessionError } from '../errors/errors.js'
+import { MissingSessionError, ReadonlySessionError } from '../errors/errors.js'
 import { verifyScopes } from '../scopes.js'
 import {
   PikkuCredentialWireService,
@@ -329,7 +329,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         resolveAddonAuth(packageName, addonInstance?.namespace)
       ) {
         if (!session) {
-          throw new ForbiddenError('Authentication required')
+          throw new MissingSessionError('Authentication required')
         }
       }
     } else {
@@ -339,7 +339,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
       }
       if (!session) {
-        throw new ForbiddenError('Authentication required')
+        throw new MissingSessionError('Authentication required')
       }
     }
 

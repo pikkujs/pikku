@@ -22,7 +22,7 @@ import {
   type PermissionWire,
 } from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
-import { ForbiddenError } from '../../errors/errors.js'
+import { ForbiddenError, MissingSessionError } from '../../errors/errors.js'
 import { verifyScopes } from '../../scopes.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
@@ -315,7 +315,7 @@ export async function assertAgentAuthorized(
     : undefined
 
   if (agent.auth === true && !session) {
-    throw new ForbiddenError('Authentication required')
+    throw new MissingSessionError('Authentication required')
   }
 
   verifyScopes(agent.scopes, session)

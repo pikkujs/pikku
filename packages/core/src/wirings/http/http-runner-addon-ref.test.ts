@@ -233,6 +233,6 @@ describe('http routes wired with ref() to an addon function', () => {
 
     const response = await fetch(new ParamsRequest('/addon/greet', 'get'))
 
-    assert.strictEqual(response.status, 403)
+    assert.strictEqual(response.status, 401)
   })
 })

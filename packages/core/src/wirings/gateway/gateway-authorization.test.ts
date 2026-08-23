@@ -280,7 +280,7 @@ describe('gateway handler authorization', () => {
 
       const response = await postMessage('/webhooks/declared-session')
 
-      assert.equal(response.status, 403)
+      assert.equal(response.status, 401)
       assert.deepEqual(
         calls,
         [],
@@ -339,7 +339,7 @@ describe('gateway handler authorization', () => {
 
       const response = await postMessage('/webhooks/gw-auth')
 
-      assert.equal(response.status, 403)
+      assert.equal(response.status, 401)
       assert.deepEqual(calls, [], 'auth: true must require a session')
     })
 
@@ -365,7 +365,7 @@ describe('gateway handler authorization', () => {
 
       const response = await postMessage('/webhooks/handler-auth')
 
-      assert.equal(response.status, 403)
+      assert.equal(response.status, 401)
       assert.deepEqual(calls, [], 'auth: true must require a session')
     })
 
