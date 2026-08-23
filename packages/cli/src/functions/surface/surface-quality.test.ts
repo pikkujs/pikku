@@ -57,6 +57,7 @@ const read = () => {
  */
 const CORE_LEAK = 86
 const UNRESOLVABLE = 774
+const BARE_ERRORS = 5
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
 const DOCUMENTED_KEYS = 76
@@ -98,6 +99,24 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
         `Closure is the whole promise of the doc: every type it names is a type it can ` +
         `explain. Export the type through a leaf, or inline the shape:\n  ` +
         `${[...missing].sort().join(', ')}`
+    )
+  })
+
+  test('gives every error class the status it is registered with', () => {
+    const { symbols } = read()
+    const errors = symbols.filter(
+      (symbol) => symbol.kind === 'class' && symbol.name.endsWith('Error')
+    )
+    const bare = errors
+      .filter((symbol) => symbol.status === undefined)
+      .map((symbol) => symbol.name)
+    assert.ok(
+      errors.length > 0 && bare.length <= BARE_ERRORS,
+      `${bare.length} of ${errors.length} error classes carry no status, up from ` +
+        `${BARE_ERRORS}. The status is the one thing a caller needs from an error ` +
+        `class, and it only exists in the emitted \`.js\` — a declaration file has ` +
+        `no statements, so a scrape that reads only the program finds nothing:\n  ` +
+        `${bare.join(', ')}`
     )
   })
 

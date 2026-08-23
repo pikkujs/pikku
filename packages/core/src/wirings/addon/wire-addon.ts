@@ -22,24 +22,11 @@ export type WireAddonConfig = {
   variableOverrides?: Record<string, string>
   /** Points a credential the addon reads at a different key in this deployment. */
   credentialOverrides?: Record<string, string>
-  /**
-   * Secrets this instance may read on top of the ones it declared, named as the
-   * addon reads them — the scope check runs before `secretOverrides` renames
-   * them, so an overridden secret is named here by its addon-side key. Listing
-   * one in `secretOverrides` grants it too.
-   *
-   * For an addon whose secret names come off its input rather than its own
-   * source, this is how the host lends names the addon could not declare.
-   */
+  /** Extra secrets this instance may read, named as the addon reads them — the scope check runs before `secretOverrides` renames them. */
   secretGrants?: string[]
   /** Credentials this instance may read on top of the ones it declared. */
   credentialGrants?: string[]
-  /**
-   * Hands this instance the whole `SecretService` instead of one scoped to the
-   * secrets it declared. The value is the reason, recorded in the deploy
-   * manifest — an addon that names secrets at runtime cannot be scoped, and
-   * only the consuming app, never the addon, can grant it.
-   */
+  /** Hands over the whole `SecretService` unscoped. The value is the reason, recorded in the deploy manifest. */
   globalSecrets?: string
   /**
    * Hands this instance the whole `CredentialService` instead of one narrowed

@@ -578,8 +578,12 @@ const membersOf = (
 /**
  * `addError(SomeError, { status })` is a runtime registration, so nothing about
  * a class says what it maps to. The calls are top-level statements next to the
- * classes they register, which makes the mapping readable from the program the
- * surface is already walking rather than by importing and booting the runtime.
+ * classes they register, which makes the mapping readable by parsing rather
+ * than by importing and booting the runtime.
+ *
+ * A surveyed project consumes pikku as `.d.ts`, and a declaration file carries
+ * no statements — the registrations survive only in the `.js` beside it, which
+ * is why the emitted sibling is parsed too.
  */
 const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
   const statuses = new Map<string, number>()
@@ -594,8 +598,7 @@ const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
     }
   }
 
-  for (const sourceFile of program.getSourceFiles()) {
-    if (sourceFile.isDeclarationFile) continue
+  const scan = (sourceFile: ts.SourceFile): void => {
     for (const statement of sourceFile.statements) {
       if (!ts.isExpressionStatement(statement)) continue
       const call = statement.expression
@@ -614,6 +617,27 @@ const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
         if (name && details) record(name, details)
       }
     }
+  }
+
+  for (const sourceFile of program.getSourceFiles()) {
+    if (!sourceFile.isDeclarationFile) {
+      scan(sourceFile)
+      continue
+    }
+    if (!sourceFile.text.includes('PikkuError')) continue
+    const emitted = sourceFile.fileName.replace(/\.d\.([cm]?ts)$/, '.$1')
+    if (emitted === sourceFile.fileName) continue
+    const source = ts.sys.readFile(emitted.replace(/\.ts$/, '.js'))
+    if (source === undefined) continue
+    scan(
+      ts.createSourceFile(
+        emitted,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.JS
+      )
+    )
   }
 
   return statuses

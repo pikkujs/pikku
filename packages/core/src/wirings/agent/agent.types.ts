@@ -362,15 +362,7 @@ export type CoreAgent<
   summary?: string
   /** Names of error classes this may throw, so each one's registered status is used instead of a 500. */
   errors?: string[]
-  /**
-   * The three fields below are the system prompt. `buildInstructions` joins
-   * whichever are set with a blank line, always in this order — role, then
-   * personality, then goal — and appends the tool-usage rules if the agent has
-   * tools. Nothing checks them against each other: the split is there to keep a
-   * prompt legible, and text put in the wrong one still reaches the model.
-   *
-   * Who the agent is. 'You are a support engineer triaging inbound bugs.'
-   */
+  /** Who the agent is. Joined with `personality` and `goal`, in that order, to form the system prompt. */
   role?: string
   /** How it should sound: tone, vocabulary, how much it says at a time. */
   personality?: string
@@ -388,15 +380,7 @@ export type CoreAgent<
   agents?: unknown[]
   /** Workflows the model may start, for work too long to sit inside one agent run. */
   workflows?: unknown[]
-  /**
-   * Grades this agent's finished runs on live traffic, named by the generated
-   * `ScorerName` union rather than by `ref()` — a scorer is not a function, so
-   * there is nothing in the function map for a ref to resolve against.
-   *
-   * A reference-based judge listed here is never sampled: live traffic has no
-   * answer key. Scenarios name scorers directly and may grade with scorers an
-   * agent does not ship with.
-   */
+  /** Grades finished runs on live traffic. A reference-based judge is never sampled here — live traffic has no answer key. */
   scorers?: Scorer[]
   /** `delegate` hands a sub-agent the task and takes its answer; `supervise` keeps this agent in the loop over each step. */
   agentMode?: 'delegate' | 'supervise'
@@ -406,15 +390,7 @@ export type CoreAgent<
   maxSteps?: number
   /** Whether the model may answer without calling a tool (`auto`), must call one (`required`), or may not (`none`). */
   toolChoice?: 'auto' | 'required' | 'none'
-  /**
-   * Per-provider model settings, keyed by provider id and passed through
-   * untouched — for anything only one vendor offers, which the fields above
-   * deliberately do not try to unify.
-   *
-   * `{ openai: { reasoningEffort: 'minimal' } }` is the one that matters for
-   * voice: on gpt-5-mini it measured 0.9s to first token against 2.5s at the
-   * default, and a spoken reply is waited through rather than skimmed.
-   */
+  /** Per-provider settings passed through untouched, for what only one vendor offers. */
   providerOptions?: AIProviderOptions
   /** The schema of what starts a run, which is also its input type. */
   input?: unknown

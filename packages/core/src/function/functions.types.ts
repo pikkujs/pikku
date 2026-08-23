@@ -206,16 +206,10 @@ export type CorePikkuFunctionConfig<
   /** Makes the function callable from outside as `POST /rpc/<name>`. Without a session requirement, a permission or an addon gate, that means callable by anyone. */
   expose?: boolean
   /**
-   * The permission check for this function lives in its body — verifying a
-   * signed token, checking a webhook signature, matching an invite code — so
-   * it is not open despite declaring no session, scope or permission.
-   *
-   * A last resort. Prefer `permissions`, which are declared, inspectable, and
-   * reusable; reach for this only when the check cannot be expressed as one.
-   *
-   * Purely declarative — it grants nothing, and asserting it falsely disables
-   * the audit that would have caught the mistake. Requires
-   * `allow.permissionsInBody` in `pikku.config.json`.
+   * Declares that the body does its own permission check, so the function is
+   * not open despite naming no session, scope or permission. It grants
+   * nothing — asserting it falsely just disables the audit that would have
+   * caught the mistake. Requires `allow.permissionsInBody` in the config.
    */
   permissionsInBody?: boolean
   /** Publishes the function in this package's remote surface, which is what a `wireRemoteAddon` consumer gets a typed client for. */
@@ -244,11 +238,7 @@ export type CorePikkuFunctionConfig<
    * and report how much of the flow each surface actually covers.
    */
   surfaces?: ScenarioSurface[]
-  /**
-   * Scenario steps only: this step is driven by a persona, so the runner injects
-   * `wire.actor` and refuses to dispatch it without one. Set by the definer from
-   * a `browser` binding or an explicit `actor: true`, never written by hand.
-   */
+  /** Scenario steps only, and set by the definer rather than by hand: this step needs a persona, so the runner injects `wire.actor`. */
   requiresActor?: boolean
   /**
    * Records every call in the audit log. `transactional` durability writes the
@@ -283,13 +273,7 @@ export type CorePikkuFunctionConfig<
   skip?: string
   /** Whether calling this requires a session, wherever it is wired. A wiring can be more permissive than the function, never less. */
   auth?: boolean
-  /**
-   * Scopes the session must hold; all are required (AND) and checked before
-   * `permissions`, which OR together — a scope can only narrow access.
-   * Narrowed to the generated `ScopeId` union, so an undeclared scope is a
-   * compile error. Requires a session — see
-   * {@link CorePikkuSessionlessFunctionConfig}.
-   */
+  /** Scopes the session must hold. All are required, and checked before `permissions`, which OR together — a scope only narrows access. */
   scopes?: Scope[]
   /** Checks that run before the body. Grouped names OR together, so any one passing admits the caller; use `scopes` to require rather than offer. */
   permissions?: CorePermissionGroup<PikkuPermission>

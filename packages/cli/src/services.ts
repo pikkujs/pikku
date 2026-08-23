@@ -110,12 +110,14 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
 /**
  * Commands that must work in a directory that is not a Pikku project.
  * `skills install` writes agent skills into a repo that has no pikku.config.json
- * yet — that is the whole point of it — so it cannot require one to start.
+ * yet — that is the whole point of it — so it cannot require one to start, and
+ * `doc` answers from the surface shipped inside the CLI rather than the project.
  */
 const CONFIG_FREE_COMMANDS = new Set([
   'skills',
   'skills.list',
   'skills.install',
+  'doc',
 ])
 
 export const createConfig: CreateConfig<

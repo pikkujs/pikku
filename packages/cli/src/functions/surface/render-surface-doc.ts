@@ -110,11 +110,17 @@ const renderSymbolRow = (symbol: SurfaceDocSymbol): string[] => {
   if (symbol.summary) {
     lines.push(wrap(symbol.summary, 74, '      '))
   }
-  for (const member of symbol.members ?? []) {
-    lines.push(`      ${member.line}`)
-    if (member.doc) {
-      lines.push(wrap(member.doc, 68, '          '))
-    }
+  const keys = symbol.members?.length ?? 0
+  const more = keys > 0 || (symbol.examples?.length ?? 0) > 0
+  const signature = symbol.signature?.replace(/\s+/g, ' ')
+  if (more) {
+    lines.push(
+      `      ${keys > 0 ? `${keys} keys` : 'example'} — pikku doc ${symbol.name}`
+    )
+  } else if (signature && signature.length <= 96) {
+    lines.push(`      ${signature}`)
+  } else if (signature) {
+    lines.push(`      pikku doc ${symbol.name}`)
   }
   lines.push('')
   return lines
