@@ -6,7 +6,7 @@ description: >-
   CFWorkerSchemaService, user asks about schema validation on Cloudflare Workers, or
   @pikku/schema-cfworker. DO NOT TRIGGER when: user asks about AJV schema validation (use
   pikku-schema-ajv).
-installGroups: [core, fabric]
+installGroups: [core]
 ---
 
 # Pikku Schema CFWorker (Cloudflare Workers Validation)

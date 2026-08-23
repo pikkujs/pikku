@@ -5,7 +5,7 @@ description: >-
   tasks, and WebSocket via Durable Objects. TRIGGER when: code imports @pikku/cloudflare, user
   mentions Cloudflare Workers deployment, or worker entry uses ExportedHandler/wrangler.toml. DO
   NOT TRIGGER when: just defining functions/wirings without Cloudflare-specific code.
-installGroups: [fabric]
+installGroups: [core]
 ---
 
 # Pikku Cloudflare Workers Deployment

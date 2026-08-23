@@ -22,14 +22,7 @@ const KNOWN_INSTALL_GROUPS = new Set(['core', 'fabric'])
  * (dropping a tag would shrink both sides and still pass). Adding a skill to
  * the Fabric set means updating this list on purpose.
  */
-const FABRIC_SKILLS = [
-  'pikku-deploy-cloudflare',
-  'pikku-fabric',
-  'pikku-fabric-debug',
-  'pikku-schema-cfworker',
-  'pikku-product-second-opinion',
-  'pikku-software-archaeology',
-]
+const FABRIC_SKILLS = ['pikku-ai-voice', 'pikku-fabric']
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 
 type Frontmatter = {
