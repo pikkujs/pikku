@@ -5033,7 +5033,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/better-auth@npm:^0.12.26, @pikku/better-auth@npm:^0.12.27, @pikku/better-auth@npm:^0.12.28, @pikku/better-auth@workspace:*, @pikku/better-auth@workspace:packages/services/better-auth":
+"@pikku/better-auth@npm:^0.12.26, @pikku/better-auth@npm:^0.12.27, @pikku/better-auth@npm:^0.12.29, @pikku/better-auth@workspace:*, @pikku/better-auth@workspace:packages/services/better-auth":
   version: 0.0.0-use.local
   resolution: "@pikku/better-auth@workspace:packages/services/better-auth"
   dependencies:
@@ -6148,7 +6148,7 @@ __metadata:
     "@modelcontextprotocol/sdk": "npm:1.30.0"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
-    "@pikku/better-auth": "npm:^0.12.28"
+    "@pikku/better-auth": "npm:^0.12.29"
     "@pikku/cli": "npm:^0.12.115"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.92"
@@ -6202,7 +6202,7 @@ __metadata:
   resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
   dependencies:
     "@next/swc-darwin-arm64": "npm:^16.3.1"
-    "@pikku/better-auth": "npm:^0.12.28"
+    "@pikku/better-auth": "npm:^0.12.29"
     "@pikku/cli": "npm:^0.12.115"
     "@pikku/core": "npm:^0.12.92"
     "@pikku/fetch": "npm:^0.12.9"
