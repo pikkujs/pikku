@@ -1,6 +1,6 @@
 import { LocalEnvironmentOnlyError } from '#pikku/addon/error'
 import { pikkuFunc } from '#pikku/addon/function'
-import type { AgentConfigChanges } from '../services/code-edit.service.js'
+import type { AgentConfigChanges } from '@pikku/code-edit'
 
 export const updateAgentConfig = pikkuFunc<
   {
