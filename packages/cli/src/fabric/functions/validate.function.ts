@@ -1255,7 +1255,6 @@ export async function runValidate(
     }
   }
 
-
   // ── a deployed frontend pointing at localhost ──────────────────────────
   // Nothing in the deploy container writes a `VITE_*` / `NEXT_PUBLIC_*`
   // variable, and nothing can: the stage hostname is chosen when the worker is
@@ -1309,7 +1308,11 @@ export async function runValidate(
       for (const raw of text.split('\n')) {
         // A URL in prose is documentation, not a request.
         const line = raw.trim()
-        if (line.startsWith('//') || line.startsWith('*') || line.startsWith('/*')) {
+        if (
+          line.startsWith('//') ||
+          line.startsWith('*') ||
+          line.startsWith('/*')
+        ) {
           continue
         }
         if (ENV_FALLBACK_RE.test(line)) {
@@ -1320,7 +1323,8 @@ export async function runValidate(
       }
     }
     const sample = (hits: string[]) =>
-      hits.slice(0, 5).join(', ') + (hits.length > 5 ? `, +${hits.length - 5} more` : '')
+      hits.slice(0, 5).join(', ') +
+      (hits.length > 5 ? `, +${hits.length - 5} more` : '')
     const originFix = lines(
       'Derive the base from the page instead of from a variable nobody sets:',
       '',

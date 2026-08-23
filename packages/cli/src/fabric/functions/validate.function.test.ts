@@ -2398,7 +2398,11 @@ describe('deployed frontend API base (live validate.function)', () => {
       type: 'module',
       dependencies: { react: '^19.0.0' },
     })
-    await writeFile(join(root, 'apps', 'web', 'src', 'lib', 'api.ts'), source, 'utf8')
+    await writeFile(
+      join(root, 'apps', 'web', 'src', 'lib', 'api.ts'),
+      source,
+      'utf8'
+    )
   }
 
   const ids = (findings: Array<{ id: string }>) =>
@@ -2417,7 +2421,10 @@ describe('deployed frontend API base (live validate.function)', () => {
       const f = result.findings.find(
         (f) => f.id === 'frontend-env-fallback-localhost-web'
       )
-      assert.ok(f, `expected the fallback finding, got: ${ids(result.findings)}`)
+      assert.ok(
+        f,
+        `expected the fallback finding, got: ${ids(result.findings)}`
+      )
       assert.strictEqual(f!.severity, 'error')
       assert.match(f!.message, /src\/lib\/api\.ts/)
     } finally {
@@ -2467,7 +2474,9 @@ describe('deployed frontend API base (live validate.function)', () => {
       )
       const result = await runValidate(tmp, { skipTypecheck: true })
       assert.ok(
-        !result.findings.some((f) => f.id.startsWith('frontend-env-fallback-localhost')),
+        !result.findings.some((f) =>
+          f.id.startsWith('frontend-env-fallback-localhost')
+        ),
         `expected no fallback finding, got: ${ids(result.findings)}`
       )
       assert.ok(
