@@ -311,6 +311,8 @@ export function pikkuFunc(func: any) {
  * A \`pikkuFunc\` whose input and output are already the shared list shape —
  * filters, sort, paging in; rows and a total out — so a listing endpoint pages
  * the same way everywhere.
+ *
+ * @example snippet: listFunction
  */
 export const pikkuListFunc = <
   F extends Record<string, unknown> = {},

@@ -55,6 +55,8 @@ export const pikkuChannelMiddleware = <
 /**
  * Declares channel middleware that takes options, so one definition can be
  * wired several times with different configuration.
+ *
+ * @example snippet: channelMiddlewareFactory
  */
 export const pikkuChannelMiddlewareFactory = <In = any>(
   factory: CorePikkuChannelMiddlewareFactory<In>

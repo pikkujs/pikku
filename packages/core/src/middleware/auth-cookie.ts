@@ -30,6 +30,8 @@ const hasSessionIdentity = (session: unknown): boolean => {
 /**
  * Reads a JWT session from a cookie, and re-issues the cookie after the
  * request whenever the session changed (e.g. after login).
+ *
+ * @example snippet: machineAuth
  */
 export const authCookie = pikkuMiddlewareFactory<{
   /** Cookie name to read and write. */

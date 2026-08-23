@@ -1,4 +1,5 @@
 import { pikkuVoidFunc } from '#pikku/function'
+import { isExpectedError } from '#pikku/error'
 
 /**
  * One pass over the items that need attention, firing the handler for each.
@@ -27,11 +28,20 @@ export const sweepLowStock = pikkuVoidFunc({
       .execute()
 
     for (const row of rows) {
-      await rpc.invoke('onLowStock', {
-        itemId: row.itemId,
-        name: row.name,
-        stock: row.stock,
-      })
+      // @snippet start isExpectedError
+      try {
+        await rpc.invoke('onLowStock', {
+          itemId: row.itemId,
+          name: row.name,
+          stock: row.stock,
+        })
+      } catch (error) {
+        // An error pikku knows about carries a status and a message meant for
+        // the caller; anything else is a bug and belongs on the floor.
+        if (!isExpectedError(error)) throw error
+        logger.warn({ event: 'low_stock_alert_failed', itemId: row.itemId })
+      }
+      // @snippet end isExpectedError
     }
 
     logger.info({ event: 'low_stock_swept', noticed: rows.length })

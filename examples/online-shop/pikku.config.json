@@ -71,5 +71,8 @@
       "apiUrl": "http://localhost:4010",
       "signInPath": "/api/auth/sign-in/actor"
     }
+  },
+  "allow": {
+    "complexWorkflows": true
   }
 }

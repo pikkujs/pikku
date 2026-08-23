@@ -1,5 +1,10 @@
 import type { AgentStreamEvent } from '@pikku/core/agent'
-import { pikkuAgentMiddleware, pikkuChannelMiddleware } from '#pikku/middleware'
+import {
+  addChannelMiddleware,
+  pikkuAgentMiddleware,
+  pikkuChannelMiddleware,
+  pikkuChannelMiddlewareFactory,
+} from '#pikku/middleware'
 
 // @snippet start channelMiddleware
 export const traceAgentStream = pikkuChannelMiddleware<any, AgentStreamEvent>(
@@ -26,3 +31,17 @@ export const countAgentCharacters = pikkuAgentMiddleware<{
   },
 })
 // @snippet end agentMiddleware
+
+// @snippet start channelMiddlewareFactory
+export const tagChannelEvents = pikkuChannelMiddlewareFactory(
+  (channelName: string) =>
+    async ({ logger }, event, next) => {
+      logger.debug({ event: 'channel_event', channel: channelName })
+      await next(event)
+    }
+)
+// @snippet end channelMiddlewareFactory
+
+// @snippet start addChannelMiddleware
+addChannelMiddleware('orders', [tagChannelEvents('order-status')])
+// @snippet end addChannelMiddleware

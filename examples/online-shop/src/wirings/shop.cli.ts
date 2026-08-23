@@ -1,5 +1,6 @@
 import {
   wireCLI,
+  defineCLICommands,
   pikkuCLICommand,
   pikkuCLIRender,
 } from '#pikku/cli/pikku-cli-types.gen.js'
@@ -30,24 +31,26 @@ wireCLI({
 // @snippet end cliSubcommands
 
 // @snippet start cliWiring
-// Wire multiple functions as CLI commands under a single program.
-wireCLI({
-  program: 'shop',
-  commands: {
-    report: pikkuCLICommand({
-      description: 'Generate the daily sales report',
-      func: dailySalesReport,
-    }),
-    cleanup: pikkuCLICommand({
-      description: 'Remove baskets abandoned for more than 24 h',
-      func: cleanupAbandonedBaskets,
-    }),
-    items: pikkuCLICommand({
-      description: 'List all items in the catalogue',
-      func: listItems,
-    }),
-  },
+// @snippet start cliCommandContract
+// The command map is a contract of its own, so it can be declared once and
+// wired wherever the program is assembled.
+const shopCommands = defineCLICommands({
+  report: pikkuCLICommand({
+    description: 'Generate the daily sales report',
+    func: dailySalesReport,
+  }),
+  cleanup: pikkuCLICommand({
+    description: 'Remove baskets abandoned for more than 24 h',
+    func: cleanupAbandonedBaskets,
+  }),
+  items: pikkuCLICommand({
+    description: 'List all items in the catalogue',
+    func: listItems,
+  }),
 })
+// @snippet end cliCommandContract
+
+wireCLI({ program: 'shop', commands: shopCommands })
 // @snippet end cliWiring
 
 // @snippet start cliUsage

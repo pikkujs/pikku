@@ -164,6 +164,8 @@ export const pikkuChannelMiddleware = <RequiredServices extends Services = Servi
 /**
  * Declares channel middleware that takes options, so one definition can be
  * wired several times with different configuration.
+ *
+ * @example snippet: channelMiddlewareFactory
  */
 export const pikkuChannelMiddlewareFactory = <In = any>(
   factory: CorePikkuChannelMiddlewareFactory<In>
@@ -174,6 +176,8 @@ export const pikkuChannelMiddlewareFactory = <In = any>(
 /**
  * Attaches channel middleware to every channel carrying the given tag, so the
  * channels themselves stay free of the wiring.
+ *
+ * @example snippet: addChannelMiddleware
  */
 export const addChannelMiddleware = (tag: string, middleware: PikkuChannelMiddleware[]) =>
   addChannelMiddlewareCore(tag, middleware, ${packageNameValue})

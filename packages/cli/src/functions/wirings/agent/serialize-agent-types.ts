@@ -56,6 +56,8 @@ export const pikkuAgent = <
 /**
  * Declares a scorer that grades an agent run programmatically — a function over
  * the run's input and output returning a score.
+ *
+ * @example snippet: agentScorer
  */
 export const pikkuAgentScorer = (
   config: Parameters<typeof corePikkuAgentScorer<Services>>[0]
@@ -64,6 +66,8 @@ export const pikkuAgentScorer = (
 /**
  * Declares a scorer that grades an agent run with another model, for the
  * qualities a programmatic check cannot express.
+ *
+ * @example snippet: agentJudge
  */
 export const pikkuAgentJudge = (
   config: Parameters<typeof corePikkuAgentJudge<Services>>[0]
@@ -106,6 +110,8 @@ export const agentStream = <Name extends keyof AgentMap>(
 /**
  * A ready-made function that answers one pending tool approval, letting a run
  * that paused for a human carry on.
+ *
+ * @example snippet: agentApproval
  */
 export const agentResume = () => {
   return coreAgentResume() as PikkuFunctionConfig<
@@ -117,6 +123,8 @@ export const agentResume = () => {
 
 /**
  * A ready-made function that answers every pending approval for a run at once.
+ *
+ * @example snippet: agentApproval
  */
 export const agentApprove = <Name extends keyof AgentMap>(
   agentName: Name

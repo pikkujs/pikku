@@ -166,6 +166,8 @@ export const wireChannel = <ChannelData, Channel extends string>(
  * @template T - Record of channel route handlers
  * @param routes - The channel routes record
  * @returns The same routes record (identity function for type safety)
+ *
+ * @example snippet: channelRoutes
  */
 export function defineChannelRoutes<T extends Record<string, any>>(routes: T): T {
   return defineChannelRoutesCore(routes)

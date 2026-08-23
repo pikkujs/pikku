@@ -1,4 +1,5 @@
 import {
+  defineChannelRoutes,
   wireChannel,
   pikkuChannelFunc,
   pikkuChannelConnectionFunc,
@@ -44,10 +45,12 @@ wireChannel({
   onConnect,
   onDisconnect,
   onMessageWiring: {
-    type: {
+    // @snippet start channelRoutes
+    type: defineChannelRoutes({
       subscribe: subscribeToOrder,
       unsubscribe: unsubscribeFromOrder,
-    },
+    }),
+    // @snippet end channelRoutes
   },
 })
 // @snippet end channelWiring

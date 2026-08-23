@@ -13,6 +13,8 @@ export class PikkuError extends Error {
  * survives serialization across a workflow step boundary and rehydration as a
  * plain `Error`. Callers log the message alone for these, the full stack for
  * everything else.
+ *
+ * @example snippet: isExpectedError
  */
 export const isExpectedError = (error: unknown): boolean =>
   error instanceof PikkuError ||

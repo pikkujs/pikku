@@ -15,3 +15,13 @@ defineSecret({
   schema: StripeKeySchema,
 })
 // @snippet end secrets
+
+export const OpsApiTokenSchema = z.string()
+
+defineSecret({
+  name: 'opsApiToken',
+  displayName: 'Ops API Token',
+  description: 'Bearer token the ops integrations authenticate with',
+  secretId: 'OPS_API_TOKEN',
+  schema: OpsApiTokenSchema,
+})

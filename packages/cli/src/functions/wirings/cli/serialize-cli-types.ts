@@ -110,6 +110,8 @@ export const pikkuCLICommand = <
  * @template T - Record of CLI command configurations
  * @param commands - The CLI commands record
  * @returns The same commands record (identity function for type safety)
+ *
+ * @example snippet: cliCommandContract
  */
 export const defineCLICommands = <T extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>, any>>>(
   commands: T

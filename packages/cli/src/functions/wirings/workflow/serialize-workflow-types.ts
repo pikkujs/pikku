@@ -112,6 +112,8 @@ export function pikkuWorkflowFunc(func: any) {
  * Declares a workflow whose control flow the DSL cannot express - a loop whose
  * bound is only known at runtime, or branching that rejoins. An escape hatch:
  * reach for \`pikkuWorkflowFunc\` unless the shape genuinely needs this.
+ *
+ * @example snippet: workflowComplexFunc
  */
 export function pikkuWorkflowComplexFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -199,6 +201,8 @@ type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; th
  * Declares a workflow as an explicit node graph, for a genuine cyclic
  * dependency or a Node-only import the DSL cannot carry. The last resort of the
  * three.
+ *
+ * @example snippet: workflowGraph
  */
 export function pikkuWorkflowGraph<
   const FuncMap extends Record<

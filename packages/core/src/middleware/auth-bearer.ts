@@ -17,6 +17,8 @@ const constantTimeEqual = (a: string, b: string): boolean => {
  * Validates a bearer token: JWT-decoded by default, or compared in constant
  * time against a static `value` or a `secretId` resolved through the secrets
  * service per request.
+ *
+ * @example snippet: machineAuth
  */
 export const authBearer = pikkuMiddlewareFactory<{
   /** Omit to JWT-decode the token. Set it to accept one fixed token instead, matched in constant time. */
