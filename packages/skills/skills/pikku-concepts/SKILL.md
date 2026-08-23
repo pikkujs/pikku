@@ -1,13 +1,13 @@
 ---
 name: pikku-concepts
 description: >-
-  Foundational guide to Pikku framework concepts. Use this skill when working with any Pikku
-  codebase, starting a new Pikku project, or migrating a backend to Pikku. Covers the core mental
-  model, function types, project structure, code generation, testing, and how Pikku maps to
-  traditional backend patterns. TRIGGER when: user asks "what is Pikku?", starts a new Pikku
-  project, migrates from Express/NestJS/Hono, or needs to understand how Pikku works. DO NOT
-  TRIGGER when: user is doing a specific wiring task (use the specific skill instead, e.g.
-  pikku-http, pikku-websocket).
+  Use FIRST in any Pikku codebase, before writing an import or reaching for another pikku skill.
+  Covers the core mental model, function types, project structure, code generation and testing,
+  and how to read `pikku doc` — the API surface of the pikku actually installed here, which also
+  indexes which skill teaches each door. TRIGGER when: starting any Pikku task, about to import
+  from `#pikku/*`, unsure whether an export exists or what its options are called, choosing which
+  pikku skill to load, a build failed on an unknown import or option, or migrating an existing
+  backend to Pikku. DO NOT TRIGGER when: the task is not a Pikku project.
 installGroups: [core]
 ---
 
@@ -17,7 +17,7 @@ installGroups: [core]
 
 Use this skill as an execution checklist, not reference material.
 
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+1. Discover before editing. Run `pikku doc --ai` for the installed API surface, and the relevant `pikku meta ... --json` for what this project has wired.
 2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
 3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
@@ -25,12 +25,54 @@ Use this skill as an execution checklist, not reference material.
 
 Pikku is a TypeScript framework that separates business logic from transport mechanisms. You define a function once, then wire it to HTTP, WebSocket, queues, schedulers, MCP, CLI, or RPC — without the function knowing how it's being called.
 
-For deep-dive on each topic, see the dedicated skills:
+## Ask The Installed Pikku, Don't Guess
 
-- **Wiring**: `pikku-http`, `pikku-websocket`, `pikku-rpc`, `pikku-mcp`, `pikku-queue`, `pikku-cron`, `pikku-trigger`, `pikku-cli`, `pikku-agent`, `pikku-workflow`
-- **Authorization**: `pikku-security` (authentication/sessions), `pikku-permissions` (permission checks, scopes), `pikku-middleware` (global/tag/route middleware)
-- **Infrastructure**: `pikku-services`, `pikku-config`
-- **Project introspection**: `pikku-info`
+Pikku generates `#pikku/*` imports per project and changes between versions. Anything you
+remember about its API may be from a different version than the one in this directory.
+Everything below is the mental model; `pikku doc` is the API surface, computed when the
+installed CLI was built. It needs no config and works outside a project.
+
+**Do not write an import, an export name, or an option key you have not seen in `pikku doc`.**
+A name that looks right and is not costs a full build cycle to discover. If the doc does not
+list it, it does not exist here — do not reach into `node_modules` or `.pikku` for something
+that will work anyway.
+
+### Start here, every time
+
+```
+pikku doc --ai
+```
+
+≈480 tokens, giving the 20 `#pikku/*` doors grouped by the job they do, and beside each the
+skill that teaches it. Read that routing table as the index to every other pikku skill — it is
+generated from the installed version, so it never names a skill for a door that no longer exists.
+
+Then go one of two ways. For **what exists** — the exact export name, its options, its
+signature — stay in the doc:
+
+```
+pikku doc http                 one door: its exports, each with a signature or a key count
+pikku doc wireHTTP             one export: signature, every key with what it is for
+pikku doc wireHTTP pikkuFunc   several topics in one call, rather than one call each
+```
+
+For **how it fits together** — composition, lifecycle, the generated client — load the skill
+the routing table named. The doc lists keys; it does not teach patterns.
+
+On a door screen, `N keys — pikku doc X` means a second call buys you something; an inlined
+signature means it does not. Error classes carry the HTTP status they are registered with,
+which is what decides whether a thrown error becomes a 409 or a 500.
+
+### Two things the doc will not give you
+
+- **Worked examples are sparse.** Most exports show a signature and keys, not usage.
+- **`pikkuFunc` lists keys that belong elsewhere.** `before`, `after`, `skip`, `surfaces` and
+  `requiresActor` apply only to scenarios; `workflowQueued`, `workflowRetries` and
+  `workflowTimeout` only to a workflow step. One shared config type offers all of them to
+  every function — each key says which it belongs to.
+
+`pikku doc` needs `@pikku/cli` 0.12.115 or newer. On an older pin, fall back to the door's
+skill and `pikku meta --json`, and do not guess at names the doc would have given you.
 
 ## Core Mental Model
 

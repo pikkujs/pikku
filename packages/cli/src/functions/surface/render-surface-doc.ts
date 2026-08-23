@@ -92,10 +92,32 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
     lines.push('', `  ${fn.specifier} — every wiring eventually points at one of these`)
     lines.push(...columns(fn.symbols.map((symbol) => symbol.name), 4, 26))
   }
+  if (ai) {
+    const taught = leaves.filter((leaf) => leaf.skill)
+    const bare = leaves.filter((leaf) => !leaf.skill).map((leaf) => leaf.name)
+    lines.push('', '  what is above is what exists; these skills say how to use it')
+    lines.push(
+      ...columns(
+        taught.map((leaf) => `${leaf.name} → ${leaf.skill}`),
+        2,
+        38
+      )
+    )
+    if (bare.length > 0) {
+      lines.push(
+        wrap(
+          `No skill teaches ${bare.join(', ')} — for those, this doc is the whole of it.`,
+          78,
+          '  '
+        )
+      )
+    }
+  }
   lines.push(
     '',
     '  pikku doc <door>      one door: what it exports and the keys you write',
-    '  pikku doc <export>    one export: its signature, its keys, what it references'
+    '  pikku doc <export>    one export: its signature, its keys, what it references',
+    '  pikku doc a b c       several at once, in one call'
   )
   if (!ai) {
     lines.push('  pikku doc --ai        the same, plus the skill to load for each door')
