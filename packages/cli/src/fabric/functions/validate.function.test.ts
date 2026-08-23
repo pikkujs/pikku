@@ -2378,3 +2378,148 @@ describe('declared frontends + type-check (live validate.function)', () => {
     }
   })
 })
+
+// A deployed frontend that points at a dev server is the failure this whole
+// block exists for: the deploy goes green, the stage answers, and every call
+// the browser makes hangs until it times out — with nothing in any log,
+// because the request never left the visitor's machine.
+describe('deployed frontend API base (live validate.function)', () => {
+  const declareWeb = async (root: string, deploy = true) => {
+    await writeJson(join(root, 'pikkufabric.config.json'), {
+      projectId: 'proj-abc123',
+      frontends: { web: { cwd: 'apps/web', deploy } },
+    })
+  }
+
+  const writeApiLib = async (root: string, source: string) => {
+    await mkdir(join(root, 'apps', 'web', 'src', 'lib'), { recursive: true })
+    await writeJson(join(root, 'apps', 'web', 'package.json'), {
+      name: '@project/web',
+      type: 'module',
+      dependencies: { react: '^19.0.0' },
+    })
+    await writeFile(join(root, 'apps', 'web', 'src', 'lib', 'api.ts'), source, 'utf8')
+  }
+
+  const ids = (findings: Array<{ id: string }>) =>
+    JSON.stringify(findings.map((f) => f.id))
+
+  test('an env read defaulting to localhost → error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3002'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-env-fallback-localhost-web'
+      )
+      assert.ok(f, `expected the fallback finding, got: ${ids(result.findings)}`)
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /src\/lib\/api\.ts/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('process.env / NEXT_PUBLIC_ is caught the same way', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8080/api"\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some(
+          (f) => f.id === 'frontend-env-fallback-localhost-web'
+        ),
+        `expected the fallback finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  // The recommended shape: a localhost constant is still in the file, but it
+  // is the dev branch of an origin-derived answer rather than the shipped one.
+  test('deriving the base from location.origin passes clean', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `const LOCAL_API_URL = 'http://localhost:3002'`,
+          `export function apiUrl(): string {`,
+          `  if (typeof window === 'undefined') return LOCAL_API_URL`,
+          `  if (import.meta.env.DEV) return LOCAL_API_URL`,
+          `  return window.location.origin + '/api'`,
+          `}`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-env-fallback-localhost')),
+        `expected no fallback finding, got: ${ids(result.findings)}`
+      )
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-localhost-url')),
+        `expected no bare-URL warning, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a localhost URL only in a comment is not a finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `// locally the API is at http://localhost:3002, in prose only`,
+          `export const API_URL = '/api'`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-')),
+        `expected no frontend findings, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a frontend with deploy:false is not checked — it never reaches a browser', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp, false)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3002'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) =>
+          f.id.startsWith('frontend-env-fallback-localhost')
+        ),
+        `expected no fallback finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})

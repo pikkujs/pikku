@@ -1255,6 +1255,105 @@ export async function runValidate(
     }
   }
 
+
+  // ── a deployed frontend pointing at localhost ──────────────────────────
+  // Nothing in the deploy container writes a `VITE_*` / `NEXT_PUBLIC_*`
+  // variable, and nothing can: the stage hostname is chosen when the worker is
+  // published, after the frontend bundle has already been built. So every
+  // build-time env read in a deployed frontend resolves to `undefined`, and
+  // whatever the code falls back to is what real browsers get.
+  //
+  // When that fallback is a dev-server URL the app deploys green and is broken
+  // on arrival — every call hangs until it times out, with nothing in any log
+  // to say why, because the request never left the visitor's machine.
+  //
+  // The fix is never "set the variable". It is to derive the base from the
+  // page's own origin: fabric serves the app and the API on one hostname and
+  // the dispatcher claims `/api/*` on it, so `location.origin + '/api'` is
+  // right on a stage, on a preview, and on a custom domain alike.
+  const LOCALHOST_URL_RE =
+    /['"`](?:https?|wss?):\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?[^'"`]*['"`]/
+  // The same literal, but standing as the default of a build-time env read —
+  // `import.meta.env.X ?? '…'`, `process.env.X || '…'`. This is the shape that
+  // reads as configured and ships as hardcoded.
+  const ENV_FALLBACK_RE =
+    /(?:import\.meta\.env|process\.env)\s*(?:\.\w+|\[\s*['"][^'"]+['"]\s*\])\s*(?:\?\?|\|\|)\s*['"`](?:https?|wss?):\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)/
+
+  for (const fe of declaredFrontends) {
+    if (!fe.deploy) continue
+    const files = [
+      ...(await listSourceFiles(join(fe.dir, 'src'))),
+      ...(await listSourceFiles(join(fe.dir, 'app'))),
+      ...(await listSourceFiles(join(fe.dir, 'pages'))),
+    ]
+    const envFallbackHits: string[] = []
+    const bareHits: string[] = []
+    // An app that reads its own origin has already solved this, and the
+    // localhost literal left in it is the dev branch of that answer — the
+    // shape the fix hint below recommends. Warning on it every run would
+    // train people to ignore the warning that matters.
+    let derivesOrigin = false
+    for (const file of files) {
+      const rel = file.slice(fe.dir.length + 1).replace(/\\/g, '/')
+      // Tests and type declarations are not in the bundle a browser runs.
+      if (
+        /\.(test|spec)\.[jt]sx?$/.test(rel) ||
+        rel.endsWith('.d.ts') ||
+        /(?:^|\/)(?:__tests__|__mocks__)\//.test(rel)
+      ) {
+        continue
+      }
+      const text = await readTextSafe(file)
+      if (!text) continue
+      if (/\blocation\s*\.\s*origin\b/.test(text)) derivesOrigin = true
+      for (const raw of text.split('\n')) {
+        // A URL in prose is documentation, not a request.
+        const line = raw.trim()
+        if (line.startsWith('//') || line.startsWith('*') || line.startsWith('/*')) {
+          continue
+        }
+        if (ENV_FALLBACK_RE.test(line)) {
+          if (!envFallbackHits.includes(rel)) envFallbackHits.push(rel)
+        } else if (LOCALHOST_URL_RE.test(line)) {
+          if (!bareHits.includes(rel)) bareHits.push(rel)
+        }
+      }
+    }
+    const sample = (hits: string[]) =>
+      hits.slice(0, 5).join(', ') + (hits.length > 5 ? `, +${hits.length - 5} more` : '')
+    const originFix = lines(
+      'Derive the base from the page instead of from a variable nobody sets:',
+      '',
+      '  const configured = import.meta.env.VITE_API_URL',
+      '  const remote = !/^(localhost|127\\.0\\.0\\.1)$/.test(window.location.hostname)',
+      '  // a localhost base served from a real origin is a stray dev value',
+      '  if (configured && !(remote && /\\/\\/(localhost|127\\.0\\.0\\.1)(:|\\/)/.test(configured))) {',
+      '    return configured',
+      '  }',
+      "  return window.location.origin + '/api'",
+      '',
+      'Fabric serves the app and the API on one hostname and routes /api/* to',
+      'the API units, so the derived value is correct on every stage, preview',
+      'and custom domain. Guard the `window` read for SSR.'
+    )
+    if (envFallbackHits.length > 0) {
+      e(
+        `frontend-env-fallback-localhost-${fe.slug}`,
+        `frontend "${fe.slug}" defaults a build-time env read to a localhost URL (${sample(envFallbackHits)}) — the deploy sets no VITE_*/NEXT_PUBLIC_* variable, so that fallback is what the production bundle ships and every call from a browser will time out`,
+        fe.dir,
+        originFix
+      )
+    }
+    if (bareHits.length > 0 && !derivesOrigin) {
+      w(
+        `frontend-localhost-url-${fe.slug}`,
+        `frontend "${fe.slug}" hardcodes a localhost URL (${sample(bareHits)}) — unreachable from any deployed page`,
+        fe.dir,
+        originFix
+      )
+    }
+  }
+
   // ── apps/ vs fabric.config.json frontends ─────────────────────────────
   const appsDir = join(root, 'apps')
 
