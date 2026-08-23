@@ -70,7 +70,10 @@ export const FabricLink = pikkuSessionlessFunc({
       }
     }
 
-    const project = await rpc.invoke('importProject', { repoUrl: remoteUrl })
+    const project = await rpc.invoke('importProject', {
+      repoUrl: remoteUrl,
+      productionBranch: 'main',
+    })
 
     await writeProjectConfig(process.cwd(), {
       projectId: project.projectId,

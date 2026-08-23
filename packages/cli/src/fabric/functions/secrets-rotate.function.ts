@@ -10,7 +10,7 @@ export const FabricSecretsRotateInput = z.object({
 })
 
 export const FabricSecretsRotateOutput = z.object({
-  retiredKeyId: z.string(),
+  retiredKeyId: z.string().nullable(),
 })
 
 export const FabricSecretsRotate = pikkuSessionlessFunc({
@@ -46,6 +46,6 @@ export const FabricSecretsRotate = pikkuSessionlessFunc({
     console.log(
       '[fabric] deploy the stage to issue a new key, then set its secrets again'
     )
-    return result
+    return { retiredKeyId: result.retiredKeyId }
   },
 })
