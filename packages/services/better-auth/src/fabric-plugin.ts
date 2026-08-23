@@ -149,6 +149,64 @@ const grantOperatorAdmin = async (
 }
 
 /**
+ * The stage's own id for the address an operator wants to act as.
+ *
+ * Resolved here rather than by the caller because there is nowhere else to
+ * resolve it: impersonation names a user id, a persona only knows an email, and
+ * since `admin()` was dropped no HTTP endpoint lists users. The adapter is
+ * already in hand on this request and the operator token has already been
+ * verified above, so the lookup costs nothing and is gated by the same check
+ * that mints the session.
+ *
+ * Looked up before creating, so an address that already exists is acted as
+ * rather than duplicated. Creation is opt-in: a persona is meant to be an
+ * account somebody provisioned, and writing users into a live database is a
+ * side effect nobody asked for.
+ *
+ * A `role` is written only when the caller names one. pikku no longer has a
+ * `role` column of its own, but an app is free to keep better-auth's `admin()`
+ * plugin, and those apps tend to constrain the column — creating a row without
+ * one fails their CHECK. The caller knows the persona's roles; this does not.
+ */
+const resolveActAs = async (
+  internalAdapter: {
+    findUserByEmail: (email: string) => Promise<{ user?: { id: unknown } } | null>
+    createUser: (user: Record<string, unknown>) => Promise<{ id: unknown } | undefined>
+  },
+  actAs: {
+    email: string
+    name?: string | undefined
+    create?: boolean | undefined
+    role?: string | undefined
+  }
+): Promise<{ userId: string }> => {
+  const email = actAs.email.toLowerCase()
+  const found = await internalAdapter.findUserByEmail(email)
+  if (found?.user?.id) {
+    return { userId: String(found.user.id) }
+  }
+  if (!actAs.create) {
+    throw new APIError('NOT_FOUND', {
+      message: `No account on this stage for ${actAs.email}`,
+    })
+  }
+  const created = await internalAdapter.createUser({
+    email,
+    emailVerified: true,
+    name: actAs.name ?? actAs.email,
+    ...(actAs.role ? { role: actAs.role } : {}),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+  if (!created?.id) {
+    throw new APIError('INTERNAL_SERVER_ERROR', {
+      message: `Failed to create an account for ${actAs.email}`,
+    })
+  }
+  return { userId: String(created.id) }
+}
+
+/**
  * Better Auth plugin that lets an authorized Fabric operator act as an admin of
  * a client app WITHOUT being one of its real users. Mirrors {@link actor}:
  * `POST /sign-in/fabric` with `{ token }` verifies a short-lived RS256 JWT the
@@ -188,6 +246,14 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
           method: 'POST',
           body: z.object({
             token: z.string(),
+            actAs: z
+              .object({
+                email: z.string(),
+                name: z.string().optional(),
+                create: z.boolean().optional(),
+                role: z.string().optional(),
+              })
+              .optional(),
           }),
         },
         async (ctx) => {
@@ -279,9 +345,16 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
             })
           }
           await setSessionCookie(ctx, { session, user: user as any })
+          const actAs = ctx.body.actAs
+            ? await resolveActAs(
+                ctx.context.internalAdapter as any,
+                ctx.body.actAs
+              )
+            : undefined
           return ctx.json({
             token: session.token,
             user: { id: user.id, email, fabric: true },
+            ...(actAs ? { actAs } : {}),
           })
         }
       ),

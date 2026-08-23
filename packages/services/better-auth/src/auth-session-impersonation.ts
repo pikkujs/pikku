@@ -8,8 +8,9 @@ export type ImpersonationOptions = {
   /** Header carrying the target user id. Defaults to `x-pikku-impersonate-user-id`. */
   header?: string
   /**
-   * Gate the real caller against impersonating. Defaults to requiring the
-   * `admin:impersonate` scope, resolved through the registered `ScopeService`.
+   * Gate the real caller against impersonating. Defaults to a Fabric operator
+   * row, or the `admin:impersonate` scope resolved through the registered
+   * `ScopeService`.
    */
   canImpersonate?: (
     result: SessionLike,
@@ -35,9 +36,13 @@ export type MapSession = (
  * to the real session. An unknown target is logged at `warn` — it is NOT an
  * error. Hook errors (`canImpersonate`/`loadUser`) propagate by design.
  *
- * The default gate is the `admin:impersonate` scope, resolved for the *caller*
- * through the registered `ScopeService`. It fails closed: with no ScopeService
- * there is nothing to hold the scope, so impersonation is denied.
+ * The default gate admits two callers. A `fabric: true` row is one: that column
+ * is set by nothing but {@link fabric}'s sign-in, which writes it only after
+ * verifying an RS256 token against the stage's public key, so the row's very
+ * existence is the authorization — and unlike a scope it needs no ScopeService
+ * wired, which no app template actually does. Otherwise the caller must hold
+ * `admin:impersonate`, resolved through the registered `ScopeService`; that
+ * half fails closed, since with no ScopeService nothing can hold the scope.
  */
 export const resolveImpersonatedSession = async (
   caller: SessionLike,
@@ -56,6 +61,7 @@ export const resolveImpersonatedSession = async (
   const canImpersonate =
     impersonation.canImpersonate ??
     ((result: SessionLike, coreServices: CoreServices) =>
+      result.user?.fabric === true ||
       userHoldsScopes(
         result.user?.id,
         [ADMIN_SCOPES.impersonate],
