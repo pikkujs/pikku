@@ -23,7 +23,6 @@ import {
   type ProgressEvent,
 } from '../lib/deployment.js'
 
-/** 15 minutes. A cold fabric deploy builds every unit from a clean clone. */
 const DEFAULT_TIMEOUT_SECONDS = 900
 
 export const FabricDeployInput = z.object({
@@ -40,9 +39,6 @@ export const FabricDeployInput = z.object({
 
 export const FabricDeployValidatedInput = FabricDeployInput.superRefine(
   (value, ctx) => {
-    // A deployment id already fixes the stage, the branch and the sha. Taking
-    // a target as well would let the two disagree, and there is no honest
-    // answer to which one wins.
     if (value.deploymentId) {
       if (value.branch || value.production) {
         ctx.addIssue({
@@ -91,49 +87,29 @@ const Changes = z.object({
   ),
 })
 
-/**
- * One command, five endings — and the fields that belong to only some of them
- * stay absent rather than present-and-empty. A bare `apply` genuinely has no
- * status to report because it never looked, which is a different claim from
- * `status: ''`. `outcome` is the discriminator; read it first.
- */
 export const FabricDeployApplyOutput = z.object({
-  /** Names this object as the terminal line of the NDJSON progress stream. */
   event: z.literal('result'),
   outcome: z.enum(['queued', 'succeeded', 'failed', 'blocked', 'timeout']),
   projectId: z.string(),
   deploymentId: z.string(),
-  /** Absent only when attaching to a deployment the project listing dropped. */
   branch: z.string().optional(),
-  /** Created deploys only — the sha we resolved and asked fabric to build. */
   ref: z.string().optional(),
-  /** Present once anything has been read back from the server. */
   status: z.string().optional(),
   statusReason: z.string().nullable().optional(),
-  /** Created deploys only. */
   stageId: z.string().optional(),
   runId: z.string().optional(),
-  /** `blocked` only. */
   blockedReason: z
     .enum(['awaiting_approval', 'needs_config', 'needs_attention', 'unknown'])
     .optional(),
   missingSecrets: z.array(MissingConfig).optional(),
   missingVariables: z.array(MissingConfig).optional(),
-  /**
-   * `blocked` only, and only when the gate would otherwise have opened: the
-   * approval was ours to give and we declined to give it. Distinct from
-   * `blockedReason`, which says why fabric parked the deploy.
-   */
   approvalWithheld: z.literal('destructive_migrations').optional(),
-  /** Terminal reads only — what this deployment changes against the live one. */
   changes: Changes.optional(),
-  /** `succeeded` only. */
   workers: z
     .array(z.object({ name: z.string(), role: z.string(), status: z.string() }))
     .optional(),
   url: z.string().nullable().optional(),
   approved: z.boolean().optional(),
-  /** Waits only. */
   elapsedMs: z.number().optional(),
   timeoutSeconds: z.number().optional(),
 })
@@ -143,10 +119,6 @@ type ApplyOutput = z.infer<typeof FabricDeployApplyOutput>
 type FabricRPC = ReturnType<typeof getFabricRPC>
 
 /**
- * Auth + target resolution for a *created* deploy: authenticate, resolve the
- * target branch, resolve the ref to a concrete sha. `--deployment-id` skips
- * all of it — the deployment already pins a sha, and the local checkout has
- * every right to have moved on since.
  */
 async function prepDeploy({ branch, production, ref }: DeployInput) {
   const ctx = await resolveApiContext()
@@ -169,7 +141,6 @@ async function prepDeploy({ branch, production, ref }: DeployInput) {
   return { ctx, projectId: ctx.projectId, targetBranch, resolved, safety }
 }
 
-/** Auth only — the attach path has no branch to check and no tree to compare. */
 async function prepAttach() {
   const ctx = await resolveApiContext()
   if (!ctx.token) {
@@ -181,18 +152,6 @@ async function prepAttach() {
   return { ctx, projectId: ctx.projectId }
 }
 
-/**
- * Exit codes, set via `process.exitCode` rather than thrown, because the
- * result still has to be rendered — a thrown CLIError never reaches a
- * renderer, and under `--json` the terminal event is the whole point of the
- * run. The bin exits with `process.exitCode ?? 0`.
- *
- *   0  deployed, already live, or queued (bare apply)
- *   1  the command could not run: not logged in, unsafe git state, bad flags
- *   2  the deployment reached a terminal failure
- *   3  the deployment is blocked and nothing here can unblock it
- *   4  the wait timed out with the deployment still in flight
- */
 const EXIT_BY_OUTCOME: Record<ApplyOutput['outcome'], number> = {
   queued: 0,
   succeeded: 0,
@@ -207,10 +166,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
   input: FabricDeployValidatedInput,
   output: FabricDeployApplyOutput,
   func: async (_services, input) => {
-    // knowledge: decisions/internals/cli-stdout-is-reserved-for-machine-readable-output.md
-    // Progress has to leave the function as it happens — the renderer only
-    // runs once, at the end. Under `--json` that is NDJSON on stdout; the
-    // human path stays silent here and says everything in the render.
     const emit = input.json
       ? (event: ProgressEvent) => console.log(JSON.stringify(event))
       : () => {}
@@ -220,10 +175,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       throw new Error('--timeout must be a positive number of seconds.')
     }
 
-    // Guarded rather than asserted: `superRefine` is a zod-level check, and
-    // the generated JSON schema the runtime validates against does not carry
-    // it — so a caller reaching the function any other way needs the rule
-    // enforced here too.
     if (input.deploymentId && (input.branch || input.production)) {
       throw new Error(
         '--deployment-id already names its target — drop --branch/--production.'
@@ -233,8 +184,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
     const attaching = Boolean(input.deploymentId)
     let projectId: string
     let deploymentId: string
-    // Absent when attaching to a deployment the project listing no longer
-    // carries — the status read still knows everything that decides the exit.
     let branch: string | undefined
     let ref: string | undefined
     let stageId: string | undefined
@@ -246,12 +195,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       projectId = id
       rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
       deploymentId = input.deploymentId!
-      // `getDeploymentStatus` is the existence check, not the project listing:
-      // it reads the row by id and 404s if there isn't one, whereas
-      // `getProjectDeployments` is a *filtered* listing — a cancelled deploy is
-      // usually dismissed and would come back "not found" when it exists and
-      // has a perfectly good terminal status to report. The listing is still
-      // worth a call, for the branch name and the diff, but only as a bonus.
       const current = await readDeploymentStatus(rpc, deploymentId)
       stageId = current.stageId
       branch = (await describeDeployment(rpc, projectId, deploymentId))?.branch
@@ -269,9 +212,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       ref = resolved
       rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
-      // Classic yes/no guard on *creating* a deployment. `--auto-approve`
-      // supplies the answer; a non-interactive session has no human to ask, so
-      // we refuse rather than hang.
       if (!input.autoApprove) {
         const target = `${branch} @ ${resolved.slice(0, 8)}`
         if (!process.stdin.isTTY) {
@@ -306,35 +246,17 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       ...(runId ? { runId } : {}),
     }
 
-    // Fire and forget: created, id returned, nothing waited on.
     if (!input.sync && !attaching) {
       return { ...base, outcome: 'queued' as const }
     }
 
-    // Set when we, not fabric, kept the gate shut — see `approvalWithheld`.
     let approvalWithheld: ApplyOutput['approvalWithheld']
 
-    /**
-     * Approving is a second decision, distinct from "create this deployment",
-     * and `--auto-approve` answers both. Without it an interactive session is
-     * asked and every other session is told, so a parked plan surfaces as
-     * exit 3 rather than an auto-publish nobody sanctioned. `--json` never
-     * prompts: its stdout belongs to the event stream.
-     *
-     * A destructive migration overrides all of that. `--auto-approve` is a
-     * standing "yes" written before anyone knew what the plan contained, and
-     * fabric's own risk verdict is the thing that could not have been known:
-     * a `DROP TABLE` deserves a decision taken with it in view, so it needs
-     * `--allow-destructive` said about this deploy, not a blanket yes.
-     */
     const approveGate = async (status: DeploymentStatus): Promise<boolean> => {
-      // Read the plan here rather than up front: the gate is the first moment
-      // it exists, and this callback runs at most once per deploy.
       const described = await describeDeployment(rpc, projectId, deploymentId)
       const destructive = destructiveMigrations(described?.changes)
 
       if (destructive.length > 0 && !input.allowDestructive) {
-        // Nobody to show it to, or a standing yes that never saw it.
         if (input.autoApprove || input.json || !process.stdin.isTTY) {
           approvalWithheld = 'destructive_migrations'
           return false
@@ -344,8 +266,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       }
       if (input.json || !process.stdin.isTTY) return false
 
-      // Interactive: the risk goes in the question, so the answer is given
-      // with it in view.
       const warning =
         destructive.length > 0
           ? `\n${destructiveLines(destructive).join('\n')}\n`
@@ -358,7 +278,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       )
     }
 
-    // `--deployment-id` without `--sync` is a status read, not a wait.
     if (!input.sync) {
       const status = await readDeploymentStatus(rpc, deploymentId)
       const klass = classifyStatus(status.status)
@@ -428,11 +347,6 @@ export const FabricDeployApply = pikkuSessionlessFunc({
   },
 })
 
-/**
- * The reads worth one round-trip each, once the wait is over: what this
- * deployment changes (only `getProjectDeployments` carries the diff) and, on
- * success, what is actually running. Never called from the poll loop.
- */
 async function finalise(
   rpc: FabricRPC,
   projectId: string,
@@ -450,18 +364,11 @@ async function finalise(
   return out
 }
 
-// ── renders ────────────────────────────────────────────────────────────────
-
 const shortList = (names: string[], limit = 8): string =>
   names.length <= limit
     ? names.join(', ')
     : `${names.slice(0, limit).join(', ')} +${names.length - limit} more`
 
-/**
- * One line per destructive migration, naming the reasons fabric gave. These
- * are the lines a `--auto-approve` run is refusing on, so they have to stand
- * on their own — not read as an addendum to the migration list above them.
- */
 const destructiveLines = (risks: MigrationRisk[]): string[] =>
   risks.map(
     (r) =>
@@ -532,8 +439,6 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
     timeoutSeconds,
     approved,
   } = result
-  // `--deployment-id` against a deployment the project listing has dropped
-  // knows the id and nothing else nameable; the id is right there on the line.
   const where = branch ?? 'deployment'
   const at = ref ? ` ${dim('@')} ${ref.slice(0, 8)}` : ''
   const took =

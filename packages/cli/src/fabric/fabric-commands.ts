@@ -220,9 +220,6 @@ export const fabricCommands = defineCLICommands({
             description: 'Seconds to wait under --sync (default 900)',
           },
           json: {
-            // No `short` here: the CLI's own global `-j, --json` already owns
-            // that letter and shadows a per-command one, exactly as on `logs`,
-            // `metrics` and `secrets list`.
             description: 'Machine-readable output (NDJSON)',
             default: false,
           },

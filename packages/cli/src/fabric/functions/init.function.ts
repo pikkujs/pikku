@@ -54,10 +54,6 @@ export const FabricInit = pikkuSessionlessFunc({
       repoUrl: repo,
       name,
       defaultBranch: branch,
-      // Fabric declares this `z.string().default('main')`, so it is optional
-      // over the wire; codegen emits zod's *output* type, which makes it
-      // required here. Passing the server's own default keeps the previous
-      // behaviour of omitting it.
       productionBranch: 'main',
     })
 

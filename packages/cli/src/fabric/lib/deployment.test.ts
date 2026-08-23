@@ -19,11 +19,6 @@ type StatusRow = {
   missingVariables?: { name: string }[]
 }
 
-/**
- * A fake RPC that hands out one scripted status per poll and records every
- * `applyDeployment`. The last row repeats forever, so a script can end on an
- * in-flight status to exercise the timeout.
- */
 function fakeRpc(script: StatusRow[]) {
   const calls: string[] = []
   let index = 0
@@ -63,7 +58,6 @@ function fakeRpc(script: StatusRow[]) {
   return { rpc, calls }
 }
 
-/** Virtual clock — the loop must never sleep in real time under test. */
 function fakeClock() {
   let clock = 0
   return {
@@ -223,9 +217,6 @@ describe('waitForDeployment', () => {
   })
 
   test('a resume that takes a few polls to move is not called blocked', async () => {
-    // `applyDeployment` only dispatches the resume, so the row can still read
-    // `suspended` on the first re-read after approval. That must not be
-    // mistaken for a stuck gate.
     const { result, calls } = await run(
       [
         { status: 'suspended', statusReason: 'awaiting_approval' },
@@ -338,8 +329,6 @@ describe('describeDeployment', () => {
                       level: 'destructive',
                       reasons: ['drop_table'],
                     },
-                    // Already applied by an earlier attempt — not a decision
-                    // this run is being asked to make.
                     {
                       name: '0000_old',
                       level: 'destructive',
