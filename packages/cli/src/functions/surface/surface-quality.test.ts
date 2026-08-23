@@ -56,6 +56,17 @@ const read = () => {
  * went in; the assertion is `<=`, so a change that makes the doc worse fails
  * and a change that makes it better is expected to lower the number here.
  */
+/** The exports whose shape a signature cannot convey, so an example is required. */
+const WIRED_BY_EXAMPLE = [
+  'wireHTTP',
+  'wireChannel',
+  'wireScheduler',
+  'wireQueueWorker',
+  'defineSecret',
+  'defineVariable',
+  'addError',
+]
+
 const CORE_LEAK = 112
 const UNRESOLVABLE = 818
 const BARE_ERRORS = 5
@@ -168,6 +179,37 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
           `flag would have found it`
       )
     }
+  })
+
+  test('shows the wire helpers being used, from template source', () => {
+    const { symbols } = read()
+    const missing = WIRED_BY_EXAMPLE.filter(
+      (name) =>
+        !symbols.some(
+          (symbol) => symbol.name === name && (symbol.examples?.length ?? 0) > 0
+        )
+    )
+    assert.deepEqual(
+      missing,
+      [],
+      `${missing.join(', ')} carry no example. These are the exports a reader ` +
+        `reaches for first, and a signature alone does not show the shape of the ` +
+        `object they take. Wrap the real usage in templates/functions in ` +
+        `"// @snippet start <name>" and point an "@example snippet: <name>" at it.`
+    )
+  })
+
+  test('resolves every example that names a snippet', () => {
+    const { symbols } = read()
+    const unresolved = symbols.filter((symbol) =>
+      (symbol.examples ?? []).some((example) => /^snippet:/.test(example))
+    )
+    assert.deepEqual(
+      unresolved.map((symbol) => symbol.name),
+      [],
+      'an "@example snippet: name" reached the shipped doc unresolved, so the ' +
+        'reader is shown the reference instead of the code it names'
+    )
   })
 
   test('says what each key it lists is for', () => {

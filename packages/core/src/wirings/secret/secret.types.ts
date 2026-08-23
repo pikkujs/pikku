@@ -56,5 +56,7 @@ export type SecretDefinitions = SecretDefinitionMeta[]
  * Declares a secret this project needs, with the shape of its value. The CLI
  * collects every declaration into `CredentialsMap`, which is what makes
  * `secrets.getSecret('NAME')` return the right type instead of `unknown`.
+ *
+ * @example snippet: define-secret
  */
 export const defineSecret = <T>(_config: CoreSecret<T>): void => {}

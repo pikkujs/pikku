@@ -161,6 +161,8 @@ ${
  * @template ChannelData - Type of data associated with the channel
  * @template Channel - String literal type for the channel name
  * @param channel - Channel definition with connection, disconnection, and message handlers
+ *
+ * @example snippet: wire-channel
  */
 export const wireChannel = <ChannelData, Channel extends string>(
   channel: ChannelWiring<ChannelData, Channel> & AssertHTTPWiringParams<ChannelData, Channel>

@@ -31,6 +31,8 @@ type QueueWiring<In, Out> = CoreQueueWorker<PikkuFunctionConfig<In, Out, 'sessio
  * Workers process background jobs from queues.
  *
  * @param queueWorker - Queue worker definition with job handler
+ *
+ * @example snippet: wire-queue-worker
  */
 export const wireQueueWorker = (queueWorker: QueueWiring<any, any>) => {
   wireQueueWorkerCore(queueWorker as any)

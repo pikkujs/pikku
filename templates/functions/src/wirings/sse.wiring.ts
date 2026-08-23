@@ -1,6 +1,7 @@
 import { wireHTTP } from '#pikku/http'
 import { processTodosProgress, todoStream } from '../functions/sse.functions.js'
 
+// @snippet start wire-http
 wireHTTP({
   method: 'get',
   route: '/todos/progress',
@@ -8,6 +9,7 @@ wireHTTP({
   sse: true,
   tags: ['sse', 'realtime'],
 })
+// @snippet end wire-http
 
 wireHTTP({
   auth: false,

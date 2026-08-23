@@ -49,6 +49,8 @@ export type CollectSurfaceOptions = {
   importsSubpath?: string
   /** Restrict collection to these subpaths, so the program stays small. */
   subpaths?: string[]
+  /** The snippet regions an `@example snippet: name` resolves against. */
+  snippets?: Map<string, string>
 }
 
 type PackageJson = {
@@ -284,15 +286,43 @@ const deprecationReason = (tags: ts.JSDocTagInfo[]): string | undefined => {
   return text.length > 0 ? text : undefined
 }
 
+export class UnknownSnippetError extends Error {
+  constructor(name: string, symbol: string, known: string[]) {
+    super(
+      `The example on ${symbol} names the snippet "${name}", which no template declares. Wrap the code you want shown in "// @snippet start ${name}" / "// @snippet end ${name}". Declared: ${known.join(', ')}.`
+    )
+    this.name = 'UnknownSnippetError'
+  }
+}
+
+const SNIPPET_REFERENCE = /^snippet:\s*(\S+)$/
+
 /**
  * The `@example` blocks. `getDocumentationComment` returns the description only,
  * so an example an author wrote is dropped unless the tags are read separately.
+ * An `@example snippet: name` names a region of real template source instead of
+ * restating it, and is resolved here so the shipped doc holds code that compiles.
  */
-const examplesOf = (tags: ts.JSDocTagInfo[]): string[] =>
+const examplesOf = (
+  tags: ts.JSDocTagInfo[],
+  symbolName: string,
+  snippets: Map<string, string> | undefined
+): string[] =>
   tags
     .filter((tag) => tag.name === 'example')
     .map((tag) => ts.displayPartsToString(tag.text).trim())
     .filter((text) => text.length > 0)
+    .map((text) => {
+      const reference = text.match(SNIPPET_REFERENCE)
+      if (!reference?.[1] || !snippets) return text
+      const snippet = snippets.get(reference[1])
+      if (snippet === undefined) {
+        throw new UnknownSnippetError(reference[1], symbolName, [
+          ...snippets.keys(),
+        ])
+      }
+      return snippet
+    })
 
 /**
  * The doc comment as written. A leaf re-exports through `export *`, so the
@@ -375,7 +405,8 @@ const typeOfSymbol = (
   kind: SurfaceKind,
   checker: ts.TypeChecker
 ): ts.Type | undefined => {
-  if (DECLARED_TYPE_KINDS.has(kind)) return checker.getDeclaredTypeOfSymbol(symbol)
+  if (DECLARED_TYPE_KINDS.has(kind))
+    return checker.getDeclaredTypeOfSymbol(symbol)
   const declaration = symbol.declarations?.[0]
   return declaration
     ? checker.getTypeOfSymbolAtLocation(symbol, declaration)
@@ -386,7 +417,8 @@ const printType = (
   type: ts.Type,
   location: ts.Node | undefined,
   checker: ts.TypeChecker
-): string => checker.typeToString(type, location, SIGNATURE_FLAGS).replace(/\s+/g, ' ')
+): string =>
+  checker.typeToString(type, location, SIGNATURE_FLAGS).replace(/\s+/g, ' ')
 
 /**
  * The widest an expanded type may print before its name is the better answer.
@@ -401,11 +433,18 @@ const EXPANDED_FLAGS =
 const NOT_TERMINAL = /[{}]|=>/
 
 const collapse = (constituents: string[]): string[] => {
-  const collapsed = constituents.includes('true') && constituents.includes('false')
-    ? ['boolean', ...constituents.filter((c) => c !== 'true' && c !== 'false')]
-    : constituents
+  const collapsed =
+    constituents.includes('true') && constituents.includes('false')
+      ? [
+          'boolean',
+          ...constituents.filter((c) => c !== 'true' && c !== 'false'),
+        ]
+      : constituents
   const isAbsent = (c: string) => c === 'undefined' || c === 'null'
-  return [...collapsed.filter((c) => !isAbsent(c)), ...collapsed.filter(isAbsent)]
+  return [
+    ...collapsed.filter((c) => !isAbsent(c)),
+    ...collapsed.filter(isAbsent),
+  ]
 }
 
 /**
@@ -463,7 +502,9 @@ const constructorSignature = (
               ? checker.getTypeOfSymbolAtLocation(parameter, declaration)
               : checker.getTypeOfSymbol(parameter)
             const optional =
-              declaration && ts.isParameter(declaration) && declaration.questionToken
+              declaration &&
+              ts.isParameter(declaration) &&
+              declaration.questionToken
                 ? '?'
                 : ''
             return `${parameter.getName()}${optional}: ${printResolved(parameterType, declaration, checker, optional === '?')}`
@@ -508,7 +549,10 @@ export type SurfaceMember = {
 const LITERAL_RUN = /("[^"]*"(?: \| "[^"]*"){7,})/g
 
 const collapseRuns = (line: string): string =>
-  line.replace(LITERAL_RUN, (run) => `${run.split(' | ').length} names (pikku meta)`)
+  line.replace(
+    LITERAL_RUN,
+    (run) => `${run.split(' | ').length} names (pikku meta)`
+  )
 
 /**
  * A key declared by the project rather than by the framework — the services in
@@ -573,7 +617,8 @@ const shapeOf = (
     const parameterType = declaration
       ? checker.getTypeOfSymbolAtLocation(parameter, declaration)
       : checker.getTypeOfSymbol(parameter)
-    if (checker.getPropertiesOfType(parameterType).length > 0) return parameterType
+    if (checker.getPropertiesOfType(parameterType).length > 0)
+      return parameterType
   }
   return undefined
 }
@@ -621,7 +666,8 @@ const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
     for (const statement of sourceFile.statements) {
       if (!ts.isExpressionStatement(statement)) continue
       const call = statement.expression
-      if (!ts.isCallExpression(call) || !ts.isIdentifier(call.expression)) continue
+      if (!ts.isCallExpression(call) || !ts.isIdentifier(call.expression))
+        continue
       if (call.expression.text === 'addError') {
         const [name, details] = call.arguments
         if (name && details) record(name, details)
@@ -664,7 +710,7 @@ const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
 
 export const collectSurface = async (
   packageDir: string,
-  { importsSubpath, subpaths }: CollectSurfaceOptions = {}
+  { importsSubpath, subpaths, snippets }: CollectSurfaceOptions = {}
 ): Promise<SurfaceEntrypoint[]> => {
   const root = resolve(packageDir)
   const packageJson = await readJson<PackageJson>(join(root, 'package.json'))
@@ -753,7 +799,7 @@ export const collectSurface = async (
       const target = aliasTargetOf(symbol, checker)
       const type = typeOfSymbol(target, kind, checker)
       const location = target.declarations?.[0]
-      const examples = examplesOf(tags)
+      const examples = examplesOf(tags, name, snippets)
       const members = type ? membersOf(type, kind, checker, program, root) : []
       symbols.push({
         name,

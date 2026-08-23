@@ -4,12 +4,14 @@ import {
   weeklyCleanup,
 } from '../functions/scheduled.functions.js'
 
+// @snippet start wire-scheduler
 wireScheduler({
   name: 'dailySummary',
   schedule: '0 9 * * *',
   func: dailySummary,
   tags: ['daily', 'summary'],
 })
+// @snippet end wire-scheduler
 
 wireScheduler({
   name: 'weeklyCleanup',

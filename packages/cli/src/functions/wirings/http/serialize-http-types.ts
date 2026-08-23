@@ -39,6 +39,8 @@ type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out,
  * @template Out - Output type for the HTTP wiring
  * @template Route - String literal type for the HTTP path (e.g., "/users/:id")
  * @param httpWiring - HTTP wiring definition with handler, method, and optional middleware
+ *
+ * @example snippet: wire-http
  */
 export const wireHTTP = <In, Out, Route extends string>(
   httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
