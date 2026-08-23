@@ -67,7 +67,7 @@ export const pikkuServices = (
   return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
     const createdServices = await func(config, existingServices)
     const services = { ...existingServices, ...createdServices }
-    const allowedToShadow = new Set(${JSON.stringify(allowShadowedServices)})
+    const allowedToShadow = new Set<string>(${JSON.stringify(allowShadowedServices)})
     const shadowed = Object.keys(createdServices).filter(
       (name) =>
         !allowedToShadow.has(name) &&
