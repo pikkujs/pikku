@@ -7,7 +7,7 @@ import {
   addTagMiddleware,
   clearMiddlewareCache,
 } from '../../middleware-runner.js'
-import { ForbiddenError } from '../../errors/errors.js'
+import { ForbiddenError, MissingSessionError } from '../../errors/errors.js'
 import { resolveAddonAuth, resolveAddonTags, wireAddon } from './wire-addon.js'
 
 const ADDON_PACKAGE = '@addon/console'
@@ -114,7 +114,7 @@ describe('wireAddon auth on direct wirings', () => {
 
     await assert.rejects(
       () => callOverDirectWiring('credentialGet'),
-      ForbiddenError
+      MissingSessionError
     )
   })
 
@@ -141,7 +141,7 @@ describe('wireAddon auth on direct wirings', () => {
 
     await assert.rejects(
       () => callOverDirectWiring('credentialGet', { auth: true }),
-      ForbiddenError
+      MissingSessionError
     )
   })
 
@@ -161,7 +161,7 @@ describe('wireAddon auth on direct wirings', () => {
     ]) {
       await assert.rejects(
         () => callOverDirectWiring('credentialGet', { wireType }),
-        ForbiddenError,
+        MissingSessionError,
         `${wireType} should have been gated`
       )
     }

@@ -32,7 +32,7 @@ export class LocalSecretService implements SecretService {
     if (value) {
       return createSecretValue(this.parseSecret<T>(value))
     }
-    throw new Error('Requested secret not found')
+    throw new Error(`Requested secret not found: ${key}`)
   }
 
   public async setSecret(key: string, value: unknown): Promise<void> {

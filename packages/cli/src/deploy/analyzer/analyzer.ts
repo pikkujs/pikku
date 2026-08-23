@@ -71,6 +71,7 @@ export interface AnalyzerOptions {
    * Queues created via explicit `wireQueue(...)` user code are unaffected.
    */
   workflowQueues?: boolean
+  globalHTTPPrefix?: string
 }
 
 export function analyzeDeployment(
@@ -80,6 +81,8 @@ export function analyzeDeployment(
   const serverlessIncompatible = new Set(options.serverlessIncompatible ?? [])
   const defaultTarget = options.defaultTarget ?? 'serverless'
   const workflowQueues = options.workflowQueues ?? true
+  const httpPrefix = (options.globalHTTPPrefix ?? '').replace(/\/+$/, '')
+  const prefixed = (route: string) => `${httpPrefix}${route}`
   const units: DeploymentUnit[] = []
   const queues: QueueDefinition[] = []
   const scheduledTasks: ScheduledTaskDefinition[] = []
@@ -174,7 +177,7 @@ export function analyzeDeployment(
       const funcName = funcMeta.name ?? funcId
       const rpcRoute = {
         method: 'post',
-        route: `/rpc/${funcName}`,
+        route: prefixed(`/rpc/${funcName}`),
         pikkuFuncId: funcId,
       }
       const fetchHandler = handlers.find(
@@ -191,7 +194,7 @@ export function analyzeDeployment(
       const funcName = funcMeta.name ?? funcId
       const remoteRoute = {
         method: 'post',
-        route: `/remote/rpc/${funcName}`,
+        route: prefixed(`/remote/rpc/${funcName}`),
         pikkuFuncId: funcId,
       }
       const fetchHandler = handlers.find(
@@ -250,22 +253,22 @@ export function analyzeDeployment(
     const agentRoutes = [
       {
         method: 'post',
-        route: `/rpc/agent/${agentName}`,
+        route: prefixed(`/rpc/agent/${agentName}`),
         pikkuFuncId: `agentRun:${agentName}`,
       },
       {
         method: 'post',
-        route: `/rpc/agent/${agentName}/stream`,
+        route: prefixed(`/rpc/agent/${agentName}/stream`),
         pikkuFuncId: `agentStream:${agentName}`,
       },
       {
         method: 'post',
-        route: `/rpc/agent/${agentName}/approve`,
+        route: prefixed(`/rpc/agent/${agentName}/approve`),
         pikkuFuncId: `agentApprove:${agentName}`,
       },
       {
         method: 'post',
-        route: `/rpc/agent/${agentName}/resume`,
+        route: prefixed(`/rpc/agent/${agentName}/resume`),
         pikkuFuncId: `agentResume:${agentName}`,
       },
     ]

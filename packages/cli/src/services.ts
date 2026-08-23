@@ -234,6 +234,10 @@ export const createSingletonServices: CreateSingletonServices<
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false
 
+  const releaseProgram = (state: { program?: unknown } | undefined) => {
+    if (state) state.program = undefined
+  }
+
   /**
    * `unfiltered` is for commands that RUN the project rather than generate from
    * it. The CLI filters narrow what gets written out, which is meaningless to a
@@ -392,6 +396,8 @@ export const createSingletonServices: CreateSingletonServices<
       logger.debug(`Inspector took ${Date.now() - inspectStart}ms`)
       inspectedTsGeneration = tsGenerationAtInspect
       inspectorInvalidated = false
+
+      releaseProgram(unfilteredState)
 
       if (
         'diagnostics' in unfilteredState &&

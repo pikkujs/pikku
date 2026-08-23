@@ -4,7 +4,6 @@ import type { SecretValue } from '../classification/secret-value.js'
 export type SecretValues<T> = { [K in keyof T]: SecretValue<T[K]> }
 
 export interface SecretService {
-  /** Throws if the secret is not found. Unwrap the result with `.reveal()`. */
   getSecret<T = string>(key: string): Promise<SecretValue<T>>
   /** Answers for any key, including a disallowed one — it must not throw. */
   hasSecret(key: string): Promise<boolean>

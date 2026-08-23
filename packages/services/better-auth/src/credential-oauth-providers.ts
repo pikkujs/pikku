@@ -1,5 +1,6 @@
 import type { SecretValue } from '@pikku/core/classification'
 import type { OAuth2CredentialConfig } from '@pikku/core/secret'
+import { isSecretNotFound } from './secret-not-found.js'
 
 export type CredentialOAuth2Configs = Record<
   string,
@@ -85,7 +86,7 @@ export const credentialOAuthProviders = async (
           ).reveal()
         } catch (e: any) {
           // Not configured yet — skip this provider, don't take down all of auth.
-          if (e?.message === 'Requested secret not found') {
+          if (isSecretNotFound(e)) {
             logger?.warn(
               `OAuth2 credential '${providerId}' skipped — app secret '${config.appCredentialSecretId}' is not configured.`
             )

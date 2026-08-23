@@ -54,6 +54,7 @@ export const FabricInit = pikkuSessionlessFunc({
       repoUrl: repo,
       name,
       defaultBranch: branch,
+      productionBranch: 'main',
     })
 
     const path = await writeProjectConfig(process.cwd(), {

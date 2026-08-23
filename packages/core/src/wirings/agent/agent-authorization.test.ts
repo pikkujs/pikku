@@ -8,7 +8,11 @@ import {
 } from '../../pikku-state.js'
 import { assertAgentAuthorized } from './agent-prepare.js'
 import { clearPermissionsCache } from '../../permissions.js'
-import { ForbiddenError, MissingScopeError } from '../../errors/errors.js'
+import {
+  ForbiddenError,
+  MissingScopeError,
+  MissingSessionError,
+} from '../../errors/errors.js'
 import type { CoreAgent } from './agent.types.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 
@@ -73,7 +77,7 @@ describe('assertAgentAuthorized', () => {
     await assertAgentAuthorized(agent, {}, null)
   })
 
-  test('throws ForbiddenError when auth is explicitly true and no session exists', async () => {
+  test('throws MissingSessionError when auth is explicitly true and no session exists', async () => {
     const agent = addAgent('needs-session', { auth: true })
     await assert.rejects(
       () =>
@@ -82,7 +86,7 @@ describe('assertAgentAuthorized', () => {
           { sessionService: sessionService(undefined) },
           null
         ),
-      ForbiddenError
+      MissingSessionError
     )
   })
 

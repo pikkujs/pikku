@@ -114,7 +114,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
           ? `import type { ${pikkuConfigType.type} } from '${getFileImportRelativePath(setupTypesFile, pikkuConfigType.typePath, packageMappings)}'`
           : '// Config type not found, will use fallback',
         pikkuConfigType?.type,
-        `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(setupTypesFile, servicesFile, packageMappings)}'`
+        `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(setupTypesFile, servicesFile, packageMappings)}'`,
+        config.allowShadowedServices
       )
     )
 

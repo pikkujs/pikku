@@ -3,8 +3,9 @@
  *
  * The "server function" is a Pikku function; this shim is a typed *caller* over
  * the generated RPC map (`PikkuRPC`) for use in Start loaders, actions and
- * components. The API base URL comes from `import.meta.env.VITE_API_URL` and the
- * shim throws if it is unset — never hardcode a host.
+ * components. The base URL is derived from the page origin in the browser and
+ * from a runtime binding during SSR — never hardcoded, and never taken from a
+ * build-time variable alone, which is undefined in a deployed bundle.
  *
  * @param rpcWiringsPath - import path to the file exporting the `PikkuRPC` class
  */
@@ -17,19 +18,41 @@ export const serializeTanStackStartShim = (rpcWiringsPath: string): string => {
  *
  *   loader: () => makeApi().invoke('listCards', {})
  *
- * The API base URL is read from \`import.meta.env.VITE_API_URL\`.
+ * In the browser the base URL is \`import.meta.env.VITE_API_URL\` when the build
+ * inlined one, otherwise the page's own origin + /api. During SSR it comes from
+ * \`PIKKU_API_URL\` / \`VITE_API_URL\` in the environment, since there is no page
+ * to derive it from.
  */
 import { PikkuRPC } from '${rpcWiringsPath}'
 
-export function makeApi(): PikkuRPC {
-  const serverUrl = import.meta.env.VITE_API_URL
-  if (!serverUrl) {
-    throw new Error(
-      'VITE_API_URL is not set — point it at the Pikku API base URL'
-    )
+const LOCAL_HOSTNAME = /^(localhost|127\\.0\\.0\\.1)$/
+const LOCAL_BASE = /\\/\\/(localhost|127\\.0\\.0\\.1)(:|\\/)/
+
+export function apiBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_URL
+
+  if (import.meta.env.SSR) {
+    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+      .process?.env
+    const serverUrl = env?.PIKKU_API_URL ?? env?.VITE_API_URL ?? configured
+    if (!serverUrl) {
+      throw new Error(
+        'No API base URL during SSR — set VITE_API_URL for local dev, or bind PIKKU_API_URL on the deployed server'
+      )
+    }
+    return serverUrl
   }
+
+  const remote = !LOCAL_HOSTNAME.test(window.location.hostname)
+  if (configured && !(remote && LOCAL_BASE.test(configured))) {
+    return configured
+  }
+  return window.location.origin + '/api'
+}
+
+export function makeApi(): PikkuRPC {
   const rpc = new PikkuRPC()
-  rpc.setServerUrl(serverUrl)
+  rpc.setServerUrl(apiBaseUrl())
   return rpc
 }
 `

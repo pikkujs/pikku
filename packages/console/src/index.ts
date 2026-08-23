@@ -80,6 +80,9 @@ export { DockFlyout } from './components/nav-dock/DockFlyout'
 // such an app replaces wholesale. Without this the app's only way to reach them
 // is to restate the storage keys and hope they never change.
 export {
+  DOCK_SCALE_MAX,
+  DOCK_SCALE_MIN,
+  DOCK_SCALE_STEP,
   DOCK_SIDES,
   isVerticalDock,
   useDockPrefs,

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "module": "Node18",
+    "moduleResolution": "NodeNext",
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node", "@pikku/playwright"],
+    "paths": {
+      "#pikku/*.js": ["./.pikku/*.ts"],
+      "#pikku/*": ["./.pikku/*"]
+    }
+  },
+  "include": ["src/", "test/", ".pikku/*"],
+  "files": []
+}
