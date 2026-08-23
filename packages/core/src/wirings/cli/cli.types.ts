@@ -336,14 +336,23 @@ export interface CoreCLI<
   PikkuMiddleware,
   PikkuCLIRender,
 > {
+  /** The command name a user types. It is also what `--help` prints as the program. */
   program: string
+  /** What the program is for, shown at the top of `--help`. */
   description?: string
+  /** Top-level commands, keyed by the word that selects them. */
   commands: Commands
+  /** Flags accepted before any command, for things that apply to the whole program. */
   options?: CLIOptions<Options>
+  /** Wraps every command. */
   middleware?: PikkuMiddleware[]
+  /** The fallback printer for commands that declare none of their own. */
   render?: PikkuCLIRender
+  /** A one-line description for listings, where the full `description` is too long. */
   summary?: string
+  /** Names of error classes any command may throw, so each one's registered exit behaviour is used. */
   errors?: string[]
+  /** Filters this program in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /**
    * Requires a session on the websocket serving this program remotely. Has no

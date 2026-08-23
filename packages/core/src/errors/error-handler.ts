@@ -19,8 +19,11 @@ export const isExpectedError = (error: unknown): boolean =>
   (error as { expected?: unknown } | null)?.expected === true
 
 export interface ErrorDetails {
+  /** The HTTP status this error answers with, instead of a 500. */
   status: number
+  /** What the caller is told. It leaves the process, so it must not name anything internal. */
   message: string
+  /** The JSON-RPC code an MCP client is given, where the HTTP status has no equivalent. */
   mcpCode?: number
 }
 

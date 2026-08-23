@@ -2,16 +2,25 @@ import { pikkuState } from '../../pikku-state.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 export type WireAddonConfig = {
+  /** How this instance is addressed. One package may be wired more than once, and the name is what tells the instances apart. */
   name: string
+  /** The npm package the addon ships in. */
   package: string
+  /** Where to reach the addon when it runs as its own service rather than in-process. */
   rpcEndpoint?: string
+  /** Requires a session for every function in the addon, whatever each one declares. Gates an addon whose functions are individually open. */
   auth?: boolean
+  /** Offers the addon's functions to MCP clients as tools, without wiring each one. */
   mcp?: boolean
+  /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /** Required of every function in the addon, on top of the function's own. */
   scopes?: string[]
+  /** Points a secret the addon reads at a different key in this deployment, so two instances can hold different credentials. */
   secretOverrides?: Record<string, string>
+  /** Points a variable the addon reads at a different key in this deployment. */
   variableOverrides?: Record<string, string>
+  /** Points a credential the addon reads at a different key in this deployment. */
   credentialOverrides?: Record<string, string>
   /**
    * Secrets this instance may read on top of the ones it declared, named as the

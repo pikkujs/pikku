@@ -70,14 +70,21 @@ export type CoreGateway<
 > = Partial<
   Pick<CommonWireMeta, 'title' | 'summary' | 'description' | 'errors'>
 > & {
+  /** Unique across the project. It is how the gateway is addressed in `pikku meta` and in logs. */
   name: string
+  /** How the platform reaches us: a `webhook` it posts to, a `websocket` it holds open, or a `listener` we open outward. */
   type: GatewayTransportType
   /** Required for 'webhook' and 'websocket'; unused for 'listener'. */
   route?: string
+  /** Which service this speaks to — slack, whatsapp, discord. It selects the adapter's dialect, not the transport. */
   platform?: string
+  /** Translates between the platform's message format and pikku's. A factory is called with services, for an adapter that needs a token or a client. */
   adapter: GatewayAdapter | GatewayAdapterFactory
+  /** The function to run per inbound message. It receives the normalised message, not the platform's raw payload. */
   func: PikkuFunctionConfig
+  /** Wraps every inbound message: signature verification, tracing, rate limiting. */
   middleware?: CorePikkuMiddlewareGroup<any, any>
+  /** Filters this gateway in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /** Unset lets the handler's own `auth` govern; gateway handlers are sessionless by default. */
   auth?: boolean

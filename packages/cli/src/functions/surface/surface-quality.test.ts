@@ -59,7 +59,7 @@ const CORE_LEAK = 86
 const UNRESOLVABLE = 774
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
-const DOCUMENTED_KEYS = 63
+const DOCUMENTED_KEYS = 76
 
 describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
   test('does not name the internals the generated aliases exist to hide', () => {
