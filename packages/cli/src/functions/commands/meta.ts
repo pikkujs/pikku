@@ -1,5 +1,9 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getSchema } from '@pikku/core/schema'
+import { CodeEditService } from '@pikku/code-edit'
+import type { CodeEditOperation } from '@pikku/code-edit'
+import { readFile } from 'node:fs/promises'
+import { relative, resolve } from 'node:path'
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value))
@@ -540,6 +544,87 @@ export const pikkuMetaClients = pikkuSessionlessFunc<{}, void>({
       rpcs,
       workflows,
       channels,
+    })
+  },
+})
+
+async function readOperationsInput(file: string | undefined): Promise<unknown> {
+  const raw = file
+    ? await readFile(resolve(file), 'utf-8')
+    : await new Promise<string>((res, rej) => {
+        let buffer = ''
+        process.stdin.setEncoding('utf-8')
+        process.stdin.on('data', (chunk) => (buffer += chunk))
+        process.stdin.on('end', () => res(buffer))
+        process.stdin.on('error', rej)
+      })
+
+  if (!raw.trim()) {
+    throw new Error(
+      file
+        ? `${file} is empty`
+        : 'No operations on stdin. Pass a file, or pipe JSON in.'
+    )
+  }
+
+  try {
+    return JSON.parse(raw)
+  } catch (e) {
+    throw new Error(
+      `Could not parse operations as JSON: ${(e as Error).message}`
+    )
+  }
+}
+
+function parseOperations(input: unknown): CodeEditOperation[] {
+  const operations = Array.isArray(input)
+    ? input
+    : (input as { operations?: unknown })?.operations
+
+  if (!Array.isArray(operations)) {
+    throw new Error(
+      'Expected an array of operations, or an object with an "operations" array'
+    )
+  }
+
+  const kinds = ['functionConfig', 'functionBody', 'agentConfig']
+
+  operations.forEach((operation, index) => {
+    const at = `operations[${index}]`
+    if (!operation || typeof operation !== 'object') {
+      throw new Error(`${at} is not an object`)
+    }
+    const { kind, sourceFile, exportedName } = operation as Record<
+      string,
+      unknown
+    >
+    if (typeof kind !== 'string' || !kinds.includes(kind)) {
+      throw new Error(`${at}.kind must be one of ${kinds.join(', ')}`)
+    }
+    if (typeof sourceFile !== 'string' || !sourceFile) {
+      throw new Error(`${at}.sourceFile must be a non-empty string`)
+    }
+    if (typeof exportedName !== 'string' || !exportedName) {
+      throw new Error(`${at}.exportedName must be a non-empty string`)
+    }
+  })
+
+  return operations as CodeEditOperation[]
+}
+
+export const pikkuMetaApply = pikkuSessionlessFunc<{ file?: string }, void>({
+  func: async ({ config }, data) => {
+    const operations = parseOperations(await readOperationsInput(data.file))
+
+    const rootDir = (config as any).rootDir ?? process.cwd()
+    const codeEdit = new CodeEditService(rootDir)
+    const files = await codeEdit.applyOperations(operations)
+
+    out({
+      schemaVersion: 'meta-apply.v1',
+      applied: operations.length,
+      files: files.map((f) => relative(rootDir, f)),
+      generatedMetaIsStale: operations.some((o) => o.kind !== 'functionBody'),
     })
   },
 })

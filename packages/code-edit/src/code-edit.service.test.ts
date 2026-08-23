@@ -4,6 +4,7 @@ import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { CodeEditService } from './code-edit.service.js'
+import type { CodeEditOperation } from './code-edit.service.js'
 
 let tempDir: string
 let service: CodeEditService
@@ -632,6 +633,233 @@ describe('CodeEditService', () => {
 
       const updated = await readTempFile('funcs.ts')
       assert.ok(updated.includes('tags: []'))
+    })
+  })
+
+  describe('permissions', () => {
+    test('adds permissions and the import it needs', async () => {
+      await createTempFile('funcs.ts', FUNCTION_SOURCE)
+
+      await service.updateFunctionConfig(
+        join(tempDir, 'funcs.ts'),
+        'listTodos',
+        {
+          permissions: {
+            functionLevel: { name: 'isTodoOwner', from: '../permissions.js' },
+          },
+        }
+      )
+
+      const updated = await readTempFile('funcs.ts')
+      assert.ok(updated.includes('permissions: { functionLevel: isTodoOwner }'))
+      assert.ok(
+        updated.includes("import { isTodoOwner } from '../permissions.js'")
+      )
+    })
+
+    test('an array of permissions renders as bare identifiers', async () => {
+      await createTempFile('funcs.ts', FUNCTION_SOURCE)
+
+      await service.updateFunctionConfig(
+        join(tempDir, 'funcs.ts'),
+        'listTodos',
+        {
+          permissions: {
+            functionLevel: [
+              { name: 'isLoggedIn', from: '../permissions.js' },
+              { name: 'isTodoOwner', from: '../permissions.js' },
+            ],
+          },
+        }
+      )
+
+      const updated = await readTempFile('funcs.ts')
+      assert.ok(
+        updated.includes(
+          'permissions: { functionLevel: [isLoggedIn, isTodoOwner] }'
+        )
+      )
+      assert.ok(
+        updated.includes(
+          "import { isLoggedIn, isTodoOwner } from '../permissions.js'"
+        )
+      )
+    })
+
+    test('widens an existing import instead of adding a second one', async () => {
+      await createTempFile(
+        'funcs.ts',
+        FUNCTION_SOURCE.replace(
+          "import { pikkuSessionlessFunc } from '@pikku/core'",
+          "import { pikkuSessionlessFunc } from '@pikku/core'\nimport { isLoggedIn } from '../permissions.js'"
+        )
+      )
+
+      await service.updateFunctionConfig(
+        join(tempDir, 'funcs.ts'),
+        'listTodos',
+        {
+          permissions: {
+            functionLevel: [
+              { name: 'isLoggedIn', from: '../permissions.js' },
+              { name: 'isTodoOwner', from: '../permissions.js' },
+            ],
+          },
+        }
+      )
+
+      const updated = await readTempFile('funcs.ts')
+      assert.equal(
+        updated.match(/from '\.\.\/permissions\.js'/g)?.length,
+        1,
+        'should not add a second import from the same module'
+      )
+      assert.ok(
+        updated.includes(
+          "import { isLoggedIn, isTodoOwner } from '../permissions.js'"
+        )
+      )
+    })
+
+    test('does not re-import a name that is already imported', async () => {
+      await createTempFile(
+        'funcs.ts',
+        FUNCTION_SOURCE.replace(
+          "import { pikkuSessionlessFunc } from '@pikku/core'",
+          "import { pikkuSessionlessFunc } from '@pikku/core'\nimport { isTodoOwner } from '../permissions.js'"
+        )
+      )
+
+      await service.updateFunctionConfig(
+        join(tempDir, 'funcs.ts'),
+        'listTodos',
+        {
+          permissions: {
+            functionLevel: { name: 'isTodoOwner', from: '../permissions.js' },
+          },
+        }
+      )
+
+      const updated = await readTempFile('funcs.ts')
+      assert.equal(updated.match(/isTodoOwner/g)?.length, 2)
+    })
+
+    test('removes permissions by setting null', async () => {
+      await createTempFile('funcs.ts', FUNCTION_SOURCE)
+      const path = join(tempDir, 'funcs.ts')
+
+      await service.updateFunctionConfig(path, 'listTodos', {
+        permissions: {
+          functionLevel: { name: 'isTodoOwner', from: '../permissions.js' },
+        },
+      })
+      await service.updateFunctionConfig(path, 'listTodos', {
+        permissions: null,
+      })
+
+      const updated = await readTempFile('funcs.ts')
+      assert.ok(!updated.includes('permissions:'))
+    })
+
+    test('setting tools brings ref in with it', async () => {
+      await createTempFile('funcs.ts', FUNCTION_NO_TRAILING_COMMA)
+
+      await service.updateAgentConfig(join(tempDir, 'funcs.ts'), 'createTodo', {
+        tools: ['listTodos'],
+      })
+
+      const updated = await readTempFile('funcs.ts')
+      assert.ok(updated.includes("tools: [ref('listTodos')]"))
+      assert.ok(updated.includes("import { ref } from '#pikku/function'"))
+    })
+  })
+
+  describe('applyOperations', () => {
+    test('applies edits across several files', async () => {
+      await createTempFile('a.ts', FUNCTION_SOURCE)
+      await createTempFile('b.ts', AGENT_SOURCE)
+
+      const written = await service.applyOperations([
+        {
+          kind: 'functionConfig',
+          sourceFile: join(tempDir, 'a.ts'),
+          exportedName: 'listTodos',
+          changes: { title: 'Renamed' },
+        },
+        {
+          kind: 'agentConfig',
+          sourceFile: join(tempDir, 'b.ts'),
+          exportedName: 'todoAssistant',
+          changes: { maxSteps: 9 },
+        },
+      ])
+
+      assert.equal(written.length, 2)
+      assert.ok((await readTempFile('a.ts')).includes("title: 'Renamed'"))
+      assert.ok((await readTempFile('b.ts')).includes('maxSteps: 9'))
+    })
+
+    test('composes several operations on one file', async () => {
+      await createTempFile('a.ts', FUNCTION_SOURCE)
+
+      const written = await service.applyOperations([
+        {
+          kind: 'functionConfig',
+          sourceFile: join(tempDir, 'a.ts'),
+          exportedName: 'listTodos',
+          changes: { title: 'First' },
+        },
+        {
+          kind: 'functionConfig',
+          sourceFile: join(tempDir, 'a.ts'),
+          exportedName: 'listTodos',
+          changes: {
+            summary: 'Second',
+            permissions: {
+              functionLevel: { name: 'isTodoOwner', from: '../permissions.js' },
+            },
+          },
+        },
+      ])
+
+      assert.equal(written.length, 1, 'one file touched, written once')
+      const updated = await readTempFile('a.ts')
+      assert.ok(updated.includes("title: 'First'"))
+      assert.ok(updated.includes("summary: 'Second'"))
+      assert.ok(updated.includes('permissions: { functionLevel: isTodoOwner }'))
+      assert.ok(
+        updated.includes("import { isTodoOwner } from '../permissions.js'")
+      )
+    })
+
+    test('writes nothing when a later operation fails', async () => {
+      await createTempFile('a.ts', FUNCTION_SOURCE)
+      await createTempFile('b.ts', AGENT_SOURCE)
+      const before = await readTempFile('a.ts')
+
+      const operations: CodeEditOperation[] = [
+        {
+          kind: 'functionConfig',
+          sourceFile: join(tempDir, 'a.ts'),
+          exportedName: 'listTodos',
+          changes: { title: 'Should not survive' },
+        },
+        {
+          kind: 'functionConfig',
+          sourceFile: join(tempDir, 'b.ts'),
+          exportedName: 'noSuchExport',
+          changes: { title: 'Boom' },
+        },
+      ]
+
+      await assert.rejects(() => service.applyOperations(operations))
+
+      assert.equal(
+        await readTempFile('a.ts'),
+        before,
+        'the earlier file must be untouched'
+      )
+      assert.ok(!(await readTempFile('b.ts')).includes('Boom'))
     })
   })
 })

@@ -2,6 +2,16 @@ import * as ts from 'typescript'
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
+/**
+ * A value that is written as a bare identifier rather than a literal, plus the
+ * module it has to be imported from. The caller supplies `from` because the
+ * source file alone cannot say where a symbol that is not there yet lives.
+ */
+export interface SymbolRef {
+  name: string
+  from: string
+}
+
 export interface FunctionConfigChanges {
   title?: string | null
   description?: string | null
@@ -13,7 +23,28 @@ export interface FunctionConfigChanges {
   mcp?: boolean | null
   readonly?: boolean | null
   approvalRequired?: boolean | null
+  permissions?: Record<string, SymbolRef | SymbolRef[]> | null
 }
+
+export type CodeEditOperation =
+  | {
+      kind: 'functionConfig'
+      sourceFile: string
+      exportedName: string
+      changes: FunctionConfigChanges
+    }
+  | {
+      kind: 'functionBody'
+      sourceFile: string
+      exportedName: string
+      body: string
+    }
+  | {
+      kind: 'agentConfig'
+      sourceFile: string
+      exportedName: string
+      changes: AgentConfigChanges
+    }
 
 export interface AgentConfigChanges {
   name?: string
@@ -109,14 +140,25 @@ export class CodeEditService {
   ): Promise<void> {
     const absPath = this.resolvePath(sourceFile)
     const content = await readFile(absPath, 'utf-8')
-    const callInfo = this.findPikkuCall(content, exportedName)
+    const result = this.editFunctionConfig(content, exportedName, changes)
+    await writeFile(absPath, result, 'utf-8')
+  }
 
+  private editFunctionConfig(
+    content: string,
+    exportedName: string,
+    changes: FunctionConfigChanges
+  ): string {
+    const callInfo = this.findPikkuCall(content, exportedName)
     const result = this.applyPropertyChanges(
       content,
       callInfo,
       changes as Record<string, unknown>
     )
-    await writeFile(absPath, result, 'utf-8')
+    return this.ensureImports(
+      result,
+      this.collectSymbolRefs(changes as Record<string, unknown>)
+    )
   }
 
   async updateFunctionBody(
@@ -126,6 +168,21 @@ export class CodeEditService {
   ): Promise<void> {
     const absPath = this.resolvePath(sourceFile)
     const content = await readFile(absPath, 'utf-8')
+    const result = this.editFunctionBody(
+      content,
+      exportedName,
+      newBody,
+      sourceFile
+    )
+    await writeFile(absPath, result, 'utf-8')
+  }
+
+  private editFunctionBody(
+    content: string,
+    exportedName: string,
+    newBody: string,
+    sourceFile: string
+  ): string {
     const callInfo = this.findPikkuCall(content, exportedName)
 
     if (!callInfo.funcProperty) {
@@ -134,11 +191,11 @@ export class CodeEditService {
       )
     }
 
-    const result =
+    return (
       content.slice(0, callInfo.funcProperty.valueStart) +
       newBody +
       content.slice(callInfo.funcProperty.valueEnd)
-    await writeFile(absPath, result, 'utf-8')
+    )
   }
 
   async readAgentSource(
@@ -166,14 +223,82 @@ export class CodeEditService {
   ): Promise<void> {
     const absPath = this.resolvePath(sourceFile)
     const content = await readFile(absPath, 'utf-8')
-    const callInfo = this.findPikkuCall(content, exportedName)
+    const result = this.editAgentConfig(content, exportedName, changes)
+    await writeFile(absPath, result, 'utf-8')
+  }
 
+  private editAgentConfig(
+    content: string,
+    exportedName: string,
+    changes: AgentConfigChanges
+  ): string {
+    const callInfo = this.findPikkuCall(content, exportedName)
     const result = this.applyPropertyChanges(
       content,
       callInfo,
       changes as Record<string, unknown>
     )
-    await writeFile(absPath, result, 'utf-8')
+    return this.ensureImports(
+      result,
+      this.collectSymbolRefs(changes as Record<string, unknown>)
+    )
+  }
+
+  /**
+   * Applies a batch of edits all-or-nothing: every operation is resolved
+   * against in-memory content first, and nothing is written unless all of them
+   * succeed. A half-applied batch leaves a project that does not compile with
+   * no record of how far it got, which is the failure this exists to prevent.
+   *
+   * Operations on the same file compose in order, each one re-parsing the
+   * result of the last, because a splice invalidates every offset after it.
+   */
+  async applyOperations(operations: CodeEditOperation[]): Promise<string[]> {
+    const pending = new Map<string, string>()
+
+    for (const [index, operation] of operations.entries()) {
+      try {
+        const absPath = this.resolvePath(operation.sourceFile)
+        let content = pending.get(absPath)
+        if (content === undefined) {
+          content = await readFile(absPath, 'utf-8')
+        }
+
+        if (operation.kind === 'functionConfig') {
+          content = this.editFunctionConfig(
+            content,
+            operation.exportedName,
+            operation.changes
+          )
+        } else if (operation.kind === 'agentConfig') {
+          content = this.editAgentConfig(
+            content,
+            operation.exportedName,
+            operation.changes
+          )
+        } else {
+          content = this.editFunctionBody(
+            content,
+            operation.exportedName,
+            operation.body,
+            operation.sourceFile
+          )
+        }
+
+        pending.set(absPath, content)
+      } catch (e) {
+        throw new Error(
+          `operations[${index}] (${operation.kind} ${operation.exportedName} in ${operation.sourceFile}) failed, so nothing was written: ${(e as Error).message}`,
+          { cause: e }
+        )
+      }
+    }
+
+    for (const [absPath, content] of pending) {
+      await writeFile(absPath, content, 'utf-8')
+    }
+
+    return [...pending.keys()]
   }
 
   /**
@@ -316,16 +441,23 @@ export class CodeEditService {
 
       const existing = callInfo.properties.find((p) => p.name === key)
 
-      const serialized =
-        key === 'tools' && Array.isArray(value)
-          ? this.serializeToolsArray(value)
-          : this.serializeValue(value)
-
       if (value === null || value === undefined) {
         if (existing) {
           removals.push(existing)
         }
-      } else if (existing) {
+        continue
+      }
+
+      const serialized =
+        key === 'tools' && Array.isArray(value)
+          ? this.serializeToolsArray(value)
+          : key === 'permissions'
+            ? this.serializePermissions(
+                value as Record<string, SymbolRef | SymbolRef[]>
+              )
+            : this.serializeValue(value)
+
+      if (existing) {
         updates.push({ prop: existing, newValue: serialized })
       } else {
         additions.push({ name: key, value: serialized })
@@ -374,14 +506,20 @@ export class CodeEditService {
         ? /,\s*$/.test(content.slice(lastProp.propEnd, objEnd).trim() || ',')
         : false
 
-      let insertion = ''
       if (lastProp && !hasTrailingComma) {
-        insertion = `,\n${newProps}\n`
-      } else {
-        insertion = `\n${newProps}\n`
+        edits.push({
+          start: lastProp.propEnd,
+          end: lastProp.propEnd,
+          replacement: ',',
+        })
       }
 
-      edits.push({ start: objEnd, end: objEnd, replacement: insertion })
+      const alreadyOnOwnLine = /\n[ \t]*$/.test(content.slice(0, objEnd))
+      edits.push({
+        start: objEnd,
+        end: objEnd,
+        replacement: alreadyOnOwnLine ? `${newProps}\n` : `\n${newProps}\n`,
+      })
     }
 
     edits.sort((a, b) => b.start - a.start)
@@ -412,6 +550,143 @@ export class CodeEditService {
     if (tools.length === 0) return '[]'
     const items = tools.map((t) => `ref('${t}')`)
     return `[${items.join(', ')}]`
+  }
+
+  private serializePermissions(
+    permissions: Record<string, SymbolRef | SymbolRef[]>
+  ): string {
+    const entries = Object.entries(permissions).map(([group, value]) => {
+      const rendered = Array.isArray(value)
+        ? `[${value.map((r) => r.name).join(', ')}]`
+        : value.name
+      return `${group}: ${rendered}`
+    })
+    if (entries.length === 0) return '{}'
+    return `{ ${entries.join(', ')} }`
+  }
+
+  /**
+   * Every bare identifier a change-set is about to write, with the module it
+   * comes from. A spliced identifier that nothing imports is a file that no
+   * longer compiles, so this drives ensureImports.
+   */
+  private collectSymbolRefs(changes: Record<string, unknown>): SymbolRef[] {
+    const refs: SymbolRef[] = []
+
+    const permissions = changes['permissions']
+    if (permissions && typeof permissions === 'object') {
+      for (const value of Object.values(
+        permissions as Record<string, SymbolRef | SymbolRef[]>
+      )) {
+        for (const r of Array.isArray(value) ? value : [value]) {
+          refs.push(r)
+        }
+      }
+    }
+
+    const tools = changes['tools']
+    if (Array.isArray(tools) && tools.length > 0) {
+      refs.push({ name: 'ref', from: '#pikku/function' })
+    }
+
+    return refs
+  }
+
+  /**
+   * Adds any missing named imports, widening an existing import from the same
+   * module rather than adding a second one. Import text is spliced like every
+   * other edit here, so the rest of the file is untouched.
+   */
+  private ensureImports(content: string, refs: SymbolRef[]): string {
+    if (refs.length === 0) return content
+
+    const sourceFile = ts.createSourceFile(
+      'temp.ts',
+      content,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS
+    )
+
+    const byModule = new Map<string, Set<string>>()
+    for (const r of refs) {
+      const names = byModule.get(r.from) ?? new Set<string>()
+      names.add(r.name)
+      byModule.set(r.from, names)
+    }
+
+    const existing = new Map<
+      string,
+      { names: Set<string>; insertAt: number | null; end: number }
+    >()
+    let lastImportEnd = 0
+
+    for (const statement of sourceFile.statements) {
+      if (!ts.isImportDeclaration(statement)) continue
+      lastImportEnd = Math.max(lastImportEnd, statement.getEnd())
+
+      const specifier = statement.moduleSpecifier
+      if (!ts.isStringLiteral(specifier)) continue
+
+      const names = new Set<string>()
+      let insertAt: number | null = null
+      const bindings = statement.importClause?.namedBindings
+
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const element of bindings.elements) {
+          names.add(element.name.text)
+        }
+        const last = bindings.elements[bindings.elements.length - 1]
+        insertAt = last ? last.getEnd() : bindings.getEnd() - 1
+      }
+
+      existing.set(specifier.text, {
+        names,
+        insertAt,
+        end: statement.getEnd(),
+      })
+    }
+
+    const edits: Array<{ start: number; end: number; replacement: string }> = []
+    const newImports: string[] = []
+
+    for (const [module, names] of byModule) {
+      const match = existing.get(module)
+
+      if (match && match.insertAt !== null) {
+        const missing = [...names].filter((n) => !match.names.has(n))
+        if (missing.length === 0) continue
+        edits.push({
+          start: match.insertAt,
+          end: match.insertAt,
+          replacement: `, ${missing.join(', ')}`,
+        })
+        continue
+      }
+
+      if (match) continue
+
+      newImports.push(`import { ${[...names].join(', ')} } from '${module}'`)
+    }
+
+    if (newImports.length > 0) {
+      const text = newImports.join('\n')
+      edits.push({
+        start: lastImportEnd,
+        end: lastImportEnd,
+        replacement: lastImportEnd === 0 ? `${text}\n` : `\n${text}`,
+      })
+    }
+
+    edits.sort((a, b) => b.start - a.start)
+
+    let result = content
+    for (const edit of edits) {
+      result =
+        result.slice(0, edit.start) + edit.replacement + result.slice(edit.end)
+    }
+
+    return result
   }
 
   private serializeValue(value: unknown): string {
