@@ -474,7 +474,7 @@ export function updatePackageJSONScripts(
   if (packageManager === 'yarn') {
     packageJson.packageManager = 'yarn@4.9.2'
   } else if (packageManager === 'bun') {
-    packageJson.packageManager = 'bun@1.2.0'
+    packageJson.packageManager = 'bun@1.4.0'
   }
 
   packageJson.scripts.pikku = 'pikku all'

@@ -294,7 +294,7 @@ export async function runValidate(
         rootPkgPath,
         lines(
           'Add it to the root package.json:',
-          '  "packageManager": "bun@1.3.14"',
+          '  "packageManager": "bun@1.4.0"',
           'then run `bun install` to generate bun.lock and commit both.'
         )
       )
@@ -305,7 +305,7 @@ export async function runValidate(
         rootPkgPath,
         lines(
           'Set the root package.json to bun:',
-          '  "packageManager": "bun@1.3.14"',
+          '  "packageManager": "bun@1.4.0"',
           'then migrate the lockfile:',
           '  bun install && rm -f yarn.lock pnpm-lock.yaml package-lock.json',
           'and commit bun.lock.'

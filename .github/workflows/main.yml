@@ -203,7 +203,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.0
       - name: Run binary verifier
         shell: bash
         run: cd verifiers/binary && yarn test
@@ -445,7 +445,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.0
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1

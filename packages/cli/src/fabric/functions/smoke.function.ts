@@ -22,7 +22,7 @@ import {
 import { headSha, isWorkingTreeClean } from '../lib/git.js'
 import { added, changed, dim, removed } from '../lib/output.js'
 
-const DEFAULT_BUN_VERSION = 'bun@1.3.14'
+const DEFAULT_BUN_VERSION = 'bun@1.4.0'
 const DEFAULT_STEP_TIMEOUT_SECONDS = 300
 const DEFAULT_STARTUP_TIMEOUT_SECONDS = 60
 const DEV_LOG_TAIL_BYTES = 16_000
@@ -767,7 +767,7 @@ export const FabricSmoke = pikkuSessionlessFunc({
         steps,
         failure: `Unsupported packageManager for Fabric smoke: ${packageManager}`,
         logTail:
-          'Fabric is bun-only, so smoke runs the same way the build container does. Declare "packageManager": "bun@1.3.14" in package.json.',
+          'Fabric is bun-only, so smoke runs the same way the build container does. Declare "packageManager": "bun@1.4.0" in package.json.',
       }
       process.exitCode = 1
       return result
