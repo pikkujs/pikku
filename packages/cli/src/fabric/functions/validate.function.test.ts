@@ -2488,6 +2488,30 @@ describe('deployed frontend API base (live validate.function)', () => {
     }
   })
 
+  test('a bare localhost URL, with no origin derivation anywhere → warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const CHANNEL_URL = 'ws://localhost:3002/meditation'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-localhost-url-web'
+      )
+      assert.ok(
+        f,
+        `expected the bare-URL warning, got: ${ids(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'warn')
+      assert.match(f!.message, /src\/lib\/api\.ts/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('a localhost URL only in a comment is not a finding', async () => {
     const tmp = await makeTmp()
     try {
