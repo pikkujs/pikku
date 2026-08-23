@@ -101,6 +101,7 @@ import {
   pikkuMetaWorkflowsList,
   pikkuMetaContext,
   pikkuMetaClients,
+  pikkuMetaApply,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
 
@@ -1157,6 +1158,12 @@ wireCLI({
           func: pikkuMetaClients,
           description:
             'Frontend-targeted metadata: exposed RPCs, workflows, channels with their input/output type names and descriptions',
+        }),
+        apply: pikkuCLICommand({
+          func: pikkuMetaApply,
+          description:
+            'Apply a batch of edits to your own source, all-or-nothing. Takes JSON — a file, or stdin — of {operations: [{kind, sourceFile, exportedName, ...}]}, where kind is functionConfig, functionBody or agentConfig. Config edits are spliced into the original text, so formatting and comments survive, and a permission or tool written as an identifier brings its import with it. Nothing is written unless every operation resolves, so a batch either lands whole or not at all. Run `pikku all` once afterwards to refresh generated metadata.',
+          parameters: '[file]',
         }),
         functions: {
           func: pikkuMetaFunctionsList,

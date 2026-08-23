@@ -5164,6 +5164,7 @@ __metadata:
     "@pikku/ai-vercel": "npm:^0.12.13"
     "@pikku/better-auth": "npm:^0.12.29"
     "@pikku/bun-server": "npm:^0.12.8"
+    "@pikku/code-edit": "npm:^0.12.0"
     "@pikku/core": "npm:^0.12.93"
     "@pikku/deploy": "npm:^0.12.1"
     "@pikku/deploy-cloudflare": "npm:^0.12.13"
