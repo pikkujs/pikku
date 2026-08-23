@@ -42,7 +42,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'create a function',
     skill: 'pikku-concepts',
     summary:
-      'The function definers every wiring eventually points at, and the types they are written against.',
+      'The function definers every wiring eventually points at, and the types they are written against. A function is handed services, then its input, then the wire — and the wire is where the request lives: `session`, `setSession`, `clearSession`, `http`, `channel`, `rpc`. None of those are exports, so they are not listed here; destructure them from the third argument.',
   },
   middleware: {
     step: 'enhance it',

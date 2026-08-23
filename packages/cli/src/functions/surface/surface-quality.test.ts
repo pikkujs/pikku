@@ -58,6 +58,7 @@ const read = () => {
 const CORE_LEAK = 112
 const UNRESOLVABLE = 818
 const BARE_ERRORS = 5
+const BARE_SYMBOLS = 0
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
 const DOCUMENTED_KEYS = 76
@@ -117,6 +118,22 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
         `class, and it only exists in the emitted \`.js\` — a declaration file has ` +
         `no statements, so a scrape that reads only the program finds nothing:\n  ` +
         `${bare.join(', ')}`
+    )
+  })
+
+  test('says what each export it lists is for', () => {
+    const { symbols } = read()
+    const bare = symbols
+      .filter((symbol) => !symbol.name.endsWith('Error'))
+      .filter((symbol) => !(symbol.summary ?? '').trim())
+      .map((symbol) => symbol.name)
+    assert.ok(
+      bare.length <= BARE_SYMBOLS,
+      `${bare.length} exports are listed with nothing but a name and a kind, up ` +
+        `from ${BARE_SYMBOLS}. A reader who has to open the source to learn what an ` +
+        `export is for has been sent away from the doc. Write one line of JSDoc ` +
+        `where it is declared:\n  ` +
+        `${[...new Set(bare)].sort().join(', ')}`
     )
   })
 
