@@ -1,5 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getCLIVersion } from '../../utils/get-cli-version.js'
@@ -12,7 +12,7 @@ import { collectSnippets } from './collect-snippets.js'
  * `build.sh` generates the two projects it reads — one application, one addon —
  * and points this at them.
  */
-const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> --snippets <dir> --out <file> [--snippets-out <file>]`
+const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> --snippets <dir> --out <file> [--snippets-out <file>] [--snippets-meta-out <file>]`
 
 const parseArgs = (argv: string[]): Record<string, string> => {
   const parsed: Record<string, string> = {}
@@ -27,13 +27,44 @@ const parseArgs = (argv: string[]): Record<string, string> => {
   return parsed
 }
 
+/**
+ * The one region a marker cannot reach: `pikku.config.json` is parsed as strict
+ * JSON, so the scenario environments a doc has to show cannot be fenced in
+ * place. Read straight off the project's own config instead of being retyped.
+ */
+const addScenarioConfig = async (
+  projectDir: string,
+  snippets: Map<string, string>,
+  origins: Map<string, string>
+): Promise<void> => {
+  try {
+    const config = JSON.parse(
+      await readFile(join(projectDir, 'pikku.config.json'), 'utf8')
+    )
+    if (!config.scenarios) return
+    snippets.set(
+      'scenarioConfig',
+      JSON.stringify({ scenarios: config.scenarios }, null, 2)
+    )
+    origins.set('scenarioConfig', 'pikku.config.json')
+  } catch {
+    return
+  }
+}
+
 const main = async (argv: string[]): Promise<void> => {
   const args = parseArgs(argv)
   const { app, addon, out, snippets: snippetsDir } = args
   const snippetsOut = args['snippets-out']
   if (!app || !addon || !out || !snippetsDir) throw new Error(usage)
 
-  const snippets = await collectSnippets(resolve(snippetsDir))
+  const origins = new Map<string, string>()
+  const snippets = await collectSnippets(
+    resolve(snippetsDir),
+    new Map(),
+    origins
+  )
+  await addScenarioConfig(resolve(snippetsDir), snippets, origins)
 
   const doc = await buildSurfaceDoc({
     version: getCLIVersion(),
@@ -55,6 +86,17 @@ const main = async (argv: string[]): Promise<void> => {
       'utf8'
     )
     process.stdout.write(`  snippets: ${snippets.size}\n`)
+  }
+
+  const metaOut = args['snippets-meta-out']
+  if (metaOut) {
+    const metaFile = resolve(metaOut)
+    await mkdir(dirname(metaFile), { recursive: true })
+    await writeFile(
+      metaFile,
+      `${JSON.stringify(Object.fromEntries([...origins].sort()), null, 2)}\n`,
+      'utf8'
+    )
   }
 
   for (const entryPoint of doc.entryPoints) {

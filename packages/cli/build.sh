@@ -276,7 +276,8 @@ node dist/src/functions/surface/generate-surface-doc.js \
   --addon ../../templates/function-addon \
   --snippets ../../examples/online-shop \
   --out surface.json \
-  --snippets-out snippets.json
+  --snippets-out snippets.json \
+  --snippets-meta-out snippets-meta.json
 
 # Copy schema file
 echo "Copying schema file..."

@@ -1,7 +1,7 @@
 {
   "name": "@pikku/cli",
   "version": "0.12.115",
-  "description": "Pikku CLI \u2014 code generation, dev server, migrations and deployment",
+  "description": "Pikku CLI — code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -87,7 +87,8 @@
     "console-app",
     "cli.schema.json",
     "surface.json",
-    "snippets.json"
+    "snippets.json",
+    "snippets-meta.json"
   ],
   "engines": {
     "node": ">=24"

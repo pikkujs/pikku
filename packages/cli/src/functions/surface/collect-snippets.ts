@@ -1,10 +1,10 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 
-const START = /^\s*\/\/\s*@snippet start (\S+)\s*$/
-const END = /^\s*\/\/\s*@snippet end (\S+)\s*$/
+const START = /^\s*(?:\/\/|--)\s*@snippet start (\S+)\s*$/
+const END = /^\s*(?:\/\/|--)\s*@snippet end (\S+)\s*$/
 
-const SOURCE_EXTENSIONS = ['.ts', '.tsx']
+const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.sql']
 const SKIPPED_DIRECTORIES = new Set(['node_modules', '.pikku', 'dist', '.git'])
 
 export class UnclosedSnippetError extends Error {
