@@ -22,7 +22,7 @@ describe('LocalSecretService', () => {
     const vars = new LocalVariablesService({})
     const service = new LocalSecretService(vars)
     await assert.rejects(() => service.getSecret('MISSING'), {
-      message: 'Requested secret not found',
+      message: 'Requested secret not found: MISSING',
     })
   })
 
@@ -44,7 +44,7 @@ describe('LocalSecretService', () => {
     const vars = new LocalVariablesService({})
     const service = new LocalSecretService(vars)
     await assert.rejects(() => service.getSecret('MISSING'), {
-      message: 'Requested secret not found',
+      message: 'Requested secret not found: MISSING',
     })
   })
 

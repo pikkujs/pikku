@@ -44,7 +44,7 @@ export const defineSecretServiceTests = (
     test('getSecret throws for missing key', async () => {
       const service = await factory({ key: kek })
       await assert.rejects(() => service.getSecret('nonexistent'), {
-        message: 'Requested secret not found',
+        message: 'Requested secret not found: nonexistent',
       })
     })
 

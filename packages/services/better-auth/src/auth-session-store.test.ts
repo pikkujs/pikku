@@ -45,7 +45,7 @@ async function run(opts: {
     secrets: {
       getSecret: async () => {
         if (opts.secretMissing) {
-          throw new Error('Requested secret not found')
+          throw new Error('Requested secret not found: BETTER_AUTH_SECRET')
         }
         return { reveal: () => SECRET }
       },
