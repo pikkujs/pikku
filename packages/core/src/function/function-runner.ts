@@ -83,7 +83,7 @@ async function resolveSession(
 
 export const addFunction = (
   funcName: string,
-  funcConfig: CorePikkuFunctionConfig<any, any>,
+  funcConfig: CorePikkuFunctionConfig<any, any, any, any, any>,
   packageName: string | null = null
 ) => {
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)

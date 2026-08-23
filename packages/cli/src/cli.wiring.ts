@@ -55,6 +55,7 @@ import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
 import { pikkuImportN8n } from './functions/commands/import-n8n.js'
+import { doc, renderDoc } from './functions/commands/doc.js'
 import {
   pikkuInfoFunctions,
   pikkuInfoTags,
@@ -186,6 +187,25 @@ wireCLI({
     },
   },
   commands: {
+    doc: pikkuCLICommand({
+      func: doc,
+      render: renderDoc,
+      description:
+        'Print the API surface of the pikku installed here — the doors, what they export, and how each export is called',
+      parameters: '[topics...]',
+      options: {
+        ai: {
+          description:
+            'Name the skill that teaches each door, for an agent deciding whether it needs to load one',
+          default: false,
+        },
+        addon: {
+          description:
+            'Describe the addon surface instead of the application one',
+          default: false,
+        },
+      },
+    }),
     all: pikkuCLICommand({
       func: all,
       description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
@@ -1110,6 +1130,11 @@ wireCLI({
             fabric: {
               description:
                 'Install skills whose frontmatter includes installGroups: [fabric]',
+              default: false,
+            },
+            client: {
+              description:
+                'Install skills whose frontmatter includes installGroups: [client]',
               default: false,
             },
             update: {

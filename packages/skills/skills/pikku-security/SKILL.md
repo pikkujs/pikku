@@ -61,7 +61,7 @@ with the default `auth` would be rejected before its body ever ran.
 Apply these via `addHTTPMiddleware` in a wirings file:
 
 ```typescript
-import { authBearer, authCookie, authAPIKey } from '@pikku/core/middleware'
+import { authBearer, authCookie, authAPIKey } from '#pikku/middleware'
 import { addHTTPMiddleware } from '#pikku/http'
 
 // JWT bearer token — reads Authorization header
@@ -128,7 +128,7 @@ export const isVerified = pikkuAuth(
 )
 
 // wirings/auth.wiring.ts
-import { authCookie } from '@pikku/core/middleware'
+import { authCookie } from '#pikku/middleware'
 import { addHTTPMiddleware } from '#pikku/http'
 
 addHTTPMiddleware('*', [

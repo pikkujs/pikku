@@ -1,7 +1,7 @@
 ---
 name: pikku-i18n
 description: 'Wire i18n into a Pikku frontend with Paraglide JS (inlang). English by default, every user-facing string is a typed message function (`m.some__key()`) compiled from `messages/<locale>.json`, and additional languages are served under `/fr` `/de` URL prefixes. TRIGGER when: scaffolding or editing a frontend and writing user-facing text, adding a second language, or asked to "make this translatable / use tokens / add i18n". DO NOT TRIGGER for backend functions, error messages thrown from functions, or log output.'
-installGroups: [core]
+installGroups: [client]
 ---
 
 # Pikku i18n (Paraglide JS)

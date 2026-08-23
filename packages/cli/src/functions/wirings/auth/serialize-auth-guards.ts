@@ -74,24 +74,7 @@ type PikkuPermissionConfig<In = unknown, RequiredServices extends SecretlessServ
  * Factory function for creating permissions with tree-shaking support.
  * Supports both direct function and configuration object syntax.
  *
- * @example
- * \`\`\`typescript
- * // Direct function syntax
- * const permission = pikkuPermission(async ({ logger }, data, { session }) => {
- *   const session = await session?.get()
- *   return session?.role === 'admin'
- * })
- *
- * // Configuration object syntax with metadata
- * const adminPermission = pikkuPermission({
- *   name: 'Admin Permission',
- *   description: 'Checks if user has admin role',
- *   func: async ({ logger }, data, { session }) => {
- *     const session = await session?.get()
- *     return session?.role === 'admin'
- *   }
- * })
- * \`\`\`
+ * @example snippet: permissionFunction
  */
 export const pikkuPermission = <In>(
   permission: PikkuPermission<In> | PikkuPermissionConfig<In>

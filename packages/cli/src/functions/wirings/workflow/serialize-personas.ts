@@ -34,6 +34,10 @@ export type PersonaName = keyof typeof personaConfigs
 export const personaList: ResolvedPersona[] = Object.values(personaConfigs)
 
 export type AgentName = keyof AgentMap & string
+/**
+ * The personas this project declares, keyed by name — the \`actors\` a scenario
+ * step runs as.
+ */
 export type TypedPersonas = Record<
   PersonaName,
   ScenarioPersona<AgentName, FlattenedRPCMap>

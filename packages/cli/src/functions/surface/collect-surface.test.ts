@@ -489,3 +489,143 @@ describe('collectSurface on a project that has not been built yet', () => {
     }
   })
 })
+
+describe('collectSurface describes how to call an export', () => {
+  const setup = async (source: string, dependency?: string) => {
+    const tmp = await makeTmp()
+    await write(
+      tmp,
+      'package.json',
+      JSON.stringify({
+        name: 'callable',
+        exports: { '.': { types: './dist/index.d.ts', import: './dist/index.js' } },
+      })
+    )
+    await write(tmp, 'tsconfig.json', TSCONFIG)
+    if (dependency !== undefined) {
+      await write(
+        tmp,
+        'node_modules/@fake/lib/package.json',
+        JSON.stringify({ name: '@fake/lib', types: './index.d.ts' })
+      )
+      await write(tmp, 'node_modules/@fake/lib/index.d.ts', dependency)
+    }
+    await write(tmp, 'src/index.ts', source)
+    return tmp
+  }
+
+  const symbolNamed = (
+    entrypoints: Awaited<ReturnType<typeof collectSurface>>,
+    name: string
+  ) => entrypoints[0]?.symbols.find((s) => s.name === name)
+
+  test('lists the keys of the options object a wiring helper takes', async () => {
+    const tmp = await setup(
+      `
+      import type { Wiring } from '@fake/lib'
+      export const wireThing = (wiring: Wiring): void => { void wiring }
+    `,
+      `export type Wiring = { route: string; method: 'get' | 'post'; auth?: boolean }`
+    )
+    try {
+      const wire = symbolNamed(await collectSurface(tmp), 'wireThing')
+      assert.deepEqual(
+        wire?.members?.map((member) => member.line),
+        ['auth?: boolean', 'method: "get" | "post"', 'route: string']
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('drops the keys the surveyed project declares itself', async () => {
+    const tmp = await setup(
+      `
+      import type { Wiring } from '@fake/lib'
+      export type Store = { rows: string[] }
+      export const wireThing = (wiring: Wiring & { store: Store }): void => {
+        void wiring
+      }
+    `,
+      `export type Wiring = { route: string }`
+    )
+    try {
+      const wire = symbolNamed(await collectSurface(tmp), 'wireThing')
+      assert.deepEqual(
+        wire?.members?.map((member) => member.line),
+        ['route: string']
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a class is described by how it is constructed, not as `typeof`', async () => {
+    const tmp = await setup(`
+      export class Thing { constructor(public message: string, public code?: number) {} }
+    `)
+    try {
+      const thing = symbolNamed(await collectSurface(tmp), 'Thing')
+      assert.equal(thing?.signature, 'new Thing(message: string, code?: number)')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the members of a built-in prototype are not the API', async () => {
+    const tmp = await setup(
+      `
+      import type { Boom } from '@fake/lib'
+      export const takesList = (items: string[]): void => { void items }
+      export const throwsBoom = (boom: Boom): void => { void boom }
+    `,
+      `export declare class Boom extends Error {}`
+    )
+    try {
+      const surface = await collectSurface(tmp)
+      assert.deepEqual(symbolNamed(surface, 'takesList')?.members, undefined)
+      assert.deepEqual(symbolNamed(surface, 'throwsBoom')?.members, undefined)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('captures the @example blocks the documentation comment leaves out', async () => {
+    const tmp = await setup(`
+      /**
+       * Does a thing.
+       *
+       * @example
+       * doThing('now')
+       */
+      export const doThing = (when: string): void => { void when }
+    `)
+    try {
+      const thing = symbolNamed(await collectSurface(tmp), 'doThing')
+      assert.equal(thing?.summary, 'Does a thing.')
+      assert.deepEqual(thing?.examples, ["doThing('now')"])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('reads the status an error class is registered with', async () => {
+    const tmp = await setup(`
+      const registry = new Map<unknown, { status: number }>()
+      export const addError = (error: unknown, details: { status: number }): void => {
+        registry.set(error, details)
+      }
+      export class MissingError extends Error {}
+      export class ClashError extends Error {}
+      addError(MissingError, { status: 404 })
+      addError(ClashError, { status: 409 })
+    `)
+    try {
+      const surface = await collectSurface(tmp)
+      assert.equal(symbolNamed(surface, 'MissingError')?.status, 404)
+      assert.equal(symbolNamed(surface, 'ClashError')?.status, 409)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})

@@ -183,6 +183,7 @@ export interface PikkuAgentMiddlewareHooks<
   State extends Record<string, unknown> = Record<string, unknown>,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > {
+  /** Rewrites what the model is about to see — messages and instructions — before each turn. */
   modifyInput?: (
     services: SingletonServices,
     ctx: {
@@ -210,6 +211,7 @@ export interface PikkuAgentMiddlewareHooks<
     | Promise<{ messages: AgentMessage[]; instructions: string }>
     | { messages: AgentMessage[]; instructions: string }
 
+  /** Sees the model's output as it streams, for redaction or live inspection. Keeps its own `state` across chunks, unlike the shared run notes. */
   modifyOutputStream?: (
     services: SingletonServices,
     ctx: {
@@ -262,6 +264,7 @@ export interface PikkuAgentMiddlewareHooks<
    * and handed to anything that grades the run, and scrubbing the reply alone
    * leaves them untouched.
    */
+  /** Rewrites the finished output of a turn, after streaming has completed. */
   modifyOutput?: (
     services: SingletonServices,
     ctx: {
@@ -282,6 +285,7 @@ export interface PikkuAgentMiddlewareHooks<
         toolCalls?: NonNullable<AgentStep['toolCalls']>
       }
 
+  /** Runs before a tool executes, and may rewrite the arguments the model chose. Returning nothing leaves them as they are. */
   beforeToolCall?: (
     services: SingletonServices,
     ctx: {
@@ -294,6 +298,7 @@ export interface PikkuAgentMiddlewareHooks<
     | { args: Record<string, unknown> }
     | void
 
+  /** Runs once a tool has returned, and may replace its result before the model sees it. */
   afterToolCall?: (
     services: SingletonServices,
     ctx: {
@@ -305,6 +310,7 @@ export interface PikkuAgentMiddlewareHooks<
     }
   ) => Promise<{ result: unknown } | void> | { result: unknown } | void
 
+  /** Runs at the end of each model turn. For observation — it cannot change what happened. */
   afterStep?: (
     services: SingletonServices,
     ctx: {
@@ -323,6 +329,7 @@ export interface PikkuAgentMiddlewareHooks<
     }
   ) => Promise<void> | void
 
+  /** Runs when a turn throws, with the step it failed on. For logging and cleanup; it does not swallow the error. */
   onError?: (
     services: SingletonServices,
     ctx: {
@@ -347,58 +354,51 @@ export type CoreAgent<
   Scope extends string = string,
   Scorer extends string = string,
 > = {
+  /** Unique across the project. It is how the agent is invoked and how its runs are grouped. */
   name: string
+  /** What the agent is for. Another agent choosing whether to delegate to this one reads it, so write it for that reader. */
   description: string
+  /** A one-line description for listings, where the full `description` is too long. */
   summary?: string
+  /** Names of error classes this may throw, so each one's registered status is used instead of a 500. */
   errors?: string[]
-  /**
-   * The three fields below are the system prompt. `buildInstructions` joins
-   * whichever are set with a blank line, always in this order — role, then
-   * personality, then goal — and appends the tool-usage rules if the agent has
-   * tools. Nothing checks them against each other: the split is there to keep a
-   * prompt legible, and text put in the wrong one still reaches the model.
-   *
-   * Who the agent is. 'You are a support engineer triaging inbound bugs.'
-   */
+  /** Who the agent is. Joined with `personality` and `goal`, in that order, to form the system prompt. */
   role?: string
   /** How it should sound: tone, vocabulary, how much it says at a time. */
   personality?: string
   /** What it is for — the only one of the three that is required. */
   goal: string
+  /** Which model to run on, as the provider names it. */
   model: string
+  /** How much the model is allowed to vary its answer. Lower is more repeatable, which is what a tool-driving agent usually wants. */
   temperature?: number
   /** Ownership/partitioning of this agent's threads and runs. Defaults to `'user'`. */
   sessionScope?: SessionScope
+  /** Functions the model may call, given to it as tools. A `readonly` one may be called without asking first. */
   tools?: unknown[]
+  /** Other agents this one may hand work to. `agentMode` decides whether it delegates or supervises. */
   agents?: unknown[]
+  /** Workflows the model may start, for work too long to sit inside one agent run. */
   workflows?: unknown[]
-  /**
-   * Grades this agent's finished runs on live traffic, named by the generated
-   * `ScorerName` union rather than by `ref()` — a scorer is not a function, so
-   * there is nothing in the function map for a ref to resolve against.
-   *
-   * A reference-based judge listed here is never sampled: live traffic has no
-   * answer key. Scenarios name scorers directly and may grade with scorers an
-   * agent does not ship with.
-   */
+  /** Grades finished runs on live traffic. A reference-based judge is never sampled here — live traffic has no answer key. */
   scorers?: Scorer[]
+  /** `delegate` hands a sub-agent the task and takes its answer; `supervise` keeps this agent in the loop over each step. */
   agentMode?: 'delegate' | 'supervise'
+  /** What the agent carries between runs, and how much of it. */
   memory?: AgentMemoryConfig
+  /** How many model turns a single run may take before it is stopped. The guard against a tool loop that never converges. */
   maxSteps?: number
+  /** Whether the model may answer without calling a tool (`auto`), must call one (`required`), or may not (`none`). */
   toolChoice?: 'auto' | 'required' | 'none'
-  /**
-   * Per-provider model settings, keyed by provider id and passed through
-   * untouched — for anything only one vendor offers, which the fields above
-   * deliberately do not try to unify.
-   *
-   * `{ openai: { reasoningEffort: 'minimal' } }` is the one that matters for
-   * voice: on gpt-5-mini it measured 0.9s to first token against 2.5s at the
-   * default, and a spoken reply is waited through rather than skimmed.
-   */
+  /** Per-provider settings passed through untouched, for what only one vendor offers. */
   providerOptions?: AIProviderOptions
+  /** The schema of what starts a run, which is also its input type. */
   input?: unknown
+  /** The schema the final answer must match, which is also its return type. Without one the agent returns free text. */
   output?: unknown
+  /** Filters this agent in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
+  /** Runs before each model turn, to change what that turn sees or to stop the run. This is where a step budget or a tool narrowing goes. */
   prepareStep?: (ctx: {
     stepNumber: number
     messages: AgentMessage[]
@@ -407,8 +407,11 @@ export type CoreAgent<
     model: string
     stop: () => void
   }) => void | Promise<void>
+  /** Wraps the whole run: auth, tracing, spend limits. */
   middleware?: PikkuMiddleware[]
+  /** Wraps each message when the agent is driven over a channel. */
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
+  /** Hooks around each step and each tool call — the place to inspect, rewrite or veto what the model is about to do. */
   agentMiddleware?: PikkuAgentMiddlewareHooks<any, any>[]
   /**
    * Whether a session is required to run this agent. Defaults to `false`, since
@@ -427,6 +430,7 @@ export type CoreAgent<
    * `#pikku/scopes`, so an undeclared scope is a compile error.
    */
   scopes?: Scope[]
+  /** Checks that run before the agent starts. Grouped names OR together, so any one passing admits the caller. */
   permissions?: CorePermissionGroup<PikkuPermission>
 }
 

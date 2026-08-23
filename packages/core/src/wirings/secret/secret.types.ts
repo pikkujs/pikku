@@ -4,21 +4,9 @@ export type CoreSecret<T = unknown> = {
   description?: string
   secretId: string
   schema: T
-  /**
-   * A secret is REQUIRED by default because `getSecret` throws when the value is
-   * missing — a deploy without it is a runtime failure waiting to happen, so the
-   * deploy gate refuses it. Mark a secret `optional` when absence is a supported
-   * state the app handles (a feature that simply stays off): the generated map
-   * emits it as an optional property and `getSecret` resolves `undefined`
-   * instead of throwing.
-   */
+  /** Required by default: this says absence is a supported state, and `getSecret` resolves `undefined` rather than throwing. */
   optional?: boolean
-  /**
-   * Where a user goes to obtain this value — a provider's API-key page, a setup
-   * guide, an internal runbook. Consoles and deploy UIs surface it beside a
-   * missing value. The same field on every credential/variable definition means
-   * the same thing.
-   */
+  /** Where a user goes to obtain this value, surfaced beside a missing one. */
   docsUrl?: string
   /** Rotation cadence as a duration string, e.g. `'1d'`, `'30day'`, `'1w'`. */
   rotationPeriod?: string
@@ -64,4 +52,11 @@ export type SecretDefinitionsMeta = Record<string, SecretDefinitionMeta>
 
 export type SecretDefinitions = SecretDefinitionMeta[]
 
+/**
+ * Declares a secret this project needs, with the shape of its value. The CLI
+ * collects every declaration into `CredentialsMap`, which is what makes
+ * `secrets.getSecret('NAME')` return the right type instead of `unknown`.
+ *
+ * @example snippet: secrets
+ */
 export const defineSecret = <T>(_config: CoreSecret<T>): void => {}

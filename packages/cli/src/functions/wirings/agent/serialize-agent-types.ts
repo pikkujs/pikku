@@ -38,6 +38,12 @@ type AgentConfig<
   workflows?: object[]
 }
 
+/**
+ * Declares an agent: the model, the prompt, the tools it may call and the shape
+ * of what it returns. Wire it like any other function.
+ *
+ * @example snippet: aiAgent
+ */
 export const pikkuAgent = <
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
@@ -47,16 +53,34 @@ export const pikkuAgent = <
   return agent
 }
 
+/**
+ * Declares a scorer that grades an agent run programmatically — a function over
+ * the run's input and output returning a score.
+ *
+ * @example snippet: agentScorer
+ */
 export const pikkuAgentScorer = (
   config: Parameters<typeof corePikkuAgentScorer<Services>>[0]
 ) => corePikkuAgentScorer<Services>(config)
 
+/**
+ * Declares a scorer that grades an agent run with another model, for the
+ * qualities a programmatic check cannot express.
+ *
+ * @example snippet: agentJudge
+ */
 export const pikkuAgentJudge = (
   config: Parameters<typeof corePikkuAgentJudge<Services>>[0]
 ) => corePikkuAgentJudge<Services>(config)
 
 
 
+/**
+ * A ready-made function that runs the named agent once and returns its result —
+ * wire it straight to a route when you need no logic around the run.
+ *
+ * @example snippet: aiAgentInvoke
+ */
 export const agent = <Name extends keyof AgentMap>(
   agentName: Name
 ) => {
@@ -67,6 +91,12 @@ export const agent = <Name extends keyof AgentMap>(
   >
 }
 
+/**
+ * The streaming counterpart of \`agent\`: wire it to a channel to send tokens and
+ * tool calls as they happen instead of waiting for the run to finish.
+ *
+ * @example snippet: aiAgentStream
+ */
 export const agentStream = <Name extends keyof AgentMap>(
   agentName?: Name
 ) => {
@@ -77,6 +107,12 @@ export const agentStream = <Name extends keyof AgentMap>(
   >
 }
 
+/**
+ * A ready-made function that answers one pending tool approval, letting a run
+ * that paused for a human carry on.
+ *
+ * @example snippet: agentApproval
+ */
 export const agentResume = () => {
   return coreAgentResume() as PikkuFunctionConfig<
     { runId: string; toolCallId: string; approved: boolean },
@@ -85,6 +121,11 @@ export const agentResume = () => {
   >
 }
 
+/**
+ * A ready-made function that answers every pending approval for a run at once.
+ *
+ * @example snippet: agentApproval
+ */
 export const agentApprove = <Name extends keyof AgentMap>(
   agentName: Name
 ) => {

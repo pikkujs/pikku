@@ -98,8 +98,11 @@ export type CoreChannel<
   PikkuPermission = CorePikkuPermission<ChannelData>,
   PikkuMiddleware = CorePikkuMiddleware,
 > = {
+  /** Unique across the project. It is how the channel is addressed in `pikku meta` and by the generated client. */
   name: string
+  /** The path a client opens the socket on. */
   route: Channel
+  /** Runs once when a client connects, before any message. Its return value is sent as the first message. */
   onConnect?:
     | ChannelConnect
     | {
@@ -112,7 +115,9 @@ export type CoreChannel<
         func?: ChannelDisconnect
         middleware?: PikkuMiddleware[]
       }
+  /** Handles any message that no `onMessageWiring` entry claimed. Without one, an unrouted message is dropped. */
   onMessage?: ChannelFunctionMessage
+  /** Routes messages by a key in their payload: the outer key is the field to switch on, the inner key its value. This is how one socket carries many operations. */
   onMessageWiring?: Record<
     string,
     Record<
@@ -125,17 +130,23 @@ export type CoreChannel<
         }
     >
   >
+  /** Wraps the connection: it runs on connect, where the session is established, not on every message. */
   middleware?: PikkuMiddleware[]
+  /** Wraps every message, which is where per-message concerns like rate limiting belong. */
   channelMiddleware?: Array<
     CorePikkuChannelMiddleware | CorePikkuChannelMiddlewareFactory
   >
+  /** Whether opening the channel requires a session. Defaults to true — a channel is closed unless it says otherwise. */
   auth?: boolean
+  /** Whether this channel carries binary frames. Text frames are still parsed as JSON. */
   binary?: boolean | null
+  /** Handles binary frames, which never reach `onMessage` because they are not JSON. Return a value to reply in kind. */
   onBinaryMessage?: (
     services: any,
     data: BinaryData,
     channel: PikkuChannel<ChannelData, any>
   ) => Promise<BinaryData | void> | BinaryData | void
+  /** Filters this channel in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
 }
 

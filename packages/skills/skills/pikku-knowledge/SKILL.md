@@ -13,7 +13,6 @@ description: >-
   brief to record. DO NOT TRIGGER when: user asks what
   functions, routes, tables or permissions exist (that is `pikku meta` / `pikku info`, never a
   note), or to write a scenario test (use pikku-scenario).
-installGroups: [core]
 ---
 
 # Pikku Knowledge

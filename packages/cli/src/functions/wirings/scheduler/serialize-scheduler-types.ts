@@ -32,6 +32,8 @@ type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void, 'sessio
  * Tasks run based on cron expressions and are sessionless.
  *
  * @param task - Scheduled task definition with cron expression and handler
+ *
+ * @example snippet: wireScheduler
  */
 export const wireScheduler = (task: SchedulerWiring) => {
   wireSchedulerCore(task as any)

@@ -175,6 +175,12 @@ type SplitBySpace<S extends string> = S extends `${infer First} ${infer Rest}`
     : [S]
 
 /**
+ * Strip the `...` a variadic positional carries, so `[files...]` validates
+ * against the `files` key the runtime parser fills.
+ */
+type StripVariadic<S extends string> = S extends `${infer Name}...` ? Name : S
+
+/**
  * Recursively build a tuple by stripping brackets from each element
  */
 type BuildParamsTuple<Parts extends readonly string[]> =
@@ -182,7 +188,7 @@ type BuildParamsTuple<Parts extends readonly string[]> =
     infer First extends string,
     ...infer Rest extends string[],
   ]
-    ? [StripBrackets<First>, ...BuildParamsTuple<Rest>]
+    ? [StripVariadic<StripBrackets<First>>, ...BuildParamsTuple<Rest>]
     : []
 
 /**
@@ -227,16 +233,39 @@ export type CoreCLICommandConfig<
   >,
   Params extends string = string,
 > = {
+  /**
+   * Positional arguments, written the way `--help` prints them: `<env>` is
+   * required, `[region]` optional. Each name must be a key of the function's
+   * input schema, so a typo is a compile error rather than an argument that
+   * silently never arrives.
+   */
   parameters?: ValidateParameters<Params, ExtractFunctionInput<FuncConfig>>
+  /** The function to run. Omit it on a command that exists only to hold `subcommands`. */
   func?: FuncConfig
+  /** The heading shown above this command's own help. */
   title?: string
+  /** The one-line summary listed beside the command name. */
   description?: string
+  /**
+   * Prints the result. The function returns data and this is the only thing
+   * that writes to stdout, which is what lets one command serve both a human
+   * reading it and a script parsing it.
+   */
   render?: PikkuCLIRender
+  /**
+   * Flags, keyed by the input field each one fills. A field with no entry is
+   * still accepted as `--field`; an entry is how it gets a short form, a
+   * default, or help text.
+   */
   options?: {
     [K in keyof ExtractFunctionInput<FuncConfig>]?: {
+      /** What this flag is for, as `--help` prints it. */
       description?: string
+      /** A single-letter alias, so `--verbose` can also be `-v`. */
       short?: string
+      /** How the argument is parsed. Inferred from the input schema when omitted. */
       type?: CLIOptionType
+      /** Used when the flag is absent, and shown in `--help` so nobody has to guess it. */
       default?: ExtractFunctionInput<FuncConfig>[K]
       /**
        * The values this option accepts. Rejected by the parser and listed in
@@ -246,13 +275,18 @@ export type CoreCLICommandConfig<
       choices?: ReadonlyArray<ExtractFunctionInput<FuncConfig>[K]>
     }
   }
+  /** Wraps every run of this command. */
   middleware?: PikkuMiddleware[]
+  /** Nested commands, keyed by the word that selects them: `deploy plan` is `deploy` with a `plan` subcommand. */
   subcommands?: Record<
     string,
     CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender, any>
   >
+  /** Whether running this requires a logged-in session. Defaults to true — a command is closed unless it says otherwise. */
   auth?: boolean
+  /** Permission checks run before the function, for a command that not every logged-in user may run. */
   permissions?: any[]
+  /** Runs when the parent is invoked with no subcommand named. */
   isDefault?: boolean
 }
 
@@ -308,14 +342,23 @@ export interface CoreCLI<
   PikkuMiddleware,
   PikkuCLIRender,
 > {
+  /** The command name a user types. It is also what `--help` prints as the program. */
   program: string
+  /** What the program is for, shown at the top of `--help`. */
   description?: string
+  /** Top-level commands, keyed by the word that selects them. */
   commands: Commands
+  /** Flags accepted before any command, for things that apply to the whole program. */
   options?: CLIOptions<Options>
+  /** Wraps every command. */
   middleware?: PikkuMiddleware[]
+  /** The fallback printer for commands that declare none of their own. */
   render?: PikkuCLIRender
+  /** A one-line description for listings, where the full `description` is too long. */
   summary?: string
+  /** Names of error classes any command may throw, so each one's registered exit behaviour is used. */
   errors?: string[]
+  /** Filters this program in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /**
    * Requires a session on the websocket serving this program remotely. Has no

@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2765 observable things**: 872 exported names, plus
-1893 members on the classes and interfaces among them, reachable
+**2764 observable things**: 872 exported names, plus
+1892 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -37,7 +37,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
-| `./trigger` | 8 | 8 | 12 |
+| `./trigger` | 8 | 8 | 11 |
 | `./workflow/timeline` | 9 | 4 | 14 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
@@ -494,7 +494,7 @@ export interface AbortScope {
   readonly reason?: string
   onBeginChanges?: () => void
 }
-addFunction: (funcName: string, funcConfig: CorePikkuFunctionConfig<any, any>, packageName?: string | null) => void
+addFunction: (funcName: string, funcConfig: CorePikkuFunctionConfig<any, any, any, any, any>, packageName?: string | null) => void
 checkAuthPermissions: (funcPermissions: CorePermissionGroup, session: CoreUserSession, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, packageName?: string | null) => Promise<boolean>
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   Record<string, PikkuPermission | PikkuPermission[]> | undefined
@@ -2479,81 +2479,16 @@ export type CoreHTTPFunctionWiring<
     any,
     any
   >,
-> =
-  | (CoreHTTPFunction & {
-      route: R
-      method: HTTPMethod
-      func: CorePikkuFunctionConfig<
-        PikkuFunction,
-        PikkuPermission,
-        PikkuMiddleware
-      >
-      auth?: true
-      middleware?: PikkuMiddleware[]
-      sse?: undefined
-    })
-  | (CoreHTTPFunction & {
-      route: R
-      method: HTTPMethod
-      func: CorePikkuFunctionConfig<
-        PikkuFunctionSessionless,
-        PikkuPermission,
-        PikkuMiddleware
-      >
-      auth?: false
-      middleware?: PikkuMiddleware[]
-      sse?: undefined
-    })
-  | (CoreHTTPFunction & {
-      route: R
-      method: 'get'
-      func: CorePikkuFunctionConfig<
-        PikkuFunction,
-        PikkuPermission,
-        PikkuMiddleware
-      >
-      auth?: true
-      middleware?: PikkuMiddleware[]
-      sse?: boolean
-    })
-  | (CoreHTTPFunction & {
-      route: R
-      method: 'get'
-      func: CorePikkuFunctionConfig<
-        PikkuFunctionSessionless,
-        PikkuPermission,
-        PikkuMiddleware
-      >
-      auth?: false
-      middleware?: PikkuMiddleware[]
-      sse?: boolean
-    })
-  | (CoreHTTPFunction & {
-      route: R
-      method: 'post'
-      func: CorePikkuFunctionConfig<
-        PikkuFunction,
-        PikkuPermission,
-        PikkuMiddleware
-      >
-      auth?: true
-      middleware?: PikkuMiddleware[]
-      query?: Array<keyof In>
-      sse?: undefined
-    })
-  | (CoreHTTPFunction & {
-      route: R
-      method: 'post'
-      func: CorePikkuFunctionConfig<
-        PikkuFunctionSessionless,
-        PikkuPermission,
-        PikkuMiddleware
-      >
-      auth?: false
-      middleware?: PikkuMiddleware[]
-      query?: Array<keyof In>
-      sse?: undefined
-    })
+> = HTTPWiringShared<R, PikkuMiddleware> &
+  HTTPWiringAuth<
+    In,
+    Out,
+    PikkuFunction,
+    PikkuFunctionSessionless,
+    PikkuPermission,
+    PikkuMiddleware
+  > &
+  HTTPWiringMethod<In>
 DEFAULT_MAX_BODY_SIZE: number
 defineHTTPRoutes: { <T extends HTTPRouteMap>(routes: T): HTTPRouteContract<T>; <T extends HTTPRouteMap>(config: HTTPRoutesGroupConfig & { routes: T; }): HTTPRouteContract<T>; }
 fetch: <In, Out>(request: Request, params?: Partial<{ skipUserSession: boolean; respondWith404: boolean; logWarningsForStatusCodes: number[]; coerceDataFromSchema: boolean; bubbleErrors: boolean; exposeErrors: boolean; generateRequestId: () => string; traceId: string; maxBodySize: number; }>) => Promise<Response>
@@ -2856,7 +2791,6 @@ export interface CoreTrigger<PikkuFunctionConfig = any> {
   func: PikkuFunctionConfig
   description?: string
   tags?: string[]
-  graph?: true
 }
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers: Map<string, TriggerInstance>

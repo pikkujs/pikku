@@ -13,19 +13,30 @@ export class PikkuError extends Error {
  * survives serialization across a workflow step boundary and rehydration as a
  * plain `Error`. Callers log the message alone for these, the full stack for
  * everything else.
+ *
+ * @example snippet: isExpectedError
  */
 export const isExpectedError = (error: unknown): boolean =>
   error instanceof PikkuError ||
   (error as { expected?: unknown } | null)?.expected === true
 
 export interface ErrorDetails {
+  /** The HTTP status this error answers with, instead of a 500. */
   status: number
+  /** What the caller is told. It leaves the process, so it must not name anything internal. */
   message: string
+  /** The JSON-RPC code an MCP client is given, where the HTTP status has no equivalent. */
   mcpCode?: number
 }
 
 export type PikkuErrorConstructor = new (...args: any[]) => Error
 
+/**
+ * Registers one of your own error classes with the HTTP status and message it
+ * should produce, so throwing it maps to a real response instead of a 500.
+ *
+ * @example snippet: addError
+ */
 export const addError = (
   error: any,
   { status, message, mcpCode }: ErrorDetails

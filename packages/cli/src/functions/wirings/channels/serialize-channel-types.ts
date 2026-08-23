@@ -59,6 +59,8 @@ type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<
  * @template Out - Output type for connection response
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
+ *
+ * @example snippet: channelLifecycle
  */
 export const pikkuChannelConnectionFunc = <Out = unknown>(
   func:
@@ -74,6 +76,8 @@ export const pikkuChannelConnectionFunc = <Out = unknown>(
  *
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
+ *
+ * @example snippet: channelLifecycle
  */
 export const pikkuChannelDisconnectionFunc = (
   func:
@@ -119,23 +123,7 @@ type PikkuChannelFuncConfigWithSchema<
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * // Pattern 1: Using generic types
- * const handleMessage = pikkuChannelFunc<{text: string}, {received: boolean}>({
- *   func: async (_services, { text }) => ({ received: true })
- * })
- *
- * // Pattern 2: Using Zod schemas
- * const messageInput = z.object({ text: z.string() })
- * const messageOutput = z.object({ received: z.boolean() })
- *
- * const handleMessage = pikkuChannelFunc({
- *   input: messageInput,
- *   output: messageOutput,
- *   func: async (_services, { text }) => ({ received: true })
- * })
- * \`\`\`
+ * @example snippet: orderStatusChannel
  */
 export function pikkuChannelFunc<
   InputSchema extends StandardSchemaV1,
@@ -161,6 +149,8 @@ ${
  * @template ChannelData - Type of data associated with the channel
  * @template Channel - String literal type for the channel name
  * @param channel - Channel definition with connection, disconnection, and message handlers
+*
+* @example snippet: channelWiring
  */
 export const wireChannel = <ChannelData, Channel extends string>(
   channel: ChannelWiring<ChannelData, Channel> & AssertHTTPWiringParams<ChannelData, Channel>
@@ -176,6 +166,8 @@ export const wireChannel = <ChannelData, Channel extends string>(
  * @template T - Record of channel route handlers
  * @param routes - The channel routes record
  * @returns The same routes record (identity function for type safety)
+ *
+ * @example snippet: channelRoutes
  */
 export function defineChannelRoutes<T extends Record<string, any>>(routes: T): T {
   return defineChannelRoutesCore(routes)

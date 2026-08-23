@@ -18,6 +18,8 @@ const assertSampleRate = (name: string, sampleRate: number | undefined) => {
 /**
  * A heuristic scorer: pure code over the finished run, no model call, so it
  * grades on the fast lane.
+ *
+ * @example snippet: agentScorer
  */
 export const pikkuAgentScorer = <Services = any>(config: {
   name: string
@@ -49,6 +51,8 @@ export const pikkuAgentScorer = <Services = any>(config: {
  * The rubric field is `goal`, matching `pikkuAgent`'s prompt vocabulary — a
  * judge is a degenerate agent, and should use the same word for the same thing.
  * `prompt` is the escape hatch for non-standard framing.
+ *
+ * @example snippet: agentJudge
  */
 export const pikkuAgentJudge = <Services = any>(config: {
   name: string

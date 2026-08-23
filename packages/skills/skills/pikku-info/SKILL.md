@@ -8,7 +8,6 @@ description: >-
   routes/middleware/permissions", or needs to understand an existing Pikku codebase. DO NOT
   TRIGGER when: user is writing new code (use the specific wiring skill) or asking about Pikku
   concepts (use pikku-concepts).
-installGroups: [core]
 allowed-tools: Bash(yarn pikku info *)
 argument-hint: '[functions|tags|middleware|permissions] [--verbose] [--limit N]'
 ---

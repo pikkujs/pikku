@@ -2,35 +2,31 @@ import { pikkuState } from '../../pikku-state.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 export type WireAddonConfig = {
+  /** How this instance is addressed. One package may be wired more than once, and the name is what tells the instances apart. */
   name: string
+  /** The npm package the addon ships in. */
   package: string
+  /** Where to reach the addon when it runs as its own service rather than in-process. */
   rpcEndpoint?: string
+  /** Requires a session for every function in the addon, whatever each one declares. Gates an addon whose functions are individually open. */
   auth?: boolean
+  /** Offers the addon's functions to MCP clients as tools, without wiring each one. */
   mcp?: boolean
+  /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /** Required of every function in the addon, on top of the function's own. */
   scopes?: string[]
+  /** Points a secret the addon reads at a different key in this deployment, so two instances can hold different credentials. */
   secretOverrides?: Record<string, string>
+  /** Points a variable the addon reads at a different key in this deployment. */
   variableOverrides?: Record<string, string>
+  /** Points a credential the addon reads at a different key in this deployment. */
   credentialOverrides?: Record<string, string>
-  /**
-   * Secrets this instance may read on top of the ones it declared, named as the
-   * addon reads them — the scope check runs before `secretOverrides` renames
-   * them, so an overridden secret is named here by its addon-side key. Listing
-   * one in `secretOverrides` grants it too.
-   *
-   * For an addon whose secret names come off its input rather than its own
-   * source, this is how the host lends names the addon could not declare.
-   */
+  /** Extra secrets this instance may read, named as the addon reads them — the scope check runs before `secretOverrides` renames them. */
   secretGrants?: string[]
   /** Credentials this instance may read on top of the ones it declared. */
   credentialGrants?: string[]
-  /**
-   * Hands this instance the whole `SecretService` instead of one scoped to the
-   * secrets it declared. The value is the reason, recorded in the deploy
-   * manifest — an addon that names secrets at runtime cannot be scoped, and
-   * only the consuming app, never the addon, can grant it.
-   */
+  /** Hands over the whole `SecretService` unscoped. The value is the reason, recorded in the deploy manifest. */
   globalSecrets?: string
   /**
    * Hands this instance the whole `CredentialService` instead of one narrowed
@@ -40,6 +36,12 @@ export type WireAddonConfig = {
   globalCredentials?: string
 }
 
+/**
+ * Installs an addon into this project: its functions, wirings and scopes become
+ * part of the app, under the namespace and options given here.
+ *
+ * @example snippet: addonWiring
+ */
 export const wireAddon = (config: WireAddonConfig): void => {
   pikkuState(null, 'addons', 'packages').set(config.name, {
     package: config.package,

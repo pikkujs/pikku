@@ -154,6 +154,8 @@ ${
  * Runs everywhere — inspector extracts at build time.
  *
  * @param trigger - Trigger definition with name and function config
+ *
+ * @example snippet: wireTrigger
  */
 export const wireTrigger = (
   trigger: TriggerWiring
@@ -167,6 +169,8 @@ export const wireTrigger = (
  * Only imported in the trigger worker process.
  *
  * @param source - Trigger source with name, func, and input
+ *
+ * @example snippet: wireTriggerSource
  */
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: TriggerSource<TInput, TOutput>

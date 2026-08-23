@@ -26,6 +26,10 @@ import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
 import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
 
+/**
+ * The wire a workflow step is handed: \`step\` to run one durably, plus sleeping,
+ * waiting for a signal and asking for approval.
+ */
 export interface TypedWorkflow extends PikkuWorkflowWire {
   do<K extends keyof FlattenedRPCMap>(
     stepName: string,
@@ -56,6 +60,9 @@ import type { ScopeId } from '${scopesImportPath}'
 import { PikkuError } from '@pikku/core/errors'
 import type { CorePermissionGroup } from '@pikku/core/function'
 
+/**
+ * The shape of a workflow's body — services, input, and the workflow wire.
+ */
 export type PikkuFunctionWorkflow<
   In = unknown,
   Out = never
@@ -79,6 +86,13 @@ ${sharedWorkflowConfigFields}
   permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
 }
 
+/**
+ * Declares a workflow: the DSL form, where each step is awaited in order and
+ * the runner persists progress between them so a restart resumes rather than
+ * replays. The default choice for a workflow.
+ *
+ * @example snippet: workflowSteps
+ */
 export function pikkuWorkflowFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
@@ -94,6 +108,13 @@ export function pikkuWorkflowFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
+/**
+ * Declares a workflow whose control flow the DSL cannot express - a loop whose
+ * bound is only known at runtime, or branching that rejoins. An escape hatch:
+ * reach for \`pikkuWorkflowFunc\` unless the shape genuinely needs this.
+ *
+ * @example snippet: workflowComplexFunc
+ */
 export function pikkuWorkflowComplexFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
@@ -176,6 +197,13 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
 
 type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; then: NodeIds; else?: NodeIds }
 
+/**
+ * Declares a workflow as an explicit node graph, for a genuine cyclic
+ * dependency or a Node-only import the DSL cannot carry. The last resort of the
+ * three.
+ *
+ * @example snippet: workflowGraph
+ */
 export function pikkuWorkflowGraph<
   const FuncMap extends Record<
     string,

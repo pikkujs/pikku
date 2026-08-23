@@ -46,12 +46,7 @@ type PikkuCLIRender<Data, RequiredServices extends SingletonServices = Singleton
  * @param render - Function that receives singleton services and data to render output
  * @returns A CLI renderer configuration
  *
- * @example
- * \`\`\`typescript
- * const myRenderer = pikkuCLIRender<MyData>(({ logger }, data) => {
- *   logger.info(data.message)
- * })
- * \`\`\`
+ * @example snippet: cliRenderer
  */
 export const pikkuCLIRender = <Data, RequiredServices extends SingletonServices = SingletonServices>(
   render: (services: SingletonServices, data: Data) => void | Promise<void>
@@ -80,6 +75,8 @@ type CLIWiring<Commands extends Record<string, CoreCLICommandConfig<any, PikkuMi
  * @template Commands - Type describing the command structure
  * @template GlobalOptions - Type for global CLI options
  * @param cli - CLI definition with program name, commands, and global options
+ *
+ * @example snippet: cliWiring
  */
 export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>, any>>, GlobalOptions>(
   cli: CLIWiring<Commands, GlobalOptions>
@@ -95,6 +92,8 @@ export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any
  * @template Params - The parameters string literal type
  * @param config - CLI command configuration
  * @returns CLI command configuration with inferred types
+ *
+ * @example snippet: cliWiring
  */
 export const pikkuCLICommand = <
   FuncConfig extends PikkuFunctionConfig<any, any, 'cli' | 'rpc' | 'session'>,
@@ -111,6 +110,8 @@ export const pikkuCLICommand = <
  * @template T - Record of CLI command configurations
  * @param commands - The CLI commands record
  * @returns The same commands record (identity function for type safety)
+ *
+ * @example snippet: cliCommandContract
  */
 export const defineCLICommands = <T extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>, any>>>(
   commands: T

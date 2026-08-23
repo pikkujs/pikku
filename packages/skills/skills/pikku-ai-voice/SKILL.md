@@ -7,6 +7,7 @@ description: >-
   agents, speech-to-text, text-to-speech, transcription, or @pikku/ai-voice. DO NOT TRIGGER when:
   user asks about AI agent wiring generally (use pikku-agent) or the runner itself (use
   pikku-ai-vercel).
+installGroups: [fabric]
 ---
 
 # Pikku AI Voice (Speech I/O)

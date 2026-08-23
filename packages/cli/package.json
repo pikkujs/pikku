@@ -86,7 +86,9 @@
     "dist",
     "console-app",
     "cli.schema.json",
-    "surface.json"
+    "surface.json",
+    "snippets.json",
+    "snippets-meta.json"
   ],
   "engines": {
     "node": ">=24"

@@ -29,7 +29,7 @@ import type { PikkuAgentMiddlewareHooks } from '@pikku/core/agent'
 import type { Services, SingletonServices } from '${functionTypesImportPath}'
 ${requiredServicesTypeImport}
 
-export { cors } from '@pikku/core/middleware'
+export { cors, authAPIKey, authBearer, authCookie } from '@pikku/core/middleware'
 export type { MiddlewarePriority }
 
 /**
@@ -95,18 +95,7 @@ export const pikkuMiddleware = <RequiredServices extends SingletonServices = Wir
  * Factory function for creating middleware factories
  * Use this when your middleware needs configuration/input parameters
  *
- * @example
- * \`\`\`typescript
- * export const logMiddleware = pikkuMiddlewareFactory<LogOptions>(({
- *   message,
- *   level = 'info'
- * }) => {
- *   return pikkuMiddleware(async ({ logger }, next) => {
- *     logger[level](message)
- *     await next()
- *   })
- * })
- * \`\`\`
+ * @example snippet: middlewareFactory
  */
 export const pikkuMiddlewareFactory = <In = any>(
   factory: (input: In) => PikkuMiddleware
@@ -130,8 +119,7 @@ export const addGlobalMiddleware = (middleware: PikkuMiddleware[]) => {
 /**
  * Tag-scoped middleware. Applies to any wiring that carries the matching tag.
  *
- * @example
- * addTagMiddleware('admin', [adminMiddleware])
+ * @example snippet: tagMiddleware
  */
 export const addTagMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
   addTagMiddlewareCore(tag, middleware as any, ${packageNameValue})
@@ -146,14 +134,7 @@ export const addTagMiddleware = (tag: string, middleware: PikkuMiddleware[]) => 
  * @param routeOrMiddleware - Either a global middleware array or a route pattern string
  * @param middleware - The middleware array to apply when a route pattern is specified
  *
- * @example
- * \`\`\`typescript
- * // Add global HTTP middleware
- * addHTTPMiddleware([authMiddleware, loggingMiddleware])
- *
- * // Add route-specific middleware
- * addHTTPMiddleware('/api/admin/*', [adminAuthMiddleware])
- * \`\`\`
+ * @example snippet: httpMiddleware
  */
 export const addHTTPMiddleware = (
   routeOrMiddleware: PikkuMiddleware[] | string,
@@ -162,23 +143,51 @@ export const addHTTPMiddleware = (
   addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any)
 }
 
+/**
+ * The shape of channel middleware — it runs around the connection and its
+ * messages rather than around a single request.
+ */
 export type PikkuChannelMiddleware<RequiredServices extends Services = Services, Event = unknown> = CorePikkuChannelMiddleware<RequiredServices, Event>
 
+/**
+ * Declares middleware for a channel — it runs around the connection and its
+ * messages rather than around a single request.
+ *
+ * @example snippet: channelMiddleware
+ */
 export const pikkuChannelMiddleware = <RequiredServices extends Services = Services, Event = unknown>(
   middleware: PikkuChannelMiddleware<RequiredServices, Event>
 ): PikkuChannelMiddleware<RequiredServices, Event> => {
   return middleware
 }
 
+/**
+ * Declares channel middleware that takes options, so one definition can be
+ * wired several times with different configuration.
+ *
+ * @example snippet: channelMiddlewareFactory
+ */
 export const pikkuChannelMiddlewareFactory = <In = any>(
   factory: CorePikkuChannelMiddlewareFactory<In>
 ): CorePikkuChannelMiddlewareFactory<In> => {
   return factory
 }
 
+/**
+ * Attaches channel middleware to every channel carrying the given tag, so the
+ * channels themselves stay free of the wiring.
+ *
+ * @example snippet: addChannelMiddleware
+ */
 export const addChannelMiddleware = (tag: string, middleware: PikkuChannelMiddleware[]) =>
   addChannelMiddlewareCore(tag, middleware, ${packageNameValue})
 
+/**
+ * Declares middleware for an agent run — hooks around the model call, its tool
+ * calls and the run's state.
+ *
+ * @example snippet: agentMiddleware
+ */
 export const pikkuAgentMiddleware = <
   State extends Record<string, unknown> = Record<string, unknown>,
   RequiredServices extends SingletonServices = WiredSingletonServices,

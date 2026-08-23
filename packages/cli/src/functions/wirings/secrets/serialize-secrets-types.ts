@@ -108,6 +108,10 @@ import './pikku-secrets-meta.gen.json' with { type: 'json' }`
 
   return `${imports.join('\n')}
 
+/**
+ * Every secret this project declares with \`defineSecret\`, keyed by name. It is
+ * what gives \`secrets.getSecret('NAME')\` a real type.
+ */
 export type CredentialsMap = {
 ${mapEntries.join('\n')}
 }
@@ -116,6 +120,10 @@ const CREDENTIALS_META: Record<string, CredentialMeta> = {
 ${metaEntries.join(',\n')}
 }
 
+/**
+ * The \`secrets\` service as this project sees it: \`getSecret('NAME')\` resolves
+ * the value's type from \`CredentialsMap\` instead of returning \`unknown\`.
+ */
 export class TypedSecretService extends CoreTypedSecretService<CredentialsMap> {
   constructor(secrets: SecretService) {
     super(secrets, CREDENTIALS_META)

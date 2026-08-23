@@ -92,6 +92,10 @@ import './pikku-variables-meta.gen.json' with { type: 'json' }`
 
   return `${imports.join('\n')}
 
+/**
+ * Every variable this project declares with \`defineVariable\`, keyed by name. It
+ * is what gives \`variables.get('NAME')\` a real type.
+ */
 export interface VariablesMap {
 ${mapEntries.join('\n')}
 }
@@ -100,6 +104,10 @@ const TYPED_VARIABLES_META: Record<string, VariableMeta> = {
 ${metaEntries.join(',\n')}
 }
 
+/**
+ * The \`variables\` service as this project sees it: \`get('NAME')\` resolves the
+ * value's type from \`VariablesMap\` instead of returning \`unknown\`.
+ */
 export class TypedVariablesService extends CoreTypedVariablesService<VariablesMap> {
   constructor(variables: VariablesService) {
     super(variables, TYPED_VARIABLES_META)

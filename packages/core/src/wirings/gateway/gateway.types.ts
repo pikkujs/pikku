@@ -17,6 +17,10 @@ export interface GatewayAttachment {
   filename?: string
 }
 
+/**
+ * One message arriving from a gateway, normalised: who sent it, in which
+ * conversation, and what they said.
+ */
 export interface GatewayInboundMessage {
   /** Platform-specific: a phone number, a Slack user id, and so on. */
   senderId: string
@@ -26,15 +30,27 @@ export interface GatewayInboundMessage {
   metadata?: Record<string, unknown>
 }
 
+/**
+ * One message to send back through a gateway — plain text, or the provider's
+ * own rich content.
+ */
 export interface GatewayOutboundMessage {
   text?: string
   richContent?: Record<string, unknown>
   attachments?: GatewayAttachment[]
 }
 
+/**
+ * What a gateway's `verifyWebhook` returns — verified, with the response the
+ * provider expects back, or not.
+ */
 export type WebhookVerificationResult =
   { verified: true; response: unknown } | { verified: false }
 
+/**
+ * What a gateway integration implements: parse an incoming event into a
+ * message, send one back, and open and close the connection.
+ */
 export interface GatewayAdapter {
   name: string
   /** Return null to ignore the event, e.g. a delivery receipt. */
@@ -70,14 +86,21 @@ export type CoreGateway<
 > = Partial<
   Pick<CommonWireMeta, 'title' | 'summary' | 'description' | 'errors'>
 > & {
+  /** Unique across the project. It is how the gateway is addressed in `pikku meta` and in logs. */
   name: string
+  /** How the platform reaches us: a `webhook` it posts to, a `websocket` it holds open, or a `listener` we open outward. */
   type: GatewayTransportType
   /** Required for 'webhook' and 'websocket'; unused for 'listener'. */
   route?: string
+  /** Which service this speaks to — slack, whatsapp, discord. It selects the adapter's dialect, not the transport. */
   platform?: string
+  /** Translates between the platform's message format and pikku's. A factory is called with services, for an adapter that needs a token or a client. */
   adapter: GatewayAdapter | GatewayAdapterFactory
+  /** The function to run per inbound message. It receives the normalised message, not the platform's raw payload. */
   func: PikkuFunctionConfig
+  /** Wraps every inbound message: signature verification, tracing, rate limiting. */
   middleware?: CorePikkuMiddlewareGroup<any, any>
+  /** Filters this gateway in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /** Unset lets the handler's own `auth` govern; gateway handlers are sessionless by default. */
   auth?: boolean

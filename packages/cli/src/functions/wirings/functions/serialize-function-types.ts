@@ -69,8 +69,21 @@ ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 ${workflowImport}
 
+/**
+ * The services that live for the process — the ones built once in \`createConfig\`/
+ * \`createSingletonServices\` and shared by every request.
+ */
 ${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServices = ${singletonServicesTypeName}` : `export type { ${singletonServicesTypeName} as SingletonServices }`}
+/**
+ * Everything a function is handed as its first argument: the singleton services
+ * plus whatever is built per request. This is the type to widen when you add a
+ * service.
+ */
 ${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
+/**
+ * The signed-in user as this project defines it. Reached on the wire as
+ * \`session\`, and replaced with \`setSession\`.
+ */
 ${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeName}` : `export type { ${userSessionTypeName} as Session }`}
 
 /**
@@ -277,21 +290,7 @@ type PikkuFunctionConfigWithSchema<
  * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * const createUserInput = z.object({ name: z.string(), email: z.string() })
- * const createUserOutput = z.object({ id: z.number() })
- *
- * const createUser = pikkuFunc({
- *   input: createUserInput,
- *   output: createUserOutput,
- *   func: async ({db}, input) => {
- *     // input is typed as { name: string, email: string }
- *     const user = await db.users.create(input)
- *     return { id: user.id } // must match output schema
- *   }
- * })
- * \`\`\`
+ * @example snippet: sessionFunction
  */
 export function pikkuFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -308,6 +307,13 @@ export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
+/**
+ * A \`pikkuFunc\` whose input and output are already the shared list shape —
+ * filters, sort, paging in; rows and a total out — so a listing endpoint pages
+ * the same way everywhere.
+ *
+ * @example snippet: listFunction
+ */
 export const pikkuListFunc = <
   F extends Record<string, unknown> = {},
   Row = unknown,
@@ -368,19 +374,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
  * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * const greetInput = z.object({ name: z.string() })
- * const greetOutput = z.object({ message: z.string() })
- *
- * const greet = pikkuSessionlessFunc({
- *   input: greetInput,
- *   output: greetOutput,
- *   func: async (_services, { name }) => {
- *     return { message: \`Hello, \${name}!\` }
- *   }
- * })
- * \`\`\`
+ * @example snippet: readFunction
  */
 export function pikkuSessionlessFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -405,14 +399,7 @@ export function pikkuSessionlessFunc(func: any) {
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  *
- * @example
- * \`\`\`typescript
- * const cleanupTempFiles = pikkuVoidFunc(async ({fileSystem, logger}) => {
- *     logger.info('Starting cleanup of temporary files')
- *     await fileSystem.deleteDirectory('/tmp/uploads')
- *     logger.info('Cleanup completed')
- * })
- * \`\`\`
+ * @example snippet: cleanupFunction
  */
 export const pikkuVoidFunc = (
   func:

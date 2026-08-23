@@ -373,10 +373,15 @@ export type CommonWireMeta = {
   pikkuFuncId: string
   packageName?: string
 
+  /** A human name for this wiring, shown wherever it is listed rather than called. */
   title?: string
+  /** Filters this wiring in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
+  /** A one-line description for listings, where the full `description` is too long. */
   summary?: string
+  /** What this does, for whoever is reading the wiring rather than writing it. */
   description?: string
+  /** Names of error classes this may throw, so each one's registered status is used instead of a 500. */
   errors?: string[]
 
   middleware?: MiddlewareMetadata[]

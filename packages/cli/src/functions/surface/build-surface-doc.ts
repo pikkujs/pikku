@@ -139,6 +139,10 @@ const toDocSymbols = (
       ...(symbol.deprecated
         ? { deprecated: symbol.deprecatedReason ?? 'Deprecated' }
         : {}),
+      ...(symbol.signature ? { signature: symbol.signature } : {}),
+      ...(symbol.members?.length ? { members: symbol.members } : {}),
+      ...(symbol.examples?.length ? { examples: symbol.examples } : {}),
+      ...(symbol.status !== undefined ? { status: symbol.status } : {}),
     }))
 
 const byStepThenName = (a: SurfaceLeaf, b: SurfaceLeaf): number =>
@@ -175,6 +179,7 @@ const toLeaves = (
       name,
       step: copy.step,
       summary: copy.summary,
+      skill: copy.skill,
       symbols: toDocSymbols(entrypoint, generatedRoot),
     })
   }
@@ -201,16 +206,20 @@ export type BuildSurfaceDocOptions = {
   version: string
   app: SurfaceProject
   addon: SurfaceProject
+  /** Named regions an `@example snippet: <name>` resolves against. */
+  snippets?: Map<string, string>
 }
 
 const projectEntryPoint = async (
   id: 'app' | 'addon',
-  project: SurfaceProject
+  project: SurfaceProject,
+  snippets: Map<string, string> | undefined
 ): Promise<SurfaceEntryPoint> => {
   const projectDir = resolve(project.projectDir)
   const generatedRoot = resolve(project.outDir ?? join(projectDir, '.pikku'))
   const entrypoints = await collectSurface(projectDir, {
     importsSubpath: PIKKU_IMPORTS_SUBPATH,
+    snippets,
   })
   return {
     id,
@@ -225,14 +234,22 @@ const projectEntryPoint = async (
   }
 }
 
+/**
+ * An example names a snippet rather than restating it, and both entrypoints
+ * resolve against the same map — the regions come from one running application
+ * (`examples/online-shop`), not from whichever template happened to hold them.
+ */
 export const buildSurfaceDoc = async ({
   version,
   app,
   addon,
-}: BuildSurfaceDocOptions): Promise<SurfaceDoc> => ({
-  version,
-  entryPoints: [
-    await projectEntryPoint('app', app),
-    await projectEntryPoint('addon', addon),
-  ],
-})
+  snippets,
+}: BuildSurfaceDocOptions): Promise<SurfaceDoc> => {
+  return {
+    version,
+    entryPoints: [
+      await projectEntryPoint('app', app, snippets),
+      await projectEntryPoint('addon', addon, snippets),
+    ],
+  }
+}

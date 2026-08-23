@@ -82,7 +82,8 @@ async function getWantedSkills(
     only,
     core = false,
     fabric = false,
-  }: { only?: string; core?: boolean; fabric?: boolean }
+    client = false,
+  }: { only?: string; core?: boolean; fabric?: boolean; client?: boolean }
 ): Promise<string[]> {
   const wanted = new Set<string>()
 
@@ -98,6 +99,7 @@ async function getWantedSkills(
   const requestedGroups = [
     ...(core ? ['core'] : []),
     ...(fabric ? ['fabric'] : []),
+    ...(client ? ['client'] : []),
   ]
 
   if (requestedGroups.length > 0) {
@@ -151,13 +153,21 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
     only?: string
     core?: boolean
     fabric?: boolean
+    client?: boolean
     update?: boolean
   },
   void
 >({
   func: async (
     { logger },
-    { agent = 'claude', only, core = false, fabric = false, update = false }
+    {
+      agent = 'claude',
+      only,
+      core = false,
+      fabric = false,
+      client = false,
+      update = false,
+    }
   ) => {
     const supportedAgents = Object.keys(AGENT_SKILL_DIRS)
     if (!supportedAgents.includes(agent)) {
@@ -175,6 +185,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       only,
       core,
       fabric,
+      client,
     })
     const missing = wanted.filter((n) => !allEntries.includes(n))
     if (missing.length > 0) {

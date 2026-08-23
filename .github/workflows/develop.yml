@@ -367,6 +367,23 @@ jobs:
             exit 1
           fi
 
+  examples:
+    name: Example (${{ matrix.example }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [online-shop]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Generate, migrate and type-check
+        run: cd examples/${{ matrix.example }} && yarn build
+      - name: Test
+        run: cd examples/${{ matrix.example }} && yarn test
+
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
     runs-on: ubuntu-latest

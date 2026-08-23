@@ -4,6 +4,12 @@ export interface ScenarioCookieJar {
   readonly empty: boolean
 }
 
+/**
+ * A cookie store for a scenario run, so a step that signs in leaves the session
+ * cookie behind for the steps after it.
+ *
+ * @example snippet: scenarioCookieJar
+ */
 export const createCookieJar = (apiUrl: string): ScenarioCookieJar => {
   const jar = new Map<string, string>()
   const origin = new URL(apiUrl).origin

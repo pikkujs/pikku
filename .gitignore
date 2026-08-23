@@ -27,6 +27,8 @@ my-app
 console-app
 cli.schema.json
 packages/cli/surface.json
+packages/cli/snippets.json
+packages/cli/snippets-meta.json
 .playwright-mcp
 
 # Logs
@@ -165,6 +167,7 @@ verifiers/addon-registry/consumer/pikku-addons.json
 # test the commit rather than the generator. The addon's own db/ is source.
 verifiers/db-schema/db/
 verifiers/db-schema/.pikku-runtime/
+.pikku-runtime/
 
 # The workflow verifier's runtime migration is written by `pikku db generate`
 # at the start of every db-backed run, against whatever postgres the run points

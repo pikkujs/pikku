@@ -6,7 +6,7 @@ description: >-
   TRIGGER when: code uses pikkuWorkflowFunc/pikkuWorkflowGraph, user asks about workflows,
   multi-step processes, durable execution, suspend/resume, or DAG orchestration. DO NOT TRIGGER
   when: user asks about simple background jobs (use pikku-queue) or scheduled tasks (use
-  pikku-cron).
+  pikku-schedule).
 installGroups: [core]
 ---
 

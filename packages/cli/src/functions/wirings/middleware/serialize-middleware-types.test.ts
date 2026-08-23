@@ -39,7 +39,11 @@ describe('serializeMiddlewareTypes', () => {
       )
     }
 
-    assert.match(content, /export \{ cors \} from '@pikku\/core\/middleware'/)
+    assert.match(
+      content,
+      /export \{ cors, authAPIKey, authBearer, authCookie \} from '@pikku\/core\/middleware'/,
+      'the middleware leaf is the only door to core middleware, so every one it ships reaches through it'
+    )
   })
 
   // Re-implementing a core factory means the generated copy drifts from it. The
