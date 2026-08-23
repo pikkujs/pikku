@@ -3,7 +3,7 @@
 // against CoreSingletonServices and will not accept a handler that reads app
 // services.
 import { pikkuMiddleware } from '#pikku/middleware'
-import { InvalidOriginError } from '@pikku/core/errors'
+import { InvalidOriginError } from '#pikku/error'
 import { allowedOrigins } from '../lib/cors-origins.js'
 
 /**

@@ -124,12 +124,12 @@ const barrelSpecifiers = (file: string) => {
  * it otherwise never imports.
  */
 const namesOwnedByALeaf = new Map<string, string>([
-  ['defineCredential', '#pikku/credentials'],
+  ['defineCredential', '#pikku/auth'],
   ['defineSecret', '#pikku/secrets'],
   ['defineVariable', '#pikku/variables'],
   ['defineScope', '#pikku/scopes'],
   ['defineSystemRole', '#pikku/scopes'],
-  ['cors', '#pikku/http'],
+  ['cors', '#pikku/middleware'],
   ['InvalidOriginError', '#pikku/error'],
 ])
 

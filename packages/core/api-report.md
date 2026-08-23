@@ -494,7 +494,7 @@ export interface AbortScope {
   readonly reason?: string
   onBeginChanges?: () => void
 }
-addFunction: (funcName: string, funcConfig: CorePikkuFunctionConfig<any, any>, packageName?: string | null) => void
+addFunction: (funcName: string, funcConfig: CorePikkuFunctionConfig<any, any, any, any, any>, packageName?: string | null) => void
 checkAuthPermissions: (funcPermissions: CorePermissionGroup, session: CoreUserSession, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, packageName?: string | null) => Promise<boolean>
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   Record<string, PikkuPermission | PikkuPermission[]> | undefined

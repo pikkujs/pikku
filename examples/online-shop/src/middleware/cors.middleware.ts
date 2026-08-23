@@ -1,4 +1,4 @@
-import { cors } from '@pikku/core/middleware'
+import { cors } from '#pikku/middleware'
 // `pikkuMiddleware`/`addHTTPMiddleware` come from '#pikku', not '@pikku/core':
 // the generated helpers are bound to this app's SingletonServices, while the
 // core ones are typed against CoreSingletonServices and reject a handler that
