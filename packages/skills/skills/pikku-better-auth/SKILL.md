@@ -388,14 +388,15 @@ runs in.
 
 **Signing in and provisioning are separate powers.** An unknown address becomes
 an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
-in as the personas `pikku persona sync` provisioned there and refuses everything
-else (`No actor account exists for that address`), so holding the secret on such
-a stage does not let anyone invent identities. `pikku persona sync` writes those
-rows through its own database connection rather than by signing in, so it needs
-no actor secret and works against a stage whose endpoint is shut.
+in as the personas the deployment provisioned when it started and refuses
+everything else (`No actor account exists for that address`), so holding the
+secret on such a stage does not let anyone invent identities. Those rows are
+written by `provisionPersonas` from `@pikku/better-auth`, called in the server's
+own lifecycle, so provisioning needs no actor secret and works on a stage whose
+endpoint is shut.
 
 **`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
-persona.** `pikku persona sync` grants declared roles to actor accounts, so an
+persona.** Provisioning grants declared roles to actor accounts, so an
 `admin` persona is an actor holding real admin — anyone with the secret _and_ the
 opt-in can take a session as one. Do not treat "actors only" as a licence to open
 the hatch in production.
@@ -408,13 +409,42 @@ actor`. So the secret cannot take over a **real user's** account — the blast
   radius is the actor accounts and whatever roles they were granted.
 - **Unknown emails are created only under `pikku dev`**, flagged `actor: true`,
   so a local scenario declaring a new persona needs no seed step. Anywhere else
-  the account has to have been provisioned by `pikku persona sync` first.
+  the account has to have been provisioned at boot first.
 - **The comparison is constant-time and length-hiding**, so a wrong secret leaks
   neither the length nor a prefix of the right one.
 
 This is the endpoint `pikku scenario` signs its actors in through, and the one
 the frontend dev switcher posts to — see `pikku-scenario` for declaring the
 actors and `pikku-react` for `useDevActors()`.
+
+### Provisioning personas (`provisionPersonas`)
+
+Anywhere but `pikku dev`, the accounts have to exist before anyone signs in.
+The deployment creates them itself, from its own lifecycle:
+
+```ts
+import { provisionPersonas } from '@pikku/better-auth'
+import { personaConfigs, personaEnvironments } from '#pikku/pikku-personas.gen.js'
+
+await provisionPersonas(singletonServices, {
+  personas: personaConfigs,
+  environments: personaEnvironments,
+})
+```
+
+It runs where the database already is, which is the point: the CLI has no
+connection to a deployed environment's database — it resolves one from the local
+project config — so a `pikku persona sync staging` that wrote rows would write
+them to whatever database the checkout happened to point at. `pikku persona sync
+<environment>` still exists, and reports who that environment will provision and
+why anyone was skipped, which is what you run *before* the deploy.
+
+It creates missing accounts as `actor: true`, applies the roles each persona
+declares, and is additive — it never revokes, so removing a persona from the code
+leaves its account standing until somebody decides otherwise. `PIKKU_ENV` (or an
+explicit `environment`) selects who is eligible, through the same rule that
+decides who may run there; an address already held by a real, non-actor user
+throws rather than being granted the persona's roles.
 
 ---
 
