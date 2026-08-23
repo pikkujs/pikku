@@ -30,13 +30,27 @@ command sets it, and its absence is the answer everywhere else.
 
 Scenario and e2e suites do legitimately sign actors in against a deployed stage,
 so a hard "dev only" rule would have deleted the scenarios feature rather than
-secured it. Two escape hatches, both deliberate: `allowOutsideDev: true` on the
-plugin for an app whose whole purpose is being exercised, and
-`PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in` for everything else. The
-accepted value is a sentence rather than `true` so the hatch cannot be reached by
-habit, and any other value is ignored _and_ warned about, naming the literal that
-would have worked — a near miss means somebody meant to enable this and believes
-they did.
+secured it. One escape hatch, deliberately worded:
+`PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in`. The accepted value is a
+sentence rather than `true` so the hatch cannot be reached by habit, and any
+other value is ignored _and_ warned about, naming the literal that would have
+worked — a near miss means somebody meant to enable this and believes they did.
+
+There is deliberately no build-time equivalent. A `allowOutsideDev` option would
+be compiled into the bundle, so nothing about a running deployment would tell you
+whether its actor endpoint is open, and `pikku serve` could clear a marker but
+never a constant. An env var is the auditable form: greppable across
+deployments, visible where the deployment is configured, and clearable.
+
+**Signing in and provisioning are now separate powers.** Creating an
+`actor: true` row for an address that has none requires `pikku dev`
+specifically; the opt-in permits authentication only, refusing an unknown
+address with `No actor account exists for that address`. So a stage that must
+run scenarios can be signed into as the personas provisioned there without also
+becoming a place where anyone holding the secret can mint identities. The
+endpoint was the only thing that created actor rows, so `pikku persona sync`
+now writes them through the database connection it already holds — see its own
+changeset.
 
 Nothing here fails quietly. An open gate logs which branch opened it. A shut gate
 with a secret wired to it warns, because that is a misconfiguration rather than a

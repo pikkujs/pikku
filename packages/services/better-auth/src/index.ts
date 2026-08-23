@@ -26,6 +26,7 @@ export type { BanPluginOptions } from './ban-plugin.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export {
+  ACTOR_NOT_PROVISIONED_MESSAGE,
   ACTOR_SIGN_IN_DISABLED_MESSAGE,
   ACTOR_SIGN_IN_OPT_IN_ENV,
   ACTOR_SIGN_IN_OPT_IN_VALUE,
