@@ -14,27 +14,11 @@ import {
 } from './actor-sign-in-gate.js'
 
 export interface ActorPluginOptions {
-  /** Impersonation secret; only `actor: true` rows can sign in, missing/empty refuses the endpoint */
   secret:
     | string
     | undefined
     | (() => string | undefined | Promise<string | undefined>)
-  /**
-   * Enable actor sign-in on a process that is not `pikku dev`.
-   *
-   * For an app whose whole reason to exist is being exercised by scenarios — a
-   * review sandbox, a dedicated e2e stage — hard-coding the intent here is
-   * clearer than an environment variable somebody has to remember to set. Every
-   * other deployment reaches the same switch through
-   * `PIKKU_ALLOW_ACTOR_SIGN_IN`, which needs no rebuild.
-   */
   allowOutsideDev?: boolean
-  /**
-   * Where the gate announces which branch it took. Defaults to `console`
-   * because `actor()` is wired inside a `betterAuth({...})` config, where the
-   * app's logger is frequently not in scope — and a decision this security
-   * relevant must never go unannounced for want of somewhere to put it.
-   */
   logger?: Pick<Logger, 'info' | 'warn'>
 }
 
@@ -62,12 +46,6 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
     logger.info(actorSignInEnabledMessage(gate.reason))
   }
 
-  // A lazy `secret` cannot be resolved at wiring time without calling the app's
-  // secret lookup on every boot — a vault round-trip for a value the process may
-  // never need. So the misconfiguration warning fires here for the plain-string
-  // wiring, which is what a project that read the secret out of its config
-  // actually has, and on the first refused request otherwise. Either way it is
-  // said once.
   let refusalAnnounced = false
   if (!gate.enabled && typeof options.secret === 'string' && options.secret) {
     logger.warn(actorSignInRefusedMessage())
@@ -76,10 +54,6 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
 
   return {
     id: 'actor',
-    // Declared whether or not the gate is open. The column is part of the
-    // project's database schema, and `pikku db generate` reading a different
-    // shape in production than in development would be a far worse failure than
-    // the one this gate closes.
     schema: {
       user: {
         fields: {
