@@ -1,6 +1,6 @@
 {
   "name": "@pikku/bun-server",
-  "version": "0.12.8",
+  "version": "0.12.9",
   "description": "Pikku server adapter for Bun (Bun.serve)",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

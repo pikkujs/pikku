@@ -1,6 +1,6 @@
 {
   "name": "@pikku/code-edit",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Surgical edits to developer-owned Pikku source — locates a pikku call with the TypeScript AST, then splices the original text so formatting and comments survive",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
