@@ -1,3 +1,70 @@
+## 0.12.93
+
+### Patch Changes
+
+- 4058c3a: `addFunction` accepts a config carrying its schemas. It typed the parameter with
+  two type arguments where the schema-carrying overloads of
+  `CorePikkuFunctionConfig` need five, so every generated scenario registration
+  failed to typecheck — invisible until a real project was compiled in CI.
+- 4058c3a: authBearer, authCookie and authAPIKey now come from `#pikku/middleware`, so nothing needs `@pikku/core`
+- 4058c3a: `pikku doc` takes several topics at once, so an agent that needs two exports
+  spends one round-trip rather than two.
+
+  A variadic positional validated at runtime but not in the types: `[files...]`
+  resolved to a key literally named `files...`, so declaring one was a type error.
+
+- 4058c3a: `pikku doc` keeps a door screen to a door: exports, what each is for, and either
+  its signature or a pointer to its keys — never the keys themselves. `#pikku/function`
+  was 9.4k tokens and is now under 1k.
+
+  Error classes carry their registered HTTP status again. The scrape read only the
+  program, and a surveyed project consumes pikku as `.d.ts`, which has no statements —
+  so all 49 came back bare.
+
+- 4058c3a: Give every export `pikku doc` lists a line saying what it is for, and gate it at zero
+- 4058c3a: Point the doc's examples at real template source instead of restating it. An `@example snippet: name` names a `// @snippet start name` region in `templates/functions` or `templates/function-addon`, and the surface build resolves it — so every example the doc shows is code that compiled, and renaming an option breaks the build rather than the docs. `wireHTTP`, `wireChannel`, `wireScheduler`, `wireQueueWorker`, `defineSecret`, `defineVariable` and `addError` now carry one.
+- 114c079: Answer 401, not 403, when a function requires a session and no session exists.
+
+  `MissingSessionError` has been in the error table at 401 since forever and was never thrown — the runner threw `ForbiddenError('Authentication required')` instead, so "you are not signed in" and "you are signed in but not allowed" both came back 403. The two mean opposite things to a client: the first is worth retrying after re-authenticating, the second never is.
+
+  That made pikku's own recovery unreachable. `HttpPersona` re-logs-in once on a 401 mid-run, for exactly the case its comment describes — a long run outliving its session. Against a stage using `betterAuthStatelessSession`, the signed cookie cache expires on the app's `cookieCache.maxAge` (5 minutes is the common setting), and from that moment every RPC in the run failed with 403 "Authentication required" while the retry watched for a 401 that could never arrive. A 32-minute scenario run failed everything after its first five minutes.
+
+  Permission and scope denials are untouched and stay 403.
+
+- 4450b2a: Name the missing key when a secret is not found.
+
+  Every `SecretService` threw a bare `Requested secret not found`. In a deployed
+  runtime the stack is minified, so the message was the only evidence there was —
+  and it identified neither the key nor the service. Each implementation now names
+  the key it looked for; the better-auth middlewares that skip on an absent secret
+  match the prefix through one shared predicate instead of the whole string.
+
+- 4058c3a: Every `@example` in the public surface now names a snippet from `examples/online-shop`,
+  and `@pikku/cli` ships the regions themselves as `snippets.json` beside `surface.json`.
+
+  One running application is the only source: the code a reader is shown is code that
+  compiles, migrates and passes `pikku` in CI, and it cannot drift from the API it
+  illustrates. 80 of the 85 app-entrypoint callables now carry an example, up from 34.
+
+- 4058c3a: Say what each wiring key is for, and gate it so it stays said
+
+  The public surface doc listed keys as a name and a type. `schedule: string`
+  is a shape; what a caller needs is that it wants a cron expression. Written
+  as JSDoc where the type is declared, it reaches `pikku doc`, the IDE and the
+  console at once — 31% of keys carried one, now 64%.
+
+  `CoreHTTPFunctionWiring` was six near-identical union branches, so its keys
+  could not be documented once. It is now a shared object intersected with the
+  two unions that are genuinely correlated: `auth` with the kind of function it
+  admits, and the method with `sse` and `query`.
+
+  A test reads the shipped surface and holds three numbers: keys that say what
+  they are for can only go up, and references to a `Core*` internal or to a type
+  the doc never describes can only go down.
+
+  Drops `eventChannel` from HTTP wirings and `graph` from triggers; nothing read
+  either.
+
 ## 0.12.92
 
 ### Patch Changes

@@ -1,3 +1,27 @@
+## 0.12.20
+
+### Patch Changes
+
+- 4450b2a: Name the missing key when a secret is not found.
+
+  Every `SecretService` threw a bare `Requested secret not found`. In a deployed
+  runtime the stack is minified, so the message was the only evidence there was —
+  and it identified neither the key nor the service. Each implementation now names
+  the key it looked for; the better-auth middlewares that skip on an absent secret
+  match the prefix through one shared predicate instead of the whole string.
+
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [114c079]
+- Updated dependencies [4450b2a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+  - @pikku/core@0.12.93
+
 ## 0.12.19
 
 ### Patch Changes

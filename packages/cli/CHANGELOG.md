@@ -1,3 +1,263 @@
+## 0.12.116
+
+### Patch Changes
+
+- d7eea08: Gate the generated `getAgentThreads` behind `auth: true`. It lists the caller's own threads, so an anonymous caller could only ever get an empty array back — but it was the one exposed agent function with neither a permission nor a session requirement, so every scaffolded project shipped a PKU574 warning.
+- 4058c3a: authBearer, authCookie and authAPIKey now come from `#pikku/middleware`, so nothing needs `@pikku/core`
+- 4058c3a: A default skills install is now the seventeen that teach a `#pikku/*` door, not everything
+- 4058c3a: `pikku doc <export>` finds an export that lives on the addon surface instead of dead-ending
+- 4058c3a: `pikku doc --ai` now names the skill that teaches each door, and pikku-concepts sends you there first
+- 4058c3a: `pikku doc` takes several topics at once, so an agent that needs two exports
+  spends one round-trip rather than two.
+
+  A variadic positional validated at runtime but not in the types: `[files...]`
+  resolved to a key literally named `files...`, so declaring one was a type error.
+
+- 4058c3a: `pikku doc` keeps a door screen to a door: exports, what each is for, and either
+  its signature or a pointer to its keys — never the keys themselves. `#pikku/function`
+  was 9.4k tokens and is now under 1k.
+
+  Error classes carry their registered HTTP status again. The scrape read only the
+  program, and a surveyed project consumes pikku as `.d.ts`, which has no statements —
+  so all 49 came back bare.
+
+- 23ab90f: Stop the CLI entrypoint-guard tests failing whenever colour is forced.
+
+  The two assertions ran the emitted guard in a child process and compared its
+  stdout against `'true'` / `'false'`. The fixture logged the bare boolean, so
+  `console.log` sent it through `util.inspect`, which wraps a boolean in ANSI
+  yellow as soon as colour is forced. `yarn` forces it — so the tests passed when
+  run by hand and failed inside the pre-push hook, comparing
+  `'\x1B[33mfalse\x1B[39m'` against `'false'`, which left `main` unpushable
+  without `--no-verify`.
+
+  The fixture now logs `String(isDirectExecution)`. Strings are not colourised,
+  and the assertions are about what the guard resolved to, never about how Node
+  formats it.
+
+- 4058c3a: Give every export `pikku doc` lists a line saying what it is for, and gate it at zero
+- 4058c3a: Point the doc's examples at real template source instead of restating it. An `@example snippet: name` names a `// @snippet start name` region in `templates/functions` or `templates/function-addon`, and the surface build resolves it — so every example the doc shows is code that compiled, and renaming an option breaks the build rather than the docs. `wireHTTP`, `wireChannel`, `wireScheduler`, `wireQueueWorker`, `defineSecret`, `defineVariable` and `addError` now carry one.
+- 1bba2a5: feat(fabric): `deploy apply --sync` waits for the deploy and fails the build when it doesn't land
+
+  `pikku fabric deploy apply` queued a deployment, printed its id and exited 0.
+  Whether the deploy went live, failed, or parked itself at fabric's approval gate
+  waiting for a human, the CLI said the same thing and returned the same code — so
+  no CI pipeline built on it could tell a green deploy from a red one.
+
+  `--sync` polls the deployment to a terminal state and exits on the outcome: 0
+  live, 2 failed, 3 blocked, 4 timed out (900s by default, `--timeout <seconds>`
+  to move it). On success it prints what changed — units, handlers, functions,
+  workflows, secrets, variables, pending migrations (destructive ones called out
+  individually with fabric's reasons) — and the workers now running.
+  Under `--json` the wait emits NDJSON progress events with the terminal result
+  last.
+
+  It polls `getDeploymentStatus`, not `listDeployments`, because only the former
+  carries `statusReason` — and `suspended` alone cannot tell "waiting for you to
+  approve" from "blocked on a secret that has no value". A caller polling for
+  `active` on the second one waits out its whole timeout on a deployment that was
+  never going to move. The CLI now names the missing secrets and variables
+  instead, and only offers to approve a plan that is genuinely at the gate.
+
+  - `--auto-approve` **replaces `--auto-apply`**, with no alias. It answers both
+    decisions the flow has: confirm the create, and publish a plan parked at
+    `awaiting_approval`. It deliberately will not force a `needs_config` or
+    `needs_attention` plan through — fabric refuses those, and so do we.
+  - `--allow-destructive` is required on top of `--auto-approve` when fabric's
+    plan marks a pending migration destructive (`drop_table`, `truncate`,
+    `delete_rows`, a column rewrite, …). `--auto-approve` is a standing yes
+    written before anyone knew what the plan contained, and the risk verdict is
+    exactly what could not have been known — so the CLI lists the migrations and
+    the reasons, exits 3, and waits to be told again with the plan in view. The
+    interactive prompt shows the same lines inside the question.
+  - `--deployment-id <id>` attaches to an existing deployment instead of creating
+    one, which is what lets one CI job kick a deploy off and a later one wait for
+    it. It combines with `--sync` and `--auto-approve`, is rejected alongside
+    `--branch`/`--production`, and skips the git safety check — the deployment
+    already pins a sha and the local checkout is allowed to have moved on.
+  - **`deploy plan` is removed.** It never called the server: it re-ran the same
+    auth, branch-safety and ref resolution `apply` does and printed the sha back.
+    The real plan is produced server-side and is now visible in `apply`'s output.
+  - The `message` field on the deploy input is gone. Nothing ever sent it.
+
+  Attaching reads `getDeploymentStatus` for the deployment's existence and state
+  and treats the project listing as a bonus lookup for the branch name and diff.
+  The listing hides dismissed deployments unless asked, and a cancelled deploy is
+  normally dismissed — going to it first reported "no such deployment" for one
+  that existed and had a terminal status worth failing the build on.
+
+  The bundled fabric rpc-map snapshot gains `applyDeployment` and
+  `getDeploymentStatus` and drops `reapplyDeployment`, which fabric no longer
+  serves.
+
+- 57c1589: Apply `globalHTTPPrefix` to the RPC and agent routes the deploy analyzer synthesizes.
+
+  Every `wireHTTP` route already carries the prefix — the generator bakes it in, so `rpcCaller` is wired at `<prefix>/rpc/:rpcName` and the generated client posts to `` `${globalHTTPPrefix}/rpc/${rpcName}` ``. The per-function routes `analyzeDeployment` builds did not: an exposed function's unit was published at `/rpc/getMe` regardless of the prefix.
+
+  On a deployed stage that made the whole exposed RPC surface unreachable. `<prefix>/rpc/getMe` — what every client sends — matched no function unit, so it fell through to the `rpcCaller` catch-all, which carries only its own implementation; and `/rpc/getMe`, where the unit actually sat, is outside the prefix the gateway serves the API under, so it reached the frontend instead. Projects without `globalHTTPPrefix` were unaffected, which is why this survived: the two paths are the same string when the prefix is empty.
+
+  Also applies to `/remote/rpc/<name>` and the four `/rpc/agent/<name>` routes.
+
+- 8ea7879: Release the inspector's ts.Program between refreshes so `pikku dev` stops ratcheting memory
+- 4058c3a: Point another thirteen examples at template source: `pikkuFunc`, `pikkuSessionlessFunc`, `pikkuVoidFunc`, `pikkuChannelFunc`, `pikkuConfig`, `pikkuWireServices`, `pikkuPermission`, `pikkuMiddlewareFactory`, `pikkuChannelMiddleware`, `pikkuAgentMiddleware`, `addTagMiddleware`, `addHTTPMiddleware` and `pikkuCLIRender`. 23 of the 34 examples the doc ships are now code that compiled.
+- 4058c3a: Gate the door-to-skill table so it cannot name a skill a default install does not get
+- 9d48e8a: Fail `pikku fabric validate` when a scenario step hardcodes a string the message catalogue already owns.
+
+  A browser step that says `getByLabel('Full Name')` passes only while the app happens to render the base locale, and any copy edit turns it into a selector timeout that points at the wizard rather than at the rename that caused it. Validate now reads each `apps/<app>/messages/<baseLocale>.json` and errors on any string in a `*.steps.ts` / `*.scenario.ts` that is verbatim a catalogue value, naming the key to use.
+
+  It scans every literal rather than only the ones sitting in a `getBy*` call, because copy passed to a project helper — `pick('Where would you like to work?', …)` — reaches the DOM just the same. Comments are stripped first, since the prose around a step quotes the copy it is explaining. A project with no inlang app is not scanned, and a string the catalogue does not own (a test id, a fixture filename) is left alone.
+
+  The `pikku-scenario` skill gains the corresponding rule, including typing the lookup off the catalogue JSON rather than the generated Paraglide output, so a renamed key is a compile error instead of a run-time timeout.
+
+- 06dae85: fix(cli): type the shadow-exempt set so a project that opts none in still compiles
+
+  The shadowed-services warning emitted `new Set([])` when a project declared no
+  `allowShadowedServices`, and TypeScript infers that as `Set<never>` — so the
+  `allowedToShadow.has(name)` on the next line failed to compile with a `string`.
+  It type-checked only for a project that had opted at least one service in, and
+  no project in the repo has, so every build broke on the generated setup types.
+
+  Emitted as `new Set<string>([])`.
+
+- 4058c3a: Every `@example` in the public surface now names a snippet from `examples/online-shop`,
+  and `@pikku/cli` ships the regions themselves as `snippets.json` beside `surface.json`.
+
+  One running application is the only source: the code a reader is shown is code that
+  compiles, migrates and passes `pikku` in CI, and it cannot drift from the API it
+  illustrates. 80 of the 85 app-entrypoint callables now carry an example, up from 34.
+
+- 4058c3a: Add a `client` install group, so frontend-facing skills can be pulled without the whole `core` set: `pikku skills install --client`. `installGroups` has always been a list and the resolver installs a skill if _any_ requested group matches, so `[core, client]` keeps every existing `--core` install identical.
+
+  Tagged `[core, client]`: `pikku-react`, `pikku-react-query`, `pikku-workflows-client`, `pikku-paraglide`, `pikku-i18n`, `pikku-rtl`.
+
+- 4058c3a: `@pikku/cli` ships every snippet the docs need, so a site rendering them no longer
+  carries a submodule of the app they came from.
+
+  Three gaps closed against what the website was extracting itself: SQL migrations
+  are source too (`-- @snippet start` in a `.sql` file), `snippets-meta.json` records
+  which file each region came from so a page can link to it, and the scenario
+  environments block is read straight off the project's `pikku.config.json` — the one
+  region a marker cannot reach, since that file is parsed as strict JSON.
+
+- 4058c3a: Describe how each export is called in the surface doc: computed signatures, the keys of the options object it takes with the JSDoc that declares them, `@example` blocks, and the HTTP status an error class maps to. Each leaf now also names the skill that teaches it, or declares that none does.
+- 4058c3a: Say what each wiring key is for, and gate it so it stays said
+
+  The public surface doc listed keys as a name and a type. `schedule: string`
+  is a shape; what a caller needs is that it wants a cron expression. Written
+  as JSDoc where the type is declared, it reaches `pikku doc`, the IDE and the
+  console at once — 31% of keys carried one, now 64%.
+
+  `CoreHTTPFunctionWiring` was six near-identical union branches, so its keys
+  could not be documented once. It is now a shared object intersected with the
+  two unions that are genuinely correlated: `auth` with the kind of function it
+  admits, and the method with `sse` and `query`.
+
+  A test reads the shipped surface and holds three numbers: keys that say what
+  they are for can only go up, and references to a `Core*` internal or to a type
+  the doc never describes can only go down.
+
+  Drops `eventChannel` from HTTP wirings and `graph` from triggers; nothing read
+  either.
+
+- 958b91a: Stop the TanStack Start shim throwing on every deployed page
+
+  `makeApi()` read `import.meta.env.VITE_API_URL` and threw `VITE_API_URL is not
+set` when it was absent — which is what happens in a deployed bundle. Fabric
+  binds `VITE_API_URL` as a runtime binding on the worker, invisible to Vite at
+  build time, so the read is `undefined` and the shim threw on the first loader
+  that touched it. Codegen was shipping the failure `fabric validate` now fails
+  projects for.
+
+  The generated shim derives the base instead:
+
+  - **Browser** — `import.meta.env.VITE_API_URL` when the build inlined one,
+    otherwise `window.location.origin + '/api'`. A configured base pointing at
+    localhost while the page is served from a real origin is ignored: the browser
+    cannot reach it, so it is a stray dev value.
+  - **SSR** — `PIKKU_API_URL` then `VITE_API_URL` from the environment, since
+    there is no page to derive from. This is the one path that still throws when
+    nothing is set, and it now names both variables. The environment is reached
+    through `globalThis`, so the emitted file type-checks under a browser-only
+    tsconfig with no Node types.
+
+  `apiBaseUrl()` is exported alongside `makeApi()` for code that needs the base
+  without an RPC client. This is the same resolution the shipping app templates
+  use.
+
+- 704d87d: Fail `pikku fabric validate` when a deployed frontend does not derive its API base from the page origin.
+
+  Nothing writes a `VITE_*` / `NEXT_PUBLIC_*` variable at build time, and nothing
+  can: the stage hostname is chosen when the worker is published, after the bundle
+  is built. Fabric binds `VITE_API_URL` as a runtime binding on the deployed
+  worker, which `import.meta.env` cannot see — so in the shipped bundle the read
+  is `undefined` and whatever follows it is the real answer.
+
+  That makes every build-time env read for an API base a failure, not just the
+  ones defaulting to localhost:
+
+  - `?? 'http://localhost:3002'` — errors as `frontend-env-fallback-localhost-<slug>`.
+    Every call from a real browser hangs until it times out, with nothing in any
+    log, because the request never left the visitor's machine.
+  - `?? '/api'`, or no fallback at all, or a `NEXT_PUBLIC_*` name nothing binds —
+    errors as `frontend-api-base-not-derived-<slug>`, naming the variable the app
+    actually read.
+  - A bare hardcoded localhost URL — now an error rather than a warning.
+
+  All three are suppressed when the frontend reads `location.origin` somewhere:
+  there the env read is the override branch of an answer that is already correct.
+  That is the fix in every case, and what fabric's own app template does — the app
+  and the API share a hostname and the dispatcher claims `/api/*` on it, so
+  `location.origin + '/api'` is right on a stage, a preview and a custom domain
+  alike.
+
+  Only deployable declared frontends are scanned. Tests, `.d.ts` files and comments
+  are skipped: none of them reach a browser.
+
+- 90bef58: Warn when `createSingletonServices` returns a service the host already passed in
+
+  `pikkuServices` merges `{ ...existingServices, ...createdServices }`, so a
+  factory that builds its own `secrets` (or `kysely`, or `content`) wins over the
+  one the host configured — silently. The replacement starts empty and the first
+  failure lands much later, somewhere unrelated, with nothing in the boot log
+  pointing at the swap. The generated wrapper now names what it discarded and
+  points at the `existingServices.x ?? new Own()` idiom the templates use.
+
+  Shadowing stays available where it is deliberate, but has to be said out loud.
+  `allowShadowedServices` in `pikku.config.json` lists the names that may be
+  replaced without a warning:
+
+  ```json
+  {
+    "allowShadowedServices": ["kysely"]
+  }
+  ```
+
+  Names are opted in one at a time rather than by a blanket flag, so adding a
+  service later still warns until someone decides it should not.
+
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [114c079]
+- Updated dependencies [4058c3a]
+- Updated dependencies [9d48e8a]
+- Updated dependencies [4450b2a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [c63adb8]
+  - @pikku/core@0.12.93
+  - @pikku/skills@0.12.14
+  - @pikku/better-auth@0.12.29
+  - @pikku/kysely@0.13.22
+
 ## 0.12.115
 
 ### Patch Changes

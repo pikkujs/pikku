@@ -1,5 +1,35 @@
 # @pikku/better-auth
 
+## 0.12.29
+
+### Patch Changes
+
+- 4450b2a: Name the missing key when a secret is not found.
+
+  Every `SecretService` threw a bare `Requested secret not found`. In a deployed
+  runtime the stack is minified, so the message was the only evidence there was —
+  and it identified neither the key nor the service. Each implementation now names
+  the key it looked for; the better-auth middlewares that skip on an absent secret
+  match the prefix through one shared predicate instead of the whole string.
+
+- c63adb8: Say so when a request carries `x-pikku-impersonate-user-id` and the session middleware was registered without an `impersonation` option.
+
+  The option is opt-in and omitting it was silent: the header was read by nobody and the request ran as the caller that signed in. A deployed stage's scenario and virtual-user runs sign in with a Fabric operator token and name the persona in that header, so an app that never passed the option ran every persona as the operator — a row with no membership anywhere — and the only symptom was assertions failing against data the persona should have been able to see.
+
+  Both `betterAuthSession` and `betterAuthStatelessSession` now warn once per process instead.
+
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [114c079]
+- Updated dependencies [4450b2a]
+- Updated dependencies [4058c3a]
+- Updated dependencies [4058c3a]
+  - @pikku/core@0.12.93
+
 ## 0.12.28
 
 ### Patch Changes
