@@ -1,3 +1,4 @@
+import type { PersonaEnvironment } from '@pikku/core/persona'
 import type { ResolvedPersona } from '@pikku/core/services'
 
 /**
@@ -11,8 +12,19 @@ import type { ResolvedPersona } from '@pikku/core/services'
 export const serializePersonas = (
   personas: Record<string, ResolvedPersona>,
   agentMapImportPath: string,
-  rpcMapImportPath: string
+  rpcMapImportPath: string,
+  environments: Readonly<Record<string, PersonaEnvironment>> = {}
 ) => {
+  // Only the flag the rule reads. The rest of an environment entry is its
+  // apiUrl and paths, which belong to the machine running `pikku scenario` and
+  // have no business inside the deployed bundle.
+  const projected = Object.fromEntries(
+    Object.entries(environments).map(([name, environment]) => [
+      name,
+      environment.production ? { production: true } : {},
+    ])
+  )
+
   return `/** Personas declared with definePersonas() */
 import { createHttpPersonas } from '@pikku/core/persona'
 import type { HttpPersonasConfig } from '@pikku/core/persona'
@@ -32,6 +44,18 @@ export type PersonaName = keyof typeof personaConfigs
  * \`roles\` off every persona needs this instead.
  */
 export const personaList: ResolvedPersona[] = Object.values(personaConfigs)
+
+/**
+ * The \`environments\` block of pikku.config.json, carried into the runtime.
+ *
+ * A persona's environments are checked twice: at build time against the config,
+ * and again wherever a persona is signed in or provisioned, against the
+ * environment the running process says it is (\`PIKKU_ENV\`). The second check
+ * is not the first one repeated — the build check trusts the file, and the run
+ * check does not trust which artifact got deployed — so the rule needs the
+ * config on both sides of the build.
+ */
+export const personaEnvironments = ${JSON.stringify(projected, null, 2)} as const satisfies Record<string, { production?: boolean }>
 
 export type AgentName = keyof AgentMap & string
 export type TypedPersonas = Record<

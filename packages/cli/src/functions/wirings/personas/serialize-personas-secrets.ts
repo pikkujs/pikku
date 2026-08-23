@@ -3,7 +3,7 @@
  *
  * `SCENARIO_ACTOR_SECRET` is the platform's, not the application's: nothing in
  * app code reads it. It is consumed by the scenario service when it signs an
- * actor in, by `pikku scenario` / `pikku persona` / `pikku persona sync`, and by
+ * actor in, by `pikku scenario` / `pikku persona`, and by
  * the Playwright provider. Declaring it here — rather than leaving every project
  * to hand-write the same `defineSecret` — is the same reasoning that puts
  * `BETTER_AUTH_SECRET` in the auth scaffold: a value the framework requires

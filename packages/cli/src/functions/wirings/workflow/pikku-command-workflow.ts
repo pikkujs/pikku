@@ -318,7 +318,12 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       await writeFileInDir(
         logger,
         config.personasWiringFile,
-        serializePersonas(personas, agentMapImportPath, exposedRpcMapImportPath)
+        serializePersonas(
+          personas,
+          agentMapImportPath,
+          exposedRpcMapImportPath,
+          config.environments ?? {}
+        )
       )
       // Same reason as the scenario meta above: a project generated before this
       // moved to `scenarios/` still has a copy under `workflow/`, and tsc

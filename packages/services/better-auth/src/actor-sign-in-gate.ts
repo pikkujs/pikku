@@ -7,7 +7,7 @@ export const ACTOR_SIGN_IN_DISABLED_MESSAGE =
   'Actor sign-in is disabled outside `pikku dev`'
 
 export const ACTOR_NOT_PROVISIONED_MESSAGE =
-  'No actor account exists for that address — run `pikku persona sync` against this environment'
+  'No actor account exists for that address — the deployment provisions its personas at boot, so check `provisionPersonas` runs in this environment'
 
 export type ActorSignInReason = 'pikku-dev' | 'allow-outside-dev-env' | 'disabled'
 
@@ -16,8 +16,8 @@ export interface ActorSignInGate {
   reason: ActorSignInReason
   /**
    * Whether an unknown address may be turned into an actor row. `pikku dev`
-   * alone: a stage that runs scenarios signs in as the personas
-   * `pikku persona sync` provisioned, and never mints new identities.
+   * alone: a stage that runs scenarios signs in as the personas the deployment
+   * provisioned when it started, and never mints new identities.
    */
   mayProvision: boolean
   nearMissOptIn: string | undefined

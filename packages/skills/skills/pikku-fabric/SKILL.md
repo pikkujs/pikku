@@ -113,7 +113,7 @@ This is **test data only**: enough rows that a fresh dev database isn't an empty
 app. It never reaches staging or production — reset refuses `NODE_ENV=production`
 and refuses a database outside the runtime directory. Anything a real environment
 needs — accounts, role grants — is provisioning, not seeding, and belongs in
-`pikku persona sync` or a migration.
+`provisionPersonas` or a migration.
 
 A Better Auth app has a second constraint: the plugins you enable (`ban()`,
 `actor()`, …) each declare columns, and `pikku db migrate` refuses to run while
