@@ -7,12 +7,14 @@ import {
   OPERATOR_TOKEN_VARIABLE,
   CREATE_MISSING_VARIABLE,
 } from './persona-credentials.js'
-import type { VariablesService } from '@pikku/core/services'
+import { LocalVariablesService } from '@pikku/core/services'
 
-const variablesFrom = (values: Record<string, string>): VariablesService =>
-  ({
-    get: async (name: string) => values[name],
-  }) as unknown as VariablesService
+// The real service, not a fake that hands back what it was given: `get`
+// JSON-parses, so 'true' arrives as a boolean and 'false' as one too. A stub
+// returning raw strings is more forgiving than anything this code runs
+// against, and hid a createMissing flag that could never be turned on.
+const variablesFrom = (values: Record<string, string>) =>
+  new LocalVariablesService(values)
 
 describe('resolvePersonaCredentials', () => {
   test('uses the actor secret when that is all the environment holds', async () => {
@@ -50,6 +52,15 @@ describe('resolvePersonaCredentials', () => {
       'scenario actors'
     )
     assert.equal(on.operator?.createMissing, true)
+
+    const explicitlyOff = await resolvePersonaCredentials(
+      variablesFrom({
+        [OPERATOR_TOKEN_VARIABLE]: 'operator-token',
+        [CREATE_MISSING_VARIABLE]: 'false',
+      }),
+      'scenario actors'
+    )
+    assert.equal(explicitlyOff.operator?.createMissing, false)
   })
 
   test('names both credentials, and the command, when neither is set', async () => {

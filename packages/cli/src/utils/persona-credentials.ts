@@ -28,8 +28,12 @@ export const resolvePersonaCredentials = async (
 ): Promise<PersonaCredentials> => {
   const token = await variables.get(OPERATOR_TOKEN_VARIABLE)
   if (token) {
+    // `variables.get` JSON-parses, so `PIKKU_PERSONA_CREATE_MISSING=true`
+    // arrives as the boolean `true` and never equalled the string. The
+    // operator token survives the same parse only because a JWT is not
+    // valid JSON.
     const createMissing =
-      (await variables.get(CREATE_MISSING_VARIABLE)) === 'true'
+      String(await variables.get(CREATE_MISSING_VARIABLE)) === 'true'
     return { operator: { token, createMissing } }
   }
 
