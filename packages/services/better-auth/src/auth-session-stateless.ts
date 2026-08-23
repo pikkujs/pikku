@@ -57,8 +57,6 @@ export const betterAuthStatelessSession = (
       if (!http?.request || !setSession || session) {
         return next()
       }
-      // Capture the narrowed request so the deferred impersonation header reader
-      // below keeps the non-null type.
       const request = http.request
 
       let secret: string | undefined
@@ -81,8 +79,9 @@ export const betterAuthStatelessSession = (
       // surface. The normal "no valid cookie" path returns null here — it does
       // not throw.
       let cached: CachedSession | null
+      let headers: Headers
       try {
-        const headers = mergeRelayedCookies(new Headers(request.headers()))
+        headers = mergeRelayedCookies(new Headers(request.headers()))
         // Cookie is `__Secure-`-prefixed when secure, unprefixed otherwise; try
         // both since NODE_ENV is unreliable in serverless. Only one cookie exists.
         cached =
@@ -110,7 +109,7 @@ export const betterAuthStatelessSession = (
             cached,
             impersonation,
             services as CoreServices,
-            (name) => request.header(name),
+            (name) => headers.get(name),
             mapSession
           )
           if (impersonated) {
@@ -120,8 +119,9 @@ export const betterAuthStatelessSession = (
             return next()
           }
         } else {
-          warnImpersonationUnconfigured(services as CoreServices, (name) =>
-            request.header(name)
+          warnImpersonationUnconfigured(
+            services as CoreServices,
+            (name) => headers.get(name)
           )
         }
         const mapped = mapSession
