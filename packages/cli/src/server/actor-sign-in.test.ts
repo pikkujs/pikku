@@ -15,7 +15,6 @@ import {
   enableDevActorSignIn,
 } from './actor-sign-in.js'
 
-/** Records what the command told the operator, standing in for the CLI logger. */
 const recordingLogger = () => {
   const info: string[] = []
   const warn: string[] = []
@@ -104,9 +103,6 @@ describe('pikku serve refusing actor sign-in', () => {
   afterEach(clearEnv)
 
   test('leaves the gate shut even with a secret in the environment', () => {
-    // The failure this replaces: a stray SCENARIO_ACTOR_SECRET in a production
-    // environment was enough, on its own, to enable passwordless sign-in as any
-    // declared persona.
     process.env[ACTOR_SECRET_ENV] = 'leaked-into-production'
     disableDevActorSignIn(recordingLogger() as any)
 

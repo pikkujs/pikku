@@ -11,7 +11,6 @@ import {
 } from './actor-sign-in-gate.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 
-/** Collects the plugin's own log lines instead of letting them reach the console. */
 const recordingLogger = () => {
   const info: string[] = []
   const warn: string[] = []
@@ -59,8 +58,6 @@ const signInActor = (
   )
 
 describe('better-auth actor plugin', () => {
-  // These cover the sign-in mechanics rather than the gate, so they run as
-  // `pikku dev` does — the command that enables actor sign-in.
   beforeEach(() => {
     process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
   })
@@ -229,8 +226,6 @@ describe('actor sign-in gate', () => {
   test('still declares the actor column while disabled', () => {
     const logger = recordingLogger()
     const plugin = actor({ secret: undefined, logger })
-    // The gate must not move the database schema — a column that exists in dev
-    // and not in production is a worse problem than the one it closes.
     assert.equal((plugin.schema as any).user.fields.actor.type, 'boolean')
   })
 })
