@@ -2379,10 +2379,6 @@ describe('declared frontends + type-check (live validate.function)', () => {
   })
 })
 
-// A deployed frontend that points at a dev server is the failure this whole
-// block exists for: the deploy goes green, the stage answers, and every call
-// the browser makes hangs until it times out — with nothing in any log,
-// because the request never left the visitor's machine.
 describe('deployed frontend API base (live validate.function)', () => {
   const declareWeb = async (root: string, deploy = true) => {
     await writeJson(join(root, 'pikkufabric.config.json'), {
@@ -2453,8 +2449,6 @@ describe('deployed frontend API base (live validate.function)', () => {
     }
   })
 
-  // The recommended shape: a localhost constant is still in the file, but it
-  // is the dev branch of an origin-derived answer rather than the shipped one.
   test('deriving the base from location.origin passes clean', async () => {
     const tmp = await makeTmp()
     try {

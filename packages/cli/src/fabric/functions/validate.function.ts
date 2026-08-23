@@ -1255,26 +1255,8 @@ export async function runValidate(
     }
   }
 
-  // ── a deployed frontend pointing at localhost ──────────────────────────
-  // Nothing in the deploy container writes a `VITE_*` / `NEXT_PUBLIC_*`
-  // variable, and nothing can: the stage hostname is chosen when the worker is
-  // published, after the frontend bundle has already been built. So every
-  // build-time env read in a deployed frontend resolves to `undefined`, and
-  // whatever the code falls back to is what real browsers get.
-  //
-  // When that fallback is a dev-server URL the app deploys green and is broken
-  // on arrival — every call hangs until it times out, with nothing in any log
-  // to say why, because the request never left the visitor's machine.
-  //
-  // The fix is never "set the variable". It is to derive the base from the
-  // page's own origin: fabric serves the app and the API on one hostname and
-  // the dispatcher claims `/api/*` on it, so `location.origin + '/api'` is
-  // right on a stage, on a preview, and on a custom domain alike.
   const LOCALHOST_URL_RE =
     /['"`](?:https?|wss?):\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?[^'"`]*['"`]/
-  // The same literal, but standing as the default of a build-time env read —
-  // `import.meta.env.X ?? '…'`, `process.env.X || '…'`. This is the shape that
-  // reads as configured and ships as hardcoded.
   const ENV_FALLBACK_RE =
     /(?:import\.meta\.env|process\.env)\s*(?:\.\w+|\[\s*['"][^'"]+['"]\s*\])\s*(?:\?\?|\|\|)\s*['"`](?:https?|wss?):\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)/
 
@@ -1287,14 +1269,9 @@ export async function runValidate(
     ]
     const envFallbackHits: string[] = []
     const bareHits: string[] = []
-    // An app that reads its own origin has already solved this, and the
-    // localhost literal left in it is the dev branch of that answer — the
-    // shape the fix hint below recommends. Warning on it every run would
-    // train people to ignore the warning that matters.
     let derivesOrigin = false
     for (const file of files) {
       const rel = file.slice(fe.dir.length + 1).replace(/\\/g, '/')
-      // Tests and type declarations are not in the bundle a browser runs.
       if (
         /\.(test|spec)\.[jt]sx?$/.test(rel) ||
         rel.endsWith('.d.ts') ||
@@ -1306,7 +1283,6 @@ export async function runValidate(
       if (!text) continue
       if (/\blocation\s*\.\s*origin\b/.test(text)) derivesOrigin = true
       for (const raw of text.split('\n')) {
-        // A URL in prose is documentation, not a request.
         const line = raw.trim()
         if (
           line.startsWith('//') ||
