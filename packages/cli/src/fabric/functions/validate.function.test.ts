@@ -2378,3 +2378,258 @@ describe('declared frontends + type-check (live validate.function)', () => {
     }
   })
 })
+
+describe('deployed frontend API base (live validate.function)', () => {
+  const declareWeb = async (root: string, deploy = true) => {
+    await writeJson(join(root, 'pikkufabric.config.json'), {
+      projectId: 'proj-abc123',
+      frontends: { web: { cwd: 'apps/web', deploy } },
+    })
+  }
+
+  const writeApiLib = async (root: string, source: string) => {
+    await mkdir(join(root, 'apps', 'web', 'src', 'lib'), { recursive: true })
+    await writeJson(join(root, 'apps', 'web', 'package.json'), {
+      name: '@project/web',
+      type: 'module',
+      dependencies: { react: '^19.0.0' },
+    })
+    await writeFile(
+      join(root, 'apps', 'web', 'src', 'lib', 'api.ts'),
+      source,
+      'utf8'
+    )
+  }
+
+  const ids = (findings: Array<{ id: string }>) =>
+    JSON.stringify(findings.map((f) => f.id))
+
+  test('an env read defaulting to localhost → error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3002'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-env-fallback-localhost-web'
+      )
+      assert.ok(
+        f,
+        `expected the fallback finding, got: ${ids(result.findings)}`
+      )
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /src\/lib\/api\.ts/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('process.env / NEXT_PUBLIC_ is caught the same way', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8080/api"\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some(
+          (f) => f.id === 'frontend-env-fallback-localhost-web'
+        ),
+        `expected the fallback finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('deriving the base from location.origin passes clean', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `const LOCAL_API_URL = 'http://localhost:3002'`,
+          `export function apiUrl(): string {`,
+          `  if (typeof window === 'undefined') return LOCAL_API_URL`,
+          `  if (import.meta.env.DEV) return LOCAL_API_URL`,
+          `  return window.location.origin + '/api'`,
+          `}`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) =>
+          f.id.startsWith('frontend-env-fallback-localhost')
+        ),
+        `expected no fallback finding, got: ${ids(result.findings)}`
+      )
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-localhost-url')),
+        `expected no bare-URL warning, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a bare localhost URL, with no origin derivation anywhere → error', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const CHANNEL_URL = 'ws://localhost:3002/meditation'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-localhost-url-web'
+      )
+      assert.ok(f, `expected the bare-URL finding, got: ${ids(result.findings)}`)
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /src\/lib\/api\.ts/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a localhost URL only in a comment is not a finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `// locally the API is at http://localhost:3002, in prose only`,
+          `export const API_URL = '/api'`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-')),
+        `expected no frontend findings, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read with a non-localhost fallback still fails — nothing injects it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? '/api'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-api-base-not-derived-web'
+      )
+      assert.ok(f, `expected the derivation finding, got: ${ids(result.findings)}`)
+      assert.strictEqual(f!.severity, 'error')
+      assert.match(f!.message, /VITE_API_URL/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read with no fallback at all fails the same way', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        result.findings.some(
+          (f) => f.id === 'frontend-api-base-not-derived-web'
+        ),
+        `expected the derivation finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the finding names the variable the app actually read', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        `export const API = process.env.NEXT_PUBLIC_API_BASE ?? '/api'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const f = result.findings.find(
+        (f) => f.id === 'frontend-api-base-not-derived-web'
+      )
+      assert.ok(f, `expected the derivation finding, got: ${ids(result.findings)}`)
+      assert.match(f!.message, /NEXT_PUBLIC_API_BASE/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an env read is fine once the origin is the fallback', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp)
+      await writeApiLib(
+        tmp,
+        [
+          `export function apiUrl(): string {`,
+          `  return import.meta.env.VITE_API_URL ?? window.location.origin + '/api'`,
+          `}`,
+          ``,
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) => f.id.startsWith('frontend-')),
+        `expected no frontend findings, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a frontend with deploy:false is not checked — it never reaches a browser', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await declareWeb(tmp, false)
+      await writeApiLib(
+        tmp,
+        `export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3002'\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.ok(
+        !result.findings.some((f) =>
+          f.id.startsWith('frontend-env-fallback-localhost')
+        ),
+        `expected no fallback finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
