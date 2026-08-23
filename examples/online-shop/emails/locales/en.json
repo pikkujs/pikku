@@ -1,0 +1,23 @@
+{
+  "common": {
+    "footer": "If you did not create this account, you can safely ignore this email."
+  },
+  "confirmEmail": {
+    "subject": "Confirm your email for {{appName}}",
+    "preview": "Confirm your email address to finish setting up your account.",
+    "heading": "Confirm your email",
+    "intro": "Thanks for signing up for {{appName}}! Confirm {{email}} to finish setting up your account.",
+    "cta": "Confirm email",
+    "fallback": "If the button does not work, copy and paste this URL into your browser:",
+    "expiry": "This link expires in 24 hours."
+  },
+  "resetPassword": {
+    "subject": "Reset your {{appName}} password",
+    "preview": "Use the link inside to choose a new password.",
+    "heading": "Reset your password",
+    "intro": "We received a request to reset the password for {{email}}. Choose a new password to get back in.",
+    "cta": "Choose a new password",
+    "fallback": "If the button does not work, copy and paste this URL into your browser:",
+    "expiry": "This link expires in 1 hour. If you did not ask for a reset, you can safely ignore this email."
+  }
+}

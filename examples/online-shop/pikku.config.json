@@ -1,0 +1,75 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "rootDir": ".",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": [
+    "./src",
+    "./test"
+  ],
+  "outDir": "./.pikku",
+  "emailTemplatesDir": "./emails",
+  "clientFiles": {
+    "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
+    "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
+    "fetchFile": ".pikku/pikku-fetch.gen.ts",
+    "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
+    "websocketFile": ".pikku/pikku-websocket.gen.ts",
+    "realtimeFile": ".pikku/realtime.gen.ts"
+  },
+  "packageMappings": {
+    ".": "@pikku/example-online-shop"
+  },
+  "schema": {
+    "supportsImportAttributes": true
+  },
+  "dev": {
+    "db": true
+  },
+  "content": {
+    "uploadUrlPrefix": "/upload",
+    "assetUrlPrefix": "/content",
+    "sizeLimit": "10mb"
+  },
+  "scaffold": {
+    "pikkuDir": "src/scaffold",
+    "console": true,
+    "rpc": true,
+    "agent": true,
+    "workflow": true,
+    "scenarios": true,
+    "events": true
+  },
+  "scenarios": {
+    "emailDomain": "actors.local",
+    "environments": {
+      "local": {
+        "apiUrl": "http://localhost:4011",
+        "appUrl": "http://localhost:7211",
+        "signInPath": "/api/auth/sign-in/actor"
+      },
+      "sandbox": {
+        "apiUrl": "http://localhost:4000",
+        "signInPath": "/api/auth/sign-in/actor"
+      },
+      "coverage": {
+        "apiUrl": "http://localhost:4010",
+        "signInPath": "/api/auth/sign-in/actor"
+      }
+    }
+  },
+  "environments": {
+    "local": {
+      "apiUrl": "http://localhost:4011",
+      "appUrl": "http://localhost:7211",
+      "signInPath": "/api/auth/sign-in/actor"
+    },
+    "sandbox": {
+      "apiUrl": "http://localhost:4000",
+      "signInPath": "/api/auth/sign-in/actor"
+    },
+    "coverage": {
+      "apiUrl": "http://localhost:4010",
+      "signInPath": "/api/auth/sign-in/actor"
+    }
+  }
+}

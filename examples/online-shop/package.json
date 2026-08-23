@@ -1,0 +1,45 @@
+{
+  "name": "@pikku/example-online-shop",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^2.0.48",
+    "@pikku/addon-console": "workspace:*",
+    "@pikku/addon-stripe": "^0.1.8",
+    "@pikku/ai-vercel": "workspace:*",
+    "@pikku/better-auth": "^0.12.28",
+    "@pikku/cloudflare": "workspace:*",
+    "@pikku/core": "^0.12.92",
+    "@pikku/kysely": "workspace:^",
+    "@pikku/schema-cfworker": "^0.12.6",
+    "@standard-schema/spec": "^1.1.0",
+    "ai": "^6.0.0",
+    "better-auth": "^1.6.29",
+    "kysely": "^0.29.5",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@pikku/cli": "^0.12.115",
+    "@pikku/deploy-standalone": "workspace:*",
+    "@pikku/playwright": "workspace:*",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^24",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3"
+  },
+  "scripts": {
+    "build": "pikku all && pikku db migrate && tsc --noEmit",
+    "tsc": "tsc --noEmit",
+    "pikku": "pikku all && pikku db migrate",
+    "test": "node --import tsx --test \"test/**/*.test.ts\""
+  },
+  "imports": {
+    "#pikku/*.gen.js": "./.pikku/*.gen.ts",
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": [
+      "./.pikku/*/index.ts",
+      "./.pikku/*"
+    ]
+  }
+}
