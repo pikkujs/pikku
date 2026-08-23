@@ -5,6 +5,7 @@ import type { BetterAuthPlugin } from 'better-auth'
 import type { Logger } from '@pikku/core/services'
 
 import {
+  ACTOR_NOT_PROVISIONED_MESSAGE,
   ACTOR_SIGN_IN_DISABLED_MESSAGE,
   actorSignInAttemptRefusedMessage,
   actorSignInEnabledMessage,
@@ -19,8 +20,6 @@ export interface ActorPluginOptions {
     | string
     | undefined
     | (() => string | undefined | Promise<string | undefined>)
-  /** Enable sign-in outside `pikku dev`, for a stage that exists to be exercised by scenarios. `PIKKU_ALLOW_ACTOR_SIGN_IN` does the same without a rebuild. */
-  allowOutsideDev?: boolean
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
 }
@@ -37,10 +36,10 @@ const secretsEqual = (a: string, b: string): boolean => {
   return diff === 0
 }
 
-/** Better Auth plugin for scenario actors: `POST /sign-in/actor` with `{ email, secret }`, actor rows auto-created, non-actor sign-in refused */
+/** Better Auth plugin for scenario actors: `POST /sign-in/actor` with `{ email, secret }`, non-actor sign-in refused, rows created only under `pikku dev` */
 export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
   const logger = options.logger ?? console
-  const gate = resolveActorSignIn(options.allowOutsideDev)
+  const gate = resolveActorSignIn()
 
   if (gate.nearMissOptIn !== undefined) {
     logger.warn(actorSignInNearMissMessage(gate.nearMissOptIn))
@@ -123,6 +122,11 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
             })
           }
           if (!user) {
+            if (!gate.mayProvision) {
+              throw new APIError('UNAUTHORIZED', {
+                message: ACTOR_NOT_PROVISIONED_MESSAGE,
+              })
+            }
             user = (await ctx.context.internalAdapter.createUser({
               email,
               emailVerified: true,

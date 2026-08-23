@@ -380,10 +380,19 @@ leaked into a production environment enables nothing and gets a warning naming
 itself instead.
 
 A stage that genuinely must run scenarios opts in on purpose, with
-`PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in` or
-`actor({ secret, allowOutsideDev: true })`. Any other value of that variable is
+`PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in`. Any other value is
 ignored and warned about, so the hatch cannot be opened by copying a `true` from
-the line above.
+the line above, and it is the only hatch — there is no build-time option, because
+an option compiled into the bundle cannot be audited from the environment it
+runs in.
+
+**Signing in and provisioning are separate powers.** An unknown address becomes
+an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
+in as the personas `pikku persona sync` provisioned there and refuses everything
+else (`No actor account exists for that address`), so holding the secret on such
+a stage does not let anyone invent identities. `pikku persona sync` writes those
+rows through its own database connection rather than by signing in, so it needs
+no actor secret and works against a stage whose endpoint is shut.
 
 **`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
 persona.** `pikku persona sync` grants declared roles to actor accounts, so an
@@ -397,9 +406,9 @@ Within that boundary, three properties bound the damage:
   column; an email matching a row without it is refused with `User is not an
 actor`. So the secret cannot take over a **real user's** account — the blast
   radius is the actor accounts and whatever roles they were granted.
-- **Unknown emails are created**, flagged `actor: true`, so a scenario that
-  declares a new persona needs no seed step. Note the flip side: the secret
-  mints accounts, it does not merely use existing ones.
+- **Unknown emails are created only under `pikku dev`**, flagged `actor: true`,
+  so a local scenario declaring a new persona needs no seed step. Anywhere else
+  the account has to have been provisioned by `pikku persona sync` first.
 - **The comparison is constant-time and length-hiding**, so a wrong secret leaks
   neither the length nor a prefix of the right one.
 

@@ -1,12 +1,12 @@
+import { randomBytes } from 'node:crypto'
+
 import type { Kysely } from 'kysely'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { createHttpPersonas } from '@pikku/core/persona'
 import type { ResolvedPersona } from '@pikku/core/services'
 import { personaEnvironmentRefusal } from '@pikku/core/persona'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
-import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { resolveEnvironment } from './environment.js'
 import { loadDeclaredRoles, openScopeServiceForRoles } from './roles-shared.js'
 
@@ -20,16 +20,58 @@ import { loadDeclaredRoles, openScopeServiceForRoles } from './roles-shared.js'
  * account concept for personas, which is the one thing this command exists to
  * avoid: a persona is a user, provisioned the way users are.
  */
-const userIdByEmail = async (
+const userByEmail = async (
   db: Kysely<any>,
   email: string
-): Promise<string | null> => {
+): Promise<{ id: string; actor: boolean } | null> => {
   const row = await db
     .selectFrom('user')
-    .select('id')
+    .select(['id', 'actor'])
     .where('email', '=', email)
     .executeTakeFirst()
-  return row ? String(row.id) : null
+  return row ? { id: String(row.id), actor: Boolean(row.actor) } : null
+}
+
+/**
+ * Better Auth's own id shape: 32 alphanumeric characters. A uuid would be four
+ * characters longer than a `varchar(32)` column allows.
+ */
+const generateUserId = (): string => {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  const bytes = randomBytes(32)
+  let id = ''
+  for (const byte of bytes) {
+    id += alphabet[byte % alphabet.length]
+  }
+  return id
+}
+
+/**
+ * Provisions the persona's account through this command's own database handle
+ * rather than by signing in, because signing in is what the actor endpoint
+ * refuses outside `pikku dev`: a stage can be provisioned without also becoming
+ * one where anyone holding the secret may invent identities.
+ */
+const provisionActor = async (
+  db: Kysely<any>,
+  email: string,
+  name: string
+): Promise<string> => {
+  const id = generateUserId()
+  const now = new Date()
+  await db
+    .insertInto('user')
+    .values({
+      id,
+      email,
+      name,
+      emailVerified: true,
+      actor: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .execute()
+  return id
 }
 
 /**
@@ -62,7 +104,7 @@ export const personaSync = pikkuSessionlessFunc<
 >({
   remote: true,
   func: async (
-    { logger, config, getInspectorState, variables },
+    { logger, config, getInspectorState },
     { environment, apiUrl, dryRun }
   ) => {
     const state = await getInspectorState(true, false, false, true)
@@ -115,7 +157,7 @@ export const personaSync = pikkuSessionlessFunc<
 
     if (dryRun) {
       logger.info(
-        `persona sync (dry run): ${eligible.length} persona(s) would be provisioned into '${environment}' at ${env.apiUrl}:`
+        `persona sync (dry run): ${eligible.length} persona(s) would be provisioned into the database behind '${environment}' (${env.apiUrl}):`
       )
       for (const [id, persona] of eligible) {
         logger.info(
@@ -133,11 +175,6 @@ export const personaSync = pikkuSessionlessFunc<
       return
     }
 
-    const credentials = await resolvePersonaCredentials(
-      variables,
-      'a persona account'
-    )
-
     const declaredRoles = await loadDeclaredRoles(
       config.rolesMetaJsonFile,
       logger
@@ -145,14 +182,6 @@ export const personaSync = pikkuSessionlessFunc<
     if (!declaredRoles) {
       throw new Error('role metadata not found')
     }
-
-    const signedIn = createHttpPersonas({
-      apiUrl: env.apiUrl,
-      ...credentials,
-      personas: Object.fromEntries(eligible),
-      signInPath: env.signInPath,
-      rpcPath: env.rpcPath,
-    })
 
     // Roles are synced on the way in, so a grant can name a role this deploy
     // introduced. Both that sync and everything below are additive.
@@ -171,24 +200,24 @@ export const personaSync = pikkuSessionlessFunc<
       let held = 0
 
       for (const [id, persona] of eligible) {
-        // Signing in is what creates the account: the actor plugin upserts an
-        // `actor: true` user row on first sign-in, and nothing else does.
-        // `sessionRoles()` is the public call that forces it — its answer is a
-        // by-product here, not the reason for the call.
-        await signedIn[id]!.sessionRoles()
-        accounts++
+        const existing = await userByEmail(opened.db, persona.email)
+        if (existing && !existing.actor) {
+          throw new Error(
+            `persona sync: ${persona.email} is a real user in the database backing '${environment}', not an actor. ` +
+              `Refusing to grant persona '${id}' roles to someone else's account — give the persona an address of its own.`
+          )
+        }
+
+        const userId =
+          existing?.id ??
+          (await provisionActor(opened.db, persona.email, persona.name))
+        if (!existing) {
+          accounts++
+        }
 
         if (persona.roles.length === 0) {
           logger.info(`  ${id.padEnd(20)} ${persona.email} (no roles)`)
           continue
-        }
-
-        const userId = await userIdByEmail(opened.db, persona.email)
-        if (!userId) {
-          throw new Error(
-            `persona sync: signed '${id}' in at ${env.apiUrl}, but no user row for ${persona.email} exists in the database this command opened. ` +
-              `That database is not the one '${environment}' runs on, so its grants would land nowhere.`
-          )
         }
 
         const already = new Set(await opened.service.listUserRoles(userId))
@@ -207,7 +236,7 @@ export const personaSync = pikkuSessionlessFunc<
       }
 
       logger.info(
-        `persona sync: ${accounts} account(s) in '${environment}', ${granted} role grant(s) applied, ${held} already held`
+        `persona sync: ${accounts} account(s) created in '${environment}', ${granted} role grant(s) applied, ${held} already held`
       )
       if (skipped.length > 0) {
         logger.info(
