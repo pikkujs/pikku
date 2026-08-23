@@ -18,7 +18,7 @@ own reason.
 
 In production it does the opposite. A `SCENARIO_ACTOR_SECRET` that reached a
 deployed environment — an inherited `.env`, an image built from a dev shell —
-silently enabled passwordless sign-in as any declared persona, `pikku persona sync`
+silently enabled passwordless sign-in as any declared persona, provisioning
 having granted those personas their real roles. Nothing said so.
 
 So the gate now reads `PIKKU_DEV_ACTOR_SIGN_IN`, a positive marker `pikku dev`
@@ -48,9 +48,8 @@ specifically; the opt-in permits authentication only, refusing an unknown
 address with `No actor account exists for that address`. So a stage that must
 run scenarios can be signed into as the personas provisioned there without also
 becoming a place where anyone holding the secret can mint identities. The
-endpoint was the only thing that created actor rows, so `pikku persona sync`
-now writes them through the database connection it already holds — see its own
-changeset.
+endpoint was the only thing that created actor rows, so the deployment now
+writes them itself at boot through `provisionPersonas` — see its own changeset.
 
 Nothing here fails quietly. An open gate logs which branch opened it. A shut gate
 with a secret wired to it warns, because that is a misconfiguration rather than a

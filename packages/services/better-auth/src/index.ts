@@ -37,6 +37,12 @@ export type {
   ActorSignInGate,
   ActorSignInReason,
 } from './actor-sign-in-gate.js'
+export { provisionPersonas } from './provision-personas.js'
+export type {
+  ProvisionPersonasOptions,
+  ProvisionPersonasResult,
+  ProvisionPersonasServices,
+} from './provision-personas.js'
 export { fabric } from './fabric-plugin.js'
 export type { FabricPluginOptions } from './fabric-plugin.js'
 export type {

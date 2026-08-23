@@ -765,18 +765,8 @@ wireCLI({
         sync: pikkuCLICommand({
           func: personaSync,
           description:
-            "Provision the declared personas into an environment: create each account and apply the roles it declares. Additive — it never revokes. Needs both the environment's API (to sign in) and its database (to write the grants), and the sign-in secret from SCENARIO_ACTOR_SECRET.",
+            "Report which personas an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — call provisionPersonas from '@pikku/better-auth' in your server lifecycle — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
-          options: {
-            dryRun: {
-              description:
-                'Report who would be provisioned, with which roles, and why anyone was skipped — without touching anything',
-            },
-            apiUrl: {
-              description:
-                "Override the environment's apiUrl — for a target that only exists at run time, such as a freshly deployed sandbox",
-            },
-          },
         }),
         list: pikkuCLICommand({
           func: personaList,
