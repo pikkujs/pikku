@@ -5,6 +5,7 @@ description: >-
   adapter for Pikku channels. TRIGGER when: code uses @pikku/ws, user asks about ws library
   WebSocket server, or Node.js WebSocket runtime. DO NOT TRIGGER when: user asks about WebSocket
   wiring/channels (use pikku-websocket) or uWebSockets (use pikku-deploy-uws).
+installGroups: [fabric]
 ---
 
 # Pikku WS (WebSocket Server Runtime)

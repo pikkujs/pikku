@@ -6,6 +6,7 @@ description: >-
   TRIGGER when: code uses wire.rpc or expose: true, user asks about calling one Pikku function
   from another, function composition, or RPC endpoints. DO NOT TRIGGER when: user asks about HTTP
   routes (use pikku-http) or addon cross-package calls (use pikku-addon).
+installGroups: [fabric]
 ---
 
 # Pikku RPC Wiring

@@ -3,6 +3,7 @@ name: pikku-n8n-import
 description: 'Use to import an n8n workflow JSON export into a runnable Pikku workflow. Triggers when the user says "import this n8n workflow", "convert this n8n export to pikku", points at an n8n `.json` export or a directory of them, or picks up after `pikku import n8n` left throwing stub functions (`STUB — generated from n8n …`, `— implement me`) or a `<workflow>.integrations.json` manifest. Owns the whole flow: run the importer, triage what it could not map, fill each stub, report any missing `@pikku/addon-*` integrations, and verify the result compiles and runs with no surviving stubs. DO NOT TRIGGER for hand-written addon wiring unrelated to an n8n import (use pikku-addon), or for authoring workflows from scratch (use pikku-workflow).'
 metadata:
   version: 1.0.0
+installGroups: [fabric]
 ---
 
 # n8n → Pikku Import

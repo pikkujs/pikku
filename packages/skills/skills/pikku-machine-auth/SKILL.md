@@ -9,6 +9,7 @@ description: >-
   credentials, sandbox/worker tokens, or resolving a better-auth session in a Pikku function. DO
   NOT TRIGGER when: user asks about end-user HTTP session/cookie auth only (use pikku-http + the
   app betterAuth config) or about WebSocket channel mechanics (use pikku-websocket).
+installGroups: [fabric]
 ---
 
 # Pikku Machine Auth
