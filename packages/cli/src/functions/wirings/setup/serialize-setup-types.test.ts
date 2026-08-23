@@ -40,13 +40,22 @@ describe('serializeSetupTypes', () => {
   test('warns when the factory shadows a service the host passed in', () => {
     const content = emit('Config')
 
-    assert.match(content, /const shadowed = Object\.keys\(createdServices\)\.filter\(/)
+    assert.match(
+      content,
+      /const shadowed = Object\.keys\(createdServices\)\.filter\(/
+    )
     assert.match(content, /logger\?\.warn\?\.\(/)
     assert.match(content, /discarding what the host passed in/)
   })
 
   test('exempts nothing when the project opts none in', () => {
-    assert.match(emit('Config'), /const allowedToShadow = new Set\(\[\]\)/)
+    // Typed, not inferred: an empty literal infers Set<never>, and the
+    // `.has(name)` below is then a compile error in every project that opts none
+    // in — which is every project by default.
+    assert.match(
+      emit('Config'),
+      /const allowedToShadow = new Set<string>\(\[\]\)/
+    )
   })
 
   test('exempts the services pikku.config.json opts in', () => {
@@ -54,13 +63,16 @@ describe('serializeSetupTypes', () => {
 
     assert.match(
       content,
-      /const allowedToShadow = new Set\(\["kysely","secrets"\]\)/
+      /const allowedToShadow = new Set<string>\(\["kysely","secrets"\]\)/
     )
     assert.match(content, /!allowedToShadow\.has\(name\) &&/)
   })
 
   test('points at the config key as the way to silence the warning', () => {
-    assert.match(emit('Config'), /allowShadowedServices\\` in pikku\.config\.json/)
+    assert.match(
+      emit('Config'),
+      /allowShadowedServices\\` in pikku\.config\.json/
+    )
   })
 
   test('registers the wire services factory on pikku state', () => {
