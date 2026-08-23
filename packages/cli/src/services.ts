@@ -232,12 +232,6 @@ export const createSingletonServices: CreateSingletonServices<
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false
 
-  /**
-   * Drop the `ts.Program` an inspection leaves on the state. Its only reader is
-   * the next inspection, which takes it back as `oldProgram` for incremental
-   * reuse — so keeping it pins a whole program's source files and ASTs live for
-   * the life of the process, which in `pikku dev` is its largest allocation.
-   */
   const releaseProgram = (state: { program?: unknown } | undefined) => {
     if (state) state.program = undefined
   }
