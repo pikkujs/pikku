@@ -7,7 +7,6 @@ export const exampleCredentialsSchema = z.object({
   endpoint: z.url().optional().describe('Optional custom endpoint URL'),
 })
 
-// @snippet start define-secret
 defineSecret({
   name: 'example-api',
   displayName: 'Example API Credentials',
@@ -15,4 +14,3 @@ defineSecret({
   secretId: 'EXAMPLE_API_CREDENTIALS',
   schema: exampleCredentialsSchema,
 })
-// @snippet end define-secret

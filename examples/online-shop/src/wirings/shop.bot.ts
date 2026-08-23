@@ -4,6 +4,10 @@ import {
   agentStream,
 } from '#pikku/agent/pikku-agent-types.gen.js'
 import { wireHTTP } from '#pikku/http'
+import {
+  countAgentCharacters,
+  traceAgentStream,
+} from '../middleware/agent.middleware.js'
 import { listCategories } from '../functions/categories/list-categories.function.js'
 import { listItems } from '../functions/items/list-items.function.js'
 import { getItem } from '../functions/items/get-item.function.js'
@@ -30,6 +34,8 @@ export const shopAssistant = pikkuAgent({
   ],
   memory: { storage: 'aiStorage', lastMessages: 20 },
   maxSteps: 10,
+  channelMiddleware: [traceAgentStream],
+  agentMiddleware: [countAgentCharacters],
 })
 // @snippet end aiAgent
 

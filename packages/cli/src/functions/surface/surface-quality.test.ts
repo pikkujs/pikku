@@ -68,8 +68,9 @@ const WIRED_BY_EXAMPLE = [
 ]
 
 const CORE_LEAK = 112
-const UNRESOLVABLE = 818
+const UNRESOLVABLE = 823
 const BARE_ERRORS = 5
+const FUNCTIONS_WITHOUT_EXAMPLE = 58
 const BARE_SYMBOLS = 0
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
@@ -194,8 +195,26 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
       [],
       `${missing.join(', ')} carry no example. These are the exports a reader ` +
         `reaches for first, and a signature alone does not show the shape of the ` +
-        `object they take. Wrap the real usage in templates/functions in ` +
+        `object they take. Wrap the real usage in examples/online-shop in ` +
         `"// @snippet start <name>" and point an "@example snippet: <name>" at it.`
+    )
+  })
+
+  test('shows every callable being used, or is measurably closer to it', () => {
+    const { symbols } = read()
+    const missing = symbols
+      .filter(
+        (symbol) =>
+          symbol.kind === 'function' && (symbol.examples?.length ?? 0) === 0
+      )
+      .map((symbol) => symbol.name)
+    assert.ok(
+      missing.length <= FUNCTIONS_WITHOUT_EXAMPLE,
+      `${missing.length} callables carry no example, up from ` +
+        `${FUNCTIONS_WITHOUT_EXAMPLE}. Every door the doc lists is a door somebody ` +
+        `has to walk through: show it being used in examples/online-shop and point ` +
+        `an "@example snippet: <name>" at the region:\n  ` +
+        `${[...new Set(missing)].sort().join(', ')}`
     )
   })
 

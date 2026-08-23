@@ -83,10 +83,8 @@ export const createSingletonServices = pikkuServices(
 /**
  * Creates per-request wire services.
  */
-// @snippet start pikku-wire-services
 export const createWireServices = pikkuWireServices(
   async (_singletonServices, _session) => {
     return {}
   }
 )
-// @snippet end pikku-wire-services

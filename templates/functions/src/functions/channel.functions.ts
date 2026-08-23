@@ -32,7 +32,6 @@ export const onDisconnect = pikkuChannelDisconnectionFunc(
   }
 )
 
-// @snippet start pikku-channel-func
 export const authenticate = pikkuChannelFunc({
   input: ChannelAuthInputSchema,
   output: ChannelAuthOutputSchema,
@@ -61,7 +60,6 @@ export const authenticate = pikkuChannelFunc({
     return { authenticated: true, userId: user.id }
   },
 })
-// @snippet end pikku-channel-func
 
 /**
  * Subscribe to todo update events via EventHub.

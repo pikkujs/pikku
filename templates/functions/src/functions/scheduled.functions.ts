@@ -23,7 +23,6 @@ export const dailySummary = pikkuVoidFunc(async ({ logger, todoStore }) => {
  * Scheduled task: Clean up old completed todos.
  * Runs weekly to remove todos completed more than 30 days ago.
  */
-// @snippet start pikku-void-func
 export const weeklyCleanup = pikkuVoidFunc(async ({ logger }) => {
   logger.info('Running weekly cleanup task')
 
@@ -32,4 +31,3 @@ export const weeklyCleanup = pikkuVoidFunc(async ({ logger }) => {
     `Would clean up todos completed before ${cutoffDate.toISOString()}`
   )
 })
-// @snippet end pikku-void-func

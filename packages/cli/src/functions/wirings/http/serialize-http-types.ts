@@ -40,7 +40,7 @@ type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out,
  * @template Route - String literal type for the HTTP path (e.g., "/users/:id")
  * @param httpWiring - HTTP wiring definition with handler, method, and optional middleware
  *
- * @example snippet: wire-http
+ * @example snippet: httpSingleRoute
  */
 export const wireHTTP = <In, Out, Route extends string>(
   httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
@@ -98,6 +98,8 @@ type TypedWireHTTPRoutesConfig = TypedHTTPRoutesGroupConfig & {
 }
 /**
  * Type-safe helper for defining route contracts that can be composed.
+ *
+ * @example snippet: wireHttp
  */
 export function defineHTTPRoutes<T extends TypedHTTPRouteMap>(routes: T): TypedHTTPRouteContract<T>
 export function defineHTTPRoutes<T extends TypedHTTPRouteMap>(config: TypedHTTPRoutesGroupConfig & { routes: T }): TypedHTTPRouteContract<T>
@@ -111,6 +113,8 @@ ${
     : `
 /**
  * Wires multiple HTTP routes from a nested map or array configuration.
+ *
+ * @example snippet: httpRoutesWiring
  */
 export const wireHTTPRoutes = (config: TypedWireHTTPRoutesConfig): void => {
   wireHTTPRoutesCore(config as any)

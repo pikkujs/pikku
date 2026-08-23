@@ -33,7 +33,7 @@ type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void, 'sessio
  *
  * @param task - Scheduled task definition with cron expression and handler
  *
- * @example snippet: wire-scheduler
+ * @example snippet: wireScheduler
  */
 export const wireScheduler = (task: SchedulerWiring) => {
   wireSchedulerCore(task as any)

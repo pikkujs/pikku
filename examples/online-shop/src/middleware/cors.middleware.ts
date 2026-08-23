@@ -11,6 +11,7 @@ import { allowedOrigins } from '../lib/cors-origins.js'
  * than at module load — that is what lets the list come from `variables`
  * instead of being frozen at import time, before any service exists.
  */
+// @snippet start corsMiddleware
 const corsMiddleware = pikkuMiddleware(
   async ({ variables, ...services }, { http, ...wire }, next) => {
     const middleware = cors({
@@ -26,3 +27,4 @@ const corsMiddleware = pikkuMiddleware(
 )
 
 addHTTPMiddleware('*', [corsMiddleware])
+// @snippet end corsMiddleware

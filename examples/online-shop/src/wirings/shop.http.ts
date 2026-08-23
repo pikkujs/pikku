@@ -98,7 +98,9 @@ export const shopRoutes = defineHTTPRoutes({
 // @snippet end wireHttp
 // @snippet end shopRoutes
 
+// @snippet start httpRoutesWiring
 wireHTTPRoutes({ routes: { shop: shopRoutes } })
+// @snippet end httpRoutesWiring
 
 // @snippet start httpSingleRoute
 // Wire a single route — good for one-offs

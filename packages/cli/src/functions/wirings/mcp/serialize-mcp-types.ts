@@ -51,6 +51,8 @@ ${
  * @template In - Input type for the resource request
  * @template URI - URI template string for compile-time parameter validation
  * @param mcpResource - MCP resource definition with data provider function
+ *
+ * @example snippet: mcpResource
  */
 export const wireMCPResource = <In, URI extends string>(
   mcpResource: MCPResourceWiring<In, URI> & AssertMCPResourceURIParams<In, URI>
@@ -64,6 +66,8 @@ export const wireMCPResource = <In, URI extends string>(
  *
  * @template In - Input type for the prompt parameters
  * @param mcpPrompt - MCP prompt definition with template function
+ *
+ * @example snippet: mcpPrompt
  */
 export const wireMCPPrompt = <In>(
   mcpPrompt: MCPPromptWiring<In>
@@ -92,6 +96,8 @@ type MCPPromptFuncConfigWithSchema<InputSchema extends StandardSchemaV1> = {
  * @template In - Input type for the prompt parameters (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
+ *
+ * @example snippet: mcpPrompt
  */
 export function pikkuMCPPromptFunc<InputSchema extends StandardSchemaV1>(
   config: MCPPromptFuncConfigWithSchema<InputSchema>
@@ -134,6 +140,8 @@ type MCPToolFuncConfigWithSchema<InputSchema extends StandardSchemaV1> = {
  * @template In - Input type for the tool invocation (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
+ *
+ * @example snippet: mcpSingleTool
  */
 export function pikkuMCPToolFunc<InputSchema extends StandardSchemaV1>(
   config: MCPToolFuncConfigWithSchema<InputSchema>
@@ -176,6 +184,8 @@ type MCPResourceFuncConfigWithSchema<InputSchema extends StandardSchemaV1> = {
  * @template In - Input type for the resource request (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
+ *
+ * @example snippet: mcpResource
  */
 export function pikkuMCPResourceFunc<InputSchema extends StandardSchemaV1>(
   config: MCPResourceFuncConfigWithSchema<InputSchema>

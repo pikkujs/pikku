@@ -8,6 +8,8 @@ import {
  * matching origin and otherwise sends no `Access-Control-Allow-Origin` at all,
  * so the browser reports "origin not allowed" rather than an origin mismatch
  * against whichever entry happened to be first.
+ *
+ * @example snippet: corsMiddleware
  */
 export const cors = pikkuMiddlewareFactory<{
   /** Which origins may call. Defaults to `*`, which the browser rejects alongside `credentials: true` — name the origins instead. */

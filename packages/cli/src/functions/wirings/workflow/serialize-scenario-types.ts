@@ -179,6 +179,8 @@ export function pikkuScenarioHook<In = unknown, Ctx = unknown>(
  * Steps run as actors over the REAL transport — \`scenario.do(step, rpc,
  * data, { actor: actors.yasser })\` — so flows double as e2e tests and
  * staged/production health checks (no state reset; scope what you create).
+ *
+ * @example snippet: scenarioBasics
  */
 export function pikkuScenario<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -260,6 +262,8 @@ type PikkuFeatureConfig<Scenarios extends readonly unknown[]> = {
  *   ],
  * })
  * \`\`\`
+ *
+ * @example snippet: scenarioFeature
  */
 export function pikkuFeature<const Scenarios extends readonly unknown[]>(
   config: PikkuFeatureConfig<Scenarios>
@@ -384,6 +388,8 @@ type PikkuScenarioStepConfig<In, Out, HasActor extends boolean = false> =
  *
  * Steps are deliberately NOT registered as RPCs: a browser-driving step must
  * never be network-callable.
+ *
+ * @example snippet: scenarioStepDefinition
  */
 export function pikkuScenarioStep<
   InputSchema extends StandardSchemaV1 | undefined = undefined,

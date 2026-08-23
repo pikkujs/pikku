@@ -86,6 +86,8 @@ export const serializeAuthTypes = (
     ` * Builds this project's Better Auth instance. The factory is handed the`,
     ` * singleton services, with typed \`secrets\` and \`variables\`, and is called`,
     ` * lazily so config and secrets are resolved before auth is constructed.`,
+    ` *`,
+    ` * @example snippet: betterAuthConfig`,
     ` */`,
     `export const pikkuBetterAuth = <I extends BetterAuthInstance>(`,
     `  factory: (services: AuthSingletonServices) => I | Promise<I>`,

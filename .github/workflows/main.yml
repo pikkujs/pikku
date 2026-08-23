@@ -275,18 +275,22 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_db_schema
 
-  example-online-shop:
-    name: Example (online-shop)
+  examples:
+    name: Example (${{ matrix.example }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [online-shop]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Generate, migrate and type-check
-        run: cd examples/online-shop && yarn build
+        run: cd examples/${{ matrix.example }} && yarn build
       - name: Test
-        run: cd examples/online-shop && yarn test
+        run: cd examples/${{ matrix.example }} && yarn test
 
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})

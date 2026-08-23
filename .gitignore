@@ -27,6 +27,7 @@ my-app
 console-app
 cli.schema.json
 packages/cli/surface.json
+packages/cli/snippets.json
 .playwright-mcp
 
 # Logs

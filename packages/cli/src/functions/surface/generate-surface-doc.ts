@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { getCLIVersion } from '../../utils/get-cli-version.js'
 import { buildSurfaceDoc } from './build-surface-doc.js'
+import { collectSnippets } from './collect-snippets.js'
 
 /**
  * Build-time entry point: `@pikku/cli` ships the surface doc, so it is computed
@@ -11,7 +12,7 @@ import { buildSurfaceDoc } from './build-surface-doc.js'
  * `build.sh` generates the two projects it reads — one application, one addon —
  * and points this at them.
  */
-const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> --out <file>`
+const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> --snippets <dir> --out <file> [--snippets-out <file>]`
 
 const parseArgs = (argv: string[]): Record<string, string> => {
   const parsed: Record<string, string> = {}
@@ -28,18 +29,33 @@ const parseArgs = (argv: string[]): Record<string, string> => {
 
 const main = async (argv: string[]): Promise<void> => {
   const args = parseArgs(argv)
-  const { app, addon, out } = args
-  if (!app || !addon || !out) throw new Error(usage)
+  const { app, addon, out, snippets: snippetsDir } = args
+  const snippetsOut = args['snippets-out']
+  if (!app || !addon || !out || !snippetsDir) throw new Error(usage)
+
+  const snippets = await collectSnippets(resolve(snippetsDir))
 
   const doc = await buildSurfaceDoc({
     version: getCLIVersion(),
     app: { projectDir: app },
     addon: { projectDir: addon },
+    snippets,
   })
 
   const outFile = resolve(out)
   await mkdir(dirname(outFile), { recursive: true })
   await writeFile(outFile, `${JSON.stringify(doc, null, 2)}\n`, 'utf8')
+
+  if (snippetsOut) {
+    const snippetsFile = resolve(snippetsOut)
+    await mkdir(dirname(snippetsFile), { recursive: true })
+    await writeFile(
+      snippetsFile,
+      `${JSON.stringify(Object.fromEntries([...snippets].sort()), null, 2)}\n`,
+      'utf8'
+    )
+    process.stdout.write(`  snippets: ${snippets.size}\n`)
+  }
 
   for (const entryPoint of doc.entryPoints) {
     const symbols = entryPoint.leaves.reduce(

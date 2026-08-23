@@ -35,6 +35,6 @@ export type VariableDefinitions = VariableDefinitionMeta[]
  * value. The CLI collects every declaration into `VariablesMap`, which is what
  * makes `variables.get('NAME')` return the right type instead of `unknown`.
  *
- * @example snippet: define-variable
+ * @example snippet: variables
  */
 export const defineVariable = <T>(_config: CoreVariable<T>): void => {}

@@ -90,6 +90,8 @@ ${sharedWorkflowConfigFields}
  * Declares a workflow: the DSL form, where each step is awaited in order and
  * the runner persists progress between them so a restart resumes rather than
  * replays. The default choice for a workflow.
+ *
+ * @example snippet: workflowSteps
  */
 export function pikkuWorkflowFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,

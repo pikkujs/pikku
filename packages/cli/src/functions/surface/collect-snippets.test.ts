@@ -67,7 +67,8 @@ describe('collectSnippets', () => {
 
   test('reads both templates into one map, so either can hold a region', async () => {
     const app = await project({
-      'src/a.ts': '// @snippet start app-one\nconst a = 1\n// @snippet end app-one',
+      'src/a.ts':
+        '// @snippet start app-one\nconst a = 1\n// @snippet end app-one',
     })
     const addon = await project({
       'src/b.ts':
@@ -79,6 +80,27 @@ describe('collectSnippets', () => {
     await collectSnippets(addon, snippets)
 
     assert.deepEqual([...snippets.keys()].sort(), ['addon-one', 'app-one'])
+  })
+
+  test('reads a region nested inside another', async () => {
+    const root = await project({
+      'src/a.ts': [
+        '// @snippet start outer',
+        'const before = 1',
+        '// @snippet start inner',
+        'const inside = 2',
+        '// @snippet end inner',
+        'const after = 3',
+        '// @snippet end outer',
+      ].join('\n'),
+    })
+
+    const snippets = await collectSnippets(root)
+    assert.equal(snippets.get('inner'), 'const inside = 2')
+    assert.equal(
+      snippets.get('outer'),
+      'const before = 1\nconst inside = 2\nconst after = 3'
+    )
   })
 
   test('refuses a name two files both claim', async () => {

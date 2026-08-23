@@ -68,27 +68,28 @@ export const collectSnippets = async (
   for (const file of await sourceFilesIn(projectDir)) {
     const where = relative(projectDir, file)
     const lines = (await readFile(file, 'utf8')).split('\n')
-    let open: { name: string; body: string[] } | null = null
+    const open = new Map<string, string[]>()
     for (const line of lines) {
       const end = line.match(END)
-      if (end && open && end[1] === open.name) {
-        const existing = origins.get(open.name)
-        if (existing)
-          throw new DuplicateSnippetError(open.name, where, existing)
-        into.set(open.name, dedent(open.body))
-        origins.set(open.name, where)
-        open = null
+      if (end?.[1] && open.has(end[1])) {
+        const name = end[1]
+        const existing = origins.get(name)
+        if (existing) throw new DuplicateSnippetError(name, where, existing)
+        into.set(name, dedent(open.get(name)!))
+        origins.set(name, where)
+        open.delete(name)
         continue
       }
       const start = line.match(START)
       if (start?.[1]) {
-        if (open) throw new UnclosedSnippetError(open.name, where)
-        open = { name: start[1], body: [] }
+        if (!open.has(start[1])) open.set(start[1], [])
         continue
       }
-      if (open) open.body.push(line)
+      if (end) continue
+      for (const body of open.values()) body.push(line)
     }
-    if (open) throw new UnclosedSnippetError(open.name, where)
+    const [unclosed] = open.keys()
+    if (unclosed) throw new UnclosedSnippetError(unclosed, where)
   }
   return into
 }

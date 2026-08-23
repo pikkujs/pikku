@@ -162,9 +162,11 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
   },
 })
 
+// @snippet start scenarioFeature
 export const journeyFeature = pikkuFeature({
   name: 'Browser journey',
   description: 'The job this app exists for, performed by clicking',
   tags: ['journey'],
   scenarios: [shopperBuysAnItemInTheBrowser],
 })
+// @snippet end scenarioFeature

@@ -50,6 +50,7 @@ export const OpensPageOutput = z.object({
  * forbids it both read the same value, and the landed path appears in the run
  * record either way.
  */
+// @snippet start scenarioStepDefinition
 export const opensPage = pikkuScenarioStep({
   name: 'opensPage',
   description: 'opens an app page as the signed-in actor',
@@ -69,6 +70,7 @@ export const opensPage = pikkuScenarioStep({
     return { pathname, status }
   },
 })
+// @snippet end scenarioStepDefinition
 
 export const SeesTextInput = z.object({
   text: z.string(),

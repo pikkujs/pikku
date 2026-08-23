@@ -50,11 +50,13 @@ import { applyStripeEvent } from '../functions/orders/apply-stripe-event.functio
  * not grant `payments` (the parent, which satisfies both children) to anybody
  * who should not be issuing refunds.
  */
+// @snippet start addonWiring
 wireAddon({
   name: 'stripe',
   package: '@pikku/addon-stripe',
   scopes: ['payments:charge'],
 })
+// @snippet end addonWiring
 
 /**
  * Stripe's own receiver, on our route.

@@ -39,6 +39,8 @@ export type WireAddonConfig = {
 /**
  * Installs an addon into this project: its functions, wirings and scopes become
  * part of the app, under the namespace and options given here.
+ *
+ * @example snippet: addonWiring
  */
 export const wireAddon = (config: WireAddonConfig): void => {
   pikkuState(null, 'addons', 'packages').set(config.name, {

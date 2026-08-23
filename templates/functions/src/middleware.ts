@@ -5,7 +5,6 @@ import { pikkuAgentMiddleware } from '#pikku/middleware'
 // The better-auth session-bridge middleware is generated into auth.gen.ts by the
 // pikku CLI (from the `pikkuBetterAuth` export in src/auth.ts) — no manual wiring here.
 
-// @snippet start pikku-channel-middleware
 export const appendModified = pikkuChannelMiddleware<any, AgentStreamEvent>(
   async (_services, event, next) => {
     if (event.type === 'text-delta') {
@@ -15,9 +14,7 @@ export const appendModified = pikkuChannelMiddleware<any, AgentStreamEvent>(
     }
   }
 )
-// @snippet end pikku-channel-middleware
 
-// @snippet start pikku-agent-middleware
 export const logAgentIO = pikkuAgentMiddleware<{ charCount: number }>({
   modifyInput: async ({ logger }, { messages, instructions }) => {
     logger.info(`Agent input: ${messages.length} messages`)
@@ -30,4 +27,3 @@ export const logAgentIO = pikkuAgentMiddleware<{ charCount: number }>({
     return event
   },
 })
-// @snippet end pikku-agent-middleware

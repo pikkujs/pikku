@@ -154,6 +154,8 @@ ${
  * Runs everywhere — inspector extracts at build time.
  *
  * @param trigger - Trigger definition with name and function config
+ *
+ * @example snippet: wireTrigger
  */
 export const wireTrigger = (
   trigger: TriggerWiring

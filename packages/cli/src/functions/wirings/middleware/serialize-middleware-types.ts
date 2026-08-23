@@ -95,7 +95,7 @@ export const pikkuMiddleware = <RequiredServices extends SingletonServices = Wir
  * Factory function for creating middleware factories
  * Use this when your middleware needs configuration/input parameters
  *
- * @example snippet: pikku-middleware-factory
+ * @example snippet: middlewareFactory
  */
 export const pikkuMiddlewareFactory = <In = any>(
   factory: (input: In) => PikkuMiddleware
@@ -119,7 +119,7 @@ export const addGlobalMiddleware = (middleware: PikkuMiddleware[]) => {
 /**
  * Tag-scoped middleware. Applies to any wiring that carries the matching tag.
  *
- * @example snippet: add-tag-middleware
+ * @example snippet: tagMiddleware
  */
 export const addTagMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
   addTagMiddlewareCore(tag, middleware as any, ${packageNameValue})
@@ -134,7 +134,7 @@ export const addTagMiddleware = (tag: string, middleware: PikkuMiddleware[]) => 
  * @param routeOrMiddleware - Either a global middleware array or a route pattern string
  * @param middleware - The middleware array to apply when a route pattern is specified
  *
- * @example snippet: add-http-middleware
+ * @example snippet: httpMiddleware
  */
 export const addHTTPMiddleware = (
   routeOrMiddleware: PikkuMiddleware[] | string,
@@ -153,7 +153,7 @@ export type PikkuChannelMiddleware<RequiredServices extends Services = Services,
  * Declares middleware for a channel — it runs around the connection and its
  * messages rather than around a single request.
  *
- * @example snippet: pikku-channel-middleware
+ * @example snippet: channelMiddleware
  */
 export const pikkuChannelMiddleware = <RequiredServices extends Services = Services, Event = unknown>(
   middleware: PikkuChannelMiddleware<RequiredServices, Event>
@@ -182,7 +182,7 @@ export const addChannelMiddleware = (tag: string, middleware: PikkuChannelMiddle
  * Declares middleware for an agent run — hooks around the model call, its tool
  * calls and the run's state.
  *
- * @example snippet: pikku-agent-middleware
+ * @example snippet: agentMiddleware
  */
 export const pikkuAgentMiddleware = <
   State extends Record<string, unknown> = Record<string, unknown>,

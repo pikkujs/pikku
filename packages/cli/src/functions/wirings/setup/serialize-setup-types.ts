@@ -33,7 +33,7 @@ ${!configTypeName ? 'export type Config = any' : configTypeName === 'Config' ? '
  * @param func - Config factory function that returns your application's config
  * @returns The config factory function
  *
- * @example snippet: pikku-config
+ * @example snippet: pikkuConfig
  */
 export const pikkuConfig = (
   func: (variables?: any, ...args: any[]) => Promise<Config>
@@ -101,7 +101,7 @@ export const pikkuServices = (
  * @param func - Wire services factory function
  * @returns The wire services factory function
  *
- * @example snippet: pikku-wire-services
+ * @example snippet: shopWireServices
  */
 export const pikkuWireServices = (
   func: (

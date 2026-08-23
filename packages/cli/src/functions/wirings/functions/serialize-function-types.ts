@@ -290,7 +290,7 @@ type PikkuFunctionConfigWithSchema<
  * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
- * @example snippet: pikku-func
+ * @example snippet: sessionFunction
  */
 export function pikkuFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -372,7 +372,7 @@ type PikkuFunctionSessionlessConfigWithSchema<
  * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
- * @example snippet: pikku-sessionless-func
+ * @example snippet: readFunction
  */
 export function pikkuSessionlessFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -397,7 +397,7 @@ export function pikkuSessionlessFunc(func: any) {
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  *
- * @example snippet: pikku-void-func
+ * @example snippet: cleanupFunction
  */
 export const pikkuVoidFunc = (
   func:

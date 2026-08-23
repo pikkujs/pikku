@@ -6,6 +6,7 @@ import {
 } from '#pikku/channel/pikku-channel-types.gen.js'
 import { pikkuFunc } from '#pikku/function'
 
+// @snippet start channelLifecycle
 export const onConnect = pikkuChannelConnectionFunc(
   async ({ logger }, _, { channel }) => {
     logger.info({ event: 'ws_connected', channelId: channel.channelId })
@@ -17,6 +18,7 @@ export const onDisconnect = pikkuChannelDisconnectionFunc(
     logger.info({ event: 'ws_disconnected', channelId: channel.channelId })
   }
 )
+// @snippet end channelLifecycle
 
 // @snippet start orderStatusChannel
 // @snippet start wireChannel

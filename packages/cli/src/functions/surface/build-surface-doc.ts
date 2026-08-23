@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 
-import { collectSnippets } from './collect-snippets.js'
 import { collectSurface, type SurfaceEntrypoint } from './collect-surface.js'
 import {
   ENTRY_POINT_EDITORIAL,
@@ -207,12 +206,14 @@ export type BuildSurfaceDocOptions = {
   version: string
   app: SurfaceProject
   addon: SurfaceProject
+  /** Named regions an `@example snippet: <name>` resolves against. */
+  snippets?: Map<string, string>
 }
 
 const projectEntryPoint = async (
   id: 'app' | 'addon',
   project: SurfaceProject,
-  snippets: Map<string, string>
+  snippets: Map<string, string> | undefined
 ): Promise<SurfaceEntryPoint> => {
   const projectDir = resolve(project.projectDir)
   const generatedRoot = resolve(project.outDir ?? join(projectDir, '.pikku'))
@@ -234,19 +235,16 @@ const projectEntryPoint = async (
 }
 
 /**
- * An example names a snippet rather than restating it, and a core symbol reached
- * through both entrypoints resolves against whichever template happens to hold
- * the region — so the two are collected into one map before either is read.
+ * An example names a snippet rather than restating it, and both entrypoints
+ * resolve against the same map — the regions come from one running application
+ * (`examples/online-shop`), not from whichever template happened to hold them.
  */
 export const buildSurfaceDoc = async ({
   version,
   app,
   addon,
+  snippets,
 }: BuildSurfaceDocOptions): Promise<SurfaceDoc> => {
-  const snippets = new Map<string, string>()
-  const origins = new Map<string, string>()
-  await collectSnippets(resolve(app.projectDir), snippets, origins)
-  await collectSnippets(resolve(addon.projectDir), snippets, origins)
   return {
     version,
     entryPoints: [

@@ -12,7 +12,6 @@ import {
   completeTodo,
 } from '../functions/todos.functions.js'
 
-// @snippet start wire-channel
 wireChannel({
   name: 'todos-live',
   route: '/',
@@ -43,4 +42,3 @@ wireChannel({
   },
   tags: ['realtime', 'todos'],
 })
-// @snippet end wire-channel

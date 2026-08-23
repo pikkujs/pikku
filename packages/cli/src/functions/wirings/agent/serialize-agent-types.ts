@@ -41,6 +41,8 @@ type AgentConfig<
 /**
  * Declares an agent: the model, the prompt, the tools it may call and the shape
  * of what it returns. Wire it like any other function.
+ *
+ * @example snippet: aiAgent
  */
 export const pikkuAgent = <
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -72,6 +74,8 @@ export const pikkuAgentJudge = (
 /**
  * A ready-made function that runs the named agent once and returns its result —
  * wire it straight to a route when you need no logic around the run.
+ *
+ * @example snippet: aiAgentInvoke
  */
 export const agent = <Name extends keyof AgentMap>(
   agentName: Name
@@ -86,6 +90,8 @@ export const agent = <Name extends keyof AgentMap>(
 /**
  * The streaming counterpart of \`agent\`: wire it to a channel to send tokens and
  * tool calls as they happen instead of waiting for the run to finish.
+ *
+ * @example snippet: aiAgentStream
  */
 export const agentStream = <Name extends keyof AgentMap>(
   agentName?: Name
