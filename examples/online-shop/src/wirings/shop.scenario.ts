@@ -1,4 +1,4 @@
-import { pikkuScenario } from '#pikku/scenarios'
+import { pikkuScenario, pikkuScenarioHook } from '#pikku/scenarios'
 
 // @snippet start scenarioBasics
 // A scenario is a workflow whose steps run as real users ("actors") over the
@@ -82,11 +82,34 @@ export const shopperBuysAnItem = pikkuScenario({
 })
 // @snippet end scenarioBasics
 
+// @snippet start scenarioHook
+/**
+ * Empties the shopper's basket before the assistant is asked to fill it.
+ *
+ * The scenario's real assertion is "the basket now has the mug", and a basket
+ * a previous run left full satisfies that whether or not the assistant did
+ * anything. A hook runs outside the recorded steps, so the tidying never shows
+ * up in the report as something the shopper did.
+ */
+const emptiesTheBasket = pikkuScenarioHook(
+  async (_services, _data, { actors }) => {
+    const basket = await actors.shopper.invoke('getBasket', {})
+    for (const item of basket.items) {
+      await actors.shopper.invoke('removeFromBasket', {
+        basketId: basket.basketId,
+        itemId: item.itemId,
+      })
+    }
+  }
+)
+// @snippet end scenarioHook
+
 // @snippet start scenarioConverse
 // Actors can also hold a free-form conversation with one of your AI agents,
 // in persona. The actor drives the agent over the real transport, answers its
 // tool-approval requests, and returns a verdict on whether the task was met.
 export const shopperAsksTheAssistant = pikkuScenario({
+  before: emptiesTheBasket,
   title: 'Shopper gets help from the assistant',
   description: 'The shop assistant finds a product and adds it to the basket.',
   tags: ['agents'],

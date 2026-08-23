@@ -7,6 +7,8 @@ export interface ScenarioCookieJar {
 /**
  * A cookie store for a scenario run, so a step that signs in leaves the session
  * cookie behind for the steps after it.
+ *
+ * @example snippet: scenarioCookieJar
  */
 export const createCookieJar = (apiUrl: string): ScenarioCookieJar => {
   const jar = new Map<string, string>()

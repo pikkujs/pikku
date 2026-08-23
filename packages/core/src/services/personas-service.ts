@@ -38,6 +38,8 @@ export interface ScenarioHttpResponse<T = unknown> {
  * `invokeRaw` returns this, and a step that has to reach past a persona — a
  * route with no RPC, an identity no persona can hold — reaches for this rather
  * than writing the same record by hand.
+ *
+ * @example snippet: scenarioPolling
  */
 export const readScenarioHttpResponse = async <T = unknown>(
   res: Response
@@ -84,6 +86,8 @@ export interface ScenarioJsonRequest {
  * outright when the target answers an empty body or an HTML error page. A
  * refusal is the expected outcome of a permissions scenario, so it has to
  * survive as data.
+ *
+ * @example snippet: scenarioHttpStep
  */
 export const postScenarioJson = async <T = unknown>(
   url: string,

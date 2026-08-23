@@ -41,3 +41,14 @@ defineVariable({
   schema: BetterAuthUrlSchema,
 })
 // @snippet end variables
+
+export const WarehouseFeedUrlSchema = z.string().url()
+
+defineVariable({
+  name: 'warehouseFeedUrl',
+  displayName: 'Warehouse Feed URL',
+  description:
+    'Server-sent-events endpoint the warehouse pushes stock movements to',
+  variableId: 'WAREHOUSE_FEED_URL',
+  schema: WarehouseFeedUrlSchema,
+})

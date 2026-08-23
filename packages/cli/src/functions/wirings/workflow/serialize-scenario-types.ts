@@ -167,6 +167,8 @@ export type PikkuScenarioHook<
  * Declares a scenario hook. Returns the function verbatim — a hook is never
  * registered, so this exists purely to give an inline hook a call site to be
  * contextually typed from, the way every other pikku primitive is.
+ *
+ * @example snippet: scenarioHook
  */
 export function pikkuScenarioHook<In = unknown, Ctx = unknown>(
   hook: PikkuFunctionScenario<In, void, Ctx>
@@ -480,6 +482,8 @@ type PikkuSubjectScenarioStepConfig<In, Out> =
  *
  * Local-test-only, and never in a virtual user's catalogue: a virtual user that
  * could expire its own trial is manufacturing the outcome it exists to discover.
+ *
+ * @example snippet: platformStep
  */
 export function pikkuPlatformScenarioStep<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -508,6 +512,8 @@ export function pikkuPlatformScenarioStep(config: any) {
  *
  * Local-test-only, and never in a virtual user's catalogue: one that could
  * invoke this would forge its own payment success.
+ *
+ * @example snippet: addonStep
  */
 export function pikkuAddonScenarioStep<
   InputSchema extends StandardSchemaV1 | undefined = undefined,

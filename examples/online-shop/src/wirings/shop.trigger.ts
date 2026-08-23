@@ -1,7 +1,11 @@
-import { wireTrigger } from '#pikku/trigger/pikku-trigger-types.gen.js'
+import {
+  wireTrigger,
+  wireTriggerSource,
+} from '#pikku/trigger/pikku-trigger-types.gen.js'
 import { wireScheduler } from '#pikku/scheduler'
 import { onLowStock } from '../functions/on-low-stock.function.js'
 import { sweepLowStock } from '../functions/sweep-low-stock.function.js'
+import { warehouseStockFeed } from '../functions/warehouse-stock-feed.function.js'
 
 // @snippet start wireTrigger
 wireTrigger({
@@ -26,3 +30,20 @@ wireScheduler({
   func: sweepLowStock,
 })
 // @snippet end triggerSource
+
+// @snippet start wireTriggerSource
+/**
+ * The other half of the same trigger, and the shape a source is actually for:
+ * something outside the app pushes, and the app listens.
+ *
+ * `name` is the contract — it must spell the `wireTrigger` above exactly, or
+ * the two never meet. Compare the sweep: a source that starts its own timer is
+ * `wireScheduler` written badly, while a source that holds a subscription is
+ * the only thing that can do this at all.
+ */
+wireTriggerSource({
+  name: 'low-stock',
+  func: warehouseStockFeed,
+  input: { threshold: 5 },
+})
+// @snippet end wireTriggerSource

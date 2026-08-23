@@ -6,6 +6,8 @@ export interface PollOptions {
 /**
  * Retries an assertion until it passes or the timeout runs out — for the
  * eventually-consistent parts of a scenario (a queued job, a projection).
+ *
+ * @example snippet: scenarioPolling
  */
 export const pollUntil = async <T>(
   attempt: () => Promise<T | undefined> | T | undefined,

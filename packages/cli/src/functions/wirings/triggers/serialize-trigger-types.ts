@@ -169,6 +169,8 @@ export const wireTrigger = (
  * Only imported in the trigger worker process.
  *
  * @param source - Trigger source with name, func, and input
+ *
+ * @example snippet: wireTriggerSource
  */
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: TriggerSource<TInput, TOutput>

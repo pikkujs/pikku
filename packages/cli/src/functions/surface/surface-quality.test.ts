@@ -70,7 +70,7 @@ const WIRED_BY_EXAMPLE = [
 const CORE_LEAK = 112
 const UNRESOLVABLE = 823
 const BARE_ERRORS = 5
-const FUNCTIONS_WITHOUT_EXAMPLE = 27
+const FUNCTIONS_WITHOUT_EXAMPLE = 10
 const BARE_SYMBOLS = 0
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
