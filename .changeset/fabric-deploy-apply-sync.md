@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 feat(fabric): `deploy apply --sync` waits for the deploy and fails the build when it doesn't land
