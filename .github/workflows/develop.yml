@@ -220,7 +220,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.0
       - name: Run binary verifier
         shell: bash
         run: cd verifiers/binary && yarn test
