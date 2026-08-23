@@ -36,6 +36,7 @@ A Yarn workspace monorepo with strict TypeScript and Husky pre-commit hooks:
 - `packages/` — the Pikku packages
 - `templates/` — runtime templates
 - `verifiers/` — verifier suites (see Testing)
+- `examples/` — running applications CI compiles; `online-shop` is the doc snippet source
 - `e2e/` — end-to-end project
 - `benchmarks/`, `docs/`, `scripts/`
 
@@ -145,6 +146,30 @@ Multiple agents work this checkout concurrently, so the worktree is routinely di
 **Write self-documenting code** — clear names, well-structured types, sensible organization — and add a comment only for a complex algorithm that resists refactoring, a non-obvious reason for an approach, or a workaround for a known limitation. A comment that restates the code is one the code should have made unnecessary.
 
 **Preserve existing comments and JSDoc.** When refactoring, keep them; if one references something you renamed, update it to match.
+
+### Examples on a public export
+
+An `@example` names a region, never restates code:
+
+```typescript
+/**
+ * Adds an item to the shopper's basket.
+ *
+ * @example snippet: addToBasket
+ */
+```
+
+The region is a `// @snippet start <name>` … `// @snippet end <name>` pair in
+`examples/online-shop`, the only source — an export missing an example gets the
+usage written there first. Regions may nest, `.sql` files use `--` markers, and
+`packages/cli/build.sh` collects them into the `snippets.json` the CLI ships.
+
+Two tests in `packages/cli/src/functions/surface/` enforce it: a name with no
+region fails outright, and a ratchet counts the callables still carrying no
+example — cover one and lower the number in the same commit.
+
+Write `snippet:` on the same line as `@example`. `@example @snippet name` silently
+loses the example, because TypeScript reads the leading `@snippet` as a new tag.
 
 ### Function type signatures
 
