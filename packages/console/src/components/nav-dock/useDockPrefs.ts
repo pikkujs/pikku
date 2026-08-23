@@ -7,6 +7,11 @@ export const DOCK_SIDES: DockSide[] = ['bottom', 'top', 'left', 'right']
 export const isVerticalDock = (side: DockSide) =>
   side === 'left' || side === 'right'
 
+/** Percent of the dock's natural size. */
+export const DOCK_SCALE_MIN = 70
+export const DOCK_SCALE_MAX = 160
+export const DOCK_SCALE_STEP = 5
+
 /**
  * How the user wants the dock to behave, persisted per browser.
  *
@@ -29,5 +34,13 @@ export function useDockPrefs() {
     defaultValue: true,
     getInitialValueInEffect: false,
   })
-  return { side, setSide, alwaysVisible, setAlwaysVisible }
+  /* A ceiling, not an override: the fit still shrinks the row to whatever the
+     window can hold, so asking for 160% on a narrow laptop simply gets you the
+     largest tile that fits. */
+  const [scale, setScale] = useLocalStorage({
+    key: 'nav-dock-scale',
+    defaultValue: 100,
+    getInitialValueInEffect: false,
+  })
+  return { side, setSide, alwaysVisible, setAlwaysVisible, scale, setScale }
 }

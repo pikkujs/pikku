@@ -859,6 +859,32 @@
   fill: transparent;
 }
 
+/* A range row. Same insets as an item so the label column still lines up down
+   the menu, with the track hanging under it rather than beside it — a track
+   squeezed into the end slot is too short to aim with. */
+.fiSlider {
+  width: 100%;
+  padding: 5px 10px 12px;
+  color: var(--app-text-dim);
+  font-size: 13px;
+}
+
+.fiSliderHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+}
+
+.fiSliderHead > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  stroke-width: calc(2 * var(--pf-stitch-weight, 1));
+  fill: transparent;
+}
+
 /* ---------- which edge the dock sits on ---------- */
 
 /* Four sides, one geometry with the axis swapped — so what follows only

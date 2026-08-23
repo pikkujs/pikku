@@ -635,6 +635,7 @@
   "nav_language": "Language",
   "nav_dock": "Dock",
   "nav_dock_always_visible": "Always visible",
+  "nav_dock_size": "Size",
   "nav_dock_bottom": "Bottom",
   "nav_dock_top": "Top",
   "nav_dock_left": "Left",

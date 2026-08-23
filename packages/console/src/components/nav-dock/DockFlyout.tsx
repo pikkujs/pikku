@@ -1,4 +1,4 @@
-import { Menu } from '@pikku/mantine/core'
+import { Menu, Slider } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import type { DockMenu, DockTile, FlyoutRow } from './model'
 import classes from './NavDock.module.css'
@@ -117,6 +117,35 @@ function Row({
           ))}
         </Menu.Sub.Dropdown>
       </Menu.Sub>
+    )
+  }
+
+  /* A range, not a set of alternatives. A div rather than a Menu.Item because a
+     menu item swallows the pointer and the arrow keys the slider needs — and
+     closing the menu on release would put the thing you are sizing out of sight
+     exactly when you want to see it. */
+  if (row.slider) {
+    const { value, min, max, step, format, onChange } = row.slider
+    return (
+      <div
+        className={classes.fiSlider}
+        onKeyDown={(e) => e.stopPropagation()}
+        data-testid={`flyout-slider-${row.key}`}
+      >
+        <div className={classes.fiSliderHead}>
+          <Body row={{ ...row, hint: format ? format(value) : String(value) }} />
+        </div>
+        <Slider
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          onChange={onChange}
+          label={null}
+          size="sm"
+          aria-label={row.label}
+        />
+      </div>
     )
   }
 
