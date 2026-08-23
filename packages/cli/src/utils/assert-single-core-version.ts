@@ -1,20 +1,68 @@
 import { readFile } from 'node:fs/promises'
-import { realpathSync } from 'node:fs'
+import { readdirSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { glob } from 'tinyglobby'
 import { ErrorCode } from '@pikku/inspector'
 
-// Bounded globs (no unbounded `**`) covering the real @pikku/core copies each
-// package manager keeps: hoisted root, bun (.bun), pnpm (.pnpm), and one level
-// of npm/yarn nesting (both plain and scoped dependents).
+// Bounded globs (no unbounded `**`) covering the copies reachable without a
+// content-addressed store: the hoisted root, and one level of npm/yarn nesting
+// (both plain and scoped dependents).
 const PATTERNS = [
   '@pikku/core/package.json',
-  '.bun/@pikku+core@*/node_modules/@pikku/core/package.json',
-  '.pnpm/@pikku+core@*/node_modules/@pikku/core/package.json',
   '*/node_modules/@pikku/core/package.json',
   '@*/*/node_modules/@pikku/core/package.json',
 ]
+
+/**
+ * bun and pnpm keep every version they have ever installed under `.bun`/`.pnpm`
+ * and neither prunes on upgrade, so globbing the store counts copies nothing can
+ * load: after one `@pikku/core` bump the store holds both, and the split this
+ * guard exists to catch is reported on a tree that has none. Walk in from the
+ * links instead — a store copy counts only when a live `@pikku/*` package
+ * resolves to it.
+ */
+const storeCores = (nodeModules: string): string[] => {
+  const seen = new Set<string>()
+  const cores = new Set<string>()
+  const queue: string[] = []
+
+  const real = (dir: string) => {
+    try {
+      return realpathSync(dir)
+    } catch {
+      return null
+    }
+  }
+
+  const visitScope = (scopeDir: string) => {
+    let entries: string[]
+    try {
+      entries = readdirSync(scopeDir)
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      const resolved = real(path.join(scopeDir, entry))
+      if (!resolved || seen.has(resolved)) continue
+      seen.add(resolved)
+      if (entry === 'core') cores.add(path.join(resolved, 'package.json'))
+      else queue.push(resolved)
+    }
+  }
+
+  visitScope(path.join(nodeModules, '@pikku'))
+  while (queue.length > 0) {
+    const pkg = queue.pop()!
+    // A package's own dependencies sit either beside it (bun and pnpm put a
+    // package and everything it resolves into one store `node_modules`) or
+    // nested under it (npm/yarn). Every queued entry is a `@pikku/*` package, so
+    // its parent is always the scope directory.
+    visitScope(path.dirname(pkg))
+    visitScope(path.join(pkg, 'node_modules', '@pikku'))
+  }
+  return [...cores]
+}
 
 /**
  * Minimal semver range check for the shapes @pikku/cli publishes in its own
@@ -117,11 +165,14 @@ export async function assertSingleCoreVersion(
   logger: { warn: (message: string) => void }
 ): Promise<void> {
   const nodeModules = path.join(path.resolve(rootDir), 'node_modules')
-  const found = await glob(PATTERNS, {
-    cwd: nodeModules,
-    absolute: true,
-    onlyFiles: true,
-  }).catch(() => [] as string[])
+  const found = [
+    ...(await glob(PATTERNS, {
+      cwd: nodeModules,
+      absolute: true,
+      onlyFiles: true,
+    }).catch(() => [] as string[])),
+    ...storeCores(nodeModules),
+  ]
 
   // Dedupe by real path (symlinks/hoisting surface the same copy many times),
   // then map each physical copy to its version.

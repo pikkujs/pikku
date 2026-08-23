@@ -1,6 +1,12 @@
 import { describe, test, afterEach } from 'node:test'
 import assert from 'node:assert'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  symlinkSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { readFile } from 'node:fs/promises'
@@ -113,6 +119,87 @@ describe('assertSingleCoreVersion', () => {
   test('two distinct cores still throw PKU717 (split beats skew)', async () => {
     await assert.rejects(
       assertSingleCoreVersion(projectWithCores('0.12.51', '0.12.56'), logger),
+      /PKU717.*Multiple @pikku\/core versions/s
+    )
+  })
+
+  /**
+   * bun leaves the version it replaced in `.bun` after an upgrade, so the store
+   * holds two while the links resolve to one. That is not a split.
+   */
+  const bunProject = (linked: string, ...orphaned: string[]) => {
+    const root = mkdtempSync(path.join(tmpdir(), 'pikku-core-store-'))
+    dirs.push(root)
+    const store = path.join(root, 'node_modules', '.bun')
+
+    const place = (version: string) => {
+      const dir = path.join(
+        store,
+        `@pikku+core@${version}`,
+        'node_modules',
+        '@pikku',
+        'core'
+      )
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(
+        path.join(dir, 'package.json'),
+        JSON.stringify({ name: '@pikku/core', version })
+      )
+      return dir
+    }
+
+    for (const version of orphaned) place(version)
+    const target = place(linked)
+    const scope = path.join(root, 'node_modules', '@pikku')
+    mkdirSync(scope, { recursive: true })
+    symlinkSync(target, path.join(scope, 'core'), 'dir')
+    return root
+  }
+
+  test('a version the store kept but nothing links to is not a split', async () => {
+    const range = await cliCorePeerRange()
+    const inRange = /(\d+\.\d+\.\d+)/.exec(range)![1]!
+    await assertSingleCoreVersion(bunProject(inRange, '0.12.51'), logger)
+    assert.strictEqual(warnings.length, 0)
+  })
+
+  test('two versions the links both reach still throw PKU717', async () => {
+    const root = bunProject('0.12.56', '0.12.51')
+    // A second package resolving the older store copy is what makes it live.
+    const dependent = path.join(
+      root,
+      'node_modules',
+      '.bun',
+      '@pikku+kysely@0.13.0',
+      'node_modules',
+      '@pikku'
+    )
+    mkdirSync(path.join(dependent, 'kysely'), { recursive: true })
+    writeFileSync(
+      path.join(dependent, 'kysely', 'package.json'),
+      JSON.stringify({ name: '@pikku/kysely', version: '0.13.0' })
+    )
+    symlinkSync(
+      path.join(
+        root,
+        'node_modules',
+        '.bun',
+        '@pikku+core@0.12.51',
+        'node_modules',
+        '@pikku',
+        'core'
+      ),
+      path.join(dependent, 'core'),
+      'dir'
+    )
+    symlinkSync(
+      path.join(dependent, 'kysely'),
+      path.join(root, 'node_modules', '@pikku', 'kysely'),
+      'dir'
+    )
+
+    await assert.rejects(
+      assertSingleCoreVersion(root, logger),
       /PKU717.*Multiple @pikku\/core versions/s
     )
   })
