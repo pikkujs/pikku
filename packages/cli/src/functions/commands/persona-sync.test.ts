@@ -3,7 +3,6 @@ import { describe, test, beforeEach, afterEach } from 'node:test'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createServer, type Server } from 'node:http'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import {
@@ -15,14 +14,12 @@ import { createKysely } from '../db/local-db.js'
 import { personaSync } from './persona-sync.js'
 
 /**
- * Drives the real command against a real sqlite database and a real HTTP target
- * that behaves like the actor plugin: it upserts an `actor: true` user row on
- * sign-in, and nothing else creates one. Both halves matter — the point of the
- * command is that the account and the grants land together.
+ * Drives the real command against a real sqlite database. The command writes
+ * both halves itself — the account and its grants — so the database is the
+ * whole of the contract; nothing here talks to an API.
  */
 let root: string
 let logs: string[]
-let target: Awaited<ReturnType<typeof startTarget>>
 
 const logger = {
   info: (msg: string) => logs.push(msg),
@@ -89,66 +86,6 @@ const openDb = async () =>
     coercionFile: join(root, 'nope.js'),
   } as any)
 
-/** The actor plugin's contract, as much of it as this command touches. */
-const startTarget = async () => {
-  const signedIn: string[] = []
-  /** Off models a target whose user store is a different deployment's. */
-  const state = { upserts: true }
-  const server: Server = createServer((req, res) => {
-    const chunks: Buffer[] = []
-    req.on('data', (c) => chunks.push(c))
-    req.on('end', () => {
-      void (async () => {
-        const body = chunks.length
-          ? JSON.parse(Buffer.concat(chunks).toString())
-          : {}
-        if (req.url === '/auth/sign-in/actor') {
-          if (body.secret !== 'impersonation-secret') {
-            res.writeHead(401).end(JSON.stringify({ message: 'bad secret' }))
-            return
-          }
-          // The upsert: an actor row exists because somebody signed in as it.
-          if (state.upserts) {
-            const db = await openDb()
-            try {
-              await (db as Kysely<any>)
-                .insertInto('user')
-                .values({
-                  id: `user-${body.email}`,
-                  email: body.email,
-                  actor: 1,
-                })
-                .onConflict((oc: any) => oc.column('id').doNothing())
-                .execute()
-            } finally {
-              await db.destroy()
-            }
-          }
-          signedIn.push(body.email)
-          res.setHeader('set-cookie', [`session=s${signedIn.length}; Path=/`])
-          res.writeHead(200).end(JSON.stringify({ ok: true }))
-          return
-        }
-        if (req.url === '/auth/get-session') {
-          res
-            .writeHead(200, { 'content-type': 'application/json' })
-            .end(JSON.stringify({ user: { id: 'whoever', role: '' } }))
-          return
-        }
-        res.writeHead(404).end()
-      })()
-    })
-  })
-  await new Promise<void>((resolve) => server.listen(0, resolve))
-  const { port } = server.address() as { port: number }
-  return {
-    apiUrl: `http://127.0.0.1:${port}`,
-    signedIn,
-    state,
-    stop: () => new Promise<void>((resolve) => server.close(() => resolve())),
-  }
-}
-
 const config = () => ({
   rootDir: root,
   outDir: join(root, '.pikku'),
@@ -158,8 +95,8 @@ const config = () => ({
   rolesMetaJsonFile: join(root, '.pikku', 'scopes', 'roles.gen.json'),
   scenarios: { emailDomain: 'e2e.test' },
   environments: {
-    local: { apiUrl: target.apiUrl },
-    prod: { apiUrl: target.apiUrl, production: true },
+    local: { apiUrl: 'http://persona-sync.invalid' },
+    prod: { apiUrl: 'http://persona-sync.invalid', production: true },
   },
 })
 
@@ -169,19 +106,39 @@ const run = async (data: any, personas: unknown[] = PERSONAS) =>
       logger,
       config: config(),
       getInspectorState: async () => ({ personas: { definitions: personas } }),
-      variables: { get: async () => 'impersonation-secret' },
     } as any,
     data,
     {} as any
   )
 
+/** Every address the command turned into an actor row. */
+const provisioned = async () => {
+  const db = await openDb()
+  try {
+    const rows = await (db as Kysely<any>)
+      .selectFrom('user')
+      .select('email')
+      .where('actor', '=', 1)
+      .execute()
+    return rows.map((r: any) => String(r.email)).sort()
+  } finally {
+    await db.destroy()
+  }
+}
+
 const rolesOf = async (email: string) => {
   const db = await openDb()
   try {
+    const user = await (db as Kysely<any>)
+      .selectFrom('user')
+      .select('id')
+      .where('email', '=', email)
+      .executeTakeFirst()
+    if (!user) return []
     const rows = await db
       .selectFrom('pikkuUserRole')
       .select('role')
-      .where('userId', '=', `user-${email}`)
+      .where('userId', '=', String(user.id))
       .execute()
     return rows.map((r) => r.role).sort()
   } finally {
@@ -192,7 +149,6 @@ const rolesOf = async (email: string) => {
 beforeEach(async () => {
   root = mkdtempSync(join(tmpdir(), 'pikku-persona-sync-'))
   logs = []
-  target = await startTarget()
 
   mkdirSync(join(root, 'src'), { recursive: true })
   mkdirSync(join(root, '.pikku', 'scopes'), { recursive: true })
@@ -221,7 +177,11 @@ beforeEach(async () => {
     .ifNotExists()
     .addColumn('id', 'text', (col: any) => col.primaryKey())
     .addColumn('email', 'text')
+    .addColumn('name', 'text')
+    .addColumn('email_verified', 'integer')
     .addColumn('actor', 'integer')
+    .addColumn('created_at', 'text')
+    .addColumn('updated_at', 'text')
     .execute()
   await applyPikkuSchemas(db, [scopeSchema])
   const service = new KyselyScopeService(db)
@@ -230,7 +190,6 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
-  await target.stop()
   rmSync(root, { recursive: true, force: true })
 })
 
@@ -238,7 +197,7 @@ describe('pikku persona sync', () => {
   test('creates the account and applies the declared roles', async () => {
     await run({ environment: 'local' })
 
-    assert.deepEqual(target.signedIn.sort(), [
+    assert.deepEqual(await provisioned(), [
       'susan@e2e.test',
       'target@e2e.test',
     ])
@@ -251,7 +210,7 @@ describe('pikku persona sync', () => {
   test('provisions a persona that is declared runnable: false', async () => {
     await run({ environment: 'local' })
 
-    assert.ok(target.signedIn.includes('target@e2e.test'))
+    assert.ok((await provisioned()).includes('target@e2e.test'))
   })
 
   // The rule that decides who may run decides who may be provisioned. `mo`
@@ -259,7 +218,7 @@ describe('pikku persona sync', () => {
   test('skips a persona that does not act in this environment', async () => {
     await run({ environment: 'local' })
 
-    assert.ok(!target.signedIn.includes('mo@e2e.test'))
+    assert.ok(!(await provisioned()).includes('mo@e2e.test'))
     assert.match(logs.join('\n'), /1 persona\(s\) skipped/)
   })
 
@@ -269,7 +228,7 @@ describe('pikku persona sync', () => {
   test('provisions only the accountable persona into production', async () => {
     await run({ environment: 'prod' })
 
-    assert.deepEqual(target.signedIn, ['mo@e2e.test'])
+    assert.deepEqual(await provisioned(), ['mo@e2e.test'])
     assert.deepEqual(await rolesOf('mo@e2e.test'), ['platform-admin'])
   })
 
@@ -284,10 +243,10 @@ describe('pikku persona sync', () => {
 
   // A dry run against production is the one somebody types before the real
   // thing, so it has to touch nothing at all.
-  test('--dry-run signs nobody in and writes no grant', async () => {
+  test('--dry-run provisions nobody and writes no grant', async () => {
     await run({ environment: 'prod', dryRun: true })
 
-    assert.deepEqual(target.signedIn, [])
+    assert.deepEqual(await provisioned(), [])
     assert.deepEqual(await rolesOf('mo@e2e.test'), [])
     const output = logs.join('\n')
     assert.match(output, /dry run/)
@@ -311,29 +270,29 @@ describe('pikku persona sync', () => {
     await run({ environment: 'local' }, [])
 
     assert.match(logs.join('\n'), /no personas are declared/)
-    assert.deepEqual(target.signedIn, [])
+    assert.deepEqual(await provisioned(), [])
   })
 
-  // Pointing the command at one deployment's API and another's database would
-  // otherwise report success while the grants landed nowhere.
-  test('fails loudly when the database holds no row for a signed-in persona', async () => {
-    // The target signs people in against its own store; this database is a
-    // different deployment's, and has nobody in it.
-    target.state.upserts = false
+  // The persona's address belonging to somebody real is the one case where
+  // provisioning would hand a stranger's account an `admin` grant.
+  test('refuses to provision over a real user holding that address', async () => {
+    const db = await openDb()
+    await (db as Kysely<any>)
+      .insertInto('user')
+      .values({ id: 'a-real-person', email: 'susan@e2e.test', actor: 0 })
+      .execute()
+    await db.destroy()
 
     await assert.rejects(
-      () =>
-        run({ environment: 'local' }, [
-          {
-            id: 'ghost',
-            name: 'Ghost',
-            roles: ['report-viewer'],
-            goals: [],
-            tags: [],
-            runnable: true,
-          },
-        ]),
-      /is not the one 'local' runs on/
+      () => run({ environment: 'local' }),
+      /is a real user in the database backing 'local'/
     )
+    assert.deepEqual(await rolesOf('susan@e2e.test'), [])
+  })
+
+  test('running against a fresh database needs no actor secret', async () => {
+    await run({ environment: 'local' })
+
+    assert.deepEqual(await rolesOf('susan@e2e.test'), ['report-viewer'])
   })
 })

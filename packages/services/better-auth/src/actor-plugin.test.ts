@@ -24,7 +24,7 @@ const recordingLogger = () => {
 const makeAuth = (
   db: Record<string, any[]>,
   secret?: string,
-  options: { allowOutsideDev?: boolean; logger?: any } = {}
+  options: { logger?: any } = {}
 ) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
@@ -32,11 +32,7 @@ const makeAuth = (
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [
-      actor({
-        secret,
-        allowOutsideDev: options.allowOutsideDev,
-        logger: options.logger ?? recordingLogger(),
-      }),
+      actor({ secret, logger: options.logger ?? recordingLogger() }),
     ],
   })
 
@@ -180,20 +176,44 @@ describe('actor sign-in gate', () => {
     )
 
     process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE
-    const allowed = await signInActor(makeAuth(db, 'flow-secret'), {
+    const stillRefused = await signInActor(makeAuth(db, 'flow-secret'), {
       email: 'customer@actors.local',
       secret: 'flow-secret',
     })
-    assert.equal(allowed.status, 200)
+    assert.equal(
+      stillRefused.status,
+      401,
+      'the opt-in reaches the secret check; provisioning is a separate power'
+    )
+    assert.match((await stillRefused.json()).message ?? '', /No actor account/)
   })
 
-  test('the allowOutsideDev option enables it outside dev', async () => {
+  test('the opt-in signs provisioned actors in but mints no new ones', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const res = await signInActor(
-      makeAuth(db, 'flow-secret', { allowOutsideDev: true }),
-      { email: 'customer@actors.local', secret: 'flow-secret' }
-    )
-    assert.equal(res.status, 200)
+    process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE
+
+    const unknown = await signInActor(makeAuth(db, 'flow-secret'), {
+      email: 'never-provisioned@actors.local',
+      secret: 'flow-secret',
+    })
+    assert.equal(unknown.status, 401)
+    assert.match((await unknown.json()).message ?? '', /No actor account/)
+    assert.equal(db.user!.length, 0)
+
+    db.user!.push({
+      id: 'provisioned-1',
+      email: 'customer@actors.local',
+      name: 'customer',
+      actor: true,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const provisioned = await signInActor(makeAuth(db, 'flow-secret'), {
+      email: 'customer@actors.local',
+      secret: 'flow-secret',
+    })
+    assert.equal(provisioned.status, 200)
   })
 
   test('a secret configured on a shut gate is a warning, not a silent no-op', () => {
