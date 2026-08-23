@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import {
+  DEFAULT_IMPERSONATION_HEADER,
   resolveImpersonatedSession,
+  warnImpersonationUnconfigured,
   type SessionLike,
 } from './auth-session-impersonation.js'
 
@@ -211,5 +213,24 @@ describe('resolveImpersonatedSession', () => {
       ),
       /db down/
     )
+  })
+
+  test('a request with no impersonation header says nothing', () => {
+    const { services, logs } = svc()
+    warnImpersonationUnconfigured(services, () => undefined)
+    assert.deepEqual(logs.warn, [])
+  })
+
+  test('a header nobody is configured to honour is reported, once', () => {
+    const { services, logs } = svc()
+    const getHeader = (name: string) =>
+      name === DEFAULT_IMPERSONATION_HEADER ? 'u_guest' : undefined
+
+    warnImpersonationUnconfigured(services, getHeader)
+    warnImpersonationUnconfigured(services, getHeader)
+
+    assert.equal(logs.warn.length, 1)
+    assert.match(logs.warn[0]!, /without an `impersonation` option/)
+    assert.match(logs.warn[0]!, /u_guest/)
   })
 })
