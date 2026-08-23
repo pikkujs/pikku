@@ -1,6 +1,7 @@
 import assert from 'node:assert'
 import { describe, test } from 'node:test'
 
+import { renderSurfaceDoc } from './render-surface-doc.js'
 import { readShippedSurfaceDoc } from './shipped-surface-doc.js'
 import type { SurfaceDoc, SurfaceDocSymbol } from './surface-doc.types.js'
 
@@ -135,6 +136,38 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
         `where it is declared:\n  ` +
         `${[...new Set(bare)].sort().join(', ')}`
     )
+  })
+
+  test('finds an export wherever in the surface it lives', () => {
+    assert.ok(doc)
+    const app = new Set(
+      doc.entryPoints
+        .filter((entryPoint) => entryPoint.id === 'app')
+        .flatMap((entryPoint) =>
+          entryPoint.leaves.flatMap((leaf) =>
+            leaf.symbols.map((symbol) => symbol.name)
+          )
+        )
+    )
+    const elsewhere = doc.entryPoints
+      .filter((entryPoint) => entryPoint.id !== 'app')
+      .flatMap((entryPoint) =>
+        entryPoint.leaves.flatMap((leaf) =>
+          leaf.symbols.map((symbol) => symbol.name)
+        )
+      )
+      .filter((name) => !app.has(name))
+    assert.ok(
+      elsewhere.length > 0,
+      'no entry point outside the app one has an export of its own to look up'
+    )
+    for (const name of elsewhere) {
+      assert.doesNotThrow(
+        () => renderSurfaceDoc(doc, { target: name }),
+        `'pikku doc ${name}' dead-ends, and the reader has no way to know which ` +
+          `flag would have found it`
+      )
+    }
   })
 
   test('says what each key it lists is for', () => {

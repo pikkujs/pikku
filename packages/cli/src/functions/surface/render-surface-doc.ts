@@ -274,6 +274,16 @@ export const renderSurfaceDoc = (
   if (owner && symbol) {
     return renderSymbol(symbol, owner, home, ai)
   }
+  const elsewhere = doc.entryPoints.find(
+    (candidate) =>
+      candidate.id !== entryPoint &&
+      candidate.leaves.some((leaf2) =>
+        leaf2.symbols.some((symbol2) => symbol2.name === target)
+      )
+  )
+  if (elsewhere) {
+    return renderSurfaceDoc(doc, { target, ai, entryPoint: elsewhere.id })
+  }
   throw new UnknownSurfaceTargetError(
     target,
     near(target, [...leaves.map((candidate) => candidate.name), ...home.keys()])
