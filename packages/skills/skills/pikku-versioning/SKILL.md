@@ -11,7 +11,6 @@ description: >-
   CLI commands. DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-config)
   or general function definitions (use pikku-concepts), or about updating dependency versions
   (use pikku-deps).
-installGroups: [core]
 ---
 
 # Pikku Function Versioning

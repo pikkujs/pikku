@@ -57,7 +57,9 @@ const columns = (values: string[], perRow: number, width: number): string[] => {
       '    ' +
         values
           .slice(i, i + perRow)
-          .map((value) => value.padEnd(width))
+          .map((value) =>
+            value.length >= width ? `${value}  ` : value.padEnd(width)
+          )
           .join('')
           .trimEnd()
     )
@@ -98,7 +100,7 @@ const renderIndex = (doc: SurfaceDoc, leaves: SurfaceLeaf[], ai: boolean) => {
     lines.push('', '  what is above is what exists; these skills say how to use it')
     lines.push(
       ...columns(
-        taught.map((leaf) => `${leaf.name} → ${leaf.skill}`),
+        taught.map((leaf) => `${leaf.name} → ${[leaf.skill].flat().join(' + ')}`),
         2,
         38
       )
@@ -168,7 +170,7 @@ const renderLeaf = (leaf: SurfaceLeaf, ai: boolean): string => {
   if (ai) {
     lines.push(
       leaf.skill
-        ? `  Load the ${leaf.skill} skill before writing this if you need how rather than what.`
+        ? `  Load the ${[leaf.skill].flat().join(' and ')} skill before writing this if you need how rather than what.`
         : '  No skill teaches this door — what is above is the whole of it.'
     )
   }
@@ -230,7 +232,7 @@ const renderSymbol = (
     )
   }
   if (ai && leaf.skill) {
-    lines.push('', `  Load the ${leaf.skill} skill before writing this if you need how rather than what.`)
+    lines.push('', `  Load the ${[leaf.skill].flat().join(' and ')} skill before writing this if you need how rather than what.`)
   }
   return lines.join('\n').trimEnd()
 }

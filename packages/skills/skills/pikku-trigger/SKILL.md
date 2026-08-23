@@ -5,7 +5,7 @@ description: >-
   PostgreSQL LISTEN/NOTIFY, or custom event sources. Covers wireTrigger, wireTriggerSource, and
   pikkuTriggerFunc. TRIGGER when: code uses wireTrigger/wireTriggerSource/pikkuTriggerFunc, user
   asks about event-driven functions, Redis pub/sub, PostgreSQL LISTEN/NOTIFY, or reacting to
-  external events. DO NOT TRIGGER when: user asks about scheduled tasks (use pikku-cron) or
+  external events. DO NOT TRIGGER when: user asks about scheduled tasks (use pikku-schedule) or
   background job queues (use pikku-queue).
 installGroups: [core]
 ---

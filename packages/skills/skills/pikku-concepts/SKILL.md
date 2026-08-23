@@ -101,7 +101,7 @@ The function never imports Express, never reads `req.body`, never touches `ws.se
 
 ## Concept Mapping: Generic Backend → Pikku
 
-Controllers/routes → `pikkuFunc`; auth/sessions → `pikku-security`; authorization checks → `pikku-permissions`; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
+Controllers/routes → `pikkuFunc`; auth/sessions → `pikku-security`, a separate install; authorization checks → `pikku-permissions`; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
 
 ## Functions
 
@@ -312,8 +312,8 @@ src/
 ├── schemas.ts           # Zod/Valibot schemas
 ├── services.ts          # Service factories (see pikku-services)
 ├── lifecycle.ts         # Server lifecycle hooks (pikku dev/serve only)
-├── middleware.ts         # Middleware definitions (see pikku-security)
-├── permissions.ts       # Permission definitions (see pikku-security)
+├── middleware.ts         # Middleware definitions (see pikku-middleware)
+├── permissions.ts       # Permission definitions (see pikku-permissions)
 └── .pikku/              # Generated (gitignored)
     ├── function/        # #pikku/function
     ├── http/            # #pikku/http

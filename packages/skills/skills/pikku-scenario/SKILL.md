@@ -628,7 +628,7 @@ An actor with no `persona` is its own persona, so a project that never declares 
 ### The same actors sign a human in
 
 Declared actors are not only for automated runs. `signInPath` is Better Auth's
-`actor` plugin (see `pikku-better-auth`), which any caller can post to — so the
+`actor` plugin (see `pikku-better-auth`, a separate install), which any caller can post to — so the
 frontend gets a one-click "Sign in as …" switcher over the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
@@ -639,7 +639,7 @@ control renders nothing there — but gate the reads on your bundler's dev flag
 anyway (`import.meta.env.DEV ? … : undefined`) so the secret never reaches a
 production bundle in the first place.
 
-Do not hand-roll the switcher: `useDevActors()` (`pikku-react`) is the logic and
+Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate install) is the logic and
 `<DevActorSwitcher />` from `@pikku/mantine/dev` is a ready rendering of it.
 `pikku fabric validate` **requires** any frontend with a login screen to ship
 one — without it a reviewer is locked out of their own sandbox.

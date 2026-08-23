@@ -8,7 +8,7 @@ description: >-
   app, or asked to demonstrate what Pikku can do. DO NOT TRIGGER when: the user wants a product
   built (use pikku-build-app), something quick (use pikku-build-quick), or one specific surface
   wired into an existing app — a single workflow, cron job or agent (use that surface's own skill,
-  e.g. pikku-workflow, pikku-cron, pikku-agent).
+  e.g. pikku-workflow, pikku-schedule, pikku-agent).
 ---
 
 # Build a platform showcase on Pikku
@@ -89,7 +89,7 @@ on a human or a timer and must survive a restart.
   from the UI.
 - Three workflows ship with the template. Read them before writing yours.
 
-### Schedules — `pikku-schedule` / `pikku-cron`
+### Schedules — `pikku-schedule`
 
 Recurring work: a nightly rollup, a reminder sweep, an expiry pass.
 
@@ -230,7 +230,7 @@ built.
 ## Reference
 
 - Base workflow: `pikku-build-app` — read it first, follow it in full
-- Per-surface skills: `pikku-workflow`, `pikku-schedule`, `pikku-cron`,
+- Per-surface skills: `pikku-workflow`, `pikku-schedule`,
   `pikku-queue`, `pikku-agent`, `pikku-ai-vercel`, `pikku-realtime`,
   `pikku-websocket`, `pikku-mcp`, `pikku-trigger`, `pikku-i18n`, `pikku-rtl`,
   `pikku-emails`, `pikku-versioning`, `pikku-addon`, `pikku-security`,

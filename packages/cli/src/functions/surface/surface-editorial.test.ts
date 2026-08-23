@@ -17,19 +17,24 @@ const installGroupsOf = async (name: string): Promise<string[]> => {
 describe('the door to skill routing table', () => {
   test('only names skills that exist', async () => {
     const known = new Set(await listSkillNames())
-    const missing = Object.entries(LEAF_EDITORIAL)
-      .filter(([, entry]) => entry.skill && !known.has(entry.skill))
-      .map(([door, entry]) => `${door} -> ${entry.skill}`)
+    const missing = Object.entries(LEAF_EDITORIAL).flatMap(([door, entry]) =>
+      [entry.skill]
+        .flat()
+        .filter((skill) => skill && !known.has(skill))
+        .map((skill) => `${door} -> ${skill}`)
+    )
     assert.deepEqual(missing, [])
   })
 
   test('only names skills a default install actually gets', async () => {
     const orphans: string[] = []
     for (const [door, entry] of Object.entries(LEAF_EDITORIAL)) {
-      if (!entry.skill) continue
-      const groups = await installGroupsOf(entry.skill)
-      if (!groups.includes('core')) {
-        orphans.push(`${door} -> ${entry.skill} (${groups.join(', ') || 'no group'})`)
+      for (const skill of [entry.skill].flat()) {
+        if (!skill) continue
+        const groups = await installGroupsOf(skill)
+        if (!groups.includes('core')) {
+          orphans.push(`${door} -> ${skill} (${groups.join(', ') || 'no group'})`)
+        }
       }
     }
     assert.deepEqual(orphans, [])

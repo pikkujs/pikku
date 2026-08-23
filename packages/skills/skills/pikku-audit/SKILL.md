@@ -10,7 +10,6 @@ description: >-
   uses auditLog, createInvocationAudit, createAuditedKysely, or AuditService. DO NOT TRIGGER when:
   user wants app logging/telemetry (use the logger) or DB migrations in general (use
   pikku-kysely).
-installGroups: [core]
 ---
 
 # Pikku Audit

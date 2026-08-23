@@ -1,14 +1,15 @@
 ---
 name: pikku-schedule
 description: >-
-  Use when setting up in-memory cron scheduling in a Pikku app. Covers InMemorySchedulerService
-  for running scheduled tasks. TRIGGER when: code uses InMemorySchedulerService,
-  PikkuTaskScheduler, or user asks about in-memory scheduling, cron jobs without external
-  dependencies, or @pikku/schedule. DO NOT TRIGGER when: user asks about cron wiring (use
-  pikku-cron) or queue-based scheduling with BullMQ/PgBoss (use pikku-queue).
+  Use when adding scheduled tasks, recurring jobs, or cron-based automation to a Pikku app. Covers
+  wireScheduler, cron expressions, the scheduled task wire object, and scheduler middleware.
+  TRIGGER when: code uses wireScheduler, user asks about cron, scheduled tasks, recurring jobs, or
+  "run every X minutes/hours". DO NOT TRIGGER when: user asks about background jobs with retries
+  (use pikku-queue) or event-driven triggers (use pikku-trigger).
+installGroups: [core]
 ---
 
-# Pikku Schedule (In-Memory Scheduler)
+# Pikku Scheduled Tasks
 
 ## Agent Operating Procedure
 
@@ -20,75 +21,203 @@ Use this skill as an execution checklist, not reference material.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-`@pikku/schedule` provides an in-memory cron scheduler for running Pikku scheduled functions without external dependencies like Redis or PostgreSQL.
+Wire Pikku functions to run on a schedule using cron expressions. Uses `pikkuVoidFunc` (no input/output).
 
-## Installation
+`pikku dev`, `pikku serve` and the standalone deploy adapter each register a scheduler service for you, so a wired task runs without any setup. Only register one yourself when deploying somewhere those do not reach, and then take it off the queue factory (`bullFactory.getSchedulerService()`, `pgBossFactory.getSchedulerService()` — see `pikku-queue`) so it survives a restart and is shared between instances.
+
+## Before You Start
 
 ```bash
-yarn add @pikku/schedule
+pikku info functions --verbose   # See existing functions and their types
+pikku info tags --verbose        # Understand project organization
 ```
+
+See `pikku-concepts` for the core mental model.
 
 ## API Reference
 
-### `InMemorySchedulerService`
+### `wireScheduler(config)`
 
 ```typescript
-import { InMemorySchedulerService } from '@pikku/schedule'
+import { wireScheduler } from '@pikku/core/scheduler'
 
-const schedulerService = new InMemorySchedulerService()
-await schedulerService.start() // registers a CronJob per wired scheduled task
+wireScheduler({
+  name: string,            // Unique scheduler name
+  schedule: string,        // Cron expression
+  func: PikkuVoidFunc,     // Must be pikkuVoidFunc (no input/output)
+  tags?: string[],         // Targets tag middleware — see pikku-middleware
+  middleware?: PikkuMiddleware[],
+})
 ```
 
-It implements core's `SchedulerService` on two mechanisms: `cron` for the
-recurring tasks you declared with `wireScheduler` (see `pikku-cron`), and
-`setTimeout` for one-off delayed RPCs. Both live in process memory, so nothing
-survives a restart and nothing is shared between instances — fine for
-development and a single-instance deployment, wrong for anything else.
+### Wire Object (`wire.scheduledTask`)
 
-`PikkuTaskScheduler` is a deprecated alias for the same class.
-
-### Scheduling a one-off RPC
+Inside scheduled functions:
 
 ```typescript
-const taskId = await schedulerService.scheduleRPC(
-  '5m',
-  'sendReminder',
-  data,
-  session
-)
-await schedulerService.getTask(taskId) // { rpcName, scheduledFor, status, … } | null
-await schedulerService.getAllTasks() // pending one-offs only
-await schedulerService.unschedule(taskId) // true when it was still pending
+wire.scheduledTask.name // Scheduler name
+wire.scheduledTask.schedule // Cron expression string
+wire.scheduledTask.executionTime // Date this execution was triggered
+wire.scheduledTask.skip(reason?) // Abort this execution — THROWS, never returns
 ```
 
-The delay is milliseconds or a duration string (`'30s'`, `'5m'`, `'2h'`). This is
-also the mechanism a workflow's delayed steps use, which is why a workflow that
-sleeps needs a `schedulerService` registered.
+**`skip()` aborts by throwing.** It reads like an early return but it is not:
+nothing after the call runs, so there is no need to `return` afterwards. The
+consequence that bites is in middleware — a `try/catch` around `await next()`
+will catch a skip and report it as a failure. If your middleware distinguishes
+success from failure, let the skip pass through rather than logging it as an
+error.
+
+### Cron Expression Reference
+
+```
+┌───────────── minute (0-59)
+│ ┌───────────── hour (0-23)
+│ │ ┌───────────── day of month (1-31)
+│ │ │ ┌───────────── month (1-12)
+│ │ │ │ ┌───────────── day of week (0-7, 0 and 7 = Sunday)
+│ │ │ │ │
+* * * * *
+```
+
+Common patterns:
+
+| Expression    | Meaning                    |
+| ------------- | -------------------------- |
+| `*/5 * * * *` | Every 5 minutes            |
+| `0 9 * * *`   | Daily at 9:00 AM           |
+| `0 9 * * 1`   | Every Monday at 9:00 AM    |
+| `0 0 1 * *`   | First of month at midnight |
+| `0 */6 * * *` | Every 6 hours              |
+| `30 2 * * 0`  | Sundays at 2:30 AM         |
 
 ## Usage Patterns
 
-### Basic Setup
-
-The scheduler is a singleton service under the name **`schedulerService`**, and
-it is started in your server bootstrap — declaring it without calling `start()`
-registers no cron jobs, so nothing ever fires:
+### Basic Scheduled Task
 
 ```typescript
-// start.ts
-import { InMemorySchedulerService } from '@pikku/schedule'
-
-const schedulerService = new InMemorySchedulerService()
-const singletonServices = await createSingletonServices(config, {
-  schedulerService,
+const dailySummary = pikkuVoidFunc({
+  title: 'Daily Summary',
+  func: async ({ db, emailService, logger }) => {
+    logger.info('Generating daily summary')
+    const stats = await db.getDailyStats()
+    await emailService.sendSummary(stats)
+  },
 })
 
-await appServer.start()
-await schedulerService.start()
+wireScheduler({
+  name: 'dailySummary',
+  schedule: '0 9 * * *',
+  func: dailySummary,
+})
 ```
 
-Call `close()` on shutdown — it stops every cron job and clears pending timers.
+### Using the Wire Object
 
-For distributed or persistent scheduling, take the scheduler service off the
-queue factory instead (`bullFactory.getSchedulerService()`,
-`pgBossFactory.getSchedulerService()`) and register it under the same name. See
-`pikku-queue`.
+```typescript
+const weeklyCleanup = pikkuVoidFunc({
+  title: 'Weekly Cleanup',
+  func: async ({ db, logger }, _input, wire) => {
+    logger.info(`Running: ${wire.scheduledTask.name}`)
+    logger.info(`Schedule: ${wire.scheduledTask.schedule}`)
+    logger.info(`Execution time: ${wire.scheduledTask.executionTime}`)
+
+    const staleCount = await db.countStaleTodos()
+    if (staleCount === 0) {
+      wire.scheduledTask.skip('No stale todos found') // throws — nothing below runs
+    }
+
+    await db.deleteCompletedTodos({ olderThan: '30d' })
+    logger.info(`Cleaned ${staleCount} stale todos`)
+  },
+})
+
+wireScheduler({
+  name: 'weeklyCleanup',
+  schedule: '0 0 * * 0',
+  func: weeklyCleanup,
+})
+```
+
+### Scheduler Middleware
+
+```typescript
+const schedulerMetrics = pikkuMiddleware(
+  async ({ logger }, { scheduledTask }, next) => {
+    const start = Date.now()
+    logger.info(`Task started: ${scheduledTask.name}`)
+
+    try {
+      await next()
+      logger.info(`Task completed: ${scheduledTask.name}`, {
+        duration: Date.now() - start,
+      })
+    } catch (error) {
+      logger.error(`Task failed: ${scheduledTask.name}`, {
+        error: error.message,
+        duration: Date.now() - start,
+      })
+      throw error
+    }
+  }
+)
+
+wireScheduler({
+  name: 'dailySummary',
+  schedule: '0 9 * * *',
+  func: dailySummary,
+  middleware: [schedulerMetrics],
+})
+```
+
+## Complete Example
+
+```typescript
+// functions/scheduled.functions.ts
+export const dailySummary = pikkuVoidFunc({
+  title: 'Daily Summary',
+  func: async ({ db, emailService, logger }) => {
+    const stats = await db.getDailyStats()
+    await emailService.sendSummary(stats)
+    logger.info('Daily summary sent', { stats })
+  },
+})
+
+export const cleanupExpired = pikkuVoidFunc({
+  title: 'Cleanup Expired',
+  func: async ({ db, logger }, _input, wire) => {
+    const count = await db.countExpiredSessions()
+    if (count === 0) {
+      wire.scheduledTask.skip('No expired sessions') // throws — nothing below runs
+    }
+    await db.deleteExpiredSessions()
+    logger.info(`Cleaned ${count} expired sessions`)
+  },
+})
+
+export const syncInventory = pikkuVoidFunc({
+  title: 'Sync Inventory',
+  func: async ({ inventoryApi, db, logger }) => {
+    const updates = await inventoryApi.getChanges()
+    await db.applyInventoryUpdates(updates)
+    logger.info(`Synced ${updates.length} inventory changes`)
+  },
+})
+
+// wirings/scheduler.wiring.ts
+wireScheduler({
+  name: 'dailySummary',
+  schedule: '0 9 * * *',
+  func: dailySummary,
+})
+wireScheduler({
+  name: 'cleanupExpired',
+  schedule: '0 */6 * * *',
+  func: cleanupExpired,
+})
+wireScheduler({
+  name: 'syncInventory',
+  schedule: '*/15 * * * *',
+  func: syncInventory,
+})
+```

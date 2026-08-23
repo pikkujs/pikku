@@ -18,7 +18,7 @@ export type LeafEditorial = {
    * everything there is. Required so that adding a leaf forces the question
    * rather than quietly shipping a door nothing teaches.
    */
-  skill: string | null
+  skill: string | string[] | null
 }
 
 export type EntryPointEditorial = {
@@ -100,7 +100,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   scheduler: {
     step: 'wire it up',
-    skill: 'pikku-cron',
+    skill: 'pikku-schedule',
     summary: 'Wires a function to a cron expression to run it on a schedule.',
   },
   trigger: {
@@ -129,7 +129,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   auth: {
     step: 'guard it',
-    skill: 'pikku-permissions',
+    skill: ['pikku-security', 'pikku-permissions'],
     summary:
       'Who may call a function, and what the call is made with: permissions that see the request, auth gates that run before it, and the credentials a function borrows rather than holds.',
   },

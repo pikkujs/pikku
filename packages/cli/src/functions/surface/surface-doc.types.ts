@@ -48,7 +48,7 @@ export type SurfaceLeaf = {
    * The skill to load for how rather than what, or `null` where this page is
    * the whole story. Never absent: a leaf must answer the question.
    */
-  skill: string | null
+  skill: string | string[] | null
   symbols: SurfaceDocSymbol[]
 }
 

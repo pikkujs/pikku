@@ -1,7 +1,7 @@
 ---
 name: pikku-fabric-debug
 description: 'Debug a deployed Fabric stage from the CLI — read logs, find recent errors, follow a single request end-to-end by traceId, and check request/error/latency metrics. TRIGGER when: a deployed Fabric app is erroring, timing out, or behaving differently than local; the user asks "why is prod failing", "check the logs", "what happened to this request"; or a deploy succeeded but the app misbehaves. DO NOT TRIGGER when: the failure reproduces locally (debug it locally), the deploy itself failed (use pikku-fabric — that is a build/config problem, not a runtime one), or the project is not deployed to Fabric.'
-installGroups: [core]
+installGroups: [fabric]
 ---
 
 # Debugging a deployed Fabric stage

@@ -12,7 +12,6 @@ description: >-
   reading/rendering audit.json. DO NOT TRIGGER when: user asks about authentication/sessions/JWT
   (use pikku-security), permissions (use pikku-permissions), or secrets/env vars (use
   pikku-config).
-installGroups: [core]
 ---
 
 # Pikku Dependency Audit
