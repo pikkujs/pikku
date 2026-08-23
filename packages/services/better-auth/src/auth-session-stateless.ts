@@ -4,6 +4,7 @@ import type { CorePikkuMiddleware } from '@pikku/core/middleware'
 import { getCookieCache } from 'better-auth/cookies'
 import {
   resolveImpersonatedSession,
+  warnImpersonationUnconfigured,
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
@@ -118,6 +119,10 @@ export const betterAuthStatelessSession = (
             )
             return next()
           }
+        } else {
+          warnImpersonationUnconfigured(services as CoreServices, (name) =>
+            request.header(name)
+          )
         }
         const mapped = mapSession
           ? await mapSession(cached, services as CoreServices)

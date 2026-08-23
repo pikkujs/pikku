@@ -5,6 +5,7 @@ import type { BetterAuthInstance } from './define-auth.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 import {
   resolveImpersonatedSession,
+  warnImpersonationUnconfigured,
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
@@ -161,6 +162,10 @@ export const betterAuthSession = (
           )
           return next()
         }
+      } else {
+        warnImpersonationUnconfigured(services as CoreServices, (name) =>
+          request.header(name)
+        )
       }
       const mapped = mapSession
         ? await mapSession(result, services as CoreServices)
