@@ -25,3 +25,11 @@ plugin and constrain that column, so the persona's first role is passed through
 for those.
 
 `OperatorSignInOptions.adminPath` is removed; nothing points at it any more.
+
+A Fabric operator row now also satisfies the default impersonation gate.
+`fabric()` grants the `admin` scope only when handed a `ScopeService`, and no
+app template wires one — so the operator signed in holding nothing and every
+impersonated request fell back to the operator's own session. The `fabric`
+column is written by nothing but that sign-in, after an RS256 verification
+against the stage's public key, so the row's existence is the authorization.
+The scope half of the gate still fails closed.

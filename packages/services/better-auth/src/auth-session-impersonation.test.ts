@@ -8,6 +8,7 @@ import {
 const USERS: Record<string, any> = {
   u_admin: { id: 'u_admin' },
   u_guest: { id: 'u_guest' },
+  u_fabric: { id: 'u_fabric', fabric: true },
 }
 
 const GRANTS: Record<string, string[]> = {
@@ -117,6 +118,31 @@ describe('resolveImpersonatedSession', () => {
     assert.equal(out, null)
     assert.equal(logs.warn.length, 1)
     assert.match(logs.warn[0]!, /admin:impersonate/)
+  })
+
+  test('default gate: a fabric operator impersonates without any scope', async () => {
+    // No ScopeService at all — the row could not hold a scope if it wanted one.
+    // Only the fabric sign-in sets this column, and only after verifying the
+    // control plane's signature, so the row itself is the authorization.
+    const { services } = svc(null)
+    const out = await resolveImpersonatedSession(
+      caller('u_fabric'),
+      { loadUser },
+      services,
+      () => 'u_guest'
+    )
+    assert.deepEqual(out, { userId: 'u_guest' })
+  })
+
+  test('default gate: a merely truthy fabric value is not enough', async () => {
+    const { services } = svc(null)
+    const out = await resolveImpersonatedSession(
+      { user: { id: 'u_liar', fabric: 1 }, session: {} },
+      { loadUser },
+      services,
+      () => 'u_guest'
+    )
+    assert.equal(out, null)
   })
 
   test('an unknown target returns null and warns (not an error)', async () => {
