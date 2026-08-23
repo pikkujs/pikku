@@ -192,7 +192,7 @@ wireCLI({
       render: renderDoc,
       description:
         'Print the API surface of the pikku installed here — the doors, what they export, and how each export is called',
-      parameters: '[topic]',
+      parameters: '[topics...]',
       options: {
         ai: {
           description:

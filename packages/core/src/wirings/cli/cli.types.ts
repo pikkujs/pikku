@@ -175,6 +175,12 @@ type SplitBySpace<S extends string> = S extends `${infer First} ${infer Rest}`
     : [S]
 
 /**
+ * Strip the `...` a variadic positional carries, so `[files...]` validates
+ * against the `files` key the runtime parser fills.
+ */
+type StripVariadic<S extends string> = S extends `${infer Name}...` ? Name : S
+
+/**
  * Recursively build a tuple by stripping brackets from each element
  */
 type BuildParamsTuple<Parts extends readonly string[]> =
@@ -182,7 +188,7 @@ type BuildParamsTuple<Parts extends readonly string[]> =
     infer First extends string,
     ...infer Rest extends string[],
   ]
-    ? [StripBrackets<First>, ...BuildParamsTuple<Rest>]
+    ? [StripVariadic<StripBrackets<First>>, ...BuildParamsTuple<Rest>]
     : []
 
 /**
