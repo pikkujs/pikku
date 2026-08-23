@@ -153,7 +153,7 @@ export const getAgentThreads = pikkuSessionlessFunc({
   description:
     'Returns the caller\\'s AI agent threads from storage. Accepts optional filters: agentName, resourceId, limit, and offset for pagination.',
   expose: true,
-  auth: false,
+  auth: true,
   func: async ({ agentRunService }, input, { session }) => {
     // \`owners\` is an authorization constraint derived from the session, never
     // from input — \`resourceId\` remains a caller-supplied filter within it.
