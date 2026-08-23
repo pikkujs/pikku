@@ -63,6 +63,7 @@
     "@ai-sdk/openai-compatible": "^3.0.30",
     "@pikku/cli": "workspace:*",
     "@pikku/playwright": "workspace:*",
+    "@pikku/ws": "workspace:*",
     "@playwright/test": "^1.50.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22",

@@ -5209,11 +5209,17 @@ __metadata:
   peerDependencies:
     "@pikku/core": ^0.12.93
     "@pikku/playwright": ^0.12.79
+    "@pikku/ws": ^0.12.9
     better-auth: ^1.6.0
+    ws: ^8.21.3
   peerDependenciesMeta:
     "@pikku/playwright":
       optional: true
+    "@pikku/ws":
+      optional: true
     better-auth:
+      optional: true
+    ws:
       optional: true
   bin:
     pikku: dist/bin/pikku.js
@@ -5440,6 +5446,7 @@ __metadata:
     "@pikku/redis": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
     "@pikku/websocket": "workspace:*"
+    "@pikku/ws": "workspace:*"
     "@playwright/test": "npm:^1.50.0"
     "@types/better-sqlite3": "npm:^9.6.0"
     "@types/node": "npm:^22"
@@ -6272,6 +6279,7 @@ __metadata:
     "@pikku/schema-cfworker": "npm:^0.12.6"
     "@pikku/templates-function-addon": "workspace:*"
     "@pikku/websocket": "npm:^0.12.4"
+    "@pikku/ws": "npm:^0.12.9"
     "@types/aws-lambda": "npm:^8.10.162"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
@@ -6905,7 +6913,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/ws@npm:^0.12.9, @pikku/ws@workspace:packages/runtimes/ws":
+"@pikku/ws@npm:^0.12.9, @pikku/ws@workspace:*, @pikku/ws@workspace:packages/runtimes/ws":
   version: 0.0.0-use.local
   resolution: "@pikku/ws@workspace:packages/runtimes/ws"
   dependencies:

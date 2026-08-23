@@ -456,7 +456,9 @@ export const createSingletonServices: CreateSingletonServices<
     invalidateInspectorState,
     workflowService,
     bundler: isBun ? new BunBundler() : new NodeBundler(),
-    devServerRunner: isBun ? new BunServerRunner() : new NodeServerRunner(),
+    devServerRunner: isBun
+      ? new BunServerRunner()
+      : new NodeServerRunner(rootDir),
   }
 }
 
