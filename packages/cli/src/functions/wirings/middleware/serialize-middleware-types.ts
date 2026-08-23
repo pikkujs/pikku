@@ -29,7 +29,7 @@ import type { PikkuAgentMiddlewareHooks } from '@pikku/core/agent'
 import type { Services, SingletonServices } from '${functionTypesImportPath}'
 ${requiredServicesTypeImport}
 
-export { cors } from '@pikku/core/middleware'
+export { cors, authAPIKey, authBearer, authCookie } from '@pikku/core/middleware'
 export type { MiddlewarePriority }
 
 /**

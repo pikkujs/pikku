@@ -2,7 +2,12 @@ import {
   pikkuMiddleware,
   pikkuMiddlewareFactory,
 } from './middleware-factories.js'
+/**
+ * Reads an API key from the request and JWT-decodes it into a session. Leaves
+ * an existing session alone, so it composes with other auth middleware.
+ */
 export const authAPIKey = pikkuMiddlewareFactory<{
+  /** Where to look: the `x-api-key` header, the `apiKey` query param, or both. */
   source: 'header' | 'query' | 'all'
 }>(({ source }) =>
   pikkuMiddleware(

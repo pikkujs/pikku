@@ -19,6 +19,7 @@ const constantTimeEqual = (a: string, b: string): boolean => {
  * service per request.
  */
 export const authBearer = pikkuMiddlewareFactory<{
+  /** Omit to JWT-decode the token. Set it to accept one fixed token instead, matched in constant time. */
   token?:
     | {
         value: string

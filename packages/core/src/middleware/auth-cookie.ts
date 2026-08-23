@@ -6,10 +6,6 @@ import {
 import type { RelativeTimeInput } from '../time-utils.js'
 import { getRelativeTimeOffsetFromNow } from '../time-utils.js'
 
-/**
- * Reads a JWT session from a cookie, and re-issues the cookie after the
- * request whenever the session changed (e.g. after login).
- */
 /** Standard JWT registered claims — present on a token even with no session. */
 const JWT_REGISTERED_CLAIMS = new Set([
   'iat',
@@ -31,9 +27,16 @@ const hasSessionIdentity = (session: unknown): boolean => {
   return Object.keys(session).some((key) => !JWT_REGISTERED_CLAIMS.has(key))
 }
 
+/**
+ * Reads a JWT session from a cookie, and re-issues the cookie after the
+ * request whenever the session changed (e.g. after login).
+ */
 export const authCookie = pikkuMiddlewareFactory<{
+  /** Cookie name to read and write. */
   name: string
+  /** Serialize options merged over the defaults, which are httpOnly and sameSite lax. */
   options: SerializeOptions
+  /** How long the re-issued cookie lives, as a relative time such as `'7d'`. */
   expiresIn: RelativeTimeInput
 }>(({ name, options, expiresIn }) => {
   const mergedOptions: SerializeOptions = {
