@@ -534,6 +534,32 @@ export const opensTheCart = pikkuScenarioStep<
 - `pikku scenario run <env> --no-browser` **skips** scenarios containing browser steps and reports them as skipped — it does not fail them. That is how a machine with no browser stays green.
 - Playwright auto-waits; do not wrap `page.click` in `expectEventually`.
 
+#### Locate by message key, never by rendered copy
+
+If the app is translated, **no step may contain a user-visible string.** `getByLabel('Full Name')` passes only while the browser happens to render the base locale, and any copy edit turns it into a selector timeout that points at the wizard rather than at the rename that caused it — the test looks broken where it is merely stale.
+
+The message catalogue already holds the string under a key. Read it from there. Type the lookup off the catalogue JSON so a renamed or misspelled key is a **compile** error rather than a run-time timeout:
+
+```typescript
+// tests/scenarios/i18n.ts
+import type messages from '../../../../apps/web/messages/en.json'
+
+export type MessageKey = keyof typeof messages
+
+export const t = (key: MessageKey, locale = baseLocale): string => { /* … */ }
+```
+
+```typescript
+await page.getByLabel(t('jobs_apply_fullname')).fill(identity.name)
+await page.getByRole('button', { name: t('jobs_apply_submit'), exact: true }).click()
+```
+
+- Type off `messages/<baseLocale>.json`, **not** the generated Paraglide output — `i18n/paraglide/` is build output, so typing against it makes the tests unbuildable until the app has been built. The JSON is the tracked source.
+- Fall back to the base locale for a key a locale has not translated. That is what Paraglide does at run time, so a helper that throws instead would disagree with the screen the test is looking at.
+- This is not only about locators. A copy literal passed to a **project helper** (`pick('Where would you like to work?', …)`) reaches the DOM the same way, and so does a pane name quoted back in a failure message. `pikku fabric validate` scans every string in a `*.steps.ts` / `*.scenario.ts` against the base catalogue and errors on any verbatim match, wherever it sits.
+- A regex locator (`{ name: /^Next$/i }`) hides the literal but not the problem. `{ name: t('key'), exact: true }` is both stricter and locale-correct.
+- Strings the catalogue does not own — a test id, a fixture filename, a seeded value — stay literal. The catalogue is the test for whether something is copy.
+
 ## Configuration
 
 Personas, actors and environments live in `pikku.config.json`:
@@ -758,6 +784,7 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 | `sleep()` before asserting                          | Use `expectEventually`.                                                                                                     |
 | A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                   |
 | A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                            |
+| `getByLabel('Full Name')` in a translated app        | Passes only in the base locale, and a copy edit breaks it as an unexplained timeout. Locate by message key.                 |
 | A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                             |
 | A step with a `func:` instead of a surface binding  | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.             |
 | `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                   |
