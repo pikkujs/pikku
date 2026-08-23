@@ -66,6 +66,16 @@ export const pikkuServices = (
   return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
     const createdServices = await func(config, existingServices)
     const services = { ...existingServices, ...createdServices }
+    const shadowed = Object.keys(createdServices).filter(
+      (name) =>
+        (existingServices as any)[name] !== undefined &&
+        (existingServices as any)[name] !== (createdServices as any)[name]
+    )
+    if (shadowed.length > 0) {
+      ;(services as any).logger?.warn?.(
+        \`createSingletonServices returned its own \${shadowed.join(', ')}, discarding what the host passed in. A host only passes a service it has already configured — a \\\`secrets\\\` holding this deployment's values, a \\\`kysely\\\` bound to its database — so the replacement starts empty and fails later somewhere unrelated. Write \\\`existingServices.<name> ?? new Own...\\\` to take the host's when there is one and still work standalone.\`
+      )
+    }
     const authFactory = __pikkuState(null, 'package', 'authFactory')
     if (authFactory) {
       let authInstance: Promise<unknown> | undefined

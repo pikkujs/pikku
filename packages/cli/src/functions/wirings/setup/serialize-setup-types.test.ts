@@ -36,6 +36,18 @@ describe('serializeSetupTypes', () => {
     assert.match(emit(), /export type Config = any/)
   })
 
+  // A host (fabric, a test harness, an addon runner) passes services it has
+  // already configured. Returning a fresh one of the same name wins the merge
+  // silently, and the empty replacement only fails much later — so the wrapper
+  // says which names it just discarded.
+  test('warns when the factory shadows a service the host passed in', () => {
+    const content = emit('Config')
+
+    assert.match(content, /const shadowed = Object\.keys\(createdServices\)\.filter\(/)
+    assert.match(content, /logger\?\.warn\?\.\(/)
+    assert.match(content, /discarding what the host passed in/)
+  })
+
   test('registers the wire services factory on pikku state', () => {
     assert.match(
       emit('Config'),
