@@ -2,7 +2,7 @@ import { pikkuAddonServices } from '#pikku/addon/setup'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
 import { AddonReadinessService } from './services/addon-readiness.service.js'
-import type { CodeEditService } from './services/code-edit.service.js'
+import type { CodeEditService } from '@pikku/code-edit'
 import { StateDiffService } from './services/state-diff.service.js'
 import { DbSchemaService } from './services/db-schema.service.js'
 import { KnowledgeService } from './services/knowledge.service.js'
@@ -69,7 +69,7 @@ export const createSingletonServices = pikkuAddonServices(
       // degrade to a null codeEditService — never crash every console RPC. The
       // update-* edit functions already guard on `if (!codeEditService) throw`.
       try {
-        const codeEditPath = './services/code-edit.service.js'
+        const codeEditPath = '@pikku/code-edit'
         const { CodeEditService } = await import(codeEditPath)
         codeEditService = new CodeEditService(projectRoot)
       } catch {

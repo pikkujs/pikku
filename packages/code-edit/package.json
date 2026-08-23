@@ -1,0 +1,34 @@
+{
+  "name": "@pikku/code-edit",
+  "version": "0.12.0",
+  "description": "Surgical edits to developer-owned Pikku source — locates a pikku call with the TypeScript AST, then splices the original text so formatting and comments survive",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc -b",
+    "release": "yarn build && npm test",
+    "test": "bash run-tests.sh",
+    "test:coverage": "bash run-tests.sh --coverage",
+    "prepublishOnly": "yarn build"
+  },
+  "dependencies": {
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
