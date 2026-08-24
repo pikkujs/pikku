@@ -64,6 +64,7 @@ import { CredentialUserPanel } from '../project/panels/CredentialUserPanel'
 import { AuthProviderPanel } from '../project/panels/AuthProviderPanel'
 import { DbColumnPanel } from '../project/panels/DbColumnPanel'
 import { EmailPreviewPanel } from '../project/panels/EmailPreviewPanel'
+import { ScenarioDocument } from '../scenarios/ScenarioDocument'
 import { ScenarioStepPanel } from '../scenarios/ScenarioStepPanel'
 
 interface PanelChild {
@@ -203,6 +204,18 @@ const WorkflowTabbedPanel: React.FC<{
   const isCreating = !!runContext?.isCreatingRun
   const hasNodes = !!workflow?.nodes && Object.keys(workflow.nodes).length > 0
   const showGraph = renderGraph && hasNodes
+  const isScenario =
+    workflow?.source === 'scenario' || workflow?.scenario === true
+
+  // A scenario is a declaration, not a graph: it reads as the section its feature
+  // document shows, and the workflow header would only repeat the title above it.
+  if (isScenario && !hasRun && !isCreating) {
+    return (
+      <Box px="md" py="sm">
+        <ScenarioDocument scenarioName={workflowId} />
+      </Box>
+    )
+  }
 
   return (
     <Stack gap="md">
@@ -228,8 +241,8 @@ const WorkflowTabbedPanel: React.FC<{
 }
 
 export interface PanelRenderOptions {
-  /** Render the workflow panel's flow visually (vertical graph / scenario
-   *  timeline). Disable when the panel sits beside a full workflow canvas. */
+  /** Render the workflow panel's flow visually (the vertical graph). Disable
+   *  when the panel sits beside a full workflow canvas. */
   workflowGraph?: boolean
 }
 

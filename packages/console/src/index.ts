@@ -333,7 +333,6 @@ export {
   hasActiveStep,
 } from './hooks/workflow-query-keys'
 export { useWorkflowRunRefresh } from './hooks/useWorkflowRuns'
-export { PersonaTimeline } from './components/flows/timeline/PersonaTimeline'
 export type { FlowDirection } from './context/FlowDirectionContext'
 
 // The same building-block treatment, applied across the rest of the console.
@@ -491,6 +490,7 @@ export type { ScenariosBrowseRailProps } from './components/scenarios/ScenariosB
 export { useScenariosBrowse } from './hooks/useScenariosBrowse'
 export type { ScenariosBrowse } from './hooks/useScenariosBrowse'
 export { ScenarioSection } from './components/scenarios/ScenarioSection'
+export { ScenarioDocument } from './components/scenarios/ScenarioDocument'
 export { ScenarioCast } from './components/scenarios/ScenarioCast'
 export { ScenarioLadder } from './components/scenarios/ScenarioLadder'
 export { TagFilter } from './components/scenarios/TagFilter'

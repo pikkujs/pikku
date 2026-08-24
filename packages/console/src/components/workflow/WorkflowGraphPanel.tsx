@@ -1,5 +1,12 @@
 import React, { useMemo, useCallback } from 'react'
-import { Alert, Box, Center, Loader, Text } from '@pikku/mantine/core'
+import {
+  Alert,
+  Box,
+  Center,
+  Loader,
+  ScrollArea,
+  Text,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { GitBranch, History } from 'lucide-react'
@@ -8,14 +15,14 @@ import { useWorkflowRunContextSafe } from '../../context/WorkflowRunContext'
 import { useWorkflowSurface } from '../../context/WorkflowSurfaceContext'
 import { filterWiresForRun } from '../../lib/filter-wires-for-run'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
-import { PersonaTimeline } from '../flows/timeline/PersonaTimeline'
+import { ScenarioDocument } from '../scenarios/ScenarioDocument'
 import { WorkflowGraphView } from '../project/WorkflowGraphView'
 import { WorkflowTimelineDrawer } from '../project/WorkflowTimelineDrawer'
 
 /**
- * The workflow itself — a node graph, or a persona timeline for scenarios —
- * with the run's time-travel scrubber beneath it. Mount anywhere under a
- * `WorkflowSurface`.
+ * The workflow itself — a node graph, or the scenario's own document when the
+ * workflow is a scenario — with the run's time-travel scrubber beneath it.
+ * Mount anywhere under a `WorkflowSurface`.
  */
 export const WorkflowGraphPanel: React.FC = () => {
   const { workflow, workflowName, loading, isScenario } = useWorkflowSurface()
@@ -85,7 +92,11 @@ export const WorkflowGraphPanel: React.FC = () => {
       )}
       <Box style={{ flex: 1, minHeight: 0 }}>
         {isScenario ? (
-          <PersonaTimeline workflow={canvasWorkflow} />
+          <ScrollArea h="100%" type="auto">
+            <Box p="xl" style={{ maxWidth: 860, margin: '0 auto' }}>
+              <ScenarioDocument scenarioName={workflowName} />
+            </Box>
+          </ScrollArea>
         ) : (
           <WorkflowGraphView
             workflow={canvasWorkflow}
