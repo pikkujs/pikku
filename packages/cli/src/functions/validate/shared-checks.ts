@@ -5,6 +5,11 @@ import { runKnowledgeValidate } from '@pikku/knowledge'
 import { runBootstrapChecks } from './bootstrap-checks.js'
 import { runPersonaChecks, type ValidateFinding } from './persona-checks.js'
 import { runScenarioFileChecks } from './scenario-file-checks.js'
+import {
+  projectWiresChannels,
+  runWebsocketDepsChecks,
+} from './websocket-deps-checks.js'
+import { resolveFromProject } from '../../utils/resolve-from-project.js'
 
 export type Finding = ValidateFinding
 
@@ -556,6 +561,21 @@ export async function runSharedProjectChecks(
 
   // ── server bootstrap ───────────────────────────────────────────────────
   findings.push(...(await runBootstrapChecks(root, rootPkg, pikkuConfig)))
+
+  findings.push(
+    ...runWebsocketDepsChecks({
+      root,
+      runtime:
+        typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
+          ? 'bun'
+          : 'node',
+      hasChannels: await projectWiresChannels(
+        root,
+        typeof pikkuConfig?.outDir === 'string' ? pikkuConfig.outDir : '.pikku'
+      ),
+      resolve: (specifier) => resolveFromProject(root, specifier),
+    })
+  )
 
   // ── personas, scenario files and the knowledge base ────────────────────
   findings.push(...(await runPersonaChecks(root, pikkuConfig)))
