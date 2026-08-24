@@ -171,6 +171,7 @@ jobs:
             treeshaking,
             types,
             secrets,
+            scopes,
             workflows,
             variables,
             functions,

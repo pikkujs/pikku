@@ -5,6 +5,7 @@ import {
   LocalVariablesService,
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
+import { InMemoryScopeService } from './scope-service.js'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 
 export const createConfig = pikkuConfig(async () => {
@@ -18,6 +19,7 @@ export const createSingletonServices = pikkuServices(
       existingServices?.secrets || new LocalSecretService(variables)
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
+    const scopeService = new InMemoryScopeService()
 
     return {
       config,
@@ -25,6 +27,7 @@ export const createSingletonServices = pikkuServices(
       logger,
       variables,
       schema,
+      scopeService,
     }
   }
 )
