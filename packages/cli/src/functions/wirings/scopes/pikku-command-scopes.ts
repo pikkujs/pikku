@@ -19,11 +19,6 @@ export const withAppScopes = (
   scopes: ScopeDefinitions,
   personas: PersonaDefinitions
 ): ScopeDefinitions => {
-  const appScopes = buildAppScopeDefinition(personas)
-  if (!appScopes) {
-    return scopes
-  }
-
   const declared = scopes.find((scope) => scope.name === APP_SCOPE_ROOT)
   if (declared) {
     throw new Error(
@@ -31,7 +26,8 @@ export const withAppScopes = (
     )
   }
 
-  return [...scopes, appScopes]
+  const appScopes = buildAppScopeDefinition(personas)
+  return appScopes ? [...scopes, appScopes] : scopes
 }
 
 export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({

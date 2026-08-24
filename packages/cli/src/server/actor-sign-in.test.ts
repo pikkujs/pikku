@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { afterEach, describe, test } from 'node:test'
+import { afterEach, beforeEach, describe, test } from 'node:test'
 
 import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
@@ -36,6 +36,7 @@ const clearEnv = () => {
 }
 
 describe('pikku dev enabling actor sign-in', () => {
+  beforeEach(clearEnv)
   afterEach(clearEnv)
 
   test('mints an ephemeral secret under both names and opens the gate', () => {
@@ -100,6 +101,7 @@ describe('pikku dev enabling actor sign-in', () => {
 })
 
 describe('pikku serve refusing actor sign-in', () => {
+  beforeEach(clearEnv)
   afterEach(clearEnv)
 
   test('leaves the gate shut even with a secret in the environment', () => {

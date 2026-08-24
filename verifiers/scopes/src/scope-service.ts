@@ -1,25 +1,41 @@
+import {
+  SystemRoleImmutableError,
+  SystemRoleShadowedError,
+} from '@pikku/core/errors'
 import type { Role, ScopeService } from '@pikku/core/services'
 import type { FlatScope } from '@pikku/core/scope'
 
 /**
- * The smallest ScopeService that satisfies the generated
- * `RequiredSingletonServices`. The verifier exercises the compile-time
- * narrowing and the `verifyScopes` gate, neither of which reads a store, so
- * this only has to hold what it is given — a real deployment wires
- * `KyselyScopeService`.
+ * An in-memory ScopeService that satisfies the generated
+ * `RequiredSingletonServices`, so the verifier can exercise the compile-time
+ * narrowing and the `verifyScopes` gate without a database.
+ *
+ * It keeps the parts of the contract a store cannot opt out of — additive
+ * syncs that mark a removed declaration rather than deleting it, and the
+ * system-role mutation rules — because a double that answers `[]` to every
+ * stale query would let a regression in those pass the verifier.
+ * `KyselyScopeService` is what a real deployment wires.
  */
 export class InMemoryScopeService implements ScopeService {
-  private scopes: FlatScope[] = []
+  private scopes = new Map<string, FlatScope & { declared: boolean }>()
   private roles = new Map<string, Role>()
   private userRoles = new Map<string, Set<string>>()
   private userScopes = new Map<string, Set<string>>()
 
   async syncScopes(scopes: FlatScope[]) {
-    this.scopes = scopes
+    const declared = new Set(scopes.map((scope) => scope.id))
+    for (const [id, scope] of this.scopes) {
+      if (!declared.has(id)) {
+        this.scopes.set(id, { ...scope, declared: false })
+      }
+    }
+    for (const scope of scopes) {
+      this.scopes.set(scope.id, { ...scope, declared: true })
+    }
   }
 
   async listScopes() {
-    return this.scopes.map((scope) => ({ ...scope, declared: true }))
+    return [...this.scopes.values()]
   }
 
   async resolveScopes(userId: string) {
@@ -33,20 +49,35 @@ export class InMemoryScopeService implements ScopeService {
   }
 
   async syncSystemRoles(roles: Array<{ name: string; scopes: string[] }>) {
+    const declared = new Set(roles.map((role) => role.name))
+    for (const [name, role] of this.roles) {
+      if (role.system && !declared.has(name)) {
+        this.roles.set(name, { ...role, declared: false })
+      }
+    }
     for (const role of roles) {
       this.roles.set(role.name, { ...role, system: true, declared: true })
     }
   }
 
   async createRole(role: Role) {
+    if (this.isSystemRole(role.name)) {
+      throw new SystemRoleShadowedError(role.name)
+    }
     this.roles.set(role.name, role)
   }
 
   async deleteRole(name: string) {
+    if (this.isSystemRole(name)) {
+      throw new SystemRoleImmutableError(name, 'delete')
+    }
     this.roles.delete(name)
   }
 
   async setRoleScopes(name: string, scopes: string[]) {
+    if (this.isSystemRole(name)) {
+      throw new SystemRoleImmutableError(name, 're-scope')
+    }
     const role = this.roles.get(name)
     if (role) {
       this.roles.set(name, { ...role, scopes })
@@ -86,18 +117,64 @@ export class InMemoryScopeService implements ScopeService {
   }
 
   async findStaleScopes() {
-    return []
+    return [...this.scopes.values()]
+      .filter((scope) => !scope.declared)
+      .map((scope) => ({
+        scope: scope.id,
+        roles: [...this.roles.values()]
+          .filter((role) => role.scopes.includes(scope.id))
+          .map((role) => role.name),
+      }))
   }
 
   async pruneScopes() {
-    return []
+    const stale = await this.findStaleScopes()
+    for (const { scope, roles } of stale) {
+      this.scopes.delete(scope)
+      for (const name of roles) {
+        const role = this.roles.get(name)
+        if (role) {
+          this.roles.set(name, {
+            ...role,
+            scopes: role.scopes.filter((held) => held !== scope),
+          })
+        }
+      }
+      for (const held of this.userScopes.values()) {
+        held.delete(scope)
+      }
+    }
+    return stale.map(({ scope }) => scope)
   }
 
   async findStaleSystemRoles() {
-    return []
+    return [...this.roles.values()]
+      .filter((role) => role.system && role.declared === false)
+      .map((role) => ({
+        role: role.name,
+        users: [...this.userRoles.values()].filter((held) =>
+          held.has(role.name)
+        ).length,
+      }))
   }
 
   async pruneSystemRoles() {
-    return []
+    const stale = await this.findStaleSystemRoles()
+    for (const { role } of stale) {
+      this.roles.delete(role)
+      for (const held of this.userRoles.values()) {
+        held.delete(role)
+      }
+    }
+    return stale.map(({ role }) => role)
+  }
+
+  /**
+   * Asked of the store rather than of the generated `SYSTEM_ROLES`, matching
+   * `KyselyScopeService`: a role whose declaration was deleted is still
+   * immutable until someone prunes it.
+   */
+  private isSystemRole(name: string): boolean {
+    return this.roles.get(name)?.system === true
   }
 }

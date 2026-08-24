@@ -271,7 +271,7 @@ credentialOAuth({
   config: [
     {
       providerId: 'github',
-      type: 'per-user',
+      type: 'wire',
       clientId,
       clientSecret,
       authorizationUrl,
@@ -297,7 +297,8 @@ by construction. Tokens land in better-auth's `account` table, so
 
 `type` decides the blast radius:
 
-- **`per-user`** — every user links their own. Signed in is enough.
+- **`wire`** — every user links their own, and the credential is read on
+  the wire that runs as them. Signed in is enough.
 - **`singleton`** — one token the whole app shares, owned by a reserved
   `pikku-platform` user row created on demand. Rebinding it changes the
   credential for _everyone_, so it is gated on `admin:credentials:link` (or the

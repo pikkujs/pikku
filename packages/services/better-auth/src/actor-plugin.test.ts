@@ -134,6 +134,7 @@ describe('better-auth actor plugin', () => {
 })
 
 describe('actor sign-in gate', () => {
+  beforeEach(clearGateEnv)
   afterEach(clearGateEnv)
 
   test('refuses every sign-in when no command enabled it, secret or not', async () => {
@@ -173,6 +174,11 @@ describe('actor sign-in gate', () => {
       nearMiss.lines.warn.join('\n'),
       new RegExp(ACTOR_SIGN_IN_OPT_IN_VALUE),
       'the near miss names the literal that would have worked'
+    )
+    assert.doesNotMatch(
+      nearMiss.lines.warn.join('\n'),
+      /'true'/,
+      'and never the value it was given, which may be a pasted secret'
     )
 
     process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE

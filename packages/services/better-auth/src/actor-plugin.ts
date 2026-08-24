@@ -41,8 +41,8 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
   const logger = options.logger ?? console
   const gate = resolveActorSignIn()
 
-  if (gate.nearMissOptIn !== undefined) {
-    logger.warn(actorSignInNearMissMessage(gate.nearMissOptIn))
+  if (gate.nearMissOptIn) {
+    logger.warn(actorSignInNearMissMessage())
   }
   if (gate.enabled) {
     logger.info(actorSignInEnabledMessage(gate.reason))

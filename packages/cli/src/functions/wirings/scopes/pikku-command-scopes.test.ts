@@ -40,4 +40,15 @@ describe('withAppScopes', () => {
       /reserved.*src\/scopes\.ts/s
     )
   })
+
+  // The root is reserved by name, not by whether the derivation happens to
+  // produce a tree this run: a project whose personas name no app would
+  // otherwise compile with a hand-declared `app` and start failing the day
+  // someone gave a persona one.
+  test('refuses it even when no persona names an app', () => {
+    assert.throws(
+      () => withAppScopes([scope('app', 'src/scopes.ts')], [persona('a')]),
+      /reserved.*src\/scopes\.ts/s
+    )
+  })
 })

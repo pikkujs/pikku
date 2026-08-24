@@ -251,6 +251,92 @@ describe('addAuth inspector', () => {
     }
   })
 
+  test('refuses admin() reached through a namespace import', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-ns-admin-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        "import * as plugins from 'better-auth/plugins'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    plugins: [plugins.bearer(), plugins.admin()],',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      await assert.rejects(
+        () => inspect(makeLogger(criticals), [file], { rootDir }),
+        /admin\(\) plugin is not supported/
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('allows a local plugin of its own named admin', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-local-admin-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        "import { bearer } from 'better-auth/plugins'",
+        'const admin = () => ({ id: "admin" })',
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    plugins: [bearer(), admin()],',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.deepEqual(state.auth.plugins, ['bearer', 'admin'])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('records a namespace-imported plugin under its exported name', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-ns-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        "import * as plugins from 'better-auth/plugins'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    plugins: [plugins.bearer()],',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.deepEqual(state.auth.plugins, ['bearer'])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('records no plugins when the plugins array is absent', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-noplugins-'))
     const file = join(rootDir, 'auth.ts')

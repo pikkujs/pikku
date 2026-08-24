@@ -117,6 +117,72 @@ describe('runAuthPluginChecks', () => {
     }
   })
 
+  test('catches admin() reached through a namespace import', async () => {
+    const root = await makeTmp()
+    try {
+      await writeSource(
+        root,
+        'auth.ts',
+        [
+          "import { pikkuBetterAuth } from '@pikku/better-auth'",
+          "import { betterAuth } from 'better-auth'",
+          "import * as plugins from 'better-auth/plugins'",
+          'export const auth = pikkuBetterAuth(() =>',
+          '  betterAuth({ plugins: [plugins.admin()] })',
+          ')',
+        ].join('\n')
+      )
+      const ids = (await runAuthPluginChecks(root, config)).map((f) => f.id)
+      assert.deepEqual(ids, ['better-auth-admin-plugin'])
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test('ignores an admin import the plugins array no longer uses', async () => {
+    const root = await makeTmp()
+    try {
+      await writeSource(
+        root,
+        'auth.ts',
+        [
+          "import { pikkuBetterAuth, ban } from '@pikku/better-auth'",
+          "import { betterAuth } from 'better-auth'",
+          "import { admin } from 'better-auth/plugins'",
+          'export const auth = pikkuBetterAuth(() =>',
+          '  betterAuth({ plugins: [ban()] })',
+          ')',
+        ].join('\n')
+      )
+      assert.deepEqual(await runAuthPluginChecks(root, config), [])
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test('does not count a ban() call outside the plugins array', async () => {
+    const root = await makeTmp()
+    try {
+      await writeSource(
+        root,
+        'auth.ts',
+        [
+          "import { pikkuBetterAuth, ban } from '@pikku/better-auth'",
+          "import { betterAuth } from 'better-auth'",
+          "import { bearer } from 'better-auth/plugins'",
+          'export const auth = pikkuBetterAuth(() =>',
+          '  betterAuth({ plugins: [bearer()] })',
+          ')',
+          'void ban()',
+        ].join('\n')
+      )
+      const ids = (await runAuthPluginChecks(root, config)).map((f) => f.id)
+      assert.deepEqual(ids, ['better-auth-no-ban-plugin'])
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test('says nothing about an app that does not configure better-auth', async () => {
     const root = await makeTmp()
     try {

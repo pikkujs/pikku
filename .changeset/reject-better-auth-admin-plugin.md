@@ -28,3 +28,9 @@ session hook that refuses a banned user a session.
 warns about the quieter half of the migration — an app that dropped `admin()`
 and never wired `ban()`, which keeps its ban columns and its ban UI while
 silently enforcing nothing.
+
+Both resolve the plugin's provenance before applying the policy: the entry has
+to be better-auth's `admin`, imported from `better-auth/plugins` — by name, by
+alias or through a namespace — and actually present in the `plugins` array. A
+project's own helper called `admin` passes, and an import left behind after the
+call was removed configures nothing.

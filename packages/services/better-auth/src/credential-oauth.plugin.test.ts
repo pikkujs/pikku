@@ -8,17 +8,16 @@ import type { CredentialOAuthProvider } from './credential-oauth-providers.js'
 
 const provider = (
   providerId: string,
-  type: 'singleton' | 'per-user'
-): CredentialOAuthProvider =>
-  ({
-    providerId,
-    type,
-    clientId: `${providerId}-client`,
-    clientSecret: `${providerId}-secret`,
-    authorizationUrl: `https://${providerId}.example/authorize`,
-    tokenUrl: `https://${providerId}.example/token`,
-    scopes: ['read'],
-  }) as CredentialOAuthProvider
+  type: NonNullable<CredentialOAuthProvider['type']>
+): CredentialOAuthProvider => ({
+  providerId,
+  type,
+  clientId: `${providerId}-client`,
+  clientSecret: `${providerId}-secret`,
+  authorizationUrl: `https://${providerId}.example/authorize`,
+  tokenUrl: `https://${providerId}.example/token`,
+  scopes: ['read'],
+})
 
 /**
  * A scope store holding exactly the grants named, shaped like the slice of
@@ -91,7 +90,7 @@ const link = (
 
 describe('credentialOAuth plugin', () => {
   test('an anonymous caller cannot start a link', async () => {
-    const auth = makeAuth(emptyDb(), [provider('acme', 'per-user')])
+    const auth = makeAuth(emptyDb(), [provider('acme', 'wire')])
 
     const res = await link(auth, 'acme')
 
@@ -100,7 +99,7 @@ describe('credentialOAuth plugin', () => {
 
   test('an undeclared provider is a 404, not a redirect into nowhere', async () => {
     const db = emptyDb()
-    const auth = makeAuth(db, [provider('acme', 'per-user')])
+    const auth = makeAuth(db, [provider('acme', 'wire')])
     const { cookie } = await signUp(auth, 'user@example.com')
 
     const res = await link(auth, 'not-declared', cookie)
@@ -108,9 +107,9 @@ describe('credentialOAuth plugin', () => {
     assert.equal(res.status, 404)
   })
 
-  test('a per-user link sends the caller to the provider', async () => {
+  test('a per-user `wire` link sends the caller to the provider', async () => {
     const db = emptyDb()
-    const auth = makeAuth(db, [provider('acme', 'per-user')])
+    const auth = makeAuth(db, [provider('acme', 'wire')])
     const { cookie } = await signUp(auth, 'user@example.com')
 
     const res = await link(auth, 'acme', cookie)

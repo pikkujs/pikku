@@ -20,7 +20,12 @@ export interface ActorSignInGate {
    * provisioned when it started, and never mints new identities.
    */
   mayProvision: boolean
-  nearMissOptIn: string | undefined
+  /**
+   * Whether the opt-in variable is set to something other than the value that
+   * works. The value is deliberately not carried: it reaches a log line, and an
+   * operator may have pasted a secret into it.
+   */
+  nearMissOptIn: boolean
 }
 
 export const resolveActorSignIn = (): ActorSignInGate => {
@@ -28,8 +33,6 @@ export const resolveActorSignIn = (): ActorSignInGate => {
   const optIn = env?.[ACTOR_SIGN_IN_OPT_IN_ENV]
   const nearMissOptIn =
     optIn !== undefined && optIn !== ACTOR_SIGN_IN_OPT_IN_VALUE
-      ? optIn
-      : undefined
   const isDev = env?.[DEV_ACTOR_SIGN_IN_ENV] === 'true'
 
   if (optIn === ACTOR_SIGN_IN_OPT_IN_VALUE) {
@@ -69,5 +72,10 @@ export const actorSignInAttemptRefusedMessage = (): string =>
   `actor: refused a sign-in attempt — actor sign-in is disabled outside \`pikku dev\`. ` +
   `If this stage is meant to run scenarios, set ${ACTOR_SIGN_IN_OPT_IN_ENV}=${ACTOR_SIGN_IN_OPT_IN_VALUE}.`
 
-export const actorSignInNearMissMessage = (value: string): string =>
-  `actor: ${ACTOR_SIGN_IN_OPT_IN_ENV} is set to '${value}', which is ignored — the only value that enables actor sign-in outside \`pikku dev\` is '${ACTOR_SIGN_IN_OPT_IN_VALUE}'.`
+/**
+ * The value itself is never reproduced: an operator who pasted a secret into
+ * the variable by mistake would otherwise have it retained by every log sink
+ * that saw this warning.
+ */
+export const actorSignInNearMissMessage = (): string =>
+  `actor: ${ACTOR_SIGN_IN_OPT_IN_ENV} is set to an unsupported value, which is ignored — the only value that enables actor sign-in outside \`pikku dev\` is '${ACTOR_SIGN_IN_OPT_IN_VALUE}'.`

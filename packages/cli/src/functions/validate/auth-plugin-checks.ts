@@ -45,19 +45,85 @@ const listSourceFiles = async (dir: string): Promise<string[]> => {
 }
 
 /**
- * Files importing `admin` out of better-auth's plugin entrypoint.
+ * The text inside every `plugins: [...]` array in the file.
  *
- * Matched on the import rather than on a bare `admin(` call, which collides
- * with any local helper of that name. The import is also what a project has to
- * remove, so it points at the line that needs editing.
+ * Bracket-counted rather than parsed: `pikku validate` runs without a TypeScript
+ * program, and a `]` inside a string literal in a plugin's options is the only
+ * way this misreads an array — at which point the check under-reports rather
+ * than inventing a finding.
  */
-const importsAdminPlugin = (text: string): boolean =>
-  /import\s*\{[^}]*\badmin\b[^}]*\}\s*from\s*['"]better-auth\/plugins['"]/.test(
-    text
-  )
+const pluginArrays = (text: string): string[] => {
+  const arrays: string[] = []
+  const opener = /plugins\s*:\s*\[/g
+  let match: RegExpExecArray | null
+  while ((match = opener.exec(text))) {
+    const start = match.index + match[0].length
+    let depth = 1
+    let i = start
+    while (i < text.length && depth > 0) {
+      if (text[i] === '[') depth++
+      else if (text[i] === ']') depth--
+      i++
+    }
+    if (depth === 0) arrays.push(text.slice(start, i - 1))
+  }
+  return arrays
+}
 
-const wiresBanPlugin = (text: string): boolean =>
-  /@pikku\/better-auth/.test(text) && /\bban\s*\(/.test(text)
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * How `exported` from `module` can be called in this file: the local name a
+ * named import bound it to, or `<namespace>.<exported>` for a namespace import.
+ * Empty when the file never imports it, so a local helper of the same name is
+ * not mistaken for the package's.
+ */
+const importedCallees = (
+  text: string,
+  module: string,
+  exported: string
+): string[] => {
+  const callees: string[] = []
+  const imports = /import\s+([\s\S]*?)\s+from\s*['"]([^'"]+)['"]/g
+  let match: RegExpExecArray | null
+  while ((match = imports.exec(text))) {
+    if (match[2] !== module) continue
+    const clause = match[1]!
+    const namespace = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/)
+    if (namespace) {
+      callees.push(`${namespace[1]}.${exported}`)
+      continue
+    }
+    const named = clause.match(/\{([\s\S]*?)\}/)
+    if (!named) continue
+    for (const entry of named[1]!.split(',')) {
+      const [imported, alias] = entry.split(/\s+as\s+/).map((v) => v.trim())
+      if (imported === exported) callees.push(alias || imported)
+    }
+  }
+  return callees
+}
+
+/**
+ * Whether `exported` from `module` is wired as a plugin — imported from that
+ * package *and* called inside a `plugins: [...]` array. An import left behind
+ * after the call was removed configures nothing, and a call somewhere else in
+ * the file is not a plugin.
+ */
+const configuresPlugin = (
+  text: string,
+  module: string,
+  exported: string
+): boolean => {
+  const callees = importedCallees(text, module, exported)
+  if (callees.length === 0) return false
+  return pluginArrays(text).some((array) =>
+    callees.some((callee) =>
+      new RegExp(`(^|[^\\w$.])${escapeRegExp(callee)}\\s*\\(`).test(array)
+    )
+  )
+}
 
 /**
  * Whether better-auth is configured the way pikku supports.
@@ -89,8 +155,9 @@ export const runAuthPluginChecks = async (
   for (const file of sourceFiles) {
     const text = await readTextSafe(file)
     if (!text) continue
-    if (importsAdminPlugin(text)) adminFiles.push(file)
-    if (wiresBanPlugin(text)) bansAnywhere = true
+    if (configuresPlugin(text, 'better-auth/plugins', 'admin'))
+      adminFiles.push(file)
+    if (configuresPlugin(text, '@pikku/better-auth', 'ban')) bansAnywhere = true
   }
 
   for (const file of adminFiles) {
