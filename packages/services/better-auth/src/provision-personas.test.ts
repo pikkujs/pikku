@@ -41,6 +41,7 @@ const harness = (
   { withBanPlugin = true }: { withBanPlugin?: boolean } = {}
 ) => {
   const grants = new Map<string, Set<string>>()
+  const scopeGrants = new Map<string, Set<string>>()
   const created: string[] = []
   const sessionsRevoked: string[] = []
   const byId = (userId: string) => users.find((u) => u.id === userId)
@@ -85,6 +86,14 @@ const harness = (
       held.add(role)
       grants.set(userId, held)
     },
+    listUserScopes: async (userId: string) => [
+      ...(scopeGrants.get(userId) ?? []),
+    ],
+    addScopeToUser: async (userId: string, scope: string) => {
+      const held = scopeGrants.get(userId) ?? new Set<string>()
+      held.add(scope)
+      scopeGrants.set(userId, held)
+    },
   } as any
 
   const logs: string[] = []
@@ -98,6 +107,11 @@ const harness = (
     return user ? [...(grants.get(user.id) ?? [])].sort() : []
   }
 
+  const scopesOf = (email: string) => {
+    const user = users.find((u) => u.email === email)
+    return user ? [...(scopeGrants.get(user.id) ?? [])].sort() : []
+  }
+
   return {
     auth,
     scopeService,
@@ -106,6 +120,7 @@ const harness = (
     users,
     created,
     rolesOf,
+    scopesOf,
     sessionsRevoked,
   }
 }
@@ -125,6 +140,78 @@ describe('provisionPersonas', () => {
     assert.ok(h.users.every((u) => u.actor === true))
     assert.equal(result.created, 2)
     assert.equal(result.granted, 1)
+  })
+
+
+  test('grants the app a persona names as a scope', async () => {
+    const h = harness()
+
+    const result = await provisionPersonas(h, {
+      personas: {
+        staffer: {
+          id: 'staffer',
+          name: 'Staffer',
+          email: 'staffer@e2e.test',
+          roles: ['report-viewer'],
+          app: 'staff',
+        },
+        shopper: {
+          id: 'shopper',
+          name: 'Shopper',
+          email: 'shopper@e2e.test',
+          roles: [],
+          app: 'portal',
+        },
+      },
+      environments: ENVIRONMENTS,
+      environment: 'local',
+    })
+
+    assert.deepEqual(h.scopesOf('staffer@e2e.test'), ['app:staff'])
+    assert.deepEqual(h.scopesOf('shopper@e2e.test'), ['app:portal'])
+    assert.equal(result.appsGranted, 2)
+  })
+
+  // The single-frontend case, which is most of them: nothing named, nothing
+  // granted, and no empty `app:` grant to explain to whoever reads the console.
+  test('grants no app scope when no persona names one', async () => {
+    const h = harness()
+
+    const result = await provisionPersonas(h, {
+      personas: PERSONAS,
+      environments: ENVIRONMENTS,
+      environment: 'local',
+    })
+
+    assert.deepEqual(h.scopesOf('susan@e2e.test'), [])
+    assert.equal(result.appsGranted, 0)
+  })
+
+  // Provisioning runs on every deploy, so re-granting has to be a no-op rather
+  // than a second row.
+  test('holds an app grant it has already applied', async () => {
+    const h = harness()
+    const personas = {
+      staffer: {
+        id: 'staffer',
+        name: 'Staffer',
+        email: 'staffer@e2e.test',
+        roles: [],
+        app: 'staff',
+      },
+    }
+    const options = {
+      personas,
+      environments: ENVIRONMENTS,
+      environment: 'local',
+    }
+
+    await provisionPersonas(h, options)
+    const result = await provisionPersonas(h, options)
+
+    assert.deepEqual(h.scopesOf('staffer@e2e.test'), ['app:staff'])
+    assert.equal(result.appsGranted, 0)
+    assert.equal(result.held, 1)
   })
 
   // The rule that decides who may run decides who is provisioned. `mo` names
@@ -224,6 +311,7 @@ describe('provisionPersonas', () => {
     assert.deepEqual(result, {
       created: 0,
       granted: 0,
+      appsGranted: 0,
       held: 0,
       skipped: [],
       orphaned: [],
@@ -277,6 +365,27 @@ describe('provisionPersonas orphans', () => {
     assert.equal(result.banned, 0)
     assert.ok(h.users.every((u) => !u.banned))
     assert.match(h.logs.join('\n'), /no declared persona claims here/)
+  })
+
+  // Deployment logs are read by more people than the account list is, and they
+  // are retained for longer. The count belongs in the warning; the addresses
+  // belong in the return value, where an authorized caller can act on them.
+  test('names the orphans to its caller, never to the log', async () => {
+    const h = await provisioned()
+
+    const result = await provisionPersonas(h, {
+      personas: { susan: PERSONAS.susan },
+      environments: ENVIRONMENTS,
+      environment: 'local',
+    })
+
+    assert.deepEqual(result.orphaned, ['target@e2e.test'])
+    for (const email of result.orphaned) {
+      assert.ok(
+        !h.logs.join('\n').includes(email),
+        `${email} reached the deployment log`
+      )
+    }
   })
 
   test("orphans: 'ban' shuts the account and revokes its sessions", async () => {

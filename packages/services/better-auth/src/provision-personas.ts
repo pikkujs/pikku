@@ -262,9 +262,6 @@ export const provisionPersonas = async (
           ? `, ${result.banned} newly banned`
           : ' — they keep every role they were granted, and the actor endpoint authenticates on the actor column alone. Pass orphans: \'ban\' to shut them.')
     )
-    for (const email of result.orphaned) {
-      logger.warn(`  ${email}`)
-    }
   }
 
   return result
