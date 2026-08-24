@@ -129,6 +129,40 @@ const isInsideGlobalMiddlewareRegistration = (node: ts.Node): boolean => {
 }
 
 /**
+ * Refusal for better-auth's `admin()`, which pikku does not support.
+ *
+ * `admin()` authorizes its endpoints against a `user.role` column, so wiring it
+ * means running a second authorization model alongside pikku's scopes and
+ * keeping one projected onto the other — coarsely, since any single
+ * `admin:users:*` scope has to project to `role='admin'` and thereby unlocks
+ * every one of its endpoints underneath. Pikku dropped that projection: user
+ * management is `@pikku/addon-admin`'s scoped RPCs, and the one capability
+ * `admin()` had that nothing else did — refusing a session to a banned user —
+ * is `ban()`.
+ *
+ * Thrown rather than warned because the failure it prevents is silent. An app
+ * that drops `admin()` without wiring `ban()` keeps its ban columns and its ban
+ * UI, and simply stops enforcing bans.
+ */
+const UNSUPPORTED_ADMIN_PLUGIN = (sourceFile: string): string =>
+  `better-auth's admin() plugin is not supported by pikku (${sourceFile}).
+
+It authorizes against a 'user.role' column, while pikku authorizes on scopes —
+wiring both means one has to be projected onto the other, and the projection is
+coarser than the scopes it stands in for.
+
+Use ban() instead:
+
+  import { ban } from '@pikku/better-auth'
+  betterAuth({ plugins: [ban()] })
+
+ban() keeps the part of admin() that pikku cannot supply from outside
+better-auth — the banned/banReason/banExpires columns and the session hook that
+refuses a banned user a session. Everything else admin() offered is already
+scoped RPCs in @pikku/addon-admin: list, create, ban, remove, revoke sessions
+and set password.`
+
+/**
  * Detects `pikkuBetterAuth((services) => betterAuth({...}))` calls.
  *
  * `pikkuBetterAuth` is pure: it wraps a factory that returns a configured better-auth
@@ -306,6 +340,9 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     if (plugins) {
       for (const el of plugins.elements) {
         const id = readPluginId(el)
+        if (id === 'admin') {
+          throw new Error(UNSUPPORTED_ADMIN_PLUGIN(sourceFile))
+        }
         if (id && !state.auth.plugins.includes(id)) {
           state.auth.plugins.push(id)
         }
