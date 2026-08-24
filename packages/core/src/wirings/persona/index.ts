@@ -16,6 +16,11 @@ export type {
   PersonaEnvironmentSubject,
 } from './persona-environments.js'
 export { personaEmail, personaEmails } from './persona-email.js'
+export {
+  APP_SCOPE_ROOT,
+  appScopeId,
+  buildAppScopeDefinition,
+} from './persona-app-scopes.js'
 export type {
   MailboxAllowlist,
   PersonaMailbox,

@@ -137,21 +137,21 @@ resolves the caller's scopes through the registered `ScopeService` and checks th
 `admin:*` tree (`ADMIN_SCOPES` exports the ids so you never spell them as bare
 strings):
 
-| Gate                                                                 | Scope required           |
-| -------------------------------------------------------------------- | ------------------------ |
-| `impersonation` (`betterAuthSession` / `betterAuthStatelessSession`) | `admin:impersonate`      |
-| `credentialOAuth`'s `canLinkSingleton`                               | `admin:credentials:link` |
-| the console's user directory                                         | `admin:users:list`       |
-| create a user out of band                                            | `admin:users:create`     |
-| ban / unban                                                          | `admin:users:ban`        |
-| delete a user and their data                                         | `admin:users:remove`     |
-| revoke a user's sessions                                             | `admin:users:sessions`   |
-| set a user's password                                                | `admin:users:password`   |
-| read credential values and who holds them                            | `admin:credentials:read` |
+| Gate                                                                 | Scope required             |
+| -------------------------------------------------------------------- | -------------------------- |
+| `impersonation` (`betterAuthSession` / `betterAuthStatelessSession`) | `admin:impersonate`        |
+| `credentialOAuth`'s `canLinkSingleton`                               | `admin:credentials:link`   |
+| the console's user directory                                         | `admin:users:list`         |
+| create a user out of band                                            | `admin:users:create`       |
+| ban / unban                                                          | `admin:users:ban`          |
+| delete a user and their data                                         | `admin:users:remove`       |
+| revoke a user's sessions                                             | `admin:users:sessions`     |
+| set a user's password                                                | `admin:users:password`     |
+| read credential values and who holds them                            | `admin:credentials:read`   |
 | set and delete credentials                                           | `admin:credentials:manage` |
-| view declared scopes, roles, and who holds them                      | `admin:scopes:read`      |
-| create roles, change their scopes, grant them                        | `admin:scopes:manage`    |
-| read the audit trail                                                 | `admin:audit:read`       |
+| view declared scopes, roles, and who holds them                      | `admin:scopes:read`        |
+| create roles, change their scopes, grant them                        | `admin:scopes:manage`      |
+| read the audit trail                                                 | `admin:audit:read`         |
 
 Holding the bare `admin` scope satisfies all of them — a parent grant covers
 everything nested beneath it — so `admin` is the direct replacement for the old
@@ -246,6 +246,112 @@ betterAuth({ plugins: [ban()] })
 create a session for a banned user, lapsing an expired ban as it goes. It makes
 no authorization decision — who may ban is decided by `admin:users:ban` — so it
 never needs to know about scopes or roles.
+
+### The plugins `@pikku/better-auth` ships
+
+Five, all imported from the package root and passed to `betterAuth({ plugins })`
+like any other. None is automatic — an app wires the ones it needs.
+
+| Plugin              | Plugin `id`        | Adds                                                                    | Use it when                                                   |
+| ------------------- | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `ban()`             | `pikku-ban`        | `user.banned/banReason/banExpires`                                      | You ban users (the schema + enforcement half of the above)    |
+| `actor()`           | `actor`            | `POST /sign-in/actor`, `user.actor`                                     | Scenarios or a dev switcher sign in as a persona              |
+| `credentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
+| `delegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
+| `fabric()`          | `fabric`           | `POST /sign-in/fabric`                                                  | A Fabric-deployed app lets a control-plane operator in        |
+
+The plugin's `id` is what better-auth stores; the **export name** is what the
+inspector reads off your `plugins` array and what generated metadata is keyed
+by, so the two differ for `ban` and `delegatedAuth`.
+
+#### `credentialOAuth()` — link API credentials, not identities
+
+```typescript
+credentialOAuth({
+  config: [
+    {
+      providerId: 'github',
+      type: 'wire',
+      clientId,
+      clientSecret,
+      authorizationUrl,
+      tokenUrl,
+      scopes: ['repo'],
+    },
+    { providerId: 'slack', type: 'singleton' /* … */ },
+  ],
+  scopeService,
+  logger,
+})
+```
+
+Wraps better-auth's `genericOAuth` to keep its token exchange and refresh, and
+replaces only the two identity-bound endpoints. `genericOAuth`'s own
+`/oauth2/link` models an identity **provider**: it demands a userinfo response
+and refuses to link when the provider's email differs from the user's. A
+credential is not an identity — most credential providers expose only
+`/authorize` and `/token` — so the account row is keyed on _whose_ credential it
+is (`accountId` = the linking user's id), making `(providerId, userId)` unique
+by construction. Tokens land in better-auth's `account` table, so
+`auth.api.getAccessToken()` refreshes them on read.
+
+`type` decides the blast radius:
+
+- **`wire`** — every user links their own, and the credential is read on
+  the wire that runs as them. Signed in is enough.
+- **`singleton`** — one token the whole app shares, owned by a reserved
+  `pikku-platform` user row created on demand. Rebinding it changes the
+  credential for _everyone_, so it is gated on `admin:credentials:link` (or the
+  `admin` root above it), and **fails closed** with no `ScopeService`. Override
+  the whole gate with `canLinkSingleton`.
+
+An undeclared `providerId` is a 404; an anonymous caller a 401; a refused
+singleton a 403 that leaves no platform user behind.
+
+#### `delegatedAuth()` — the upstream API is the identity provider
+
+```typescript
+delegatedAuth({
+  authenticate: async ({ email, password, apiKey }) => upstream.login(...),
+  storeCredential: (userId, identity) =>
+    credentialService.set('acme', identity.credential, userId),
+  defaultRole: 'member',
+  mapRole: (upstreamRole) => ROLE_MAP[upstreamRole],
+  scopeService,
+  logger,
+})
+```
+
+`POST /sign-in/delegated` forwards the credentials the user already has to
+`authenticate`. On success it JIT-provisions a real user row (email-keyed and
+`emailVerified` — the upstream just verified them), links it via an `account`
+row (`providerId: 'delegated'`, `accountId: externalId`), persists the upstream
+token **before** minting the session, and returns a normal session cookie.
+Passwords are never stored. Exactly one upstream per app: additional imported
+APIs are linked integrations (`credentialOAuth`), not extra login methods.
+
+A resolved role is granted through the `ScopeService` as a pikku role, so it
+lands in `pikku_user_role` rather than on a column. A role the app never
+defined is a provisioning gap, not a sign-in failure — the grant is dropped with
+a warning and the user still gets in.
+
+`storeCredential` failing, by contrast, **fails the sign-in**: every proxied
+call would be dead anyway.
+
+#### `fabric()` — control-plane operator sign-in
+
+```typescript
+fabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY, scopeService, logger })
+```
+
+`POST /sign-in/fabric` verifies a short-lived RS256 token that the Fabric
+control plane signed for an operator session, then signs them into a synthetic
+`fabric-<id>@fabric.internal` row holding the `admin` scope. Asymmetric on
+purpose: the app holds only the public key, so it can never forge an operator
+login, and the same `FABRIC_AUTH_PUBLIC_KEY` is distributed to every stage with
+no per-environment secret. A missing or empty key disables the endpoint, and a
+token whose `purpose` claim is not `fabric-admin` is rejected. Without a
+`ScopeService` the operator signs in holding nothing.
 
 ### 2. Production database adapter
 
@@ -371,14 +477,35 @@ plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]
 session cookie. `secret` may also be a (possibly async) function, so it can come
 off the secrets service instead of a captured value.
 
+**Which command is running decides whether it works, not whether a secret is
+set.** `pikku dev` sets `PIKKU_DEV_ACTOR_SIGN_IN` and mints an ephemeral
+`SCENARIO_ACTOR_SECRET` for the run, so local development needs no configuration
+at all. Everywhere else the endpoint refuses (`Actor sign-in is disabled outside
+\`pikku dev\``) — `pikku serve` clears the marker outright, so a secret that
+leaked into a production environment enables nothing and gets a warning naming
+itself instead.
+
+A stage that genuinely must run scenarios opts in on purpose, with
+`PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in`. Any other value is
+ignored and warned about, so the hatch cannot be opened by copying a `true` from
+the line above, and it is the only hatch — there is no build-time option, because
+an option compiled into the bundle cannot be audited from the environment it
+runs in.
+
+**Signing in and provisioning are separate powers.** An unknown address becomes
+an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
+in as the personas the deployment provisioned when it started and refuses
+everything else (`No actor account exists for that address`), so holding the
+secret on such a stage does not let anyone invent identities. Those rows are
+written by `provisionPersonas` from `@pikku/better-auth`, called in the server's
+own lifecycle, so provisioning needs no actor secret and works on a stage whose
+endpoint is shut.
+
 **`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
-persona.** `pikku persona sync` grants declared roles to actor accounts, so an
-`admin` persona is an actor holding real admin — anyone with the secret can take
-a session as one. Keep the endpoint **off outside development and sandbox
-deployments**: leave the secret unset on any stage that should not run scenarios,
-which is the supported switch (`Actor sign-in is not configured`), rather than
-conditionally registering the plugin. Do not treat "actors only" as a licence to
-enable it in production.
+persona.** Provisioning grants declared roles to actor accounts, so an
+`admin` persona is an actor holding real admin — anyone with the secret _and_ the
+opt-in can take a session as one. Do not treat "actors only" as a licence to open
+the hatch in production.
 
 Within that boundary, three properties bound the damage:
 
@@ -386,15 +513,74 @@ Within that boundary, three properties bound the damage:
   column; an email matching a row without it is refused with `User is not an
 actor`. So the secret cannot take over a **real user's** account — the blast
   radius is the actor accounts and whatever roles they were granted.
-- **Unknown emails are created**, flagged `actor: true`, so a scenario that
-  declares a new persona needs no seed step. Note the flip side: the secret
-  mints accounts, it does not merely use existing ones.
+- **Unknown emails are created only under `pikku dev`**, flagged `actor: true`,
+  so a local scenario declaring a new persona needs no seed step. Anywhere else
+  the account has to have been provisioned at boot first.
 - **The comparison is constant-time and length-hiding**, so a wrong secret leaks
   neither the length nor a prefix of the right one.
 
 This is the endpoint `pikku scenario` signs its actors in through, and the one
 the frontend dev switcher posts to — see `pikku-scenario` for declaring the
 actors and `pikku-react` for `useDevActors()`.
+
+### Provisioning personas (`provisionPersonas`)
+
+Anywhere but `pikku dev`, the accounts have to exist before anyone signs in.
+The deployment creates them itself, from its own lifecycle:
+
+```ts
+import { provisionPersonas } from '@pikku/better-auth'
+import {
+  personaConfigs,
+  personaEnvironments,
+} from '#pikku/pikku-personas.gen.js'
+
+await provisionPersonas(singletonServices, {
+  personas: personaConfigs,
+  environments: personaEnvironments,
+})
+```
+
+It runs where the database already is, which is the point: the CLI has no
+connection to a deployed environment's database — it resolves one from the local
+project config — so a `pikku persona sync staging` that wrote rows would write
+them to whatever database the checkout happened to point at. `pikku persona sync
+<environment>` still exists, and reports who that environment will provision and
+why anyone was skipped, which is what you run _before_ the deploy.
+
+It creates missing accounts as `actor: true`, applies the roles each persona
+declares, and is additive — it never revokes. `PIKKU_ENV` (or an explicit
+`environment`) selects who is eligible, through the same rule that decides who
+may run there; an address already held by a real, non-actor user throws rather
+than being granted the persona's roles.
+
+**Deleting a persona does not delete its account.** Being additive leaves a hole:
+the account keeps every role it was granted, and the actor endpoint authenticates
+on the `actor` column alone without consulting the declaration — so an `admin`
+persona nobody declares any more is still a live way in wherever that endpoint is
+open. By default provisioning warns about those accounts and changes nothing.
+`orphans: 'ban'` shuts them:
+
+```ts
+await provisionPersonas(singletonServices, {
+  personas: personaConfigs,
+  environments: personaEnvironments,
+  orphans: 'ban',
+})
+```
+
+It writes the same `banned` column the console's ban RPC writes (so it needs the
+`ban()` plugin wired, and says so if it isn't), revokes the account's sessions,
+and leaves the row, its grants and its history intact — provisioning lifts the
+ban again by itself if the persona comes back. Deleting is deliberately not
+offered: an actor row is referenced by whatever those scenarios did while it
+existed.
+
+`report` is the default because a rolling deploy runs the new replica's
+provisioning while the old replica is still serving, so for the length of that
+overlap "no persona claims this" is a statement about the newer declaration only.
+A persona pinned to another environment counts as unclaimed here — it has no
+business holding a signable account in an environment its own rule refuses it.
 
 ---
 

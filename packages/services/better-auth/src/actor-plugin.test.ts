@@ -1,19 +1,45 @@
 import assert from 'node:assert/strict'
-import { describe, test } from 'node:test'
+import { afterEach, beforeEach, describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import { actor } from './actor-plugin.js'
+import {
+  ACTOR_SIGN_IN_OPT_IN_ENV,
+  ACTOR_SIGN_IN_OPT_IN_VALUE,
+  DEV_ACTOR_SIGN_IN_ENV,
+} from './actor-sign-in-gate.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 
-const makeAuth = (db: Record<string, any[]>, secret?: string) =>
+const recordingLogger = () => {
+  const info: string[] = []
+  const warn: string[] = []
+  return {
+    info: (m: any) => info.push(String(m)),
+    warn: (m: any) => warn.push(String(m)),
+    lines: { info, warn },
+  }
+}
+
+const makeAuth = (
+  db: Record<string, any[]>,
+  secret?: string,
+  options: { logger?: any } = {}
+) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    plugins: [actor({ secret })],
+    plugins: [
+      actor({ secret, logger: options.logger ?? recordingLogger() }),
+    ],
   })
+
+const clearGateEnv = () => {
+  delete process.env[DEV_ACTOR_SIGN_IN_ENV]
+  delete process.env[ACTOR_SIGN_IN_OPT_IN_ENV]
+}
 
 const signInActor = (
   auth: ReturnType<typeof makeAuth>,
@@ -28,6 +54,11 @@ const signInActor = (
   )
 
 describe('better-auth actor plugin', () => {
+  beforeEach(() => {
+    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+  })
+  afterEach(clearGateEnv)
+
   test('auto-creates the actor user and mints a session cookie', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const auth = makeAuth(db, 'flow-secret')
@@ -99,6 +130,129 @@ describe('better-auth actor plugin', () => {
       secret: '',
     })
     assert.equal(unconfigured.status, 401)
+  })
+})
+
+describe('actor sign-in gate', () => {
+  beforeEach(clearGateEnv)
+  afterEach(clearGateEnv)
+
+  test('refuses every sign-in when no command enabled it, secret or not', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const res = await signInActor(makeAuth(db, 'flow-secret'), {
+      email: 'customer@actors.local',
+      secret: 'flow-secret',
+    })
+
+    assert.equal(res.status, 401)
+    assert.match((await res.json()).message ?? '', /disabled outside/)
+    assert.equal(db.user!.length, 0, 'a refused sign-in mints no actor row')
+  })
+
+  test('`pikku dev` setting its marker is what turns it on', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+
+    const res = await signInActor(makeAuth(db, 'flow-secret'), {
+      email: 'customer@actors.local',
+      secret: 'flow-secret',
+    })
+    assert.equal(res.status, 200)
+  })
+
+  test('the opt-in env var enables it outside dev, but only spelt exactly', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+
+    process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = 'true'
+    const nearMiss = recordingLogger()
+    const refused = await signInActor(
+      makeAuth(db, 'flow-secret', { logger: nearMiss }),
+      { email: 'customer@actors.local', secret: 'flow-secret' }
+    )
+    assert.equal(refused.status, 401, "'true' is not the opt-in value")
+    assert.match(
+      nearMiss.lines.warn.join('\n'),
+      new RegExp(ACTOR_SIGN_IN_OPT_IN_VALUE),
+      'the near miss names the literal that would have worked'
+    )
+    assert.doesNotMatch(
+      nearMiss.lines.warn.join('\n'),
+      /'true'/,
+      'and never the value it was given, which may be a pasted secret'
+    )
+
+    process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE
+    const stillRefused = await signInActor(makeAuth(db, 'flow-secret'), {
+      email: 'customer@actors.local',
+      secret: 'flow-secret',
+    })
+    assert.equal(
+      stillRefused.status,
+      401,
+      'the opt-in reaches the secret check; provisioning is a separate power'
+    )
+    assert.match((await stillRefused.json()).message ?? '', /No actor account/)
+  })
+
+  test('the opt-in signs provisioned actors in but mints no new ones', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE
+
+    const unknown = await signInActor(makeAuth(db, 'flow-secret'), {
+      email: 'never-provisioned@actors.local',
+      secret: 'flow-secret',
+    })
+    assert.equal(unknown.status, 401)
+    assert.match((await unknown.json()).message ?? '', /No actor account/)
+    assert.equal(db.user!.length, 0)
+
+    db.user!.push({
+      id: 'provisioned-1',
+      email: 'customer@actors.local',
+      name: 'customer',
+      actor: true,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    const provisioned = await signInActor(makeAuth(db, 'flow-secret'), {
+      email: 'customer@actors.local',
+      secret: 'flow-secret',
+    })
+    assert.equal(provisioned.status, 200)
+  })
+
+  test('a secret configured on a shut gate is a warning, not a silent no-op', () => {
+    const logger = recordingLogger()
+    actor({ secret: 'flow-secret', logger })
+    assert.match(
+      logger.lines.warn.join('\n'),
+      /secret is configured but sign-in stays disabled/
+    )
+
+    const quiet = recordingLogger()
+    actor({ secret: undefined, logger: quiet })
+    assert.deepEqual(
+      quiet.lines.warn,
+      [],
+      'no secret and no opt-in is the intended production state'
+    )
+  })
+
+  test('announces itself when it is open', () => {
+    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+    const logger = recordingLogger()
+    actor({ secret: 'flow-secret', logger })
+    assert.match(
+      logger.lines.info.join('\n'),
+      new RegExp(DEV_ACTOR_SIGN_IN_ENV)
+    )
+  })
+
+  test('still declares the actor column while disabled', () => {
+    const logger = recordingLogger()
+    const plugin = actor({ secret: undefined, logger })
+    assert.equal((plugin.schema as any).user.fields.actor.type, 'boolean')
   })
 })
 

@@ -2,13 +2,26 @@ import * as z from 'zod'
 import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
+import type { Logger } from '@pikku/core/services'
+
+import {
+  ACTOR_NOT_PROVISIONED_MESSAGE,
+  ACTOR_SIGN_IN_DISABLED_MESSAGE,
+  actorSignInAttemptRefusedMessage,
+  actorSignInEnabledMessage,
+  actorSignInNearMissMessage,
+  actorSignInRefusedMessage,
+  resolveActorSignIn,
+} from './actor-sign-in-gate.js'
 
 export interface ActorPluginOptions {
-  /** Impersonation secret; only `actor: true` rows can sign in, missing/empty disables the endpoint */
+  /** Impersonation secret; only `actor: true` rows can sign in, missing/empty refuses the endpoint. */
   secret:
     | string
     | undefined
     | (() => string | undefined | Promise<string | undefined>)
+  /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
+  logger?: Pick<Logger, 'info' | 'warn'>
 }
 
 /** Length-hiding constant-time comparison — no early exit on mismatch. */
@@ -23,10 +36,27 @@ const secretsEqual = (a: string, b: string): boolean => {
   return diff === 0
 }
 
-/** Better Auth plugin for scenario actors: `POST /sign-in/actor` with `{ email, secret }`, actor rows auto-created, non-actor sign-in refused */
+/** Better Auth plugin for scenario actors: `POST /sign-in/actor` with `{ email, secret }`, non-actor sign-in refused, rows created only under `pikku dev` */
 export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
+  const logger = options.logger ?? console
+  const gate = resolveActorSignIn()
+
+  if (gate.nearMissOptIn) {
+    logger.warn(actorSignInNearMissMessage())
+  }
+  if (gate.enabled) {
+    logger.info(actorSignInEnabledMessage(gate.reason))
+  }
+
+  let refusalAnnounced = false
+  if (!gate.enabled && typeof options.secret === 'string' && options.secret) {
+    logger.warn(actorSignInRefusedMessage())
+    refusalAnnounced = true
+  }
+
   return {
     id: 'actor',
+    /** Declared whether or not the gate is open — `pikku db generate` must never read a different shape in production than in development. */
     schema: {
       user: {
         fields: {
@@ -51,6 +81,16 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
           }),
         },
         async (ctx) => {
+          if (!gate.enabled) {
+            if (!refusalAnnounced) {
+              refusalAnnounced = true
+              logger.warn(actorSignInAttemptRefusedMessage())
+            }
+            throw new APIError('UNAUTHORIZED', {
+              message: ACTOR_SIGN_IN_DISABLED_MESSAGE,
+            })
+          }
+
           const expected =
             typeof options.secret === 'function'
               ? await options.secret()
@@ -82,6 +122,11 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
             })
           }
           if (!user) {
+            if (!gate.mayProvision) {
+              throw new APIError('UNAUTHORIZED', {
+                message: ACTOR_NOT_PROVISIONED_MESSAGE,
+              })
+            }
             user = (await ctx.context.internalAdapter.createUser({
               email,
               emailVerified: true,

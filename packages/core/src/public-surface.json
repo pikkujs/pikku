@@ -272,10 +272,13 @@
     "validateAndBuildSystemRoleDefinitionsMeta"
   ],
   "./persona": [
+    "APP_SCOPE_ROOT",
     "ActorSignIn",
     "HttpPersona",
     "IMPERSONATE_USER_ID_HEADER",
     "OperatorSignIn",
+    "appScopeId",
+    "buildAppScopeDefinition",
     "createHttpPersonas",
     "definePersonas",
     "establishOperatorSession",

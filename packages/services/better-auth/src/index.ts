@@ -21,12 +21,35 @@ export {
   setAuthUserPassword,
 } from './admin-users.js'
 export type { AuthGetter } from './admin-users.js'
-export { ban } from './ban-plugin.js'
+export { ban, BAN_PLUGIN_ID } from './ban-plugin.js'
 export type { BanPluginOptions } from './ban-plugin.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
+export {
+  ACTOR_NOT_PROVISIONED_MESSAGE,
+  ACTOR_SIGN_IN_DISABLED_MESSAGE,
+  ACTOR_SIGN_IN_OPT_IN_ENV,
+  ACTOR_SIGN_IN_OPT_IN_VALUE,
+  DEV_ACTOR_SIGN_IN_ENV,
+  resolveActorSignIn,
+} from './actor-sign-in-gate.js'
+export type {
+  ActorSignInGate,
+  ActorSignInReason,
+} from './actor-sign-in-gate.js'
+export { provisionPersonas } from './provision-personas.js'
+export type {
+  PersonaOrphanPolicy,
+  ProvisionPersonasOptions,
+  ProvisionPersonasResult,
+  ProvisionPersonasServices,
+} from './provision-personas.js'
 export { fabric } from './fabric-plugin.js'
 export type { FabricPluginOptions } from './fabric-plugin.js'
+export {
+  delegatedAuth,
+  DELEGATED_PROVIDER_ID,
+} from './delegated-auth-plugin.js'
 export type {
   DelegatedAuthOptions,
   UpstreamIdentity,

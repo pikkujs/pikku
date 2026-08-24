@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2764 observable things**: 872 exported names, plus
+**2767 observable things**: 875 exported names, plus
 1892 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 34 | 34 | 48 |
+| `./persona` | 37 | 37 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
 | `./services/local-meta` | 22 | 3 | 46 |
@@ -3818,6 +3818,9 @@ export class ActorSignIn implements PersonaSignIn {
   async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
   headers(): Record<string, string>
 }
+APP_SCOPE_ROOT: "app"
+appScopeId: (app: string) => string
+buildAppScopeDefinition: (personas: PersonaMeta[]) => ScopeDefinitionMeta | null
 export type CorePersona = {
   name: string
   jobTitle?: string
