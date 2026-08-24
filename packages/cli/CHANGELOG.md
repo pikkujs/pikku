@@ -1,3 +1,36 @@
+## 0.12.120
+
+### Patch Changes
+
+- 29309e2: Send what a persona currently declares alongside the schedule row that is actually running it. A cadence is enabled once and then outlives the declaration it was written from: someone edits `personas.ts`, redeploys, and the row keeps running last month's goals and disposition with nothing anywhere to say so. `listVirtualUserSchedules` now resolves each row's persona out of `personaConfigs` and returns its goals and disposition as `declared`, so the difference is readable rather than inferred.
+
+  Which fields differ is deliberately not computed here. It is a question about how to render two values, and a codegen step that answered it would fix the answer for every client — including the ones that want to show both sides rather than a flag.
+
+- 2caea1d: Make the virtual user scaffold typecheck in the project it is generated into.
+
+  Three shapes in `virtual-user.gen.ts` were written against what the scaffold
+  knows rather than what an application actually has, and every one of them was
+  an error the moment a real project turned `scaffold.virtualUser` on:
+
+  - `startVirtualUserRun` asked for `config: { nodeEnv?: string }`. An
+    application's `Config` is its own interface and need not declare `nodeEnv` at
+    all — and a target type whose properties are all optional shares none with
+    such a config, so TypeScript rejected the whole call. It takes `unknown` and
+    reads `nodeEnv` off it.
+  - It also asked for `rpc.invoke(name: string, …)`. A project's generated
+    `invoke` is generic over its own map's keys and `string` is not one of them.
+    The parameter now names the one function the scaffold dispatches.
+  - `listVirtualUserSchedules` passed `input: null`, which is not one of the two
+    things an input may be. The field is omitted.
+
+  It also signed in at the wrong door. `createPersonas` was called without a
+  sign-in or RPC path, so a run against an application that mounts auth anywhere
+  but the root — `/api/auth` is the usual place — signed in against a 404 and
+  spent its whole budget reasoning about why every call failed. It now reads
+  `SCENARIO_SIGN_IN_PATH` and `SCENARIO_RPC_PATH`, the same two variables a
+  scenario run reads, because a virtual user goes through exactly the doors a
+  scenario does.
+
 ## 0.12.119
 
 ### Patch Changes

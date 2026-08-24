@@ -1,6 +1,6 @@
 {
   "name": "@pikku/mantine",
-  "version": "0.12.10",
+  "version": "0.12.11",
   "description": "Mantine components with i18n-tightened types for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
