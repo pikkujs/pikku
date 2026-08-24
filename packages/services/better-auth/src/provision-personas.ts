@@ -1,6 +1,10 @@
-import type { Logger, ResolvedPersona, ScopeService } from '@pikku/core/services'
+import type {
+  Logger,
+  ResolvedPersona,
+  ScopeService,
+} from '@pikku/core/services'
 import type { PersonaEnvironment } from '@pikku/core/persona'
-import { personaEnvironmentRefusal } from '@pikku/core/persona'
+import { appScopeId, personaEnvironmentRefusal } from '@pikku/core/persona'
 
 import type { AuthGetter } from './admin-users.js'
 import { setAuthUserBanned } from './admin-users.js'
@@ -15,7 +19,10 @@ import { BAN_PLUGIN_ID } from './ban-plugin.js'
  */
 export interface ProvisionPersonasServices {
   auth: AuthGetter
-  scopeService: Pick<ScopeService, 'addUserToRole' | 'listUserRoles'>
+  scopeService: Pick<
+    ScopeService,
+    'addScopeToUser' | 'addUserToRole' | 'listUserRoles' | 'listUserScopes'
+  >
   logger: Pick<Logger, 'info' | 'warn'>
 }
 
@@ -49,6 +56,8 @@ export interface ProvisionPersonasOptions {
 export interface ProvisionPersonasResult {
   created: number
   granted: number
+  /** How many `app:<name>` grants were applied for the app a persona signs into. */
+  appsGranted: number
   held: number
   /** One line per persona that may not act here, saying why. */
   skipped: string[]
@@ -118,6 +127,7 @@ export const provisionPersonas = async (
   const result: ProvisionPersonasResult = {
     created: 0,
     granted: 0,
+    appsGranted: 0,
     held: 0,
     skipped: [],
     orphaned: [],
@@ -145,7 +155,9 @@ export const provisionPersonas = async (
     typeof ctx.hasPlugin === 'function'
       ? Boolean(ctx.hasPlugin(BAN_PLUGIN_ID))
       : Boolean(
-          ctx.options?.plugins?.some((plugin: any) => plugin?.id === BAN_PLUGIN_ID)
+          ctx.options?.plugins?.some(
+            (plugin: any) => plugin?.id === BAN_PLUGIN_ID
+          )
         )
   if (orphans === 'ban' && !banAvailable) {
     throw new Error(
@@ -169,9 +181,8 @@ export const provisionPersonas = async (
 
     const email = persona.email.toLowerCase()
     claimed.add(email)
-    const existing = (await ctx.internalAdapter.findUserByEmail(email))?.user as
-      | ActorUser
-      | undefined
+    const existing = (await ctx.internalAdapter.findUserByEmail(email))
+      ?.user as ActorUser | undefined
     if (existing && !existing.actor) {
       throw new Error(
         `${email} is a real user here, not an actor. Refusing to grant persona '${id}' the roles of somebody else's account — give the persona an address of its own.`
@@ -198,6 +209,17 @@ export const provisionPersonas = async (
       // declaration to explain why.
       await setAuthUserBanned(auth, { userId: user.id, banned: false })
       result.unbanned++
+    }
+
+    if (persona.app) {
+      const scope = appScopeId(persona.app)
+      const heldScopes = new Set(await scopeService.listUserScopes(user.id))
+      if (heldScopes.has(scope)) {
+        result.held++
+      } else {
+        await scopeService.addScopeToUser(user.id, scope)
+        result.appsGranted++
+      }
     }
 
     const roles = persona.roles ?? []
@@ -244,7 +266,11 @@ export const provisionPersonas = async (
   }
 
   logger.info(
-    `personas: ${result.created} account(s) created, ${result.granted} role grant(s) applied, ${result.held} already held` +
+    `personas: ${result.created} account(s) created, ${result.granted} role grant(s) applied` +
+      (result.appsGranted
+        ? `, ${result.appsGranted} app grant(s) applied`
+        : '') +
+      `, ${result.held} already held` +
       (result.skipped.length
         ? `, ${result.skipped.length} persona(s) skipped — they do not act in '${environment ?? 'an unresolved environment'}'`
         : '') +
@@ -260,7 +286,7 @@ export const provisionPersonas = async (
       `personas: ${result.orphaned.length} actor account(s) no declared persona claims here` +
         (banned
           ? `, ${result.banned} newly banned`
-          : ' — they keep every role they were granted, and the actor endpoint authenticates on the actor column alone. Pass orphans: \'ban\' to shut them.')
+          : " — they keep every role they were granted, and the actor endpoint authenticates on the actor column alone. Pass orphans: 'ban' to shut them.")
     )
   }
 
