@@ -11,8 +11,9 @@
 // raw strings fail to compile. Pass text through `t()` / `asI18n()`.
 
 export * from '@mantine/core'
-import { createElement } from 'react'
+import { createElement, forwardRef } from 'react'
 import type { CSSProperties } from 'react'
+import { modifiedStyles } from './original.js'
 
 import {
   // polymorphic (children)
@@ -290,69 +291,124 @@ export const Notification = MantineNotification as OverrideFactory<
 >
 
 // ── Plain: inputs (label / placeholder / description, plus extras) ────────────
-export const TextInput = MantineTextInput as OverrideFactory<
+
+/**
+ * An input's value alongside the one it started as. See {@link modifiedStyles}
+ * — the two may be a runtime row against its declaration, or simply a field
+ * against what it held when the form loaded.
+ *
+ * On every control that carries a value, so that wiring `original` through is
+ * never a question of whether this particular input supports it. A control
+ * without an `original` behaves exactly as Mantine's does.
+ *
+ * Controlled fields only: the comparison reads the value off props, so a field
+ * left uncontrolled with `defaultValue` has nothing to compare and stays
+ * unmarked.
+ */
+type Original = { original?: unknown }
+
+/**
+ * A caller's own `styles` wins. Mantine also accepts a function there, which
+ * cannot be merged into without calling it with a theme this layer does not
+ * have — so a call styling its input by hand keeps its own border and simply
+ * does not get the mark.
+ *
+ * `from` and `part` differ per control: a toggle's value is `checked`, and it
+ * hides the input it would otherwise be drawn on, painting a track or a circle
+ * instead. Bordering the hidden element marks nothing visible.
+ */
+const withOriginal = (
+  Component: any,
+  from: 'value' | 'checked' = 'value',
+  part = 'input'
+) =>
+  forwardRef<any, any>(({ original, styles, ...props }, ref) => {
+    const modified = modifiedStyles(props[from], original, part)
+    const merged =
+      !modified.styles || typeof styles === 'function'
+        ? styles
+        : {
+            ...styles,
+            [part]: { ...(styles as any)?.[part], ...modified.styles[part] },
+          }
+    return createElement(Component, { ...props, ref, styles: merged })
+  })
+
+export const TextInput = withOriginal(MantineTextInput) as OverrideFactory<
   TextInputFactory,
-  Input
+  Input & Original
 >
-export const PasswordInput = MantinePasswordInput as OverrideFactory<
-  PasswordInputFactory,
-  Input
->
-export const Textarea = MantineTextarea as OverrideFactory<
+export const PasswordInput = withOriginal(
+  MantinePasswordInput
+) as OverrideFactory<PasswordInputFactory, Original & Input>
+export const Textarea = withOriginal(MantineTextarea) as OverrideFactory<
   TextareaFactory,
-  Input
+  Input & Original
 >
-export const JsonInput = MantineJsonInput as OverrideFactory<
+export const JsonInput = withOriginal(MantineJsonInput) as OverrideFactory<
   JsonInputFactory,
-  Input
+  Original & Input
 >
-export const NativeSelect = MantineNativeSelect as OverrideFactory<
-  NativeSelectFactory,
-  Input
->
-export const NumberInput = MantineNumberInput as OverrideFactory<
+export const NativeSelect = withOriginal(
+  MantineNativeSelect
+) as OverrideFactory<NativeSelectFactory, Original & Input>
+export const NumberInput = withOriginal(MantineNumberInput) as OverrideFactory<
   NumberInputFactory,
-  Input & { prefix?: I18nString; suffix?: I18nString }
+  Input & Original & { prefix?: I18nString; suffix?: I18nString }
 >
-export const Select = MantineSelect as OverrideFactory<
+export const Select = withOriginal(MantineSelect) as OverrideFactory<
   SelectFactory,
-  Input & { nothingFoundMessage?: I18nNode }
+  Input & Original & { nothingFoundMessage?: I18nNode }
 >
-export const MultiSelect = MantineMultiSelect as OverrideFactory<
+export const MultiSelect = withOriginal(MantineMultiSelect) as OverrideFactory<
   MultiSelectFactory,
-  Input & { nothingFoundMessage?: I18nNode }
+  Input & Original & { nothingFoundMessage?: I18nNode }
 >
-export const Autocomplete = MantineAutocomplete as OverrideFactory<
+export const Autocomplete = withOriginal(
+  MantineAutocomplete
+) as OverrideFactory<
   AutocompleteFactory,
-  Input & { nothingFoundMessage?: I18nNode }
+  Original & Input & { nothingFoundMessage?: I18nNode }
 >
-export const TagsInput = MantineTagsInput as OverrideFactory<
+export const TagsInput = withOriginal(MantineTagsInput) as OverrideFactory<
   TagsInputFactory,
-  Input & { nothingFoundMessage?: I18nNode }
+  Input & Original & { nothingFoundMessage?: I18nNode }
 >
-export const ColorInput = MantineColorInput as OverrideFactory<
+export const ColorInput = withOriginal(MantineColorInput) as OverrideFactory<
   ColorInputFactory,
-  Input & { swatchesLabel?: I18nString }
+  Original & Input & { swatchesLabel?: I18nString }
 >
 export const FileInput = MantineFileInput as OverrideFactory<
   FileInputFactory,
   { label?: I18nNode; placeholder?: I18nNode; description?: I18nNode }
 >
-export const PinInput = MantinePinInput as OverrideFactory<
+export const PinInput = withOriginal(MantinePinInput) as OverrideFactory<
   PinInputFactory,
-  { placeholder?: I18nString }
+  Original & { placeholder?: I18nString }
 >
-export const Checkbox = MantineCheckbox as OverrideFactory<
+export const Checkbox = withOriginal(
+  MantineCheckbox,
+  'checked',
+  'input'
+) as OverrideFactory<
   CheckboxFactory,
-  { label?: I18nNode; description?: I18nNode }
+  Original & { label?: I18nNode; description?: I18nNode }
 >
-export const Switch = MantineSwitch as OverrideFactory<
+export const Switch = withOriginal(
+  MantineSwitch,
+  'checked',
+  'track'
+) as OverrideFactory<
   SwitchFactory,
-  { label?: I18nNode; description?: I18nNode }
+  Original & { label?: I18nNode; description?: I18nNode }
 >
-export const Radio = MantineRadio as OverrideFactory<
+export const Radio = withOriginal(
+  MantineRadio,
+  'checked',
+  'radio'
+) as OverrideFactory<
   RadioFactory,
-  { label?: I18nNode; description?: I18nNode }
+  Original & { label?: I18nNode; description?: I18nNode }
 >
 // PillsInput is an Input wrapper (label/description/error live on the root); its
 // `.Field` static carries the placeholder. Gate both via a composed factory.
@@ -451,3 +507,5 @@ export const Input = MantineInput as unknown as WithStatics<
     Placeholder: OverrideFactory<{ props: InputPlaceholderProps }, Children>
   }
 >
+
+export { modifiedStyles } from './original.js'

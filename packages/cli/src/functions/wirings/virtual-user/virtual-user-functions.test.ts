@@ -74,6 +74,22 @@ describe('serializeVirtualUserFunctions', () => {
     assert.match(setFn, /scopes: \['virtualUser:schedule'\]/)
   })
 
+  // A schedule is enabled once and then outlives the declaration it was written
+  // from, so both sides have to travel for anyone to see they have parted ways.
+  test('a schedule carries what the persona currently declares', () => {
+    const setFn = out.slice(out.indexOf('const serializeSchedule'))
+    assert.match(setFn, /declared,/)
+    assert.match(setFn, /personaConfigs\[/)
+    assert.match(schemas, /declared: z\.object\(\{/)
+  })
+
+  // Which fields differ is a question about how to render two values, and the
+  // answer belongs where they are rendered — not baked into the payload.
+  test('the difference is left for the client to work out', () => {
+    assert.doesNotMatch(out, /drifted/)
+    assert.doesNotMatch(schemas, /drifted/)
+  })
+
   // A codegen step does not get to decide that an app starts spending model
   // budget; the project wires the tick when it means it.
   test('the tick is emitted unwired, with no scaffolded cron behind it', () => {
