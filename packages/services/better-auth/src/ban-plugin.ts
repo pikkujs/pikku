@@ -28,8 +28,14 @@ const DEFAULT_MESSAGE =
  * only moment the value matters is the moment a session is created, so that is
  * where it is settled.
  */
+/**
+ * The plugin's id, exported because callers that write the `banned` column have
+ * to know whether the column exists — `ctx.hasPlugin(BAN_PLUGIN_ID)`.
+ */
+export const BAN_PLUGIN_ID = 'pikku-ban'
+
 export const ban = (options: BanPluginOptions = {}): BetterAuthPlugin => ({
-  id: 'pikku-ban',
+  id: BAN_PLUGIN_ID,
   schema: {
     user: {
       fields: {

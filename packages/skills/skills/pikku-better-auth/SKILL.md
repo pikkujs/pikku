@@ -440,11 +440,38 @@ them to whatever database the checkout happened to point at. `pikku persona sync
 why anyone was skipped, which is what you run *before* the deploy.
 
 It creates missing accounts as `actor: true`, applies the roles each persona
-declares, and is additive — it never revokes, so removing a persona from the code
-leaves its account standing until somebody decides otherwise. `PIKKU_ENV` (or an
-explicit `environment`) selects who is eligible, through the same rule that
-decides who may run there; an address already held by a real, non-actor user
-throws rather than being granted the persona's roles.
+declares, and is additive — it never revokes. `PIKKU_ENV` (or an explicit
+`environment`) selects who is eligible, through the same rule that decides who
+may run there; an address already held by a real, non-actor user throws rather
+than being granted the persona's roles.
+
+**Deleting a persona does not delete its account.** Being additive leaves a hole:
+the account keeps every role it was granted, and the actor endpoint authenticates
+on the `actor` column alone without consulting the declaration — so an `admin`
+persona nobody declares any more is still a live way in wherever that endpoint is
+open. By default provisioning warns about those accounts and changes nothing.
+`orphans: 'ban'` shuts them:
+
+```ts
+await provisionPersonas(singletonServices, {
+  personas: personaConfigs,
+  environments: personaEnvironments,
+  orphans: 'ban',
+})
+```
+
+It writes the same `banned` column the console's ban RPC writes (so it needs the
+`ban()` plugin wired, and says so if it isn't), revokes the account's sessions,
+and leaves the row, its grants and its history intact — provisioning lifts the
+ban again by itself if the persona comes back. Deleting is deliberately not
+offered: an actor row is referenced by whatever those scenarios did while it
+existed.
+
+`report` is the default because a rolling deploy runs the new replica's
+provisioning while the old replica is still serving, so for the length of that
+overlap "no persona claims this" is a statement about the newer declaration only.
+A persona pinned to another environment counts as unclaimed here — it has no
+business holding a signable account in an environment its own rule refuses it.
 
 ---
 
