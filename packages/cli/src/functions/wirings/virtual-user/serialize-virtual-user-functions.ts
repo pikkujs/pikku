@@ -362,9 +362,16 @@ const serializeRun = (run: VirtualUserRunRecord) => ({
 const startVirtualUserRun = async (
   services: {
     virtualUserRunStore?: VirtualUserRunStore
-    config: { nodeEnv?: string }
+    // \`unknown\` because an application's Config is its own interface and need
+    // not declare nodeEnv at all. A structural \`{ nodeEnv?: string }\` shares no
+    // property with such a config and TypeScript rejects the whole call.
+    config: unknown
   },
-  rpc: { invoke: (name: string, data: any) => Promise<unknown> },
+  // Named literally rather than as \`string\`: a project's generated rpc.invoke
+  // is generic over its own map's keys, and \`string\` is not one of them.
+  rpc: {
+    invoke: (name: 'executeVirtualUserRun', data: any) => Promise<unknown>
+  },
   input: {
     persona: string
     disposition?: string
@@ -406,7 +413,7 @@ const startVirtualUserRun = async (
   // does wrong, which is not a thing to do to real customers' data. Checked
   // against the effective disposition, so the override cannot smuggle one in.
   if (
-    config.nodeEnv === 'production' &&
+    (config as { nodeEnv?: string } | undefined)?.nodeEnv === 'production' &&
     disposition !== PRODUCTION_DISPOSITION
   ) {
     throw new Error(
@@ -645,7 +652,6 @@ export const listVirtualUserSchedules = pikkuFunc({
     'Which personas are on a clock, how often they run, and when each is next due.',
   expose: true,
   scopes: ['virtualUser:read'],
-  input: null,
   output: ListVirtualUserSchedulesOutput,
   func: async ({ virtualUserScheduleStore }) => {
     if (!virtualUserScheduleStore) {
