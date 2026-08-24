@@ -16,11 +16,12 @@ export interface AuthPluginDef {
  */
 export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
   actor: { displayName: 'Actor' },
-  admin: { displayName: 'Admin' },
   anonymous: { displayName: 'Anonymous' },
   apiKey: { displayName: 'API Key' },
+  ban: { displayName: 'Ban' },
   bearer: { displayName: 'Bearer' },
   captcha: { displayName: 'Captcha' },
+  credentialOAuth: { displayName: 'Credential OAuth' },
   customSession: { displayName: 'Custom Session' },
   delegatedAuth: { displayName: 'Delegated Auth' },
   deviceAuthorization: { displayName: 'Device Authorization' },
