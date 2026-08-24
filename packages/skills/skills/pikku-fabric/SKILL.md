@@ -109,11 +109,25 @@ plain `INSERT`s** — no `INSERT OR IGNORE`, no `ON CONFLICT DO NOTHING`, no
 you find yourself reaching for an idempotent form, that's a sign the data wants
 to be a migration instead.
 
-This is **test data only**: enough rows that a fresh dev database isn't an empty
-app. It never reaches staging or production — reset refuses `NODE_ENV=production`
-and refuses a database outside the runtime directory. Anything a real environment
-needs — accounts, role grants — is provisioning, not seeding, and belongs in
-`pikku persona sync` or a migration.
+This is **local dev data only**: enough rows that a fresh dev database isn't an
+empty app. Nothing else ever runs it. A deployed stage applies `db/<engine>/*.sql`
+and stops there — reset refuses `NODE_ENV=production` and refuses a database
+outside the runtime directory, and no deploy step reaches for the seed file.
+
+So the test is not "is this row realistic?", it is **"would the app be broken
+without it in production?"** If yes, it is configuration and belongs in a
+migration, however much it looks like sample data. A venue and its rooms, a
+product catalogue, a tenant, a country list, the organization the whole
+deployment hangs off — all configuration. Accounts and role grants are
+provisioning: `pikku persona sync` or a migration. What is left over is the
+seed's job — the bookings, orders and messages a demo needs and a real
+environment starts without.
+
+Get this wrong and it hides: the app is perfect locally, where reset has just
+run, and every deployed environment comes up with empty tables. The signature is
+a stage whose pages return 200 — the shell renders fine — while its first data
+read throws `no result` or a foreign-key violation on a row the seed was
+silently supplying.
 
 A Better Auth app has a second constraint: the plugins you enable (`ban()`,
 `actor()`, …) each declare columns, and `pikku db migrate` refuses to run while

@@ -115,7 +115,9 @@ Then, in this order — it is the order codegen depends on:
 2. **Seed** — rows in `db/sqlite-dev-seed.sql`. There is no seed command:
    `bunx --bun pikku db reset` wipes, migrates and seeds in one go, and is the
    only thing that applies the file. It always starts from a wiped database, so
-   the file is plain `INSERT`s — no `ON CONFLICT DO NOTHING`. **Be generous, and
+   the file is plain `INSERT`s — no `ON CONFLICT DO NOTHING`. It is local only:
+   no deploy applies it, so anything the app cannot run without belongs in a
+   migration instead. **Be generous, and
    seed rows for both personas.** An empty app demos badly, and you cannot see a
    layout break against zero rows.
 3. **Functions** — one `pikkuFunc` per `*.function.ts`, `expose: true`. Pikku
