@@ -50,6 +50,17 @@ Two properties carry over, and one is new:
   `personaEnvironments` so the rule can be applied inside the bundle; only the
   `production` flag is projected into it, because an environment's `apiUrl` and
   paths belong to the machine running `pikku scenario`.
+- **A persona you delete leaves an account behind, and now you hear about it.**
+  Additive provisioning has a hole: the account keeps every role it was granted,
+  and the actor endpoint authenticates on the `actor` column alone without
+  consulting the declaration, so an `admin` persona nobody declares any more is
+  still a live way in wherever that endpoint is open. Provisioning warns about
+  every actor account no declared persona claims; `orphans: 'ban'` shuts them
+  through the same `banned` column the console's ban RPC writes, revoking their
+  sessions and leaving the row, its grants and its history intact — and lifting
+  the ban again by itself if the persona comes back. `report` stays the default
+  because a rolling deploy provisions from the new declaration while the old
+  replica is still serving the previous one.
 - **`pikku persona sync <environment>` now reports rather than writes.** It
   prints who the environment will provision, with which roles, and why anyone was
   skipped — which is what tells you *before* a deploy whether the accounts you

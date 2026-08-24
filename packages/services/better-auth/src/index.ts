@@ -21,7 +21,7 @@ export {
   setAuthUserPassword,
 } from './admin-users.js'
 export type { AuthGetter } from './admin-users.js'
-export { ban } from './ban-plugin.js'
+export { ban, BAN_PLUGIN_ID } from './ban-plugin.js'
 export type { BanPluginOptions } from './ban-plugin.js'
 export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
@@ -39,6 +39,7 @@ export type {
 } from './actor-sign-in-gate.js'
 export { provisionPersonas } from './provision-personas.js'
 export type {
+  PersonaOrphanPolicy,
   ProvisionPersonasOptions,
   ProvisionPersonasResult,
   ProvisionPersonasServices,
