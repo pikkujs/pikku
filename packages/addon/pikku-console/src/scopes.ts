@@ -111,6 +111,10 @@ defineScope({
               run: {
                 description: 'Turn a persona loose on this application',
               },
+              schedule: {
+                description:
+                  'Decide which personas keep using this application on their own',
+              },
             },
           },
           db: {

@@ -1067,5 +1067,15 @@
   "virtual_users_runs_none": "Nobody has run this user yet.",
   "virtual_users_runs_intent": "{title} · {status}",
   "virtual_users_runs_seed": "{disposition} · seed {seed}",
-  "virtual_users_runs_start": "Run now"
+  "virtual_users_runs_start": "Run now",
+  "virtual_users_schedule": "On their own",
+  "virtual_users_schedule_enabled": "Keep using the app",
+  "virtual_users_schedule_note": "Turned on here, never in code — a persona put on a clock spends model budget every time it runs, with nobody watching. Fields that no longer match what this persona declares are marked.",
+  "virtual_users_schedule_disposition": "Disposition",
+  "virtual_users_schedule_goals": "Goals",
+  "virtual_users_schedule_min_hours": "At least every (hours)",
+  "virtual_users_schedule_max_hours": "At most every (hours)",
+  "virtual_users_schedule_next": "Next run around {when}",
+  "virtual_users_schedule_off": "Not running on its own.",
+  "virtual_users_schedule_save": "Save cadence"
 }

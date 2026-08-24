@@ -13,10 +13,19 @@ const EXAMPLE =
   "definePersonas({ shopper: { name: 'Shopper', disposition: 'careless', goals: [...] } })"
 
 /**
- * The virtual users reading surface: who is declared, and what each one would
- * do if it were run. Deliberately not a run view — a run happens against a real
- * stage, over real auth, from the CLI or from Fabric, and pretending otherwise
- * here would put a button on something that spends money.
+ * The virtual users screen: who is declared, what each one would do if it were
+ * run, what happened when they were, and whether any of them keeps going on its
+ * own.
+ *
+ * The reading half is built from declarations alone and needs nothing wired.
+ * The rest needs a store, and says so rather than failing: an application with
+ * no `virtualUserRunStore` has no runs, and one with no
+ * `virtualUserScheduleStore` has no cadences, which are true answers.
+ *
+ * Both of the controls here spend money, which is why neither is a plain
+ * button. Running acts once, with whoever clicked it watching. A cadence keeps
+ * acting with nobody there, so it is off until somebody turns it on and every
+ * field is shown against what the persona declares.
  */
 export const VirtualUsersWorkspace: React.FC = () => {
   const { users, selected, setSelectedId, loading } = useVirtualUsers()
