@@ -325,7 +325,9 @@ or not the note says `built`.
    for working on an empty state the test data would hide). Because reset always
    arrives at a database it just wiped, **the seed file is plain `INSERT`s** — no
    `ON CONFLICT DO NOTHING`, no `INSERT OR IGNORE`. Nothing ever applies it
-   twice, so it never has to defend itself.
+   twice, so it never has to defend itself. It is also **local only** — no deploy
+   applies it, so anything the app would be broken without in production is
+   configuration and belongs in a migration, not here.
    Do this generously and do it now: an empty app demos badly and critiques
    badly, and you cannot judge a screen's hierarchy, overflow, or truncation
    against zero rows. Seed rows each persona sees differently — with an ownership
