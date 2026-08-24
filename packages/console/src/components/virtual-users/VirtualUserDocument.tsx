@@ -15,6 +15,7 @@ import { m } from '@/i18n/messages'
 import type { VirtualUserDisposition } from '@pikku/core/virtual-user'
 import type { VirtualUserDoc } from './virtual-user-model'
 import { VirtualUserRuns } from './VirtualUserRuns'
+import { VirtualUserSchedule } from './VirtualUserSchedule'
 import styles from './virtual-users.module.css'
 
 /** One line saying what this disposition is, in a person's terms. */
@@ -623,6 +624,12 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
             </Text>
           )}
         </Section>
+
+        <VirtualUserSchedule
+          persona={user.id}
+          declaredDisposition={user.disposition}
+          declaredGoals={user.goals}
+        />
 
         <VirtualUserRuns persona={user.id} />
 

@@ -5742,6 +5742,7 @@ __metadata:
     "@types/react": "npm:^19"
     react: "npm:^19"
     react-dom: "npm:^19"
+    tsx: "npm:^4.23.12"
     typescript: "npm:^6.0.3"
   peerDependencies:
     "@mantine/core": ^9.2.1
