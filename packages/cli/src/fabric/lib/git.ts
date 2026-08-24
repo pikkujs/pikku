@@ -16,9 +16,41 @@ export class GitError extends Error {
   }
 }
 
+/**
+ * Repository-location variables git exports to its hooks. `git push` from a
+ * worktree sets GIT_DIR, and a hook's children inherit it — after which git
+ * answers about the hook's repository no matter which directory it is run in,
+ * so a probe given a `cwd` outside any repository reports that repository's
+ * state instead of "no repository". Every probe below picks its repository by
+ * `cwd`, so the inherited pointer is always wrong here and is dropped.
+ */
+const REPO_LOCATION_ENV = [
+  'GIT_DIR',
+  'GIT_COMMON_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_PREFIX',
+  'GIT_NAMESPACE',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_CEILING_DIRECTORIES',
+] as const
+
+function envWithoutInheritedRepo(): NodeJS.ProcessEnv {
+  const env = { ...process.env }
+  for (const key of REPO_LOCATION_ENV) {
+    delete env[key]
+  }
+  return env
+}
+
 function git(args: string[], cwd = process.cwd()): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn('git', args, {
+      cwd,
+      env: envWithoutInheritedRepo(),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
     let stdout = ''
     let stderr = ''
     child.stdout.on('data', (b) => (stdout += b.toString()))
