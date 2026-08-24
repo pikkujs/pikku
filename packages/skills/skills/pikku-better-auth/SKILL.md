@@ -247,6 +247,111 @@ create a session for a banned user, lapsing an expired ban as it goes. It makes
 no authorization decision — who may ban is decided by `admin:users:ban` — so it
 never needs to know about scopes or roles.
 
+### The plugins `@pikku/better-auth` ships
+
+Five, all imported from the package root and passed to `betterAuth({ plugins })`
+like any other. None is automatic — an app wires the ones it needs.
+
+| Plugin              | Plugin `id`        | Adds                                                                    | Use it when                                                   |
+| ------------------- | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `ban()`             | `pikku-ban`        | `user.banned/banReason/banExpires`                                      | You ban users (the schema + enforcement half of the above)    |
+| `actor()`           | `actor`            | `POST /sign-in/actor`, `user.actor`                                     | Scenarios or a dev switcher sign in as a persona              |
+| `credentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
+| `delegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
+| `fabric()`          | `fabric`           | `POST /sign-in/fabric`                                                  | A Fabric-deployed app lets a control-plane operator in        |
+
+The plugin's `id` is what better-auth stores; the **export name** is what the
+inspector reads off your `plugins` array and what generated metadata is keyed
+by, so the two differ for `ban` and `delegatedAuth`.
+
+#### `credentialOAuth()` — link API credentials, not identities
+
+```typescript
+credentialOAuth({
+  config: [
+    {
+      providerId: 'github',
+      type: 'per-user',
+      clientId,
+      clientSecret,
+      authorizationUrl,
+      tokenUrl,
+      scopes: ['repo'],
+    },
+    { providerId: 'slack', type: 'singleton' /* … */ },
+  ],
+  scopeService,
+  logger,
+})
+```
+
+Wraps better-auth's `genericOAuth` to keep its token exchange and refresh, and
+replaces only the two identity-bound endpoints. `genericOAuth`'s own
+`/oauth2/link` models an identity **provider**: it demands a userinfo response
+and refuses to link when the provider's email differs from the user's. A
+credential is not an identity — most credential providers expose only
+`/authorize` and `/token` — so the account row is keyed on _whose_ credential it
+is (`accountId` = the linking user's id), making `(providerId, userId)` unique
+by construction. Tokens land in better-auth's `account` table, so
+`auth.api.getAccessToken()` refreshes them on read.
+
+`type` decides the blast radius:
+
+- **`per-user`** — every user links their own. Signed in is enough.
+- **`singleton`** — one token the whole app shares, owned by a reserved
+  `pikku-platform` user row created on demand. Rebinding it changes the
+  credential for _everyone_, so it is gated on `admin:credentials:link` (or the
+  `admin` root above it), and **fails closed** with no `ScopeService`. Override
+  the whole gate with `canLinkSingleton`.
+
+An undeclared `providerId` is a 404; an anonymous caller a 401; a refused
+singleton a 403 that leaves no platform user behind.
+
+#### `delegatedAuth()` — the upstream API is the identity provider
+
+```typescript
+delegatedAuth({
+  authenticate: async ({ email, password, apiKey }) => upstream.login(...),
+  storeCredential: (userId, identity) =>
+    credentialService.set('acme', identity.credential, userId),
+  defaultRole: 'member',
+  mapRole: (upstreamRole) => ROLE_MAP[upstreamRole],
+  scopeService,
+  logger,
+})
+```
+
+`POST /sign-in/delegated` forwards the credentials the user already has to
+`authenticate`. On success it JIT-provisions a real user row (email-keyed and
+`emailVerified` — the upstream just verified them), links it via an `account`
+row (`providerId: 'delegated'`, `accountId: externalId`), persists the upstream
+token **before** minting the session, and returns a normal session cookie.
+Passwords are never stored. Exactly one upstream per app: additional imported
+APIs are linked integrations (`credentialOAuth`), not extra login methods.
+
+A resolved role is granted through the `ScopeService` as a pikku role, so it
+lands in `pikku_user_role` rather than on a column. A role the app never
+defined is a provisioning gap, not a sign-in failure — the grant is dropped with
+a warning and the user still gets in.
+
+`storeCredential` failing, by contrast, **fails the sign-in**: every proxied
+call would be dead anyway.
+
+#### `fabric()` — control-plane operator sign-in
+
+```typescript
+fabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY, scopeService, logger })
+```
+
+`POST /sign-in/fabric` verifies a short-lived RS256 token that the Fabric
+control plane signed for an operator session, then signs them into a synthetic
+`fabric-<id>@fabric.internal` row holding the `admin` scope. Asymmetric on
+purpose: the app holds only the public key, so it can never forge an operator
+login, and the same `FABRIC_AUTH_PUBLIC_KEY` is distributed to every stage with
+no per-environment secret. A missing or empty key disables the endpoint, and a
+token whose `purpose` claim is not `fabric-admin` is rejected. Without a
+`ScopeService` the operator signs in holding nothing.
+
 ### 2. Production database adapter
 
 For real deployments swap `memoryAdapter` for the Kysely adapter backed by an injected DB. Better Auth owns its own tables (`user`, `session`, `account`, `verification`, plus plugin tables) — generate its schema with `npx @better-auth/cli generate` and apply it as a migration.
@@ -424,7 +529,10 @@ The deployment creates them itself, from its own lifecycle:
 
 ```ts
 import { provisionPersonas } from '@pikku/better-auth'
-import { personaConfigs, personaEnvironments } from '#pikku/pikku-personas.gen.js'
+import {
+  personaConfigs,
+  personaEnvironments,
+} from '#pikku/pikku-personas.gen.js'
 
 await provisionPersonas(singletonServices, {
   personas: personaConfigs,
@@ -437,7 +545,7 @@ connection to a deployed environment's database — it resolves one from the loc
 project config — so a `pikku persona sync staging` that wrote rows would write
 them to whatever database the checkout happened to point at. `pikku persona sync
 <environment>` still exists, and reports who that environment will provision and
-why anyone was skipped, which is what you run *before* the deploy.
+why anyone was skipped, which is what you run _before_ the deploy.
 
 It creates missing accounts as `actor: true`, applies the roles each persona
 declares, and is additive — it never revokes. `PIKKU_ENV` (or an explicit
