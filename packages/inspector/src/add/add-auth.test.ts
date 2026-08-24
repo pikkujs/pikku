@@ -217,6 +217,40 @@ describe('addAuth inspector', () => {
     }
   })
 
+  test('refuses better-auth admin() and points at ban()', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-admin-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        "import { admin, bearer } from 'better-auth/plugins'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    plugins: [bearer(), admin()],',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      await assert.rejects(
+        () => inspect(makeLogger(criticals), [file], { rootDir }),
+        (error: Error) => {
+          assert.match(error.message, /admin\(\) plugin is not supported/)
+          assert.match(error.message, /ban\(\)/)
+          assert.match(error.message, /@pikku\/addon-admin/)
+          return true
+        }
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('records no plugins when the plugins array is absent', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-noplugins-'))
     const file = join(rootDir, 'auth.ts')
