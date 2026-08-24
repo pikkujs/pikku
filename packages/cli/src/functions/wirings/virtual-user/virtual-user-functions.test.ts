@@ -173,7 +173,7 @@ describe('serializeVirtualUserFunctions', () => {
   })
 
   test('refuses every disposition but the accountable one in production', () => {
-    assert.match(out, /config\.nodeEnv === 'production'/)
+    assert.match(out, /nodeEnv === 'production'/)
     assert.match(out, /disposition !== PRODUCTION_DISPOSITION/)
   })
 
@@ -206,6 +206,16 @@ describe('serializeVirtualUserFunctions', () => {
     )
     const execute = out.slice(out.indexOf('executeVirtualUserRun ='))
     assert.doesNotMatch(execute, /expose: true/)
+  })
+
+  // An app that mounts auth somewhere other than the root has no other way to
+  // say so, and the run would otherwise sign in against a 404 and spend its
+  // whole budget wondering why every call fails.
+  test('signs in and calls through the paths a scenario run uses', () => {
+    assert.match(out, /SCENARIO_SIGN_IN_PATH/)
+    assert.match(out, /SCENARIO_RPC_PATH/)
+    assert.match(out, /signInPath:/)
+    assert.match(out, /rpcPath:/)
   })
 
   test('imports the generated personas rather than declaring any', () => {

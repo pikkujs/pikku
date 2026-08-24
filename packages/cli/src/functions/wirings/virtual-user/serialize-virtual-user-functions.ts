@@ -314,6 +314,16 @@ const SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
 const MODEL_VARIABLE = 'VIRTUAL_USER_MODEL'
 
 /**
+ * The same two variables a scenario run reads, because a virtual user signs in
+ * and calls through exactly the doors a scenario does. An app that mounts auth
+ * somewhere other than the root — \`/api/auth\` is the common one — has no other
+ * way to say so, and without them the run signs in against a 404 and spends its
+ * whole budget thinking about why nothing works.
+ */
+const SIGN_IN_PATH_VARIABLE = 'SCENARIO_SIGN_IN_PATH'
+const RPC_PATH_VARIABLE = 'SCENARIO_RPC_PATH'
+
+/**
  * One run on the wire. Findings and intents are free-form by design — the
  * engine records what it noticed, not a fixed row shape — so they cross as the
  * schema's open objects rather than being narrowed to whatever kinds exist
@@ -798,7 +808,13 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
         agentsMeta: await metaService.getAgentsMeta(),
       })
 
-      const signedIn = createPersonas({ apiUrl, secret, model })
+      const signedIn = createPersonas({
+        apiUrl,
+        secret,
+        model,
+        signInPath: (await variables.get(SIGN_IN_PATH_VARIABLE)) ?? undefined,
+        rpcPath: (await variables.get(RPC_PATH_VARIABLE)) ?? undefined,
+      })
       const target = signedIn[personaId as keyof typeof signedIn]
       if (!target) {
         throw new Error(\`Persona "\${personaId}" cannot sign in\`)
