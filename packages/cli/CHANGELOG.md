@@ -1,3 +1,175 @@
+## 0.12.119
+
+### Patch Changes
+
+- c7b9e8e: Make `@pikku/ws` and `ws` optional peer dependencies instead of dependencies, and resolve them from the project rather than from the CLI.
+
+  `@pikku/ws` peers on a `@pikku/core` range, so a copy sitting in the CLI's own tree gets paired with the CLI's core rather than the project's — the skew surfaced as `Cannot find module '@pikku/core/ecosystem'` from a package the project never imported. As an optional peer resolved against the project's `package.json`, there is one core in play, and a Bun project (which serves WebSockets natively through `@pikku/bun-server`) no longer installs a Node WebSocket stack it cannot use.
+
+  `pikku dev` and `pikku serve` under Node now start over plain HTTP when the packages are absent, logging why, and `pikku validate` reports `websocket-deps-missing` as an error for a project that wires channels without them.
+
+- 0b1bf53: `pikku dev` turns actor quick login on and mints its secret; `pikku serve` never
+  does
+
+  Which command is running is the thing that knows whether "sign in as <persona>"
+  should work, so the two server commands now say so rather than leaving it to
+  whatever the environment happens to contain.
+
+  `pikku dev` sets `PIKKU_DEV_ACTOR_SIGN_IN` before it loads the project and, if no
+  actor secret is set, mints a cryptographically random one for the run under both
+  `SCENARIO_ACTOR_SECRET` and the `VITE_`-prefixed copy the dev frontend can
+  actually read — only prefixed variables reach `import.meta.env`, and the switcher
+  runs in the browser. Requiring every contributor to hand-manage a secret for a
+  server that is trusted with the database anyway bought nothing and cost setup
+  friction on every machine. An explicitly-set secret always wins: a project
+  pointing its scenario runs and its dev server at one value has to keep that
+  value. The minted one lives only in this process's environment, so it is gone
+  when the server stops and yesterday's cannot sign anything in today. Both cases
+  are logged, naming where the secret came from — the previous silence is what made
+  a missing control unanswerable from outside the container. Where the two names
+  disagree the command says so instead of picking one quietly, because that
+  disagreement presents as "the switcher signs in nowhere".
+
+  `pikku serve` is the production server command and does the opposite: it clears
+  the marker outright, so an inherited environment cannot switch passwordless
+  sign-in on behind the operator, and it warns when it had something to clear. What
+  it deliberately leaves alone is `PIKKU_ALLOW_ACTOR_SIGN_IN` — scenario suites have
+  to be able to run against a deployed stage, and that opt-in is the supported way
+  to say so.
+
+  `pikku validate`'s fix hint for a project with personas but no actor sign-in no
+  longer tells people to control the endpoint by withholding the secret, which is
+  no longer how it is controlled, and the `pikku-better-auth` skill documents the
+  gate, the two escape hatches, and the two distinct refusals.
+
+- 0b1bf53: Stop the fabric git probes answering about the wrong repository. `git push` from a worktree exports `GIT_DIR` to every hook, and a hook's children inherit it — `GIT_DIR` outranks the process's directory, so `isGitRepo`/`isTracked` and the deploy safety checks reported the hook's repository no matter which `cwd` they were given. `fabric validate` run from a pre-push hook then failed `fabric-config-untracked` against files it never looked at. Each probe picks its repository by `cwd`, so the inherited pointer is dropped along with the other repository-location variables.
+- 0b1bf53: Provision the app a persona signs into as a grant, not just a declaration.
+
+  `CorePersona.app` decided where a browser run navigated and nothing else, so
+  "which frontend may this person reach" was a fact only the test runner held and
+  the deployment could not enforce. It is now a scope: the CLI derives an `app`
+  tree from the apps the personas name, and `provisionPersonas` grants
+  `app:<name>` alongside the roles.
+
+  Carried as a scope rather than a per-app column so it resolves at the session
+  boundary like every other grant — revocable at runtime from the console, not
+  inherited by a restricted API key, and one query for which apps a user may
+  reach instead of a migration per frontend. A single-frontend product declares
+  nothing and is unaffected.
+
+  `app` is reserved as a scope root: a `defineScope` call that also declares it
+  now fails the build rather than shadowing the derived tree.
+
+- 0b1bf53: Personas are provisioned by the deployment, not by the CLI
+
+  Signing a persona in was what created their account: the actor endpoint upserted
+  an `actor: true` row on first sign-in and nothing else did. That is now the wrong
+  way round — creating an actor row is a power the endpoint only has under
+  `pikku dev`, so a stage whose sign-in is shut could not be provisioned at all,
+  and one whose sign-in is open would have had to accept identity minting as the
+  price of running scenarios.
+
+  The obvious fix was to have `pikku persona sync <environment>` write the rows
+  itself, and that fix is wrong in a way worth naming: the CLI has no connection to
+  a deployed environment's database. It resolves one from the local project config,
+  so `pikku persona sync staging` would read staging's API and write whatever
+  database the checkout happens to point at — right for a developer's own stage,
+  silently wrong everywhere else.
+
+  So provisioning happens where the database already is. `@pikku/better-auth`
+  exports `provisionPersonas`, which an app calls from its server lifecycle:
+
+  ```ts
+  import { provisionPersonas } from '@pikku/better-auth'
+  import {
+    personaConfigs,
+    personaEnvironments,
+  } from '#pikku/pikku-personas.gen.js'
+
+  await provisionPersonas(singletonServices, {
+    personas: personaConfigs,
+    environments: personaEnvironments,
+  })
+  ```
+
+  It creates each missing account through better-auth's own adapter, applies the
+  roles the persona declares, and is additive — it never revokes. A deploy carries
+  its personas with it, and no credential has to travel to reach a database.
+
+  Two properties carry over, and one is new:
+
+  - **A real user's address is refused**, rather than being granted the persona's
+    roles. If a row exists for that address without `actor`, provisioning stops and
+    names the persona, because the alternative is silently handing somebody else's
+    account an `admin` grant.
+  - **The environment rule still decides who is provisioned.** The same
+    `personaEnvironmentRefusal` that decides who may _run_ against an environment
+    decides who gets an account in it — two rules would drift, and the one that
+    drifted would leave an account standing in production for a persona the engine
+    then refuses to sign in. The generated personas file now carries
+    `personaEnvironments` so the rule can be applied inside the bundle; only the
+    `production` flag is projected into it, because an environment's `apiUrl` and
+    paths belong to the machine running `pikku scenario`.
+  - **A persona you delete leaves an account behind, and now you hear about it.**
+    Additive provisioning has a hole: the account keeps every role it was granted,
+    and the actor endpoint authenticates on the `actor` column alone without
+    consulting the declaration, so an `admin` persona nobody declares any more is
+    still a live way in wherever that endpoint is open. Provisioning warns about
+    every actor account no declared persona claims; `orphans: 'ban'` shuts them
+    through the same `banned` column the console's ban RPC writes, revoking their
+    sessions and leaving the row, its grants and its history intact — and lifting
+    the ban again by itself if the persona comes back. `report` stays the default
+    because a rolling deploy provisions from the new declaration while the old
+    replica is still serving the previous one.
+  - **`pikku persona sync <environment>` now reports rather than writes.** It
+    prints who the environment will provision, with which roles, and why anyone was
+    skipped — which is what tells you _before_ a deploy whether the accounts you
+    expect will appear. It needs no `SCENARIO_ACTOR_SECRET` and no database.
+
+- 0b1bf53: Refuse better-auth's `admin()` plugin, and point at `ban()`.
+
+  `admin()` authorizes its endpoints against a `user.role` column while pikku
+  authorizes on scopes, so wiring it means running two authorization models and
+  projecting one onto the other — coarsely, since any single `admin:users:*` scope
+  has to project to `role='admin'` and thereby unlocks every one of its endpoints
+  underneath. Pikku dropped that projection when user management moved to
+  `@pikku/addon-admin`'s scoped RPCs, so nothing reads the column any more.
+
+  The inspector now throws when `admin()` appears in a `betterAuth({ plugins })`
+  array, naming the replacement:
+
+  ```ts
+  import { ban } from '@pikku/better-auth'
+  betterAuth({ plugins: [ban()] })
+  ```
+
+  `ban()` keeps the one capability `admin()` had that pikku cannot supply from
+  outside better-auth: the `banned`/`banReason`/`banExpires` columns and the
+  session hook that refuses a banned user a session.
+
+  `pikku validate` reports the same thing without a prebuild, and additionally
+  warns about the quieter half of the migration — an app that dropped `admin()`
+  and never wired `ban()`, which keeps its ban columns and its ban UI while
+  silently enforcing nothing.
+
+  Both resolve the plugin's provenance before applying the policy: the entry has
+  to be better-auth's `admin`, imported from `better-auth/plugins` — by name, by
+  alias or through a namespace — and actually present in the `plugins` array. A
+  project's own helper called `admin` passes, and an import left behind after the
+  call was removed configures nothing.
+
+- Updated dependencies [0b1bf53]
+- Updated dependencies [0b1bf53]
+- Updated dependencies [0b1bf53]
+- Updated dependencies [8519a73]
+- Updated dependencies [0b1bf53]
+- Updated dependencies [0b1bf53]
+- Updated dependencies [0b1bf53]
+  - @pikku/better-auth@0.12.30
+  - @pikku/skills@0.12.16
+  - @pikku/core@0.12.94
+  - @pikku/inspector@0.12.64
+
 ## 0.12.118
 
 ### Patch Changes

@@ -1,5 +1,158 @@
 # @pikku/better-auth
 
+## 0.12.30
+
+### Patch Changes
+
+- 0b1bf53: Actor sign-in gates on which command is running, not on whether a secret happens
+  to be set
+
+  `actor()` decided whether to work by asking "is a secret configured". That
+  question is wrong in both directions, and both directions cost something real.
+
+  In development it charges every contributor a hand-managed `SCENARIO_ACTOR_SECRET`
+  for a server that is never production, and when they skip it the frontend renders
+  no quick-login control — a state indistinguishable from "no personas declared" or
+  "persona metadata unreadable". A consumer app ended up baking a `VITE_DEV_ACTOR_SOURCE`
+  marker into its bundle purely to tell those three apart from outside the
+  container, which is a diagnostic that only exists because the gate swallowed its
+  own reason.
+
+  In production it does the opposite. A `SCENARIO_ACTOR_SECRET` that reached a
+  deployed environment — an inherited `.env`, an image built from a dev shell —
+  silently enabled passwordless sign-in as any declared persona, provisioning
+  having granted those personas their real roles. Nothing said so.
+
+  So the gate now reads `PIKKU_DEV_ACTOR_SIGN_IN`, a positive marker `pikku dev`
+  sets on its own process. It is deliberately not `NODE_ENV`. `NODE_ENV` is written
+  by bundlers, test runners and process managers, and it is simply absent in plenty
+  of real deployments, so `NODE_ENV !== 'production'` fails **open** in exactly the
+  environments where being wrong is expensive. A marker fails closed: only the dev
+  command sets it, and its absence is the answer everywhere else.
+
+  Scenario and e2e suites do legitimately sign actors in against a deployed stage,
+  so a hard "dev only" rule would have deleted the scenarios feature rather than
+  secured it. One escape hatch, deliberately worded:
+  `PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in`. The accepted value is a
+  sentence rather than `true` so the hatch cannot be reached by habit, and any
+  other value is ignored _and_ warned about, naming the literal that would have
+  worked — a near miss means somebody meant to enable this and believes they did.
+
+  There is deliberately no build-time equivalent. A `allowOutsideDev` option would
+  be compiled into the bundle, so nothing about a running deployment would tell you
+  whether its actor endpoint is open, and `pikku serve` could clear a marker but
+  never a constant. An env var is the auditable form: greppable across
+  deployments, visible where the deployment is configured, and clearable.
+
+  **Signing in and provisioning are now separate powers.** Creating an
+  `actor: true` row for an address that has none requires `pikku dev`
+  specifically; the opt-in permits authentication only, refusing an unknown
+  address with `No actor account exists for that address`. So a stage that must
+  run scenarios can be signed into as the personas provisioned there without also
+  becoming a place where anyone holding the secret can mint identities. The
+  endpoint was the only thing that created actor rows, so the deployment now
+  writes them itself at boot through `provisionPersonas` — see its own changeset.
+
+  Nothing here fails quietly. An open gate logs which branch opened it. A shut gate
+  with a secret wired to it warns, because that is a misconfiguration rather than a
+  no-op — at wiring time for a plain-string secret, and on the first refused request
+  for a lazy one, since resolving a lazy secret at boot would mean a vault round-trip
+  for a value the process may never need. A refusal returns
+  `Actor sign-in is disabled outside \`pikku dev\``, distinct from the existing
+`Actor sign-in is not configured`, so a caller can tell "this stage does not run
+  scenarios" from "this stage meant to and lost its secret".
+
+  The `user.actor` column is still declared when the gate is shut. A schema that
+  differs between development and production would be a worse failure than the one
+  being closed.
+
+- 0b1bf53: Export `delegatedAuth` from the package barrel, so `import { delegatedAuth } from '@pikku/better-auth'` resolves — only its types were re-exported, leaving the factory reachable from its own module alone. Refresh `PLUGIN_REGISTRY`: drop `admin`, which pikku refuses, and add the shipped-but-unlisted `ban` and `credentialOAuth`.
+- 0b1bf53: Provision the app a persona signs into as a grant, not just a declaration.
+
+  `CorePersona.app` decided where a browser run navigated and nothing else, so
+  "which frontend may this person reach" was a fact only the test runner held and
+  the deployment could not enforce. It is now a scope: the CLI derives an `app`
+  tree from the apps the personas name, and `provisionPersonas` grants
+  `app:<name>` alongside the roles.
+
+  Carried as a scope rather than a per-app column so it resolves at the session
+  boundary like every other grant — revocable at runtime from the console, not
+  inherited by a restricted API key, and one query for which apps a user may
+  reach instead of a migration per frontend. A single-frontend product declares
+  nothing and is unaffected.
+
+  `app` is reserved as a scope root: a `defineScope` call that also declares it
+  now fails the build rather than shadowing the derived tree.
+
+- 0b1bf53: Personas are provisioned by the deployment, not by the CLI
+
+  Signing a persona in was what created their account: the actor endpoint upserted
+  an `actor: true` row on first sign-in and nothing else did. That is now the wrong
+  way round — creating an actor row is a power the endpoint only has under
+  `pikku dev`, so a stage whose sign-in is shut could not be provisioned at all,
+  and one whose sign-in is open would have had to accept identity minting as the
+  price of running scenarios.
+
+  The obvious fix was to have `pikku persona sync <environment>` write the rows
+  itself, and that fix is wrong in a way worth naming: the CLI has no connection to
+  a deployed environment's database. It resolves one from the local project config,
+  so `pikku persona sync staging` would read staging's API and write whatever
+  database the checkout happens to point at — right for a developer's own stage,
+  silently wrong everywhere else.
+
+  So provisioning happens where the database already is. `@pikku/better-auth`
+  exports `provisionPersonas`, which an app calls from its server lifecycle:
+
+  ```ts
+  import { provisionPersonas } from '@pikku/better-auth'
+  import {
+    personaConfigs,
+    personaEnvironments,
+  } from '#pikku/pikku-personas.gen.js'
+
+  await provisionPersonas(singletonServices, {
+    personas: personaConfigs,
+    environments: personaEnvironments,
+  })
+  ```
+
+  It creates each missing account through better-auth's own adapter, applies the
+  roles the persona declares, and is additive — it never revokes. A deploy carries
+  its personas with it, and no credential has to travel to reach a database.
+
+  Two properties carry over, and one is new:
+
+  - **A real user's address is refused**, rather than being granted the persona's
+    roles. If a row exists for that address without `actor`, provisioning stops and
+    names the persona, because the alternative is silently handing somebody else's
+    account an `admin` grant.
+  - **The environment rule still decides who is provisioned.** The same
+    `personaEnvironmentRefusal` that decides who may _run_ against an environment
+    decides who gets an account in it — two rules would drift, and the one that
+    drifted would leave an account standing in production for a persona the engine
+    then refuses to sign in. The generated personas file now carries
+    `personaEnvironments` so the rule can be applied inside the bundle; only the
+    `production` flag is projected into it, because an environment's `apiUrl` and
+    paths belong to the machine running `pikku scenario`.
+  - **A persona you delete leaves an account behind, and now you hear about it.**
+    Additive provisioning has a hole: the account keeps every role it was granted,
+    and the actor endpoint authenticates on the `actor` column alone without
+    consulting the declaration, so an `admin` persona nobody declares any more is
+    still a live way in wherever that endpoint is open. Provisioning warns about
+    every actor account no declared persona claims; `orphans: 'ban'` shuts them
+    through the same `banned` column the console's ban RPC writes, revoking their
+    sessions and leaving the row, its grants and its history intact — and lifting
+    the ban again by itself if the persona comes back. `report` stays the default
+    because a rolling deploy provisions from the new declaration while the old
+    replica is still serving the previous one.
+  - **`pikku persona sync <environment>` now reports rather than writes.** It
+    prints who the environment will provision, with which roles, and why anyone was
+    skipped — which is what tells you _before_ a deploy whether the accounts you
+    expect will appear. It needs no `SCENARIO_ACTOR_SECRET` and no database.
+
+- Updated dependencies [0b1bf53]
+  - @pikku/core@0.12.94
+
 ## 0.12.29
 
 ### Patch Changes
