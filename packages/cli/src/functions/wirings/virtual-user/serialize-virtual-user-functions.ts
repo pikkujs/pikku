@@ -214,6 +214,19 @@ const virtualUserScheduleFields = {
   nextRunAt: z.string(),
   lastRunId: z.string().nullable(),
   lastRunAt: z.string().nullable(),
+  /**
+   * What \`definePersonas()\` says about this persona now, alongside what the
+   * row is actually running.
+   *
+   * A schedule is turned on once and then outlives the declaration it was
+   * written from: someone edits \`personas.ts\`, redeploys, and the row keeps
+   * running last month's goals with nothing anywhere to say so. Both sides
+   * cross the wire so that difference is readable rather than inferred.
+   */
+  declared: z.object({
+    disposition: Disposition,
+    goals: z.array(z.string()),
+  }),
 }
 
 export const SetVirtualUserScheduleOutput = z.object(virtualUserScheduleFields)
@@ -534,27 +547,38 @@ export const getVirtualUserRunSteps = pikkuFunc({
  * what every other call here takes; the engine's own duration also accepts
  * \`'30m'\`, which nothing on this side ever writes.
  */
-const serializeSchedule = (schedule: VirtualUserScheduleRecord) => ({
-  persona: schedule.persona,
-  enabled: schedule.enabled,
-  disposition: schedule.disposition,
-  goals: schedule.goals,
-  budget: schedule.budget
-    ? {
-        steps: schedule.budget.steps,
-        mutations: schedule.budget.mutations,
-        durationMs:
-          typeof schedule.budget.duration === 'number'
-            ? schedule.budget.duration
-            : undefined,
-      }
-    : null,
-  minIntervalMs: schedule.minIntervalMs,
-  maxIntervalMs: schedule.maxIntervalMs,
-  nextRunAt: schedule.nextRunAt.toISOString(),
-  lastRunId: schedule.lastRunId,
-  lastRunAt: schedule.lastRunAt ? schedule.lastRunAt.toISOString() : null,
-})
+const serializeSchedule = (schedule: VirtualUserScheduleRecord) => {
+  const persona = personaConfigs[
+    schedule.persona as keyof typeof personaConfigs
+  ] as { goals?: string[]; disposition?: string } | undefined
+  const declared = {
+    disposition: (persona?.disposition ??
+      'realistic') as VirtualUserDisposition,
+    goals: persona?.goals ?? [],
+  }
+  return {
+    persona: schedule.persona,
+    enabled: schedule.enabled,
+    disposition: schedule.disposition,
+    goals: schedule.goals,
+    budget: schedule.budget
+      ? {
+          steps: schedule.budget.steps,
+          mutations: schedule.budget.mutations,
+          durationMs:
+            typeof schedule.budget.duration === 'number'
+              ? schedule.budget.duration
+              : undefined,
+        }
+      : null,
+    minIntervalMs: schedule.minIntervalMs,
+    maxIntervalMs: schedule.maxIntervalMs,
+    nextRunAt: schedule.nextRunAt.toISOString(),
+    lastRunId: schedule.lastRunId,
+    lastRunAt: schedule.lastRunAt ? schedule.lastRunAt.toISOString() : null,
+    declared,
+  }
+}
 
 export const setVirtualUserSchedule = pikkuFunc({
   tags: ['pikku'],
