@@ -11,8 +11,13 @@ import type { PathToNameAndType } from '../types.js'
  * that follow the scaffold's naming. A project that renamed the interface still
  * satisfies every required-type check and then resolves to no services at all,
  * which surfaces far downstream as PKU724 or as every service turning optional.
- * The import map carries the real name, and `getFilesAndMethods` already
- * rejects a second declaration — so taking the first entry is taking the only.
+ * The import map carries the real name, so no name matching is needed.
+ *
+ * A project is only ever meant to declare one of each: `getMetaTypes` records
+ * `More than one ... found` when it sees a second, which `checkRequiredTypes`
+ * then reports. That check is the caller's to run, and extraction happens
+ * first, so where two declarations do exist this takes the first in traversal
+ * order rather than diagnosing the ambiguity itself.
  */
 export const resolveCoreType = (
   typesLookup: Map<string, ts.Type[]>,

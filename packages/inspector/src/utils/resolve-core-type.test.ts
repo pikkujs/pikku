@@ -130,8 +130,11 @@ describe('service extraction resolves core types by declaration, not by name', (
     )
     state.singletonServicesTypeImportMap = new Map()
     state.wireServicesTypeImportMap = new Map()
-    state.serviceAggregation.allSingletonServices = []
-    state.serviceAggregation.allWireServices = []
+    // Left at their initial empty value on purpose: `extractAllServices` only
+    // assigns when a type resolves, so seeding them here would make the
+    // assertions below true no matter what it did. `typesLookup` still holds
+    // both interfaces under their conventional names — resolving one from
+    // there is exactly the bug this guards.
     aggregateRequiredServices(state)
     assert.deepEqual(state.serviceAggregation.allSingletonServices, [])
     assert.deepEqual(state.serviceAggregation.allWireServices, [])

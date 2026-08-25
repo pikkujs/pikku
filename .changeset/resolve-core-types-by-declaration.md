@@ -1,5 +1,6 @@
 ---
 '@pikku/inspector': patch
+'@pikku/cli': patch
 ---
 
 Resolve `Config`, `SingletonServices` and `Services` by declaration rather than
@@ -10,5 +11,9 @@ happens to use, but the lookup is keyed by whatever the project named its
 interface. A project that renamed one satisfied every required-type check and
 then resolved to no services at all, surfacing much later as PKU724 or as every
 singleton service turning optional. These now go through the import maps, which
-carry the real name, and `getFilesAndMethods` already rejects a second
-declaration — so the one it finds is the only one.
+carry the real name.
+
+`pikku workflow` carried the same lookup as its fallback when aggregation came
+back empty, so a project with a renamed interface was told
+`WORKFLOW_ORCHESTRATOR_NOT_CONFIGURED` while holding a perfectly good
+`workflowService`.
