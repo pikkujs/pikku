@@ -9,7 +9,10 @@ import { clearChannelMiddlewareCache } from '../wirings/channel/channel-middlewa
 import { httpRouter } from '../wirings/http/routers/http-router.js'
 import type { Logger } from '../services/logger.js'
 import type { CorePikkuFunctionConfig } from '../function/functions.types.js'
-import { createModuleRunner } from './module-runner.js'
+import {
+  createModuleRunner,
+  isTopLevelAwaitLimitation,
+} from './module-runner.js'
 
 export { reloadGeneratedMeta, reconcileAddonRegistry } from './reload-meta.js'
 
@@ -63,6 +66,23 @@ const isWatchedTsFile = (filename: string): boolean => {
   )
 }
 
+/** Not every reload failure is a mistake in the file: pikku's reloader emits
+ *  `cjs`, which has no way to express top-level `await`, so a perfectly valid
+ *  module can fail here forever. Saying so outright saves the reader from
+ *  hunting a bug that is not in their code. The stack is dropped in that case
+ *  because it points into esbuild rather than at anything actionable. */
+const reloadFailureReason = (error: Error): string => {
+  if (isTopLevelAwaitLimitation(error)) {
+    return (
+      `  ${error.message}\n` +
+      '  This is a pikku limitation, not a mistake in your file: the hot-reloader compiles to `cjs`, ' +
+      'which cannot express top-level `await`. Move the awaited work into a function, or restart the ' +
+      'dev server to pick the file up.'
+    )
+  }
+  return `  ${error.stack ?? error.message}`
+}
+
 export interface PikkuDevReloaderHandle {
   close: () => void
   /** Re-import every file changed since the last drain (post-codegen, once
@@ -96,13 +116,19 @@ export async function pikkuDevReloader(
     )
     const importPath = compiledFile ?? changedTsFile
 
-    const mod = await moduleRunner.run(importPath)
-    if (!mod) {
+    const result = await moduleRunner.run(importPath)
+    if (!result.ok) {
+      // Keeping the old code leaves the process disagreeing with the file on
+      // disk, and the only symptom is stale output from a function that looks
+      // correct in the editor — so the reason has to be printed here, where it
+      // is still known, rather than left for the developer to reconstruct.
       logger.error(
-        `Failed to import: ${relative(process.cwd(), importPath)} (keeping old code)`
+        `Failed to import: ${relative(process.cwd(), importPath)} (keeping old code)\n` +
+          reloadFailureReason(result.error)
       )
       return
     }
+    const mod = result.exports
 
     // knowledge: decisions/internals/hot-reload-writes-into-the-function-map-captured-at-startup.md
     for (const [exportName, exportValue] of Object.entries(mod)) {
