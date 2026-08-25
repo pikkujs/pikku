@@ -2495,7 +2495,10 @@ describe('deployed frontend API base (live validate.function)', () => {
       const f = result.findings.find(
         (f) => f.id === 'frontend-localhost-url-web'
       )
-      assert.ok(f, `expected the bare-URL finding, got: ${ids(result.findings)}`)
+      assert.ok(
+        f,
+        `expected the bare-URL finding, got: ${ids(result.findings)}`
+      )
       assert.strictEqual(f!.severity, 'error')
       assert.match(f!.message, /src\/lib\/api\.ts/)
     } finally {
@@ -2539,7 +2542,10 @@ describe('deployed frontend API base (live validate.function)', () => {
       const f = result.findings.find(
         (f) => f.id === 'frontend-api-base-not-derived-web'
       )
-      assert.ok(f, `expected the derivation finding, got: ${ids(result.findings)}`)
+      assert.ok(
+        f,
+        `expected the derivation finding, got: ${ids(result.findings)}`
+      )
       assert.strictEqual(f!.severity, 'error')
       assert.match(f!.message, /VITE_API_URL/)
     } finally {
@@ -2581,7 +2587,10 @@ describe('deployed frontend API base (live validate.function)', () => {
       const f = result.findings.find(
         (f) => f.id === 'frontend-api-base-not-derived-web'
       )
-      assert.ok(f, `expected the derivation finding, got: ${ids(result.findings)}`)
+      assert.ok(
+        f,
+        `expected the derivation finding, got: ${ids(result.findings)}`
+      )
       assert.match(f!.message, /NEXT_PUBLIC_API_BASE/)
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -2648,10 +2657,13 @@ describe('scenario steps vs the message catalogue (live validate.function)', () 
       type: 'module',
       dependencies: { react: '^19.0.0' },
     })
-    await writeJson(join(root, 'apps', 'web', 'project.inlang', 'settings.json'), {
-      baseLocale: 'en',
-      locales: ['en', 'de'],
-    })
+    await writeJson(
+      join(root, 'apps', 'web', 'project.inlang', 'settings.json'),
+      {
+        baseLocale: 'en',
+        locales: ['en', 'de'],
+      }
+    )
     await writeJson(join(root, 'apps', 'web', 'messages', 'en.json'), messages)
   }
 
@@ -2762,6 +2774,80 @@ describe('scenario steps vs the message catalogue (live validate.function)', () 
         [],
         `expected no finding, got: ${ids(result.findings)}`
       )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('an app whose baseLocale is not English (live validate.function)', () => {
+  const writeInlangApp = async (
+    root: string,
+    settings: Record<string, unknown>,
+    catalogueLocale: string
+  ) => {
+    const app = join(root, 'apps', 'web')
+    await mkdir(join(app, 'project.inlang'), { recursive: true })
+    await mkdir(join(app, 'messages'), { recursive: true })
+    await writeJson(join(app, 'package.json'), {
+      name: '@project/web',
+      type: 'module',
+      dependencies: { react: '^19.0.0' },
+    })
+    await writeJson(join(app, 'project.inlang', 'settings.json'), settings)
+    await writeJson(join(app, 'messages', `${catalogueLocale}.json`), {
+      jobs_apply_fullname: 'Full Name',
+    })
+  }
+
+  const baseLocaleFindings = (findings: Array<{ id: string }>) =>
+    findings.filter((f) => f.id.startsWith('app-base-locale-not-english-'))
+
+  test('baseLocale "de" → warn pointing at defaultLocale instead', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeInlangApp(tmp, { baseLocale: 'de', locales: ['de'] }, 'de')
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = baseLocaleFindings(result.findings)
+      assert.ok(finding, 'expected an app-base-locale-not-english finding')
+      assert.strictEqual(finding!.id, 'app-base-locale-not-english-web')
+      assert.strictEqual(finding!.severity, 'warn')
+      // The fix has to name the setting that actually serves a language, or
+      // the reader repoints baseLocale again and lands back here.
+      assert.match(finding!.fixHint, /"defaultLocale": "de"/)
+      assert.match(finding!.fixHint, /"baseLocale": "en"/)
+      // A project already keyed in German is a re-key, not a rename, and the
+      // hint has to say so before someone tries it as a one-line edit.
+      assert.match(finding!.fixHint, /re-key, not a rename/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('baseLocale "en" with a second locale → no finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeInlangApp(
+        tmp,
+        { baseLocale: 'en', locales: ['en', 'de'] },
+        'en'
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(baseLocaleFindings(result.findings), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('an omitted baseLocale defaults to en and does not warn', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeInlangApp(tmp, { locales: ['en'] }, 'en')
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(baseLocaleFindings(result.findings), [])
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

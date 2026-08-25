@@ -41,6 +41,13 @@ schemas (`yarn pikku meta functions get <id>`) or workflow steps
 **Capability rule:** do not introduce new wires of a type whose
 `capabilities.<type>` is `false` unless the user explicitly asked for it.
 
+**Language rule:** read `locale` in `pikku.config.json` (default `en`). It is
+the language of every `description`, `title` and step `template` you author —
+the meta the Pikku Console renders back to the team. It renames nothing:
+functions, components, types, files, tables and columns are English in every
+project, and what the app says to its users is the message catalogue. See
+`pikku-concepts` → _What Language You Write In_.
+
 ## Stage 2 — State intent in plain English (BEFORE writing code)
 
 Before touching any files, give the user one paragraph stating exactly what

@@ -11,9 +11,80 @@ installGroups: [client, fabric]
 Use this skill as an execution checklist, not reference material.
 
 1. Every user-facing string in a frontend is a message. Never hardcode display text — add a key to `messages/en.json` and render `m.the__key()`. This holds even when the app ships only English; the messages are the seam a second language slots into later.
-2. One `messages/<locale>.json` per language at the app root (NOT under `src/`), declared in `project.inlang/settings.json`. English (`en`) is `baseLocale` and the only locale until someone adds another.
+2. One `messages/<locale>.json` per language at the app root (NOT under `src/`), declared in `project.inlang/settings.json`. English (`en`) is `baseLocale` and the only locale until someone adds another. **`baseLocale` stays `en` whatever language the product speaks** — see [The product's language is not the code's language](#the-products-language-is-not-the-codes-language), which is the first thing to read if the brief says the app is not in English.
 3. Messages compile to typed ESM functions in `src/paraglide/` (generated, self-gitignored — never edit or commit it). The Vite plugin compiles during `dev`/`build` with HMR on message edits; run the CLI compile only when you need `tsc` before Vite has ever run.
 4. Validate with the app's own `tsc` then its `build`. The deploy pipeline compiles Paraglide and runs each frontend's `tsc` before building it — an i18n mistake blocks the deploy.
+
+## The product's language is not the code's language
+
+A brief that says "the entire UI is German, no English strings visible anywhere"
+is a statement about **one** of three separate things, and reading it as a
+statement about the codebase is the single most expensive mistake available in
+this skill. Three axes:
+
+| Axis            | What it covers                                                                                          | What sets it                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Identifiers** | Function, component, type and file names; database tables and columns                                   | Nothing — always English, no setting                            |
+| **Meta**        | `description` / `name` / `title` / `template` authored inside the code, which the Pikku Console renders | `locale` in `pikku.config.json`, default `en`                   |
+| **Product UI**  | Every string the app shows a user                                                                       | `messages/<locale>.json` + `defaultLocale` — **this axis only** |
+
+A non-English product moves the third row and nothing else.
+
+### `baseLocale` stays `en`
+
+`baseLocale` in `project.inlang/settings.json` does not mean "the language the
+app is in". It names the message **source** — the catalogue every other locale is
+cloned from and translated against. Setting it to the product's language looks
+like it works, because the app does come up in that language, and then:
+
+- there is no `en.json`, so `--add-locale` has no catalogue to translate from
+- the app can never gain a second language without re-authoring every key
+- a message missing from a locale falls back to a catalogue nobody wrote
+
+The setting that actually decides what a first-time visitor sees is
+`defaultLocale`, held in `apps/app/src/i18n/active.json` in the Fabric app
+template and read by `src/i18n/config.ts`. It is deliberately a separate file
+from `settings.json` for exactly this reason — the source language and the
+served language are different questions.
+
+So a German medical portal is **three** settings, not one:
+
+```jsonc
+// project.inlang/settings.json — the source catalogue is English
+{ "baseLocale": "en", "locales": ["en", "de"] }
+
+// apps/app/src/i18n/active.json — what a visitor opens in
+{ "defaultLocale": "de" }
+
+// pikku.config.json — the language the team reads their Console in
+{ "locale": "de" }
+```
+
+In the Fabric template both of the first two have a command, so you rarely edit
+them by hand:
+
+```sh
+fabric i18n --add-locale de       # adds "de" to locales, seeds messages/de.json from en.json
+fabric i18n --default-locale de   # writes active.json — the app now OPENS in German
+```
+
+### The failure this is written from
+
+A real build, from this template. The brief said the UI was German; the agent
+set `baseLocale: "de"` with `locales: ["de"]` and no `en.json`, then carried the
+same reading into the code — RPC functions `getUebersicht` and
+`getPatientendetail`, components `Zeitstrahl` and `AufmerksamkeitStreifen`,
+helpers `datumDeutsch` and `voraussichtlichFertig`, database tables `vorgang`
+and `ereignis` with German columns.
+
+The German UI it was asked for needed none of that. It needed German **values**
+in a catalogue whose keys and source stayed English. What it got instead was a
+project that cannot add a second language and cannot be picked up by anyone who
+does not read German.
+
+If you find a project in this state, say so plainly rather than working around
+it: `baseLocale` cannot be repointed without re-keying every message, so it is a
+migration someone has to agree to, not a fix to slip in.
 
 ## The moving parts (starter-template layout)
 
@@ -109,9 +180,10 @@ The gate catches _invalid_ messages but not _inlined_ strings. The `@pikku/manti
 ## Adding a second language
 
 1. `messages/fr.json` mirroring `en.json`'s keys (translate the values, keep `{param}` names identical).
-2. Add `"fr"` to `locales` in `project.inlang/settings.json`.
+2. Add `"fr"` to `locales` in `project.inlang/settings.json`. **Leave `baseLocale` at `en`** — step 1 only works because there is an English catalogue to mirror.
 3. Recompile (restart/`vite dev` or the CLI compile). A locale file missing keys falls back to the base locale per message.
 4. Content is reachable via the `/<lang>` URL prefix (`detectLocale` already resolves it); the base locale needs no prefix. Expose the switcher via `useLocale().setLocale`.
+5. Only if the app should **open** in the new language rather than merely offer it: set `defaultLocale` (`active.json` / `fabric i18n --default-locale fr`). Adding a locale and changing the default are different asks — do the second only when asked.
 
 ## i18n debug mode (find inlined strings)
 
@@ -137,6 +209,9 @@ The wrapper alternative — a module that walks the namespace and pipes each mes
 ## What NOT to do
 
 - Don't hardcode display strings "just for now" — the message is the work.
+- Don't set `baseLocale` to anything but `en`, whatever language the product speaks. It names the source catalogue, and a project without one can never add a language. Set `defaultLocale` instead.
+- Don't let a non-English UI reach the identifiers. Functions, components, types, files, tables and columns are English in every project; the product's language lives in `messages/*.json` and nowhere else.
+- Don't translate message **keys**. `auth__login__title` stays English in `de.json`; only the value changes.
 - Don't edit or commit anything under `src/paraglide/` — it's regenerated; change `messages/*.json` instead.
 - **Don't wrap `m`.** No re-export module, no branding layer, no resolver. Components import `m` from `../paraglide/messages.js` and call it. `@pikku/react`'s `I18nString` is declared as `string & { readonly __brand: 'LocalizedString' }` — deliberately identical to Paraglide's own `LocalizedString` — so `m.some__key()` satisfies the `@pikku/mantine` `I18nNode` gate natively. A wrapper adds nothing and costs per-message tree-shaking.
 

@@ -52,6 +52,15 @@ it — one kind of person, or several?** Everything else you decide yourself.
 Do not ask about design, deployment, or scope. This is the quick mode; the
 defaults are the point.
 
+Do not ask about language either — take the defaults and note them in §6.
+Identifiers are English in every project, whatever the product's market;
+`locale` in `pikku.config.json` (the language of `description`/`title`/step
+`template`, which the Console renders) stays `en` unless the user already told
+you otherwise. If the request says the app's UI is not English, that is the
+message catalogue only: add the locale and set `defaultLocale`, and leave
+`baseLocale` at `en`. `pikku-build-app` §1a has the three axes in full; getting
+them confused is how a project ends up unable to add a second language.
+
 ## 2. Personas — 60 seconds, not optional
 
 `packages/functions/src/personas.ts` ships with a `visitor`. Add one persona per
