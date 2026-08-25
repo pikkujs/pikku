@@ -50,13 +50,8 @@ export const pikkuConsoleGetVariable = pikkuFunc({
     if (!exists) {
       return { exists: false, value: null }
     }
-    try {
-      const value = await variables.get(variableId)
-      return { exists: true, value }
-    } catch {
-      const value = await variables.get(variableId)
-      return { exists: true, value }
-    }
+    const value = await variables.get(variableId)
+    return { exists: true, value }
   },
 })
 
@@ -67,11 +62,7 @@ export const pikkuConsoleSetVariable = pikkuFunc({
   input: SetVariable,
   output: Success,
   func: async ({ variables }, { variableId, value }) => {
-    if (typeof value === 'string') {
-      await variables.set(variableId, value)
-    } else {
-      await variables.set(variableId, value)
-    }
+    await variables.set(variableId, value)
     return { success: true }
   },
 })

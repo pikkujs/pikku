@@ -11,6 +11,10 @@ const generate = () =>
  * a field the caller declares but never forwards is silently dropped.
  */
 describe('serializePublicAgent — agent HTTP surface', () => {
+  /**
+   * Kept in step with `AgentCallInput` in @pikku/core — the schema below is
+   * what a caller may send, and agentCallOptions is what reaches the agent.
+   */
   const optionalInputs = ['attachments', 'model', 'temperature', 'context']
 
   const callerBody = (output: string, exportName: string) => {
@@ -44,13 +48,17 @@ describe('serializePublicAgent — agent HTTP surface', () => {
       )
     })
 
-    test(`${caller} forwards every optional AgentInput field to the rpc call`, () => {
+    test(`${caller} hands the whole input to agentCallOptions`, () => {
       const { functions } = generate()
       const body = callerBody(functions, caller)
+      assert.ok(
+        body.includes('agentCallOptions(data)'),
+        `expected ${caller} to forward its input through core`
+      )
       for (const field of optionalInputs) {
         assert.ok(
-          new RegExp(`\\.\\.\\.\\(data\\.${field}[^)]*\\)`).test(body),
-          `expected ${caller} to conditionally spread \`${field}\` into the rpc call`
+          !body.includes(`data.${field}`),
+          `expected ${caller} not to pick \`${field}\` apart itself — which field survives is agentCallOptions' decision, tested in core`
         )
       }
     })

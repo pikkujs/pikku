@@ -62,7 +62,11 @@ export const ThreadRef = z.object({
 export const ThreadDeleted = z.object({ deleted: z.boolean() })
 `
 
-  const functions = `import { canAccessThread, threadOwnerConstraint } from '@pikku/core/agent'
+  const functions = `import {
+  agentCallOptions,
+  canAccessThread,
+  threadOwnerConstraint,
+} from '@pikku/core/agent'
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { pikkuPermission } from '${leaf('auth')}'
 import { defineHTTPRoutes, wireHTTPRoutes } from '${leaf('http')}'
@@ -96,15 +100,7 @@ export const agentCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    return await rpc.agent.run(data.agentName as any, {
-      message: data.message,
-      threadId: data.threadId,
-      resourceId: data.resourceId,
-      ...(data.attachments ? { attachments: data.attachments } : {}),
-      ...(data.model ? { model: data.model } : {}),
-      ...(data.temperature !== undefined ? { temperature: data.temperature } : {}),
-      ...(data.context ? { context: data.context } : {}),
-    })
+    return await rpc.agent.run(data.agentName as any, agentCallOptions(data))
   },
 })
 
@@ -113,15 +109,7 @@ export const agentStreamCaller = pikkuSessionlessFunc({
   auth: false,
   input: AgentCall,
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.stream(data.agentName as any, {
-      message: data.message,
-      threadId: data.threadId,
-      resourceId: data.resourceId,
-      ...(data.attachments ? { attachments: data.attachments } : {}),
-      ...(data.model ? { model: data.model } : {}),
-      ...(data.temperature !== undefined ? { temperature: data.temperature } : {}),
-      ...(data.context ? { context: data.context } : {}),
-    })
+    await rpc.agent.stream(data.agentName as any, agentCallOptions(data))
   },
 })
 

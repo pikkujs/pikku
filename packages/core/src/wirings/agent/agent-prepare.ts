@@ -149,6 +149,31 @@ export function canAccessThread(
   )
 }
 
+/**
+ * An agent call with the fields nobody supplied left out.
+ *
+ * Omitted rather than passed as `undefined`, because an explicit `undefined`
+ * overrides the agent's own declared default with nothing — a request that
+ * names no model would silently unset the one the agent declares.
+ *
+ * Shared by the scaffolded `run` and `stream` routes, which receive the same
+ * input and differ only in what they do with the reply. `agentName` is not part
+ * of it: both callers pass that separately, because `rpc.agent.run` and
+ * `rpc.agent.stream` take it as their first argument and type the rest
+ * against it.
+ */
+export const agentCallOptions = (input: AgentInput): AgentInput => ({
+  message: input.message,
+  threadId: input.threadId,
+  resourceId: input.resourceId,
+  ...(input.attachments ? { attachments: input.attachments } : {}),
+  ...(input.model ? { model: input.model } : {}),
+  ...(input.temperature !== undefined
+    ? { temperature: input.temperature }
+    : {}),
+  ...(input.context ? { context: input.context } : {}),
+})
+
 export type StreamAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
   onRunCreated?: (runId: string) => void

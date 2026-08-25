@@ -33,6 +33,7 @@ export {
   type StreamAgentOptions,
   ToolApprovalRequired,
   ToolCredentialRequired,
+  agentCallOptions,
   canAccessThread,
   isOwnedByPrincipal,
   threadOwnerConstraint,
