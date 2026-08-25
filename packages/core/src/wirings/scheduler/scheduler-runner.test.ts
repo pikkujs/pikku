@@ -258,6 +258,47 @@ describe('runScheduledTask', () => {
     assert.deepEqual(frozenSession, machineSession)
   })
 
+  test('a session-taking task does not warn that auth was disabled', async () => {
+    const mockTask: CoreScheduledTask = {
+      name: 'identified-task',
+      schedule: '0 0 * * *',
+      middleware: [
+        async (_services: any, wire: any, next: any) => {
+          wire.setSession({ userId: 'cron:identified-task' })
+          return next()
+        },
+      ] as any,
+      func: {
+        func: async () => {},
+      },
+    }
+
+    pikkuState(null, 'scheduler', 'meta')['identified-task'] = {
+      pikkuFuncId: 'scheduler_identified-task',
+      name: 'identified-task',
+      schedule: '0 0 * * *',
+    }
+    pikkuState(null, 'function', 'meta')['scheduler_identified-task'] = {
+      pikkuFuncId: 'scheduler_identified-task',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: false,
+    }
+    wireScheduler(mockTask)
+
+    const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
+
+    await runScheduledTask({ name: 'identified-task' })
+
+    assert.deepEqual(
+      mockLogger.getLogs().filter((log) => log.level === 'warn'),
+      []
+    )
+  })
+
   test('should throw ScheduledTaskNotFoundError when task not found', async () => {
     const mockLogger = createMockLogger()
     pikkuState(null, 'package', 'singletonServices', {

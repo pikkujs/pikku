@@ -116,7 +116,6 @@ export async function runScheduledTask({
     await runPikkuFunc('scheduler', meta.name, meta.pikkuFuncId, {
       singletonServices,
       createWireServices,
-      auth: false,
       data: () => undefined,
       inheritedMiddleware: meta.middleware,
       wireMiddleware: task.middleware,
