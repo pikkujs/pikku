@@ -234,19 +234,20 @@ An unresolved token leaves the session unset and the function throws `MissingSes
 A scheduled task has no caller and no header, but it is still a machine principal, and without a session it cannot invoke a gated RPC or be attributed in anything it writes. Give it one the same way, in the task's own `middleware`:
 
 ```typescript
-const machineSession = (userId: string, scopes: ScopeId[]) =>
-  pikkuMiddleware<SingletonServices>(async (_services, { setSession }, next) => {
-    setSession?.({ userId, orgId: '', scopes } as UserSession)
-    return next()
-  })
+const cronSession = pikkuMiddleware(async (_services, { scheduledTask, setSession }, next) => {
+  setSession?.({ userId: `cron:${scheduledTask?.name}`, scopes: ['machine:cron'] } as UserSession)
+  return next()
+})
 
 wireScheduler({
   name: 'tickVirtualUserSchedules',
   schedule: '*/15 * * * *',
-  middleware: [machineSession('cron:tickVirtualUserSchedules', ['machine:cron']) as any],
+  middleware: [cronSession],
   func: tickVirtualUserSchedules,
 })
 ```
+
+One `const`, not a `machineSession(name)` factory: the inspector rejects a bare `pikkuMiddleware()` that is not assigned to a variable or object property, and the task name is on the wire anyway. Parameterised middleware goes through `pikkuMiddlewareFactory`.
 
 The task can then be a thin `rpc.invoke('someGatedRpc')` against the same entry point a person calls, instead of factoring the logic into a `lib/` helper purely to route around the missing identity.
 

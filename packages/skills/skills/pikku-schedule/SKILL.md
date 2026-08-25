@@ -61,7 +61,7 @@ scheduled task is a machine principal — give it a session in the task's own
 wireScheduler({
   name: 'bookingLifecycleDaily',
   schedule: '0 3 * * *',
-  middleware: [machineSession('cron:bookingLifecycleDaily', ['machine:cron']) as any],
+  middleware: [cronSession],
   func: bookingLifecycleDaily,
 })
 ```
