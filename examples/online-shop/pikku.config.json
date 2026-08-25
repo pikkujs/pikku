@@ -37,6 +37,7 @@
     "agent": true,
     "workflow": true,
     "scenarios": true,
+    "virtualUser": true,
     "events": true
   },
   "scenarios": {

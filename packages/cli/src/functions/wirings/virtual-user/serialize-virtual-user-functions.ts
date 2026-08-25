@@ -272,7 +272,8 @@ export const ExecuteVirtualUserRunOutput = z.object({
  * Auto-generated virtual user functions
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuFunc, pikkuSessionlessFunc } from '${leaf('function')}'
+import { pikkuFunc, pikkuSessionlessFunc, type Session } from '${leaf('function')}'
+import { pikkuMiddleware } from '${leaf('middleware')}'
 import { defineScope } from '${leaf('scopes')}'
 import { personaVirtualUserTarget, runVirtualUser as runVirtualUserEngine, type SchemaMap, type VirtualUserDisposition } from '@pikku/core/virtual-user'
 import {
@@ -280,7 +281,6 @@ import {
   PRODUCTION_DISPOSITION,
   tickVirtualUserSchedules as tick,
   type VirtualUserRunRecord,
-  type VirtualUserRunStore,
   type VirtualUserScheduleRecord,
 } from '@pikku/core/virtual-user'
 import { createPersonas, personaConfigs } from '${pathToPersonas}'
@@ -399,115 +399,6 @@ const serializeRun = (run: VirtualUserRunRecord) => ({
   finishedAt: run.finishedAt ? run.finishedAt.toISOString() : null,
 })
 
-/**
- * Resolves a persona down to a run and kicks it off, for the two callers that
- * start one: a person with the scope, and the tick acting on a schedule.
- *
- * Shared rather than duplicated because the checks are the point — an acted-upon
- * persona has no session, and only one disposition may ever touch production.
- * A second copy of that would eventually disagree with this one.
- */
-const startVirtualUserRun = async (
-  services: {
-    virtualUserRunStore?: VirtualUserRunStore
-    // \`unknown\` because an application's Config is its own interface and need
-    // not declare nodeEnv at all. A structural \`{ nodeEnv?: string }\` shares no
-    // property with such a config and TypeScript rejects the whole call.
-    config: unknown
-  },
-  // Named literally rather than as \`string\`: a project's generated rpc.invoke
-  // is generic over its own map's keys, and \`string\` is not one of them.
-  rpc: {
-    invoke: (name: 'executeVirtualUserRun', data: any) => Promise<unknown>
-  },
-  input: {
-    persona: string
-    disposition?: string
-    goals?: string[]
-    memory?: Record<string, string>
-    budget?: { steps?: number; mutations?: number; durationMs?: number }
-    seed?: number
-    startedBy?: string | null
-    operatorToken?: string
-  }
-): Promise<string> => {
-  const { virtualUserRunStore, config } = services
-  if (!virtualUserRunStore) {
-    throw new Error(
-      'No virtualUserRunStore is wired — a run has nowhere to be recorded. ' +
-        'Wire KyselyVirtualUserRunStore from @pikku/kysely, or your own implementation of VirtualUserRunStore.'
-    )
-  }
-
-  const persona = personaConfigs[input.persona as keyof typeof personaConfigs] as
-    | { id: string; runnable: boolean; disposition?: string }
-    | undefined
-  if (!persona) {
-    throw new Error(
-      \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
-    )
-  }
-  // An acted-upon persona has no session of its own, and running one would
-  // race whatever scenario acts on it.
-  if (!persona.runnable) {
-    throw new Error(
-      \`Persona "\${input.persona}" is declared as acted upon, never run\`
-    )
-  }
-
-  const disposition = (input.disposition ??
-    persona.disposition ??
-    'realistic') as VirtualUserDisposition
-  // Every disposition other than this one exists to find out what the product
-  // does wrong, which is not a thing to do to real customers' data. Checked
-  // against the effective disposition, so the override cannot smuggle one in.
-  if (
-    (config as { nodeEnv?: string } | undefined)?.nodeEnv === 'production' &&
-    disposition !== PRODUCTION_DISPOSITION
-  ) {
-    throw new Error(
-      \`Only the '\${PRODUCTION_DISPOSITION}' disposition may run against production; "\${input.persona}" is \${disposition}\`
-    )
-  }
-
-  // Seeded here rather than inside the engine so the record carries the seed
-  // even if the run dies before returning — an unreproducible crash costs the
-  // most.
-  const seed = input.seed ?? Math.floor(Math.random() * 2_147_483_647)
-
-  const runId = await virtualUserRunStore.start({
-    persona: persona.id,
-    disposition,
-    seed,
-    goals: input.goals ?? [],
-    memory: input.memory ?? {},
-    startedBy: input.startedBy ?? null,
-  })
-
-  // Deliberately not awaited: a run takes minutes, and a held-open request
-  // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
-  // writes both outcomes to the record itself, so the only thing left to
-  // handle here is a rejection escaping the promise — without the catch it
-  // becomes an unhandled rejection and takes the process with it.
-  void rpc
-    .invoke('executeVirtualUserRun', {
-      runId,
-      persona: persona.id,
-      disposition,
-      goals: input.goals ?? [],
-      memory: input.memory ?? {},
-      budget: input.budget,
-      seed,
-      // Rides the dispatch and nothing else. \`virtualUserRunStore.start\` above
-      // is deliberately not given it: a run record outlives the run, and a
-      // credential in a row somebody can read back is a credential leak.
-      operatorToken: input.operatorToken,
-    })
-    .catch(() => {})
-
-  return runId
-}
-
 export const runVirtualUser = pikkuFunc({
   tags: ['pikku'],
   title: 'Run a Virtual User',
@@ -518,11 +409,83 @@ export const runVirtualUser = pikkuFunc({
   input: RunVirtualUserInput,
   output: RunVirtualUserOutput,
   func: async ({ virtualUserRunStore, config }, input, { session, rpc }) => {
-    const runId = await startVirtualUserRun(
-      { virtualUserRunStore, config },
-      rpc!,
-      { ...input, startedBy: session?.userId ?? null }
-    )
+    if (!virtualUserRunStore) {
+      throw new Error(
+        'No virtualUserRunStore is wired — a run has nowhere to be recorded. ' +
+          'Wire KyselyVirtualUserRunStore from @pikku/kysely, or your own implementation of VirtualUserRunStore.'
+      )
+    }
+
+    const persona = personaConfigs[
+      input.persona as keyof typeof personaConfigs
+    ] as { id: string; runnable: boolean; disposition?: string } | undefined
+    if (!persona) {
+      throw new Error(
+        \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
+      )
+    }
+    // An acted-upon persona has no session of its own, and running one would
+    // race whatever scenario acts on it.
+    if (!persona.runnable) {
+      throw new Error(
+        \`Persona "\${input.persona}" is declared as acted upon, never run\`
+      )
+    }
+
+    const disposition = (input.disposition ??
+      persona.disposition ??
+      'realistic') as VirtualUserDisposition
+    // Every disposition other than this one exists to find out what the product
+    // does wrong, which is not a thing to do to real customers' data. Checked
+    // against the effective disposition, so the override cannot smuggle one in.
+    // Cast because an application's Config is its own interface and need not
+    // declare nodeEnv at all.
+    if (
+      (config as { nodeEnv?: string } | undefined)?.nodeEnv === 'production' &&
+      disposition !== PRODUCTION_DISPOSITION
+    ) {
+      throw new Error(
+        \`Only the '\${PRODUCTION_DISPOSITION}' disposition may run against production; "\${input.persona}" is \${disposition}\`
+      )
+    }
+
+    // Seeded here rather than inside the engine so the record carries the seed
+    // even if the run dies before returning — an unreproducible crash costs the
+    // most.
+    const seed = input.seed ?? Math.floor(Math.random() * 2_147_483_647)
+
+    const runId = await virtualUserRunStore.start({
+      persona: persona.id,
+      disposition,
+      seed,
+      goals: input.goals ?? [],
+      memory: input.memory ?? {},
+      // Whoever the session says, which for the scheduled tick is the machine
+      // identity its middleware set and not a person.
+      startedBy: session?.userId ?? null,
+    })
+
+    // Deliberately not awaited: a run takes minutes, and a held-open request
+    // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
+    // writes both outcomes to the record itself, so the only thing left to
+    // handle here is a rejection escaping the promise — without the catch it
+    // becomes an unhandled rejection and takes the process with it.
+    void rpc!
+      .invoke('executeVirtualUserRun', {
+        runId,
+        persona: persona.id,
+        disposition,
+        goals: input.goals ?? [],
+        memory: input.memory ?? {},
+        budget: input.budget,
+        seed,
+        // Rides the dispatch and nothing else. \`virtualUserRunStore.start\` above
+        // is deliberately not given it: a run record outlives the run, and a
+        // credential in a row somebody can read back is a credential leak.
+        operatorToken: input.operatorToken,
+      })
+      .catch(() => {})
+
     return { runId }
   },
 })
@@ -716,6 +679,36 @@ export const listVirtualUserSchedules = pikkuFunc({
 })
 
 /**
+ * The identity a scheduled tick runs as.
+ *
+ * \`pikku-platform\` is the platform's own principal, and it already exists for
+ * exactly this: a reserved user row created with no credential account of any
+ * kind, so no sign-in method can resolve it, and one the user directory already
+ * filters out — so unlike a seeded service account it costs no phantom member
+ * in any list, seat count or bill.
+ *
+ * Not parameterised, because it is not a decision an application makes: work
+ * this scaffold starts on its own clock is the platform's work, and the scope
+ * is the one \`runVirtualUser\` gates on.
+ *
+ * Attached to \`wireScheduler\`'s \`middleware\` rather than declared as tag
+ * middleware over \`/rpc\`, which cannot set a session at all: \`runScheduledTask\`
+ * builds its wire with a \`sessionService\`, so the session set here is the one
+ * the function is frozen with.
+ */
+const PLATFORM_USER_ID = 'pikku-platform'
+
+export const virtualUserPlatformSession = pikkuMiddleware(
+  async (_services, { setSession }, next) => {
+    await setSession?.({
+      userId: PLATFORM_USER_ID,
+      scopes: ['virtualUser:run'],
+    } as Session)
+    return next()
+  }
+)
+
+/**
  * Acts on whichever personas are due, once.
  *
  * Not exposed, and not wired to anything: pikku does not start a timer on an
@@ -727,9 +720,17 @@ export const listVirtualUserSchedules = pikkuFunc({
  * wireScheduler({
  *   name: 'virtualUsers',
  *   schedule: '0 * * * *',
+ *   middleware: [virtualUserPlatformSession],
  *   func: tickVirtualUserSchedules,
  * })
  * \`\`\`
+ *
+ * The middleware is not decoration: the tick starts a run through
+ * \`runVirtualUser\`, the same gated entry point a person calls, so without a
+ * session carrying \`virtualUser:run\` every dispatch is refused. Going through
+ * that front door rather than a shared helper is the point — the persona
+ * checks, the production-disposition rule and the record all live in one place,
+ * and a second copy of them would eventually disagree with the first.
  *
  * An hourly tick is plenty for intervals measured in hours: the tick
  * decides nothing except which rows are already due, so running it more often
@@ -745,10 +746,10 @@ export const tickVirtualUserSchedules = pikkuSessionlessFunc<void, void>({
     const result = await tick({
       schedules: virtualUserScheduleStore,
       runs: virtualUserRunStore,
-      dispatch: (schedule) =>
-        startVirtualUserRun(services, rpc!, {
+      dispatch: async (schedule) => {
+        const { runId } = await rpc!.invoke('runVirtualUser', {
           persona: schedule.persona,
-          disposition: schedule.disposition,
+          disposition: schedule.disposition as VirtualUserDisposition,
           goals: schedule.goals,
           budget: schedule.budget
             ? {
@@ -760,7 +761,9 @@ export const tickVirtualUserSchedules = pikkuSessionlessFunc<void, void>({
                     : undefined,
               }
             : undefined,
-        }),
+        })
+        return runId
+      },
     })
     // Logged rather than returned: the caller is a cron, and a run this started
     // is otherwise the only trace that a persona is still out there working.

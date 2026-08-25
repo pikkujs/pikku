@@ -655,3 +655,90 @@ describe('getScheduledTasks', () => {
     assert.equal(tasks.size, 0)
   })
 })
+
+/**
+ * A cron has no caller to authenticate, so the only thing that can give it an
+ * identity is its own wiring. These cover the mechanism the virtual-user
+ * scaffold's `virtualUserPlatformSession` relies on: middleware on the task
+ * sets the session, and the scope gate on the function it drives is enforced
+ * against exactly that session — a tick with no identity, or one holding the
+ * wrong scope, is refused the same way a person would be.
+ */
+describe('a scheduled task authorizes on the session its own middleware sets', () => {
+  const wireGatedTask = (
+    name: string,
+    middleware?: Array<
+      (services: any, wire: any, next: any) => Promise<void> | void
+    >
+  ) => {
+    let seen: CoreUserSession | undefined
+    const task: CoreScheduledTask = {
+      name,
+      schedule: '0 * * * *',
+      func: {
+        func: async (_services: any, _data: any, wire: any) => {
+          seen = await wire.getSession()
+        },
+      } as any,
+      middleware,
+    }
+    pikkuState(null, 'scheduler', 'meta')[name] = {
+      pikkuFuncId: `scheduler_${name}`,
+      name,
+      schedule: '0 * * * *',
+    }
+    pikkuState(null, 'function', 'meta')[`scheduler_${name}`] = {
+      pikkuFuncId: `scheduler_${name}`,
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: false,
+      scopes: ['virtualUser:run'],
+    }
+    wireScheduler(task)
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: createMockLogger(),
+    } as any)
+    return () => seen
+  }
+
+  const settingSession = (session: CoreUserSession) => [
+    async (_services: any, wire: any, next: any) => {
+      await wire.setSession(session)
+      return next()
+    },
+  ]
+
+  test('is refused outright when nothing gives the tick an identity', async () => {
+    wireGatedTask('unidentified-tick')
+    await assert.rejects(
+      runScheduledTask({ name: 'unidentified-tick' }),
+      /Authentication required/
+    )
+  })
+
+  test('is refused when the identity it sets holds the wrong scope', async () => {
+    wireGatedTask(
+      'misscoped-tick',
+      settingSession({
+        userId: 'pikku-platform',
+        scopes: ['admin'],
+      } as CoreUserSession)
+    )
+    await assert.rejects(
+      runScheduledTask({ name: 'misscoped-tick' }),
+      /virtualUser:run/
+    )
+  })
+
+  test('runs as the platform user its middleware set', async () => {
+    const seen = wireGatedTask(
+      'platform-tick',
+      settingSession({
+        userId: 'pikku-platform',
+        scopes: ['virtualUser:run'],
+      } as CoreUserSession)
+    )
+    await runScheduledTask({ name: 'platform-tick' })
+    assert.equal(seen()?.userId, 'pikku-platform')
+  })
+})

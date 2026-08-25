@@ -112,11 +112,31 @@ describe('serializeVirtualUserFunctions', () => {
   })
 
   // The checks are the point — an acted-upon persona has no session, and only
-  // one disposition may ever touch production. A second copy would drift.
+  // one disposition may ever touch production. A helper the tick called instead
+  // would be a second copy of them, and would eventually drift.
   test('a scheduled run goes through the same door a person does', () => {
-    assert.match(out, /const startVirtualUserRun = async \(/)
     const tickFn = out.slice(out.indexOf('tickVirtualUserSchedules ='))
-    assert.match(tickFn, /dispatch: \(schedule\) =>\n\s+startVirtualUserRun\(/)
+    assert.match(tickFn, /rpc!\.invoke\('runVirtualUser', \{/)
+    assert.doesNotMatch(out, /const startVirtualUserRun = /)
+  })
+
+  // A cron has no caller and no header, so without a session it cannot invoke
+  // the scope-gated RPC above, and nothing it writes can be attributed. The
+  // identity is the reserved platform user — not an invented service account,
+  // which the directory would have to learn to ignore.
+  test('the tick runs as the platform user', () => {
+    assert.match(out, /const PLATFORM_USER_ID = 'pikku-platform'/)
+    assert.match(
+      out,
+      /export const virtualUserPlatformSession = pikkuMiddleware\(/
+    )
+    assert.match(
+      out,
+      /setSession\?\.\(\{\n\s+userId: PLATFORM_USER_ID,\n\s+scopes: \['virtualUser:run'\],\n\s+\} as Session\)/
+    )
+    // Attached to the task's own middleware — tag middleware over `/rpc` cannot
+    // set a session at all.
+    assert.match(out, / \* {3}middleware: \[virtualUserPlatformSession\],/)
   })
 
   // A run is capped by a budget; how often runs happen is the schedule. The two
@@ -148,14 +168,14 @@ describe('serializeVirtualUserFunctions', () => {
   // for a workflow or a queue here would be recording it as something it isn't.
   test('dispatches without a workflow and without a queue', () => {
     assert.doesNotMatch(out, /startWorkflow|pikkuWorkflowFunc|wireQueueWorker/)
-    assert.match(out, /rpc\s*\n?\s*\.invoke\('executeVirtualUserRun'/)
+    assert.match(out, /rpc!\s*\n?\s*\.invoke\('executeVirtualUserRun'/)
   })
 
   // A held-open request survives neither a rollout nor a proxy timeout, so the
   // run must not be awaited — and an un-caught rejection from a promise nobody
   // awaits takes the process down with it.
   test('kicks the run off unawaited, with the rejection caught', () => {
-    assert.match(out, /void rpc\s*\n?\s*\.invoke\(/)
+    assert.match(out, /void rpc!\s*\n?\s*\.invoke\(/)
     assert.match(out, /\.catch\(\(\) => \{\}\)/)
   })
 
@@ -239,7 +259,10 @@ describe('serializeVirtualUserFunctions', () => {
   // for one: a box that can ask holds a credential that mints admin sessions
   // for itself, for as long as it lives.
   test('a deployed run is started with a token, not with a way to get one', () => {
-    assert.match(schemas, /operatorToken: z\.string\(\)\.min\(1\)\.optional\(\)/)
+    assert.match(
+      schemas,
+      /operatorToken: z\.string\(\)\.min\(1\)\.optional\(\)/
+    )
     assert.match(out, /operatorToken: input\.operatorToken/)
   })
 
@@ -272,12 +295,21 @@ describe('serializeVirtualUserFunctions', () => {
   // `/api/auth` should not have to name each door separately.
   test('an app that moved its auth mount moves both sign-in paths', () => {
     assert.match(out, /const signInPathFor = \(/)
-    assert.match(out, /signInPath: signInPathFor\(configuredSignInPath, 'fabric'\)/)
-    assert.match(out, /signInPath: signInPathFor\(configuredSignInPath, 'actor'\)/)
+    assert.match(
+      out,
+      /signInPath: signInPathFor\(configuredSignInPath, 'fabric'\)/
+    )
+    assert.match(
+      out,
+      /signInPath: signInPathFor\(configuredSignInPath, 'actor'\)/
+    )
   })
 
   test('says which credential is missing rather than assuming the local one', () => {
-    assert.match(out, /Neither an operator token nor \$\{SECRET_VARIABLE\} is available/)
+    assert.match(
+      out,
+      /Neither an operator token nor \$\{SECRET_VARIABLE\} is available/
+    )
   })
 })
 
