@@ -417,9 +417,13 @@ export const dev = pikkuSessionlessFunc<
     await pikkuServer.start()
     await lifecycle?.afterStart?.(resolvedServices)
 
+    // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
+    // announced from here has to name the one it actually handed out.
+    const boundPort = pikkuServer.port
+
     if (consoleMount) {
       logger.info(
-        `Pikku Console available at http://${hostname}:${resolvedPort}${consoleMount.urlPrefix}`
+        `Pikku Console available at http://${hostname}:${boundPort}${consoleMount.urlPrefix}`
       )
     }
 
@@ -428,11 +432,11 @@ export const dev = pikkuSessionlessFunc<
     // dev server owns dev; it proxies its API calls back to this port.
     if (config.frontend) {
       logger.info(
-        `Frontend not served in dev — run your frontend dev server and proxy its API calls to http://${hostname}:${resolvedPort}`
+        `Frontend not served in dev — run your frontend dev server and proxy its API calls to http://${hostname}:${boundPort}`
       )
     }
 
-    logger.info(serverReadyLine(hostname, resolvedPort))
+    logger.info(serverReadyLine(hostname, boundPort))
 
     let watcher: FSWatcher | undefined
 

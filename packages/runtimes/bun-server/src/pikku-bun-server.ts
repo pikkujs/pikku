@@ -297,10 +297,17 @@ export class PikkuBunServer {
 
     eventHub.setServer(this.server as BunServer<unknown>)
     logger.info(
-      `pikku-bun-server: listening on http://${config.hostname ?? 'localhost'}:${config.port}`
+      `pikku-bun-server: listening on http://${config.hostname ?? 'localhost'}:${this.port}`
     )
   }
 
+  /**
+   * The port the server is actually listening on.
+   *
+   * Not the same as `config.port` whenever that is `0`: the OS picks a free
+   * port at bind time, and a parent process that was told `0` has no other way
+   * to find out which one. Falls back to the requested port before `start()`.
+   */
   public get port(): number {
     return this.server?.port ?? this.config.port
   }

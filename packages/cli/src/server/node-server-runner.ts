@@ -74,6 +74,9 @@ export class NodeServerRunner implements DevServerRunner {
     return {
       init: () => server.init(),
       start: () => server.start(),
+      get port() {
+        return server.port
+      },
       stop: async () => {
         if (wss) {
           await new Promise<void>((resolve, reject) =>

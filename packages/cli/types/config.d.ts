@@ -734,6 +734,16 @@ export type PikkuCLIInput = {
      * Defaults to 'serverless'.
      */
     defaultTarget?: 'serverless' | 'server'
+    /** Desktop shell settings, used by `pikku deploy apply --tauri`. */
+    tauri?: {
+      /**
+       * Reverse-DNS bundle identifier for the desktop app. Derived from the
+       * package name when omitted, which is fine for a local build but should
+       * be set before anything is distributed — it is the identity the OS
+       * keys the app's data directory and permissions on.
+       */
+      identifier?: string
+    }
   }
 
   /** Named filter presets keyed by name, used via CLI --filter <name>. */

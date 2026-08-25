@@ -1,14 +1,9 @@
 /**
- * Printed once the server is listening AND the project's `afterStart`
- * lifecycle has resolved.
+ * The readiness handshake, owned by `@pikku/deploy` so the CLI and the
+ * standalone provider's generated server entry print and wait on the same
+ * string. Re-exported here because `--spawn` and the dev/serve commands have
+ * always imported it from this path.
  *
- * The runtime's own `listening on …` line is emitted inside `server.start()`,
- * which runs *before* `afterStart` — so anything a project seeds there (users,
- * scopes, fixtures) is still pending when it appears, and a parent process
- * that treats it as readiness races the seed. This marker is the point at
- * which the server is actually usable, and it is what `--spawn` waits for.
+ * @see {@link SERVER_READY_MARKER} for why `listening on …` is not readiness.
  */
-export const SERVER_READY_MARKER = 'pikku: ready'
-
-export const serverReadyLine = (hostname: string, port: number): string =>
-  `${SERVER_READY_MARKER} on http://${hostname}:${port}`
+export { SERVER_READY_MARKER, serverReadyLine } from '@pikku/deploy'

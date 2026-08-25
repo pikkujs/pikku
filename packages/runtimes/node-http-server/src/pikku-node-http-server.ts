@@ -903,11 +903,26 @@ export class PikkuNodeHTTPServer {
       this.server.listen(this.config.port, this.config.hostname, () => {
         this.listening = true
         this.logger.info(
-          `pikku-node-http-server: listening on http://${this.config.hostname}:${this.config.port}`
+          `pikku-node-http-server: listening on http://${this.config.hostname}:${this.port}`
         )
         resolve()
       })
     })
+  }
+
+  /**
+   * The port the server is actually listening on.
+   *
+   * Not the same as `config.port` whenever that is `0`: the OS picks a free
+   * port at bind time, and a parent process that was told `0` has no other way
+   * to find out which one. Falls back to the requested port before `start()`.
+   */
+  public get port(): number {
+    const address = this.server.address()
+    if (address && typeof address === 'object') {
+      return address.port
+    }
+    return this.config.port
   }
 
   public async stop(): Promise<void> {

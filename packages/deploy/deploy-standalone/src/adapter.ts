@@ -17,7 +17,7 @@
  *   `bun build --compile`. No runtime needed on the target host.
  */
 import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
-import { nodeBuiltinExternals } from '@pikku/deploy'
+import { nodeBuiltinExternals, SERVER_READY_MARKER } from '@pikku/deploy'
 
 export type StandaloneRuntime = 'node' | 'bun'
 
@@ -35,8 +35,49 @@ export const STANDALONE_FRONTEND_DIR = 'frontend'
  */
 export const STANDALONE_FRONTEND_MANIFEST = './frontend-assets.gen.js'
 
+/**
+ * Lines every standalone entry ends with, whatever the runtime.
+ *
+ * The ready line is the handshake a parent process — `pikku dev --spawn`, or
+ * the desktop shell that runs this binary as a sidecar — blocks on. It carries
+ * `server.port` rather than the requested port because a shell passes `PORT=0`:
+ * picking a free port in the parent and handing it down races anything else
+ * that binds it in between, so the server binds first and reports back.
+ */
+const sidecarHandshakeLines = (): string[] => [
+  `  watchParentProcess()`,
+  `  console.log(\`${SERVER_READY_MARKER} on http://\${hostname}:\${server.port}\`)`,
+]
+
+const SIDECAR_RUNTIME_IMPORT = `import { watchParentProcess } from '@pikku/deploy-standalone/runtime'`
+
+/**
+ * `rustc -vV`, or nothing when no toolchain is installed. The triple then falls
+ * back to the Node platform pair, which is right for every ordinary host — the
+ * cases rustc knows better about (musl, Rosetta) are the ones where a Rust
+ * toolchain is present anyway.
+ */
+const rustcHostOutput = async (): Promise<string | undefined> => {
+  try {
+    const { execFileSync } = await import('node:child_process')
+    return execFileSync('rustc', ['-vV'], { encoding: 'utf-8', stdio: 'pipe' })
+  } catch {
+    return undefined
+  }
+}
+
 export interface StandaloneProviderAdapterOptions {
   runtime?: StandaloneRuntime
+  /**
+   * Generate a Tauri desktop shell around the compiled binary. Requires the
+   * `bun` runtime — the shell ships the binary as a sidecar, and only that
+   * runtime produces one.
+   */
+  tauri?: boolean
+  /** Project root. The shell crate is written to `<projectDir>/src-tauri`. */
+  projectDir?: string
+  /** Bundle identifier for the shell. Derived from the app name when absent. */
+  tauriIdentifier?: string
 }
 
 export class StandaloneProviderAdapter implements ProviderAdapter {
@@ -44,9 +85,15 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
   readonly runtime: StandaloneRuntime
+  readonly tauri: boolean
+  readonly projectDir?: string
+  readonly tauriIdentifier?: string
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.runtime = options.runtime ?? 'node'
+    this.tauri = options.tauri ?? false
+    this.projectDir = options.projectDir
+    this.tauriIdentifier = options.tauriIdentifier
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
@@ -67,6 +114,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
       `import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'`,
       `import { WebSocketServer } from 'ws'`,
+      SIDECAR_RUNTIME_IMPORT,
       ...(ctx.frontend
         ? [
             `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
@@ -131,6 +179,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await triggerService.start()`,
       `  server.enableExitOnSignals()`,
       `  await server.start()`,
+      ...sidecarHandshakeLines(),
       `}`,
       ``,
       `main().catch((err) => {`,
@@ -145,6 +194,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     return [
       `// Generated standalone entry (bun runtime) — all functions in one process`,
       `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
+      SIDECAR_RUNTIME_IMPORT,
       `import { pikkuState } from '@pikku/core/state'`,
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
@@ -202,6 +252,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await triggerService.start()`,
       `  server.enableExitOnSignals()`,
       `  await server.start()`,
+      ...sidecarHandshakeLines(),
       `}`,
       ``,
       `main().catch((err) => {`,
@@ -245,6 +296,35 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     onProgress?: (step: string, detail: string) => void
   }) {
     const { buildDir, logger } = options
+
+    // Checked before anything expensive runs: a `--tauri` deploy that cannot
+    // produce a shell should say so now, not after a bun compile.
+    if (this.tauri) {
+      if (this.runtime !== 'bun') {
+        return {
+          success: false,
+          errors: [
+            {
+              step: 'tauri',
+              error: `A desktop shell ships the server as a sidecar binary, which only the bun runtime produces. Re-run with --runtime bun (got '${this.runtime}').`,
+            },
+          ],
+        }
+      }
+      if (!this.projectDir) {
+        return {
+          success: false,
+          errors: [
+            {
+              step: 'tauri',
+              error:
+                'No project directory was supplied, so there is nowhere to write src-tauri/.',
+            },
+          ],
+        }
+      }
+    }
+
     const { join, dirname } = await import('node:path')
     const { cp, readdir, writeFile, copyFile, mkdir } =
       await import('node:fs/promises')
@@ -326,6 +406,46 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       }
     }
 
+    // --- 2c. tauri: wrap the compiled binary in a desktop shell ---
+    let targetTriple: string | undefined
+    if (this.tauri && this.projectDir) {
+      const { generateTauriShell, tauriBundleIdentifier } =
+        await import('./tauri/generate.js')
+      const { hostTargetTriple } = await import('./tauri/target-triple.js')
+      try {
+        targetTriple = hostTargetTriple({
+          rustcVersionVerbose: await rustcHostOutput(),
+        })
+        const shell = await generateTauriShell({
+          projectDir: this.projectDir,
+          appName,
+          identifier: this.tauriIdentifier ?? tauriBundleIdentifier(appName),
+          targetTriple,
+          binaryPath: join(outDir, appName),
+        })
+        logger.info(`Desktop shell: ${shell.dir} (${shell.targetTriple})`)
+        if (shell.written.length) {
+          logger.info(`  wrote ${shell.written.join(', ')}`)
+        }
+        if (shell.preserved.length) {
+          logger.info(
+            `  kept your edits, not regenerated: ${shell.preserved.join(', ')}`
+          )
+        }
+        logger.info(`  sidecar: binaries/${shell.sidecar?.fileName}`)
+      } catch (e: unknown) {
+        return {
+          success: false,
+          errors: [
+            {
+              step: 'tauri',
+              error: e instanceof Error ? e.message : String(e),
+            },
+          ],
+        }
+      }
+    }
+
     // --- 3. config/ — empty template with .env example ---
     const configDir = join(outDir, 'config')
     await mkdir(configDir, { recursive: true })
@@ -357,6 +477,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       workersDeployed: [appName],
       resourcesCreated: [],
       errors: [],
+      targetTriple,
     }
   }
 }

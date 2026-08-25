@@ -225,19 +225,23 @@ export const serve = pikkuSessionlessFunc<
     await pikkuServer.start()
     await lifecycle?.afterStart?.(resolvedServices)
 
+    // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
+    // announced from here has to name the one it actually handed out.
+    const boundPort = pikkuServer.port
+
     if (consoleMount) {
       logger.info(
-        `Pikku Console available at http://${hostname}:${resolvedPort}${consoleMount.urlPrefix}`
+        `Pikku Console available at http://${hostname}:${boundPort}${consoleMount.urlPrefix}`
       )
     }
 
     if (frontendMount) {
       logger.info(
-        `Frontend available at http://${hostname}:${resolvedPort}${frontendMount.urlPrefix}`
+        `Frontend available at http://${hostname}:${boundPort}${frontendMount.urlPrefix}`
       )
     }
 
-    logger.info(serverReadyLine(hostname, resolvedPort))
+    logger.info(serverReadyLine(hostname, boundPort))
 
     process.once('SIGINT', async () => {
       logger.info('Stopping server...')

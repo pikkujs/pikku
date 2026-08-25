@@ -138,7 +138,12 @@ export async function resolveProvider(
     deploy?: { providers: Record<string, string>; defaultProvider?: string }
   },
   providerName?: string,
-  options?: { runtime?: string }
+  options?: {
+    runtime?: string
+    tauri?: boolean
+    projectDir?: string
+    tauriIdentifier?: string
+  }
 ): Promise<ProviderAdapter> {
   const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
 
@@ -266,6 +271,7 @@ export const deployApply = pikkuSessionlessFunc<
     fromPlan?: boolean
     provider?: string
     runtime?: string
+    tauri?: boolean
     resultFile?: string
     debugArtifacts?: boolean
   },
@@ -275,6 +281,9 @@ export const deployApply = pikkuSessionlessFunc<
     const projectDir = config.rootDir
     const provider = await resolveProvider(config, data?.provider, {
       runtime: data?.runtime,
+      tauri: data?.tauri,
+      projectDir,
+      tauriIdentifier: config.deploy?.tauri?.identifier,
     })
     const fromPlan = data?.fromPlan ?? false
     const resultFile = data?.resultFile

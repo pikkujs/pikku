@@ -1066,6 +1066,11 @@ wireCLI({
                 'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
               default: 'node',
             },
+            tauri: {
+              description:
+                'Also generate a Tauri desktop shell (src-tauri/) that runs the compiled binary as a sidecar. Requires --provider standalone --runtime bun.',
+              default: false,
+            },
             fromPlan: {
               description:
                 'Skip build pipeline, deploy from existing plan output',
