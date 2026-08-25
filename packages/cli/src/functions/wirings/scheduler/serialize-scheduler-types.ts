@@ -14,14 +14,15 @@ ${addon ? '' : `import { wireScheduler as wireSchedulerCore } from '@pikku/core/
     addon
       ? ''
       : `import { CoreScheduledTask } from '@pikku/core/scheduler'
-import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, Session } from '${functionTypesImportPath}'
 import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 
 /**
  * Type definition for scheduled tasks that run at specified intervals.
- * These are sessionless functions that execute based on cron expressions.
+ * The function is sessionless — a cron has no caller — but the task may declare
+ * the \`session\` it runs as, which is what lets it invoke a gated RPC.
  */
-type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void, 'session' | 'rpc'>, PikkuMiddleware>
+type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void, 'session' | 'rpc'>, PikkuMiddleware, Session>
 `
   }${
     addon
@@ -29,7 +30,7 @@ type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void, 'sessio
       : `
 /**
  * Registers a scheduled task with the Pikku framework.
- * Tasks run based on cron expressions and are sessionless.
+ * Tasks run based on cron expressions. Declare \`session\` to give one a system identity.
  *
  * @param task - Scheduled task definition with cron expression and handler
  *

@@ -213,6 +213,82 @@ describe('runScheduledTask', () => {
     assert.deepEqual(receivedSession, session)
   })
 
+  test('runs as the session the task declares', async () => {
+    let receivedSession: CoreUserSession | undefined
+
+    const declared: CoreUserSession = { userId: 'system:nightly', scopes: ['admin'] }
+    const mockTask: CoreScheduledTask = {
+      name: 'task-declaring-session',
+      schedule: '0 0 * * *',
+      session: declared,
+      func: {
+        func: async (services: any, data: any, wire: any) => {
+          receivedSession = await wire.getSession()
+        },
+        auth: false,
+      },
+    }
+
+    pikkuState(null, 'scheduler', 'meta')['task-declaring-session'] = {
+      pikkuFuncId: 'scheduler_task-declaring-session',
+      name: 'task-declaring-session',
+      schedule: '0 0 * * *',
+    }
+    pikkuState(null, 'function', 'meta')['scheduler_task-declaring-session'] = {
+      pikkuFuncId: 'scheduler_task-declaring-session',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+    }
+    wireScheduler(mockTask)
+
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: createMockLogger(),
+    } as any)
+
+    await runScheduledTask({ name: 'task-declaring-session' })
+
+    assert.deepEqual(receivedSession, declared)
+  })
+
+  test('a session passed to the run wins over the declared one', async () => {
+    let receivedSession: CoreUserSession | undefined
+
+    const mockTask: CoreScheduledTask = {
+      name: 'task-session-override',
+      schedule: '0 0 * * *',
+      session: { userId: 'system:nightly' },
+      func: {
+        func: async (services: any, data: any, wire: any) => {
+          receivedSession = await wire.getSession()
+        },
+        auth: false,
+      },
+    }
+
+    pikkuState(null, 'scheduler', 'meta')['task-session-override'] = {
+      pikkuFuncId: 'scheduler_task-session-override',
+      name: 'task-session-override',
+      schedule: '0 0 * * *',
+    }
+    pikkuState(null, 'function', 'meta')['scheduler_task-session-override'] = {
+      pikkuFuncId: 'scheduler_task-session-override',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+    }
+    wireScheduler(mockTask)
+
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: createMockLogger(),
+    } as any)
+
+    const session: CoreUserSession = { userId: 'someone-else' }
+    await runScheduledTask({ name: 'task-session-override', session })
+
+    assert.deepEqual(receivedSession, session)
+  })
+
   test('should throw ScheduledTaskNotFoundError when task not found', async () => {
     const mockLogger = createMockLogger()
     pikkuState(null, 'package', 'singletonServices', {

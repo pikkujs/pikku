@@ -81,11 +81,6 @@ export async function runScheduledTask({
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
-  const userSession = new PikkuSessionService(singletonServices.sessionStore)
-  if (session) {
-    userSession.set(session)
-  }
-
   if (!task) {
     throw new ScheduledTaskNotFoundError(`Scheduled task not found: ${name}`)
   }
@@ -93,6 +88,12 @@ export async function runScheduledTask({
     throw new ScheduledTaskNotFoundError(
       `Scheduled task meta not found: ${name}`
     )
+  }
+
+  const userSession = new PikkuSessionService(singletonServices.sessionStore)
+  const resolvedSession = session ?? task.session
+  if (resolvedSession) {
+    userSession.set(resolvedSession)
   }
 
   const wire: PikkuRawWire = {

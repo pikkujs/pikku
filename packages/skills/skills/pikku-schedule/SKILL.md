@@ -47,8 +47,39 @@ wireScheduler({
   func: PikkuVoidFunc,     // Must be pikkuVoidFunc (no input/output)
   tags?: string[],         // Targets tag middleware — see pikku-middleware
   middleware?: PikkuMiddleware[],
+  session?: Session,       // The identity the task runs as — see below
 })
 ```
+
+### `session`: the identity a cron runs as
+
+A cron has no caller, so by default it runs with **no session at all**. That has
+two consequences people hit immediately: it cannot call a permission-gated or
+scope-gated RPC (the gate sees no session and says no), and everything it writes
+is attributed to nobody — `userId: null` in the audit trail.
+
+Declare the identity on the wiring and both go away:
+
+```typescript
+wireScheduler({
+  name: 'bookingLifecycleDaily',
+  schedule: '0 3 * * *',
+  session: { userId: 'system:booking-lifecycle', scopes: ['admin'] },
+  func: bookingLifecycleDaily,
+})
+```
+
+Now the task can be a thin `rpc.invoke('runBookingLifecycleNow')` against the
+same gated RPC a person calls, instead of both of them delegating to a `lib/`
+helper written purely to route around the missing identity — and the audit rows
+say `system:booking-lifecycle` rather than `null`.
+
+Give each task its own system id: it is the "who" in every row it writes, so one
+shared `system` identity throws away the only attribution you get. Grant it the
+narrowest scopes the task actually needs.
+
+A session passed to `runScheduledTask({ name, session })` — a scheduler service
+running the task on someone's behalf — wins over the declared one.
 
 ### Wire Object (`wire.scheduledTask`)
 
