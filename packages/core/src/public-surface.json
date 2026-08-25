@@ -399,6 +399,7 @@
     "getStubTracker",
     "isTestRun",
     "pikkuWebhookWorkerFunc",
+    "renderEmail",
     "scenarioArtifactContentType",
     "scenarioRunSummary",
     "spy",

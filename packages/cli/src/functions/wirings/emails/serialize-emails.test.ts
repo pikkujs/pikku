@@ -58,31 +58,44 @@ Hello {{userName}}.
 {{t.passwordReset.cta}}: {{resetUrl}}
 `
 
+const HASHES = {
+  en: {
+    contentHash: 'content-hash',
+    htmlHash: 'html-hash',
+    subjectHash: 'subject-hash',
+    textHash: 'text-hash',
+  },
+}
+
 const TEMPLATES = {
   'password-reset': {
     html: HTML,
     subject: SUBJECT,
     text: TEXT,
     variables: ['appName', 'rawNotice', 'resetUrl', 'userName'],
-    hashes: {
-      en: {
-        contentHash: 'content-hash',
-        htmlHash: 'html-hash',
-        subjectHash: 'subject-hash',
-        textHash: 'text-hash',
-      },
-    },
+    hashes: HASHES,
+  },
+  'no-text': {
+    html: '<p>{{userName}}</p>',
+    subject: 'Hi',
+    text: '',
+    variables: ['userName'],
+    hashes: HASHES,
   },
 }
 
 type RenderedEmail = {
+  name: string
+  locale: string
   subject: string
   html: string
   text?: string
+  variables: ReadonlyArray<string>
+  hash: string
 }
 
 type RenderEmailTemplate = (input: {
-  name: 'password-reset'
+  name: 'password-reset' | 'no-text'
   locale?: 'en'
   data: Record<string, unknown>
 }) => RenderedEmail
@@ -119,22 +132,19 @@ function render(data: Record<string, unknown>) {
   return renderEmailTemplate({ name: 'password-reset', locale: 'en', data })
 }
 
-describe('generated email renderer escaping', () => {
-  test('a value containing a double quote cannot break out of an attribute', () => {
-    const { html } = render({
-      resetUrl: 'https://x.test/" onmouseover="alert(1)',
-    })
-    assert.ok(
-      !html.includes('onmouseover="alert(1)"'),
-      `attribute broke out:\n${html}`
-    )
-    assert.ok(
-      html.includes('href="https://x.test/&quot; onmouseover=&quot;alert(1)"'),
-      `quote was not escaped:\n${html}`
-    )
-  })
+function renderTextless(data: Record<string, unknown>) {
+  return renderEmailTemplate({ name: 'no-text', locale: 'en', data })
+}
 
-  test('a value containing markup renders escaped, with no raw script tag', () => {
+/**
+ * The escaping rules themselves are core's `renderEmail`, tested against real
+ * code in email-template.test.ts. What is generated — and so what is tested
+ * here, by importing the module the CLI actually writes — is the seam: the
+ * assets reach the renderer, and the typed wrapper hands back everything it
+ * returned.
+ */
+describe('the generated email module', () => {
+  test('the assets reach the renderer, so escaping applies', () => {
     const { html } = render({
       resetUrl: '"><script>alert(1)</script><a href="',
     })
@@ -142,79 +152,42 @@ describe('generated email renderer escaping', () => {
     assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'))
   })
 
-  test('a value containing handlebars is not re-expanded', () => {
-    const { html } = render({ resetUrl: '{{t.passwordReset.note}}' })
-    assert.ok(
-      !html.includes('If you did not ask for this, you can ignore it.</a>'),
-      `caller value was re-expanded as a template:\n${html}`
-    )
-    assert.ok(html.includes('href="{{t.passwordReset.note}}"'))
-  })
-
-  test('a value cannot forge a partial reference', () => {
-    const { html } = render({ resetUrl: '{{> footer}}' })
-    assert.ok(html.includes('href="{{&gt; footer}}"'), html)
-  })
-
-  test('a font stack with embedded quotes renders a valid style attribute', () => {
-    const { html } = render({ resetUrl: 'https://x.test/reset' })
-    assert.ok(
-      html.includes(
-        '<body style="font-family:-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif;color:#101828;">'
-      ),
-      `theme font stack corrupted the style attribute:\n${html}`
-    )
-  })
-
-  test('an app name with an apostrophe and an ampersand stays inside the tag', () => {
+  test('theme, locale strings and partials are all wired in', () => {
     const { html, subject } = render({
-      appName: "Peet's & Co",
-      resetUrl: 'https://x.test/reset',
-    })
-    assert.ok(
-      html.includes('<title>Reset your Peet&#39;s &amp; Co password</title>'),
-      html
-    )
-    assert.strictEqual(subject, "Reset your Peet's & Co password")
-  })
-
-  test('{{content}} and partials still render raw', () => {
-    const { html } = render({ resetUrl: 'https://x.test/reset' })
-    assert.ok(html.includes('<a href="https://x.test/reset"'), html)
-    assert.ok(html.includes('<div class="footer"'), html)
-    assert.ok(
-      html.includes('>If you did not ask for this, you can ignore it.</div>'),
-      html
-    )
-  })
-
-  test('the triple-brace form is an opt-in raw escape hatch', () => {
-    const { html } = render({
-      resetUrl: 'https://x.test/reset',
-      rawNotice: '<strong>read me</strong>',
-    })
-    assert.ok(html.includes('<p><strong>read me</strong></p>'), html)
-  })
-
-  test('locale strings that reference caller variables still expand', () => {
-    const { subject, text } = render({
       userName: 'Ada',
       resetUrl: 'https://x.test/reset',
     })
+    // theme.appName, reached through a locale string that references it
     assert.strictEqual(subject, 'Reset your Pikku App password')
-    assert.ok(text?.includes('Hello Ada.'), text)
+    // the layout partial, and a partial the template itself includes
     assert.ok(
-      text?.includes('Choose a new password: https://x.test/reset'),
-      text
+      html.includes('<title>Reset your Pikku App password</title>'),
+      html
+    )
+    assert.ok(html.includes('<div class="footer"'), html)
+    assert.ok(html.includes('style="background:#7c3aed;"'), html)
+  })
+
+  test('the wrapper loses nothing the renderer returned', () => {
+    const rendered = render({
+      userName: 'Ada',
+      resetUrl: 'https://x.test/reset',
+    })
+    assert.deepStrictEqual(
+      { ...rendered, html: '<html>', subject: '<subject>', text: '<text>' },
+      {
+        name: 'password-reset',
+        locale: 'en',
+        html: '<html>',
+        subject: '<subject>',
+        text: '<text>',
+        variables: ['appName', 'rawNotice', 'resetUrl', 'userName'],
+        hash: 'content-hash',
+      }
     )
   })
 
-  test('plain-text outputs are not html escaped', () => {
-    const { text } = render({
-      userName: 'Ada & Bob',
-      resetUrl: 'https://x.test/reset?a=1&b=2',
-    })
-    assert.ok(text?.includes('Hello Ada & Bob.'), text)
-    assert.ok(text?.includes('https://x.test/reset?a=1&b=2'), text)
+  test('a template with no text yields no text field', () => {
+    assert.strictEqual('text' in renderTextless({}), false)
   })
 })

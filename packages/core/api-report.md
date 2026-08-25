@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2834 observable things**: 896 exported names, plus
-1938 members on the classes and interfaces among them, reachable
+**2856 observable things**: 901 exported names, plus
+1955 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 135 | 110 | 396 |
+| `./services` | 141 | 115 | 413 |
 | `./virtual-user` | 66 | 66 | 210 |
 | `./scenario` | 45 | 45 | 133 |
 | `./workflow` | 84 | 35 | 140 |
@@ -25,7 +25,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./persona` | 37 | 37 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
-| `./services/local-meta` | 22 | 3 | 46 |
+| `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
@@ -4444,6 +4444,12 @@ export interface DeploymentServiceConfig {
   heartbeatInterval?: number
   heartbeatTtl?: number
 }
+export interface EmailAssets {
+  theme: Record<string, unknown>
+  locales: Record<string, Record<string, unknown>>
+  partials: Record<string, string>
+  templates: Record<string, EmailTemplateAssets>
+}
 export interface EmailService {
   send<T extends SendEmailInput>(input: Safe<T>): Promise<SendEmailResult>
 }
@@ -4451,6 +4457,19 @@ export interface EmailsMeta {
   src: string
   themeHash: string
   templates: Record<string, EmailTemplateMeta>
+}
+export interface EmailTemplateAssets {
+  html: string
+  subject: string
+  text: string
+  variables: ReadonlyArray<string>
+  hashes: Record<string, EmailTemplateHashes>
+}
+export interface EmailTemplateHashes {
+  contentHash: string
+  htmlHash: string
+  subjectHash: string
+  textHash: string
 }
 export interface EmailTemplateMeta {
   variables: string[]
@@ -4782,6 +4801,20 @@ export class QueueWebhookService extends WebhookService {
   constructor(protected queueService: QueueService)
   public async send(input: SendWebhookInput): Promise<SendWebhookResult>
   protected async prepareDelivery(input: SendWebhookInput): Promise<{ jobData: WebhookJobData; options: JobOptions }>
+}
+export interface RenderedEmailResult {
+  locale: string
+  subject: string
+  html: string
+  text?: string
+  variables: ReadonlyArray<string>
+  hash: string
+}
+renderEmail: ({ theme, locales, partials, templates }: EmailAssets, { name, locale: requestedLocale, data }: RenderEmailRequest) => RenderedEmailResult
+export interface RenderEmailRequest {
+  name: string
+  locale?: string
+  data?: Record<string, unknown>
 }
 export type ResolvedAuditConfig = {
   durability: AuditDurability

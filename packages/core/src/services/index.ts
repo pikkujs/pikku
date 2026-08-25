@@ -54,6 +54,14 @@ export type {
   SendTextEmailInput,
 } from './email-service.js'
 export {
+  renderEmail,
+  type EmailAssets,
+  type EmailTemplateAssets,
+  type EmailTemplateHashes,
+  type RenderEmailRequest,
+  type RenderedEmailResult,
+} from './email-template.js'
+export {
   DEFAULT_WEBHOOK_RETRIES,
   PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME,
   WebhookService,
