@@ -78,3 +78,35 @@ row is created. It is deliberately logged rather than thrown, so a single
 failure used to leave that operator permanently unprivileged with nothing to
 retry it, and a root added to the set later would never have reached the
 operators that already existed.
+
+The scaffolds no longer keep their logic inside the CLI's template strings.
+
+Code written as text inside a template literal is never compiled, never linted,
+and testable only by matching the source the CLI emits — so a dead branch or a
+duplicated loop survives there indefinitely. Five scaffolds were carrying real
+logic that way, and it now lives in `@pikku/core` alongside the types it uses,
+leaving each serializer to emit only what is genuinely per-application.
+
+- **virtual-user** — 677 lines: the run driver, the persona and disposition
+  rules, the schedule writer and the serializers, now
+  `@pikku/core/virtual-user`. The guarantee that an operator token never
+  reaches the run record used to be a regex over emitted text; it is now
+  structural, because `startVirtualUserRun` has no parameter to pass one to.
+- **workflow** — the two status streams were an ~80-line poll loop each,
+  identical apart from three fields, now one `streamWorkflowRunStatus` told
+  whether to be detailed. Fixes a latent bug both copies shared: a
+  `setInterval(async …)` whose poll threw produced an unhandled rejection and a
+  stream that never closed.
+- **emails** — ~190 lines of HTML escaping, trusted-root allowlist and
+  single-pass substitution, now `renderEmail` in `@pikku/core/services`. This
+  was the security-sensitive one.
+- **agent** — both callers built the same options object; now
+  `agentCallOptions`, typed against `AgentInput` rather than a second copy of
+  its shape.
+- **console** — two branches that could only survive uncompiled: a catch block
+  identical to its try, and an if/else whose arms were the same call.
+
+Behaviour is unchanged throughout, and the emitted modules are the same modules
+— the emails scaffold's ten escaping tests pass untouched through core. The five
+serializers shrink from 1,936 lines to 1,281, and what they used to emit is now
+covered by 75 tests that run the code rather than by regexes over the text.
