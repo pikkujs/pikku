@@ -85,3 +85,23 @@ export {
   personaVirtualUserTarget,
   type PersonaTargetOptions,
 } from './virtual-user-target.js'
+export {
+  executeVirtualUserRun,
+  logVirtualUserTick,
+  requireVirtualUserRunStore,
+  requireVirtualUserScheduleStore,
+  runnablePersona,
+  serializeVirtualUserRun,
+  serializeVirtualUserSchedule,
+  serializeVirtualUserSteps,
+  signInPathFor,
+  startVirtualUserRun,
+  VIRTUAL_USER_VARIABLES,
+  virtualUserScheduleRunInput,
+  writeVirtualUserSchedule,
+  type ExecuteVirtualUserRunParams,
+  type ScaffoldPersonas,
+  type StartedVirtualUserRun,
+  type StartVirtualUserRunParams,
+  type WriteVirtualUserScheduleParams,
+} from './virtual-user-scaffold.js'

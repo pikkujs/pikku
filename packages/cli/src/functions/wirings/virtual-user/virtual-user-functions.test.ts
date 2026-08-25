@@ -30,27 +30,16 @@ describe('serializeVirtualUserFunctions', () => {
     '../../../.pikku/workflow/pikku-personas.gen.js'
   )
 
-  test('the transcript a run produced is stored, not discarded', () => {
-    assert.match(out, /intents: result\.intents/)
-    assert.match(out, /steps: result\.steps/)
-  })
-
   test('offers a way to ask what the virtual users have been doing', () => {
     assert.match(out, /export const listVirtualUserRuns = pikkuFunc\(/)
-    assert.match(
-      out,
-      /virtualUserRunStore\.list\(\{ persona, limit, offset \}\)/
-    )
+    assert.match(out, /\)\.list\(\{ persona, limit, offset \}\)/)
   })
 
   // The steps are the bulk of a run, so a list that carried them would make
   // reading the history cost a budget's worth of transcript per row.
   test('the transcript is its own read, not a field on the run', () => {
     assert.match(out, /export const getVirtualUserRunSteps = pikkuFunc\(/)
-    assert.match(
-      out,
-      /virtualUserRunStore\.steps\(runId, \{ limit, offset \}\)/
-    )
+    assert.match(out, /\)\.steps\(runId, \{ limit, offset \}\)/)
     assert.doesNotMatch(schemas, /steps: z\.array\(Step\),\n  tally/)
   })
 
@@ -63,7 +52,7 @@ describe('serializeVirtualUserFunctions', () => {
 
   test('a persona can be put on a clock rather than triggered by hand', () => {
     assert.match(out, /export const setVirtualUserSchedule = pikkuFunc\(/)
-    assert.match(out, /virtualUserScheduleStore\.set\(/)
+    assert.match(out, /writeVirtualUserSchedule\(\{/)
   })
 
   // Starting a run spends money once, with a caller present to see it. Writing
@@ -77,10 +66,11 @@ describe('serializeVirtualUserFunctions', () => {
   // A schedule is enabled once and then outlives the declaration it was written
   // from, so both sides have to travel for anyone to see they have parted ways.
   test('a schedule carries what the persona currently declares', () => {
-    const setFn = out.slice(out.indexOf('const serializeSchedule'))
-    assert.match(setFn, /declared,/)
-    assert.match(setFn, /personaConfigs\[/)
     assert.match(schemas, /declared: z\.object\(\{/)
+    assert.match(
+      out,
+      /serializeVirtualUserSchedule\(schedule, personaConfigs\)/
+    )
   })
 
   // Which fields differ is a question about how to render two values, and the
@@ -116,7 +106,7 @@ describe('serializeVirtualUserFunctions', () => {
   // would be a second copy of them, and would eventually drift.
   test('a scheduled run goes through the same door a person does', () => {
     const tickFn = out.slice(out.indexOf('tickVirtualUserSchedules ='))
-    assert.match(tickFn, /rpc!\.invoke\('runVirtualUser', \{/)
+    assert.match(tickFn, /rpc!\.invoke\(\s*'runVirtualUser',/)
     assert.doesNotMatch(out, /const startVirtualUserRun = /)
   })
 
@@ -180,43 +170,36 @@ describe('serializeVirtualUserFunctions', () => {
   })
 
   test('records the run before dispatching it, so a crash is still addressable', () => {
-    const start = out.indexOf('virtualUserRunStore.start(')
+    const start = out.indexOf('await startVirtualUserRun({')
     const dispatch = out.indexOf(".invoke('executeVirtualUserRun'")
     assert.ok(start > 0 && dispatch > start)
   })
 
-  // The seed is what makes a finding reproducible; deciding it inside the
-  // engine would lose it whenever a run dies before returning.
-  test('seeds the run before the record is written', () => {
-    const seed = out.indexOf('const seed = input.seed ??')
-    assert.ok(seed > 0 && seed < out.indexOf('virtualUserRunStore.start('))
-  })
-
-  test('refuses every disposition but the accountable one in production', () => {
-    assert.match(out, /nodeEnv === 'production'/)
-    assert.match(out, /disposition !== PRODUCTION_DISPOSITION/)
-  })
-
-  // An acted-upon persona has no session of its own, and running one races the
-  // scenario that acts on it.
-  test('refuses a persona that is declared as acted upon', () => {
-    assert.match(out, /!persona\.runnable/)
-  })
-
-  test('both outcomes reach the record, since nothing else knows the run happened', () => {
-    assert.match(out, /virtualUserRunStore\.complete\(/)
-    assert.match(out, /virtualUserRunStore\.fail\(/)
-  })
-
   // Reaching into pikku internals would make this a thing only the framework
   // can do, which is the opposite of a scaffold.
-  test('derives everything through the public meta surface', () => {
-    assert.match(out, /metaService\.getFunctionsMeta\(\)/)
+  test('derives everything through the public surface', () => {
     assert.doesNotMatch(out, /pikkuState|@pikku\/core\/internal/)
   })
 
-  test('shares its derivation with the CLI rather than repeating it', () => {
-    assert.match(out, /prepareVirtualUserRun\(/)
+  // What is generated is the part that varies by application. Everything else
+  // is a call into `@pikku/core/virtual-user`, where it is type checked when
+  // core builds and fixed once rather than in every generated copy of it.
+  test('the bodies are calls into core, not a second copy of it', () => {
+    const bodies = [
+      /await startVirtualUserRun\(\{/,
+      /serializeVirtualUserRun\(run\)/,
+      /serializeVirtualUserSteps\(steps\)/,
+      /await writeVirtualUserSchedule\(\{/,
+      /logVirtualUserTick\(/,
+      /executeRun\(\{/,
+    ]
+    for (const body of bodies) {
+      assert.match(out, body)
+    }
+    // The work itself, rather than the wiring, is nowhere in the output.
+    assert.doesNotMatch(out, /prepareVirtualUserRun\(|runVirtualUserEngine\(/)
+    assert.doesNotMatch(out, /metaService\.get|variables\.get\(/)
+    assert.doesNotMatch(out, /\.complete\(runId|\.fail\(runId/)
   })
 
   test('the work is sessionless and unexposed — it has no caller of its own', () => {
@@ -226,16 +209,6 @@ describe('serializeVirtualUserFunctions', () => {
     )
     const execute = out.slice(out.indexOf('executeVirtualUserRun ='))
     assert.doesNotMatch(execute, /expose: true/)
-  })
-
-  // An app that mounts auth somewhere other than the root has no other way to
-  // say so, and the run would otherwise sign in against a 404 and spend its
-  // whole budget wondering why every call fails.
-  test('signs in and calls through the paths a scenario run uses', () => {
-    assert.match(out, /SCENARIO_SIGN_IN_PATH/)
-    assert.match(out, /SCENARIO_RPC_PATH/)
-    assert.match(out, /signInPath:/)
-    assert.match(out, /rpcPath:/)
   })
 
   test('imports the generated personas rather than declaring any', () => {
@@ -269,47 +242,12 @@ describe('serializeVirtualUserFunctions', () => {
   // A run record outlives the run and is read back over RPC, so a credential
   // stored on it is a credential anyone with read scope can collect.
   test('the handed-in token rides the dispatch and is never recorded', () => {
-    const start = out.slice(
-      out.indexOf('const startVirtualUserRun'),
-      out.indexOf('export const runVirtualUser')
+    const recorded = out.slice(
+      out.indexOf('await startVirtualUserRun({'),
+      out.indexOf('void rpc!')
     )
-    const record = start.slice(
-      start.indexOf('virtualUserRunStore.start('),
-      start.indexOf('rpc')
-    )
-    assert.doesNotMatch(record, /operatorToken/)
-  })
-
-  // Asymmetric, so the stage can verify one and can never mint one. The actor
-  // secret is symmetric and only `pikku dev` serves the endpoint that takes it.
-  test('an operator token wins over the actor secret wherever both exist', () => {
-    assert.match(
-      out,
-      /operatorToken \?\? \(await variables\.get\(OPERATOR_TOKEN_VARIABLE\)\)/
-    )
-    assert.match(out, /token\n\s+\? \{\n\s+operator: \{/)
-    assert.match(out, /\}\n\s+: \{ secret \}\),/)
-  })
-
-  // Both are better-auth plugins on one mount, so an app that moved auth to
-  // `/api/auth` should not have to name each door separately.
-  test('an app that moved its auth mount moves both sign-in paths', () => {
-    assert.match(out, /const signInPathFor = \(/)
-    assert.match(
-      out,
-      /signInPath: signInPathFor\(configuredSignInPath, 'fabric'\)/
-    )
-    assert.match(
-      out,
-      /signInPath: signInPathFor\(configuredSignInPath, 'actor'\)/
-    )
-  })
-
-  test('says which credential is missing rather than assuming the local one', () => {
-    assert.match(
-      out,
-      /Neither an operator token nor \$\{SECRET_VARIABLE\} is available/
-    )
+    assert.doesNotMatch(recorded, /operatorToken/)
+    assert.match(out, /operatorToken: input\.operatorToken/)
   })
 })
 
