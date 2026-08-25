@@ -1,3 +1,195 @@
+## 0.12.121
+
+### Patch Changes
+
+- 30e390b: `pikku.config.json` takes a `locale`, naming the language the project's meta is
+  written in.
+
+  Meta is the human-readable prose authored inside the code rather than in a
+  message catalogue: `description` on functions and steps, `name`/`title` on
+  features and scenarios, step `template` strings, role and persona descriptions.
+  It is also the one part of a project the Pikku Console renders back to a human,
+  which is what the field is for — a team whose working language is German should
+  be able to read their own Console in German without anything else about the
+  project changing.
+
+  This release is the groundwork: the field is read, validated and canonicalized,
+  and the skills explain which of a project's three languages it is. Nothing
+  consumes it yet, so setting it does not change what the Console renders — that
+  comes with the reader.
+
+  It defaults to `en`, is validated as a BCP-47 tag through
+  `Intl.getCanonicalLocales` (so `de_DE` fails at the line that is wrong rather
+  than degrading to "some language" three layers down), and comes back
+  canonicalized so `EN-gb` and `en-GB` are one value downstream.
+
+  Two things it deliberately does not do, because collapsing them is the bug this
+  came from. It never renames anything — identifiers, files, database tables and
+  columns stay English whatever it says. And it is not the product's UI language:
+  what the app says to its users lives in `messages/<locale>.json`, with
+  `active.json`'s `defaultLocale` deciding what a first-time visitor is served,
+  while `baseLocale` names the message source and stays `en`.
+
+- b5e79c1: Resolve `Config`, `SingletonServices` and `Services` by declaration rather than
+  by name.
+
+  Service extraction read `typesLookup` under the hardcoded names the scaffold
+  happens to use, but the lookup is keyed by whatever the project named its
+  interface. A project that renamed one satisfied every required-type check and
+  then resolved to no services at all, surfacing much later as PKU724 or as every
+  singleton service turning optional. These now go through the import maps, which
+  carry the real name.
+
+  `pikku workflow` carried the same lookup as its fallback when aggregation came
+  back empty, so a project with a renamed interface was told
+  `WORKFLOW_ORCHESTRATOR_NOT_CONFIGURED` while holding a perfectly good
+  `workflowService`.
+
+- 30e390b: `pikku fabric validate` warns when an app's `baseLocale` is not `en`.
+
+  `baseLocale` names the message source, not the language the app is served in,
+  and pointing it at the product's language looks like it works — the app does
+  come up in that language. What it actually does is leave the project without an
+  English catalogue to add a second language from, permanently, because repointing
+  it later re-authors every key.
+
+  New finding `app-base-locale-not-english-<app>` (warn) says so and names the
+  setting that was wanted instead: `baseLocale: "en"` with the language in
+  `locales`, and `defaultLocale` in `active.json` deciding what a first-time
+  visitor opens in. Where the app is already keyed in the other language the hint
+  adds that this is a re-key rather than a rename, since that is the part someone
+  otherwise discovers halfway through.
+
+- 2a02288: Let a virtual user run against a deployed stage.
+
+  Until now the scaffolded run could only sign its personas in with
+  `SCENARIO_ACTOR_SECRET`, which only `pikku dev` serves — so a run against a
+  deployed target failed before its first turn. `runVirtualUser` now takes an
+  optional short-lived Fabric operator token, handed in by whoever starts the run
+  and passed through to `createPersonas` as `operator`.
+
+  Handed in rather than fetched on demand: a stage that could ask for a token
+  would be holding a credential able to mint admin sessions for itself for as long
+  as the box lives. It holds one receipt, for one run, and the receipt expires. It
+  is never written to the run record — only `FABRIC_OPERATOR_TOKEN` in the
+  environment is read, and only as the fallback for a run nobody handed a token to.
+
+  `HttpPersonasConfig.signInPath` now applies to the operator path too, so an app
+  that mounts auth under `/api` can say so once.
+
+  The framework's own virtual-user RPCs no longer enter a virtual user's
+  catalogue. A persona whose role carries `virtualUser:*` could otherwise start
+  further runs, read back every run's transcript — an adversarial run's steps are
+  working exploits against the same app — and put a persona on a schedule that
+  outlives it.
+
+  The scheduled tick now runs as the platform user, and starts its runs through
+  the same door a person uses.
+
+  The scaffolded `startVirtualUserRun` RPC is gone — not the `startVirtualUserRun`
+  helper `@pikku/core/virtual-user` now exports, which is the shared record-writer
+  `runVirtualUser` calls. The RPC existed only so the tick could record a run
+  without holding a session, which meant the persona checks, the
+  production-disposition rule and the record lived in two places that would
+  eventually disagree. The tick calls `runVirtualUser` over RPC instead, and the
+  scaffold emits `virtualUserPlatformSession` to give it an identity:
+
+  ```ts
+  wireScheduler({
+    name: 'virtualUsers',
+    schedule: '0 * * * *',
+    middleware: [virtualUserPlatformSession],
+    func: tickVirtualUserSchedules,
+  })
+  ```
+
+  `pikku-platform` is the platform's own principal and already exists for exactly
+  this — a reserved user row created with no credential account of any kind, so no
+  sign-in method can resolve it, and one the user directory already filters out, so
+  unlike a seeded service account it costs no phantom member in any list, seat
+  count or bill.
+
+  The middleware is attached to the task rather than declared as tag middleware
+  over `/rpc`, which cannot set a session at all: `runScheduledTask` builds its
+  wire with a `sessionService`, so the session set here is the one the function is
+  frozen with. A tick wired without it is refused for want of a session, and one
+  carrying the wrong scope is refused on `virtualUser:run` — both now covered by
+  tests.
+
+  A Fabric operator can now actually start the run it signs in to start.
+
+  `fabric()` granted its operator row `admin` and nothing else. `admin` is this
+  package's own root — pikku's parent-grant rule walks down from a root that is
+  held, and the virtual-user scaffold declares `virtualUser` as a root of its own
+  precisely so a role can carry `virtualUser:run` without also implying
+  administration. So the operator was refused by `runVirtualUser`, the one
+  function the operator sign-in exists to reach.
+
+  The operator is now granted the roots in `OPERATOR_SCOPE_ROOTS`
+  (`admin`, `virtualUser`) rather than a bare `admin`. Listed rather than
+  collapsed to `*`, which would make every operator a superuser on every app for
+  the sake of one function: an operator still holds nothing in the application's
+  own domain, and a root the app never declared is skipped rather than stored.
+
+  The grant is also re-checked on every operator sign-in instead of only when the
+  row is created. It is deliberately logged rather than thrown, so a single
+  failure used to leave that operator permanently unprivileged with nothing to
+  retry it, and a root added to the set later would never have reached the
+  operators that already existed.
+
+  The scaffolds no longer keep their logic inside the CLI's template strings.
+
+  Code written as text inside a template literal is never compiled, never linted,
+  and testable only by matching the source the CLI emits — so a dead branch or a
+  duplicated loop survives there indefinitely. Five scaffolds were carrying real
+  logic that way, and it now lives in `@pikku/core` alongside the types it uses,
+  leaving each serializer to emit only what is genuinely per-application.
+
+  - **virtual-user** — 677 lines: the run driver, the persona and disposition
+    rules, the schedule writer and the serializers, now
+    `@pikku/core/virtual-user`. The guarantee that an operator token never
+    reaches the run record used to be a regex over emitted text; it is now
+    structural, because `startVirtualUserRun` has no parameter to pass one to.
+  - **workflow** — the two status streams were an ~80-line poll loop each,
+    identical apart from three fields, now one `streamWorkflowRunStatus` told
+    whether to be detailed. Fixes three latent bugs both copies shared: a
+    `setInterval(async …)` whose poll threw produced an unhandled rejection; a
+    poll that threw left the channel open rather than ending the stream; and the
+    interval fired whether or not the previous poll had returned, so a slow store
+    put two polls in flight and sent the init frame twice.
+  - **emails** — ~190 lines of HTML escaping, trusted-root allowlist and
+    single-pass substitution, now `renderEmail` in `@pikku/core/services`. This
+    was the security-sensitive one, and compiling it surfaced a bug the template
+    string had been hiding: `{{ content }}` was written unescaped in every render
+    rather than only in the layout it is the slot for, so a caller passing
+    `data.content` to a template that named it got raw HTML out. Nested lookups
+    also used `in`, which walks the prototype chain; nothing inherited actually
+    reached the output — every step past a prototype hit lands on a function,
+    which is neither traversed nor written — so that one is a closed door rather
+    than a fixed leak.
+  - **agent** — both callers built the same options object; now
+    `agentCallOptions`, typed against `AgentInput` rather than a second copy of
+    its shape.
+  - **console** — two branches that could only survive uncompiled: a catch block
+    identical to its try, and an if/else whose arms were the same call.
+
+  Behaviour is unchanged throughout, and the emitted modules are the same modules
+  — the emails scaffold's ten escaping tests pass untouched through core. The five
+  serializers shrink from 1,936 lines to 1,281, and what they used to emit is now
+  covered by 75 tests that run the code rather than by regexes over the text.
+
+- Updated dependencies [a3deea4]
+- Updated dependencies [a3deea4]
+- Updated dependencies [1cc50ef]
+- Updated dependencies [b5e79c1]
+- Updated dependencies [a3deea4]
+- Updated dependencies [30e390b]
+- Updated dependencies [2a02288]
+  - @pikku/better-auth@0.12.31
+  - @pikku/skills@0.12.17
+  - @pikku/core@0.12.95
+  - @pikku/inspector@0.12.65
+
 ## 0.12.120
 
 ### Patch Changes

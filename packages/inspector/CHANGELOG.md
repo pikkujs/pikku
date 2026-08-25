@@ -1,3 +1,27 @@
+## 0.12.65
+
+### Patch Changes
+
+- b5e79c1: Resolve `Config`, `SingletonServices` and `Services` by declaration rather than
+  by name.
+
+  Service extraction read `typesLookup` under the hardcoded names the scaffold
+  happens to use, but the lookup is keyed by whatever the project named its
+  interface. A project that renamed one satisfied every required-type check and
+  then resolved to no services at all, surfacing much later as PKU724 or as every
+  singleton service turning optional. These now go through the import maps, which
+  carry the real name.
+
+  `pikku workflow` carried the same lookup as its fallback when aggregation came
+  back empty, so a project with a renamed interface was told
+  `WORKFLOW_ORCHESTRATOR_NOT_CONFIGURED` while holding a perfectly good
+  `workflowService`.
+
+- Updated dependencies [1cc50ef]
+- Updated dependencies [a3deea4]
+- Updated dependencies [2a02288]
+  - @pikku/core@0.12.95
+
 ## 0.12.64
 
 ### Patch Changes
