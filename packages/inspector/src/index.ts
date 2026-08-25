@@ -63,3 +63,4 @@ export type {
   SerializedWorkflowGraph,
   SerializedWorkflowGraphs,
 } from './utils/workflow/graph/index.js'
+export { resolveCoreType } from './utils/resolve-core-type.js'

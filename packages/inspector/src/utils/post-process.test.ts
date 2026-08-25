@@ -12,9 +12,11 @@ import {
   validateRemoteAddonAuth,
   validateAgentToolReferences,
   validateAgentModels,
+  validateSchemaReferences,
 } from './post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import type { InspectorState, InspectorLogger } from '../types.js'
+import { TypesMap } from '../types-map.js'
 
 const makeCriticalLogger = () => {
   const criticals: { code: string; message: string }[] = []
@@ -927,4 +929,124 @@ describe('validateAgentModels (aliases resolve against pikku.config.json)', () =
       assert.equal(criticals[0]!.code, ErrorCode.INVALID_MODEL)
     })
   }
+})
+
+const makeDiagnosticLogger = () => {
+  const diagnostics: { code: string; severity: string; message: string }[] = []
+  const logger = {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    critical: () => {},
+    diagnostic: (d: any) =>
+      diagnostics.push({
+        code: String(d.code),
+        severity: d.severity,
+        message: d.message,
+      }),
+  } as unknown as InspectorLogger
+  return { logger, diagnostics }
+}
+
+const makeSchemaRefState = (
+  meta: Record<string, { inputs?: string[]; outputs?: string[] }>,
+  schemas: string[],
+  types: Record<string, string> = {}
+): InspectorState => {
+  const typesMap = new TypesMap()
+  for (const [name, path] of Object.entries(types)) {
+    typesMap.addType(name, path)
+  }
+  return {
+    functions: { meta, typesMap },
+    schemas: Object.fromEntries(schemas.map((name) => [name, {}])),
+  } as unknown as InspectorState
+}
+
+describe('validateSchemaReferences', () => {
+  test('an output type that was never exported is reported, not silent', () => {
+    const { logger, diagnostics } = makeDiagnosticLogger()
+    validateSchemaReferences(
+      logger,
+      makeSchemaRefState(
+        { getStructure: { outputs: ['StructureSummary'] } },
+        []
+      )
+    )
+    assert.equal(diagnostics.length, 1)
+    assert.equal(diagnostics[0]!.code, ErrorCode.SCHEMA_REFERENCE_UNRESOLVED)
+    assert.equal(diagnostics[0]!.severity, 'error')
+    assert.match(
+      diagnostics[0]!.message,
+      /getStructure\.output → 'StructureSummary'/
+    )
+    assert.match(diagnostics[0]!.message, /declared but not exported/)
+  })
+
+  test('an unresolved input is reported the same way', () => {
+    const { logger, diagnostics } = makeDiagnosticLogger()
+    validateSchemaReferences(
+      logger,
+      makeSchemaRefState({ getStructure: { inputs: ['StructureQuery'] } }, [])
+    )
+    assert.equal(diagnostics.length, 1)
+    assert.match(
+      diagnostics[0]!.message,
+      /getStructure\.input → 'StructureQuery'/
+    )
+  })
+
+  test('a generated schema resolves and says nothing', () => {
+    const { logger, diagnostics } = makeDiagnosticLogger()
+    validateSchemaReferences(
+      logger,
+      makeSchemaRefState({ getStructure: { outputs: ['StructureSummary'] } }, [
+        'StructureSummary',
+      ])
+    )
+    assert.deepEqual(diagnostics, [])
+  })
+
+  test('primitive contracts are never schema references', () => {
+    const { logger, diagnostics } = makeDiagnosticLogger()
+    validateSchemaReferences(
+      logger,
+      makeSchemaRefState(
+        { getStructure: { inputs: ['string'], outputs: ['void'] } },
+        []
+      )
+    )
+    assert.deepEqual(diagnostics, [])
+  })
+
+  test('a name shared by two files is reported under the disambiguated name', () => {
+    const { logger, diagnostics } = makeDiagnosticLogger()
+    const typesMap = new TypesMap()
+    const mine = typesMap.addUniqueType('StructureSummary', '/structure.ts')
+    typesMap.addUniqueType('StructureSummary', '/other-structure.ts')
+    const state = {
+      functions: { meta: { getStructure: { outputs: [mine] } }, typesMap },
+      schemas: {},
+    } as unknown as InspectorState
+    validateSchemaReferences(logger, state)
+    assert.equal(diagnostics.length, 1)
+    assert.match(diagnostics[0]!.message, new RegExp(`→ '${mine}'`))
+  })
+
+  test('every unresolved contract is named in one diagnostic, not one each', () => {
+    const { logger, diagnostics } = makeDiagnosticLogger()
+    validateSchemaReferences(
+      logger,
+      makeSchemaRefState(
+        {
+          getStructure: { outputs: ['StructureSummary'] },
+          listStructures: { outputs: ['StructureSummary'] },
+        },
+        []
+      )
+    )
+    assert.equal(diagnostics.length, 1)
+    assert.match(diagnostics[0]!.message, /2 function contracts name a schema/)
+  })
 })
