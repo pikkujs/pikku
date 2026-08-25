@@ -761,10 +761,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<boolean> {
-    const target = stepDispatchTarget(
-      rpcName,
-      stepName,
-      await this.isInline(runId)
+    const target = await stepDispatchTarget(rpcName, stepName, () =>
+      this.isInline(runId)
     )
     if (target === 'inline') {
       return false

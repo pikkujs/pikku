@@ -76,12 +76,16 @@ export const stepWorkerQueueName = (
  *
  * Throws only for a step that asked for the queue by name and has none, which
  * is a deployment missing a service rather than a routing choice.
+ *
+ * `parentIsInline` is a thunk because resolving it can read the run store, and
+ * every step dispatch would pay for that — only a step that names a workflow
+ * and has a queue to reach ever asks.
  */
-export const stepDispatchTarget = (
+export const stepDispatchTarget = async (
   rpcName: string,
   stepName: string,
-  parentIsInline: boolean
-): 'queue' | 'inline' => {
+  parentIsInline: () => Promise<boolean>
+): Promise<'queue' | 'inline'> => {
   const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
   const rpcMeta =
     typeof rpcFuncId === 'string'
@@ -98,7 +102,10 @@ export const stepDispatchTarget = (
   }
   const isWorkflow =
     pikkuState(null, 'workflows', 'meta')[rpcName] !== undefined
-  return isWorkflow && hasQueue && !parentIsInline ? 'queue' : 'inline'
+  if (!isWorkflow || !hasQueue) {
+    return 'inline'
+  }
+  return (await parentIsInline()) ? 'inline' : 'queue'
 }
 
 export const jobGroupFor = (
