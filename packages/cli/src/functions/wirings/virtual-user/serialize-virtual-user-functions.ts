@@ -77,6 +77,15 @@ export const RunVirtualUserInput = z.object({
   budget: Budget.optional(),
   /** Fixed seed, so a run replays into the same finding. */
   seed: z.number().int().optional(),
+  /**
+   * A short-lived Fabric operator token, handed in by whoever starts the run.
+   *
+   * Handed in rather than held: a deployed stage that could ask for a token
+   * would be holding a credential able to mint admin sessions for itself, for
+   * as long as the box lives. This way it holds one receipt, for one run, and
+   * the receipt expires on its own. It is never written to the run record.
+   */
+  operatorToken: z.string().min(1).optional(),
 })
 
 export const RunVirtualUserOutput = z.object({
@@ -250,6 +259,8 @@ export const ExecuteVirtualUserRunInput = z.object({
     })
     .optional(),
   seed: z.number(),
+  /** Carried from the caller for the duration of the dispatch, never stored. */
+  operatorToken: z.string().optional(),
 })
 
 export const ExecuteVirtualUserRunOutput = z.object({
@@ -324,6 +335,33 @@ const SIGN_IN_PATH_VARIABLE = 'SCENARIO_SIGN_IN_PATH'
 const RPC_PATH_VARIABLE = 'SCENARIO_RPC_PATH'
 
 /**
+ * The deployed way in. A Fabric operator token is asymmetric — this stage can
+ * verify one and can never mint one — so unlike the actor secret it is safe for
+ * a run against a real environment. Read from the environment only as the
+ * fallback for a run nobody handed a token to, which is what a schedule is.
+ */
+const OPERATOR_TOKEN_VARIABLE = 'FABRIC_OPERATOR_TOKEN'
+const CREATE_MISSING_VARIABLE = 'PIKKU_PERSONA_CREATE_MISSING'
+
+/**
+ * Which door under the auth mount, given the credential in hand. Both are
+ * better-auth plugins mounted side by side, so \`\${SIGN_IN_PATH_VARIABLE}\` names
+ * the mount and the last segment is ours to pick — an app that moved auth to
+ * \`/api/auth\` says so once and both paths follow. A path that names neither
+ * plugin is left alone, since it was configured deliberately.
+ */
+const signInPathFor = (
+  configured: string | undefined,
+  plugin: 'actor' | 'fabric'
+): string | undefined => {
+  if (!configured) {
+    return undefined
+  }
+  const mount = configured.replace(/\\/sign-in\\/(actor|fabric)$/, '')
+  return mount === configured ? configured : \`\${mount}/sign-in/\${plugin}\`
+}
+
+/**
  * One run on the wire. Findings and intents are free-form by design — the
  * engine records what it noticed, not a fixed row shape — so they cross as the
  * schema's open objects rather than being narrowed to whatever kinds exist
@@ -390,6 +428,7 @@ const startVirtualUserRun = async (
     budget?: { steps?: number; mutations?: number; durationMs?: number }
     seed?: number
     startedBy?: string | null
+    operatorToken?: string
   }
 ): Promise<string> => {
   const { virtualUserRunStore, config } = services
@@ -459,6 +498,10 @@ const startVirtualUserRun = async (
       memory: input.memory ?? {},
       budget: input.budget,
       seed,
+      // Rides the dispatch and nothing else. \`virtualUserRunStore.start\` above
+      // is deliberately not given it: a run record outlives the run, and a
+      // credential in a row somebody can read back is a credential leak.
+      operatorToken: input.operatorToken,
     })
     .catch(() => {})
 
@@ -750,7 +793,16 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
   output: ExecuteVirtualUserRunOutput,
   func: async (
     { virtualUserRunStore, metaService, agentRunner, variables, logger },
-    { runId, persona: personaId, disposition, goals, memory, budget, seed }
+    {
+      runId,
+      persona: personaId,
+      disposition,
+      goals,
+      memory,
+      budget,
+      seed,
+      operatorToken,
+    }
   ) => {
     if (!virtualUserRunStore) {
       throw new Error('No virtualUserRunStore is wired.')
@@ -769,12 +821,21 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
           \`\${API_URL_VARIABLE} is not set — a virtual user has no address to sign in at.\`
         )
       }
-      const secret = await variables.get(SECRET_VARIABLE)
-      if (!secret) {
+      // An operator token wins wherever one is available: it is asymmetric, and
+      // it does not need the target to hold a shared secret at all. The actor
+      // secret is the local-only fallback, because only \`pikku dev\` serves the
+      // endpoint that accepts it.
+      const token =
+        operatorToken ?? (await variables.get(OPERATOR_TOKEN_VARIABLE))
+      const secret = token ? undefined : await variables.get(SECRET_VARIABLE)
+      if (!token && !secret) {
         throw new Error(
-          \`\${SECRET_VARIABLE} is not set — actor sign-in is disabled, so there is nobody for the virtual user to be.\`
+          \`Neither an operator token nor \${SECRET_VARIABLE} is available — there is nobody for the virtual user to be. \` +
+            \`Hand a Fabric operator token in with the run against a deployed stage, or export \${SECRET_VARIABLE} against a local \\\`pikku dev\\\` target.\`
         )
       }
+      const createMissing =
+        String(await variables.get(CREATE_MISSING_VARIABLE)) === 'true'
       const model = await variables.get(MODEL_VARIABLE)
       if (!model) {
         throw new Error(\`\${MODEL_VARIABLE} is not set — no model to think with.\`)
@@ -808,11 +869,21 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
         agentsMeta: await metaService.getAgentsMeta(),
       })
 
+      const configuredSignInPath =
+        (await variables.get(SIGN_IN_PATH_VARIABLE)) ?? undefined
       const signedIn = createPersonas({
         apiUrl,
-        secret,
+        ...(token
+          ? {
+              operator: {
+                token,
+                createMissing,
+                signInPath: signInPathFor(configuredSignInPath, 'fabric'),
+              },
+            }
+          : { secret }),
         model,
-        signInPath: (await variables.get(SIGN_IN_PATH_VARIABLE)) ?? undefined,
+        signInPath: signInPathFor(configuredSignInPath, 'actor'),
         rpcPath: (await variables.get(RPC_PATH_VARIABLE)) ?? undefined,
       })
       const target = signedIn[personaId as keyof typeof signedIn]

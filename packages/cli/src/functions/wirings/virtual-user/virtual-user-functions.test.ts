@@ -234,6 +234,51 @@ describe('serializeVirtualUserFunctions', () => {
   test('carries the seed out with the run, so a finding can be replayed', () => {
     assert.match(schemas, /seed: z\.number\(\)/)
   })
+
+  // The whole point of handing the token in rather than letting the stage ask
+  // for one: a box that can ask holds a credential that mints admin sessions
+  // for itself, for as long as it lives.
+  test('a deployed run is started with a token, not with a way to get one', () => {
+    assert.match(schemas, /operatorToken: z\.string\(\)\.min\(1\)\.optional\(\)/)
+    assert.match(out, /operatorToken: input\.operatorToken/)
+  })
+
+  // A run record outlives the run and is read back over RPC, so a credential
+  // stored on it is a credential anyone with read scope can collect.
+  test('the handed-in token rides the dispatch and is never recorded', () => {
+    const start = out.slice(
+      out.indexOf('const startVirtualUserRun'),
+      out.indexOf('export const runVirtualUser')
+    )
+    const record = start.slice(
+      start.indexOf('virtualUserRunStore.start('),
+      start.indexOf('rpc')
+    )
+    assert.doesNotMatch(record, /operatorToken/)
+  })
+
+  // Asymmetric, so the stage can verify one and can never mint one. The actor
+  // secret is symmetric and only `pikku dev` serves the endpoint that takes it.
+  test('an operator token wins over the actor secret wherever both exist', () => {
+    assert.match(
+      out,
+      /operatorToken \?\? \(await variables\.get\(OPERATOR_TOKEN_VARIABLE\)\)/
+    )
+    assert.match(out, /token\n\s+\? \{\n\s+operator: \{/)
+    assert.match(out, /\}\n\s+: \{ secret \}\),/)
+  })
+
+  // Both are better-auth plugins on one mount, so an app that moved auth to
+  // `/api/auth` should not have to name each door separately.
+  test('an app that moved its auth mount moves both sign-in paths', () => {
+    assert.match(out, /const signInPathFor = \(/)
+    assert.match(out, /signInPath: signInPathFor\(configuredSignInPath, 'fabric'\)/)
+    assert.match(out, /signInPath: signInPathFor\(configuredSignInPath, 'actor'\)/)
+  })
+
+  test('says which credential is missing rather than assuming the local one', () => {
+    assert.match(out, /Neither an operator token nor \$\{SECRET_VARIABLE\} is available/)
+  })
 })
 
 describe('pikkuVirtualUserFunctions', () => {

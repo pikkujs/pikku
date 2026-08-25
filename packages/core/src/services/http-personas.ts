@@ -51,7 +51,12 @@ export interface HttpPersonasConfig {
   operator?: OperatorSignInOptions
   /** Persona id → the declaration with its address filled in. */
   personas: Record<string, ResolvedPersona>
-  /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
+  /**
+   * Sign-in path under apiUrl, for whichever of the two paths is in use — an
+   * app that mounts auth under `/api` moves both. Default: the actor plugin's
+   * `/auth/sign-in/actor`, or `/auth/sign-in/fabric` for an operator.
+   * {@link OperatorSignInOptions.signInPath} overrides it.
+   */
   signInPath?: string
   /** Where the session (and its roles) is read back. Default `/auth/get-session`. */
   sessionPath?: string
@@ -92,7 +97,10 @@ export class HttpPersona implements ScenarioPersona {
   ) {
     this.jar = createCookieJar(config.apiUrl)
     if (config.operator) {
-      this.signIn = new OperatorSignIn(config.apiUrl, config.operator)
+      this.signIn = new OperatorSignIn(config.apiUrl, {
+        signInPath: config.signInPath,
+        ...config.operator,
+      })
     } else if (config.secret) {
       this.signIn = new ActorSignIn(
         config.apiUrl,

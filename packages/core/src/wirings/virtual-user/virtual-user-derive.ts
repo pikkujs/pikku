@@ -35,6 +35,15 @@ export const deriveCatalogue = (
     if (meta.scenario || meta.scenarioStep || meta.scenarioStepKind) continue
     // knowledge: decisions/internals/only-exposed-functions-enter-a-virtual-user-catalogue.md
     if (meta.expose !== true) continue
+    // A virtual user is not offered the machinery that runs virtual users. A
+    // persona whose role carries `virtualUser:*` would otherwise be able to
+    // start further runs, read every run's findings — an adversarial run's
+    // transcript is working exploits against this same app — and put a persona
+    // on a schedule that outlives it. Same reasoning as the scenario-step rule
+    // above: the tool is about the run, not about the product being explored.
+    if (meta.scopes?.some((scope) => scope.split(':')[0] === 'virtualUser')) {
+      continue
+    }
 
     const inputSchema = meta.inputSchemaName
       ? schemas[meta.inputSchemaName]
