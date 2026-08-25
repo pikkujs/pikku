@@ -15,6 +15,7 @@ import {
 import { PGlite } from '@electric-sql/pglite'
 import type { ClassificationManifest } from '@pikku/core/classification'
 import { DataLock } from '@pikku/core/classification'
+import { DataLockedError } from '@pikku/core/errors'
 import {
   ClassificationCrypto,
   createDataLockResolver,
@@ -95,17 +96,17 @@ class PGliteDriver implements Driver {
   async destroy(): Promise<void> {}
 }
 
+const PASSPHRASE = 'a-passphrase-long-enough-to-be-real-key-material'
+
 let pglite: PGlite
 let db: Kysely<AccountsDB>
 let crypto: ClassificationCrypto
+let lock: DataLock
 
 before(async () => {
-  const lock = new DataLock(createMemoryLockVault())
+  lock = new DataLock(createMemoryLockVault())
   await lock.init()
-  await lock.initialize('a-passphrase-long-enough-to-be-real-key-material', [
-    'default',
-    'recovery-codes',
-  ])
+  await lock.initialize(PASSPHRASE, ['default', 'recovery-codes'])
   crypto = new ClassificationCrypto({
     resolveKEK: createDataLockResolver(lock),
   })
@@ -220,5 +221,46 @@ describe('against a real postgres', () => {
       .where('id', '=', 'a1')
       .executeTakeFirstOrThrow()
     assert.equal(row.ssn, '123-45-6789')
+  })
+
+  test('locking shuts a column that was readable a moment ago, and unlocking opens it again', async () => {
+    // The whole point of the passphrase gate: the rows are already on disk and
+    // the process is already running, so what changes when someone walks away
+    // has to be the key alone — not the services, the connection or the plugin.
+    const before = await db
+      .selectFrom('accounts')
+      .select('ssn')
+      .where('id', '=', 'a1')
+      .executeTakeFirstOrThrow()
+    assert.equal(before.ssn, '123-45-6789')
+
+    lock.lock()
+
+    await assert.rejects(
+      () =>
+        db
+          .selectFrom('accounts')
+          .select('ssn')
+          .where('id', '=', 'a1')
+          .executeTakeFirstOrThrow(),
+      DataLockedError
+    )
+
+    // A locked store must not accept a write either. Failing loudly here is
+    // what stops a value being stored in the clear because nobody could reach
+    // the key to wrap it.
+    await assert.rejects(
+      () => crypto.encryptColumn('default', 'never-written'),
+      DataLockedError
+    )
+
+    await lock.unlock(PASSPHRASE)
+
+    const after = await db
+      .selectFrom('accounts')
+      .select('ssn')
+      .where('id', '=', 'a1')
+      .executeTakeFirstOrThrow()
+    assert.equal(after.ssn, '123-45-6789')
   })
 })
