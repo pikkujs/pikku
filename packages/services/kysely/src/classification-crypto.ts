@@ -3,6 +3,7 @@ import {
   envelopeEncrypt,
   envelopeRewrap,
 } from '@pikku/core/crypto-utils'
+import { DEFAULT_KEY_ID } from '@pikku/core/classification'
 import type { DataLock } from '@pikku/core/classification'
 import type {
   LockRecord,
@@ -14,8 +15,13 @@ import type {
  * The key a column is protected by when its classification names none. A
  * deployment that never scopes its keys stores this id in every row and still
  * gets the scoping seam for free.
+ *
+ * Re-exported from core rather than declared again: the same constant decides
+ * which record `initialize` mints and which one a stored envelope names, and
+ * two copies of it would only ever be found to disagree by a row that could
+ * not be opened.
  */
-export const DEFAULT_KEY_ID = 'default'
+export { DEFAULT_KEY_ID }
 
 const ENVELOPE_PREFIX = 'pikku1'
 
