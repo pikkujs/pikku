@@ -127,6 +127,26 @@ describe('generating a Tauri shell around a pikku binary', () => {
     }
   })
 
+  it('gives up when the sidecar never becomes ready', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir)
+      const main = await readFile(
+        join(dir, 'src-tauri', 'src', 'main.rs'),
+        'utf-8'
+      )
+
+      // A sidecar that starts and then hangs prints no ready line, so nothing
+      // opens a window — and a Tauri process with no window cannot be quit
+      // from the dock. The shell has to notice and exit on its own.
+      assert.match(main, /READY_TIMEOUT/)
+      assert.match(main, /did not become ready/)
+      assert.match(main, /exit\(1\)/)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   it('never asks the shell to choose a port', async () => {
     const dir = await scratch()
     try {

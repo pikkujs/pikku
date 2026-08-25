@@ -412,10 +412,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       const { generateTauriShell, tauriBundleIdentifier } =
         await import('./tauri/generate.js')
       const { hostTargetTriple } = await import('./tauri/target-triple.js')
+      const { renderTauriNextSteps } = await import('./tauri/next-steps.js')
       try {
-        targetTriple = hostTargetTriple({
-          rustcVersionVerbose: await rustcHostOutput(),
-        })
+        const rustcVersionVerbose = await rustcHostOutput()
+        targetTriple = hostTargetTriple({ rustcVersionVerbose })
         const shell = await generateTauriShell({
           projectDir: this.projectDir,
           appName,
@@ -433,6 +433,12 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
           )
         }
         logger.info(`  sidecar: binaries/${shell.sidecar?.fileName}`)
+        for (const line of renderTauriNextSteps({
+          shellDir: shell.dir,
+          hasRust: rustcVersionVerbose !== undefined,
+        })) {
+          logger.info(line)
+        }
       } catch (e: unknown) {
         return {
           success: false,

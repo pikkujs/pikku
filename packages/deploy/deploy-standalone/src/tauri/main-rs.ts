@@ -31,7 +31,9 @@ export const renderMainRs = (options: MainRsOptions): string => {
 // shell only supervises it.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -41,6 +43,11 @@ use tauri_plugin_shell::ShellExt;
 /// finished. The runtime's own "listening on ..." line comes earlier and is not
 /// readiness.
 const READY_PREFIX: &str = "${SERVER_READY_MARKER} on http://";
+
+/// How long to wait for the ready line before giving up. A sidecar that starts
+/// and then hangs prints nothing, so no window is ever built — and a Tauri
+/// process with no window cannot be quit from the dock or the taskbar.
+const READY_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Held so the child is not dropped while the app runs, and so a clean exit can
 /// stop it explicitly.
@@ -95,9 +102,23 @@ fn main() {
 
             app.manage(Sidecar(Mutex::new(Some(child))));
 
+            let opened = Arc::new(AtomicBool::new(false));
+
+            let timeout_handle = app.handle().clone();
+            let timeout_opened = opened.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(READY_TIMEOUT);
+                if !timeout_opened.load(Ordering::SeqCst) {
+                    eprintln!(
+                        "the pikku sidecar did not become ready within {:?} — giving up",
+                        READY_TIMEOUT
+                    );
+                    timeout_handle.exit(1);
+                }
+            });
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let mut opened = false;
                 while let Some(event) = rx.recv().await {
                     let line = match event {
                         CommandEvent::Stdout(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
@@ -107,7 +128,7 @@ fn main() {
                         }
                         CommandEvent::Terminated(payload) => {
                             eprintln!("pikku sidecar exited: {:?}", payload.code);
-                            if !opened {
+                            if !opened.load(Ordering::SeqCst) {
                                 handle.exit(1);
                             }
                             break;
@@ -116,7 +137,7 @@ fn main() {
                     };
                     print!("{}", line);
 
-                    if opened {
+                    if opened.load(Ordering::SeqCst) {
                         continue;
                     }
                     if let Some(port) = parse_ready_port(&line) {
@@ -132,7 +153,7 @@ fn main() {
                                 .inner_size(${width}.0, ${height}.0)
                                 .build();
                                 match built {
-                                    Ok(_) => opened = true,
+                                    Ok(_) => opened.store(true, Ordering::SeqCst),
                                     Err(err) => {
                                         eprintln!("could not open the window: {}", err);
                                         handle.exit(1);
