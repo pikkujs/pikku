@@ -115,6 +115,28 @@ describe('operator persona sign-in', () => {
     assert.equal(stage.createdCount, 0)
   })
 
+  // An app that mounts auth somewhere other than the root moves both sign-in
+  // paths together, and `SCENARIO_SIGN_IN_PATH` is the only place it can say so.
+  test('honours a moved sign-in path the same way the actor path does', async () => {
+    const stage = await startStage([
+      { id: 'user-7', email: 'customer@personas.invalid' },
+    ])
+    servers.push(stage.server)
+
+    const personas = createHttpPersonas({
+      apiUrl: stage.apiUrl.replace(/\/api$/, ''),
+      operator: { token: OPERATOR_TOKEN },
+      signInPath: '/api/auth/sign-in/fabric',
+      rpcPath: '/api/rpc',
+      personas: { customer: persona('customer@personas.invalid') },
+    })
+
+    const result = (await personas.customer!.invoke('whoami', {})) as {
+      actingAs: string | null
+    }
+    assert.equal(result.actingAs, 'user-7')
+  })
+
   test('refuses a persona the stage has no account for', async () => {
     const stage = await startStage([])
     servers.push(stage.server)

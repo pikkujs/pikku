@@ -77,6 +77,15 @@ export const RunVirtualUserInput = z.object({
   budget: Budget.optional(),
   /** Fixed seed, so a run replays into the same finding. */
   seed: z.number().int().optional(),
+  /**
+   * A short-lived Fabric operator token, handed in by whoever starts the run.
+   *
+   * Handed in rather than held: a deployed stage that could ask for a token
+   * would be holding a credential able to mint admin sessions for itself, for
+   * as long as the box lives. This way it holds one receipt, for one run, and
+   * the receipt expires on its own. It is never written to the run record.
+   */
+  operatorToken: z.string().min(1).optional(),
 })
 
 export const RunVirtualUserOutput = z.object({
@@ -250,6 +259,8 @@ export const ExecuteVirtualUserRunInput = z.object({
     })
     .optional(),
   seed: z.number(),
+  /** Carried from the caller for the duration of the dispatch, never stored. */
+  operatorToken: z.string().optional(),
 })
 
 export const ExecuteVirtualUserRunOutput = z.object({
@@ -261,16 +272,20 @@ export const ExecuteVirtualUserRunOutput = z.object({
  * Auto-generated virtual user functions
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuFunc, pikkuSessionlessFunc } from '${leaf('function')}'
+import { pikkuFunc, pikkuSessionlessFunc, type Session } from '${leaf('function')}'
+import { pikkuMiddleware } from '${leaf('middleware')}'
 import { defineScope } from '${leaf('scopes')}'
-import { personaVirtualUserTarget, runVirtualUser as runVirtualUserEngine, type SchemaMap, type VirtualUserDisposition } from '@pikku/core/virtual-user'
 import {
-  prepareVirtualUserRun,
-  PRODUCTION_DISPOSITION,
+  executeVirtualUserRun as executeRun,
+  logVirtualUserTick,
+  requireVirtualUserRunStore,
+  serializeVirtualUserRun,
+  serializeVirtualUserSchedule,
+  serializeVirtualUserSteps,
+  startVirtualUserRun,
   tickVirtualUserSchedules as tick,
-  type VirtualUserRunRecord,
-  type VirtualUserRunStore,
-  type VirtualUserScheduleRecord,
+  virtualUserScheduleRunInput,
+  writeVirtualUserSchedule,
 } from '@pikku/core/virtual-user'
 import { createPersonas, personaConfigs } from '${pathToPersonas}'
 import {
@@ -289,6 +304,14 @@ import {
   SetVirtualUserScheduleOutput,
 } from './virtual-user.schemas.gen.js'
 
+/**
+ * The wirings, and only the wirings.
+ *
+ * Every body below is one call into \`@pikku/core/virtual-user\`, because none of
+ * this work varies by application — what is generated is the part that does:
+ * the scopes this project declares, the schemas its RPCs are checked against,
+ * and the \`rpc.invoke\` calls typed off its own RPC map.
+ */
 defineScope({
   virtualUser: {
     displayName: 'Virtual Users',
@@ -303,168 +326,6 @@ defineScope({
   },
 })
 
-/**
- * Where the virtual user signs in. Its own variable rather than a guess at the
- * host's origin: a run drives real traffic through the real front door, and a
- * server that cannot name its own public URL would be signing in somewhere it
- * only assumed was itself.
- */
-const API_URL_VARIABLE = 'VIRTUAL_USER_API_URL'
-const SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
-const MODEL_VARIABLE = 'VIRTUAL_USER_MODEL'
-
-/**
- * The same two variables a scenario run reads, because a virtual user signs in
- * and calls through exactly the doors a scenario does. An app that mounts auth
- * somewhere other than the root — \`/api/auth\` is the common one — has no other
- * way to say so, and without them the run signs in against a 404 and spends its
- * whole budget thinking about why nothing works.
- */
-const SIGN_IN_PATH_VARIABLE = 'SCENARIO_SIGN_IN_PATH'
-const RPC_PATH_VARIABLE = 'SCENARIO_RPC_PATH'
-
-/**
- * One run on the wire. Findings and intents are free-form by design — the
- * engine records what it noticed, not a fixed row shape — so they cross as the
- * schema's open objects rather than being narrowed to whatever kinds exist
- * today.
- */
-const serializeRun = (run: VirtualUserRunRecord) => ({
-  runId: run.runId,
-  persona: run.persona,
-  disposition: run.disposition,
-  seed: run.seed,
-  status: run.status,
-  goals: run.goals,
-  memory: run.memory,
-  findings: run.findings.map((finding) => ({
-    kind: finding.kind as string,
-    detail: finding.detail,
-    rpcName: finding.rpcName,
-    status: finding.status,
-    intentId: finding.intentId,
-    step: finding.step,
-  })),
-  intents: run.intents.map((intent) => ({
-    id: intent.id,
-    sourceId: intent.sourceId,
-    title: intent.title,
-    status: intent.status as string,
-    steps: intent.steps,
-    suspensions: intent.suspensions,
-    summary: intent.summary,
-  })),
-  tally: (run.tally ?? null) as Record<string, unknown> | null,
-  stoppedBy: run.stoppedBy,
-  error: run.error,
-  createdAt: run.createdAt.toISOString(),
-  finishedAt: run.finishedAt ? run.finishedAt.toISOString() : null,
-})
-
-/**
- * Resolves a persona down to a run and kicks it off, for the two callers that
- * start one: a person with the scope, and the tick acting on a schedule.
- *
- * Shared rather than duplicated because the checks are the point — an acted-upon
- * persona has no session, and only one disposition may ever touch production.
- * A second copy of that would eventually disagree with this one.
- */
-const startVirtualUserRun = async (
-  services: {
-    virtualUserRunStore?: VirtualUserRunStore
-    // \`unknown\` because an application's Config is its own interface and need
-    // not declare nodeEnv at all. A structural \`{ nodeEnv?: string }\` shares no
-    // property with such a config and TypeScript rejects the whole call.
-    config: unknown
-  },
-  // Named literally rather than as \`string\`: a project's generated rpc.invoke
-  // is generic over its own map's keys, and \`string\` is not one of them.
-  rpc: {
-    invoke: (name: 'executeVirtualUserRun', data: any) => Promise<unknown>
-  },
-  input: {
-    persona: string
-    disposition?: string
-    goals?: string[]
-    memory?: Record<string, string>
-    budget?: { steps?: number; mutations?: number; durationMs?: number }
-    seed?: number
-    startedBy?: string | null
-  }
-): Promise<string> => {
-  const { virtualUserRunStore, config } = services
-  if (!virtualUserRunStore) {
-    throw new Error(
-      'No virtualUserRunStore is wired — a run has nowhere to be recorded. ' +
-        'Wire KyselyVirtualUserRunStore from @pikku/kysely, or your own implementation of VirtualUserRunStore.'
-    )
-  }
-
-  const persona = personaConfigs[input.persona as keyof typeof personaConfigs] as
-    | { id: string; runnable: boolean; disposition?: string }
-    | undefined
-  if (!persona) {
-    throw new Error(
-      \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
-    )
-  }
-  // An acted-upon persona has no session of its own, and running one would
-  // race whatever scenario acts on it.
-  if (!persona.runnable) {
-    throw new Error(
-      \`Persona "\${input.persona}" is declared as acted upon, never run\`
-    )
-  }
-
-  const disposition = (input.disposition ??
-    persona.disposition ??
-    'realistic') as VirtualUserDisposition
-  // Every disposition other than this one exists to find out what the product
-  // does wrong, which is not a thing to do to real customers' data. Checked
-  // against the effective disposition, so the override cannot smuggle one in.
-  if (
-    (config as { nodeEnv?: string } | undefined)?.nodeEnv === 'production' &&
-    disposition !== PRODUCTION_DISPOSITION
-  ) {
-    throw new Error(
-      \`Only the '\${PRODUCTION_DISPOSITION}' disposition may run against production; "\${input.persona}" is \${disposition}\`
-    )
-  }
-
-  // Seeded here rather than inside the engine so the record carries the seed
-  // even if the run dies before returning — an unreproducible crash costs the
-  // most.
-  const seed = input.seed ?? Math.floor(Math.random() * 2_147_483_647)
-
-  const runId = await virtualUserRunStore.start({
-    persona: persona.id,
-    disposition,
-    seed,
-    goals: input.goals ?? [],
-    memory: input.memory ?? {},
-    startedBy: input.startedBy ?? null,
-  })
-
-  // Deliberately not awaited: a run takes minutes, and a held-open request
-  // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
-  // writes both outcomes to the record itself, so the only thing left to
-  // handle here is a rejection escaping the promise — without the catch it
-  // becomes an unhandled rejection and takes the process with it.
-  void rpc
-    .invoke('executeVirtualUserRun', {
-      runId,
-      persona: persona.id,
-      disposition,
-      goals: input.goals ?? [],
-      memory: input.memory ?? {},
-      budget: input.budget,
-      seed,
-    })
-    .catch(() => {})
-
-  return runId
-}
-
 export const runVirtualUser = pikkuFunc({
   tags: ['pikku'],
   title: 'Run a Virtual User',
@@ -475,11 +336,42 @@ export const runVirtualUser = pikkuFunc({
   input: RunVirtualUserInput,
   output: RunVirtualUserOutput,
   func: async ({ virtualUserRunStore, config }, input, { session, rpc }) => {
-    const runId = await startVirtualUserRun(
-      { virtualUserRunStore, config },
-      rpc!,
-      { ...input, startedBy: session?.userId ?? null }
-    )
+    const { runId, persona, disposition, goals, memory, seed } =
+      await startVirtualUserRun({
+        store: virtualUserRunStore,
+        personas: personaConfigs,
+        // Cast because an application's Config is its own interface and need
+        // not declare nodeEnv at all.
+        config: config as { nodeEnv?: string } | undefined,
+        persona: input.persona,
+        disposition: input.disposition,
+        seed: input.seed,
+        goals: input.goals,
+        memory: input.memory,
+        startedBy: session?.userId ?? null,
+      })
+
+    // Deliberately not awaited: a run takes minutes, and a held-open request
+    // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
+    // writes both outcomes to the record itself, so the only thing left to
+    // handle here is a rejection escaping the promise — without the catch it
+    // becomes an unhandled rejection and takes the process with it.
+    void rpc!
+      .invoke('executeVirtualUserRun', {
+        runId,
+        persona,
+        disposition,
+        goals,
+        memory,
+        seed,
+        budget: input.budget,
+        // Rides the dispatch and nothing else. The run record is deliberately
+        // not given it: a record outlives the run, and a credential in a row
+        // somebody can read back is a credential leak.
+        operatorToken: input.operatorToken,
+      })
+      .catch(() => {})
+
     return { runId }
   },
 })
@@ -497,14 +389,14 @@ export const getVirtualUserRun = pikkuFunc({
   input: GetVirtualUserRunInput,
   output: GetVirtualUserRunOutput,
   func: async ({ virtualUserRunStore }, { runId }) => {
-    if (!virtualUserRunStore) {
-      throw new Error('No virtualUserRunStore is wired — there are no runs to read.')
-    }
-    const run = await virtualUserRunStore.get(runId)
+    const run = await requireVirtualUserRunStore(
+      virtualUserRunStore,
+      true
+    ).get(runId)
     if (!run) {
       throw new Error(\`No virtual user run \${runId}\`)
     }
-    return serializeRun(run)
+    return serializeVirtualUserRun(run)
   },
 })
 
@@ -518,11 +410,11 @@ export const listVirtualUserRuns = pikkuFunc({
   input: ListVirtualUserRunsInput,
   output: ListVirtualUserRunsOutput,
   func: async ({ virtualUserRunStore }, { persona, limit, offset }) => {
-    if (!virtualUserRunStore) {
-      throw new Error('No virtualUserRunStore is wired — there are no runs to read.')
-    }
-    const runs = await virtualUserRunStore.list({ persona, limit, offset })
-    return { runs: runs.map(serializeRun) }
+    const runs = await requireVirtualUserRunStore(
+      virtualUserRunStore,
+      true
+    ).list({ persona, limit, offset })
+    return { runs: runs.map(serializeVirtualUserRun) }
   },
 })
 
@@ -539,63 +431,13 @@ export const getVirtualUserRunSteps = pikkuFunc({
   input: GetVirtualUserRunStepsInput,
   output: GetVirtualUserRunStepsOutput,
   func: async ({ virtualUserRunStore }, { runId, limit, offset }) => {
-    if (!virtualUserRunStore) {
-      throw new Error('No virtualUserRunStore is wired — there are no runs to read.')
-    }
-    const steps = await virtualUserRunStore.steps(runId, { limit, offset })
-    return {
-      steps: steps.map((step) => ({
-        index: step.index,
-        intentId: step.intentId,
-        action: step.action as unknown as Record<string, unknown>,
-        status: step.status,
-        ok: step.ok,
-        response: step.response,
-        findingKinds: step.findingKinds as string[] | undefined,
-        tokensIn: step.tokensIn,
-        tokensOut: step.tokensOut,
-      })),
-    }
+    const steps = await requireVirtualUserRunStore(
+      virtualUserRunStore,
+      true
+    ).steps(runId, { limit, offset })
+    return { steps: serializeVirtualUserSteps(steps) }
   },
 })
-
-/**
- * One schedule on the wire. The budget crosses as \`durationMs\` because that is
- * what every other call here takes; the engine's own duration also accepts
- * \`'30m'\`, which nothing on this side ever writes.
- */
-const serializeSchedule = (schedule: VirtualUserScheduleRecord) => {
-  const persona = personaConfigs[
-    schedule.persona as keyof typeof personaConfigs
-  ] as { goals?: string[]; disposition?: string } | undefined
-  const declared = {
-    disposition: (persona?.disposition ??
-      'realistic') as VirtualUserDisposition,
-    goals: persona?.goals ?? [],
-  }
-  return {
-    persona: schedule.persona,
-    enabled: schedule.enabled,
-    disposition: schedule.disposition,
-    goals: schedule.goals,
-    budget: schedule.budget
-      ? {
-          steps: schedule.budget.steps,
-          mutations: schedule.budget.mutations,
-          durationMs:
-            typeof schedule.budget.duration === 'number'
-              ? schedule.budget.duration
-              : undefined,
-        }
-      : null,
-    minIntervalMs: schedule.minIntervalMs,
-    maxIntervalMs: schedule.maxIntervalMs,
-    nextRunAt: schedule.nextRunAt.toISOString(),
-    lastRunId: schedule.lastRunId,
-    lastRunAt: schedule.lastRunAt ? schedule.lastRunAt.toISOString() : null,
-    declared,
-  }
-}
 
 export const setVirtualUserSchedule = pikkuFunc({
   tags: ['pikku'],
@@ -610,48 +452,12 @@ export const setVirtualUserSchedule = pikkuFunc({
   input: SetVirtualUserScheduleInput,
   output: SetVirtualUserScheduleOutput,
   func: async ({ virtualUserScheduleStore }, input) => {
-    if (!virtualUserScheduleStore) {
-      throw new Error(
-        'No virtualUserScheduleStore is wired — a cadence has nowhere to live. ' +
-          'Wire KyselyVirtualUserScheduleStore from @pikku/kysely, or your own implementation of VirtualUserScheduleStore.'
-      )
-    }
-    const persona = personaConfigs[
-      input.persona as keyof typeof personaConfigs
-    ] as { runnable: boolean } | undefined
-    if (!persona) {
-      throw new Error(
-        \`Unknown persona "\${input.persona}" — declare it with definePersonas()\`
-      )
-    }
-    // The same rule \`runVirtualUser\` enforces, applied at the point the row is
-    // written rather than every hour afterwards: an acted-upon persona has no
-    // session, so a cadence for one is a tick that can only ever fail to start.
-    if (!persona.runnable) {
-      throw new Error(
-        \`Persona "\${input.persona}" is declared as acted upon, never run\`
-      )
-    }
-    const schedule = await virtualUserScheduleStore.set({
-      persona: input.persona,
-      enabled: input.enabled,
-      disposition: input.disposition as VirtualUserDisposition | undefined,
-      goals: input.goals,
-      budget:
-        input.budget === undefined
-          ? undefined
-          : input.budget === null
-            ? null
-            : {
-                steps: input.budget.steps,
-                mutations: input.budget.mutations,
-                duration: input.budget.durationMs,
-              },
-      minIntervalMs: input.minIntervalMs,
-      maxIntervalMs: input.maxIntervalMs,
-      nextRunAt: input.nextRunAt ? new Date(input.nextRunAt) : undefined,
+    const schedule = await writeVirtualUserSchedule({
+      store: virtualUserScheduleStore,
+      personas: personaConfigs,
+      ...input,
     })
-    return serializeSchedule(schedule)
+    return serializeVirtualUserSchedule(schedule, personaConfigs)
   },
 })
 
@@ -668,9 +474,43 @@ export const listVirtualUserSchedules = pikkuFunc({
       return { schedules: [] }
     }
     const schedules = await virtualUserScheduleStore.list()
-    return { schedules: schedules.map(serializeSchedule) }
+    return {
+      schedules: schedules.map((schedule) =>
+        serializeVirtualUserSchedule(schedule, personaConfigs)
+      ),
+    }
   },
 })
+
+/**
+ * The identity a scheduled tick runs as.
+ *
+ * \`pikku-platform\` is the platform's own principal, and it already exists for
+ * exactly this: a reserved user row created with no credential account of any
+ * kind, so no sign-in method can resolve it, and one the user directory already
+ * filters out — so unlike a seeded service account it costs no phantom member
+ * in any list, seat count or bill.
+ *
+ * Not parameterised, because it is not a decision an application makes: work
+ * this scaffold starts on its own clock is the platform's work, and the scope
+ * is the one \`runVirtualUser\` gates on.
+ *
+ * Attached to \`wireScheduler\`'s \`middleware\` rather than declared as tag
+ * middleware over \`/rpc\`, which cannot set a session at all: \`runScheduledTask\`
+ * builds its wire with a \`sessionService\`, so the session set here is the one
+ * the function is frozen with.
+ */
+const PLATFORM_USER_ID = 'pikku-platform'
+
+export const virtualUserPlatformSession = pikkuMiddleware(
+  async (_services, { setSession }, next) => {
+    await setSession?.({
+      userId: PLATFORM_USER_ID,
+      scopes: ['virtualUser:run'],
+    } as Session)
+    return next()
+  }
+)
 
 /**
  * Acts on whichever personas are due, once.
@@ -684,13 +524,21 @@ export const listVirtualUserSchedules = pikkuFunc({
  * wireScheduler({
  *   name: 'virtualUsers',
  *   schedule: '0 * * * *',
+ *   middleware: [virtualUserPlatformSession],
  *   func: tickVirtualUserSchedules,
  * })
  * \`\`\`
  *
- * An hourly tick is plenty for intervals measured in hours: the tick
- * decides nothing except which rows are already due, so running it more often
- * costs a query and changes no cadence.
+ * The middleware is not decoration: the tick starts a run through
+ * \`runVirtualUser\`, the same gated entry point a person calls, so without a
+ * session carrying \`virtualUser:run\` every dispatch is refused. Going through
+ * that front door rather than a shared helper is the point — the persona
+ * checks, the production-disposition rule and the record all live in one place,
+ * and a second copy of them would eventually disagree with the first.
+ *
+ * An hourly tick is plenty for intervals measured in hours: the tick decides
+ * nothing except which rows are already due, so running it more often costs a
+ * query and changes no cadence.
  */
 export const tickVirtualUserSchedules = pikkuSessionlessFunc<void, void>({
   tags: ['pikku'],
@@ -699,50 +547,26 @@ export const tickVirtualUserSchedules = pikkuSessionlessFunc<void, void>({
     if (!virtualUserScheduleStore || !virtualUserRunStore) {
       return
     }
-    const result = await tick({
-      schedules: virtualUserScheduleStore,
-      runs: virtualUserRunStore,
-      dispatch: (schedule) =>
-        startVirtualUserRun(services, rpc!, {
-          persona: schedule.persona,
-          disposition: schedule.disposition,
-          goals: schedule.goals,
-          budget: schedule.budget
-            ? {
-                steps: schedule.budget.steps,
-                mutations: schedule.budget.mutations,
-                durationMs:
-                  typeof schedule.budget.duration === 'number'
-                    ? schedule.budget.duration
-                    : undefined,
-              }
-            : undefined,
-        }),
-    })
-    // Logged rather than returned: the caller is a cron, and a run this started
-    // is otherwise the only trace that a persona is still out there working.
-    for (const { persona, runId } of result.dispatched) {
-      logger.info(\`Virtual user \${persona} started run \${runId} on schedule\`)
-    }
-    for (const runId of result.reaped) {
-      logger.warn(
-        \`Virtual user run \${runId} was abandoned — marked failed so its persona can run again\`
-      )
-    }
-    for (const { persona, reason } of result.skipped) {
-      logger.info(\`Virtual user \${persona} skipped this tick: \${reason}\`)
-    }
+    logVirtualUserTick(
+      logger,
+      await tick({
+        schedules: virtualUserScheduleStore,
+        runs: virtualUserRunStore,
+        dispatch: async (schedule) => {
+          const { runId } = await rpc!.invoke(
+            'runVirtualUser',
+            virtualUserScheduleRunInput(schedule)
+          )
+          return runId
+        },
+      })
+    )
   },
 })
 
 /**
  * The run itself. Not exposed: it is dispatched by \`runVirtualUser\` and has no
  * caller of its own.
- *
- * Everything it needs is derived through \`metaService\` and the generated
- * personas — the same public surface any consumer has. Nothing reaches into
- * pikku's internals, because an app could not, and a feature built on what only
- * the framework can see would not be this feature.
  */
 export const executeVirtualUserRun = pikkuSessionlessFunc({
   tags: ['pikku'],
@@ -750,122 +574,18 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
   output: ExecuteVirtualUserRunOutput,
   func: async (
     { virtualUserRunStore, metaService, agentRunner, variables, logger },
-    { runId, persona: personaId, disposition, goals, memory, budget, seed }
-  ) => {
-    if (!virtualUserRunStore) {
-      throw new Error('No virtualUserRunStore is wired.')
-    }
-    try {
-      if (!metaService) {
-        throw new Error('metaService is not wired — there is no catalogue to derive')
-      }
-      if (!agentRunner) {
-        throw new Error('agentRunner is not wired — there is nothing to think with')
-      }
-
-      const apiUrl = await variables.get(API_URL_VARIABLE)
-      if (!apiUrl) {
-        throw new Error(
-          \`\${API_URL_VARIABLE} is not set — a virtual user has no address to sign in at.\`
-        )
-      }
-      const secret = await variables.get(SECRET_VARIABLE)
-      if (!secret) {
-        throw new Error(
-          \`\${SECRET_VARIABLE} is not set — actor sign-in is disabled, so there is nobody for the virtual user to be.\`
-        )
-      }
-      const model = await variables.get(MODEL_VARIABLE)
-      if (!model) {
-        throw new Error(\`\${MODEL_VARIABLE} is not set — no model to think with.\`)
-      }
-
-      const functionsMeta = await metaService.getFunctionsMeta()
-      // Only the schemas the catalogue can actually refer to, so a large app
-      // does not pull every schema it has ever generated into one run.
-      const schemaNames = [
-        ...new Set(
-          Object.values(functionsMeta).flatMap((meta: any) =>
-            [meta.inputSchemaName, meta.outputSchemaName].filter(
-              (name: unknown): name is string => !!name
-            )
-          )
-        ),
-      ]
-      const schemas = (await metaService.getSchemas(schemaNames)) as SchemaMap
-
-      const persona = personaConfigs[personaId as keyof typeof personaConfigs]
-      if (!persona) {
-        throw new Error(\`Persona "\${personaId}" is no longer declared\`)
-      }
-
-      const { catalogue, intents, agents } = prepareVirtualUserRun({
-        persona,
-        functionsMeta,
-        schemas,
-        workflowsMeta: await metaService.getWorkflowMeta(),
-        systemRoles: await metaService.getSystemRolesMeta(),
-        agentsMeta: await metaService.getAgentsMeta(),
-      })
-
-      const signedIn = createPersonas({
-        apiUrl,
-        secret,
-        model,
-        signInPath: (await variables.get(SIGN_IN_PATH_VARIABLE)) ?? undefined,
-        rpcPath: (await variables.get(RPC_PATH_VARIABLE)) ?? undefined,
-      })
-      const target = signedIn[personaId as keyof typeof signedIn]
-      if (!target) {
-        throw new Error(\`Persona "\${personaId}" cannot sign in\`)
-      }
-
-      const result = await runVirtualUserEngine({
-        persona,
-        personaId,
-        disposition: disposition as VirtualUserDisposition,
-        catalogue,
-        intents,
-        goals,
-        memory,
-        seed,
-        agents,
-        target: personaVirtualUserTarget(target, {
-          model,
-          agents: agents.map((agent) => agent.name),
-        }),
-        // \`AgentRunnerService.run\` IS the engine's \`ActorLLM\` — same params,
-        // same result — so a virtual user thinks through the same runner every
-        // agent in the app does, provider quirks and all.
-        llm: (params) => agentRunner.run(params),
-        model,
-        budget: {
-          steps: budget?.steps,
-          mutations: budget?.mutations,
-          duration: budget?.durationMs,
-        },
-      })
-
-      await virtualUserRunStore.complete(runId, {
-        findings: result.findings,
-        tally: result.tally,
-        memory: result.memory,
-        stoppedBy: result.stoppedBy ?? null,
-        intents: result.intents,
-        steps: result.steps,
-      })
-
-      return { findings: result.findings.length }
-    } catch (error) {
-      // A crashed run and a run that found nothing are different states, and the
-      // record is the only place that distinction survives — leaving it at
-      // 'running' forever is what \`fail\` exists to prevent.
-      const message = error instanceof Error ? error.message : String(error)
-      logger.error(\`Virtual user run \${runId} (\${personaId}) failed: \${message}\`)
-      await virtualUserRunStore.fail(runId, message)
-      throw error
-    }
-  },
+    input
+  ) =>
+    executeRun({
+      runStore: virtualUserRunStore,
+      metaService,
+      agentRunner,
+      variables,
+      logger,
+      personas: personaConfigs,
+      createPersonas,
+      ...input,
+    }),
 })
 `
 

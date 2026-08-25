@@ -6,6 +6,7 @@ import {
   agentResume,
   agentApprove,
 } from './agent-helpers.js'
+import { agentCallOptions } from './agent-prepare.js'
 
 describe('agent helpers', () => {
   describe('agent', () => {
@@ -148,5 +149,67 @@ describe('agent helpers', () => {
       ])
       assert.deepStrictEqual(result, { approved: true })
     })
+  })
+})
+
+describe('agentCallOptions', () => {
+  // An explicit `undefined` overrides the agent's own declared default with
+  // nothing, so a request that names no model would silently unset the one the
+  // agent declares.
+  test('a field nobody supplied is left out rather than sent as undefined', () => {
+    const options = agentCallOptions({
+      message: 'hello',
+      threadId: 't1',
+      resourceId: 'r1',
+    })
+    assert.equal('model' in options, false)
+    assert.equal('temperature' in options, false)
+    assert.equal('context' in options, false)
+    assert.equal('attachments' in options, false)
+  })
+
+  test('what was supplied is carried through unchanged', () => {
+    const options = agentCallOptions({
+      message: 'hello',
+      threadId: 't1',
+      resourceId: 'user-1',
+      model: 'a-model',
+      temperature: 0.2,
+      context: 'some context',
+      attachments: [{ type: 'image' as const, url: 'a.png' }],
+    })
+    assert.deepEqual(options, {
+      message: 'hello',
+      threadId: 't1',
+      resourceId: 'user-1',
+      attachments: [{ type: 'image' as const, url: 'a.png' }],
+      model: 'a-model',
+      temperature: 0.2,
+      context: 'some context',
+    })
+  })
+
+  // Zero is a temperature a caller can mean, and the falsy check every other
+  // field uses would drop it.
+  test('a temperature of zero survives, unlike an empty string', () => {
+    assert.equal(
+      agentCallOptions({
+        message: 'x',
+        threadId: 't',
+        resourceId: 'r',
+        temperature: 0,
+      }).temperature,
+      0
+    )
+    assert.equal(
+      'context' in
+        agentCallOptions({
+          message: 'x',
+          threadId: 't',
+          resourceId: 'r',
+          context: '',
+        }),
+      false
+    )
   })
 })

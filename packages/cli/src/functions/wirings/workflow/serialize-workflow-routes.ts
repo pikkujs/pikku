@@ -44,7 +44,10 @@ export const Acknowledged = z.object({ ok: z.literal(true) })
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTPRoutes } from '${leaf('http')}'
 import { MissingServiceError } from '@pikku/core/errors'
-import { assertWorkflowRunOwner } from '@pikku/core/workflow'
+import {
+  assertWorkflowRunOwner,
+  streamWorkflowRunStatus,
+} from '@pikku/core/workflow'
 import {
   WorkflowStart,
   WorkflowRunRef,
@@ -111,78 +114,7 @@ export const workflowStatusStream = pikkuSessionlessFunc({
   func: async ({ workflowRunService }, { runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
-
-    const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
-    let lastHash = ''
-    let initSent = false
-
-    const poll = async () => {
-      const run = await workflowRunService.getRun(runId)
-      if (!run) {
-        channel.close()
-        return false
-      }
-      assertWorkflowRunOwner(run.wire, session)
-
-      const steps = await workflowRunService.getRunSteps(runId)
-
-      if (!initSent && run.deterministic) {
-        const statusByStep = new Map(
-          steps.map((s: { stepName: string; status: string }) => [
-            s.stepName,
-            s.status,
-          ])
-        )
-        channel.send({
-          type: 'init',
-          deterministic: true,
-          steps: (run.plannedSteps ?? []).map(
-            (s: { stepName: string }) => ({
-              stepName: s.stepName,
-              status: statusByStep.get(s.stepName) ?? 'pending',
-            })
-          ),
-        })
-        initSent = true
-      }
-
-      const hash = JSON.stringify({
-        s: run.status,
-        steps: steps.map((s: { stepName: string; status: string }) => [s.stepName, s.status]),
-      })
-
-      if (hash !== lastHash) {
-        lastHash = hash
-        channel.send({
-          type: 'update',
-          status: run.status,
-          steps: steps.map((s: { stepName: string; status: string }) => ({
-            stepName: s.stepName,
-            status: s.status,
-          })),
-        })
-      }
-
-      if (terminalStatuses.has(run.status)) {
-        channel.send({ type: 'done' })
-        channel.close()
-        return false
-      }
-      return true
-    }
-
-    const shouldContinue = await poll()
-    if (!shouldContinue) return
-
-    await new Promise<void>((resolve) => {
-      const interval = setInterval(async () => {
-        const cont = await poll()
-        if (!cont) {
-          clearInterval(interval)
-          resolve()
-        }
-      }, 500)
-    })
+    await streamWorkflowRunStatus({ workflowRunService, runId, channel, session })
   },
 })
 
@@ -197,81 +129,12 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc({
   func: async ({ workflowRunService }, { runId }, { channel, session }) => {
     assertWorkflowRunService(workflowRunService)
     if (!channel) return
-
-    const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
-    let lastHash = ''
-    let initSent = false
-
-    const poll = async () => {
-      const run = await workflowRunService.getRun(runId)
-      if (!run) {
-        channel.close()
-        return false
-      }
-      assertWorkflowRunOwner(run.wire, session)
-
-      const steps = await workflowRunService.getRunSteps(runId)
-
-      if (!initSent && run.deterministic) {
-        const statusByStep = new Map(
-          steps.map((s: { stepName: string; status: string }) => [
-            s.stepName,
-            s.status,
-          ])
-        )
-        channel.send({
-          type: 'init',
-          deterministic: true,
-          steps: (run.plannedSteps ?? []).map(
-            (s: { stepName: string }) => ({
-              stepName: s.stepName,
-              status: statusByStep.get(s.stepName) ?? 'pending',
-            })
-          ),
-        })
-        initSent = true
-      }
-
-      const hash = JSON.stringify({
-        s: run.status,
-        o: run.output,
-        steps: steps.map((s: { stepName: string; status: string }) => [s.stepName, s.status]),
-      })
-
-      if (hash !== lastHash) {
-        lastHash = hash
-        channel.send({
-          type: 'update',
-          status: run.status,
-          output: run.output,
-          error: run.error,
-          steps: steps.map((s: { stepName: string; status: string; childRunId?: string }) => ({
-            stepName: s.stepName,
-            status: s.status,
-            ...(s.childRunId ? { childRunId: s.childRunId } : {}),
-          })),
-        })
-      }
-
-      if (terminalStatuses.has(run.status)) {
-        channel.send({ type: 'done' })
-        channel.close()
-        return false
-      }
-      return true
-    }
-
-    const shouldContinue = await poll()
-    if (!shouldContinue) return
-
-    await new Promise<void>((resolve) => {
-      const interval = setInterval(async () => {
-        const cont = await poll()
-        if (!cont) {
-          clearInterval(interval)
-          resolve()
-        }
-      }, 500)
+    await streamWorkflowRunStatus({
+      workflowRunService,
+      runId,
+      channel,
+      session,
+      detailed: true,
     })
   },
 })

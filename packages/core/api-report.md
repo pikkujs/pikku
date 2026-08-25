@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2767 observable things**: 875 exported names, plus
-1892 members on the classes and interfaces among them, reachable
+**2856 observable things**: 901 exported names, plus
+1955 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,18 +14,18 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 135 | 110 | 396 |
-| `./virtual-user` | 48 | 48 | 170 |
+| `./services` | 141 | 115 | 413 |
+| `./virtual-user` | 66 | 66 | 210 |
 | `./scenario` | 45 | 45 | 133 |
-| `./workflow` | 82 | 33 | 134 |
-| `./agent` | 49 | 47 | 81 |
+| `./workflow` | 84 | 35 | 140 |
+| `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 37 | 37 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
-| `./services/local-meta` | 22 | 3 | 46 |
+| `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
@@ -1259,6 +1259,7 @@ export interface StepState {
 }
 export type StepStatus =
   'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
+streamWorkflowRunStatus: ({ workflowRunService, runId, channel, session, detailed, pollIntervalMs, }: WorkflowStatusStreamParams) => Promise<void>
 export interface SuspendStepMeta {
   type: 'suspend'
   reason: string
@@ -1449,6 +1450,14 @@ export type WorkflowsMeta = Record<
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
 export type WorkflowStatus =
   'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+export interface WorkflowStatusStreamParams {
+  workflowRunService: WorkflowRunService
+  runId: string
+  channel: Pick<PikkuChannel<unknown, any>, 'send' | 'close'>
+  session: CoreUserSession | undefined
+  detailed?: boolean
+  pollIntervalMs?: number
+}
 export class WorkflowStepFunctionMismatchError extends PikkuError {
   constructor(public readonly runId: string, public readonly stepName: string)
 }
@@ -2188,6 +2197,24 @@ export interface DispositionProfile {
   invertedOracle: boolean
 }
 DISPOSITIONS: Readonly<Record<VirtualUserDisposition, DispositionProfile>>
+executeVirtualUserRun: ({ runStore, metaService, agentRunner, variables, logger, personas, createPersonas, runId, persona: personaId, disposition, goals, memory, seed, budget, operatorToken, }: ExecuteVirtualUserRunParams) => Promise<{ findings: number; }>
+export interface ExecuteVirtualUserRunParams {
+  runStore: VirtualUserRunStore | undefined
+  metaService: MetaService | undefined
+  agentRunner: AgentRunnerService | undefined
+  variables: VariablesService
+  logger: Logger
+  personas: ScaffoldPersonas
+  createPersonas: (options: Omit<HttpPersonasConfig, 'personas'>) => ScenarioPersonas
+  runId: string
+  persona: string
+  disposition: string
+  goals: string[]
+  memory: Record<string, string>
+  seed: number
+  budget?: { steps?: number; mutations?: number; durationMs?: number }
+  operatorToken?: string
+}
 export interface IntentRecord {
   id: string
   sourceId: string
@@ -2215,6 +2242,7 @@ export class IntentStack {
 }
 isDue: (schedule: VirtualUserScheduleRecord, now: Date) => boolean
 isReadOnly: (entry: ApiCatalogueEntry) => boolean
+logVirtualUserTick: (logger: Logger, result: VirtualUserTickResult) => void
 nextRunAt: (schedule: Pick<VirtualUserScheduleRecord, "minIntervalMs" | "maxIntervalMs">, now: Date, random: () => number) => Date
 personaScopes: (persona: { roles?: readonly string[] | undefined; }, roleScopes: Record<string, readonly string[]>) => string[]
 export interface PersonaTargetOptions {
@@ -2229,6 +2257,9 @@ export interface ReachableAgent {
   description?: string
 }
 reachableCatalogue: (entries: readonly ApiCatalogueEntry[], { readOnly, allowApprovalRequired, scopes, }?: { readOnly?: boolean | undefined; allowApprovalRequired?: boolean | undefined; scopes?: readonly string[] | undefined; }) => ApiCatalogueEntry[]
+requireVirtualUserRunStore: (store: VirtualUserRunStore | undefined, reading?: boolean) => VirtualUserRunStore
+requireVirtualUserScheduleStore: (store: VirtualUserScheduleStore | undefined) => VirtualUserScheduleStore
+runnablePersona: (personas: ScaffoldPersonas, personaId: string) => ResolvedPersona
 runVirtualUser: (params: RunVirtualUserParams) => Promise<VirtualUserRunResult>
 export interface RunVirtualUserParams {
   persona: ResolvedPersona
@@ -2253,8 +2284,33 @@ export interface RunVirtualUserParams {
   allowApprovalRequired?: boolean
   maxStepsPerIntent?: number
 }
+export type ScaffoldPersonas = Record<string, ResolvedPersona>
 export type SchemaMap = Record<string, Record<string, unknown> | undefined>
+serializeVirtualUserRun: (run: VirtualUserRunRecord) => { runId: string; persona: string; disposition: VirtualUserDisposition; seed: number; status: "running" | "completed" | "failed"; goals: string[]; memory: Record<string, string>; findings: { kind: string; detail: string; rpcName: string | undefined; status: number | undefined; intentId: string | undefined; step: number; }[]; intents: { id: string; sourceId: string; title: string; status: string; steps: number[]; suspensions: number; summary: string | undefined; }[]; tally: Record<string, unknown> | null; stoppedBy: string | null; error: string | null; createdAt: string; finishedAt: string | null; }
+serializeVirtualUserSchedule: (schedule: VirtualUserScheduleRecord, personas: ScaffoldPersonas) => { persona: string; enabled: boolean; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | null; minIntervalMs: number; maxIntervalMs: number; nextRunAt: string; lastRunId: string | null; lastRunAt: string | null; declared: { disposition: VirtualUserDisposition; goals: string[]; }; }
+serializeVirtualUserSteps: (steps: readonly StepRecord[]) => { index: number; intentId: string | undefined; action: Record<string, unknown>; status: number | undefined; ok: boolean | undefined; response: string | undefined; findingKinds: string[] | undefined; tokensIn: number; tokensOut: number; }[]
+signInPathFor: (configured: string | undefined, plugin: "actor" | "fabric") => string | undefined
 STALE_RUN_AFTER_MS: number
+export interface StartedVirtualUserRun {
+  runId: string
+  persona: string
+  disposition: VirtualUserDisposition
+  seed: number
+  goals: string[]
+  memory: Record<string, string>
+}
+startVirtualUserRun: ({ store, personas, config, persona: personaId, disposition: requested, seed: requestedSeed, goals, memory, startedBy, }: StartVirtualUserRunParams) => Promise<StartedVirtualUserRun>
+export interface StartVirtualUserRunParams {
+  store: VirtualUserRunStore | undefined
+  personas: ScaffoldPersonas
+  config: { nodeEnv?: string } | undefined
+  persona: string
+  disposition?: string
+  seed?: number
+  goals?: string[]
+  memory?: Record<string, string>
+  startedBy?: string | null
+}
 export interface StepRecord {
   index: number
   intentId?: string
@@ -2268,6 +2324,7 @@ export interface StepRecord {
 }
 tickVirtualUserSchedules: ({ schedules, runs, dispatch, now, random, staleAfterMs, }: VirtualUserTickParams) => Promise<VirtualUserTickResult>
 unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
+VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_ACTOR_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; readonly createMissing: "PIKKU_PERSONA_CREATE_MISSING"; }
 export interface VirtualUserBudget {
   steps?: number
   mutations?: number
@@ -2367,6 +2424,7 @@ export interface VirtualUserScheduleRecord {
   lastRunId: string | null
   lastRunAt: Date | null
 }
+virtualUserScheduleRunInput: (schedule: VirtualUserScheduleRecord) => { persona: string; disposition: VirtualUserDisposition; goals: string[]; budget: { steps: number | undefined; mutations: number | undefined; durationMs: number | undefined; } | undefined; }
 export interface VirtualUserScheduleStore {
   set(schedule: VirtualUserScheduleInput): Promise<VirtualUserScheduleRecord>
   get(persona: string): Promise<VirtualUserScheduleRecord | null>
@@ -2402,6 +2460,19 @@ export interface VirtualUserTuning {
   readOnly?: boolean
   invertedOracle?: boolean
   instructions?: string
+}
+writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
+export interface WriteVirtualUserScheduleParams {
+  store: VirtualUserScheduleStore | undefined
+  personas: ScaffoldPersonas
+  persona: string
+  enabled?: boolean
+  disposition?: string
+  goals?: string[]
+  budget?: { steps?: number; mutations?: number; durationMs?: number } | null
+  minIntervalMs?: number
+  maxIntervalMs?: number
+  nextRunAt?: string
 }
 ```
 
@@ -3073,6 +3144,7 @@ wireMCPResource: <PikkuFunctionConfig extends CorePikkuFunctionConfig<CorePikkuF
 addAgent: (agentName: string, agent: CoreAgent<any, any>, packageName?: string | null) => void
 agent: <TAgentMap extends Record<string, { output: any; }>>(agentName: string & keyof TAgentMap) => { func: (services: any, data: any, wire: any) => Promise<any>; }
 agentApprove: <TAgentMap extends Record<string, { output: any; }>>(_agentName: string & keyof TAgentMap) => { func: (services: any, data: { runId: string; approvals: { toolCallId: string; approved: boolean; }[]; }, wire: any) => Promise<any>; }
+agentCallOptions: (input: AgentInput) => AgentInput
 export type AgentContentPart =
   | { type: 'text'; text: string }
   | { type: 'image'; data?: string; url?: string; mediaType?: string }
@@ -4372,6 +4444,12 @@ export interface DeploymentServiceConfig {
   heartbeatInterval?: number
   heartbeatTtl?: number
 }
+export interface EmailAssets {
+  theme: Record<string, unknown>
+  locales: Record<string, Record<string, unknown>>
+  partials: Record<string, string>
+  templates: Record<string, EmailTemplateAssets>
+}
 export interface EmailService {
   send<T extends SendEmailInput>(input: Safe<T>): Promise<SendEmailResult>
 }
@@ -4379,6 +4457,19 @@ export interface EmailsMeta {
   src: string
   themeHash: string
   templates: Record<string, EmailTemplateMeta>
+}
+export interface EmailTemplateAssets {
+  html: string
+  subject: string
+  text: string
+  variables: ReadonlyArray<string>
+  hashes: Record<string, EmailTemplateHashes>
+}
+export interface EmailTemplateHashes {
+  contentHash: string
+  htmlHash: string
+  subjectHash: string
+  textHash: string
 }
 export interface EmailTemplateMeta {
   variables: string[]
@@ -4710,6 +4801,20 @@ export class QueueWebhookService extends WebhookService {
   constructor(protected queueService: QueueService)
   public async send(input: SendWebhookInput): Promise<SendWebhookResult>
   protected async prepareDelivery(input: SendWebhookInput): Promise<{ jobData: WebhookJobData; options: JobOptions }>
+}
+export interface RenderedEmailResult {
+  locale: string
+  subject: string
+  html: string
+  text?: string
+  variables: ReadonlyArray<string>
+  hash: string
+}
+renderEmail: ({ theme, locales, partials, templates }: EmailAssets, { name, locale: requestedLocale, data }: RenderEmailRequest) => RenderedEmailResult
+export interface RenderEmailRequest {
+  name: string
+  locale?: string
+  data?: Record<string, unknown>
 }
 export type ResolvedAuditConfig = {
   durability: AuditDurability

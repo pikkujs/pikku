@@ -14,6 +14,10 @@ export {
   WorkflowRunForbiddenError,
 } from './workflow-run-ownership.js'
 export { WorkflowApprovalForbiddenError } from './workflow-approval-policy.js'
+export {
+  streamWorkflowRunStatus,
+  type WorkflowStatusStreamParams,
+} from './workflow-status-stream.js'
 export type {
   WorkflowRunEngine,
   WorkflowRunExtension,

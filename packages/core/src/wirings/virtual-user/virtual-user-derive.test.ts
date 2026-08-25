@@ -396,3 +396,31 @@ describe('driving a virtual user through a signed-in actor', () => {
     assert.match(verdict.reasoning, /no assistant called 'concierge'/)
   })
 })
+
+// An adversarial run's transcript is working exploits against this same app,
+// and a schedule outlives the run that wrote it. Neither belongs in the hands
+// of the thing being run.
+test('a virtual user is never offered the machinery that runs virtual users', () => {
+  const catalogue = deriveCatalogue({
+    runVirtualUser: {
+      name: 'runVirtualUser',
+      expose: true,
+      scopes: ['virtualUser:run'],
+    },
+    getVirtualUserRunSteps: {
+      name: 'getVirtualUserRunSteps',
+      expose: true,
+      scopes: ['virtualUser:read'],
+    },
+    listBookings: {
+      name: 'listBookings',
+      expose: true,
+      scopes: ['bookings:read'],
+    },
+  } as any)
+
+  assert.deepEqual(
+    catalogue.map((entry) => entry.name),
+    ['listBookings']
+  )
+})

@@ -4,6 +4,8 @@ import { createSign, generateKeyPairSync } from 'node:crypto'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
+import { hasScopes } from '@pikku/core/scope'
+
 import { fabric } from './fabric-plugin.js'
 
 const { publicKey, privateKey } = generateKeyPairSync('rsa', {
@@ -42,7 +44,7 @@ const signToken = (
   return `${input}.${sig}`
 }
 
-const makeScopeService = () => {
+const makeScopeService = (declared: string[] = ['virtualUser']) => {
   const granted: Array<{ userId: string; scope: string }> = []
   return {
     granted,
@@ -50,6 +52,10 @@ const makeScopeService = () => {
       addScopeToUser: async (userId: string, scope: string) => {
         granted.push({ userId, scope })
       },
+      listUserScopes: async (userId: string) =>
+        granted.filter((g) => g.userId === userId).map((g) => g.scope),
+      listScopes: async () =>
+        declared.map((id) => ({ id, declared: true as const })),
     } as any,
   }
 }
@@ -163,8 +169,29 @@ describe('better-auth fabric plugin', () => {
     assert.equal(row?.fabric, true, 'user row is flagged fabric')
     assert.deepEqual(
       granted,
-      [{ userId: body.user.id, scope: 'admin' }],
-      'fabric row is granted the admin scope'
+      [
+        { userId: body.user.id, scope: 'admin' },
+        { userId: body.user.id, scope: 'virtualUser' },
+      ],
+      'fabric row is granted the roots an operator acts with'
+    )
+    // The grant is only worth anything if it satisfies the gates an operator
+    // is signed in to reach, so check it through the same algebra they use.
+    const operatorScopes = granted.map((g) => g.scope)
+    assert.equal(
+      hasScopes(['virtualUser:run'], operatorScopes),
+      true,
+      'an operator can start a virtual user run'
+    )
+    assert.equal(
+      hasScopes(['admin:impersonate'], operatorScopes),
+      true,
+      'an operator can still impersonate'
+    )
+    assert.equal(
+      hasScopes(['orders:refund'], operatorScopes),
+      false,
+      "but holds nothing in the application's own domain"
     )
     assert.equal(db.user!.length, 1)
 
@@ -175,7 +202,64 @@ describe('better-auth fabric plugin', () => {
     )
     assert.equal(res2.status, 200)
     assert.equal(db.user!.length, 1, 'no duplicate fabric rows')
-    assert.equal(granted.length, 1, 'the grant is not repeated for a known row')
+    assert.equal(granted.length, 2, 'a root already held is not granted twice')
+  })
+
+  test('an operator whose grant did not land gets it on the next sign-in', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const { granted, scopeService } = makeScopeService()
+    let failNext = true
+    const flaky = {
+      ...scopeService,
+      addScopeToUser: async (userId: string, scope: string) => {
+        if (failNext) {
+          failNext = false
+          throw new Error('scope store is down')
+        }
+        granted.push({ userId, scope })
+      },
+    }
+    const auth = makeAuth(db, publicKey, flaky)
+
+    const first = await signInFabric(
+      auth,
+      signToken(privateKey, { sub: 'op-456' })
+    )
+    assert.equal(first.status, 200, 'a failed grant does not fail sign-in')
+    assert.deepEqual(granted, [], 'nothing was granted')
+
+    const body = await first.json()
+    const second = await signInFabric(
+      auth,
+      signToken(privateKey, { sub: 'op-456' })
+    )
+    assert.equal(second.status, 200)
+    assert.deepEqual(
+      granted,
+      [
+        { userId: body.user.id, scope: 'admin' },
+        { userId: body.user.id, scope: 'virtualUser' },
+      ],
+      'the retry on the next sign-in lands both roots'
+    )
+  })
+
+  test('a root the app never declared is not granted', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const { granted, scopeService } = makeScopeService([])
+    const auth = makeAuth(db, publicKey, scopeService)
+
+    const res = await signInFabric(
+      auth,
+      signToken(privateKey, { sub: 'op-789' })
+    )
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.deepEqual(
+      granted,
+      [{ userId: body.user.id, scope: 'admin' }],
+      "admin is this package's own root; virtualUser is the app's to declare"
+    )
   })
 
   test('never signs in a real user sitting at the namespaced email', async () => {

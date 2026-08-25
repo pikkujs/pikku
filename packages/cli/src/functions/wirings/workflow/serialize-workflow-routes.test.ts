@@ -5,27 +5,33 @@ import { serializeWorkflowRoutes } from './serialize-workflow-routes.js'
 const leaf = (name: string) => `#pikku/${name}`
 
 describe('serializeWorkflowRoutes', () => {
-  test('generates deterministic init event for both stream variants', () => {
+  test('both stream variants are the same core poller, told how much to say', () => {
     const { functions: result } = serializeWorkflowRoutes(leaf)
 
-    const initMatches = result.match(/type: 'init'/g) ?? []
-    assert.equal(initMatches.length, 2)
-    assert.match(result, /if \(!initSent && run\.deterministic\)/)
-    assert.match(result, /steps: \(run\.plannedSteps \?\? \[\]\)\.map/)
-    assert.match(
-      result,
-      /status: statusByStep\.get\(s\.stepName\) \?\? 'pending'/
+    const delegations = result.match(/await streamWorkflowRunStatus\(/g) ?? []
+    assert.equal(delegations.length, 2)
+    const detailed = result.match(/detailed: true/g) ?? []
+    assert.equal(
+      detailed.length,
+      1,
+      'only the full stream asks for output, error and child run ids'
     )
   })
 
-  test('keeps update and done events in both streams', () => {
+  // The frames themselves are core's, tested by running the poller in
+  // workflow-status-stream.test.ts. A second copy here could only be a
+  // divergent one, since nothing compiles this template string.
+  test('the streams keep no copy of the frames they used to build', () => {
     const { functions: result } = serializeWorkflowRoutes(leaf)
 
-    const updateMatches = result.match(/type: 'update'/g) ?? []
-    const doneMatches = result.match(/type: 'done'/g) ?? []
-
-    assert.equal(updateMatches.length, 2)
-    assert.equal(doneMatches.length, 2)
+    for (const frame of ["type: 'init'", "type: 'update'", "type: 'done'"]) {
+      assert.ok(
+        !result.includes(frame),
+        `expected no inline \`${frame}\` frame`
+      )
+    }
+    assert.ok(!result.includes('setInterval'))
+    assert.ok(!result.includes('plannedSteps'))
   })
 
   test('emits an approve route wired to approveStep', () => {
@@ -44,14 +50,21 @@ describe('serializeWorkflowRoutes', () => {
 
     assert.match(
       result,
-      /import \{ assertWorkflowRunOwner \} from '@pikku\/core\/workflow'/
+      /assertWorkflowRunOwner,?\n?[^}]*\} from '@pikku\/core\/workflow'/
     )
     const ownershipChecks =
       result.match(/assertWorkflowRunOwner\(run\.wire, session\)/g) ?? []
     assert.equal(
       ownershipChecks.length,
-      3,
-      'the status checker and both streams own the run before returning it'
+      1,
+      'the status checker owns the run itself; both streams hand session to streamWorkflowRunStatus, which owns it there'
+    )
+    const sessionsPassed =
+      result.match(/streamWorkflowRunStatus\(\{[^}]*session/g) ?? []
+    assert.equal(
+      sessionsPassed.length,
+      2,
+      'a stream that forgot to pass session would poll an unowned run'
     )
   })
 
