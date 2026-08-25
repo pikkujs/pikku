@@ -27,6 +27,16 @@ export type DataLockStatus = {
 export type DataLockWiringOptions = {
   /** Where the lock routes are mounted. Defaults to `/_pikku/data`. */
   prefix?: string
+  /**
+   * Which keys first-run initialization mints. Derive it with
+   * `keyIdsFromManifest`.
+   *
+   * It is fixed here rather than sent by the caller because the unlock screen
+   * posts a passphrase and nothing else — and because a key the schema names
+   * but nobody minted does not fail at startup, it fails at the first write to
+   * that one column.
+   */
+  keyIds?: string[]
 }
 
 const DEFAULT_PREFIX = '/_pikku/data'
@@ -46,7 +56,7 @@ const DEFAULT_PREFIX = '/_pikku/data'
  */
 export const wireDataLock = (
   lock: DataLock,
-  { prefix = DEFAULT_PREFIX }: DataLockWiringOptions = {}
+  { prefix = DEFAULT_PREFIX, keyIds }: DataLockWiringOptions = {}
 ): void => {
   const status = (): DataLockStatus => ({
     state: lock.state,
@@ -63,7 +73,7 @@ export const wireDataLock = (
     '/initialize',
     'pikkuDataLockInitialize',
     async (_services: unknown, { passphrase }: { passphrase: string }) => {
-      await lock.initialize(passphrase)
+      await lock.initialize(passphrase, keyIds)
       return status()
     }
   )

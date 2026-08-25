@@ -105,6 +105,18 @@ describe('wireDataLock', () => {
     assert.equal(lock.state, 'unlocked')
   })
 
+  test('initializing mints every key the wiring was given', async () => {
+    // The manifest is the only thing that knows which keys the schema names,
+    // and the unlock screen posts a passphrase and nothing else — so the list
+    // has to be fixed at wiring time or a scoped key never gets minted at all.
+    wireDataLock(lock, { keyIds: ['notes', 'credentials'] })
+
+    await handler('pikkuDataLockInitialize')({ passphrase: PASSPHRASE })
+
+    assert.ok(await lock.getKEK('notes'))
+    assert.ok(await lock.getKEK('credentials'))
+  })
+
   test('unlocking opens a store that came up locked', async () => {
     wireDataLock(lock)
     await handler('pikkuDataLockInitialize')({ passphrase: PASSPHRASE })
