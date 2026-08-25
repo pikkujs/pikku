@@ -8,7 +8,6 @@ export { requireUnlocked } from './require-unlocked.js'
 export { telemetryOuter, telemetryInner } from './telemetry.js'
 export {
   addTagMiddleware,
-  addTagMiddleware as addMiddleware,
   addGlobalMiddleware,
   runMiddleware,
 } from '../middleware-runner.js'

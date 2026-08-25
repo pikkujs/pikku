@@ -4,7 +4,6 @@
   "./middleware": [
     "addGlobalMiddleware",
     "addGlobalPermission",
-    "addMiddleware",
     "addTagMiddleware",
     "authAPIKey",
     "authBearer",
