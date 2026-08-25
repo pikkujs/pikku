@@ -431,3 +431,73 @@ test('no collision warning when nothing collides', async () => {
     false
   )
 })
+
+// ─── Column key scoping (keyId) ──────────────────────────────────────────────
+
+async function runManifest(
+  columns: ColumnInfo[],
+  annotations?: Record<string, Record<string, unknown>>
+) {
+  const dir = mkdtempSync(join(tmpdir(), 'db-codegen-manifest-'))
+  if (annotations) {
+    mkdirSync(join(dir, 'db'), { recursive: true })
+    writeFileSync(
+      join(dir, 'db', 'annotations.gen.json'),
+      JSON.stringify(annotations),
+      'utf8'
+    )
+  }
+  const result = await generateSchemaTypes(fakeIntrospector(columns), {
+    outFile: join(dir, 'schema.gen.ts'),
+    coercionFile: join(dir, 'coercion.gen.ts'),
+    manifestFile: join(dir, 'classification.gen.ts'),
+    dialect: 'postgres',
+    rootDir: dir,
+  })
+  return readFileSync(join(dir, 'classification.gen.ts'), 'utf8')
+}
+
+test('a wrapped column that names no key is protected by the default one', async () => {
+  const manifest = await runManifest([col({ name: 'ssn', type: 'text' })], {
+    widget: { ssn: { security: 'secret', form: 'wrapped' } },
+  })
+  assert.match(manifest, /"ssn": \{ classification: 'secret'.*keyId: 'default'/)
+})
+
+test('a column naming its own key keeps it', async () => {
+  const manifest = await runManifest(
+    [col({ name: 'recovery', type: 'text' })],
+    {
+      widget: {
+        recovery: {
+          security: 'secret',
+          form: 'wrapped',
+          keyId: 'recovery-codes',
+        },
+      },
+    }
+  )
+  assert.match(manifest, /"recovery": \{.*keyId: 'recovery-codes'/)
+})
+
+test('a sealed column carries a key too', async () => {
+  const manifest = await runManifest([col({ name: 'blob', type: 'text' })], {
+    widget: { blob: { security: 'secret', form: 'sealed', keyId: 'vault' } },
+  })
+  assert.match(manifest, /"blob": \{.*keyId: 'vault'/)
+})
+
+test('a hashed column names no key — a hash is not opened by one', async () => {
+  const manifest = await runManifest(
+    [col({ name: 'token_hash', type: 'text' })],
+    { widget: { token_hash: { security: 'secret', form: 'hashed' } } }
+  )
+  assert.doesNotMatch(manifest, /"token_hash": \{[^}]*keyId/)
+})
+
+test('an unencrypted column names no key, so the manifest cannot imply protection it has not got', async () => {
+  const manifest = await runManifest([col({ name: 'name', type: 'text' })], {
+    widget: { name: { security: 'public' } },
+  })
+  assert.doesNotMatch(manifest, /"name": \{[^}]*keyId/)
+})
