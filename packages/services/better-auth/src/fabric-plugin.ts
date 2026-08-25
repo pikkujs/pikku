@@ -157,15 +157,13 @@ const grantOperatorScopes = async (
     // spells it out, because the gates that check it live here. Any other root
     // has to be one the app declares, or the grant is a row nobody can trace
     // back to a declaration.
-    const declared =
-      missing.some((scope) => scope !== ADMIN_SCOPE_ROOT) &&
-      scopeService.listScopes
-        ? new Set(
-            (await scopeService.listScopes())
-              .filter((scope) => scope.declared)
-              .map((scope) => scope.id)
-          )
-        : new Set<string>()
+    const declared = missing.some((scope) => scope !== ADMIN_SCOPE_ROOT)
+      ? new Set(
+          (await scopeService.listScopes())
+            .filter((scope) => scope.declared)
+            .map((scope) => scope.id)
+        )
+      : new Set<string>()
     for (const scope of missing) {
       if (scope !== ADMIN_SCOPE_ROOT && !declared.has(scope)) {
         continue

@@ -117,27 +117,28 @@ export const streamWorkflowRunStatus = async ({
     return true
   }
 
-  // A run that is already finished is answered without ever starting a timer.
-  if (!(await poll())) {
-    return
-  }
+  // Every exit from here closes the channel, including the ones a throw takes:
+  // `assertWorkflowRunOwner` rejecting a session that lost access is exactly
+  // the case where the stream should end rather than be left hanging open.
+  try {
+    // A run that is already finished is answered without ever starting a timer.
+    if (!(await poll())) {
+      return
+    }
 
-  await new Promise<void>((resolve, reject) => {
-    const interval = setInterval(() => {
-      // The poll is not awaited by the timer, so a throw inside it would
-      // otherwise be an unhandled rejection that takes the process with it.
-      void poll().then(
-        (again) => {
-          if (!again) {
-            clearInterval(interval)
-            resolve()
-          }
-        },
-        (error) => {
-          clearInterval(interval)
-          reject(error)
-        }
-      )
-    }, pollIntervalMs)
-  })
+    // The next poll is scheduled when the previous one resolves rather than on
+    // a fixed interval. A timer that fires regardless would let two polls
+    // overlap on a slow store — both seeing `initSent` unset and sending the
+    // init frame twice, and racing `lastHash` into out-of-order updates.
+    while (
+      await new Promise<boolean>((resolve, reject) => {
+        setTimeout(() => void poll().then(resolve, reject), pollIntervalMs)
+      })
+    ) {
+      // The condition is the whole loop: poll until it says to stop.
+    }
+  } catch (error) {
+    await channel.close()
+    throw error
+  }
 }

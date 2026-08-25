@@ -80,7 +80,16 @@ const getNestedValue = (
   const segments = path.split('.')
   let current: unknown = source
   for (const segment of segments) {
-    if (!current || typeof current !== 'object' || !(segment in current)) {
+    // `hasOwn`, not `in`: `in` walks the prototype chain, so a path is answered
+    // by what an object inherits rather than only by what it carries. Nothing
+    // inherited reaches the output today — every step past a prototype hit lands
+    // on a function, which is neither traversed nor written — so this closes the
+    // lookup rather than fixing a value that escapes through it.
+    if (
+      !current ||
+      typeof current !== 'object' ||
+      !Object.hasOwn(current, segment)
+    ) {
       return ''
     }
     current = (current as Record<string, unknown>)[segment]
@@ -139,12 +148,17 @@ const expandTrusted = (
 const substitute = (
   source: string,
   context: Record<string, unknown>,
-  escape: boolean
+  escape: boolean,
+  slot?: string
 ): string =>
   source.replace(TEMPLATE_TOKEN, (_match, rawTriple, rawDouble) => {
     const { raw, key } = readToken(rawTriple, rawDouble)
-    if (key === 'content') {
-      return typeof context.content === 'string' ? context.content : ''
+    // `content` is the layout's slot for the body that was already rendered and
+    // escaped, so it is the one value written in raw. Only the layout gets it:
+    // honouring it everywhere would let a caller pass `data.content` into a
+    // template that happens to name it and have it emitted unescaped.
+    if (slot !== undefined && key === slot) {
+      return typeof context[slot] === 'string' ? (context[slot] as string) : ''
     }
     if (key.startsWith('>')) {
       return ''
@@ -157,14 +171,15 @@ const renderTemplate = (
   source: string,
   partials: Record<string, string>,
   context: Record<string, unknown>,
-  escape: boolean
+  escape: boolean,
+  slot?: string
 ): string => {
   const composed = expandTrusted(
     expandPartials(source, partials),
     context,
     escape
   )
-  return substitute(composed, context, escape)
+  return substitute(composed, context, escape, slot)
 }
 
 export const renderEmail = (
@@ -214,7 +229,8 @@ export const renderEmail = (
         partials.layout,
         partials,
         { ...baseContext, subject, content: htmlBody },
-        true
+        true,
+        'content'
       )
     : htmlBody
 

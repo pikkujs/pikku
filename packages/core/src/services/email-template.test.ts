@@ -258,3 +258,54 @@ describe('renderEmail lookups', () => {
     assert.equal('text' in result, false)
   })
 })
+
+/**
+ * `content` is the layout's slot, not a name a caller may fill. It is the one
+ * value written without escaping, because by then it holds a body that has
+ * already been rendered and escaped.
+ */
+describe('renderEmail treats content as the layout slot only', () => {
+  const assets = (html: string, layout?: string): EmailAssets => ({
+    theme: { appName: 'Shop' },
+    locales: { en: {} },
+    partials: layout ? { layout } : {},
+    templates: {
+      welcome: {
+        html,
+        subject: 'Hi',
+        text: '',
+        variables: [],
+        hashes: {
+          en: {
+            contentHash: 'h',
+            htmlHash: 'h',
+            subjectHash: 'h',
+            textHash: 'h',
+          },
+        },
+      },
+    },
+  })
+
+  test('caller data named content is escaped like any other value', () => {
+    const { html } = renderEmail(assets('<p>{{ content }}</p>'), {
+      name: 'welcome',
+      data: { content: '<img src=x onerror=alert(1)>' },
+    })
+
+    assert.ok(
+      !html.includes('<img src=x'),
+      `caller content must not be written raw, got: ${html}`
+    )
+    assert.match(html, /&lt;img src=x/)
+  })
+
+  test('the layout still receives the rendered body unescaped', () => {
+    const { html } = renderEmail(
+      assets('<p>hello</p>', '<main>{{ content }}</main>'),
+      { name: 'welcome' }
+    )
+
+    assert.equal(html, '<main><p>hello</p></main>')
+  })
+})

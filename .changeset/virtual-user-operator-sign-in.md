@@ -30,7 +30,9 @@ outlives it.
 The scheduled tick now runs as the platform user, and starts its runs through
 the same door a person uses.
 
-`startVirtualUserRun` is gone. It existed only so the tick could record a run
+The scaffolded `startVirtualUserRun` RPC is gone — not the `startVirtualUserRun`
+helper `@pikku/core/virtual-user` now exports, which is the shared record-writer
+`runVirtualUser` calls. The RPC existed only so the tick could record a run
 without holding a session, which meant the persona checks, the
 production-disposition rule and the record lived in two places that would
 eventually disagree. The tick calls `runVirtualUser` over RPC instead, and the
@@ -94,12 +96,21 @@ leaving each serializer to emit only what is genuinely per-application.
   structural, because `startVirtualUserRun` has no parameter to pass one to.
 - **workflow** — the two status streams were an ~80-line poll loop each,
   identical apart from three fields, now one `streamWorkflowRunStatus` told
-  whether to be detailed. Fixes a latent bug both copies shared: a
-  `setInterval(async …)` whose poll threw produced an unhandled rejection and a
-  stream that never closed.
+  whether to be detailed. Fixes three latent bugs both copies shared: a
+  `setInterval(async …)` whose poll threw produced an unhandled rejection; a
+  poll that threw left the channel open rather than ending the stream; and the
+  interval fired whether or not the previous poll had returned, so a slow store
+  put two polls in flight and sent the init frame twice.
 - **emails** — ~190 lines of HTML escaping, trusted-root allowlist and
   single-pass substitution, now `renderEmail` in `@pikku/core/services`. This
-  was the security-sensitive one.
+  was the security-sensitive one, and compiling it surfaced a bug the template
+  string had been hiding: `{{ content }}` was written unescaped in every render
+  rather than only in the layout it is the slot for, so a caller passing
+  `data.content` to a template that named it got raw HTML out. Nested lookups
+  also used `in`, which walks the prototype chain; nothing inherited actually
+  reached the output — every step past a prototype hit lands on a function,
+  which is neither traversed nor written — so that one is a closed door rather
+  than a fixed leak.
 - **agent** — both callers built the same options object; now
   `agentCallOptions`, typed against `AgentInput` rather than a second copy of
   its shape.

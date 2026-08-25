@@ -98,8 +98,8 @@ export class HttpPersona implements ScenarioPersona {
     this.jar = createCookieJar(config.apiUrl)
     if (config.operator) {
       this.signIn = new OperatorSignIn(config.apiUrl, {
-        signInPath: config.signInPath,
         ...config.operator,
+        signInPath: config.operator.signInPath ?? config.signInPath,
       })
     } else if (config.secret) {
       this.signIn = new ActorSignIn(

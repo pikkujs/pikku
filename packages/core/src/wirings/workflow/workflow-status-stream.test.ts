@@ -251,3 +251,104 @@ describe('streamWorkflowRunStatus', () => {
     )
   })
 })
+
+/**
+ * A stream that throws still has a channel open on the other end. The owner
+ * check runs on every poll precisely so a session that loses access stops the
+ * stream — which is only true if stopping also closes it.
+ */
+describe('streamWorkflowRunStatus closes the channel when a poll throws', () => {
+  const failingStream = (failOn: number) => {
+    let closed = false
+    let polls = 0
+    const workflowRunService = {
+      getRun: async () => {
+        polls += 1
+        if (polls >= failOn) {
+          throw new Error('run store unavailable')
+        }
+        return run()
+      },
+      getRunSteps: async () => [step('charge', 'running')],
+    } as unknown as WorkflowRunService
+
+    return {
+      closed: () => closed,
+      stream: () =>
+        streamWorkflowRunStatus({
+          workflowRunService,
+          runId: 'run-1',
+          channel: {
+            send: async () => {},
+            close: async () => {
+              closed = true
+            },
+          },
+          session: undefined as any,
+          pollIntervalMs: 1,
+        }),
+    }
+  }
+
+  test('the first poll throwing closes the channel and rethrows', async () => {
+    const h = failingStream(1)
+    await assert.rejects(h.stream(), /run store unavailable/)
+    assert.equal(h.closed(), true, 'a throw must not leave the channel open')
+  })
+
+  test('a later poll throwing closes the channel and rethrows', async () => {
+    const h = failingStream(3)
+    await assert.rejects(h.stream(), /run store unavailable/)
+    assert.equal(h.closed(), true, 'a throw must not leave the channel open')
+  })
+})
+
+/**
+ * The poll used to be on a fixed interval, which fires whether or not the
+ * previous one has come back. Two in flight at once both see `initSent` unset
+ * and send the init frame twice.
+ */
+describe('streamWorkflowRunStatus never runs two polls at once', () => {
+  test('a poll slower than the interval does not overlap the next', async () => {
+    const sent: any[] = []
+    let inFlight = 0
+    let overlapped = false
+    let polls = 0
+
+    const workflowRunService = {
+      getRun: async () => {
+        inFlight += 1
+        if (inFlight > 1) overlapped = true
+        await new Promise((r) => setTimeout(r, 15))
+        polls += 1
+        inFlight -= 1
+        return run({
+          status: polls >= 3 ? 'completed' : 'running',
+          deterministic: true,
+          plannedSteps: [{ stepName: 'charge' }],
+        })
+      },
+      getRunSteps: async () => [step('charge', 'running')],
+    } as unknown as WorkflowRunService
+
+    await streamWorkflowRunStatus({
+      workflowRunService,
+      runId: 'run-1',
+      channel: {
+        send: async (d: any) => {
+          sent.push(d)
+        },
+        close: async () => {},
+      },
+      session: undefined as any,
+      pollIntervalMs: 1,
+    })
+
+    assert.equal(overlapped, false, 'two polls must never be in flight together')
+    assert.equal(
+      sent.filter((f) => f.type === 'init').length,
+      1,
+      'the init frame is sent exactly once'
+    )
+  })
+})
