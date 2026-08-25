@@ -15,6 +15,8 @@ import { analyzeDeployment } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
 import type { DeploymentManifest } from '@pikku/deploy'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
+import { materializeFrontend } from './frontend-assets.js'
+import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import type { BundleResult } from './bundler/types.js'
 import type { ProviderAdapter } from '@pikku/deploy'
@@ -108,6 +110,16 @@ export async function runBuildPipeline(options: {
     unit: DeploymentManifest['units'][0],
     state: InspectorState
   ) => unknown
+  /**
+   * A built frontend to ship with the bundle, from the project's `frontend`
+   * config. Single-unit builds only — a decomposed deployment has no one unit
+   * that owns the origin the UI would be served from.
+   */
+  frontend?: {
+    dir: string
+    urlPrefix: string
+    spaFallback: boolean
+  }
   deployDir?: string
   outDir?: string
   /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
@@ -171,7 +183,26 @@ export async function runBuildPipeline(options: {
     const pikkuDir = options.outDir ?? join(projectDir, '.pikku')
     await mkdir(unitDir, { recursive: true })
 
-    const ctx = getEntryContext(unitDir, pikkuDir, singleUnit, inspectorState)
+    let frontendMount: { urlPrefix: string; spaFallback: boolean } | undefined
+    if (options.frontend) {
+      await assertFrontendBuilt(options.frontend.dir)
+      const keys = await materializeFrontend(options.frontend.dir, unitDir)
+      frontendMount = {
+        urlPrefix: options.frontend.urlPrefix,
+        spaFallback: options.frontend.spaFallback,
+      }
+      logger.info(`Frontend: ${keys.length} files from ${options.frontend.dir}`)
+    }
+
+    const ctx = {
+      ...(getEntryContext(
+        unitDir,
+        pikkuDir,
+        singleUnit,
+        inspectorState
+      ) as object),
+      frontend: frontendMount,
+    }
     const source = provider.generateEntrySource(ctx as never)
 
     const entryPath = join(unitDir, 'entry.ts')

@@ -41,6 +41,17 @@ export type StaticMount = {
   urlPrefix: string
   directory: string
   spaFallback?: boolean
+  /**
+   * Serve from an explicit key → path map instead of from `directory`, which is
+   * then unused. Keys are mount-relative request paths (`index.html`,
+   * `assets/app-a1b2c3.js`).
+   *
+   * This exists for assets that are not laid out as a directory at all: a
+   * `bun build --compile` binary embeds each file and hands back an opaque
+   * `/$bunfs/…` path, so the only way to find one is to have recorded it at
+   * build time.
+   */
+  assets?: Record<string, string>
 }
 
 export type NodeHTTPServerConfig = CoreConfig & {
@@ -393,7 +404,7 @@ export class PikkuNodeHTTPServer {
         return
       }
 
-      if (await this.handleStaticMountRequest(req, res)) {
+      if (await this.handleStaticFileRequest(req, res)) {
         return
       }
 
@@ -410,6 +421,9 @@ export class PikkuNodeHTTPServer {
         ...runOptions,
       })
       const response = pikkuResponse.toResponse()
+      if (response.status === 404 && (await this.serveSpaFallback(req, res))) {
+        return
+      }
       await writeResponse(res, response)
     } catch (err) {
       this.logger.error(`node-http-server: handler error: ${err}`)
@@ -456,52 +470,114 @@ export class PikkuNodeHTTPServer {
     return false
   }
 
-  private async handleStaticMountRequest(
-    req: IncomingMessage,
-    res: ServerResponse
-  ): Promise<boolean> {
+  /**
+   * Resolve the mounts a GET/HEAD request could be served from, or null when
+   * static serving does not apply to this request at all.
+   */
+  private staticMountCandidates(
+    req: IncomingMessage
+  ): { pathname: string; mounts: StaticMount[] } | null {
     const mounts = this.config.staticMounts
     if (!mounts?.length || (req.method !== 'GET' && req.method !== 'HEAD')) {
-      return false
+      return null
     }
     const requestUrl = this.getRequestUrl(req)
     if (!requestUrl) {
-      return false
+      return null
     }
     const pathname = decodeURIComponent(requestUrl.pathname)
+    return {
+      pathname,
+      mounts: mounts.filter((mount) =>
+        this.matchesPrefix(pathname, mount.urlPrefix)
+      ),
+    }
+  }
 
-    for (const mount of mounts) {
-      if (!this.matchesPrefix(pathname, mount.urlPrefix)) {
-        continue
-      }
-      const key = this.contentKey(pathname, mount.urlPrefix)
-      const served = await this.serveStaticFile(req, res, mount, key)
-      if (served) {
+  /**
+   * Serve an exact file hit only. A miss falls through to route dispatch, so a
+   * mount at `/` cannot swallow the API — the app shell is served afterwards by
+   * `serveSpaFallback`, once dispatch has had its chance and produced a 404.
+   */
+  private async handleStaticFileRequest(
+    req: IncomingMessage,
+    res: ServerResponse
+  ): Promise<boolean> {
+    const candidates = this.staticMountCandidates(req)
+    if (!candidates) {
+      return false
+    }
+
+    for (const mount of candidates.mounts) {
+      const key = this.contentKey(candidates.pathname, mount.urlPrefix)
+      const result = await this.serveStaticFile(req, res, mount, key)
+      if (result === 'served') {
         return true
       }
-      if (mount.spaFallback) {
-        return await this.serveStaticFile(req, res, mount, 'index.html')
+      if (result === 'rejected') {
+        // A key that escaped the mount directory is refused outright rather
+        // than falling through, which would answer a traversal attempt with a
+        // 200 and the app shell.
+        res.writeHead(404)
+        res.end()
+        return true
       }
-      res.writeHead(404)
-      res.end()
-      return true
     }
 
     return false
   }
 
+  /**
+   * Last resort for a client-side route: dispatch has already 404'd, so an
+   * unmatched path under a `spaFallback` mount is the SPA's own routing.
+   */
+  private async serveSpaFallback(
+    req: IncomingMessage,
+    res: ServerResponse
+  ): Promise<boolean> {
+    const candidates = this.staticMountCandidates(req)
+    if (!candidates) {
+      return false
+    }
+
+    for (const mount of candidates.mounts) {
+      if (!mount.spaFallback) {
+        continue
+      }
+      const result = await this.serveStaticFile(req, res, mount, 'index.html')
+      if (result === 'served') {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * `rejected` is kept distinct from `missing` because the two must not share a
+   * fate: a missing file is a candidate for the SPA fallback, while a key that
+   * resolved outside the mount directory must never be. An `assets` mount never
+   * produces `rejected` at all — a map lookup has no directory to escape.
+   */
   private async serveStaticFile(
     req: IncomingMessage,
     res: ServerResponse,
     mount: StaticMount,
     key: string
-  ): Promise<boolean> {
-    const targetPath =
-      key === ''
+  ): Promise<'served' | 'missing' | 'rejected'> {
+    const contentKey = key === '' ? 'index.html' : key
+
+    if (mount.assets && !(contentKey in mount.assets)) {
+      return 'missing'
+    }
+
+    const targetPath = mount.assets
+      ? mount.assets[contentKey]!
+      : key === ''
         ? resolve(mount.directory, 'index.html')
         : this.toTargetPath(mount.directory, key)
     if (!targetPath) {
-      return false
+      return 'rejected'
     }
 
     let filePath = targetPath
@@ -512,10 +588,13 @@ export class PikkuNodeHTTPServer {
         file = await stat(filePath)
       }
       if (!file.isFile()) {
-        return false
+        return 'missing'
       }
 
-      const extension = filePath.slice(filePath.lastIndexOf('.'))
+      // An embedded asset's stored name is opaque, so the type comes from the
+      // key the client actually asked for.
+      const typedPath = mount.assets ? contentKey : filePath
+      const extension = typedPath.slice(typedPath.lastIndexOf('.'))
       res.writeHead(200, {
         'content-length': String(file.size),
         'content-type':
@@ -523,7 +602,7 @@ export class PikkuNodeHTTPServer {
       })
       if (req.method === 'HEAD') {
         res.end()
-        return true
+        return 'served'
       }
       await new Promise<void>((resolvePromise, reject) => {
         const stream = createReadStream(filePath)
@@ -531,9 +610,9 @@ export class PikkuNodeHTTPServer {
         stream.on('end', () => resolvePromise())
         stream.pipe(res)
       })
-      return true
+      return 'served'
     } catch {
-      return false
+      return 'missing'
     }
   }
 
@@ -550,6 +629,11 @@ export class PikkuNodeHTTPServer {
   }
 
   private matchesPrefix(pathname: string, prefix: string): boolean {
+    // A root mount covers the whole tree; the generic test below would match
+    // only `/` itself, since nothing starts with `//`.
+    if (prefix === '' || prefix === '/') {
+      return true
+    }
     return pathname === prefix || pathname.startsWith(`${prefix}/`)
   }
 

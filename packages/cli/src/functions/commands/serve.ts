@@ -33,6 +33,7 @@ import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
+import { resolveFrontendMount } from './serve-frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { disableDevActorSignIn } from '../../server/actor-sign-in.js'
@@ -197,13 +198,21 @@ export const serve = pikkuSessionlessFunc<
         'Console app not found. Please rebuild @pikku/cli with the console app bundled.'
       )
     }
+    const frontendMount = config.frontend
+      ? await resolveFrontendMount(config.frontend)
+      : undefined
+    // The console goes first so a frontend mounted at `/` cannot claim
+    // `/console` before the console's own mount is offered the request.
+    const staticMounts = [consoleMount, frontendMount].filter(
+      (mount): mount is NonNullable<typeof mount> => Boolean(mount)
+    )
     const pikkuServer = devServerRunner.createServer(
       {
         ...userConfig,
         hostname: bindHostname,
         port: resolvedPort,
         content: localContentConfig,
-        ...(consoleMount ? { staticMounts: [consoleMount] } : {}),
+        ...(staticMounts.length ? { staticMounts } : {}),
       },
       logger,
       { contentSigningJWT }
@@ -219,6 +228,12 @@ export const serve = pikkuSessionlessFunc<
     if (consoleMount) {
       logger.info(
         `Pikku Console available at http://${hostname}:${resolvedPort}${consoleMount.urlPrefix}`
+      )
+    }
+
+    if (frontendMount) {
+      logger.info(
+        `Frontend available at http://${hostname}:${resolvedPort}${frontendMount.urlPrefix}`
       )
     }
 

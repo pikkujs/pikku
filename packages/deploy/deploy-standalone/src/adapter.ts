@@ -21,6 +21,20 @@ import { nodeBuiltinExternals } from '@pikku/deploy'
 
 export type StandaloneRuntime = 'node' | 'bun'
 
+/**
+ * Directory the built frontend is copied to, both inside the unit and beside
+ * the shipped bundle. The node entry resolves it relative to itself at runtime,
+ * so the two have to agree.
+ */
+export const STANDALONE_FRONTEND_DIR = 'frontend'
+
+/**
+ * Module the bun entry imports its embedded assets from. It stays out of the
+ * esbuild bundle — esbuild rejects the `with { type: 'file' }` attribute the
+ * manifest is built on — and is resolved by `bun build --compile` instead.
+ */
+export const STANDALONE_FRONTEND_MANIFEST = './frontend-assets.gen.js'
+
 export interface StandaloneProviderAdapterOptions {
   runtime?: StandaloneRuntime
 }
@@ -53,6 +67,12 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
       `import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'`,
       `import { WebSocketServer } from 'ws'`,
+      ...(ctx.frontend
+        ? [
+            `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
+            `import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'`,
+          ]
+        : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -84,9 +104,21 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
+      ...(ctx.frontend
+        ? [
+            // Resolved from the running bundle rather than baked in at build
+            // time, so the distributable stays movable.
+            `  const staticMounts = [{`,
+            `    urlPrefix: '${ctx.frontend.urlPrefix}',`,
+            `    directory: __pikkuJoin(__pikkuDirname(__pikkuFileURLToPath(import.meta.url)), '${STANDALONE_FRONTEND_DIR}'),`,
+            `    spaFallback: ${ctx.frontend.spaFallback},`,
+            `  }]`,
+            ``,
+          ]
+        : []),
       `  const wss = new WebSocketServer({ noServer: true, maxPayload: DEFAULT_WS_MAX_PAYLOAD })`,
       `  const server = new PikkuNodeHTTPServer(`,
-      `    { ...config, port, hostname },`,
+      `    { ...config, port, hostname${ctx.frontend ? ', staticMounts' : ''} },`,
       `    logger,`,
       `    {`,
       `      ${ctx.mcpServerOption}configureServer: (httpServer) => {`,
@@ -117,6 +149,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
       `import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'`,
+      ...(ctx.frontend
+        ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
+        : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -148,7 +183,20 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
-      `  const server = new PikkuBunServer({ ...config, port, hostname }, logger, { ${ctx.mcpServerOption}eventHub })`,
+      ...(ctx.frontend
+        ? [
+            // A compiled binary has no directory to read: every file was
+            // embedded, and the map is the only way back to it.
+            `  const staticMounts = [{`,
+            `    urlPrefix: '${ctx.frontend.urlPrefix}',`,
+            `    directory: '',`,
+            `    spaFallback: ${ctx.frontend.spaFallback},`,
+            `    assets: frontendAssets,`,
+            `  }]`,
+            ``,
+          ]
+        : []),
+      `  const server = new PikkuBunServer({ ...config, port, hostname${ctx.frontend ? ', staticMounts' : ''} }, logger, { ${ctx.mcpServerOption}eventHub })`,
       `  await server.init()`,
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
@@ -182,6 +230,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       // Bun-native builtins are provided by the runtime and resolved by
       // `bun build --compile` — leave them as imports rather than inlining.
       externals.push('bun', 'bun:*', 'bun:sqlite', 'bun:ffi')
+      externals.push(STANDALONE_FRONTEND_MANIFEST)
     }
     return externals
   }
@@ -197,7 +246,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }) {
     const { buildDir, logger } = options
     const { join, dirname } = await import('node:path')
-    const { readdir, writeFile, copyFile, mkdir } =
+    const { cp, readdir, writeFile, copyFile, mkdir } =
       await import('node:fs/promises')
     const { existsSync } = await import('node:fs')
 
@@ -229,6 +278,22 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       )
     }
     logger.info(`Bundle: ${join(outDir, 'bundle.js')}`)
+
+    // --- 2a. Frontend, when the build produced one ---
+    // Both runtimes need it here rather than only in the build directory: node
+    // resolves the mount relative to the shipped bundle, and `bun build
+    // --compile` follows the manifest import out of the copy it is given.
+    const frontendDir = join(unitDir, STANDALONE_FRONTEND_DIR)
+    if (existsSync(frontendDir)) {
+      await cp(frontendDir, join(outDir, STANDALONE_FRONTEND_DIR), {
+        recursive: true,
+      })
+      const manifestName = STANDALONE_FRONTEND_MANIFEST.replace('./', '')
+      if (existsSync(join(unitDir, manifestName))) {
+        await copyFile(join(unitDir, manifestName), join(outDir, manifestName))
+      }
+      logger.info(`Frontend: ${join(outDir, STANDALONE_FRONTEND_DIR)}`)
+    }
 
     // --- 2b. bun runtime: compile the bundle into a self-contained binary ---
     if (this.runtime === 'bun') {

@@ -394,6 +394,28 @@ export type PikkuCLIInput = {
   emailTemplatesDir?: string
 
   /**
+   * A built frontend for the server to serve from its own origin, so the UI and
+   * the API share a host and cookies stay first-party.
+   *
+   * This names *output*, not a project: `pikku serve` and `pikku deploy` read
+   * the directory and never build it, so the frontend's own build has to have
+   * run first. `pikku dev` deliberately ignores it — a frontend dev server owns
+   * that job and proxies its API calls back to pikku, which is what makes HMR
+   * work.
+   */
+  frontend?: {
+    /** Directory of built frontend output, resolved relative to the config file. */
+    dir: string
+    /** Where the frontend is mounted. Defaults to `/`. */
+    urlPrefix?: string
+    /**
+     * Serve `index.html` for a path under the prefix that no route and no file
+     * claimed, so the client-side router can handle it. Defaults to true.
+     */
+    spaFallback?: boolean
+  }
+
+  /**
    * Path to write the generated Better Auth wiring file (auth.gen.ts).
    * The CLI inspects this file and its generated siblings (auth-secrets.gen.ts,
    * auth-middleware.gen.ts) explicitly, so they may sit outside srcDirectories.
@@ -725,6 +747,13 @@ export type PikkuCLIConfig = PikkuCLIInput & {
   tags?: string[]
   wires?: string[]
   excludeWires?: string[]
+
+  /** Defaults filled in and `dir` made absolute by `getPikkuCLIConfig`. */
+  frontend?: {
+    dir: string
+    urlPrefix: string
+    spaFallback: boolean
+  }
 
   userSessionType?: string
   singletonServicesFactoryType?: string

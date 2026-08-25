@@ -2,6 +2,7 @@ import { join, dirname, resolve, isAbsolute, parse as parsePath } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import type {
   PikkuCLIConfig,
+  PikkuCLIInput,
   PikkuScaffoldFeature,
 } from '../../types/config.js'
 import { resolveScaffoldFeature } from './resolve-scaffold-feature.js'
@@ -159,6 +160,40 @@ export const normalizeLocale = (locale: unknown): string => {
       `It sets the language of the meta the Console renders back to your team (function and step descriptions, feature and scenario names). ` +
       `Identifiers stay English regardless, and the language the app speaks to its users is defaultLocale in active.json, not this.`
   )
+}
+
+/**
+ * Fill in the mount defaults and make `dir` absolute.
+ *
+ * The trailing slash is stripped because a mount matches with
+ * `pathname === prefix || pathname.startsWith(prefix + '/')`, under which a
+ * stored `/app/` matches nothing at all — a frontend that silently never
+ * appears rather than an error anyone can act on.
+ */
+export const resolveFrontendConfig = (
+  frontend: NonNullable<PikkuCLIInput['frontend']>,
+  configDir: string
+): NonNullable<PikkuCLIConfig['frontend']> => {
+  if (!frontend.dir) {
+    throw new PikkuCLIConfigError(
+      `frontend.dir is required — it names the directory your frontend's build already wrote, since pikku serves that output rather than building it`
+    )
+  }
+
+  const urlPrefix = frontend.urlPrefix ?? '/'
+  if (!urlPrefix.startsWith('/')) {
+    throw new PikkuCLIConfigError(
+      `frontend.urlPrefix must start with "/" — got "${urlPrefix}"`
+    )
+  }
+
+  return {
+    dir: isAbsolute(frontend.dir)
+      ? frontend.dir
+      : join(configDir, frontend.dir),
+    urlPrefix: urlPrefix === '/' ? '/' : urlPrefix.replace(/\/+$/, ''),
+    spaFallback: frontend.spaFallback ?? true,
+  }
 }
 
 const _getPikkuCLIConfig = async (
@@ -1148,6 +1183,10 @@ const _getPikkuCLIConfig = async (
           result.clientFiles[key] = join(result.configDir, val)
         }
       }
+    }
+
+    if (result.frontend) {
+      result.frontend = resolveFrontendConfig(result.frontend, result.configDir)
     }
 
     if (result.emailTemplatesDir && !isAbsolute(result.emailTemplatesDir)) {

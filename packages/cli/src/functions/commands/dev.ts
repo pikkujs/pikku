@@ -423,6 +423,15 @@ export const dev = pikkuSessionlessFunc<
       )
     }
 
+    // Serving the built frontend here would hand you whatever the last build
+    // produced, with no HMR and no warning that it is stale. The frontend's own
+    // dev server owns dev; it proxies its API calls back to this port.
+    if (config.frontend) {
+      logger.info(
+        `Frontend not served in dev — run your frontend dev server and proxy its API calls to http://${hostname}:${resolvedPort}`
+      )
+    }
+
     logger.info(serverReadyLine(hostname, resolvedPort))
 
     let watcher: FSWatcher | undefined

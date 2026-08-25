@@ -81,6 +81,7 @@ export const deployPlan = pikkuSessionlessFunc<
       defaultTarget: config.deploy?.defaultTarget,
       globalHTTPPrefix: config.globalHTTPPrefix,
       getEntryContext,
+      frontend: config.frontend,
       outDir: config.outDir,
       debugArtifacts: data?.debugArtifacts ?? false,
       logger,
