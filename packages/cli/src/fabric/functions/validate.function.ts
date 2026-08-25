@@ -1779,12 +1779,47 @@ export async function runValidate(
       for (const ent of await readdir(appsRoot, { withFileTypes: true })) {
         if (!ent.isDirectory()) continue
         const appPath = join(appsRoot, ent.name)
-        const settings = await readJsonSafe<{ baseLocale?: string }>(
-          join(appPath, 'project.inlang', 'settings.json')
-        )
+        const settingsPath = join(appPath, 'project.inlang', 'settings.json')
+        const settings = await readJsonSafe<{
+          baseLocale?: string
+          locales?: unknown
+        }>(settingsPath)
         if (!settings) continue
+
+        // `baseLocale` names the message SOURCE — the catalogue every other
+        // locale is cloned from and translated against — not the language the
+        // app is served in. Pointing it at the product's language looks right,
+        // because the app does come up in that language, and quietly makes the
+        // project single-language forever: there is no en.json to add a locale
+        // from, and repointing it later re-authors every key. The setting that
+        // decides what a first-time visitor opens in is active.json's
+        // defaultLocale, which is a separate file for exactly this reason.
+        const baseLocale = settings.baseLocale ?? 'en'
+        if (baseLocale !== 'en') {
+          const declared = Array.isArray(settings.locales)
+            ? settings.locales.filter((l): l is string => typeof l === 'string')
+            : []
+          w(
+            `app-base-locale-not-english-${ent.name}`,
+            `apps/${ent.name}/project.inlang/settings.json sets baseLocale to "${baseLocale}" — that names the message source, not the language the app is served in, so this app has no English catalogue to add a second language from`,
+            settingsPath,
+            lines(
+              'Serving the app in a language is a different setting from authoring the messages in one:',
+              `  1. settings.json: { "baseLocale": "en", "locales": ["en", "${baseLocale}"] }`,
+              `  2. src/i18n/active.json: { "defaultLocale": "${baseLocale}" }  (or: fabric i18n --default-locale ${baseLocale})`,
+              `Keys and their English values stay in messages/en.json; messages/${baseLocale}.json holds the ${baseLocale} values.`,
+              ...(declared.length && !declared.includes('en')
+                ? [
+                    `Note this is a re-key, not a rename: messages/${baseLocale}.json is currently the source, so its keys have to survive the move.`,
+                  ]
+                : []),
+              'Identifiers are unaffected either way — functions, components, types, tables and columns are English in every project.'
+            )
+          )
+        }
+
         const catalogue = await readJsonSafe<Record<string, unknown>>(
-          join(appPath, 'messages', `${settings.baseLocale ?? 'en'}.json`)
+          join(appPath, 'messages', `${baseLocale}.json`)
         )
         if (!catalogue) continue
         for (const [key, value] of Object.entries(catalogue)) {
