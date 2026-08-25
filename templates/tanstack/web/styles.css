@@ -1,0 +1,183 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --border: #dfe3e8;
+  --text: #16191d;
+  --muted: #5f6874;
+  --accent: #2f6feb;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --surface: #171a20;
+    --border: #2a2f38;
+    --text: #e7eaee;
+    --muted: #9aa3b0;
+    --accent: #7aa2ff;
+    --accent-text: #0f1115;
+    --danger: #f2837c;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    16px/1.5 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+.shell {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.header h1 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.header a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.header a:hover {
+  color: var(--accent);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+}
+
+.card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+.card p {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+form.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+label {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+input {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  padding: 0.625rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 400;
+  padding: 0.25rem 0.5rem;
+}
+
+button.ghost:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.notice {
+  font-size: 0.875rem;
+  color: var(--danger);
+  min-height: 1.25rem;
+}
+
+.notice.waiting {
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row .title {
+  flex: 1;
+}
+
+.row .title.done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.compose {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty {
+  color: var(--muted);
+  padding: 1rem 0;
+}

@@ -351,6 +351,7 @@ jobs:
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
+            tanstack,
             mcp-server,
             pg-boss,
             bullmq,

@@ -424,6 +424,7 @@ jobs:
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
+            tanstack,
             mcp-server,
             pg-boss,
             bullmq,
@@ -450,6 +451,8 @@ jobs:
             template: nextjs
           - package-manager: bun
             template: nextjs-full
+          - package-manager: bun
+            template: tanstack
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup

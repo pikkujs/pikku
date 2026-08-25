@@ -108,6 +108,12 @@ const templates = [
     supports: ['http', 'fullstack'],
   },
   {
+    template: 'tanstack',
+    description:
+      'A TanStack Start frontend served by pikku from one origin, with the passphrase unlock screen',
+    supports: ['http', 'fullstack'],
+  },
+  {
     template: 'pg-boss',
     description: 'A PostgreSQL-based queue template using pg-boss',
     supports: ['queue'],

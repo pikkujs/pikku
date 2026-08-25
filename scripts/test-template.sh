@@ -324,7 +324,10 @@ esac
 # Build
 log_info "Building the app..."
 case "$TEMPLATE_NAME" in
-    nextjs|nextjs-full)
+    # These templates type-check as part of their own build: a frontend build
+    # generates sources (Next's route types, TanStack's route tree) that a bare
+    # `tsc` run beforehand would not find.
+    nextjs|nextjs-full|tanstack)
         if ! "$PACKAGE_MANAGER" run build; then
             log_error "Build failed"
             exit 1
