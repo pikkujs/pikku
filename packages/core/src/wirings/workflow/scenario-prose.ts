@@ -38,7 +38,11 @@ export const composeStepProse = ({
   keywordWidth?: number
 }): string => {
   const keyword = capitalise(phase)
-  const subject = actor ? `the ${actor}` : ''
+  // The actor key is the subject verbatim, with no article in front of it.
+  // "the ${actor}" only reads as English when the key happens to be a role
+  // noun — it turns a persona named after a person into "the nadia", which
+  // is the reporter quietly imposing a naming convention on the author.
+  const subject = actor ?? ''
   const rendered = template ? renderStepTemplate(template, input) : description
   const sentence = [subject, rendered].filter(Boolean).join(' ')
   if (keywordWidth === undefined) {

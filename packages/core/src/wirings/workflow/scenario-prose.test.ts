@@ -63,7 +63,7 @@ describe('composeStepProse', () => {
         input: { packageName: '@pikku/addon-todos' },
         actor: 'admin',
       }),
-      'Then the admin sees @pikku/addon-todos'
+      'Then admin sees @pikku/addon-todos'
     )
   })
 
@@ -75,7 +75,7 @@ describe('composeStepProse', () => {
         input: { packageName: '@pikku/addon-todos' },
         actor: 'admin',
       }),
-      'Then the admin sees an addon in the gallery'
+      'Then admin sees an addon in the gallery'
     )
   })
 })
@@ -88,7 +88,7 @@ describe('composeStepProse basics', () => {
         description: 'buys an apple',
         actor: 'shopper',
       }),
-      'Given the shopper buys an apple'
+      'Given shopper buys an apple'
     )
     assert.equal(
       composeStepProse({
@@ -96,7 +96,18 @@ describe('composeStepProse basics', () => {
         description: 'sees a receipt',
         actor: 'shopper',
       }),
-      'Then the shopper sees a receipt'
+      'Then shopper sees a receipt'
+    )
+  })
+
+  test('a persona named after a person reads as that person', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'opens /app',
+        actor: 'nadia',
+      }),
+      'When nadia opens /app'
     )
   })
 
@@ -117,7 +128,7 @@ describe('composeStepProse basics', () => {
         description: 'refreshes the dashboard',
         actor: 'admin',
       }),
-      'When the admin refreshes the dashboard'
+      'When admin refreshes the dashboard'
     )
   })
 
@@ -133,11 +144,11 @@ describe('composeStepProse basics', () => {
     )
 
     assert.deepEqual(rendered, [
-      'Given the shopper buys an apple',
-      'When  the shopper checks out',
-      'Then  the shopper sees a receipt',
+      'Given shopper buys an apple',
+      'When  shopper checks out',
+      'Then  shopper sees a receipt',
     ])
-    const columns = new Set(rendered.map((line) => line.indexOf('the shopper')))
+    const columns = new Set(rendered.map((line) => line.indexOf('shopper')))
     assert.equal(columns.size, 1, 'every sentence starts in the same column')
   })
 

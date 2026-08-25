@@ -265,17 +265,14 @@ describe('buildStepLadder', () => {
     )
 
     assert.equal(lines.length, 3)
-    assert.match(
-      lines[0]!,
-      /^ {2}Given the shopper buys an apple {2,}✓ {2}412ms$/
-    )
+    assert.match(lines[0]!, /^ {2}Given shopper buys an apple {2,}✓ {2}412ms$/)
     assert.match(
       lines[1]!,
-      /^ {2}When {2}the shopper completes the checkout {2,}✓ {2}1\.2s$/
+      /^ {2}When {2}shopper completes the checkout {2,}✓ {2}1\.2s$/
     )
     assert.match(
       lines[2]!,
-      /^ {2}Then {2}the shopper sees the receipt {2,}✗ {2}expected 1 item, got 0$/
+      /^ {2}Then {2}shopper sees the receipt {2,}✗ {2}expected 1 item, got 0$/
     )
 
     const columns = new Set(lines.map((line) => line.search(/[✓✗]/)))
@@ -292,7 +289,7 @@ describe('buildStepLadder', () => {
     )
 
     assert.equal(lines.length, 2)
-    assert.match(lines[1]!, /When {2}the shopper completes the checkout/)
+    assert.match(lines[1]!, /When {2}shopper completes the checkout/)
   })
 
   test('a step with no recorded prose still appears, by its name', () => {
@@ -347,7 +344,7 @@ describe('step templates', () => {
       templatedProse()
     )
 
-    assert.match(lines[0]!, /Then {2}the shopper sees a receipt for an apple/)
+    assert.match(lines[0]!, /Then {2}shopper sees a receipt for an apple/)
   })
 
   test('the same step reads differently for each input it is called with', () => {
@@ -389,7 +386,7 @@ describe('step templates', () => {
 
     assert.match(
       lines[0]!,
-      /When {2}the shopper completes the checkout$|When {2}the shopper completes the checkout {2}/
+      /When {2}shopper completes the checkout$|When {2}shopper completes the checkout {2}/
     )
   })
 
@@ -427,8 +424,8 @@ describe('step templates', () => {
       collectScenarioStepProse(loopMeta as any, templatedMeta() as any)
     )
 
-    assert.match(lines[0]!, /Then {2}the shopper sees a receipt for an apple/)
-    assert.match(lines[1]!, /Then {2}the shopper sees a receipt for a pear/)
+    assert.match(lines[0]!, /Then {2}shopper sees a receipt for an apple/)
+    assert.match(lines[1]!, /Then {2}shopper sees a receipt for a pear/)
   })
 
   test('the step name still wins over the function fallback', () => {
@@ -446,7 +443,7 @@ describe('step templates', () => {
 
     assert.match(
       lines[0]!,
-      /When {2}the shopper completes the checkout/,
+      /When {2}shopper completes the checkout/,
       'a step recorded under a declared name is never re-resolved by function'
     )
   })
@@ -500,7 +497,7 @@ describe('step templates', () => {
       templatedProse()
     )
 
-    assert.match(lines[0]!, /Given the shopper buys an apple/)
+    assert.match(lines[0]!, /Given shopper buys an apple/)
   })
 })
 
