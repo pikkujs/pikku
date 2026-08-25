@@ -213,6 +213,97 @@ describe('runScheduledTask', () => {
     assert.deepEqual(receivedSession, session)
   })
 
+  test('a task middleware can set the session the task runs as', async () => {
+    let frozenSession: CoreUserSession | undefined
+    const machineSession: CoreUserSession = {
+      userId: 'cron:machine-session-task',
+    }
+
+    const mockTask: CoreScheduledTask = {
+      name: 'machine-session-task',
+      schedule: '0 0 * * *',
+      middleware: [
+        async (_services: any, wire: any, next: any) => {
+          wire.setSession(machineSession)
+          return next()
+        },
+      ] as any,
+      func: {
+        func: async (_services: any, _data: any, wire: any) => {
+          frozenSession = wire.session
+        },
+        auth: false,
+      },
+    }
+
+    pikkuState(null, 'scheduler', 'meta')['machine-session-task'] = {
+      pikkuFuncId: 'scheduler_machine-session-task',
+      name: 'machine-session-task',
+      schedule: '0 0 * * *',
+    }
+    pikkuState(null, 'function', 'meta')['scheduler_machine-session-task'] = {
+      pikkuFuncId: 'scheduler_machine-session-task',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+    }
+    wireScheduler(mockTask)
+
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: createMockLogger(),
+    } as any)
+
+    await runScheduledTask({ name: 'machine-session-task' })
+
+    assert.deepEqual(frozenSession, machineSession)
+  })
+
+  test('a session-taking task does not warn that auth was disabled', async () => {
+    const mockTask: CoreScheduledTask = {
+      name: 'identified-task',
+      schedule: '0 0 * * *',
+      middleware: [
+        async (_services: any, wire: any, next: any) => {
+          wire.setSession({ userId: 'cron:identified-task' })
+          return next()
+        },
+      ] as any,
+      func: {
+        func: async () => {},
+      },
+    }
+
+    pikkuState(null, 'scheduler', 'meta')['identified-task'] = {
+      pikkuFuncId: 'scheduler_identified-task',
+      name: 'identified-task',
+      schedule: '0 0 * * *',
+    }
+    pikkuState(null, 'function', 'meta')['scheduler_identified-task'] = {
+      pikkuFuncId: 'scheduler_identified-task',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: false,
+    }
+    wireScheduler(mockTask)
+
+    const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
+
+    await runScheduledTask({ name: 'identified-task' })
+
+    assert.deepEqual(
+      mockLogger
+        .getLogs()
+        .filter(
+          (log) =>
+            log.level === 'warn' && /auth was explicitly disabled/.test(log.message)
+        ),
+      []
+    )
+  })
+
   test('should throw ScheduledTaskNotFoundError when task not found', async () => {
     const mockLogger = createMockLogger()
     pikkuState(null, 'package', 'singletonServices', {

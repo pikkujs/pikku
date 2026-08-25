@@ -50,6 +50,29 @@ wireScheduler({
 })
 ```
 
+### Giving a cron an identity
+
+A cron has no caller, so it runs with **no session at all**: it cannot invoke a
+permission- or scope-gated RPC, and nothing it writes can be attributed. A
+scheduled task is a machine principal — give it a session in the task's own
+`middleware`, exactly as a bearer-authenticated caller gets one:
+
+```typescript
+wireScheduler({
+  name: 'bookingLifecycleDaily',
+  schedule: '0 3 * * *',
+  middleware: [cronSession],
+  func: bookingLifecycleDaily,
+})
+```
+
+`runScheduledTask` builds its wire with a `sessionService`, so a `setSession`
+here is the session the function is frozen with. See the machine-auth section of
+`pikku-middleware` for the factory and for why a cron is not a user row.
+
+A scheduler service running a task on someone's behalf can pass a session
+directly instead: `runScheduledTask({ name, session })`.
+
 ### Wire Object (`wire.scheduledTask`)
 
 Inside scheduled functions:

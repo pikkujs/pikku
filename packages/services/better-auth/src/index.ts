@@ -77,7 +77,7 @@ export type {
   CredentialOAuthProvider,
   CredentialOAuthSecretReader,
 } from './credential-oauth-providers.js'
-export { credentialOAuth } from './credential-oauth.plugin.js'
+export { credentialOAuth, PLATFORM_USER_ID } from './credential-oauth.plugin.js'
 export type { CredentialOAuthOptions } from './credential-oauth.plugin.js'
 export { PROVIDER_REGISTRY } from './provider-registry.js'
 export type { AuthProvider, AuthProviderDef } from './provider-registry.js'
