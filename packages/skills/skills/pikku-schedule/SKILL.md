@@ -47,39 +47,31 @@ wireScheduler({
   func: PikkuVoidFunc,     // Must be pikkuVoidFunc (no input/output)
   tags?: string[],         // Targets tag middleware — see pikku-middleware
   middleware?: PikkuMiddleware[],
-  session?: Session,       // The identity the task runs as — see below
 })
 ```
 
-### `session`: the identity a cron runs as
+### Giving a cron an identity
 
-A cron has no caller, so by default it runs with **no session at all**. That has
-two consequences people hit immediately: it cannot call a permission-gated or
-scope-gated RPC (the gate sees no session and says no), and everything it writes
-is attributed to nobody — `userId: null` in the audit trail.
-
-Declare the identity on the wiring and both go away:
+A cron has no caller, so it runs with **no session at all**: it cannot invoke a
+permission- or scope-gated RPC, and nothing it writes can be attributed. A
+scheduled task is a machine principal — give it a session in the task's own
+`middleware`, exactly as a bearer-authenticated caller gets one:
 
 ```typescript
 wireScheduler({
   name: 'bookingLifecycleDaily',
   schedule: '0 3 * * *',
-  session: { userId: 'system:booking-lifecycle', scopes: ['admin'] },
+  middleware: [machineSession('cron:bookingLifecycleDaily', ['machine:cron']) as any],
   func: bookingLifecycleDaily,
 })
 ```
 
-Now the task can be a thin `rpc.invoke('runBookingLifecycleNow')` against the
-same gated RPC a person calls, instead of both of them delegating to a `lib/`
-helper written purely to route around the missing identity — and the audit rows
-say `system:booking-lifecycle` rather than `null`.
+`runScheduledTask` builds its wire with a `sessionService`, so a `setSession`
+here is the session the function is frozen with. See the machine-auth section of
+`pikku-middleware` for the factory and for why a cron is not a user row.
 
-Give each task its own system id: it is the "who" in every row it writes, so one
-shared `system` identity throws away the only attribution you get. Grant it the
-narrowest scopes the task actually needs.
-
-A session passed to `runScheduledTask({ name, session })` — a scheduler service
-running the task on someone's behalf — wins over the declared one.
+A scheduler service running a task on someone's behalf can pass a session
+directly instead: `runScheduledTask({ name, session })`.
 
 ### Wire Object (`wire.scheduledTask`)
 

@@ -13,6 +13,10 @@ installGroups: [core]
 
 # Pikku Permissions
 
+## ⛔ FIRST: is the caller a machine with a token? ⛔
+
+**Then this is NOT a permissions problem.** Resolve the token in `addHTTPMiddleware('*')` middleware that calls `setSession`, make the function a `pikkuFunc`, and gate it with `scopes`. A `permissions` check that verifies a bearer token and returns `true` is authentication wearing an authorization hat — and it leaves the function sessionless, so every body still has to work out who called it. See the machine-auth section of `pikku-middleware`. The only exception is a bootstrap endpoint whose caller has no identity yet (a shared-secret registration, a login): that one is sessionless and declares its gate here.
+
 ## The Rule
 
 **ALWAYS put authorization checks in the `permissions` field of `pikkuFunc` or `pikkuSessionlessFunc` — NEVER inside the `func` body.**

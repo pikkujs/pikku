@@ -20,7 +20,6 @@ export type CoreScheduledTask<
     CorePikkuFunctionSessionless<void, void>
   >,
   PikkuMiddleware = CorePikkuMiddleware<any>,
-  UserSession extends CoreUserSession = CoreUserSession,
 > = {
   /** Unique across the project. It is how the task is addressed in logs, in `pikku meta`, and by a scheduler service asked to run it now. */
   name: string
@@ -30,16 +29,8 @@ export type CoreScheduledTask<
   func: PikkuFunctionConfig
   /** Filters this task in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
-  /** Wraps every execution. There is no request to read from, so this is for tracing, locking and teardown rather than authenticating a caller. */
+  /** Wraps every execution. There is no request to read from, so this is for tracing, locking and teardown rather than auth. */
   middleware?: PikkuMiddleware[]
-  /**
-   * The identity the task runs as. A cron has no caller to take a session from,
-   * so without this it runs with none: it cannot pass a permission gate, hold a
-   * scope, or be attributed in an audit trail, and any logic it shares with a
-   * gated RPC has to be factored out to a helper both can call. Declare a system
-   * identity here and the task can invoke that RPC directly instead.
-   */
-  session?: UserSession
 }
 
 export interface PikkuScheduledTask {

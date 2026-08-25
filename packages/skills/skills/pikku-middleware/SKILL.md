@@ -184,7 +184,81 @@ const earlyMiddleware = pikkuMiddleware({
 
 Within the same priority level, the collection order above is preserved. Use priority when a middleware must run before/after others regardless of where it was registered (e.g. telemetry wrapping everything, session extraction before auth checks).
 
-## Service-to-Service Bearer Auth (canonical pattern)
+## ⛔ MACHINE AUTH: THE TOKEN BECOMES A SESSION. ⛔
+
+**A caller that has an identity — a sandbox, a deployed stage, a pool host, a device — is authenticated ONCE, in middleware, which calls `setSession`. The function is then an ordinary `pikkuFunc` gated with `scopes`. It reads `session`. It NEVER re-derives who the caller is.**
+
+Either a function is sessionless (genuinely public) or it has a session. Anything in between — a token verified inside `func`, a token verified in a `permissions` check that returns `true`, an identity passed in the input schema, the same resolver memoised per request so N functions can each call it — is the anti-pattern this section exists to kill.
+
+```typescript
+// middleware.ts — resolve the bearer ONCE, for every route
+const sandboxBearerAuth = pikkuMiddleware<SingletonServices>(
+  async ({ kysely, auth }, { http, getSession, setSession }, next) => {
+    if (await getSession?.()) return next()
+    const header = http?.request?.header?.('authorization')
+    if (!header?.startsWith('Bearer ')) return next()
+    const sandbox = await resolveSandboxSession(kysely, auth, header.slice(7).trim())
+    if (sandbox) {
+      setSession?.({ userId: sandbox.createdByUserId ?? sandbox.sandboxInstanceId,
+        orgId: sandbox.organizationId, scopes: ['machine:sandbox'], sandbox } as UserSession)
+    }
+    return next()
+  },
+)
+
+addHTTPMiddleware('*', [cors(...), betterAuthSession(), apiBearerAuth, sandboxBearerAuth as any])
+```
+
+```typescript
+// functions/report-something.function.ts
+export const reportSomething = pikkuFunc({
+  expose: true,
+  scopes: ['machine:sandbox'],          // ← the gate. Enforced by the runner, seen by the inspector.
+  input: ReportSomethingInput,
+  output: ReportSomethingOutput,
+  func: async ({ kysely }, input, { session }) => {
+    const sandbox = sandboxOf(session)   // ← narrowing only, no verification
+    ...
+  },
+})
+```
+
+An unresolved token leaves the session unset and the function throws `MissingSessionError` — 401, for free. Declare the scope tree once with `defineScope` (see `pikku-permissions`).
+
+### It MUST be `addHTTPMiddleware`, never `addTagMiddleware`
+
+**A session set in tag middleware is invisible to the function when the call arrives over `POST /rpc/:rpcName`.** Tag middleware runs inside `runPikkuFunc`, and the RPC dispatch calls it without a `sessionService`, so `invocationWire.session` is never re-read after your `setSession` — the function sees the session the OUTER wire had, which is none. `addHTTPMiddleware('*')` runs on the `/rpc` route itself, before its handler, and that session is the one the dispatched function inherits. Tag middleware is still right for a gate that only says yes/no.
+
+### A cron is a machine identity too — set it in the task's own middleware
+
+A scheduled task has no caller and no header, but it is still a machine principal, and without a session it cannot invoke a gated RPC or be attributed in anything it writes. Give it one the same way, in the task's own `middleware`:
+
+```typescript
+const machineSession = (userId: string, scopes: ScopeId[]) =>
+  pikkuMiddleware<SingletonServices>(async (_services, { setSession }, next) => {
+    setSession?.({ userId, orgId: '', scopes } as UserSession)
+    return next()
+  })
+
+wireScheduler({
+  name: 'tickVirtualUserSchedules',
+  schedule: '*/15 * * * *',
+  middleware: [machineSession('cron:tickVirtualUserSchedules', ['machine:cron']) as any],
+  func: tickVirtualUserSchedules,
+})
+```
+
+The task can then be a thin `rpc.invoke('someGatedRpc')` against the same entry point a person calls, instead of factoring the logic into a `lib/` helper purely to route around the missing identity.
+
+Unlike tag middleware over `/rpc`, this works: `runScheduledTask` builds its wire with a `sessionService`, so the session set here is the one the function is frozen with. And unlike a person, a cron is **not** a user row — inventing a seeded account for it buys a phantom member in every list, seat count and bill, and a per-org membership that a cross-org sweep has to ignore anyway. Platform-wide authority is a scope, not a membership.
+
+### The one sessionless exception: bootstrap
+
+An endpoint that runs BEFORE the caller has an identity — registering a new host with a shared bootstrap key, a login, a device-code request — has no session to set. That one stays `pikkuSessionlessFunc` and declares its gate in `permissions` (see `pikku-permissions`).
+
+## Service-to-Service Bearer Auth (gate-only pattern)
+
+Use this when the callee needs to know only THAT the caller is trusted, not WHICH caller it is. If it needs to know which, use the session pattern above.
 
 A server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent). Auth lives in a tag middleware — NOT in the function body. Authorization/permission checks belong in the `permissions` field (see `pikku-permissions`), never inside `func`.
 

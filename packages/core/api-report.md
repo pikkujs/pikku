@@ -2737,14 +2737,12 @@ export type CoreScheduledTask<
     CorePikkuFunctionSessionless<void, void>
   >,
   PikkuMiddleware = CorePikkuMiddleware<any>,
-  UserSession extends CoreUserSession = CoreUserSession,
 > = {
   name: string
   schedule: string
   func: PikkuFunctionConfig
   tags?: string[]
   middleware?: PikkuMiddleware[]
-  session?: UserSession
 }
 getScheduledTasks: () => Map<string, CoreScheduledTask>
 logSchedulers: (logger: Logger) => void
