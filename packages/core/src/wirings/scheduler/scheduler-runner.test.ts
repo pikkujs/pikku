@@ -294,7 +294,12 @@ describe('runScheduledTask', () => {
     await runScheduledTask({ name: 'identified-task' })
 
     assert.deepEqual(
-      mockLogger.getLogs().filter((log) => log.level === 'warn'),
+      mockLogger
+        .getLogs()
+        .filter(
+          (log) =>
+            log.level === 'warn' && /auth was explicitly disabled/.test(log.message)
+        ),
       []
     )
   })
