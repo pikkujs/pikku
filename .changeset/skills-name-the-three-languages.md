@@ -1,5 +1,5 @@
 ---
-'@pikku/skills': minor
+'@pikku/skills': patch
 ---
 
 Skills now name the three languages a project has, and refuse to let them

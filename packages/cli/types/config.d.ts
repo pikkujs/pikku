@@ -316,7 +316,9 @@ export type PikkuCLIInput = {
    * It exists for the Pikku Console. That meta is the one part of a project
    * the Console renders back to a human, so a team whose working language is
    * German should be able to read their own Console in German without anything
-   * else about the project changing.
+   * else about the project changing. Nothing reads it yet, so setting it does
+   * not change what the Console renders — this is the field the reader will
+   * come to.
    *
    * Two things it deliberately does not do:
    *
