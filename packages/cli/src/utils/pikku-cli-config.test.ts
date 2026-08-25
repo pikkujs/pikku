@@ -5,9 +5,11 @@ import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { rmSync } from 'node:fs'
 import {
+  DEFAULT_LOCALE,
   PikkuCLIConfigError,
   assertSchemaDirectoriesAreDistinct,
   getPikkuCLIConfig,
+  normalizeLocale,
   tryGetPikkuCLIConfig,
 } from './pikku-cli-config.js'
 
@@ -162,6 +164,45 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
+  test('locale defaults to English when the config does not name one', async () => {
+    const root = await writeConfig()
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+
+    assert.equal(config.locale, DEFAULT_LOCALE)
+  })
+
+  test('a declared locale survives the load, canonicalized', async () => {
+    const root = await writeConfig({ locale: 'de-de' })
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+
+    assert.equal(config.locale, 'de-DE')
+  })
+
+  test('a locale that is not a language tag names itself in the error', async () => {
+    const root = await writeConfig({ locale: 'de_DE' })
+
+    await assert.rejects(
+      () =>
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      (error: unknown) => {
+        assert.ok(error instanceof PikkuCLIConfigError)
+        assert.match(error.message, /locale in pikku\.config\.json/)
+        assert.match(error.message, /"de_DE"/)
+        return true
+      }
+    )
+  })
+
   test('a scenario schema directory equal to the app one is rejected', async () => {
     // The scenario write owns its directory: it emits register.gen.ts and prunes
     // every schema file its own required-set does not name. Sharing the app's
@@ -203,6 +244,39 @@ describe('assertSchemaDirectoriesAreDistinct', () => {
           scenarioSchemaDirectory: '/app/.pikku/scenarios/../schemas',
         }),
       PikkuCLIConfigError
+    )
+  })
+})
+
+describe('normalizeLocale', () => {
+  test('an absent locale is English rather than an error', () => {
+    assert.equal(normalizeLocale(undefined), DEFAULT_LOCALE)
+    assert.equal(normalizeLocale(null), DEFAULT_LOCALE)
+  })
+
+  test('canonicalizes so one language is one value downstream', () => {
+    assert.equal(normalizeLocale('en'), 'en')
+    assert.equal(normalizeLocale(' de '), 'de')
+    assert.equal(normalizeLocale('pt-br'), 'pt-BR')
+    assert.equal(normalizeLocale('EN-gb'), 'en-GB')
+  })
+
+  test('rejects the POSIX underscore people reach for', () => {
+    assert.throws(() => normalizeLocale('de_DE'), PikkuCLIConfigError)
+  })
+
+  test('rejects what is not a tag at all', () => {
+    assert.throws(() => normalizeLocale(''), PikkuCLIConfigError)
+    assert.throws(() => normalizeLocale('   '), PikkuCLIConfigError)
+    assert.throws(() => normalizeLocale('German, please'), PikkuCLIConfigError)
+    assert.throws(() => normalizeLocale(42), PikkuCLIConfigError)
+    assert.throws(() => normalizeLocale(['de']), PikkuCLIConfigError)
+  })
+
+  test('the error points at the two settings it is not', () => {
+    assert.throws(
+      () => normalizeLocale('de_DE'),
+      /Identifiers stay English regardless.*defaultLocale in active\.json/s
     )
   })
 })

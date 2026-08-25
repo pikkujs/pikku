@@ -306,6 +306,32 @@ export type PikkuCLIInput = {
    */
   allowShadowedServices?: string[]
 
+  /**
+   * The language the project's **meta** is authored in — the human-readable
+   * prose that lives inside the code rather than in a message catalogue:
+   * `description` on functions and steps, `name`/`title` on features and
+   * scenarios, step `template` strings, role and persona descriptions.
+   * A BCP-47 tag; defaults to `en`.
+   *
+   * It exists for the Pikku Console. That meta is the one part of a project
+   * the Console renders back to a human, so a team whose working language is
+   * German should be able to read their own Console in German without anything
+   * else about the project changing.
+   *
+   * Two things it deliberately does not do:
+   *
+   * - **It never renames anything.** Identifiers — functions, components,
+   *   types, variables, files, database tables and columns — are English
+   *   whatever this is set to. `locale: "de"` buys a German `description`, not
+   *   a `getUebersicht` or a `vorgang` table.
+   * - **It is not the product's UI language.** What the app says to its users
+   *   lives in `messages/<locale>.json`, and which language a first-time
+   *   visitor is served is `active.json`'s `defaultLocale`. `baseLocale` in
+   *   `project.inlang/settings.json` names the message *source* and stays
+   *   `en`, or `--add-locale` has no English catalogue to translate from.
+   */
+  locale?: string
+
   configDir: string
   tsconfig: string
 

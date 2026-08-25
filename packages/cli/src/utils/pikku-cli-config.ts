@@ -118,6 +118,49 @@ export const assertSchemaDirectoriesAreDistinct = (
   }
 }
 
+/**
+ * The `locale` a project gets when its config does not name one.
+ *
+ * English, and it stays English for almost every project — the field changes
+ * what the Console reads back to a human, not who the product is for.
+ */
+export const DEFAULT_LOCALE = 'en'
+
+/**
+ * `locale` is handed on to codegen and the Console as a language tag, so a
+ * value they cannot interpret is worse than none: it degrades quietly to "some
+ * language" a long way from the line that is wrong. `Intl.getCanonicalLocales`
+ * is the BCP-47 grammar Node already ships, and it catches the mistake people
+ * actually make — `de_DE` with a POSIX underscore where BCP-47 wants `de-DE`.
+ *
+ * It returns the canonical spelling rather than what was typed, so `EN-gb` and
+ * `en-GB` are one value downstream instead of two that never compare equal.
+ */
+export const normalizeLocale = (locale: unknown): string => {
+  if (locale === undefined || locale === null) {
+    return DEFAULT_LOCALE
+  }
+
+  if (typeof locale === 'string') {
+    try {
+      const [canonical] = Intl.getCanonicalLocales(locale.trim())
+      if (canonical) {
+        return canonical
+      }
+    } catch {
+      // Falls through to the shared error below — the reader needs the same
+      // explanation whether the tag was malformed or the wrong type entirely.
+    }
+  }
+
+  throw new PikkuCLIConfigError(
+    `locale in pikku.config.json is not a language tag: ${JSON.stringify(locale)}. ` +
+      `Use a BCP-47 code — "en", "de", "pt-BR" — with a hyphen rather than an underscore. ` +
+      `It sets the language of the meta the Console renders back to your team (function and step descriptions, feature and scenario names). ` +
+      `Identifiers stay English regardless, and the language the app speaks to its users is defaultLocale in active.json, not this.`
+  )
+}
+
 const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
@@ -1125,6 +1168,8 @@ const _getPikkuCLIConfig = async (
     if (!isAbsolute(result.tsconfig)) {
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }
+
+    result.locale = normalizeLocale(result.locale)
 
     assertSchemaDirectoriesAreDistinct(result)
 
