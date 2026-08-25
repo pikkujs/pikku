@@ -27,10 +27,31 @@ Enforcement belongs in a **Kysely plugin**, not at call sites. A call site that
 forgets to encrypt writes plaintext into a column the manifest says is secret,
 and nothing catches it — the row looks fine. A plugin sits in the query path
 every write goes through, so "encrypted" becomes a property of the column rather
-than a property of the developer's memory. It transforms values on the way in
-and back on the way out, and the application code is unchanged.
+than a property of the developer's memory.
 
-That plugin lives here, in `@pikku/services-kysely`, and not in a SQLite-specific
+Transparency turned out to be **asymmetric**, and the implementation says so.
+Reads are genuinely transparent: `transformResult` is async, so ciphertext is
+decrypted on the way out and application code is unchanged. Writes are not.
+`transformQuery` is synchronous — it returns a `RootOperationNode`, not a
+promise — and WebCrypto is async, so the plugin cannot encrypt on the way in.
+What it does instead is **refuse**: plaintext heading for a `wrapped` or
+`sealed` column throws, and values are produced by
+`ClassificationCrypto.encryptColumn()`. The security property is intact — a
+forgotten call site is a loud error rather than a silent plaintext row — but
+"transparent" describes only half of it.
+
+Two alternatives were rejected to get there. Node's synchronous `crypto` would
+fork crypto away from core and break every non-Node runtime. Proxying the query
+builder is the kind of workaround the repo bans. A **`Driver` wrapper**
+encrypting compiled-query parameters *would* deliver full write transparency and
+reuses the manifest walk and resolver verbatim, so it stays open — but it needs
+a parameter-index-to-column mapping recovered after compilation, and that
+mapping goes fragile exactly where inserts get interesting (multi-row,
+`onConflict().doUpdateSet()`). A mapping that is subtly wrong encrypts the wrong
+column, which is worse than the problem it solves. Not worth it until the write
+path is the thing actually hurting.
+
+That plugin lives here, in `@pikku/kysely`, and not in a SQLite-specific
 package. Nothing about wrapping a column value is dialect-specific, and the same
 plugin is wanted against Postgres — fabric has the same classified columns and
 the same reason to protect them. Putting it beside the dialect would mean

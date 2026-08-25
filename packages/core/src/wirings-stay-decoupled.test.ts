@@ -36,6 +36,10 @@ const ALLOWED: Record<string, string[]> = {
   // resolves the addon instance that owns the namespace.
   rpc: ['agent', 'addon'],
   gateway: ['http'],
+  // The passphrase gate is reached over HTTP by design: unlocking is a page in
+  // the app, so one unlock screen serves both a desktop build and a headless
+  // `pikku serve`. There is nothing left of this wire without the routes.
+  'data-lock': ['http'],
   mcp: ['rpc'],
   trigger: ['rpc'],
   // A workflow step is dispatched to a queue, invoked over rpc, or slept on.
