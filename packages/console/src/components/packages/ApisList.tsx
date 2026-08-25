@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Center, Loader } from '@pikku/mantine/core'
+import { Box } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Globe } from 'lucide-react'
@@ -12,6 +12,7 @@ import { CommunityGallery } from './CommunityGallery'
 import { deriveNamespace } from './deriveNamespace'
 import type { InstalledAddonRow, PackageMeta } from './packageMeta'
 import { PAGE_SIZE } from './packageMeta'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 interface OpenApiEntry {
   name: string
@@ -134,9 +135,7 @@ export const ApisList: React.FC<{
   if (isPending) {
     return (
       <Box style={{ flex: 1, minHeight: 0 }}>
-        <Center h="100%">
-          <Loader />
-        </Center>
+        <ConsoleLoading />
       </Box>
     )
   }

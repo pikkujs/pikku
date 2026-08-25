@@ -1,12 +1,5 @@
 import React, { useMemo, useCallback } from 'react'
-import {
-  Alert,
-  Box,
-  Center,
-  Loader,
-  ScrollArea,
-  Text,
-} from '@pikku/mantine/core'
+import { Alert, Box, ScrollArea, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { GitBranch, History } from 'lucide-react'
@@ -18,6 +11,7 @@ import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { ScenarioDocument } from '../scenarios/ScenarioDocument'
 import { WorkflowGraphView } from '../project/WorkflowGraphView'
 import { WorkflowTimelineDrawer } from '../project/WorkflowTimelineDrawer'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 /**
  * The workflow itself — a node graph, or the scenario's own document when the
@@ -48,11 +42,7 @@ export const WorkflowGraphPanel: React.FC = () => {
   }, [baseWorkflow, runContext?.runData?.wire])
 
   if (loading) {
-    return (
-      <Center h="100%">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading />
   }
 
   if (!workflow) {

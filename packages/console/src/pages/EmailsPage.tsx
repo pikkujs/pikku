@@ -9,7 +9,6 @@ import {
   Center,
   Code,
   Group,
-  Loader,
   Select,
   Stack,
   Text,
@@ -41,6 +40,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { PikkuSwitch } from '../components/ui/PikkuSwitch'
 import { EmailsOverview } from './EmailsOverview'
 import classes from '../components/ui/console.module.css'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 const EMAIL_DOCS_HREF = 'https://pikku.dev/docs'
 
@@ -163,9 +163,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
             />
           }
         >
-          <Center h="100%">
-            <Loader />
-          </Center>
+          <ConsoleLoading />
         </ResizablePanelLayout>
       </ConsoleSurface>
     )
@@ -329,11 +327,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
               p="md"
             >
               <Stack gap="md" style={{ minWidth: 0 }}>
-                {preview.isLoading ? (
-                  <Center py="xl">
-                    <Loader />
-                  </Center>
-                ) : null}
+                {preview.isLoading ? <ConsoleLoading py="xl" /> : null}
                 {preview.error ? (
                   <Alert color="red" icon={<AlertTriangle size={16} />}>
                     {asI18n(

@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { ReactNode } from 'react'
 import classes from '../components/ui/console.module.css'
+import { ConsoleLoaderProvider } from '../components/ui/ConsoleLoading'
 
 /**
  * Who draws the chrome around a console screen.
@@ -44,17 +45,28 @@ export function useListSurfaceClass(): string {
  * console.module.css. The data attribute is not read by the console itself — it
  * is a hook for the host's own stylesheet, which may need to reach inside the
  * embedded screen.
+ *
+ * `loader` is the mark every screen inside shows while it waits, so an embedded
+ * console waits the way the rest of the host's product does.
  */
-export function HostConsoleChrome({ children }: { children: ReactNode }) {
+export function HostConsoleChrome({
+  children,
+  loader,
+}: {
+  children: ReactNode
+  loader?: ReactNode
+}) {
   return (
     <ConsoleChromeContext.Provider value="host">
-      <div
-        data-console-chrome="host"
-        className={`${classes.flexColumn} ${classes.chromeHost}`}
-        style={{ flex: 1, minWidth: 0, minHeight: 0 }}
-      >
-        {children}
-      </div>
+      <ConsoleLoaderProvider loader={loader}>
+        <div
+          data-console-chrome="host"
+          className={`${classes.flexColumn} ${classes.chromeHost}`}
+          style={{ flex: 1, minWidth: 0, minHeight: 0 }}
+        >
+          {children}
+        </div>
+      </ConsoleLoaderProvider>
     </ConsoleChromeContext.Provider>
   )
 }

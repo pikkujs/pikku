@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react'
-import { Box, Center, Loader, Alert, Text } from '@pikku/mantine/core'
+import { Box, Alert, Text } from '@pikku/mantine/core'
 import { AlertTriangle } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { useRenderEmailPreview } from '../../../hooks/useWirings'
+import { ConsoleLoading } from '../../ui/ConsoleLoading'
 
 /**
  * Read-only rendered preview of an email template — the viewer half of the
@@ -30,11 +31,7 @@ export const EmailPreviewPanel: React.FC<{
 
   return (
     <Box>
-      {preview.isLoading ? (
-        <Center py="xl">
-          <Loader />
-        </Center>
-      ) : null}
+      {preview.isLoading ? <ConsoleLoading py="xl" /> : null}
       {preview.error ? (
         <Alert color="red" icon={<AlertTriangle size={16} />}>
           {asI18n(

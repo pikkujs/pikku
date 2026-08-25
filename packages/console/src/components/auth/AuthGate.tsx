@@ -1,7 +1,7 @@
-import { Center, Loader } from '@pikku/mantine/core'
 import { useAuth } from '../../context/AuthContext'
 import { LoginScreen } from './LoginScreen'
 import { NotAuthorized } from './NotAuthorized'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 /**
  * The console's front door. Blocks all app UI until there is a Better Auth
@@ -20,11 +20,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({
   const { loading, user, canUseConsole } = useAuth()
 
   if (loading) {
-    return (
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading h="100vh" />
   }
 
   if (!user) {

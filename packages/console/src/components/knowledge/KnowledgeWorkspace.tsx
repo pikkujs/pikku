@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Center, Loader, Text } from '@pikku/mantine/core'
+import { Box, Center, Text } from '@pikku/mantine/core'
 import { BookOpen } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -14,6 +14,7 @@ import type { KnowledgeBrowse } from '../../hooks/useKnowledgeBrowse'
 import { findingsForNote } from '../../lib/knowledge'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 import classes from '../ui/console.module.css'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 const DOCS_HREF = 'https://pikku.dev/docs/core-features/knowledge'
 
@@ -76,9 +77,7 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
   if (isLoading) {
     return (
       <ResizablePanelLayout header={header} hidePanel>
-        <Center style={{ flex: 1 }}>
-          <Loader />
-        </Center>
+        <ConsoleLoading />
       </ResizablePanelLayout>
     )
   }

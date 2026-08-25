@@ -1,8 +1,8 @@
 import React, { Suspense } from 'react'
-import { Center, Loader } from '@pikku/mantine/core'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { VirtualUsersWorkspace } from '../components/virtual-users/VirtualUsersWorkspace'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 /**
  * Virtual users sit beside scenarios because they are fed by the same prose: a
@@ -20,13 +20,7 @@ const VirtualUsersPageInner: React.FC = () => {
 }
 
 export const VirtualUsersPage: React.FC = () => (
-  <Suspense
-    fallback={
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    }
-  >
+  <Suspense fallback={<ConsoleLoading h="100vh" />}>
     <VirtualUsersPageInner />
   </Suspense>
 )

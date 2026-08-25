@@ -2,7 +2,6 @@ import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { Center, Loader } from '@pikku/mantine/core'
 import { GitBranch } from 'lucide-react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
@@ -12,6 +11,7 @@ import { workflowQueryKeys } from '../../hooks/workflow-query-keys'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export const WorkflowTabContent: React.FC<{
   immersiveDetail?: boolean
@@ -47,11 +47,7 @@ export const WorkflowTabContent: React.FC<{
   }, [meta.workflows])
 
   if (isLoading) {
-    return (
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading h="100vh" />
   }
 
   if (!workflow) {

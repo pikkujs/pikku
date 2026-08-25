@@ -17,6 +17,7 @@ import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
 import { usePageGate } from '../../context/PageGateContext'
 import { useListSurfaceClass } from '../../context/ConsoleChromeContext'
 import classes from '../ui/console.module.css'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 interface Column<T> {
   key: string
@@ -131,9 +132,7 @@ export const TableListPage = <T,>({
   if (loading) {
     return (
       <Box className={surfaceClass}>
-        <Center h="100%">
-          <Loader />
-        </Center>
+        <ConsoleLoading />
       </Box>
     )
   }

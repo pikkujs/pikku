@@ -7,8 +7,6 @@ import {
   Button,
   Code,
   Group,
-  Loader,
-  Center,
   Select,
   Stack,
   Table,
@@ -61,6 +59,7 @@ import type {
   MCPResourceMeta,
   MCPPromptMeta,
 } from '@pikku/core/mcp'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 interface McpMeta {
   toolsMeta: MCPToolMeta
@@ -488,11 +487,7 @@ export const PackageDetailPage: React.FC<{
   if (source === 'api') {
     const api = apiDetail
     if (!api) {
-      return (
-        <Center h="100vh">
-          <Loader />
-        </Center>
-      )
+      return <ConsoleLoading h="100vh" />
     }
     return (
       <ResizablePanelLayout
@@ -709,11 +704,7 @@ export const PackageDetailPage: React.FC<{
   }
 
   if (isLoading || settling) {
-    return (
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading h="100vh" />
   }
 
   if (!pkg) {

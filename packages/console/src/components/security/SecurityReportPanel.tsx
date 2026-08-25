@@ -1,11 +1,12 @@
 import React from 'react'
-import { Box, Center, Loader, ScrollArea, Text } from '@pikku/mantine/core'
+import { Box, ScrollArea, Text } from '@pikku/mantine/core'
 import { ShieldCheck } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { SecurityAuditView, type SecurityLens } from './SecurityAuditView'
 import { useSecurityAudit } from '../../hooks/useSecurityAudit'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface SecurityReportPanelProps {
   lens: SecurityLens
@@ -33,11 +34,7 @@ export const SecurityReportPanel: React.FC<SecurityReportPanelProps> = ({
   const { report, isLoading } = useSecurityAudit()
 
   if (isLoading) {
-    return (
-      <Center style={{ flex: 1 }}>
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading />
   }
 
   if (!report) {

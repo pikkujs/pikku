@@ -1,8 +1,8 @@
 import React, { Suspense } from 'react'
-import { Center, Loader } from '@pikku/mantine/core'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { PersonasWorkspace } from '../components/personas/PersonasWorkspace'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 /**
  * The people a product is for, declared once with `definePersonas()`.
@@ -23,13 +23,7 @@ const PersonasPageInner: React.FC = () => {
 }
 
 export const PersonasPage: React.FC = () => (
-  <Suspense
-    fallback={
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    }
-  >
+  <Suspense fallback={<ConsoleLoading h="100vh" />}>
     <PersonasPageInner />
   </Suspense>
 )

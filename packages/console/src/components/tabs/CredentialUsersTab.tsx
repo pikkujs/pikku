@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Text, Group, Badge, Center, Loader } from '@pikku/mantine/core'
+import { Text, Group, Badge } from '@pikku/mantine/core'
 import { Users, Check } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -10,6 +10,7 @@ import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 interface CredentialMeta {
   name: string
@@ -143,11 +144,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({
   )
 
   if (loading) {
-    return (
-      <Center h="100%">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading />
   }
 
   if (perUserCredentials.length === 0) {

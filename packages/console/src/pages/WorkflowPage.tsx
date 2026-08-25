@@ -1,6 +1,6 @@
 import React, { Suspense, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Group, TextInput, Center, Loader } from '@pikku/mantine/core'
+import { Group, TextInput } from '@pikku/mantine/core'
 import { GitBranch, Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -15,6 +15,7 @@ import {
   ConsoleNavigatorCtx,
   useConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 export type { WorkflowExtraColumn } from '../components/project/WorkflowsList'
 
@@ -111,13 +112,7 @@ export const WorkflowsPage: React.FC<{
 }) => {
   const existingNavigator = useContext(ConsoleNavigatorCtx)
   const inner = (
-    <Suspense
-      fallback={
-        <Center h="100vh">
-          <Loader />
-        </Center>
-      }
-    >
+    <Suspense fallback={<ConsoleLoading h="100vh" />}>
       <WorkflowPageInner
         onOpen={onOpen}
         headerRight={headerRight}

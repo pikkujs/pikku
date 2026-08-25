@@ -5,7 +5,6 @@ import {
   Stack,
   Group,
   Badge,
-  Loader,
   Center,
   Tabs,
   TextInput,
@@ -31,6 +30,7 @@ import {
 } from '../hooks/useStateDiff'
 import { httpMethodDefs, funcWrapperDefs } from '../components/ui/badge-defs'
 import classes from '../components/ui/console.module.css'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 const CATEGORY_LABELS: Record<string, string> = {
   functions: 'Functions',
@@ -683,11 +683,7 @@ export const ChangesPage: React.FC = () => {
               docsHref="https://pikku.dev/docs"
             />
           )}
-          {activePath && isLoading && (
-            <Center p="xl">
-              <Loader />
-            </Center>
-          )}
+          {activePath && isLoading && <ConsoleLoading py="xl" />}
           {activePath && error && (
             <Center p="xl">
               <Text size="sm" c="red">
