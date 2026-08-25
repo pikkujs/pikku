@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 import { defineConfig } from 'vite'
 import viteReact from '@vitejs/plugin-react'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
@@ -12,7 +14,21 @@ const PIKKU_SERVER = 'http://localhost:4002'
 /** Paths that belong to pikku rather than to the client-side router. */
 const API_PATHS = ['/todos', '/_pikku']
 
+const generated = fileURLToPath(
+  new URL('../functions/.pikku/', import.meta.url)
+)
+
 export default defineConfig({
+  /**
+   * `#pikku/*` is the specifier every scaffolded app inherits, and it is the
+   * only one that survives create-pikku relocating the generated directory.
+   * tsconfig `paths` teaches tsc about it; vite needs telling separately, and
+   * a package.json `imports` entry cannot be used because Node rejects a
+   * subpath-imports target outside its own package.
+   */
+  resolve: {
+    alias: [{ find: /^#pikku\/(.*)\.js$/, replacement: `${generated}$1.ts` }],
+  },
   server: {
     port: 4003,
     proxy: Object.fromEntries(

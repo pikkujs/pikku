@@ -1,5 +1,5 @@
 import { PikkuFetchError } from '@pikku/fetch'
-import { pikkuFetch } from '../../../functions/.pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
 import { lockStore } from './lock-store'
 
 /**

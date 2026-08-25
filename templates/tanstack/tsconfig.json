@@ -15,7 +15,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "#pikku/*.js": ["../functions/.pikku/*.ts"],
+      "#pikku/*": ["../functions/.pikku/*/index.ts", "../functions/.pikku/*"]
+    }
   },
   "include": [
     "src",
