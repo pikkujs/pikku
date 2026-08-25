@@ -2,12 +2,10 @@ import {
   Alert,
   Badge,
   Box,
-  Center,
   CloseButton,
   Divider,
   Drawer,
   Group,
-  Loader,
   Menu,
   Button,
   Stack,
@@ -27,6 +25,7 @@ import {
 import { ScopeTreeSelector } from '../scopes/ScopeTreeSelector'
 import { diffScopeSelection } from '../scopes/scope-tree'
 import { m } from '@/i18n/messages'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 type UserRolesDrawerProps = {
   opened: boolean
@@ -83,9 +82,7 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
       title={m.scopes_user_roles_title({ label: userLabel })}
     >
       {userRolesQuery.isLoading ? (
-        <Center py="xl">
-          <Loader />
-        </Center>
+        <ConsoleLoading py="xl" />
       ) : (
         <Stack gap="md" data-testid="user-roles-drawer">
           {mutationError && (

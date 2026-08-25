@@ -1,15 +1,6 @@
 import React from 'react'
 import { useLink } from '../router'
-import {
-  Box,
-  SimpleGrid,
-  Paper,
-  Text,
-  Group,
-  Stack,
-  Center,
-  Loader,
-} from '@pikku/mantine/core'
+import { Box, SimpleGrid, Paper, Text, Group, Stack } from '@pikku/mantine/core'
 import {
   FunctionSquare,
   GitBranch,
@@ -28,6 +19,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 interface StatCardProps {
   label: I18nString
@@ -98,11 +90,7 @@ export const OverviewPage: React.FC = () => {
   const { counts, loading } = usePikkuMeta()
 
   if (loading) {
-    return (
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading h="100vh" />
   }
 
   const stats: StatCardProps[] = [

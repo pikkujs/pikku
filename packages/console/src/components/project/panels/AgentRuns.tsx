@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import { Center, Loader, Stack } from '@pikku/mantine/core'
+import { Stack } from '@pikku/mantine/core'
 import { Bot, Gauge } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -7,6 +7,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import { AgentRunCard, type AgentRunCardProps } from './AgentRunCard'
 import { AgentPlaygroundContext } from '../../../context/AgentPlaygroundContext'
 import { useAgentThreadRuns } from '../../../hooks/useAgentRuns'
+import { ConsoleLoading } from '../../ui/ConsoleLoading'
 
 /**
  * The runs of the conversation currently open, newest first, each carrying
@@ -35,11 +36,7 @@ export const AgentRuns: React.FC = () => {
   }
 
   if (isLoading) {
-    return (
-      <Center h="100%">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading />
   }
 
   const runs = (data as AgentRunCardProps['run'][] | undefined) ?? []

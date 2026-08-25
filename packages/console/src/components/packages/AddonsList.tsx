@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Center, Loader } from '@pikku/mantine/core'
+import { Box } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Package } from 'lucide-react'
@@ -17,6 +17,7 @@ import type {
   PackageMeta,
 } from './packageMeta'
 import { PAGE_SIZE, installedToPackageMeta } from './packageMeta'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 // The registry caps a page at 500 rows.
 const MAX_PAGE = 500
@@ -150,9 +151,7 @@ export const AddonsList: React.FC<{
   if (isPending) {
     return (
       <Box style={{ flex: 1, minHeight: 0 }}>
-        <Center h="100%">
-          <Loader />
-        </Center>
+        <ConsoleLoading />
       </Box>
     )
   }

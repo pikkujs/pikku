@@ -1,5 +1,5 @@
 import React from 'react'
-import { Center, Loader, Stack, Text } from '@pikku/mantine/core'
+import { Center, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { ListPageHeader } from '../layout/PageLayout'
@@ -8,6 +8,7 @@ import { VirtualUserNavigator } from './VirtualUserNavigator'
 import { VirtualUserDocument } from './VirtualUserDocument'
 import { useVirtualUsers } from '../../hooks/useVirtualUsers'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 const EXAMPLE =
   "definePersonas({ shopper: { name: 'Shopper', disposition: 'careless', goals: [...] } })"
@@ -56,9 +57,7 @@ export const VirtualUsersWorkspace: React.FC = () => {
       hidePanel
     >
       {loading ? (
-        <Center style={{ flex: 1 }}>
-          <Loader />
-        </Center>
+        <ConsoleLoading />
       ) : selected ? (
         <VirtualUserDocument user={selected} />
       ) : (

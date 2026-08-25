@@ -1,5 +1,4 @@
 import React from 'react'
-import { Center, Loader } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
@@ -8,6 +7,7 @@ import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholde
 import { AgentPlaygroundSurface } from '../components/agent-playground/AgentPlaygroundSurface'
 import { AgentThreePane } from '../components/agent-playground/AgentThreePane'
 import { useAgentPlaygroundState } from '../hooks/useAgentPlaygroundState'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 export const AgentPlaygroundPage: React.FC = () => {
   useLocale()
@@ -15,11 +15,7 @@ export const AgentPlaygroundPage: React.FC = () => {
     useAgentPlaygroundState()
 
   if (loading) {
-    return (
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading h="100vh" />
   }
 
   if (!agentId || !agentData) {

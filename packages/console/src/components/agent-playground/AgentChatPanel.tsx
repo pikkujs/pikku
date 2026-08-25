@@ -1,10 +1,11 @@
 import React from 'react'
-import { Box, Center, Loader } from '@pikku/mantine/core'
+import { Box } from '@pikku/mantine/core'
 import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
 import { useAgentPlaygroundSurface } from '../../context/AgentPlaygroundSurfaceContext'
 import { useAgentCredentials } from '../../hooks/useAgentCredentials'
 import { AgentChat } from '../project/AgentChat'
 import { AgentCredentialPrompt } from './AgentCredentialPrompt'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 /**
  * The conversation with the surface's agent, gated behind whatever accounts the
@@ -30,9 +31,7 @@ export const AgentChatPanel: React.FC = () => {
             onRefresh={refetchCreds}
           />
         ) : threadId != null && dbMessages === undefined ? (
-          <Center h="100%">
-            <Loader />
-          </Center>
+          <ConsoleLoading />
         ) : (
           <AgentChat key={`${agentId}-${threadId}`} />
         )}

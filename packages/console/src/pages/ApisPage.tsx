@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react'
-import { Center, Loader } from '@pikku/mantine/core'
 import type { I18nString } from '@pikku/react'
 import { TabbedSurface } from '../components/console/TabbedSurface'
 import type { TabbedSurfaceTab } from '../components/console/TabbedSurface'
@@ -10,6 +9,7 @@ import { CliTab } from '../components/tabs/CliTab'
 import { GatewaysTab } from '../components/tabs/GatewaysTab'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 type ApisPageProps = {
   httpHero?: React.ReactNode
@@ -68,13 +68,7 @@ export const ApisPage: React.FC<ApisPageProps> = ({
   ]
 
   return (
-    <Suspense
-      fallback={
-        <Center h="100vh">
-          <Loader />
-        </Center>
-      }
-    >
+    <Suspense fallback={<ConsoleLoading h="100vh" />}>
       <TabbedSurface
         controls="shell"
         tabs={tabs}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Group, TextInput, Center, Loader, Text } from '@pikku/mantine/core'
+import { Group, TextInput, Center, Text } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { ListPageHeader } from '../layout/PageLayout'
@@ -14,6 +14,7 @@ import type { ScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 import { scenarioViewSelection, type ScenarioView } from './scenario-view'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface ScenariosWorkspaceProps {
   /** Browse state owned by the host (see `useScenariosBrowse`). Supplying it
@@ -133,9 +134,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
         hidePanel={loading}
       >
         {loading ? (
-          <Center style={{ flex: 1 }}>
-            <Loader />
-          </Center>
+          <ConsoleLoading />
         ) : selected ? (
           <FeatureDocument
             feature={selected}

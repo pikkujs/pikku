@@ -1,5 +1,4 @@
 import React, { Suspense, useContext } from 'react'
-import { Center, Loader } from '@pikku/mantine/core'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ScenariosWorkspace } from '../components/scenarios/ScenariosWorkspace'
@@ -11,6 +10,7 @@ import {
   ConsoleNavigatorCtx,
   OSSConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
+import { ConsoleLoading } from '../components/ui/ConsoleLoading'
 
 const SCENARIOS_BASE_PATH = '/scenarios'
 
@@ -52,13 +52,7 @@ export const ScenariosPage: React.FC<ScenariosPageProps> = ({ browse }) => {
   // fall back to the OSS query-param navigator when none is present.
   const hostNavigator = useContext(ConsoleNavigatorCtx)
   const page = (
-    <Suspense
-      fallback={
-        <Center h="100vh">
-          <Loader />
-        </Center>
-      }
-    >
+    <Suspense fallback={<ConsoleLoading h="100vh" />}>
       <ScenariosPageInner browse={browse} />
     </Suspense>
   )

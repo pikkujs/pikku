@@ -5,7 +5,6 @@ import {
   Center,
   Code,
   Group,
-  Loader,
   ScrollArea,
   Stack,
   Text,
@@ -20,6 +19,7 @@ import {
 import { ScenarioRunStatusBadge } from './ScenarioRunStatusBadge'
 import { ScenarioRunResult } from './ScenarioRunResult'
 import { runDuration, runRelativeTime } from './scenario-run-format'
+import { ConsoleLoading } from '../../ui/ConsoleLoading'
 
 type ScenarioRunDetailProps = {
   runId: string
@@ -38,11 +38,7 @@ export const ScenarioRunDetail: React.FC<ScenarioRunDetailProps> = ({
   const remove = useDeleteScenarioRun()
 
   if (isLoading) {
-    return (
-      <Center style={{ flex: 1 }}>
-        <Loader />
-      </Center>
-    )
+    return <ConsoleLoading />
   }
 
   if (!run) {

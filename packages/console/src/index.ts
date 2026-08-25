@@ -391,6 +391,13 @@ export {
 } from './context/ConsoleChromeContext'
 export type { ConsoleChrome } from './context/ConsoleChromeContext'
 
+// A screen's waiting state. Every page-level spinner renders `ConsoleLoading`,
+// which shows the host's own mark when `HostConsoleChrome` was given one.
+export {
+  ConsoleLoading,
+  ConsoleLoaderProvider,
+} from './components/ui/ConsoleLoading'
+
 // The shell behind the console's tabbed pages. `activeTab`/`onTabChange` are
 // optional: supply them to drive tabs from a host router, omit them to keep the
 // OSS `?tab=` search-param behaviour.
