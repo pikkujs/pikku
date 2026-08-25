@@ -83,6 +83,7 @@ import {
   jobGroupFor,
   orchestratorQueueName,
   resolveWorkflowConfig,
+  stepDispatchTarget,
   stepJobOptions,
   stepWorkerQueueName,
 } from './workflow-queue-routing.js'
@@ -760,18 +761,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<boolean> {
-    const functionsMeta = pikkuState(null, 'function', 'meta')
-    const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
-    const rpcMeta =
-      typeof rpcFuncId === 'string' ? functionsMeta[rpcFuncId] : undefined
-    const forceQueue = rpcMeta?.workflowQueued === true
-    if (!forceQueue) {
+    const target = await stepDispatchTarget(rpcName, stepName, () =>
+      this.isInline(runId)
+    )
+    if (target === 'inline') {
       return false
-    }
-    if (!getSingletonServices()?.queueService) {
-      throw new Error(
-        `Workflow step '${stepName}' (function '${rpcName}') is marked 'workflowQueued: true' but no queue service is configured.`
-      )
     }
     try {
       await getSingletonServices()!.queueService!.add(

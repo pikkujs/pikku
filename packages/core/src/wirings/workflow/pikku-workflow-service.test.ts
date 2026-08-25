@@ -192,8 +192,11 @@ describe('pikku-workflow-service run-level inline', () => {
 
 describe('pikku-workflow-service per-function step dispatch', () => {
   class TestWorkflowService extends InMemoryWorkflowService {
-    public callDispatchStep(rpcName: string) {
-      return this.dispatchStep('run-1', 'step-1', rpcName, {})
+    public callDispatchStep(rpcName: string, runId = 'run-1') {
+      return this.dispatchStep(runId, 'step-1', rpcName, {})
+    }
+    public markInline(runId: string) {
+      this.registerInlineRun(runId)
     }
   }
 
@@ -247,6 +250,72 @@ describe('pikku-workflow-service per-function step dispatch', () => {
     assert.equal(dispatched, true, 'workflowQueued step should dispatch')
     assert.equal(queued, true, 'workflowQueued step should queue')
     cleanup('queuedStep')
+  })
+
+  const setupWorkflow = (name: string) => {
+    pikkuState(null, 'workflows', 'meta')[name] = {
+      name,
+      pikkuFuncId: name,
+      graphHash: 'hash',
+    } as any
+  }
+
+  const cleanupWorkflow = (name: string) => {
+    delete pikkuState(null, 'workflows', 'meta')[name]
+  }
+
+  test('a step naming a workflow queues even though it is unmarked', async () => {
+    const ws = new TestWorkflowService()
+    let queued = false
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
+      queueService: {
+        add: async () => {
+          queued = true
+        },
+      },
+    } as any)
+
+    setupWorkflow('childWorkflowStep')
+    const dispatched = await ws.callDispatchStep('childWorkflowStep')
+    assert.equal(dispatched, true, 'a child workflow should dispatch')
+    assert.equal(queued, true, 'a child workflow should queue')
+    cleanupWorkflow('childWorkflowStep')
+  })
+
+  test('a step naming a workflow stays inline when the parent run is inline', async () => {
+    const ws = new TestWorkflowService()
+    let queued = false
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
+      queueService: {
+        add: async () => {
+          queued = true
+        },
+      },
+    } as any)
+
+    setupWorkflow('childOfInlineParent')
+    ws.markInline('inline-parent')
+    const dispatched = await ws.callDispatchStep(
+      'childOfInlineParent',
+      'inline-parent'
+    )
+    assert.equal(dispatched, false, 'an inline parent keeps its child inline')
+    assert.equal(queued, false, 'an inline parent queues nothing')
+    cleanupWorkflow('childOfInlineParent')
+  })
+
+  test('a step naming a workflow stays inline when there is no queueService', async () => {
+    const ws = new TestWorkflowService()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
+    } as any)
+
+    setupWorkflow('childWorkflowNoQueue')
+    const dispatched = await ws.callDispatchStep('childWorkflowNoQueue')
+    assert.equal(dispatched, false, 'no queue leaves the child inline')
+    cleanupWorkflow('childWorkflowNoQueue')
   })
 
   test('workflowQueued: true step throws when no queueService is configured', async () => {

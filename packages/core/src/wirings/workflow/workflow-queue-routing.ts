@@ -64,6 +64,50 @@ export const stepWorkerQueueName = (
     resolveWorkflowConfig().stepWorkerQueueName
   )
 
+/**
+ * How a step reaches its worker: on the queue, or here in the orchestrator.
+ *
+ * A step naming a workflow queues whenever a queue exists, even unmarked. Run
+ * here, it holds the parent's run lock — and its lock connection — until the
+ * child ends, and marks the child inline so the child's own `sleep` degrades
+ * from a suspension into a real in-process wait. Workflows cannot opt in
+ * through `workflowQueued`: that flag is read off `rpc` meta, and `addWorkflow`
+ * never registers there.
+ *
+ * Throws only for a step that asked for the queue by name and has none, which
+ * is a deployment missing a service rather than a routing choice.
+ *
+ * `parentIsInline` is a thunk because resolving it can read the run store, and
+ * every step dispatch would pay for that — only a step that names a workflow
+ * and has a queue to reach ever asks.
+ */
+export const stepDispatchTarget = async (
+  rpcName: string,
+  stepName: string,
+  parentIsInline: () => Promise<boolean>
+): Promise<'queue' | 'inline'> => {
+  const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
+  const rpcMeta =
+    typeof rpcFuncId === 'string'
+      ? pikkuState(null, 'function', 'meta')[rpcFuncId]
+      : undefined
+  const hasQueue = getSingletonServices()?.queueService !== undefined
+  if (rpcMeta?.workflowQueued === true) {
+    if (!hasQueue) {
+      throw new Error(
+        `Workflow step '${stepName}' (function '${rpcName}') is marked 'workflowQueued: true' but no queue service is configured.`
+      )
+    }
+    return 'queue'
+  }
+  const isWorkflow =
+    pikkuState(null, 'workflows', 'meta')[rpcName] !== undefined
+  if (!isWorkflow || !hasQueue) {
+    return 'inline'
+  }
+  return (await parentIsInline()) ? 'inline' : 'queue'
+}
+
 export const jobGroupFor = (
   strategy: WorkflowQueueStrategy,
   id?: string
