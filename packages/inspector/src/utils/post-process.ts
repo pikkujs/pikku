@@ -17,6 +17,7 @@ import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
 import { findSecretAliasServices } from './secret-alias-services.js'
+import { resolveCoreType } from './resolve-core-type.js'
 import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
@@ -106,19 +107,25 @@ function extractAllServices(
   }
 
   // Extract all singleton services from the SingletonServices type
-  const singletonServicesTypes = state.typesLookup.get('SingletonServices')
-  if (singletonServicesTypes && singletonServicesTypes.length > 0) {
-    const singletonServiceNames = extractTypeKeys(singletonServicesTypes[0])
-    state.serviceAggregation.allSingletonServices = singletonServiceNames.sort()
+  const singletonServicesType = resolveCoreType(
+    state.typesLookup,
+    state.singletonServicesTypeImportMap
+  )
+  if (singletonServicesType) {
+    state.serviceAggregation.allSingletonServices = extractTypeKeys(
+      singletonServicesType
+    ).sort()
   }
 
   // Extract all services from the Services type
-  const servicesTypes = state.typesLookup.get('Services')
-  if (servicesTypes && servicesTypes.length > 0) {
-    const allServiceNames = extractTypeKeys(servicesTypes[0])
+  const servicesType = resolveCoreType(
+    state.typesLookup,
+    state.wireServicesTypeImportMap
+  )
+  if (servicesType) {
     // Wire services are those in Services but not in SingletonServices
     const singletonSet = new Set(state.serviceAggregation.allSingletonServices)
-    state.serviceAggregation.allWireServices = allServiceNames
+    state.serviceAggregation.allWireServices = extractTypeKeys(servicesType)
       .filter((name) => !singletonSet.has(name))
       .sort()
   }
@@ -1101,11 +1108,14 @@ export function validateNoSecretAliasServices(
   if (!('typesLookup' in state)) {
     return
   }
-  const singletonServicesTypes = state.typesLookup.get('SingletonServices')
-  if (!singletonServicesTypes?.length) {
+  const singletonServicesType = resolveCoreType(
+    state.typesLookup,
+    state.singletonServicesTypeImportMap
+  )
+  if (!singletonServicesType) {
     return
   }
-  const aliases = findSecretAliasServices(singletonServicesTypes[0]!, checker)
+  const aliases = findSecretAliasServices(singletonServicesType, checker)
   if (aliases.length === 0) {
     return
   }

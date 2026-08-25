@@ -11,6 +11,7 @@ import {
   extractFunctionName,
   makeContextBasedId,
 } from '../utils/extract-function-name.js'
+import { resolveCoreType } from '../utils/resolve-core-type.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 import { extractWireNames } from '../utils/post-process.js'
@@ -825,8 +826,11 @@ function extractEnumFromConfigType(
   _inspectorOptions: InspectorOptions
 ): string[] | null {
   // Look for Config type in typesLookup
-  const configTypes = inspectorState.typesLookup.get('Config')
-  if (!configTypes || configTypes.length === 0) {
+  const configType = resolveCoreType(
+    inspectorState.typesLookup,
+    inspectorState.configTypeImportMap
+  )
+  if (!configType) {
     // Only warn once per CLI file to avoid spamming logs
     if (!configTypeWarningShown.has('missing-config-type')) {
       configTypeWarningShown.add('missing-config-type')
@@ -834,16 +838,6 @@ function extractEnumFromConfigType(
         `Could not find Config type in typesLookup. ` +
           `Make sure you have a Config interface extending CoreConfig in your codebase.`
       )
-    }
-    return null
-  }
-
-  // Use the first Config type (there should only be one)
-  const configType = configTypes[0]
-  if (!configType) {
-    if (!configTypeWarningShown.has('undefined-config-type')) {
-      configTypeWarningShown.add('undefined-config-type')
-      logger.warn(`Config type is undefined in typesLookup.`)
     }
     return null
   }
