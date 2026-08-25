@@ -154,6 +154,13 @@ icons, hardcoded `marginLeft`, a nav that opens on the wrong side.
 Adding a language means adding a locale file. If it means touching components,
 that is the finding.
 
+`baseLocale` stays `en` through all of this — it names the message source that
+every added locale is cloned from, so three locales is `locales: ["en", …]` and
+never a repointed base. Shipping locales is also not a reason for anything in
+the code to stop being English: identifiers are English in every project, and
+the language of `description`/`title`/`template` is `locale` in
+`pikku.config.json`. See `pikku-build-app` §1a.
+
 ### Emails — `pikku-emails`
 
 Templates in `emails/`, rendered and sent through the injected `email` service,

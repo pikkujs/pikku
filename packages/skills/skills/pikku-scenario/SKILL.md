@@ -356,6 +356,56 @@ const order = await scenario.do(
 
 Reach for a `pikkuScenarioStep` on the non-browser side only when one intent genuinely spans several RPCs, or when the step asserts something the RPC result alone does not say.
 
+### What language the prose is in
+
+A scenario carries two kinds of text, and they do not share a language.
+
+**Identifiers are English.** The exported const (`buysAnApple`,
+`credentialFeature`), the step's `name` — which is its `pikkuFuncId`, the typed
+string the generated step map is keyed by — the file name, and every helper in
+`*.browser.ts`. These bind to generated code and to `pikku scenario list`; they
+are English in every project regardless of who the product is for or what
+language the team speaks. There is no setting that changes this.
+
+**Prose follows `locale` in `pikku.config.json`** (default `en`). That is a
+step's `description` and `template`, a feature's `name` and `description`, a
+scenario's `title`, and the positional step names passed to
+`scenario.given/when/then`. Read the field before you write any of them.
+
+This split is the same one the feature table already states — _the export
+identifier is the feature's id; `name` is the human-readable label_ — applied to
+language. The report is the deliverable, and it is read by the team; the
+identifier is an API, and it is read by the toolchain.
+
+```typescript
+// pikku.config.json: { "locale": "de" }
+export const buysAnApple = pikkuScenarioStep<{ qty: number }, { orderId: string }>({
+  name: 'buysAnApple',          // identifier — English, always
+  description: 'kauft einen Apfel',  // prose — follows locale
+  template: 'kauft {qty} Äpfel',     // prose — follows locale
+  actor: true,
+  default: async (_services, { qty }, { actor }) =>
+    await actor.invoke('placeOrder', { qty }),
+})
+```
+
+Note what does **not** change: `placeOrder` is still `placeOrder`, and the file
+is still `apple.scenario.ts`.
+
+A product with a non-English UI is not on its own a reason to set `locale` — that
+is the app's language, not the team's. Ask, or leave it `en`.
+
+**Where a non-`en` `locale` still shows English, today.** The reporter composes a
+sentence as `<Keyword> the <actor> <template>` (`composeStepProse`), and both the
+keyword and the article `the` are English literals. The Console translates the
+Given/When/Then keywords into its own UI language; the CLI reporter does not, and
+nothing translates `the`. So `locale: "de"` gives you German step prose inside an
+English frame — `Given the shopper kauft 1 Äpfel`. Write templates that read
+acceptably in that frame rather than trying to defeat it. A second gap: where a
+function or scenario declares no `title`, the Console falls back to splitting the
+**identifier** into an English-looking label (`toEnglishName`), so under a
+non-`en` `locale` meta is worth authoring rather than leaving to the fallback.
+
 ### `then` bindings are witnesses, not alternatives
 
 This is the one place the surface bindings do **not** behave like a switch, and it is the part worth reading twice.
@@ -783,6 +833,7 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 | Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                |
 | `sleep()` before asserting                          | Use `expectEventually`.                                                                                                     |
 | A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                   |
+| A step named `kauftEinenApfel` / a `vorgang` table   | Identifiers are English in every project. The German belongs in `description` / `template`, and only when `pikku.config.json` sets `locale`.  |
 | A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                            |
 | `getByLabel('Full Name')` in a translated app        | Passes only in the base locale, and a copy edit breaks it as an unexplained timeout. Locate by message key.                 |
 | A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                             |
