@@ -56,6 +56,57 @@ When adding something new, first decide which axis it's on. If it changes the
 type, it's `kind`/`tsType`/auto-detect. If it's a pure string refinement, it's a
 `format`.
 
+## A third axis: `form` (what the bytes look like at rest)
+
+`security` says how sensitive a value is. `form` says what is actually stored in
+the column, and the two are independent — a token hash is `security: 'secret'`
+**and** `form: 'hashed'`, and it must never be encrypted, because the hash _is_
+the lookup key.
+
+| `form`    | Stored bytes                                                           | Read back by                        |
+| --------- | ---------------------------------------------------------------------- | ----------------------------------- |
+| `plain`   | the value itself (what an absent `form` means)                         | anyone holding the row              |
+| `hashed`  | a one-way digest                                                       | nobody — you compare, never decrypt |
+| `wrapped` | ciphertext under a symmetric key the application holds                 | the application, once unlocked      |
+| `sealed`  | ciphertext under a public key whose private half the application lacks | somewhere else, offline             |
+
+`wrapped` and `sealed` are siblings rather than degrees of one `encrypted`.
+Collapsing them would let a value be written where the other was expected, and a
+row sealed under a key you do not have is permanent, silent data loss.
+
+Each form carries a **required** brand in `@pikku/core/classification`
+(`WrappedValue`, `SealedValue`, `HashedValue`) — unlike `Private`/`Pii`/`Secret`,
+whose marker is optional. So a plain `string` is not assignable to a
+`form: 'wrapped'` column, which is what stops a raw credential being written into
+the column that should hold its ciphertext. The branded type stays assignable
+_to_ `string`, so it still works as a query operand and serializes normally: the
+constraint is on construction, not on use.
+
+`security: 'encrypted'` predates this split. It still parses, as the pair it
+always meant (`secret` + `wrapped`), and an explicit `form` wins over it.
+
+### `keyId` — which key protects the column
+
+An encrypted column may name its key:
+
+```ts
+notes_body: { security: 'secret', form: 'wrapped', keyId: 'notes' }
+```
+
+Absent means the deployment's default key (`DEFAULT_KEY_ID`, exported from
+`@pikku/core/classification` and re-exported by `@pikku/kysely` so the two cannot
+drift). `keyId` reaches `classification.gen.ts` only for `wrapped`/`sealed` —
+emitting one on a plain or hashed column would claim a protection it has not got,
+and a hash has no key to be opened with in the first place.
+
+Every `keyId` the manifest names has to have been minted in the lock, or nothing
+fails at startup and the first write to that one column fails instead. Derive the
+list rather than typing it out:
+
+```ts
+wireDataLock(lock, { keyIds: keyIdsFromManifest(manifest) })
+```
+
 ## Dialect-awareness
 
 Only auto-detection is dialect-specific, and deliberately so. Postgres has real
@@ -168,6 +219,11 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
   `AnnotationKind` is the superset: `uuid` types a column as `Uuid` but needs no
   coercion, so it is excluded from the coercion map in `db-codegen` and absent
   from `ColumnKind` — the runtime never has to defend against it.
+- **`security` and `form` are two axes, not one scale.** A column may be
+  `secret` and `plain` (a live bearer token — which is a finding, not a
+  design), or `secret` and `hashed` (a token digest, which encryption would
+  destroy). Reading `form` off `security` is how a lookup column ends up
+  unopenable.
 - **Keep `@pikku/core`'s `classification/data-classification.ts` in lockstep** with the brand
   aliases emitted in the `schema.gen.d.ts` header (`Private`/`Pii`/`Secret` use an
   optional `__classification__?` marker so plain values stay assignable).
