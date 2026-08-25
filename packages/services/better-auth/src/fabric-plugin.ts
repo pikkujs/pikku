@@ -4,7 +4,7 @@ import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
 import type { Logger } from '@pikku/core/services'
 import type { ScopeService } from '@pikku/core/services'
-import { ADMIN_SCOPE_ROOT } from './auth-scopes.js'
+import { ADMIN_SCOPE_ROOT, OPERATOR_SCOPE_ROOTS } from './auth-scopes.js'
 
 export interface FabricPluginOptions {
   /**
@@ -125,25 +125,56 @@ const verifyFabricToken = async (
 }
 
 /**
- * Grants the operator's row the umbrella `admin` scope. A failure here is
- * logged, not thrown: the operator gets an authenticated but unprivileged
- * session, which is a far clearer symptom than a 500 on sign-in.
+ * Grants the operator's row the scopes an operator acts with.
+ *
+ * Re-checked on every sign-in rather than only when the row is created. The
+ * grant below is deliberately not fatal, so a single failure used to leave that
+ * operator permanently unprivileged with nothing to retry it; and a root added
+ * to {@link OPERATOR_SCOPE_ROOTS} later would never have reached the operators
+ * that already existed.
+ *
+ * A failure here is logged, not thrown: the operator gets an authenticated but
+ * unprivileged session, which is a far clearer symptom than a 500 on sign-in.
  */
-const grantOperatorAdmin = async (
+const grantOperatorScopes = async (
   options: FabricPluginOptions,
   userId: string
 ): Promise<void> => {
-  if (!options.scopeService) {
+  const scopeService = options.scopeService
+  if (!scopeService) {
     options.logger?.warn?.(
-      `fabric: no ScopeService registered, so operator ${userId} holds no admin scope`
+      `fabric: no ScopeService registered, so operator ${userId} holds no scopes`
     )
     return
   }
   try {
-    await options.scopeService.addScopeToUser(userId, ADMIN_SCOPE_ROOT)
+    const held = new Set(await scopeService.listUserScopes(userId))
+    const missing = OPERATOR_SCOPE_ROOTS.filter((scope) => !held.has(scope))
+    if (missing.length === 0) {
+      return
+    }
+    // `admin` is this package's own root and is granted whether or not the app
+    // spells it out, because the gates that check it live here. Any other root
+    // has to be one the app declares, or the grant is a row nobody can trace
+    // back to a declaration.
+    const declared =
+      missing.some((scope) => scope !== ADMIN_SCOPE_ROOT) &&
+      scopeService.listScopes
+        ? new Set(
+            (await scopeService.listScopes())
+              .filter((scope) => scope.declared)
+              .map((scope) => scope.id)
+          )
+        : new Set<string>()
+    for (const scope of missing) {
+      if (scope !== ADMIN_SCOPE_ROOT && !declared.has(scope)) {
+        continue
+      }
+      await scopeService.addScopeToUser(userId, scope)
+    }
   } catch (error) {
     options.logger?.warn?.(
-      `fabric: could not grant '${ADMIN_SCOPE_ROOT}' to operator ${userId}: ${error}`
+      `fabric: could not grant operator scopes to ${userId}: ${error}`
     )
   }
 }
@@ -170,8 +201,12 @@ const grantOperatorAdmin = async (
  */
 const resolveActAs = async (
   internalAdapter: {
-    findUserByEmail: (email: string) => Promise<{ user?: { id: unknown } } | null>
-    createUser: (user: Record<string, unknown>) => Promise<{ id: unknown } | undefined>
+    findUserByEmail: (
+      email: string
+    ) => Promise<{ user?: { id: unknown } } | null>
+    createUser: (
+      user: Record<string, unknown>
+    ) => Promise<{ id: unknown } | undefined>
   },
   actAs: {
     email: string
@@ -333,8 +368,8 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
                 message: 'Failed to create fabric user',
               })
             }
-            await grantOperatorAdmin(options, user.id)
           }
+          await grantOperatorScopes(options, user.id)
 
           const session = await ctx.context.internalAdapter.createSession(
             user.id

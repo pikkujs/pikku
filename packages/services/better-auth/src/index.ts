@@ -11,6 +11,7 @@ export {
   ADMIN_SCOPES,
   ADMIN_SCOPE_ROOT,
   ADMIN_SCOPE_TREE,
+  OPERATOR_SCOPE_ROOTS,
   resolvedUserHoldsScopes,
 } from './auth-scopes.js'
 export {

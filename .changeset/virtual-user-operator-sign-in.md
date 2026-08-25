@@ -1,6 +1,7 @@
 ---
 '@pikku/core': patch
 '@pikku/cli': patch
+'@pikku/better-auth': patch
 ---
 
 Let a virtual user run against a deployed stage.
@@ -56,3 +57,24 @@ wire with a `sessionService`, so the session set here is the one the function is
 frozen with. A tick wired without it is refused for want of a session, and one
 carrying the wrong scope is refused on `virtualUser:run` — both now covered by
 tests.
+
+A Fabric operator can now actually start the run it signs in to start.
+
+`fabric()` granted its operator row `admin` and nothing else. `admin` is this
+package's own root — pikku's parent-grant rule walks down from a root that is
+held, and the virtual-user scaffold declares `virtualUser` as a root of its own
+precisely so a role can carry `virtualUser:run` without also implying
+administration. So the operator was refused by `runVirtualUser`, the one
+function the operator sign-in exists to reach.
+
+The operator is now granted the roots in `OPERATOR_SCOPE_ROOTS`
+(`admin`, `virtualUser`) rather than a bare `admin`. Listed rather than
+collapsed to `*`, which would make every operator a superuser on every app for
+the sake of one function: an operator still holds nothing in the application's
+own domain, and a root the app never declared is skipped rather than stored.
+
+The grant is also re-checked on every operator sign-in instead of only when the
+row is created. It is deliberately logged rather than thrown, so a single
+failure used to leave that operator permanently unprivileged with nothing to
+retry it, and a root added to the set later would never have reached the
+operators that already existed.
