@@ -85,7 +85,8 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
 
   return (
     /* the provider sits above the panel so a step's details can read its own
-       scenario's workflow meta, not just the document's */
+       scenario's workflow meta, not just the document's — a host that mounts
+       the panel outside this tree reads the same meta off the panel data */
     <WorkflowProvider workflow={stepWorkflow}>
       <ResizablePanelLayout
         header={
@@ -141,7 +142,11 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
             onOpenPersona={showPersona}
             onSelectStep={(workflow, stepId, stepType, metadata) => {
               setStepWorkflow(workflow)
-              openWorkflowStep(stepId, stepType, { ...metadata, stepType })
+              openWorkflowStep(stepId, stepType, {
+                ...metadata,
+                stepType,
+                workflow,
+              })
             }}
           />
         ) : (
