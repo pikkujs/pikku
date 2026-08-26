@@ -1173,7 +1173,14 @@ describe('pikku fabric validate', () => {
   })
 
   describe('db/sqlite-dev-seed.sql', () => {
-    test('missing db/sqlite-dev-seed.sql → error', async () => {
+    /**
+     * A dev seed is optional by definition — it is the file `pikku db reset`
+     * replays locally, and Fabric never reads it. Data the deployed stage
+     * needs belongs in a migration, and a project that has correctly moved it
+     * there was being failed for no longer carrying the file it deliberately
+     * does not need.
+     */
+    test('missing db/sqlite-dev-seed.sql → info, and does not fail validate', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1181,12 +1188,12 @@ describe('pikku fabric validate', () => {
           force: true,
         })
         const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, false)
         const finding = result.findings.find(
           (f) => f.id === 'dev-seed-sql-missing'
         )
         assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'error')
+        assert.strictEqual(finding!.severity, 'info')
+        assert.strictEqual(result.ok, true)
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }

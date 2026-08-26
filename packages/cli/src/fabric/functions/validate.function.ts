@@ -1135,24 +1135,28 @@ export async function runValidate(
       'db',
       dbEngine === 'postgres' ? 'postgres-dev-seed.sql' : 'sqlite-dev-seed.sql'
     )
+    // Info, not an error. The dev seed is replayed by `pikku db reset` and
+    // never by a deploy, so a project whose data has correctly moved into a
+    // migration — where anything a deployed stage needs has to live — no
+    // longer needs this file, and was being failed for not carrying it.
     if (!existsSync(devSeedPath)) {
-      e(
+      const seedFile =
+        dbEngine === 'postgres'
+          ? 'db/postgres-dev-seed.sql'
+          : 'db/sqlite-dev-seed.sql'
+      const migrationsRel =
+        dbEngine === 'postgres' ? 'db/postgres/' : 'db/sqlite/'
+      info(
         'dev-seed-sql-missing',
-        dbEngine === 'postgres'
-          ? 'db/postgres-dev-seed.sql not found'
-          : 'db/sqlite-dev-seed.sql not found',
+        `${seedFile} not found — no dev seed will be applied by \`pikku db reset\``,
         devSeedPath,
-        dbEngine === 'postgres'
-          ? lines(
-              'Create `db/postgres-dev-seed.sql`.',
-              'Use idempotent INSERT statements suitable for local/dev/test setup.',
-              'Keep it safe to re-run.'
-            )
-          : lines(
-              'Create `db/sqlite-dev-seed.sql`.',
-              'Use idempotent `INSERT OR IGNORE` statements for local/dev/test data.',
-              'Keep it safe to re-run.'
-            )
+        lines(
+          `Optional. Add \`${seedFile}\` for rows you want locally and nowhere else;`,
+          'it is replayed by `pikku db reset` against a freshly wiped database and',
+          'is never applied to a deployed stage.',
+          `Data a deployed stage needs is migration data — put it in ${migrationsRel}`,
+          'rather than here, whatever it looks like.'
+        )
       )
     }
 

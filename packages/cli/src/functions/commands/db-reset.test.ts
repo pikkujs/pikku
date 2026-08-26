@@ -84,7 +84,7 @@ describe('pikku db reset', () => {
     )
   })
 
-  test('--no-seed migrates but leaves the database empty', async () => {
+  test('--no-seed migrates without seeding', async () => {
     await dbReset.func(
       { logger, config: config() } as any,
       {
@@ -94,7 +94,7 @@ describe('pikku db reset', () => {
 
     assert.equal(await todoCount(), 0)
     assert.ok(
-      logs.some((l) => l.includes('leaving the database empty')),
+      logs.some((l) => l.includes('--no-seed, skipping the dev seed')),
       `expected the --no-seed log line, got:\n${logs.join('\n')}`
     )
     assert.ok(
@@ -108,5 +108,49 @@ describe('pikku db reset', () => {
     await dbReset.func({ logger, config: config() } as any, {} as any)
 
     assert.equal(await todoCount(), 2)
+  })
+  /**
+   * The seed step reports on the seed step. `pikku db reset` used to finish
+   * with "database is empty" whenever no dev seed existed, which is a
+   * conclusion about the database drawn from one step that did nothing — and
+   * it is false the moment a migration carries the rows the deployed stage
+   * needs, which is exactly where such rows belong.
+   */
+  test('a populating migration and no dev seed is not reported as an empty database', async () => {
+    rmSync(join(root, 'db', 'sqlite-dev-seed.sql'))
+    writeFileSync(
+      join(root, 'db', 'sqlite', '0002-rows.sql'),
+      `INSERT INTO todos (title) VALUES ('from a migration');\n`
+    )
+
+    await dbReset.func({ logger, config: config() } as any, {} as any)
+
+    assert.equal(await todoCount(), 1)
+    assert.ok(
+      !logs.some((l) => l.includes('database is empty')),
+      `the database holds a migrated row, but reset called it empty:\n${logs.join('\n')}`
+    )
+    assert.ok(
+      logs.some((l) => l.includes('no dev seed applied')),
+      `expected the seed step to report on itself, got:\n${logs.join('\n')}`
+    )
+  })
+
+  test('--no-seed reports the skipped step, not a verdict on the database', async () => {
+    writeFileSync(
+      join(root, 'db', 'sqlite', '0002-rows.sql'),
+      `INSERT INTO todos (title) VALUES ('from a migration');\n`
+    )
+
+    await dbReset.func(
+      { logger, config: config() } as any,
+      { noSeed: true } as any
+    )
+
+    assert.equal(await todoCount(), 1)
+    assert.ok(
+      !logs.some((l) => l.includes('empty')),
+      `--no-seed called a migrated database empty:\n${logs.join('\n')}`
+    )
   })
 })

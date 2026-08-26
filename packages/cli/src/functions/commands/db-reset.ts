@@ -64,8 +64,12 @@ export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
         : `db reset: ${zod.outFile} unchanged`
     )
 
+    // Both lines report on the SEED STEP, never on the database. A migration
+    // is free to carry rows — data a deployed stage needs is migration data —
+    // so "database is empty" was a verdict this step has no standing to reach,
+    // and it read as a failed reset every time it was wrong.
     if (noSeed) {
-      logger.info('db reset: --no-seed, leaving the database empty')
+      logger.info('db reset: --no-seed, skipping the dev seed')
       return
     }
 
@@ -73,7 +77,7 @@ export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
     logger.info(
       devSeedResult.applied
         ? `db reset: seeded ${resolved.devSeedFile} (${devSeedResult.bytes} bytes)`
-        : `db reset: no ${resolved.devSeedFile} found, database is empty`
+        : `db reset: no dev seed applied (${resolved.devSeedFile} not found)`
     )
   },
 })
