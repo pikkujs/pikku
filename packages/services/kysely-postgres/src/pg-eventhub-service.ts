@@ -115,15 +115,6 @@ export class PgEventHubService<
     }
   }
 
-  /**
-   * Lifecycle follows `delivery`, NOT `local`, and the difference matters.
-   *
-   * Every other method routes to `delivery`, so registering a channel on `local`
-   * while an inner transport hub is injected would put the channel on one hub and
-   * its subscription on another — the channel would open and never receive.
-   * `delivery` is `local` when nothing is injected, so the no-inner case is
-   * unchanged.
-   */
   onChannelOpened(channelHandler: ChannelHandler): Promise<void> | void {
     return this.delivery.onChannelOpened(channelHandler)
   }
