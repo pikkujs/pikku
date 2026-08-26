@@ -379,6 +379,17 @@ jobs:
             ai-postgres,
           ]
         package-manager: [yarn]
+        include:
+          # A second row rather than a flag on the tanstack one, because an
+          # include that names an existing combination merges into it instead of
+          # adding a run — which would have replaced the plain app rather than
+          # joined it. The row builds the same template with its private-mode
+          # overlay applied: a different app, and otherwise never compiled in CI.
+          - version: 24
+            template: tanstack-private
+            template-name: tanstack
+            private-mode: 'true'
+            package-manager: yarn
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -388,8 +399,9 @@ jobs:
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION"
         env:
-          TEMPLATE_NAME: ${{ matrix.template }}
+          TEMPLATE_NAME: ${{ matrix.template-name || matrix.template }}
           TEMPLATE_VERSION: ${{ github.ref_name }}
+          TEMPLATE_PRIVATE_MODE: ${{ matrix.private-mode }}
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter

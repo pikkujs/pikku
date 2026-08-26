@@ -6406,6 +6406,7 @@ __metadata:
     "@pikku/cli": "npm:^0.12.120"
     "@pikku/core": "npm:^0.12.94"
     "@pikku/fetch": "npm:^0.12.9"
+    "@playwright/test": "npm:1.58.2"
     "@tanstack/react-router": "npm:^1.170.32"
     "@tanstack/react-start": "npm:^1.168.49"
     "@types/node": "npm:^24"
