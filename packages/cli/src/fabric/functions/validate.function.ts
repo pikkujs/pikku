@@ -682,6 +682,7 @@ export async function runValidate(
           if (
             /\s/.test(spec) ||
             spec.startsWith('node:') ||
+            spec.startsWith('bun:') ||
             spec.startsWith('@/') ||
             spec.startsWith('~') ||
             spec.startsWith('virtual:') ||

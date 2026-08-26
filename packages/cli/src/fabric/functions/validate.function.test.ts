@@ -569,6 +569,32 @@ describe('pikku fabric validate', () => {
       }
     })
 
+    test('a bun: builtin is not an undeclared package', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'functions', 'a.test.ts'),
+          [
+            "import { test, expect } from 'bun:test'",
+            "import { Database } from 'bun:sqlite'",
+            '',
+            "test('runs', () => expect(Database).toBeDefined())",
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings.filter((f) => f.id.startsWith('undeclared-deps-')),
+          [],
+          `expected no finding, got: ${JSON.stringify(result.findings.map((f) => f.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
     test('prose quoting a word after "from" is not an import', async () => {
       const tmp = await makeTmp()
       try {
