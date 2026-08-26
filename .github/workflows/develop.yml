@@ -441,7 +441,6 @@ jobs:
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
-            tanstack,
             mcp-server,
             pg-boss,
             bullmq,
@@ -468,19 +467,6 @@ jobs:
             template: nextjs
           - package-manager: bun
             template: nextjs-full
-          - package-manager: bun
-            template: tanstack
-        include:
-          # A second row rather than a flag on the tanstack one, because an
-          # include that names an existing combination merges into it instead of
-          # adding a run — which would have replaced the plain app rather than
-          # joined it. The row builds the same template with its private-mode
-          # overlay applied: a different app, and otherwise never compiled in CI.
-          - version: 24
-            template: tanstack-private
-            template-name: tanstack
-            private-mode: 'true'
-            package-manager: yarn
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -490,10 +476,9 @@ jobs:
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
         env:
-          TEMPLATE_NAME: ${{ matrix.template-name || matrix.template }}
+          TEMPLATE_NAME: ${{ matrix.template }}
           TEMPLATE_VERSION: ${{ github.ref_name }}
           PACKAGE_MANAGER: ${{ matrix.package-manager }}
-          TEMPLATE_PRIVATE_MODE: ${{ matrix.private-mode }}
           TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
       - name: Generate template coverage report
         if: always()
@@ -533,8 +518,19 @@ jobs:
       fail-fast: false
       matrix:
         version: [24]
-        template: [cli]
+        template: [cli, tanstack]
         package-manager: [yarn]
+        include:
+          # A second row rather than a flag on the tanstack one, because an
+          # include that names an existing combination merges into it instead of
+          # adding a run — which would have replaced the plain app rather than
+          # joined it. The row builds the same template with its private-mode
+          # overlay applied: a different app, and otherwise never compiled in CI.
+          - version: 24
+            template: tanstack-private
+            template-name: tanstack
+            private-mode: 'true'
+            package-manager: yarn
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -542,8 +538,12 @@ jobs:
           node-version: ${{ matrix.version }}
       - name: Test template
         timeout-minutes: 5
-        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
         env:
+          TEMPLATE_NAME: ${{ matrix.template-name || matrix.template }}
+          TEMPLATE_VERSION: ${{ github.ref_name }}
+          PACKAGE_MANAGER: ${{ matrix.package-manager }}
+          TEMPLATE_PRIVATE_MODE: ${{ matrix.private-mode }}
           TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
       - name: Generate template coverage report
         if: always()

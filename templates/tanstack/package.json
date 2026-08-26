@@ -11,7 +11,7 @@
     "pikku": "pikku",
     "start": "pikku serve --port 4002",
     "test:fullstack": "npx tsx client/fullstack.ts",
-    "test": "bash ../functions/run-tests.sh --build 'npm run build' --server 'npm run start' --url http://localhost:4002 --fullstack --no-database",
+    "test": "bash ../functions/run-tests.sh --build 'npm run build' --server 'npm run start' --url http://localhost:4002 --fullstack",
     "test:browser": "npx tsx client/browser.ts"
   },
   "dependencies": {

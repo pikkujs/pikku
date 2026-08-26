@@ -368,7 +368,6 @@ jobs:
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
-            tanstack,
             mcp-server,
             pg-boss,
             bullmq,
@@ -378,6 +377,36 @@ jobs:
             remote-rpc-redis,
             ai-postgres,
           ]
+        package-manager: [yarn]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.version }}
+      - name: Test template
+        timeout-minutes: 5
+        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION"
+        env:
+          TEMPLATE_NAME: ${{ matrix.template }}
+          TEMPLATE_VERSION: ${{ github.ref_name }}
+    env:
+      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
+      REDIS_URL: redis://localhost:6379
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SLS_TELEMETRY_DISABLED: 1
+      SLS_NOTIFICATIONS_MODE: off
+
+  templates-no-services:
+    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [24]
+        template: [cli, tanstack]
         package-manager: [yarn]
         include:
           # A second row rather than a flag on the tanstack one, because an
@@ -402,36 +431,6 @@ jobs:
           TEMPLATE_NAME: ${{ matrix.template-name || matrix.template }}
           TEMPLATE_VERSION: ${{ github.ref_name }}
           TEMPLATE_PRIVATE_MODE: ${{ matrix.private-mode }}
-    env:
-      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
-      REDIS_URL: redis://localhost:6379
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      SLS_TELEMETRY_DISABLED: 1
-      SLS_NOTIFICATIONS_MODE: off
-
-  templates-no-services:
-    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        version: [24]
-        template: [cli]
-        package-manager: [yarn]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-        with:
-          node-version: ${{ matrix.version }}
-      - name: Test template
-        timeout-minutes: 5
-        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION"
-        env:
-          TEMPLATE_NAME: ${{ matrix.template }}
-          TEMPLATE_VERSION: ${{ github.ref_name }}
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

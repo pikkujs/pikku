@@ -36,7 +36,6 @@ RUN_WORKFLOW_TESTS=false
 RUN_AGENT_TESTS=false
 RUN_REALTIME_TESTS=false
 RUN_FULLSTACK_TESTS=false
-NO_DATABASE=false
 IGNORE_SERVER_READY_CHECK=false
 NO_START=false
 WS_PATH=""
@@ -116,10 +115,6 @@ while [[ $# -gt 0 ]]; do
             RUN_FULLSTACK_TESTS=true
             shift
             ;;
-        --no-database)
-            NO_DATABASE=true
-            shift
-            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -164,16 +159,6 @@ kill_tree() {
 }
 
 # -------- START SERVER --------
-# An app that declares no database still gets pointed at one by `pikku serve`,
-# which takes DATABASE_URL from the environment over the app's own config. In
-# CI that variable belongs to a Postgres these tests share with every other
-# template, and the app has no migrations for it, so the server exits on a
-# schema it was never asked to have. Templates that run without a database say
-# so and the variable stops being ambient.
-if $NO_DATABASE; then
-    unset DATABASE_URL
-fi
-
 if $NO_START; then
     echo "Skipping server start (--no-start), assuming external server at $HELLO_WORLD_URL_PREFIX"
 else
