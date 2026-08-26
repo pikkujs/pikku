@@ -1,10 +1,8 @@
-import { PikkuFetchError } from '@pikku/fetch'
 import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
-import { lockStore } from './lock-store'
 
 /**
  * The demo user the todo wirings default to. A real app would take this from a
- * session; the point here is the gate in front of the data, not who owns it.
+ * session; the point here is the shape of the client, not who owns the data.
  */
 const USER_ID = 'user1'
 
@@ -25,48 +23,27 @@ const client = () => {
   return pikkuFetch
 }
 
-/**
- * Run a request, and treat a 423 as news about the lock rather than as an
- * ordinary failure: the store shut under a page that was already open, so the
- * app goes back to the unlock screen instead of rendering a broken list.
- */
-const guarded = async <T>(request: () => Promise<T>): Promise<T> => {
-  try {
-    return await request()
-  } catch (caught) {
-    if (caught instanceof PikkuFetchError && caught.status === 423) {
-      lockStore.markLocked()
-    }
-    throw caught
-  }
-}
-
 export const listTodos = () =>
-  guarded(() =>
-    client().get('/todos', {
-      userId: USER_ID,
-      completed: undefined,
-      priority: undefined,
-      tag: undefined,
-    })
-  )
+  client().get('/todos', {
+    userId: USER_ID,
+    completed: undefined,
+    priority: undefined,
+    tag: undefined,
+  })
 
 export type Todo = Awaited<ReturnType<typeof listTodos>>['todos'][number]
 
 export const createTodo = (title: string) =>
-  guarded(() =>
-    client().post('/todos', {
-      title,
-      userId: USER_ID,
-      description: undefined,
-      priority: 'medium',
-      dueDate: undefined,
-      tags: undefined,
-    })
-  )
+  client().post('/todos', {
+    title,
+    userId: USER_ID,
+    description: undefined,
+    priority: 'medium',
+    dueDate: undefined,
+    tags: undefined,
+  })
 
 export const completeTodo = (id: string) =>
-  guarded(() => client().post('/todos/:id/complete', { id }))
+  client().post('/todos/:id/complete', { id })
 
-export const deleteTodo = (id: string) =>
-  guarded(() => client().delete('/todos/:id', { id }))
+export const deleteTodo = (id: string) => client().delete('/todos/:id', { id })

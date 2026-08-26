@@ -2,20 +2,18 @@
  * The same fullstack contract, checked with the app actually running.
  *
  * `fullstack.ts` next door proves the server's half over HTTP, but it never
- * executes a line of the app: React never mounts, no route guard runs, and a
+ * executes a line of the app: React never mounts, no route loads, and a
  * frontend that pikku serves perfectly while its own fetches go nowhere would
- * pass every check in it. This walks the screens instead — first run, unlock,
- * a todo typed into the form — so the parts that only exist in a browser are
- * covered too.
+ * pass every check in it. This drives the page instead — a todo typed into
+ * the form, and still there after a reload — so the parts that only exist in
+ * a browser are covered too.
  *
- * It runs before `fullstack.ts` because that one finishes by tripping the
- * lockout deliberately, and a throttled store cannot be opened from a form.
+ * Scaffolding with private mode replaces this file with a version that also
+ * walks the unlock screens.
  */
 import { chromium, type Page } from '@playwright/test'
 
 const BASE = process.env.TODO_APP_URL || 'http://localhost:4002'
-const PASSPHRASE = 'correct horse battery staple'
-const WRONG = 'not the passphrase'
 const TYPED_TODO = 'Typed into the running app'
 
 let failures = 0
@@ -29,52 +27,14 @@ const check = (description: string, condition: boolean, detail = '') => {
   }
 }
 
-const headerLabel = (page: Page) =>
-  page.locator('.header span').textContent()
-
-const submitPassphrase = async (page: Page, passphrase: string) => {
-  await page.locator('#passphrase').fill(passphrase)
-  await page.getByRole('button', { name: /Initialize|Unlock/ }).click()
-}
-
-const lockTheStore = async (page: Page) => {
-  const response = await page.request.post(`${BASE}/_pikku/data/lock`, {
-    data: { passphrase: PASSPHRASE },
-  })
-  check(
-    'the store can be shut from outside the browser',
-    response.status() === 200,
-    `got ${response.status()}`
-  )
-}
-
-const testFirstRun = async (page: Page) => {
-  console.log('A store nobody has opened sends the browser to its first run')
+const testTheAppMounts = async (page: Page) => {
+  console.log('The served page mounts and reaches the API')
 
   await page.goto(BASE)
-  await page.waitForURL('**/initialize')
-  check('/ redirects to /initialize while uninitialized', true)
-  await page
-    .getByRole('heading', { name: 'Choose a passphrase' })
-    .waitFor({ state: 'visible' })
-  check(
-    'the header says the store has never been opened',
-    (await headerLabel(page)) === 'store not yet initialized'
-  )
-}
-
-const testOpeningFromTheForm = async (page: Page) => {
-  console.log('The passphrase typed into the page opens the store')
-
-  await submitPassphrase(page, PASSPHRASE)
-  await page.waitForURL(`${BASE}/`)
   await page
     .getByRole('heading', { name: 'Todos', level: 2 })
     .waitFor({ state: 'visible' })
-  check(
-    'the header flips to unlocked',
-    (await headerLabel(page)) === 'store unlocked'
-  )
+  check('the app renders its todos page', true)
 
   // Seeded server-side, so its presence is the app's own fetch having reached
   // the API on this origin rather than anything the page could invent.
@@ -94,56 +54,19 @@ const testWritingFromTheForm = async (page: Page) => {
   check('it is still there after a reload, so the server kept it', true)
 }
 
-const testLockedStoreSendsTheBrowserToUnlock = async (page: Page) => {
-  console.log('Shutting the store sends an open page to the unlock screen')
+const testCompletingAndRemoving = async (page: Page) => {
+  console.log('The list round-trips a completion and a delete')
 
-  await lockTheStore(page)
-  await page.goto(BASE)
-  await page.waitForURL('**/unlock')
+  await page.getByLabel(`Complete ${TYPED_TODO}`).check()
   await page
-    .getByRole('heading', { name: 'Unlock this store' })
+    .getByLabel(`Complete ${TYPED_TODO}`)
+    .and(page.locator(':disabled'))
     .waitFor({ state: 'visible' })
-  check(
-    'the header says the store is locked',
-    (await headerLabel(page)) === 'store locked'
-  )
-}
+  check('completing one sticks', true)
 
-const testWrongPassphraseSaysNothingUseful = async (page: Page) => {
-  console.log('A wrong guess is refused without hinting')
-
-  await submitPassphrase(page, WRONG)
-  const notice = page.locator('.notice')
-  await notice.filter({ hasText: /\S/ }).waitFor({ state: 'visible' })
-  const message = (await notice.textContent()) ?? ''
-  check(
-    'the form shows a refusal',
-    message.trim().length > 0,
-    'the notice stayed empty'
-  )
-  check(
-    'the refusal does not say the passphrase was close, or which part was wrong',
-    !/close|almost|character|length|correct so far/i.test(message),
-    message
-  )
-  check(
-    'a refused guess leaves the browser on the unlock screen',
-    new URL(page.url()).pathname === '/unlock',
-    page.url()
-  )
-}
-
-const testReopening = async (page: Page) => {
-  console.log('The right passphrase reopens the store, todos and all')
-
-  await submitPassphrase(page, PASSPHRASE)
-  await page.waitForURL(`${BASE}/`)
-  check(
-    'the header flips back to unlocked',
-    (await headerLabel(page)) === 'store unlocked'
-  )
-  await page.getByText(TYPED_TODO).waitFor({ state: 'visible' })
-  check('the todo typed earlier is still listed', true)
+  await page.getByLabel(`Delete ${TYPED_TODO}`).click()
+  await page.getByText(TYPED_TODO).waitFor({ state: 'detached' })
+  check('deleting one removes it from the list', true)
 }
 
 const main = async () => {
@@ -159,12 +82,9 @@ const main = async () => {
   })
 
   try {
-    await testFirstRun(page)
-    await testOpeningFromTheForm(page)
+    await testTheAppMounts(page)
     await testWritingFromTheForm(page)
-    await testLockedStoreSendsTheBrowserToUnlock(page)
-    await testWrongPassphraseSaysNothingUseful(page)
-    await testReopening(page)
+    await testCompletingAndRemoving(page)
   } finally {
     await browser.close()
   }

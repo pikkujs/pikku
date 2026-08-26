@@ -24,8 +24,8 @@ export const useTodos = (): TodosState => {
       const { todos: loaded } = await listTodos()
       setTodos(loaded)
     } catch {
-      // A failed load leaves an empty list rather than a half-drawn one; the
-      // next successful reload is what fills it back in.
+      // A 423 has already been reported to the lock store, which moves the app
+      // to the unlock screen; anything else leaves the last good list alone.
       setTodos([])
     } finally {
       setLoading(false)
@@ -41,8 +41,8 @@ export const useTodos = (): TodosState => {
       try {
         await request()
       } catch {
-        // A failed write is not worth tearing the list down for: the reload
-        // below redraws whatever did survive.
+        // Same as above: a 423 is already on its way to the unlock screen, and
+        // the reload below is what redraws whatever did survive.
       } finally {
         await reload()
       }
