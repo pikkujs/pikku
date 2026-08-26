@@ -19,12 +19,6 @@ const durableObjectState = {
   getWebSockets: () => [],
 } as never
 
-/**
- * Cloudflare delivers to Durable Object WebSockets only, so the suite asserts
- * the REFUSAL rather than delivery: an SSE stream lives in the Worker, not in
- * the DO, and accepting a handler it can never reach would only make the
- * failure quiet.
- */
 defineEventHubServiceTests(
   'CloudflareEventHubService',
   () => new CloudflareEventHubService(logger, durableObjectState),
