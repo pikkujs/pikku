@@ -429,19 +429,15 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs:
-      [
-        validate-deps,
-        lint,
-        unit-tests,
-        verifiers,
-        verifiers-workflows-db,
-        verifiers-db-schema-db,
-        templates,
-        templates-no-services,
-        template-runtime-targets,
-        e2e,
-      ]
+    # Only the gates that protect a publish. The verifier and template matrices
+    # still run on every push to main, but they no longer stand between a merge
+    # and the registry: ~100 jobs across two package managers held the Version
+    # Packages PR shut for the length of the slowest one, and `develop.yml` had
+    # already run the same matrix against the same tree on the branch.
+    #
+    # What stays: validate-deps (workspace-protocol deps and peer ranges are
+    # precisely what must not reach npm), lint, build, unit-tests, e2e.
+    needs: [validate-deps, build, lint, unit-tests, e2e]
     outputs:
       published: ${{ steps.changesets.outputs.published }}
       publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
