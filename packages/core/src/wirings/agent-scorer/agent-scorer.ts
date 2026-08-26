@@ -22,7 +22,9 @@ const assertSampleRate = (name: string, sampleRate: number | undefined) => {
  * @example snippet: agentScorer
  */
 export const pikkuAgentScorer = <Services = any>(config: {
+  /** Identifies the scorer in results and in the Console. Unique per project. */
   name: string
+  /** What this scorer grades, in one line, for whoever reads the score later. */
   description: string
   /** 0..1 fraction of live runs to grade. Defaults to all of them. */
   sampleRate?: number
@@ -31,6 +33,10 @@ export const pikkuAgentScorer = <Services = any>(config: {
    * traffic has no answer key, so the runtime never samples it.
    */
   requiresReference?: boolean
+  /**
+   * The grade itself: read the finished run and return `{ score, reason }`.
+   * Runs in-process, so it may use your own services.
+   */
   score: (
     input: ScorerInput,
     services: Services
@@ -55,7 +61,9 @@ export const pikkuAgentScorer = <Services = any>(config: {
  * @example snippet: agentJudge
  */
 export const pikkuAgentJudge = <Services = any>(config: {
+  /** Identifies the judge in results and in the Console. Unique per project. */
   name: string
+  /** What this judge grades, in one line, for whoever reads the score later. */
   description: string
   /** 0..1 fraction of live runs to grade. Defaults to all of them. */
   sampleRate?: number
@@ -64,7 +72,9 @@ export const pikkuAgentJudge = <Services = any>(config: {
    * traffic has no answer key, so the runtime never samples it.
    */
   requiresReference?: boolean
+  /** The model that grades, e.g. `'claude-sonnet-4-5'`. Not the model under test. */
   model: string
+  /** The rubric: what a good answer looks like, phrased as the goal it should meet. */
   goal: string
   /**
    * How much of the run's trajectory to disclose to the judge. Defaults to
@@ -72,6 +82,10 @@ export const pikkuAgentJudge = <Services = any>(config: {
    * sending a third-party model the rows the tools returned.
    */
   toolCalls?: JudgeToolCallDisclosure
+  /**
+   * Replaces the generated rubric prompt outright, for framing `goal` cannot
+   * express. The `{ score, reason }` response is still forced.
+   */
   prompt?: (input: ScorerInput) => string
 }): PikkuAgentScorer<Services> => ({
   name: config.name,

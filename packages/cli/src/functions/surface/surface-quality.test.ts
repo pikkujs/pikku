@@ -52,9 +52,9 @@ const read = () => {
 }
 
 /**
- * Ceilings, not targets. Each one is what the surface measured when the gate
- * went in; the assertion is `<=`, so a change that makes the doc worse fails
- * and a change that makes it better is expected to lower the number here.
+ * Ceilings, not targets. Each one is what the surface measures today; the
+ * assertion is `<=`, so a change that makes the doc worse fails and a change
+ * that makes it better is expected to lower the number here.
  */
 /** The exports whose shape a signature cannot convey, so an example is required. */
 const WIRED_BY_EXAMPLE = [
@@ -67,14 +67,28 @@ const WIRED_BY_EXAMPLE = [
   'addError',
 ]
 
-const CORE_LEAK = 112
-const UNRESOLVABLE = 823
+/**
+ * Re-baselined against the artifact. The three numbers below went in at 112,
+ * 823 and 10, and the surface they shipped beside measured 160, 1210 and 15 —
+ * so the gate never passed, on any build, from the commit that added it. It
+ * went unseen because the unit suite ran only on main and main's runs were
+ * being cancelled by the latest-push-wins rule; putting it on branch CI made it
+ * everyone's failure at once.
+ *
+ * Every published surface.json from 0.12.116 (the release the gate shipped in)
+ * through 0.12.123 measures identically, so nothing drifted and there is no
+ * regression buried in here — only a baseline that never described the artifact.
+ * These are now the real measurements, which is what makes the `<=` mean
+ * something: from here a change that makes the doc worse fails.
+ */
+const CORE_LEAK = 160
+const UNRESOLVABLE = 1210
 const BARE_ERRORS = 5
-const FUNCTIONS_WITHOUT_EXAMPLE = 10
+const FUNCTIONS_WITHOUT_EXAMPLE = 15
 const BARE_SYMBOLS = 0
 
 /** A floor rather than a ceiling: the assertion is `>=`. */
-const DOCUMENTED_KEYS = 76
+const DOCUMENTED_KEYS = 79
 
 describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
   test('does not name the internals the generated aliases exist to hide', () => {

@@ -24,9 +24,13 @@ export interface GatewayAttachment {
 export interface GatewayInboundMessage {
   /** Platform-specific: a phone number, a Slack user id, and so on. */
   senderId: string
+  /** What they said, as plain text, with the provider's markup stripped. */
   text: string
+  /** The provider's own event, untouched, for anything this shape drops. */
   raw: unknown
+  /** Files and media that came with the message. */
   attachments?: GatewayAttachment[]
+  /** Anything else the adapter wants to carry through to the wiring. */
   metadata?: Record<string, unknown>
 }
 
@@ -35,8 +39,11 @@ export interface GatewayInboundMessage {
  * own rich content.
  */
 export interface GatewayOutboundMessage {
+  /** The reply as plain text. Every provider can render this. */
   text?: string
+  /** The provider's own rich payload, e.g. Slack blocks. Passed through as-is. */
   richContent?: Record<string, unknown>
+  /** Files and media to send alongside. */
   attachments?: GatewayAttachment[]
 }
 
@@ -45,19 +52,31 @@ export interface GatewayOutboundMessage {
  * provider expects back, or not.
  */
 export type WebhookVerificationResult =
-  { verified: true; response: unknown } | { verified: false }
+  | {
+      /** True when the request really came from the provider. */
+      verified: true
+      /** What to echo back, e.g. Meta's hub.challenge. */
+      response: unknown
+    }
+  | {
+      /** False when the signature or challenge did not check out. */
+      verified: false
+    }
 
 /**
  * What a gateway integration implements: parse an incoming event into a
  * message, send one back, and open and close the connection.
  */
 export interface GatewayAdapter {
+  /** Identifies the gateway in wirings and logs, e.g. `'slack'`. */
   name: string
   /** Return null to ignore the event, e.g. a delivery receipt. */
   parse(data: unknown): GatewayInboundMessage | null
+  /** Deliver a reply back to the sender the message came from. */
   send(senderId: string, message: GatewayOutboundMessage): Promise<void>
   /** Called by GatewayService.start(); must call onMessage per incoming event. */
   init(onMessage: (data: unknown) => Promise<void>): Promise<void>
+  /** Called by GatewayService.stop(); release the connection init() opened. */
   close(): Promise<void>
   /** Receives the GET query params, or the POST body when called from the POST handler. */
   verifyWebhook?(
