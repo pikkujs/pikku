@@ -38,6 +38,10 @@ import {
   renderDeployUnits,
 } from './functions/deploy-units.function.js'
 import { FabricStatus, renderStatus } from './functions/status.function.js'
+import {
+  FabricProjectsList,
+  renderProjectsList,
+} from './functions/projects-list.function.js'
 import { FabricErrors, renderErrors } from './functions/errors.function.js'
 import {
   FabricDbSchema,
@@ -361,6 +365,12 @@ export const fabricCommands = defineCLICommands({
     func: FabricStatus,
     render: renderStatus,
     description: 'Show the linked project status (active + in-flight deploy)',
+  }),
+  projects: pikkuCLICommand({
+    func: FabricProjectsList,
+    render: renderProjectsList,
+    description:
+      'List the projects in your organization, with their ids (works unlinked)',
   }),
   errors: pikkuCLICommand({
     func: FabricErrors,
