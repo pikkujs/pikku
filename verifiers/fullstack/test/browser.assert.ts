@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn, type ChildProcess } from 'node:child_process'
+import { once } from 'node:events'
 import { rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { after, before, describe, test } from 'node:test'
@@ -28,6 +29,7 @@ const startServer = () =>
     server = spawn('npx', ['pikku', 'serve', '--port', '0'], {
       cwd: projectDir,
       stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     })
 
     const timer = setTimeout(
@@ -74,9 +76,40 @@ before(async () => {
   page = await browser.newPage()
 })
 
+/**
+ * Stop the server and everything it started.
+ *
+ * `npx` forks rather than execs, so signalling the child reaches the wrapper
+ * and leaves the real server holding the pipes that keep this process alive —
+ * the suite passes and node then never exits. The spawn puts the server in its
+ * own process group and this signals the group, with SIGKILL behind a grace
+ * period so a server that ignores SIGTERM cannot hang the run either.
+ */
+const stopServer = async () => {
+  const pid = server?.pid
+  if (!pid || server.exitCode !== null || server.signalCode !== null) return
+
+  const exited = once(server, 'exit')
+  const signal = (name: NodeJS.Signals) => {
+    try {
+      process.kill(-pid, name)
+    } catch {
+      server.kill(name)
+    }
+  }
+
+  signal('SIGTERM')
+  const hard = setTimeout(() => signal('SIGKILL'), 5_000)
+  try {
+    await exited
+  } finally {
+    clearTimeout(hard)
+  }
+}
+
 after(async () => {
   await browser?.close()
-  server?.kill()
+  await stopServer()
 })
 
 describe('a browser on the served origin', () => {
