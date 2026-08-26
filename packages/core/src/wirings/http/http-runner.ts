@@ -260,7 +260,14 @@ const executeRoute = async (
       remote: unsupportedChannelRemote,
     }
 
-    if (singletonServices.eventHub?.onChannelOpened) {
+    // Without a hub the stream still works for whatever the function writes to
+    // it directly; it just never receives a publish. Say so, because an SSE
+    // connection that opens and stays quiet looks identical to a working one.
+    if (!singletonServices.eventHub) {
+      singletonServices.logger.warn(
+        `SSE route ${route.route} has no eventHub configured: the stream will open but never receive a published event`
+      )
+    } else {
       const channelRef = channel
       const channelHandler = {
         getChannel: () => channelRef,
@@ -270,10 +277,13 @@ const executeRoute = async (
         },
         sendBinary: (data: any) => channelRef.sendBinary(data),
       }
-      singletonServices.eventHub.onChannelOpened(channelHandler)
+      // A hub that cannot deliver to a non-socket channel throws here, and that
+      // throw is allowed to fail the request. A 500 naming the limitation is a
+      // far better outcome than a connection that hangs open delivering nothing.
+      await singletonServices.eventHub.onChannelOpened(channelHandler)
       const originalClose = channel.close
       channel.close = () => {
-        singletonServices.eventHub.onChannelClosed(channelId)
+        singletonServices.eventHub!.onChannelClosed(channelId)
         originalClose()
       }
     }
