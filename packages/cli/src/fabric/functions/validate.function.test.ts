@@ -569,6 +569,33 @@ describe('pikku fabric validate', () => {
       }
     })
 
+    test('prose quoting a word after "from" is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'functions', 'a.ts'),
+          [
+            '/**',
+            ' * Converted from the Gherkin scenario of the same name.',
+            ' * The original asserted the redirect from "signed out".',
+            ' */',
+            'export const description = \'Unauthenticated request from "protected endpoint"\'',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings.filter((f) => f.id.startsWith('undeclared-deps-')),
+          [],
+          `expected no finding, got: ${JSON.stringify(result.findings.map((f) => f.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
     test('bun → no finding', async () => {
       const tmp = await makeTmp()
       try {
@@ -2751,6 +2778,44 @@ describe('scenario steps vs the message catalogue (live validate.function)', () 
       await writeSteps(
         tmp,
         `await page.getByText('favicon-16x16.png').waitFor()\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a UI-facing step argument is copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { rooms_create_room: 'Create Room' })
+      await writeSteps(
+        tmp,
+        `await scenario.when('start', 'clicksControl', { name: 'Create Room' })\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.match(finding!.fixHint, /rooms_create_room/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a payload field that happens to match a label is not copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { unit_kg: 'kg' })
+      await writeSteps(
+        tmp,
+        `await rpc.invoke('addItem', { name: itemName, unit: 'kg', quantity: 5 })\n`
       )
       const result = await runValidate(tmp, { skipTypecheck: true })
       assert.deepStrictEqual(
