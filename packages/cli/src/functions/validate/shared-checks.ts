@@ -130,6 +130,61 @@ export function migrationCreatesTable(sql: string, tableName: string): boolean {
 const BETTER_AUTH_TABLES = ['user', 'session', 'account', 'verification']
 
 /**
+ * Every table name one better-auth model can be sitting under.
+ *
+ * `modelName` renames a model's table — `user: { modelName: 'authUser' }` is
+ * how an app keeps better-auth's rows out of a `user` table it already owns —
+ * and the adapter's CamelCasePlugin then writes that as `auth_user`. An app
+ * that renames all four models has none of the default names in its
+ * migrations, so a default-names-only check reported it as having no auth
+ * schema at all. Accept the default, the override, and the override's
+ * snake_case form.
+ */
+export const betterAuthTableAliases = (
+  model: string,
+  configText: string
+): string[] => {
+  const override = configText.match(
+    new RegExp(
+      `\\b${model}\\s*:\\s*\\{[^{}]*?\\bmodelName\\s*:\\s*['"\`](\\w+)['"\`]`
+    )
+  )?.[1]
+  if (!override) return [model]
+  return [
+    model,
+    override,
+    override.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase(),
+  ]
+}
+
+/**
+ * The text of every source file that configures better-auth, concatenated.
+ *
+ * Narrowed to files mentioning `betterAuth` so a `modelName` belonging to some
+ * other library cannot rename an auth table out from under the check.
+ */
+const readAuthConfigText = async (srcDir: string): Promise<string> => {
+  if (!existsSync(srcDir)) return ''
+  let entries: string[]
+  try {
+    entries = (await readdir(srcDir, { recursive: true })).filter(
+      (f): f is string =>
+        typeof f === 'string' &&
+        f.endsWith('.ts') &&
+        !f.includes('node_modules')
+    )
+  } catch {
+    return ''
+  }
+  const texts = await Promise.all(
+    entries.map((f) => readTextSafe(join(srcDir, f)))
+  )
+  return texts
+    .filter((t): t is string => Boolean(t) && /betterAuth/.test(t!))
+    .join('\n')
+}
+
+/**
  * Scaffold flags that gate a generated surface the pikku console calls.
  *
  * `console` gates app introspection, so nothing renders without it;
@@ -455,8 +510,10 @@ export async function runSharedProjectChecks(
           )
             .filter((sql): sql is string => Boolean(sql))
             .join('\n')
+          const authConfigText = await readAuthConfigText(join(fnDir, 'src'))
           for (const table of BETTER_AUTH_TABLES) {
-            if (!migrationCreatesTable(allSql, table)) {
+            const aliases = betterAuthTableAliases(table, authConfigText)
+            if (!aliases.some((name) => migrationCreatesTable(allSql, name))) {
               missingAuthTables.push(table)
             }
           }
