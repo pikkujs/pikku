@@ -98,7 +98,9 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./actor-flow": ["runConversation"],
+  "./actor-flow": [
+    "runConversation"
+  ],
   "./virtual-user": [
     "DEFAULT_MAX_INTERVAL_MS",
     "DEFAULT_MIN_INTERVAL_MS",
@@ -161,7 +163,9 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": ["buildRemoteHeaders"],
+  "./remote": [
+    "buildRemoteHeaders"
+  ],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -176,7 +180,11 @@
     "runScheduledTask",
     "wireScheduler"
   ],
-  "./trigger": ["PikkuTriggerService", "wireTrigger", "wireTriggerSource"],
+  "./trigger": [
+    "PikkuTriggerService",
+    "wireTrigger",
+    "wireTriggerSource"
+  ],
   "./rpc": [
     "PikkuRPCService",
     "RPCNotFoundError",
@@ -196,7 +204,10 @@
     "safeFetch",
     "setDefaultHostResolver"
   ],
-  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
+  "./node-host-resolver": [
+    "installNodeHostResolver",
+    "nodeHostResolver"
+  ],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -265,7 +276,10 @@
     "runCLICommand",
     "wireCLI"
   ],
-  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
+  "./cli/command-parser": [
+    "generateCommandHelp",
+    "parseCLIArguments"
+  ],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -318,8 +332,14 @@
     "verifyActorSecret",
     "verifyPersonaRoles"
   ],
-  "./secret": ["defineSecret", "validateAndBuildSecretDefinitionsMeta"],
-  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
+  "./secret": [
+    "defineSecret",
+    "validateAndBuildSecretDefinitionsMeta"
+  ],
+  "./variable": [
+    "defineVariable",
+    "validateAndBuildVariableDefinitionsMeta"
+  ],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -421,10 +441,19 @@
     "verifyActorSecret",
     "withoutSecrets"
   ],
-  "./services/local-meta": ["LocalMetaService"],
-  "./services/v8-coverage": ["V8CoverageService"],
-  "./services/istanbul-coverage": ["IstanbulCoverageService"],
-  "./services/local-content": ["LocalContent", "signedContentPath"],
+  "./services/local-meta": [
+    "LocalMetaService"
+  ],
+  "./services/v8-coverage": [
+    "V8CoverageService"
+  ],
+  "./services/istanbul-coverage": [
+    "IstanbulCoverageService"
+  ],
+  "./services/local-content": [
+    "LocalContent",
+    "signedContentPath"
+  ],
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
@@ -454,7 +483,10 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
+  "./hmac": [
+    "hmacSha256Hex",
+    "timingSafeStringEqual"
+  ],
   "./state": [
     "addPackageServiceFactories",
     "getAllPackageStates",
@@ -501,6 +533,14 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": ["clearPikkuRuntimeState", "defineServiceTests"],
-  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
+  "./testing": [
+    "clearPikkuRuntimeState",
+    "defineEventHubServiceTests",
+    "defineServiceTests"
+  ],
+  "./dev": [
+    "pikkuDevReloader",
+    "reconcileAddonRegistry",
+    "reloadGeneratedMeta"
+  ]
 }
