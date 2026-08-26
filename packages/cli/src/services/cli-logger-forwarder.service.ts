@@ -106,6 +106,16 @@ export class CLILoggerForwarder implements Logger {
     this.diagnostic({ severity: 'critical', code, message })
   }
 
+  // Both delegate: the underlying logger owns the diagnostic list, so a pass
+  // opened here has to be opened there or the superseded pass is never dropped.
+  beginValidationPass() {
+    ;(this.logger as any).beginValidationPass?.()
+  }
+
+  endValidationPass() {
+    ;(this.logger as any).endValidationPass?.()
+  }
+
   hasCriticalErrors(): boolean {
     // The underlying logger (CLILogger) tracks critical errors
     return (this.logger as any).hasCriticalErrors?.() ?? false

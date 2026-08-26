@@ -31,6 +31,11 @@ export class CLILogger implements Logger {
   private silent: boolean
   private level: LogLevel = LogLevel.info // default to info level
   private diagnostics: CodedDiagnostic[] = []
+  // Diagnostics recorded by the validation pass currently open, tracked apart
+  // from the rest so a superseded pass can be dropped without touching what a
+  // generator or a command reported outside one.
+  private validationDiagnostics: CodedDiagnostic[] = []
+  private inValidationPass = false
   // Severities that should fail the build. Critical always blocks; error/warn
   // are opt-in via --fail-on-error / --fail-on-warn.
   private failOn: Set<DiagnosticSeverity> = new Set<DiagnosticSeverity>([
@@ -226,7 +231,11 @@ export class CLILogger implements Logger {
   diagnostic({ severity, code, message }: CodedDiagnostic) {
     const url = `${BASE_ERROR_URL}/${code.toLowerCase()}`
     const formattedMessage = `[${code}] ${message}\n  → ${url}`
-    this.diagnostics.push({ severity, code, message })
+    if (this.inValidationPass) {
+      this.validationDiagnostics.push({ severity, code, message })
+    } else {
+      this.diagnostics.push({ severity, code, message })
+    }
     // critical → bold red, error → red, warn → yellow. Always printed so the
     // issue surfaces even when it doesn't fail the build.
     this.emit(severity, formattedMessage, undefined, code)
@@ -244,8 +253,37 @@ export class CLILogger implements Logger {
     this.failOn = new Set<DiagnosticSeverity>(['critical', ...severities])
   }
 
+  /**
+   * Opens a validation pass, discarding what the previous one recorded.
+   *
+   * `pikku all` inspects several times over — generating the scaffold, the leaf
+   * indexes and the type files each changes the source graph the next
+   * inspection reads. Every full inspection re-runs every validator against
+   * that graph, so the newest pass is the complete one and the ones before it
+   * described input this run had not finished building yet. Keeping them made a
+   * project whose roles reference scaffold-declared scopes fail on the pass
+   * taken before its scaffold existed, while the pass taken after was clean.
+   */
+  beginValidationPass() {
+    this.validationDiagnostics = []
+    this.inValidationPass = true
+  }
+
+  /** Closes the pass opened by `beginValidationPass`. */
+  endValidationPass() {
+    this.inValidationPass = false
+  }
+
+  /**
+   * Everything recorded outside a validation pass, plus the newest pass — which
+   * is the only one that still describes the source graph as it now stands.
+   */
+  private trackedDiagnostics(): CodedDiagnostic[] {
+    return [...this.diagnostics, ...this.validationDiagnostics]
+  }
+
   hasCriticalErrors(): boolean {
-    return this.diagnostics.some((d) => d.severity === 'critical')
+    return this.trackedDiagnostics().some((d) => d.severity === 'critical')
   }
 
   /**
@@ -253,14 +291,13 @@ export class CLILogger implements Logger {
    * build (default: critical only).
    */
   hasBlockingDiagnostics(): boolean {
-    return this.diagnostics.some((d) => this.failOn.has(d.severity))
+    return this.trackedDiagnostics().some((d) => this.failOn.has(d.severity))
   }
 
   /** Distinct severities among tracked diagnostics that would fail the build. */
   blockingSeverities(): DiagnosticSeverity[] {
-    return [...this.failOn].filter((s) =>
-      this.diagnostics.some((d) => d.severity === s)
-    )
+    const tracked = this.trackedDiagnostics()
+    return [...this.failOn].filter((s) => tracked.some((d) => d.severity === s))
   }
 
   logLogo() {
