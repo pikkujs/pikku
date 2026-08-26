@@ -71,6 +71,40 @@ export function blockedSummary(reason: BlockedReason): string {
   }
 }
 
+/**
+ * What to tell someone whose deploy is blocked on config they have not set.
+ *
+ * Secrets and variables go missing in the same way and are set by two different
+ * commands: `pikku fabric secrets set` seals a value the stage can never read
+ * back, `pikku fabric variables set` writes one it can. Naming one command for
+ * both sends anyone blocked on the other kind to a command that refuses their
+ * value, which reads as the command being broken rather than as the wrong one.
+ */
+export function missingConfigHints(
+  missingSecrets: readonly { name: string }[] | undefined,
+  missingVariables: readonly { name: string }[] | undefined
+): string[] {
+  const secrets = missingSecrets ?? []
+  const variables = missingVariables ?? []
+  const hints: string[] = []
+  if (secrets.length > 0) {
+    hints.push(
+      `Set the secret${secrets.length > 1 ? 's' : ''} with \`pikku fabric secrets set <name>\`: ${secrets.map((s) => s.name).join(', ')}.`
+    )
+  }
+  if (variables.length > 0) {
+    hints.push(
+      `Set the variable${variables.length > 1 ? 's' : ''} with \`pikku fabric variables set <name> <value>\`: ${variables.map((v) => v.name).join(', ')}.`
+    )
+  }
+  if (hints.length === 0) {
+    hints.push(
+      'Set the missing values with `pikku fabric secrets set <name>` or `pikku fabric variables set <name> <value>`.'
+    )
+  }
+  return hints
+}
+
 export interface DeploymentStatus {
   status: string
   statusReason: string | null
