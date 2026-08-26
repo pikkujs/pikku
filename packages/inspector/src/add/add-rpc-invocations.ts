@@ -21,6 +21,26 @@ function findCastArg(
 }
 
 /**
+ * The `rpc` in `rpc.invoke(...)`, seen through whatever the author wrote to
+ * satisfy the type checker.
+ *
+ * `rpc` is optional on the wire, so a caller that knows it is there reaches for
+ * `rpc!.invoke(...)` — and a non-null assertion is a node of its own, not the
+ * identifier underneath it. Matching only the bare identifier meant those calls
+ * were never recorded as invocations, which is silent rather than loud: the
+ * target is not `expose: true`, so nothing else puts it in the registry, and
+ * the dispatch fails with "Function not found" at run time on a call site that
+ * type-checked. Parentheses are unwrapped for the same reason.
+ */
+function invocationReceiver(node: ts.Expression): ts.Expression {
+  let inner = node
+  while (ts.isNonNullExpression(inner) || ts.isParenthesizedExpression(inner)) {
+    inner = inner.expression
+  }
+  return inner
+}
+
+/**
  * Helper to extract namespace from a namespaced function reference like 'ext:hello'
  */
 function extractNamespace(functionRef: string): string | null {
@@ -80,11 +100,15 @@ export function addRPCInvocations(
     }
 
     // Check for rpc.invoke('...') calls
+    const invokeReceiver = ts.isPropertyAccessExpression(expression)
+      ? invocationReceiver(expression.expression)
+      : undefined
     if (
       ts.isPropertyAccessExpression(expression) &&
       expression.name.text === 'invoke' &&
-      ts.isIdentifier(expression.expression) &&
-      expression.expression.text === 'rpc'
+      invokeReceiver &&
+      ts.isIdentifier(invokeReceiver) &&
+      invokeReceiver.text === 'rpc'
     ) {
       // Skip PKU940 for generated files — they may contain intentional casts
       // (e.g. the paginated useInfiniteQuery hook in pikku-react-query.gen.ts).
