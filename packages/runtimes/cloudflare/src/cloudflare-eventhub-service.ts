@@ -143,6 +143,24 @@ export class CloudflareEventHubService<
   }
 
   /**
+   * WEBSOCKETS ONLY, and it says so rather than accepting and dropping.
+   *
+   * Delivery here resolves recipients through `ctx.getWebSockets(channelId)`, so
+   * a channel that is not a hibernatable WebSocket on this Durable Object cannot
+   * be reached. An SSE stream in particular lives in the Worker, not in the DO,
+   * so there is no reference to it to keep — holding the handler would only make
+   * the failure quiet. Serving SSE on Cloudflare needs the route to terminate
+   * inside the DO and write to a `TransformStream` held there; that is a feature,
+   * not something this method can fake.
+   */
+  public async onChannelOpened(): Promise<void> {
+    throw new Error(
+      'CloudflareEventHubService delivers to Durable Object WebSockets only, so it cannot serve SSE. ' +
+        'Use the WebSocket transport, or route the SSE endpoint into the Durable Object itself.'
+    )
+  }
+
+  /**
    * Handles cleanup when a channel is closed.
    */
   public async onChannelClosed(channelId: string): Promise<void> {
