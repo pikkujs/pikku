@@ -93,7 +93,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({
     () => [
       {
         key: 'userId',
-        header: 'USER',
+        header: 'User',
         render: (row: UserRow) => (
           <Text size="sm" ff="monospace" fw={500}>
             {asI18n(row.userId)}
@@ -102,7 +102,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({
       },
       {
         key: 'credentials',
-        header: 'CREDENTIALS',
+        header: 'Credentials',
         render: (row: UserRow) => (
           <Group gap={6} wrap="wrap">
             {perUserCredentials.map((cred) =>
@@ -127,7 +127,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({
       },
       {
         key: 'status',
-        header: 'STATUS',
+        header: 'Status',
         width: 80,
         render: (row: UserRow) => (
           <Badge

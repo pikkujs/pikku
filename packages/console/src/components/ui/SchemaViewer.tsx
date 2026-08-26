@@ -5,6 +5,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { schemaTypeColor } from './badge-defs'
+import classes from './console.module.css'
 
 interface SchemaViewerProps {
   schema: any
@@ -187,7 +188,7 @@ export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
         <col style={{ width: 150 }} />
         <col />
       </colgroup>
-      <Table.Thead>
+      <Table.Thead className={classes.tableHead}>
         <Table.Tr>
           <Table.Th>Field</Table.Th>
           <Table.Th>Type</Table.Th>

@@ -900,6 +900,40 @@
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
+/* ── Data grid header ──
+   The column strip is metadata, not a title bar: one 11px uppercase label,
+   the same idiom the console uses for every other field name, quiet enough
+   that the first row rather than the header is where the eye lands. Every
+   table in the console wears this, so a column head never has to be dressed
+   at the call site. */
+.tableHead {
+  background: transparent;
+}
+
+.tableHead th {
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: max(11px, var(--mantine-font-size-xs));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--app-text-dim);
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* A head that outlives its rows: it has to paint the panel's own surface,
+   or the rows scrolling under it show through. `--mantine-color-body` is the
+   PAGE background and reads as a black band over the card — not that. */
+.tableHeadSticky {
+  composes: tableHead;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--app-surface, var(--mantine-color-body));
+}
+
 .listSurfaceCard {
   composes: surfaceCard;
   display: flex;
