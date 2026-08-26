@@ -7,14 +7,12 @@
 '@pikku/kysely-postgres': patch
 ---
 
-Make an SSE stream a channel every event hub can actually reach, and fail loudly where one cannot.
+Fix SSE channels never receiving published events.
 
-`EventHubService` declared `subscribe`/`unsubscribe`/`publish` and nothing else, while the channel lifecycle was called all over the place and typed nowhere. Two incompatible conventions grew up in that gap: core and the Node hubs used `onChannelOpened(channelHandler)`, and the Bun and uWS hubs used `onChannelOpened(channelId, socket)`. Nothing could see the collision, so an SSE route served by Bun registered its stream under an object key, every later `subscribe` looked it up by string and missed, and the connection stayed open and completely silent — indistinguishable, from the browser, from a working one.
+`onChannelOpened`/`onChannelClosed` were called but not declared on `EventHubService`, so two signatures diverged: `onChannelOpened(channelHandler)` in core, `onChannelOpened(channelId, socket)` in the Bun and uWS hubs. An SSE stream on those runtimes registered under the wrong key and stayed open and silent. Both are now on the interface; Bun and uWS take the raw socket through `registerSocket(channelId, ws)` instead.
 
-`onChannelOpened(channelHandler)` and `onChannelClosed(channelId)` are now part of the interface, so the mismatch is a compile error rather than a quiet no-op. `PikkuChannelHandler` is the only shape that describes both transports, because it abstracts `send`/`sendBinary` away from what is underneath. Bun and uWS still need the raw socket, and now take it through their own `registerSocket(channelId, ws)` — a different operation under a different name, which is the distinction whose absence caused this.
+`server.publish` (Bun) and `socket.publish` (uWS) only reach WebSockets, so both hubs now also keep a `LocalEventHubService` for non-socket channels and publish to both. `PgEventHubService` routed its lifecycle to the built-in hub while everything else went to the injected one; it now uses `delivery` throughout.
 
-Registration alone was not enough: `server.publish` on Bun and `socket.publish` on uWS reach WebSockets and nothing else, so a correctly subscribed SSE stream still received nothing. Both hubs now keep a `LocalEventHubService` for channels that are not their native socket and publish to both, the same arrangement `PgEventHubService` already used for its fallback. `PgEventHubService` itself had a narrower version of the same bug — lifecycle went to its built-in hub while every other method went to the injected one — and now routes all of them to `delivery`.
+Lambda and Cloudflare cannot hold a stream the publisher can reach, so they throw from `onChannelOpened` rather than accept and drop. Core warns when an SSE route has no hub configured.
 
-Lambda and Cloudflare genuinely cannot do this: the stream and the publisher are not in the same isolate, and there is no reference to keep. They now throw from `onChannelOpened` rather than accept a channel they will never deliver to. Core warns when an SSE route is served with no hub at all.
-
-A shared `defineEventHubServiceTests` conformance suite ships from `@pikku/core/testing` and asks the question the per-runtime tests could not: can a channel that is not this runtime's native socket receive a publish? The old Bun test passed throughout because it encoded the broken signature instead of checking the behaviour.
+Adds `defineEventHubServiceTests` to `@pikku/core/testing`, a conformance suite covering delivery to a channel that is not the runtime's native socket.
