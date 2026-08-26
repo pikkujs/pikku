@@ -9,7 +9,6 @@ import type {
 } from '../../wirings/channel/channel.types.js'
 import { unsupportedChannelRemote } from '../../wirings/channel/channel-rpc.js'
 
-/** A channel that is not a socket — what an SSE stream looks like to a hub. */
 const recordingHandler = (channelId: string) => {
   const received: unknown[] = []
   let state: unknown
@@ -35,7 +34,6 @@ const recordingHandler = (channelId: string) => {
     clearState: () => {
       state = undefined
     },
-    // A hub only ever pushes; nothing here answers back.
     remote: unsupportedChannelRemote,
   }
 
@@ -47,20 +45,6 @@ const recordingHandler = (channelId: string) => {
   return { handler, received }
 }
 
-/**
- * Conformance suite for `EventHubService`.
- *
- * It asks one question the old per-runtime tests could not: can a channel that
- * is NOT this runtime's native socket receive a publish? That is the SSE case,
- * and every hub that claims to accept a handler has to answer yes. Hubs that
- * cannot — Lambda, Cloudflare — are expected to throw from `onChannelOpened`
- * instead, which `expectsHandlerSupport: false` asserts.
- *
- * The previous Bun test passed while the feature was broken because it called
- * `onChannelOpened('c1', socket)` — it encoded the wrong signature rather than
- * checking the behaviour. A suite shared across runtimes is what stops that
- * happening again.
- */
 export const defineEventHubServiceTests = (
   name: string,
   makeHub: () =>
