@@ -24,7 +24,7 @@ type ChannelHandler = Parameters<LocalHub['onChannelOpened']>[0]
  * `eventHub.publish(...)` only reaches them if this service delivers through
  * that very instance instead of a private `LocalEventHubService` the sockets
  * were never registered on. The server keeps its direct reference to the inner
- * hub for the socket lifecycle (`onChannelOpened`/`setServer`); this wrapper
+ * hub for the socket lifecycle (`registerSocket`/`setServer`); this wrapper
  * only decorates the subscribe/publish surface plus the NOTIFY backplane.
  *
  * Payload limit: Postgres caps NOTIFY payloads at 8 kB. Keep event data
@@ -34,8 +34,7 @@ type ChannelHandler = Parameters<LocalHub['onChannelOpened']>[0]
 export class PgEventHubService<
   Topics extends Record<string, unknown> = {},
 > implements EventHubService<Topics> {
-  // Built-in fallback hub; also backs onChannelOpened/onChannelClosed for the
-  // Node/channel-handler convention when no transport hub is injected.
+  // Built-in fallback hub, used as `delivery` when no transport hub is injected.
   private readonly local = new LocalEventHubService<Topics>()
   // Where subscribe/unsubscribe/publish and NOTIFY-relayed events are delivered:
   // the injected transport hub when supplied, otherwise the built-in `local`.
@@ -116,11 +115,20 @@ export class PgEventHubService<
     }
   }
 
-  onChannelOpened(channelHandler: ChannelHandler): void {
-    this.local.onChannelOpened(channelHandler)
+  /**
+   * Lifecycle follows `delivery`, NOT `local`, and the difference matters.
+   *
+   * Every other method routes to `delivery`, so registering a channel on `local`
+   * while an inner transport hub is injected would put the channel on one hub and
+   * its subscription on another — the channel would open and never receive.
+   * `delivery` is `local` when nothing is injected, so the no-inner case is
+   * unchanged.
+   */
+  onChannelOpened(channelHandler: ChannelHandler): Promise<void> | void {
+    return this.delivery.onChannelOpened(channelHandler)
   }
 
-  onChannelClosed(channelId: string): void {
-    this.local.onChannelClosed(channelId)
+  onChannelClosed(channelId: string): Promise<void> | void {
+    return this.delivery.onChannelClosed(channelId)
   }
 }
