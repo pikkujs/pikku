@@ -110,4 +110,54 @@ export const routes = { stream: { func: ref('console:streamWorkflowRun') } }
       await rm(dir, { recursive: true, force: true })
     }
   })
+
+  test('a non-null assertion on the receiver is still an invocation', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const rpc: { invoke: (name: string, data?: unknown) => Promise<unknown> } | undefined
+export async function doWork() {
+  return rpc!.invoke('executeVirtualUserRun')
+}
+`,
+    })
+    try {
+      assert.ok(state.rpc.invokedFunctions.has('executeVirtualUserRun'))
+      const invoked = [...state.rpc.invokedFunctionsByFile.values()][0]!
+      assert.deepStrictEqual([...invoked], ['executeVirtualUserRun'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('a parenthesised receiver is still an invocation', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const rpc: { invoke: (name: string, data?: unknown) => Promise<unknown> } | undefined
+export async function doWork() {
+  return (rpc!).invoke('listTasks')
+}
+`,
+    })
+    try {
+      assert.ok(state.rpc.invokedFunctions.has('listTasks'))
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('invoke on some other receiver is left alone', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const client: { invoke: (name: string, data?: unknown) => Promise<unknown> } | undefined
+export async function doWork() {
+  return client!.invoke('notAnRpc')
+}
+`,
+    })
+    try {
+      assert.ok(!state.rpc.invokedFunctions.has('notAnRpc'))
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })
