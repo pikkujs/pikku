@@ -5,7 +5,19 @@ on:
     branches:
       - main
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+# Latest wins. A push to main supersedes whatever is already running for main,
+# rather than queueing behind it — without this, a burst of merges left each run
+# discarded in turn while still waiting for a runner, and a fix could sit merged
+# but unreleased for hours.
+#
+# The newest run carries every commit that came before it, so nothing is lost by
+# cancelling an older one. The exception to keep in mind is `release`: a run
+# cancelled part-way through `yarn release` can leave some packages published at
+# the new version and others not. Closing that window means moving `release` into
+# a workflow of its own, which this deliberately does not do.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 # better-auth now throws on a missing BETTER_AUTH_SECRET (mapSession errors no
 # longer swallowed), so every job that builds/prerenders/runs a template needs
