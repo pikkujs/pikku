@@ -140,9 +140,10 @@ export async function resolveProvider(
   providerName?: string,
   options?: {
     runtime?: string
-    tauri?: boolean
+    desktop?: boolean
     projectDir?: string
-    tauriIdentifier?: string
+    desktopIdentifier?: string
+    desktopUrl?: string
   }
 ): Promise<ProviderAdapter> {
   const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
@@ -271,7 +272,8 @@ export const deployApply = pikkuSessionlessFunc<
     fromPlan?: boolean
     provider?: string
     runtime?: string
-    tauri?: boolean
+    desktop?: boolean
+    desktopUrl?: string
     resultFile?: string
     debugArtifacts?: boolean
   },
@@ -279,11 +281,15 @@ export const deployApply = pikkuSessionlessFunc<
 >({
   func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
+    // A url on its own is a request for a shell — asking for both flags would
+    // only leave `--desktop-url` alone as a silent no-op.
+    const desktopUrl = data?.desktopUrl ?? config.deploy?.desktop?.url
     const provider = await resolveProvider(config, data?.provider, {
       runtime: data?.runtime,
-      tauri: data?.tauri,
+      desktop: data?.desktop || Boolean(desktopUrl),
       projectDir,
-      tauriIdentifier: config.deploy?.tauri?.identifier,
+      desktopIdentifier: config.deploy?.desktop?.identifier,
+      desktopUrl,
     })
     const fromPlan = data?.fromPlan ?? false
     const resultFile = data?.resultFile

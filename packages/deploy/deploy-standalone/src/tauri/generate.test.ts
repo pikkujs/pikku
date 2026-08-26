@@ -325,3 +325,101 @@ describe('generating a Tauri shell around a pikku binary', () => {
     }
   })
 })
+
+describe('generating a Tauri shell that points at a remote pikku server', () => {
+  const remote = async (
+    projectDir: string,
+    overrides: Partial<Parameters<typeof generateTauriShell>[0]> = {}
+  ) =>
+    generate(projectDir, {
+      remoteUrl: 'https://shop.example.com',
+      ...overrides,
+    })
+
+  it('declares the window in the config, because the url is already known', async () => {
+    const dir = await scratch()
+    try {
+      await remote(dir)
+      const conf = JSON.parse(
+        await readFile(join(dir, 'src-tauri', 'tauri.conf.json'), 'utf-8')
+      )
+      assert.equal(conf.app.windows[0].url, 'https://shop.example.com')
+      assert.equal(conf.app.windows[0].label, 'main')
+      assert.equal(
+        conf.bundle.externalBin,
+        undefined,
+        'there is no sidecar to declare'
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('leaves the sidecar machinery out of main.rs entirely', async () => {
+    const dir = await scratch()
+    try {
+      await remote(dir)
+      const main = await readFile(
+        join(dir, 'src-tauri', 'src', 'main.rs'),
+        'utf-8'
+      )
+
+      assert.match(
+        main,
+        /tauri_plugin_single_instance/,
+        'a second window on the same remote session is still not wanted'
+      )
+      assert.doesNotMatch(main, /sidecar|CommandChild/)
+      assert.ok(!main.includes(SERVER_READY_MARKER))
+      assert.doesNotMatch(main, new RegExp(DATA_DIR_ENV))
+      assert.doesNotMatch(main, new RegExp(PARENT_PID_ENV))
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('drops the shell plugin it no longer has a process to run', async () => {
+    const dir = await scratch()
+    try {
+      await remote(dir)
+      const cargo = await readFile(
+        join(dir, 'src-tauri', 'Cargo.toml'),
+        'utf-8'
+      )
+      assert.doesNotMatch(cargo, /tauri-plugin-shell/)
+      assert.match(cargo, /tauri-plugin-single-instance/)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses a binary it has nothing to run with', async () => {
+    const dir = await scratch()
+    try {
+      const binaryPath = await withBinary(dir)
+      await assert.rejects(
+        () => remote(dir, { binaryPath }),
+        /remote/i,
+        'shipping a sidecar nothing starts would be a silent lie'
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects a url the webview could not open', async () => {
+    const dir = await scratch()
+    try {
+      await assert.rejects(
+        () => generate(dir, { remoteUrl: 'file:///etc/passwd' }),
+        /http/i
+      )
+      await assert.rejects(
+        () => generate(dir, { remoteUrl: 'not a url' }),
+        /url/i
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})

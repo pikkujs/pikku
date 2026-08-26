@@ -75,6 +75,11 @@ export type GenerateTauriShellOptions = {
   binaryPath?: string
   /** Defaults to the host triple, via `rustc -vV` when available. */
   targetTriple?: string
+  /**
+   * An already-running server to open the window against, instead of shipping
+   * one. The shell then bundles nothing: no sidecar, no binary, no supervision.
+   */
+  remoteUrl?: string
 }
 
 export type GenerateTauriShellResult = {
@@ -92,6 +97,10 @@ const renderConfig = (options: {
   appName: string
   identifier: string
   version: string
+  windowTitle: string
+  width: number
+  height: number
+  remoteUrl?: string
 }): string =>
   JSON.stringify(
     {
@@ -106,16 +115,29 @@ const renderConfig = (options: {
         frontendDist: 'ui',
       },
       app: {
-        // Deliberately empty: a window declared here would open before the
-        // sidecar has reported its port, and would have nowhere to point.
-        windows: [],
+        // A sidecar's origin is not known until it reports its port, so its
+        // window is built from Rust and this stays deliberately empty. A remote
+        // url is known here, and a declared window is the whole program.
+        windows: options.remoteUrl
+          ? [
+              {
+                label: 'main',
+                url: options.remoteUrl,
+                title: options.windowTitle,
+                width: options.width,
+                height: options.height,
+              },
+            ]
+          : [],
         security: { csp: null },
       },
       bundle: {
         active: true,
         targets: 'all',
         icon: ['icons/icon.png'],
-        externalBin: [`binaries/${options.appName}`],
+        ...(options.remoteUrl
+          ? {}
+          : { externalBin: [`binaries/${options.appName}`] }),
       },
     },
     null,
@@ -125,6 +147,7 @@ const renderConfig = (options: {
 const renderCargoToml = (options: {
   crateName: string
   version: string
+  remoteUrl?: string
 }): string =>
   `[package]
 name = "${options.crateName}"
@@ -136,8 +159,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
-tauri-plugin-shell = "2"
-tauri-plugin-single-instance = "2"
+${options.remoteUrl ? '' : 'tauri-plugin-shell = "2"\n'}tauri-plugin-single-instance = "2"
 
 [profile.release]
 panic = "abort"
@@ -169,6 +191,27 @@ const GITIGNORE = `/target
 /gen
 `
 
+/**
+ * A webview can only open an http(s) origin, and everything the shell exists to
+ * preserve — first-party cookies, CORS, OAuth redirects — is keyed on it. A
+ * `file:` or custom-scheme url would build fine and then fail at runtime.
+ */
+const normalizeRemoteUrl = (raw: string): string => {
+  const trimmed = raw.trim()
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    throw new Error(`"${raw}" is not a url the desktop shell could open.`)
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(
+      `The desktop shell opens an http or https url; "${raw}" is ${parsed.protocol.replace(':', '')}.`
+    )
+  }
+  return trimmed
+}
+
 export const generateTauriShell = async (
   options: GenerateTauriShellOptions
 ): Promise<GenerateTauriShellResult> => {
@@ -179,26 +222,47 @@ export const generateTauriShell = async (
     )
   }
 
+  const remoteUrl = options.remoteUrl
+    ? normalizeRemoteUrl(options.remoteUrl)
+    : undefined
+  if (remoteUrl && options.binaryPath) {
+    throw new Error(
+      'A remote desktop shell runs no server of its own, so there is no sidecar to install the binary as. Drop either the url or the binary.'
+    )
+  }
+
   const version = options.version ?? '0.1.0'
   const windowTitle = options.windowTitle ?? appName
+  const width = options.width ?? 1200
+  const height = options.height ?? 800
   const targetTriple = options.targetTriple ?? hostTargetTriple()
   const shellDir = join(options.projectDir, TAURI_SHELL_DIR)
 
   const files: Array<[string, Buffer | string]> = [
     [
       'tauri.conf.json',
-      renderConfig({ appName, identifier: options.identifier, version }),
+      renderConfig({
+        appName,
+        identifier: options.identifier,
+        version,
+        windowTitle,
+        width,
+        height,
+        remoteUrl,
+      }),
     ],
-    ['Cargo.toml', renderCargoToml({ crateName: `${appName}-shell`, version })],
+    [
+      'Cargo.toml',
+      renderCargoToml({ crateName: `${appName}-shell`, version, remoteUrl }),
+    ],
     ['build.rs', 'fn main() {\n    tauri_build::build()\n}\n'],
     [
       'src/main.rs',
-      renderMainRs({
-        sidecarName: appName,
-        windowTitle,
-        width: options.width ?? 1200,
-        height: options.height ?? 800,
-      }),
+      renderMainRs(
+        remoteUrl
+          ? { remoteUrl, windowTitle, width, height }
+          : { sidecarName: appName, windowTitle, width, height }
+      ),
     ],
     ['ui/index.html', PLACEHOLDER_UI],
     ['capabilities/default.json', CAPABILITIES],

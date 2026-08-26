@@ -10,7 +10,7 @@ const PREREQUISITES = 'https://tauri.app/start/prerequisites/'
 /**
  * What to say once the crate and its sidecar are on disk.
  *
- * Generation is pure Node — it writes files and copies a binary — so `--tauri`
+ * Generation is pure Node — it writes files and copies a binary — so `--desktop`
  * succeeds perfectly well on a machine that cannot build the result. Saying so
  * here is the difference between a known prerequisite and a cargo error at the
  * point someone least expects one.

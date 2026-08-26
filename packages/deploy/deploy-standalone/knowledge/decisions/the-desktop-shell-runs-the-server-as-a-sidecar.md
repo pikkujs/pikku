@@ -7,7 +7,7 @@ tags: [tauri, desktop, standalone, bun]
 
 # The desktop shell runs the server as a sidecar, not embedded
 
-`pikku deploy apply --provider standalone --runtime bun --tauri` generates a
+`pikku deploy apply --provider standalone --runtime bun --desktop` generates a
 `src-tauri/` crate that ships the compiled binary as an `externalBin`, spawns it
 at launch, and opens a window at `http://127.0.0.1:<port>`. The server serves
 both the API and the built frontend, so **the UI and the API share one real HTTP

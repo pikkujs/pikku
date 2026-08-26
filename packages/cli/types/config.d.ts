@@ -734,8 +734,8 @@ export type PikkuCLIInput = {
      * Defaults to 'serverless'.
      */
     defaultTarget?: 'serverless' | 'server'
-    /** Desktop shell settings, used by `pikku deploy apply --tauri`. */
-    tauri?: {
+    /** Desktop shell settings, used by `pikku deploy apply --desktop`. */
+    desktop?: {
       /**
        * Reverse-DNS bundle identifier for the desktop app. Derived from the
        * package name when omitted, which is fine for a local build but should
@@ -743,6 +743,12 @@ export type PikkuCLIInput = {
        * keys the app's data directory and permissions on.
        */
       identifier?: string
+      /**
+       * An already-deployed server for the app to open, instead of bundling
+       * one. The window is a webview onto that origin: nothing is shipped with
+       * the app, and there is no sidecar to compile.
+       */
+      url?: string
     }
   }
 

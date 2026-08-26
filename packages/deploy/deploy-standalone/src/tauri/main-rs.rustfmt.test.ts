@@ -49,4 +49,38 @@ describe('the generated main.rs as Rust source', () => {
       }
     }
   )
+
+  it(
+    'parses in its remote form too',
+    { skip: rustfmtAvailable ? false : 'rustfmt is not installed' },
+    async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'pikku-mainrs-remote-'))
+      const file = join(dir, 'main.rs')
+      try {
+        await writeFile(
+          file,
+          renderMainRs({
+            remoteUrl: 'https://shop.example.com',
+            windowTitle: 'Shop',
+            width: 1200,
+            height: 800,
+          }),
+          'utf-8'
+        )
+
+        const result = spawnSync(
+          'rustfmt',
+          ['--edition', '2021', '--check', file],
+          { encoding: 'utf-8' }
+        )
+        assert.equal(
+          result.status,
+          0,
+          `rustfmt rejected the generated remote shell:\n${result.stdout}${result.stderr}`
+        )
+      } finally {
+        await rm(dir, { recursive: true, force: true })
+      }
+    }
+  )
 })

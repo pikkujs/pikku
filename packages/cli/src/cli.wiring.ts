@@ -1066,10 +1066,14 @@ wireCLI({
                 'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
               default: 'node',
             },
-            tauri: {
+            desktop: {
               description:
-                'Also generate a Tauri desktop shell (src-tauri/) that runs the compiled binary as a sidecar. Requires --provider standalone --runtime bun.',
+                'Also generate a desktop shell (src-tauri/) that runs the compiled binary as a sidecar. Requires --provider standalone --runtime bun, unless --desktop-url is given.',
               default: false,
+            },
+            desktopUrl: {
+              description:
+                'Point the desktop shell at an already-deployed server instead of bundling one. Implies --desktop; nothing is shipped with the app.',
             },
             fromPlan: {
               description:

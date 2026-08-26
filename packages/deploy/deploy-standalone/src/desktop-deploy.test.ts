@@ -19,13 +19,13 @@ after(() => {
 const silentLogger = { info: () => {}, error: () => {} }
 
 const builtUnit = async () => {
-  const buildDir = await mkdtemp(join(tmpdir(), 'pikku-tauri-deploy-'))
+  const buildDir = await mkdtemp(join(tmpdir(), 'pikku-desktop-deploy-'))
   tempDirs.push(buildDir)
   const unitDir = join(buildDir, 'shop')
   await mkdir(unitDir, { recursive: true })
   await writeFile(join(unitDir, 'bundle.js'), 'console.log("bundle")\n')
 
-  const projectDir = await mkdtemp(join(tmpdir(), 'pikku-tauri-project-'))
+  const projectDir = await mkdtemp(join(tmpdir(), 'pikku-desktop-project-'))
   tempDirs.push(projectDir)
   return { buildDir, projectDir, outDir: join(buildDir, 'shop-dist') }
 }
@@ -36,7 +36,7 @@ describe('deploying a standalone unit as a desktop shell', () => {
 
     const result = await new StandaloneProviderAdapter({
       runtime: 'node',
-      tauri: true,
+      desktop: true,
       projectDir,
     }).deploy({ buildDir, logger: silentLogger })
 
@@ -49,7 +49,7 @@ describe('deploying a standalone unit as a desktop shell', () => {
 
     const result = await new StandaloneProviderAdapter({
       runtime: 'bun',
-      tauri: true,
+      desktop: true,
     }).deploy({ buildDir, logger: silentLogger })
 
     assert.equal(result.success, false)
@@ -61,7 +61,7 @@ describe('deploying a standalone unit as a desktop shell', () => {
 
     const result = await new StandaloneProviderAdapter({
       runtime: 'bun',
-      tauri: true,
+      desktop: true,
       projectDir,
     }).deploy({ buildDir, logger: silentLogger })
 
@@ -102,15 +102,56 @@ describe('deploying a standalone unit as a desktop shell', () => {
 
     await new StandaloneProviderAdapter({
       runtime: 'bun',
-      tauri: true,
+      desktop: true,
       projectDir,
-      tauriIdentifier: 'com.acme.pos',
+      desktopIdentifier: 'com.acme.pos',
     }).deploy({ buildDir, logger: silentLogger })
 
     const conf = JSON.parse(
       await readFile(join(projectDir, 'src-tauri', 'tauri.conf.json'), 'utf-8')
     )
     assert.equal(conf.identifier, 'com.acme.pos')
+  })
+
+  test('points a remote shell at the url, with no runtime requirement', async () => {
+    const { buildDir, projectDir } = await builtUnit()
+
+    // Nothing is bundled, so there is no binary to compile and no reason to
+    // insist on bun — the node runtime has to be allowed through here.
+    const result = await new StandaloneProviderAdapter({
+      runtime: 'node',
+      desktop: true,
+      desktopUrl: 'https://shop.example.com',
+      projectDir,
+    }).deploy({ buildDir, logger: silentLogger })
+
+    assert.deepEqual(result.errors, [])
+    assert.equal(result.success, true)
+
+    const shellDir = join(projectDir, 'src-tauri')
+    const conf = JSON.parse(
+      await readFile(join(shellDir, 'tauri.conf.json'), 'utf-8')
+    )
+    assert.equal(conf.bundle.externalBin, undefined)
+    assert.equal(conf.app.windows[0].url, 'https://shop.example.com')
+    await assert.rejects(
+      () => stat(join(shellDir, 'binaries')),
+      'a remote shell ships no sidecar'
+    )
+  })
+
+  test('refuses a url that is not http(s)', async () => {
+    const { buildDir, projectDir } = await builtUnit()
+
+    const result = await new StandaloneProviderAdapter({
+      runtime: 'node',
+      desktop: true,
+      desktopUrl: 'file:///etc/passwd',
+      projectDir,
+    }).deploy({ buildDir, logger: silentLogger })
+
+    assert.equal(result.success, false)
+    assert.match(result.errors[0]!.error, /http/i)
   })
 
   test('a plain standalone deploy generates no shell at all', async () => {

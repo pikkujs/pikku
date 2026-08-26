@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
  * `#pikku/function`, which only exists after the CLI's own codegen has run. So
  * the wiring is checked at the source level instead. What it guards is the
  * realistic regression — a flag declared but never forwarded, or forwarded but
- * never declared, either of which makes `--tauri` silently do nothing. The
+ * never declared, either of which makes `--desktop` silently do nothing. The
  * behaviour on the other side of the handoff is covered by the standalone
  * adapter's own tests, which construct it with exactly these options.
  */
@@ -18,7 +18,7 @@ const cliSrc = fileURLToPath(new URL('../..', import.meta.url))
 const read = (...segments: string[]) =>
   readFileSync(join(cliSrc, ...segments), 'utf-8')
 
-describe('`pikku deploy apply --tauri`', () => {
+describe('`pikku deploy apply --desktop`', () => {
   it('is declared as an option on the deploy apply command', () => {
     const wiring = read('cli.wiring.ts')
     const applyBlock = wiring.slice(
@@ -27,8 +27,13 @@ describe('`pikku deploy apply --tauri`', () => {
     )
     assert.match(
       applyBlock,
-      /tauri: \{/,
+      /desktop: \{/,
       'an undeclared flag is dropped before the command ever sees it'
+    )
+    assert.match(
+      applyBlock,
+      /desktopUrl: \{/,
+      'the remote form of the shell is chosen by a url, so it needs its own option'
     )
   })
 
@@ -36,9 +41,10 @@ describe('`pikku deploy apply --tauri`', () => {
     const apply = read('functions', 'commands', 'deploy-apply.ts')
     assert.match(
       apply,
-      /tauri\?: boolean/,
+      /desktop\?: boolean/,
       'deployApply must take the flag in its input type'
     )
+    assert.match(apply, /desktopUrl\?: string/)
   })
 
   it('reaches the provider adapter together with the project root', () => {
@@ -49,7 +55,7 @@ describe('`pikku deploy apply --tauri`', () => {
       )
     assert.ok(call, 'the provider is resolved with an options object')
     const forwarded = call[1]!
-    assert.match(forwarded, /tauri:/)
+    assert.match(forwarded, /desktop:/)
     assert.match(
       forwarded,
       /projectDir[,:]/,
@@ -57,7 +63,12 @@ describe('`pikku deploy apply --tauri`', () => {
     )
     assert.match(
       forwarded,
-      /tauriIdentifier:/,
+      /desktopUrl[,:]/,
+      'a shell pointed at a remote server needs the url on the other side'
+    )
+    assert.match(
+      forwarded,
+      /desktopIdentifier:/,
       'the bundle identifier has to come from the project, not a hardcoded default'
     )
   })
@@ -67,7 +78,7 @@ describe('`pikku deploy apply --tauri`', () => {
     const signature =
       /export async function resolveProvider\([\s\S]*?\n\)/.exec(apply)
     assert.ok(signature)
-    assert.match(signature[0]!, /tauri\?: boolean/)
+    assert.match(signature[0]!, /desktop\?: boolean/)
     assert.match(signature[0]!, /projectDir\?: string/)
   })
 
@@ -80,7 +91,8 @@ describe('`pikku deploy apply --tauri`', () => {
       configTypes.indexOf('  deploy?: {'),
       configTypes.indexOf('namedFilters?')
     )
-    assert.match(deployBlock, /tauri\?: \{/)
+    assert.match(deployBlock, /desktop\?: \{/)
     assert.match(deployBlock, /identifier\?: string/)
+    assert.match(deployBlock, /url\?: string/)
   })
 })

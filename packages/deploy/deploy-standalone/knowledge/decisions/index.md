@@ -7,6 +7,7 @@ description: What "a standalone unit with a UI" does and does not mean, and what
 # Decisions
 
 <!-- pikku:knowledge-index -->
+- [A remote desktop shell bundles nothing](a-remote-desktop-shell-bundles-nothing.md) — --desktop-url produces a window onto an already-deployed server — no sidecar, no binary, no bun requirement — with the window declared in tauri.conf.json rather than opened from Rust
 - [A pikku server serves a static frontend, not a rendered one](a-pikku-server-serves-a-static-frontend.md) — The frontend is TanStack Start built to static output and served through a static mount; pikku never runs a framework renderer in-process
 - [Deploy consumes a built frontend, it does not build one](deploy-consumes-a-built-frontend.md) — pikku reads an already-built client directory named by the frontend config key; running the frontend's build command is the project's job
 - [Desktop builds are unsigned and never update themselves](desktop-builds-are-unsigned-and-never-update-themselves.md) — Code signing, notarization and auto-update are deliberately absent from the first version of the Tauri shell — a known limitation, not an oversight

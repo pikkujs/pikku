@@ -15,7 +15,7 @@ describe('what to tell someone holding a freshly generated shell', () => {
   })
 
   it('says a toolchain is missing rather than letting cargo say it', () => {
-    // Generation is pure Node, so `--tauri` succeeds on a machine that cannot
+    // Generation is pure Node, so `--desktop` succeeds on a machine that cannot
     // build the result. Someone who has never used Tauri would otherwise find
     // out from a cargo error, at the point they least expect one.
     const lines = renderTauriNextSteps({

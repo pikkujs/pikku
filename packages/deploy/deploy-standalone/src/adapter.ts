@@ -69,15 +69,21 @@ const rustcHostOutput = async (): Promise<string | undefined> => {
 export interface StandaloneProviderAdapterOptions {
   runtime?: StandaloneRuntime
   /**
-   * Generate a Tauri desktop shell around the compiled binary. Requires the
+   * Generate a desktop shell (Tauri) around the compiled binary. Requires the
    * `bun` runtime — the shell ships the binary as a sidecar, and only that
-   * runtime produces one.
+   * runtime produces one. A shell pointed at {@link desktopUrl} ships no binary
+   * and so has no such requirement.
    */
-  tauri?: boolean
+  desktop?: boolean
   /** Project root. The shell crate is written to `<projectDir>/src-tauri`. */
   projectDir?: string
   /** Bundle identifier for the shell. Derived from the app name when absent. */
-  tauriIdentifier?: string
+  desktopIdentifier?: string
+  /**
+   * An already-deployed server for the shell to open, instead of bundling one.
+   * The window is a webview onto that origin and nothing else is shipped.
+   */
+  desktopUrl?: string
 }
 
 export class StandaloneProviderAdapter implements ProviderAdapter {
@@ -85,15 +91,17 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
   readonly runtime: StandaloneRuntime
-  readonly tauri: boolean
+  readonly desktop: boolean
   readonly projectDir?: string
-  readonly tauriIdentifier?: string
+  readonly desktopIdentifier?: string
+  readonly desktopUrl?: string
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.runtime = options.runtime ?? 'node'
-    this.tauri = options.tauri ?? false
+    this.desktop = options.desktop ?? Boolean(options.desktopUrl)
     this.projectDir = options.projectDir
-    this.tauriIdentifier = options.tauriIdentifier
+    this.desktopIdentifier = options.desktopIdentifier
+    this.desktopUrl = options.desktopUrl
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
@@ -297,15 +305,15 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }) {
     const { buildDir, logger } = options
 
-    // Checked before anything expensive runs: a `--tauri` deploy that cannot
+    // Checked before anything expensive runs: a `--desktop` deploy that cannot
     // produce a shell should say so now, not after a bun compile.
-    if (this.tauri) {
-      if (this.runtime !== 'bun') {
+    if (this.desktop) {
+      if (!this.desktopUrl && this.runtime !== 'bun') {
         return {
           success: false,
           errors: [
             {
-              step: 'tauri',
+              step: 'desktop',
               error: `A desktop shell ships the server as a sidecar binary, which only the bun runtime produces. Re-run with --runtime bun (got '${this.runtime}').`,
             },
           ],
@@ -316,7 +324,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
           success: false,
           errors: [
             {
-              step: 'tauri',
+              step: 'desktop',
               error:
                 'No project directory was supplied, so there is nowhere to write src-tauri/.',
             },
@@ -406,9 +414,9 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       }
     }
 
-    // --- 2c. tauri: wrap the compiled binary in a desktop shell ---
+    // --- 2c. desktop: wrap the server in a shell, or point one at a remote ---
     let targetTriple: string | undefined
-    if (this.tauri && this.projectDir) {
+    if (this.desktop && this.projectDir) {
       const { generateTauriShell, tauriBundleIdentifier } =
         await import('./tauri/generate.js')
       const { hostTargetTriple } = await import('./tauri/target-triple.js')
@@ -419,9 +427,11 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         const shell = await generateTauriShell({
           projectDir: this.projectDir,
           appName,
-          identifier: this.tauriIdentifier ?? tauriBundleIdentifier(appName),
+          identifier: this.desktopIdentifier ?? tauriBundleIdentifier(appName),
           targetTriple,
-          binaryPath: join(outDir, appName),
+          ...(this.desktopUrl
+            ? { remoteUrl: this.desktopUrl }
+            : { binaryPath: join(outDir, appName) }),
         })
         logger.info(`Desktop shell: ${shell.dir} (${shell.targetTriple})`)
         if (shell.written.length) {
@@ -432,7 +442,11 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
             `  kept your edits, not regenerated: ${shell.preserved.join(', ')}`
           )
         }
-        logger.info(`  sidecar: binaries/${shell.sidecar?.fileName}`)
+        if (shell.sidecar) {
+          logger.info(`  sidecar: binaries/${shell.sidecar.fileName}`)
+        } else {
+          logger.info(`  window opens: ${this.desktopUrl}`)
+        }
         for (const line of renderTauriNextSteps({
           shellDir: shell.dir,
           hasRust: rustcVersionVerbose !== undefined,
@@ -444,7 +458,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
           success: false,
           errors: [
             {
-              step: 'tauri',
+              step: 'desktop',
               error: e instanceof Error ? e.message : String(e),
             },
           ],
