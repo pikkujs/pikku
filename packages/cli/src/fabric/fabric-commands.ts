@@ -47,6 +47,8 @@ import { FabricRollback } from './functions/rollback.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
 import { FabricSecretsRotate } from './functions/secrets-rotate.function.js'
+import { FabricVariablesSet } from './functions/variables-set.function.js'
+import { FabricVariablesGet } from './functions/variables-get.function.js'
 import { FabricLogs } from './functions/logs.function.js'
 import { FabricMetrics } from './functions/metrics.function.js'
 import { FabricTrace } from './functions/trace.function.js'
@@ -293,6 +295,29 @@ export const fabricCommands = defineCLICommands({
             description: 'Confirm that existing secrets become unreadable',
             default: false,
           },
+        },
+      }),
+    },
+  },
+  variables: {
+    description: 'Manage stage-scoped variables',
+    subcommands: {
+      set: pikkuCLICommand({
+        parameters: '<name>',
+        func: FabricVariablesSet,
+        description: 'Set a stage-scoped variable',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          value: { description: 'Variable value, read as JSON when it parses' },
+        },
+      }),
+      get: pikkuCLICommand({
+        parameters: '<name>',
+        func: FabricVariablesGet,
+        description: 'Read a stage-scoped variable back',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          json: { description: 'Machine-readable output', default: false },
         },
       }),
     },

@@ -322,7 +322,12 @@ Why it parked is the whole story, and it is `statusReason`, not `status`:
   accepts them for that deploy.
 - `needs_config` — a declared secret or variable has no value covering the
   stage. The CLI names them. `--auto-approve` will **not** force this through;
-  set the values (`pikku fabric secrets set <name>`) and re-attach.
+  set the values and re-attach — `pikku fabric secrets set <name>` for a
+  declared secret, `pikku fabric variables set <name> --value <v>` for a declared
+  variable. They are separate stores: a secret is sealed to the stage and cannot
+  be read back, a variable is stored plainly and can (`variables get`). `set`
+  reads the value as JSON when it parses, so `--value true` is the boolean on a
+  stage exactly as it is from `.env`, and `--value '"true"'` is the string.
 - `needs_attention` — the plan is red. Nothing to approve.
 
 `--sync` defaults to a 900s ceiling; `--timeout <seconds>` moves it. On timeout
