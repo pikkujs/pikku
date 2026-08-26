@@ -484,7 +484,8 @@ export const scenarioRun = pikkuSessionlessFunc<
     ) => {
       const prose = collectScenarioStepProse(
         state.workflows?.meta?.[flowName],
-        functionsMeta
+        functionsMeta,
+        state.personas?.definitions ?? []
       )
       const steps = (await service.getRunSteps(runId)).map((step) => ({
         stepName: step.stepName,

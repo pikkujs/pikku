@@ -315,14 +315,14 @@ type PikkuScenarioStepConfigWithSchema<
   /**
    * What this step does, for the console and for whoever reads the source. It
    * is also the fallback prose when no \`template\` is declared, in which case a
-   * reporter renders "Given the shopper buys an apple". Defaults to the call
+   * reporter renders "Given shopper buys an apple". Defaults to the call
    * site's step name.
    */
   description?: string
   /**
    * The prose a reporter renders for this step, with \`{placeholders}\` filled
    * from the input the step was called with — \`'sees {packageName}'\` reports as
-   * "Then the admin sees @pikku/addon-todos". Every input field should appear,
+   * "Then admin sees @pikku/addon-todos". Every input field should appear,
    * so the report names the values under test rather than repeating one
    * sentence per call site.
    */
