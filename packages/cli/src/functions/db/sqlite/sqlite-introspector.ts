@@ -6,6 +6,7 @@ import type {
 } from '../db-introspector.js'
 import { MIGRATION_TRACKING_TABLE } from '../db-migrator.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
+import { parseCheckEnumsFromDdl } from '../check-enums.js'
 
 const SKIP_TABLES = new Set(['sqlite_sequence', MIGRATION_TRACKING_TABLE])
 
@@ -55,30 +56,17 @@ export class SqliteIntrospector implements DbIntrospector {
 
   /**
    * SQLite has no native enums, but a `CHECK (col IN ('a','b',…))` constraint is
-   * an enum by another name. Parse the table's stored `CREATE TABLE` DDL and map
-   * each constrained column to its allowed values so codegen can type it as a
-   * union. Only the positive `col IN (…)` form is recognised (the convention);
-   * `NOT IN`, ranges, and boolean expressions are left as plain `string`.
+   * an enum by another name. Read back the table's stored `CREATE TABLE` DDL —
+   * which SQLite keeps verbatim, comments included — and map each constrained
+   * column to its allowed values so codegen can type it as a union.
    */
   private parseCheckEnums(table: string): Map<string, string[]> {
-    const out = new Map<string, string[]>()
     const row = this.db
       .prepare(
         `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`
       )
       .get(table) as { sql: string | null } | undefined
-    const ddl = row?.sql
-    if (!ddl) return out
-    const checkIn = /CHECK\s*\(\s*"?(\w+)"?\s+IN\s*\(([^)]*)\)/gi
-    let m: RegExpExecArray | null
-    while ((m = checkIn.exec(ddl))) {
-      const column = m[1]
-      const values = [...m[2].matchAll(/'((?:[^']|'')*)'/g)].map((q) =>
-        q[1].replace(/''/g, "'")
-      )
-      if (values.length > 0) out.set(column, values)
-    }
-    return out
+    return row?.sql ? parseCheckEnumsFromDdl(row.sql) : new Map()
   }
 
   async getForeignKeys(table: string): Promise<ForeignKeyInfo[]> {
