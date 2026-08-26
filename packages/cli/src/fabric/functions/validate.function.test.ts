@@ -2985,4 +2985,96 @@ describe('an app whose baseLocale is not English (live validate.function)', () =
       await rm(tmp, { recursive: true, force: true })
     }
   })
+  describe('undeclared dependencies', () => {
+    const fnSrc = (root: string, name: string) =>
+      join(root, 'packages', 'functions', 'src', name)
+
+    /**
+     * The scan matched `from "…"` in raw file text, so a sentence that puts a
+     * quoted phrase after the word *from* became a phantom dependency —
+     * reported at error severity, against the app, with no line to find it by:
+     *
+     *   ✗ @project/app imports undeclared package(s): is fine — …
+     */
+    test('prose in a comment is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'prose.ts'),
+          [
+            '// what separates "needs you" from "is fine" at a glance across the',
+            '// list, and require("not a package") in prose is not one either.',
+            '/* a block comment importing "nothing at all" from "nowhere" */',
+            'export const prose = true',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const undeclared = result.findings.filter((f) =>
+          f.id.startsWith('undeclared-deps-')
+        )
+        assert.deepStrictEqual(
+          undeclared.map((f) => f.message),
+          [],
+          'a comment was read as an import'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a string that merely follows the word from is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'runtime.ts'),
+          [
+            'export const pick = (from: string[]) => from[0]',
+            "export const label = `chosen from ${'somewhere'}`",
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings
+            .filter((f) => f.id.startsWith('undeclared-deps-'))
+            .map((f) => f.message),
+          []
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a real undeclared import is still an error, and names where it is', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'uses-lodash.ts'),
+          [
+            '// a comment mentioning "lodash" on its own does not count',
+            "import groupBy from 'lodash/groupBy'",
+            'export const use = groupBy',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) =>
+          f.id.startsWith('undeclared-deps-')
+        )
+        assert.ok(finding, 'a genuine undeclared import went unreported')
+        assert.match(finding!.message, /lodash/)
+        assert.strictEqual(finding!.severity, 'error')
+        assert.match(finding!.fixHint, /uses-lodash\.ts:2/)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
 })

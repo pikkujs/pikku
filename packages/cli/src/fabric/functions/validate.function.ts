@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { added, changed, removed, dim } from '../lib/output.js'
@@ -14,6 +14,7 @@ import {
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
 import { isGitRepo, isTracked } from '../lib/git.js'
+import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -669,15 +670,18 @@ export async function runValidate(
         tsconfig?.compilerOptions?.paths ?? {}
       ).map((k) => k.replace(/\*$/, ''))
 
+      // name → "<relative file>:<line>" of the first import that used it.
       const used = new Map<string, string>()
       for (const file of await listSourceFiles(join(dir, 'src'))) {
         if (/\.gen\.(ts|tsx)$/.test(file)) continue
-        const txt = await readTextSafe(file)
-        if (!txt) continue
-        const src = stripCommentText(txt)
+        const raw = await readTextSafe(file)
+        if (!raw) continue
+        // Comments first, or prose becomes a dependency: `from "is fine"` in a
+        // sentence is indistinguishable from an import to this regex.
+        const txt = blankComments(raw)
         const re = /(?:from|import|require)\s*\(?\s*['"]([^'".#][^'"]*)['"]/g
         let m: RegExpExecArray | null
-        while ((m = re.exec(src))) {
+        while ((m = re.exec(txt))) {
           const spec = m[1]
           if (
             /\s/.test(spec) ||
@@ -700,7 +704,10 @@ export async function runValidate(
           const name = pkgNameOf(spec)
           if (NODE_BUILTINS.has(name) || name === pkg.name || wsNames.has(name))
             continue
-          if (!used.has(name)) used.set(name, file)
+          if (!used.has(name)) {
+            const where = `${relative(root, file).replace(/\\/g, '/')}:${lineOfOffset(raw, m.index)}`
+            used.set(name, where)
+          }
         }
       }
       const missing = [...used.keys()].filter((n) => !declared.has(n)).sort()
@@ -711,7 +718,9 @@ export async function runValidate(
           join(dir, 'package.json'),
           lines(
             `Add the missing package(s) to ${pkg.name ?? 'this package'}'s dependencies, e.g.:`,
-            ...missing.map((n) => `  "${n}": "<version>"`),
+            ...missing.map(
+              (n) => `  "${n}": "<version>"   (first used at ${used.get(n)})`
+            ),
             'then reinstall. They import-resolve locally via tsconfig paths / root',
             'hoisting, but esbuild/Bun.build resolves each package independently.'
           )
