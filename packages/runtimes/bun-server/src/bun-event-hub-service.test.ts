@@ -35,8 +35,6 @@ describe('BunEventHubService', () => {
 
   test('a channel with no socket falls through to the local hub', async () => {
     const hub = new BunEventHubService()
-    // Not an error: this is the SSE case, where the channel was registered as a
-    // handler and has no Bun socket behind it.
     await assert.doesNotReject(hub.subscribe('news', 'missing'))
     await assert.doesNotReject(hub.unsubscribe('news', 'missing'))
   })
@@ -79,6 +77,4 @@ describe('BunEventHubService', () => {
   })
 })
 
-// The shared suite is what actually covers SSE: a handler-backed channel is not
-// a Bun socket, so it exercises the local fallback rather than server.publish.
 defineEventHubServiceTests('BunEventHubService', () => new BunEventHubService())
