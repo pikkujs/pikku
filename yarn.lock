@@ -6698,6 +6698,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-fullstack@workspace:verifiers/fullstack":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-fullstack@workspace:verifiers/fullstack"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@playwright/test": "npm:1.58.2"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.23.12"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-functions@workspace:verifiers/functions":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-functions@workspace:verifiers/functions"

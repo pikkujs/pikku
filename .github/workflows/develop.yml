@@ -202,6 +202,23 @@ jobs:
       - uses: ./.github/actions/setup
       - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
 
+  # The only verifier that runs a browser, so it gets its own job rather than a
+  # row in the matrix: every other row would pay for a ~90MB chromium download
+  # it never opens. It is what proves the served page actually renders and its
+  # own fetches reach the API on the same origin.
+  verifiers-fullstack:
+    name: Fullstack (browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Install chromium
+        run: cd verifiers/fullstack && npx playwright install --with-deps chromium
+      - name: Run fullstack verifier
+        run: cd verifiers/fullstack && yarn test
+
   verifiers-binary:
     name: Binary (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
