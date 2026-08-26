@@ -273,6 +273,12 @@ fi
 
 # -------- RUN FULLSTACK TESTS IF REQUESTED --------
 if $RUN_FULLSTACK_TESTS; then
+    # The browser pass goes first: the HTTP pass finishes by tripping the
+    # lockout on purpose, and a throttled store cannot be opened from a form.
+    echo "Running Browser tests..."
+    npx playwright install chromium
+    $PKG_MANAGER run test:browser
+
     echo "Running Fullstack tests..."
     $PKG_MANAGER run test:fullstack
 fi

@@ -11,7 +11,8 @@
     "pikku": "pikku",
     "start": "pikku serve --port 4002",
     "test:fullstack": "npx tsx client/fullstack.ts",
-    "test": "bash ../functions/run-tests.sh --build 'npm run build' --server 'npm run start' --url http://localhost:4002 --fullstack"
+    "test": "bash ../functions/run-tests.sh --build 'npm run build' --server 'npm run start' --url http://localhost:4002 --fullstack",
+    "test:browser": "npx tsx client/browser.ts"
   },
   "dependencies": {
     "@pikku/core": "^0.12.94",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "^0.12.120",
+    "@playwright/test": "1.58.2",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
