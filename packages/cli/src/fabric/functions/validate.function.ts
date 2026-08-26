@@ -1129,6 +1129,51 @@ export async function runValidate(
       }
     }
 
+    // ── the coercion map has to reach a Kysely instance ──────────────────
+    // `pikku db migrate` generates a CoercionMap from the `kind` entries in
+    // db/annotations.ts, and nothing wires it up on the project's behalf. An
+    // unwired map is invisible locally and fatal deployed: the dev sqlite
+    // driver hydrates a TEXT date into a Date by itself, libsql on a stage
+    // returns the raw string, and the generated schema types the column
+    // `Date` either way — so tsc flags nothing and there is no failing local
+    // test to write. It surfaces as `TypeError: e.getFullYear is not a
+    // function` on the first deployed request. Booleans diverge more quietly
+    // still: `1` from a stage where local gives `true`.
+    const outDirRel =
+      typeof pikkuConfig?.outDir === 'string' ? pikkuConfig.outDir : '.pikku'
+    const coercionPath = join(root, outDirRel, 'db', 'coercion.gen.ts')
+    const coercionText = await readTextSafe(coercionPath)
+    // `{}` means no column declared a `kind`, so there is nothing to wire.
+    if (coercionText && /:\s*"(date|boolean|json)"/.test(coercionText)) {
+      const wired = (
+        await Promise.all(
+          (await walkSourceFiles(root)).map((f) => readTextSafe(f))
+        )
+      ).some((text) => text?.includes('createCoercionPlugin'))
+      if (!wired) {
+        e(
+          'coercion-map-not-wired',
+          `${join(outDirRel, 'db', 'coercion.gen.ts')} declares coercions that no Kysely instance applies`,
+          coercionPath,
+          lines(
+            'Attach the plugin where the kysely singleton is created, in',
+            'createSingletonServices:',
+            '',
+            "  import { createCoercionPlugin } from '@pikku/kysely'",
+            "  import { coercionMap } from '#pikku/db/coercion.gen.js'",
+            '',
+            '  kysely: existingServices.kysely.withPlugin(',
+            '    createCoercionPlugin({ map: coercionMap }),',
+            '  )',
+            '',
+            'Without it a deployed stage returns raw strings and integers where',
+            'the generated schema promises Date and boolean. The dev driver',
+            'hydrates them for you, so this cannot fail locally.'
+          )
+        )
+      }
+    }
+
     const devSeedPath = join(
       root,
       'db',

@@ -3146,3 +3146,80 @@ describe('an app whose baseLocale is not English (live validate.function)', () =
     })
   })
 })
+
+describe('the generated coercion map', () => {
+  const coercionPath = (root: string) =>
+    join(root, 'packages', 'functions', '.pikku', 'db', 'coercion.gen.ts')
+
+  const writeCoercionMap = async (root: string, body: string) => {
+    await mkdir(dirname(coercionPath(root)), { recursive: true })
+    await writeFile(coercionPath(root), body, 'utf8')
+  }
+
+  const withCoercions = `export const coercionMap = {
+  "assessment": {
+    "created_at": "date",
+    "admin_rights": "boolean"
+  }
+} as const
+`
+
+  test('is an error when nothing applies it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      const result = await runValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'coercion-map-not-wired'
+      )
+      assert.ok(finding, 'expected coercion-map-not-wired')
+      assert.strictEqual(finding.severity, 'error')
+      assert.match(finding.fixHint, /createCoercionPlugin/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent once a source file attaches the plugin', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `import { createCoercionPlugin } from '@pikku/kysely'\n` +
+          `import { coercionMap } from '#pikku/db/coercion.gen.js'\n` +
+          `export const kysely = (k: any) =>\n` +
+          `  k.withPlugin(createCoercionPlugin({ map: coercionMap }))\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding once the plugin is wired'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when no column declared a kind', async () => {
+    // An empty map is not an unwired map — there is nothing to apply.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(
+        tmp,
+        'export const coercionMap = {\n\n} as const\n'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding for an empty map'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
