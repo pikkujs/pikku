@@ -6,6 +6,7 @@ import {
   describeDeployment,
   destructiveMigrations,
   isApprovable,
+  missingConfigHints,
   stateLabel,
   waitForDeployment,
   type DeploymentStatus,
@@ -128,6 +129,56 @@ describe('blocked reasons', () => {
       'needs attention'
     )
     assert.strictEqual(stateLabel('active', null), 'live')
+  })
+})
+
+describe('missingConfigHints', () => {
+  test('a missing secret names the secrets command', () => {
+    assert.deepEqual(missingConfigHints([{ name: 'GRAPH_PASSWORD' }], []), [
+      'Set the secret with `pikku fabric secrets set <name>`: GRAPH_PASSWORD.',
+    ])
+  })
+
+  test('a missing variable names the variables command, not the secrets one', () => {
+    const [hint, ...rest] = missingConfigHints([], [{ name: 'GRAPH_URI' }])
+    assert.equal(rest.length, 0)
+    assert.ok(!hint!.includes('secrets set'), hint)
+    assert.ok(hint!.includes('variables set'), hint)
+    assert.ok(hint!.includes('GRAPH_URI'), hint)
+  })
+
+  test('both missing gets both hints, secrets first', () => {
+    const hints = missingConfigHints(
+      [{ name: 'GRAPH_PASSWORD' }],
+      [{ name: 'GRAPH_URI' }, { name: 'GRAPH_USER' }]
+    )
+    assert.equal(hints.length, 2)
+    assert.ok(hints[0]!.includes('secrets set'))
+    assert.ok(hints[1]!.includes('GRAPH_URI, GRAPH_USER'))
+  })
+
+  test('several of a kind are pluralised', () => {
+    assert.ok(
+      missingConfigHints([{ name: 'A' }, { name: 'B' }], [])[0]!.includes(
+        'Set the secrets'
+      )
+    )
+    assert.ok(
+      missingConfigHints([], [{ name: 'A' }, { name: 'B' }])[0]!.includes(
+        'Set the variables'
+      )
+    )
+  })
+
+  test('blocked on config with neither list still names both commands', () => {
+    for (const hints of [
+      missingConfigHints([], []),
+      missingConfigHints(undefined, undefined),
+    ]) {
+      assert.equal(hints.length, 1)
+      assert.ok(hints[0]!.includes('secrets set'), hints[0])
+      assert.ok(hints[0]!.includes('variables set'), hints[0])
+    }
   })
 })
 
