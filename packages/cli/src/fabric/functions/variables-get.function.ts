@@ -2,11 +2,11 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { resolveStageId } from '../lib/stage.js'
+import { resolveStage } from '../lib/stage.js'
 
 export const FabricVariablesGetInput = z.object({
   name: z.string(),
-  branch: z.string(),
+  branch: z.string().optional(),
   json: z.boolean().optional(),
 })
 
@@ -21,7 +21,7 @@ export const FabricVariablesGet = pikkuSessionlessFunc({
     'Read a stage-scoped variable back, so you can see the shape it was stored in rather than the shape you meant.',
   input: FabricVariablesGetInput,
   output: FabricVariablesGetOutput,
-  func: async (_services, { name, branch, json }) => {
+  func: async (_services, { name, branch: requested, json }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -31,7 +31,11 @@ export const FabricVariablesGet = pikkuSessionlessFunc({
       )
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const stageId = await resolveStageId(rpc, ctx.projectId, branch)
+    const { stageId, branch } = await resolveStage(
+      rpc,
+      ctx.projectId,
+      requested
+    )
     const { exists, value } = await rpc.invoke('getStageConsoleVariable', {
       stageId,
       variableId: name,

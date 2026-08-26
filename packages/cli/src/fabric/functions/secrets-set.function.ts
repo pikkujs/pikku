@@ -3,12 +3,12 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { promptSecret } from '../lib/prompt.js'
-import { resolveStageId } from '../lib/stage.js'
+import { resolveStage } from '../lib/stage.js'
 import { seal, serializeSealedValue } from '../lib/sealed-box.js'
 
 export const FabricSecretsSetInput = z.object({
   name: z.string(),
-  branch: z.string(),
+  branch: z.string().optional(),
   value: z.string().optional(),
   force: z.boolean().optional(),
 })
@@ -23,7 +23,7 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
     'Set a stage-scoped secret. Sealed here to the stage public key — the plaintext never leaves this machine.',
   input: FabricSecretsSetInput,
   output: FabricSecretsSetOutput,
-  func: async (_services, { name, branch, value }) => {
+  func: async (_services, { name, branch: requested, value }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -36,7 +36,11 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
     if (!plaintext) throw new Error('Empty secret value — aborting.')
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const stageId = await resolveStageId(rpc, ctx.projectId, branch)
+    const { stageId, branch } = await resolveStage(
+      rpc,
+      ctx.projectId,
+      requested
+    )
 
     // Fabric holds only the public half of this keypair. The private half went
     // to the stage's worker at deploy time and was dropped there, so the value

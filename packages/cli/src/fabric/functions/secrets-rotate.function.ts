@@ -2,10 +2,10 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { resolveStageId } from '../lib/stage.js'
+import { resolveStage } from '../lib/stage.js'
 
 export const FabricSecretsRotateInput = z.object({
-  branch: z.string(),
+  branch: z.string().optional(),
   force: z.boolean().optional(),
 })
 
@@ -18,7 +18,7 @@ export const FabricSecretsRotate = pikkuSessionlessFunc({
     "Retire a stage's sealing key so the next deploy issues a new one. Secrets sealed to the old key must be set again.",
   input: FabricSecretsRotateInput,
   output: FabricSecretsRotateOutput,
-  func: async (_services, { branch, force }) => {
+  func: async (_services, { branch: requested, force }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -26,6 +26,16 @@ export const FabricSecretsRotate = pikkuSessionlessFunc({
       throw new Error(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
+
+    // Resolved before the refusal, so the one message standing between a
+    // typo and unreadable secrets names the stage that would actually be
+    // rotated rather than echoing an argument that may not have been passed.
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const { stageId, branch } = await resolveStage(
+      rpc,
+      ctx.projectId,
+      requested
+    )
 
     if (!force) {
       // Not a confirmation for politeness — this is the one operation here
@@ -36,8 +46,6 @@ export const FabricSecretsRotate = pikkuSessionlessFunc({
       )
     }
 
-    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const stageId = await resolveStageId(rpc, ctx.projectId, branch)
     const result = await rpc.invoke('rotateStageSealingKey', { stageId })
 
     console.log(

@@ -2,10 +2,10 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { resolveStageId } from '../lib/stage.js'
+import { resolveStage } from '../lib/stage.js'
 
 export const FabricSecretsListInput = z.object({
-  branch: z.string(),
+  branch: z.string().optional(),
   json: z.boolean().optional(),
 })
 
@@ -18,7 +18,7 @@ export const FabricSecretsList = pikkuSessionlessFunc({
     'List the secrets set on a stage, by name. Values are sealed to the stage and never leave it.',
   input: FabricSecretsListInput,
   output: FabricSecretsListOutput,
-  func: async (_services, { branch, json }) => {
+  func: async (_services, { branch: requested, json }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -28,7 +28,11 @@ export const FabricSecretsList = pikkuSessionlessFunc({
       )
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const stageId = await resolveStageId(rpc, ctx.projectId, branch)
+    const { stageId, branch } = await resolveStage(
+      rpc,
+      ctx.projectId,
+      requested
+    )
     const result = await rpc.invoke('listStageSecretNames', { stageId })
 
     if (json) {
