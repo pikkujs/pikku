@@ -16,6 +16,7 @@ import {
   isApprovable,
   readDeploymentStatus,
   readWorkers,
+  reconcileDeployedRef,
   stateLabel,
   waitForDeployment,
   type BlockedReason,
@@ -234,7 +235,19 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       deploymentId = created.deploymentId
       stageId = created.stageId
       runId = created.runId
-      emit({ event: 'created', deploymentId, branch, ref: resolved })
+
+      // Read the commit back off the deployment rather than repeating the one
+      // that was asked for: `deployByStageKind` attaches to an already-parked
+      // plan for the branch instead of cutting a new one, and that plan is
+      // pinned to whatever commit it was created at.
+      ref = reconcileDeployedRef({
+        requested: resolved,
+        actual:
+          (await describeDeployment(rpc, projectId, deploymentId))?.gitSha ??
+          null,
+        deploymentId,
+      })
+      emit({ event: 'created', deploymentId, branch, ref })
     }
 
     const base = {

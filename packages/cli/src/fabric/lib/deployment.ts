@@ -16,10 +16,7 @@ const FAILED = new Set([
 ])
 
 export type BlockedReason =
-  | 'awaiting_approval'
-  | 'needs_config'
-  | 'needs_attention'
-  | 'unknown'
+  'awaiting_approval' | 'needs_config' | 'needs_attention' | 'unknown'
 
 export type StatusClass = 'in_flight' | 'succeeded' | 'failed' | 'blocked'
 
@@ -46,7 +43,10 @@ export function isApprovable(reason: BlockedReason): boolean {
   return reason === 'awaiting_approval'
 }
 
-export function stateLabel(status: string, statusReason: string | null): string {
+export function stateLabel(
+  status: string,
+  statusReason: string | null
+): string {
   if (status === 'suspended') {
     if (statusReason === 'needs_attention') return 'needs attention'
     if (statusReason === 'needs_config') return 'config required'
@@ -445,4 +445,49 @@ export async function waitForDeployment({
     delay = Math.min(delay * 1.5, 10_000)
     latest = await readDeploymentStatus(rpc, deploymentId)
   }
+}
+
+/**
+ * The sha a deployment actually holds, or an error naming the disagreement.
+ *
+ * `deployByStageKind` does not always cut a new deployment: with one already
+ * parked at `suspended` for the branch, it attaches to that plan — pinned to
+ * whatever commit it was created at — and returns its id. The CLI then
+ * reported the sha it had been *asked* for, so `apply` printed
+ *
+ *   status: suspended   sha: 599439e6
+ *
+ * for a deployment `deploy list` showed pinned to `5bfe84c`, five commits
+ * above it. Passing `--ref` explicitly changed nothing; the argument was
+ * echoed back. Nothing shipped only because that plan timed out.
+ *
+ * The blast radius is bounded — a second command still publishes, and only a
+ * commit already on the branch can go out — but the failure mode is a rollback
+ * that silently does not roll back, and a rollback is reached for precisely
+ * when production is already wrong. So whatever `apply` reports as the ref is
+ * read from the deployment, and a disagreement is an error rather than a line
+ * of output nobody can tell from the truth.
+ */
+export function reconcileDeployedRef({
+  requested,
+  actual,
+  deploymentId,
+}: {
+  requested: string
+  actual: string | null
+  deploymentId: string
+}): string {
+  if (!actual) return requested
+  if (actual === requested) return actual
+
+  const short = (sha: string) => sha.slice(0, 8)
+  throw new Error(
+    [
+      `Refusing to continue: deployment ${deploymentId} is pinned to ${short(actual)}, not the ${short(requested)} you asked for.`,
+      'A deployment already parked for this branch was attached to rather than a new one being cut,',
+      'so continuing would deploy a different commit than the one named.',
+      `Inspect it with \`pikku fabric deploy list --json\`, then either publish it deliberately with`,
+      `\`pikku fabric deploy apply --deployment-id ${deploymentId} --sync\` or dismiss it and re-run.`,
+    ].join('\n')
+  )
 }
