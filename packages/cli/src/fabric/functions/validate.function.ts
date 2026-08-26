@@ -15,6 +15,7 @@ import { runTypeIdentityChecks } from '../../functions/validate/type-identity-ch
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
 import { isGitRepo, isTracked } from '../lib/git.js'
 import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
+import { blankScenarioMeta } from '../lib/blank-scenario-meta.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -79,17 +80,6 @@ async function listSourceFiles(dir: string): Promise<string[]> {
     return []
   }
 }
-
-/**
- * Blanks comment bodies so a raw-text scan cannot read prose as code. Prose in a
- * scenario description ("Converted from the Gherkin scenario...") otherwise
- * matches the import scanner's `from "..."` and reports a package that is really
- * a sentence.
- */
-const stripCommentText = (text: string): string =>
-  text
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, (_m, p1: string) => p1)
 
 // Heavy/generated dirs pruned during a source walk.
 const SKIP_WALK_DIRS = new Set([
@@ -1908,7 +1898,10 @@ export async function runValidate(
         if (!/\.(steps|scenario)\.tsx?$/.test(file)) continue
         const text = await readTextSafe(file)
         if (!text) continue
-        const code = stripCommentText(text)
+        // Comments carry the copy they explain; a feature's own name and
+        // description are Console meta authored in the project's locale, not
+        // app copy. Neither reaches the DOM, so neither is a selector.
+        const code = blankScenarioMeta(blankComments(text))
         const hits: string[] = []
         for (const match of code.matchAll(STRING_LITERAL)) {
           const literal = match[2]

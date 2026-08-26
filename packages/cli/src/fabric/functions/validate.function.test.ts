@@ -2803,6 +2803,74 @@ describe('scenario steps vs the message catalogue (live validate.function)', () 
     }
   })
 
+  const writeScenario = async (root: string, source: string) => {
+    const dir = join(root, 'packages', 'functions', 'tests', 'scenarios')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'downloads.scenario.ts'), source, 'utf8')
+  }
+
+  /**
+   * A feature's `name`/`description` are Console meta, authored in the
+   * project's locale and never rendered by the app. Flagging them made the two
+   * rules disagree: moving a `pikkuFeature` into a `*.scenario.ts` — the
+   * documented fix for the file-naming rule — is what put it in front of this
+   * one, and its advice would tie the Console's language to the product's.
+   */
+  test("a feature's own name is meta, not app copy", async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, {
+        nav__downloads: 'Downloads',
+        downloads__title: 'Downloads',
+      })
+      await writeScenario(
+        tmp,
+        [
+          'export const downloadsFeature = pikkuFeature({',
+          "  name: 'Downloads',",
+          "  description: 'Downloads',",
+          '})',
+          '',
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a selector nested inside a step is still caught', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { common_save: 'Speichern' })
+      await writeScenario(
+        tmp,
+        [
+          'export const step = pikkuScenarioStep({',
+          "  name: 'save the form',",
+          '  run: async ({ page }) => {',
+          "    await page.getByRole('button', { name: 'Speichern' }).click()",
+          '  },',
+          '})',
+          '',
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.match(finding!.fixHint, /common_save/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('a string the catalogue does not own is left alone', async () => {
     const tmp = await makeTmp()
     try {
