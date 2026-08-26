@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2856 observable things**: 901 exported names, plus
-1955 members on the classes and interfaces among them, reachable
+**2857 observable things**: 901 exported names, plus
+1956 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 141 | 115 | 413 |
 | `./virtual-user` | 66 | 66 | 210 |
-| `./scenario` | 45 | 45 | 133 |
+| `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
@@ -1514,7 +1514,7 @@ export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
 
 ```ts
 addFeature: (featureId: string, feature: CoreFeature, packageName?: string | null) => void
-composeStepProse: ({ phase, description, template, input, actor, keywordWidth, }: { phase: ScenarioStepPhase; description: string; template?: string | undefined; input?: unknown; actor?: string | undefined; keywordWidth?: number | undefined; }) => string
+composeStepProse: ({ phase, description, template, input, actor, actorRole, continuesPhase, continuesActor, keywordWidth, }: { phase: ScenarioStepPhase; description: string; template?: string | undefined; input?: unknown; actor?: string | undefined; actorRole?: string | undefined; continuesPhase?: boolean | undefined; continuesActor?: boolean | undefined; keywordWidth?: number | undefined; }) => string
 export type CoreFeature = {
   name: string
   description?: string
@@ -1721,6 +1721,7 @@ export interface ScenarioStepOptions {
 export type ScenarioStepPhase = 'given' | 'when' | 'then'
 export interface ScenarioStepRow {
   sentence: string
+  sentenceWithRole?: string
   status: string
   durationMs?: number
   error?: string

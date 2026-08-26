@@ -80,6 +80,120 @@ describe('composeStepProse', () => {
   })
 })
 
+describe('composeStepProse with an actor role', () => {
+  test('the role renders as an apposition after the actor', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'signs in',
+        actor: 'yasser',
+        actorRole: 'founder',
+      }),
+      'Given yasser (the founder) signs in'
+    )
+  })
+
+  test('no role renders exactly as it did before', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'signs in',
+        actor: 'yasser',
+      }),
+      'Given yasser signs in'
+    )
+  })
+
+  test('a role without an actor has nothing to qualify, so it is dropped', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'then',
+        description: 'the receipt totals 4.50',
+        actorRole: 'founder',
+      }),
+      'Then the receipt totals 4.50'
+    )
+  })
+
+  test('the role sits inside the padded sentence, not the keyword column', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'opens /app',
+        actor: 'nadia',
+        actorRole: 'head of ops',
+        keywordWidth: 5,
+      }),
+      'When  nadia (the head of ops) opens /app'
+    )
+  })
+})
+
+describe('composeStepProse continuations', () => {
+  test('a repeated phase reads as And', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'is invited',
+        actor: 'nadia',
+        continuesPhase: true,
+      }),
+      'And nadia is invited'
+    )
+  })
+
+  test('the same actor continuing drops the repeated subject', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'sees the audit log',
+        actor: 'yasser',
+        continuesPhase: true,
+        continuesActor: true,
+      }),
+      'And sees the audit log'
+    )
+  })
+
+  test('a new actor keeps their name even under And', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'is invited',
+        actor: 'nadia',
+        continuesPhase: true,
+        continuesActor: false,
+      }),
+      'And nadia is invited'
+    )
+  })
+
+  test('the same actor across a phase change keeps the subject', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'opens the dashboard',
+        actor: 'yasser',
+        continuesActor: true,
+      }),
+      'When yasser opens the dashboard'
+    )
+  })
+
+  test('an introduction is never dropped by a continuation', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'is invited',
+        actor: 'nadia',
+        actorRole: 'reviewer',
+        continuesPhase: true,
+      }),
+      'And nadia (the reviewer) is invited'
+    )
+  })
+})
+
 describe('composeStepProse basics', () => {
   test('renders the gherkin keyword, the actor and the description', () => {
     assert.equal(

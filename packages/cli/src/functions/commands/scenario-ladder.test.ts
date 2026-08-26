@@ -245,6 +245,162 @@ describe('scenarioSurfaceCoverage', () => {
   })
 })
 
+const personas = (overrides: Record<string, unknown> = {}) =>
+  [
+    {
+      id: 'shopper',
+      name: 'Shopper',
+      roles: ['customer'],
+      goals: [],
+      tags: [],
+      runnable: true,
+      ...overrides,
+    },
+  ] as any
+
+describe('an actor introduces themselves once', () => {
+  const rows = (personaList: any) =>
+    scenarioStepRows(
+      [
+        { stepName: 'buys an apple', status: 'succeeded' },
+        { stepName: 'checks out', status: 'succeeded' },
+        { stepName: 'sees a receipt', status: 'succeeded' },
+      ],
+      collectScenarioStepProse(
+        workflowMeta() as any,
+        functionsMeta() as any,
+        personaList
+      )
+    )
+
+  test('only the first step carries the role', () => {
+    const [first, second, third] = rows(personas({ jobTitle: 'founder' }))
+    assert.equal(
+      first!.sentenceWithRole?.trim(),
+      'Given shopper (the founder) buys an apple'
+    )
+    assert.equal(second!.sentenceWithRole, undefined)
+    assert.equal(third!.sentenceWithRole, undefined)
+  })
+
+  test('the plain sentence never carries the role, so a reader can drop it', () => {
+    const [first] = rows(personas({ jobTitle: 'founder' }))
+    assert.equal(first!.sentence.trim(), 'Given shopper buys an apple')
+  })
+
+  test('a job title beats the authorisation roles', () => {
+    const [first] = rows(personas({ jobTitle: 'founder', roles: ['admin'] }))
+    assert.ok(first!.sentenceWithRole?.includes('(the founder)'))
+  })
+
+  test('a role is not a job title, so it introduces nobody', () => {
+    const [first] = rows(personas({ roles: ['reviewer'] }))
+    assert.equal(first!.sentenceWithRole, undefined)
+  })
+
+  test('no personas at all leaves every row as it was', () => {
+    for (const row of rows([])) {
+      assert.equal(row.sentenceWithRole, undefined)
+    }
+  })
+
+  test('the ladder shows the introduction and pads to it', () => {
+    const lines = buildStepLadder(rows(personas({ jobTitle: 'founder' })))
+    assert.ok(
+      lines[0]!.includes('shopper (the founder) buys an apple'),
+      lines[0]
+    )
+    assert.ok(lines[1]!.includes('shopper completes the checkout'), lines[1])
+    assert.ok(!lines[1]!.includes('(the founder)'), lines[1])
+    const widths = new Set(lines.map((line) => line.indexOf('  ✓')))
+    assert.equal(widths.size, 1, 'every glyph lands in the same column')
+  })
+})
+
+describe('a run reads as one paragraph', () => {
+  const journeyMeta = {
+    steps: [
+      {
+        type: 'scenarioStep',
+        stepName: 'signs in',
+        stepFunc: 'a',
+        phase: 'given',
+        actor: 'yasser',
+      },
+      {
+        type: 'scenarioStep',
+        stepName: 'opens the dashboard',
+        stepFunc: 'b',
+        phase: 'when',
+        actor: 'yasser',
+      },
+      {
+        type: 'scenarioStep',
+        stepName: 'sees the audit log',
+        stepFunc: 'c',
+        phase: 'when',
+        actor: 'yasser',
+      },
+      {
+        type: 'scenarioStep',
+        stepName: 'reviews the invite',
+        stepFunc: 'd',
+        phase: 'when',
+        actor: 'nadia',
+      },
+    ],
+  }
+  const journeyFns = {
+    a: { pikkuFuncId: 'a' },
+    b: { pikkuFuncId: 'b' },
+    c: { pikkuFuncId: 'c' },
+    d: { pikkuFuncId: 'd' },
+  }
+  const cast = [
+    {
+      id: 'yasser',
+      name: 'Yasser',
+      jobTitle: 'founder',
+      roles: [],
+      goals: [],
+      tags: [],
+      runnable: true,
+    },
+    {
+      id: 'nadia',
+      name: 'Nadia',
+      roles: ['reviewer'],
+      goals: [],
+      tags: [],
+      runnable: true,
+    },
+  ]
+  const lines = () =>
+    buildStepLadder(
+      scenarioStepRows(
+        journeyMeta.steps.map((step) => ({
+          stepName: step.stepName,
+          status: 'succeeded',
+          durationMs: 1,
+        })) as any,
+        collectScenarioStepProse(
+          journeyMeta as any,
+          journeyFns as any,
+          cast as any
+        )
+      )
+    ).map((line) => line.replace(/\s+✓.*$/, '').trim())
+
+  test('the actor is introduced, then carried, then dropped', () => {
+    assert.deepEqual(lines(), [
+      'Given yasser (the founder) signs in',
+      'When  yasser opens the dashboard',
+      'And   sees the audit log',
+      'And   nadia reviews the invite',
+    ])
+  })
+})
+
 describe('buildStepLadder', () => {
   const prose = () =>
     collectScenarioStepProse(workflowMeta() as any, functionsMeta() as any)
@@ -289,7 +445,9 @@ describe('buildStepLadder', () => {
     )
 
     assert.equal(lines.length, 2)
-    assert.match(lines[1]!, /When {2}shopper completes the checkout/)
+    // The same step twice is a continuation, so the second reads as `And`.
+    assert.match(lines[0]!, /When {2}shopper completes the checkout/)
+    assert.match(lines[1]!, /And {3}completes the checkout/)
   })
 
   test('a step with no recorded prose still appears, by its name', () => {
@@ -425,7 +583,7 @@ describe('step templates', () => {
     )
 
     assert.match(lines[0]!, /Then {2}shopper sees a receipt for an apple/)
-    assert.match(lines[1]!, /Then {2}shopper sees a receipt for a pear/)
+    assert.match(lines[1]!, /And {3}sees a receipt for a pear/)
   })
 
   test('the step name still wins over the function fallback', () => {
