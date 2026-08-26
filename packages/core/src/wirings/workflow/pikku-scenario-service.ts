@@ -6,7 +6,11 @@ import {
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import { closeWireServices } from '../../utils.js'
-import { PikkuError, addError } from '../../errors/error-handler.js'
+import {
+  PikkuError,
+  addError,
+  declareErrorNames,
+} from '../../errors/error-handler.js'
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { runScheduledTask } from '../scheduler/scheduler-runner.js'
 import { WorkflowStepNameNotString } from './workflow-errors.js'
@@ -1011,3 +1015,17 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     )
   }
 }
+
+/**
+ * The wire name of every error above, as string literals the deploy bundle's
+ * minifier cannot rewrite — `error.name` is part of the contract a client
+ * reads, so it must not be the constructor identifier.
+ */
+declareErrorNames({
+  ScenarioHookError,
+  ScenarioWitnessDisagreement,
+  ScenarioBrowserUnavailable,
+  ScenarioActorRequired,
+  ScenarioNoSurfaceBinding,
+  ScenarioNoWitness,
+})

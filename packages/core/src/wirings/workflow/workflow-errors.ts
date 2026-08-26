@@ -1,4 +1,8 @@
-import { PikkuError, addError } from '../../errors/error-handler.js'
+import {
+  PikkuError,
+  addError,
+  declareErrorNames,
+} from '../../errors/error-handler.js'
 import type { ApprovalOutcome } from './workflow.types.js'
 
 /**
@@ -130,3 +134,17 @@ export class WorkflowStepNameNotString extends Error {
     super(`Workflow step name must be a string. Received: ${typeof stepName}`)
   }
 }
+
+/**
+ * The wire name of every error above, as string literals the deploy bundle's
+ * minifier cannot rewrite — `error.name` is part of the contract a client
+ * reads, so it must not be the constructor identifier.
+ */
+declareErrorNames({
+  WorkflowNotFoundError,
+  WorkflowRunNotFoundError,
+  WorkflowRunFailedError,
+  WorkflowRunCancelledError,
+  WorkflowApprovalResolvedError,
+  WorkflowStepFunctionMismatchError,
+})
