@@ -1853,6 +1853,29 @@ export async function runValidate(
       // happens to read like the catalogue's `unit_kg` label for a form suffix —
       // rewriting it to a message lookup would bind a stored value to UI copy.
       const PROPERTY_KEY = /([A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*$/
+      // The innermost call whose argument list `index` sits in. Walks back
+      // balancing brackets, so in `expect(await page.getByText('Save'), ...)`
+      // the literal belongs to `getByText`, which is a locator and is still
+      // scanned.
+      const enclosingCall = (code: string, index: number): string | null => {
+        let depth = 0
+        for (let i = index - 1; i >= 0; i--) {
+          const ch = code[i]!
+          if (ch === ')' || ch === ']' || ch === '}') depth++
+          else if (ch === '(' || ch === '[' || ch === '{') {
+            if (depth > 0) {
+              depth--
+              continue
+            }
+            if (ch !== '(') return null
+            return (
+              /([A-Za-z_$][A-Za-z0-9_$]*)\s*$/.exec(code.slice(0, i))?.[1] ??
+              null
+            )
+          }
+        }
+        return null
+      }
       const UI_TEXT_KEYS = new Set([
         'alt',
         'button',
@@ -1879,6 +1902,11 @@ export async function runValidate(
           if (!literal) continue
           const keys = keysByValue.get(literal)
           if (!keys) continue
+          // `expect(item.unit, 'kg')` asserts on a value the RPC returned,
+          // not on anything the browser rendered. Reading it from the
+          // catalogue would bind a stored value to UI copy, and the assertion
+          // would then pass against whatever the label happened to say.
+          if (enclosingCall(code, match.index) === 'expect') continue
           const property = PROPERTY_KEY.exec(code.slice(0, match.index))
           if (property && !UI_TEXT_KEYS.has(property[1]!)) continue
           hits.push(`"${literal}" → ${keys.join(' | ')}`)

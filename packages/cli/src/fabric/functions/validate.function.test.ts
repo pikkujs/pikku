@@ -2854,6 +2854,41 @@ describe('scenario steps vs the message catalogue (live validate.function)', () 
     }
   })
 
+  test('a value asserted with expect is not copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { unit_kg: 'kg' })
+      await writeSteps(tmp, `expect(item.unit, 'kg', 'the item unit')\n`)
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a locator nested inside expect is still copy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { rooms_create_room: 'Create Room' })
+      await writeSteps(
+        tmp,
+        `expect(await page.getByText('Create Room').count(), 1)\n`
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.match(finding!.fixHint, /rooms_create_room/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('a project with no inlang app is not scanned', async () => {
     const tmp = await makeTmp()
     try {
