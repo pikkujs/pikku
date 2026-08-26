@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2857 observable things**: 901 exported names, plus
+**2860 observable things**: 904 exported names, plus
 1956 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
@@ -32,8 +32,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./classification` | 21 | 21 | 13 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
+| `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
-| `./middleware` | 24 | 22 | 0 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
@@ -414,6 +414,7 @@ addGlobalMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(middleware: C
 addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], packageName?: string | null) => CorePermissionGroup | CorePikkuPermission[]
 addMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
 addTagMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
+analyticsOrigin: CorePikkuMiddlewareFactory<{ origins?: string[] | ((services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => string[] | Promise<string[]>) | undefined; }>
 authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }>
 authBearer: CorePikkuMiddlewareFactory<{ token?: { value: string; userSession: CoreUserSession; } | { secretId: string; userSession: CoreUserSession; } | undefined; }>
 authCookie: CorePikkuMiddlewareFactory<{ name: string; options: SerializeOptions; expiresIn: RelativeTimeInput; }>
@@ -447,6 +448,7 @@ export type CorePikkuMiddlewareGroup<
   | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
 >
 cors: CorePikkuMiddlewareFactory<{ origin?: string | true | string[] | undefined; methods?: string[] | undefined; headers?: string[] | undefined; exposeHeaders?: string[] | undefined; credentials?: boolean | undefined; maxAge?: number | undefined; }>
+isAllowedOrigin: (requestOrigin: string | null, hostOrigin: string | null, configuredOrigins: string[]) => boolean
 export type MiddlewareMetadata =
   | {
       type: 'http'
@@ -481,6 +483,7 @@ pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?
 runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
 telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
 telemetryOuter: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
+toOrigin: (value: string | null | undefined) => string | null
 ```
 
 ## ./function

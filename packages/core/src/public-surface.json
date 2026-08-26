@@ -6,10 +6,12 @@
     "addGlobalPermission",
     "addMiddleware",
     "addTagMiddleware",
+    "analyticsOrigin",
     "authAPIKey",
     "authBearer",
     "authCookie",
     "cors",
+    "isAllowedOrigin",
     "pikkuAgentMiddleware",
     "pikkuChannelMiddleware",
     "pikkuChannelMiddlewareFactory",
@@ -18,7 +20,8 @@
     "pikkuRemoteAuthMiddleware",
     "runMiddleware",
     "telemetryInner",
-    "telemetryOuter"
+    "telemetryOuter",
+    "toOrigin"
   ],
   "./function": [
     "AbandonedError",
