@@ -1,6 +1,7 @@
 /**
- * Verifies PKU953 end-to-end through the real CLI: a vault secret that is
- * revealed and then written to a sink is reported.
+ * Verifies PKU953 and PKU954 end-to-end through the real CLI: a vault secret
+ * that is revealed and then written to a sink is reported, and so is a PII
+ * column written to a sink that leaves the operator's control.
  *
  * This is the half of the `SecretValue` design the type system cannot cover.
  * `SecretValue` is nominally typed, so it never reaches a sink by accident —
@@ -95,7 +96,7 @@ export const createWireServices: CreateWireServices<
 `
 
 async function createProject(functionSource: string): Promise<string> {
-  const dir = await mkdtemp(join(TMP_PARENT, '.tmp-secret-sink-'))
+  const dir = await mkdtemp(join(TMP_PARENT, '.tmp-classified-sink-'))
   await writeFile(
     join(dir, 'pikku.config.json'),
     JSON.stringify({
@@ -216,6 +217,111 @@ describe('PKU953 — a revealed secret written to a sink', () => {
       })
       const output = (res.stdout ?? '') + (res.stderr ?? '')
       assert.doesNotMatch(output, /PKU953/)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+// A PII column read out of the database and logged. Nothing here is a secret —
+// `email` is an ordinary string that happens to name a person — so only the
+// classification brand distinguishes it from any other field.
+const PII_LOG_FUNC = `
+import { pikkuSessionlessFunc } from '@pikku/core'
+import type { Pii } from '@pikku/core/classification'
+import type { Services } from './services.js'
+
+declare function loadShopper(): Promise<{
+  shopperId: string
+  email: Pii<string>
+}>
+
+export const greetShopper = pikkuSessionlessFunc({
+  func: async ({ logger }: Services) => {
+    const shopper = await loadShopper()
+    logger.info({ msg: 'greeting shopper', email: shopper.email })
+    return { ok: true }
+  }
+})
+`
+
+// The same column written to the audit, which lives in the operator's own
+// database and is usually the legal requirement rather than a breach of it,
+// alongside a log line carrying only the id. The scan must stay quiet.
+const PII_AUDIT_FUNC = `
+import { pikkuSessionlessFunc } from '@pikku/core'
+import type { Pii } from '@pikku/core/classification'
+import type { Services } from './services.js'
+
+declare function loadShopper(): Promise<{
+  shopperId: string
+  email: Pii<string>
+}>
+
+export const recordView = pikkuSessionlessFunc({
+  func: async ({ logger, audit }: Services) => {
+    const shopper = await loadShopper()
+    await audit?.audit({
+      type: 'shopper.viewed',
+      source: 'explicit',
+      occurredAt: new Date().toISOString(),
+      input: { email: shopper.email },
+    })
+    logger.info('shopper viewed', { shopperId: shopper.shopperId })
+    return { ok: true }
+  }
+})
+`
+
+describe('PKU954 — personal data written to a sink', () => {
+  test('is reported when it is logged', async () => {
+    const dir = await createProject(PII_LOG_FUNC)
+    try {
+      const { exitCode, output } = runPikkuAll(dir)
+      assert.match(output, /PKU954/)
+      assert.match(output, /logger\.info/)
+      assert.doesNotMatch(output, /PKU953/)
+      assert.equal(
+        exitCode,
+        0,
+        'the finding is an error, not a critical — `pikku all` still exits 0'
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('blocks the build under --fail-on-error', async () => {
+    const dir = await createProject(PII_LOG_FUNC)
+    try {
+      const { exitCode, output } = runPikkuAll(dir, ['--fail-on-error'])
+      assert.match(output, /PKU954/)
+      assert.notEqual(exitCode, 0)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("stays quiet for an audit, which stays in the operator's own database", async () => {
+    const dir = await createProject(PII_AUDIT_FUNC)
+    try {
+      const { output } = runPikkuAll(dir)
+      assert.doesNotMatch(output, /PKU954/)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('does not run without --security', async () => {
+    const dir = await createProject(PII_LOG_FUNC)
+    try {
+      const res = spawnSync('node', [PIKKU_BIN, 'all'], {
+        cwd: dir,
+        timeout: 60_000,
+        encoding: 'utf8',
+      })
+      const output = (res.stdout ?? '') + (res.stderr ?? '')
+      assert.doesNotMatch(output, /PKU954/)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
