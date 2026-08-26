@@ -18,22 +18,35 @@ const loadTransform = async (): Promise<EsbuildTransform> => {
   return transformSync
 }
 
+/** The outcome of one run. A failure carries its error rather than collapsing
+ *  to `null`: the caller keeps serving the previously-loaded code, so unless the
+ *  reason travels with the failure the running process silently disagrees with
+ *  the file on disk and nothing anywhere says why. */
+export type PikkuModuleRunResult =
+  { ok: true; exports: Record<string, unknown> } | { ok: false; error: Error }
+
 export interface PikkuModuleRunner {
   /** Run a user module by absolute path. Repeated runs of one path overwrite a
-   *  single registry slot. Returns `null` on failure so the caller can keep the
-   *  previously-loaded code. */
-  run: (absPath: string) => Promise<Record<string, unknown> | null>
+   *  single registry slot. Failure is returned, not thrown, so the caller can
+   *  keep the previously-loaded code — and the discriminant makes that case
+   *  impossible to read past by accident. */
+  run: (absPath: string) => Promise<PikkuModuleRunResult>
   evict: (absPath: string) => void
   clear: () => void
   readonly size: number
 }
 
+/** esbuild states pikku's one documented reload limitation only in the text of
+ *  its transform error. Matching it is worth the fragility: the developer's file
+ *  is correct, and no amount of re-reading it will reveal that the reloader —
+ *  not the file — is what cannot cope. */
+export const isTopLevelAwaitLimitation = (error: Error): boolean =>
+  /top-level await/i.test(error.message)
+
 export const createModuleRunner = (): PikkuModuleRunner => {
   const registry = new Map<string, Record<string, unknown>>()
 
-  const run = async (
-    filePath: string
-  ): Promise<Record<string, unknown> | null> => {
+  const run = async (filePath: string): Promise<PikkuModuleRunResult> => {
     const absPath = resolve(filePath)
     try {
       const transform = await loadTransform()
@@ -55,11 +68,20 @@ export const createModuleRunner = (): PikkuModuleRunner => {
       fn(require, moduleObj.exports, moduleObj, absPath, dirname(absPath))
 
       registry.set(absPath, moduleObj.exports)
-      return moduleObj.exports
-    } catch {
+      return { ok: true, exports: moduleObj.exports }
+    } catch (thrown) {
       // A bad edit, or the one known limitation: a file using top-level
-      // `await`, which cannot be emitted in `cjs` form.
-      return null
+      // `await`, which cannot be emitted in `cjs` form. Normalised to an
+      // `Error` so the caller always has a message and a stack to print
+      // without re-deriving them; a non-`Error` throw keeps its original value
+      // as the `cause`.
+      return {
+        ok: false,
+        error:
+          thrown instanceof Error
+            ? thrown
+            : new Error(String(thrown), { cause: thrown }),
+      }
     }
   }
 

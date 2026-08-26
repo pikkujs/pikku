@@ -215,6 +215,48 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     assert.deepEqual(await func.func({} as any, {}, {} as any), {
       working: true,
     })
+
+    // Serving the old code is only safe if the developer is told why; without
+    // the reason the sole symptom is a function that ignores the file on disk.
+    const failureLog = mockLogger
+      .getLogs()
+      .find((l) => l.message.includes('Failed to import'))
+    assert.ok(failureLog, 'Should log the failed import')
+    assert.ok(
+      failureLog!.message.includes('keeping old code'),
+      'Should say the old code is still being served'
+    )
+    assert.match(failureLog!.message, /badFunc\.js/)
+  })
+
+  test('should name the top-level await limitation when a reload hits it', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
+    await writeFile(join(tmpDir, 'tlaFunc.ts'), '// initial')
+
+    reloader = await pikkuDevReloader({
+      srcDirectories: [tmpDir],
+      logger: mockLogger,
+      pikkuDir: tmpDir,
+    })
+
+    await writeFile(
+      join(tmpDir, 'tlaFunc.ts'),
+      `const config = await Promise.resolve({ ok: true })
+       export const tlaFunc = { func: async () => config }
+       // trigger ${Date.now()}`
+    )
+
+    await wait(300)
+
+    const failureLog = mockLogger
+      .getLogs()
+      .find((l) => l.message.includes('Failed to import'))
+    assert.ok(failureLog, 'Should log the failed import')
+    // The file is valid TypeScript; pointing at pikku's own `cjs` emit is the
+    // difference between a two-minute fix and an afternoon.
+    assert.match(failureLog!.message, /top-level `?await`?/i)
+    assert.match(failureLog!.message, /pikku limitation/i)
   })
 
   test('should ignore non-ts files, test files, and gen files', async (t) => {

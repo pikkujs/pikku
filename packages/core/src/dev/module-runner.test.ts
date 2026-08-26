@@ -8,7 +8,10 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
 
-import { createModuleRunner } from './module-runner.js'
+import {
+  createModuleRunner,
+  isTopLevelAwaitLimitation,
+} from './module-runner.js'
 
 // A forced-GC hook without launching the process with a flag: on Bun use the
 // native collector; on Node flip --expose-gc on just long enough to grab `gc`.
@@ -56,9 +59,10 @@ describe('createModuleRunner', { concurrency: false }, () => {
        export const createTodo = { func: async (_s: any, d: Todo) => ({ id: d.id }) }`
     )
 
-    const mod = await runner.run(file)
-    assert.ok(mod)
-    const createTodo = mod!.createTodo as {
+    const result = await runner.run(file)
+    assert.equal(result.ok, true)
+    const createTodo = (result as { exports: Record<string, unknown> }).exports
+      .createTodo as {
       func: (...a: any[]) => Promise<any>
     }
     assert.equal(typeof createTodo.func, 'function')
@@ -83,8 +87,9 @@ describe('createModuleRunner', { concurrency: false }, () => {
        wire('createTodo', createTodo)`
     )
 
-    const mod = await runner.run(userFile)
-    assert.ok(mod)
+    const result = await runner.run(userFile)
+    assert.equal(result.ok, true)
+    const mod = (result as { exports: Record<string, unknown> }).exports
 
     // Read the dependency through the same resolver the runner uses, so we
     // observe the exact instance the user module's `import` bound to (using a
@@ -103,26 +108,64 @@ describe('createModuleRunner', { concurrency: false }, () => {
 
     await writeFile(file, `export const value = { func: async () => 'v1' }`)
     const first = await runner.run(file)
-    assert.equal(await (first!.value as any).func(), 'v1')
+    assert.equal(first.ok, true)
+    assert.equal(await ((first as any).exports.value as any).func(), 'v1')
 
     await writeFile(file, `export const value = { func: async () => 'v2' }`)
     const second = await runner.run(file)
-    assert.equal(await (second!.value as any).func(), 'v2')
+    assert.equal(second.ok, true)
+    assert.equal(await ((second as any).exports.value as any).func(), 'v2')
 
     // Stable key: many reloads of one path never grow the registry.
     for (let i = 0; i < 20; i++) await runner.run(file)
     assert.equal(runner.size, 1)
   })
 
-  test('returns null on a bad edit so the caller keeps old code', async () => {
+  test('reports a bad edit with its reason so the caller can say why', async () => {
     const runner = createModuleRunner()
     const file = join(tmpDir, 'broken.ts')
     await writeFile(
       file,
       `export const oops = { func: async () => ( } ] syntax`
     )
-    const mod = await runner.run(file)
-    assert.equal(mod, null)
+    const result = await runner.run(file)
+    assert.equal(result.ok, false)
+    // The caller keeps serving the old code, so this error is the only thing
+    // standing between the developer and an unexplained stale response.
+    const { error } = result as { error: Error }
+    assert.ok(error instanceof Error)
+    assert.match(error.message, /broken\.ts/)
+    assert.equal(isTopLevelAwaitLimitation(error), false)
+  })
+
+  test('names the top-level await limitation as such', async () => {
+    const runner = createModuleRunner()
+    const file = join(tmpDir, 'tla.ts')
+    await writeFile(
+      file,
+      `const config = await Promise.resolve({ ok: true })
+       export const load = { func: async () => config }`
+    )
+    const result = await runner.run(file)
+    assert.equal(result.ok, false)
+    // Nothing is wrong with this file — the `cjs` emit is what cannot take it,
+    // and the caller has to be able to tell the developer that.
+    assert.equal(
+      isTopLevelAwaitLimitation((result as { error: Error }).error),
+      true
+    )
+  })
+
+  test('a thrown non-Error still arrives as an Error carrying its value', async () => {
+    const runner = createModuleRunner()
+    const file = join(tmpDir, 'throws-a-string.ts')
+    await writeFile(file, `throw 'boom'`)
+    const result = await runner.run(file)
+    assert.equal(result.ok, false)
+    const { error } = result as { error: Error }
+    assert.ok(error instanceof Error)
+    assert.equal(error.message, 'boom')
+    assert.equal((error as { cause?: unknown }).cause, 'boom')
   })
 
   test('editing and reimporting a module 200x does not leak memory', async () => {
@@ -153,8 +196,8 @@ describe('createModuleRunner', { concurrency: false }, () => {
 
     for (let i = 1; i <= 200; i++) {
       await write(i)
-      const mod = await runner.run(file)
-      assert.ok(mod)
+      const result = await runner.run(file)
+      assert.equal(result.ok, true)
     }
     gc()
     const growth = heapUsedMb() - baseline
