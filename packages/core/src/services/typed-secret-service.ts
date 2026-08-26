@@ -64,8 +64,11 @@ export class TypedSecretService<
   }
 
   async hasSecret(key: string): Promise<boolean> {
+    // `undefined` is cached for an optional secret that resolved absent, so a
+    // cache hit means "already looked", not "there is a value". Reporting true
+    // for it would let a read of an optional secret assert its own presence.
     if (this.cache.has(key)) {
-      return true
+      return this.cache.get(key) !== undefined
     }
     return this.secrets.hasSecret(key)
   }

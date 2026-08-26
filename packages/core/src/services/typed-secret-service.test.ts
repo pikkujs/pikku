@@ -137,7 +137,10 @@ describe('TypedSecretService', () => {
         optional: true,
       },
     })
-    assert.strictEqual(await service.getSecret('SCENARIO_ACTOR_SECRET'), undefined)
+    assert.strictEqual(
+      await service.getSecret('SCENARIO_ACTOR_SECRET'),
+      undefined
+    )
   })
 
   test('an optional secret that IS set resolves its value', async () => {
@@ -157,6 +160,28 @@ describe('TypedSecretService', () => {
       STRIPE_KEY: { name: 'stripe', displayName: 'Stripe' },
     })
     await assert.rejects(() => service.getSecret('STRIPE_KEY'))
+  })
+
+  test('a resolved-absent optional secret still reports hasSecret false', async () => {
+    // The cache stores `undefined` to remember the absence, so a `has(key)`
+    // test on it answers "we have looked", not "there is a value". Reading an
+    // optional secret must not turn its own absence into a claim it is set.
+    const service = new TypedSecretService(createMockSecrets(), {
+      OPTIONAL: { name: 'opt', displayName: 'Optional', optional: true },
+    })
+    assert.strictEqual(await service.getSecret('OPTIONAL'), undefined)
+    assert.strictEqual(await service.hasSecret('OPTIONAL'), false)
+  })
+
+  test('an optional secret set after an absent read is picked up', async () => {
+    const store = new Map<string, string>()
+    const service = new TypedSecretService(createMockSecrets(store), {
+      OPTIONAL: { name: 'opt', displayName: 'Optional', optional: true },
+    })
+    assert.strictEqual(await service.getSecret('OPTIONAL'), undefined)
+    await service.setSecret('OPTIONAL', 'later')
+    assert.strictEqual(await service.hasSecret('OPTIONAL'), true)
+    assert.strictEqual(await service.getSecret('OPTIONAL'), 'later')
   })
 
   test('an optional secret does not re-hit the store once resolved', async () => {
