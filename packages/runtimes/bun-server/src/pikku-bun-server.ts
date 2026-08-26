@@ -298,7 +298,7 @@ export class PikkuBunServer {
           channelHandler.registerOnClose(() => {
             ws.close()
           })
-          eventHub.onChannelOpened(channelHandler.channelId, ws)
+          eventHub.registerSocket(channelHandler.channelId, ws)
           channelHandler.open()
         },
 
