@@ -1,3 +1,67 @@
+## 0.12.123
+
+### Patch Changes
+
+- 9d2fbeb: Point a config-blocked deploy at the command that sets what is actually missing
+
+  A deploy blocked on `needs_config` printed one hint — "Set the values with
+  `pikku fabric secrets set <name>`" — whether what was missing was a secret or a
+  variable. Secrets and variables are set by two different commands, so anyone
+  blocked on a variable was sent to a command that refuses their value. The hint
+  now follows what is missing and names it, so the values can be found without
+  reading the deployment status by hand.
+
+- 2f94a0a: Stop `pikku all` failing on a diagnostic its own codegen went on to fix.
+
+  The run inspects several times, because generating the scaffold, the leaf indexes and the type files each changes the source graph the next inspection reads. Every full inspection re-runs every validator, so the newest pass is the complete one — but the logger accumulated diagnostics across all of them, and the build gate failed the run if any pass had ever recorded a critical.
+
+  A project whose system roles grant a scaffold-declared scope (`virtualUser:*`) therefore could not build from clean: the pass taken before the scaffold existed raised PKU124, the pass taken after was clean, and the run failed anyway. Same for PKU951 on a scaffold-declared secret.
+
+  Validation diagnostics are now scoped to the pass that recorded them, so a later pass supersedes an earlier one. Diagnostics reported outside a validation pass — by a generator or a command — are untouched, and a fault every pass reports still fails the run.
+
+- f1ccfe3: A step ladder reads as one paragraph, not a list of restatements
+
+  Every step prefixed its actor with `the `, named that actor again, and repeated
+  the phase keyword. A three-step run by one person said their name three times
+  and `Given` three times, only read as English when the persona key happened to
+  be a role noun, and never said who that person was — the fabric template's own
+  placeholder came out as `the nadia opens /app`.
+
+  ```
+  Given yasser (the founder) signs in
+  When  yasser opens the dashboard
+  And   sees the audit log
+  And   nadia reviews the invite
+  ```
+
+  The article is gone: the actor key is the subject verbatim, so a persona named
+  after a person reads as that person. A repeated phase reads as `And`, the way
+  Gherkin has always written it. A step that continues both the phase and the
+  actor drops the repeated subject, because English drops a repeated subject in a
+  compound predicate — it takes both, since eliding across a phase change gives
+  `When opens the dashboard`, and a pronoun rather than a name would give `they
+sees`, step templates being authored in the third person singular.
+
+  An actor is introduced once, by the persona's `jobTitle` — prose someone wrote
+  for a reader. `roles` is authorisation, so a persona whose only description is a
+  `reviewer` grant gets no introduction rather than one assembled out of grants.
+  A row carries `sentenceWithRole` alongside `sentence`, set only where an actor
+  is first named, so a renderer can offer the introduction as a toggle without
+  parsing a composed sentence back apart.
+
+  `{placeholder}` filling, the `#ordinal` lookup for repeated step names and an
+  actorless step reading as its description alone are all unchanged.
+
+- Updated dependencies [88629af]
+- Updated dependencies [88629af]
+- Updated dependencies [2f94a0a]
+- Updated dependencies [7eeff81]
+- Updated dependencies [f1ccfe3]
+  - @pikku/core@0.12.96
+  - @pikku/fetch@0.12.10
+  - @pikku/inspector@0.12.66
+  - @pikku/skills@0.12.19
+
 ## 0.12.122
 
 ### Patch Changes
