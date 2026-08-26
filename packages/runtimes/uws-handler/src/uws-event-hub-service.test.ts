@@ -59,6 +59,4 @@ describe('UWSEventHubService', () => {
   })
 })
 
-// The shared suite covers the SSE case: a handler-backed channel is not a uWS
-// socket, so it exercises the local fallback rather than socket.publish.
 defineEventHubServiceTests('UWSEventHubService', () => new UWSEventHubService())
