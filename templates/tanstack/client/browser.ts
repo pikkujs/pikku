@@ -57,12 +57,12 @@ const testWritingFromTheForm = async (page: Page) => {
 const testCompletingAndRemoving = async (page: Page) => {
   console.log('The list round-trips a completion and a delete')
 
-  await page.getByLabel(`Complete ${TYPED_TODO}`).check()
+  await page.getByLabel(`Complete ${TYPED_TODO}`).click()
   await page
     .getByLabel(`Complete ${TYPED_TODO}`)
     .and(page.locator(':disabled'))
     .waitFor({ state: 'visible' })
-  check('completing one sticks', true)
+  check('a completed todo comes back checked and no longer editable', true)
 
   await page.getByLabel(`Delete ${TYPED_TODO}`).click()
   await page.getByText(TYPED_TODO).waitFor({ state: 'detached' })
