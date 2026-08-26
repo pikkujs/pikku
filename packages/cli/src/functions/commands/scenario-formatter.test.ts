@@ -9,7 +9,7 @@ import {
 
 describe('formatScenarioFailure', () => {
   const failure = () => ({
-    sentence: 'When  the shopper completes the checkout',
+    sentence: 'When  shopper completes the checkout',
     message: 'Timed out waiting for selector button[title="Edit"]',
     stack:
       'Error: Timed out waiting for selector button[title="Edit"]\n' +
@@ -23,7 +23,7 @@ describe('formatScenarioFailure', () => {
       projectRoot: '/project',
     }).join('\n')
 
-    assert.match(block, /failed at: When {2}the shopper completes the checkout/)
+    assert.match(block, /failed at: When {2}shopper completes the checkout/)
     assert.match(block, /Timed out waiting for selector/)
     assert.match(block, /checkout\.steps\.ts:71:5/)
   })
@@ -135,7 +135,7 @@ describe('formatScenarioReport', () => {
     durationMs: 412,
     steps: [
       {
-        sentence: 'Given the shopper buys an apple',
+        sentence: 'Given shopper buys an apple',
         status: 'succeeded',
         durationMs: 12,
       },
@@ -149,13 +149,13 @@ describe('formatScenarioReport', () => {
     error: 'expected 1 item, got 0',
     steps: [
       {
-        sentence: 'Then  the shopper sees the receipt',
+        sentence: 'Then  shopper sees the receipt',
         status: 'failed',
         error: 'expected 1 item, got 0',
       },
     ],
     failure: {
-      sentence: 'Then  the shopper sees the receipt',
+      sentence: 'Then  shopper sees the receipt',
       message: 'expected 1 item, got 0',
     },
   })
@@ -172,7 +172,7 @@ describe('formatScenarioReport', () => {
     })
 
     assert.equal(lines[0]!.text, 'PASS a shopper checks out (412ms)')
-    assert.match(lines[1]!.text, /Given the shopper buys an apple {2,}✓/)
+    assert.match(lines[1]!.text, /Given shopper buys an apple {2,}✓/)
     assert.equal(lines.at(-1)!.text, "1/1 scenarios passed against 'local'")
     assert.ok(
       lines.every((line) => line.level === 'info'),
@@ -292,14 +292,14 @@ describe('formatScenarioReport with a multi-line error', () => {
           'locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator(…)',
         steps: [
           {
-            sentence: 'Then  the admin sees the addon',
+            sentence: 'Then  admin sees the addon',
             status: 'failed',
             error:
               'locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator(…)',
           },
         ],
         failure: {
-          sentence: 'Then  the admin sees the addon',
+          sentence: 'Then  admin sees the addon',
           message:
             'locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator(…)',
         },

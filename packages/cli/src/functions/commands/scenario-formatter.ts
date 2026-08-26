@@ -79,16 +79,21 @@ export const formatScenarioReport = (
 }
 
 export const buildStepLadder = (steps: ScenarioStepRow[]): string[] => {
-  const width = Math.max(0, ...steps.map(({ sentence }) => sentence.length))
-  return steps.map((step) => {
+  const sentences = steps.map(ladderSentence)
+  const width = Math.max(0, ...sentences.map((sentence) => sentence.length))
+  return steps.map((step, index) => {
     const glyph = step.status === 'succeeded' ? '✓' : '✗'
     const detail =
       step.status === 'succeeded' || !step.error
         ? formatDuration(step.durationMs)
         : firstLine(step.error)
-    return `  ${step.sentence.padEnd(width)}  ${glyph}  ${detail}`
+    return `  ${sentences[index]!.padEnd(width)}  ${glyph}  ${detail}`
   })
 }
+
+/** The ladder introduces an actor where the row offers an introduction. */
+const ladderSentence = (step: ScenarioStepRow) =>
+  step.sentenceWithRole ?? step.sentence
 
 /**
  * The one line a summary gets. A browser timeout's message carries its whole
