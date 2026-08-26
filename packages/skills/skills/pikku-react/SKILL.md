@@ -268,6 +268,37 @@ Do not hand-write the `devActors()` / `signInAsActor()` pair per app; that
 copy-paste, including the `import.meta.env.DEV` gate, is exactly what this
 replaced.
 
+### Linking from a Mantine element: `renderRoot`, not `component`
+
+Handing TanStack's `Link` to a Mantine element as `component={Link}` compiles,
+renders, and navigates — and silently unties the type. Mantine's polymorphic
+`component` prop widens the router generic to `AnyRouter`, so `to` and
+`params` stop being checked against your actual routes. Renaming a route then
+breaks the running app instead of the build, which is the one thing the typed
+router exists to prevent.
+
+Wrap the typed `Link` once and reach it through `renderRoot`, which passes the
+props through without re-typing the element:
+
+```tsx
+// components/links.tsx — one wrapper the whole app links through
+import { Link } from '@tanstack/react-router'
+
+export const AssessmentLink = (props: { assessmentId: string; children: React.ReactNode }) => (
+  <Link to="/assessments/$assessmentId" params={{ assessmentId: props.assessmentId }}>
+    {props.children}
+  </Link>
+)
+```
+
+```tsx
+<Button renderRoot={(p) => <AssessmentLink assessmentId={id} {...p} />}>
+  Open
+</Button>
+```
+
+The wrapper is where `to` and `params` are checked, and it is checked once.
+
 ## What NOT to do
 
 - Don't instantiate `PikkuFetch`/`PikkuRPC` inside a component — `createPikku`
