@@ -47,22 +47,12 @@ export class LambdaEventHubService<
     }
   }
 
-  /**
-   * API GATEWAY WEBSOCKETS ONLY. Every publish is a `PostToConnection` call
-   * against a connection id, and a Lambda invocation cannot hold an open stream
-   * from some other invocation in memory, so there is nothing an SSE handler
-   * could be registered on. Refusing is the honest answer.
-   */
   async onChannelOpened(): Promise<void> {
     throw new Error(
       'LambdaEventHubService delivers to API Gateway WebSocket connections only, so it cannot serve SSE.'
     )
   }
 
-  /**
-   * Subscriptions live in the `eventHubStore`, and the `$disconnect` route is
-   * what clears them — there is no per-invocation state to drop here.
-   */
   async onChannelClosed(): Promise<void> {}
 
   private async sendMessages(
