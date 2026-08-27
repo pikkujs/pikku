@@ -2,8 +2,12 @@ import React, { useState } from 'react'
 import { Group, SegmentedControl, Stack, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import type { I18nNode, I18nString } from '@pikku/react'
-import { useSearchParams } from '../../router'
 import { setUrlHash } from '../../hooks/useUrlHash'
+import {
+  useUrlSelection,
+  useUrlState,
+  useUrlWrite,
+} from '../../hooks/url-state'
 import { ConsoleSurface } from './ConsoleSurface'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { ListPageHeader } from '../layout/PageLayout'
@@ -80,16 +84,19 @@ export const TabbedSurface: React.FC<TabbedSurfaceProps> = (props) => {
     onTabChange,
   } = props
   useLocale()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [linkedTab] = useUrlSelection(
+    searchParamKey,
+    tabs.map((tab) => tab.value)
+  )
+  const writeUrl = useUrlWrite()
   // `?search=` makes one row of a tab linkable from elsewhere — a knowledge note
   // naming `http:/entries` sends the reader to the endpoint it is about. Only the
   // initial value: from then on the box is theirs, and rewriting the URL as they
   // type would put every keystroke in the back button.
-  const [searchQuery, setSearchQuery] = useState(
-    () => searchParams.get('search') ?? ''
-  )
+  const [linkedSearch] = useUrlState('search')
+  const [searchQuery, setSearchQuery] = useState(() => linkedSearch ?? '')
 
-  const requested = activeTab ?? searchParams.get(searchParamKey)
+  const requested = activeTab ?? linkedTab
   const active = tabs.find((tab) => tab.value === requested) ?? tabs[0]!
 
   const handleTabChange = (value: string) => {
@@ -102,7 +109,10 @@ export const TabbedSurface: React.FC<TabbedSurfaceProps> = (props) => {
       onTabChange(value)
       return
     }
-    setSearchParams({ [searchParamKey]: value })
+    // One write: the box is cleared above, so the param that seeded it goes in
+    // the same step as the tab — left behind it would name a search no longer
+    // being run. Pushed, not replaced: back belongs to the tab you came from.
+    writeUrl({ [searchParamKey]: value, search: null }, { replace: false })
   }
 
   const segmented = (
