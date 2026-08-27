@@ -195,13 +195,25 @@
   gap: var(--pf-dock-gap);
 }
 
-/* Grouping by space, not by rule. A 1px hairline on blurred glass measures
-   1.3:1 — it was doing hierarchy work it could not carry. */
+/* Space alone did not read: at 3.6 gaps it is a pause a user reports as "there
+   is no separator". A 1px hairline is still out — on blurred glass it measures
+   1.3:1 — so the rule is a 2px pill in the hint colour, the one mark on this
+   surface already proven to carry at that width. */
 .dockSep {
   flex: 0 0 auto;
   width: calc(var(--pf-dock-gap) * 3.6);
-  height: 1px;
-  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dockSep::before {
+  content: '';
+  width: 2px;
+  height: calc(var(--pf-tile) * 0.44);
+  border-radius: 1px;
+  background: var(--pf-hint);
+  opacity: 0.55;
 }
 
 /* A tile. Fixed box — deliberately no macOS magnification: magnification moves
@@ -978,8 +990,13 @@
 }
 
 .dockStrip[data-axis='y'] .dockSep {
-  width: 1px;
+  width: auto;
   height: calc(var(--pf-dock-gap) * 3.6);
+}
+
+.dockStrip[data-axis='y'] .dockSep::before {
+  width: calc(var(--pf-tile) * 0.44);
+  height: 2px;
 }
 
 .dockStrip[data-axis='y'] .dockHint {
