@@ -43,7 +43,7 @@ import { resolvePermissions } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import { findPiiPaths } from '../utils/check-pii-output.js'
-import { findRevealedSecretSinks } from '../utils/check-secret-sinks.js'
+import { findClassifiedSinks } from '../utils/check-classified-sinks.js'
 import { isScenarioInstrumentationFunction } from './scenario-instrumentation.js'
 import type { NodeType } from '@pikku/core/node'
 
@@ -1230,17 +1230,27 @@ export const addFunctions: AddWiring = (
   // it runs ONLY when explicitly requested (`pikku all --security`) — see the
   // classificationCheck option. Default codegen skips it entirely.
   if (options.classificationCheck) {
-    // A revealed vault secret is invisible to the return-type scan below when it
-    // is written out mid-body rather than returned, so walk the sinks too.
-    for (const violation of findRevealedSecretSinks(checker, handler)) {
+    // A revealed vault secret — or a PII column — is invisible to the return-type
+    // scan below when it is written out mid-body rather than returned, so walk
+    // the sinks too.
+    for (const violation of findClassifiedSinks(checker, handler)) {
       logger.diagnostic({
         severity: 'error',
-        code: ErrorCode.SECRET_REVEALED_INTO_SINK,
+        code:
+          violation.classification === 'secret'
+            ? ErrorCode.SECRET_REVEALED_INTO_SINK
+            : ErrorCode.PII_INTO_SINK,
         message:
-          `Function '${name}' passes a revealed secret to '${violation.sink}' ` +
-          `at line ${violation.line} (path '${violation.path}').\n  ` +
-          `A vault secret must not be written to a log, an audit, a queue, an email or a webhook. ` +
-          `Pass the value only to the client that needs it, and reveal it there.`,
+          violation.classification === 'secret'
+            ? `Function '${name}' passes a revealed secret to '${violation.sink}' ` +
+              `at line ${violation.line} (path '${violation.path}').\n  ` +
+              `A vault secret must not be written to a log, an audit, a queue, an email or a webhook. ` +
+              `Pass the value only to the client that needs it, and reveal it there.`
+            : `Function '${name}' passes personal data to '${violation.sink}' ` +
+              `at line ${violation.line} (path '${violation.path}').\n  ` +
+              `A log, the console and a webhook all leave your control — they are shipped to third parties and retained ` +
+              `long past the request. Log an id instead, or narrow the value to a non-identifying field. ` +
+              `An email to the data subject, an audit in your own database and a queue on your own infrastructure are fine.`,
       })
     }
 
