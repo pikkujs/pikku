@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { SectionLabel } from './shared/SectionLabel'
+import classes from '../../ui/console.module.css'
 
 interface PackagePanelProps {
   packageId: string
@@ -93,7 +94,7 @@ export const PackageConfiguration: React.FC<PackagePanelProps> = ({
             </Accordion.Control>
             <Accordion.Panel>
               <Table highlightOnHover>
-                <Table.Thead>
+                <Table.Thead className={classes.tableHead}>
                   <Table.Tr>
                     <Table.Th>Name</Table.Th>
                     <Table.Th>Input</Table.Th>

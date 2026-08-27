@@ -32,14 +32,14 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (pair: TriggerPair) => (
           <Text fw={500}>{asI18n(pair.name)}</Text>
         ),
       },
       {
         key: 'source',
-        header: 'SOURCE',
+        header: 'Source',
         render: (pair: TriggerPair) => (
           <PikkuBadge
             type="label"
@@ -62,7 +62,7 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
       },
       {
         key: 'trigger',
-        header: 'TRIGGER',
+        header: 'Trigger',
         align: 'right' as const,
         render: (pair: TriggerPair) => (
           <PikkuBadge

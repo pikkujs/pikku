@@ -26,7 +26,7 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
     () => [
       {
         key: 'route',
-        header: 'ROUTE',
+        header: 'Route',
         render: (route: any) => (
           <>
             <Group gap={5} wrap="nowrap" mb={2}>

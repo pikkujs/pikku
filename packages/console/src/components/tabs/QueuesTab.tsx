@@ -55,7 +55,7 @@ export const QueuesTab: React.FC<{
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: any) => (
           <>
             <Text fw={500} ff="monospace" truncate>
@@ -71,7 +71,7 @@ export const QueuesTab: React.FC<{
       },
       {
         key: 'queued',
-        header: 'QUEUED',
+        header: 'Queued',
         width: 80,
         render: (item: any) => {
           const depth = depths?.[item.wireId || item.name]
@@ -88,7 +88,7 @@ export const QueuesTab: React.FC<{
       },
       {
         key: 'active',
-        header: 'ACTIVE',
+        header: 'Active',
         width: 80,
         render: (item: any) => {
           const depth = depths?.[item.wireId || item.name]
@@ -109,7 +109,7 @@ export const QueuesTab: React.FC<{
       },
       {
         key: 'failed',
-        header: 'FAILED',
+        header: 'Failed',
         width: 80,
         render: (item: any) => {
           const depth = depths?.[item.wireId || item.name]

@@ -10,7 +10,11 @@ import {
   WorkflowStepConfiguration,
 } from '../project/panels/WorkflowStepPanels'
 import { ScenarioStepCode } from './ScenarioStepCode'
-import { useWorkflowNode } from '../../context/WorkflowContext'
+import {
+  useWorkflowContextSafe,
+  useWorkflowNode,
+  WorkflowProvider,
+} from '../../context/WorkflowContext'
 import { usePanelContext } from '../../context/PanelContext'
 
 const PHASE_LABEL: Record<string, () => string> = {
@@ -27,6 +31,7 @@ type ScenarioStepPanelProps = {
     actor?: string
     actorName?: string
     stepName?: string
+    workflow?: unknown
   }
 }
 
@@ -34,8 +39,25 @@ type ScenarioStepPanelProps = {
  * A scenario step read as a step: the sentence it was written as, the phase it
  * runs in and the actor it runs as — with the scenario step behind it named,
  * rather than the generic `rpc` a workflow node would show.
+ *
+ * The workflow meta travels on the panel data rather than being read off an
+ * ambient provider, because a host mounts the panel container wherever it
+ * likes — the Fabric console docks it on the end edge, a sibling of the
+ * surface that opened it, so that surface's provider is not above this.
  */
 export const ScenarioStepPanel: React.FC<ScenarioStepPanelProps> = ({
+  stepId,
+  metadata,
+}) => {
+  const ambient = useWorkflowContextSafe()
+  return (
+    <WorkflowProvider workflow={metadata.workflow ?? ambient?.workflow}>
+      <ScenarioStepBody stepId={stepId} metadata={metadata} />
+    </WorkflowProvider>
+  )
+}
+
+const ScenarioStepBody: React.FC<ScenarioStepPanelProps> = ({
   stepId,
   metadata,
 }) => {

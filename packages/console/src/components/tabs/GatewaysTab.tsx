@@ -30,7 +30,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (gateway: any) => (
           <>
             <Text fw={500} truncate>
@@ -46,7 +46,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
       },
       {
         key: 'platform',
-        header: 'PLATFORM',
+        header: 'Platform',
         width: 130,
         render: (gateway: any) => (
           <Text size="sm" c="var(--app-text-dim)" truncate>
@@ -56,7 +56,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
       },
       {
         key: 'route',
-        header: 'ENTRY',
+        header: 'Entry',
         width: 190,
         render: (gateway: any) => (
           <Text size="sm" ff="monospace" c="var(--app-text-dim)" truncate>
@@ -66,7 +66,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
       },
       {
         key: 'type',
-        header: 'TYPE',
+        header: 'Type',
         align: 'right' as const,
         width: 110,
         render: (gateway: any) => (
