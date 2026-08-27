@@ -1,3 +1,32 @@
+## 0.12.70
+
+### Patch Changes
+
+- 1fad479: Draw the nav dock's separator. It was a 3.6-gap spacer with `background: none`,
+  so the zones it divides read as one uninterrupted row — the grouping was there
+  in the markup and invisible on screen. It is now a 2px pill in the hint colour,
+  which is the same mark and width the dock's own pull hint already uses, rather
+  than the 1px hairline that could not hold contrast against blurred glass.
+- 0c4d191: feat(console): export `DatabasePage` from the package root
+
+  Every other console screen a host app can mount is re-exported from
+  `src/index.ts` — `FunctionsPage`, `ApisPage`, `RuntimePage`, `SecretsPage` and
+  the rest. `DatabasePage` was not, and the package's `exports` map has no
+  `./pages/*` subpath, so a host had no way to reach it at all. The screen was
+  mountable only by the console's own router.
+
+  That gap is why an embedding console ends up reimplementing the database canvas
+  rather than mounting this one, and the reimplementation loses what only this
+  page has: the per-column classification icons (public, private, pii, secret),
+  the classification filter, and the table search. The data behind them needs no
+  new plumbing — `DbSchemaService` already merges `db/annotations.gen.json` over
+  `db/pikku-db-schema.gen.json`, and `console:getDbSchema` already carries the
+  merged result.
+
+  Export only; the page itself is unchanged.
+
+- 8c1269b: Export `ScopesPage` so a host console can mount the roles and scopes screen, the way `AuditPage` and `SecurityPage` already can. The page was reachable only through the console's own router, which put runtime role and grant editing out of reach for anything embedding these pages.
+
 ## 0.12.69
 
 ### Patch Changes
