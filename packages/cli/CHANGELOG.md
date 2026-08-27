@@ -1,3 +1,82 @@
+## 0.12.124
+
+### Patch Changes
+
+- e0106bb: fabric validate: honour better-auth `modelName` overrides in the auth schema check.
+
+  The check looked for migrations creating `user`, `session`, `account` and
+  `verification` — better-auth's default table names. An app that already owns a
+  `user` table renames the models (`user: { modelName: 'authUser' }`), and the
+  adapter's CamelCasePlugin then writes them as `auth_user`, `auth_session` and
+  so on. None of the default names appear in such an app's migrations, so a fully
+  migrated project was reported as having no better-auth schema at all — an error
+  it had no way to clear.
+
+  Each model now also matches its configured `modelName` and that name's
+  snake_case form, read from the source files that configure better-auth.
+
+- e0106bb: fabric validate: stop two scanners reporting false positives.
+
+  The undeclared-import scan read raw file text, so prose in a comment or a
+  description string matched its `from "..."` pattern — `Converted from the
+Gherkin scenario of the same name` reported a missing package named `signed`.
+  Comments are now blanked before the scan, and a specifier containing whitespace
+  is never a package name.
+
+  The scenario copy scan matched every string literal in the file against the
+  message catalogue, so an RPC payload field whose value happens to equal a label
+  was reported as hardcoded UI copy — `unit: 'kg'` flagged against a `unit_kg`
+  form suffix, where rewriting it to a message lookup would bind a stored value to
+  UI copy. A literal in `key: '...'` position now only counts when the key names
+  something the browser renders; bare locator arguments are unchanged.
+
+- e0106bb: fabric validate: stop the scenario copy scan reporting asserted values as UI copy.
+
+  `expect(item.unit, 'kg', 'the item unit')` compares a value an RPC returned.
+  The scan matched the literal against the message catalogue and reported it as
+  hardcoded copy that should be read from `unit_kg` — a fix that would bind a
+  stored value to a form label, so the assertion would then pass against whatever
+  the label happened to say.
+
+  A literal passed directly to `expect(...)` is no longer scanned. A locator
+  nested inside one still is: in `expect(await page.getByText('Save').count(), 1)`
+  the literal belongs to `getByText`.
+
+- 6d9c09c: Resolve a variable's declared default instead of dropping it.
+
+  `defineVariable` takes a schema, and a schema can carry a default — `z.enum(['https://api.github.com']).default('https://api.github.com')` is the shape most addons declare their base URL with. Nothing read it. `variables.get('GITHUB_BASE_URL')` returned `undefined` on a host that had not set it, and the `as string` at the call site hid that until a request went to `undefined/repos/...`.
+
+  The default now resolves in `TypedVariablesService`, which is the layer that knows what was declared — `VariablesService` only knows what a host put in it. A stored value always wins; a schema with no default still resolves to `undefined`.
+
+  `VariableStatus` gains `hasDefault`, and `getMissing()` no longer lists a variable that defaults: it has a value, just not one anybody has to supply. `isConfigured` still means what it said — that a host set it.
+
+  For this to work the generated `TYPED_VARIABLES_META` now carries the schema as a value rather than only `z.infer`-ing its type, so the schema module is retained in the emit instead of being elided.
+
+- ef775dc: validate: flag static imports of packages the deploy bundler stubs
+
+  The deploy bundler replaces the AI SDK packages (`@pikku/ai-vercel`, `@ai-sdk/*`,
+  `ai`) with `export {}` in every unit that does not require `agentRunner`, so a
+  static named import of one in `services.ts` fails to bundle with an opaque
+  esbuild error repeated once per unit. `pikku fabric validate` now reports this as
+  `services-static-stubbed-import` and points at the lazy-import shape the starter
+  template uses. The service-to-module map moved to its own module so the check and
+  the bundler read the same list.
+
+- 239332b: Move first-party product analytics out of application code and into the framework.
+
+  `createAnalytics<Event>({ endpoint })` in `@pikku/react` is the buffered beacon client: it is typed against the app's own event union, flushes on an interval, on size and on `pagehide`/`visibilitychange` (via `sendBeacon`, so the abandon-point events survive unload), never surfaces a failure to the user and never retries. It also carries the delegated `data-analytics-click` listener, registered in the capture phase so a component calling `stopPropagation()` cannot silence instrumentation, and merging `data-analytics-meta` from ancestors with nearest-wins. Put the client on the Pikku instance and `usePikkuAnalytics<Event>()` reaches it from the provider, alongside `usePikkuFetch` and `usePikkuRPC`.
+
+  `requireOrigin()` in `@pikku/core/middleware` is a server-side origin lock for any unauthed route, and is re-exported from the generated `#pikku/middleware` leaf alongside `cors`. Unlike `cors()` — which only sets response headers a non-browser client ignores — it rejects with a 403 before the function body. Comparison is exact on the parsed origin, so `https://evil-myapp.com` cannot suffix-match `myapp.com`, and a missing `Origin` is rejected because a real browser always sets one on a cross-origin-capable POST. Allowed origins default to the request's own host and can be extended with a list or a resolver over services. `isAllowedOrigin` and `toOrigin` are exported for direct unit testing.
+
+  Together these let an app keep only its event registry and its wiring, instead of a few hundred lines of copied transport.
+
+- Updated dependencies [8154b1c]
+- Updated dependencies [af2b764]
+- Updated dependencies [6d9c09c]
+- Updated dependencies [239332b]
+  - @pikku/core@0.12.97
+  - @pikku/inspector@0.12.67
+
 ## 0.12.123
 
 ### Patch Changes
