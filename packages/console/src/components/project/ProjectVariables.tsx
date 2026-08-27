@@ -32,7 +32,7 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (v: VariableMeta) => (
           <>
             <Text fw={500} truncate>
@@ -48,7 +48,7 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
       },
       {
         key: 'variableId',
-        header: 'VARIABLE ID',
+        header: 'Variable ID',
         render: (v: VariableMeta) => (
           <Text size="sm" c="dimmed" ff="monospace">
             {asI18n(v.variableId)}

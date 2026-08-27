@@ -132,7 +132,7 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
               {asI18n(`Instances (${usedByInstances.length})`)}
             </SectionLabel>
             <Table verticalSpacing={4} horizontalSpacing="xs">
-              <Table.Thead>
+              <Table.Thead className={classes.tableHead}>
                 <Table.Tr>
                   <Table.Th>ID</Table.Th>
                   <Table.Th>Type</Table.Th>
@@ -240,7 +240,7 @@ const GroupPanel: React.FC<{
             {asI18n(`Middleware (${resolvedDefs.length})`)}
           </SectionLabel>
           <Table verticalSpacing={4} horizontalSpacing="xs">
-            <Table.Thead>
+            <Table.Thead className={classes.tableHead}>
               <Table.Tr>
                 <Table.Th>Definition</Table.Th>
                 <Table.Th>Type</Table.Th>

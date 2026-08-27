@@ -36,7 +36,7 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
           return (
@@ -62,7 +62,7 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
       },
       {
         key: 'type',
-        header: 'TYPE',
+        header: 'Type',
         width: 160,
         render: (func: any) => (
           <Group gap={6} wrap="nowrap">
@@ -78,7 +78,7 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
       },
       {
         key: 'auth',
-        header: 'AUTH',
+        header: 'Auth',
         width: 70,
         render: (func: any) =>
           func.sessionless !== true ? (
@@ -87,7 +87,7 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
       },
       {
         key: 'permissions',
-        header: 'PERMISSIONS',
+        header: 'Permissions',
         width: 110,
         render: (func: any) =>
           func.permissions?.length > 0 ? (
@@ -96,7 +96,7 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
       },
       {
         key: 'wirings',
-        header: 'WIRINGS',
+        header: 'Wirings',
         width: 130,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId

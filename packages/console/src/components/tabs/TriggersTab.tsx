@@ -17,7 +17,7 @@ interface TriggerPair {
 const columns = [
   {
     key: 'name',
-    header: 'NAME',
+    header: 'Name',
     render: (item: TriggerPair) => (
       <Text fw={500} ff="monospace" truncate>
         {asI18n(item.name)}
@@ -26,7 +26,7 @@ const columns = [
   },
   {
     key: 'source',
-    header: 'SOURCE',
+    header: 'Source',
     render: (item: TriggerPair) => (
       <Badge
         size="sm"
@@ -47,7 +47,7 @@ const columns = [
   },
   {
     key: 'target',
-    header: 'TARGET',
+    header: 'Target',
     render: (item: TriggerPair) => (
       <Badge
         size="sm"

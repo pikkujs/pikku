@@ -34,7 +34,7 @@ export const SchedulersListPanel: React.FC<SchedulersListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: SchedulerItem) => (
           <>
             <Text fw={500} truncate>
@@ -50,7 +50,7 @@ export const SchedulersListPanel: React.FC<SchedulersListPanelProps> = ({
       },
       {
         key: 'schedule',
-        header: 'SCHEDULE',
+        header: 'Schedule',
         align: 'right' as const,
         render: (item: SchedulerItem) =>
           item.schedule ? (

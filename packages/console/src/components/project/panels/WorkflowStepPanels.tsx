@@ -225,17 +225,11 @@ export const WorkflowStepInput: React.FC<WorkflowStepPanelProps> = ({
         {hasInput ? (
           <Card.Section>
             <Table verticalSpacing={4} horizontalSpacing="xs">
-              <Table.Thead>
+              <Table.Thead className={classes.tableHead}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Parameter
-                  </Table.Th>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Type
-                  </Table.Th>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Value
-                  </Table.Th>
+                  <Table.Th>Parameter</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th>Value</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -316,14 +310,10 @@ export const WorkflowStepOutput: React.FC<
           ) : schema?.properties ? (
             <Card.Section>
               <Table verticalSpacing={4} horizontalSpacing="xs">
-                <Table.Thead>
+                <Table.Thead className={classes.tableHead}>
                   <Table.Tr>
-                    <Table.Th c="dimmed" fw={500} fz="xs">
-                      Property
-                    </Table.Th>
-                    <Table.Th c="dimmed" fw={500} fz="xs">
-                      Type
-                    </Table.Th>
+                    <Table.Th>Property</Table.Th>
+                    <Table.Th>Type</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -386,14 +376,10 @@ export const WorkflowStepOutput: React.FC<
             {hasOutputs ? (
               <Card.Section>
                 <Table verticalSpacing={4} horizontalSpacing="xs">
-                  <Table.Thead>
+                  <Table.Thead className={classes.tableHead}>
                     <Table.Tr>
-                      <Table.Th c="dimmed" fw={500} fz="xs">
-                        Output
-                      </Table.Th>
-                      <Table.Th c="dimmed" fw={500} fz="xs">
-                        Source
-                      </Table.Th>
+                      <Table.Th>Output</Table.Th>
+                      <Table.Th>Source</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>

@@ -33,7 +33,7 @@ export const ScorersPage: React.FC = () => {
   const columns = [
     {
       key: 'name',
-      header: 'SCORER',
+      header: 'Scorer',
       render: (item: ScorerItem) => (
         <Stack gap={2}>
           <Text fw={500}>{asI18n(item.name)}</Text>
@@ -45,7 +45,7 @@ export const ScorersPage: React.FC = () => {
     },
     {
       key: 'lane',
-      header: 'LANE',
+      header: 'Lane',
       render: (item: ScorerItem) => (
         <PikkuBadge
           type="dynamic"
@@ -58,7 +58,7 @@ export const ScorersPage: React.FC = () => {
     },
     {
       key: 'sampling',
-      header: 'SAMPLING',
+      header: 'Sampling',
       align: 'right' as const,
       render: (item: ScorerItem) => (
         <Text
@@ -80,7 +80,7 @@ export const ScorersPage: React.FC = () => {
     },
     {
       key: 'agents',
-      header: 'AGENTS',
+      header: 'Agents',
       align: 'right' as const,
       render: (item: ScorerItem) =>
         item.agents.length === 0 ? (

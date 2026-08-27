@@ -184,14 +184,10 @@ export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
         {hasNodes ? (
           <Card.Section>
             <Table verticalSpacing={4} horizontalSpacing="xs" highlightOnHover>
-              <Table.Thead>
+              <Table.Thead className={classes.tableHead}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Name
-                  </Table.Th>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Type
-                  </Table.Th>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Type</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -258,20 +254,12 @@ const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
       <Card withBorder radius="md" padding={0}>
         <Card.Section>
           <Table verticalSpacing={4} horizontalSpacing="xs" highlightOnHover>
-            <Table.Thead>
+            <Table.Thead className={classes.tableHead}>
               <Table.Tr>
-                <Table.Th c="dimmed" fw={500} fz="xs">
-                  Name
-                </Table.Th>
-                <Table.Th c="dimmed" fw={500} fz="xs">
-                  Type
-                </Table.Th>
-                <Table.Th c="dimmed" fw={500} fz="xs">
-                  Status
-                </Table.Th>
-                <Table.Th c="dimmed" fw={500} fz="xs">
-                  Runs
-                </Table.Th>
+                <Table.Th>Name</Table.Th>
+                <Table.Th>Type</Table.Th>
+                <Table.Th>Status</Table.Th>
+                <Table.Th>Runs</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -338,17 +326,11 @@ export const WorkflowState: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
         {hasContext ? (
           <Card.Section>
             <Table verticalSpacing={4} horizontalSpacing="xs">
-              <Table.Thead>
+              <Table.Thead className={classes.tableHead}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Variable
-                  </Table.Th>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Type
-                  </Table.Th>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Default
-                  </Table.Th>
+                  <Table.Th>Variable</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th>Default</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
