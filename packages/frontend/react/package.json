@@ -1,6 +1,6 @@
 {
   "name": "@pikku/react",
-  "version": "0.12.7",
+  "version": "0.12.8",
   "description": "React bindings for Pikku — provider and hooks for fetch, RPC, agents, workflows and realtime",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
