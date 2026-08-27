@@ -274,6 +274,7 @@ export { WebhooksPage } from './pages/WebhooksPage'
 export { CredentialsPage } from './pages/CredentialsPage'
 export { AuditPage } from './pages/AuditPage'
 export { SecurityPage } from './pages/SecurityPage'
+export { ScopesPage } from './pages/ScopesPage'
 export { SecurityAuditView } from './components/security/SecurityAuditView'
 export type {
   SecurityAuditViewProps,
