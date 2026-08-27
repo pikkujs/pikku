@@ -11,12 +11,10 @@ import {
   type UnknownRow,
 } from 'kysely'
 import type { ClassificationManifest } from '@pikku/core/classification'
-import { DataLock } from '@pikku/core/classification'
-import { DataLockedError } from '@pikku/core/errors'
+import { deriveKEK, generateKEKSalt } from '@pikku/core/crypto-utils'
 import {
   ClassificationCrypto,
-  createDataLockResolver,
-  createMemoryLockVault,
+  type KEKResolver,
 } from './classification-crypto.js'
 import { createClassificationPlugin } from './classification-plugin.js'
 
@@ -57,18 +55,27 @@ const manifest: ClassificationManifest = {
 }
 
 let crypto: ClassificationCrypto
-let lock: DataLock
+
+/** A key source with nothing to give, the way an unconfigured one behaves. */
+class NoKeyError extends Error {}
+const noKey: KEKResolver = async () => {
+  throw new NoKeyError('no key for this column')
+}
 
 before(async () => {
-  lock = new DataLock(createMemoryLockVault())
-  await lock.init()
-  await lock.initialize('a-passphrase-long-enough-to-be-real-key-material', [
-    'default',
-    'recovery-codes',
-  ])
-  crypto = new ClassificationCrypto({
-    resolveKEK: createDataLockResolver(lock),
-  })
+  const keks = new Map<string, Promise<CryptoKey>>()
+  const resolveKEK: KEKResolver = async (keyId) => {
+    let kek = keks.get(keyId)
+    if (!kek) {
+      kek = deriveKEK(
+        'a-passphrase-long-enough-to-be-real-key-material',
+        generateKEKSalt()
+      )
+      keks.set(keyId, kek)
+    }
+    return { kek: await kek, keyVersion: 1 }
+  }
+  crypto = new ClassificationCrypto({ resolveKEK })
 })
 
 const plugin = () => createClassificationPlugin({ manifest, crypto })
@@ -147,24 +154,17 @@ describe('reading classified columns', () => {
     assert.equal(row!.ssn, 'not-an-envelope')
   })
 
-  test('plain and hashed columns still read while the store is locked', async () => {
-    const locked = new DataLock(createMemoryLockVault())
-    await locked.init()
-    await locked.initialize('another-passphrase-of-entirely-adequate-length')
-    locked.lock()
-
+  test('plain and hashed columns still read without any key at all', async () => {
     const p = createClassificationPlugin({
       manifest,
-      crypto: new ClassificationCrypto({
-        resolveKEK: createDataLockResolver(locked),
-      }),
+      crypto: new ClassificationCrypto({ resolveKEK: noKey }),
     })
     const queryId = {} as { queryId: string }
     p.transformQuery({ queryId, node: selectFrom(['users']) } as any)
 
-    // The unlock screen is served by a server that cannot yet decrypt anything,
-    // and a sign-in that checks a token hash has to work before the passphrase
-    // exists — so a query touching no wrapped column must never reach the lock.
+    // A sign-in that checks a token hash has to work on a deployment whose key
+    // source is unavailable, so a query touching no wrapped column must never
+    // reach the resolver at all.
     const out = await p.transformResult({
       queryId,
       result: {
@@ -179,20 +179,12 @@ describe('reading classified columns', () => {
     })
   })
 
-  test('a wrapped column read while locked fails loudly', async () => {
-    const locked = new DataLock(createMemoryLockVault())
-    await locked.init()
-    await locked.initialize('another-passphrase-of-entirely-adequate-length')
-    const stored = await new ClassificationCrypto({
-      resolveKEK: createDataLockResolver(locked),
-    }).encryptColumn('default', 'ssn')
-    locked.lock()
+  test('a wrapped column read without its key fails loudly', async () => {
+    const stored = await crypto.encryptColumn('default', 'ssn')
 
     const p = createClassificationPlugin({
       manifest,
-      crypto: new ClassificationCrypto({
-        resolveKEK: createDataLockResolver(locked),
-      }),
+      crypto: new ClassificationCrypto({ resolveKEK: noKey }),
     })
     const queryId = {} as { queryId: string }
     p.transformQuery({ queryId, node: selectFrom(['users']) } as any)
@@ -205,7 +197,7 @@ describe('reading classified columns', () => {
             rows: [{ id: 'u1', ssn: stored }],
           } as QueryResult<UnknownRow>,
         } as any),
-      (error: unknown) => error instanceof DataLockedError,
+      (error: unknown) => error instanceof NoKeyError,
       'handing back an unopened envelope as if it were the value would be worse'
     )
   })

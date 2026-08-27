@@ -120,8 +120,7 @@ fn parse_ready_port(line: &str) -> Option<u16> {
 fn main() {
     tauri::Builder::default()
         // A second launch must never spawn a second sidecar: that would be two
-        // SQLite writers on one file and two independently unlocked keys in
-        // memory. Focus what is already running instead.
+        // SQLite writers on one file. Focus what is already running instead.
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();

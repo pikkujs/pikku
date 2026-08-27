@@ -1,36 +1,37 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { deriveKEK, generateKEKSalt } from '@pikku/core/crypto-utils'
-import { DataLock } from '@pikku/core/classification'
-import { DataLockedError, InvalidPassphraseError } from '@pikku/core/errors'
 import {
   ClassificationCrypto,
   DEFAULT_KEY_ID,
-  createDataLockResolver,
-  createMemoryLockVault,
   isColumnEnvelope,
   parseColumnEnvelope,
+  type KEKResolver,
 } from './classification-crypto.js'
 
 const passphrase = 'a-passphrase-long-enough-to-be-real-key-material'
 
-/** Every keyId the manifest under test names — `getKEK` only knows registered ones. */
-const KEY_IDS = [DEFAULT_KEY_ID, 'credentials', 'notes', 'tenant.42']
-
-const unlockedLock = async (
-  secret = passphrase,
-  keyIds = KEY_IDS
-): Promise<DataLock> => {
-  const lock = new DataLock(createMemoryLockVault())
-  await lock.init()
-  await lock.initialize(secret, keyIds)
-  return lock
+/**
+ * A resolver that derives a KEK per keyId and remembers it.
+ *
+ * Caching is the part under test as much as the derivation: `resolveKEK` is
+ * called per operation, and a resolver that re-derived every time would pay
+ * key stretching on every row.
+ */
+const testResolver = (): KEKResolver => {
+  const keks = new Map<string, Promise<CryptoKey>>()
+  return async (keyId) => {
+    let kek = keks.get(keyId)
+    if (!kek) {
+      kek = deriveKEK(passphrase, generateKEKSalt())
+      keks.set(keyId, kek)
+    }
+    return { kek: await kek, keyVersion: 1 }
+  }
 }
 
 const staticCrypto = async () =>
-  new ClassificationCrypto({
-    resolveKEK: createDataLockResolver(await unlockedLock()),
-  })
+  new ClassificationCrypto({ resolveKEK: testResolver() })
 
 describe('column envelope', () => {
   test('round-trips a value through the default key', async () => {
@@ -88,7 +89,7 @@ describe('column envelope', () => {
 
 describe('KEK scoping', () => {
   test('different keyIds derive different KEKs from one passphrase', async () => {
-    const resolve = createDataLockResolver(await unlockedLock())
+    const resolve = testResolver()
     const a = await resolve(DEFAULT_KEY_ID)
     const b = await resolve('credentials')
     assert.notEqual(a.kek, b.kek)
@@ -104,8 +105,8 @@ describe('KEK scoping', () => {
     await assert.rejects(() => crypto.decryptColumn(forged))
   })
 
-  test('the same keyId resolves to the same KEK, so unlock is paid once', async () => {
-    const resolve = createDataLockResolver(await unlockedLock())
+  test('the same keyId resolves to the same KEK, so derivation is paid once', async () => {
+    const resolve = testResolver()
     assert.equal(
       (await resolve(DEFAULT_KEY_ID)).kek,
       (await resolve(DEFAULT_KEY_ID)).kek
@@ -138,106 +139,5 @@ describe('KEK scoping', () => {
     const envelope = await crypto.encryptColumn('anything', 'v')
     assert.equal(parseColumnEnvelope(envelope)?.keyVersion, 7)
     assert.equal(await crypto.decryptColumn(envelope), 'v')
-  })
-})
-
-describe('locking', () => {
-  /** A lock whose records exist but whose keys have not been handed over yet. */
-  const lockedLock = async (): Promise<DataLock> => {
-    const lock = await unlockedLock()
-    lock.lock()
-    return lock
-  }
-
-  test('a locked store refuses to resolve, identifiably', async () => {
-    const resolve = createDataLockResolver(await lockedLock())
-    await assert.rejects(
-      () => resolve(DEFAULT_KEY_ID),
-      (error: unknown) => error instanceof DataLockedError
-    )
-  })
-
-  test('encrypting while locked refuses rather than writing plaintext', async () => {
-    const crypto = new ClassificationCrypto({
-      resolveKEK: createDataLockResolver(await lockedLock()),
-    })
-    await assert.rejects(
-      () => crypto.encryptColumn(DEFAULT_KEY_ID, 'ssn'),
-      (error: unknown) => error instanceof DataLockedError
-    )
-  })
-
-  test('a key that arrives after construction still opens the column', async () => {
-    const lock = new DataLock(createMemoryLockVault())
-    const crypto = new ClassificationCrypto({
-      resolveKEK: createDataLockResolver(lock),
-    })
-
-    await lock.init()
-    await lock.initialize(passphrase, KEY_IDS)
-
-    const stored = await crypto.encryptColumn(DEFAULT_KEY_ID, 'secret')
-    assert.equal(await crypto.decryptColumn(stored), 'secret')
-  })
-
-  test('locking again withdraws a key that was working a moment ago', async () => {
-    const lock = await unlockedLock()
-    const crypto = new ClassificationCrypto({
-      resolveKEK: createDataLockResolver(lock),
-    })
-
-    const stored = await crypto.encryptColumn(DEFAULT_KEY_ID, 'secret')
-    assert.equal(await crypto.decryptColumn(stored), 'secret')
-
-    lock.lock()
-    await assert.rejects(
-      () => crypto.decryptColumn(stored),
-      (error: unknown) => error instanceof DataLockedError
-    )
-  })
-
-  test('unlock, lock, unlock reads back what the first unlock wrote', async () => {
-    const lock = await unlockedLock()
-    const crypto = new ClassificationCrypto({
-      resolveKEK: createDataLockResolver(lock),
-    })
-
-    const stored = await crypto.encryptColumn(DEFAULT_KEY_ID, 'secret')
-    lock.lock()
-    await lock.unlock(passphrase)
-
-    assert.equal(await crypto.decryptColumn(stored), 'secret')
-  })
-
-  test('a wrong passphrase is refused and leaves the store locked', async () => {
-    const lock = await unlockedLock()
-    const crypto = new ClassificationCrypto({
-      resolveKEK: createDataLockResolver(lock),
-    })
-    const stored = await crypto.encryptColumn(DEFAULT_KEY_ID, 'secret')
-
-    lock.lock()
-    await assert.rejects(
-      () => lock.unlock('a-completely-different-passphrase-of-good-length'),
-      (error: unknown) => error instanceof InvalidPassphraseError
-    )
-
-    await assert.rejects(
-      () => crypto.decryptColumn(stored),
-      (error: unknown) => error instanceof DataLockedError,
-      'a rejected unlock must not leave half a keyring behind'
-    )
-  })
-
-  test('a written value carries the version from its lock record', async () => {
-    const lock = await unlockedLock()
-    const crypto = new ClassificationCrypto({
-      resolveKEK: createDataLockResolver(lock),
-    })
-    const stored = await crypto.encryptColumn('credentials', 'v')
-    assert.equal(
-      parseColumnEnvelope(stored)?.keyVersion,
-      lock.getKeyVersion('credentials')
-    )
   })
 })

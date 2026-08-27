@@ -75,7 +75,6 @@
     "./hmac": "./dist/utils/hmac.js",
     "./state": "./dist/pikku-state.js",
     "./classification": "./dist/classification/index.js",
-    "./data-lock": "./dist/wirings/data-lock/index.js",
     "./utils": "./dist/utils.js",
     "./schema": "./dist/schema.js",
     "./testing": "./dist/testing/index.js",

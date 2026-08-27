@@ -37,6 +37,4 @@ export {
 } from './secret-value.js'
 export type { Safe } from './secret-value.js'
 
-export { DataLock } from './data-lock.js'
-export type { LockState, LockRecord, LockVault } from './data-lock.js'
-export { DEFAULT_KEY_ID, keyIdsFromManifest } from './key-ids.js'
+export { DEFAULT_KEY_ID } from './key-ids.js'

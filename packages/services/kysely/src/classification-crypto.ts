@@ -4,12 +4,7 @@ import {
   envelopeRewrap,
 } from '@pikku/core/crypto-utils'
 import { DEFAULT_KEY_ID } from '@pikku/core/classification'
-import type { DataLock } from '@pikku/core/classification'
-import type {
-  LockRecord,
-  LockVault,
-  WrappedValue,
-} from '@pikku/core/classification'
+import type { WrappedValue } from '@pikku/core/classification'
 
 /**
  * The key a column is protected by when its classification names none. A
@@ -164,42 +159,5 @@ export class ClassificationCrypto {
       wrappedDek: await envelopeRewrap(oldKEK, newKEK, envelope.wrappedDek),
       ciphertext: envelope.ciphertext,
     })
-  }
-}
-
-/**
- * Resolve a column's KEK from a `DataLock`.
- *
- * The lock is asked per operation rather than read once, which is what lets the
- * key arrive after everything around it has been built: the server boots
- * locked, the passphrase comes in over HTTP, and none of the services, the
- * Kysely instance or the plugin are reconstructed. `getKEK` throws
- * `DataLockedError` while locked, so a classified write fails loudly instead of
- * quietly storing plaintext, and a later `lock()` takes the key back mid-life.
- */
-export const createDataLockResolver =
-  (lock: DataLock): KEKResolver =>
-  async (keyId) => ({
-    kek: await lock.getKEK(keyId),
-    keyVersion: lock.getKeyVersion(keyId),
-  })
-
-/**
- * Lock records held in memory for the life of the process.
- *
- * The records are not secret — they are salts and a verifier — so what makes
- * this in-memory store a test-only choice is durability, not exposure: the
- * salts vanish on exit and every row sealed under them becomes unopenable. A
- * real deployment persists them.
- */
-export const createMemoryLockVault = (): LockVault => {
-  let records: LockRecord[] = []
-  return {
-    async read() {
-      return records
-    },
-    async write(next) {
-      records = next
-    },
   }
 }

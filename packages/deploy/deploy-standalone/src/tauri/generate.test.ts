@@ -165,30 +165,6 @@ describe('generating a Tauri shell around a pikku binary', () => {
     }
   })
 
-  it('holds no passphrase of any kind', async () => {
-    const dir = await scratch()
-    try {
-      await generate(dir)
-      const main = await readFile(
-        join(dir, 'src-tauri', 'src', 'main.rs'),
-        'utf-8'
-      )
-      // Comments are free to explain the design; it is the code that must not
-      // touch a key.
-      const code = main
-        .split('\n')
-        .filter((line) => !line.trim().startsWith('//'))
-        .join('\n')
-      assert.doesNotMatch(
-        code,
-        /passphrase|password|PIKKU_PASS|unlock/i,
-        'unlocking is an HTTP call the frontend makes; Rust must never see the key'
-      )
-    } finally {
-      await rm(dir, { recursive: true, force: true })
-    }
-  })
-
   it('lands the binary under the name externalBin resolves', async () => {
     const dir = await scratch()
     try {

@@ -15,7 +15,6 @@ import path from 'path'
 import { downloadTemplate } from 'giget'
 import { createSpinner } from 'nanospinner'
 import {
-  applyPrivateMode,
   cleanPikkuConfig,
   cleanTSConfig,
   filterFilesByFeatures,
@@ -110,9 +109,8 @@ const templates = [
   },
   {
     template: 'tanstack',
-    description:
-      'A TanStack Start frontend served by pikku from one origin, optionally sealed behind a passphrase',
-    supports: ['http', 'fullstack', 'private-mode'],
+    description: 'A TanStack Start frontend served by pikku from one origin',
+    supports: ['http', 'fullstack'],
   },
   {
     template: 'pg-boss',
@@ -192,7 +190,6 @@ interface CliOptions {
   stackblitz?: boolean
   variations?: boolean
   frontend?: string
-  privateMode?: boolean
 }
 
 // 🏗 Add CLI Flags with Commander.js
@@ -210,10 +207,6 @@ program
   .option('--stackblitz', 'Add StackBlitz configuration')
   .option('--variations', 'Show all template variations')
   .option('--frontend <frontend>', 'Frontend app to keep for fabric')
-  .option(
-    '--private',
-    'Seal this app behind a passphrase (templates that support private mode)'
-  )
   .parse(process.argv)
 
 const cliOptions = program.opts()
@@ -326,7 +319,6 @@ async function setupTemplate(cliOptions: CliOptions) {
     mergeJsonFiles([functionsPath, templatePath], targetPath, 'tsconfig.json')
     mergeDirectories(functionsPath, targetPath)
     mergeDirectories(templatePath, targetPath)
-    applyPrivateMode(targetPath, Boolean(cliOptions.privateMode))
     replaceFunctionReferences(targetPath, cliOptions.stackblitz)
     if (template !== 'functions') {
       removeFunctionsOnlyFiles(targetPath)
@@ -512,37 +504,6 @@ async function run() {
             ? 'bun'
             : 'npm')
 
-  const supportsPrivateMode = (
-    templates.find((t) => t.template === template)?.supports as
-      string[] | undefined
-  )?.includes('private-mode')
-
-  // Asked rather than assumed, and off by default: sealing the data means
-  // typing a passphrase every time the server starts, which is a real cost
-  // most apps have no reason to pay.
-  const privateMode =
-    supportsPrivateMode &&
-    (cliOptions.private ||
-      (cliOptions.variations
-        ? await select({
-            message: 'Seal this app behind a passphrase?',
-            choices: [
-              {
-                name: 'No',
-                value: false,
-                description:
-                  'The app stores its data in the clear, and starts without being unlocked',
-              },
-              {
-                name: 'Yes',
-                value: true,
-                description:
-                  'The server boots locked and holds no key until someone types the passphrase into the app',
-              },
-            ],
-          })
-        : false))
-
   const install =
     !cliOptions.skipInstall && (cliOptions.install || !cliOptions.variations)
 
@@ -556,7 +517,6 @@ async function run() {
     stackblitz: cliOptions.stackblitz,
     variations: cliOptions.variations,
     frontend: cliOptions.frontend,
-    privateMode: Boolean(privateMode),
   }
 
   if (template === 'nextjs-full') {

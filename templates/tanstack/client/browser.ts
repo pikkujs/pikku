@@ -7,9 +7,6 @@
  * pass every check in it. This drives the page instead — a todo typed into
  * the form, and still there after a reload — so the parts that only exist in
  * a browser are covered too.
- *
- * Scaffolding with private mode replaces this file with a version that also
- * walks the unlock screens.
  */
 import { chromium, type Page } from '@playwright/test'
 

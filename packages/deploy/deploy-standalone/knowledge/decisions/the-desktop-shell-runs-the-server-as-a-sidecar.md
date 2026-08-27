@@ -33,11 +33,10 @@ Two supporting rules fall out of running a real server process:
 
 - **Single instance is load-bearing.** `tauri-plugin-single-instance` focuses the
   existing window instead of launching again. Two shells would mean two
-  sidecars: two SQLite writers on one file, and two independently unlocked keys
-  in memory.
+  sidecars: two SQLite writers on one file.
 - **The sidecar must not outlive the shell.** Tauri stops it on a clean exit, but
-  a hard crash never runs that path, and an orphan holds the database open with
-  its data key still resident. The shell passes its pid down as
+  a hard crash never runs that path, and an orphan holds the database open. The
+  shell passes its pid down as
   `PIKKU_PARENT_PID` and the server polls it, exiting when the parent is gone.
   With no such variable set — a terminal, a container — the watch is inert.
 

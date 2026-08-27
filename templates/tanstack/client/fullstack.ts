@@ -5,9 +5,6 @@
  *  - the built frontend and the API answer on one origin, and a client-side
  *    route falls back to the app shell rather than 404ing;
  *  - the generated HTTP surface serves the todo wirings the app calls.
- *
- * Scaffolding with private mode replaces this file with a version that also
- * walks the passphrase gate.
  */
 const BASE = process.env.TODO_APP_URL || 'http://localhost:4002'
 
