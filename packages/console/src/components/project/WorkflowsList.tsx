@@ -16,12 +16,12 @@ type Workflow = WorkflowsMeta[string] & {
 const COLUMNS = [
   {
     key: 'name',
-    header: 'NAME',
+    header: 'Name',
     render: (w: Workflow) => <Text fw={500}>{asI18n(w.name)}</Text>,
   },
   {
     key: 'steps',
-    header: 'STEPS',
+    header: 'Steps',
     align: 'right' as const,
     render: (w: Workflow) => (
       <PikkuBadge

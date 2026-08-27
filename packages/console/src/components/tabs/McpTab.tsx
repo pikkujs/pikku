@@ -26,7 +26,7 @@ export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: any) => (
           <>
             <Text fw={500} truncate>
@@ -42,7 +42,7 @@ export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
       },
       {
         key: 'type',
-        header: 'TYPE',
+        header: 'Type',
         align: 'right' as const,
         render: (item: any) => {
           const method = item.method || 'tool'

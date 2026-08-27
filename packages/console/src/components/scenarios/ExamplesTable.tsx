@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { Box, Table, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
+import classes from '../ui/console.module.css'
 
 const cell = (value: unknown): string =>
   typeof value === 'string' ? value : JSON.stringify(value)
@@ -31,7 +32,7 @@ export const ExamplesTable: React.FC<ExamplesTableProps> = ({ rows }) => {
       </Text>
       <Box style={{ overflowX: 'auto' }}>
         <Table withTableBorder withColumnBorders fz="xs">
-          <Table.Thead>
+          <Table.Thead className={classes.tableHead}>
             <Table.Tr>
               {columns.map((column) => (
                 <Table.Th key={column}>{asI18n(column)}</Table.Th>
