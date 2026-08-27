@@ -17,12 +17,12 @@ interface ServiceItem {
 const COLUMNS = [
   {
     key: 'name',
-    header: 'NAME',
+    header: 'Name',
     render: (item: ServiceItem) => <Text fw={500}>{asI18n(item.name)}</Text>,
   },
   {
     key: 'functions',
-    header: 'FUNCTIONS',
+    header: 'Functions',
     align: 'right' as const,
     render: (item: ServiceItem) => (
       <PikkuBadge type="dynamic" badge="functions" value={item.funcCount} />

@@ -35,7 +35,7 @@ export const MiddlewareListPanel: React.FC<MiddlewareListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: MiddlewareItem) => (
           <>
             <Text fw={500} truncate>
@@ -51,7 +51,7 @@ export const MiddlewareListPanel: React.FC<MiddlewareListPanelProps> = ({
       },
       {
         key: 'type',
-        header: 'TYPE',
+        header: 'Type',
         align: 'right' as const,
         render: (item: MiddlewareItem) => {
           const wireNames: string[] = item.data?.wires?.wires ?? []

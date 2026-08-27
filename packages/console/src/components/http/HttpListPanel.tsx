@@ -31,7 +31,7 @@ export const HttpListPanel: React.FC<HttpListPanelProps> = ({
     () => [
       {
         key: 'route',
-        header: 'ROUTE',
+        header: 'Route',
         render: (route: any) => (
           <>
             <Text fw={500} truncate>
@@ -45,7 +45,7 @@ export const HttpListPanel: React.FC<HttpListPanelProps> = ({
       },
       {
         key: 'method',
-        header: 'METHOD',
+        header: 'Method',
         align: 'right' as const,
         render: (route: any) => {
           const method = route.method?.toUpperCase() || 'GET'

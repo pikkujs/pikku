@@ -50,7 +50,7 @@ export const AuthProvidersListPanel: React.FC<AuthProvidersListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'PROVIDER',
+        header: 'Provider',
         render: (p: AuthProviderDef) => (
           <Group gap="xs">
             <KeyRound size={14} />
@@ -65,14 +65,14 @@ export const AuthProvidersListPanel: React.FC<AuthProvidersListPanelProps> = ({
       },
       {
         key: 'status',
-        header: 'STATUS',
+        header: 'Status',
         render: (p: AuthProviderDef) => (
           <ConfiguredBadge configured={isConfigured(p)} providerId={p.id} />
         ),
       },
       {
         key: 'description',
-        header: 'DESCRIPTION',
+        header: 'Description',
         render: (p: AuthProviderDef) => (
           <Text size="sm" c="dimmed">
             {asI18n(p.description)}
@@ -81,7 +81,7 @@ export const AuthProvidersListPanel: React.FC<AuthProvidersListPanelProps> = ({
       },
       {
         key: 'fields',
-        header: 'ENV VARS',
+        header: 'Env vars',
         render: (p: AuthProviderDef) => (
           <Text size="sm" c="dimmed" ff="monospace">
             {asI18n(

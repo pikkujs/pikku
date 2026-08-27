@@ -31,7 +31,7 @@ export const QueuesListPanel: React.FC<QueuesListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: QueueItem) => (
           <>
             <Text fw={500} truncate>
@@ -47,7 +47,7 @@ export const QueuesListPanel: React.FC<QueuesListPanelProps> = ({
       },
       {
         key: 'concurrency',
-        header: 'CONCURRENCY',
+        header: 'Concurrency',
         align: 'right' as const,
         render: (item: QueueItem) =>
           item.concurrency ? (
