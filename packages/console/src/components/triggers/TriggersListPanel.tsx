@@ -5,6 +5,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Zap } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { useTriggerItems, type TriggerPair } from '../../hooks/useTriggerItems'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -27,6 +28,19 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
   const { openTriggerSource, openTrigger } = usePanelContext()
   useLocale()
   const { items: pairs, loading } = useTriggerItems()
+
+  usePanelUrl({
+    type: 'trigger',
+    items: pairs,
+    getId: (pair) => pair.name,
+    open: (id, pair) => openTrigger(id, pair.trigger),
+  })
+  usePanelUrl({
+    type: 'triggerSource',
+    items: pairs,
+    getId: (pair) => pair.name,
+    open: (id, pair) => openTriggerSource(id, pair.source),
+  })
 
   const columns = useMemo(
     () => [

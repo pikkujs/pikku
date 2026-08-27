@@ -3,6 +3,7 @@ import { Group, SegmentedControl, Stack, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { useSearchParams } from '../../router'
+import { setUrlHash } from '../../hooks/useUrlHash'
 import { ConsoleSurface } from './ConsoleSurface'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { ListPageHeader } from '../layout/PageLayout'
@@ -93,6 +94,10 @@ export const TabbedSurface: React.FC<TabbedSurfaceProps> = (props) => {
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
+    // The fragment names a row in the tab being left; it means nothing in the
+    // next one, and leaving it there would have the URL describe a selection
+    // that is not on screen.
+    setUrlHash('')
     if (onTabChange) {
       onTabChange(value)
       return

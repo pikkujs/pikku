@@ -5,6 +5,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { useQueueItems, type QueueItem } from '../../hooks/useQueueItems'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -26,6 +27,13 @@ export const QueuesListPanel: React.FC<QueuesListPanelProps> = ({
   const { openQueue } = usePanelContext()
   useLocale()
   const { items, loading } = useQueueItems()
+
+  usePanelUrl({
+    type: 'queue',
+    items,
+    getId: (item) => item.name,
+    open: (id, item) => openQueue(id, item.data),
+  })
 
   const columns = useMemo(
     () => [

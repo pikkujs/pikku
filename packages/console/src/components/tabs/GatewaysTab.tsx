@@ -3,6 +3,7 @@ import { Group, Text } from '@pikku/mantine/core'
 import { Network } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { asI18n } from '@pikku/react'
@@ -25,6 +26,13 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
       .filter((gateway: any) => gateway.enabled !== false)
       .sort((a: any, b: any) => a.name.localeCompare(b.name))
   }, [meta.gatewayMeta])
+
+  usePanelUrl({
+    type: 'gateway',
+    items: gateways,
+    getId: (gateway: any) => gateway.name,
+    open: openGateway,
+  })
 
   const columns = useMemo(
     () => [

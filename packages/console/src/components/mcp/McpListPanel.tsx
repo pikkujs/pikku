@@ -5,6 +5,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { useMcpItems } from '../../hooks/useMcpItems'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -33,6 +34,13 @@ export const McpListPanel: React.FC<McpListPanelProps> = ({
     if (filter === 'all') return items
     return items.filter((item) => item.method === filter)
   }, [items, filter])
+
+  usePanelUrl({
+    type: 'mcp',
+    items,
+    getId: (item: any) => `mcp::${item.method}::${item.wireId || item.name}`,
+    open: openMCP,
+  })
 
   const columns = useMemo(
     () => [

@@ -5,6 +5,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { TableListPage } from '../layout/TableListPage'
 import { funcWrapperDefs } from '../ui/badge-defs'
@@ -80,6 +81,18 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
     searchQuery,
     showPikkuFunctions
   )
+  const allFunctions = useMemo(
+    () => (rawFunctions ?? []) as any[],
+    [rawFunctions]
+  )
+
+  usePanelUrl({
+    type: 'function',
+    items: allFunctions,
+    getId: (func: any) => func.pikkuFuncName || func.pikkuFuncId,
+    open: openFunction,
+  })
+
   const hasTestsColumn = useMemo(
     () => !!testsByFunction || functions.some((func: any) => !!func.tests),
     [functions, testsByFunction]

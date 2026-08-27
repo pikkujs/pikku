@@ -5,6 +5,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { useHttpItems } from '../../hooks/useHttpItems'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -26,6 +27,13 @@ export const HttpListPanel: React.FC<HttpListPanelProps> = ({
   const { openHTTPWire } = usePanelContext()
   useLocale()
   const { items: routes, loading } = useHttpItems()
+
+  usePanelUrl({
+    type: 'http',
+    items: routes,
+    getId: (route: any) => `http::${route.method}::${route.route}`,
+    open: openHTTPWire,
+  })
 
   const columns = useMemo(
     () => [

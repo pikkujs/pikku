@@ -292,6 +292,9 @@ export { ConsoleEditableProvider } from './context/ConsoleEditableContext'
 // Detail-panel system: lets an embedder (e.g. a canvas/graph view) open the
 // same right-hand configuration panels the pages use, by wire type + id.
 export { PanelProvider, usePanelContext } from './context/PanelContext'
+export { usePanelUrl } from './hooks/usePanelUrl'
+export type { PanelUrlOptions } from './hooks/usePanelUrl'
+export { panelHref } from './lib/panel-url'
 export type { PanelType, PanelData } from './context/PanelContext'
 export { PanelContainer } from './components/panel/PanelContainer'
 // Needed by an embedder that opens the workflow panel outside a workflow page:

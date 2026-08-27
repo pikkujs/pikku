@@ -5,6 +5,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import {
   usePermissionItems,
   type PermissionItem,
@@ -30,6 +31,13 @@ export const PermissionsListPanel: React.FC<PermissionsListPanelProps> = ({
   const { openPermission } = usePanelContext()
   useLocale()
   const { items, loading } = usePermissionItems()
+
+  usePanelUrl({
+    type: 'permission',
+    items,
+    getId: (item) => item.id,
+    open: (id, item) => openPermission(id, item.data),
+  })
 
   const columns = useMemo(
     () => [

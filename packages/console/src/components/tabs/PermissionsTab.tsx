@@ -3,6 +3,7 @@ import { Text, Group } from '@pikku/mantine/core'
 import { Shield } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { asI18n } from '@pikku/react'
@@ -46,6 +47,13 @@ export const PermissionsTab: React.FC<{ searchQuery: string }> = ({
         item.data?.description?.toLowerCase().includes(q)
     )
   }, [allItems, searchQuery])
+
+  usePanelUrl({
+    type: 'permission',
+    items: allItems,
+    getId: (item) => item.id,
+    open: (id, item) => openPermission(id, item.data),
+  })
 
   const columns = useMemo(
     () => [

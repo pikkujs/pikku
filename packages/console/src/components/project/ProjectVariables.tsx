@@ -3,6 +3,7 @@ import { Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { Settings2 } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { TableListPage } from '../layout/TableListPage'
 
 export interface VariableMeta {
@@ -27,6 +28,14 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
   emptyHero,
 }) => {
   const { openVariable } = usePanelContext()
+
+  usePanelUrl({
+    type: 'variable',
+    items: variables,
+    getId: (variable) => variable.name,
+    open: (id, variable) =>
+      openVariable(id, { ...(variable.rawData ?? variable), installed }),
+  })
 
   const columns = useMemo(
     () => [

@@ -3,6 +3,7 @@ import { Text, Group } from '@pikku/mantine/core'
 import { Globe } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { m } from '@/i18n/messages'
@@ -21,6 +22,13 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
       a.route.localeCompare(b.route)
     )
   }, [meta.httpMeta])
+
+  usePanelUrl({
+    type: 'http',
+    items: routes,
+    getId: (route: any) => `http::${route.method}::${route.route}`,
+    open: openHTTPWire,
+  })
 
   const columns = useMemo(
     () => [
