@@ -307,6 +307,15 @@ export { ConsoleEditableProvider } from './context/ConsoleEditableContext'
 // same right-hand configuration panels the pages use, by wire type + id.
 export { PanelProvider, usePanelContext } from './context/PanelContext'
 export { usePanelUrl } from './hooks/usePanelUrl'
+// The URL as state, for a host with pages of its own: bind `createUrlState` to
+// that host's router and its pages keep a selection the way the console's do.
+export {
+  createUrlState,
+  useUrlState,
+  useUrlSelection,
+  useUrlWrite,
+} from './hooks/url-state'
+export type { UrlState, UrlWrite, UrlStateOptions } from './hooks/url-state'
 export type { PanelUrlOptions } from './hooks/usePanelUrl'
 export { panelHref } from './lib/panel-url'
 export type { PanelType, PanelData } from './context/PanelContext'
