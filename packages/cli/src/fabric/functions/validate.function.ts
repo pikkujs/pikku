@@ -79,6 +79,17 @@ async function listSourceFiles(dir: string): Promise<string[]> {
   }
 }
 
+/**
+ * Blanks comment bodies so a raw-text scan cannot read prose as code. Prose in a
+ * scenario description ("Converted from the Gherkin scenario...") otherwise
+ * matches the import scanner's `from "..."` and reports a package that is really
+ * a sentence.
+ */
+const stripCommentText = (text: string): string =>
+  text
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, (_m, p1: string) => p1)
+
 // Heavy/generated dirs pruned during a source walk.
 const SKIP_WALK_DIRS = new Set([
   'node_modules',
@@ -663,12 +674,15 @@ export async function runValidate(
         if (/\.gen\.(ts|tsx)$/.test(file)) continue
         const txt = await readTextSafe(file)
         if (!txt) continue
+        const src = stripCommentText(txt)
         const re = /(?:from|import|require)\s*\(?\s*['"]([^'".#][^'"]*)['"]/g
         let m: RegExpExecArray | null
-        while ((m = re.exec(txt))) {
+        while ((m = re.exec(src))) {
           const spec = m[1]
           if (
+            /\s/.test(spec) ||
             spec.startsWith('node:') ||
+            spec.startsWith('bun:') ||
             spec.startsWith('@/') ||
             spec.startsWith('~') ||
             spec.startsWith('virtual:') ||
@@ -1834,19 +1848,68 @@ export async function runValidate(
     if (keysByValue.size > 0) {
       const STRING_LITERAL =
         /(?<![A-Za-z0-9_$])(['"])((?:[^\\\n]|\\.){2,200}?)\1/g
+      // A literal in `someKey: '...'` position is only copy when the key names
+      // something the browser renders. `unit: 'kg'` is an RPC payload field that
+      // happens to read like the catalogue's `unit_kg` label for a form suffix —
+      // rewriting it to a message lookup would bind a stored value to UI copy.
+      const PROPERTY_KEY = /([A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*$/
+      // The innermost call whose argument list `index` sits in. Walks back
+      // balancing brackets, so in `expect(await page.getByText('Save'), ...)`
+      // the literal belongs to `getByText`, which is a locator and is still
+      // scanned.
+      const enclosingCall = (code: string, index: number): string | null => {
+        let depth = 0
+        for (let i = index - 1; i >= 0; i--) {
+          const ch = code[i]!
+          if (ch === ')' || ch === ']' || ch === '}') depth++
+          else if (ch === '(' || ch === '[' || ch === '{') {
+            if (depth > 0) {
+              depth--
+              continue
+            }
+            if (ch !== '(') return null
+            return (
+              /([A-Za-z_$][A-Za-z0-9_$]*)\s*$/.exec(code.slice(0, i))?.[1] ??
+              null
+            )
+          }
+        }
+        return null
+      }
+      const UI_TEXT_KEYS = new Set([
+        'alt',
+        'button',
+        'caption',
+        'heading',
+        'label',
+        'link',
+        'name',
+        'option',
+        'placeholder',
+        'tab',
+        'text',
+        'title',
+        'value',
+      ])
       for (const file of await walkSourceFiles(root)) {
         if (!/\.(steps|scenario)\.tsx?$/.test(file)) continue
         const text = await readTextSafe(file)
         if (!text) continue
-        const code = text
-          .replace(/\/\*[\s\S]*?\*\//g, '')
-          .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1')
+        const code = stripCommentText(text)
         const hits: string[] = []
         for (const match of code.matchAll(STRING_LITERAL)) {
           const literal = match[2]
           if (!literal) continue
           const keys = keysByValue.get(literal)
-          if (keys) hits.push(`"${literal}" → ${keys.join(' | ')}`)
+          if (!keys) continue
+          // `expect(item.unit, 'kg')` asserts on a value the RPC returned,
+          // not on anything the browser rendered. Reading it from the
+          // catalogue would bind a stored value to UI copy, and the assertion
+          // would then pass against whatever the label happened to say.
+          if (enclosingCall(code, match.index) === 'expect') continue
+          const property = PROPERTY_KEY.exec(code.slice(0, match.index))
+          if (property && !UI_TEXT_KEYS.has(property[1]!)) continue
+          hits.push(`"${literal}" → ${keys.join(' | ')}`)
         }
         if (hits.length === 0) continue
         e(
