@@ -1,6 +1,6 @@
 ---
-'@pikku/core': minor
-'@pikku/cli': minor
+'@pikku/core': patch
+'@pikku/cli': patch
 ---
 
 Resolve a variable's declared default instead of dropping it.
