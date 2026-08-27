@@ -5338,7 +5338,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:*, @pikku/core@npm:^0.12.85, @pikku/core@npm:^0.12.86, @pikku/core@npm:^0.12.87, @pikku/core@npm:^0.12.89, @pikku/core@npm:^0.12.90, @pikku/core@npm:^0.12.96, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:*, @pikku/core@npm:^0.12.85, @pikku/core@npm:^0.12.86, @pikku/core@npm:^0.12.87, @pikku/core@npm:^0.12.89, @pikku/core@npm:^0.12.90, @pikku/core@npm:^0.12.94, @pikku/core@npm:^0.12.96, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -5571,7 +5571,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fetch@npm:^0.12.10, @pikku/fetch@npm:^0.12.6, @pikku/fetch@workspace:*, @pikku/fetch@workspace:packages/client-fetch":
+"@pikku/fetch@npm:^0.12.10, @pikku/fetch@npm:^0.12.6, @pikku/fetch@npm:^0.12.9, @pikku/fetch@workspace:*, @pikku/fetch@workspace:packages/client-fetch":
   version: 0.0.0-use.local
   resolution: "@pikku/fetch@workspace:packages/client-fetch"
   dependencies:
