@@ -31,6 +31,17 @@ export type StaticMount = {
   urlPrefix: string
   directory: string
   spaFallback?: boolean
+  /**
+   * Serve from an explicit key → path map instead of from `directory`, which is
+   * then unused. Keys are mount-relative request paths (`index.html`,
+   * `assets/app-a1b2c3.js`).
+   *
+   * This exists for assets that are not laid out as a directory at all: a
+   * `bun build --compile` binary embeds each file and hands back an opaque
+   * `/$bunfs/…` path, so the only way to find one is to have recorded it at
+   * build time.
+   */
+  assets?: Record<string, string>
 }
 
 export type BunServerConfig = CoreConfig & {
@@ -220,7 +231,7 @@ export class PikkuBunServer {
           return contentResponse
         }
 
-        const staticResponse = await this.serveStaticMounts(req)
+        const staticResponse = await this.serveStaticFiles(req)
         if (staticResponse) {
           return staticResponse
         }
@@ -231,7 +242,14 @@ export class PikkuBunServer {
           respondWith404: true,
           ...options,
         })
-        return pikkuRes.toResponse()
+        const response = pikkuRes.toResponse()
+        if (response.status === 404) {
+          const fallback = await this.serveSpaFallback(req)
+          if (fallback) {
+            return fallback
+          }
+        }
+        return response
       },
 
       websocket: {
@@ -279,60 +297,133 @@ export class PikkuBunServer {
 
     eventHub.setServer(this.server as BunServer<unknown>)
     logger.info(
-      `pikku-bun-server: listening on http://${config.hostname ?? 'localhost'}:${config.port}`
+      `pikku-bun-server: listening on http://${config.hostname ?? 'localhost'}:${this.port}`
     )
   }
 
+  /**
+   * The port the server is actually listening on.
+   *
+   * Not the same as `config.port` whenever that is `0`: the OS picks a free
+   * port at bind time, and a parent process that was told `0` has no other way
+   * to find out which one. Falls back to the requested port before `start()`.
+   */
   public get port(): number {
     return this.server?.port ?? this.config.port
   }
 
-  private async serveStaticMounts(req: Request): Promise<Response | null> {
+  private matchesPrefix(pathname: string, prefix: string): boolean {
+    // A root mount covers the whole tree; the generic test below would match
+    // only `/` itself, since nothing starts with `//`.
+    if (prefix === '' || prefix === '/') {
+      return true
+    }
+    return pathname === prefix || pathname.startsWith(`${prefix}/`)
+  }
+
+  /**
+   * Resolve the mounts a GET/HEAD request could be served from, or null when
+   * static serving does not apply to this request at all.
+   */
+  private staticMountCandidates(
+    req: Request
+  ): { pathname: string; mounts: StaticMount[] } | null {
     const mounts = this.config.staticMounts
     if (!mounts?.length || (req.method !== 'GET' && req.method !== 'HEAD')) {
       return null
     }
     const pathname = decodeURIComponent(new URL(req.url).pathname)
+    return {
+      pathname,
+      mounts: mounts.filter((mount) =>
+        this.matchesPrefix(pathname, mount.urlPrefix)
+      ),
+    }
+  }
 
-    for (const mount of mounts) {
-      if (
-        pathname !== mount.urlPrefix &&
-        !pathname.startsWith(`${mount.urlPrefix}/`)
-      ) {
-        continue
+  /**
+   * Serve an exact file hit only. A miss falls through to route dispatch, so a
+   * mount at `/` cannot swallow the API — the app shell is served afterwards by
+   * `serveSpaFallback`, once dispatch has had its chance and produced a 404.
+   */
+  private async serveStaticFiles(req: Request): Promise<Response | null> {
+    const candidates = this.staticMountCandidates(req)
+    if (!candidates) {
+      return null
+    }
+
+    for (const mount of candidates.mounts) {
+      const key = candidates.pathname
+        .slice(mount.urlPrefix.length)
+        .replace(/^\/+/, '')
+      const result = await this.resolveStaticFile(mount, key)
+      if (result === 'rejected') {
+        // A key that escaped the mount directory is refused outright rather
+        // than falling through, which would answer a traversal attempt with a
+        // 200 and the app shell.
+        return new Response('Not Found', { status: 404 })
       }
-      const key = pathname.slice(mount.urlPrefix.length).replace(/^\/+/, '')
-      const file = await this.resolveStaticFile(mount, key)
-      if (file) {
-        return new Response(req.method === 'HEAD' ? null : file)
+      if (result) {
+        return new Response(req.method === 'HEAD' ? null : result)
       }
-      if (mount.spaFallback) {
-        const index = await this.resolveStaticFile(mount, 'index.html')
-        if (index) {
-          return new Response(req.method === 'HEAD' ? null : index)
-        }
-      }
-      return new Response('Not Found', { status: 404 })
     }
 
     return null
   }
 
+  /**
+   * Last resort for a client-side route: dispatch has already 404'd, so an
+   * unmatched path under a `spaFallback` mount is the SPA's own routing.
+   */
+  private async serveSpaFallback(req: Request): Promise<Response | null> {
+    const candidates = this.staticMountCandidates(req)
+    if (!candidates) {
+      return null
+    }
+
+    for (const mount of candidates.mounts) {
+      if (!mount.spaFallback) {
+        continue
+      }
+      const index = await this.resolveStaticFile(mount, 'index.html')
+      if (index && index !== 'rejected') {
+        return new Response(req.method === 'HEAD' ? null : index)
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * `'rejected'` is kept distinct from `null` because the two must not share a
+   * fate: a missing file is a candidate for the SPA fallback, while a key that
+   * resolved outside the mount directory must never be. An `assets` mount never
+   * produces `'rejected'` at all — a map lookup has no directory to escape.
+   */
   private async resolveStaticFile(
     mount: StaticMount,
     key: string
-  ): Promise<ReturnType<typeof Bun.file> | null> {
+  ): Promise<ReturnType<typeof Bun.file> | 'rejected' | null> {
+    if (mount.assets) {
+      const assetPath = mount.assets[key === '' ? 'index.html' : key]
+      if (!assetPath) {
+        return null
+      }
+      const asset = Bun.file(assetPath)
+      return (await asset.exists()) ? asset : null
+    }
+
     const directory = resolve(mount.directory)
     const targetPath =
       key === '' ? resolve(directory, 'index.html') : resolve(directory, key)
     if (targetPath !== directory && !targetPath.startsWith(`${directory}/`)) {
-      return null
+      return 'rejected'
     }
     let file = Bun.file(targetPath)
     if (!(await file.exists())) {
       const indexPath = resolve(targetPath, 'index.html')
       if (!indexPath.startsWith(`${directory}/`)) {
-        return null
+        return 'rejected'
       }
       file = Bun.file(indexPath)
       if (!(await file.exists())) {

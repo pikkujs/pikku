@@ -8,6 +8,7 @@ export { KyselyAgentStorageService } from './kysely-agent-storage-service.js'
 export { KyselyAgentRunService } from './kysely-agent-run-service.js'
 export { KyselyAgentRunStateService } from './kysely-agent-run-state-service.js'
 export { KyselySecretService } from './kysely-secret-service.js'
+export { KyselyLockVault } from './kysely-lock-vault.js'
 export { KyselyCredentialService } from './kysely-credential-service.js'
 export { KyselySessionStore } from './kysely-session-store.js'
 export { KyselyScopeService } from './kysely-scope-service.js'
@@ -33,12 +34,29 @@ export {
   type CreateCoercionPluginOptions,
 } from './coercion-plugin.js'
 export {
+  createClassificationPlugin,
+  type CreateClassificationPluginOptions,
+} from './classification-plugin.js'
+export {
+  ClassificationCrypto,
+  DEFAULT_KEY_ID,
+  createDataLockResolver,
+  createMemoryLockVault,
+  isColumnEnvelope,
+  parseColumnEnvelope,
+  type ClassificationCryptoOptions,
+  type ColumnEnvelope,
+  type KEKResolver,
+  type ResolvedKEK,
+} from './classification-crypto.js'
+export {
   agentSchema,
   auditSchema,
   channelSchema,
   credentialSchema,
   deploymentSchema,
   scopeSchema,
+  dataLockSchema,
   secretSchema,
   sessionSchema,
   virtualUserSchema,

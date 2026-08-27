@@ -10,6 +10,7 @@ import { agentSchema } from './agent.schema.js'
 import { auditSchema } from './audit.schema.js'
 import { channelSchema } from './channel.schema.js'
 import { credentialSchema } from './credential.schema.js'
+import { dataLockSchema } from './data-lock.schema.js'
 import { deploymentSchema } from './deployment.schema.js'
 import { scopeSchema } from './scope.schema.js'
 import { secretSchema } from './secret.schema.js'
@@ -52,6 +53,7 @@ export const pikkuSchemas: PikkuSchema[] = [
   channelSchema,
   sessionSchema,
   secretSchema,
+  dataLockSchema,
   credentialSchema,
   deploymentSchema,
   webhookSchema,
@@ -67,6 +69,7 @@ export { agentSchema } from './agent.schema.js'
 export { auditSchema } from './audit.schema.js'
 export { channelSchema } from './channel.schema.js'
 export { credentialSchema } from './credential.schema.js'
+export { dataLockSchema } from './data-lock.schema.js'
 export { deploymentSchema } from './deployment.schema.js'
 export { scopeSchema } from './scope.schema.js'
 export { secretSchema } from './secret.schema.js'

@@ -18,6 +18,15 @@ export interface DevServerInstance {
   start(): Promise<void>
   /** Full teardown — closes the server and any owned WebSocket server. */
   stop(): Promise<void>
+  /**
+   * The port the server actually bound, readable once `start()` has resolved.
+   *
+   * Diverges from the requested port whenever that was `0`, which is the only
+   * race-free way for a parent process to hand the server a port: anything the
+   * parent picks can be taken between its check and the server's bind. The
+   * ready line is built from this, so a parent learns the port by reading it.
+   */
+  readonly port: number
 }
 
 /** Config shape both runtimes accept (Core config + host/port/content). */

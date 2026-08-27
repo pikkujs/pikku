@@ -35,6 +35,7 @@ RUN_CLI_TESTS=false
 RUN_WORKFLOW_TESTS=false
 RUN_AGENT_TESTS=false
 RUN_REALTIME_TESTS=false
+RUN_FULLSTACK_TESTS=false
 IGNORE_SERVER_READY_CHECK=false
 NO_START=false
 WS_PATH=""
@@ -108,6 +109,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --realtime)
             RUN_REALTIME_TESTS=true
+            shift
+            ;;
+        --fullstack)
+            RUN_FULLSTACK_TESTS=true
             shift
             ;;
         *)
@@ -264,6 +269,18 @@ fi
 if $RUN_REALTIME_TESTS; then
     echo "Running Realtime tests..."
     $PKG_MANAGER run test:realtime
+fi
+
+# -------- RUN FULLSTACK TESTS IF REQUESTED --------
+if $RUN_FULLSTACK_TESTS; then
+    # The browser pass goes first: the HTTP pass finishes by tripping the
+    # lockout on purpose, and a throttled store cannot be opened from a form.
+    echo "Running Browser tests..."
+    npx playwright install chromium
+    $PKG_MANAGER run test:browser
+
+    echo "Running Fullstack tests..."
+    $PKG_MANAGER run test:fullstack
 fi
 
 echo "✅ All tests completed successfully."

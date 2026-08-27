@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2860 observable things**: 904 exported names, plus
-1956 members on the classes and interfaces among them, reachable
-through 53 entry points.
+**2884 observable things**: 916 exported names, plus
+1968 members on the classes and interfaces among them, reachable
+through 54 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -24,12 +24,12 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 37 | 37 | 48 |
 | `./http` | 25 | 25 | 49 |
-| `./errors` | 49 | 49 | 20 |
+| `./errors` | 52 | 52 | 20 |
+| `./classification` | 27 | 27 | 25 |
 | `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
-| `./classification` | 21 | 21 | 13 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./middleware` | 27 | 25 | 0 |
@@ -62,6 +62,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
 | `./testing` | 3 | 3 | 2 |
 | `./node` | 3 | 3 | 0 |
+| `./data-lock` | 3 | 3 | 0 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
 | `./hmac` | 2 | 2 | 0 |
@@ -412,7 +413,6 @@ export type WireServices<
 ```ts
 addGlobalMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
 addGlobalPermission: (permissions: CorePermissionGroup | CorePikkuPermission[], packageName?: string | null) => CorePermissionGroup | CorePikkuPermission[]
-addMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
 addTagMiddleware: <PikkuMiddleware extends CorePikkuMiddleware>(tag: string, middleware: CorePikkuMiddlewareGroup, packageName?: string | null) => CorePikkuMiddlewareGroup
 authAPIKey: CorePikkuMiddlewareFactory<{ source: "header" | "query" | "all"; }>
 authBearer: CorePikkuMiddlewareFactory<{ token?: { value: string; userSession: CoreUserSession; } | { secretId: string; userSession: CoreUserSession; } | undefined; }>
@@ -480,6 +480,7 @@ pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingleto
 pikkuMiddlewareFactory: <In = any>(factory: CorePikkuMiddlewareFactory<In>) => CorePikkuMiddlewareFactory<In>
 pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 requireOrigin: CorePikkuMiddlewareFactory<{ origins?: string[] | ((services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => string[] | Promise<string[]>) | undefined; }>
+requireUnlocked: (lock: DataLock) => CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
 telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
 telemetryOuter: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
@@ -4125,6 +4126,7 @@ export class AIProviderNotConfiguredError extends PikkuError {
 export class BadGatewayError extends PikkuError {}
 export class BadRequestError extends PikkuError {}
 export class ConflictError extends PikkuError {}
+export class DataLockedError extends PikkuError {}
 export interface ErrorDetails {
   status: number
   message: string
@@ -4138,6 +4140,7 @@ export class HTTPVersionNotSupportedError extends PikkuError {}
 export class InternalServerError extends PikkuError {}
 export class InvalidMiddlewareWireError extends PikkuError {}
 export class InvalidOriginError extends PikkuError {}
+export class InvalidPassphraseError extends PikkuError {}
 export class InvalidSessionError extends PikkuError {}
 isExpectedError: (error: unknown) => boolean
 export class LengthRequiredError extends PikkuError {}
@@ -4186,6 +4189,7 @@ export class SystemRoleShadowedError extends PikkuError {
   public payload: { error: 'system_role_shadowed'; role: string }
   constructor(role: string)
 }
+export class TooManyAttemptsError extends PikkuError {}
 export class TooManyRequestsError extends PikkuError {}
 export class UnauthorizedError extends PikkuError {}
 export class UnprocessableContentError extends PikkuError {}
@@ -5576,13 +5580,38 @@ export interface ColumnClassification {
   classification: Classification
   anonymize_strategy: AnonymizeStrategy
   form?: ColumnForm
+  keyId?: string
   description?: string
 }
 export type ColumnForm = 'plain' | 'hashed' | 'wrapped' | 'sealed'
 createSecretValue: <T>(value: T) => SecretValue<T>
+export class DataLock {
+  constructor(private readonly vault: LockVault, options: { now?: () => number } = {})
+  get state(): LockState
+  get retryAfterMs(): number
+  async init(): Promise<LockState>
+  async initialize(passphrase: string, keyIds: string[] = [DEFAULT_KEY_ID]): Promise<void>
+  async unlock(passphrase: string): Promise<void>
+  lock(): void
+  async getKEK(keyId: string): Promise<CryptoKey>
+  getKeyVersion(keyId: string): number
+}
+DEFAULT_KEY_ID: "default"
 export type HashedValue = string & { readonly [hashedBrand]: true }
 hashToken: (raw: string) => Promise<HashedValue>
 isSecretValue: (value: unknown) => value is SecretValue<unknown>
+keyIdsFromManifest: (manifest: ClassificationManifest) => string[]
+export type LockRecord = {
+  keyId: string
+  keyVersion: number
+  salt: string
+  verifier: WrappedValue
+}
+export type LockState = 'uninitialized' | 'locked' | 'unlocked'
+export interface LockVault {
+  read(): Promise<LockRecord[]>
+  write(records: LockRecord[]): Promise<void>
+}
 export type Pii<T> = T & { readonly __classification__?: 'pii' }
 export type Private<T> = T & { readonly __classification__?: 'private' }
 REDACTED: "[secret]"
@@ -5621,6 +5650,20 @@ unsafeAsHashed: (stored: string) => HashedValue
 unsafeAsSealed: (stored: string) => SealedValue
 unsafeAsWrapped: (stored: string) => WrappedValue
 export type WrappedValue = string & { readonly [wrappedBrand]: true }
+```
+
+## ./data-lock
+
+```ts
+export type DataLockStatus = {
+  state: LockState
+  retryAfterMs: number
+}
+export type DataLockWiringOptions = {
+  prefix?: string
+  keyIds?: string[]
+}
+wireDataLock: (lock: DataLock, { prefix, keyIds }?: DataLockWiringOptions) => void
 ```
 
 ## ./utils

@@ -228,3 +228,21 @@ test('merges tables across several schemas', () => {
   assert.equal(loaded['user']?.['email']?.classification, 'pii')
   assert.equal(loaded['entry']?.['actor']?.classification, 'private')
 })
+
+test('loadAnnotations carries a column keyId through', () => {
+  writeSidecar({
+    user: {
+      recovery: {
+        security: 'secret',
+        form: 'wrapped',
+        keyId: 'recovery-codes',
+      },
+      ssn: { security: 'secret', form: 'wrapped' },
+    },
+  })
+  const ann = loadAnnotations(root)
+  assert.equal(ann.user!.recovery!.keyId, 'recovery-codes')
+  // Left undefined rather than defaulted here: the parser reports what was
+  // authored, and the manifest emitter is the one place the default is applied.
+  assert.equal(ann.user!.ssn!.keyId, undefined)
+})

@@ -40,6 +40,19 @@ export interface EntryGenerationContext {
    * mounts /mcp. Else ''. Empty is safe — trailing commas are valid.
    */
   mcpServerOption: string
+  /**
+   * The mount for a frontend the deploy is serving from the server's own
+   * origin, or undefined when the project configured none.
+   *
+   * Only the mount's shape travels here — where the built files end up is the
+   * provider's business, because it differs per runtime: node reads a directory
+   * copied beside the bundle, while a compiled bun binary has no directory at
+   * all and reads an embedded asset map instead.
+   */
+  frontend?: {
+    urlPrefix: string
+    spaFallback: boolean
+  }
 }
 
 export interface ProviderAdapter {

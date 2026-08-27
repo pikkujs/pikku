@@ -54,6 +54,16 @@ export interface ColumnClassification {
   anonymize_strategy: AnonymizeStrategy
   /** At-rest representation. Absent means `plain`. */
   form?: ColumnForm
+  /**
+   * Which key protects this column, for a `wrapped` or `sealed` form. Absent
+   * means the deployment's default key.
+   *
+   * It is a purpose, not a tenant: naming one here says "these columns open
+   * together and separately from the rest", so unlocking notes need not unlock
+   * credentials. The id is stored in the value, so a column that changes key
+   * is a rewrap rather than a migration.
+   */
+  keyId?: string
   description?: string
 }
 

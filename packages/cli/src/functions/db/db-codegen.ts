@@ -417,6 +417,15 @@ function emitInterface(
 
 // ─── Manifest emitter ────────────────────────────────────────────────────────
 
+/**
+ * The key an encrypted column is protected by when it names none.
+ *
+ * Spelled out in every entry rather than left implicit, so the set of keys a
+ * deployment has to unlock can be read off the manifest without knowing the
+ * rule that produced it.
+ */
+const DEFAULT_COLUMN_KEY_ID = 'default'
+
 function emitManifest(
   tables: TableSchema[],
   explicitAnnotations: AnnotationMap
@@ -435,9 +444,16 @@ function emitManifest(
           // tell "held in the clear, stated" from "nobody has said yet", and a
           // defaulted 'plain' would erase exactly that difference.
           const formLiteral = ann?.form ? `, form: '${ann.form}'` : ''
+          // Only a column that is actually encrypted names a key. Emitting one
+          // on a plain or hashed column would claim a protection it has not
+          // got — and a hash has no key to be opened with in the first place.
+          const encrypted = ann?.form === 'wrapped' || ann?.form === 'sealed'
+          const keyIdLiteral = encrypted
+            ? `, keyId: '${ann?.keyId ?? DEFAULT_COLUMN_KEY_ID}'`
+            : ''
           return (
             `      ${JSON.stringify(col.name)}: ` +
-            `{ classification: '${classification}', anonymize_strategy: ${strategyLiteral}${formLiteral} }`
+            `{ classification: '${classification}', anonymize_strategy: ${strategyLiteral}${formLiteral}${keyIdLiteral} }`
           )
         })
         .join(',\n')
@@ -477,6 +493,10 @@ function emitClassificationMap(tables: TableSchema[]): string {
     `   *  real encrypt/seal/hash result can be written to it. Defaults to 'plain',`,
     `   *  which on a \`secret\` column is warned about (PKU483) until stated here. */`,
     `  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'`,
+    `  /** Which key protects this column, for a 'wrapped' or 'sealed' form. It is a`,
+    `   *  purpose, not a tenant: naming one here says these columns open together and`,
+    `   *  separately from the rest. Defaults to 'default'. */`,
+    `  keyId?: string`,
     `  /** Anonymize strategy used by \`pikku db anonymize\`. */`,
     `  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'`,
     `  /** Column kind override for codegen coercion + typing. */`,

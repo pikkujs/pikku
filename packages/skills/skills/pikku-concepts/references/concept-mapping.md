@@ -449,7 +449,7 @@ src/
 
 // Use tags for cross-cutting concerns:
 wireHTTP({ route: '/todos', func: listTodos, tags: ['todos', 'public'] })
-addMiddleware('todos', [loggingMiddleware])  // Applies to all 'todos'-tagged functions
+addTagMiddleware('todos', [loggingMiddleware])  // Applies to all 'todos'-tagged functions
 ```
 
 ---

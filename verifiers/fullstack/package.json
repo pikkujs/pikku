@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/verifiers-fullstack",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@playwright/test": "1.58.2",
+    "@types/node": "^24",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "pikku": "pikku",
+    "test": "pikku && tsc --noEmit && node --import tsx --test test/browser.assert.ts"
+  }
+}

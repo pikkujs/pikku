@@ -6,13 +6,15 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -b",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "test": "node --test --import tsx src/*.test.ts"
   },
   "devDependencies": {
     "typescript": "^6.0.3"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./runtime": "./dist/runtime/index.js"
   },
   "license": "MIT",
   "dependencies": {

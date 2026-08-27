@@ -90,6 +90,14 @@ log_info "Testing template: $TEMPLATE_NAME"
 log_info "Version/branch: $VERSION"
 log_info "Package manager: $PACKAGE_MANAGER"
 
+# Templates that carry a scaffold overlay build a second, different app from the
+# same directory, and the plain run never compiles a line of it. Setting this
+# scaffolds that variant instead, so both apps a template can produce are tested.
+PRIVATE_MODE="${TEMPLATE_PRIVATE_MODE:-false}"
+if [ "$PRIVATE_MODE" = "true" ]; then
+    log_info "Private mode: on"
+fi
+
 # Clean up existing test-app directory
 if [ -d "$TEST_APP_DIR" ]; then
     log_warning "Removing existing test-app directory..."
@@ -119,6 +127,10 @@ else
         --package-manager "$PACKAGE_MANAGER"
         --skip-install
     )
+fi
+
+if [ "$PRIVATE_MODE" = "true" ]; then
+    CREATE_ARGS+=(--private)
 fi
 
 if ! node ./dist/index.js "${CREATE_ARGS[@]}"; then
@@ -324,7 +336,10 @@ esac
 # Build
 log_info "Building the app..."
 case "$TEMPLATE_NAME" in
-    nextjs|nextjs-full)
+    # These templates type-check as part of their own build: a frontend build
+    # generates sources (Next's route types, TanStack's route tree) that a bare
+    # `tsc` run beforehand would not find.
+    nextjs|nextjs-full|tanstack)
         if ! "$PACKAGE_MANAGER" run build; then
             log_error "Build failed"
             exit 1

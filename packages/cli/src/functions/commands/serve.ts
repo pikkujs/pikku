@@ -33,6 +33,7 @@ import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
+import { resolveFrontendMount } from './serve-frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { disableDevActorSignIn } from '../../server/actor-sign-in.js'
@@ -197,13 +198,21 @@ export const serve = pikkuSessionlessFunc<
         'Console app not found. Please rebuild @pikku/cli with the console app bundled.'
       )
     }
+    const frontendMount = config.frontend
+      ? await resolveFrontendMount(config.frontend)
+      : undefined
+    // The console goes first so a frontend mounted at `/` cannot claim
+    // `/console` before the console's own mount is offered the request.
+    const staticMounts = [consoleMount, frontendMount].filter(
+      (mount): mount is NonNullable<typeof mount> => Boolean(mount)
+    )
     const pikkuServer = devServerRunner.createServer(
       {
         ...userConfig,
         hostname: bindHostname,
         port: resolvedPort,
         content: localContentConfig,
-        ...(consoleMount ? { staticMounts: [consoleMount] } : {}),
+        ...(staticMounts.length ? { staticMounts } : {}),
       },
       logger,
       { contentSigningJWT }
@@ -216,13 +225,23 @@ export const serve = pikkuSessionlessFunc<
     await pikkuServer.start()
     await lifecycle?.afterStart?.(resolvedServices)
 
+    // Not `resolvedPort`: `--port 0` asks the OS for a free port, and every URL
+    // announced from here has to name the one it actually handed out.
+    const boundPort = pikkuServer.port
+
     if (consoleMount) {
       logger.info(
-        `Pikku Console available at http://${hostname}:${resolvedPort}${consoleMount.urlPrefix}`
+        `Pikku Console available at http://${hostname}:${boundPort}${consoleMount.urlPrefix}`
       )
     }
 
-    logger.info(serverReadyLine(hostname, resolvedPort))
+    if (frontendMount) {
+      logger.info(
+        `Frontend available at http://${hostname}:${boundPort}${frontendMount.urlPrefix}`
+      )
+    }
+
+    logger.info(serverReadyLine(hostname, boundPort))
 
     process.once('SIGINT', async () => {
       logger.info('Stopping server...')

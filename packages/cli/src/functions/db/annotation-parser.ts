@@ -41,6 +41,14 @@ export interface ColAnnotation {
    * insert/update brand on the generated column type. Absent means `plain`.
    */
   form?: ColumnForm
+  /**
+   * Which key protects this column, for an encrypted `form`. Absent means the
+   * deployment's default key.
+   *
+   * Reported as authored rather than defaulted here, so the manifest emitter
+   * stays the single place the default is applied.
+   */
+  keyId?: string
 }
 
 /** Per-table, per-column annotation map sourced from `db/annotations.ts`. */
@@ -71,6 +79,7 @@ interface RawEntry {
   security?: string
   classification?: string
   form?: string
+  keyId?: string
   kind?: string
   tsType?: string
   format?: string
@@ -174,6 +183,7 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
         ) {
           entry.form = ann.form as ColumnForm
         }
+        if (ann.keyId) entry.keyId = ann.keyId
         const strategy = parseStrategy(ann.classification)
         if (strategy !== null) entry.anonymize = strategy
         result[table][col] = entry

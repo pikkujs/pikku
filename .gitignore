@@ -183,3 +183,7 @@ verifiers/workflows/db/
 # `@pikku/knowledge` package, the console's knowledge components, and the e2e
 # harness's own bundle, all of which are source and must be committed.
 /knowledge/
+
+# The fullstack verifier ships a hand-written frontend rather than a built one,
+# so this browser script is source despite the *.js rule above.
+!verifiers/fullstack/web/app.js

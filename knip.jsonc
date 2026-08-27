@@ -34,6 +34,10 @@
     // An optional system binary. `@pikku/playwright` probes for it and keeps
     // recordings uncompressed when it is absent, so it is never installed.
     "ffmpeg",
+    // Part of a Rust toolchain rather than of this repo. The test that checks
+    // the generated Tauri shell parses skips itself when it is absent, so it
+    // is never a dependency anyone has to install.
+    "rustfmt",
   ],
 
   // Build output and generated sources are not hand-authored, and their

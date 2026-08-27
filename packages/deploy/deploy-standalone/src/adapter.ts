@@ -17,12 +17,73 @@
  *   `bun build --compile`. No runtime needed on the target host.
  */
 import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
-import { nodeBuiltinExternals } from '@pikku/deploy'
+import { nodeBuiltinExternals, SERVER_READY_MARKER } from '@pikku/deploy'
 
 export type StandaloneRuntime = 'node' | 'bun'
 
+/**
+ * Directory the built frontend is copied to, both inside the unit and beside
+ * the shipped bundle. The node entry resolves it relative to itself at runtime,
+ * so the two have to agree.
+ */
+export const STANDALONE_FRONTEND_DIR = 'frontend'
+
+/**
+ * Module the bun entry imports its embedded assets from. It stays out of the
+ * esbuild bundle — esbuild rejects the `with { type: 'file' }` attribute the
+ * manifest is built on — and is resolved by `bun build --compile` instead.
+ */
+export const STANDALONE_FRONTEND_MANIFEST = './frontend-assets.gen.js'
+
+/**
+ * Lines every standalone entry ends with, whatever the runtime.
+ *
+ * The ready line is the handshake a parent process — `pikku dev --spawn`, or
+ * the desktop shell that runs this binary as a sidecar — blocks on. It carries
+ * `server.port` rather than the requested port because a shell passes `PORT=0`:
+ * picking a free port in the parent and handing it down races anything else
+ * that binds it in between, so the server binds first and reports back.
+ */
+const sidecarHandshakeLines = (): string[] => [
+  `  watchParentProcess()`,
+  `  console.log(\`${SERVER_READY_MARKER} on http://\${hostname}:\${server.port}\`)`,
+]
+
+const SIDECAR_RUNTIME_IMPORT = `import { watchParentProcess } from '@pikku/deploy-standalone/runtime'`
+
+/**
+ * `rustc -vV`, or nothing when no toolchain is installed. The triple then falls
+ * back to the Node platform pair, which is right for every ordinary host — the
+ * cases rustc knows better about (musl, Rosetta) are the ones where a Rust
+ * toolchain is present anyway.
+ */
+const rustcHostOutput = async (): Promise<string | undefined> => {
+  try {
+    const { execFileSync } = await import('node:child_process')
+    return execFileSync('rustc', ['-vV'], { encoding: 'utf-8', stdio: 'pipe' })
+  } catch {
+    return undefined
+  }
+}
+
 export interface StandaloneProviderAdapterOptions {
   runtime?: StandaloneRuntime
+  /**
+   * Generate a desktop shell (Tauri) around the compiled binary. Requires the
+   * `bun` runtime — the shell ships the binary as a sidecar, and only that
+   * runtime produces one. A shell pointed at {@link desktopUrl} ships no binary
+   * and so has no such requirement.
+   */
+  desktop?: boolean
+  /** Project root. The shell crate is written to `<projectDir>/src-tauri`. */
+  projectDir?: string
+  /** Bundle identifier for the shell. Derived from the app name when absent. */
+  desktopIdentifier?: string
+  /**
+   * An already-deployed server for the shell to open, instead of bundling one.
+   * The window is a webview onto that origin and nothing else is shipped.
+   */
+  desktopUrl?: string
 }
 
 export class StandaloneProviderAdapter implements ProviderAdapter {
@@ -30,9 +91,17 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
   readonly runtime: StandaloneRuntime
+  readonly desktop: boolean
+  readonly projectDir?: string
+  readonly desktopIdentifier?: string
+  readonly desktopUrl?: string
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.runtime = options.runtime ?? 'node'
+    this.desktop = options.desktop ?? Boolean(options.desktopUrl)
+    this.projectDir = options.projectDir
+    this.desktopIdentifier = options.desktopIdentifier
+    this.desktopUrl = options.desktopUrl
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
@@ -53,6 +122,13 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
       `import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'`,
       `import { WebSocketServer } from 'ws'`,
+      SIDECAR_RUNTIME_IMPORT,
+      ...(ctx.frontend
+        ? [
+            `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
+            `import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'`,
+          ]
+        : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -84,9 +160,21 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
+      ...(ctx.frontend
+        ? [
+            // Resolved from the running bundle rather than baked in at build
+            // time, so the distributable stays movable.
+            `  const staticMounts = [{`,
+            `    urlPrefix: '${ctx.frontend.urlPrefix}',`,
+            `    directory: __pikkuJoin(__pikkuDirname(__pikkuFileURLToPath(import.meta.url)), '${STANDALONE_FRONTEND_DIR}'),`,
+            `    spaFallback: ${ctx.frontend.spaFallback},`,
+            `  }]`,
+            ``,
+          ]
+        : []),
       `  const wss = new WebSocketServer({ noServer: true, maxPayload: DEFAULT_WS_MAX_PAYLOAD })`,
       `  const server = new PikkuNodeHTTPServer(`,
-      `    { ...config, port, hostname },`,
+      `    { ...config, port, hostname${ctx.frontend ? ', staticMounts' : ''} },`,
       `    logger,`,
       `    {`,
       `      ${ctx.mcpServerOption}configureServer: (httpServer) => {`,
@@ -99,6 +187,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await triggerService.start()`,
       `  server.enableExitOnSignals()`,
       `  await server.start()`,
+      ...sidecarHandshakeLines(),
       `}`,
       ``,
       `main().catch((err) => {`,
@@ -113,10 +202,14 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     return [
       `// Generated standalone entry (bun runtime) — all functions in one process`,
       `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
+      SIDECAR_RUNTIME_IMPORT,
       `import { pikkuState } from '@pikku/core/state'`,
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
       `import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'`,
+      ...(ctx.frontend
+        ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
+        : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -148,12 +241,26 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
-      `  const server = new PikkuBunServer({ ...config, port, hostname }, logger, { ${ctx.mcpServerOption}eventHub })`,
+      ...(ctx.frontend
+        ? [
+            // A compiled binary has no directory to read: every file was
+            // embedded, and the map is the only way back to it.
+            `  const staticMounts = [{`,
+            `    urlPrefix: '${ctx.frontend.urlPrefix}',`,
+            `    directory: '',`,
+            `    spaFallback: ${ctx.frontend.spaFallback},`,
+            `    assets: frontendAssets,`,
+            `  }]`,
+            ``,
+          ]
+        : []),
+      `  const server = new PikkuBunServer({ ...config, port, hostname${ctx.frontend ? ', staticMounts' : ''} }, logger, { ${ctx.mcpServerOption}eventHub })`,
       `  await server.init()`,
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
       `  server.enableExitOnSignals()`,
       `  await server.start()`,
+      ...sidecarHandshakeLines(),
       `}`,
       ``,
       `main().catch((err) => {`,
@@ -182,6 +289,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       // Bun-native builtins are provided by the runtime and resolved by
       // `bun build --compile` — leave them as imports rather than inlining.
       externals.push('bun', 'bun:*', 'bun:sqlite', 'bun:ffi')
+      externals.push(STANDALONE_FRONTEND_MANIFEST)
     }
     return externals
   }
@@ -196,8 +304,37 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     onProgress?: (step: string, detail: string) => void
   }) {
     const { buildDir, logger } = options
+
+    // Checked before anything expensive runs: a `--desktop` deploy that cannot
+    // produce a shell should say so now, not after a bun compile.
+    if (this.desktop) {
+      if (!this.desktopUrl && this.runtime !== 'bun') {
+        return {
+          success: false,
+          errors: [
+            {
+              step: 'desktop',
+              error: `A desktop shell ships the server as a sidecar binary, which only the bun runtime produces. Re-run with --runtime bun (got '${this.runtime}').`,
+            },
+          ],
+        }
+      }
+      if (!this.projectDir) {
+        return {
+          success: false,
+          errors: [
+            {
+              step: 'desktop',
+              error:
+                'No project directory was supplied, so there is nowhere to write src-tauri/.',
+            },
+          ],
+        }
+      }
+    }
+
     const { join, dirname } = await import('node:path')
-    const { readdir, writeFile, copyFile, mkdir } =
+    const { cp, readdir, writeFile, copyFile, mkdir } =
       await import('node:fs/promises')
     const { existsSync } = await import('node:fs')
 
@@ -230,6 +367,22 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     }
     logger.info(`Bundle: ${join(outDir, 'bundle.js')}`)
 
+    // --- 2a. Frontend, when the build produced one ---
+    // Both runtimes need it here rather than only in the build directory: node
+    // resolves the mount relative to the shipped bundle, and `bun build
+    // --compile` follows the manifest import out of the copy it is given.
+    const frontendDir = join(unitDir, STANDALONE_FRONTEND_DIR)
+    if (existsSync(frontendDir)) {
+      await cp(frontendDir, join(outDir, STANDALONE_FRONTEND_DIR), {
+        recursive: true,
+      })
+      const manifestName = STANDALONE_FRONTEND_MANIFEST.replace('./', '')
+      if (existsSync(join(unitDir, manifestName))) {
+        await copyFile(join(unitDir, manifestName), join(outDir, manifestName))
+      }
+      logger.info(`Frontend: ${join(outDir, STANDALONE_FRONTEND_DIR)}`)
+    }
+
     // --- 2b. bun runtime: compile the bundle into a self-contained binary ---
     if (this.runtime === 'bun') {
       const { execFileSync } = await import('node:child_process')
@@ -255,6 +408,58 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
             {
               step: 'compile',
               error: `bun build --compile failed (is bun installed?): ${message}`,
+            },
+          ],
+        }
+      }
+    }
+
+    // --- 2c. desktop: wrap the server in a shell, or point one at a remote ---
+    let targetTriple: string | undefined
+    if (this.desktop && this.projectDir) {
+      const { generateTauriShell, tauriBundleIdentifier } =
+        await import('./tauri/generate.js')
+      const { hostTargetTriple } = await import('./tauri/target-triple.js')
+      const { renderTauriNextSteps } = await import('./tauri/next-steps.js')
+      try {
+        const rustcVersionVerbose = await rustcHostOutput()
+        targetTriple = hostTargetTriple({ rustcVersionVerbose })
+        const shell = await generateTauriShell({
+          projectDir: this.projectDir,
+          appName,
+          identifier: this.desktopIdentifier ?? tauriBundleIdentifier(appName),
+          targetTriple,
+          ...(this.desktopUrl
+            ? { remoteUrl: this.desktopUrl }
+            : { binaryPath: join(outDir, appName) }),
+        })
+        logger.info(`Desktop shell: ${shell.dir} (${shell.targetTriple})`)
+        if (shell.written.length) {
+          logger.info(`  wrote ${shell.written.join(', ')}`)
+        }
+        if (shell.preserved.length) {
+          logger.info(
+            `  kept your edits, not regenerated: ${shell.preserved.join(', ')}`
+          )
+        }
+        if (shell.sidecar) {
+          logger.info(`  sidecar: binaries/${shell.sidecar.fileName}`)
+        } else {
+          logger.info(`  window opens: ${this.desktopUrl}`)
+        }
+        for (const line of renderTauriNextSteps({
+          shellDir: shell.dir,
+          hasRust: rustcVersionVerbose !== undefined,
+        })) {
+          logger.info(line)
+        }
+      } catch (e: unknown) {
+        return {
+          success: false,
+          errors: [
+            {
+              step: 'desktop',
+              error: e instanceof Error ? e.message : String(e),
             },
           ],
         }
@@ -292,6 +497,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       workersDeployed: [appName],
       resourcesCreated: [],
       errors: [],
+      targetTriple,
     }
   }
 }
