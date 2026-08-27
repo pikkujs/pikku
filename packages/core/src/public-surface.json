@@ -10,15 +10,18 @@
     "authBearer",
     "authCookie",
     "cors",
+    "isAllowedOrigin",
     "pikkuAgentMiddleware",
     "pikkuChannelMiddleware",
     "pikkuChannelMiddlewareFactory",
     "pikkuMiddleware",
     "pikkuMiddlewareFactory",
     "pikkuRemoteAuthMiddleware",
+    "requireOrigin",
     "runMiddleware",
     "telemetryInner",
-    "telemetryOuter"
+    "telemetryOuter",
+    "toOrigin"
   ],
   "./function": [
     "AbandonedError",

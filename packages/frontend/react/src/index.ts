@@ -3,6 +3,7 @@ export {
   usePikkuFetch,
   usePikkuAgent,
   usePikkuRPC,
+  usePikkuAnalytics,
   usePikkuRealtime,
   usePikkuWorkflow,
 } from './pikku-provider.js'
@@ -33,3 +34,8 @@ export type {
   UseDevActorsOptions,
   UseDevActorsResult,
 } from './dev-actors.js'
+
+// Buffered product-analytics client, typed against the app's own event union.
+// The app owns the union and the endpoint; this package owns the transport.
+export { createAnalytics } from './analytics.js'
+export type { AnalyticsClient, CreateAnalyticsOptions } from './analytics.js'

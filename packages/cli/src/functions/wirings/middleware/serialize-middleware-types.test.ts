@@ -41,7 +41,7 @@ describe('serializeMiddlewareTypes', () => {
 
     assert.match(
       content,
-      /export \{ cors, authAPIKey, authBearer, authCookie \} from '@pikku\/core\/middleware'/,
+      /export \{ cors, requireOrigin, authAPIKey, authBearer, authCookie \} from '@pikku\/core\/middleware'/,
       'the middleware leaf is the only door to core middleware, so every one it ships reaches through it'
     )
   })
