@@ -405,17 +405,11 @@ const CliOptionsTable: React.FC<{
 
   return (
     <Table verticalSpacing={4} horizontalSpacing="xs">
-      <Table.Thead>
+      <Table.Thead className={classes.tableHead}>
         <Table.Tr>
-          <Table.Th c="dimmed" fw={500} fz="xs">
-            Option
-          </Table.Th>
-          <Table.Th c="dimmed" fw={500} fz="xs">
-            Description
-          </Table.Th>
-          <Table.Th c="dimmed" fw={500} fz="xs">
-            Default
-          </Table.Th>
+          <Table.Th>Option</Table.Th>
+          <Table.Th>Description</Table.Th>
+          <Table.Th>Default</Table.Th>
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
@@ -625,17 +619,11 @@ export const McpConfiguration: React.FC<WiringPanelProps> = ({
           <Box>
             <SectionLabel>{asI18n('Arguments')}</SectionLabel>
             <Table verticalSpacing={4} horizontalSpacing="xs">
-              <Table.Thead>
+              <Table.Thead className={classes.tableHead}>
                 <Table.Tr>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Name
-                  </Table.Th>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Description
-                  </Table.Th>
-                  <Table.Th c="dimmed" fw={500} fz="xs">
-                    Required
-                  </Table.Th>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Description</Table.Th>
+                  <Table.Th>Required</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>

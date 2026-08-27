@@ -205,22 +205,14 @@ export const TableListPage = <T,>({
               withRowBorders
               className={classes.tableLastRowBorder}
             >
-              <Table.Thead
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 1,
-                  background: 'var(--mantine-color-body)',
-                }}
-              >
-                <Table.Tr style={{ height: 42 }}>
+              <Table.Thead className={classes.tableHeadSticky}>
+                <Table.Tr>
                   {columns.map((col, i) => (
                     <Table.Th
                       key={col.key}
                       pl={i === 0 ? 'md' : undefined}
                       pr={i === columns.length - 1 ? 'md' : undefined}
-                      fw={600}
-                      fz="sm"
+                      ta={col.align}
                       style={{
                         ...(col.width ? { width: col.width } : {}),
                         ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}),
@@ -257,6 +249,7 @@ export const TableListPage = <T,>({
                         key={col.key}
                         pl={i === 0 ? 'md' : undefined}
                         pr={i === columns.length - 1 ? 'md' : undefined}
+                        ta={col.align}
                         style={{
                           ...(col.width ? { width: col.width } : {}),
                           ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}),

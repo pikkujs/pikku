@@ -93,7 +93,7 @@ export const SchedulersTab: React.FC<{
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: any) => (
           <>
             <Text fw={500} ff="monospace" truncate>
@@ -109,13 +109,13 @@ export const SchedulersTab: React.FC<{
       },
       {
         key: 'schedule',
-        header: 'SCHEDULE',
+        header: 'Schedule',
         render: (item: any) =>
           item.schedule ? <CronBadges schedule={item.schedule} /> : null,
       },
       {
         key: 'lastRun',
-        header: 'LAST RUN',
+        header: 'Last run',
         width: 120,
         render: (item: any) => {
           const taskName = item.wireId || item.name

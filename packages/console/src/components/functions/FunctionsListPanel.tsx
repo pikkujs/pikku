@@ -89,7 +89,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         maxWidth: 350,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
@@ -109,7 +109,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
       },
       {
         key: 'version',
-        header: 'VERSION',
+        header: 'Version',
         width: 80,
         render: (func: any) => (
           <Text size="sm" ff="monospace" c="var(--app-text-dim)">
@@ -119,7 +119,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
       },
       {
         key: 'type',
-        header: 'TYPE',
+        header: 'Type',
         width: 140,
         render: (func: any) => {
           const wrapperDef = funcWrapperDefs[func.funcWrapper]
@@ -132,7 +132,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
       },
       {
         key: 'auth',
-        header: 'AUTH',
+        header: 'Auth',
         width: 60,
         render: (func: any) => {
           const hasAuth = func.sessionless !== true
@@ -149,7 +149,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
       },
       {
         key: 'wirings',
-        header: 'WIRINGS',
+        header: 'Wirings',
         width: 80,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
@@ -172,7 +172,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
         ? [
             {
               key: 'tests',
-              header: 'TESTS',
+              header: 'Tests',
               width: 180,
               render: (func: any) => {
                 const funcId = func.pikkuFuncName || func.pikkuFuncId

@@ -127,8 +127,18 @@ describe('pikku scenario run', () => {
     assertAllPassed(run)
     assert.match(
       run.output,
-      /^\s*When\s+the admin reads a function definition in the console\s+✓/m,
-      `expected the step ladder to render the declared prose:\n${run.output}`
+      /^\s*When\s+admin \(the Console administrator\) reads a function definition in the console\s+✓/m,
+      `expected the first mention to name the actor and their role:\n${run.output}`
+    )
+    assert.match(
+      run.output,
+      /^\s*Then\s+admin sees how editableFunc is declared\s+✓/m,
+      `expected a phase change to name the actor again, without the role:\n${run.output}`
+    )
+    assert.match(
+      run.output,
+      /^\s*And\s+sees the original greeting\s+✓/m,
+      `expected a repeated phase and actor to drop both:\n${run.output}`
     )
   })
 

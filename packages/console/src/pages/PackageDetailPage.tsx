@@ -144,16 +144,13 @@ const ReadOnlyTable: React.FC<{
   rows: React.ReactNode[][]
 }> = ({ headers, rows }) => (
   <Table highlightOnHover withRowBorders>
-    <Table.Thead>
+    <Table.Thead className={styles.tableHead}>
       <Table.Tr>
         {headers.map((h, i) => (
           <Table.Th
             key={h}
             pl={i === 0 ? 'md' : undefined}
             pr={i === headers.length - 1 ? 'md' : undefined}
-            c="dimmed"
-            fw={500}
-            fz="xs"
           >
             {h}
           </Table.Th>

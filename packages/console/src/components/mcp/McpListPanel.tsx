@@ -38,7 +38,7 @@ export const McpListPanel: React.FC<McpListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: any) => (
           <>
             <Text fw={500} truncate>
@@ -54,7 +54,7 @@ export const McpListPanel: React.FC<McpListPanelProps> = ({
       },
       {
         key: 'method',
-        header: 'TYPE',
+        header: 'Type',
         align: 'right' as const,
         render: (item: any) => {
           const method = item.method || 'tool'

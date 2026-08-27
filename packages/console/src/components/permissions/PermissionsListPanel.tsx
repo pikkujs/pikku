@@ -35,7 +35,7 @@ export const PermissionsListPanel: React.FC<PermissionsListPanelProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: PermissionItem) => (
           <>
             <Text fw={500} truncate>
@@ -51,7 +51,7 @@ export const PermissionsListPanel: React.FC<PermissionsListPanelProps> = ({
       },
       {
         key: 'type',
-        header: 'TYPE',
+        header: 'Type',
         align: 'right' as const,
         render: (item: PermissionItem) => {
           const wireNames: string[] = item.data?.wires?.wires ?? []

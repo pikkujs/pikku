@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Box, Text, Table, Badge } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import classes from './console.module.css'
 
 const ValueInline: React.FC<{ value: unknown }> = ({ value }) => {
   if (value === null || value === undefined) {
@@ -147,7 +148,7 @@ export const DataViewer: React.FC<{ data: unknown }> = ({ data }) => {
         },
       }}
     >
-      <Table.Thead>
+      <Table.Thead className={classes.tableHead}>
         <Table.Tr>
           <Table.Th>Field</Table.Th>
           <Table.Th>Value</Table.Th>
