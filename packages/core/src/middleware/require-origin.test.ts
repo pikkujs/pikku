@@ -1,6 +1,6 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
-import { analyticsOrigin, isAllowedOrigin, toOrigin } from './analytics-origin.js'
+import { requireOrigin, isAllowedOrigin, toOrigin } from './require-origin.js'
 import { InvalidOriginError } from '../errors/errors.js'
 import { resetPikkuState } from '../pikku-state.js'
 
@@ -14,11 +14,11 @@ const headers = (values: Record<string, string | undefined>) => ({
 })
 
 const run = async (
-  config: Parameters<typeof analyticsOrigin>[0],
+  config: Parameters<typeof requireOrigin>[0],
   values: Record<string, string | undefined>
 ) => {
   let reached = false
-  const middleware = analyticsOrigin(config)
+  const middleware = requireOrigin(config)
   await middleware({} as any, { http: { request: headers(values) } } as any, async () => {
     reached = true
   })
@@ -56,7 +56,7 @@ describe('isAllowedOrigin', () => {
   })
 })
 
-describe('analyticsOrigin', () => {
+describe('requireOrigin', () => {
   test('allows a beacon from the request own host', async () => {
     assert.equal(
       await run({}, { origin: 'https://app.com', host: 'app.com' }),
@@ -107,7 +107,7 @@ describe('analyticsOrigin', () => {
 
   test('passes through when there is no http wire at all', async () => {
     let reached = false
-    await analyticsOrigin({})({} as any, {} as any, async () => {
+    await requireOrigin({})({} as any, {} as any, async () => {
       reached = true
     })
     assert.equal(reached, true)

@@ -3,6 +3,7 @@ export {
   usePikkuFetch,
   usePikkuAgent,
   usePikkuRPC,
+  usePikkuAnalytics,
   usePikkuRealtime,
   usePikkuWorkflow,
 } from './pikku-provider.js'

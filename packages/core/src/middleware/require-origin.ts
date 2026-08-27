@@ -41,14 +41,14 @@ export const isAllowedOrigin = (
  * route — it is not flood control, because `Origin` is trusted from nobody but a browser.
  * A missing `Origin` is rejected too: a real browser sets one on a cross-origin-capable POST.
  */
-export const analyticsOrigin = pikkuMiddlewareFactory<{
+export const requireOrigin = pikkuMiddlewareFactory<{
   /** Extra allowed origins beyond the request's own host, or a resolver for them. */
   origins?:
     | string[]
     | ((services: CoreSingletonServices) => string[] | Promise<string[]>)
 }>(({ origins = [] } = {}) =>
   pikkuMiddleware({
-    name: 'analyticsOrigin',
+    name: 'requireOrigin',
     description: 'Rejects requests that did not come from this app.',
     func: async (services, { http }, next) => {
       const request = http?.request

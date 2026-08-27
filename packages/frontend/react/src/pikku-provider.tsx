@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import type { CorePikkuFetch } from '@pikku/fetch'
+import type { AnalyticsClient } from './analytics.js'
 
 export type PikkuInstance<
   Fetch extends CorePikkuFetch = CorePikkuFetch,
@@ -10,6 +11,8 @@ export type PikkuInstance<
   rpc: RPC
   /** Optional — present when createPikku is called with a PikkuRealtime class. */
   realtime?: Realtime
+  /** Optional — a `createAnalytics` client, so components reach it through the provider. */
+  analytics?: AnalyticsClient<any>
 }
 
 const PikkuContext = createContext<PikkuInstance | null>(null)
@@ -32,6 +35,21 @@ export const usePikkuFetch = <
     throw new Error('usePikkuFetch must be used within PikkuProvider')
   }
   return context.fetch as Fetch
+}
+
+export const usePikkuAnalytics = <
+  TEvent extends { name: string },
+>(): AnalyticsClient<TEvent> => {
+  const context = useContext(PikkuContext)
+  if (!context) {
+    throw new Error('usePikkuAnalytics must be used within PikkuProvider')
+  }
+  if (!context.analytics) {
+    throw new Error(
+      'usePikkuAnalytics needs an analytics client on the Pikku instance'
+    )
+  }
+  return context.analytics as AnalyticsClient<TEvent>
 }
 
 export const usePikkuRPC = <RPC = any,>(): RPC => {
