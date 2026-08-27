@@ -15,6 +15,20 @@ export { reactRouterAdapter } from './adapters/react-router'
 // Page gate context (host apps use this to inject a body override while keeping headers visible)
 export { PageGateContext } from './context/PageGateContext'
 
+// Auth — the console's own login state. A host without a console login (Fabric,
+// which reaches a sandbox with a bearer token) provides `AuthContext` itself so
+// the user pages resolve; `createConsoleAuthClient` builds the client the value
+// requires.
+export {
+  AuthContext,
+  AuthProvider,
+  useAuth,
+  useOptionalAuth,
+} from './context/AuthContext'
+export type { AuthContextValue, AuthUser } from './context/AuthContext'
+export { createConsoleAuthClient } from './lib/auth-client'
+export type { ConsoleAuthClient } from './lib/auth-client'
+
 // Users — presentation-only table shared by AdminUsersPage and external hosts
 // (e.g. Fabric's server-brokered stage Users tab).
 export { UsersTable } from './components/users/UsersTable'

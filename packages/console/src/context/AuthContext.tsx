@@ -86,7 +86,13 @@ export interface AuthContextValue {
   setUserPassword: (userId: string, newPassword: string) => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+/**
+ * Exported so a host that has no console login of its own can provide the value
+ * itself — Fabric reaches a sandbox with a bearer token rather than a Better
+ * Auth cookie, so it has a user and scopes but no `AuthProvider` to build them.
+ * Without this the user pages are unreachable outside the standalone console.
+ */
+export const AuthContext = createContext<AuthContextValue | null>(null)
 
 /**
  * The user-management RPCs the host app scaffolds. They cannot appear in the
