@@ -3,6 +3,7 @@ import { Text, Group } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { FunctionSquare } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -31,6 +32,13 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
       )
     })
   }, [functions])
+
+  usePanelUrl({
+    type: 'function',
+    items: functions,
+    getId: (func: any) => func.pikkuFuncName || func.pikkuFuncId,
+    open: openFunction,
+  })
 
   const columns = useMemo(
     () => [

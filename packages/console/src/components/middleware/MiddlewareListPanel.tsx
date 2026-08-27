@@ -5,6 +5,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import {
   useMiddlewareItems,
   type MiddlewareItem,
@@ -30,6 +31,13 @@ export const MiddlewareListPanel: React.FC<MiddlewareListPanelProps> = ({
   const { openMiddleware } = usePanelContext()
   useLocale()
   const { items, loading } = useMiddlewareItems()
+
+  usePanelUrl({
+    type: 'middleware',
+    items,
+    getId: (item) => item.id,
+    open: (id, item) => openMiddleware(id, item.data),
+  })
 
   const columns = useMemo(
     () => [

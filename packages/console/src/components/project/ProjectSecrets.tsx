@@ -3,6 +3,7 @@ import { Text, Group } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { KeyRound } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 
@@ -29,6 +30,14 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
   emptyHero,
 }) => {
   const { openSecret } = usePanelContext()
+
+  usePanelUrl({
+    type: 'secret',
+    items: secrets,
+    getId: (secret) => secret.name,
+    open: (id, secret) =>
+      openSecret(id, { ...(secret.rawData ?? secret), installed }),
+  })
 
   const columns = useMemo(
     () => [

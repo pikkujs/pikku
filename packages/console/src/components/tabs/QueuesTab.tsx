@@ -4,6 +4,7 @@ import { ListOrdered } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
@@ -50,6 +51,13 @@ export const QueuesTab: React.FC<{
         item.pikkuFuncId?.toLowerCase().includes(q)
     )
   }, [allItems, searchQuery])
+
+  usePanelUrl({
+    type: 'queue',
+    items: allItems,
+    getId: (item: any) => item.wireId || item.name,
+    open: openQueue,
+  })
 
   const columns = useMemo(
     () => [

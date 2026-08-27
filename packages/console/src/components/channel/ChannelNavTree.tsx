@@ -11,10 +11,8 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ChannelMeta } from '@pikku/core/channel'
 import styles from '../ui/console.module.css'
 
-export type ChannelSelection =
-  | { type: 'handler'; handler: string }
-  | { type: 'action'; category: string; action: string }
-  | null
+export type { ChannelSelection } from './channel-selection'
+import type { ChannelSelection } from './channel-selection'
 
 interface ChannelNavTreeProps {
   channelName: string

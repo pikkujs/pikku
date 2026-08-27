@@ -3,6 +3,7 @@ import { Text } from '@pikku/mantine/core'
 import { Cpu } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { m } from '@/i18n/messages'
@@ -21,6 +22,13 @@ export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
       (a.name || '').localeCompare(b.name || '')
     )
   }, [meta.mcpMeta])
+
+  usePanelUrl({
+    type: 'mcp',
+    items,
+    getId: (item: any) => `mcp::${item.method}::${item.wireId || item.name}`,
+    open: openMCP,
+  })
 
   const columns = useMemo(
     () => [

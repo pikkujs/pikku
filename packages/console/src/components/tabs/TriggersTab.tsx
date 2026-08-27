@@ -3,6 +3,7 @@ import { Text, Badge } from '@pikku/mantine/core'
 import { Zap } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -101,6 +102,13 @@ export const TriggersTab: React.FC<{
         p.trigger?.pikkuFuncId?.toLowerCase().includes(q)
     )
   }, [allPairs, searchQuery])
+
+  usePanelUrl({
+    type: 'trigger',
+    items: allPairs,
+    getId: (pair) => pair.name,
+    open: (id, pair) => openTrigger(id, pair.trigger),
+  })
 
   return (
     <TableListPage

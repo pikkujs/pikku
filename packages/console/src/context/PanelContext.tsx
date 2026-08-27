@@ -1,5 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react'
 import { toEnglishName } from '../lib/strings'
+import { useUrlHash } from '../hooks/useUrlHash'
+import { encodePanelHash, panelHashIsBare } from '../lib/panel-url'
 
 export type PanelType =
   | 'function'
@@ -104,6 +113,15 @@ interface PanelContextType {
   closePanel: (id: string) => void
   setActivePanel: (id: string) => void
   setActiveChild: (panelId: string, childId: string) => void
+  /**
+   * The selection this surface is being asked to restore, straight from the URL
+   * fragment. Lists watch it through `usePanelUrl` and open the row it names
+   * once they hold the row's metadata.
+   */
+  panelHash: string
+  /** The panel types this surface has lists for; see `usePanelUrl`. */
+  registeredPanelTypes: Set<PanelType>
+  registerPanelType: (type: PanelType) => () => void
 }
 
 export const PanelContext = createContext<PanelContextType | undefined>(
@@ -132,6 +150,49 @@ interface PanelProviderProps {
 export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
   const [panels, setPanels] = useState<Map<string, Panel>>(new Map())
   const [activePanel, setActivePanelState] = useState<string | null>(null)
+  const [panelHash, setPanelHash] = useUrlHash()
+  const [registeredPanelTypes, setRegisteredPanelTypes] = useState<
+    Set<PanelType>
+  >(() => new Set())
+  const registrationsRef = useRef(new Map<PanelType, number>())
+
+  const registerPanelType = useCallback((type: PanelType) => {
+    // Counted, not a plain set: two lists of the same type on one surface must
+    // not have the first to unmount cancel the second's registration.
+    const counts = registrationsRef.current
+    counts.set(type, (counts.get(type) ?? 0) + 1)
+    setRegisteredPanelTypes(new Set(counts.keys()))
+    return () => {
+      const remaining = (counts.get(type) ?? 1) - 1
+      if (remaining > 0) counts.set(type, remaining)
+      else counts.delete(type)
+      setRegisteredPanelTypes(new Set(counts.keys()))
+    }
+  }, [])
+
+  const wroteHashRef = useRef(false)
+
+  useEffect(() => {
+    const panel = activePanel ? panels.get(activePanel) : undefined
+    if (panel) {
+      wroteHashRef.current = true
+      setPanelHash(
+        encodePanelHash(
+          panel.data.type,
+          panel.data.id,
+          panelHashIsBare(registeredPanelTypes)
+        ) ?? ''
+      )
+      return
+    }
+    // Nothing selected. Only a fragment this surface wrote itself may be
+    // cleared — one that arrived in the URL has to survive until the list
+    // holding its row has loaded and can open it.
+    if (wroteHashRef.current) {
+      wroteHashRef.current = false
+      setPanelHash('')
+    }
+  }, [activePanel, panels, registeredPanelTypes, setPanelHash])
 
   const openPanelGeneric = useCallback(
     (type: PanelType, id: string, title: string, metadata?: any) => {
@@ -471,6 +532,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
         closePanel,
         setActivePanel,
         setActiveChild,
+        panelHash,
+        registeredPanelTypes,
+        registerPanelType,
       }}
     >
       {children}

@@ -5,6 +5,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import {
   useSchedulerItems,
   type SchedulerItem,
@@ -29,6 +30,13 @@ export const SchedulersListPanel: React.FC<SchedulersListPanelProps> = ({
   const { openScheduler } = usePanelContext()
   useLocale()
   const { items, loading } = useSchedulerItems()
+
+  usePanelUrl({
+    type: 'scheduler',
+    items,
+    getId: (item) => item.name,
+    open: (id, item) => openScheduler(id, item.data),
+  })
 
   const columns = useMemo(
     () => [

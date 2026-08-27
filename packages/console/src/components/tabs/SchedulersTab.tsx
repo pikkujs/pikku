@@ -4,6 +4,7 @@ import { Clock } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
@@ -88,6 +89,13 @@ export const SchedulersTab: React.FC<{
         item.schedule?.toLowerCase().includes(q)
     )
   }, [allItems, searchQuery])
+
+  usePanelUrl({
+    type: 'scheduler',
+    items: allItems,
+    getId: (item: any) => item.wireId || item.name,
+    open: openScheduler,
+  })
 
   const columns = useMemo(
     () => [

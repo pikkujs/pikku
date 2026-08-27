@@ -5,6 +5,7 @@ import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { useQuery } from '@tanstack/react-query'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
@@ -88,6 +89,21 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({
     const q = searchQuery.toLowerCase()
     return allRows.filter((row) => row.userId.toLowerCase().includes(q))
   }, [allRows, searchQuery])
+
+  usePanelUrl({
+    type: 'credentialUser',
+    items: allRows,
+    getId: (row) => row.userId,
+    open: (id, row) =>
+      openCredentialUser(id, {
+        credentials: row.credentials,
+        credentialsMeta: perUserCredentials.map((c) => ({
+          name: c.name,
+          displayName: c.displayName,
+          isOAuth2: c.isOAuth2,
+        })),
+      }),
+  })
 
   const columns = useMemo(
     () => [
