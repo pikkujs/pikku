@@ -1,3 +1,26 @@
+## 0.12.97
+
+### Patch Changes
+
+- 8154b1c: Restore the `SecretService.getSecret` JSDoc noting its failure mode, and state the `optional` carve-out `defineSecret` already documents: a key declared `optional` resolves `undefined` when absent rather than throwing. The line was on `main` and was removed by mistake in a comment cleanup on #1411 — the PR that changes what that throw says — leaving `getSecret` the only one of the interface's methods without its documented failure mode.
+- 6d9c09c: Resolve a variable's declared default instead of dropping it.
+
+  `defineVariable` takes a schema, and a schema can carry a default — `z.enum(['https://api.github.com']).default('https://api.github.com')` is the shape most addons declare their base URL with. Nothing read it. `variables.get('GITHUB_BASE_URL')` returned `undefined` on a host that had not set it, and the `as string` at the call site hid that until a request went to `undefined/repos/...`.
+
+  The default now resolves in `TypedVariablesService`, which is the layer that knows what was declared — `VariablesService` only knows what a host put in it. A stored value always wins; a schema with no default still resolves to `undefined`.
+
+  `VariableStatus` gains `hasDefault`, and `getMissing()` no longer lists a variable that defaults: it has a value, just not one anybody has to supply. `isConfigured` still means what it said — that a host set it.
+
+  For this to work the generated `TYPED_VARIABLES_META` now carries the schema as a value rather than only `z.infer`-ing its type, so the schema module is retained in the emit instead of being elided.
+
+- 239332b: Move first-party product analytics out of application code and into the framework.
+
+  `createAnalytics<Event>({ endpoint })` in `@pikku/react` is the buffered beacon client: it is typed against the app's own event union, flushes on an interval, on size and on `pagehide`/`visibilitychange` (via `sendBeacon`, so the abandon-point events survive unload), never surfaces a failure to the user and never retries. It also carries the delegated `data-analytics-click` listener, registered in the capture phase so a component calling `stopPropagation()` cannot silence instrumentation, and merging `data-analytics-meta` from ancestors with nearest-wins. Put the client on the Pikku instance and `usePikkuAnalytics<Event>()` reaches it from the provider, alongside `usePikkuFetch` and `usePikkuRPC`.
+
+  `requireOrigin()` in `@pikku/core/middleware` is a server-side origin lock for any unauthed route, and is re-exported from the generated `#pikku/middleware` leaf alongside `cors`. Unlike `cors()` — which only sets response headers a non-browser client ignores — it rejects with a 403 before the function body. Comparison is exact on the parsed origin, so `https://evil-myapp.com` cannot suffix-match `myapp.com`, and a missing `Origin` is rejected because a real browser always sets one on a cross-origin-capable POST. Allowed origins default to the request's own host and can be extended with a list or a resolver over services. `isAllowedOrigin` and `toOrigin` are exported for direct unit testing.
+
+  Together these let an app keep only its event registry and its wiring, instead of a few hundred lines of copied transport.
+
 ## 0.12.96
 
 ### Patch Changes

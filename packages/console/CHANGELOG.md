@@ -1,3 +1,108 @@
+## 0.12.70
+
+### Patch Changes
+
+- 1fad479: Draw the nav dock's separator. It was a 3.6-gap spacer with `background: none`,
+  so the zones it divides read as one uninterrupted row — the grouping was there
+  in the markup and invisible on screen. It is now a 2px pill in the hint colour,
+  which is the same mark and width the dock's own pull hint already uses, rather
+  than the 1px hairline that could not hold contrast against blurred glass.
+- 0c4d191: feat(console): export `DatabasePage` from the package root
+
+  Every other console screen a host app can mount is re-exported from
+  `src/index.ts` — `FunctionsPage`, `ApisPage`, `RuntimePage`, `SecretsPage` and
+  the rest. `DatabasePage` was not, and the package's `exports` map has no
+  `./pages/*` subpath, so a host had no way to reach it at all. The screen was
+  mountable only by the console's own router.
+
+  That gap is why an embedding console ends up reimplementing the database canvas
+  rather than mounting this one, and the reimplementation loses what only this
+  page has: the per-column classification icons (public, private, pii, secret),
+  the classification filter, and the table search. The data behind them needs no
+  new plumbing — `DbSchemaService` already merges `db/annotations.gen.json` over
+  `db/pikku-db-schema.gen.json`, and `console:getDbSchema` already carries the
+  merged result.
+
+  Export only; the page itself is unchanged.
+
+- 8c1269b: Export `ScopesPage` so a host console can mount the roles and scopes screen, the way `AuditPage` and `SecurityPage` already can. The page was reachable only through the console's own router, which put runtime role and grant editing out of reach for anything embedding these pages.
+
+## 0.12.69
+
+### Patch Changes
+
+- 35f2979: Export `AuthContext` so a host without a console login of its own can supply the auth value directly.
+
+  `AdminUsersPage`, `useAdminUsers` and the user action menus and drawers all read `useAuth()` for the caller's identity, their scopes and the `pikkuAdmin*` user-admin calls. That value only ever came from `AuthProvider`, which builds it from a Better Auth cookie session on `{serverUrl}/api/auth` — so a host embedding these pages without such a session got a thrown `useAuth must be used within an AuthProvider` rather than a degraded page. Fabric is the case in hand: it reaches a sandbox with a bearer token that the app already maps to a scoped session, so it has both a user and scopes, just not a cookie to fetch them with.
+
+  `AuthContext` now joins `PikkuRPCContext` and `ConsoleNavigatorCtx` as a context a host may provide itself. `AuthProvider`, `useAuth`, `useOptionalAuth`, the `AuthContextValue` and `AuthUser` types, and `createConsoleAuthClient` (which builds the `client` the value requires) are exported alongside it. Nothing about the standalone console changes — it still mounts `AuthProvider` and reads the same context.
+
+- 053930d: Give every table in the console the same column header. The list grid painted its sticky head with `--mantine-color-body`, which resolves to the page background rather than the panel the table sits in, so the header read as a black band floating over the card — and the labels under it were 14px full-contrast bold, outweighing the rows they name.
+
+  The head is now a `.tableHead` class in `console.module.css`: a 34px strip of 11px uppercase `--app-text-dim`, the same field-label idiom the console already uses everywhere else. `.tableHeadSticky` adds the sticky positioning and paints `--app-surface` for the one grid that has to occlude rows scrolling under it. Detail panels that dressed their own heads inline (`c="dimmed" fw={500} fz="xs"`, sometimes monospace) drop those props and use the class, so no `Table.Th` in the package carries styling.
+
+  Column casing moves to CSS with it: the 71 header strings go from `'ENV VARS'` to `'Env vars'`, which stops screen readers spelling out shouted words and leaves translators real strings. `TableListPage`'s `align` option, declared on the column type but never applied, now reaches both the header cell and the body cell.
+
+- b2ca560: feat(console): the selected row lives in the URL
+
+  Opening a row put the inspector's contents in React state and nowhere else, so
+  a selection was gone the moment you reloaded, followed a link out and came
+  back, or tried to send someone the thing you were looking at — `/functions` was
+  the only address the functions page ever had, whichever function was open.
+
+  The panel context now writes whatever is selected into the URL fragment and
+  reads it back. A surface with one list writes the bare id — `/functions#getUser`,
+  `/apis?tab=channels#events` — and one with several qualifies it, as
+  `/jobs?tab=triggers#triggerSource:orderPlaced`, because there an id alone would
+  not say which list owns it. Fragments are written with `replaceState`: the URL
+  always describes the selection, but scanning a list does not fill the back
+  stack.
+
+  Restoring is the list's job rather than the provider's, because a panel renders
+  from the metadata captured when it opened and only the list that fetched a row
+  holds it. `usePanelUrl` is what a list registers with — it names the panel type,
+  the rows, and how to open one — and it reopens whatever the fragment names as
+  soon as the rows have loaded. Registered: functions, HTTP routes, MCP
+  tools, gateways, schedulers, queues, triggers and their sources, middleware,
+  permissions, secrets, variables and credential users.
+
+  Channels are not panels but now address themselves the same way, and their row
+  is two levels deep, so the fragment names both: `#chat` for the channel,
+  `#chat/connect` for one of its handlers, `#chat/messages/send` for one action.
+  The open channel moves out of `?id=`, which is still read so older links keep
+  working. Switching tab on a tabbed surface drops the fragment, since a row in
+  the tab you left is not on screen in the one you arrive at.
+
+  `panelHref(type, id)` builds a link that opens a row on the page that owns its
+  type, so one surface can point at a row on another and land with it selected.
+
+- 39c9d3a: feat(console): the URL as state, over whichever router is reading it
+
+  Keeping something on screen in the URL is the same handful of rules every time
+  — merge rather than overwrite the params you don't own, clear on null, fall
+  back to the first row when the value names one that is gone, replace rather
+  than push so scanning a list does not fill the back stack — and they were being
+  written out again at each call site, here and in every host with pages of its
+  own.
+
+  `createUrlState(useSearchParams)` holds the rules and takes the router,
+  returning `useUrlState(key)`, `useUrlSelection(key, options)` and
+  `useUrlWrite()` for a change that means nothing by halves. The console binds it
+  to the router shim and exports the bound hooks; a host binds it to its own
+  router, which is what a page outside the shim's provider needs — Fabric's file
+  tree and ticket board are its pages, not the console's, and they keep a
+  selection by the same rules.
+
+  `TabbedSurface` is the first to use it. Its tab used to be written by replacing
+  the whole param set, which quietly dropped every other param on the surface;
+  the tab and the search box it clears now go in one merged write.
+
+- Updated dependencies [8154b1c]
+- Updated dependencies [6d9c09c]
+- Updated dependencies [239332b]
+  - @pikku/core@0.12.97
+  - @pikku/react@0.12.8
+
 ## 0.12.68
 
 ### Patch Changes
