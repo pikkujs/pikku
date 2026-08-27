@@ -51,7 +51,7 @@ export const MiddlewareTab: React.FC<{ searchQuery: string }> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (item: MiddlewareItem) => (
           <>
             <Text fw={500} truncate>
@@ -67,7 +67,7 @@ export const MiddlewareTab: React.FC<{ searchQuery: string }> = ({
       },
       {
         key: 'type',
-        header: 'TYPE',
+        header: 'Type',
         align: 'right' as const,
         render: (item: MiddlewareItem) => {
           const wireNames: string[] = item.data?.wires?.wires ?? []

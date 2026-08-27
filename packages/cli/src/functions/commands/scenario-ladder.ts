@@ -12,6 +12,7 @@ import { composeStepProse } from '@pikku/core/scenario'
 import type { ScenarioSurface, ScenarioStepPhase } from '@pikku/core/scenario'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import type { FunctionsMeta } from '@pikku/core/services'
+import type { PersonaDefinitions } from '@pikku/core/persona'
 import { KEYWORD_WIDTH } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
@@ -59,6 +60,12 @@ export interface ScenarioProse {
    * which is what it did before this index existed.
    */
   byStepFunc: Map<string, ScenarioStepProse>
+  /**
+   * What each actor is, keyed by the persona key a step records. A persona's
+   * job title is what a reader wants — "the founder" — and its first role is
+   * the fallback for a persona that declares no title.
+   */
+  roleByActor: Map<string, string>
 }
 
 /**
@@ -96,7 +103,8 @@ function* walkScenarioSteps(steps: unknown): Generator<any> {
  */
 export const collectScenarioStepProse = (
   workflowMeta: { steps?: WorkflowStepMeta[] } | undefined,
-  functionsMeta: FunctionsMeta
+  functionsMeta: FunctionsMeta,
+  personas: PersonaDefinitions = []
 ): ScenarioProse => {
   const byStepName = new Map<string, ScenarioStepProse>()
   const byStepFunc = new Map<string, ScenarioStepProse>()
@@ -126,7 +134,22 @@ export const collectScenarioStepProse = (
   for (const stepFunc of ambiguous) {
     byStepFunc.delete(stepFunc)
   }
-  return { byStepName, byStepFunc }
+  return { byStepName, byStepFunc, roleByActor: rolesByActor(personas) }
+}
+
+/**
+ * Only a job title introduces an actor. `roles` is authorisation — "reviewer"
+ * is a grant, not a description of who someone is — so a persona that declares
+ * no title gets no introduction rather than one assembled out of its grants.
+ */
+const rolesByActor = (personas: PersonaDefinitions): Map<string, string> => {
+  const roles = new Map<string, string>()
+  for (const persona of personas) {
+    if (persona.jobTitle) {
+      roles.set(persona.id, persona.jobTitle)
+    }
+  }
+  return roles
 }
 
 const sameProse = (a: ScenarioStepProse, b: ScenarioStepProse) =>
@@ -241,17 +264,31 @@ export const scenarioSurfaceCoverage = (
  * recorded under the name it was declared with is never re-resolved by a
  * function shared with another call site.
  */
-const stepSentence = (
+const stepProse = (
   step: ScenarioStepOutcome,
   prose: ScenarioProse
+): ScenarioStepProse | undefined =>
+  prose.byStepName.get(step.stepName) ??
+  prose.byStepName.get(baseName(step.stepName)) ??
+  (step.stepFunc ? prose.byStepFunc.get(step.stepFunc) : undefined)
+
+/** How a step follows the one recorded before it. */
+interface StepContinuation {
+  actorRole?: string
+  continuesPhase?: boolean
+  continuesActor?: boolean
+}
+
+const stepSentence = (
+  step: ScenarioStepOutcome,
+  prose: ScenarioProse,
+  continuation: StepContinuation = {}
 ): string => {
-  const parts =
-    prose.byStepName.get(step.stepName) ??
-    prose.byStepName.get(baseName(step.stepName)) ??
-    (step.stepFunc ? prose.byStepFunc.get(step.stepFunc) : undefined)
+  const parts = stepProse(step, prose)
   return parts
     ? composeStepProse({
         ...parts,
+        ...continuation,
         input: step.input,
         keywordWidth: KEYWORD_WIDTH,
       })
@@ -262,13 +299,41 @@ const stepSentence = (
 export const scenarioStepRows = (
   steps: ScenarioStepOutcome[],
   prose: ScenarioProse
-): ScenarioStepRow[] =>
-  steps.map((step) => ({
-    sentence: stepSentence(step, prose),
-    status: step.status,
-    durationMs: step.durationMs,
-    error: step.error,
-  }))
+): ScenarioStepRow[] => {
+  const introduced = new Set<string>()
+  let previous: ScenarioStepProse | undefined
+  return steps.map((step) => {
+    const parts = stepProse(step, prose)
+    const actor = parts?.actor
+    const role = actor ? prose.roleByActor.get(actor) : undefined
+    // Only the step that first names an actor carries their role, so a run
+    // that is one person doing eight things says who they are once.
+    const firstMention =
+      actor !== undefined && role !== undefined && !introduced.has(actor)
+    const continuation: StepContinuation = {
+      continuesPhase: previous !== undefined && previous.phase === parts?.phase,
+      continuesActor: previous !== undefined && previous.actor === actor,
+    }
+    if (actor) {
+      introduced.add(actor)
+    }
+    previous = parts
+    return {
+      sentence: stepSentence(step, prose, continuation),
+      ...(firstMention
+        ? {
+            sentenceWithRole: stepSentence(step, prose, {
+              ...continuation,
+              actorRole: role,
+            }),
+          }
+        : {}),
+      status: step.status,
+      durationMs: step.durationMs,
+      error: step.error,
+    }
+  })
+}
 
 const baseName = (stepName: string) => stepName.replace(/#\d+$/, '')
 

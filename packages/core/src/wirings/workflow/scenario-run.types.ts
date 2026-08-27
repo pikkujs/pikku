@@ -38,6 +38,13 @@ export interface ScenarioArtifact {
 /** One step of a run, already joined to the prose that declared it. */
 export interface ScenarioStepRow {
   sentence: string
+  /**
+   * The same sentence with the actor's role in it — "yasser (the founder)
+   * signs in". Set only on the step that first names each actor, and only
+   * when a persona declares a job title or a role, so a reader who wants the
+   * context picks this and one who wants the bare run picks `sentence`.
+   */
+  sentenceWithRole?: string
   status: string
   durationMs?: number
   error?: string

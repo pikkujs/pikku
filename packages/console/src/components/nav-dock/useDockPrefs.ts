@@ -7,6 +7,20 @@ export const DOCK_SIDES: DockSide[] = ['bottom', 'top', 'left', 'right']
 export const isVerticalDock = (side: DockSide) =>
   side === 'left' || side === 'right'
 
+/**
+ * Where the dock starts before anyone has moved it.
+ *
+ * An RTL reader's whole layout runs right-to-left, and a bottom dock puts the
+ * identity tile — the anchor everything else is read from — at the far end of
+ * the row from where their eye starts. The right edge is that same anchor on
+ * the side the page is already read from. It is only a default: the dock's own
+ * menu moves it, and once moved the stored side wins forever.
+ */
+export function defaultDockSide(): DockSide {
+  if (typeof document === 'undefined') return 'bottom'
+  return document.documentElement.dir === 'rtl' ? 'right' : 'bottom'
+}
+
 /** Percent of the dock's natural size. */
 export const DOCK_SCALE_MIN = 70
 export const DOCK_SCALE_MAX = 160
@@ -23,7 +37,7 @@ export const DOCK_SCALE_STEP = 5
 export function useDockPrefs() {
   const [side, setSide] = useLocalStorage<DockSide>({
     key: 'nav-dock-side',
-    defaultValue: 'bottom',
+    defaultValue: defaultDockSide(),
     getInitialValueInEffect: false,
   })
   /* Held open until someone says otherwise. A dock that starts hidden is a

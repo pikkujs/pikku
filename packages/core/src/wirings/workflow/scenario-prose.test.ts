@@ -63,7 +63,7 @@ describe('composeStepProse', () => {
         input: { packageName: '@pikku/addon-todos' },
         actor: 'admin',
       }),
-      'Then the admin sees @pikku/addon-todos'
+      'Then admin sees @pikku/addon-todos'
     )
   })
 
@@ -75,7 +75,121 @@ describe('composeStepProse', () => {
         input: { packageName: '@pikku/addon-todos' },
         actor: 'admin',
       }),
-      'Then the admin sees an addon in the gallery'
+      'Then admin sees an addon in the gallery'
+    )
+  })
+})
+
+describe('composeStepProse with an actor role', () => {
+  test('the role renders as an apposition after the actor', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'signs in',
+        actor: 'yasser',
+        actorRole: 'founder',
+      }),
+      'Given yasser (the founder) signs in'
+    )
+  })
+
+  test('no role renders exactly as it did before', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'signs in',
+        actor: 'yasser',
+      }),
+      'Given yasser signs in'
+    )
+  })
+
+  test('a role without an actor has nothing to qualify, so it is dropped', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'then',
+        description: 'the receipt totals 4.50',
+        actorRole: 'founder',
+      }),
+      'Then the receipt totals 4.50'
+    )
+  })
+
+  test('the role sits inside the padded sentence, not the keyword column', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'opens /app',
+        actor: 'nadia',
+        actorRole: 'head of ops',
+        keywordWidth: 5,
+      }),
+      'When  nadia (the head of ops) opens /app'
+    )
+  })
+})
+
+describe('composeStepProse continuations', () => {
+  test('a repeated phase reads as And', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'is invited',
+        actor: 'nadia',
+        continuesPhase: true,
+      }),
+      'And nadia is invited'
+    )
+  })
+
+  test('the same actor continuing drops the repeated subject', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'sees the audit log',
+        actor: 'yasser',
+        continuesPhase: true,
+        continuesActor: true,
+      }),
+      'And sees the audit log'
+    )
+  })
+
+  test('a new actor keeps their name even under And', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'is invited',
+        actor: 'nadia',
+        continuesPhase: true,
+        continuesActor: false,
+      }),
+      'And nadia is invited'
+    )
+  })
+
+  test('the same actor across a phase change keeps the subject', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'opens the dashboard',
+        actor: 'yasser',
+        continuesActor: true,
+      }),
+      'When yasser opens the dashboard'
+    )
+  })
+
+  test('an introduction is never dropped by a continuation', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'given',
+        description: 'is invited',
+        actor: 'nadia',
+        actorRole: 'reviewer',
+        continuesPhase: true,
+      }),
+      'And nadia (the reviewer) is invited'
     )
   })
 })
@@ -88,7 +202,7 @@ describe('composeStepProse basics', () => {
         description: 'buys an apple',
         actor: 'shopper',
       }),
-      'Given the shopper buys an apple'
+      'Given shopper buys an apple'
     )
     assert.equal(
       composeStepProse({
@@ -96,7 +210,18 @@ describe('composeStepProse basics', () => {
         description: 'sees a receipt',
         actor: 'shopper',
       }),
-      'Then the shopper sees a receipt'
+      'Then shopper sees a receipt'
+    )
+  })
+
+  test('a persona named after a person reads as that person', () => {
+    assert.equal(
+      composeStepProse({
+        phase: 'when',
+        description: 'opens /app',
+        actor: 'nadia',
+      }),
+      'When nadia opens /app'
     )
   })
 
@@ -117,7 +242,7 @@ describe('composeStepProse basics', () => {
         description: 'refreshes the dashboard',
         actor: 'admin',
       }),
-      'When the admin refreshes the dashboard'
+      'When admin refreshes the dashboard'
     )
   })
 
@@ -133,11 +258,11 @@ describe('composeStepProse basics', () => {
     )
 
     assert.deepEqual(rendered, [
-      'Given the shopper buys an apple',
-      'When  the shopper checks out',
-      'Then  the shopper sees a receipt',
+      'Given shopper buys an apple',
+      'When  shopper checks out',
+      'Then  shopper sees a receipt',
     ])
-    const columns = new Set(rendered.map((line) => line.indexOf('the shopper')))
+    const columns = new Set(rendered.map((line) => line.indexOf('shopper')))
     assert.equal(columns.size, 1, 'every sentence starts in the same column')
   })
 

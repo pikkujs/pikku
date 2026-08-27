@@ -1,3 +1,39 @@
+## 0.12.66
+
+### Patch Changes
+
+- 2f94a0a: Stop `pikku all` failing on a diagnostic its own codegen went on to fix.
+
+  The run inspects several times, because generating the scaffold, the leaf indexes and the type files each changes the source graph the next inspection reads. Every full inspection re-runs every validator, so the newest pass is the complete one — but the logger accumulated diagnostics across all of them, and the build gate failed the run if any pass had ever recorded a critical.
+
+  A project whose system roles grant a scaffold-declared scope (`virtualUser:*`) therefore could not build from clean: the pass taken before the scaffold existed raised PKU124, the pass taken after was clean, and the run failed anyway. Same for PKU951 on a scaffold-declared secret.
+
+  Validation diagnostics are now scoped to the pass that recorded them, so a later pass supersedes an earlier one. Diagnostics reported outside a validation pass — by a generator or a command — are untouched, and a fault every pass reports still fails the run.
+
+- 7eeff81: Record `rpc!.invoke(...)` as an invocation
+
+  `rpc` is optional on the wire, so a caller that knows it is there writes
+  `rpc!.invoke('someFunction', …)`. The inspector matched the receiver as a bare
+  identifier, but a non-null assertion is a node of its own wrapping that
+  identifier, so those call sites were never recorded.
+
+  That is silent rather than loud. An invocation is what puts a function that is
+  not `expose: true` into the runtime registry, so the target was left
+  unregistered and the dispatch failed with `Function not found` — at run time,
+  on a call site that type-checked.
+
+  The generated virtual-user scaffold dispatches exactly this way, which meant
+  `executeVirtualUserRun` was never registered: every virtual-user run sat at
+  `running` forever with nothing logged, because the scaffold's own
+  `.catch(() => {})` swallowed the rejection.
+
+  The receiver is now unwrapped through non-null assertions and parentheses
+  before it is matched.
+
+- Updated dependencies [88629af]
+- Updated dependencies [f1ccfe3]
+  - @pikku/core@0.12.96
+
 ## 0.12.65
 
 ### Patch Changes

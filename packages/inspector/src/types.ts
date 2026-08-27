@@ -366,6 +366,24 @@ export interface InspectorLogger {
   /** Sugar for `diagnostic({ severity: 'critical', code, message })`. */
   critical: (code: ErrorCode, message: string) => void
   hasCriticalErrors: () => boolean
+  /**
+   * Opens a validation pass, discarding whatever a previous one recorded.
+   *
+   * A single `pikku all` inspects several times, because generating the
+   * scaffold, the leaf indexes and the type files each changes the source graph
+   * the next inspection reads. The validators are pure functions of that graph
+   * and every full inspection re-runs all of them, so the newest pass is always
+   * the complete one and the ones before it are strictly superseded.
+   *
+   * Without this the diagnostics accumulated instead, and a run failed on a
+   * complaint about its own half-built input: a project whose roles reference
+   * scaffold-declared scopes was reported as failing even though the pass that
+   * ran once the scaffold existed was clean. Optional so a host supplying its
+   * own logger keeps working — one that omits it simply never discards.
+   */
+  beginValidationPass?: () => void
+  /** Closes the pass opened by `beginValidationPass`. */
+  endValidationPass?: () => void
 }
 
 export type AddWiring = (

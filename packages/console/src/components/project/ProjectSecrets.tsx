@@ -34,7 +34,7 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
     () => [
       {
         key: 'name',
-        header: 'NAME',
+        header: 'Name',
         render: (s: SecretMeta) => (
           <>
             <Group gap="xs">
@@ -57,7 +57,7 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
       },
       {
         key: 'secretId',
-        header: 'SECRET ID',
+        header: 'Secret ID',
         render: (s: SecretMeta) => (
           <Text size="sm" c="dimmed" ff="monospace">
             {asI18n(s.secretId)}

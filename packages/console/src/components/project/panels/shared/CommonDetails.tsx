@@ -100,14 +100,10 @@ const WiredToSection: React.FC<{ functionName: string }> = ({
         {m.common_details_wired_to({ count: allWirings.length })}
       </SectionLabel>
       <Table verticalSpacing={4} horizontalSpacing="xs">
-        <Table.Thead>
+        <Table.Thead className={classes.tableHead}>
           <Table.Tr>
-            <Table.Th c="var(--app-text-dim)" fw={500} fz="xs" ff="monospace">
-              Name
-            </Table.Th>
-            <Table.Th c="var(--app-text-dim)" fw={500} fz="xs" ff="monospace">
-              Type
-            </Table.Th>
+            <Table.Th c="var(--app-text-dim)">Name</Table.Th>
+            <Table.Th c="var(--app-text-dim)">Type</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

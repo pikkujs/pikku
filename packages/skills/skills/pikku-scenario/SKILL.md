@@ -213,14 +213,14 @@ The **feature is the run unit**: `--flows` on a scenario whose every feature ent
 
 A scenario records what someone was **trying to do**, never the keystrokes they used to do it. This is the one decision that determines whether a suite survives its first redesign, and it applies to every step name you write.
 
-| Action ladder — wrong               | Intent ladder — right                               |
-| ----------------------------------- | --------------------------------------------------- |
-| `Given opens /shop`                 | `Given the shopper is browsing the shop`            |
-| `When clicks the category filter`   | `When the shopper buys the £5 strawberry milkshake` |
-| `And clicks "Drinks"`               | `Then it is in their basket`                        |
-| `And clicks the first product card` |                                                     |
-| `And clicks Add to basket`          |                                                     |
-| `Then sees "1 item"`                |                                                     |
+| Action ladder — wrong               | Intent ladder — right                           |
+| ----------------------------------- | ----------------------------------------------- |
+| `Given opens /shop`                 | `Given shopper is browsing the shop`            |
+| `When clicks the category filter`   | `When shopper buys the £5 strawberry milkshake` |
+| `And clicks "Drinks"`               | `Then it is in their basket`                    |
+| `And clicks the first product card` |                                                 |
+| `And clicks Add to basket`          |                                                 |
+| `Then sees "1 item"`                |                                                 |
 
 Three things go wrong with the left-hand column, and all three are expensive:
 
@@ -313,7 +313,7 @@ await scenario.when(
   { name: '£5 strawberry milkshake' },
   { actor: actors.shopper }
 )
-// reporter renders: When the shopper buys the £5 strawberry milkshake  ✓  1.2s
+// reporter renders: When shopper buys the £5 strawberry milkshake  ✓  1.2s
 ```
 
 **Every intent step begins by arriving.** `ensureOnShop` is not defensive noise — it is what lets a scenario start at any step, run alone, and be reordered without touching it. It checks first and navigates only if needed, so a scenario already on the shop pays nothing. This is about the _browser's_ starting position, not the database: there is still no state reset (see above), and you still scope what you create.
@@ -489,7 +489,7 @@ await scenario.given(
   { qty: 1 },
   { actor: actors.shopper }
 )
-// reporter renders: Given the shopper buys 1 apples   ✓  412ms
+// reporter renders: Given shopper buys 1 apples   ✓  412ms
 ```
 
 Rules that bite:

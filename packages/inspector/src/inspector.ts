@@ -493,6 +493,10 @@ export const inspect = async (
   )
 
   if (!options.setupOnly) {
+    // Everything below re-derives from the state this pass just built, so it
+    // supersedes whatever an earlier pass concluded about a source graph the
+    // run has since finished generating into.
+    logger.beginValidationPass?.()
     const startAggregate = performance.now()
     // Apply the inspected auth handler service set before aggregation so it
     // flows into requiredServices (the generated handler's own func is opaque).
@@ -542,6 +546,7 @@ export const inspect = async (
     validateScopeReferences(logger, state)
     validateSystemRoleScopes(logger, state)
     validatePersonaRoles(logger, state)
+    logger.endValidationPass?.()
   }
 
   state.program = program

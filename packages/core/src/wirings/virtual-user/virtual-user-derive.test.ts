@@ -222,10 +222,10 @@ describe('deriving intents from scenarios', () => {
   test('the prose comes through with its placeholders left open', () => {
     const [intent] = deriveIntents(workflows, functions)
     assert.deepEqual(intent!.steps, [
-      'Given the orgAdmin is signed in',
+      'Given orgAdmin is signed in',
       // The scenario knows which address it invites. The user has to pick one.
-      'When the orgAdmin invites {email}',
-      'Then the orgAdmin sees the new member in the list',
+      'When orgAdmin invites {email}',
+      'Then orgAdmin sees the new member in the list',
     ])
   })
 
@@ -298,8 +298,8 @@ describe('deriving intents from scenarios', () => {
     )
 
     assert.deepEqual(intents[0]!.steps, [
-      'Given the orgAdmin is signed in',
-      'When the orgAdmin invites {email}',
+      'Given orgAdmin is signed in',
+      'When orgAdmin invites {email}',
     ])
     assert.deepEqual(intents[0]!.personas, ['orgAdmin'])
   })

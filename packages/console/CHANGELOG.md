@@ -1,3 +1,23 @@
+## 0.12.68
+
+### Patch Changes
+
+- 2c9e4e7: Fix the scenarios step panel throwing `useWorkflowContext must be used within WorkflowProvider` when a host mounts the panel container outside the surface that opened it. The step's workflow meta now travels on the panel data, and `ScenarioStepPanel` mounts its own provider from it, falling back to an ambient one.
+
+## 0.12.67
+
+### Patch Changes
+
+- 2f35d54: Start the nav dock on the right edge in an RTL locale. The dock's default side was `bottom` for everyone, which puts the identity tile — the anchor the rest of the row is read from — at the far end from where an Arabic or Hebrew reader's eye starts. `defaultDockSide()` reads `document.documentElement.dir`, so it is the layout direction that decides, not the locale list. It remains only a default: the dock's own menu moves it, and a stored `nav-dock-side` always wins.
+
+  Hosts that mirror direction onto `<html dir>` from an effect will hand this `ltr` on a cold load — set the attribute during render if the first paint matters.
+
+- Updated dependencies [88629af]
+- Updated dependencies [88629af]
+- Updated dependencies [f1ccfe3]
+  - @pikku/core@0.12.96
+  - @pikku/fetch@0.12.10
+
 ## 0.12.66
 
 ### Patch Changes

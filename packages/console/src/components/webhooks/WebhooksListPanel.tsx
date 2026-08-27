@@ -64,7 +64,7 @@ export const WebhooksListPanel: React.FC<WebhooksListPanelProps> = ({
       },
       {
         key: 'status',
-        header: 'STATUS',
+        header: 'Status',
         render: (item: WebhookDelivery) => (
           <Badge color={STATUS_COLOR[item.status]} variant="light">
             {asI18n(item.status)}
@@ -73,7 +73,7 @@ export const WebhooksListPanel: React.FC<WebhooksListPanelProps> = ({
       },
       {
         key: 'attempts',
-        header: 'ATTEMPTS',
+        header: 'Attempts',
         align: 'right' as const,
         render: (item: WebhookDelivery) => (
           <Text>{asI18n(String(item.attempts))}</Text>

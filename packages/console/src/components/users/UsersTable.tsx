@@ -1,5 +1,6 @@
 import { Table, Group, Avatar, Box, Text } from '@pikku/mantine/core'
 import { asI18n, type I18nString } from '@pikku/react'
+import classes from '../ui/console.module.css'
 
 /**
  * A user row as rendered by {@link UsersTable}. A structural superset of both
@@ -47,7 +48,7 @@ export const UsersTable: React.FC<UsersTableProps> = ({
   renderActions,
 }) => (
   <Table verticalSpacing="sm" highlightOnHover>
-    <Table.Thead>
+    <Table.Thead className={classes.tableHead}>
       <Table.Tr>
         <Table.Th>{labels.columnUser}</Table.Th>
         <Table.Th>{labels.columnCreated}</Table.Th>

@@ -8,6 +8,7 @@ import { added, changed, removed, dim, table } from '../lib/output.js'
 import {
   blockedReason,
   blockedSummary,
+  missingConfigHints,
   changesAreEmpty,
   classifyStatus,
   describeDeployment,
@@ -506,7 +507,12 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
         )
       )
     } else if (reason === 'needs_config') {
-      console.log(dim('Set the values with `pikku fabric secrets set <name>`.'))
+      for (const hint of missingConfigHints(
+        result.missingSecrets,
+        result.missingVariables
+      )) {
+        console.log(dim(hint))
+      }
     }
     return
   }
