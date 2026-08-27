@@ -5061,6 +5061,7 @@ export interface UploadURLResult {
 export type VariableMeta = {
   name: string
   displayName: string
+  schema?: StandardSchemaV1 | (() => StandardSchemaV1)
 }
 export interface VariablesService {
   get<T = string>(name: string): Promise<T | undefined> | T | undefined

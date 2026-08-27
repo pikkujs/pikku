@@ -49,8 +49,12 @@ export const serializeVariablesTypes = ({
         mapEntries.push(
           `  '${meta.variableId}': z.infer<typeof ${schemaRef.variableName}>`
         )
+        // The schema is emitted behind a thunk because this file and the one
+        // declaring the schema import each other: reading it while the modules
+        // are still initializing throws `Cannot access '<schema>' before
+        // initialization`, and deferring the read to first use avoids the cycle.
         metaEntries.push(
-          `  '${meta.variableId}': { name: '${name}', displayName: ${literal(meta.displayName)} }`
+          `  '${meta.variableId}': { name: '${name}', displayName: ${literal(meta.displayName)}, schema: () => ${schemaRef.variableName} }`
         )
       }
     }

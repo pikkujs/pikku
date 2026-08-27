@@ -20,6 +20,6 @@
   "scripts": {
     "build": "tsc -b",
     "pikku": "pikku",
-    "test": "pikku && tsc -b"
+    "test": "pikku && tsc -b && ./test.sh"
   }
 }

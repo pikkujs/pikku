@@ -100,3 +100,28 @@ describe('serializeVariablesTypes — shipping the declared set', () => {
     )
   })
 })
+
+describe('serializeVariablesTypes — carrying the declared schema', () => {
+  // Without the schema as a value in the metadata, a `.default()` in the
+  // declaration is unreachable at runtime: the service has no way to ask.
+  test('puts the schema on the metadata entry, not just in the type map', () => {
+    const output = schemaBackedVariable('API URL')
+    assert.match(output, /'API_URL': \{[^}]*schema: \(\) => ApiUrlSchema/)
+    assert.deepEqual(parseErrors(output), [])
+  })
+
+  // This file and the one declaring the schema import each other, so evaluating
+  // the schema at module scope throws before it is initialized.
+  test('defers reading the schema, so the import cycle stays harmless', () => {
+    const output = schemaBackedVariable('API URL')
+    assert.doesNotMatch(output, /schema: ApiUrlSchema/)
+  })
+
+  test('imports the schema as a value so the emit keeps it', () => {
+    const output = schemaBackedVariable('API URL')
+    assert.match(
+      output,
+      /^import \{ ApiUrlSchema \} from '\.\.\/\.\.\/src\/variables\.js'$/m
+    )
+  })
+})

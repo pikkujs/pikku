@@ -13,3 +13,15 @@ defineVariable({
   variableId: 'SERVER_CONFIG',
   schema: serverConfigSchema,
 })
+
+export const apiBaseUrlSchema = z
+  .enum(['https://api.example.com'])
+  .default('https://api.example.com')
+
+defineVariable({
+  name: 'api-base-url',
+  displayName: 'API Base URL',
+  description: 'Where the API lives. There is only one, so it defaults.',
+  variableId: 'API_BASE_URL',
+  schema: apiBaseUrlSchema,
+})
