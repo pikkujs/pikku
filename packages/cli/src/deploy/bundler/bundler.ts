@@ -34,6 +34,7 @@ import type {
   CompileInput,
   CompileResult,
 } from './bundler.interface.js'
+import { SERVICE_MODULE_MAP } from './service-module-map.js'
 
 /**
  * Mapping of service name -> gen file pattern that should be stubbed
@@ -41,22 +42,6 @@ import type {
  */
 const SERVICE_GEN_FILE_MAP: Record<string, RegExp> = {
   metaService: /pikku-meta-service\.gen/,
-}
-
-/**
- * Mapping of service name -> npm module patterns to stub when the service is
- * NOT required by a deployment unit. Unlike SERVICE_GEN_FILE_MAP these are
- * external packages, not gen files: a unit that doesn't wire the service never
- * executes the code path that imports them, so replacing them with `export {}`
- * keeps their (often large) trees out of the bundle.
- *
- * The AI SDKs (@pikku/ai-vercel + @ai-sdk/* + `ai`, ~3MB) are only constructed
- * when `agentRunner` is wired (agent units). Every non-agent unit stubs them.
- * The shared services factory must guard the runner construction behind a
- * defined-check on the dynamic import so a stubbed unit simply skips it.
- */
-const SERVICE_MODULE_MAP: Record<string, RegExp[]> = {
-  agentRunner: [/^@pikku\/ai-vercel/, /^@ai-sdk\//, /^ai$/],
 }
 
 /**

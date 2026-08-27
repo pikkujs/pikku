@@ -11,6 +11,7 @@ import {
   runWebsocketDepsChecks,
 } from './websocket-deps-checks.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
+import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
 
 export type Finding = ValidateFinding
 
@@ -155,6 +156,44 @@ export const betterAuthTableAliases = (
     override,
     override.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase(),
   ]
+}
+
+/**
+ * Static value imports of a package the deploy bundler stubs.
+ *
+ * A unit that does not require the service gets the package rewritten to
+ * `export {}`, so a static named import fails to bundle — once per unit, with
+ * an esbuild message that names the stub rather than the mistake. Type-only
+ * imports are erased before bundling and a side-effect import binds nothing,
+ * so neither is reported.
+ */
+export const staticStubbedImports = (
+  code: string
+): Array<{ module: string; service: string }> => {
+  const found: Array<{ module: string; service: string }> = []
+  const statements = code.matchAll(
+    /^[ \t]*import\s+(?!type\s)([\s\S]*?)\s*from\s*['"`]([^'"`]+)['"`]/gm
+  )
+  for (const statement of statements) {
+    const clause = statement[1]!
+    const specifier = statement[2]!
+    const named = clause.match(/^\{([\s\S]*)\}$/)
+    if (
+      named &&
+      named[1]!
+        .split(',')
+        .filter((binding) => binding.trim().length > 0)
+        .every((binding) => /^type\s/.test(binding.trim()))
+    ) {
+      continue
+    }
+    for (const [service, patterns] of Object.entries(SERVICE_MODULE_MAP)) {
+      if (patterns.some((pattern) => pattern.test(specifier))) {
+        found.push({ module: specifier, service })
+      }
+    }
+  }
+  return found
 }
 
 /**
@@ -462,13 +501,29 @@ export async function runSharedProjectChecks(
     }
 
     const servicesPath = join(fnDir, 'src', 'services.ts')
-    if (!(await readTextSafe(servicesPath))) {
+    const servicesText = await readTextSafe(servicesPath)
+    if (!servicesText) {
       w(
         'services-missing',
         'packages/functions/src/services.ts not found',
         servicesPath,
         'Create services.ts and export your service factory for the workspace'
       )
+    } else {
+      for (const { module, service } of staticStubbedImports(servicesText)) {
+        e(
+          'services-static-stubbed-import',
+          `services.ts imports '${module}' statically, but the deploy bundler stubs it in every unit that does not require '${service}'`,
+          servicesPath,
+          lines(
+            `Every unit without '${service}' gets '${module}' rewritten to \`export {}\`, so a static import fails to bundle there.`,
+            'Import the type only, then load the package when you build the service:',
+            `  const mod = await import('${module}')`,
+            '  if (mod.SomeExport) { ... }',
+            'See templates/starter-template/packages/functions/src/services.ts for the shape.'
+          )
+        )
+      }
     }
 
     // ── auth schema ──────────────────────────────────────────────────────
