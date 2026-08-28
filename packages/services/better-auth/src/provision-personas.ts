@@ -149,7 +149,7 @@ export const provisionPersonas = async (
       'Provisioning personas requires better-auth to be wired (services.auth is missing)'
     )
   }
-  const ctx = (await auth()).$context as any
+  const ctx = (await (await auth()).$context) as any
 
   const banAvailable =
     typeof ctx.hasPlugin === 'function'

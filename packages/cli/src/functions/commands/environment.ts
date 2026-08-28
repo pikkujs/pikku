@@ -149,3 +149,29 @@ export const parseAppUrls = (
   }
   return { base, byApp }
 }
+
+/**
+ * The environment name `pikku dev` is running as, for anything that gates on
+ * `PIKKU_ENV` — persona provisioning above all, which fails closed and so
+ * provisions nothing at all when nobody says where the process is.
+ *
+ * Local means a configured, non-production environment whose `apiUrl` is a
+ * loopback host; `local` wins when several qualify. A project that configures
+ * none gets `undefined` rather than a guess.
+ */
+export const resolveDevEnvironmentName = (
+  environments: Record<string, PikkuEnvironment>
+): string | undefined => {
+  const candidates = Object.entries(environments).filter(([, environment]) => {
+    if (environment.production) {
+      return false
+    }
+    try {
+      return LOCAL_HOSTNAMES.has(new URL(environment.apiUrl).hostname)
+    } catch {
+      return false
+    }
+  })
+  const preferred = candidates.find(([name]) => name === 'local')
+  return (preferred ?? candidates[0])?.[0]
+}
