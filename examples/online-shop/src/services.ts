@@ -7,6 +7,8 @@ import {
   createInvocationAudit,
 } from '@pikku/core/services'
 import { createAuditedKysely, KyselyScopeService } from '@pikku/kysely'
+import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
+import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { pikkuServices, pikkuWireServices } from '#pikku/setup'
 import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
@@ -99,6 +101,13 @@ export const createSingletonServices = pikkuServices(
       await kyselyScopes.init()
       scopeService = kyselyScopes
     }
+
+    // The definitions in scopes.ts and roles.ts are declarations until something
+    // writes them down. Nothing else does, and a role with no row cannot be
+    // granted — `addUserToRole` fails the pikku_role_scopes foreign key, which is
+    // how persona provisioning discovers it.
+    await scopeService.syncScopes(SCOPES)
+    await scopeService.syncSystemRoles(SYSTEM_ROLES)
 
     return {
       ...(existingServices ?? {}),
