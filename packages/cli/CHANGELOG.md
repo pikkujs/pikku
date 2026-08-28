@@ -1,3 +1,82 @@
+## 0.12.125
+
+### Patch Changes
+
+- b951f04: Add `pikku fabric projects`, listing the projects in your organization with their ids. The fabric API already exposed `fabricCliProjects`; no command called it, so a project's id was reachable only through the web console — and a checkout whose `pikkufabric.config.json` still held the `__PROJECT_ID__` placeholder could run no other fabric command to recover it. `fabric init` was no help either: it only creates, so against a project that already exists it fails with a 409 carrying no id. Projects matching the local config are marked.
+- 80eb5c0: Generate a desktop shell from `pikku deploy apply --desktop`
+
+  `pikku deploy apply --provider standalone --runtime bun --desktop` now emits a
+  `src-tauri/` crate that ships the compiled binary as a sidecar and opens a
+  window on the server's own HTTP origin, so cookies, CORS and OAuth behave
+  exactly as they do in a browser. Regeneration is idempotent and leaves an
+  edited file alone rather than overwriting it.
+
+  `--desktop-url https://app.example.com` builds the other shape: a shell that
+  points at an already-deployed server. Nothing is bundled — no sidecar, no
+  binary, and so no bun runtime to compile one — and the window is declared in
+  `tauri.conf.json` rather than opened from Rust, because the origin is known up
+  front. The url can also live in `pikku.config.json` as `deploy.desktop.url`,
+  alongside `deploy.desktop.identifier`.
+
+  Supporting changes: `SERVER_READY_MARKER` moved to `@pikku/deploy` (the CLI
+  re-exports it from its old path), both HTTP runtimes expose the port they
+  actually bound so `--port 0` reports a real port, and the generated server
+  entry exits when its parent process goes away.
+
+- 80eb5c0: feat: serve a built frontend from the pikku server's own origin
+
+  A new `frontend` key in `pikku.config.json` names a directory of built
+  frontend output. `pikku serve` mounts it, and `pikku deploy` ships it inside
+  the distributable — into a directory beside the bundle for the node runtime,
+  and embedded in the binary for a `bun build --compile` standalone. `pikku dev`
+  deliberately ignores it and says so, because the frontend's own dev server owns
+  that job.
+
+  Pikku reads the frontend's output and never builds it, so an unbuilt directory
+  fails with a message that says which build to run rather than booting a server
+  that answers every page with a 404.
+
+- af2bde4: Persona provisioning actually provisions.
+
+  Two things stopped `provisionPersonas` from ever creating an account. It read
+  `$context` off the better-auth instance without awaiting it — every other call
+  site does — so the orphan sweep died on `undefined.findMany`, and a cast to
+  `any` kept the compiler quiet about it. And nothing set `PIKKU_ENV`, so the
+  environment rule failed closed and skipped every persona before it got that
+  far; `pikku dev` now names the local environment from `environments` in
+  pikku.config.json, preferring one called `local`.
+
+- 2252016: Decide whether a virtual-user run is against production from the configured
+  environment rather than `NODE_ENV`.
+
+  A deployment whose staging is a production mirror runs `NODE_ENV=production`
+  there too, so the old check refused every disposition on the one environment
+  they exist to be used on. `startVirtualUserRun` now takes the `environments`
+  generated beside the personas and the environment this process is (`PIKKU_ENV`
+  by default), which is the same signal `personaEnvironmentRefusal` already
+  checks at sign-in; the generated scaffold passes them. An environment that
+  cannot be resolved is treated as production. `NODE_ENV` remains the answer for
+  a project that configures no environments at all.
+
+- 80eb5c0: Encrypt classified columns from the generated manifest.
+
+  `ClassificationPlugin` reads the per-column classification manifest and decrypts `wrapped` and `sealed` columns transparently on the way out. Writes are not transparent — Kysely's `transformQuery` is synchronous and WebCrypto is not — so plaintext heading for a classified column **throws** instead, and values are produced by `ClassificationCrypto.encryptColumn()`. A forgotten call site is a loud error rather than a silent plaintext row. The stored envelope is self-describing (`pikku1.<keyId>.<version>.<wrappedDek>.<ciphertext>`), so a row records which key opens it without a schema change to every table.
+
+  `keyId` now flows from the hand-authored `db/annotations.ts` through `pikku db migrate` into `classification.gen.ts`. It is emitted only for `wrapped` and `sealed` columns: naming a key on a plain column would claim a protection it does not have, and a hashed column has no key at all — the hash is the lookup key.
+
+- Updated dependencies [80eb5c0]
+- Updated dependencies [80eb5c0]
+- Updated dependencies [80eb5c0]
+- Updated dependencies [af2bde4]
+- Updated dependencies [2252016]
+- Updated dependencies [80eb5c0]
+  - @pikku/core@0.12.98
+  - @pikku/node-http-server@0.12.12
+  - @pikku/bun-server@0.12.10
+  - @pikku/deploy@0.12.2
+  - @pikku/better-auth@0.12.32
+  - @pikku/kysely@0.13.23
+
 ## 0.12.124
 
 ### Patch Changes
