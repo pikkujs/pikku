@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2884 observable things**: 916 exported names, plus
-1968 members on the classes and interfaces among them, reachable
+**2886 observable things**: 916 exported names, plus
+1970 members on the classes and interfaces among them, reachable
 through 54 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -15,7 +15,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 141 | 115 | 413 |
-| `./virtual-user` | 66 | 66 | 210 |
+| `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
@@ -2304,11 +2304,13 @@ export interface StartedVirtualUserRun {
   goals: string[]
   memory: Record<string, string>
 }
-startVirtualUserRun: ({ store, personas, config, persona: personaId, disposition: requested, seed: requestedSeed, goals, memory, startedBy, }: StartVirtualUserRunParams) => Promise<StartedVirtualUserRun>
+startVirtualUserRun: ({ store, personas, config, environments, environment, persona: personaId, disposition: requested, seed: requestedSeed, goals, memory, startedBy, }: StartVirtualUserRunParams) => Promise<StartedVirtualUserRun>
 export interface StartVirtualUserRunParams {
   store: VirtualUserRunStore | undefined
   personas: ScaffoldPersonas
   config: { nodeEnv?: string } | undefined
+  environments?: Readonly<Record<string, PersonaEnvironment>>
+  environment?: string
   persona: string
   disposition?: string
   seed?: number

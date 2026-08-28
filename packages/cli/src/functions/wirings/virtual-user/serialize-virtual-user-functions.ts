@@ -287,7 +287,7 @@ import {
   virtualUserScheduleRunInput,
   writeVirtualUserSchedule,
 } from '@pikku/core/virtual-user'
-import { createPersonas, personaConfigs } from '${pathToPersonas}'
+import { createPersonas, personaConfigs, personaEnvironments } from '${pathToPersonas}'
 import {
   ExecuteVirtualUserRunInput,
   ExecuteVirtualUserRunOutput,
@@ -340,8 +340,11 @@ export const runVirtualUser = pikkuFunc({
       await startVirtualUserRun({
         store: virtualUserRunStore,
         personas: personaConfigs,
-        // Cast because an application's Config is its own interface and need
-        // not declare nodeEnv at all.
+        // Which of the configured environments this process is decides whether
+        // a run is against production. \`config\` is only the fallback for a
+        // project that configures none, and is cast because an application's
+        // Config is its own interface and need not declare nodeEnv at all.
+        environments: personaEnvironments,
         config: config as { nodeEnv?: string } | undefined,
         persona: input.persona,
         disposition: input.disposition,

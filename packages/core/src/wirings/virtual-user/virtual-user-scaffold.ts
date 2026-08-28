@@ -11,6 +11,7 @@ import { prepareVirtualUserRun } from './prepare-virtual-user-run.js'
 import { runVirtualUser as runVirtualUserEngine } from './run-virtual-user.js'
 import { personaVirtualUserTarget } from './virtual-user-target.js'
 import type { SchemaMap } from './virtual-user-derive.js'
+import type { PersonaEnvironment } from '../persona/persona-environments.js'
 import { PRODUCTION_DISPOSITION } from './virtual-user.types.js'
 import type {
   StepRecord,
@@ -160,8 +161,13 @@ export interface StartVirtualUserRunParams {
   /**
    * The app's config, read only for `nodeEnv` — structural because an
    * application's Config is its own interface and need not declare it at all.
+   * The fallback signal, used only by a project that configures no environments.
    */
   config: { nodeEnv?: string } | undefined
+  /** `environments` from pikku.config.json, as generated beside the personas. */
+  environments?: Readonly<Record<string, PersonaEnvironment>>
+  /** Which of them this process is. Defaults to `PIKKU_ENV`. */
+  environment?: string
   persona: string
   disposition?: string
   seed?: number
@@ -182,6 +188,33 @@ export interface StartedVirtualUserRun {
 }
 
 /**
+ * Whether this process is running against production, for the disposition rule.
+ *
+ * The configured environment wins over `NODE_ENV` because they answer different
+ * questions. A deployment whose staging is a production *mirror* runs
+ * `NODE_ENV=production` there too — keying on it refuses every disposition on
+ * the one environment they exist to be used on. `PIKKU_ENV` names which of the
+ * configured environments this is, which is the question actually being asked,
+ * and it is the same signal `personaEnvironmentRefusal` already checks at
+ * sign-in.
+ *
+ * Unresolved is treated as production: an environment nobody can name is one
+ * whose data nobody can vouch for. `NODE_ENV` remains the answer only for a
+ * project that configures no environments at all, which has no production
+ * environment declared for this to be wrong about.
+ */
+const isProductionRun = (
+  config: { nodeEnv?: string } | undefined,
+  environments: Readonly<Record<string, PersonaEnvironment>> | undefined,
+  environment: string | undefined
+): boolean => {
+  if (!environments || Object.keys(environments).length === 0) {
+    return config?.nodeEnv === 'production'
+  }
+  return environment ? Boolean(environments[environment]?.production) : true
+}
+
+/**
  * Resolves a request against the declaration and records the run.
  *
  * Everything up to the point a run exists, which is everything a caller and a
@@ -192,6 +225,8 @@ export const startVirtualUserRun = async ({
   store,
   personas,
   config,
+  environments,
+  environment = process.env.PIKKU_ENV,
   persona: personaId,
   disposition: requested,
   seed: requestedSeed,
@@ -210,8 +245,8 @@ export const startVirtualUserRun = async ({
   // does wrong, which is not a thing to do to real customers' data. Checked
   // against the effective disposition, so an override cannot smuggle one in.
   if (
-    config?.nodeEnv === 'production' &&
-    disposition !== PRODUCTION_DISPOSITION
+    disposition !== PRODUCTION_DISPOSITION &&
+    isProductionRun(config, environments, environment)
   ) {
     throw new Error(
       `Only the '${PRODUCTION_DISPOSITION}' disposition may run against production; "${personaId}" is ${disposition}`

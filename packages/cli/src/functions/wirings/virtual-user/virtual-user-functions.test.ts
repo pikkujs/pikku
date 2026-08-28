@@ -214,7 +214,7 @@ describe('serializeVirtualUserFunctions', () => {
   test('imports the generated personas rather than declaring any', () => {
     assert.match(
       out,
-      /import \{ createPersonas, personaConfigs \} from '\.\.\/\.\.\/\.\.\/\.pikku\/workflow\/pikku-personas\.gen\.js'/
+      /import \{ createPersonas, personaConfigs, personaEnvironments \} from '\.\.\/\.\.\/\.\.\/\.pikku\/workflow\/pikku-personas\.gen\.js'/
     )
   })
 
