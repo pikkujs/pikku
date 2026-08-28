@@ -12,6 +12,7 @@ import { createGenerator, RootlessError } from 'ts-json-schema-generator'
 import { register } from 'tsx/esm/api'
 import * as z from 'zod'
 import { zodToTs, createAuxiliaryTypeStore } from 'zod-to-ts'
+import { findZodTransform } from './find-zod-transform.js'
 import type { FunctionsMeta } from '@pikku/core/services'
 import type { JSONValue } from '@pikku/core/utils'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -508,6 +509,19 @@ function processZodSchema(
   fakeSourceFile: ts.SourceFile,
   logger: InspectorLogger
 ): void {
+  const transformPath = findZodTransform(zodSchema)
+  if (transformPath !== undefined) {
+    const where = transformPath === '' ? 'the schema itself' : transformPath
+    throw new Error(
+      `[${ErrorCode.SCHEMA_TRANSFORM_NOT_SUPPORTED}] '${schemaName}' contains a .transform() at ${where}.\n` +
+        'A transform makes the value sent and the value received two different ' +
+        'shapes, and a wire contract describes one: it cannot be expressed in ' +
+        'JSON Schema or in the generated TypeScript.\n' +
+        'Validate with the plain schema and apply the transform inside the ' +
+        'function, or move it to the output type.'
+    )
+  }
+
   const schema = z.toJSONSchema(zodSchema, {
     unrepresentable: 'any',
     override: ({ zodSchema, jsonSchema }) => {

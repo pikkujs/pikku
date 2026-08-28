@@ -6,6 +6,7 @@ import type {
   EnumInfo,
 } from '../db-introspector.js'
 import { MIGRATION_TRACKING_TABLE } from '../db-migrator.js'
+import { parseCheckEnumValues } from '../check-enums.js'
 
 interface PgColumnRow {
   column_name: string
@@ -20,6 +21,13 @@ interface PgColumnRow {
 interface PgAllColumnRow extends PgColumnRow {
   table_schema: string
   table_name: string
+}
+
+interface PgCheckRow {
+  table_schema: string
+  table_name: string
+  column_name: string
+  def: string
 }
 
 interface PgAllForeignKeyRow {
@@ -137,6 +145,10 @@ export class PostgresIntrospector implements DbIntrospector {
       [tableName, schema]
     )
 
+    const checkEnums =
+      (await this.getCheckEnums({ schema, name: tableName })).get(table) ??
+      new Map<string, string[]>()
+
     return result.rows.map((r) => ({
       name: r.column_name,
       type: resolveColumnType(r.data_type, r.udt_name),
@@ -145,7 +157,57 @@ export class PostgresIntrospector implements DbIntrospector {
       pk: Boolean(r.is_pk),
       defaultValue: r.column_default,
       generated: r.is_generated === 'ALWAYS',
+      enumValues: checkEnums.get(r.column_name),
     }))
+  }
+
+  /**
+   * Columns constrained to a value list by a `CHECK (col IN (…))`, keyed like
+   * {@link getAllColumns} then by column name. Postgres has native enums, but
+   * a CHECK is the other half of how a schema says "one of these" — and the
+   * one an app written against SQLite as well ends up using, since SQLite has
+   * no enums at all. Left as plain `string`, every caller narrows it by hand.
+   *
+   * Only single-column constraints are read: `conkey` naming two columns means
+   * neither is restricted to the list on its own.
+   *
+   * `table` limits the sweep to one table; omitted, it covers the schema. Both
+   * are one round-trip — see {@link getAllColumns}.
+   */
+  private async getCheckEnums(table?: {
+    schema: string
+    name: string
+  }): Promise<Map<string, Map<string, string[]>>> {
+    const result = await this.client.query<PgCheckRow>(
+      `SELECT n.nspname   AS table_schema,
+              cl.relname  AS table_name,
+              a.attname   AS column_name,
+              pg_get_constraintdef(co.oid) AS def
+       FROM pg_constraint co
+       JOIN pg_class cl     ON cl.oid = co.conrelid
+       JOIN pg_namespace n  ON n.oid = cl.relnamespace
+       JOIN pg_attribute a  ON a.attrelid = co.conrelid AND a.attnum = co.conkey[1]
+       WHERE co.contype = 'c'
+         AND array_length(co.conkey, 1) = 1
+         AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+         AND n.nspname NOT LIKE 'pg_temp_%'
+         AND ($1::text IS NULL OR (n.nspname = $1 AND cl.relname = $2))`,
+      [table?.schema ?? null, table?.name ?? null]
+    )
+
+    const byTable = new Map<string, Map<string, string[]>>()
+    for (const r of result.rows) {
+      const values = parseCheckEnumValues(r.def)
+      if (!values) continue
+      const key = tableKey(r.table_schema, r.table_name)
+      let cols = byTable.get(key)
+      if (!cols) {
+        cols = new Map()
+        byTable.set(key, cols)
+      }
+      cols.set(r.column_name, values)
+    }
+    return byTable
   }
 
   async getForeignKeys(table: string): Promise<ForeignKeyInfo[]> {
@@ -220,6 +282,8 @@ export class PostgresIntrospector implements DbIntrospector {
        ORDER BY c.table_schema, c.table_name, c.ordinal_position`
     )
 
+    const checkEnums = await this.getCheckEnums()
+
     const byTable = new Map<string, ColumnInfo[]>()
     for (const r of result.rows) {
       if (isMigrationTracking(r.table_name)) continue
@@ -237,6 +301,7 @@ export class PostgresIntrospector implements DbIntrospector {
         pk: Boolean(r.is_pk),
         defaultValue: r.column_default,
         generated: r.is_generated === 'ALWAYS',
+        enumValues: checkEnums.get(key)?.get(r.column_name),
       })
     }
     return byTable

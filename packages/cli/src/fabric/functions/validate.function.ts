@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { added, changed, removed, dim } from '../lib/output.js'
@@ -14,6 +14,8 @@ import {
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
 import { isGitRepo, isTracked } from '../lib/git.js'
+import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
+import { blankScenarioMeta } from '../lib/blank-scenario-meta.js'
 
 const FindingSchema = z.object({
   id: z.string(),
@@ -78,17 +80,6 @@ async function listSourceFiles(dir: string): Promise<string[]> {
     return []
   }
 }
-
-/**
- * Blanks comment bodies so a raw-text scan cannot read prose as code. Prose in a
- * scenario description ("Converted from the Gherkin scenario...") otherwise
- * matches the import scanner's `from "..."` and reports a package that is really
- * a sentence.
- */
-const stripCommentText = (text: string): string =>
-  text
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, (_m, p1: string) => p1)
 
 // Heavy/generated dirs pruned during a source walk.
 const SKIP_WALK_DIRS = new Set([
@@ -669,15 +660,18 @@ export async function runValidate(
         tsconfig?.compilerOptions?.paths ?? {}
       ).map((k) => k.replace(/\*$/, ''))
 
+      // name → "<relative file>:<line>" of the first import that used it.
       const used = new Map<string, string>()
       for (const file of await listSourceFiles(join(dir, 'src'))) {
         if (/\.gen\.(ts|tsx)$/.test(file)) continue
-        const txt = await readTextSafe(file)
-        if (!txt) continue
-        const src = stripCommentText(txt)
+        const raw = await readTextSafe(file)
+        if (!raw) continue
+        // Comments first, or prose becomes a dependency: `from "is fine"` in a
+        // sentence is indistinguishable from an import to this regex.
+        const txt = blankComments(raw)
         const re = /(?:from|import|require)\s*\(?\s*['"]([^'".#][^'"]*)['"]/g
         let m: RegExpExecArray | null
-        while ((m = re.exec(src))) {
+        while ((m = re.exec(txt))) {
           const spec = m[1]
           if (
             /\s/.test(spec) ||
@@ -700,7 +694,10 @@ export async function runValidate(
           const name = pkgNameOf(spec)
           if (NODE_BUILTINS.has(name) || name === pkg.name || wsNames.has(name))
             continue
-          if (!used.has(name)) used.set(name, file)
+          if (!used.has(name)) {
+            const where = `${relative(root, file).replace(/\\/g, '/')}:${lineOfOffset(raw, m.index)}`
+            used.set(name, where)
+          }
         }
       }
       const missing = [...used.keys()].filter((n) => !declared.has(n)).sort()
@@ -711,7 +708,9 @@ export async function runValidate(
           join(dir, 'package.json'),
           lines(
             `Add the missing package(s) to ${pkg.name ?? 'this package'}'s dependencies, e.g.:`,
-            ...missing.map((n) => `  "${n}": "<version>"`),
+            ...missing.map(
+              (n) => `  "${n}": "<version>"   (first used at ${used.get(n)})`
+            ),
             'then reinstall. They import-resolve locally via tsconfig paths / root',
             'hoisting, but esbuild/Bun.build resolves each package independently.'
           )
@@ -1130,29 +1129,78 @@ export async function runValidate(
       }
     }
 
+    // ── the coercion map has to reach a Kysely instance ──────────────────
+    // `pikku db migrate` generates a CoercionMap from the `kind` entries in
+    // db/annotations.ts, and nothing wires it up on the project's behalf. An
+    // unwired map is invisible locally and fatal deployed: the dev sqlite
+    // driver hydrates a TEXT date into a Date by itself, libsql on a stage
+    // returns the raw string, and the generated schema types the column
+    // `Date` either way — so tsc flags nothing and there is no failing local
+    // test to write. It surfaces as `TypeError: e.getFullYear is not a
+    // function` on the first deployed request. Booleans diverge more quietly
+    // still: `1` from a stage where local gives `true`.
+    const outDirRel =
+      typeof pikkuConfig?.outDir === 'string' ? pikkuConfig.outDir : '.pikku'
+    const coercionPath = join(root, outDirRel, 'db', 'coercion.gen.ts')
+    const coercionText = await readTextSafe(coercionPath)
+    // `{}` means no column declared a `kind`, so there is nothing to wire.
+    if (coercionText && /:\s*"(date|boolean|json)"/.test(coercionText)) {
+      const wired = (
+        await Promise.all(
+          (await walkSourceFiles(root)).map((f) => readTextSafe(f))
+        )
+      ).some((text) => text?.includes('createCoercionPlugin'))
+      if (!wired) {
+        e(
+          'coercion-map-not-wired',
+          `${join(outDirRel, 'db', 'coercion.gen.ts')} declares coercions that no Kysely instance applies`,
+          coercionPath,
+          lines(
+            'Attach the plugin where the kysely singleton is created, in',
+            'createSingletonServices:',
+            '',
+            "  import { createCoercionPlugin } from '@pikku/kysely'",
+            "  import { coercionMap } from '#pikku/db/coercion.gen.js'",
+            '',
+            '  kysely: existingServices.kysely.withPlugin(',
+            '    createCoercionPlugin({ map: coercionMap }),',
+            '  )',
+            '',
+            'Without it a deployed stage returns raw strings and integers where',
+            'the generated schema promises Date and boolean. The dev driver',
+            'hydrates them for you, so this cannot fail locally.'
+          )
+        )
+      }
+    }
+
     const devSeedPath = join(
       root,
       'db',
       dbEngine === 'postgres' ? 'postgres-dev-seed.sql' : 'sqlite-dev-seed.sql'
     )
+    // Info, not an error. The dev seed is replayed by `pikku db reset` and
+    // never by a deploy, so a project whose data has correctly moved into a
+    // migration — where anything a deployed stage needs has to live — no
+    // longer needs this file, and was being failed for not carrying it.
     if (!existsSync(devSeedPath)) {
-      e(
+      const seedFile =
+        dbEngine === 'postgres'
+          ? 'db/postgres-dev-seed.sql'
+          : 'db/sqlite-dev-seed.sql'
+      const migrationsRel =
+        dbEngine === 'postgres' ? 'db/postgres/' : 'db/sqlite/'
+      info(
         'dev-seed-sql-missing',
-        dbEngine === 'postgres'
-          ? 'db/postgres-dev-seed.sql not found'
-          : 'db/sqlite-dev-seed.sql not found',
+        `${seedFile} not found — no dev seed will be applied by \`pikku db reset\``,
         devSeedPath,
-        dbEngine === 'postgres'
-          ? lines(
-              'Create `db/postgres-dev-seed.sql`.',
-              'Use idempotent INSERT statements suitable for local/dev/test setup.',
-              'Keep it safe to re-run.'
-            )
-          : lines(
-              'Create `db/sqlite-dev-seed.sql`.',
-              'Use idempotent `INSERT OR IGNORE` statements for local/dev/test data.',
-              'Keep it safe to re-run.'
-            )
+        lines(
+          `Optional. Add \`${seedFile}\` for rows you want locally and nowhere else;`,
+          'it is replayed by `pikku db reset` against a freshly wiped database and',
+          'is never applied to a deployed stage.',
+          `Data a deployed stage needs is migration data — put it in ${migrationsRel}`,
+          'rather than here, whatever it looks like.'
+        )
       )
     }
 
@@ -1895,7 +1943,10 @@ export async function runValidate(
         if (!/\.(steps|scenario)\.tsx?$/.test(file)) continue
         const text = await readTextSafe(file)
         if (!text) continue
-        const code = stripCommentText(text)
+        // Comments carry the copy they explain; a feature's own name and
+        // description are Console meta authored in the project's locale, not
+        // app copy. Neither reaches the DOM, so neither is a selector.
+        const code = blankScenarioMeta(blankComments(text))
         const hits: string[] = []
         for (const match of code.matchAll(STRING_LITERAL)) {
           const literal = match[2]

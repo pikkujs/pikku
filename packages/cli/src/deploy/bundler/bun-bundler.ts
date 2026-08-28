@@ -51,7 +51,12 @@ interface BunBuildApi {
     format?: 'esm' | 'cjs' | 'iife'
     minify?:
       | boolean
-      | { whitespace?: boolean; identifiers?: boolean; syntax?: boolean }
+      | {
+          whitespace?: boolean
+          identifiers?: boolean
+          syntax?: boolean
+          keepNames?: boolean
+        }
     sourcemap?: 'none' | 'linked' | 'external' | 'inline'
     define?: Record<string, string>
     banner?: string
@@ -159,11 +164,18 @@ export class BunBundler extends BaseBundler {
       entrypoints: [input.entryPath],
       target: input.platform === 'node' ? 'node' : 'browser',
       format: input.format === 'cjs' ? 'cjs' : 'esm',
-      // identifiers:true is safe — pikku's only name-based reflection
-      // (error→status mapping) compares a class against an instance of the SAME
-      // (consistently-renamed) class, and workflow exceptions hardcode their
-      // `.name` string. So full minification preserves correctness.
-      minify: { whitespace: true, syntax: true, identifiers: true },
+      // keepNames matches the esbuild bundler, which has always set it. The
+      // error→status mapping survives renaming either way — it compares a
+      // class against an instance of the SAME consistently-renamed class —
+      // but `Function.name` reaches further than that: it is the name every
+      // error answers with on the wire, the one an unregistered error is
+      // matched by, and what appears in a stack trace someone has to read.
+      minify: {
+        whitespace: true,
+        syntax: true,
+        identifiers: true,
+        keepNames: true,
+      },
       sourcemap: input.sourcemap ? 'external' : 'none',
       define: input.define,
       banner: input.bannerJs,

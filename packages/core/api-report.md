@@ -3652,7 +3652,13 @@ export type GatewaysMeta = Record<string, GatewayMeta>
 export type GatewayTransportType = 'webhook' | 'websocket' | 'listener'
 resolveGatewayAdapter: (config: CoreGateway, services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => Promise<GatewayAdapter>
 export type WebhookVerificationResult =
-  { verified: true; response: unknown } | { verified: false }
+  | {
+      verified: true
+      response: unknown
+    }
+  | {
+      verified: false
+    }
 wireGateway: (config: CoreGateway) => void
 ```
 

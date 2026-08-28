@@ -2,12 +2,12 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { resolveStageId } from '../lib/stage.js'
+import { resolveStage } from '../lib/stage.js'
 import { parseVariableValue } from '../lib/variable-value.js'
 
 export const FabricVariablesSetInput = z.object({
   name: z.string(),
-  branch: z.string(),
+  branch: z.string().optional(),
   value: z.string(),
 })
 
@@ -21,7 +21,7 @@ export const FabricVariablesSet = pikkuSessionlessFunc({
     'Set a stage-scoped variable — the deployed counterpart of a line in .env. Not a secret: the value is stored in plain form and is readable back.',
   input: FabricVariablesSetInput,
   output: FabricVariablesSetOutput,
-  func: async (_services, { name, branch, value }) => {
+  func: async (_services, { name, branch: requested, value }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -31,7 +31,11 @@ export const FabricVariablesSet = pikkuSessionlessFunc({
       )
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const stageId = await resolveStageId(rpc, ctx.projectId, branch)
+    const { stageId, branch } = await resolveStage(
+      rpc,
+      ctx.projectId,
+      requested
+    )
 
     // Deliberately not sealed, and deliberately not prompted for. A variable is
     // configuration — a port, a URL, a feature switch — and treating it like a

@@ -190,3 +190,93 @@ test('introspection query count is independent of table count', async () => {
       `got ${small.stats.total} for 3 tables vs ${large.stats.total} for 40`
   )
 })
+
+/**
+ * A real Postgres, so the constraint text under test is what Postgres actually
+ * stores rather than what we guessed it stores: `IN (…)` is not preserved, it
+ * is rewritten as `= ANY (ARRAY[…])` with every element cast to the column's
+ * type, and the cast differs between `text` and `varchar`.
+ */
+async function pgliteClient(ddl: string): Promise<QueryClient> {
+  const { PGlite } = await import('@electric-sql/pglite')
+  const db = await PGlite.create()
+  await db.exec(ddl)
+  return {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      const result = await db.query(sql, params as any[])
+      return { rows: result.rows as T[] }
+    },
+    async end() {
+      await db.close()
+    },
+  }
+}
+
+test('getColumns types a CHECK (col IN (…)) constraint as an enum', async () => {
+  const client = await pgliteClient(`CREATE TABLE assessment (
+    assessment_id text PRIMARY KEY,
+    status text NOT NULL CHECK (status IN ('draft', 'submitted', 'final')),
+    band varchar(20) CHECK (band IN ('low', 'high')),
+    score int CHECK (score > 0),
+    stage text CHECK (stage NOT IN ('retired')),
+    note text
+  )`)
+  try {
+    const byName = Object.fromEntries(
+      (await new PostgresIntrospector(client).getColumns('assessment')).map(
+        (c) => [c.name, c]
+      )
+    )
+    assert.deepEqual(byName.status!.enumValues, ['draft', 'submitted', 'final'])
+    // varchar carries a different cast in the constraint text than text does
+    assert.deepEqual(byName.band!.enumValues, ['low', 'high'])
+    // a range is not an enumeration
+    assert.equal(byName.score!.enumValues, undefined)
+    // nor is an exclusion — `NOT IN` normalises to `<> ALL (ARRAY[…])`
+    assert.equal(byName.stage!.enumValues, undefined)
+    assert.equal(byName.note!.enumValues, undefined)
+  } finally {
+    await client.end()
+  }
+})
+
+test('getAllColumns types CHECK enums across every table in one sweep', async () => {
+  const client = await pgliteClient(`
+    CREATE TABLE assessment (
+      status text NOT NULL CHECK (status IN ('draft', 'final'))
+    );
+    CREATE TABLE report (
+      band text CHECK (band IN ('low', 'mid', 'high')),
+      note text
+    );
+  `)
+  try {
+    const byTable = await new PostgresIntrospector(client).getAllColumns()
+    const status = byTable.get('assessment')!.find((c) => c.name === 'status')
+    const band = byTable.get('report')!.find((c) => c.name === 'band')
+    const note = byTable.get('report')!.find((c) => c.name === 'note')
+    assert.deepEqual(status!.enumValues, ['draft', 'final'])
+    assert.deepEqual(band!.enumValues, ['low', 'mid', 'high'])
+    assert.equal(note!.enumValues, undefined)
+  } finally {
+    await client.end()
+  }
+})
+
+test('a multi-column CHECK is not read as an enum for either column', async () => {
+  // `conkey` holds both columns, so neither one is constrained to the list on
+  // its own — typing either as a union would be a claim the constraint never
+  // made.
+  const client = await pgliteClient(`CREATE TABLE t (
+    a text,
+    b text,
+    CHECK (a IN ('x', 'y') AND b IN ('p', 'q'))
+  )`)
+  try {
+    const cols = await new PostgresIntrospector(client).getColumns('t')
+    assert.equal(cols.find((c) => c.name === 'a')!.enumValues, undefined)
+    assert.equal(cols.find((c) => c.name === 'b')!.enumValues, undefined)
+  } finally {
+    await client.end()
+  }
+})

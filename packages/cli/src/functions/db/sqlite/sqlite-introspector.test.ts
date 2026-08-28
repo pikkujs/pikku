@@ -52,3 +52,35 @@ test('getColumns unescapes doubled single-quotes in CHECK enum values', async ()
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test('getColumns ignores SQL comments inside a CHECK enum list', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pikku-sqlite-enum-'))
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(join(dir, 'test.db'))
+  try {
+    // SQLite stores the CREATE TABLE text verbatim, comments and all, so a
+    // comment annotating a value is part of what the parser reads back. An
+    // apostrophe in one opens a string that swallows the rest of the list,
+    // and a bracket in one closes the list early — either way the constraint
+    // survives as a union that is wrong rather than as no union at all.
+    db.exec(`CREATE TABLE assessment (
+      status TEXT NOT NULL CHECK (status IN (
+        'draft',      -- the clinician's working copy
+        'submitted',  -- locked (see the report flow)
+        'final'
+      )),
+      band TEXT CHECK (band IN (
+        /* scored bands */
+        'low',
+        'high'
+      ))
+    )`)
+    const cols = await new SqliteIntrospector(db).getColumns('assessment')
+    const byName = Object.fromEntries(cols.map((c) => [c.name, c]))
+    assert.deepEqual(byName.status.enumValues, ['draft', 'submitted', 'final'])
+    assert.deepEqual(byName.band.enumValues, ['low', 'high'])
+  } finally {
+    db.close()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

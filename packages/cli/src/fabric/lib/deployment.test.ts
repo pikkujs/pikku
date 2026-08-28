@@ -7,6 +7,7 @@ import {
   destructiveMigrations,
   isApprovable,
   missingConfigHints,
+  reconcileDeployedRef,
   stateLabel,
   waitForDeployment,
   type DeploymentStatus,
@@ -74,7 +75,10 @@ const run = (
   {
     approve = async () => false,
     timeoutMs = 900_000,
-  }: { approve?: (s: DeploymentStatus) => Promise<boolean>; timeoutMs?: number } = {}
+  }: {
+    approve?: (s: DeploymentStatus) => Promise<boolean>
+    timeoutMs?: number
+  } = {}
 ) => {
   const { rpc, calls } = fakeRpc(script)
   const { now, sleep } = fakeClock()
@@ -123,7 +127,10 @@ describe('blocked reasons', () => {
 
   test('labels match the console vocabulary', () => {
     assert.strictEqual(stateLabel('suspended', 'awaiting_approval'), 'planned')
-    assert.strictEqual(stateLabel('suspended', 'needs_config'), 'config required')
+    assert.strictEqual(
+      stateLabel('suspended', 'needs_config'),
+      'config required'
+    )
     assert.strictEqual(
       stateLabel('suspended', 'needs_attention'),
       'needs attention'
@@ -405,7 +412,11 @@ describe('describeDeployment', () => {
       ['0001_init', '0002_drop_users']
     )
     assert.deepStrictEqual(destructiveMigrations(found?.changes), [
-      { name: '0002_drop_users', level: 'destructive', reasons: ['drop_table'] },
+      {
+        name: '0002_drop_users',
+        level: 'destructive',
+        reasons: ['drop_table'],
+      },
     ])
   })
 
@@ -430,7 +441,11 @@ describe('describeDeployment', () => {
                     null,
                     { name: '0001_init', level: 'unheard-of' },
                     { level: 'destructive', reasons: ['drop_table'] },
-                    { name: '0001_init', level: 'destructive', reasons: 'nope' },
+                    {
+                      name: '0001_init',
+                      level: 'destructive',
+                      reasons: 'nope',
+                    },
                   ],
                 },
                 migrations: [],
@@ -452,5 +467,51 @@ describe('describeDeployment', () => {
       invoke: async () => ({ stages: [] }),
     } as unknown as PikkuRPC
     assert.strictEqual(await describeDeployment(rpc, 'proj-1', 'nope'), null)
+  })
+})
+
+/**
+ * `deploy apply --branch main` reported the sha it was asked for while the
+ * deployment it had attached to was pinned to a different commit — a revert
+ * that printed `599439e6` and held `5bfe84c`, five commits above it. The only
+ * symptom was a correct-looking line of output, and the failure mode is a
+ * rollback that silently does not roll back.
+ */
+describe('reconcileDeployedRef', () => {
+  const requested = '599439e6c0ffee0000000000000000000000abcd'
+
+  test('returns the sha the deployment actually holds', () => {
+    const ref = reconcileDeployedRef({
+      requested,
+      actual: requested,
+      deploymentId: 'dep-1',
+    })
+    assert.strictEqual(ref, requested)
+  })
+
+  test('throws when the deployment holds a different commit', () => {
+    assert.throws(
+      () =>
+        reconcileDeployedRef({
+          requested,
+          actual: '5bfe84ce315780a1580b6a3c80be58bba81d1eaf',
+          deploymentId: 'e0d4ffea-a63d-4712-ae09-db98baabccac',
+        }),
+      (error: Error) => {
+        assert.match(error.message, /599439e6/)
+        assert.match(error.message, /5bfe84ce/)
+        assert.match(error.message, /e0d4ffea/)
+        return true
+      }
+    )
+  })
+
+  test('falls back to the requested sha when the server reports none', () => {
+    const ref = reconcileDeployedRef({
+      requested,
+      actual: null,
+      deploymentId: 'dep-1',
+    })
+    assert.strictEqual(ref, requested)
   })
 })

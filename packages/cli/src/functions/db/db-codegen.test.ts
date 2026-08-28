@@ -501,3 +501,32 @@ test('an unencrypted column names no key, so the manifest cannot imply protectio
   })
   assert.doesNotMatch(manifest, /"name": \{[^}]*keyId/)
 })
+
+test('coercion.gen.ts says what has to consume it', async () => {
+  // The map is generated complete and correct and then applied by nobody. It
+  // is invisible locally — the dev driver hydrates a TEXT date into a Date on
+  // its own — and fatal on a deployed stage, which returns the raw string.
+  const dir = mkdtempSync(join(tmpdir(), 'db-codegen-coercion-'))
+  mkdirSync(join(dir, 'db'), { recursive: true })
+  writeFileSync(
+    join(dir, 'db', 'annotations.gen.json'),
+    JSON.stringify({ widget: { created_at: { kind: 'date' } } }),
+    'utf8'
+  )
+  const coercionFile = join(dir, 'coercion.gen.ts')
+  await generateSchemaTypes(
+    fakeIntrospector([col({ name: 'created_at', type: 'text' })]),
+    {
+      outFile: join(dir, 'schema.gen.ts'),
+      coercionFile,
+      dialect: 'postgres',
+      rootDir: dir,
+    }
+  )
+
+  const generated = readFileSync(coercionFile, 'utf8')
+  assert.match(generated, /"created_at": "date"/)
+  assert.match(generated, /Nothing applies this for you/)
+  assert.match(generated, /createCoercionPlugin/)
+  assert.match(generated, /createSingletonServices/)
+})

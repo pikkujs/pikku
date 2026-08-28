@@ -1173,7 +1173,14 @@ describe('pikku fabric validate', () => {
   })
 
   describe('db/sqlite-dev-seed.sql', () => {
-    test('missing db/sqlite-dev-seed.sql → error', async () => {
+    /**
+     * A dev seed is optional by definition — it is the file `pikku db reset`
+     * replays locally, and Fabric never reads it. Data the deployed stage
+     * needs belongs in a migration, and a project that has correctly moved it
+     * there was being failed for no longer carrying the file it deliberately
+     * does not need.
+     */
+    test('missing db/sqlite-dev-seed.sql → info, and does not fail validate', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -1181,12 +1188,12 @@ describe('pikku fabric validate', () => {
           force: true,
         })
         const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, false)
         const finding = result.findings.find(
           (f) => f.id === 'dev-seed-sql-missing'
         )
         assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'error')
+        assert.strictEqual(finding!.severity, 'info')
+        assert.strictEqual(result.ok, true)
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
@@ -2796,6 +2803,74 @@ describe('scenario steps vs the message catalogue (live validate.function)', () 
     }
   })
 
+  const writeScenario = async (root: string, source: string) => {
+    const dir = join(root, 'packages', 'functions', 'tests', 'scenarios')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'downloads.scenario.ts'), source, 'utf8')
+  }
+
+  /**
+   * A feature's `name`/`description` are Console meta, authored in the
+   * project's locale and never rendered by the app. Flagging them made the two
+   * rules disagree: moving a `pikkuFeature` into a `*.scenario.ts` — the
+   * documented fix for the file-naming rule — is what put it in front of this
+   * one, and its advice would tie the Console's language to the product's.
+   */
+  test("a feature's own name is meta, not app copy", async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, {
+        nav__downloads: 'Downloads',
+        downloads__title: 'Downloads',
+      })
+      await writeScenario(
+        tmp,
+        [
+          'export const downloadsFeature = pikkuFeature({',
+          "  name: 'Downloads',",
+          "  description: 'Downloads',",
+          '})',
+          '',
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      assert.deepStrictEqual(
+        hardcoded(result.findings),
+        [],
+        `expected no finding, got: ${ids(result.findings)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('a selector nested inside a step is still caught', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCatalogue(tmp, { common_save: 'Speichern' })
+      await writeScenario(
+        tmp,
+        [
+          'export const step = pikkuScenarioStep({',
+          "  name: 'save the form',",
+          '  run: async ({ page }) => {',
+          "    await page.getByRole('button', { name: 'Speichern' }).click()",
+          '  },',
+          '})',
+          '',
+        ].join('\n')
+      )
+      const result = await runValidate(tmp, { skipTypecheck: true })
+      const [finding] = hardcoded(result.findings)
+      assert.ok(finding, `expected a finding, got: ${ids(result.findings)}`)
+      assert.match(finding!.fixHint, /common_save/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
   test('a string the catalogue does not own is left alone', async () => {
     const tmp = await makeTmp()
     try {
@@ -2974,6 +3049,175 @@ describe('an app whose baseLocale is not English (live validate.function)', () =
       await writeInlangApp(tmp, { locales: ['en'] }, 'en')
       const result = await runValidate(tmp, { skipTypecheck: true })
       assert.deepStrictEqual(baseLocaleFindings(result.findings), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+  describe('undeclared dependencies', () => {
+    const fnSrc = (root: string, name: string) =>
+      join(root, 'packages', 'functions', 'src', name)
+
+    /**
+     * The scan matched `from "…"` in raw file text, so a sentence that puts a
+     * quoted phrase after the word *from* became a phantom dependency —
+     * reported at error severity, against the app, with no line to find it by:
+     *
+     *   ✗ @project/app imports undeclared package(s): is fine — …
+     */
+    test('prose in a comment is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'prose.ts'),
+          [
+            '// what separates "needs you" from "is fine" at a glance across the',
+            '// list, and require("not a package") in prose is not one either.',
+            '/* a block comment importing "nothing at all" from "nowhere" */',
+            'export const prose = true',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const undeclared = result.findings.filter((f) =>
+          f.id.startsWith('undeclared-deps-')
+        )
+        assert.deepStrictEqual(
+          undeclared.map((f) => f.message),
+          [],
+          'a comment was read as an import'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a string that merely follows the word from is not an import', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'runtime.ts'),
+          [
+            'export const pick = (from: string[]) => from[0]',
+            "export const label = `chosen from ${'somewhere'}`",
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings
+            .filter((f) => f.id.startsWith('undeclared-deps-'))
+            .map((f) => f.message),
+          []
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('a real undeclared import is still an error, and names where it is', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          fnSrc(tmp, 'uses-lodash.ts'),
+          [
+            '// a comment mentioning "lodash" on its own does not count',
+            "import groupBy from 'lodash/groupBy'",
+            'export const use = groupBy',
+            '',
+          ].join('\n'),
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) =>
+          f.id.startsWith('undeclared-deps-')
+        )
+        assert.ok(finding, 'a genuine undeclared import went unreported')
+        assert.match(finding!.message, /lodash/)
+        assert.strictEqual(finding!.severity, 'error')
+        assert.match(finding!.fixHint, /uses-lodash\.ts:2/)
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+})
+
+describe('the generated coercion map', () => {
+  const coercionPath = (root: string) =>
+    join(root, 'packages', 'functions', '.pikku', 'db', 'coercion.gen.ts')
+
+  const writeCoercionMap = async (root: string, body: string) => {
+    await mkdir(dirname(coercionPath(root)), { recursive: true })
+    await writeFile(coercionPath(root), body, 'utf8')
+  }
+
+  const withCoercions = `export const coercionMap = {
+  "assessment": {
+    "created_at": "date",
+    "admin_rights": "boolean"
+  }
+} as const
+`
+
+  test('is an error when nothing applies it', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      const result = await runValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'coercion-map-not-wired'
+      )
+      assert.ok(finding, 'expected coercion-map-not-wired')
+      assert.strictEqual(finding.severity, 'error')
+      assert.match(finding.fixHint, /createCoercionPlugin/)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent once a source file attaches the plugin', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(tmp, withCoercions)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+        `import { createCoercionPlugin } from '@pikku/kysely'\n` +
+          `import { coercionMap } from '#pikku/db/coercion.gen.js'\n` +
+          `export const kysely = (k: any) =>\n` +
+          `  k.withPlugin(createCoercionPlugin({ map: coercionMap }))\n`,
+        'utf8'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding once the plugin is wired'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is silent when no column declared a kind', async () => {
+    // An empty map is not an unwired map — there is nothing to apply.
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(
+        tmp,
+        'export const coercionMap = {\n\n} as const\n'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected no finding for an empty map'
+      )
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

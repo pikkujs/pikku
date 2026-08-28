@@ -216,6 +216,32 @@ describe('bundled skills corpus', () => {
     )
   })
 
+  test("no skill teaches a router Link through Mantine's component prop", async () => {
+    // `component={Link}` compiles and navigates, and widens the router generic
+    // to AnyRouter on the way — `to` and `params` stop being checked against
+    // the real routes, so renaming one breaks the running app instead of the
+    // build. `renderRoot` with a wrapped, typed Link keeps the checking.
+    const offenders: string[] = []
+    for (const skill of await readSkills()) {
+      // Code only: the prose that warns about it has to be able to spell it.
+      let inFence = false
+      for (const [i, line] of skill.body.split('\n').entries()) {
+        if (line.startsWith('```')) {
+          inFence = !inFence
+          continue
+        }
+        if (inFence && /component=\{Link\}/.test(line)) {
+          offenders.push(`${skill.name}:${i + 1}`)
+        }
+      }
+    }
+    assert.deepEqual(
+      offenders,
+      [],
+      `use renderRoot with a wrapped Link instead: ${offenders.join(', ')}`
+    )
+  })
+
   test('relative paths referenced in a skill resolve on disk', async () => {
     for (const skill of await readSkills()) {
       const docs = [skill.body]

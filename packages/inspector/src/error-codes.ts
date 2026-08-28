@@ -98,6 +98,9 @@ export enum ErrorCode {
   // File structure errors
   SCHEMA_AND_WIRING_COLOCATED = 'PKU490',
 
+  // Schema authoring errors
+  SCHEMA_TRANSFORM_NOT_SUPPORTED = 'PKU491',
+
   // Optimization diagnostics
   SERVICES_NOT_DESTRUCTURED = 'PKU410',
   WIRES_NOT_DESTRUCTURED = 'PKU411',

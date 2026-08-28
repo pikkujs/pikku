@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { fileURLToPath } from 'url'
 
 import { getInitialInspectorState } from '../inspector.js'
 import { generateAllSchemas, schemaRuntimeFile } from './schema-generator.js'
@@ -221,5 +222,51 @@ describe('schemaRuntimeFile', () => {
     const orphan = join(projectDir, 'src', 'types-only.d.ts')
     writeFileSync(orphan, 'export declare const a: number\n')
     assert.equal(schemaRuntimeFile(orphan), orphan)
+  })
+})
+
+describe('a Zod schema that cannot be a wire contract', () => {
+  test('names .transform() and its own error code, not a downstream one', async () => {
+    // A transform used to surface as PKU724 — the *bad `#pikku/*` import* error
+    // — because the schema failed to convert, its generated leaf never got
+    // written, and the type that leaf feeds resolved to an error type. The
+    // message sent you to an import block that was fine.
+    // Inside the package, so the fixture's `import 'zod'` resolves the same
+    // way a project's would; a tmpdir has no node_modules above it.
+    const dir = mkdtempSync(
+      join(fileURLToPath(new URL('../../', import.meta.url)), '.zod-transform-')
+    )
+    try {
+      const file = join(dir, 'schema.ts')
+      writeFileSync(
+        file,
+        `import * as z from 'zod'\n` +
+          `export const CreateAssessment = z.object({ patientId: z.string(), when: z.string().transform((s) => new Date(s)) })\n`
+      )
+      const state = getInitialInspectorState(dir) as any
+      state.schemaLookup.set('CreateAssessmentInput', {
+        variableName: 'CreateAssessment',
+        sourceFile: file,
+        vendor: 'zod',
+      })
+
+      const errors: string[] = []
+      await assert.rejects(() =>
+        generateAllSchemas(
+          { ...logger, error: (m: string) => errors.push(m) },
+          { tsconfig: join(projectDir, 'tsconfig.json') },
+          state
+        )
+      )
+
+      const reported = errors.join('\n')
+      assert.match(reported, /PKU491/)
+      assert.match(reported, /CreateAssessmentInput/)
+      assert.match(reported, /\.transform\(\)/)
+      assert.match(reported, /\.when/)
+      assert.doesNotMatch(reported, /PKU724/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

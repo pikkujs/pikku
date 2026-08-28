@@ -18,12 +18,12 @@
   },
   "sideEffects": [
     "./dist/errors/errors.js",
-    "./dist/wirings/rpc/rpc-runner.js",
     "./dist/wirings/addon/remote-addon-auth.js",
+    "./dist/wirings/rpc/rpc-runner.js",
+    "./dist/wirings/workflow/pikku-scenario-service.js",
     "./dist/wirings/workflow/workflow-approval-policy.js",
     "./dist/wirings/workflow/workflow-errors.js",
-    "./dist/wirings/workflow/workflow-run-ownership.js",
-    "./dist/wirings/workflow/pikku-scenario-service.js"
+    "./dist/wirings/workflow/workflow-run-ownership.js"
   ],
   "exports": {
     ".": "./dist/bootstrap-compat/root.js",

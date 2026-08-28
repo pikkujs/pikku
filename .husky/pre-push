@@ -1,3 +1,10 @@
+# git writes the ref list being pushed to this hook's stdin. Nothing here reads
+# it, and once yarn's subprocesses have closed the descriptor git's write lands
+# on a closed pipe: the hook exits 0 after several minutes of green build and
+# tests, and the push dies of SIGPIPE (141) without ever contacting the remote.
+# Draining it first is what makes a passing hook actually push.
+cat > /dev/null
+
 set -e
 yarn build
 yarn test

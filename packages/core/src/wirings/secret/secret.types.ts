@@ -1,8 +1,16 @@
 export type CoreSecret<T = unknown> = {
+  /** The key code reads it by: `secrets.getSecret('NAME')`. SCREAMING_SNAKE_CASE. */
   name: string
+  /** How the secret is labelled wherever a person is asked to supply it. */
   displayName: string
+  /** What this secret is for, shown beside the field someone has to fill in. */
   description?: string
+  /** The id under the backing store, which is where the value actually lives. */
   secretId: string
+  /**
+   * The shape of the value, as a schema. This is what types `getSecret`'s
+   * result — pass the schema itself, not an instance of it.
+   */
   schema: T
   /** Required by default: this says absence is a supported state, and `getSecret` resolves `undefined` rather than throwing. */
   optional?: boolean
