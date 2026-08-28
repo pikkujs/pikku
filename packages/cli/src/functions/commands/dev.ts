@@ -40,6 +40,7 @@ import {
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
+import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
@@ -72,6 +73,9 @@ export const dev = pikkuSessionlessFunc<
     { rpc }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    process.env.PIKKU_ENV ??= resolveDevEnvironmentName(
+      config.environments ?? {}
+    )
     enableDevActorSignIn(logger)
     applyModelAliasOverride(logger, model, config.models)
     if (test) {

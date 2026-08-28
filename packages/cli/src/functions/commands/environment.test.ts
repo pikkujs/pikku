@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { resolveEnvironment } from './environment.js'
+import { resolveDevEnvironmentName, resolveEnvironment } from './environment.js'
 
 const environments = {
   local: {
@@ -175,5 +175,35 @@ describe('resolveEnvironment', () => {
         }),
       /--app-url storefront '\/_frontend\/storefront\/' is not a valid absolute URL/
     )
+  })
+})
+
+describe('resolveDevEnvironmentName', () => {
+  test('a loopback environment is what dev runs as', () => {
+    assert.equal(resolveDevEnvironmentName(environments), 'local')
+  })
+
+  test("'local' wins over another loopback environment", () => {
+    assert.equal(
+      resolveDevEnvironmentName({
+        e2e: { apiUrl: 'http://127.0.0.1:4078' },
+        local: { apiUrl: 'http://localhost:4077' },
+      }),
+      'local'
+    )
+  })
+
+  test('a remote or production environment is never dev', () => {
+    assert.equal(
+      resolveDevEnvironmentName({
+        staging: { apiUrl: 'https://api.staging.test' },
+        production: { apiUrl: 'https://api.test', production: true },
+      }),
+      undefined
+    )
+  })
+
+  test('no configured environments resolves to nothing rather than a guess', () => {
+    assert.equal(resolveDevEnvironmentName({}), undefined)
   })
 })
