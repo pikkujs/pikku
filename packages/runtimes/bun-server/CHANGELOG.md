@@ -1,5 +1,46 @@
 # @pikku/bun-server
 
+## 0.12.10
+
+### Patch Changes
+
+- 80eb5c0: Generate a desktop shell from `pikku deploy apply --desktop`
+
+  `pikku deploy apply --provider standalone --runtime bun --desktop` now emits a
+  `src-tauri/` crate that ships the compiled binary as a sidecar and opens a
+  window on the server's own HTTP origin, so cookies, CORS and OAuth behave
+  exactly as they do in a browser. Regeneration is idempotent and leaves an
+  edited file alone rather than overwriting it.
+
+  `--desktop-url https://app.example.com` builds the other shape: a shell that
+  points at an already-deployed server. Nothing is bundled — no sidecar, no
+  binary, and so no bun runtime to compile one — and the window is declared in
+  `tauri.conf.json` rather than opened from Rust, because the origin is known up
+  front. The url can also live in `pikku.config.json` as `deploy.desktop.url`,
+  alongside `deploy.desktop.identifier`.
+
+  Supporting changes: `SERVER_READY_MARKER` moved to `@pikku/deploy` (the CLI
+  re-exports it from its old path), both HTTP runtimes expose the port they
+  actually bound so `--port 0` reports a real port, and the generated server
+  entry exits when its parent process goes away.
+
+- 80eb5c0: feat: serve a built frontend from the pikku server's own origin
+
+  A new `frontend` key in `pikku.config.json` names a directory of built
+  frontend output. `pikku serve` mounts it, and `pikku deploy` ships it inside
+  the distributable — into a directory beside the bundle for the node runtime,
+  and embedded in the binary for a `bun build --compile` standalone. `pikku dev`
+  deliberately ignores it and says so, because the frontend's own dev server owns
+  that job.
+
+  Pikku reads the frontend's output and never builds it, so an unbuilt directory
+  fails with a message that says which build to run rather than booting a server
+  that answers every page with a 404.
+
+- Updated dependencies [80eb5c0]
+- Updated dependencies [80eb5c0]
+  - @pikku/core@0.12.98
+
 ## 0.12.9
 
 ### Patch Changes
