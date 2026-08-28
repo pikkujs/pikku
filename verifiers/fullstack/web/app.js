@@ -18,13 +18,14 @@ const post = async (path, body) => {
   return { ok: response.ok, status: response.status }
 }
 
-const renderNotes = async () => {
+const render = async () => {
   const response = await fetch('/notes')
   if (!response.ok) {
     $('state').textContent = `notes refused: ${response.status}`
     return
   }
   const { notes } = await response.json()
+  $('state').textContent = 'ready'
   $('notes').replaceChildren(
     ...notes.map(({ id, text }) => {
       const item = document.createElement('li')
@@ -35,42 +36,10 @@ const renderNotes = async () => {
   )
 }
 
-const render = async () => {
-  const { state } = await (await fetch('/_pikku/data/status')).json()
-  $('state').textContent = state
-  const open = state === 'unlocked'
-  $('gate').hidden = open
-  $('notes-panel').hidden = !open
-
-  if (open) {
-    await renderNotes()
-    return
-  }
-
-  const first = state === 'uninitialized'
-  $('gate-label').textContent = first ? 'Choose a passphrase' : 'Passphrase'
-  $('submit').textContent = first ? 'Create' : 'Unlock'
-}
-
-$('submit').addEventListener('click', async () => {
-  const first = $('state').textContent === 'uninitialized'
-  const { ok, status } = await post(
-    first ? '/_pikku/data/initialize' : '/_pikku/data/unlock',
-    { passphrase: $('passphrase').value }
-  )
-  // Deliberately non-hinting: a message that separated "wrong passphrase" from
-  // "too many guesses" would tell an attacker which of the two they hit.
-  $('gate-error').textContent = ok ? '' : `refused (${status})`
-  if (ok) {
-    $('passphrase').value = ''
-  }
-  await render()
-})
-
 $('add').addEventListener('click', async () => {
   await post('/notes', { text: $('new-note').value })
   $('new-note').value = ''
-  await renderNotes()
+  await render()
 })
 
 await render()

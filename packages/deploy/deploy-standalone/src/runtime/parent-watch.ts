@@ -57,10 +57,9 @@ const parsePid = (raw: string | undefined): number | undefined => {
  * Exit when the process that spawned us does.
  *
  * Tauri kills its sidecar on a clean exit, but a hard crash of the shell never
- * runs that path. An orphaned pikku server keeps the SQLite file open and an
- * unlocked data key in memory, and the next launch — which single-instance
- * only guards against a second *shell* — would be a second writer against the
- * same database. Polling the parent is the only portable answer: neither
+ * runs that path. An orphaned pikku server keeps the SQLite file open, and the
+ * next launch — which single-instance only guards against a second *shell* —
+ * would be a second writer against the same database. Polling the parent is the only portable answer: neither
  * `process.on('disconnect')` (no IPC channel here) nor a closed stdin is
  * reliable across the platforms a desktop build targets.
  *

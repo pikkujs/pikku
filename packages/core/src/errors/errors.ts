@@ -230,25 +230,6 @@ addError(LockedError, {
     "The resource is locked, meaning it can't be accessed. Its response body should contain information in WebDAV's XML format.",
 })
 
-export class DataLockedError extends PikkuError {}
-addError(DataLockedError, {
-  status: 423,
-  message:
-    'The encrypted store has not been unlocked. Supply the passphrase before reading or writing classified data.',
-})
-
-export class InvalidPassphraseError extends PikkuError {}
-addError(InvalidPassphraseError, {
-  status: 403,
-  message: 'That passphrase does not open this store.',
-})
-
-export class TooManyAttemptsError extends PikkuError {}
-addError(TooManyAttemptsError, {
-  status: 429,
-  message: 'Too many failed unlock attempts. Wait before trying again.',
-})
-
 export class TooManyRequestsError extends PikkuError {}
 addError(TooManyRequestsError, {
   status: 429,

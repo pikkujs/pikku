@@ -4,7 +4,6 @@ export { authBearer } from './auth-bearer.js'
 export { pikkuRemoteAuthMiddleware } from './remote-auth.js'
 export { cors } from './cors.js'
 export { requireOrigin, isAllowedOrigin, toOrigin } from './require-origin.js'
-export { requireUnlocked } from './require-unlocked.js'
 export { telemetryOuter, telemetryInner } from './telemetry.js'
 export {
   addTagMiddleware,

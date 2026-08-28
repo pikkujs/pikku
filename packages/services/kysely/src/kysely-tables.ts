@@ -184,14 +184,6 @@ export interface SecretsTable {
   updatedAt: Generated<Date>
 }
 
-export interface DataLocksTable {
-  keyId: string
-  keyVersion: number
-  salt: string
-  verifier: string
-  createdAt: Generated<Date>
-}
-
 export interface KekSaltsTable {
   keyVersion: number
   salt: string
@@ -426,7 +418,6 @@ export interface KyselyPikkuDB {
   agentRunScore: AgentRunScoreTable
   pikkuDeployments: PikkuDeploymentsTable
   pikkuDeploymentFunctions: PikkuDeploymentFunctionsTable
-  dataLocks: DataLocksTable
   secrets: SecretsTable
   secretKekSalts: KekSaltsTable
   secretsAudit: SecretsAuditTable

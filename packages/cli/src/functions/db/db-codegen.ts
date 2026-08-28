@@ -421,7 +421,7 @@ function emitInterface(
  * The key an encrypted column is protected by when it names none.
  *
  * Spelled out in every entry rather than left implicit, so the set of keys a
- * deployment has to unlock can be read off the manifest without knowing the
+ * deployment has to resolve can be read off the manifest without knowing the
  * rule that produced it.
  */
 const DEFAULT_COLUMN_KEY_ID = 'default'

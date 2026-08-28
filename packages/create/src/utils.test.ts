@@ -19,7 +19,6 @@ import {
   filterFilesByFeatures,
   withNetworkRetry,
   isTransientNetworkError,
-  applyPrivateMode,
 } from './utils.js'
 
 describe('Functions Test Suite', () => {
@@ -858,69 +857,5 @@ describe('retrying a transient download', () => {
       /attempt 3/
     )
     assert.equal(attempts, 3)
-  })
-})
-
-describe('private mode', () => {
-  let root: string
-
-  const scaffold = () => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'private-mode-'))
-    const overlay = path.join(root, 'scaffold', 'private-mode')
-    fs.mkdirSync(path.join(overlay, 'web', 'routes'), { recursive: true })
-    fs.mkdirSync(path.join(root, 'web', 'routes'), { recursive: true })
-
-    fs.writeFileSync(path.join(root, 'web', 'routes', 'index.tsx'), 'plain')
-    fs.writeFileSync(path.join(overlay, 'web', 'routes', 'index.tsx'), 'sealed')
-    fs.writeFileSync(path.join(overlay, 'web', 'routes', 'unlock.tsx'), 'gate')
-    return root
-  }
-
-  const read = (...parts: string[]) =>
-    fs.readFileSync(path.join(root, ...parts), 'utf-8')
-
-  after(() => {
-    fs.rmSync(root, { recursive: true, force: true })
-  })
-
-  test('declining leaves the plain app exactly as it shipped', () => {
-    scaffold()
-    applyPrivateMode(root, false)
-
-    assert.equal(read('web', 'routes', 'index.tsx'), 'plain')
-    assert.equal(
-      fs.existsSync(path.join(root, 'web', 'routes', 'unlock.tsx')),
-      false,
-      'the unlock screen must not appear in a project that declined it'
-    )
-  })
-
-  test('accepting replaces the plain files and adds the gate', () => {
-    scaffold()
-    applyPrivateMode(root, true)
-
-    assert.equal(read('web', 'routes', 'index.tsx'), 'sealed')
-    assert.equal(read('web', 'routes', 'unlock.tsx'), 'gate')
-  })
-
-  test('the overlay is gone either way, so no project ships a scaffold dir', () => {
-    for (const enabled of [true, false]) {
-      scaffold()
-      applyPrivateMode(root, enabled)
-      assert.equal(
-        fs.existsSync(path.join(root, 'scaffold')),
-        false,
-        `scaffold/ survived with enabled=${enabled}`
-      )
-    }
-  })
-
-  test('a template with no overlay is untouched', () => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'private-mode-'))
-    fs.mkdirSync(path.join(root, 'web'), { recursive: true })
-    fs.writeFileSync(path.join(root, 'web', 'index.tsx'), 'plain')
-
-    applyPrivateMode(root, true)
-    assert.equal(read('web', 'index.tsx'), 'plain')
   })
 })

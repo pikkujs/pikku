@@ -64,31 +64,6 @@ export function mergeDirectories(srcDir: string, destDir: string): void {
 }
 
 /**
- * Apply — or discard — a template's private-mode overlay.
- *
- * The template as it ships is the plain app, because that is what almost every
- * project wants: sealing the data means typing a passphrase every time the
- * server starts. Private mode is therefore additive, a directory of files that
- * replace their plain counterparts, rather than a prune of the default. Adding
- * files cannot leave a half-rewritten app behind the way deleting them can.
- *
- * Either way the overlay is removed, so no scaffolded project carries a
- * `scaffold/` directory it will never use.
- */
-export function applyPrivateMode(targetPath: string, enabled: boolean): void {
-  const scaffoldDir = path.join(targetPath, 'scaffold')
-  const overlay = path.join(scaffoldDir, 'private-mode')
-
-  if (!fs.existsSync(overlay)) return
-
-  if (enabled) {
-    mergeDirectories(overlay, targetPath)
-  }
-
-  fs.rmSync(scaffoldDir, { recursive: true, force: true })
-}
-
-/**
  * Merges JSON files (package.json, pikku.config.json) by combining properties.
  */
 export function mergeJsonFiles(

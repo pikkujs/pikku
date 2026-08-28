@@ -59,9 +59,9 @@ export interface ColumnClassification {
    * means the deployment's default key.
    *
    * It is a purpose, not a tenant: naming one here says "these columns open
-   * together and separately from the rest", so unlocking notes need not unlock
-   * credentials. The id is stored in the value, so a column that changes key
-   * is a rewrap rather than a migration.
+   * together and separately from the rest", so the key that opens notes need
+   * not open credentials. The id is stored in the value, so a column that
+   * changes key is a rewrap rather than a migration.
    */
   keyId?: string
   description?: string

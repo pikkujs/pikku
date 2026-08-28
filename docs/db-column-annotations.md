@@ -67,7 +67,7 @@ the lookup key.
 | --------- | ---------------------------------------------------------------------- | ----------------------------------- |
 | `plain`   | the value itself (what an absent `form` means)                         | anyone holding the row              |
 | `hashed`  | a one-way digest                                                       | nobody — you compare, never decrypt |
-| `wrapped` | ciphertext under a symmetric key the application holds                 | the application, once unlocked      |
+| `wrapped` | ciphertext under a symmetric key the application holds                 | the application, from its own key   |
 | `sealed`  | ciphertext under a public key whose private half the application lacks | somewhere else, offline             |
 
 `wrapped` and `sealed` are siblings rather than degrees of one `encrypted`.
@@ -99,13 +99,9 @@ drift). `keyId` reaches `classification.gen.ts` only for `wrapped`/`sealed` —
 emitting one on a plain or hashed column would claim a protection it has not got,
 and a hash has no key to be opened with in the first place.
 
-Every `keyId` the manifest names has to have been minted in the lock, or nothing
-fails at startup and the first write to that one column fails instead. Derive the
-list rather than typing it out:
-
-```ts
-wireDataLock(lock, { keyIds: keyIdsFromManifest(manifest) })
-```
+Every `keyId` the manifest names has to be one the deployment's `KEKResolver`
+can answer for. A key it cannot resolve does not fail at startup — it fails at
+the first write to that one column.
 
 ## Dialect-awareness
 
