@@ -15,7 +15,7 @@ import type {
   SessionScope,
 } from './agent.types.js'
 import type { AgentRunnerParams } from '../../services/agent-runner-service.js'
-import { PikkuError, declareErrorNames } from '../../errors/error-handler.js'
+import { PikkuError } from '../../errors/error-handler.js'
 import {
   checkAuthPermissions,
   runPermissions,
@@ -1081,13 +1081,3 @@ export async function prepareAgentRun(
     workingMemorySchemaName,
   }
 }
-
-/**
- * The wire name of every error above, as string literals the deploy bundle's
- * minifier cannot rewrite — `error.name` is part of the contract a client
- * reads, so it must not be the constructor identifier.
- */
-declareErrorNames({
-  ToolApprovalRequired,
-  ToolCredentialRequired,
-})

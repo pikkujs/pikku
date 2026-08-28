@@ -19,8 +19,6 @@
   "sideEffects": [
     "./dist/errors/errors.js",
     "./dist/wirings/addon/remote-addon-auth.js",
-    "./dist/wirings/agent/agent-prepare.js",
-    "./dist/wirings/queue/queue-runner.js",
     "./dist/wirings/rpc/rpc-runner.js",
     "./dist/wirings/workflow/pikku-scenario-service.js",
     "./dist/wirings/workflow/workflow-approval-policy.js",

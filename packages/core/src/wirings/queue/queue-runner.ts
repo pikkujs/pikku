@@ -4,11 +4,7 @@ import type {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
-import {
-  getErrorResponse,
-  PikkuError,
-  declareErrorNames,
-} from '../../errors/error-handler.js'
+import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 import {
   getSingletonServices,
@@ -183,14 +179,3 @@ export async function runQueueJob({
     throw error
   }
 }
-
-/**
- * The wire name of every error above, as string literals the deploy bundle's
- * minifier cannot rewrite — `error.name` is part of the contract a client
- * reads, so it must not be the constructor identifier.
- */
-declareErrorNames({
-  QueueWorkerNotFoundError,
-  QueueJobFailedError,
-  QueueJobDiscardedError,
-})

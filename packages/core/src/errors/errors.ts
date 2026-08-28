@@ -1,4 +1,4 @@
-import { addError, PikkuError, declareErrorNames } from './error-handler.js'
+import { addError, PikkuError } from './error-handler.js'
 
 export class InvalidMiddlewareWireError extends PikkuError {}
 addError(InvalidMiddlewareWireError, {
@@ -390,56 +390,4 @@ export class SystemRoleShadowedError extends PikkuError {
 addError(SystemRoleShadowedError, {
   status: 409,
   message: 'A system role of that name is already declared in code.',
-})
-
-/**
- * The wire name of every error above, as string literals the deploy bundle's
- * minifier cannot rewrite — `error.name` is part of the contract a client
- * reads, so it must not be the constructor identifier.
- */
-declareErrorNames({
-  InvalidMiddlewareWireError,
-  PikkuMissingMetaError,
-  MissingServiceError,
-  LocalEnvironmentOnlyError,
-  BadRequestError,
-  UnauthorizedError,
-  MissingSessionError,
-  InvalidSessionError,
-  PaymentRequiredError,
-  ForbiddenError,
-  MissingCredentialError,
-  MissingScopeError,
-  ReadonlySessionError,
-  InvalidOriginError,
-  NotFoundError,
-  MethodNotAllowedError,
-  NotAcceptableError,
-  ProxyAuthenticationRequiredError,
-  RequestTimeoutError,
-  ConflictError,
-  GoneError,
-  LengthRequiredError,
-  PreconditionFailedError,
-  PayloadTooLargeError,
-  URITooLongError,
-  UnsupportedMediaTypeError,
-  RangeNotSatisfiableError,
-  ExpectationFailedError,
-  UnprocessableContentError,
-  LockedError,
-  TooManyRequestsError,
-  InternalServerError,
-  NotImplementedError,
-  BadGatewayError,
-  ServiceUnavailableError,
-  GatewayTimeoutError,
-  HTTPVersionNotSupportedError,
-  MaxComputeTimeReachedError,
-  MissingSchemaError,
-  WeakKeyMaterialError,
-  AIProviderNotConfiguredError,
-  AIProviderAuthError,
-  SystemRoleImmutableError,
-  SystemRoleShadowedError,
 })

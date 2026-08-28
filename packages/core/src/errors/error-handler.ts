@@ -4,47 +4,9 @@ export class PikkuError extends Error {
   constructor(message: string = 'An error occurred') {
     super(message)
     Object.setPrototypeOf(this, new.target.prototype)
-    this.name = declaredErrorNames.get(new.target) ?? new.target.name
+    this.name = new.target.name
   }
 }
-
-/**
- * Wire names, keyed by the class they belong to.
- *
- * Deliberately a module-level map rather than pikku state: an error class is
- * registered by module-import side effect, which never re-runs, so its name
- * has to outlive a state reset the same way the error registry itself is made
- * to.
- */
-const declaredErrorNames = new WeakMap<Function, string>()
-
-/**
- * Declare the wire name of one or more error classes, as string literals a
- * minifier cannot rewrite.
- *
- * `new.target.name` is the constructor *identifier*, and a deploy bundle
- * renames it: `PermissionDeniedError` ships as `cn`, `NotFoundError` as `Qc`.
- * But `error.name` is part of the wire contract — it is the field a client
- * switches on to tell *you may not* from *it is not there* — so it cannot
- * depend on whether the bundler happened to be told to keep names.
- *
- * Passing the classes in shorthand keeps each name in exactly one place: the
- * object key is a string literal and survives minification, while the value is
- * free to be renamed.
- *
- * @example declareErrorNames({ NotFoundError, ForbiddenError })
- */
-export const declareErrorNames = (
-  errors: Record<string, PikkuErrorConstructor>
-): void => {
-  for (const [name, error] of Object.entries(errors)) {
-    declaredErrorNames.set(error, name)
-  }
-}
-
-/** The declared wire name of an error class, if it has one. */
-export const getDeclaredErrorName = (error: Function): string | undefined =>
-  declaredErrorNames.get(error)
 
 /**
  * A `PikkuError`, or any error carrying `expected: true` — the marker that

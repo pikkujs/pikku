@@ -167,9 +167,9 @@ export class BunBundler extends BaseBundler {
       // keepNames matches the esbuild bundler, which has always set it. The
       // error→status mapping survives renaming either way — it compares a
       // class against an instance of the SAME consistently-renamed class —
-      // but `Function.name` reaches further than that: it is what an
-      // unregistered error answers with on the wire, and what appears in a
-      // stack trace someone has to read.
+      // but `Function.name` reaches further than that: it is the name every
+      // error answers with on the wire, the one an unregistered error is
+      // matched by, and what appears in a stack trace someone has to read.
       minify: {
         whitespace: true,
         syntax: true,
