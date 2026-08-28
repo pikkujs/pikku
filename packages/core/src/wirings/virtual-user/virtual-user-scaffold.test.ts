@@ -244,6 +244,65 @@ describe('startVirtualUserRun', () => {
     assert.equal(started[0].disposition, 'accountable')
   })
 
+  // The case NODE_ENV cannot answer: a staging environment that is a production
+  // mirror runs NODE_ENV=production too, and refusing every disposition there
+  // refuses them on the one environment they exist to be used on.
+  test('a non-production environment allows a probing disposition', async () => {
+    const { store, started } = runStore()
+    await startVirtualUserRun({
+      store,
+      personas,
+      config: { nodeEnv: 'production' },
+      environments: { staging: {}, production: { production: true } },
+      environment: 'staging',
+      persona: 'susan',
+      disposition: 'adversarial',
+    })
+    assert.equal(started[0].disposition, 'adversarial')
+  })
+
+  test('the configured production environment still refuses one', async () => {
+    const { store, started } = runStore()
+    await assert.rejects(
+      startVirtualUserRun({
+        store,
+        personas,
+        config: { nodeEnv: 'development' },
+        environments: { staging: {}, production: { production: true } },
+        environment: 'production',
+        persona: 'susan',
+        disposition: 'adversarial',
+      }),
+      /Only the 'accountable' disposition may run against production/
+    )
+    assert.equal(started.length, 0)
+  })
+
+  // An environment nobody can name is one whose data nobody can vouch for.
+  // PIKKU_ENV is cleared rather than passed as undefined: it is the default the
+  // parameter falls back to, so leaving it set would test the wrong thing.
+  test('an unresolved environment is treated as production', async () => {
+    const { store, started } = runStore()
+    const pikkuEnv = process.env.PIKKU_ENV
+    delete process.env.PIKKU_ENV
+    try {
+      await assert.rejects(
+        startVirtualUserRun({
+          store,
+          personas,
+          config: { nodeEnv: 'development' },
+          environments: { staging: {}, production: { production: true } },
+          persona: 'susan',
+          disposition: 'adversarial',
+        }),
+        /Only the 'accountable' disposition may run against production/
+      )
+    } finally {
+      if (pikkuEnv !== undefined) process.env.PIKKU_ENV = pikkuEnv
+    }
+    assert.equal(started.length, 0)
+  })
+
   test('refuses a persona that is declared as acted upon', async () => {
     const { store, started } = runStore()
     await assert.rejects(
