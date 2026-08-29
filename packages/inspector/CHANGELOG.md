@@ -1,3 +1,13 @@
+## 0.12.68
+
+### Patch Changes
+
+- ee9da9e: A `.transform()` in a schema used as a function's `input` now reports PKU491, naming the schema and the path to the transform, instead of surfacing downstream as PKU724 — the bad `#pikku/*` import error.
+- Updated dependencies [ee9da9e]
+- Updated dependencies [7a15c9c]
+- Updated dependencies [ee9da9e]
+  - @pikku/core@0.12.99
+
 ## 0.12.67
 
 ### Patch Changes
