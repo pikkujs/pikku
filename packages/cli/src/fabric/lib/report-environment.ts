@@ -34,6 +34,11 @@ export interface ReportEnvironment {
  * Walk up from `startDir` for the first `node_modules/@pikku` that holds
  * packages. A monorepo hoists to the root, an app installs locally, and either
  * way the nearest populated scope is the one that was loaded.
+ *
+ * Populated means holding something `readPikkuPackages` would read, so the
+ * hidden entries it skips cannot qualify a scope either: a stray `.DS_Store` in
+ * an empty nested scope would otherwise end the walk there and report a tree
+ * with no packages in it.
  */
 export async function findPikkuScope(startDir: string): Promise<string | null> {
   let dir = startDir
@@ -41,7 +46,7 @@ export async function findPikkuScope(startDir: string): Promise<string | null> {
     const candidate = join(dir, 'node_modules', '@pikku')
     if (existsSync(candidate)) {
       const entries = await readdir(candidate).catch(() => [])
-      if (entries.length > 0) return candidate
+      if (entries.some((entry) => !entry.startsWith('.'))) return candidate
     }
     const parent = dirname(dir)
     if (parent === dir) return null

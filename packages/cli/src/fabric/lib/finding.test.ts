@@ -132,8 +132,11 @@ describe('renderReceipt', () => {
           error: 'TypeError: e.getFullYear is not a function',
           surface: 'deployed',
           cost: '98s vs 20s steady state',
+          run: 'run_412',
+          deployTarget: 'cloudflare',
         }),
-        environment
+        environment,
+        new Date('2026-08-29T14:02:11.000Z')
       )
     )
 
@@ -141,6 +144,9 @@ describe('renderReceipt', () => {
     assert.match(receipt, /command: pikku deploy/)
     assert.match(receipt, /error: TypeError: e\.getFullYear is not a function/)
     assert.match(receipt, /surface: deployed/)
+    assert.match(receipt, /run: run_412/)
+    assert.match(receipt, /deploy target: cloudflare/)
+    assert.match(receipt, /reported at: 2026-08-29T14:02:11\.000Z/)
     assert.match(receipt, /cost: 98s vs 20s steady state/)
     assert.match(receipt, /@pikku\/core@0\.12\.113/)
     assert.match(receipt, /model: claude-opus-5/)

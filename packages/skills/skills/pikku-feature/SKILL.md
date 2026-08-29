@@ -1,7 +1,7 @@
 ---
 name: pikku-feature
 description: 'Drive create-a-feature work inside a Pikku project that already exists: discover project context, work on a feature branch, implement + verify + commit, and ask the user to review via the diff. TRIGGER when: the user asks to "create a feature", "add X to my Pikku project", "wire up a new endpoint", or anything that implies turning a natural-language request into Pikku functions/wirings/migrations within a working app. DO NOT TRIGGER when: the user asks for a one-off code edit in an existing function, asks about Pikku concepts (use pikku-concepts), or is building a whole app from a fresh scaffold rather than extending one (use pikku-build-app, or pikku-build-quick / pikku-build-platform).'
-allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx pikku fabric report *)
+allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx --no pikku fabric report *)
 argument-hint: '<feature description>'
 ---
 
@@ -308,28 +308,44 @@ workaround was unpleasant.
 
 ### The command
 
+Send it as JSON on stdin. Most of a finding is prose, and prose carries
+apostrophes, quotes, backticks and newlines — each one a shell metacharacter
+before it is a character in your sentence. A stack trace passed to `--error`
+breaks the command at its first newline; a backtick in `--actual` runs whatever
+follows it. Quote the heredoc delimiter (`<<'EOF'`, never `<<EOF`) so the shell
+leaves the body alone.
+
 ```bash
-pikku fabric report "<one-line title>" \
-  --kind product \
-  --model <the model you are> \
-  --expected "<what you expected pikku to do>" \
-  --actual "<what it did instead>" \
-  --command "<the command you ran>" \
-  --workaround "<what you did instead, inside the app>"
+pikku fabric report --stdin <<'EOF'
+{
+  "title": "<one-line title>",
+  "kind": "product",
+  "model": "<the model you are>",
+  "expected": "<what you expected pikku to do>",
+  "actual": "<what it did instead>",
+  "command": "<the command you ran>",
+  "workaround": "<what you did instead, inside the app>"
+}
+EOF
 ```
 
-Add whichever of these you actually have: `--error` (the error's message line,
-verbatim), `--repro` (the shortest way to reach it again), `--proposal` (what
-pikku should do), `--area`, `--surface local|deployed|both`, `--cost` (measured
-if you measured it — "98s vs 20s steady" ranks; "slow" does not), `--run` (an id
-shared by every finding from this build), `--deploy-target`.
+Add whichever of these you actually have: `error` (the error's message line,
+verbatim), `repro` (the shortest way to reach it again), `proposal` (what pikku
+should do), `area`, `surface` (`local`, `deployed` or `both`), `cost` (measured
+if you measured it — "98s vs 20s steady" ranks; "slow" does not), `run` (an id
+shared by every finding from this build), `deployTarget`.
+
+The same fields exist as flags — `--kind`, `--expected` and so on — for a
+finding short enough to type. Anything with a newline or a quote in it goes
+through `--stdin`.
 
 Versions, platform and package manager are read off the installed tree for you.
 Do not pass them and do not ask the user for them.
 
-Reporting never fails a build: an unreachable endpoint, an unlinked project or a
-logged-out user prints a line and moves on. If it says the finding was not sent,
-carry on with the feature — do not try to fix it.
+Reporting never fails a build. A finding that cannot be sent — logged out, or
+fabric unreachable — is held on the machine and goes out with the next report
+that succeeds, so nothing you file is lost. If it says the finding was queued,
+carry on with the feature; do not try to fix it, and do not file it again.
 
 ## Hard constraints
 

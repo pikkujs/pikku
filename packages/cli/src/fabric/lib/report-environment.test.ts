@@ -119,6 +119,22 @@ describe('findPikkuScope', () => {
       await rm(root, { recursive: true, force: true })
     }
   })
+
+  test('a hidden entry does not make an empty scope count as populated', async () => {
+    const root = await makeTmp()
+    try {
+      const hoisted = join(root, 'node_modules', '@pikku')
+      await installPackage(hoisted, 'core', '0.12.90')
+      const app = join(root, 'apps', 'web')
+      const empty = join(app, 'node_modules', '@pikku')
+      await mkdir(empty, { recursive: true })
+      await writeFile(join(empty, '.DS_Store'), '')
+
+      assert.equal(await findPikkuScope(app), hoisted)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('detectPackageManager', () => {

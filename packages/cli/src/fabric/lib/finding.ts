@@ -183,6 +183,9 @@ export function renderReceipt(payload: FindingPayload): string {
   field('tried', payload.tried)
   field('proposal', payload.proposal)
   field('model', payload.model)
+  field('run', payload.runId)
+  field('deploy target', payload.deployTarget)
+  field('reported at', payload.reportedAt)
   const env = payload.environment
   field(
     'versions',
