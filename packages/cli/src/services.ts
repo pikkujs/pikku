@@ -123,6 +123,10 @@ const CONFIG_FREE_COMMANDS = new Set([
   'skills.install',
   'doc',
   'fabric.report',
+  'fabric.findings',
+  'fabric.findings.list',
+  'fabric.findings.flush',
+  'fabric.findings.clear',
 ])
 
 export const createConfig: CreateConfig<

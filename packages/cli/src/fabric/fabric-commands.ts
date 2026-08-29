@@ -69,6 +69,12 @@ import { FabricPublish } from './functions/publish.function.js'
 import { FabricAdd } from './functions/add.function.js'
 import { FabricReport } from './functions/report.function.js'
 import {
+  FabricFindingsList,
+  renderFindingsList,
+} from './functions/findings-list.function.js'
+import { FabricFindingsFlush } from './functions/findings-flush.function.js'
+import { FabricFindingsClear } from './functions/findings-clear.function.js'
+import {
   FabricAddonVerify,
   renderAddonVerify,
 } from './functions/addon-verify.function.js'
@@ -383,6 +389,28 @@ export const fabricCommands = defineCLICommands({
       deployTarget: { description: 'The deploy target in use' },
     },
   }),
+  findings: {
+    description:
+      'Inspect the findings held locally because they could not be sent',
+    subcommands: {
+      list: pikkuCLICommand({
+        func: FabricFindingsList,
+        render: renderFindingsList,
+        description: 'List the findings queued locally, waiting to be sent',
+      }),
+      flush: pikkuCLICommand({
+        func: FabricFindingsFlush,
+        description: 'Send every finding queued locally',
+        options: {
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      clear: pikkuCLICommand({
+        func: FabricFindingsClear,
+        description: 'Discard every queued finding without sending it',
+      }),
+    },
+  },
   metrics: pikkuCLICommand({
     func: FabricMetrics,
     description: 'Show request rate / error rate / latency for a stage',
