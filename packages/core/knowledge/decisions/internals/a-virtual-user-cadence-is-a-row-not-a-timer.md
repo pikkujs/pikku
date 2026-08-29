@@ -52,7 +52,7 @@ instances:
   different one, and every finding it produces is unreproducible.
 - **A run still `running` after `STALE_RUN_AFTER_MS` is failed and the persona
   runs again.** This is where the stranded-record cost of
-  [a virtual user run being neither a workflow nor a queued job](a-virtual-user-run-is-not-a-workflow-and-not-a-queued-job.md)
+  [a virtual user run not being a workflow](a-virtual-user-run-is-not-a-workflow-but-it-needs-a-trigger.md)
   gets paid: without it, one restart mid-run would block that persona's schedule
   permanently.
 
