@@ -268,8 +268,12 @@ bun run dev
 Then open the app, sign up as a real user, and click through what you built.
 **HTTP 200 is not evidence.** These are client-rendered pages: the server returns
 200 with an empty shell, so a page whose component throws still looks fine to
-curl. Either open it in a browser or drive it headlessly and assert on rendered
-text.
+curl.
+
+That pass is a smoke check. Anything you would otherwise verify by hand-driving a
+browser tool belongs in a scenario's browser step, run with
+`pikku scenario run local --spawn --run browser` — a browser session you steered
+yourself proves nothing that re-runs.
 
 Secrets come from `process.env`, which the CLI populates from a `.env` in the
 working directory. `BETTER_AUTH_SECRET` is required — without it the first

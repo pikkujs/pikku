@@ -464,8 +464,16 @@ built-in module: node:sqlite`.
 
 Open it, sign up, and click through what you built. **HTTP 200 is not evidence.**
 The pages are client-rendered: the server returns 200 with an empty shell, so a
-page whose component throws still looks fine to `curl`. Open it in a browser, or
-drive it headlessly and assert on the text that actually rendered.
+page whose component throws still looks fine to `curl`.
+
+That click-through is a smoke check, and it is the only thing it is. **Do not
+hand-drive a browser tool in place of a test.** Steering Playwright yourself
+proves a page rendered once, on your machine, in an order only you remember —
+nothing about it re-runs, so the next agent inherits a claim rather than a test,
+and a regression lands silently. When a journey is worth driving through the UI,
+it is worth writing as a browser step on §7's scenario and running
+`pikku scenario run local --spawn --run browser`: same clicks, same assertions,
+in the repo, green or red on every future run.
 
 ## 7. Prove it — scenarios
 
