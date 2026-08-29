@@ -350,11 +350,16 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   report: pikkuCLICommand({
-    parameters: '<title>',
+    parameters: '[title]',
     func: FabricReport,
     description:
-      'Report a finding — something about pikku that cost time — to the linked fabric project',
+      'Report a finding — something about pikku that cost time — to fabric',
     options: {
+      stdin: {
+        description:
+          'Read the whole finding as JSON on stdin instead of from flags (prose survives the shell intact)',
+        default: false,
+      },
       kind: {
         description:
           'product (fix pikku) or harness (fix the skill that misled you)',

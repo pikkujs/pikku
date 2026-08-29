@@ -221,25 +221,31 @@ describe('flushSpool', () => {
     )
   })
 
-  test('leaves an unlinked finding queued when there is still no project', async () => {
-    await spoolFinding({
-      payload: payload(),
-      reason: 'not-linked',
-      projectId: null,
-    })
+  test('sends a finding filed from a checkout that never linked a project', async () => {
+    let seen: unknown = 'unset'
+    await withServer(
+      (body) => {
+        seen = JSON.parse(body).projectId
+        return { status: 202 }
+      },
+      async (apiUrl) => {
+        await spoolFinding({
+          payload: payload(),
+          reason: 'not-linked',
+          projectId: null,
+        })
 
-    const result = await flushSpool({
-      apiUrl: 'http://127.0.0.1:1',
-      token: 'tok',
-      projectId: null,
-    })
+        const result = await flushSpool({
+          apiUrl,
+          token: 'tok',
+          projectId: null,
+        })
 
-    assert.deepEqual(result, {
-      sent: 0,
-      remaining: 1,
-      reason: 'no project linked',
-    })
-    assert.equal((await readSpool()).length, 1)
+        assert.deepEqual(result, { sent: 1, remaining: 0 })
+        assert.deepEqual(await readSpool(), [])
+      }
+    )
+    assert.equal(seen, null)
   })
 })
 

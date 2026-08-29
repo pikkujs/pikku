@@ -3,7 +3,11 @@
 '@pikku/skills': patch
 ---
 
-`pikku fabric report` sends a finding — something about pikku that cost an agent time — to the linked fabric project. Nothing is written to the repo, so nothing goes stale on an abandoned branch, and the terminal prints exactly what left the machine. Reporting never fails a build.
+`pikku fabric report` sends a finding — something about pikku that cost an agent time — to fabric. It needs a login but no linked project: a finding is about the framework rather than about anyone's project, and the reports worth having most come from checkouts that have nothing to name.
+
+The finding can be given as JSON on stdin (`--stdin`) instead of as flags. Half the fields are prose, and prose carries apostrophes, quotes, backticks and newlines — every one a shell metacharacter before it is a character in a sentence — so an error message pasted into `--error` used to break the command at its first newline. The same schema validates either path.
+
+Nothing is written to the repo, so nothing goes stale on an abandoned branch, and the terminal prints exactly what left the machine. Reporting never fails a build.
 
 A finding that cannot be sent is held in `~/.fabric/findings` rather than dropped: logged out, unlinked, or fabric unreachable are the states a finding is most likely to be describing, and a scaffold that never got far enough to log in is exactly the thing worth hearing about. The queue drains on the next report that succeeds, keeps the project each finding was filed against, and is bounded at 100. `pikku fabric findings list`, `flush` and `clear` inspect and control it.
 

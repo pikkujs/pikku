@@ -25,6 +25,48 @@ export const FindingInput = z.object({
 
 export type FindingInput = z.infer<typeof FindingInput>
 
+export type ParsedFinding =
+  | { finding: FindingInput }
+  | { problems: string[] }
+
+/** Shape-check a finding from either path, naming every field that is wrong. */
+export function parseFinding(value: unknown): ParsedFinding {
+  const result = FindingInput.safeParse(value)
+  if (result.success) return { finding: result.data }
+  return {
+    problems: result.error.issues.map(
+      (issue) => `${issue.path.join('.') || 'finding'}: ${issue.message}`
+    ),
+  }
+}
+
+/**
+ * A finding read as JSON rather than assembled out of flags.
+ *
+ * Half the fields are prose, and prose carries apostrophes, quotes, backticks
+ * and newlines — every one of them a shell metacharacter before it is a
+ * character in a sentence. An error message pasted into `--error` breaks the
+ * command at its first newline; one carrying a backtick runs whatever follows
+ * it. JSON has its own escaping, so this path has none of that.
+ *
+ * Returns the finding or the problems with it, never throws: a malformed
+ * payload is a usage mistake worth naming precisely.
+ */
+export function parseFindingJson(raw: string): ParsedFinding {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch (error: any) {
+    return {
+      problems: [`--stdin expected a JSON object (${error.message}).`],
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { problems: ['--stdin expected a JSON object.'] }
+  }
+  return parseFinding(parsed)
+}
+
 export interface FindingPayload extends Omit<FindingInput, 'run'> {
   runId?: string
   environment: ReportEnvironment
@@ -81,7 +123,13 @@ export function buildFindingPayload(
 export async function postFinding(opts: {
   apiUrl: string
   token: string
-  projectId: string
+  /**
+   * Provenance, not a routing key. A finding is about the framework rather
+   * than about anyone's project, and the reports worth having most — a
+   * scaffold that never produced a config, a first run that went wrong — come
+   * from checkouts that have no project to name.
+   */
+  projectId: string | null
   payload: FindingPayload
   timeoutMs?: number
 }): Promise<{ sent: boolean; reason?: string }> {

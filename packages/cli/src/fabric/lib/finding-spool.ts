@@ -121,8 +121,9 @@ export interface FlushResult {
  * hammering an endpoint that just said no is the wrong thing for a command
  * whose real job is something else.
  *
- * An entry keeps the project it was filed against; only one spooled before the
- * repo was linked adopts the project linked now.
+ * An entry keeps the project it was filed against; one spooled before the repo
+ * was linked adopts the project linked now, and sends without one if there is
+ * still none.
  */
 export async function flushSpool(ctx: {
   apiUrl: string
@@ -132,18 +133,10 @@ export async function flushSpool(ctx: {
   const entries = await readSpool()
   let sent = 0
   for (const [index, entry] of entries.entries()) {
-    const projectId = entry.projectId ?? ctx.projectId
-    if (!projectId) {
-      return {
-        sent,
-        remaining: entries.length - sent,
-        reason: 'no project linked',
-      }
-    }
     const result = await postFinding({
       apiUrl: ctx.apiUrl,
       token: ctx.token,
-      projectId,
+      projectId: entry.projectId ?? ctx.projectId,
       payload: entry.payload,
     })
     if (!result.sent) {

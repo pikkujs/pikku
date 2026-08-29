@@ -4,6 +4,7 @@ import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import {
   buildFindingPayload,
+  parseFindingJson,
   postFinding,
   renderReceipt,
   validateFinding,
@@ -184,6 +185,41 @@ describe('renderReceipt', () => {
     assert.match(receipt, /not all the same/)
     assert.match(receipt, /may be modified/)
     assert.match(receipt, /@pikku\/core@0\.12\.113 \(linked\)/)
+  })
+})
+
+describe('parseFindingJson', () => {
+  test('carries prose the shell would have mangled through intact', () => {
+    const error =
+      "TypeError: can't read `name` of undefined\n    at cn (index.js:1:8842)"
+    const parsed = parseFindingJson(JSON.stringify(finding({ error })))
+
+    assert.ok('finding' in parsed)
+    assert.equal(parsed.finding.error, error)
+  })
+
+  test('names the malformed JSON rather than throwing', () => {
+    const parsed = parseFindingJson('{ "title": ')
+
+    assert.ok('problems' in parsed)
+    assert.match(parsed.problems[0], /--stdin expected a JSON object/)
+  })
+
+  test('rejects JSON that is not an object', () => {
+    const parsed = parseFindingJson('["a finding"]')
+
+    assert.ok('problems' in parsed)
+    assert.deepEqual(parsed.problems, ['--stdin expected a JSON object.'])
+  })
+
+  test('names every field that is missing or wrong, in one pass', () => {
+    const parsed = parseFindingJson(
+      JSON.stringify({ title: 'x', kind: 'typo', expected: 'y' })
+    )
+
+    assert.ok('problems' in parsed)
+    const fields = parsed.problems.map((p) => p.split(':')[0])
+    assert.deepEqual(fields.sort(), ['actual', 'kind', 'model'])
   })
 })
 
