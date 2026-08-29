@@ -1,5 +1,67 @@
 # @pikku/skills
 
+## 0.12.20
+
+### Patch Changes
+
+- 7a15c9c: An actor credential is one persona's, not everyone's
+
+  `SCENARIO_ACTOR_SECRET` was a skeleton key. Anyone holding it could post any
+  `actor: true` address to `/auth/sign-in/actor` and get that persona's session —
+  including the `admin` persona, which provisioning grants real admin. The browser
+  switcher held it too, baked into the dev bundle as `VITE_SCENARIO_ACTOR_SECRET`,
+  so "the reviewer can sign in as each kind of user" and "the reviewer's bundle is
+  entitled to every persona" were the same fact.
+
+  It is now a root that credentials derive from, never one that is presented:
+
+  ```ts
+  deriveActorSecret(root, email) // HKDF-expanded HMAC-SHA256 over the address
+  ```
+
+  The endpoint re-derives the expected value for whichever address is signing in
+  and compares, so nothing is stored or looked up, a credential minted for one
+  persona is refused for every other, and rotating the root invalidates all of
+  them at once. The root itself is no longer a valid credential, and a root under
+  32 characters refuses the endpoint rather than deriving weak credentials from
+  it — the server log says why, the client is not told.
+
+  What that buys, in the places that used to need the whole key:
+
+  - **`pikku dev`** mints one credential per declared persona into
+    `VITE_DEV_ACTOR_SECRETS` and no longer writes `VITE_SCENARIO_ACTOR_SECRET` at
+    all. The root stays on the server.
+  - **`pikku persona secret <id>`** mints them for anything else, and a run given
+    `PIKKU_PERSONA_SECRETS=id=secret,…` can sign in as those personas and no
+    others — asking for one outside the list throws naming the persona instead of
+    falling back to the root.
+
+  `useDevActors()` and `<DevActorSwitcher />` take `secrets` (one per address)
+  where they took `secret`, and an actor with no credential is no longer offered
+  rather than rendering a row that 401s. `HttpPersonasConfig.secret` and the
+  Playwright provider's `secret` additionally accept a resolver, which is how a
+  partially-credentialled run is expressed.
+
+- ee9da9e: pikku-react now covers linking from a Mantine element: `component={Link}` widens the router generic to `AnyRouter` and stops checking `to` and `params`, so the skill teaches a wrapped typed `Link` reached through `renderRoot` instead.
+- 7d641f3: The three build skills now draw the line between the manual click-through (a smoke check, for layout) and verification: anything worth driving through the UI belongs in a scenario's browser step, not in a browser session steered by hand that nothing re-runs.
+- ee9da9e: The hardcoded-copy check stops flagging a feature's own name
+
+  Two rules disagreed. `runScenarioFileChecks` requires every `pikkuFeature` to
+  live in a `*.scenario.ts`, and moving one there is what put it in front of the
+  hardcoded-copy check — which then flagged the feature's own `name` because the
+  app catalogue happens to hold the same word:
+
+  ```
+  name: 'Downloads',   → ✗ "Downloads" → nav__downloads | downloads__title
+  ```
+
+  Complying with the first rule created violations of the second, and the advice
+  — read the string from the app catalogue — would tie the Console's language to
+  the product's. `name`, `description` and `template` declared directly on a
+  `pikkuFeature`, `pikkuScenario` or `pikkuScenarioStep` are Console meta and are
+  now skipped. A `name` nested deeper — `getByRole('button', { name: 'Speichern'
+})` — is a selector built out of UI copy and is still caught.
+
 ## 0.12.19
 
 ### Patch Changes
