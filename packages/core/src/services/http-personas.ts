@@ -18,6 +18,7 @@ import {
 } from '../wirings/workflow/scenario-cookie-jar.js'
 import {
   ActorSignIn,
+  type ActorSecretResolver,
   OperatorSignIn,
   type OperatorSignInOptions,
   type PersonaSignIn,
@@ -34,13 +35,19 @@ export interface HttpPersonasConfig {
    */
   apiUrl: string
   /**
-   * The impersonation secret. Sign-in only ever works for user rows flagged
-   * `actor: true` — knowing the secret never impersonates real users.
+   * The ROOT actor secret, from which each persona's own credential is derived
+   * and bound to their address. Sign-in only ever works for user rows flagged
+   * `actor: true`, and a derived credential only ever works for the one address
+   * it was derived for.
+   *
+   * Pass an {@link ActorSecretResolver} instead to drive personas whose
+   * credentials were minted elsewhere — a caller entitled to one persona then
+   * never holds the root.
    *
    * The local-development credential. A deployed stage has none, and passes
    * {@link HttpPersonasConfig.operator} instead.
    */
-  secret?: string
+  secret?: string | ActorSecretResolver
   /**
    * Fabric operator credentials, for signing personas into a DEPLOYED stage.
    *

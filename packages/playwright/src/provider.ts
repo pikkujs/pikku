@@ -3,8 +3,10 @@ import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
 import type { ResolvedPersona } from '@pikku/core/services'
 import {
+  deriveActorSecret,
   establishOperatorSession,
   IMPERSONATE_USER_ID_HEADER,
+  type ActorSecretResolver,
   type OperatorSignInOptions,
 } from '@pikku/core/persona'
 import type {
@@ -53,11 +55,15 @@ export type ActorSignIn = (
 export interface PlaywrightScenarioBrowserProviderOptions {
   config?: BrowserConfig
   /**
-   * The actor impersonation secret — the same SCENARIO_ACTOR_SECRET the HTTP
-   * actors use. The local-development credential; a deployed stage passes
+   * The ROOT actor secret — the same SCENARIO_ACTOR_SECRET the HTTP actors
+   * use — from which each persona's own credential is derived and bound to
+   * their address. Pass an {@link ActorSecretResolver} to browse as personas
+   * whose credentials were minted elsewhere, without holding the root.
+   *
+   * The local-development credential; a deployed stage passes
    * {@link PlaywrightScenarioBrowserProviderOptions.operator} instead.
    */
-  secret?: string
+  secret?: string | ActorSecretResolver
   /**
    * Fabric operator credentials, for browsing a DEPLOYED stage as a persona.
    * Same handshake the HTTP personas use, so a browser step and an RPC step in
@@ -395,12 +401,18 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       session.capture = this.captureContext
     }
     const signIn = this.options.signIn ?? this.defaultSignIn(actorConfig)
+    const secret =
+      typeof this.options.secret === 'function'
+        ? await this.options.secret(actorConfig)
+        : this.options.secret
+          ? await deriveActorSecret(this.options.secret, actorConfig.email)
+          : undefined
     await signIn(
       session.context,
       {
         email: actorConfig.email,
         name: actorConfig.name ?? actorName,
-        secret: this.options.secret,
+        secret,
       },
       {
         apiUrl: config.apiUrl,

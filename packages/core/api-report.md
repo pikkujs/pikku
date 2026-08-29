@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2863 observable things**: 904 exported names, plus
+**2870 observable things**: 911 exported names, plus
 1959 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 141 | 115 | 413 |
+| `./services` | 147 | 115 | 413 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 37 | 37 | 48 |
+| `./persona` | 44 | 38 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
 | `./services/local-meta` | 22 | 2 | 38 |
@@ -3896,8 +3896,15 @@ validateAndBuildSystemRoleDefinitionsMeta: (definitions: SystemRoleDefinitions) 
 ## ./persona
 
 ```ts
+ACTOR_ROOT_SECRET_MIN_LENGTH: 32
+ACTOR_SECRET_INFO: "pikku:actor-sign-in"
+ACTOR_SECRET_NAME: "SCENARIO_ACTOR_SECRET"
+export type ActorSecretResolver = (
+  persona: ResolvedPersona
+) => string | Promise<string>
+actorSecretSubject: (email: string) => string
 export class ActorSignIn implements PersonaSignIn {
-  constructor(private readonly apiUrl: string, private readonly secret: string, private readonly signInPath: string)
+  constructor(private readonly apiUrl: string, private readonly secret: string | ActorSecretResolver, private readonly signInPath: string)
   async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void>
   headers(): Record<string, string>
 }
@@ -3925,6 +3932,7 @@ export type CorePersona = {
 export type CorePersonas = Record<string, CorePersona>
 createHttpPersonas: (config: HttpPersonasConfig) => ScenarioPersonas
 definePersonas: (_config: CorePersonas) => void
+deriveActorSecret: (rootSecret: string, email: string) => Promise<string>
 establishOperatorSession: (fetchImpl: (input: URL | RequestInfo, init?: RequestInit | undefined) => Promise<Response>, apiUrl: string, persona: ResolvedPersona, options: OperatorSignInOptions, extraHeaders?: Record<string, string>) => Promise<OperatorSessionResult>
 export class HttpPersona implements ScenarioPersona {
   constructor(readonly name: string, private persona: ResolvedPersona, private config: HttpPersonasConfig)
@@ -3936,7 +3944,7 @@ export class HttpPersona implements ScenarioPersona {
 }
 export interface HttpPersonasConfig {
   apiUrl: string
-  secret?: string
+  secret?: string | ActorSecretResolver
   operator?: OperatorSignInOptions
   personas: Record<string, ResolvedPersona>
   signInPath?: string
@@ -4031,6 +4039,7 @@ export interface RoleVerification {
 }
 runnablePersonas: (meta: PersonasMeta) => PersonaMeta[]
 validateAndBuildPersonasMeta: (definitions: PersonaDefinitions) => PersonasMeta
+verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
 verifyPersonaRoles: (persona: string, expected: readonly string[], actual: readonly string[]) => RoleVerification
 ```
 
@@ -4206,6 +4215,10 @@ export class WeakKeyMaterialError extends PikkuError {
 ## ./services
 
 ```ts
+ACTOR_ROOT_SECRET_MIN_LENGTH: 32
+ACTOR_SECRET_INFO: "pikku:actor-sign-in"
+ACTOR_SECRET_NAME: "SCENARIO_ACTOR_SECRET"
+actorSecretSubject: (email: string) => string
 export type AgentMeta = AgentsMeta[string]
 export type AgentRunnerParams = {
   model: string
@@ -4455,6 +4468,7 @@ export interface DeploymentServiceConfig {
   heartbeatInterval?: number
   heartbeatTtl?: number
 }
+deriveActorSecret: (rootSecret: string, email: string) => Promise<string>
 export interface EmailAssets {
   theme: Record<string, unknown>
   locales: Record<string, Record<string, unknown>>
@@ -5078,6 +5092,7 @@ export interface VariablesService {
   has: (name: string) => Promise<boolean> | boolean
   delete: (name: string) => Promise<void> | void
 }
+verifyActorSecret: (rootSecret: string, email: string, presented: string) => Promise<boolean>
 export interface WebhookAttemptResult {
   statusCode?: number
   responseBody?: string

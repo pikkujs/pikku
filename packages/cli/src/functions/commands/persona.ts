@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   createHttpPersonas,
+  deriveActorSecret,
   personaEnvironmentRefusal,
   roleMismatchMessage,
   verifyPersonaRoles,
@@ -19,7 +20,11 @@ import {
 import { getSingletonServices, setSingletonServices } from '@pikku/core/state'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
-import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
+import {
+  ACTOR_SECRET_VARIABLE,
+  PERSONA_SECRETS_VARIABLE,
+  resolvePersonaCredentials,
+} from '../../utils/persona-credentials.js'
 import { resolveEnvironment } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { formatVirtualUserReport } from './virtual-user-formatter.js'
@@ -289,6 +294,62 @@ export const personaRun = pikkuSessionlessFunc<
 })
 
 /** Who this app is for, and what each of them wants, without running anything. */
+/**
+ * Mint the actor credential for one persona, or for every declared persona.
+ *
+ * The root secret is entitled to all of them, so nothing that only needs to be
+ * one person should ever hold it. What comes out is bound to that persona's
+ * address by the target — presenting it for anyone else is refused — so a CI
+ * job, a container or a virtual user can be handed exactly the people it is
+ * meant to be and no more.
+ *
+ * Printed as `id=secret` lines, which is the shape PIKKU_PERSONA_SECRETS reads.
+ */
+export const personaSecret = pikkuSessionlessFunc<
+  { personas?: string[] },
+  void
+>({
+  func: async ({ logger, config, variables, getInspectorState }, input) => {
+    const root = await variables.get(ACTOR_SECRET_VARIABLE)
+    if (!root) {
+      throw new Error(
+        `${ACTOR_SECRET_VARIABLE} is not set — there is no root to derive from. ` +
+          `It lives in the environment of whoever mints credentials, and never in pikku.config.json.`
+      )
+    }
+
+    const state = await getInspectorState(true, false, false, true)
+    const declared = resolvePersonas(
+      state.personas?.definitions ?? [],
+      config.scenarios?.emailDomain
+    )
+    const wanted = input.personas?.length
+      ? input.personas
+      : Object.keys(declared)
+    const unknown = wanted.filter((id) => !declared[id])
+    if (unknown.length > 0) {
+      throw new Error(
+        `No persona ${unknown.map((id) => `'${id}'`).join(', ')} is declared. ` +
+          `Declared: ${Object.keys(declared).sort().join(', ') || 'none'}.`
+      )
+    }
+
+    const minted: string[] = []
+    for (const id of wanted) {
+      minted.push(
+        `${id}=${await deriveActorSecret(String(root), declared[id]!.email)}`
+      )
+    }
+    for (const line of minted) {
+      logger.info(line)
+    }
+    logger.info('')
+    logger.info(
+      `Hand these to a run as ${PERSONA_SECRETS_VARIABLE}='${minted.join(',')}'`
+    )
+  },
+})
+
 export const personaList = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState(true, false, false, true)

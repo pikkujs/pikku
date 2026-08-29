@@ -709,11 +709,12 @@ frontend gets a one-click "Sign in as …" switcher over the **same** list, and 
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
 The sandbox dev server bakes both halves into the frontend from the declared
-personas: `VITE_DEV_ACTORS` (the JSON actor list) and
-`VITE_SCENARIO_ACTOR_SECRET`. Neither is set in a production build, so the
-control renders nothing there — but gate the reads on your bundler's dev flag
-anyway (`import.meta.env.DEV ? … : undefined`) so the secret never reaches a
-production bundle in the first place.
+personas: `VITE_DEV_ACTORS` (the JSON actor list) and `VITE_DEV_ACTOR_SECRETS`
+(`{ email: credential }`, one per persona — `SCENARIO_ACTOR_SECRET` itself never
+goes in a bundle; see **pikku-better-auth**). Neither var is set in a production
+build, so the control renders nothing there — but gate the reads on your
+bundler's dev flag anyway (`import.meta.env.DEV ? … : undefined`) so no
+credential reaches a production bundle in the first place.
 
 Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate install) is the logic and
 `<DevActorSwitcher />` from `@pikku/mantine/dev` is a ready rendering of it.

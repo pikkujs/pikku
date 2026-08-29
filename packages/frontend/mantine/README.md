@@ -49,17 +49,19 @@ to ship one, since without it a reviewer is locked out of their own sandbox.
 import { DevActorSwitcher } from '@pikku/mantine/dev'
 ;<DevActorSwitcher
   actors={import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined}
-  secret={
-    import.meta.env.DEV ? import.meta.env.VITE_SCENARIO_ACTOR_SECRET : undefined
+  secrets={
+    import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTOR_SECRETS : undefined
   }
   apiUrl={apiUrl()}
   onSignedIn={() => navigate({ to: '/' })}
 />
 ```
 
-The sandbox dev server bakes both env vars from your declared personas; neither
-is set in production, so the control renders `null` there. Gate the reads on your
-bundler's dev flag as above so the secret never reaches a production bundle.
+The sandbox dev server bakes both env vars from your declared personas;
+`VITE_DEV_ACTOR_SECRETS` is one credential per persona, each accepted for that
+persona's address only. Neither is set in production, so the control renders
+`null` there. Gate the reads on your bundler's dev flag as above so no
+credential reaches a production bundle.
 
 It takes `onSignedIn` rather than depending on a router — every app lands
 somewhere different. For custom UI, build on `useDevActors()` from

@@ -55,10 +55,19 @@ export {
   OperatorSignIn,
   establishOperatorSession,
   IMPERSONATE_USER_ID_HEADER,
+  type ActorSecretResolver,
   type PersonaSignIn,
   type OperatorSignInOptions,
   type OperatorSessionResult,
 } from '../../services/persona-sign-in.js'
+export {
+  ACTOR_ROOT_SECRET_MIN_LENGTH,
+  ACTOR_SECRET_INFO,
+  ACTOR_SECRET_NAME,
+  actorSecretSubject,
+  deriveActorSecret,
+  verifyActorSecret,
+} from '../../services/persona-actor-secret.js'
 export {
   postScenarioJson,
   readScenarioHttpResponse,

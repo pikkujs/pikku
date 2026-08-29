@@ -10,8 +10,12 @@ import { Button, Menu, Text } from '../core/index.js'
 export type DevActorSwitcherProps = {
   /** Raw JSON actor list from the host's env, or an already-parsed list. */
   actors: string | DevActor[] | undefined
-  /** The shared scenario actor secret from the host's env. Absent renders nothing. */
-  secret: string | undefined
+  /**
+   * One credential per persona, keyed by address, from the host's env
+   * (`VITE_DEV_ACTOR_SECRETS`). Absent renders nothing, and an actor with no
+   * credential is not offered.
+   */
+  secrets: string | Record<string, string> | undefined
   /** API base, including the `/api` prefix if the app has one. */
   apiUrl: string
   /**
@@ -46,8 +50,8 @@ const CORNERS: Record<
  * own sandbox — which is why `pikku fabric validate` requires any frontend with
  * a login screen to ship one.
  *
- * Renders nothing when the host exposed no actors or no secret, which is every
- * production build.
+ * Renders nothing when the host exposed no actors or no credentials, which is
+ * every production build.
  *
  * Strings here are passed through `asI18n` rather than a message catalogue: this
  * control never ships to an end user, so translating it would cost every
@@ -55,7 +59,7 @@ const CORNERS: Record<
  */
 export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
   actors: rawActors,
-  secret,
+  secrets,
   apiUrl,
   onSignedIn,
   label = asI18n('Sign in as …'),
@@ -63,7 +67,7 @@ export const DevActorSwitcher: FC<DevActorSwitcherProps> = ({
 }) => {
   const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
     actors: rawActors,
-    secret,
+    secrets,
     apiUrl,
     onSignedIn,
   })

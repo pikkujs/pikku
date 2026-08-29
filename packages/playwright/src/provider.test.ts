@@ -6,9 +6,14 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
+import { deriveActorSecret } from '@pikku/core/persona'
+
 import { PlaywrightScenarioBrowserProvider } from './provider.js'
 import { hasFfmpeg } from './capture.js'
 import type { BrowserConfig } from './config.js'
+
+/** Long enough to be key material, which every derived credential needs. */
+const ROOT = 'a-root-secret-long-enough-to-derive'
 
 const config = (overrides: Partial<BrowserConfig> = {}): BrowserConfig =>
   ({
@@ -102,7 +107,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const { browser, contexts } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -119,7 +124,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const { browser, contexts } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
@@ -141,7 +146,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const { browser, contexts } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -165,7 +170,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
           storefront: 'https://app.test/_frontend/storefront',
         },
       }),
-      secret: 's',
+      secret: ROOT,
       actors: {
         mechanic: { email: 'mechanic@test', app: 'workshop' },
         customer: { email: 'customer@test', app: 'storefront' },
@@ -191,7 +196,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
       config: config({
         appUrls: { storefront: 'https://app.test/_frontend/storefront' },
       }),
-      secret: 's',
+      secret: ROOT,
       actors: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -206,7 +211,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -218,12 +223,12 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     )
   })
 
-  test('the browser signs in through the actor path, as the actor', async () => {
+  test('the browser signs in with that actor own derived credential', async () => {
     const { browser } = fakeBrowser()
     const signIns: Array<{ email: string; name: string; secret: string }> = []
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 'top-secret',
+      secret: ROOT,
       actors: { shopper: { email: 'shopper@test', name: 'Shopper' } },
       connectBrowser: async () => ({ browser }),
       signIn: async (_context, request) => {
@@ -235,8 +240,13 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     await provider.sessionFor('shopper')
 
     assert.deepEqual(signIns, [
-      { email: 'shopper@test', name: 'Shopper', secret: 'top-secret' },
+      {
+        email: 'shopper@test',
+        name: 'Shopper',
+        secret: await deriveActorSecret(ROOT, 'shopper@test'),
+      },
     ])
+    assert.notEqual(signIns[0]!.secret, ROOT, 'the root is never presented')
   })
 
   test('close releases the browser exactly once and reopens on next use', async () => {
@@ -244,7 +254,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     let released = 0
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
@@ -278,7 +288,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     }
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { shopper: { email: 'shopper@test' } },
       // No `release` — a shared/remote browser (CDP) belongs to whoever opened it.
       connectBrowser: async () => ({ browser }),
@@ -296,7 +306,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const signIns: string[] = []
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
@@ -333,7 +343,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     let released = 0
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { shopper: { email: 'shopper@test' } },
       connectBrowser: async () => {
         connects++
@@ -364,7 +374,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: {
         shopper: { email: 'shopper@test' },
         admin: { email: 'admin@test' },
@@ -398,7 +408,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-failures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -422,7 +432,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-failures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -445,7 +455,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -465,7 +475,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: {
         admin: { email: 'admin@test' },
         shopper: { email: 'shopper@test' },
@@ -501,7 +511,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -534,7 +544,7 @@ describe('PlaywrightScenarioBrowserProvider', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-captures-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -562,7 +572,7 @@ describe('PlaywrightScenarioBrowserProvider video retention', () => {
   ) =>
     new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -597,7 +607,11 @@ describe('PlaywrightScenarioBrowserProvider video retention', () => {
     provider.endScenario('passed')
     await provider.reset()
 
-    assert.equal(videos.length, 1, 'it was recorded — the outcome was not known')
+    assert.equal(
+      videos.length,
+      1,
+      'it was recorded — the outcome was not known'
+    )
     assert.equal(videos[0]!.savedTo, undefined, 'and never filed')
     assert.equal(videos[0]!.deleted, true, 'and then dropped')
     await rm(dir, { recursive: true, force: true })
@@ -697,7 +711,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const { browser } = fakeBrowser()
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -714,7 +728,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: {
         admin: { email: 'admin@test' },
         shopper: { email: 'shopper@test' },
@@ -752,7 +766,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -778,7 +792,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},
@@ -839,7 +853,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     // encode — the fake browser's saveAs only records the path it was given.
     const provider = new PlaywrightScenarioBrowserProvider({
       config: config(),
-      secret: 's',
+      secret: ROOT,
       actors: { admin: { email: 'admin@test' } },
       connectBrowser: async () => ({ browser }),
       signIn: async () => {},

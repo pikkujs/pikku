@@ -3,6 +3,10 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
 import { createHttpPersonas } from './http-personas.js'
+import { verifyActorSecret } from './persona-actor-secret.js'
+
+/** The root the personas derive from; the target verifies against the same one. */
+const ROOT = 'impersonation-secret-impersonation'
 
 // Minimal target app mirroring the Better Auth actor plugin's contract:
 // sign-in endpoint, exposed RPC endpoint, session by cookie.
@@ -12,12 +16,12 @@ const startTarget = async () => {
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = []
     req.on('data', (c) => chunks.push(c))
-    req.on('end', () => {
+    req.on('end', async () => {
       const body = chunks.length
         ? JSON.parse(Buffer.concat(chunks).toString())
         : {}
       if (req.url === '/api/auth/sign-in/actor') {
-        if (body.secret !== 'impersonation-secret') {
+        if (!(await verifyActorSecret(ROOT, body.email, body.secret))) {
           res
             .writeHead(401)
             .end(JSON.stringify({ message: 'bad actor secret' }))
@@ -82,7 +86,9 @@ describe('HttpPersona', async () => {
   const target = await startTarget()
   after(() => target.server.close())
 
-  const makePersonas = (secret = 'impersonation-secret') =>
+  const makePersonas = (
+    secret: Parameters<typeof createHttpPersonas>[0]['secret'] = ROOT
+  ) =>
     createHttpPersonas({
       apiUrl: target.apiUrl,
       secret,
@@ -216,8 +222,10 @@ describe('HttpPersona', async () => {
     )
   })
 
-  test('a wrong impersonation secret surfaces status and body', async () => {
-    const actors = makePersonas('wrong-secret')
+  // A caller holding one persona's credential and asking for another gets the
+  // target's refusal, not a client-side guess about whether it would have worked.
+  test('a credential the target will not accept surfaces status and body', async () => {
+    const actors = makePersonas(() => 'not-this-personas-credential')
     await assert.rejects(
       actors.customer!.invoke('ping', {}),
       /persona sign-in failed for 'customer' \(401\).*bad actor secret/

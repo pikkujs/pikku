@@ -15,7 +15,7 @@
     "pretest": "pikku all",
     "start": "tsx bin/start.ts",
     "dev": "tsx --watch bin/start.ts",
-    "scenarios": "SCENARIO_ACTOR_SECRET=${SCENARIO_ACTOR_SECRET:-e2e-actor-secret} PIKKU_MOCK_LLM=${PIKKU_MOCK_LLM:-1} FABRIC_API_URL=${FABRIC_API_URL:-http://localhost:4096} pikku scenario run",
+    "scenarios": "SCENARIO_ACTOR_SECRET=${SCENARIO_ACTOR_SECRET:-e2e-actor-secret-long-enough-to-derive-from} PIKKU_MOCK_LLM=${PIKKU_MOCK_LLM:-1} FABRIC_API_URL=${FABRIC_API_URL:-http://localhost:4096} pikku scenario run",
     "test": "yarn scenarios local --spawn --exclude-tags ai-live,test-fixture,console",
     "test:agent": "yarn scenarios local --spawn --tags agent-protocol",
     "test:addons": "yarn scenarios local --spawn --run browser --features addonsFeature",

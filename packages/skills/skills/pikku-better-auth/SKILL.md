@@ -474,8 +474,21 @@ plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]
 ```
 
 `POST ${basePath}/sign-in/actor` `{ email, secret, name? }` → 200 + the normal
-session cookie. `secret` may also be a (possibly async) function, so it can come
-off the secrets service instead of a captured value.
+session cookie. The plugin's `secret` is the **root**, and it may be a (possibly
+async) function so it can come off the secrets service instead of a captured
+value.
+
+**What a caller presents is not the root.** It is
+`deriveActorSecret(root, email)` from `@pikku/core/services` — HKDF-expanded
+HMAC-SHA256 over the lowercased address. The endpoint re-derives the expected
+value for the address being signed in as and compares, so a credential minted
+for one persona is refused for every other, and the root itself is never a valid
+credential. A root under 32 characters refuses the endpoint outright rather than
+deriving weak credentials from it (the server log names the problem; the client
+is not told which). Callers rarely derive by hand — `pikku dev` mints one per
+persona into `VITE_DEV_ACTOR_SECRETS` for the browser switcher, `pikku persona
+secret <id>` mints them for a run, and the two `PersonaSignIn` implementations
+derive on the fly.
 
 **Which command is running decides whether it works, not whether a secret is
 set.** `pikku dev` sets `PIKKU_DEV_ACTOR_SIGN_IN` and mints an ephemeral
@@ -516,8 +529,10 @@ actor`. So the secret cannot take over a **real user's** account — the blast
 - **Unknown emails are created only under `pikku dev`**, flagged `actor: true`,
   so a local scenario declaring a new persona needs no seed step. Anywhere else
   the account has to have been provisioned at boot first.
-- **The comparison is constant-time and length-hiding**, so a wrong secret leaks
-  neither the length nor a prefix of the right one.
+- **A credential is bound to one address**, so a leaked one is one synthetic
+  account rather than the whole actor population; only the root is worth the
+  paragraph above. The comparison is constant-time and length-hiding, so a wrong
+  credential leaks neither the length nor a prefix of the right one.
 
 This is the endpoint `pikku scenario` signs its actors in through, and the one
 the frontend dev switcher posts to — see `pikku-scenario` for declaring the

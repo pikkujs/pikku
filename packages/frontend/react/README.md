@@ -43,19 +43,22 @@ import { useDevActors } from '@pikku/react'
 
 const { actors, signInAs, isPending } = useDevActors({
   // The sandbox dev server bakes these from your declared personas. Gate the
-  // reads on your bundler's dev flag so the secret never reaches production.
+  // reads on your bundler's dev flag so no credential reaches production.
   actors: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined,
-  secret: import.meta.env.DEV
-    ? import.meta.env.VITE_SCENARIO_ACTOR_SECRET
+  secrets: import.meta.env.DEV
+    ? import.meta.env.VITE_DEV_ACTOR_SECRETS
     : undefined,
   apiUrl: apiUrl(),
   onSignedIn: () => navigate({ to: '/' }),
 })
 ```
 
-`actors` is empty unless the host supplied both a list and a secret, so a
-production build renders nothing without you testing for it. The endpoint only
-accepts users flagged `actor: true`, so it can never impersonate a real user.
+`secrets` is `{ address: credential }`, not a single shared value: a credential
+opens the one persona it was minted for. `actors` is empty unless the host
+supplied both a list and the credentials for it, and an actor with no credential
+is not offered, so a production build renders nothing without you testing for
+it. The endpoint only accepts users flagged `actor: true`, so it can never
+impersonate a real user.
 
 ## Locale store
 

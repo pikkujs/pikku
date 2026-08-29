@@ -1,4 +1,5 @@
 import type { CoreSingletonServices } from '@pikku/core/types'
+import { deriveActorSecret } from '@pikku/core/services'
 import {
   ADMIN_USER,
   GUEST_USER,
@@ -53,7 +54,11 @@ export const seedScenarioActors = async (
     const res = await fetch(`${baseUrl}/api/auth/sign-in/actor`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: baseUrl },
-      body: JSON.stringify({ email: actor.email, name: actor.name, secret }),
+      body: JSON.stringify({
+        email: actor.email,
+        name: actor.name,
+        secret: await deriveActorSecret(String(secret), actor.email),
+      }),
     })
     if (!res.ok) {
       throw new Error(

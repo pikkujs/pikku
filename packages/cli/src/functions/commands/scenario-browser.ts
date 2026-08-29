@@ -13,14 +13,21 @@ import type {
   ScenarioBrowserProvider,
 } from '@pikku/core/scenario'
 import type { ResolvedPersona } from '@pikku/core/services'
-import type { OperatorSignInOptions } from '@pikku/core/persona'
+import type {
+  ActorSecretResolver,
+  OperatorSignInOptions,
+} from '@pikku/core/persona'
 
 /** The default driver, used when a project names no other. */
 export const DEFAULT_BROWSER_DRIVER = '@pikku/playwright'
 
 export interface ScenarioBrowserDriverOptions {
-  /** The actor secret, for a local `pikku dev` target. */
-  secret?: string
+  /**
+   * The root actor secret, for a local `pikku dev` target — each persona's
+   * credential is derived from it. A resolver instead when this run was handed
+   * credentials for only some personas.
+   */
+  secret?: string | ActorSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
   actors: Record<string, ResolvedPersona>
@@ -85,8 +92,12 @@ export interface ResolveScenarioBrowserProviderOptions {
   appUrl?: string
   /** Base url per app, for a product whose personas sign into more than one. */
   appUrls?: Record<string, string>
-  /** The actor secret, for a local `pikku dev` target. */
-  secret?: string
+  /**
+   * The root actor secret, for a local `pikku dev` target — each persona's
+   * credential is derived from it. A resolver instead when this run was handed
+   * credentials for only some personas.
+   */
+  secret?: string | ActorSecretResolver
   /** Fabric operator credentials, for a deployed target. */
   operator?: OperatorSignInOptions
   actors: Record<string, ResolvedPersona>

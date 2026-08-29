@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
+import { deriveActorSecret } from '@pikku/core/services'
+
 import { actor } from './actor-plugin.js'
 import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
@@ -10,6 +12,15 @@ import {
   DEV_ACTOR_SIGN_IN_ENV,
 } from './actor-sign-in-gate.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
+
+/**
+ * A root long enough to be key material — every persona's credential is derived
+ * from it, so the plugin refuses anything shorter than 32 characters.
+ */
+const ROOT = 'flow-secret-flow-secret-flow-secret'
+
+/** What a caller actually presents: the credential for that one address. */
+const credentialFor = (email: string) => deriveActorSecret(ROOT, email)
 
 const recordingLogger = () => {
   const info: string[] = []
@@ -31,9 +42,7 @@ const makeAuth = (
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    plugins: [
-      actor({ secret, logger: options.logger ?? recordingLogger() }),
-    ],
+    plugins: [actor({ secret, logger: options.logger ?? recordingLogger() })],
   })
 
 const clearGateEnv = () => {
@@ -61,12 +70,12 @@ describe('better-auth actor plugin', () => {
 
   test('auto-creates the actor user and mints a session cookie', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const auth = makeAuth(db, 'flow-secret')
+    const auth = makeAuth(db, ROOT)
 
     const res = await signInActor(auth, {
       email: 'Customer@Actors.local',
       name: 'Customer',
-      secret: 'flow-secret',
+      secret: await credentialFor('customer@actors.local'),
     })
 
     assert.equal(res.status, 200)
@@ -84,7 +93,7 @@ describe('better-auth actor plugin', () => {
     // Second sign-in reuses the row
     const res2 = await signInActor(auth, {
       email: 'customer@actors.local',
-      secret: 'flow-secret',
+      secret: await credentialFor('customer@actors.local'),
     })
     assert.equal(res2.status, 200)
     assert.equal(db.user!.length, 1, 'no duplicate actor rows')
@@ -106,19 +115,62 @@ describe('better-auth actor plugin', () => {
       session: [],
       account: [],
     }
-    const auth = makeAuth(db, 'flow-secret')
+    const auth = makeAuth(db, ROOT)
 
     const res = await signInActor(auth, {
       email: 'real@person.com',
-      secret: 'flow-secret',
+      secret: await credentialFor('real@person.com'),
     })
     assert.equal(res.status, 401)
     assert.match((await res.json()).message ?? '', /not an actor/)
   })
 
+  // The whole point of deriving: a credential is a capability for one synthetic
+  // account, so a leaked one is worth that account and not the population.
+  test("one persona's credential does not open another persona", async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const res = await signInActor(makeAuth(db, ROOT), {
+      email: 'other@actors.local',
+      secret: await credentialFor('customer@actors.local'),
+    })
+    assert.equal(res.status, 401)
+    assert.match((await res.json()).message ?? '', /Invalid actor secret/)
+    assert.equal(db.user!.length, 0, 'no user created for a foreign credential')
+  })
+
+  // The root derives every credential, so it must never be one itself —
+  // otherwise handing it out is handing out all of them, which is what this
+  // whole shape exists to stop.
+  test('the root secret is not itself a credential', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const res = await signInActor(makeAuth(db, ROOT), {
+      email: 'customer@actors.local',
+      secret: ROOT,
+    })
+    assert.equal(res.status, 401)
+    assert.match((await res.json()).message ?? '', /Invalid actor secret/)
+  })
+
+  // A password-strength root would make every derived credential guessable
+  // from it, so the endpoint refuses rather than deriving from weak material.
+  test('a root too short to be key material refuses the endpoint', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const logger = recordingLogger()
+    const res = await signInActor(makeAuth(db, 'short', { logger }), {
+      email: 'customer@actors.local',
+      secret: await credentialFor('customer@actors.local'),
+    })
+    assert.equal(res.status, 401)
+    assert.match(
+      (await res.json()).message ?? '',
+      /not configured with a strong enough secret/
+    )
+    assert.match(logger.lines.warn.join('\n'), /shorter than 32 characters/)
+  })
+
   test('rejects a wrong secret and an unconfigured plugin', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const wrong = await signInActor(makeAuth(db, 'flow-secret'), {
+    const wrong = await signInActor(makeAuth(db, ROOT), {
       email: 'a@b.c',
       secret: 'nope',
     })
@@ -139,9 +191,9 @@ describe('actor sign-in gate', () => {
 
   test('refuses every sign-in when no command enabled it, secret or not', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
-    const res = await signInActor(makeAuth(db, 'flow-secret'), {
+    const res = await signInActor(makeAuth(db, ROOT), {
       email: 'customer@actors.local',
-      secret: 'flow-secret',
+      secret: await credentialFor('customer@actors.local'),
     })
 
     assert.equal(res.status, 401)
@@ -153,9 +205,9 @@ describe('actor sign-in gate', () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
 
-    const res = await signInActor(makeAuth(db, 'flow-secret'), {
+    const res = await signInActor(makeAuth(db, ROOT), {
       email: 'customer@actors.local',
-      secret: 'flow-secret',
+      secret: await credentialFor('customer@actors.local'),
     })
     assert.equal(res.status, 200)
   })
@@ -166,8 +218,11 @@ describe('actor sign-in gate', () => {
     process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = 'true'
     const nearMiss = recordingLogger()
     const refused = await signInActor(
-      makeAuth(db, 'flow-secret', { logger: nearMiss }),
-      { email: 'customer@actors.local', secret: 'flow-secret' }
+      makeAuth(db, ROOT, { logger: nearMiss }),
+      {
+        email: 'customer@actors.local',
+        secret: await credentialFor('customer@actors.local'),
+      }
     )
     assert.equal(refused.status, 401, "'true' is not the opt-in value")
     assert.match(
@@ -182,9 +237,9 @@ describe('actor sign-in gate', () => {
     )
 
     process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE
-    const stillRefused = await signInActor(makeAuth(db, 'flow-secret'), {
+    const stillRefused = await signInActor(makeAuth(db, ROOT), {
       email: 'customer@actors.local',
-      secret: 'flow-secret',
+      secret: await credentialFor('customer@actors.local'),
     })
     assert.equal(
       stillRefused.status,
@@ -198,9 +253,9 @@ describe('actor sign-in gate', () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE
 
-    const unknown = await signInActor(makeAuth(db, 'flow-secret'), {
+    const unknown = await signInActor(makeAuth(db, ROOT), {
       email: 'never-provisioned@actors.local',
-      secret: 'flow-secret',
+      secret: await credentialFor('never-provisioned@actors.local'),
     })
     assert.equal(unknown.status, 401)
     assert.match((await unknown.json()).message ?? '', /No actor account/)
@@ -215,16 +270,16 @@ describe('actor sign-in gate', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    const provisioned = await signInActor(makeAuth(db, 'flow-secret'), {
+    const provisioned = await signInActor(makeAuth(db, ROOT), {
       email: 'customer@actors.local',
-      secret: 'flow-secret',
+      secret: await credentialFor('customer@actors.local'),
     })
     assert.equal(provisioned.status, 200)
   })
 
   test('a secret configured on a shut gate is a warning, not a silent no-op', () => {
     const logger = recordingLogger()
-    actor({ secret: 'flow-secret', logger })
+    actor({ secret: ROOT, logger })
     assert.match(
       logger.lines.warn.join('\n'),
       /secret is configured but sign-in stays disabled/
@@ -242,7 +297,7 @@ describe('actor sign-in gate', () => {
   test('announces itself when it is open', () => {
     process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
     const logger = recordingLogger()
-    actor({ secret: 'flow-secret', logger })
+    actor({ secret: ROOT, logger })
     assert.match(
       logger.lines.info.join('\n'),
       new RegExp(DEV_ACTOR_SIGN_IN_ENV)

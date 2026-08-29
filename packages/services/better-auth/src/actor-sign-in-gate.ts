@@ -6,10 +6,14 @@ export const ACTOR_SIGN_IN_OPT_IN_VALUE = 'passwordless-actor-sign-in'
 export const ACTOR_SIGN_IN_DISABLED_MESSAGE =
   'Actor sign-in is disabled outside `pikku dev`'
 
+export const WEAK_ACTOR_ROOT_SECRET_MESSAGE =
+  'Actor sign-in is not configured with a strong enough secret'
+
 export const ACTOR_NOT_PROVISIONED_MESSAGE =
   'No actor account exists for that address — the deployment provisions its personas at boot, so check `provisionPersonas` runs in this environment'
 
-export type ActorSignInReason = 'pikku-dev' | 'allow-outside-dev-env' | 'disabled'
+export type ActorSignInReason =
+  'pikku-dev' | 'allow-outside-dev-env' | 'disabled'
 
 export interface ActorSignInGate {
   enabled: boolean
@@ -79,3 +83,12 @@ export const actorSignInAttemptRefusedMessage = (): string =>
  */
 export const actorSignInNearMissMessage = (): string =>
   `actor: ${ACTOR_SIGN_IN_OPT_IN_ENV} is set to an unsupported value, which is ignored — the only value that enables actor sign-in outside \`pikku dev\` is '${ACTOR_SIGN_IN_OPT_IN_VALUE}'.`
+
+/**
+ * Says what is wrong on the server, where the operator can act on it — the
+ * caller is told only that sign-in is not configured, since a short root secret
+ * is a fact about the deployment and not something a client gets to learn.
+ */
+export const weakActorRootSecretMessage = (): string =>
+  `actor: refused a sign-in — the root actor secret is shorter than 32 characters. ` +
+  `Every persona's credential is derived from it, so it must be high-entropy key material, not a password.`

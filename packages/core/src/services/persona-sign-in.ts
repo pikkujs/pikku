@@ -1,3 +1,4 @@
+import { deriveActorSecret } from './persona-actor-secret.js'
 import type { ResolvedPersona } from './personas-service.js'
 import type { ScenarioCookieJar } from '../wirings/workflow/scenario-cookie-jar.js'
 
@@ -41,6 +42,14 @@ const failed = async (
 }
 
 /**
+ * Yields the credential for one persona, for a caller that holds that persona's
+ * derived secret and not the root it came from.
+ */
+export type ActorSecretResolver = (
+  persona: ResolvedPersona
+) => string | Promise<string>
+
+/**
  * Sign a persona in through the Better Auth actor plugin — the local-development
  * path.
  *
@@ -48,22 +57,31 @@ const failed = async (
  * for it. Passwordless by design and refused for any row not carrying that flag,
  * so the secret can never reach a real user's account; the plugin still declines
  * to serve the endpoint at all outside `pikku dev`.
+ *
+ * What is presented is the persona's own credential, derived from the root and
+ * bound to their address. A run driving many personas holds the root and
+ * derives as it goes; a run entitled to one persona is handed that one value
+ * through a resolver and can sign in as nobody else.
  */
 export class ActorSignIn implements PersonaSignIn {
   constructor(
     private readonly apiUrl: string,
-    private readonly secret: string,
+    private readonly secret: string | ActorSecretResolver,
     private readonly signInPath: string
   ) {}
 
   async login(jar: ScenarioCookieJar, persona: ResolvedPersona): Promise<void> {
+    const secret =
+      typeof this.secret === 'function'
+        ? await this.secret(persona)
+        : await deriveActorSecret(this.secret, persona.email)
     const res = await jar.fetch(`${this.apiUrl}${this.signInPath}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         email: persona.email,
         name: persona.name,
-        secret: this.secret,
+        secret,
       }),
     })
     if (!res.ok) {

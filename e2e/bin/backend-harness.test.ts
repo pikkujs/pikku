@@ -17,17 +17,25 @@ test('the app defaults are applied without spawning anything', () => {
     delete process.env.SCENARIO_ACTOR_SECRET
     delete process.env.PIKKU_MOCK_LLM
     applyTestEnvDefaults()
-    assert.equal(process.env.SCENARIO_ACTOR_SECRET, 'e2e-actor-secret')
+    const secret = process.env.SCENARIO_ACTOR_SECRET ?? ''
+    assert.ok(
+      secret.length >= 32,
+      'a root shorter than key material refuses every actor sign-in'
+    )
+    assert.equal(secret, 'e2e-actor-secret-long-enough-to-derive-from')
     assert.equal(process.env.PIKKU_MOCK_LLM, '1')
   })
 })
 
 test('an explicit secret and a real-model opt-out both survive the defaults', () => {
   withCleanEnv(() => {
-    process.env.SCENARIO_ACTOR_SECRET = 'deployed-secret'
+    process.env.SCENARIO_ACTOR_SECRET = 'deployed-secret-long-enough-to-derive'
     process.env.PIKKU_MOCK_LLM = '0'
     applyTestEnvDefaults()
-    assert.equal(process.env.SCENARIO_ACTOR_SECRET, 'deployed-secret')
+    assert.equal(
+      process.env.SCENARIO_ACTOR_SECRET,
+      'deployed-secret-long-enough-to-derive'
+    )
     assert.equal(process.env.PIKKU_MOCK_LLM, '0')
   })
 })
