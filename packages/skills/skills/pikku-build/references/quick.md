@@ -200,10 +200,11 @@ export const ownerCreatesAndSeesItScenario = pikkuScenario<void, { id: string }>
   `pikkuScenarioStep`.** An RPC name in a `then` will not resolve.
 - **Every scenario must assert.** A ladder with no `then` is a PKU680 critical —
   it fails `pikku all`, stopping codegen rather than a test.
-- **Add `SCENARIO_ACTOR_SECRET` to `.env`.** `bun run dev` writes that file with
-  only a `BETTER_AUTH_SECRET`; without the actor secret
-  `/api/auth/sign-in/actor` is disabled and every scenario fails at sign-in, for
-  a reason that reads like an auth bug.
+- **Check `.env` has a `SCENARIO_ACTOR_SECRET`, and add one if not.** Recent
+  scaffolds generate it on the first `bun run dev`; older ones wrote only a
+  `BETTER_AUTH_SECRET`. Without the actor secret `/api/auth/sign-in/actor` is
+  disabled, every scenario fails at sign-in for a reason that reads like an auth
+  bug, and the login screen's "Sign in as …" switcher renders nothing.
 - **There is no state reset** — scope what you create to unique ids.
 
 Keep the three shipped scenarios in `packages/functions/test/scenarios/` green.
