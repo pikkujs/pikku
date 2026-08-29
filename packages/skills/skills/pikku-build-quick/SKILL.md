@@ -178,8 +178,11 @@ exactly like an app bug, so if every request fails, check both came up.
 
 Sign up, click every screen. **HTTP 200 is not evidence:** pages are
 client-rendered, so the server returns 200 with an empty shell and a page whose
-component throws still looks fine to `curl`. Open a browser, or drive it
-headlessly and assert on rendered text.
+component throws still looks fine to `curl`.
+
+Looking is for the layout — the part only eyes catch. Assertions belong in the
+smoke scenario, not in a browser session you steered by hand: that session proves
+a screen rendered once, here, and nothing about it re-runs.
 
 **Screenshot at 390px too.** A layout that is fine at 1440 routinely breaks on a
 phone — an overflowing table, a row of buttons wrapped into a pile, a modal
