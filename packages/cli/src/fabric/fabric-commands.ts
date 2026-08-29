@@ -67,6 +67,7 @@ import {
 import { FabricSmoke, renderSmoke } from './functions/smoke.function.js'
 import { FabricPublish } from './functions/publish.function.js'
 import { FabricAdd } from './functions/add.function.js'
+import { FabricReport } from './functions/report.function.js'
 import {
   FabricAddonVerify,
   renderAddonVerify,
@@ -340,6 +341,46 @@ export const fabricCommands = defineCLICommands({
         default: false,
       },
       json: { description: 'Machine-readable output', default: false },
+    },
+  }),
+  report: pikkuCLICommand({
+    parameters: '<title>',
+    func: FabricReport,
+    description:
+      'Report a finding — something about pikku that cost time — to the linked fabric project',
+    options: {
+      kind: {
+        description:
+          'product (fix pikku) or harness (fix the skill that misled you)',
+      },
+      model: { description: 'The model that hit this' },
+      expected: { description: 'What you expected pikku to do' },
+      actual: { description: 'What it did instead' },
+      skill: {
+        description: 'For a harness finding, the skill that misled you',
+      },
+      passage: { description: 'The passage in that skill it contradicts' },
+      command: { description: 'The command you ran' },
+      error: { description: "The error's message line, verbatim" },
+      repro: { description: 'The shortest way to reach it again' },
+      workaround: { description: 'What you did instead, inside the app' },
+      proposal: {
+        description:
+          'What pikku should do — named file and function, mechanism, suggested change',
+      },
+      tried: {
+        description:
+          'For an unresolved finding, what you tried and how each attempt failed',
+      },
+      unresolved: {
+        description: 'No workaround was found — a blocker, not a tax',
+        default: false,
+      },
+      area: { description: 'The part of pikku this is about' },
+      surface: { description: 'Where it showed up: local, deployed or both' },
+      cost: { description: 'What it cost, measured or estimated' },
+      run: { description: 'Run id, to group findings from one build' },
+      deployTarget: { description: 'The deploy target in use' },
     },
   }),
   metrics: pikkuCLICommand({

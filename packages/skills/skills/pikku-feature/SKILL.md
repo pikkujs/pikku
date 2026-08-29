@@ -1,7 +1,7 @@
 ---
 name: pikku-feature
 description: 'Drive create-a-feature work inside a Pikku project that already exists: discover project context, work on a feature branch, implement + verify + commit, and ask the user to review via the diff. TRIGGER when: the user asks to "create a feature", "add X to my Pikku project", "wire up a new endpoint", or anything that implies turning a natural-language request into Pikku functions/wirings/migrations within a working app. DO NOT TRIGGER when: the user asks for a one-off code edit in an existing function, asks about Pikku concepts (use pikku-concepts), or is building a whole app from a fresh scaffold rather than extending one (use pikku-build-app, or pikku-build-quick / pikku-build-platform).'
-allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *)
+allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx pikku fabric report *)
 argument-hint: '<feature description>'
 ---
 
@@ -16,6 +16,7 @@ Use this skill as an execution checklist, not reference material.
 3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+6. Report anything about pikku itself that cost you time, the moment it happens — see **Report what fought you**.
 
 End-to-end flow: **discover → state intent → branch → implement → verify → commit → hand to reviewer**.
 
@@ -246,6 +247,90 @@ feature/<slug>` and surface the PR-create URL.
 
 Do not push without explicit confirmation. Do not merge.
 
+## Report what fought you
+
+When pikku itself is what cost you time, report it with `pikku fabric report`.
+Nothing is written to the repo; the finding goes to the linked fabric project
+and the terminal shows you exactly what was sent.
+
+**Report at the moment it happens**, not at the end from memory — a run that
+falls over never reaches its end. One finding per thing that fought you.
+
+### The ladder
+
+1. **Find the quicker workaround.** The user is paying for their feature, not
+   for pikku's health.
+2. **Investigate** only when there is no workaround, or when the user asks why
+   something is slow or wrong.
+3. **Report at the depth you already reached.** Never spend extra effort to
+   file; never throw away effort you already spent. If the investigation took
+   you to the mechanism, the finding says so — named file, named function, what
+   is actually happening, and what pikku should do instead.
+
+**Never fix pikku itself.** Not a patch in `node_modules`, not a linked
+checkout, not a branch in the framework repo. Many agents each patching pikku to
+unblock themselves is many divergent copies and a merge problem nobody signed up
+for. Work around it in the app, report it, and let the fix happen once.
+
+### What counts
+
+Anything that cost you time and would cost the next person the same. Most of
+these never produce an error: output that is quietly wrong, a generated type
+that disagrees with the runtime, a check that passes when it should not, a
+narrowing you had to write by hand because the framework should have written it.
+**Having to write code the framework should have written for you is a finding.**
+
+So is anything that only shows up in one place — invisible locally, fatal
+deployed, or the reverse. Say which, with `--surface`.
+
+Not a finding: a preference, a thing you would have designed differently, or
+baseline noise that was already failing before you started.
+
+### Two kinds
+
+- `--kind product` — pikku behaved wrongly. Fixing it is a change to the
+  framework.
+- `--kind harness` — a skill misled you: it told you to run something that does
+  not exist, described a flag that is spelled differently, or contradicted what
+  the CLI actually did. Pass `--skill <name>` and `--passage "<the line or
+  section>"`. This is the most useful kind to file, because it is fixable
+  immediately — so file it even when the cost was small.
+
+### When there was no workaround
+
+Report it anyway with `--unresolved`, and put what you tried and how each
+attempt failed in `--tried`. That is what stops the next person walking the same
+dead ends. Tell the user what you did instead — abandoned it, shipped something
+degraded, or stopped.
+
+`--unresolved` means **no workaround was found**. It does not mean the
+workaround was unpleasant.
+
+### The command
+
+```bash
+pikku fabric report "<one-line title>" \
+  --kind product \
+  --model <the model you are> \
+  --expected "<what you expected pikku to do>" \
+  --actual "<what it did instead>" \
+  --command "<the command you ran>" \
+  --workaround "<what you did instead, inside the app>"
+```
+
+Add whichever of these you actually have: `--error` (the error's message line,
+verbatim), `--repro` (the shortest way to reach it again), `--proposal` (what
+pikku should do), `--area`, `--surface local|deployed|both`, `--cost` (measured
+if you measured it — "98s vs 20s steady" ranks; "slow" does not), `--run` (an id
+shared by every finding from this build), `--deploy-target`.
+
+Versions, platform and package manager are read off the installed tree for you.
+Do not pass them and do not ask the user for them.
+
+Reporting never fails a build: an unreachable endpoint, an unlinked project or a
+logged-out user prints a line and moves on. If it says the finding was not sent,
+carry on with the feature — do not try to fix it.
+
 ## Hard constraints
 
 The skill's `allowed-tools` does **not** permit:
@@ -254,7 +339,8 @@ The skill's `allowed-tools` does **not** permit:
 - `yarn dbmigrate` (never run migrations against the real DB during planning)
 - `pikku deploy apply` (never deploy)
 - secret writes
-- network calls beyond what the implementation requires
+- network calls beyond what the implementation requires, except
+  `pikku fabric report`, which is explicitly permitted
 
 If the feature genuinely needs any of these, **stop and ask** with a clear
 explanation of why and what would change.
