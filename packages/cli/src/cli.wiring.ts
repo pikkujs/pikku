@@ -41,7 +41,11 @@ import {
   renderKnowledgeIndex,
 } from './functions/commands/knowledge-index.js'
 import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
-import { personaList, personaRun } from './functions/commands/persona.js'
+import {
+  personaList,
+  personaRun,
+  personaSecret,
+} from './functions/commands/persona.js'
 import { personaSync } from './functions/commands/persona-sync.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
@@ -772,6 +776,12 @@ wireCLI({
           func: personaList,
           description:
             'List the declared personas — who each one is, what they may do, and what they are trying to get done',
+        }),
+        secret: pikkuCLICommand({
+          func: personaSecret,
+          description:
+            'Mint the actor credential for a persona from SCENARIO_ACTOR_SECRET, bound to their address. Hand these to a run as PIKKU_PERSONA_SECRETS instead of the root, which is entitled to every persona. Names none, mints all.',
+          parameters: '[personas...]',
         }),
       },
     },

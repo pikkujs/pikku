@@ -230,8 +230,9 @@ susan:  { /* … */ account: {} },                        // email + password
 yasser: { /* … */ account: {}, linkedAccounts: { google: {} } },
 ```
 
-`account: {}` is genuinely empty in the normal case: the address is computed and the
-password derives from `SCENARIO_ACTOR_SECRET`, so there is nothing left to write down. It
+`account: {}` is genuinely empty in the normal case: the address is computed and the actor
+credential derives from `SCENARIO_ACTOR_SECRET` and that address, so there is nothing left
+to write down. It
 fills up only for a provider login — `account: { provider: 'google' }`.
 
 ### The shape is better-auth's, deliberately

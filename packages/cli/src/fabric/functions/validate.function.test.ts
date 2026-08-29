@@ -1683,7 +1683,7 @@ describe('pikku fabric validate', () => {
           'src/pages/LoginPage.tsx':
             "import { useDevActors } from '@pikku/react'\n" +
             'export const LoginPage = () => {\n' +
-            '  const { actors, signInAs } = useDevActors({ actors: undefined, secret: undefined, apiUrl: "/api" })\n' +
+            '  const { actors, signInAs } = useDevActors({ actors: undefined, secrets: undefined, apiUrl: "/api" })\n' +
             '  return <>{actors.map((a) => <button key={a.key} onClick={() => signInAs(a.email)} />)}</>\n}\n',
         })
         const result = await runValidate(tmp)

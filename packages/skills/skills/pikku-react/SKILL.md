@@ -240,11 +240,11 @@ their own sandbox.
 import { useDevActors } from '@pikku/react'
 
 const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
-  // Gate both reads on the bundler's dev flag so the secret cannot reach a
+  // Gate both reads on the bundler's dev flag so no credential can reach a
   // production bundle. The sandbox dev server bakes them from your personas.
   actors: import.meta.env.DEV ? import.meta.env.VITE_DEV_ACTORS : undefined,
-  secret: import.meta.env.DEV
-    ? import.meta.env.VITE_SCENARIO_ACTOR_SECRET
+  secrets: import.meta.env.DEV
+    ? import.meta.env.VITE_DEV_ACTOR_SECRETS
     : undefined,
   apiUrl: apiUrl(),
   onSignedIn: () => navigate({ to: '/' }),
@@ -255,8 +255,11 @@ const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
   `<DevActorSwitcher />` from `@pikku/mantine/dev` — a separate entry point from
   `@pikku/mantine/core`, whose contract is "drop-in alias for `@mantine/core`"
   and so must not export components Mantine has no counterpart for.
-- **`actors` is empty unless the host supplied both a list and a secret**, so a
-  production build renders nothing without you testing for it.
+- **`secrets` is `{ address: credential }`, not one shared value** — a
+  credential opens the one persona it was minted for (see
+  **pikku-better-auth**). `actors` is empty unless the host supplied both a list
+  and the credentials for it, and an actor with no credential is not offered, so
+  a production build renders nothing without you testing for it.
 - **It takes `onSignedIn` rather than a router**, and takes the env values rather
   than reading them, because how env is spelled is a bundler fact
   (`import.meta.env.VITE_*` vs `process.env.NEXT_PUBLIC_*`).

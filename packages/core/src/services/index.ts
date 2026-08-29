@@ -73,6 +73,14 @@ export {
   type WebhookJobData,
   type WebhookServiceConfig,
 } from './webhook-service.js'
+export {
+  ACTOR_ROOT_SECRET_MIN_LENGTH,
+  ACTOR_SECRET_INFO,
+  ACTOR_SECRET_NAME,
+  actorSecretSubject,
+  deriveActorSecret,
+  verifyActorSecret,
+} from './persona-actor-secret.js'
 export type { Logger } from './logger.js'
 export type { SecretService, SecretValues } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'

@@ -2,6 +2,10 @@ import * as z from 'zod'
 import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
+import {
+  ACTOR_ROOT_SECRET_MIN_LENGTH,
+  verifyActorSecret,
+} from '@pikku/core/services'
 import type { Logger } from '@pikku/core/services'
 
 import {
@@ -12,10 +16,17 @@ import {
   actorSignInNearMissMessage,
   actorSignInRefusedMessage,
   resolveActorSignIn,
+  WEAK_ACTOR_ROOT_SECRET_MESSAGE,
+  weakActorRootSecretMessage,
 } from './actor-sign-in-gate.js'
 
 export interface ActorPluginOptions {
-  /** Impersonation secret; only `actor: true` rows can sign in, missing/empty refuses the endpoint. */
+  /**
+   * The ROOT actor secret, from which each persona's own credential is derived
+   * — it is not itself a valid credential and is never presented to the
+   * endpoint. Missing or empty refuses the endpoint, and only `actor: true`
+   * rows can sign in.
+   */
   secret:
     | string
     | undefined
@@ -24,19 +35,15 @@ export interface ActorPluginOptions {
   logger?: Pick<Logger, 'info' | 'warn'>
 }
 
-/** Length-hiding constant-time comparison — no early exit on mismatch. */
-const secretsEqual = (a: string, b: string): boolean => {
-  const enc = new TextEncoder()
-  const ab = enc.encode(a)
-  const bb = enc.encode(b)
-  let diff = ab.length ^ bb.length
-  for (let i = 0; i < Math.max(ab.length, bb.length); i++) {
-    diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0)
-  }
-  return diff === 0
-}
-
-/** Better Auth plugin for scenario actors: `POST /sign-in/actor` with `{ email, secret }`, non-actor sign-in refused, rows created only under `pikku dev` */
+/**
+ * Better Auth plugin for scenario actors: `POST /sign-in/actor` with
+ * `{ email, secret }`, non-actor sign-in refused, rows created only under
+ * `pikku dev`.
+ *
+ * The presented secret is the address's own derived credential, not the root:
+ * it verifies against the email being signed in as, so it opens that one
+ * synthetic account and no other.
+ */
 export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
   const logger = options.logger ?? console
   const gate = resolveActorSignIn()
@@ -91,18 +98,19 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
             })
           }
 
-          const expected =
+          const root =
             typeof options.secret === 'function'
               ? await options.secret()
               : options.secret
-          if (!expected) {
+          if (!root) {
             throw new APIError('UNAUTHORIZED', {
               message: 'Actor sign-in is not configured',
             })
           }
-          if (!secretsEqual(ctx.body.secret, expected)) {
+          if (root.length < ACTOR_ROOT_SECRET_MIN_LENGTH) {
+            logger.warn(weakActorRootSecretMessage())
             throw new APIError('UNAUTHORIZED', {
-              message: 'Invalid actor secret',
+              message: WEAK_ACTOR_ROOT_SECRET_MESSAGE,
             })
           }
 
@@ -111,6 +119,11 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
             unknown
           >
           const email = ctx.body.email.toLowerCase()
+          if (!(await verifyActorSecret(root, email, ctx.body.secret))) {
+            throw new APIError('UNAUTHORIZED', {
+              message: 'Invalid actor secret',
+            })
+          }
           const existing =
             await ctx.context.internalAdapter.findUserByEmail(email)
           let user: ActorUser | undefined = existing?.user as

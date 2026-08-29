@@ -51,17 +51,18 @@ export type SignInAsActorOptions = {
   /** API base, including the `/api` prefix if the app has one — `/auth/sign-in/actor` is appended. */
   apiUrl: string
   email: string
-  /** The shared scenario actor secret. Dev-only; never present in a production bundle. */
+  /** That address's own actor credential. Dev-only; never present in a production bundle. */
   secret: string
 }
 
 /**
  * Sign in as a scenario actor through Better Auth's actor endpoint — no
- * password, using the shared secret the dev server injects.
+ * password, using the credential the dev server minted for that address.
  *
- * The endpoint only accepts rows flagged `actor: true`, so this can never
- * impersonate a real user however the secret leaks; see the `actor` plugin in
- * `@pikku/better-auth`.
+ * The credential is bound to the address, so it signs in as that persona and
+ * no other, and the endpoint only accepts rows flagged `actor: true` — so this
+ * can never impersonate a real user however a credential leaks. See the `actor`
+ * plugin in `@pikku/better-auth`.
  */
 export const signInAsActor = async ({
   apiUrl,
@@ -79,18 +80,52 @@ export const signInAsActor = async ({
   }
 }
 
+/** Address → that address's own actor credential. */
+export type DevActorSecrets = Record<string, string>
+
+/**
+ * Parse the credential map a dev server bakes into the bundle
+ * (`import.meta.env.VITE_DEV_ACTOR_SECRETS`). Unparseable yields none, for the
+ * same reason a broken actor list does: the login screen must still render.
+ */
+export const parseDevActorSecrets = (raw: unknown): DevActorSecrets => {
+  if (typeof raw === 'object' && raw !== null) return raw as DevActorSecrets
+  if (typeof raw !== 'string' || raw.length === 0) return {}
+  try {
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {}
+    }
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string'
+      )
+    )
+  } catch {
+    return {}
+  }
+}
+
 export type UseDevActorsOptions = {
   /** Raw JSON actor list from the host's env, or an already-parsed list. */
   actors: string | DevActor[] | undefined
-  /** The shared scenario actor secret from the host's env. Absent disables sign-in. */
-  secret: string | undefined
+  /**
+   * One credential per persona, keyed by address — raw JSON from the host's
+   * env, or an already-parsed map. An actor with no credential here is not
+   * offered.
+   *
+   * A map rather than one value: the root secret every credential derives from
+   * is entitled to every persona, so a bundle must never hold it. `pikku dev`
+   * mints these and exports them as `VITE_DEV_ACTOR_SECRETS`.
+   */
+  secrets: string | DevActorSecrets | undefined
   apiUrl: string
   /** Called after a successful sign-in — the app owns where that lands. */
   onSignedIn?: () => void | Promise<void>
 }
 
 export type UseDevActorsResult = {
-  /** Empty whenever the host exposed no actors or no secret — render nothing. */
+  /** Empty whenever the host exposed no actors or no credentials — render nothing. */
   actors: DevActor[]
   signInAs: (email: string) => void
   /** The address currently signing in, or null. */
@@ -102,29 +137,35 @@ export type UseDevActorsResult = {
 /**
  * State for the dev-only "Sign in as …" switcher.
  *
- * Returns an empty actor list unless the host supplied BOTH a list and a
- * secret, so a production bundle — where neither env var is set — renders
- * nothing without the caller testing for it. Hosts should still gate the env
- * reads on their dev flag (`import.meta.env.DEV`) so the secret is never
+ * Returns an empty actor list unless the host supplied BOTH a list and the
+ * credentials for it, so a production bundle — where neither env var is set —
+ * renders nothing without the caller testing for it. Hosts should still gate
+ * the env reads on their dev flag (`import.meta.env.DEV`) so no credential is
  * emitted into a production bundle in the first place; this is the second line,
  * not the first.
  */
 export const useDevActors = ({
   actors: rawActors,
-  secret,
+  secrets: rawSecrets,
   apiUrl,
   onSignedIn,
 }: UseDevActorsOptions): UseDevActorsResult => {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
 
+  const secrets = useMemo(() => parseDevActorSecrets(rawSecrets), [rawSecrets])
+
   const actors = useMemo(() => {
-    if (!secret) return []
-    return Array.isArray(rawActors) ? rawActors : parseDevActors(rawActors)
-  }, [rawActors, secret])
+    const declared = Array.isArray(rawActors)
+      ? rawActors
+      : parseDevActors(rawActors)
+    // An actor with no credential would render a row that 401s on click.
+    return declared.filter((actor) => !!secrets[actor.email])
+  }, [rawActors, secrets])
 
   const signInAs = useCallback(
     (email: string) => {
+      const secret = secrets[email]
       if (!secret) return
       setPendingEmail(email)
       setError(null)
@@ -139,7 +180,7 @@ export const useDevActors = ({
           setPendingEmail(null)
         })
     },
-    [apiUrl, secret, onSignedIn]
+    [apiUrl, secrets, onSignedIn]
   )
 
   return {

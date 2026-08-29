@@ -161,7 +161,7 @@ describe('HttpPersona.converse', async () => {
 
     const actors = createHttpPersonas({
       apiUrl: target.apiUrl,
-      secret: 'impersonation-secret',
+      secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
       personas: {
         pm: {
@@ -204,7 +204,7 @@ describe('HttpPersona.converse', async () => {
 
     const actors = createHttpPersonas({
       apiUrl: target.apiUrl,
-      secret: 'impersonation-secret',
+      secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
       personas: {
         pm: {
@@ -243,7 +243,7 @@ describe('HttpPersona.converse', async () => {
 
     const actors = createHttpPersonas({
       apiUrl: target.apiUrl,
-      secret: 'impersonation-secret',
+      secret: 'impersonation-secret-impersonation',
       model: 'test/test-model',
       personas: {
         pm: {

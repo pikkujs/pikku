@@ -3,7 +3,11 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseDevActors, signInAsActor } from './dev-actors.ts'
+import {
+  parseDevActors,
+  parseDevActorSecrets,
+  signInAsActor,
+} from './dev-actors.ts'
 
 test('parseDevActors reads the JSON list the dev server bakes in', () => {
   const raw = JSON.stringify([
@@ -72,7 +76,7 @@ test('parseDevActors drops entries missing the fields the switcher needs', () =>
   )
 })
 
-test('signInAsActor posts the secret to the actor endpoint with credentials', async () => {
+test('signInAsActor posts that address own credential to the actor endpoint', async () => {
   let seen: { url: string; init: RequestInit } | null = null
   const original = globalThis.fetch
   globalThis.fetch = (async (url: string, init: RequestInit) => {
@@ -118,4 +122,43 @@ test('signInAsActor throws on a refused sign-in', async () => {
   } finally {
     globalThis.fetch = original
   }
+})
+
+test('parseDevActorSecrets reads the credential map the dev server bakes in', () => {
+  const raw = JSON.stringify({
+    'admin@actors.example': 'admin-credential',
+    'client@actors.example': 'client-credential',
+  })
+  assert.deepEqual(parseDevActorSecrets(raw), {
+    'admin@actors.example': 'admin-credential',
+    'client@actors.example': 'client-credential',
+  })
+})
+
+test('parseDevActorSecrets takes an already-parsed map unchanged', () => {
+  const map = { 'admin@actors.example': 'admin-credential' }
+  assert.deepEqual(parseDevActorSecrets(map), map)
+})
+
+test('parseDevActorSecrets yields no credentials for anything unusable', () => {
+  // Same reason as the actor list: a broken dev affordance renders nothing
+  // rather than taking the login screen down.
+  for (const raw of [undefined, null, '', 'not json', '[]', '"a string"', 42]) {
+    assert.deepEqual(
+      parseDevActorSecrets(raw),
+      {},
+      `unexpected parse of ${String(raw)}`
+    )
+  }
+})
+
+test('parseDevActorSecrets drops entries whose credential is not a string', () => {
+  const raw = JSON.stringify({
+    'ok@actors.example': 'a-credential',
+    'broken@actors.example': 42,
+    'also-broken@actors.example': null,
+  })
+  assert.deepEqual(parseDevActorSecrets(raw), {
+    'ok@actors.example': 'a-credential',
+  })
 })

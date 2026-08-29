@@ -11,6 +11,7 @@ import WebSocket from 'ws'
 
 import { CorePikkuWebsocket } from '@pikku/websocket'
 import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
+import { deriveActorSecret } from '@pikku/core/services'
 import type { ApprovalRequester, Capabilities } from '@pikku/core/channel'
 
 import { startBackend } from '../../bin/backend-harness.js'
@@ -31,7 +32,10 @@ const signIn = async (email: string, name: string): Promise<string> => {
     body: JSON.stringify({
       email,
       name,
-      secret: process.env.SCENARIO_ACTOR_SECRET,
+      secret: await deriveActorSecret(
+        process.env.SCENARIO_ACTOR_SECRET!,
+        email
+      ),
     }),
   })
   assert.ok(res.ok, `actor sign-in failed: ${res.status}`)

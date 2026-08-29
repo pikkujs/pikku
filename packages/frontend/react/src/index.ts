@@ -27,7 +27,13 @@ export type { CreateLocaleStoreOptions, LocaleStore } from './locale-store.js'
 // Dev-only scenario actor sign-in — the logic half of the "Sign in as …"
 // switcher. UI-free, so `@pikku/mantine/dev` (which peer-depends on this
 // package) can build the rendered control on top of it.
-export { parseDevActors, signInAsActor, useDevActors } from './dev-actors.js'
+export {
+  parseDevActors,
+  parseDevActorSecrets,
+  signInAsActor,
+  useDevActors,
+  type DevActorSecrets,
+} from './dev-actors.js'
 export type {
   DevActor,
   SignInAsActorOptions,
