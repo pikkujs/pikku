@@ -120,15 +120,15 @@ export const assertSchemaDirectoriesAreDistinct = (
 }
 
 /**
- * The `locale` a project gets when its config does not name one.
+ * The `metaLocale` a project gets when its config does not name one.
  *
  * English, and it stays English for almost every project — the field changes
  * what the Console reads back to a human, not who the product is for.
  */
-export const DEFAULT_LOCALE = 'en'
+export const DEFAULT_META_LOCALE = 'en'
 
 /**
- * `locale` is handed on to codegen and the Console as a language tag, so a
+ * `metaLocale` is handed on to codegen and the Console as a language tag, so a
  * value they cannot interpret is worse than none: it degrades quietly to "some
  * language" a long way from the line that is wrong. `Intl.getCanonicalLocales`
  * is the BCP-47 grammar Node already ships, and it catches the mistake people
@@ -137,14 +137,14 @@ export const DEFAULT_LOCALE = 'en'
  * It returns the canonical spelling rather than what was typed, so `EN-gb` and
  * `en-GB` are one value downstream instead of two that never compare equal.
  */
-export const normalizeLocale = (locale: unknown): string => {
-  if (locale === undefined || locale === null) {
-    return DEFAULT_LOCALE
+export const normalizeMetaLocale = (metaLocale: unknown): string => {
+  if (metaLocale === undefined || metaLocale === null) {
+    return DEFAULT_META_LOCALE
   }
 
-  if (typeof locale === 'string') {
+  if (typeof metaLocale === 'string') {
     try {
-      const [canonical] = Intl.getCanonicalLocales(locale.trim())
+      const [canonical] = Intl.getCanonicalLocales(metaLocale.trim())
       if (canonical) {
         return canonical
       }
@@ -155,7 +155,7 @@ export const normalizeLocale = (locale: unknown): string => {
   }
 
   throw new PikkuCLIConfigError(
-    `locale in pikku.config.json is not a language tag: ${JSON.stringify(locale)}. ` +
+    `metaLocale in pikku.config.json is not a language tag: ${JSON.stringify(metaLocale)}. ` +
       `Use a BCP-47 code — "en", "de", "pt-BR" — with a hyphen rather than an underscore. ` +
       `It sets the language of the meta the Console renders back to your team (function and step descriptions, feature and scenario names). ` +
       `Identifiers stay English regardless, and the language the app speaks to its users is defaultLocale in active.json, not this.`
@@ -194,6 +194,29 @@ export const resolveFrontendConfig = (
     urlPrefix: urlPrefix === '/' ? '/' : urlPrefix.replace(/\/+$/, ''),
     spaFallback: frontend.spaFallback ?? true,
   }
+}
+
+/**
+ * The field's former name, kept only to say it moved.
+ *
+ * `locale` shipped in 0.12.120 and nothing has ever read it, so dropping it
+ * silently would cost nobody anything at runtime — but it would cost them the
+ * one thing the rename was for. A config that still says `locale` is a config
+ * whose author believed it did something; leaving it to be ignored teaches the
+ * opposite of the distinction the new name exists to draw.
+ */
+const assertMetaLocaleNotSpelledLocale = (result: Record<string, unknown>) => {
+  if (!('locale' in result)) {
+    return
+  }
+
+  throw new PikkuCLIConfigError(
+    `locale in pikku.config.json has been renamed to metaLocale. ` +
+      `Rename the field — the value is unchanged. ` +
+      `It was renamed because "locale", sitting beside baseLocale, defaultLocale and supportedLocales, reads as the language your app speaks to its users; it is not that. ` +
+      `It is the language of the meta the Console renders back to your team — function and step descriptions, feature and scenario names. ` +
+      `What a visitor opens the app in is defaultLocale in active.json.`
+  )
 }
 
 const _getPikkuCLIConfig = async (
@@ -1208,7 +1231,8 @@ const _getPikkuCLIConfig = async (
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }
 
-    result.locale = normalizeLocale(result.locale)
+    assertMetaLocaleNotSpelledLocale(result as unknown as Record<string, unknown>)
+    result.metaLocale = normalizeMetaLocale(result.metaLocale)
 
     assertSchemaDirectoriesAreDistinct(result)
 

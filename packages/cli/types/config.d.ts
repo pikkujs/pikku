@@ -324,15 +324,21 @@ export type PikkuCLIInput = {
    *
    * - **It never renames anything.** Identifiers — functions, components,
    *   types, variables, files, database tables and columns — are English
-   *   whatever this is set to. `locale: "de"` buys a German `description`, not
-   *   a `getUebersicht` or a `vorgang` table.
+   *   whatever this is set to. `metaLocale: "de"` buys a German `description`,
+   *   not a `getUebersicht` or a `vorgang` table.
    * - **It is not the product's UI language.** What the app says to its users
    *   lives in `messages/<locale>.json`, and which language a first-time
    *   visitor is served is `active.json`'s `defaultLocale`. `baseLocale` in
    *   `project.inlang/settings.json` names the message *source* and stays
    *   `en`, or `--add-locale` has no English catalogue to translate from.
+   *
+   * The name carries the distinction rather than relying on the prose above:
+   * a field called `locale`, sitting beside `baseLocale`, `defaultLocale` and
+   * `supportedLocales`, reads as the app's runtime locale — which is exactly
+   * the confusion that produced the German-identifiers build this field was
+   * added to prevent.
    */
-  locale?: string
+  metaLocale?: string
 
   configDir: string
   tsconfig: string

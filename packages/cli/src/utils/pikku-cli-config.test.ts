@@ -5,11 +5,11 @@ import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { rmSync } from 'node:fs'
 import {
-  DEFAULT_LOCALE,
+  DEFAULT_META_LOCALE,
   PikkuCLIConfigError,
   assertSchemaDirectoriesAreDistinct,
   getPikkuCLIConfig,
-  normalizeLocale,
+  normalizeMetaLocale,
   tryGetPikkuCLIConfig,
 } from './pikku-cli-config.js'
 
@@ -164,7 +164,7 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
-  test('locale defaults to English when the config does not name one', async () => {
+  test('metaLocale defaults to English when the config does not name one', async () => {
     const root = await writeConfig()
 
     const config = await getPikkuCLIConfig(
@@ -173,11 +173,11 @@ describe('getPikkuCLIConfig', () => {
       []
     )
 
-    assert.equal(config.locale, DEFAULT_LOCALE)
+    assert.equal(config.metaLocale, DEFAULT_META_LOCALE)
   })
 
-  test('a declared locale survives the load, canonicalized', async () => {
-    const root = await writeConfig({ locale: 'de-de' })
+  test('a declared metaLocale survives the load, canonicalized', async () => {
+    const root = await writeConfig({ metaLocale: 'de-de' })
 
     const config = await getPikkuCLIConfig(
       silentLogger,
@@ -185,18 +185,35 @@ describe('getPikkuCLIConfig', () => {
       []
     )
 
-    assert.equal(config.locale, 'de-DE')
+    assert.equal(config.metaLocale, 'de-DE')
   })
 
-  test('a locale that is not a language tag names itself in the error', async () => {
-    const root = await writeConfig({ locale: 'de_DE' })
+  test('the former spelling `locale` is refused with the new name', async () => {
+    const root = await writeConfig({ locale: 'de' })
 
     await assert.rejects(
       () =>
         getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
       (error: unknown) => {
         assert.ok(error instanceof PikkuCLIConfigError)
-        assert.match(error.message, /locale in pikku\.config\.json/)
+        assert.match(error.message, /renamed to metaLocale/)
+        // The error has to teach the distinction, not just the new spelling —
+        // being ignored is what the rename exists to prevent.
+        assert.match(error.message, /defaultLocale in active\.json/)
+        return true
+      }
+    )
+  })
+
+  test('a metaLocale that is not a language tag names itself in the error', async () => {
+    const root = await writeConfig({ metaLocale: 'de_DE' })
+
+    await assert.rejects(
+      () =>
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      (error: unknown) => {
+        assert.ok(error instanceof PikkuCLIConfigError)
+        assert.match(error.message, /metaLocale in pikku\.config\.json/)
         assert.match(error.message, /"de_DE"/)
         return true
       }
@@ -326,34 +343,34 @@ describe('assertSchemaDirectoriesAreDistinct', () => {
   })
 })
 
-describe('normalizeLocale', () => {
-  test('an absent locale is English rather than an error', () => {
-    assert.equal(normalizeLocale(undefined), DEFAULT_LOCALE)
-    assert.equal(normalizeLocale(null), DEFAULT_LOCALE)
+describe('normalizeMetaLocale', () => {
+  test('an absent metaLocale is English rather than an error', () => {
+    assert.equal(normalizeMetaLocale(undefined), DEFAULT_META_LOCALE)
+    assert.equal(normalizeMetaLocale(null), DEFAULT_META_LOCALE)
   })
 
   test('canonicalizes so one language is one value downstream', () => {
-    assert.equal(normalizeLocale('en'), 'en')
-    assert.equal(normalizeLocale(' de '), 'de')
-    assert.equal(normalizeLocale('pt-br'), 'pt-BR')
-    assert.equal(normalizeLocale('EN-gb'), 'en-GB')
+    assert.equal(normalizeMetaLocale('en'), 'en')
+    assert.equal(normalizeMetaLocale(' de '), 'de')
+    assert.equal(normalizeMetaLocale('pt-br'), 'pt-BR')
+    assert.equal(normalizeMetaLocale('EN-gb'), 'en-GB')
   })
 
   test('rejects the POSIX underscore people reach for', () => {
-    assert.throws(() => normalizeLocale('de_DE'), PikkuCLIConfigError)
+    assert.throws(() => normalizeMetaLocale('de_DE'), PikkuCLIConfigError)
   })
 
   test('rejects what is not a tag at all', () => {
-    assert.throws(() => normalizeLocale(''), PikkuCLIConfigError)
-    assert.throws(() => normalizeLocale('   '), PikkuCLIConfigError)
-    assert.throws(() => normalizeLocale('German, please'), PikkuCLIConfigError)
-    assert.throws(() => normalizeLocale(42), PikkuCLIConfigError)
-    assert.throws(() => normalizeLocale(['de']), PikkuCLIConfigError)
+    assert.throws(() => normalizeMetaLocale(''), PikkuCLIConfigError)
+    assert.throws(() => normalizeMetaLocale('   '), PikkuCLIConfigError)
+    assert.throws(() => normalizeMetaLocale('German, please'), PikkuCLIConfigError)
+    assert.throws(() => normalizeMetaLocale(42), PikkuCLIConfigError)
+    assert.throws(() => normalizeMetaLocale(['de']), PikkuCLIConfigError)
   })
 
   test('the error points at the two settings it is not', () => {
     assert.throws(
-      () => normalizeLocale('de_DE'),
+      () => normalizeMetaLocale('de_DE'),
       /Identifiers stay English regardless.*defaultLocale in active\.json/s
     )
   })

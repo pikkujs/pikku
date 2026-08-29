@@ -28,7 +28,7 @@ project shaped so `pikku fabric init` later adopts it with zero rework.
 ## Agent Operating Procedure
 
 1. Discover before editing. Run `pikku info functions --verbose --silent` and
-   read `AGENTS.md` before your first change. Read `locale` in
+   read `AGENTS.md` before your first change. Read `metaLocale` in
    `pikku.config.json` too: it is the language every `description`, `title` and
    step `template` you write must be in (§1a). Identifiers stay English whatever
    it says.
@@ -92,21 +92,21 @@ settle all three explicitly before you write code.
 | Axis            | What it covers                                                                                                                       | Where it goes                                                                     |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                                    | Nowhere — **always English**, no setting, not negotiable                          |
-| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and persona descriptions        | `locale` in `pikku.config.json`, default `en`                                     |
+| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and persona descriptions        | `metaLocale` in `pikku.config.json`, default `en`                                     |
 | **Product UI**  | Every string the app shows a user                                                                                                    | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
 
 **Identifiers are English.** The product's market does not change this and
-neither does `locale`. Identifiers are the surface the generated `#pikku/*`
+neither does `metaLocale`. Identifiers are the surface the generated `#pikku/*`
 clients, `pikku info`, the typed RPC map and the Kysely types all bind to, and
 unlike a string an identifier cannot be translated later — renaming one is a
 migration. A German practice management tool gets `getWorklist`, `case`,
 `event`, not `getUebersicht`, `vorgang`, `ereignis`.
 
-**Meta follows `locale`.** Write the team's answer into `pikku.config.json` in
+**Meta follows `metaLocale`.** Write the team's answer into `pikku.config.json` in
 this phase, before there is any meta to be wrong:
 
 ```json
-{ "locale": "de" }
+{ "metaLocale": "de" }
 ```
 
 It exists for the Pikku Console. Meta is the one part of a project the Console
@@ -114,7 +114,7 @@ renders back to a human, so a team working in German reads their own functions,
 features and scenario reports in German. Default `en` and do not ask when the
 project is obviously English. **On every later run, read this field first and
 author descriptions, titles and step templates in it** — a project whose
-`locale` you ignored reports half in one language and half in another.
+`metaLocale` you ignored reports half in one language and half in another.
 
 **Product UI is the message catalogue.** `messages/<locale>.json` via
 `pikku-i18n`, with `defaultLocale` deciding what a visitor opens in.
@@ -131,7 +131,7 @@ A German medical portal, correctly:
 // apps/app/src/i18n/active.json   (or: fabric i18n --default-locale de)
 { "defaultLocale": "de" }
 // pikku.config.json
-{ "locale": "de" }
+{ "metaLocale": "de" }
 ```
 
 Record the two non-obvious answers as a `decisions/` note in §2 — neither is

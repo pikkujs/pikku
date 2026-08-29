@@ -54,7 +54,7 @@ defaults are the point.
 
 Do not ask about language either — take the defaults and note them in §6.
 Identifiers are English in every project, whatever the product's market;
-`locale` in `pikku.config.json` (the language of `description`/`title`/step
+`metaLocale` in `pikku.config.json` (the language of `description`/`title`/step
 `template`, which the Console renders) stays `en` unless the user already told
 you otherwise. If the request says the app's UI is not English, that is the
 message catalogue only: add the locale and set `defaultLocale`, and leave

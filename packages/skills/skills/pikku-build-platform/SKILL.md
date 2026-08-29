@@ -158,7 +158,7 @@ that is the finding.
 every added locale is cloned from, so three locales is `locales: ["en", …]` and
 never a repointed base. Shipping locales is also not a reason for anything in
 the code to stop being English: identifiers are English in every project, and
-the language of `description`/`title`/`template` is `locale` in
+the language of `description`/`title`/`template` is `metaLocale` in
 `pikku.config.json`. See `pikku-build-app` §1a.
 
 ### Emails — `pikku-emails`
