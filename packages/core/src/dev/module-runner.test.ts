@@ -138,10 +138,12 @@ describe('createModuleRunner', { concurrency: false }, () => {
     )
     await writeFile(join(tmpDir, 'sibling.cjs'), 'module.exports = {}')
 
-    const mod = await runner.run(file)
-    assert.equal(mod!.url, pathToFileURL(file).href)
-    assert.equal(mod!.dir, tmpDir)
-    assert.match((mod!.resolves as () => string)(), /sibling\.cjs$/)
+    const result = await runner.run(file)
+    assert.equal(result.ok, true)
+    const mod = (result as { exports: Record<string, unknown> }).exports
+    assert.equal(mod.url, pathToFileURL(file).href)
+    assert.equal(mod.dir, tmpDir)
+    assert.match((mod.resolves as () => string)(), /sibling\.cjs$/)
   })
 
   test('reports a bad edit with its reason so the caller can say why', async () => {
