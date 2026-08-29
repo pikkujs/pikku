@@ -153,25 +153,38 @@ describe('serializeVirtualUserFunctions', () => {
     assert.match(out, /read: \{ description:/)
   })
 
-  // The correction this whole shape came from: a virtual user explores, so no
-  // two attempts take the same steps and there is nothing to replay. Reaching
-  // for a workflow or a queue here would be recording it as something it isn't.
-  test('dispatches without a workflow and without a queue', () => {
-    assert.doesNotMatch(out, /startWorkflow|pikkuWorkflowFunc|wireQueueWorker/)
-    assert.match(out, /rpc!\s*\n?\s*\.invoke\('executeVirtualUserRun'/)
+  // A virtual user explores, so no two attempts take the same steps and there
+  // is nothing to replay — it is still not a workflow. It does need a trigger:
+  // a deployment that puts each function in its own unit has no in-process
+  // promise to leave running, and no way to reach a function nothing triggers.
+  test('dispatches onto a queue, not into a workflow', () => {
+    assert.doesNotMatch(out, /startWorkflow|pikkuWorkflowFunc/)
+    assert.match(
+      out,
+      /wireQueueWorker\(\{\s*name: 'pikku-virtual-user-runs',[\s\S]*?func: executeVirtualUserRun,/
+    )
+    assert.match(out, /queueService\.add\('pikku-virtual-user-runs', job/)
   })
 
-  // A held-open request survives neither a rollout nor a proxy timeout, so the
-  // run must not be awaited — and an un-caught rejection from a promise nobody
-  // awaits takes the process down with it.
-  test('kicks the run off unawaited, with the rejection caught', () => {
-    assert.match(out, /void rpc!\s*\n?\s*\.invoke\(/)
+  // A redelivery is a second different outing writing into a record that
+  // already has an outcome, so the job is never retried.
+  test('the run is dispatched at one attempt', () => {
+    assert.match(out, /attempts: 1/)
+  })
+
+  // A project with no queue service runs in the one process, where the
+  // in-process dispatch is correct. A held-open request survives neither a
+  // rollout nor a proxy timeout, so the run must not be awaited — and an
+  // un-caught rejection from a promise nobody awaits takes the process down.
+  test('falls back to an unawaited invoke when there is no queue', () => {
+    assert.match(out, /if \(queueService\) \{/)
+    assert.match(out, /void rpc!\.invoke\('executeVirtualUserRun', job\)/)
     assert.match(out, /\.catch\(\(\) => \{\}\)/)
   })
 
   test('records the run before dispatching it, so a crash is still addressable', () => {
     const start = out.indexOf('await startVirtualUserRun({')
-    const dispatch = out.indexOf(".invoke('executeVirtualUserRun'")
+    const dispatch = out.indexOf('const job = {')
     assert.ok(start > 0 && dispatch > start)
   })
 
@@ -244,7 +257,7 @@ describe('serializeVirtualUserFunctions', () => {
   test('the handed-in token rides the dispatch and is never recorded', () => {
     const recorded = out.slice(
       out.indexOf('await startVirtualUserRun({'),
-      out.indexOf('void rpc!')
+      out.indexOf('const job = {')
     )
     assert.doesNotMatch(recorded, /operatorToken/)
     assert.match(out, /operatorToken: input\.operatorToken/)

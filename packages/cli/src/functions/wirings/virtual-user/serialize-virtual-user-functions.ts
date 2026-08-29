@@ -13,12 +13,15 @@ export interface VirtualUserGenOutput {
  * `pikku persona run` does the same thing from a terminal; this is the same run
  * started over RPC, from CI or from a console, with the result kept.
  *
- * A virtual user is NOT a workflow and NOT a queued job. It explores, so no two
- * attempts take the same steps and there is nothing to replay; and the run
- * record already carries the progress a queue would only be holding on the way
- * here. So `runVirtualUser` writes the record, kicks the run off without
- * awaiting it, and returns the id. The one cost is stated on the record: a
- * restart mid-run strands it at `running`.
+ * A virtual user is still NOT a workflow: it explores, so no two attempts take
+ * the same steps and there is nothing to replay. What it does need is a
+ * trigger. `runVirtualUser` writes the record and returns the id; the run
+ * itself is dispatched onto `pikku-virtual-user-runs`, at one attempt, because
+ * a queue is the only dispatch that survives a deployment which puts each
+ * function in its own unit — there is no in-process promise to leave running
+ * there, and an RPC to a function nothing triggers has nowhere to land. A
+ * project with no queue service keeps the in-process dispatch, which is
+ * correct for the single process it runs in.
  *
  * Emitted as two files. The schemas are zod, and the inspector reads a zod
  * schema by importing the module that declares it — which it cannot do for the
@@ -274,6 +277,7 @@ export const ExecuteVirtualUserRunOutput = z.object({
  */
 import { pikkuFunc, pikkuSessionlessFunc, type Session } from '${leaf('function')}'
 import { pikkuMiddleware } from '${leaf('middleware')}'
+import { wireQueueWorker } from '${leaf('queue')}'
 import { defineScope } from '${leaf('scopes')}'
 import {
   executeVirtualUserRun as executeRun,
@@ -335,7 +339,11 @@ export const runVirtualUser = pikkuFunc({
   scopes: ['virtualUser:run'],
   input: RunVirtualUserInput,
   output: RunVirtualUserOutput,
-  func: async ({ virtualUserRunStore, config }, input, { session, rpc }) => {
+  func: async (
+    { virtualUserRunStore, config, queueService },
+    input,
+    { session, rpc }
+  ) => {
     const { runId, persona, disposition, goals, memory, seed } =
       await startVirtualUserRun({
         store: virtualUserRunStore,
@@ -354,26 +362,35 @@ export const runVirtualUser = pikkuFunc({
         startedBy: session?.userId ?? null,
       })
 
-    // Deliberately not awaited: a run takes minutes, and a held-open request
-    // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
-    // writes both outcomes to the record itself, so the only thing left to
-    // handle here is a rejection escaping the promise — without the catch it
-    // becomes an unhandled rejection and takes the process with it.
-    void rpc!
-      .invoke('executeVirtualUserRun', {
-        runId,
-        persona,
-        disposition,
-        goals,
-        memory,
-        seed,
-        budget: input.budget,
-        // Rides the dispatch and nothing else. The run record is deliberately
-        // not given it: a record outlives the run, and a credential in a row
-        // somebody can read back is a credential leak.
-        operatorToken: input.operatorToken,
+    const job = {
+      runId,
+      persona,
+      disposition,
+      goals,
+      memory,
+      seed,
+      budget: input.budget,
+      // Rides the dispatch and nothing else. The run record is deliberately
+      // not given it: a record outlives the run, and a credential in a row
+      // somebody can read back is a credential leak.
+      operatorToken: input.operatorToken,
+    }
+
+    if (queueService) {
+      // One attempt. A run is an exploration, so a redelivery is a second
+      // different outing writing into a record that already has an outcome.
+      await queueService.add('pikku-virtual-user-runs', job, {
+        attempts: 1,
+        pikkuUserId: session?.userId,
       })
-      .catch(() => {})
+    } else {
+      // Deliberately not awaited: a run takes minutes, and a held-open request
+      // survives neither a rollout nor a proxy timeout. executeVirtualUserRun
+      // writes both outcomes to the record itself, so the only thing left to
+      // handle here is a rejection escaping the promise — without the catch it
+      // becomes an unhandled rejection and takes the process with it.
+      void rpc!.invoke('executeVirtualUserRun', job).catch(() => {})
+    }
 
     return { runId }
   },
@@ -569,7 +586,8 @@ export const tickVirtualUserSchedules = pikkuSessionlessFunc<void, void>({
 
 /**
  * The run itself. Not exposed: it is dispatched by \`runVirtualUser\` and has no
- * caller of its own.
+ * caller of its own — but it is wired to a queue below, which is what gives it
+ * a unit of its own under a per-function deploy.
  */
 export const executeVirtualUserRun = pikkuSessionlessFunc({
   tags: ['pikku'],
@@ -589,6 +607,12 @@ export const executeVirtualUserRun = pikkuSessionlessFunc({
       createPersonas,
       ...input,
     }),
+})
+
+wireQueueWorker({
+  name: 'pikku-virtual-user-runs',
+  tags: ['pikku'],
+  func: executeVirtualUserRun,
 })
 `
 
