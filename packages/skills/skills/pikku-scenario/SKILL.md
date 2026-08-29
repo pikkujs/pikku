@@ -367,7 +367,7 @@ string the generated step map is keyed by — the file name, and every helper in
 are English in every project regardless of who the product is for or what
 language the team speaks. There is no setting that changes this.
 
-**Prose follows `locale` in `pikku.config.json`** (default `en`). That is a
+**Prose follows `metaLocale` in `pikku.config.json`** (default `en`). That is a
 step's `description` and `template`, a feature's `name` and `description`, a
 scenario's `title`, and the positional step names passed to
 `scenario.given/when/then`. Read the field before you write any of them.
@@ -378,7 +378,7 @@ language. The report is the deliverable, and it is read by the team; the
 identifier is an API, and it is read by the toolchain.
 
 ```typescript
-// pikku.config.json: { "locale": "de" }
+// pikku.config.json: { "metaLocale": "de" }
 export const buysAnApple = pikkuScenarioStep<{ qty: number }, { orderId: string }>({
   name: 'buysAnApple',          // identifier — English, always
   description: 'kauft einen Apfel',  // prose — follows locale
@@ -392,19 +392,19 @@ export const buysAnApple = pikkuScenarioStep<{ qty: number }, { orderId: string 
 Note what does **not** change: `placeOrder` is still `placeOrder`, and the file
 is still `apple.scenario.ts`.
 
-A product with a non-English UI is not on its own a reason to set `locale` — that
+A product with a non-English UI is not on its own a reason to set `metaLocale` — that
 is the app's language, not the team's. Ask, or leave it `en`.
 
-**Where a non-`en` `locale` still shows English, today.** The reporter composes a
+**Where a non-`en` `metaLocale` still shows English, today.** The reporter composes a
 sentence as `<Keyword> the <actor> <template>` (`composeStepProse`), and both the
 keyword and the article `the` are English literals. The Console translates the
 Given/When/Then keywords into its own UI language; the CLI reporter does not, and
-nothing translates `the`. So `locale: "de"` gives you German step prose inside an
+nothing translates `the`. So `metaLocale: "de"` gives you German step prose inside an
 English frame — `Given the shopper kauft 1 Äpfel`. Write templates that read
 acceptably in that frame rather than trying to defeat it. A second gap: where a
 function or scenario declares no `title`, the Console falls back to splitting the
 **identifier** into an English-looking label (`toEnglishName`), so under a
-non-`en` `locale` meta is worth authoring rather than leaving to the fallback.
+non-`en` `metaLocale` meta is worth authoring rather than leaving to the fallback.
 
 ### `then` bindings are witnesses, not alternatives
 
@@ -833,7 +833,7 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 | Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                |
 | `sleep()` before asserting                          | Use `expectEventually`.                                                                                                     |
 | A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                   |
-| A step named `kauftEinenApfel` / a `vorgang` table   | Identifiers are English in every project. The German belongs in `description` / `template`, and only when `pikku.config.json` sets `locale`.  |
+| A step named `kauftEinenApfel` / a `vorgang` table   | Identifiers are English in every project. The German belongs in `description` / `template`, and only when `pikku.config.json` sets `metaLocale`.  |
 | A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                            |
 | `getByLabel('Full Name')` in a translated app        | Passes only in the base locale, and a copy edit breaks it as an unexplained timeout. Locate by message key.                 |
 | A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                             |

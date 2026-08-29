@@ -25,7 +25,7 @@ this skill. Three axes:
 | Axis            | What it covers                                                                                          | What sets it                                                    |
 | --------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | **Identifiers** | Function, component, type and file names; database tables and columns                                   | Nothing — always English, no setting                            |
-| **Meta**        | `description` / `name` / `title` / `template` authored inside the code, which the Pikku Console renders | `locale` in `pikku.config.json`, default `en`                   |
+| **Meta**        | `description` / `name` / `title` / `template` authored inside the code, which the Pikku Console renders | `metaLocale` in `pikku.config.json`, default `en`                   |
 | **Product UI**  | Every string the app shows a user                                                                       | `messages/<locale>.json` + `defaultLocale` — **this axis only** |
 
 A non-English product moves the third row and nothing else.
@@ -57,7 +57,7 @@ So a German medical portal is **three** settings, not one:
 { "defaultLocale": "de" }
 
 // pikku.config.json — the language the team reads their Console in
-{ "locale": "de" }
+{ "metaLocale": "de" }
 ```
 
 In the Fabric template both of the first two have a command, so you rarely edit

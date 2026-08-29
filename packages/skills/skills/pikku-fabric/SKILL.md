@@ -416,7 +416,7 @@ These apply in every Fabric app:
 - **No hand-editing `.pikku/db/schema.gen.ts`** — write a migration and re-run `pikku db migrate`.
 - **One runtime unit per file** — never define multiple functions/workflows in a single source file.
 - **Workflow steps don't need manual wiring** — `pikkuSessionlessFunc` step functions in `*.steps.ts` files are auto-discovered by codegen.
-- **Identifiers are English** — functions, components, types, files, database tables and columns, in every app whatever market it serves. The team's language is `locale` in `pikku.config.json` and reaches `description`/`title`/`template` only; the app's language is the message catalogue, where `baseLocale` stays `en` and `defaultLocale` decides what a visitor opens in. `pikku fabric validate` warns (`app-base-locale-not-english-<app>`) when an app repoints its base.
+- **Identifiers are English** — functions, components, types, files, database tables and columns, in every app whatever market it serves. The team's language is `metaLocale` in `pikku.config.json` and reaches `description`/`title`/`template` only; the app's language is the message catalogue, where `baseLocale` stays `en` and `defaultLocale` decides what a visitor opens in. `pikku fabric validate` warns (`app-base-locale-not-english-<app>`) when an app repoints its base.
 
 ## Converting an existing app to Fabric format
 
@@ -432,7 +432,7 @@ Fix every `error` and `warn` in the output before continuing. Then:
 2. **Replace route handlers with pikkuFuncs**: extract business logic into `pikkuFunc`/`pikkuSessionlessFunc`, add `wireHTTP` or `expose: true` for transport.
 3. **Replace DI/IoC with pikkuServices**: move service construction to `createSingletonServices` in `services.ts`.
 4. **Replace `process.env` calls**: plain config becomes `defineVariable` + `variables.get()`, anything sensitive becomes `defineSecret` + `secrets.getSecret()`.
-5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles` — plus `locale` if the team does not work in English, which is the language every `description`, `title` and step `template` is then authored in.
+5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles` — plus `metaLocale` if the team does not work in English, which is the language every `description`, `title` and step `template` is then authored in.
 6. **Add `pikkufabric.config.json`** at project root with `projectId`, `production.domain`, and `frontends` (production is always `main`, so there is no `production.branch`).
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.
 8. **Run `pikku fabric validate`** once more to confirm no structural issues remain.

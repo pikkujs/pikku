@@ -138,7 +138,7 @@ Services can be destructured inline in the `func` signature (e.g. `async ({ logg
 
 ```typescript
 pikkuFunc({
-  // Identity and documentation — prose, so it follows `locale` in
+  // Identity and documentation — prose, so it follows `metaLocale` in
   // pikku.config.json (default `en`). The identifier does not; see
   // "What Language You Write In".
   title?: string,           // Human-readable name
@@ -333,12 +333,12 @@ bottom.
 | Axis            | What it covers                                                                                                                                                    | What decides it                                                                                             |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Branch names and commit messages.                                                | Nothing. **Always English.** There is no setting.                                                           |
-| **Meta**        | The prose authored _inside_ the code: `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role/persona descriptions. | `locale` in `pikku.config.json`. Defaults to `en`.                                                          |
+| **Meta**        | The prose authored _inside_ the code: `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role/persona descriptions. | `metaLocale` in `pikku.config.json`. Defaults to `en`.                                                          |
 | **Product UI**  | Every string the app shows a user.                                                                                                                                | `messages/<locale>.json`, with `active.json`'s `defaultLocale` choosing what a first-time visitor opens in. |
 
 ### Identifiers are English, and nothing changes that
 
-Not the product's market, not the team's working language, and **not `locale`**.
+Not the product's market, not the team's working language, and **not `metaLocale`**.
 A German medical practice, an Arabic marketplace and a Japanese logistics tool
 all get `getOverview`, `AttentionStripe`, `case`, `event`.
 
@@ -350,10 +350,10 @@ A `vorgang` table types as `Vorgang` in Kysely and reads as noise to everyone wh
 did not name it, and unlike a string it cannot be translated later — renaming an
 identifier is a migration, not an edit.
 
-### Meta follows `locale`, and that is what the field is for
+### Meta follows `metaLocale`, and that is what the field is for
 
 ```json
-{ "locale": "de" }
+{ "metaLocale": "de" }
 ```
 
 Meta is the one part of a project the **Pikku Console** renders back to a human.
@@ -366,7 +366,7 @@ Read it before you author meta, and write descriptions, titles and templates in
 it. Absent, it is `en`. It is a BCP-47 tag (`en`, `de`, `pt-BR` — a hyphen, not
 an underscore), and the CLI rejects anything else by name.
 
-`locale` is **not** licence to rename anything. `locale: "de"` buys a German
+`metaLocale` is **not** licence to rename anything. `metaLocale: "de"` buys a German
 `description: 'Zeigt die Arbeitsliste'` on a function still called
 `getWorklist`.
 
@@ -405,7 +405,7 @@ settings, each on its own axis:
 { "defaultLocale": "de" }
 
 // pikku.config.json — the language the team reads their Console in
-{ "locale": "de" }
+{ "metaLocale": "de" }
 ```
 
 Identifiers stay English throughout. When a brief tells you the product speaks a
