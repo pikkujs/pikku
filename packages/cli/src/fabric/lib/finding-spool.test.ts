@@ -118,7 +118,11 @@ describe('spoolFinding', () => {
       reason: 'not-linked',
       projectId: null,
     })
-    await writeFile(join(dir, '2026-01-01T00-00-00-000Z-beef.json'), '{ not', 'utf8')
+    await writeFile(
+      join(dir, '2026-01-01T00-00-00-000Z-beef.json'),
+      '{ not',
+      'utf8'
+    )
 
     assert.equal((await readSpool()).length, 1)
   })

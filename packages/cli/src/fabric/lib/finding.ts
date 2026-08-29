@@ -25,9 +25,7 @@ export const FindingInput = z.object({
 
 export type FindingInput = z.infer<typeof FindingInput>
 
-export type ParsedFinding =
-  | { finding: FindingInput }
-  | { problems: string[] }
+export type ParsedFinding = { finding: FindingInput } | { problems: string[] }
 
 /** Shape-check a finding from either path, naming every field that is wrong. */
 export function parseFinding(value: unknown): ParsedFinding {
