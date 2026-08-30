@@ -3,7 +3,10 @@ import { describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
-import { credentialOAuth, PLATFORM_USER_ID } from './credential-oauth.plugin.js'
+import {
+  pikkuCredentialOAuth,
+  PLATFORM_USER_ID,
+} from './credential-oauth.plugin.js'
 import type { CredentialOAuthProvider } from './credential-oauth-providers.js'
 
 const provider = (
@@ -38,7 +41,7 @@ const makeAuth = (
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    plugins: [credentialOAuth({ config, ...options } as any)],
+    plugins: [pikkuCredentialOAuth({ config, ...options } as any)],
   })
 
 const emptyDb = (): Record<string, any[]> => ({

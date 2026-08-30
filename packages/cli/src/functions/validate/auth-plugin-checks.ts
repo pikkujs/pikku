@@ -133,7 +133,7 @@ const configuresPlugin = (
  * running two authorization models and projecting one onto the other. The
  * inspector refuses it outright at prebuild; this reports the same thing
  * without one, and additionally catches the quieter half of the migration, an
- * app that dropped `admin()` and never wired `ban()`, which keeps its ban
+ * app that dropped `admin()` and never wired `pikkuBan()`, which keeps its ban
  * columns and its ban UI while silently enforcing nothing.
  */
 export const runAuthPluginChecks = async (
@@ -157,7 +157,13 @@ export const runAuthPluginChecks = async (
     if (!text) continue
     if (configuresPlugin(text, 'better-auth/plugins', 'admin'))
       adminFiles.push(file)
-    if (configuresPlugin(text, '@pikku/better-auth', 'ban')) bansAnywhere = true
+    // `pikkuBan` is the current export; `ban` is the deprecated alias, which
+    // configures exactly the same plugin and so must satisfy the check too.
+    if (
+      configuresPlugin(text, '@pikku/better-auth', 'pikkuBan') ||
+      configuresPlugin(text, '@pikku/better-auth', 'ban')
+    )
+      bansAnywhere = true
   }
 
   for (const file of adminFiles) {
@@ -168,11 +174,11 @@ export const runAuthPluginChecks = async (
         "better-auth's admin() plugin is not supported — it authorizes against a user.role column while pikku authorizes on scopes, so one has to be projected onto the other",
       path: file,
       fixHint: lines(
-        'Replace it with ban(), which keeps the one capability admin() had that',
-        'pikku cannot supply from outside better-auth — refusing a banned user a',
-        'session:',
-        "  import { ban } from '@pikku/better-auth'",
-        '  betterAuth({ plugins: [ban()] })',
+        'Replace it with pikkuBan(), which keeps the one capability admin() had',
+        'that pikku cannot supply from outside better-auth — refusing a banned',
+        'user a session:',
+        "  import { pikkuBan } from '@pikku/better-auth'",
+        '  betterAuth({ plugins: [pikkuBan()] })',
         'User management is already scoped RPCs in @pikku/addon-admin: list,',
         'create, ban, remove, revoke sessions and set password.'
       ),
@@ -189,11 +195,11 @@ export const runAuthPluginChecks = async (
           id: 'better-auth-no-ban-plugin',
           severity: 'warn',
           message:
-            'better-auth is configured without ban() — the banned/banReason/banExpires columns do not exist, so banning a user through @pikku/addon-admin has nothing to write and nothing refuses their next sign-in',
+            'better-auth is configured without pikkuBan() — the banned/banReason/banExpires columns do not exist, so banning a user through @pikku/addon-admin has nothing to write and nothing refuses their next sign-in',
           path: file,
           fixHint: lines(
-            "  import { ban } from '@pikku/better-auth'",
-            '  betterAuth({ plugins: [ban()] })',
+            "  import { pikkuBan } from '@pikku/better-auth'",
+            '  betterAuth({ plugins: [pikkuBan()] })',
             'Wire it wherever the rest of your plugins are, then run',
             '`pikku db migrate` to add the columns.'
           ),

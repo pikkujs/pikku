@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { ban } from './ban-plugin.js'
+import { pikkuBan } from './ban-plugin.js'
 
 const hook = (plugin: any) =>
   plugin.init().options.databaseHooks.session.create.before
@@ -24,7 +24,7 @@ const contextFor = (user: any) => {
 
 describe('ban plugin', () => {
   test('declares the three columns a ban lives in, and no role', () => {
-    const fields = (ban().schema as any).user.fields
+    const fields = (pikkuBan().schema as any).user.fields
     assert.deepEqual(Object.keys(fields).sort(), [
       'banExpires',
       'banReason',
@@ -35,19 +35,19 @@ describe('ban plugin', () => {
 
   test('lets an unbanned user through', async () => {
     const { ctx, updates } = contextFor({ id: 'u1', banned: false })
-    await hook(ban())({ userId: 'u1' }, ctx)
+    await hook(pikkuBan())({ userId: 'u1' }, ctx)
     assert.deepEqual(updates, [])
   })
 
   test('refuses a session for a banned user', async () => {
     const { ctx } = contextFor({ id: 'u1', banned: true })
-    await assert.rejects(hook(ban())({ userId: 'u1' }, ctx), /banned/i)
+    await assert.rejects(hook(pikkuBan())({ userId: 'u1' }, ctx), /banned/i)
   })
 
   test('the refusal carries the configured message', async () => {
     const { ctx } = contextFor({ id: 'u1', banned: true })
     await assert.rejects(
-      hook(ban({ message: 'Talk to support' }))({ userId: 'u1' }, ctx),
+      hook(pikkuBan({ message: 'Talk to support' }))({ userId: 'u1' }, ctx),
       /Talk to support/
     )
   })
@@ -60,7 +60,7 @@ describe('ban plugin', () => {
       banned: true,
       banExpires: new Date(Date.now() - 1000),
     })
-    await hook(ban())({ userId: 'u1' }, ctx)
+    await hook(pikkuBan())({ userId: 'u1' }, ctx)
     assert.deepEqual(updates, [
       ['u1', { banned: false, banReason: null, banExpires: null }],
     ])
@@ -72,13 +72,13 @@ describe('ban plugin', () => {
       banned: true,
       banExpires: new Date(Date.now() + 60_000),
     })
-    await assert.rejects(hook(ban())({ userId: 'u1' }, ctx), /banned/i)
+    await assert.rejects(hook(pikkuBan())({ userId: 'u1' }, ctx), /banned/i)
     assert.deepEqual(updates, [])
   })
 
   // Without a request context there is nothing to read the user through, and a
   // server-minted session is not a sign-in to refuse.
   test('is inert without a context', async () => {
-    assert.equal(await hook(ban())({ userId: 'u1' }, undefined), undefined)
+    assert.equal(await hook(pikkuBan())({ userId: 'u1' }, undefined), undefined)
   })
 })

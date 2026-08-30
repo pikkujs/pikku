@@ -38,12 +38,12 @@ directory without granting the ability to ban anyone. Note the absence of
 own, so declaring `admin` there would force the umbrella grant on every caller.
 
 `admin:users:*` needs better-auth wired, and banning additionally needs its
-`ban()` plugin from `@pikku/better-auth` for the columns to exist:
+`pikkuBan()` plugin from `@pikku/better-auth` for the columns to exist:
 
 ```ts
-import { ban } from '@pikku/better-auth'
+import { pikkuBan } from '@pikku/better-auth'
 
-betterAuth({ plugins: [ban()] })
+betterAuth({ plugins: [pikkuBan()] })
 ```
 
 better-auth's own `admin()` plugin is neither needed nor wanted here. These

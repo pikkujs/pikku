@@ -256,7 +256,7 @@ const resolveActAs = async (
  * Requires a {@link FabricPluginOptions.scopeService} for the grant to land.
  * Filter `fabric: true` rows out of any end-user listing.
  */
-export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
+export const pikkuFabric = (options: FabricPluginOptions): BetterAuthPlugin => {
   const requiredPurpose = options.purpose ?? 'fabric-admin'
   return {
     id: 'fabric',
@@ -394,3 +394,11 @@ export const fabric = (options: FabricPluginOptions): BetterAuthPlugin => {
     },
   }
 }
+
+/**
+ * @deprecated Renamed to {@link pikkuFabric}. The bare name is
+ * indistinguishable from better-auth's own plugin factories at the
+ * `plugins: [...]` call site. Still exported, and still the same plugin — the
+ * `id` is unchanged.
+ */
+export const fabric = pikkuFabric
