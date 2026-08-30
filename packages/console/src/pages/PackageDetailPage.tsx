@@ -530,9 +530,7 @@ export const PackageDetailPage: React.FC<{
               </div>
             </Group>
 
-            {api.description && (
-              <Text size="sm">{asI18n(api.description)}</Text>
-            )}
+            {api.description && <Markdown fz="sm">{api.description}</Markdown>}
 
             {(api.categories?.length > 0 || api.tags?.length > 0) && (
               <Group gap={6}>

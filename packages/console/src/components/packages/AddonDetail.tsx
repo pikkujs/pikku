@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import type { InstalledAddonRow, PackageMeta } from './packageMeta'
+import { Markdown } from '../ui/Markdown'
 import { SurfaceTile } from './SurfaceTile'
 import {
   getCategoryMeta,
@@ -362,9 +363,9 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
         </Group>
 
         {description && (
-          <Text size="sm" c="dimmed" mt="md">
-            {asI18n(description)}
-          </Text>
+          <Markdown fz="sm" c="dimmed" mt="md">
+            {description}
+          </Markdown>
         )}
 
         {tags.length > 0 && (
