@@ -12,6 +12,11 @@
 export interface PikkuEnvironment {
   apiUrl: string
   signInPath?: string
+  /**
+   * Where the session and its roles are read back, for a stage that reports
+   * them somewhere other than `get-session` under the sign-in path's own mount.
+   */
+  sessionPath?: string
   rpcPath?: string
   appUrl?: string
   /**

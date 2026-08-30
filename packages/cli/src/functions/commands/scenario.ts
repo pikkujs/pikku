@@ -279,6 +279,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       ...credentials,
       personas: scenarioActors,
       signInPath: env.signInPath,
+      sessionPath: env.sessionPath,
       rpcPath: env.rpcPath,
       model: config.scenarios?.model,
     })

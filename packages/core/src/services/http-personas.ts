@@ -65,7 +65,12 @@ export interface HttpPersonasConfig {
    * {@link OperatorSignInOptions.signInPath} overrides it.
    */
   signInPath?: string
-  /** Where the session (and its roles) is read back. Default `/auth/get-session`. */
+  /**
+   * Where the session (and its roles) is read back. Defaults to `get-session`
+   * under the same auth mount as {@link HttpPersonasConfig.signInPath}, so an
+   * app that moved auth under `/api` moves this with it and does not have to
+   * say so twice.
+   */
   sessionPath?: string
   /** Exposed-RPC path prefix under apiUrl. Default `/rpc`. */
   rpcPath?: string
@@ -75,6 +80,23 @@ export interface HttpPersonasConfig {
    * the configured `agentRunner`.
    */
   model?: string
+}
+
+/**
+ * `get-session` under whichever auth mount signs the persona in.
+ *
+ * better-auth serves both from one prefix, so an app that mounts it at
+ * `/api/auth` moves the two together. Reading a hardcoded `/auth/get-session`
+ * on such an app 404s, and a 404 reads as "this stage does not report roles" —
+ * which turns off the check that tells a permissions finding from seed drift,
+ * silently, for the majority of apps.
+ */
+const defaultSessionPath = (signInPath?: string): string => {
+  const mount = signInPath ? signInPath.lastIndexOf('/sign-in/') : -1
+  if (!signInPath || mount === -1) {
+    return '/auth/get-session'
+  }
+  return `${signInPath.slice(0, mount)}/get-session`
 }
 
 /**
@@ -207,7 +229,11 @@ export class HttpPersona implements ScenarioPersona {
     if (!this.signedIn) {
       await this.login()
     }
-    const sessionPath = this.config.sessionPath ?? '/auth/get-session'
+    const sessionPath =
+      this.config.sessionPath ??
+      defaultSessionPath(
+        this.config.operator?.signInPath ?? this.config.signInPath
+      )
     const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`, {
       headers: this.signIn.headers(),
     })

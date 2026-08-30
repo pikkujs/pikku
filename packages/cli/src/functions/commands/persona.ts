@@ -209,6 +209,7 @@ export const personaRun = pikkuSessionlessFunc<
       ...credentials,
       personas,
       signInPath: env.signInPath,
+      sessionPath: env.sessionPath,
       rpcPath: env.rpcPath,
       model: resolvedModel,
     })

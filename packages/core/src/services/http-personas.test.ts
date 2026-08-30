@@ -35,6 +35,17 @@ const startTarget = async () => {
         res.writeHead(200).end(JSON.stringify({ ok: true, email: body.email }))
         return
       }
+      if (req.url === '/api/auth/get-session') {
+        const cookie = req.headers.cookie ?? ''
+        if (!cookie.includes('session=')) {
+          res.writeHead(200).end('null')
+          return
+        }
+        res
+          .writeHead(200, { 'content-type': 'application/json' })
+          .end(JSON.stringify({ user: { role: 'admin,support' } }))
+        return
+      }
       if (req.url?.startsWith('/api/rpc/')) {
         const cookie = req.headers.cookie ?? ''
         if (!cookie.includes('session=') || expireNext) {
@@ -74,6 +85,7 @@ const startTarget = async () => {
   const { port } = server.address() as { port: number }
   return {
     server,
+    origin: `http://127.0.0.1:${port}`,
     apiUrl: `http://127.0.0.1:${port}/api`,
     loginCount: () => logins,
     expireSession: () => {
@@ -230,5 +242,31 @@ describe('HttpPersona', async () => {
       actors.customer!.invoke('ping', {}),
       /persona sign-in failed for 'customer' \(401\).*bad actor secret/
     )
+  })
+
+  // An app whose auth is under `/api` but whose RPCs are not cannot put the
+  // mount in `apiUrl`, so it moves `signInPath` instead. The session read has
+  // to follow it: a 404 there reads as 'this stage does not report roles' and
+  // silently turns the role check off.
+  test('reads the session from the mount the sign-in path names', async () => {
+    const actors = createHttpPersonas({
+      apiUrl: target.origin,
+      secret: ROOT,
+      signInPath: '/api/auth/sign-in/actor',
+      rpcPath: '/api/rpc',
+      personas: {
+        manager: {
+          id: 'manager',
+          name: 'Manager',
+          email: 'manager@personas.invalid',
+          roles: ['admin'],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
+    })
+
+    assert.deepEqual(await actors.manager!.sessionRoles(), ['admin', 'support'])
   })
 })

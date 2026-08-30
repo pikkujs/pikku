@@ -544,6 +544,11 @@ export type PikkuCLIInput = {
       apiUrl: string
       /** Actor sign-in path under apiUrl. Default: /auth/sign-in/actor */
       signInPath?: string
+      /**
+       * Where the session and its roles are read back. Default: `get-session`
+       * under the same mount as `signInPath`.
+       */
+      sessionPath?: string
       /** Exposed-RPC prefix under apiUrl. Default: /rpc */
       rpcPath?: string
       /** Frontend base URL browser steps navigate against. Required for steps with a `browser` binding. */
