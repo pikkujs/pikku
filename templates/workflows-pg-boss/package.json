@@ -15,7 +15,7 @@
     "test": "npm run migrate && bash ../functions/run-tests.sh --workflow --ignore-server-ready-check"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.99",
+    "@pikku/core": "^0.12.100",
     "@pikku/express": "^0.12.14",
     "@pikku/kysely-postgres": "^0.12.22",
     "@pikku/queue-pg-boss": "^0.12.10",
@@ -27,8 +27,8 @@
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.126",
-    "@pikku/inspector": "^0.12.68",
+    "@pikku/cli": "^0.12.127",
+    "@pikku/inspector": "^0.12.69",
     "@types/node": "^24"
   },
   "exports": {

@@ -1,3 +1,35 @@
+## 0.12.71
+
+### Patch Changes
+
+- f4aa565: Drop the duplicated title in the addon/API detail panel, and summarise markdown
+  descriptions on cards.
+
+  The panel chrome already renders the addon's display name, and the body opened
+  with the same string again as a large monospace `Title` — the two sat one above
+  the other, misaligned against the logo. The body header is now a single line:
+  the package name beside its provider or official badge.
+
+  Card descriptions are clamped to two lines, so an apis.guru entry showed raw
+  `##` and `[label](url)` in the only two lines it had. `plainSummary` keeps the
+  first section and strips the markdown syntax, leaving a readable sentence.
+
+- 18d5cc2: Render a package or API description as markdown in the detail panel.
+
+  Every apis.guru entry ships a full markdown document as its description —
+  headings, links, fenced curl examples — and the console printed it into a
+  single `<Text>`. Newlines collapse, so an Adyen or Stripe entry read as one
+  unbroken paragraph with `##` and `[label](url)` inline, which is most of the
+  catalogue now that it is populated.
+
+  `AddonDetail` and the API modal in `PackageDetailPage` both use the existing
+  `<Markdown>` component, so these descriptions get the same headings, links and
+  code surfaces as a package README. Addon descriptions are one-liners and render
+  identically to before.
+
+- Updated dependencies [a0ed1e8]
+  - @pikku/core@0.12.100
+
 ## 0.12.70
 
 ### Patch Changes
