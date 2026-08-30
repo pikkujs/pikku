@@ -5,7 +5,6 @@ import {
   Stack,
   Box,
   Text,
-  Title,
   Badge,
   Button,
   ThemeIcon,
@@ -262,7 +261,6 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
         },
       ]
 
-  const displayName = pkg?.displayName ?? addon.displayName ?? addon.name
   const description = pkg?.description ?? addon.description
   const tags = pkg?.tags ?? addon.tags ?? []
   const author = pkg?.author ?? addon.author
@@ -316,7 +314,7 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
   return (
     <Stack gap={0} data-testid={`addon-detail-${addon.name}`}>
       <Box p="lg">
-        <Group gap="md" wrap="nowrap" align="flex-start">
+        <Group gap="md" wrap="nowrap" align="center">
           {iconSrc ? (
             <img
               src={iconSrc}
@@ -331,10 +329,10 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
             </ThemeIcon>
           )}
           <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
-            <Group gap="xs" align="center">
-              <Title order={3} fw={700}>
-                {asI18n(displayName || addon.name)}
-              </Title>
+            <Group gap="xs" align="center" wrap="nowrap">
+              <Text fw={600} ff="monospace" truncate>
+                {asI18n(addon.name)}
+              </Text>
               {isApi ? (
                 author && (
                   <Badge size="sm" variant="light" color="gray" tt="none">
@@ -356,9 +354,6 @@ export const AddonDetail: React.FC<AddonDetailProps> = ({
                 </Badge>
               )}
             </Group>
-            <Text size="xs" c="dimmed" ff="monospace">
-              {asI18n(addon.name)}
-            </Text>
           </Stack>
         </Group>
 

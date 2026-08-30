@@ -4,7 +4,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Check, ShieldCheck, FunctionSquare, Bot, Globe } from 'lucide-react'
-import type { PackageMeta } from './packageMeta'
+import { plainSummary, type PackageMeta } from './packageMeta'
 import {
   getCategoryMeta,
   addonPrimaryCategory,
@@ -131,7 +131,7 @@ export const AddonCard: React.FC<AddonCardProps> = ({
             lineClamp={2}
             style={{ minHeight: '2.6em' }}
           >
-            {asI18n(addon.description)}
+            {asI18n(plainSummary(addon.description))}
           </Text>
         )}
 

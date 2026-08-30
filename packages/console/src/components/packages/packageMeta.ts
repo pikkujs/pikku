@@ -55,3 +55,20 @@ export const installedToPackageMeta = (a: InstalledAddonRow): PackageMeta => ({
   functions: {},
   agents: {},
 })
+
+// A card clamps the description to two lines, and an apis.guru entry's
+// description is a whole markdown document — so the two lines a card shows are
+// otherwise raw `##` and `[label](url)`. Only the first section survives: what
+// follows a heading is reference material, not a summary.
+export const plainSummary = (markdown: string): string =>
+  markdown
+    .split(/\n\s*#{1,6}\s/)[0]!
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^\s{0,3}[>*-]\s+/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim()
