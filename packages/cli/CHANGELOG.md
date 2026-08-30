@@ -1,3 +1,68 @@
+## 0.12.127
+
+### Patch Changes
+
+- 77ae071: `pikku fabric report` sends a finding — something about pikku that cost an agent time — to fabric. It needs a login but no linked project: a finding is about the framework rather than about anyone's project, and the reports worth having most come from checkouts that have nothing to name.
+
+  The finding can be given as JSON on stdin (`--stdin`) instead of as flags. Half the fields are prose, and prose carries apostrophes, quotes, backticks and newlines — every one a shell metacharacter before it is a character in a sentence — so an error message pasted into `--error` used to break the command at its first newline. The same schema validates either path.
+
+  Nothing is written to the repo, so nothing goes stale on an abandoned branch, and the terminal prints exactly what left the machine. Reporting never fails a build.
+
+  A finding that cannot be sent is held in `~/.fabric/findings` rather than dropped: logged out, unlinked, or fabric unreachable are the states a finding is most likely to be describing, and a scaffold that never got far enough to log in is exactly the thing worth hearing about. The queue drains on the next report that succeeds, keeps the project each finding was filed against, and is bounded at 100. `pikku fabric findings list`, `flush` and `clear` inspect and control it.
+
+  The resolved `@pikku/*` versions are read off the installed tree rather than out of `package.json`, since a range says nothing about what actually ran. A skewed tree and a package resolving through a workspace or link are both flagged, because either is a reason to read the finding differently.
+
+  The `pikku-feature` skill now tells an agent when to file one: work around it first, investigate only when there is no workaround, report at the depth already reached, and never patch pikku itself from inside a project that is using it.
+
+- 32d1280: Prefix the better-auth plugin factories with `pikku`: `pikkuActor`, `pikkuBan`,
+  `pikkuFabric`, `pikkuDelegatedAuth` and `pikkuCredentialOAuth`.
+
+  A `betterAuth({ plugins: [...] })` array mixes this package's plugins with
+  better-auth's own, and until now nothing at the call site told them apart —
+  `plugins: [actor(...), ban(), fabric(...), organization()]` reads as four
+  plugins from one place when only the last is better-auth's. The prefix says
+  which package a plugin came from where it is actually wired.
+
+  The old names are still exported as deprecated aliases bound to the same
+  functions, so no import has to change. Nothing about the plugins themselves
+  moved: the `id` each registers under — `pikku-ban`, `actor`, `fabric`,
+  `delegated-auth`, `credential-oauth` — is unchanged, so no deployed database or
+  session is affected.
+
+  The pieces that read a plugin's _export_ name rather than its id accept both:
+  `PLUGIN_REGISTRY` is keyed under the prefixed and the bare name, and the
+  `pikku validate` ban/actor checks and the `scaffold.userAdmin` ban check count
+  either spelling as wired. Their messages now point at the new names.
+
+- a0ed1e8: Derive a persona's session and operator paths from the mount its sign-in path names.
+
+  Both `sessionRoles()` and the Fabric operator handshake asked for a fixed
+  `/auth/…` no matter where auth was mounted. An app serving better-auth under
+  `/api/auth` while keeping its RPCs at the root cannot put the mount in
+  `apiUrl`, so it moves `signInPath` — and the other two stayed behind.
+
+  For the session read that meant a 404, which returns `null`, which means "this
+  stage does not report roles": every `pikku persona run` on such an app warned
+  "running unverified" and lost the one thing that tells a permissions finding
+  from seed drift. For the operator handshake it was worse — `HttpPersona`
+  reused the _actor_ path verbatim, so an operator token was posted to the actor
+  endpoint and came back as a validation error about a missing email and secret,
+  which reads like a broken persona rather than a wrong URL. The browser provider
+  had the same fixed default.
+
+  All three now follow `signInPath`, and `environments[].sessionPath` in
+  pikku.config.json overrides the session read for a stage that reports it
+  elsewhere.
+
+- Updated dependencies [77ae071]
+- Updated dependencies [32d1280]
+- Updated dependencies [a0ed1e8]
+  - @pikku/skills@0.12.21
+  - @pikku/better-auth@0.12.34
+  - @pikku/inspector@0.12.69
+  - @pikku/core@0.12.100
+  - @pikku/playwright@0.12.81
+
 ## 0.12.126
 
 ### Patch Changes

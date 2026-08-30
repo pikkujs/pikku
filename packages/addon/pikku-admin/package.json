@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-admin",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "Admin addon for Pikku — the user directory, roles and scopes, credentials and the audit trail, as ordinary RPCs",
   "type": "module",
   "imports": {
@@ -27,8 +27,8 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.26",
-    "@pikku/core": "^0.12.85",
+    "@pikku/better-auth": "^0.12.34",
+    "@pikku/core": "^0.12.100",
     "zod": "^4"
   },
   "peerDependenciesMeta": {
@@ -37,8 +37,8 @@
     }
   },
   "devDependencies": {
-    "@pikku/better-auth": "^0.12.26",
-    "@pikku/cli": "^0.12.106",
+    "@pikku/better-auth": "^0.12.34",
+    "@pikku/cli": "^0.12.127",
     "@pikku/core": "*",
     "typescript": "^6.0.3",
     "zod": "^4"

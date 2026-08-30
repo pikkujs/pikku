@@ -1,6 +1,6 @@
 {
   "name": "@pikku/playwright",
-  "version": "0.12.80",
+  "version": "0.12.81",
   "description": "Playwright browser driver for Pikku scenario steps",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -23,7 +23,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.99",
+    "@pikku/core": "^0.12.100",
     "@playwright/test": "^1.50.0"
   },
   "devDependencies": {
