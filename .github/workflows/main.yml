@@ -157,13 +157,19 @@ jobs:
         timeout-minutes: 22
         run: yarn test:e2e:ai-live
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # OpenRouter, reached through the standard OPENAI_* pair because
+          # `createDevAgentRunner` builds one openai-compatible provider from
+          # whatever that pair points at. `parseModel` strips the provider
+          # prefix, so the agents' `openai/gpt-5.6-luna` arrives as
+          # `gpt-5.6-luna` — which OpenRouter resolves to the same model an
+          # unprefixed name would. No agent declaration changes.
+          OPENAI_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           # A persona's own turns are LLM calls made in the scenario process,
           # not on the target, and that runner is built by `createDevAgentRunner`
           # — which needs a base URL paired with the key and disables agents
           # without one. Every conversing scenario then fails with
           # AIProviderNotConfiguredError before it says anything.
-          OPENAI_BASE_URL: https://api.openai.com/v1
+          OPENAI_BASE_URL: https://openrouter.ai/api/v1
 
   verifiers:
     name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
@@ -393,7 +399,10 @@ jobs:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
       REDIS_URL: redis://localhost:6379
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # ai-postgres runs a live agent turn, so it needs the same gateway the AI
+      # e2e job uses — see the OPENAI_BASE_URL comment there.
+      OPENAI_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENAI_BASE_URL: https://openrouter.ai/api/v1
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
 

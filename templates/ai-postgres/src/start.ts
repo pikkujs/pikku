@@ -31,9 +31,14 @@ async function main(): Promise<void> {
       }),
     }
 
+    // `baseURL` is undefined unless OPENAI_BASE_URL is set, which is the SDK's
+    // own default of api.openai.com — so this only diverts the provider when
+    // something is deliberately fronting it, such as an OpenAI-compatible
+    // gateway or a local proxy.
     if (await secrets.hasSecret('OPENAI_API_KEY')) {
       providers.openai = createOpenAI({
         apiKey: (await secrets.getSecret('OPENAI_API_KEY')).reveal(),
+        baseURL: process.env.OPENAI_BASE_URL,
       })
     }
     if (await secrets.hasSecret('ANTHROPIC_API_KEY')) {
