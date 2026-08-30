@@ -20,17 +20,6 @@ const writeSource = async (
 }
 
 const AUTH_WITH_BAN = [
-  "import { pikkuBetterAuth, pikkuBan } from '@pikku/better-auth'",
-  "import { betterAuth } from 'better-auth'",
-  'export const auth = pikkuBetterAuth(() =>',
-  '  betterAuth({ plugins: [pikkuBan()] })',
-  ')',
-].join('\n')
-
-// pikkuBan() was named ban() until the plugins grew their pikku prefix. The
-// alias is still exported, so an app that never renamed its import must still
-// read as banning users.
-const AUTH_WITH_DEPRECATED_BAN_ALIAS = [
   "import { pikkuBetterAuth, ban } from '@pikku/better-auth'",
   "import { betterAuth } from 'better-auth'",
   'export const auth = pikkuBetterAuth(() =>',
@@ -65,7 +54,7 @@ describe('runAuthPluginChecks', () => {
       const admin = findings.find((f) => f.id === 'better-auth-admin-plugin')
       assert.ok(admin, 'admin() must be reported')
       assert.equal(admin.severity, 'error')
-      assert.match(admin.fixHint, /pikkuBan\(\)/)
+      assert.match(admin.fixHint, /ban\(\)/)
       assert.match(admin.path, /auth\.ts$/)
     } finally {
       await rm(root, { recursive: true, force: true })
@@ -85,20 +74,10 @@ describe('runAuthPluginChecks', () => {
     }
   })
 
-  test('is silent when pikkuBan() is wired', async () => {
+  test('is silent when ban() is wired', async () => {
     const root = await makeTmp()
     try {
       await writeSource(root, 'auth.ts', AUTH_WITH_BAN)
-      assert.deepEqual(await runAuthPluginChecks(root, config), [])
-    } finally {
-      await rm(root, { recursive: true, force: true })
-    }
-  })
-
-  test('is silent when the deprecated ban() alias is wired', async () => {
-    const root = await makeTmp()
-    try {
-      await writeSource(root, 'auth.ts', AUTH_WITH_DEPRECATED_BAN_ALIAS)
       assert.deepEqual(await runAuthPluginChecks(root, config), [])
     } finally {
       await rm(root, { recursive: true, force: true })

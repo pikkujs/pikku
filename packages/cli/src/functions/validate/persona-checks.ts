@@ -106,19 +106,17 @@ const countPersonas = async (
 /**
  * Whether a persona can actually sign in.
  *
- * Two shapes count. `pikkuActor()` from `@pikku/better-auth` is the one the
- * scaffold wires, and a hand-rolled `/sign-in/actor` route is the one a project
- * that does not use better-auth ends up with. Both terminate at the same
- * endpoint, so either satisfies the check. The deprecated `actor()` alias is
- * matched too — it is the same plugin under its old name.
+ * Two shapes count. `actor()` from `@pikku/better-auth` is the one the scaffold
+ * wires, and a hand-rolled `/sign-in/actor` route is the one a project that does
+ * not use better-auth ends up with. Both terminate at the same endpoint, so
+ * either satisfies the check.
  */
 const hasActorSignIn = async (sourceFiles: string[]): Promise<boolean> => {
   for (const file of sourceFiles) {
     const text = await readTextSafe(file)
     if (!text) continue
     const wiresPlugin =
-      /@pikku\/better-auth/.test(text) &&
-      /(^|[^\w$.])(pikkuActor|actor)\s*\(/.test(text)
+      /@pikku\/better-auth/.test(text) && /\bactor\s*\(/.test(text)
     if (wiresPlugin || /sign-in\/actor/.test(text)) return true
   }
   return false
@@ -183,8 +181,8 @@ export const runPersonaChecks = async (
       pikkuConfigPath,
       lines(
         'Wire the actor plugin where better-auth is configured:',
-        "  import { pikkuActor } from '@pikku/better-auth'",
-        '  plugins: [pikkuActor({ secret: SCENARIO_ACTOR_SECRET })]',
+        "  import { actor } from '@pikku/better-auth'",
+        '  plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]',
         '`pikku dev` turns the endpoint on and mints the secret itself, so there',
         'is nothing to configure locally. A deployed stage that must run',
         'scenarios opts in with',

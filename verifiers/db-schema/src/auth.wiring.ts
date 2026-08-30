@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { organization, twoFactor } from 'better-auth/plugins'
-import { pikkuBan } from '@pikku/better-auth'
+import { ban } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 
 /**
@@ -8,7 +8,7 @@ import { pikkuBetterAuth } from '#pikku/auth'
  *
  * A four-table core is easy to hardcode and would pass a test that only ever
  * saw one. `organization()` adds three tables of its own, `twoFactor()` a
- * fourth, and `pikkuBan()` adds columns to `user` rather than tables of its own — so a
+ * fourth, and `ban()` adds columns to `user` rather than tables of its own — so a
  * generator that special-cases table creation but not column addition fails
  * here. The auth source has to be the schema Better Auth materializes.
  *
@@ -47,6 +47,6 @@ export const auth = pikkuBetterAuth(async ({ secrets, kysely, config }) => {
     },
     emailAndPassword: { enabled: true },
     advanced: { database: { generateId: 'uuid' } },
-    plugins: [organization(), pikkuBan(), twoFactor()],
+    plugins: [organization(), ban(), twoFactor()],
   })
 })

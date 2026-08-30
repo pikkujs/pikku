@@ -36,19 +36,13 @@ export const pikkuUserAdminFunctions = pikkuSessionlessFunc<void, boolean>({
     // Ban is the one capability with a schema requirement of its own, and it is
     // only one of the six — a warning rather than a failure, so an app that
     // never bans anyone is not forced to carry the columns.
-    // The plugin ids here are the callee names read off the `plugins: [...]`
-    // array, so both the current `pikkuBan()` and the deprecated `ban()` alias
-    // have to count as wired.
-    const bansUsers =
-      definition.plugins.includes('pikkuBan') ||
-      definition.plugins.includes('ban')
-    if (!bansUsers) {
+    if (!definition.plugins.includes('ban')) {
       logger.warn(
-        `"scaffold.userAdmin" is enabled but better-auth is configured without the pikkuBan() plugin, ` +
+        `"scaffold.userAdmin" is enabled but better-auth is configured without the ban() plugin, ` +
           `so the banned/banReason/banExpires columns do not exist and setUserBanned will fail.\n` +
-          `Fix: add pikkuBan() to the plugins array in ${definition.sourceFile}:\n` +
-          `  import { pikkuBan } from '@pikku/better-auth'\n` +
-          `  betterAuth({ plugins: [pikkuBan()] })`
+          `Fix: add ban() to the plugins array in ${definition.sourceFile}:\n` +
+          `  import { ban } from '@pikku/better-auth'\n` +
+          `  betterAuth({ plugins: [ban()] })`
       )
     }
 

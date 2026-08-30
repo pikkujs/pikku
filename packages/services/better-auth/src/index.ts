@@ -22,9 +22,9 @@ export {
   setAuthUserPassword,
 } from './admin-users.js'
 export type { AuthGetter } from './admin-users.js'
-export { pikkuBan, ban, BAN_PLUGIN_ID } from './ban-plugin.js'
+export { ban, BAN_PLUGIN_ID } from './ban-plugin.js'
 export type { BanPluginOptions } from './ban-plugin.js'
-export { pikkuActor, actor } from './actor-plugin.js'
+export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export {
   ACTOR_NOT_PROVISIONED_MESSAGE,
@@ -45,10 +45,9 @@ export type {
   ProvisionPersonasResult,
   ProvisionPersonasServices,
 } from './provision-personas.js'
-export { pikkuFabric, fabric } from './fabric-plugin.js'
+export { fabric } from './fabric-plugin.js'
 export type { FabricPluginOptions } from './fabric-plugin.js'
 export {
-  pikkuDelegatedAuth,
   delegatedAuth,
   DELEGATED_PROVIDER_ID,
 } from './delegated-auth-plugin.js'
@@ -78,11 +77,7 @@ export type {
   CredentialOAuthProvider,
   CredentialOAuthSecretReader,
 } from './credential-oauth-providers.js'
-export {
-  pikkuCredentialOAuth,
-  credentialOAuth,
-  PLATFORM_USER_ID,
-} from './credential-oauth.plugin.js'
+export { credentialOAuth, PLATFORM_USER_ID } from './credential-oauth.plugin.js'
 export type { CredentialOAuthOptions } from './credential-oauth.plugin.js'
 export { PROVIDER_REGISTRY } from './provider-registry.js'
 export type { AuthProvider, AuthProviderDef } from './provider-registry.js'

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /**
  * A user, as the directory sees one. Ban state is optional because those
- * columns belong to the `pikkuBan()` plugin: a host without it reports no ban state
+ * columns belong to the `ban()` plugin: a host without it reports no ban state
  * at all, which a client can render as "unknown" rather than as a misleading
  * "not banned".
  */

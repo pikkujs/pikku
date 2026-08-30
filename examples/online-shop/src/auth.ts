@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { pikkuActor, pikkuBan, pikkuFabric } from '@pikku/better-auth'
+import { actor, ban, fabric } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 
 /**
@@ -74,23 +74,23 @@ export const auth = pikkuBetterAuth(
       // db/sqlite/0002-user-actor.sql) signed in by pikkuScenario via
       // POST /api/auth/sign-in/actor { email, secret }. Never signs in real users.
       //
-      // pikkuBan(): adds the banned/banExpires/banReason columns (see
+      // ban(): adds the banned/banExpires/banReason columns (see
       // db/sqlite/0003-admin.sql) and the session hook that refuses a banned
       // user a session. better-auth's own admin() is refused by the inspector:
       // it authorizes on a `user.role` column while pikku authorizes on scopes,
       // and everything else it offered — list, create, ban, remove, revoke
       // sessions, set password — is scoped RPCs in @pikku/addon-admin.
       //
-      // pikkuFabric(): exposes /api/auth/sign-in/fabric — the Fabric control plane
+      // fabric(): exposes /api/auth/sign-in/fabric — the Fabric control plane
       // mints a short-lived RS256 token and signs in as a synthetic `fabric: true`
       // admin operator (db/sqlite/0004-fabric.sql), so the console Users tab can
       // list/impersonate real users without the operator being one of them. It
       // verifies against FABRIC_AUTH_PUBLIC_KEY; a missing key disables the
       // endpoint.
       plugins: [
-        pikkuActor({ secret: SCENARIO_ACTOR_SECRET }),
-        pikkuBan(),
-        pikkuFabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY }),
+        actor({ secret: SCENARIO_ACTOR_SECRET }),
+        ban(),
+        fabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY }),
       ],
     })
   }

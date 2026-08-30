@@ -237,12 +237,12 @@ Banning is the one capability with a schema requirement, and it has its own
 small plugin:
 
 ```typescript
-import { pikkuBan } from '@pikku/better-auth'
+import { ban } from '@pikku/better-auth'
 
-betterAuth({ plugins: [pikkuBan()] })
+betterAuth({ plugins: [ban()] })
 ```
 
-`pikkuBan()` adds `banned`, `banReason` and `banExpires` to `user` and refuses to
+`ban()` adds `banned`, `banReason` and `banExpires` to `user` and refuses to
 create a session for a banned user, lapsing an expired ban as it goes. It makes
 no authorization decision — who may ban is decided by `admin:users:ban` — so it
 never needs to know about scopes or roles.
@@ -252,28 +252,22 @@ never needs to know about scopes or roles.
 Five, all imported from the package root and passed to `betterAuth({ plugins })`
 like any other. None is automatic — an app wires the ones it needs.
 
-| Plugin                   | Plugin `id`        | Adds                                                                    | Use it when                                                   |
-| ------------------------ | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `pikkuBan()`             | `pikku-ban`        | `user.banned/banReason/banExpires`                                      | You ban users (the schema + enforcement half of the above)    |
-| `pikkuActor()`           | `actor`            | `POST /sign-in/actor`, `user.actor`                                     | Scenarios or a dev switcher sign in as a persona              |
-| `pikkuCredentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
-| `pikkuDelegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
-| `pikkuFabric()`          | `fabric`           | `POST /sign-in/fabric`                                                  | A Fabric-deployed app lets a control-plane operator in        |
-
-Every one carries a `pikku` prefix, because a `plugins: [...]` array mixes these
-with better-auth's own and a bare `actor()` next to `organization()` says
-nothing about where it came from. The unprefixed names — `ban`, `actor`,
-`credentialOAuth`, `delegatedAuth`, `fabric` — are still exported as deprecated
-aliases, so existing apps keep working.
+| Plugin              | Plugin `id`        | Adds                                                                    | Use it when                                                   |
+| ------------------- | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `ban()`             | `pikku-ban`        | `user.banned/banReason/banExpires`                                      | You ban users (the schema + enforcement half of the above)    |
+| `actor()`           | `actor`            | `POST /sign-in/actor`, `user.actor`                                     | Scenarios or a dev switcher sign in as a persona              |
+| `credentialOAuth()` | `credential-oauth` | `POST /credential-oauth/link`, `/credential-oauth/callback/:providerId` | An app links OAuth2 **API credentials** for a user            |
+| `delegatedAuth()`   | `delegated-auth`   | `POST /sign-in/delegated`                                               | An imported upstream API is the system of record for identity |
+| `fabric()`          | `fabric`           | `POST /sign-in/fabric`                                                  | A Fabric-deployed app lets a control-plane operator in        |
 
 The plugin's `id` is what better-auth stores; the **export name** is what the
 inspector reads off your `plugins` array and what generated metadata is keyed
-by, so the two differ for every one of them.
+by, so the two differ for `ban` and `delegatedAuth`.
 
-#### `pikkuCredentialOAuth()` — link API credentials, not identities
+#### `credentialOAuth()` — link API credentials, not identities
 
 ```typescript
-pikkuCredentialOAuth({
+credentialOAuth({
   config: [
     {
       providerId: 'github',
@@ -314,10 +308,10 @@ by construction. Tokens land in better-auth's `account` table, so
 An undeclared `providerId` is a 404; an anonymous caller a 401; a refused
 singleton a 403 that leaves no platform user behind.
 
-#### `pikkuDelegatedAuth()` — the upstream API is the identity provider
+#### `delegatedAuth()` — the upstream API is the identity provider
 
 ```typescript
-pikkuDelegatedAuth({
+delegatedAuth({
   authenticate: async ({ email, password, apiKey }) => upstream.login(...),
   storeCredential: (userId, identity) =>
     credentialService.set('acme', identity.credential, userId),
@@ -344,10 +338,10 @@ a warning and the user still gets in.
 `storeCredential` failing, by contrast, **fails the sign-in**: every proxied
 call would be dead anyway.
 
-#### `pikkuFabric()` — control-plane operator sign-in
+#### `fabric()` — control-plane operator sign-in
 
 ```typescript
-pikkuFabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY, scopeService, logger })
+fabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY, scopeService, logger })
 ```
 
 `POST /sign-in/fabric` verifies a short-lived RS256 token that the Fabric
@@ -474,9 +468,9 @@ someone" means **a particular kind of user** rather than one fixed admin.
 Register it explicitly — it is not automatic:
 
 ```typescript
-import { pikkuActor } from '@pikku/better-auth'
+import { actor } from '@pikku/better-auth'
 
-plugins: [pikkuActor({ secret: SCENARIO_ACTOR_SECRET })]
+plugins: [actor({ secret: SCENARIO_ACTOR_SECRET })]
 ```
 
 `POST ${basePath}/sign-in/actor` `{ email, secret, name? }` → 200 + the normal
@@ -591,7 +585,7 @@ await provisionPersonas(singletonServices, {
 ```
 
 It writes the same `banned` column the console's ban RPC writes (so it needs the
-`pikkuBan()` plugin wired, and says so if it isn't), revokes the account's sessions,
+`ban()` plugin wired, and says so if it isn't), revokes the account's sessions,
 and leaves the row, its grants and its history intact — provisioning lifts the
 ban again by itself if the persona comes back. Deleting is deliberately not
 offered: an actor row is referenced by whatever those scenarios did while it

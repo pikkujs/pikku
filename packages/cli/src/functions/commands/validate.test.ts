@@ -137,8 +137,8 @@ async function makeValidWorkspace(root: string) {
   await writeFile(
     join(root, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts'),
     [
-      "import { pikkuActor } from '@pikku/better-auth'",
-      'export const auth = () => ({ plugins: [pikkuActor({ secret: undefined })] })',
+      "import { actor } from '@pikku/better-auth'",
+      'export const auth = () => ({ plugins: [actor({ secret: undefined })] })',
       '',
     ].join('\n'),
     'utf8'
