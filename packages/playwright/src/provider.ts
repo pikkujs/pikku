@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import type { BrowserContext, Video } from '@playwright/test'
 import type { ResolvedPersona } from '@pikku/core/services'
 import {
+  authMount,
   deriveActorSecret,
   establishOperatorSession,
   IMPERSONATE_USER_ID_HEADER,
@@ -434,11 +435,17 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       return defaultActorSignIn
     }
     return async (context, _request, target) => {
+      const mount = authMount(this.options.signInPath)
       const { setCookies, userId } = await establishOperatorSession(
         fetch,
         target.apiUrl,
         persona,
-        operator,
+        {
+          ...operator,
+          signInPath:
+            operator.signInPath ??
+            (mount ? `${mount}/sign-in/fabric` : undefined),
+        },
         { origin: new URL(target.appUrl).origin }
       )
       await context.addCookies(

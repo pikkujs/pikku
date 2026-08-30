@@ -35,6 +35,18 @@ const startTarget = async () => {
         res.writeHead(200).end(JSON.stringify({ ok: true, email: body.email }))
         return
       }
+      if (req.url === '/api/auth/sign-in/fabric') {
+        if (body.token !== 'operator-token') {
+          res.writeHead(401).end(JSON.stringify({ message: 'bad operator' }))
+          return
+        }
+        logins++
+        res.setHeader('set-cookie', [`session=s${logins}; Path=/; HttpOnly`])
+        res
+          .writeHead(200)
+          .end(JSON.stringify({ actAs: { userId: `u-${body.actAs.email}` } }))
+        return
+      }
       if (req.url === '/api/auth/get-session') {
         const cookie = req.headers.cookie ?? ''
         if (!cookie.includes('session=')) {
@@ -74,6 +86,7 @@ const startTarget = async () => {
             echoed: body.data,
             cookie,
             userHeader: req.headers['x-user-id'] ?? null,
+            impersonated: req.headers['x-pikku-impersonate-user-id'] ?? null,
           })
         )
         return
@@ -268,5 +281,33 @@ describe('HttpPersona', async () => {
     })
 
     assert.deepEqual(await actors.manager!.sessionRoles(), ['admin', 'support'])
+  })
+
+  // The operator handshake sits under the same mount and must be derived from
+  // it, not inherited verbatim: posting an operator token to the ACTOR path is
+  // a validation error about a missing email, which reads like a broken
+  // persona rather than a wrong URL.
+  test('derives the operator sign-in path from the same auth mount', async () => {
+    const actors = createHttpPersonas({
+      apiUrl: target.origin,
+      signInPath: '/api/auth/sign-in/actor',
+      rpcPath: '/api/rpc',
+      operator: { token: 'operator-token' },
+      personas: {
+        manager: {
+          id: 'manager',
+          name: 'Manager',
+          email: 'manager@personas.invalid',
+          roles: ['admin'],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
+    })
+
+    const result = (await actors.manager!.invoke('ping', {})) as any
+    assert.equal(result.rpcName, 'ping')
+    assert.equal(result.impersonated, 'u-manager@personas.invalid')
   })
 })

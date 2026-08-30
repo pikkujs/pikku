@@ -22,6 +22,7 @@ import {
   OperatorSignIn,
   type OperatorSignInOptions,
   type PersonaSignIn,
+  authMount,
 } from './persona-sign-in.js'
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
@@ -83,23 +84,6 @@ export interface HttpPersonasConfig {
 }
 
 /**
- * `get-session` under whichever auth mount signs the persona in.
- *
- * better-auth serves both from one prefix, so an app that mounts it at
- * `/api/auth` moves the two together. Reading a hardcoded `/auth/get-session`
- * on such an app 404s, and a 404 reads as "this stage does not report roles" —
- * which turns off the check that tells a permissions finding from seed drift,
- * silently, for the majority of apps.
- */
-const defaultSessionPath = (signInPath?: string): string => {
-  const mount = signInPath ? signInPath.lastIndexOf('/sign-in/') : -1
-  if (!signInPath || mount === -1) {
-    return '/auth/get-session'
-  }
-  return `${signInPath.slice(0, mount)}/get-session`
-}
-
-/**
  * Default HTTP-backed persona. Signs in lazily on first invoke, holds the
  * session cookies for its lifetime, and re-logs-in once on a 401 mid-run (long
  * health-check runs can outlive a session).
@@ -128,7 +112,11 @@ export class HttpPersona implements ScenarioPersona {
     if (config.operator) {
       this.signIn = new OperatorSignIn(config.apiUrl, {
         ...config.operator,
-        signInPath: config.operator.signInPath ?? config.signInPath,
+        signInPath:
+          config.operator.signInPath ??
+          (authMount(config.signInPath)
+            ? `${authMount(config.signInPath)}/sign-in/fabric`
+            : undefined),
       })
     } else if (config.secret) {
       this.signIn = new ActorSignIn(
@@ -229,11 +217,11 @@ export class HttpPersona implements ScenarioPersona {
     if (!this.signedIn) {
       await this.login()
     }
+    const mount = authMount(
+      this.config.operator?.signInPath ?? this.config.signInPath
+    )
     const sessionPath =
-      this.config.sessionPath ??
-      defaultSessionPath(
-        this.config.operator?.signInPath ?? this.config.signInPath
-      )
+      this.config.sessionPath ?? `${mount ?? '/auth'}/get-session`
     const res = await this.jar.fetch(`${this.config.apiUrl}${sessionPath}`, {
       headers: this.signIn.headers(),
     })

@@ -101,6 +101,22 @@ export class ActorSignIn implements PersonaSignIn {
   }
 }
 
+/**
+ * The auth mount a configured sign-in path sits under, or `undefined` when it
+ * names nothing recognisable.
+ *
+ * better-auth serves sign-in, operator sign-in and `get-session` from one
+ * prefix, so an app that mounts it at `/api/auth` moves all three together and
+ * says so once through `signInPath`. Reading the other two from a hardcoded
+ * `/auth` on such an app 404s — and for `get-session` a 404 reads as "this
+ * stage does not report roles", which silently turns off the check that tells a
+ * permissions finding from seed drift.
+ */
+export const authMount = (signInPath?: string): string | undefined => {
+  const mount = signInPath ? signInPath.lastIndexOf('/sign-in/') : -1
+  return !signInPath || mount === -1 ? undefined : signInPath.slice(0, mount)
+}
+
 export interface OperatorSignInOptions {
   /**
    * The short-lived RS256 operator token, or a function that mints one. Prefer

@@ -59,6 +59,7 @@ export {
   type PersonaSignIn,
   type OperatorSignInOptions,
   type OperatorSessionResult,
+  authMount,
 } from '../../services/persona-sign-in.js'
 export {
   ACTOR_ROOT_SECRET_MIN_LENGTH,
