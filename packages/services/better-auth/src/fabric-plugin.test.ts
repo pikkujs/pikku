@@ -6,7 +6,7 @@ import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import { hasScopes } from '@pikku/core/scope'
 
-import { fabric } from './fabric-plugin.js'
+import { pikkuFabric } from './fabric-plugin.js'
 
 const { publicKey, privateKey } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
@@ -71,7 +71,7 @@ const makeAuth = (
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    plugins: [fabric({ publicKey: key, scopeService, audience })],
+    plugins: [pikkuFabric({ publicKey: key, scopeService, audience })],
   })
 
 const signInFabric = (auth: ReturnType<typeof makeAuth>, token: string) =>

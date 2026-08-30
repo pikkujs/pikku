@@ -76,7 +76,7 @@ export interface CredentialOAuthSession {
  * token exchange and the `refreshAccessToken` that `getAccessToken` calls. Only
  * the two identity-bound endpoints are replaced.
  */
-export const credentialOAuth = (options: CredentialOAuthOptions) => {
+export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
   const base = genericOAuth({ config: options.config })
   const findConfig = (providerId: string) =>
     options.config.find((provider) => provider.providerId === providerId)
@@ -290,3 +290,11 @@ export const credentialOAuth = (options: CredentialOAuthOptions) => {
     endpoints: { linkCredential: link, credentialOAuthCallback: callback },
   }
 }
+
+/**
+ * @deprecated Renamed to {@link pikkuCredentialOAuth}. The bare name is
+ * indistinguishable from better-auth's own plugin factories at the
+ * `plugins: [...]` call site. Still exported, and still the same plugin — the
+ * `id` is unchanged.
+ */
+export const credentialOAuth = pikkuCredentialOAuth

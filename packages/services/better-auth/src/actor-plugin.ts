@@ -44,7 +44,7 @@ export interface ActorPluginOptions {
  * it verifies against the email being signed in as, so it opens that one
  * synthetic account and no other.
  */
-export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
+export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
   const logger = options.logger ?? console
   const gate = resolveActorSignIn()
 
@@ -173,3 +173,10 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
     },
   }
 }
+
+/**
+ * @deprecated Renamed to {@link pikkuActor}. The bare name is indistinguishable
+ * from better-auth's own plugin factories at the `plugins: [...]` call site.
+ * Still exported, and still the same plugin — the `id` is unchanged.
+ */
+export const actor = pikkuActor

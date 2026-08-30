@@ -128,7 +128,7 @@ const readPluginBindings = (source: ts.SourceFile): PluginBindings => {
 
 /**
  * Read a `plugins: [...]` entry. better-auth plugins are factory calls —
- * `bearer()`, `twoFactor({ ... })`, `ban()`, or `plugins.bearer()` through a
+ * `bearer()`, `twoFactor({ ... })`, `pikkuBan()`, or `plugins.bearer()` through a
  * namespace import; non-call entries are ignored. `betterAuthExport` is the
  * name better-auth exports the plugin under, and is absent for a plugin that
  * came from somewhere else, which no policy here applies to.
@@ -194,10 +194,10 @@ const isInsideGlobalMiddlewareRegistration = (node: ts.Node): boolean => {
  * every one of its endpoints underneath. Pikku dropped that projection: user
  * management is `@pikku/addon-admin`'s scoped RPCs, and the one capability
  * `admin()` had that nothing else did — refusing a session to a banned user —
- * is `ban()`.
+ * is `pikkuBan()`.
  *
  * Thrown rather than warned because the failure it prevents is silent. An app
- * that drops `admin()` without wiring `ban()` keeps its ban columns and its ban
+ * that drops `admin()` without wiring `pikkuBan()` keeps its ban columns and its
  * UI, and simply stops enforcing bans.
  */
 const UNSUPPORTED_ADMIN_PLUGIN = (sourceFile: string): string =>
@@ -207,12 +207,12 @@ It authorizes against a 'user.role' column, while pikku authorizes on scopes —
 wiring both means one has to be projected onto the other, and the projection is
 coarser than the scopes it stands in for.
 
-Use ban() instead:
+Use pikkuBan() instead:
 
-  import { ban } from '@pikku/better-auth'
-  betterAuth({ plugins: [ban()] })
+  import { pikkuBan } from '@pikku/better-auth'
+  betterAuth({ plugins: [pikkuBan()] })
 
-ban() keeps the part of admin() that pikku cannot supply from outside
+pikkuBan() keeps the part of admin() that pikku cannot supply from outside
 better-auth — the banned/banReason/banExpires columns and the session hook that
 refuses a banned user a session. Everything else admin() offered is already
 scoped RPCs in @pikku/addon-admin: list, create, ban, remove, revoke sessions

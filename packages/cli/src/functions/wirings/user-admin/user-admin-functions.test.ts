@@ -13,7 +13,7 @@ const ADMIN_DEFINITION = {
   sourceFile: '/app/src/auth.ts',
   basePath: '/api/auth',
   hasCredentials: true,
-  plugins: ['bearer', 'ban'],
+  plugins: ['bearer', 'pikkuBan'],
 }
 
 const writeDir = mkdtempSync(join(tmpdir(), 'pikku-user-admin-'))
@@ -135,9 +135,9 @@ describe('pikkuUserAdminFunctions', () => {
     assert.equal(result, false)
   })
 
-  // Ban is one capability of six, so a missing ban() warns and generates the
+  // Ban is one capability of six, so a missing pikkuBan() warns and generates the
   // rest rather than refusing — but it must say so, naming the file to fix.
-  test('warns, and still generates, when ban() is not wired', async () => {
+  test('warns, and still generates, when pikkuBan() is not wired', async () => {
     const warnings: string[] = []
     const svc = services({ ...ADMIN_DEFINITION, plugins: ['bearer'] }, [])
     svc.logger.warn = (message: string) => warnings.push(message)
@@ -147,14 +147,31 @@ describe('pikkuUserAdminFunctions', () => {
       true
     )
     assert.equal(warnings.length, 1)
-    assert.match(warnings[0]!, /without the ban\(\) plugin/)
+    assert.match(warnings[0]!, /without the pikkuBan\(\) plugin/)
     assert.match(warnings[0]!, /\/app\/src\/auth\.ts/)
-    assert.match(warnings[0]!, /import \{ ban \} from '@pikku\/better-auth'/)
+    assert.match(
+      warnings[0]!,
+      /import \{ pikkuBan \} from '@pikku\/better-auth'/
+    )
   })
 
-  test('says nothing when ban() is wired', async () => {
+  test('says nothing when pikkuBan() is wired', async () => {
     const warnings: string[] = []
     const svc = services(ADMIN_DEFINITION, [])
+    svc.logger.warn = (message: string) => warnings.push(message)
+
+    await (pikkuUserAdminFunctions as any).func(svc, undefined, {})
+    assert.deepEqual(warnings, [])
+  })
+
+  // pikkuBan() was `ban()` until the plugins took a pikku prefix, and the alias
+  // is still exported — so a project on the old name still reads as banning.
+  test('says nothing when the deprecated ban() alias is wired', async () => {
+    const warnings: string[] = []
+    const svc = services(
+      { ...ADMIN_DEFINITION, plugins: ['bearer', 'ban'] },
+      []
+    )
     svc.logger.warn = (message: string) => warnings.push(message)
 
     await (pikkuUserAdminFunctions as any).func(svc, undefined, {})

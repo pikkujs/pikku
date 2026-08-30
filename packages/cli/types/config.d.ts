@@ -607,8 +607,8 @@ export type PikkuCLIInput = {
     /**
      * List, create, ban, delete, session-revocation and set-password functions
      * driving better-auth's internal adapter. Requires better-auth to be wired —
-     * codegen fails if it is not — and banning additionally requires the ban()
-     * plugin from @pikku/better-auth.
+     * codegen fails if it is not — and banning additionally requires the
+     * pikkuBan() plugin from @pikku/better-auth.
      */
     userAdmin?: PikkuScaffoldFeature
     /**

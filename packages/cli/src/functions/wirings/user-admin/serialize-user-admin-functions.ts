@@ -14,7 +14,7 @@ export interface UserAdminGenOutput {
  * codegen on conflicting declarations.
  *
  * Each function is gated on its own `admin:users:*` scope, and works through
- * better-auth's internal adapter. Banning additionally needs the `ban()` plugin
+ * better-auth's internal adapter. Banning additionally needs the `pikkuBan()` plugin
  * from `@pikku/better-auth` for the columns it writes to exist.
  *
  * Emitted as two files. The schemas are zod, and the inspector reads a zod
@@ -34,7 +34,7 @@ import { z } from 'zod'
 
 /**
  * A user, as the directory sees one. Ban state is optional because those
- * columns belong to the \`ban()\` plugin: a host without it reports no ban state
+ * columns belong to the \`pikkuBan()\` plugin: a host without it reports no ban state
  * at all, which a client can render as "unknown" rather than as a misleading
  * "not banned".
  */
@@ -232,7 +232,7 @@ export const pikkuAdminSetUserBanned = pikkuFunc({
   tags: ['pikku'],
   title: 'Ban or Unban User',
   description:
-    'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted. Requires better-auth wired with the \`ban()\` plugin.',
+    'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted. Requires better-auth wired with the \`pikkuBan()\` plugin.',
   expose: true,
   scopes: ['admin:users:ban'],
   input: SetUserBannedInput,
