@@ -299,6 +299,7 @@
     "OperatorSignIn",
     "actorSecretSubject",
     "appScopeId",
+    "authMount",
     "buildAppScopeDefinition",
     "createHttpPersonas",
     "definePersonas",
