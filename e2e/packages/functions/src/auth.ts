@@ -2,9 +2,9 @@ import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import { bearer } from 'better-auth/plugins'
 import {
-  actor,
-  ban,
-  credentialOAuth,
+  pikkuActor,
+  pikkuBan,
+  pikkuCredentialOAuth,
   credentialOAuthProviders,
   resolvedUserHoldsScopes,
   ADMIN_SCOPES,
@@ -54,18 +54,18 @@ export const auth = pikkuBetterAuth(
       // is gated on the `admin` scope tree, declared by @pikku/addon-admin's
       // defineScope, which this app inherits.
       //
-      // ban() carries no authorization of its own: it adds the three columns a
+      // pikkuBan() carries no authorization of its own: it adds the three columns a
       // ban lives in and refuses a session for a banned user. Who may ban is
       // decided by `admin:users:ban` on the RPC.
       plugins: [
-        ban(),
+        pikkuBan(),
         bearer(),
-        actor({
+        pikkuActor({
           secret: (await variables.get('SCENARIO_ACTOR_SECRET')) ?? '',
         }),
         // Every defineCredential oauth2 declaration becomes a provider here, so
         // linking an account is what makes getCredential(name) resolve.
-        credentialOAuth({
+        pikkuCredentialOAuth({
           config: await credentialOAuthProviders(
             CREDENTIAL_OAUTH2_CONFIGS,
             secrets,

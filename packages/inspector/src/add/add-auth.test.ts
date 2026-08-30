@@ -217,7 +217,7 @@ describe('addAuth inspector', () => {
     }
   })
 
-  test('refuses better-auth admin() and points at ban()', async () => {
+  test('refuses better-auth admin() and points at pikkuBan()', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-admin-'))
     const file = join(rootDir, 'auth.ts')
 
@@ -241,7 +241,7 @@ describe('addAuth inspector', () => {
         () => inspect(makeLogger(criticals), [file], { rootDir }),
         (error: Error) => {
           assert.match(error.message, /admin\(\) plugin is not supported/)
-          assert.match(error.message, /ban\(\)/)
+          assert.match(error.message, /pikkuBan\(\)/)
           assert.match(error.message, /@pikku\/addon-admin/)
           return true
         }

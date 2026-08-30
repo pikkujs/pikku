@@ -111,7 +111,7 @@ const grantRole = async (
  * stored; the name is refreshed on every sign-in, and the resolved role is
  * re-granted through the {@link DelegatedAuthOptions.scopeService}.
  */
-export const delegatedAuth = (
+export const pikkuDelegatedAuth = (
   options: DelegatedAuthOptions
 ): BetterAuthPlugin => ({
   id: 'delegated-auth',
@@ -254,3 +254,11 @@ export const delegatedAuth = (
     ),
   },
 })
+
+/**
+ * @deprecated Renamed to {@link pikkuDelegatedAuth}. The bare name is
+ * indistinguishable from better-auth's own plugin factories at the
+ * `plugins: [...]` call site. Still exported, and still the same plugin — the
+ * `id` is unchanged.
+ */
+export const delegatedAuth = pikkuDelegatedAuth

@@ -13,20 +13,30 @@ export interface AuthPluginDef {
  * kebab-case plugin directory names. Plugins not listed here still appear in the
  * meta — the CLI derives a Title Case display name from the id (see
  * {@link pluginDisplayName}).
+ *
+ * Pikku's own plugins are keyed under both names: `pikkuBan` and friends are
+ * what a call site says today, and the bare `ban` is what the deprecated alias
+ * still reads as. The derived fallback would render the prefixed names as
+ * "Pikku Ban", which is the package talking rather than the capability.
  */
 export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
   actor: { displayName: 'Actor' },
+  pikkuActor: { displayName: 'Actor' },
   anonymous: { displayName: 'Anonymous' },
   apiKey: { displayName: 'API Key' },
   ban: { displayName: 'Ban' },
+  pikkuBan: { displayName: 'Ban' },
   bearer: { displayName: 'Bearer' },
   captcha: { displayName: 'Captcha' },
   credentialOAuth: { displayName: 'Credential OAuth' },
+  pikkuCredentialOAuth: { displayName: 'Credential OAuth' },
   customSession: { displayName: 'Custom Session' },
   delegatedAuth: { displayName: 'Delegated Auth' },
+  pikkuDelegatedAuth: { displayName: 'Delegated Auth' },
   deviceAuthorization: { displayName: 'Device Authorization' },
   emailOTP: { displayName: 'Email OTP' },
   fabric: { displayName: 'Fabric' },
+  pikkuFabric: { displayName: 'Fabric' },
   genericOAuth: { displayName: 'Generic OAuth' },
   haveIBeenPwned: { displayName: 'Have I Been Pwned' },
   jwt: { displayName: 'JWT' },

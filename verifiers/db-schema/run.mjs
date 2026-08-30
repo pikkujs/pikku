@@ -362,7 +362,7 @@ for (const column of [
 ]) {
   contains(authSql, column, 'plugin column on an existing table')
 }
-// `ban()` replaced better-auth's `admin()`, which is no longer wired anywhere.
+// `pikkuBan()` replaced better-auth's `admin()`, which is no longer wired anywhere.
 // These are the columns it used to add. `user.role` is checked inside the user
 // statement rather than across the file, because `organization()` legitimately
 // puts a `role` on `member`.

@@ -3,9 +3,9 @@ import { describe, test } from 'node:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 
-import { fabric } from './fabric-plugin.js'
+import { pikkuFabric } from './fabric-plugin.js'
 import {
-  delegatedAuth,
+  pikkuDelegatedAuth,
   DELEGATED_PROVIDER_ID,
   type DelegatedAuthOptions,
   type UpstreamIdentity,
@@ -42,9 +42,9 @@ const makeAuth = (
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [
-      // fabric() declares the `fabric` flag the plugin refuses to sign in.
-      fabric({ publicKey: undefined }),
-      delegatedAuth({
+      // pikkuFabric() declares the `fabric` flag the plugin refuses to sign in.
+      pikkuFabric({ publicKey: undefined }),
+      pikkuDelegatedAuth({
         scopeService,
         authenticate: async ({ email, password, apiKey }) => {
           if (apiKey === 'good-key') return identityFor()
@@ -75,7 +75,7 @@ const signInDelegated = (
     })
   )
 
-describe('better-auth delegatedAuth plugin', () => {
+describe('better-auth pikkuDelegatedAuth plugin', () => {
   test('JIT-provisions the user, links the delegated account, stores the credential, mints a session', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const { auth, stored, roles } = makeAuth(db)

@@ -5,7 +5,7 @@ import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import { deriveActorSecret } from '@pikku/core/services'
 
-import { actor } from './actor-plugin.js'
+import { pikkuActor } from './actor-plugin.js'
 import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
   ACTOR_SIGN_IN_OPT_IN_VALUE,
@@ -42,7 +42,9 @@ const makeAuth = (
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    plugins: [actor({ secret, logger: options.logger ?? recordingLogger() })],
+    plugins: [
+      pikkuActor({ secret, logger: options.logger ?? recordingLogger() }),
+    ],
   })
 
 const clearGateEnv = () => {
@@ -279,14 +281,14 @@ describe('actor sign-in gate', () => {
 
   test('a secret configured on a shut gate is a warning, not a silent no-op', () => {
     const logger = recordingLogger()
-    actor({ secret: ROOT, logger })
+    pikkuActor({ secret: ROOT, logger })
     assert.match(
       logger.lines.warn.join('\n'),
       /secret is configured but sign-in stays disabled/
     )
 
     const quiet = recordingLogger()
-    actor({ secret: undefined, logger: quiet })
+    pikkuActor({ secret: undefined, logger: quiet })
     assert.deepEqual(
       quiet.lines.warn,
       [],
@@ -297,7 +299,7 @@ describe('actor sign-in gate', () => {
   test('announces itself when it is open', () => {
     process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
     const logger = recordingLogger()
-    actor({ secret: ROOT, logger })
+    pikkuActor({ secret: ROOT, logger })
     assert.match(
       logger.lines.info.join('\n'),
       new RegExp(DEV_ACTOR_SIGN_IN_ENV)
@@ -306,7 +308,7 @@ describe('actor sign-in gate', () => {
 
   test('still declares the actor column while disabled', () => {
     const logger = recordingLogger()
-    const plugin = actor({ secret: undefined, logger })
+    const plugin = pikkuActor({ secret: undefined, logger })
     assert.equal((plugin.schema as any).user.fields.actor.type, 'boolean')
   })
 })

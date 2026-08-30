@@ -38,6 +38,14 @@ const writePersonaMeta = async (
 }
 
 const actorWiring = [
+  "import { pikkuActor } from '@pikku/better-auth'",
+  'export const auth = () => ({ plugins: [pikkuActor({ secret: undefined })] })',
+  '',
+].join('\n')
+
+// The name pikkuActor() shipped under before the plugins took a pikku prefix.
+// The alias is still exported, so wiring it still counts as actor sign-in.
+const deprecatedActorAliasWiring = [
   "import { actor } from '@pikku/better-auth'",
   'export const auth = () => ({ plugins: [actor({ secret: undefined })] })',
   '',
@@ -83,6 +91,18 @@ describe('persona checks', () => {
     try {
       await writeSource(tmp, 'personas.ts', personaDeclaration)
       await writeSource(tmp, 'auth.wiring.ts', actorWiring)
+      const findings = await runPersonaChecks(tmp, config)
+      assert.deepStrictEqual(ids(findings), [])
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('the deprecated actor() alias still counts as actor sign-in', async () => {
+    const tmp = await makeTmp()
+    try {
+      await writeSource(tmp, 'personas.ts', personaDeclaration)
+      await writeSource(tmp, 'auth.wiring.ts', deprecatedActorAliasWiring)
       const findings = await runPersonaChecks(tmp, config)
       assert.deepStrictEqual(ids(findings), [])
     } finally {
