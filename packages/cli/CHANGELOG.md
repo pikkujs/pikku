@@ -1,3 +1,169 @@
+## 0.12.126
+
+### Patch Changes
+
+- ee9da9e: A Postgres `CHECK (col IN (…))` constraint now generates a string-literal union, the way a native enum and the SQLite equivalent already did. SQL comments inside the value list are ignored rather than corrupting the union parsed out of it.
+- 7a15c9c: An actor credential is one persona's, not everyone's
+
+  `SCENARIO_ACTOR_SECRET` was a skeleton key. Anyone holding it could post any
+  `actor: true` address to `/auth/sign-in/actor` and get that persona's session —
+  including the `admin` persona, which provisioning grants real admin. The browser
+  switcher held it too, baked into the dev bundle as `VITE_SCENARIO_ACTOR_SECRET`,
+  so "the reviewer can sign in as each kind of user" and "the reviewer's bundle is
+  entitled to every persona" were the same fact.
+
+  It is now a root that credentials derive from, never one that is presented:
+
+  ```ts
+  deriveActorSecret(root, email) // HKDF-expanded HMAC-SHA256 over the address
+  ```
+
+  The endpoint re-derives the expected value for whichever address is signing in
+  and compares, so nothing is stored or looked up, a credential minted for one
+  persona is refused for every other, and rotating the root invalidates all of
+  them at once. The root itself is no longer a valid credential, and a root under
+  32 characters refuses the endpoint rather than deriving weak credentials from
+  it — the server log says why, the client is not told.
+
+  What that buys, in the places that used to need the whole key:
+
+  - **`pikku dev`** mints one credential per declared persona into
+    `VITE_DEV_ACTOR_SECRETS` and no longer writes `VITE_SCENARIO_ACTOR_SECRET` at
+    all. The root stays on the server.
+  - **`pikku persona secret <id>`** mints them for anything else, and a run given
+    `PIKKU_PERSONA_SECRETS=id=secret,…` can sign in as those personas and no
+    others — asking for one outside the list throws naming the persona instead of
+    falling back to the root.
+
+  `useDevActors()` and `<DevActorSwitcher />` take `secrets` (one per address)
+  where they took `secret`, and an actor with no credential is no longer offered
+  rather than rendering a row that 401s. `HttpPersonasConfig.secret` and the
+  Playwright provider's `secret` additionally accept a resolver, which is how a
+  partially-credentialled run is expressed.
+
+- ee9da9e: `pikku fabric validate` now fails a project whose generated `coercion.gen.ts` declares coercions that no Kysely instance applies, and the generated file itself says what has to consume it. An unwired coercion map cannot fail locally and 500s on the first deployed request.
+- ee9da9e: `pikku db reset` and `fabric validate` stop treating an absent dev seed as an empty database
+
+  The seed step reported a conclusion about the database rather than about
+  itself: with no `db/sqlite-dev-seed.sql`, reset finished with `database is
+empty` even when a migration had just populated it, and `--no-seed` said the
+  same. Both lines now name the step — `no dev seed applied (…)` and `--no-seed,
+skipping the dev seed`.
+
+  `fabric validate` raised `dev-seed-sql-missing` at **error** severity, so a
+  project that had correctly moved its rows into a migration — where anything a
+  deployed stage needs has to live, since Fabric never replays the dev seed — was
+  failed for no longer carrying a file it deliberately does not need. It is now
+  `info`, and the hint says what the file is for instead of advising an idempotent
+  form the framework tells you not to reach for.
+
+- ee9da9e: The Bun deploy bundler now keeps names, matching the esbuild one, so a deployed error answers with its real name instead of the bundler's identifier for it — `PermissionDeniedError`, not `cn`. An error's `name` is its constructor's name, so a bundler you configure yourself has to preserve names too.
+- ee9da9e: `fabric deploy apply` reports the commit the deployment holds, not the one requested
+
+  With a deployment already parked at `suspended` for the branch,
+  `deployByStageKind` attaches to that plan — pinned to whatever commit it was
+  cut at — rather than creating a new one. The CLI echoed back the sha it had
+  been asked for, so `apply` printed
+
+  ```
+  status: suspended   sha: 599439e6
+  ```
+
+  for a deployment `deploy list` showed pinned to `5bfe84c`, five commits above
+  it. `--ref` did not help; the argument was echoed too. The only symptom was a
+  correct-looking line of output, and the failure mode is a rollback that
+  silently does not roll back.
+
+  The ref is now read back off the deployment, and a disagreement between what
+  was asked for and what is held aborts with both shas and the deployment id
+  named, rather than continuing under the wrong one.
+
+- ee9da9e: The hardcoded-copy check stops flagging a feature's own name
+
+  Two rules disagreed. `runScenarioFileChecks` requires every `pikkuFeature` to
+  live in a `*.scenario.ts`, and moving one there is what put it in front of the
+  hardcoded-copy check — which then flagged the feature's own `name` because the
+  app catalogue happens to hold the same word:
+
+  ```
+  name: 'Downloads',   → ✗ "Downloads" → nav__downloads | downloads__title
+  ```
+
+  Complying with the first rule created violations of the second, and the advice
+  — read the string from the app catalogue — would tie the Console's language to
+  the product's. `name`, `description` and `template` declared directly on a
+  `pikkuFeature`, `pikkuScenario` or `pikkuScenarioStep` are Console meta and are
+  now skipped. A `name` nested deeper — `getByRole('button', { name: 'Speichern'
+})` — is a selector built out of UI copy and is still caught.
+
+- 967d1de: Rename the `locale` field in `pikku.config.json` to `metaLocale`. It sets the language of the meta the Console renders back to your team, not the language your app speaks to its users — a config that still says `locale` now fails with an error saying where the value moved.
+- ee9da9e: `fabric` stage commands default to the only stage, and say what is missing when they cannot
+
+  `pikku fabric secrets list` with one stage deployed failed with `No stage for
+branch "undefined". Existing: main` — an error interpolating the missing
+  argument's value directly above a line naming the single stage it could have
+  used.
+
+  With exactly one stage there is nothing to disambiguate, so `secrets
+list/set/rotate` and `variables get/set` now use it. With several, the error
+  says `--branch is required` and lists them; with none, it says nothing is
+  deployed yet. Each command also names the stage it acted on rather than echoing
+  the argument, and `secrets rotate` resolves before it refuses, so the one
+  message standing between a typo and unreadable secrets names the stage that
+  would actually be rotated.
+
+- ee9da9e: the surface gate measures the surface it actually ships
+
+  The doc-quality gate went in with ceilings of 112, 823 and 10 beside a surface
+  that measured 160, 1210 and 15, so it never passed on any build. Re-baselined to
+  the real measurements, and the key-documentation floor earned its way from 76%
+  to 79% by documenting what a caller has to put in `defineSecret`, the gateway
+  message shapes, and the scorer and judge configs.
+
+- ee9da9e: `fabric validate` no longer reads comment prose as an import
+
+  The undeclared-dependency check matched `from "…"` in raw file text, so any
+  sentence putting a quoted phrase after the word _from_ became a phantom
+  dependency — at error severity, against the app, with nothing naming the file
+  it came from:
+
+  ```
+  ✗  @project/app imports undeclared package(s): is fine — the deploy bundle cannot resolve them
+  ```
+
+  The source is now scanned with comments blanked (a new `blankComments` keeps
+  the text the same length so offsets still line up), and the fix hint names the
+  file and line each missing package was first imported at.
+
+- 2e7adcd: Give a virtual user run a trigger so it survives a per-function deploy.
+
+  `scaffold.virtualUser` dispatched `executeVirtualUserRun` with an unawaited
+  `rpc.invoke`. That is a real dispatch in one process and nothing at all under a
+  deployment that puts each function in its own unit: the run function is
+  sessionless, unexposed and wired to nothing, so it is never emitted as a unit,
+  the RPC resolves to nothing, and the rejection is swallowed by the `catch` that
+  exists to stop an unhandled rejection taking the process down. The run parks at
+  `running` with zero steps and no error anywhere.
+
+  The scaffold now wires it to a `pikku-virtual-user-runs` queue worker, which is
+  what puts it in the deploy manifest, and `runVirtualUser` enqueues onto that
+  queue at `attempts: 1` — a redelivery would be a second different outing writing
+  into a record that already has an outcome. A project with no queue service keeps
+  the in-process dispatch, which is correct for the one process it runs in.
+
+- Updated dependencies [ee9da9e]
+- Updated dependencies [7a15c9c]
+- Updated dependencies [ee9da9e]
+- Updated dependencies [7d641f3]
+- Updated dependencies [ee9da9e]
+- Updated dependencies [ee9da9e]
+- Updated dependencies [ee9da9e]
+  - @pikku/core@0.12.99
+  - @pikku/better-auth@0.12.33
+  - @pikku/playwright@0.12.80
+  - @pikku/skills@0.12.20
+  - @pikku/inspector@0.12.68
+
 ## 0.12.125
 
 ### Patch Changes
