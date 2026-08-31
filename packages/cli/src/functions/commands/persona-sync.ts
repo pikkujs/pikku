@@ -15,10 +15,11 @@ import { resolvePersonas } from '../../utils/resolve-personas.js'
  * config and write through it, which provisioned a local stage correctly and
  * silently provisioned the wrong database for every other environment.
  *
- * So the deployment provisions itself: an app calls `provisionPersonas` from
- * `@pikku/better-auth` in its server lifecycle, where the database connection
- * and better-auth's own adapter are both already open, and a deploy carries its
- * personas with it. What is left here is the half that needs no database — the
+ * So the deployment provisions itself: an app hands its personas to
+ * `pikkuFabric` from `@pikku/better-auth`, and the plugin creates a missing one
+ * on the operator handshake that asks for it, where the database connection and
+ * better-auth's own adapter are both already open. What is left here is the
+ * half that needs no database — the
  * declaration, and the environment rule applied to it — which is what tells you
  * before a deploy whether the accounts you expect will appear.
  */
@@ -102,7 +103,7 @@ export const personaSync = pikkuSessionlessFunc<
       logger.info(`  skipped: ${refusal}`)
     }
     logger.info(
-      "  Provisioning runs in the deployment: call `provisionPersonas` from '@pikku/better-auth' in your server lifecycle, passing `personaConfigs` and `personaEnvironments` from the generated personas file."
+      "  Provisioning runs in the deployment: pass `personas: { personas: personaConfigs, environments: personaEnvironments }` from the generated personas file to `pikkuFabric` from '@pikku/better-auth'."
     )
   },
 })

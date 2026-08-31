@@ -247,6 +247,8 @@ export const lifecycle = pikkuServerLifecycle<SingletonServices>({
 
 Export exactly one `pikkuServerLifecycle` from anywhere in `srcDirectories` — the inspector finds it by the wrapper call. Every hook is optional and receives the already-created singleton services. See pikku-services for the ordering and the `afterStop` caveat.
 
+**Only `pikku dev` and `pikku serve` invoke these hooks.** No deploy runtime does, so anything a Workers or serverless stage needs done cannot live here — put it on the request path that needs it, guarded by a cheap check.
+
 **2. Bootstrap it yourself (required for a specific runtime)**
 
 Express, Fastify, uWS, Lambda, Cloudflare and Next.js need their own entrypoint, because Pikku is embedded in a server you own:
@@ -333,7 +335,7 @@ bottom.
 | Axis            | What it covers                                                                                                                                                    | What decides it                                                                                             |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Branch names and commit messages.                                                | Nothing. **Always English.** There is no setting.                                                           |
-| **Meta**        | The prose authored _inside_ the code: `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role/persona descriptions. | `metaLocale` in `pikku.config.json`. Defaults to `en`.                                                          |
+| **Meta**        | The prose authored _inside_ the code: `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role/persona descriptions. | `metaLocale` in `pikku.config.json`. Defaults to `en`.                                                      |
 | **Product UI**  | Every string the app shows a user.                                                                                                                                | `messages/<locale>.json`, with `active.json`'s `defaultLocale` choosing what a first-time visitor opens in. |
 
 ### Identifiers are English, and nothing changes that

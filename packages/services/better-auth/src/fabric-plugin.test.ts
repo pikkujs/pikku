@@ -66,6 +66,8 @@ const makeScopeService = (
       addUserToRole: async (userId: string, role: string) => {
         roleGrants.push({ userId, role })
       },
+      listUserRoles: async (userId: string) =>
+        roleGrants.filter((g) => g.userId === userId).map((g) => g.role),
     } as any,
   }
 }
@@ -74,14 +76,17 @@ const makeAuth = (
   db: Record<string, any[]>,
   key?: string,
   scopeService?: any,
-  audience?: string
+  audience?: string,
+  personas?: any
 ) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
     secret: 'better-auth-test-secret',
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
-    plugins: [pikkuFabric({ publicKey: key, scopeService, audience })],
+    plugins: [
+      pikkuFabric({ publicKey: key, scopeService, audience, personas }),
+    ],
   })
 
 const signInFabric = (auth: ReturnType<typeof makeAuth>, token: string) =>
@@ -156,13 +161,27 @@ describe('better-auth fabric plugin', () => {
     assert.equal(res.status, 200)
   })
 
-  test('grants a provisioned persona the declared roles the caller names', async () => {
+  // The handshake is the only trigger a Worker stage has: `afterStart` is
+  // invoked by `pikku serve` and `pikku dev` alone, so an app deployed anywhere
+  // else provisioned nothing and every persona signed in holding no roles.
+  test('provisions the declared personas when the address is not there yet', async () => {
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const { roleGrants, scopeService } = makeScopeService(
       ['virtualUser'],
       ['guest']
     )
-    const auth = makeAuth(db, publicKey, scopeService)
+    const auth = makeAuth(db, publicKey, scopeService, undefined, {
+      personas: {
+        guest: {
+          id: 'guest',
+          name: 'Guest',
+          email: 'guest@personas.invalid',
+          roles: ['guest'],
+        },
+      },
+      environments: { stage: {} },
+      environment: 'stage',
+    })
 
     const res = await auth.handler(
       new Request('http://localhost:3000/api/auth/sign-in/fabric', {
@@ -170,13 +189,7 @@ describe('better-auth fabric plugin', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           token: signToken(privateKey, { sub: 'op-1' }),
-          actAs: {
-            email: 'Guest@personas.invalid',
-            name: 'Guest',
-            create: true,
-            role: 'guest',
-            roles: ['guest', 'undeclared'],
-          },
+          actAs: { email: 'Guest@personas.invalid' },
         }),
       })
     )
@@ -185,6 +198,31 @@ describe('better-auth fabric plugin', () => {
     const body = await res.json()
     assert.ok(body.actAs?.userId)
     assert.deepEqual(roleGrants, [{ userId: body.actAs.userId, role: 'guest' }])
+  })
+
+  // A persona nobody declared stays a 404 however it is asked for. Sign-in
+  // creating accounts of its own is the arrangement this replaced.
+  test('refuses an address no declaration claims', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const { scopeService } = makeScopeService(['virtualUser'], ['guest'])
+    const auth = makeAuth(db, publicKey, scopeService, undefined, {
+      personas: {},
+      environments: { stage: {} },
+      environment: 'stage',
+    })
+
+    const res = await auth.handler(
+      new Request('http://localhost:3000/api/auth/sign-in/fabric', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          token: signToken(privateKey, { sub: 'op-1' }),
+          actAs: { email: 'ghost@personas.invalid' },
+        }),
+      })
+    )
+
+    assert.equal(res.status, 404)
   })
 
   test('mints an admin session for a synthetic fabric operator row', async () => {

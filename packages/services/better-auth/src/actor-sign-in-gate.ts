@@ -10,7 +10,7 @@ export const WEAK_ACTOR_ROOT_SECRET_MESSAGE =
   'Actor sign-in is not configured with a strong enough secret'
 
 export const ACTOR_NOT_PROVISIONED_MESSAGE =
-  'No actor account exists for that address — the deployment provisions its personas at boot, so check `provisionPersonas` runs in this environment'
+  'No actor account exists for that address — the deployment provisions its personas through pikkuFabric, so check the plugin was given them in this environment'
 
 export type ActorSignInReason =
   'pikku-dev' | 'allow-outside-dev-env' | 'disabled'

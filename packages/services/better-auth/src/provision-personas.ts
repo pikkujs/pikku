@@ -83,9 +83,15 @@ type ActorUser = {
  * Runs where the database is, which is the whole point. `pikku persona sync`
  * reached for a Kysely connection built from the local project config, so it
  * only ever provisioned a deployment whose database the developer's machine
- * could open — true of a local stage and of nothing else. The server has that
- * connection by definition, so this is a call an app makes from its own
- * `afterStart`, and a deploy carries the personas with it.
+ * could open — true of a local stage and of nothing else. A running stage has
+ * that connection by definition, so provisioning happens there.
+ *
+ * Not exported, and not something an app calls. The fabric plugin runs it on an
+ * operator handshake that names an address the stage has no account for, which
+ * is the only moment the work is both needed and cheap to detect. The obvious
+ * home — `pikkuServerLifecycle`'s `afterStart` — is a trap: that hook is
+ * invoked by `pikku serve` and `pikku dev` and by nothing else, so every stage
+ * deployed to Workers or a serverless target provisioned nothing at all.
  *
  * Accounts are created through better-auth's internal adapter — the same call
  * the actor endpoint makes — rather than by inserting a `user` row directly, so

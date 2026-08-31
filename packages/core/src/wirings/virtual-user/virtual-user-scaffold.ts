@@ -77,7 +77,6 @@ export const VIRTUAL_USER_VARIABLES = {
    * fallback for a run nobody handed a token to, which is what a schedule is.
    */
   operatorToken: 'FABRIC_OPERATOR_TOKEN',
-  createMissing: 'PIKKU_PERSONA_CREATE_MISSING',
 } as const
 
 /**
@@ -560,9 +559,6 @@ export const executeVirtualUserRun = async ({
       )
     }
 
-    const createMissing =
-      String(await variables.get(VIRTUAL_USER_VARIABLES.createMissing)) ===
-      'true'
     const model = await variables.get(VIRTUAL_USER_VARIABLES.model)
     if (!model) {
       throw new Error(
@@ -606,7 +602,6 @@ export const executeVirtualUserRun = async ({
         ? {
             operator: {
               token,
-              createMissing,
               signInPath: signInPathFor(configuredSignInPath, 'fabric'),
             },
           }

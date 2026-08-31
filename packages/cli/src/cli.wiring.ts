@@ -769,7 +769,7 @@ wireCLI({
         sync: pikkuCLICommand({
           func: personaSync,
           description:
-            "Report which personas an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — call provisionPersonas from '@pikku/better-auth' in your server lifecycle — because the CLI has no connection to a deployed environment's database.",
+            "Report which personas an environment will provision, with which roles, and why any of them were skipped. The provisioning itself happens in the deployment — pass the generated personas to pikkuFabric from '@pikku/better-auth' — because the CLI has no connection to a deployed environment's database.",
           parameters: '<environment>',
         }),
         list: pikkuCLICommand({

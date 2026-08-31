@@ -1,6 +1,10 @@
 import { betterAuth } from 'better-auth'
 import { pikkuActor, pikkuBan, pikkuFabric } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
+import {
+  personaConfigs,
+  personaEnvironments,
+} from '#pikku/scenarios/pikku-personas.gen.js'
 
 /**
  * Better Auth configuration — email + password sign-in.
@@ -25,7 +29,14 @@ import { pikkuBetterAuth } from '#pikku/auth'
 // so never re-construct a service here or reach for a dynamic import.
 // @snippet start betterAuthConfig
 export const auth = pikkuBetterAuth(
-  async ({ kysely, secrets, variables, emailService }) => {
+  async ({
+    kysely,
+    secrets,
+    variables,
+    emailService,
+    scopeService,
+    logger,
+  }) => {
     // `.reveal()` at the sink, not earlier: getSecret hands back a nominal
     // SecretValue that no concretely-typed parameter accepts, so every disclosure
     // is one greppable call. Better Auth wants the raw string, and this is where
@@ -87,10 +98,25 @@ export const auth = pikkuBetterAuth(
       // list/impersonate real users without the operator being one of them. It
       // verifies against FABRIC_AUTH_PUBLIC_KEY; a missing key disables the
       // endpoint.
+      //
+      // `personas` is what provisions the scenario actors. The plugin creates a
+      // declared persona's account the first time an operator asks to act as an
+      // address the stage has no row for, so a deploy carries its actors with it
+      // without a bootstrap step. This does NOT belong in `pikkuServerLifecycle`'s
+      // afterStart: that hook only ever runs under `pikku dev` and `pikku serve`,
+      // so a deployed stage would provision nobody.
       plugins: [
         pikkuActor({ secret: SCENARIO_ACTOR_SECRET }),
         pikkuBan(),
-        pikkuFabric({ publicKey: FABRIC_AUTH_PUBLIC_KEY }),
+        pikkuFabric({
+          publicKey: FABRIC_AUTH_PUBLIC_KEY,
+          scopeService,
+          logger,
+          personas: {
+            personas: personaConfigs,
+            environments: personaEnvironments,
+          },
+        }),
       ],
     })
   }

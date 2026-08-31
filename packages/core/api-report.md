@@ -2329,7 +2329,7 @@ export interface StepRecord {
 }
 tickVirtualUserSchedules: ({ schedules, runs, dispatch, now, random, staleAfterMs, }: VirtualUserTickParams) => Promise<VirtualUserTickResult>
 unreachableCatalogue: (entries: readonly ApiCatalogueEntry[], scopes: readonly string[]) => ApiCatalogueEntry[]
-VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_ACTOR_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; readonly createMissing: "PIKKU_PERSONA_CREATE_MISSING"; }
+VIRTUAL_USER_VARIABLES: { readonly apiUrl: "VIRTUAL_USER_API_URL"; readonly secret: "SCENARIO_ACTOR_SECRET"; readonly model: "VIRTUAL_USER_MODEL"; readonly signInPath: "SCENARIO_SIGN_IN_PATH"; readonly rpcPath: "SCENARIO_RPC_PATH"; readonly operatorToken: "FABRIC_OPERATOR_TOKEN"; }
 export interface VirtualUserBudget {
   steps?: number
   mutations?: number
@@ -3971,7 +3971,6 @@ export class OperatorSignIn implements PersonaSignIn {
 }
 export interface OperatorSignInOptions {
   token: string | (() => string | Promise<string>)
-  createMissing?: boolean
   signInPath?: string
 }
 export type PersonaAccountMeta = {
