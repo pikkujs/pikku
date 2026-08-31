@@ -66,6 +66,16 @@ const startTarget = async () => {
           return
         }
         const rpcName = req.url.slice('/api/rpc/'.length)
+        if (rpcName === 'getMyScopes') {
+          res
+            .writeHead(200, { 'content-type': 'application/json' })
+            .end(JSON.stringify({ scopes: ['stays:read'], roles: ['guest'] }))
+          return
+        }
+        if (rpcName === 'noSuchRpc') {
+          res.writeHead(404).end()
+          return
+        }
         if (rpcName === 'html-error') {
           res
             .writeHead(500, { 'content-type': 'text/html' })
@@ -261,12 +271,68 @@ describe('HttpPersona', async () => {
   // mount in `apiUrl`, so it moves `signInPath` instead. The session read has
   // to follow it: a 404 there reads as 'this stage does not report roles' and
   // silently turns the role check off.
+  //
+  // `rolesRpc: false` because this is about the better-auth path specifically —
+  // leaving the RPC in would answer first and the mount would go untested.
   test('reads the session from the mount the sign-in path names', async () => {
     const actors = createHttpPersonas({
       apiUrl: target.origin,
       secret: ROOT,
       signInPath: '/api/auth/sign-in/actor',
       rpcPath: '/api/rpc',
+      rolesRpc: false,
+      personas: {
+        manager: {
+          id: 'manager',
+          name: 'Manager',
+          email: 'manager@personas.invalid',
+          roles: ['admin'],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
+    })
+
+    assert.deepEqual(await actors.manager!.sessionRoles(), ['admin', 'support'])
+  })
+
+  // Scopes are the model in an app that authorizes on them; better-auth's
+  // `user.role` is a projection kept in step for its own admin endpoints, and
+  // is absent entirely from an app that declares no such field. Reading the
+  // projection is how a guest holding exactly what it should got refused for
+  // "roles drifted".
+  test('reads roles from the app RPC in preference to better-auth', async () => {
+    const actors = createHttpPersonas({
+      apiUrl: target.origin,
+      secret: ROOT,
+      signInPath: '/api/auth/sign-in/actor',
+      rpcPath: '/api/rpc',
+      personas: {
+        manager: {
+          id: 'manager',
+          name: 'Manager',
+          email: 'manager@personas.invalid',
+          roles: ['guest'],
+          goals: [],
+          tags: [],
+          runnable: true,
+        },
+      },
+    })
+
+    assert.deepEqual(await actors.manager!.sessionRoles(), ['guest'])
+  })
+
+  // An app without the RPC is not an app reporting "no roles" — going quiet
+  // there would turn every persona into a mismatch against an empty list.
+  test('falls back to better-auth when the roles RPC is absent', async () => {
+    const actors = createHttpPersonas({
+      apiUrl: target.origin,
+      secret: ROOT,
+      signInPath: '/api/auth/sign-in/actor',
+      rpcPath: '/api/rpc',
+      rolesRpc: 'noSuchRpc',
       personas: {
         manager: {
           id: 'manager',

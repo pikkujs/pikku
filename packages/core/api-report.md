@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2871 observable things**: 912 exported names, plus
-1959 members on the classes and interfaces among them, reachable
+**2872 observable things**: 912 exported names, plus
+1960 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -22,7 +22,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
-| `./persona` | 45 | 39 | 48 |
+| `./persona` | 45 | 39 | 49 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 49 | 49 | 20 |
 | `./services/local-meta` | 22 | 2 | 38 |
@@ -3951,6 +3951,7 @@ export interface HttpPersonasConfig {
   signInPath?: string
   sessionPath?: string
   rpcPath?: string
+  rolesRpc?: string | false
   model?: string
 }
 IMPERSONATE_USER_ID_HEADER: "x-pikku-impersonate-user-id"

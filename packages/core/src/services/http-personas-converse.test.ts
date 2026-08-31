@@ -57,28 +57,37 @@ const startAgentTarget = async () => {
         json({ runId: body.runId, text: 'Created it.', status: 'completed' })
         return
       }
-      if (req.url === '/api/rpc/agent/todoBot') {
+      // The SSE route, because that is the one a persona's turn goes to — the
+      // plain route buffers the whole run and dies on undici's headers timeout.
+      if (req.url === '/api/rpc/agent/todoBot/stream') {
         agentRuns++
-        if (agentRuns === 1) {
-          json({
-            runId: 'run-1',
-            text: 'Let me do that.',
-            status: 'suspended',
-            pendingApprovals: [
-              {
-                toolCallId: 'tc1',
-                toolName: 'createTodo',
-                args: { title: 'x' },
-              },
-            ],
-          })
-          return
+        const runId = `run-${agentRuns}`
+        const events: unknown[] =
+          agentRuns === 1
+            ? [
+                { type: 'RUN_STARTED', runId },
+                { type: 'TEXT_MESSAGE_CONTENT', delta: 'Let me ' },
+                { type: 'TEXT_MESSAGE_CONTENT', delta: 'do that.' },
+                {
+                  type: 'approval-request',
+                  runId,
+                  toolCallId: 'tc1',
+                  toolName: 'createTodo',
+                  args: { title: 'x' },
+                },
+                { type: 'done' },
+              ]
+            : [
+                { type: 'RUN_STARTED', runId },
+                { type: 'TEXT_MESSAGE_CONTENT', delta: 'All set.' },
+                { type: 'RUN_FINISHED', runId },
+                { type: 'done' },
+              ]
+        res.writeHead(200, { 'content-type': 'text/event-stream' })
+        for (const event of events) {
+          res.write(`data: ${JSON.stringify(event)}\n\n`)
         }
-        json({
-          runId: `run-${agentRuns}`,
-          text: 'All set.',
-          status: 'completed',
-        })
+        res.end()
         return
       }
       res.writeHead(404).end()

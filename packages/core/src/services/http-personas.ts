@@ -77,6 +77,17 @@ export interface HttpPersonasConfig {
   /** Exposed-RPC path prefix under apiUrl. Default `/rpc`. */
   rpcPath?: string
   /**
+   * Exposed RPC that reports the CALLER's own roles, as `{ roles: string[] }`.
+   * Default `getMyScopes`. Pass `false` to skip it and read better-auth only.
+   *
+   * Asked before better-auth's `user.role`, because in an app that authorizes
+   * on scopes that column is a projection rather than the model — it exists so
+   * better-auth's own admin endpoints have something to read, is written by
+   * whatever keeps it in step, and is absent entirely from an app that declares
+   * no such field. A persona verified against it is verified against a copy.
+   */
+  rolesRpc?: string | false
+  /**
    * Default model a persona thinks with when `converse(...)` is called without
    * an explicit `model`. Its own turns/approvals/evaluation run in-process via
    * the configured `agentRunner`.
@@ -208,16 +219,46 @@ export class HttpPersona implements ScenarioPersona {
   /**
    * The roles the stage says this session holds.
    *
-   * Read from better-auth's `get-session`, which is what most pikku apps are
-   * running and where its admin plugin puts `role` — on the user, as a
-   * comma-separated list. A target that answers something else returns `null`
-   * rather than an empty list, because "this stage does not report roles" and
-   * "this person has none" call for opposite responses from the caller.
+   * {@link HttpPersonasConfig.rolesRpc} first, then better-auth's
+   * `get-session` — where its admin plugin puts `role` on the user, as a
+   * comma-separated list. A target that answers neither returns `null` rather
+   * than an empty list, because "this stage does not report roles" and "this
+   * person has none" call for opposite responses from the caller.
    */
   async sessionRoles(): Promise<string[] | null> {
     if (!this.signedIn) {
       await this.login()
     }
+    const fromRpc = await this.rolesFromRpc()
+    if (fromRpc) return fromRpc
+    return await this.rolesFromSession()
+  }
+
+  /**
+   * The caller's own roles, from the app's own RPC. `null` for every answer
+   * that is not a role list — an app without the RPC 404s here, which is a
+   * reason to go on and ask better-auth, not a reason to report "none".
+   */
+  private async rolesFromRpc(): Promise<string[] | null> {
+    const rpcName = this.config.rolesRpc ?? 'getMyScopes'
+    if (rpcName === false) return null
+    let res: Response
+    try {
+      res = await this.postRpc(rpcName, {})
+    } catch {
+      return null
+    }
+    if (!res.ok) return null
+    const { body } = await readScenarioHttpResponse<{
+      roles?: unknown
+      data?: { roles?: unknown }
+    }>(res)
+    const roles = body?.roles ?? body?.data?.roles
+    if (!Array.isArray(roles)) return null
+    return roles.filter((name): name is string => typeof name === 'string')
+  }
+
+  private async rolesFromSession(): Promise<string[] | null> {
     const mount = authMount(
       this.config.operator?.signInPath ?? this.config.signInPath
     )
