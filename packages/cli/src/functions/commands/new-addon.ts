@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'fs'
-import { dirname, join } from 'path'
+import { dirname, join, relative as relativePath, sep } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { spawnSync } from 'node:child_process'
 import { findInstallRoot } from './update.js'
@@ -947,6 +947,50 @@ async function writeFiles(
 }
 
 /**
+ * Does `root`'s `workspaces` field cover `dir`?
+ *
+ * Declaring workspaces is not enough — a root with `packages/*` does not own an
+ * addon written to `addons/crm`, and yarn, npm and pnpm all skip a nested
+ * package they were never told about.
+ */
+export function workspaceCovers(root: string, dir: string): boolean {
+  const relative = relativePath(root, dir).split(sep).join('/')
+  if (relative === '' || relative.startsWith('..')) {
+    return false
+  }
+
+  let patterns: unknown
+  try {
+    const manifest = JSON.parse(
+      readFileSync(join(root, 'package.json'), 'utf8')
+    )
+    patterns = Array.isArray(manifest.workspaces)
+      ? manifest.workspaces
+      : manifest.workspaces?.packages
+  } catch {
+    return false
+  }
+  if (!Array.isArray(patterns)) {
+    return false
+  }
+
+  return patterns.some((pattern) => {
+    if (typeof pattern !== 'string') {
+      return false
+    }
+    const source = pattern
+      .split('/')
+      .map((segment) =>
+        segment === '**'
+          ? '.*'
+          : segment.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
+      )
+      .join('/')
+    return new RegExp(`^${source}$`).test(relative)
+  })
+}
+
+/**
  * An addon that has not been built is dead at runtime.
  *
  * The generated package exports `./dist/...` — that is what an installed
@@ -985,12 +1029,13 @@ export const buildGeneratedAddon = (
     return false
   }
 
-  // A root install only reaches the addon when the addon is a workspace member.
-  // Outside a workspace the root owns a lockfile but not this package, so its
-  // devDependencies — `@pikku/cli` and `typescript`, which the build script
-  // needs — would never be installed.
-  const installIn =
-    resolveAddonDepProtocol(addonDir) === 'workspace:*' ? installDir : addonDir
+  // A root install only reaches the addon when the root's workspace patterns
+  // cover it. A root that owns the lockfile but not this package installs
+  // nothing for it, so its devDependencies — `@pikku/cli` and `typescript`,
+  // which the build script needs — would never arrive.
+  const installIn = workspaceCovers(installDir, addonDir)
+    ? installDir
+    : addonDir
 
   const steps: Array<[string, string[]]> = [
     [installIn, ['install']],
