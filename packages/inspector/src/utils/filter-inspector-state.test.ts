@@ -2010,3 +2010,56 @@ describe('invokedFunctionsByFile serialization', () => {
     assert.strictEqual(restored.rpc.invokedFunctionsByFile.size, 0)
   })
 })
+
+describe('Workflow file pruning', () => {
+  const workflowState = () => {
+    const state = createMockInspectorState()
+    state.workflows.meta = {
+      moveOut: { pikkuFuncId: 'getUsers' } as any,
+      theMoveOutScenario: { pikkuFuncId: 'createUser' } as any,
+    }
+    state.workflows.graphMeta = {
+      moveOut: { pikkuFuncId: 'getUsers' } as any,
+      theMoveOutScenario: {
+        pikkuFuncId: 'createUser',
+        source: 'scenario',
+      } as any,
+    }
+    state.workflows.files = new Map([
+      [
+        'moveOut',
+        {
+          path: '/test/project/src/wirings/move-out.workflow.ts',
+          exportedName: 'moveOut',
+        },
+      ],
+      [
+        'theMoveOutScenario',
+        {
+          path: '/test/project/test/scenarios/the-move-out.scenario.ts',
+          exportedName: 'theMoveOutScenario',
+        },
+      ],
+    ])
+    return state
+  }
+
+  test('drops the file entry of a pruned workflow', () => {
+    const result = filterInspectorState(
+      workflowState(),
+      { names: ['getUsers'] },
+      mockLogger
+    )
+
+    assert.deepEqual(Object.keys(result.workflows.graphMeta), ['moveOut'])
+    assert.deepEqual([...result.workflows.files.keys()], ['moveOut'])
+  })
+
+  test('leaves the original state untouched', () => {
+    const state = workflowState()
+    filterInspectorState(state, { names: ['getUsers'] }, mockLogger)
+
+    assert.equal(state.workflows.files.size, 2)
+    assert.equal(Object.keys(state.workflows.graphMeta).length, 2)
+  })
+})

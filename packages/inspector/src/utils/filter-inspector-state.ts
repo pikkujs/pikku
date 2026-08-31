@@ -21,6 +21,28 @@ type DeployFilter = {
   has(pikkuFuncId: string): boolean
 }
 
+/**
+ * Drop a workflow from every map that describes it. `files` and `graphFiles`
+ * are what the wiring generator iterates, and `graphMeta` is what tells a
+ * scenario apart from an app workflow — leaving a pruned workflow's file entry
+ * behind registers it anyway, and a scenario whose graphMeta has gone reads as
+ * an app workflow, which is how scenario steps reached deployed bundles.
+ */
+const pruneWorkflow = (
+  workflows: InspectorState['workflows'],
+  name: string,
+  pikkuFuncId: string | undefined
+) => {
+  delete workflows.graphMeta[name]
+  delete workflows.meta[name]
+  workflows.files.delete(name)
+  workflows.graphFiles.delete(name)
+  if (pikkuFuncId) {
+    workflows.files.delete(pikkuFuncId)
+    workflows.graphFiles.delete(pikkuFuncId)
+  }
+}
+
 // Module-level Set to track warned groups across multiple filter calls
 const globalWarnedGroups = new Set<string>()
 
@@ -449,6 +471,8 @@ export function filterInspectorState(
       ...state.workflows,
       graphMeta: JSON.parse(JSON.stringify(state.workflows?.graphMeta ?? {})),
       meta: JSON.parse(JSON.stringify(state.workflows?.meta ?? {})),
+      files: new Map(state.workflows?.files ?? []),
+      graphFiles: new Map(state.workflows?.graphFiles ?? []),
     },
     channels: {
       ...state.channels,
@@ -1098,12 +1122,10 @@ export function filterInspectorState(
         pikkuFuncId &&
         !filteredState.serviceAggregation.usedFunctions.has(pikkuFuncId)
       ) {
-        delete filteredState.workflows.graphMeta[name]
-        delete filteredState.workflows.meta[name]
+        pruneWorkflow(filteredState.workflows, name, pikkuFuncId)
       } else if (!pikkuFuncId) {
         // No function ID found — prune it
-        delete filteredState.workflows.graphMeta[name]
-        delete filteredState.workflows.meta[name]
+        pruneWorkflow(filteredState.workflows, name, pikkuFuncId)
       }
     }
 
