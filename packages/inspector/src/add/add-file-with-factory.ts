@@ -27,6 +27,7 @@ const extractForwardedServices = (
 
   const collectBinding = (pattern: ts.ObjectBindingPattern) => {
     for (const elem of pattern.elements) {
+      if (elem.dotDotDotToken) continue
       const name =
         elem.propertyName && ts.isIdentifier(elem.propertyName)
           ? elem.propertyName.text
@@ -75,6 +76,9 @@ const extractReturnedServices = (
   const returned: string[] = []
 
   const collect = (expression: ts.Expression) => {
+    while (ts.isParenthesizedExpression(expression)) {
+      expression = expression.expression
+    }
     if (!ts.isObjectLiteralExpression(expression)) return
     for (const property of expression.properties) {
       if (ts.isSpreadAssignment(property)) continue
@@ -87,7 +91,7 @@ const extractReturnedServices = (
 
   const body = functionNode.body
   if (!ts.isBlock(body)) {
-    collect(ts.isParenthesizedExpression(body) ? body.expression : body)
+    collect(body)
     return returned
   }
 
