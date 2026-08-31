@@ -22,6 +22,14 @@ import { pikkuSessionlessFunc } from '#pikku/function'
  */
 export type DistCopy = { from: string; to: string }
 
+/**
+ * `tsc` compiles a `.ts` and emits it. Everything else it either reads without
+ * emitting — a `.d.ts` is an input, `declaration: true` does not re-emit one —
+ * or ignores entirely, like the generated json.
+ */
+const tscEmitsIt = (file: string) =>
+  file.endsWith('.ts') && !file.endsWith('.d.ts')
+
 const walk = async (dir: string): Promise<string[]> => {
   if (!existsSync(dir)) {
     return []
@@ -39,19 +47,14 @@ const walk = async (dir: string): Promise<string[]> => {
 export const planDistCopies = (
   rootDir: string,
   distDir: string,
-  files: { pikku: string[]; src: string[] }
+  files: string[]
 ): DistCopy[] => {
-  const carried = [
-    // Everything tsc did not compile: the generated json, and any other asset
-    // sitting in the out dir.
-    ...files.pikku.filter((file) => !file.endsWith('.ts')),
-    // A declaration file is an input to tsc, never an output of it.
-    ...files.src.filter((file) => file.endsWith('.d.ts')),
-  ]
-  return carried.map((from) => ({
-    from,
-    to: join(distDir, relative(rootDir, from)),
-  }))
+  return files
+    .filter((file) => !tscEmitsIt(file))
+    .map((from) => ({
+      from,
+      to: join(distDir, relative(rootDir, from)),
+    }))
 }
 
 const readTsOutDir = (tsconfig: string): string | undefined => {
@@ -77,14 +80,14 @@ export const pikkuDist = pikkuSessionlessFunc<{ distDir?: string }, void>({
       process.exit(1)
     }
 
-    const copies = planDistCopies(rootDir, distDir, {
-      pikku: await walk(outDir),
-      src: (
+    const copies = planDistCopies(rootDir, distDir, [
+      ...(await walk(outDir)),
+      ...(
         await Promise.all(
           srcDirectories.map((dir: string) => walk(resolve(rootDir, dir)))
         )
       ).flat(),
-    })
+    ])
 
     for (const { from, to } of copies) {
       await mkdir(dirname(to), { recursive: true })
