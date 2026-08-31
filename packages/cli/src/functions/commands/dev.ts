@@ -12,6 +12,7 @@ import { InMemoryQueueService, QueueWebhookService } from '@pikku/core/services'
 import {
   ConsoleLogger,
   LocalEmailService,
+  LocalCredentialService,
   spy,
   InMemoryAgentRunStateService,
 } from '@pikku/core/services'
@@ -342,6 +343,7 @@ export const dev = pikkuSessionlessFunc<
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),
+      credentialService: new LocalCredentialService(),
       agentStorage,
       agentRunState,
       agentRunService,
