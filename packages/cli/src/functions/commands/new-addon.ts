@@ -209,7 +209,7 @@ export function getAddonFiles(
       scripts: {
         prepublishOnly: 'yarn build',
         prebuild: 'pikku all',
-        build: 'tsc && cp -r .pikku types dist/',
+        build: 'tsc && pikku dist',
         pikku: 'pikku all',
       },
       peerDependencies: {

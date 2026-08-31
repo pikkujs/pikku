@@ -12,6 +12,7 @@ import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { fabricCommands } from './fabric/fabric-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
+import { pikkuDist } from './functions/commands/dist.js'
 import { watch } from './functions/commands/watch.js'
 import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
@@ -301,6 +302,18 @@ wireCLI({
     bootstrap: pikkuCLICommand({
       func: bootstrap,
       description: 'Generate only type files (setup phase only)',
+    }),
+    dist: pikkuCLICommand({
+      func: pikkuDist,
+      description:
+        "Copy the generated files tsc cannot emit — the .gen.json meta, and hand-authored .d.ts — into the build output. Run it after tsc, as a package's build script",
+      options: {
+        distDir: {
+          description:
+            "Where to copy to. Defaults to the tsconfig's compilerOptions.outDir",
+          type: 'string',
+        },
+      },
     }),
     audit: pikkuCLICommand({
       func: pikkuAudit,
