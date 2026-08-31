@@ -110,7 +110,8 @@ const countPersonas = async (
  * scaffold wires, and a hand-rolled `/sign-in/actor` route is the one a project
  * that does not use better-auth ends up with. Both terminate at the same
  * endpoint, so either satisfies the check. The deprecated `actor()` alias is
- * matched too — it is the same plugin under its old name.
+ * matched too — an app on an older version wires the same plugin under that
+ * name, which was removed from the library.
  */
 const hasActorSignIn = async (sourceFiles: string[]): Promise<boolean> => {
   for (const file of sourceFiles) {

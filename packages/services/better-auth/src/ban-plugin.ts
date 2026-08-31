@@ -89,10 +89,3 @@ export const pikkuBan = (options: BanPluginOptions = {}): BetterAuthPlugin => ({
     }
   },
 })
-
-/**
- * @deprecated Renamed to {@link pikkuBan}. The bare name is indistinguishable
- * from better-auth's own plugin factories at the `plugins: [...]` call site.
- * Still exported, and still the same plugin — the `id` is unchanged.
- */
-export const ban = pikkuBan
