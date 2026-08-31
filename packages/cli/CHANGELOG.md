@@ -1,3 +1,95 @@
+## 0.12.128
+
+### Patch Changes
+
+- c0940a1: `pikku new addon` now installs and builds the addon it generates.
+
+  The generated package exports `./dist/...`, which is what an installed consumer
+  resolves and what the app's own `pikku-bootstrap.gen.ts` imports. Until `build`
+  had run, that path did not exist: the app failed at boot with PKU340 and an
+  ERR_MODULE_NOT_FOUND on a dist file nobody had written, and every
+  `ref('<addon>:…')` resolved to nothing. Nothing about the generated files showed
+  the problem, so a generated addon looked complete and was dead at runtime.
+
+  Pass `--no-build` to keep the previous write-only behaviour.
+
+- e92e30b: Print a CLI failure as its message, not as a JS stack trace.
+
+  Every error that reached the top of `executeCLI` was logged with `console.error('Error:', error)`, which node renders as the full stack — and prefixed it a second time, so a refusal read `Error: Error: Persona 'guest' missing guest…` above ten frames of pikku internals. A `PikkuFetchError` was worse: node inspects an error's own properties, so the whole `Response` came out with it, headers and body stream included, to say `502`.
+
+  An expected failure — a `PikkuError`, or anything carrying `expected: true` — now prints its message alone, and a fetch failure prints `502 Bad Gateway from <url>` without touching the response. Anything else keeps its stack, because a `TypeError` with its frames removed is undiagnosable. `--verbose`/`-v`, or `PIKKU_DEBUG=1` where the flag cannot be typed, adds the stack back to an expected failure.
+
+  The refusals behind the examples — a persona whose roles have drifted, a sign-in the stage rejected — are raised as `PikkuError` so they are classed as deliberate.
+
+- 3079f44: Give `pikku dev` a credential store.
+
+  Wiring a `credentialService` is the deployment's job — the values are per-user
+  secrets, and where they are encrypted and who holds the key is a decision only
+  the host can make. But that left `pikku dev` with none at all: `credentialService`
+  was `undefined`, so an addon imported with `--auth per-user` or `--auth delegated`
+  could not be exercised locally. The delegated sign-in a project is told to wire
+  threw on its first call, and projects were reaching for their own credential
+  tables to get past it.
+
+  `pikku dev` now builds a `LocalCredentialService` alongside the rest of its
+  in-memory services — the queue, the trigger service, the workflow service — and
+  hands it to `createSingletonServices` as an existing service. A project that
+  wants a real store overrides it there the same way it overrides any of the
+  others: `existingServices.credentialService ?? new OwnCredentialService()`.
+
+- 5bb006f: Add `pikku fabric secrets delete <name>`.
+
+  Removing one secret from a stage had no lever. The only thing close was
+  `secrets rotate`, which retires the stage's sealing key and so takes every
+  secret on the stage down with it — an enormous blast radius for wanting one
+  name gone.
+
+  `secrets delete` calls the `deleteStageSecret` RPC, which removes the single
+  named secret and leaves the sealing key and the stage's other secrets alone.
+  It confirms first unless `--force` is passed: fabric holds only the public half
+  of the stage keypair, so it cannot read a sealed value back and cannot restore
+  one — the plaintext has to be supplied again. Deployed units keep serving the
+  old value until the stage is republished, so the run that does so is reported
+  when the delete triggers one.
+
+- e15f5a9: Add `pikku dist`, and use it as the generated addon's build step.
+
+  `tsc` compiles the `.ts` under the pikku out dir, but it never carries the
+  `*.gen.json` meta written beside them, and it never re-emits a hand-authored
+  `.d.ts`. Both are needed at runtime — `MetaService` opens the meta off disk by
+  path — so a package that ships only tsc's output answers every meta lookup with
+  nothing.
+
+  Every generated addon papered over this with `tsc && cp -r .pikku types dist/`,
+  which copied two whole directories: it dragged 52 raw `.ts` sources into the
+  published output alongside the compiled ones, and needed a POSIX shell. Since
+  the script comes from the CLI, every project carried the same line.
+
+  `pikku dist` copies exactly what tsc could not emit, to where tsc would have put
+  it, reading the layout from `pikku.config.json` and the destination from the
+  tsconfig's `outDir` (or `--dist-dir`). The generated build script is now
+  `tsc && pikku dist`.
+
+- 4d0a548: Provision the declared personas from the fabric plugin instead of the server lifecycle.
+
+  `provisionPersonas` was documented as a call an app makes from `pikkuServerLifecycle`'s `afterStart`. That hook is invoked by `pikku serve` and `pikku dev` and by nothing else — no deploy runtime calls it — so on any stage deployed to Workers or a serverless target the provisioning never ran, and every persona signed in holding no roles.
+
+  `pikkuFabric` now takes `personas`. The operator endpoint resolves the address the caller wants to act as; a miss provisions the declaration and looks again. On a stage that already holds the persona that is one query, and the pass only runs when there is genuinely something absent to create.
+
+  Sign-in no longer creates accounts of its own. `OperatorSignInOptions.createMissing` and `PIKKU_PERSONA_CREATE_MISSING` are gone, and an address no declaration claims stays a 404 however many times it is asked for. `provisionPersonas` is no longer exported — the plugin is the only caller.
+
+  `pikku persona sync <environment>` is unchanged: it still reports who an environment will provision and why anyone was skipped, and still writes nothing.
+
+- Updated dependencies [e92e30b]
+- Updated dependencies [14059e0]
+- Updated dependencies [781797c]
+- Updated dependencies [ccab6ed]
+- Updated dependencies [4d0a548]
+- Updated dependencies [5ace170]
+  - @pikku/core@0.12.101
+  - @pikku/better-auth@0.12.35
+  - @pikku/skills@0.12.22
+
 ## 0.12.127
 
 ### Patch Changes

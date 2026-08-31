@@ -1,3 +1,27 @@
+## 0.12.101
+
+### Patch Changes
+
+- e92e30b: Print a CLI failure as its message, not as a JS stack trace.
+
+  Every error that reached the top of `executeCLI` was logged with `console.error('Error:', error)`, which node renders as the full stack — and prefixed it a second time, so a refusal read `Error: Error: Persona 'guest' missing guest…` above ten frames of pikku internals. A `PikkuFetchError` was worse: node inspects an error's own properties, so the whole `Response` came out with it, headers and body stream included, to say `502`.
+
+  An expected failure — a `PikkuError`, or anything carrying `expected: true` — now prints its message alone, and a fetch failure prints `502 Bad Gateway from <url>` without touching the response. Anything else keeps its stack, because a `TypeError` with its frames removed is undiagnosable. `--verbose`/`-v`, or `PIKKU_DEBUG=1` where the flag cannot be typed, adds the stack back to an expected failure.
+
+  The refusals behind the examples — a persona whose roles have drifted, a sign-in the stage rejected — are raised as `PikkuError` so they are classed as deliberate.
+
+- 781797c: Drive a persona's agent turn over the SSE route. The plain `POST /rpc/agent/:name` buffers the entire run before sending a byte, so any run longer than undici's 300s headers timeout failed with `UND_ERR_HEADERS_TIMEOUT` — which is most conversational agents.
+- ccab6ed: Verify a persona's roles against the app's own `getMyScopes` RPC before better-auth's `user.role`. In an app that authorizes on scopes that column is a projection — kept in step for better-auth's own admin endpoints, and absent entirely from an app that declares no such field — so a persona holding exactly what it should was refused for "roles drifted". Configurable via `rolesRpc`; `false` reads better-auth only.
+- 4d0a548: Provision the declared personas from the fabric plugin instead of the server lifecycle.
+
+  `provisionPersonas` was documented as a call an app makes from `pikkuServerLifecycle`'s `afterStart`. That hook is invoked by `pikku serve` and `pikku dev` and by nothing else — no deploy runtime calls it — so on any stage deployed to Workers or a serverless target the provisioning never ran, and every persona signed in holding no roles.
+
+  `pikkuFabric` now takes `personas`. The operator endpoint resolves the address the caller wants to act as; a miss provisions the declaration and looks again. On a stage that already holds the persona that is one query, and the pass only runs when there is genuinely something absent to create.
+
+  Sign-in no longer creates accounts of its own. `OperatorSignInOptions.createMissing` and `PIKKU_PERSONA_CREATE_MISSING` are gone, and an address no declaration claims stays a 404 however many times it is asked for. `provisionPersonas` is no longer exported — the plugin is the only caller.
+
+  `pikku persona sync <environment>` is unchanged: it still reports who an environment will provision and why anyone was skipped, and still writes nothing.
+
 ## 0.12.100
 
 ### Patch Changes
