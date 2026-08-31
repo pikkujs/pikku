@@ -86,12 +86,16 @@ type ActorUser = {
  * could open — true of a local stage and of nothing else. A running stage has
  * that connection by definition, so provisioning happens there.
  *
- * Not exported, and not something an app calls. The fabric plugin runs it on an
- * operator handshake that names an address the stage has no account for, which
- * is the only moment the work is both needed and cheap to detect. The obvious
- * home — `pikkuServerLifecycle`'s `afterStart` — is a trap: that hook is
- * invoked by `pikku serve` and `pikku dev` and by nothing else, so every stage
- * deployed to Workers or a serverless target provisioned nothing at all.
+ * Prefer handing the personas to `pikkuFabric` and letting the plugin call this
+ * on an operator handshake that names an address the stage has no account for:
+ * that is the only moment the work is both needed and cheap to detect, and it
+ * is the only arrangement that works on a deployed stage.
+ *
+ * Calling it directly is for a server the app itself boots, where
+ * `pikkuServerLifecycle`'s `afterStart` genuinely runs. Reach for that hook only
+ * if you know the process starts through `pikku serve` or `pikku dev` — nothing
+ * else invokes it, so an app on Workers or a serverless target that provisions
+ * from `afterStart` provisions nothing at all.
  *
  * Accounts are created through better-auth's internal adapter — the same call
  * the actor endpoint makes — rather than by inserting a `user` row directly, so

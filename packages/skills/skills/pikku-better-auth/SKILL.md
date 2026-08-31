@@ -578,6 +578,19 @@ invoked by `pikku serve` and `pikku dev` and by nothing else — no deploy runti
 calls it — so a stage on Workers or a serverless target that provisioned from
 `afterStart` provisioned nothing, and every persona signed in holding no roles.
 
+An app that boots its own server through `pikku serve` is the one case where
+that hook does run, and it can call `provisionPersonas` from `@pikku/better-auth`
+directly:
+
+```ts
+import { provisionPersonas } from '@pikku/better-auth'
+
+await provisionPersonas(
+  { auth, scopeService, logger },
+  { personas: personaConfigs, environments: personaEnvironments }
+)
+```
+
 Provisioning runs where the database already is, which is the point: the CLI has
 no connection to a deployed environment's database — it resolves one from the
 local project config — so a `pikku persona sync staging` that wrote rows would
