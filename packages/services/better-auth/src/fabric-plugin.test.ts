@@ -44,10 +44,15 @@ const signToken = (
   return `${input}.${sig}`
 }
 
-const makeScopeService = (declared: string[] = ['virtualUser']) => {
+const makeScopeService = (
+  declared: string[] = ['virtualUser'],
+  declaredRoles: string[] = []
+) => {
   const granted: Array<{ userId: string; scope: string }> = []
+  const roleGrants: Array<{ userId: string; role: string }> = []
   return {
     granted,
+    roleGrants,
     scopeService: {
       addScopeToUser: async (userId: string, scope: string) => {
         granted.push({ userId, scope })
@@ -56,6 +61,11 @@ const makeScopeService = (declared: string[] = ['virtualUser']) => {
         granted.filter((g) => g.userId === userId).map((g) => g.scope),
       listScopes: async () =>
         declared.map((id) => ({ id, declared: true as const })),
+      listRoles: async () =>
+        declaredRoles.map((name) => ({ name, scopes: [] })),
+      addUserToRole: async (userId: string, role: string) => {
+        roleGrants.push({ userId, role })
+      },
     } as any,
   }
 }
@@ -144,6 +154,37 @@ describe('better-auth fabric plugin', () => {
       signToken(privateKey, { sub: 'op-1' })
     )
     assert.equal(res.status, 200)
+  })
+
+  test('grants a provisioned persona the declared roles the caller names', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const { roleGrants, scopeService } = makeScopeService(
+      ['virtualUser'],
+      ['guest']
+    )
+    const auth = makeAuth(db, publicKey, scopeService)
+
+    const res = await auth.handler(
+      new Request('http://localhost:3000/api/auth/sign-in/fabric', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          token: signToken(privateKey, { sub: 'op-1' }),
+          actAs: {
+            email: 'Guest@personas.invalid',
+            name: 'Guest',
+            create: true,
+            role: 'guest',
+            roles: ['guest', 'undeclared'],
+          },
+        }),
+      })
+    )
+
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.ok(body.actAs?.userId)
+    assert.deepEqual(roleGrants, [{ userId: body.actAs.userId, role: 'guest' }])
   })
 
   test('mints an admin session for a synthetic fabric operator row', async () => {

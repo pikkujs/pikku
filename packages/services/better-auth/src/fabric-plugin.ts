@@ -196,8 +196,15 @@ const grantOperatorScopes = async (
  * `role` column of its own, but an app is free to keep better-auth's `admin()`
  * plugin, and those apps tend to constrain the column — creating a row without
  * one fails their CHECK. The caller knows the persona's roles; this does not.
+ *
+ * `roles` is the same list as a grant rather than a column. An app authorizing
+ * on scopes never reads `role`, so a persona created with only the column set
+ * holds nothing, and every check against it reads as seed drift. Granted on
+ * creation only: an existing account's roles are the app's to decide, and a
+ * persona whose roles have really drifted should be caught, not corrected.
  */
 const resolveActAs = async (
+  options: FabricPluginOptions,
   internalAdapter: {
     findUserByEmail: (
       email: string
@@ -211,6 +218,7 @@ const resolveActAs = async (
     name?: string | undefined
     create?: boolean | undefined
     role?: string | undefined
+    roles?: string[] | undefined
   }
 ): Promise<{ userId: string }> => {
   const email = actAs.email.toLowerCase()
@@ -236,7 +244,52 @@ const resolveActAs = async (
       message: `Failed to create an account for ${actAs.email}`,
     })
   }
-  return { userId: String(created.id) }
+  const userId = String(created.id)
+  await grantActAsRoles(options, userId, actAs.roles ?? [])
+  return { userId }
+}
+
+/**
+ * Grants a freshly created persona the roles the caller named.
+ *
+ * Skips a role the app has not declared, so a grant always traces back to a
+ * declaration. Logged rather than thrown: the account exists and the session is
+ * mintable, and a persona holding nothing fails its own role check with a far
+ * clearer message than a 500 on sign-in.
+ */
+const grantActAsRoles = async (
+  options: FabricPluginOptions,
+  userId: string,
+  roles: string[]
+): Promise<void> => {
+  if (roles.length === 0) {
+    return
+  }
+  const scopeService = options.scopeService
+  if (!scopeService) {
+    options.logger?.warn?.(
+      `fabric: no ScopeService registered, so ${userId} was created holding no roles`
+    )
+    return
+  }
+  try {
+    const declared = new Set(
+      (await scopeService.listRoles()).map((r) => r.name)
+    )
+    for (const role of roles) {
+      if (!declared.has(role)) {
+        options.logger?.warn?.(
+          `fabric: ${userId} was not granted '${role}' — this app declares no such role`
+        )
+        continue
+      }
+      await scopeService.addUserToRole(userId, role)
+    }
+  } catch (error) {
+    options.logger?.warn?.(
+      `fabric: could not grant roles to ${userId}: ${error}`
+    )
+  }
 }
 
 /**
@@ -285,6 +338,7 @@ export const pikkuFabric = (options: FabricPluginOptions): BetterAuthPlugin => {
                 name: z.string().optional(),
                 create: z.boolean().optional(),
                 role: z.string().optional(),
+                roles: z.array(z.string()).optional(),
               })
               .optional(),
           }),
@@ -380,6 +434,7 @@ export const pikkuFabric = (options: FabricPluginOptions): BetterAuthPlugin => {
           await setSessionCookie(ctx, { session, user: user as any })
           const actAs = ctx.body.actAs
             ? await resolveActAs(
+                options,
                 ctx.context.internalAdapter as any,
                 ctx.body.actAs
               )

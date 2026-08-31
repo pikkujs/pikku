@@ -14,6 +14,7 @@ const OPERATOR_TOKEN = 'operator.jwt.token'
  */
 const startStage = async (seeded: Array<{ id: string; email: string }>) => {
   const users = [...seeded]
+  const requestedRoles: unknown[] = []
   let created = 0
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = []
@@ -34,16 +35,15 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
           let user = users.find((u) => u.email === body.actAs.email)
           if (!user) {
             if (!body.actAs.create) {
-              res
-                .writeHead(404)
-                .end(
-                  JSON.stringify({
-                    message: `No account on this stage for ${body.actAs.email}`,
-                  })
-                )
+              res.writeHead(404).end(
+                JSON.stringify({
+                  message: `No account on this stage for ${body.actAs.email}`,
+                })
+              )
               return
             }
             created++
+            requestedRoles.push(body.actAs.roles)
             user = { id: `made-${created}`, email: body.actAs.email }
             users.push(user)
           }
@@ -76,6 +76,9 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
     server,
     get createdCount() {
       return created
+    },
+    get requestedRoles() {
+      return requestedRoles
     },
   }
 }
@@ -169,6 +172,7 @@ describe('operator persona sign-in', () => {
     }
     assert.equal(result.actingAs, 'made-1')
     assert.equal(stage.createdCount, 1)
+    assert.deepEqual(stage.requestedRoles, [['client']])
   })
 
   test('mints the operator session from a token factory', async () => {
