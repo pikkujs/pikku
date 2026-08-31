@@ -38,7 +38,7 @@ pikku info tags --verbose        # Understand project organization
 ### `pikkuServices(factory)` — singleton services (created once at startup)
 
 ```typescript
-import { pikkuServices } from '#pikku/function'
+import { pikkuServices } from '#pikku/setup'
 import { ConsoleLogger } from '@pikku/core/services'
 import { JoseJWTService } from '@pikku/jose'
 
@@ -61,7 +61,7 @@ export const createSingletonServices = pikkuServices(
 ### `pikkuWireServices(factory)` — per-request services (fresh per HTTP request, queue job, CLI command, etc.)
 
 ```typescript
-import { pikkuWireServices } from '#pikku/function'
+import { pikkuWireServices } from '#pikku/setup'
 
 export const createWireServices = pikkuWireServices(
   async (singletonServices, wire) => {
@@ -240,7 +240,7 @@ const createSingletonServices = pikkuServices(async (config) => {
 
 ```typescript
 // services.ts
-import { pikkuServices, pikkuWireServices } from '#pikku/function'
+import { pikkuServices, pikkuWireServices } from '#pikku/setup'
 import { ConsoleLogger } from '@pikku/core/services'
 import { JoseJWTService } from '@pikku/jose'
 

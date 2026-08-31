@@ -46,7 +46,7 @@ Scenarios live in `srcDirectories` like any other function — by convention `*.
 `pikkuScenario` comes from the **generated** workflow types, not `@pikku/core`:
 
 ```typescript
-import { pikkuScenario } from '#pikku/scenario'
+import { pikkuScenario } from '#pikku/scenarios'
 
 export const orderSupportScenario = pikkuScenario<
   { value?: number },
@@ -175,7 +175,7 @@ Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs 
 `pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip:
 
 ```typescript
-import { pikkuFeature } from '#pikku/scenario'
+import { pikkuFeature } from '#pikku/scenarios'
 import {
   credentialLazyLoadScenario,
   credentialRoundTripScenario,
@@ -240,7 +240,7 @@ Utilities are **not steps**. They are plain exported functions, they take the br
 
 ```typescript
 // shop.browser.ts — shared actions. Not steps: nothing here is an intent.
-import type { PikkuBrowserWire } from '#pikku/scenario'
+import type { PikkuBrowserWire } from '#pikku/scenarios'
 import type {} from '@pikku/playwright'
 
 /** Arrive on the shop, from wherever the browser happens to be. */
@@ -462,7 +462,7 @@ Assertions with no possible browser witness are a different thing and should not
 `scenario.do` can only name an RPC. A **step** is a named, typed unit of scenario behaviour whose body is an ordinary pikku function — so it can call several RPCs as its actor, assert, or drive a browser.
 
 ```typescript
-import { pikkuScenarioStep } from '#pikku/scenario'
+import { pikkuScenarioStep } from '#pikku/scenarios'
 
 export const buysAnApple = pikkuScenarioStep<
   { qty: number },

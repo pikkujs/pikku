@@ -58,7 +58,7 @@ Use for checks that read the session but need no request data — and that asser
 something **beyond** merely having a session (a flag, a tier, a claim).
 
 ```typescript
-import { pikkuAuth } from '#pikku/function'
+import { pikkuAuth } from '#pikku/auth'
 
 // Good: a real gate on the session's contents, not just its existence.
 export const isVerified = pikkuAuth(
@@ -89,7 +89,7 @@ A permission answers "_may this user do this?_" (role, ownership, tier) — neve
 Use when authorization depends on the actual request data (e.g., resource ownership).
 
 ```typescript
-import { pikkuPermission } from '#pikku/function'
+import { pikkuPermission } from '#pikku/auth'
 
 export const isBookOwner = pikkuPermission(
   async ({ db }, { bookId }, { session }) => {
@@ -139,7 +139,7 @@ export const deleteBook = pikkuFunc({
 A global permission is an app-wide baseline that **every** function must additionally pass. It is an independent AND gate: it can only ever _narrow_ access — it never grants access a function's own `permissions` would deny.
 
 ```typescript
-import { addGlobalPermission } from '#pikku/function'
+import { addGlobalPermission } from '#pikku/auth'
 
 addGlobalPermission([isEmployee]) // every function now also requires an employee session
 ```
@@ -248,7 +248,7 @@ declared, inspectable, and reusable.
 
 ```typescript
 // src/permissions.ts
-import { pikkuAuth, pikkuPermission } from '#pikku/function'
+import { pikkuAuth, pikkuPermission } from '#pikku/auth'
 
 export const isVerified = pikkuAuth(
   async (_services, session) => !!session?.emailVerified

@@ -65,7 +65,7 @@ import {
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 // WRONG — the function leaf does not re-export them (TS2305)
-import { pikkuWorkflowFunc } from '#pikku/function'
+import { pikkuWorkflowFunc } from '#pikku/workflow'
 ```
 
 ## Defining a workflow

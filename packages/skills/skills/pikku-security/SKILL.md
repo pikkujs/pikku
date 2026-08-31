@@ -62,7 +62,7 @@ Apply these via `addHTTPMiddleware` in a wirings file:
 
 ```typescript
 import { authBearer, authCookie, authAPIKey } from '#pikku/middleware'
-import { addHTTPMiddleware } from '#pikku/http'
+import { addHTTPMiddleware } from '#pikku/middleware'
 
 // JWT bearer token — reads Authorization header
 addHTTPMiddleware('*', [authBearer()])
@@ -118,7 +118,7 @@ response.
 
 ```typescript
 // permissions.ts
-import { pikkuAuth, pikkuPermission } from '#pikku/function'
+import { pikkuAuth, pikkuPermission } from '#pikku/auth'
 
 export const isAuthenticated = pikkuAuth(
   async (_services, session) => !!session
@@ -129,7 +129,7 @@ export const isVerified = pikkuAuth(
 
 // wirings/auth.wiring.ts
 import { authCookie } from '#pikku/middleware'
-import { addHTTPMiddleware } from '#pikku/http'
+import { addHTTPMiddleware } from '#pikku/middleware'
 
 addHTTPMiddleware('*', [
   authCookie({

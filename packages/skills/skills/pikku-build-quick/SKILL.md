@@ -85,7 +85,7 @@ named:
 
 ```typescript
 import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
-import { defineSystemRole } from '#pikku'
+import { defineSystemRole } from '#pikku/scopes'
 
 defineSystemRole({
   owner: { displayName: 'Owner', description: 'Sees only their own rows', scopes: [] },
@@ -199,7 +199,7 @@ Not the full ladder — one journey, end to end, as a real persona, so the app h
 at least one thing that stays true.
 
 ```typescript
-import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenario } from '#pikku/scenarios'
 
 export const ownerCreatesAndSeesItScenario = pikkuScenario<void, { id: string }>({
   title: 'An owner creates a thing and sees it',
