@@ -290,11 +290,3 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
     endpoints: { linkCredential: link, credentialOAuthCallback: callback },
   }
 }
-
-/**
- * @deprecated Renamed to {@link pikkuCredentialOAuth}. The bare name is
- * indistinguishable from better-auth's own plugin factories at the
- * `plugins: [...]` call site. Still exported, and still the same plugin — the
- * `id` is unchanged.
- */
-export const credentialOAuth = pikkuCredentialOAuth
