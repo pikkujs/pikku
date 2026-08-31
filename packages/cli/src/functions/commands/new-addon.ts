@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'fs'
-import { dirname, join } from 'path'
+import { dirname, join, relative as relativePath, sep } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
+import { spawnSync } from 'node:child_process'
+import { findInstallRoot } from './update.js'
 import {
   createEmptyManifest,
   saveManifest,
@@ -944,6 +946,114 @@ async function writeFiles(
   return written
 }
 
+/**
+ * Does `root`'s `workspaces` field cover `dir`?
+ *
+ * Declaring workspaces is not enough — a root with `packages/*` does not own an
+ * addon written to `addons/crm`, and yarn, npm and pnpm all skip a nested
+ * package they were never told about.
+ */
+export function workspaceCovers(root: string, dir: string): boolean {
+  const relative = relativePath(root, dir).split(sep).join('/')
+  if (relative === '' || relative.startsWith('..')) {
+    return false
+  }
+
+  let patterns: unknown
+  try {
+    const manifest = JSON.parse(
+      readFileSync(join(root, 'package.json'), 'utf8')
+    )
+    patterns = Array.isArray(manifest.workspaces)
+      ? manifest.workspaces
+      : manifest.workspaces?.packages
+  } catch {
+    return false
+  }
+  if (!Array.isArray(patterns)) {
+    return false
+  }
+
+  return patterns.some((pattern) => {
+    if (typeof pattern !== 'string') {
+      return false
+    }
+    const source = pattern
+      .split('/')
+      .map((segment) =>
+        segment === '**'
+          ? '.*'
+          : segment.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
+      )
+      .join('/')
+    return new RegExp(`^${source}$`).test(relative)
+  })
+}
+
+/**
+ * An addon that has not been built is dead at runtime.
+ *
+ * The generated package exports `./dist/...` — that is what an installed
+ * consumer resolves, and what the app's own `pikku-bootstrap.gen.ts` imports.
+ * Until `build` has run, every `ref('<addon>:...')` resolves to nothing and the
+ * app fails at boot with PKU340 plus an ERR_MODULE_NOT_FOUND on a dist path
+ * nobody wrote. Nothing about the generated files shows the problem, so the
+ * generator finishes the job: install at the root that owns the lockfile, then
+ * run the addon's own `build` script (whose `prebuild` is `pikku all`).
+ */
+export type AddonBuildRunner = (
+  command: string,
+  args: string[],
+  cwd: string
+) => { status: number | null; error?: Error }
+
+const spawnAddonBuildStep: AddonBuildRunner = (command, args, cwd) => {
+  const { status, error } = spawnSync(command, args, {
+    cwd,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  })
+  return { status, error }
+}
+
+export const buildGeneratedAddon = (
+  addonDir: string,
+  logger: { info: (message: string) => void; error: (message: string) => void },
+  run: AddonBuildRunner = spawnAddonBuildStep
+): boolean => {
+  const { dir: installDir, packageManager } = findInstallRoot(addonDir)
+  if (packageManager === 'unknown') {
+    logger.error(
+      `Could not tell which package manager owns ${addonDir} — the addon is generated but NOT built. Run install, then the addon's build script, in ${addonDir} before using it.`
+    )
+    return false
+  }
+
+  // A root install only reaches the addon when the root's workspace patterns
+  // cover it. A root that owns the lockfile but not this package installs
+  // nothing for it, so its devDependencies — `@pikku/cli` and `typescript`,
+  // which the build script needs — would never arrive.
+  const installIn = workspaceCovers(installDir, addonDir)
+    ? installDir
+    : addonDir
+
+  const steps: Array<[string, string[]]> = [
+    [installIn, ['install']],
+    [addonDir, ['run', 'build']],
+  ]
+  for (const [cwd, args] of steps) {
+    logger.info(`${packageManager} ${args.join(' ')} (${cwd})`)
+    const result = run(packageManager, args, cwd)
+    if (result.status !== 0) {
+      logger.error(
+        `${packageManager} ${args.join(' ')} failed in ${cwd}: ${result.error?.message ?? `exit ${result.status}`}`
+      )
+      return false
+    }
+  }
+  return true
+}
+
 export const pikkuNewAddon = pikkuSessionlessFunc<
   {
     name: string
@@ -960,6 +1070,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     authConfig?: string
     mcp?: boolean
     camelCase?: boolean
+    build?: boolean
   },
   void
 >({
@@ -980,6 +1091,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       authConfig,
       mcp = false,
       camelCase = false,
+      build = true,
     }
   ) => {
     name = sanitizeAddonName(name)
@@ -1101,6 +1213,10 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     logger.info(`Created addon at ${addonDir}`)
     for (const f of written) {
       logger.debug({ message: `  ${f}`, type: 'success' })
+    }
+
+    if (build && !buildGeneratedAddon(addonDir, logger)) {
+      process.exit(1)
     }
 
     console.log(addonDir)

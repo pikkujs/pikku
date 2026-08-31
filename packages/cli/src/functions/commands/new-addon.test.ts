@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import {
+  buildGeneratedAddon,
+  workspaceCovers,
   getAddonFiles,
   getTestFiles,
   resolveAddonDepProtocol,
@@ -308,5 +310,183 @@ describe('getAddonFiles', () => {
       /describe\("Bob's CRM API key"\)/,
       'the display name and the words around it are one literal'
     )
+  })
+})
+
+describe('buildGeneratedAddon', () => {
+  function recorder(statuses: Array<number | null> = []) {
+    const calls: Array<{ command: string; args: string[]; cwd: string }> = []
+    const run = (command: string, args: string[], cwd: string) => {
+      calls.push({ command, args, cwd })
+      return { status: statuses[calls.length - 1] ?? 0 }
+    }
+    return { calls, run }
+  }
+
+  function logs() {
+    const info: string[] = []
+    const error: string[] = []
+    return {
+      info,
+      error,
+      logger: {
+        info: (m: string) => info.push(m),
+        error: (m: string) => error.push(m),
+      },
+    }
+  }
+
+  test('installs at the workspace root, then builds in the addon', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), {
+      name: 'root',
+      private: true,
+      workspaces: ['packages/*'],
+    })
+    await writeFile(join(root, 'yarn.lock'), '', 'utf8')
+    const addonDir = join(root, 'packages', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder()
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), true)
+    assert.deepEqual(error, [])
+    assert.deepEqual(
+      calls.map((c) => [c.command, c.args.join(' '), c.cwd]),
+      [
+        ['yarn', 'install', root],
+        ['yarn', 'run build', addonDir],
+      ]
+    )
+  })
+
+  test('installs in the addon itself when the root declares no workspaces', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), { name: 'app' })
+    await writeFile(join(root, 'package-lock.json'), '', 'utf8')
+    const addonDir = join(root, 'addons', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder()
+    const { logger } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), true)
+    assert.deepEqual(
+      calls.map((c) => [c.command, c.args.join(' '), c.cwd]),
+      [
+        ['npm', 'install', addonDir],
+        ['npm', 'run build', addonDir],
+      ]
+    )
+  })
+
+  test("installs in the addon itself when the root's patterns exclude it", async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), {
+      name: 'root',
+      private: true,
+      workspaces: ['packages/*'],
+    })
+    await writeFile(join(root, 'yarn.lock'), '', 'utf8')
+    const addonDir = join(root, 'addons', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder()
+    const { logger } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), true)
+    assert.deepEqual(
+      calls.map((c) => [c.command, c.args.join(' '), c.cwd]),
+      [
+        ['yarn', 'install', addonDir],
+        ['yarn', 'run build', addonDir],
+      ]
+    )
+  })
+
+  test('stops at a failed install and never runs the build', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), {
+      name: 'root',
+      private: true,
+      workspaces: ['packages/*'],
+    })
+    await writeFile(join(root, 'yarn.lock'), '', 'utf8')
+    const addonDir = join(root, 'packages', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder([1])
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), false)
+    assert.equal(calls.length, 1)
+    assert.match(error.join('\n'), /yarn install failed/)
+  })
+
+  test('reports a failed build', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), {
+      name: 'root',
+      private: true,
+      workspaces: ['packages/*'],
+    })
+    await writeFile(join(root, 'yarn.lock'), '', 'utf8')
+    const addonDir = join(root, 'packages', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder([0, 1])
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), false)
+    assert.equal(calls.length, 2)
+    assert.match(error.join('\n'), /yarn run build failed/)
+  })
+
+  test('runs nothing when no package manager owns the tree', async () => {
+    const addonDir = await makeTmp()
+    const { calls, run } = recorder()
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), false)
+    assert.deepEqual(calls, [])
+    assert.match(error.join('\n'), /Could not tell which package manager/)
+  })
+})
+
+describe('workspaceCovers', () => {
+  test('matches a single-segment pattern', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), { workspaces: ['packages/*'] })
+    assert.equal(workspaceCovers(root, join(root, 'packages', 'crm')), true)
+    assert.equal(workspaceCovers(root, join(root, 'addons', 'crm')), false)
+    assert.equal(
+      workspaceCovers(root, join(root, 'packages', 'group', 'crm')),
+      false
+    )
+  })
+
+  test('matches a deep pattern at any depth', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), { workspaces: ['packages/**'] })
+    assert.equal(workspaceCovers(root, join(root, 'packages', 'crm')), true)
+    assert.equal(
+      workspaceCovers(root, join(root, 'packages', 'group', 'crm')),
+      true
+    )
+    assert.equal(workspaceCovers(root, join(root, 'addons', 'crm')), false)
+  })
+
+  test('reads the object form, and covers nothing without workspaces', async () => {
+    const object = await makeTmp()
+    await writeJson(join(object, 'package.json'), {
+      workspaces: { packages: ['packages/*'] },
+    })
+    assert.equal(workspaceCovers(object, join(object, 'packages', 'crm')), true)
+
+    const plain = await makeTmp()
+    await writeJson(join(plain, 'package.json'), { name: 'app' })
+    assert.equal(workspaceCovers(plain, join(plain, 'packages', 'crm')), false)
+  })
+
+  test('covers neither the root itself nor a dir outside it', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), { workspaces: ['packages/*'] })
+    assert.equal(workspaceCovers(root, root), false)
+    assert.equal(workspaceCovers(root, join(root, '..', 'elsewhere')), false)
   })
 })

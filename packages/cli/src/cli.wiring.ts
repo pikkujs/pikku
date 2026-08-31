@@ -994,6 +994,11 @@ wireCLI({
                 'Convert snake_case property names to camelCase in generated Zod schemas',
               default: false,
             },
+            build: {
+              description:
+                'Install and build the generated addon (an unbuilt addon exports a dist/ that does not exist yet, so every ref() into it is dead at runtime)',
+              default: true,
+            },
           },
         }),
       },
