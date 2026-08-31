@@ -51,6 +51,8 @@ export interface SerializableInspectorState {
   >
   wireServicesMeta: Array<[string, string[]]>
   addonRequiredParentServices: string[]
+  addonCreatedServices: string[]
+  addonServicesFactorySeen: boolean
   addonServerlessIncompatible: Array<[string, string[]]>
   configFactories: Array<
     [
@@ -335,6 +337,8 @@ export function serializeInspectorState(
     wireServicesFactories: Array.from(state.wireServicesFactories.entries()),
     wireServicesMeta: Array.from(state.wireServicesMeta.entries()),
     addonRequiredParentServices: state.addonRequiredParentServices,
+    addonCreatedServices: state.addonCreatedServices,
+    addonServicesFactorySeen: state.addonServicesFactorySeen,
     addonServerlessIncompatible: Array.from(
       state.addonServerlessIncompatible.entries()
     ),
@@ -544,6 +548,8 @@ export function deserializeInspectorState(
     wireServicesFactories: new Map(data.wireServicesFactories),
     wireServicesMeta: new Map(data.wireServicesMeta),
     addonRequiredParentServices: data.addonRequiredParentServices || [],
+    addonCreatedServices: data.addonCreatedServices || [],
+    addonServicesFactorySeen: data.addonServicesFactorySeen ?? false,
     addonServerlessIncompatible: new Map(
       data.addonServerlessIncompatible || []
     ),

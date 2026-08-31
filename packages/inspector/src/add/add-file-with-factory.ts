@@ -13,6 +13,102 @@ const wrapperFunctionMap: Record<string, string> = {
   pikkuServerLifecycle: 'ServerLifecycle',
 }
 
+/**
+ * What an addon's `pikkuAddonServices` factory takes from the parent: the names
+ * destructured off its second parameter, either in the parameter list or from a
+ * `const { … } = existingServices` in the body.
+ */
+const extractForwardedServices = (
+  functionNode: ts.ArrowFunction | ts.FunctionExpression
+): string[] => {
+  const forwarded: string[] = []
+  const secondParam = functionNode.parameters[1]
+  if (!secondParam) return forwarded
+
+  const collectBinding = (pattern: ts.ObjectBindingPattern) => {
+    for (const elem of pattern.elements) {
+      const name =
+        elem.propertyName && ts.isIdentifier(elem.propertyName)
+          ? elem.propertyName.text
+          : ts.isIdentifier(elem.name)
+            ? elem.name.text
+            : undefined
+      if (name) forwarded.push(name)
+    }
+  }
+
+  if (ts.isObjectBindingPattern(secondParam.name)) {
+    collectBinding(secondParam.name)
+    return forwarded
+  }
+
+  if (!ts.isIdentifier(secondParam.name)) return forwarded
+  const paramName = secondParam.name.text
+  const body = functionNode.body
+  if (!ts.isBlock(body)) return forwarded
+
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      ts.isIdentifier(node.initializer) &&
+      node.initializer.text === paramName
+    ) {
+      collectBinding(node.name)
+    }
+    ts.forEachChild(node, visit)
+  }
+  ts.forEachChild(body, visit)
+
+  return forwarded
+}
+
+/**
+ * The service names the factory's returned object literals name. A spread is
+ * skipped — it carries the parent's bag through rather than naming anything —
+ * and a name the factory took off the parent is a forward, not a creation.
+ */
+const extractReturnedServices = (
+  functionNode: ts.ArrowFunction | ts.FunctionExpression
+): string[] => {
+  const returned: string[] = []
+
+  const collect = (expression: ts.Expression) => {
+    if (!ts.isObjectLiteralExpression(expression)) return
+    for (const property of expression.properties) {
+      if (ts.isSpreadAssignment(property)) continue
+      const name = property.name
+      if (name && (ts.isIdentifier(name) || ts.isStringLiteral(name))) {
+        returned.push(name.text)
+      }
+    }
+  }
+
+  const body = functionNode.body
+  if (!ts.isBlock(body)) {
+    collect(ts.isParenthesizedExpression(body) ? body.expression : body)
+    return returned
+  }
+
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isFunctionDeclaration(node) ||
+      ts.isFunctionExpression(node) ||
+      ts.isArrowFunction(node)
+    ) {
+      return
+    }
+    if (ts.isReturnStatement(node) && node.expression) {
+      collect(node.expression)
+    }
+    ts.forEachChild(node, visit)
+  }
+  ts.forEachChild(body, visit)
+
+  return returned
+}
+
 export const addFileWithFactory = (
   node: ts.Node,
   checker: ts.TypeChecker,
@@ -77,23 +173,15 @@ export const addFileWithFactory = (
 
             // Extract existing services an addon needs from the parent
             // (second parameter of pikkuAddonServices callback)
-            if (
-              wrapperFunctionName === 'pikkuAddonServices' &&
-              functionNode &&
-              functionNode.parameters.length >= 2
-            ) {
-              const secondParam = functionNode.parameters[1]
-              if (secondParam && ts.isObjectBindingPattern(secondParam.name)) {
-                for (const elem of secondParam.name.elements) {
-                  const name =
-                    elem.propertyName && ts.isIdentifier(elem.propertyName)
-                      ? elem.propertyName.text
-                      : ts.isIdentifier(elem.name)
-                        ? elem.name.text
-                        : undefined
-                  if (name) {
-                    state.addonRequiredParentServices.push(name)
-                  }
+            if (wrapperFunctionName === 'pikkuAddonServices' && functionNode) {
+              state.addonServicesFactorySeen = true
+              const forwarded = new Set(extractForwardedServices(functionNode))
+              for (const name of forwarded) {
+                state.addonRequiredParentServices.push(name)
+              }
+              for (const name of extractReturnedServices(functionNode)) {
+                if (!forwarded.has(name)) {
+                  state.addonCreatedServices.push(name)
                 }
               }
             }

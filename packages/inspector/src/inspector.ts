@@ -83,6 +83,8 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     wireServicesFactories: new Map(),
     wireServicesMeta: new Map(),
     addonRequiredParentServices: [],
+    addonCreatedServices: [],
+    addonServicesFactorySeen: false,
     addonServerlessIncompatible: new Map(),
     configFactories: new Map(),
     serverLifecycleFactories: new Map(),
