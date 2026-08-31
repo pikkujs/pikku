@@ -6067,6 +6067,15 @@ export type SetStageCredentialInput = {
 export type SetStageCredentialOutput = {
     success: boolean;
 }
+export type DeleteStageSecretInput = {
+    stageId: string;
+    name: string;
+}
+export type DeleteStageSecretOutput = {
+    name: string;
+    runId: string | null;
+    deploymentId: string | null;
+}
 export type SetStageSealedSecretInput = {
     stageId: string;
     name: string;
@@ -7136,6 +7145,7 @@ export type RPCMap = {
   readonly 'setStageConsoleSecret': RPCHandler<SetStageConsoleSecretInput, SetStageConsoleSecretOutput>,
   readonly 'setStageConsoleVariable': RPCHandler<SetStageConsoleVariableInput, SetStageConsoleVariableOutput>,
   readonly 'setStageCredential': RPCHandler<SetStageCredentialInput, SetStageCredentialOutput>,
+  readonly 'deleteStageSecret': RPCHandler<DeleteStageSecretInput, DeleteStageSecretOutput>,
   readonly 'setStageSealedSecret': RPCHandler<SetStageSealedSecretInput, SetStageSealedSecretOutput>,
   readonly 'setStageSealingKey': RPCHandler<SetStageSealingKeyInput, SetStageSealingKeyOutput>,
   readonly 'submitContactForm': RPCHandler<SubmitContactFormInput, SubmitContactFormOutput>,

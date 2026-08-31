@@ -50,6 +50,7 @@ import {
 import { FabricRollback } from './functions/rollback.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
+import { FabricSecretsDelete } from './functions/secrets-delete.function.js'
 import { FabricSecretsRotate } from './functions/secrets-rotate.function.js'
 import { FabricVariablesSet } from './functions/variables-set.function.js'
 import { FabricVariablesGet } from './functions/variables-get.function.js'
@@ -295,6 +296,18 @@ export const fabricCommands = defineCLICommands({
         options: {
           branch: { description: 'Target branch', short: 'b' },
           json: { description: 'Machine-readable output', default: false },
+        },
+      }),
+      delete: pikkuCLICommand({
+        parameters: '<name>',
+        func: FabricSecretsDelete,
+        description: 'Delete a single stage-scoped secret',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          force: {
+            description: 'Delete without confirmation',
+            default: false,
+          },
         },
       }),
       rotate: pikkuCLICommand({

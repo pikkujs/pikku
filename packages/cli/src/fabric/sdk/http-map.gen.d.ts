@@ -6069,6 +6069,15 @@ export type SetStageCredentialInput = {
 export type SetStageCredentialOutput = {
     success: boolean;
 }
+export type DeleteStageSecretInput = {
+    stageId: string;
+    name: string;
+}
+export type DeleteStageSecretOutput = {
+    name: string;
+    runId: string | null;
+    deploymentId: string | null;
+}
 export type SetStageSealedSecretInput = {
     stageId: string;
     name: string;
