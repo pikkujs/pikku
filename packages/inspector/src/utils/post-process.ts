@@ -381,6 +381,35 @@ export function aggregateRequiredServices(
       requiredServices.add(service)
     }
   }
+
+  // 8. When this project IS an addon, what it needs from its parent is whatever
+  // its functions use minus whatever its own factory builds. Reading only the
+  // factory's second parameter missed everything the functions destructure and
+  // the factory never names — `kysely` above all — which left the contract empty
+  // and let a consumer omit it and fail at the first query instead of at build.
+  if (state.addonServicesFactorySeen) {
+    // Every function an addon declares is part of its published surface — a
+    // consumer calls it — so none of them are reachable from a local wiring and
+    // `usedFunctions` is empty. Aggregating only from wirings left the services
+    // map claiming an addon needs nothing, which is what drove addons to list
+    // their own services under `forceRequiredServices` by hand.
+    for (const funcMeta of Object.values(state.functions.meta)) {
+      addServices(funcMeta?.services)
+    }
+
+    const createdSet = new Set(state.addonCreatedServices ?? [])
+    const parentServices = new Set(parentDeclared)
+    for (const service of requiredServices) {
+      if (
+        !createdSet.has(service) &&
+        !internalServices.has(service) &&
+        !defaultServices.has(service)
+      ) {
+        parentServices.add(service)
+      }
+    }
+    state.addonRequiredParentServices = [...parentServices]
+  }
 }
 
 export function validateSecretOverrides(

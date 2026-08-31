@@ -526,6 +526,8 @@ export interface InspectorState {
   wireServicesFactories: PathToNameAndType
   wireServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
   addonRequiredParentServices: string[] // services an addon needs from the parent (extracted from pikkuAddonServices 2nd param)
+  addonCreatedServices: string[] // services an addon's own pikkuAddonServices factory builds itself
+  addonServicesFactorySeen: boolean // this project declares a pikkuAddonServices factory, i.e. it is an addon
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType
