@@ -10,6 +10,7 @@ import type {
   ConverseOptions,
   ActorFlowVerdict,
   TargetAgentReply,
+  TargetPendingApproval,
 } from '../wirings/actor-flow/actor-flow.types.js'
 import { runConversation } from '../wirings/actor-flow/run-conversation.js'
 import {
@@ -254,19 +255,30 @@ export class HttpPersona implements ScenarioPersona {
     return user ? [] : null
   }
 
-  /** Start/continue the target agent's run over HTTP as this persona. */
+  /**
+   * Start/continue the target agent's run over HTTP as this persona.
+   *
+   * The SSE route, not the plain one. `POST /rpc/agent/:name` buffers the whole
+   * run before it sends a single byte, so a run longer than the client's
+   * headers timeout — 300s in undici, which is what Node and Bun both use —
+   * fails with `UND_ERR_HEADERS_TIMEOUT` and no way to tell it apart from a
+   * stage that is down. An agent that talks for several minutes, which is the
+   * normal case for anything conversational, cannot be driven that way at all.
+   * The stream sends its first event immediately and the run's length stops
+   * mattering.
+   */
   private async agentRun(
     agentName: string,
     message: string,
     threadId: string,
     resourceId: string
   ): Promise<TargetAgentReply> {
-    const raw = await this.postAgent(`agent/${agentName}`, {
+    const res = await this.sendAgent(`agent/${agentName}/stream`, {
       message,
       threadId,
       resourceId,
     })
-    return normalizeAgentReply(raw)
+    return await collectAgentStream(res)
   }
 
   /** Answer the target agent's pending approvals over HTTP and continue. */
@@ -283,7 +295,7 @@ export class HttpPersona implements ScenarioPersona {
   }
 
   // knowledge: decisions/internals/scenario-agent-calls-sign-in-on-401-only.md
-  private async postAgent(subPath: string, body: unknown): Promise<unknown> {
+  private async sendAgent(subPath: string, body: unknown): Promise<Response> {
     const rpcPath = this.config.rpcPath ?? '/rpc'
     const url = `${this.config.apiUrl}${rpcPath}/${subPath}`
     const send = () =>
@@ -308,6 +320,11 @@ export class HttpPersona implements ScenarioPersona {
         `[scenario] agent call '${subPath}' as '${this.name}' returned ${res.status}: ${text}`
       )
     }
+    return res
+  }
+
+  private async postAgent(subPath: string, body: unknown): Promise<unknown> {
+    const res = await this.sendAgent(subPath, body)
     if (res.status === 204) return undefined
     const text = await res.text()
     return text ? JSON.parse(text) : undefined
@@ -339,6 +356,77 @@ export class HttpPersona implements ScenarioPersona {
   private async login(): Promise<void> {
     await this.signIn.login(this.jar, this.persona)
     this.signedIn = true
+  }
+}
+
+/**
+ * Reduce the agent's SSE run into the same reply shape the plain route returns.
+ *
+ * `RUN_ERROR` is raised rather than returned: the plain route answers a failed
+ * run with a non-2xx, and a scenario that read an error as an empty transcript
+ * would score the agent on silence it never produced.
+ */
+async function collectAgentStream(res: Response): Promise<TargetAgentReply> {
+  const body = res.body
+  if (!body) {
+    throw new Error('[scenario] the agent stream carried no body')
+  }
+  const decoder = new TextDecoder()
+  const reader = body.getReader()
+  let buffer = ''
+  let text = ''
+  let runId = ''
+  const pendingApprovals: TargetPendingApproval[] = []
+
+  const consume = (line: string) => {
+    if (!line.startsWith('data:')) return
+    const payload = line.slice(5).trim()
+    if (!payload) return
+    let event: Record<string, unknown>
+    try {
+      event = JSON.parse(payload)
+    } catch {
+      return
+    }
+    if (typeof event.runId === 'string' && event.runId) runId = event.runId
+    if (
+      event.type === 'TEXT_MESSAGE_CONTENT' &&
+      typeof event.delta === 'string'
+    ) {
+      text += event.delta
+    } else if (event.type === 'approval-request') {
+      pendingApprovals.push({
+        toolCallId: String(event.toolCallId),
+        toolName: String(event.toolName),
+        args: event.args,
+        reason: typeof event.reason === 'string' ? event.reason : undefined,
+      })
+    } else if (event.type === 'RUN_ERROR' || event.type === 'error') {
+      const message = event.message ?? event.errorText ?? 'the agent run failed'
+      throw new Error(`[scenario] agent run failed: ${String(message)}`)
+    }
+  }
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) consume(line)
+    }
+    if (buffer) consume(buffer)
+  } finally {
+    await reader.cancel().catch(() => {})
+  }
+
+  return {
+    text,
+    runId,
+    status: pendingApprovals.length > 0 ? 'suspended' : 'completed',
+    pendingApprovals:
+      pendingApprovals.length > 0 ? pendingApprovals : undefined,
   }
 }
 
