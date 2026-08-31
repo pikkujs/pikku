@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "^0.12.128",
-    "@pikku/inspector": "^0.12.69",
+    "@pikku/inspector": "^0.12.70",
     "@types/node": "^24"
   },
   "exports": {

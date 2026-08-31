@@ -1,6 +1,6 @@
 {
   "name": "@pikku/inspector",
-  "version": "0.12.69",
+  "version": "0.12.70",
   "description": "TypeScript inspector for Pikku — discovers functions and wirings to drive code generation",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
