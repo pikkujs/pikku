@@ -23,7 +23,7 @@ installGroups: [core]
 ## The `pikkuMiddleware` Factory
 
 ```typescript
-import { pikkuMiddleware } from '#pikku/function'
+import { pikkuMiddleware } from '#pikku/middleware'
 
 // Simple: just a function
 const myMiddleware = pikkuMiddleware(async (services, wire, next) => {
@@ -139,7 +139,7 @@ Tags from the function definition and the wire object are merged — middleware 
 ### Registering Tag Middleware
 
 ```typescript
-import { addTagMiddleware } from '#pikku/function'
+import { addTagMiddleware } from '#pikku/middleware'
 
 addTagMiddleware('machine-agent', [machineAgentBearerAuth])
 ```
@@ -277,7 +277,7 @@ export const getToken = () => _token
 ```typescript
 // wirings/http.wiring.ts
 import { timingSafeEqual } from 'node:crypto'
-import { addTagMiddleware, pikkuMiddleware } from '#pikku/function'
+import { addTagMiddleware, pikkuMiddleware } from '#pikku/middleware'
 import { UnauthorizedError } from '#pikku/error'
 import { getToken } from '../lib/host-token.js'
 

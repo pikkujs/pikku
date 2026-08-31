@@ -210,7 +210,7 @@ people the user named, and the roles they imply.
 
 ```typescript
 import { definePersonas } from '#pikku/scopes/pikku-personas.gen.js'
-import { defineSystemRole } from '#pikku'
+import { defineSystemRole } from '#pikku/scopes'
 
 defineSystemRole({
   owner: {
@@ -484,7 +484,7 @@ experiences it. Three ship in `packages/functions/test/scenarios/` — keep them
 green — and every milestone's gherkin block from §5 becomes one more.
 
 ```typescript
-import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenario } from '#pikku/scenarios'
 
 export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   title: 'A tenant reports a fault and the owner sees it',

@@ -146,7 +146,7 @@ second argument is always present — an addon never falls back to its own logge
 variables or secrets; the consuming app supplies them:
 
 ```typescript
-import { pikkuAddonServices } from '#pikku/addon/setup'
+import { pikkuAddonServices } from '#pikku/setup'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, { secrets, logger }) => {
@@ -167,7 +167,7 @@ config object.
 Define per-request services for an addon package (created fresh per HTTP request, queue job, etc.):
 
 ```typescript
-import { pikkuAddonWireServices } from '#pikku/addon/setup'
+import { pikkuAddonWireServices } from '#pikku/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async (singletonServices, wire) => {
@@ -195,7 +195,7 @@ This generates `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json
 
 ```typescript
 // src/services.ts
-import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/addon/setup'
+import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/setup'
 import { TodoStore } from './todo-store.service.js'
 
 export const createSingletonServices = pikkuAddonServices(async () => {
@@ -213,14 +213,15 @@ export const createWireServices = pikkuAddonWireServices(
 
 ### Functions
 
-An addon generates its whole tree under `#pikku/addon/*`, so it authors against
-`#pikku/addon/function`, `#pikku/addon/http` and so on. An application's leaves
-stay flat, which is what stops a linked addon resolving against its host.
+An addon's generated tree roots at `.pikku/addon/`, but its `imports` map points
+`#pikku/*` there, so it authors against the same subpaths an application does —
+`#pikku/function`, `#pikku/http`. The `addon` segment is the package's own
+business, never part of a specifier.
 
 ```typescript
 // src/functions/addTodo.function.ts
 import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { pikkuSessionlessFunc } from '#pikku/function'
 
 const AddTodoInput = z.object({ title: z.string() })
 const AddTodoOutput = z.object({ id: z.string(), title: z.string() })

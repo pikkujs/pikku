@@ -226,7 +226,7 @@ export const getBook = pikkuFunc({
 })
 
 // wirings/books.http.ts — same defineHTTPRoutes/wireHTTPRoutes shape as the Route Groups example above
-import { addHTTPMiddleware } from '#pikku/http'
+import { addHTTPMiddleware } from '#pikku/middleware'
 import { cors, authBearer } from '@pikku/core/middleware'
 
 addHTTPMiddleware('*', [cors(), authBearer()])
