@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import {
+  buildGeneratedAddon,
   getAddonFiles,
   getTestFiles,
   resolveAddonDepProtocol,
@@ -308,5 +309,117 @@ describe('getAddonFiles', () => {
       /describe\("Bob's CRM API key"\)/,
       'the display name and the words around it are one literal'
     )
+  })
+})
+
+describe('buildGeneratedAddon', () => {
+  function recorder(statuses: Array<number | null> = []) {
+    const calls: Array<{ command: string; args: string[]; cwd: string }> = []
+    const run = (command: string, args: string[], cwd: string) => {
+      calls.push({ command, args, cwd })
+      return { status: statuses[calls.length - 1] ?? 0 }
+    }
+    return { calls, run }
+  }
+
+  function logs() {
+    const info: string[] = []
+    const error: string[] = []
+    return {
+      info,
+      error,
+      logger: {
+        info: (m: string) => info.push(m),
+        error: (m: string) => error.push(m),
+      },
+    }
+  }
+
+  test('installs at the workspace root, then builds in the addon', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), {
+      name: 'root',
+      private: true,
+      workspaces: ['packages/*'],
+    })
+    await writeFile(join(root, 'yarn.lock'), '', 'utf8')
+    const addonDir = join(root, 'packages', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder()
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), true)
+    assert.deepEqual(error, [])
+    assert.deepEqual(
+      calls.map((c) => [c.command, c.args.join(' '), c.cwd]),
+      [
+        ['yarn', 'install', root],
+        ['yarn', 'run build', addonDir],
+      ]
+    )
+  })
+
+  test('installs in the addon itself when it is not a workspace member', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), { name: 'app' })
+    await writeFile(join(root, 'package-lock.json'), '', 'utf8')
+    const addonDir = join(root, 'addons', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder()
+    const { logger } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), true)
+    assert.deepEqual(
+      calls.map((c) => [c.command, c.args.join(' '), c.cwd]),
+      [
+        ['npm', 'install', addonDir],
+        ['npm', 'run build', addonDir],
+      ]
+    )
+  })
+
+  test('stops at a failed install and never runs the build', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), {
+      name: 'root',
+      private: true,
+      workspaces: ['packages/*'],
+    })
+    await writeFile(join(root, 'yarn.lock'), '', 'utf8')
+    const addonDir = join(root, 'packages', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder([1])
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), false)
+    assert.equal(calls.length, 1)
+    assert.match(error.join('\n'), /yarn install failed/)
+  })
+
+  test('reports a failed build', async () => {
+    const root = await makeTmp()
+    await writeJson(join(root, 'package.json'), {
+      name: 'root',
+      private: true,
+      workspaces: ['packages/*'],
+    })
+    await writeFile(join(root, 'yarn.lock'), '', 'utf8')
+    const addonDir = join(root, 'packages', 'addon-crm')
+    await mkdir(addonDir, { recursive: true })
+
+    const { calls, run } = recorder([0, 1])
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), false)
+    assert.equal(calls.length, 2)
+    assert.match(error.join('\n'), /yarn run build failed/)
+  })
+
+  test('runs nothing when no package manager owns the tree', async () => {
+    const addonDir = await makeTmp()
+    const { calls, run } = recorder()
+    const { logger, error } = logs()
+    assert.equal(buildGeneratedAddon(addonDir, logger, run), false)
+    assert.deepEqual(calls, [])
+    assert.match(error.join('\n'), /Could not tell which package manager/)
   })
 })

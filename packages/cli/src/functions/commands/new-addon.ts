@@ -957,9 +957,25 @@ async function writeFiles(
  * generator finishes the job: install at the root that owns the lockfile, then
  * run the addon's own `build` script (whose `prebuild` is `pikku all`).
  */
-const buildGeneratedAddon = (
+export type AddonBuildRunner = (
+  command: string,
+  args: string[],
+  cwd: string
+) => { status: number | null; error?: Error }
+
+const spawnAddonBuildStep: AddonBuildRunner = (command, args, cwd) => {
+  const { status, error } = spawnSync(command, args, {
+    cwd,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  })
+  return { status, error }
+}
+
+export const buildGeneratedAddon = (
   addonDir: string,
-  logger: { info: (message: string) => void; error: (message: string) => void }
+  logger: { info: (message: string) => void; error: (message: string) => void },
+  run: AddonBuildRunner = spawnAddonBuildStep
 ): boolean => {
   const { dir: installDir, packageManager } = findInstallRoot(addonDir)
   if (packageManager === 'unknown') {
@@ -969,17 +985,20 @@ const buildGeneratedAddon = (
     return false
   }
 
+  // A root install only reaches the addon when the addon is a workspace member.
+  // Outside a workspace the root owns a lockfile but not this package, so its
+  // devDependencies — `@pikku/cli` and `typescript`, which the build script
+  // needs — would never be installed.
+  const installIn =
+    resolveAddonDepProtocol(addonDir) === 'workspace:*' ? installDir : addonDir
+
   const steps: Array<[string, string[]]> = [
-    [installDir, ['install']],
+    [installIn, ['install']],
     [addonDir, ['run', 'build']],
   ]
   for (const [cwd, args] of steps) {
     logger.info(`${packageManager} ${args.join(' ')} (${cwd})`)
-    const result = spawnSync(packageManager, args, {
-      cwd,
-      stdio: 'inherit',
-      shell: process.platform === 'win32',
-    })
+    const result = run(packageManager, args, cwd)
     if (result.status !== 0) {
       logger.error(
         `${packageManager} ${args.join(' ')} failed in ${cwd}: ${result.error?.message ?? `exit ${result.status}`}`
