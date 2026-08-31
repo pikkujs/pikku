@@ -77,7 +77,7 @@ function resolvePikkuBin(): string {
  * include both the function IDs and any wiring-level names (e.g. agent
  * names, channel names) that reference those functions.
  */
-function collectFilterNames(
+export function collectFilterNames(
   unit: DeploymentUnit,
   manifest: DeploymentManifest,
   inspectorState: InspectorState,
@@ -146,6 +146,16 @@ function collectFilterNames(
       for (const handler of unit.handlers) {
         if (handler.type === 'queue') names.add(handler.queueName)
         if (handler.type === 'scheduled') names.add(handler.taskName)
+      }
+      // `runAgent(...)` / `rpc.agent.run(...)` look the agent up in the
+      // in-process registry, so a function that calls one needs the agent's
+      // wiring — and its tools — bundled into its OWN unit, not just into
+      // the agent gateway unit.
+      for (const agentName of unit.invokedAgents ?? []) {
+        names.add(agentName)
+        const agentDef = manifest.agents.find((a) => a.name === agentName)
+        for (const id of agentDef?.toolFunctionIds ?? []) names.add(id)
+        names.add('/rpc/:rpcName')
       }
       // Function units with workflow-state capability (workflow-starter,
       // workflow-runner, workflow-status-checker) call rpc.startWorkflow

@@ -444,3 +444,100 @@ describe('analyzeDeployment - globalHTTPPrefix', () => {
     assert.deepEqual(routesOf(manifest, 'get-me'), ['/rpc/getMe'])
   })
 })
+
+/**
+ * A function wired to HTTP whose body calls `runAgent('houseAssistant', ...)`,
+ * alongside the agent that call names.
+ */
+function stateWithFunctionInvokingAgent(
+  invoked: string[] = ['houseAssistant']
+): InspectorState {
+  return {
+    functions: {
+      meta: {
+        askTheHouse: {
+          pikkuFuncId: 'askTheHouse',
+          name: 'askTheHouse',
+          services: { services: ['kysely'] },
+        },
+      },
+      files: new Map([
+        [
+          'askTheHouse',
+          {
+            path: '/project/src/assistant/ask-the-house.function.ts',
+            exportedName: 'askTheHouse',
+          },
+        ],
+      ]),
+    },
+    http: {
+      meta: {
+        post: {
+          '/ask': {
+            pikkuFuncId: 'askTheHouse',
+            method: 'post',
+            route: '/ask',
+          },
+        },
+      },
+    },
+    agents: {
+      agentsMeta: {
+        houseAssistant: {
+          name: 'house-assistant',
+          model: 'deepseek/deepseek-v4-flash',
+          tools: ['listChores'],
+          tags: [],
+        },
+      },
+      invokedAgentsByFile: new Map([
+        ['/project/src/assistant/ask-the-house.function.ts', new Set(invoked)],
+      ]),
+    },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - agents invoked from a function body', () => {
+  // `runAgent(...)` resolves against the in-process registry, so the calling
+  // unit has to register the agent itself — the agent gateway unit is a
+  // different worker.
+  const unitOf = (state: InspectorState) =>
+    analyzeDeployment(state, { projectId: 'test' }).units.find(
+      (u) => u.name === 'ask-the-house'
+    )!
+
+  test('the calling unit records the agent', () => {
+    assert.deepEqual(unitOf(stateWithFunctionInvokingAgent()).invokedAgents, [
+      'houseAssistant',
+    ])
+  })
+
+  test('the calling unit gains the AI service requirements', () => {
+    const capabilities = unitOf(stateWithFunctionInvokingAgent()).services.map(
+      (s) => s.capability
+    )
+    assert.ok(capabilities.includes('ai-model'))
+    assert.ok(capabilities.includes('ai-storage'))
+  })
+
+  test("the function's own services survive", () => {
+    const capabilities = unitOf(stateWithFunctionInvokingAgent()).services.map(
+      (s) => s.capability
+    )
+    assert.ok(capabilities.includes('database'))
+  })
+
+  test('a name that is not a declared agent is ignored', () => {
+    const unit = unitOf(stateWithFunctionInvokingAgent(['notAnAgent']))
+    assert.equal(unit.invokedAgents, undefined)
+    assert.ok(!unit.services.some((s) => s.capability === 'ai-model'))
+  })
+})

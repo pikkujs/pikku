@@ -214,6 +214,8 @@ export function analyzeDeployment(
       continue
     }
 
+    const invokedAgents = collectInvokedAgents(state, funcId)
+
     units.push({
       name: toSafeKebab(funcId),
       role: 'function',
@@ -224,10 +226,14 @@ export function analyzeDeployment(
         defaultTarget
       ),
       functionIds: [funcId],
-      services: collectServicesForFunction(funcMeta),
+      services: withAgentServices(
+        collectServicesForFunction(funcMeta),
+        invokedAgents
+      ),
       dependsOn: [],
       handlers,
       tags: funcMeta.tags ?? [],
+      ...(invokedAgents.length > 0 && { invokedAgents }),
     })
   }
 
@@ -244,10 +250,7 @@ export function analyzeDeployment(
     )
 
     // Agent needs AI services
-    const agentServices: ServiceRequirement[] = [
-      { capability: 'ai-model', sourceServiceName: 'agentRunner' },
-      { capability: 'ai-storage', sourceServiceName: 'agentStorage' },
-    ]
+    const agentServices: ServiceRequirement[] = agentServiceRequirements()
 
     // Concrete routes for this agent via catch-all
     const agentRoutes = [
@@ -405,6 +408,7 @@ export function analyzeDeployment(
         const funcId = fromKebab(dep)
         const funcMeta = functionsMeta[funcId]
         if (funcMeta) {
+          const invokedAgents = collectInvokedAgents(state, funcId)
           units.push({
             name: dep,
             role: 'function',
@@ -415,10 +419,14 @@ export function analyzeDeployment(
               defaultTarget
             ),
             functionIds: [funcId],
-            services: collectServicesForFunction(funcMeta),
+            services: withAgentServices(
+              collectServicesForFunction(funcMeta),
+              invokedAgents
+            ),
             dependsOn: [],
             handlers: [{ type: 'fetch', routes: [] }],
             tags: funcMeta.tags ?? [],
+            ...(invokedAgents.length > 0 && { invokedAgents }),
           })
           existingUnitNames.add(dep)
         }
@@ -767,6 +775,44 @@ function mapServiceToRequirement(
   const capability = SERVICE_CAPABILITY_MAP[serviceName]
   if (!capability) return null
   return { capability, sourceServiceName: serviceName }
+}
+
+function agentServiceRequirements(): ServiceRequirement[] {
+  return [
+    { capability: 'ai-model', sourceServiceName: 'agentRunner' },
+    { capability: 'ai-storage', sourceServiceName: 'agentStorage' },
+  ]
+}
+
+/**
+ * Agents named by a `runAgent`/`rpc.agent.run` call inside a function body.
+ *
+ * The inspector attributes those calls to the source FILE, so every function
+ * declared alongside the caller inherits them. That is deliberate: the unit
+ * bundles the file either way, and registering an agent the caller never
+ * reaches is cheaper than the run-time "AI agent not found" a missed one
+ * causes.
+ */
+function collectInvokedAgents(state: InspectorState, funcId: string): string[] {
+  const path = state.functions?.files?.get(funcId)?.path
+  if (!path) return []
+  const invoked = state.agents?.invokedAgentsByFile?.get(path)
+  if (!invoked) return []
+  return [...invoked].filter((name) => Boolean(state.agents?.agentsMeta[name]))
+}
+
+function withAgentServices(
+  services: ServiceRequirement[],
+  invokedAgents: string[]
+): ServiceRequirement[] {
+  if (invokedAgents.length === 0) return services
+  const merged = [...services]
+  for (const requirement of agentServiceRequirements()) {
+    if (!merged.some((s) => s.capability === requirement.capability)) {
+      merged.push(requirement)
+    }
+  }
+  return merged
 }
 
 function collectServicesForFunction(
