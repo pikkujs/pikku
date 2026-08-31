@@ -8,6 +8,7 @@
   },
   "files": [
     "src/classification/secret-value.test.ts",
+    "src/services/email-service.test.ts",
     "src/types/typed-credentials.test.ts",
     "src/wirings/agent/agent-middleware.types.test.ts"
   ]

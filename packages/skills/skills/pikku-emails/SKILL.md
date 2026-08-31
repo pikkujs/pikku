@@ -187,6 +187,7 @@ async send(input: SendEmailInput) {
   const r = renderEmailTemplate(input.template as RenderEmailInput<EmailTemplateName>)
   return this.delegate.send({
     to: input.to, from: input.from, subject: r.subject, html: r.html,
+    attachments: input.attachments,
     ...(r.text ? { text: r.text } : {}),
   })
 }
