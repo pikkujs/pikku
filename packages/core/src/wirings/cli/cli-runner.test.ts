@@ -1,6 +1,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
+import { PikkuError } from '../../errors/error-handler.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import {
   CLIError,
@@ -723,6 +724,109 @@ describe('CLI Runner', () => {
         pikkuState(null, 'package', 'singletonServices'),
         singletonServices
       )
+    })
+    const wireFailingCommand = (error: unknown) => {
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              boom: {
+                command: 'boom',
+                pikkuFuncId: 'boomFunc',
+                positionals: [],
+                options: {},
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+      pikkuState(null, 'cli', 'programs', {
+        'test-cli': {
+          defaultRenderer: undefined,
+          middleware: [],
+          renderers: {},
+        },
+      })
+      pikkuState(null, 'function', 'meta', {
+        boomFunc: {
+          pikkuFuncId: 'boomFunc',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+      })
+      addFunction('boomFunc', {
+        func: async () => {
+          throw error
+        },
+        auth: false,
+      })
+    }
+
+    const captureStderr = async (run: () => Promise<void>) => {
+      const errors: string[] = []
+      const originalError = console.error
+      console.error = (message?: any) => {
+        errors.push(String(message))
+      }
+      try {
+        await assert.rejects(run, CLIError)
+      } finally {
+        console.error = originalError
+      }
+      return errors
+    }
+
+    test('should print an expected failure as its message alone', async () => {
+      wireFailingCommand(new PikkuError('Refusing to run — the seed drifted.'))
+
+      const errors = await captureStderr(() =>
+        executeCLI({
+          programName: 'test-cli',
+          args: ['boom'],
+          createSingletonServices: async () => singletonServices,
+        })
+      )
+
+      assert.deepStrictEqual(errors, ['Refusing to run — the seed drifted.'])
+    })
+
+    test('should keep the stack of an unexpected failure', async () => {
+      wireFailingCommand(new TypeError('cannot read x of undefined'))
+
+      const errors = await captureStderr(() =>
+        executeCLI({
+          programName: 'test-cli',
+          args: ['boom'],
+          createSingletonServices: async () => singletonServices,
+        })
+      )
+
+      assert.strictEqual(errors.length, 1)
+      assert.ok(errors[0]!.startsWith('TypeError: cannot read x of undefined'))
+      assert.ok(errors[0]!.includes('at '))
+      assert.ok(!errors[0]!.includes('Error: Error:'))
+    })
+
+    test('should add the stack of an expected failure when --verbose is passed', async () => {
+      wireFailingCommand(new PikkuError('Refusing to run.'))
+
+      const errors = await captureStderr(() =>
+        executeCLI({
+          programName: 'test-cli',
+          args: ['boom', '--verbose'],
+          createSingletonServices: async () => singletonServices,
+        })
+      )
+
+      // `--verbose` is not an option this command declares, so the parser
+      // warns about it first — the trace is whatever it printed last.
+      const printed = errors.at(-1)!
+      assert.ok(printed.startsWith('Refusing to run.\n'))
+      assert.ok(printed.includes('at '))
     })
   })
 })

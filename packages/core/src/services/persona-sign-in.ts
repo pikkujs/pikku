@@ -1,4 +1,5 @@
 import { deriveActorSecret } from './persona-actor-secret.js'
+import { PikkuError } from '../errors/error-handler.js'
 import type { ResolvedPersona } from './personas-service.js'
 import type { ScenarioCookieJar } from '../wirings/workflow/scenario-cookie-jar.js'
 
@@ -30,13 +31,19 @@ export interface PersonaSignIn {
   headers(): Record<string, string>
 }
 
+/**
+ * A sign-in the target refused. `PikkuError`, not `Error`, so the CLI prints
+ * this message alone: an expired token or a persona the stage has never seen is
+ * something to go and fix, and a stack trace through the fetch internals only
+ * buries the status and the body that say which one it is.
+ */
 const failed = async (
   what: string,
   personaId: string,
   res: Response
 ): Promise<Error> => {
   const body = (await res.text().catch(() => '')).slice(0, 300)
-  return new Error(
+  return new PikkuError(
     `[scenario] ${what} failed for '${personaId}' (${res.status}): ${body}`
   )
 }
@@ -186,7 +193,7 @@ export const establishOperatorSession = async (
   }
   const setCookies = res.headers.getSetCookie?.() ?? []
   if (setCookies.length === 0) {
-    throw new Error(
+    throw new PikkuError(
       `[scenario] operator sign-in for '${persona.id}' returned no session cookie`
     )
   }
@@ -196,7 +203,7 @@ export const establishOperatorSession = async (
   } | null
   const userId = body?.actAs?.userId
   if (!userId) {
-    throw new Error(
+    throw new PikkuError(
       `[scenario] operator sign-in for '${persona.id}' returned no user to act as — ` +
         'the target is running a @pikku/better-auth too old to resolve one'
     )

@@ -1,5 +1,4 @@
 import { NotFoundError } from '../../errors/errors.js'
-import { isExpectedError } from '../../errors/error-handler.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import type { CoreUserSession } from '../../types/core.types.js'
@@ -30,6 +29,7 @@ import {
 } from '../../services/user-session-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
+import { formatCLIError, wantsStackTrace } from './format-cli-error.js'
 
 /** The caller is expected to catch this and call `process.exit(exitCode)`. */
 export class CLIError extends Error {
@@ -532,16 +532,7 @@ export async function executeCLI({
       throw error
     }
 
-    // An expected PikkuError's message is written to be the whole output.
-    if (isExpectedError(error)) {
-      console.error(error.message)
-    } else {
-      console.error('Error:', error)
-    }
-
-    if (args.includes('--verbose') || args.includes('-v')) {
-      console.error('Stack trace:', error.stack)
-    }
+    console.error(formatCLIError(error, { verbose: wantsStackTrace(args) }))
 
     throw new CLIError(error.message || String(error), 1)
   }

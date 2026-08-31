@@ -18,6 +18,7 @@ import {
   prepareVirtualUserRun,
 } from '@pikku/core/virtual-user'
 import { getSingletonServices, setSingletonServices } from '@pikku/core/state'
+import { PikkuError } from '@pikku/core/errors'
 
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import {
@@ -199,7 +200,7 @@ export const personaRun = pikkuSessionlessFunc<
       agentsMeta: state.agents?.agentsMeta ?? {},
     })
     if (catalogue.length === 0) {
-      throw new Error(
+      throw new PikkuError(
         'This project exposes no RPCs, so there is nothing for a virtual user to do.'
       )
     }
@@ -230,7 +231,10 @@ export const personaRun = pikkuSessionlessFunc<
           verifyPersonaRoles(personaId, persona.roles, actual)
         )
         if (message) {
-          throw new Error(message)
+          // A refusal, not a crash: `PikkuError` is what tells the CLI to print
+          // the message on its own, since the seed drift it names is the whole
+          // finding and the frames underneath it are noise.
+          throw new PikkuError(message)
         }
       }
     }
