@@ -3,8 +3,11 @@ import { createAuthEndpoint, APIError } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
 import type { Logger } from '@pikku/core/services'
-import type { ScopeService } from '@pikku/core/services'
+import type { ResolvedPersona, ScopeService } from '@pikku/core/services'
+import type { PersonaEnvironment } from '@pikku/core/persona'
 import { ADMIN_SCOPE_ROOT, OPERATOR_SCOPE_ROOTS } from './auth-scopes.js'
+import { provisionPersonas } from './provision-personas.js'
+import type { PersonaOrphanPolicy } from './provision-personas.js'
 
 export interface FabricPluginOptions {
   /**
@@ -45,6 +48,27 @@ export interface FabricPluginOptions {
   scopeService?: ScopeService
   /** Logger for the grant's configuration warnings. */
   logger?: Logger
+  /**
+   * The declared personas, so an operator handshake can provision them.
+   *
+   * Provisioning belongs here rather than in `pikkuServerLifecycle`'s
+   * `afterStart` because that hook is only ever invoked by `pikku serve` and
+   * `pikku dev`. A stage deployed to Workers boots through neither, so an app
+   * that followed the documented advice provisioned nothing and every persona
+   * signed in holding no roles.
+   *
+   * Pass `personaConfigs` and `personaEnvironments` from the generated personas
+   * file. Omitted, the endpoint still mints operator sessions and still acts as
+   * an existing account — it just has no declaration to create one from.
+   */
+  personas?: {
+    personas: Record<string, ResolvedPersona>
+    environments: Readonly<Record<string, PersonaEnvironment>>
+    /** Which environment this stage is. Defaults to `PIKKU_ENV`. */
+    environment?: string
+    /** What to do with actor accounts no declared persona claims. Defaults to `report`. */
+    orphans?: PersonaOrphanPolicy
+  }
 }
 
 /** Synthetic, guaranteed-non-colliding email for a Fabric operator's app row. */
@@ -187,108 +211,81 @@ const grantOperatorScopes = async (
  * verified above, so the lookup costs nothing and is gated by the same check
  * that mints the session.
  *
- * Looked up before creating, so an address that already exists is acted as
- * rather than duplicated. Creation is opt-in: a persona is meant to be an
- * account somebody provisioned, and writing users into a live database is a
- * side effect nobody asked for.
- *
- * A `role` is written only when the caller names one. pikku no longer has a
- * `role` column of its own, but an app is free to keep better-auth's `admin()`
- * plugin, and those apps tend to constrain the column — creating a row without
- * one fails their CHECK. The caller knows the persona's roles; this does not.
- *
- * `roles` is the same list as a grant rather than a column. An app authorizing
- * on scopes never reads `role`, so a persona created with only the column set
- * holds nothing, and every check against it reads as seed drift. Granted on
- * creation only: an existing account's roles are the app's to decide, and a
- * persona whose roles have really drifted should be caught, not corrected.
+ * A miss provisions the declared personas and looks again, which is what makes
+ * the lookup the whole guard: on a stage that already holds the persona this is
+ * one query, and the pass only runs when there is something genuinely absent to
+ * create. Sign-in never invents an account of its own — an address no
+ * declaration claims stays a 404 however many times it is asked for.
  */
 const resolveActAs = async (
   options: FabricPluginOptions,
-  internalAdapter: {
-    findUserByEmail: (
-      email: string
-    ) => Promise<{ user?: { id: unknown } } | null>
-    createUser: (
-      user: Record<string, unknown>
-    ) => Promise<{ id: unknown } | undefined>
-  },
-  actAs: {
-    email: string
-    name?: string | undefined
-    create?: boolean | undefined
-    role?: string | undefined
-    roles?: string[] | undefined
-  }
+  authContext: any,
+  actAs: { email: string }
 ): Promise<{ userId: string }> => {
   const email = actAs.email.toLowerCase()
+  const internalAdapter = authContext.internalAdapter
   const found = await internalAdapter.findUserByEmail(email)
   if (found?.user?.id) {
     return { userId: String(found.user.id) }
   }
-  if (!actAs.create) {
-    throw new APIError('NOT_FOUND', {
-      message: `No account on this stage for ${actAs.email}`,
-    })
+  await provisionDeclaredPersonas(options, authContext)
+  const provisioned = await internalAdapter.findUserByEmail(email)
+  if (provisioned?.user?.id) {
+    return { userId: String(provisioned.user.id) }
   }
-  const created = await internalAdapter.createUser({
-    email,
-    emailVerified: true,
-    name: actAs.name ?? actAs.email,
-    ...(actAs.role ? { role: actAs.role } : {}),
-    createdAt: new Date(),
-    updatedAt: new Date(),
+  throw new APIError('NOT_FOUND', {
+    message: `No account on this stage for ${actAs.email}`,
   })
-  if (!created?.id) {
-    throw new APIError('INTERNAL_SERVER_ERROR', {
-      message: `Failed to create an account for ${actAs.email}`,
-    })
-  }
-  const userId = String(created.id)
-  await grantActAsRoles(options, userId, actAs.roles ?? [])
-  return { userId }
 }
 
 /**
- * Grants a freshly created persona the roles the caller named.
+ * Runs the declared personas into this stage.
  *
- * Skips a role the app has not declared, so a grant always traces back to a
- * declaration. Logged rather than thrown: the account exists and the session is
- * mintable, and a persona holding nothing fails its own role check with a far
- * clearer message than a 500 on sign-in.
+ * Logged rather than thrown: the operator's own session is already minted and
+ * valid by this point, and a persona that ends up missing fails the caller's
+ * own role check with a far clearer message than a 500 on sign-in.
  */
-const grantActAsRoles = async (
+const provisionDeclaredPersonas = async (
   options: FabricPluginOptions,
-  userId: string,
-  roles: string[]
+  authContext: any
 ): Promise<void> => {
-  if (roles.length === 0) {
+  const declared = options.personas
+  if (!declared) {
+    options.logger?.warn?.(
+      'fabric: no personas were passed to the plugin, so there is nothing to provision'
+    )
     return
   }
   const scopeService = options.scopeService
   if (!scopeService) {
     options.logger?.warn?.(
-      `fabric: no ScopeService registered, so ${userId} was created holding no roles`
+      'fabric: no ScopeService registered, so provisioned personas would hold no roles'
     )
     return
   }
   try {
-    const declared = new Set(
-      (await scopeService.listRoles()).map((r) => r.name)
-    )
-    for (const role of roles) {
-      if (!declared.has(role)) {
-        options.logger?.warn?.(
-          `fabric: ${userId} was not granted '${role}' — this app declares no such role`
-        )
-        continue
+    const result = await provisionPersonas(
+      {
+        auth: async () => ({ $context: authContext }) as any,
+        scopeService,
+        logger: options.logger ?? { info: () => {}, warn: () => {} },
+      },
+      {
+        personas: declared.personas,
+        environments: declared.environments,
+        ...(declared.environment !== undefined
+          ? { environment: declared.environment }
+          : {}),
+        ...(declared.orphans !== undefined
+          ? { orphans: declared.orphans }
+          : {}),
       }
-      await scopeService.addUserToRole(userId, role)
-    }
-  } catch (error) {
-    options.logger?.warn?.(
-      `fabric: could not grant roles to ${userId}: ${error}`
     )
+    options.logger?.info?.(
+      `fabric: provisioned personas — ${result.created} created, ${result.granted} granted, ${result.held} held`
+    )
+  } catch (error) {
+    options.logger?.warn?.(`fabric: could not provision personas: ${error}`)
   }
 }
 
@@ -335,10 +332,6 @@ export const pikkuFabric = (options: FabricPluginOptions): BetterAuthPlugin => {
             actAs: z
               .object({
                 email: z.string(),
-                name: z.string().optional(),
-                create: z.boolean().optional(),
-                role: z.string().optional(),
-                roles: z.array(z.string()).optional(),
               })
               .optional(),
           }),
@@ -433,11 +426,7 @@ export const pikkuFabric = (options: FabricPluginOptions): BetterAuthPlugin => {
           }
           await setSessionCookie(ctx, { session, user: user as any })
           const actAs = ctx.body.actAs
-            ? await resolveActAs(
-                options,
-                ctx.context.internalAdapter as any,
-                ctx.body.actAs
-              )
+            ? await resolveActAs(options, ctx.context as any, ctx.body.actAs)
             : undefined
           return ctx.json({
             token: session.token,

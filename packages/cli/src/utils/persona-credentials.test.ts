@@ -5,7 +5,6 @@ import {
   resolvePersonaCredentials,
   ACTOR_SECRET_VARIABLE,
   OPERATOR_TOKEN_VARIABLE,
-  CREATE_MISSING_VARIABLE,
   PERSONA_SECRETS_VARIABLE,
   parsePersonaSecrets,
   personaSecretResolver,
@@ -15,7 +14,7 @@ import { LocalVariablesService } from '@pikku/core/services'
 // The real service, not a fake that hands back what it was given: `get`
 // JSON-parses, so 'true' arrives as a boolean and 'false' as one too. A stub
 // returning raw strings is more forgiving than anything this code runs
-// against, and hid a createMissing flag that could never be turned on.
+// against.
 const variablesFrom = (values: Record<string, string>) =>
   new LocalVariablesService(values)
 
@@ -38,32 +37,6 @@ describe('resolvePersonaCredentials', () => {
     )
     assert.equal(credentials.secret, undefined)
     assert.equal(credentials.operator?.token, 'operator-token')
-  })
-
-  test('leaves account creation off unless it is asked for', async () => {
-    const off = await resolvePersonaCredentials(
-      variablesFrom({ [OPERATOR_TOKEN_VARIABLE]: 'operator-token' }),
-      'scenario actors'
-    )
-    assert.equal(off.operator?.createMissing, false)
-
-    const on = await resolvePersonaCredentials(
-      variablesFrom({
-        [OPERATOR_TOKEN_VARIABLE]: 'operator-token',
-        [CREATE_MISSING_VARIABLE]: 'true',
-      }),
-      'scenario actors'
-    )
-    assert.equal(on.operator?.createMissing, true)
-
-    const explicitlyOff = await resolvePersonaCredentials(
-      variablesFrom({
-        [OPERATOR_TOKEN_VARIABLE]: 'operator-token',
-        [CREATE_MISSING_VARIABLE]: 'false',
-      }),
-      'scenario actors'
-    )
-    assert.equal(explicitlyOff.operator?.createMissing, false)
   })
 
   test('prefers per-persona credentials over the root secret', async () => {

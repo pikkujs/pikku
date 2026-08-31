@@ -18,8 +18,6 @@ export const ACTOR_SECRET_VARIABLE = 'SCENARIO_ACTOR_SECRET'
  * list is the whole of what this run can be.
  */
 export const PERSONA_SECRETS_VARIABLE = 'PIKKU_PERSONA_SECRETS'
-/** Opt in to creating persona accounts the target does not already have. */
-export const CREATE_MISSING_VARIABLE = 'PIKKU_PERSONA_CREATE_MISSING'
 
 export type PersonaCredentials = Pick<HttpPersonasConfig, 'secret' | 'operator'>
 
@@ -84,13 +82,7 @@ export const resolvePersonaCredentials = async (
 ): Promise<PersonaCredentials> => {
   const token = await variables.get(OPERATOR_TOKEN_VARIABLE)
   if (token) {
-    // `variables.get` JSON-parses, so `PIKKU_PERSONA_CREATE_MISSING=true`
-    // arrives as the boolean `true` and never equalled the string. The
-    // operator token survives the same parse only because a JWT is not
-    // valid JSON.
-    const createMissing =
-      String(await variables.get(CREATE_MISSING_VARIABLE)) === 'true'
-    return { operator: { token, createMissing } }
+    return { operator: { token } }
   }
 
   const personaSecrets = await variables.get(PERSONA_SECRETS_VARIABLE)

@@ -516,9 +516,9 @@ an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
 in as the personas the deployment provisioned when it started and refuses
 everything else (`No actor account exists for that address`), so holding the
 secret on such a stage does not let anyone invent identities. Those rows are
-written by `provisionPersonas` from `@pikku/better-auth`, called in the server's
-own lifecycle, so provisioning needs no actor secret and works on a stage whose
-endpoint is shut.
+written by the fabric plugin when an operator asks to act as an address the
+stage has no account for, so provisioning needs no actor secret and works on a
+stage whose endpoint is shut.
 
 **`SCENARIO_ACTOR_SECRET` is a credential as powerful as the most privileged
 persona.** Provisioning grants declared roles to actor accounts, so an
@@ -544,30 +544,46 @@ This is the endpoint `pikku scenario` signs its actors in through, and the one
 the frontend dev switcher posts to — see `pikku-scenario` for declaring the
 actors and `pikku-react` for `useDevActors()`.
 
-### Provisioning personas (`provisionPersonas`)
+### Provisioning personas
 
-Anywhere but `pikku dev`, the accounts have to exist before anyone signs in.
-The deployment creates them itself, from its own lifecycle:
+Anywhere but `pikku dev`, the accounts have to exist before anyone signs in. The
+stage creates them itself, from the personas you hand `pikkuFabric`:
 
 ```ts
-import { provisionPersonas } from '@pikku/better-auth'
+import { pikkuFabric } from '@pikku/better-auth'
 import {
   personaConfigs,
   personaEnvironments,
 } from '#pikku/pikku-personas.gen.js'
 
-await provisionPersonas(singletonServices, {
-  personas: personaConfigs,
-  environments: personaEnvironments,
+pikkuFabric({
+  publicKey,
+  audience,
+  scopeService,
+  personas: {
+    personas: personaConfigs,
+    environments: personaEnvironments,
+  },
 })
 ```
 
-It runs where the database already is, which is the point: the CLI has no
-connection to a deployed environment's database — it resolves one from the local
-project config — so a `pikku persona sync staging` that wrote rows would write
-them to whatever database the checkout happened to point at. `pikku persona sync
-<environment>` still exists, and reports who that environment will provision and
-why anyone was skipped, which is what you run _before_ the deploy.
+There is nothing else to call and nothing to schedule. The plugin's operator
+endpoint resolves the address the caller wants to act as; a miss provisions the
+declaration and looks again. On a stage that already holds the persona that is
+one query, and the pass only runs when there is genuinely something absent to
+create.
+
+**Do not reach for `pikkuServerLifecycle`'s `afterStart` for this.** That hook is
+invoked by `pikku serve` and `pikku dev` and by nothing else — no deploy runtime
+calls it — so a stage on Workers or a serverless target that provisioned from
+`afterStart` provisioned nothing, and every persona signed in holding no roles.
+
+Provisioning runs where the database already is, which is the point: the CLI has
+no connection to a deployed environment's database — it resolves one from the
+local project config — so a `pikku persona sync staging` that wrote rows would
+write them to whatever database the checkout happened to point at. `pikku persona
+sync <environment>` still exists, and reports who that environment will provision
+and why anyone was skipped, which is what you run _before_ the deploy.
 
 It creates missing accounts as `actor: true`, applies the roles each persona
 declares, and is additive — it never revokes. `PIKKU_ENV` (or an explicit
@@ -583,10 +599,15 @@ open. By default provisioning warns about those accounts and changes nothing.
 `orphans: 'ban'` shuts them:
 
 ```ts
-await provisionPersonas(singletonServices, {
-  personas: personaConfigs,
-  environments: personaEnvironments,
-  orphans: 'ban',
+pikkuFabric({
+  publicKey,
+  audience,
+  scopeService,
+  personas: {
+    personas: personaConfigs,
+    environments: personaEnvironments,
+    orphans: 'ban',
+  },
 })
 ```
 

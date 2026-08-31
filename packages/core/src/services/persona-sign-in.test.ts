@@ -14,8 +14,7 @@ const OPERATOR_TOKEN = 'operator.jwt.token'
  */
 const startStage = async (seeded: Array<{ id: string; email: string }>) => {
   const users = [...seeded]
-  const requestedRoles: unknown[] = []
-  let created = 0
+  const sentBodies: unknown[] = []
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = []
     req.on('data', (c) => chunks.push(c))
@@ -32,20 +31,15 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
         }
         let actAs: { userId: string } | undefined
         if (body.actAs) {
-          let user = users.find((u) => u.email === body.actAs.email)
+          sentBodies.push(body.actAs)
+          const user = users.find((u) => u.email === body.actAs.email)
           if (!user) {
-            if (!body.actAs.create) {
-              res.writeHead(404).end(
-                JSON.stringify({
-                  message: `No account on this stage for ${body.actAs.email}`,
-                })
-              )
-              return
-            }
-            created++
-            requestedRoles.push(body.actAs.roles)
-            user = { id: `made-${created}`, email: body.actAs.email }
-            users.push(user)
+            res.writeHead(404).end(
+              JSON.stringify({
+                message: `No account on this stage for ${body.actAs.email}`,
+              })
+            )
+            return
           }
           actAs = { userId: user.id }
         }
@@ -74,11 +68,8 @@ const startStage = async (seeded: Array<{ id: string; email: string }>) => {
   return {
     apiUrl: `http://127.0.0.1:${port}/api`,
     server,
-    get createdCount() {
-      return created
-    },
-    get requestedRoles() {
-      return requestedRoles
+    get sentBodies() {
+      return sentBodies
     },
   }
 }
@@ -115,7 +106,6 @@ describe('operator persona sign-in', () => {
     }
     assert.equal(result.actingAs, 'user-7')
     assert.match(result.cookie, /session=operator/)
-    assert.equal(stage.createdCount, 0)
   })
 
   // An app that mounts auth somewhere other than the root moves both sign-in
@@ -154,25 +144,25 @@ describe('operator persona sign-in', () => {
       () => personas.customer!.invoke('whoami', {}),
       /operator sign-in failed for 'customer' \(404\)/
     )
-    assert.equal(stage.createdCount, 0)
   })
 
-  test('provisions the account only when told to', async () => {
-    const stage = await startStage([])
+  // Provisioning moved into the stage, so the handshake carries an address and
+  // nothing else. A `create` flag or a role list here would be the caller
+  // deciding what the stage holds, which is the arrangement this replaced.
+  test('asks only to act as an address', async () => {
+    const stage = await startStage([
+      { id: 'user-3', email: 'customer@personas.invalid' },
+    ])
     servers.push(stage.server)
 
     const personas = createHttpPersonas({
       apiUrl: stage.apiUrl,
-      operator: { token: OPERATOR_TOKEN, createMissing: true },
-      personas: { customer: persona('fresh@personas.invalid') },
+      operator: { token: OPERATOR_TOKEN },
+      personas: { customer: persona('customer@personas.invalid') },
     })
 
-    const result = (await personas.customer!.invoke('whoami', {})) as {
-      actingAs: string | null
-    }
-    assert.equal(result.actingAs, 'made-1')
-    assert.equal(stage.createdCount, 1)
-    assert.deepEqual(stage.requestedRoles, [['client']])
+    await personas.customer!.invoke('whoami', {})
+    assert.deepEqual(stage.sentBodies, [{ email: 'customer@personas.invalid' }])
   })
 
   test('mints the operator session from a token factory', async () => {

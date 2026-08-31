@@ -112,10 +112,10 @@ describe('pikku persona sync', () => {
     assert.match(output, /mo\s+mo@e2e\.test -> platform-admin/)
   })
 
-  test('points at the boot-time provisioner rather than claiming to have written anything', async () => {
+  test('points at the plugin rather than claiming to have written anything', async () => {
     await run({ environment: 'local' })
 
-    assert.match(logs.join('\n'), /provisionPersonas/)
+    assert.match(logs.join('\n'), /pikkuFabric/)
   })
 
   test('refuses an environment that is not configured', async () => {

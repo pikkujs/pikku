@@ -130,16 +130,6 @@ export interface OperatorSignInOptions {
    * the function: tokens expire, and a long run re-logs-in after a 401.
    */
   token: string | (() => string | Promise<string>)
-  /**
-   * Create the persona's user row when the target has no account for that
-   * address.
-   *
-   * Off by default, which is the whole point of the deployed path: a persona is
-   * meant to be a real account somebody provisioned, and a test run that
-   * silently writes users into a live database is a side effect nobody asked
-   * for. Turn it on for throwaway stages.
-   */
-  createMissing?: boolean
   /** Fabric operator sign-in path under apiUrl. Default `/auth/sign-in/fabric`. */
   signInPath?: string
 }
@@ -178,14 +168,7 @@ export const establishOperatorSession = async (
     headers: { 'content-type': 'application/json', ...extraHeaders },
     body: JSON.stringify({
       token,
-      actAs: {
-        email: persona.email,
-        name: persona.name,
-        create: options.createMissing ?? false,
-        ...(persona.roles.length > 0
-          ? { role: persona.roles[0], roles: [...persona.roles] }
-          : {}),
-      },
+      actAs: { email: persona.email },
     }),
   })
   if (!res.ok) {
