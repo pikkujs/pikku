@@ -5,7 +5,7 @@ description: >-
   ref(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, and cross-project
   function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, user asks about
   addons, reusable function packages, cross-project sharing, or addon package structure. DO NOT
-  TRIGGER when: user asks about internal function composition (use pikku-rpc) or general function
+  TRIGGER when: user asks about internal function composition (use pikku-wiring) or general function
   definitions (use pikku-concepts).
 installGroups: [core]
 ---
@@ -159,7 +159,7 @@ export const createSingletonServices = pikkuAddonServices(
 
 `secrets` and `variables` arrive **typed against the addon's own declarations**,
 and a secret is a `SecretValue` — `.reveal()` is the only way to the plaintext
-(see `pikku-config`). `pikkuAddonConfig` is the matching factory for the addon's
+(see `pikku-services`). `pikkuAddonConfig` is the matching factory for the addon's
 config object.
 
 ### `pikkuAddonWireServices(factory)`

@@ -7,19 +7,19 @@ Authoritative mapping table plus side-by-side code examples showing how common b
 | Generic Backend Concept                 | Pikku Equivalent                                                | Skill             |
 | --------------------------------------- | --------------------------------------------------------------- | ----------------- |
 | **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | `pikku-concepts`  |
-| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-http`      |
-| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-security`  |
-| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-security`  |
-| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-security`  |
+| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-wiring`      |
+| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-middleware` |
+| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-auth`  |
+| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-auth`  |
 | **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | `pikku-concepts`  |
 | **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`  |
-| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-websocket` |
-| **Job Queue workers**                   | `wireQueueWorker`                                               | `pikku-queue`     |
-| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-schedule`      |
+| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-wiring` |
+| **Job Queue workers**                   | `wireQueueWorker`                                               | `pikku-wiring`     |
+| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-wiring`      |
 | **Module / Feature grouping**           | Tags + wiring files                                             | `pikku-concepts`  |
 | **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | `pikku-concepts`  |
 | **Type-safe API client**                | `npx pikku all` generates clients                               | `pikku-concepts`  |
-| **Secrets / Config**                    | `defineSecret`, `defineVariable`, `services.variables`          | `pikku-config`    |
+| **Secrets / Config**                    | `defineSecret`, `defineVariable`, `services.variables`          | `pikku-services`    |
 
 ## Route Handler / Controller → pikkuFunc
 

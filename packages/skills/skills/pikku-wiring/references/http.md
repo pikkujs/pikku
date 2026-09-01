@@ -1,0 +1,197 @@
+# Pikku HTTP Wiring
+
+## API Reference
+
+All three come from `#pikku/http` (the generated `.pikku/http/index.ts`), which
+binds them to your project's service, session and middleware types. The
+`@pikku/core/http` versions are the unbound generics — they compile, but you
+lose the typing that makes the wiring worth having.
+
+- `wireHTTP(config)` — wire one function to one endpoint.
+- `defineHTTPRoutes(config)` + `wireHTTPRoutes(config)` — group routes with shared config; composable/nestable.
+
+Function input/output types come from the function's own `input:`/`output:` zod schemas — never declared in the wiring. Route `:params`, query params, and body are merged into the function's `data` arg (see Data Flow).
+
+Config cascading across groups: `basePath` concatenates down the chain, `tags` merge (union), `auth` child overrides parent.
+
+For the full option tables (every `wireHTTP` field, the `defineHTTPRoutes`/`wireHTTPRoutes` config shape), read `http-options.md`.
+
+### `addHTTPMiddleware(pattern, middlewares)`
+
+```typescript
+addHTTPMiddleware('*', [authBearer()]) // All routes
+addHTTPMiddleware('/api/*', [rateLimit()]) // Pattern match
+```
+
+> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-auth`), or app-wide via `addGlobalPermission`. Tags/patterns are for _middleware_ only now.
+
+## Data Flow
+
+Pikku merges route params, query params, and request body into a single `data` object:
+
+```typescript
+// POST /books/42?format=pdf  with body { title: "New Title" }
+wireHTTP({ method: 'post', route: '/books/:bookId', func: updateBook })
+// → updateBook receives: { bookId: "42", format: "pdf", title: "New Title" }
+```
+
+## Usage Patterns
+
+### Single Route
+
+```typescript
+wireHTTP({
+  method: 'get',
+  route: '/books/:bookId',
+  func: getBook,
+})
+```
+
+### Route Groups (Recommended for CRUD)
+
+```typescript
+const booksRoutes = defineHTTPRoutes({
+  tags: ['books'],
+  routes: {
+    list: { method: 'get', route: '/books', func: listBooks, auth: false }, // per-route override
+    get: { method: 'get', route: '/books/:bookId', func: getBook },
+    create: { method: 'post', route: '/books', func: createBook },
+    delete: { method: 'delete', route: '/books/:bookId', func: deleteBook },
+  },
+})
+
+const todosRoutes = defineHTTPRoutes({
+  auth: false, // group-level default, overridable per-route
+  tags: ['todos'],
+  routes: {
+    list: { method: 'get', route: '/todos', func: listTodos },
+  },
+})
+
+wireHTTPRoutes({
+  basePath: '/api/v1',
+  middleware: [cors()],
+  routes: { books: booksRoutes, todos: todosRoutes },
+})
+// Results in: GET /api/v1/books, POST /api/v1/books, GET /api/v1/todos, etc.
+```
+
+### Auth
+
+```typescript
+// Public route (no auth)
+wireHTTP({ method: 'get', route: '/books', func: listBooks, auth: false })
+
+// Authenticated route (default when a global auth middleware is set)
+wireHTTP({ method: 'delete', route: '/books/:bookId', func: deleteBook })
+```
+
+Authorization is not a wiring concern — declare it on the function via `permissions` (see `pikku-auth`), or app-wide via `addGlobalPermission`.
+
+### Middleware
+
+```typescript
+import { cors, authBearer } from '@pikku/core/middleware'
+
+// Global middleware
+addHTTPMiddleware('*', [
+  cors({ origin: 'https://app.example.com', credentials: true }),
+  authBearer(),
+])
+
+// Scoped middleware
+addHTTPMiddleware('/api/*', [rateLimit({ maxRequests: 100, windowMs: 60_000 })])
+
+// Per-route middleware
+wireHTTP({
+  method: 'delete',
+  route: '/books/:bookId',
+  func: deleteBook,
+  middleware: [auditLog],
+})
+```
+
+### SSE (Server-Sent Events)
+
+`sse: true` is only accepted on `method: 'get'` — the wiring union offers it on
+no other verb.
+
+```typescript
+wireHTTP({
+  method: 'get',
+  route: '/todos',
+  func: getTodos,
+  sse: true,
+})
+
+const getTodos = pikkuFunc({
+  title: 'Get Todos',
+  func: async ({ db }, {}, { channel }) => {
+    const todos = await db.getTodos()
+
+    if (channel) {
+      for (const todo of todos) {
+        channel.send({ todo })
+        await sleep(100)
+      }
+      return
+    }
+
+    return { todos }
+  },
+})
+```
+
+`channel` is on the **wire** — the func's third argument — not on services, and
+it is optional because the same function can be reached over plain HTTP or RPC,
+where there is no stream to send on. The `if (channel)` guard is what lets one
+function serve both; the return value is the non-streaming answer.
+
+### Generated Fetch Client
+
+After `npx pikku all`, a type-safe client is generated:
+
+```typescript
+import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
+
+pikkuFetch.setServerUrl('http://localhost:4002')
+
+const books = await pikkuFetch.get('/api/v1/books', {})
+const book = await pikkuFetch.get('/api/v1/books/:bookId', { bookId: '42' })
+const created = await pikkuFetch.post('/api/v1/books', {
+  title: 'The Pikku Guide',
+  author: 'You',
+})
+
+pikkuFetch.setAuthorizationJWT(token)
+const deleted = await pikkuFetch.delete('/api/v1/books/:bookId', {
+  bookId: created.bookId,
+})
+```
+
+## Complete Example
+
+Functions live in their own files (one per file) and supply behavior + `permissions`; the wiring file imports them and wires routes. Sessionless funcs need no session; `pikkuFunc` does.
+
+```typescript
+// functions/books.functions.ts
+import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
+
+export const listBooks = pikkuSessionlessFunc({
+  title: 'List Books',
+  func: async ({ db }, { limit }) => ({ books: await db.listBooks(limit) }),
+})
+
+export const getBook = pikkuFunc({
+  title: 'Get Book',
+  description: 'Retrieve a book by ID',
+  func: async ({ db }, { bookId }) => await db.getBook(bookId),
+  permissions: { user: isAuthenticated },
+})
+
+// wirings/books.http.ts — same defineHTTPRoutes/wireHTTPRoutes shape as the Route Groups example above
+import { addHTTPMiddleware } from '#pikku/middleware'
+import { cors, authBearer } from '@pikku/core/middleware'
+
+addHTTPMiddleware('*', [cors(), authBearer()])
+```

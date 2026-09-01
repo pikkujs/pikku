@@ -101,7 +101,7 @@ The function never imports Express, never reads `req.body`, never touches `ws.se
 
 ## Concept Mapping: Generic Backend → Pikku
 
-Controllers/routes → `pikkuFunc`; auth/sessions → `pikku-security`, a separate install; authorization checks → `pikku-permissions`; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
+Controllers/routes → `pikkuFunc`; auth/sessions and authorization checks → `pikku-auth`, a separate install; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
 
 ## Functions
 
@@ -143,7 +143,7 @@ pikkuFunc({
   // "What Language You Write In".
   title?: string,           // Human-readable name
   description?: string,     // What the function does
-  version?: number,         // Contract version (see pikku-versioning)
+  version?: number,         // Contract version (see pikku-meta)
   override?: string,        // Logical name override, so several exports share a versioned base
   tags?: string[],          // For grouping and middleware targeting
 
@@ -153,13 +153,13 @@ pikkuFunc({
   errors?: Array<typeof PikkuError>,  // Errors this function may throw
 
   // Reachability
-  expose?: boolean,         // Allow external RPC calls (see pikku-rpc)
+  expose?: boolean,         // Allow external RPC calls (see pikku-wiring)
   remote?: boolean,         // Allow remote RPC calls
-  mcp?: boolean,            // Expose as MCP tool (see pikku-mcp)
+  mcp?: boolean,            // Expose as MCP tool (see pikku-wiring)
   readonly?: boolean,       // Declares the function performs no writes
   deploy?: 'serverless' | 'server' | 'auto',
 
-  // Authorization — see pikku-permissions
+  // Authorization — see pikku-auth
   auth?: boolean,           // Override default auth requirement
   scopes?: ScopeId[],       // AND-ed, checked before permissions; session required
   permissions?: PermissionGroup,  // OR-ed pool
@@ -317,7 +317,7 @@ src/
 ├── services.ts          # Service factories (see pikku-services)
 ├── lifecycle.ts         # Server lifecycle hooks (pikku dev/serve only)
 ├── middleware.ts         # Middleware definitions (see pikku-middleware)
-├── permissions.ts       # Permission definitions (see pikku-permissions)
+├── permissions.ts       # Permission definitions (see pikku-auth)
 └── .pikku/              # Generated (gitignored)
     ├── function/        # #pikku/function
     ├── http/            # #pikku/http
@@ -415,7 +415,7 @@ language, it is telling you about axis three and nothing else.
 
 ## Environment Variables
 
-Never use `process.env` inside Pikku functions. Use the `variables` service (see `pikku-config`):
+Never use `process.env` inside Pikku functions. Use the `variables` service (see `pikku-services`):
 
 ```typescript
 const apiKey = services.variables.get('API_KEY')

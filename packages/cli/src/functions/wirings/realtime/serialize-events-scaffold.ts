@@ -20,7 +20,7 @@ export interface EventsGenOutput {
  *
  * Both routes call `eventHub.subscribe`/`unsubscribe` with the channel id;
  * publish-side ergonomics (envelope shape) are documented in the
- * pikku-realtime skill.
+ * pikku-wiring skill.
  */
 export const serializeEventsScaffold = (
   leaf: (name: string) => string
@@ -45,7 +45,7 @@ import { TopicRef } from './events.schemas.gen.js'
  *
  *   await eventHub.publish('todo-created', null, { topic: 'todo-created', data: { todo } })
  *
- * The pikku-realtime skill covers a thin \`publishEvent\` helper to remove
+ * The pikku-wiring skill covers a thin \`publishEvent\` helper to remove
  * the duplication; pick whichever style your project prefers.
  */
 

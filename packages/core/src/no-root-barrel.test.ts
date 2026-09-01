@@ -22,11 +22,19 @@ const skipDirectory = new Set([
   '.git',
   'build',
   'coverage',
+  // Agent scratch worktrees are whole Pikku projects scaffolded by whatever CLI
+  // version happened to write them, so they carry specifiers this repo does not
+  // own. They are gitignored and belong to no workspace, which is what puts them
+  // out of scope rather than merely making them noisy.
+  '.claude',
 ])
+
+/** A verifier's scratch project, left behind by a run that did not clean up. */
+const isScratchProject = (entry: string) => entry.startsWith('.tmp-')
 
 const walk = (dir: string, out: string[] = []): string[] => {
   for (const entry of readdirSync(dir)) {
-    if (skipDirectory.has(entry)) continue
+    if (skipDirectory.has(entry) || isScratchProject(entry)) continue
     const path = join(dir, entry)
     if (statSync(path).isDirectory()) walk(path, out)
     else if (path.endsWith('.ts') || path.endsWith('.tsx')) out.push(path)

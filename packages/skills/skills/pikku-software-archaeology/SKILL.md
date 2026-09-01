@@ -1,6 +1,6 @@
 ---
 name: pikku-software-archaeology
-description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app). TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", or points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules, or a rebuild plan. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or code review.'
+description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — and when turning that blueprint into a plain-language second opinion for the non-technical owner who holds the app. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules or a rebuild plan, or asks "explain how my app works" / "what would you do differently" / "is this built well?" for a founder, PM or operator audience. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or an engineer-facing code review.'
 ---
 
 # Software Archaeology
@@ -132,7 +132,7 @@ Run each lens over the surveyed material. Rules that counter the classic failure
 
 **Frontend** (`frontend.json` + `frontend-routes.json` + `frontend-components.json`, optional) — the web UI, which needs its own treatment because frontends vary wildly (framework, router, styling, state, data, auth) and the rebuild target is opinionated: **everything in one component system (Mantine), one data layer, one auth**.
 
-- `frontend.json` records the stack as FACTS: framework (e.g. TanStack Start), rendering (SSR/streaming/SPA), router, styling/design system, `designSystemConsistency`, state management, data layer (e.g. pikku-react-query vs REST helpers), auth (e.g. better-auth), i18n. Name the real technologies — the second-opinion skill weighs their tradeoffs, so record them precisely (do NOT editorialize here; this file is facts).
+- `frontend.json` records the stack as FACTS: framework (e.g. TanStack Start), rendering (SSR/streaming/SPA), router, styling/design system, `designSystemConsistency`, state management, data layer (e.g. pikku-react vs REST helpers), auth (e.g. better-auth), i18n. Name the real technologies — the second-opinion skill weighs their tradeoffs, so record them precisely (do NOT editorialize here; this file is facts).
 - `frontend-routes.json` is the page tree: each route's `purpose` in product terms, `auth`, the `dataFrom` (query/command names it reads — reuse the backend concept names so the UI ties back to the domain), the `usesComponents`, and the `userFlows` it belongs to.
 - `frontend.json.designFindings` captures **broken/inconsistent design patterns** as concrete, cited observations (not taste). Actively hunt for: _interaction inconsistency_ (the same job done as a modal in one place and a drawer in another; inconsistent confirm dialogs); _theming not tokenized_ (hardcoded hex colors, magic spacing/font sizes, inline styles instead of theme tokens/variables — grep for `#[0-9a-f]{3,6}`, `style={{`, raw `px` values); _cross-page inconsistency_ (the same element — button, page header, card — styled differently across routes); _component duplication_ (three near-identical cards/tables for one purpose); _design-system bypass_ (raw HTML/CSS where a library component exists). Each finding gets an example, its impact (feels unpolished / a color change means hunting every file), and a fix (standardize on one pattern / move to tokens / extract one shared component). These are almost always cheap cleanups, and they are exactly what a non-technical owner perceives as "the app looks off" without being able to say why.
 - `frontend-components.json` is where the frontend's real migration cost lives, in the **`rebuild`** field: `mantine-standard` (maps 1:1 to a Mantine component — trivial), `mantine-composition` (built from Mantine primitives — straightforward), `custom-style` (diverges only visually — normalize to Mantine), or **`custom-logic`** (bespoke behavior — a custom chart, a virtualized/complex table, a canvas, drag-and-drop, a rich editor — that must be **ported**, not re-skinned). A `custom-logic` component MUST fill `customLogic` explaining the behavior, and should list the `dependencies` (charting/table/editor libs) that make it a real port. This split — "trivially re-Mantine-able" vs "carries logic that must survive the port" — is the single most useful thing the frontend extraction produces.
@@ -187,3 +187,16 @@ node <skill-dir>/scripts/validate.mjs <repo>/.knowledge
 
 - Schema/contract: `references/blueprint.schema.json`
 - How Pikku consumes the blueprint: `references/pikku-mapping.md`
+
+## The second phase — a report the owner can act on
+
+Extraction produces a blueprint for a machine to rebuild from. The same
+`.knowledge/` directory is also the input to a second opinion for the person who
+holds the app: what works, what is holding them back, and what you would build
+instead, argued in business outcomes rather than architecture.
+
+That phase has its own voice rules, structure and red flags — read
+`references/second-opinion.md`, fill in
+`references/second-opinion-report-template.md`, and match the tone of
+`example/second-opinion-sample-report.md`. It consumes the blueprint; it never
+re-derives facts from the code, so run the extraction first.

@@ -5,8 +5,8 @@ description: >-
   Covers pikkuWorkflowFunc, workflow steps (do, sleep, suspend), graph workflows, and HTTP wiring.
   TRIGGER when: code uses pikkuWorkflowFunc/pikkuWorkflowGraph, user asks about workflows,
   multi-step processes, durable execution, suspend/resume, or DAG orchestration. DO NOT TRIGGER
-  when: user asks about simple background jobs (use pikku-queue) or scheduled tasks (use
-  pikku-schedule).
+  when: user asks about simple background jobs (use pikku-wiring) or scheduled tasks (use
+  pikku-wiring).
 installGroups: [core]
 ---
 

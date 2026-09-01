@@ -51,7 +51,7 @@ describe('validateFinding', () => {
       validateFinding(
         finding({
           kind: 'harness',
-          skill: 'pikku-feature',
+          skill: 'pikku-build',
           passage: 'Stage 4, the prebuild step',
         })
       ),

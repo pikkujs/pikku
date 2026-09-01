@@ -9,8 +9,8 @@ description: >-
   or emailTemplatesDir in pikku.config.json. TRIGGER when: user asks to add/edit a transactional
   email (verification, password reset, invitation, receipt), wire email sending, or translate an
   email. DO NOT TRIGGER when: user asks about i18n for the app UI (use pikku-i18n) or auth flows
-  in general (use pikku-better-auth).
-installGroups: [fabric]
+  in general (use pikku-auth).
+installGroups: [core]
 ---
 
 # Pikku Emails

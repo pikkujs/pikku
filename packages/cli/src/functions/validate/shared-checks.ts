@@ -609,7 +609,7 @@ export async function runSharedProjectChecks(
         lines(
           `Add a migration under db/${dbEngine}/ that creates the better-auth core schema:`,
           '  user, session, account, verification',
-          'The pikku-better-auth skill generates one for the dialect you are on.'
+          'The pikku-auth skill generates one for the dialect you are on.'
         )
       )
     }

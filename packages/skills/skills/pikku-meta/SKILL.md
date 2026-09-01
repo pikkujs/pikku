@@ -1,139 +1,67 @@
 ---
 name: pikku-meta
 description: >-
-  Read and change a Pikku project's declarations without grepping or hand-editing — functions
-  (with their transport, middleware and permissions), schemas, workflows, wires, tags, middleware
-  and permission definitions, plus `pikku meta apply` to set config on them. TRIGGER when: user
-  asks "what functions exist?", "show me the project structure", "list routes/middleware/
-  permissions", needs a function's input/output shape, or wants to add a permission, retag a
-  function, or change a declaration's config. DO NOT TRIGGER when: user is writing a NEW function
-  or wiring (use the specific wiring skill) or asking about Pikku concepts (use pikku-concepts).
+  Use to inspect or evolve a project you did not just write — `pikku meta` and `pikku info` for
+  what the project declares (functions, schemas, wires, workflows, middleware, permissions) and
+  `pikku meta apply` to change it, `pikku versions` / `pikku semver` for contract hashes,
+  breaking-change detection and the semver a release should get, and `pikku audit` / `pikku
+  update` for dependency advisories and moving Pikku forward. TRIGGER when: user asks what
+  functions or routes exist, wants a function's input/output shape, wants to retag a function or
+  set config on a declaration, asks about API versioning, breaking changes, what semver a release
+  deserves, dependency vulnerabilities, the console Security screen, or upgrading Pikku. DO NOT
+  TRIGGER when: user is writing a new function or wiring (use the wiring skill) or asking about
+  Pikku concepts (use pikku-concepts).
 installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku info *)
-argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply]'
+argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply|versions|semver|audit|update]'
 ---
 
 # Pikku Project Metadata
 
-`pikku meta` is the machine-readable view of the project and the write path to it.
-`pikku info` is the same ground as human-readable tables. Prefer `meta` when you are
-going to act on the output; prefer `info` when a person is going to read it.
+The project already knows what it declares. Ask it rather than grepping for it,
+and change it through the write path rather than by hand.
 
-## Agent Operating Procedure
+## Pick the reference
 
-Use this skill as an execution checklist, not reference material.
+| You are… | Read |
+| --- | --- |
+| Asking what exists, or setting config on a declaration | `references/meta.md` |
+| Versioning a contract, or deciding a release's semver | `references/versioning.md` |
+| Chasing a dependency advisory, or upgrading Pikku | `references/audit.md` |
 
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Change a declaration's config with `pikku meta apply`, not by hand-editing the file.
-4. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-5. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-6. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+## Start with `pikku meta context`
 
-## Reading
+It answers in one call what a planner needs — functions, wires, middleware,
+permissions, workflows, capabilities, layout. Reach for `pikku meta` when you
+are going to act on the output and `pikku info` when a person will read it;
+they are the same ground in two shapes.
 
-| Command                         | What it answers                                                                                                                  |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `pikku meta context`            | Everything a planner needs in one call — functions, wires, middleware, permissions, workflows, capabilities, layout. Start here. |
-| `pikku meta functions get <id>` | One function's input/output schema names, source file, tags, expose/readonly                                                     |
-| `pikku meta schemas get <name>` | One generated JSON schema                                                                                                        |
-| `pikku meta workflows get <id>` | One workflow's steps                                                                                                             |
-| `pikku meta permissions list`   | What permissions exist and where they are defined                                                                                |
-| `pikku meta middleware list`    | What middleware exists                                                                                                           |
-| `pikku meta wires list`         | Wires by transport (http, channel, scheduler, queue, trigger)                                                                    |
-| `pikku meta clients`            | Exposed RPCs/workflows/channels with their type names — what a frontend can call                                                 |
+## Direction decides whether a change is breaking
 
-`list` is the default for each group, so `pikku meta functions` and `pikku meta functions list`
-are the same call.
+An input is contravariant (the caller writes it) and an output is covariant (the
+caller reads it), so the same edit is not the same event on both. Adding a
+required field breaks an input and is compatible on an output; making a field
+optional is the reverse. `pikku semver` reads the generated JSON Schemas with
+that asymmetry built in, so let it decide rather than eyeballing a diff.
 
-A function's input/output shape comes from here. Do not infer it by reading the
-function body, and do not cast a call site to make it compile — the schema is the type.
+## What NOT to do
 
-## Changing
-
-`pikku meta apply` applies a batch of edits to your own source. Pass JSON as a file
-or on stdin:
-
-```bash
-pikku meta apply ops.json
-```
-
-```json
-{
-  "operations": [
-    {
-      "kind": "functionConfig",
-      "sourceFile": "src/functions/todos.functions.ts",
-      "exportedName": "listTodos",
-      "changes": { "title": "List Todos", "tags": ["todos", "read"] }
-    },
-
-    {
-      "kind": "functionConfig",
-      "sourceFile": "src/functions/todos.functions.ts",
-      "exportedName": "listTodos",
-      "changes": {
-        "permissions": {
-          "functionLevel": {
-            "name": "isTodoOwner",
-            "from": "../permissions.js"
-          }
-        }
-      }
-    }
-  ]
-}
-```
-
-Three kinds: `functionConfig`, `agentConfig`, `functionBody`. Every operation names
-a `sourceFile` and the `exportedName` declared in it.
-
-`functionConfig` changes: `title`, `description`, `summary`, `tags`, `errors`,
-`expose`, `remote`, `mcp`, `readonly`, `approvalRequired`, `permissions`.
-`agentConfig` changes: `name`, `description`, `instructions`, `role`, `personality`,
-`goal`, `model`, `maxSteps`, `temperature`, `toolChoice`, `tools`, `tags`.
-
-`null` removes a property. Edits are spliced into the original text, so formatting,
-comments and JSDoc survive.
-
-`permissions` and `tools` are written as identifiers rather than literals, so each
-one carries the module it comes from (`{"name": "isTodoOwner", "from": "../permissions.js"}`)
-and the missing import is added for you — widening an existing import from that
-module rather than adding a second one.
-
-### Why batch
-
-The whole batch either lands or it does not: every operation is resolved before
-anything is written, so a failure leaves every file untouched and names the
-operation that caused it. Batching is also what makes one codegen pass correct —
-**run `pikku all` once after the batch**, not once per property. The response tells
-you whether it is needed:
-
-```json
-{
-  "schemaVersion": "meta-apply.v1",
-  "applied": 2,
-  "files": ["src/functions/todos.functions.ts"],
-  "generatedMetaIsStale": true
-}
-```
-
-## Human-readable tables (`pikku info`)
-
-Four subcommands only — `functions`, `tags`, `middleware`, `permissions`. Routes,
-channels, schedulers and queues are not subcommands; they are the _transport_ column
-of `info functions --verbose`.
-
-```bash
-yarn pikku info functions --verbose --silent
-yarn pikku info tags --silent
-yarn pikku info middleware --verbose --silent
-yarn pikku info permissions --verbose --silent
-```
-
-`--silent` suppresses the banner and inspector diagnostics. It works, but it is not
-declared as an option, so every run also prints `Warning: Unknown option: --silent
-(ignored)` — the warning is wrong. Ignore that one line.
-
-`--limit N` caps rows (default 50); the footer says how many were withheld.
-On `tags`, `--verbose` swaps counts for names; elsewhere it adds columns.
+- **Do not infer a function's input or output by reading its body**, and do not
+  cast a call site to make it compile. The schema is the type; `pikku meta
+  functions get <id>` has it.
+- **Do not expect an unversioned function to be promoted for you.** Without an
+  explicit `version: 2` it is version 1 of its contract, collides with the
+  pinned `@v1`, and `pikku versions check` reports the published contract as
+  modified.
+- **Do not reach for `override` by default.** The contract key already drops a
+  matching `V<n>` suffix from the export name, so `getBookV1` keys under
+  `getBook`. `override` is for an export that cannot follow that convention.
+- **Do not shell out to the package manager from a function.** The audit is a
+  generated artifact — read `.pikku/audit.json` through
+  `metaService.readFile('audit.json')`.
+- **Do not redeclare the audit report's shape.** `SecurityAuditReport` and its
+  companions come from `@pikku/core`; the CLI writes it, the addon reads it, the
+  UI renders it.
+- **Do not treat a failed audit run as a clean one.** `bun audit` exits non-zero
+  when it *finds* advisories and still writes its payload, so non-zero with
+  output is data; non-zero with no output throws on purpose.

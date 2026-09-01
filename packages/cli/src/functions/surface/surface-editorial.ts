@@ -58,13 +58,13 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   variables: {
     step: 'enhance it',
-    skill: 'pikku-config',
+    skill: 'pikku-services',
     summary:
       'Configuration a function reads through the variables service, declared once so a deployment can be checked for what it is missing.',
   },
   secrets: {
     step: 'enhance it',
-    skill: 'pikku-config',
+    skill: 'pikku-services',
     summary:
       'Secrets a function can use without ever holding, declared here and resolved by the secrets service at runtime.',
   },
@@ -82,60 +82,60 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   http: {
     step: 'wire it up',
-    skill: 'pikku-http',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function to an HTTP route, with the path parameters checked against the function input.',
   },
   channel: {
     step: 'wire it up',
-    skill: 'pikku-websocket',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function to a websocket channel, its message routes and its pub/sub topics.',
   },
   queue: {
     step: 'wire it up',
-    skill: 'pikku-queue',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function as a queue worker, so a job on the queue runs the same handler an HTTP route would.',
   },
   scheduler: {
     step: 'wire it up',
-    skill: 'pikku-schedule',
+    skill: 'pikku-wiring',
     summary: 'Wires a function to a cron expression to run it on a schedule.',
   },
   trigger: {
     step: 'wire it up',
-    skill: 'pikku-trigger',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function to an event a source emits, rather than to a caller that asks for it.',
   },
   gateway: {
     step: 'wire it up',
-    skill: 'pikku-gateway-slack',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function behind a gateway that receives requests on behalf of another system.',
   },
   mcp: {
     step: 'wire it up',
-    skill: 'pikku-mcp',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function as an MCP tool, resource or prompt for a model to call.',
   },
   cli: {
     step: 'wire it up',
-    skill: 'pikku-cli',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function as a command, with its flags and arguments derived from the function input.',
   },
   auth: {
     step: 'guard it',
-    skill: ['pikku-security', 'pikku-permissions'],
+    skill: 'pikku-auth',
     summary:
       'Who may call a function, and what the call is made with: permissions that see the request, auth gates that run before it, and the credentials a function borrows rather than holds.',
   },
   scopes: {
     step: 'guard it',
-    skill: 'pikku-permissions',
+    skill: 'pikku-auth',
     summary:
       'The scopes a caller can hold and the roles that grant them, gating a call outside the permission pool.',
   },

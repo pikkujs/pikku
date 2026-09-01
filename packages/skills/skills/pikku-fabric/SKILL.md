@@ -1,6 +1,6 @@
 ---
 name: pikku-fabric
-description: 'Build and convert apps for the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `fabric.config.json`, and the pikku-verify workflow. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, or asking about Fabric deployment, database, or project conventions. TRIGGER when: user asks about a `pikku fabric validate` finding, including app-missing-actor-quick-login. DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy-cloudflare, pikku-deploy-fastify, etc. instead.'
+description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `fabric.config.json`, the pikku-verify workflow, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
 installGroups: [fabric]
 ---
 
@@ -21,7 +21,7 @@ Use this skill as an execution checklist, not reference material.
 5. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 6. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs on Cloudflare Workers with a SQLite database (via libSQL/Turso). This skill covers what's unique to Fabric. For general Pikku concepts, function authoring, HTTP wiring, and more, see `pikku-concepts`, `pikku-http`, `pikku-services`, etc.
+Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs on Cloudflare Workers with a SQLite database (via libSQL/Turso). This skill covers what's unique to Fabric. For general Pikku concepts, function authoring, HTTP wiring, and more, see `pikku-concepts`, `pikku-wiring`, `pikku-services`, etc.
 
 ## Before you start
 
@@ -440,3 +440,13 @@ Fix every `error` and `warn` in the output before continuing. Then:
 6. **Add `pikkufabric.config.json`** at project root with `projectId`, `production.domain`, and `frontends` (production is always `main`, so there is no `production.branch`).
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.
 8. **Run `pikku fabric validate`** once more to confirm no structural issues remain.
+
+## A deployed stage misbehaving
+
+Reproduce locally first — a deployed stage adds cost and latency to every
+iteration, and a failure that reproduces locally is a local debugging problem.
+When it only happens deployed, read `references/debugging.md`: start from
+`errors` rather than `logs` (they are already filtered and carry the traceId),
+follow one trace end to end before forming a theory, and confirm the fix against
+the same stage. A deploy that *failed* is a build or config problem and belongs
+above, not there.
