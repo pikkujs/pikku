@@ -3,6 +3,11 @@ export {
   type KnowledgeNote,
   type ProfileNote,
   MILESTONE_TYPE,
+  MILESTONES_DIR,
+  MILESTONE_SURFACES,
+  type MilestoneSurface,
+  listOf,
+  noteHash,
   readKnowledgeNotes,
   resourceIds,
 } from './notes.js'
@@ -48,3 +53,55 @@ export {
   type KnowledgeIndexResult,
   runKnowledgeIndex,
 } from './reindex.js'
+
+export {
+  PLAN_VERSION,
+  FIRST_PASS,
+  MAX_DEFERRALS,
+  CLASSIFICATIONS,
+  WireTransport,
+  PlanSchema,
+  type Plan,
+  type PlanSlot,
+  type PlanRead,
+  type PlanDefer,
+  type Deferral,
+  type CoverageState,
+  type NoteCoverage,
+  planSchemaJson,
+  itemsOf,
+  scenarioPass,
+  plannedApps,
+  planPathFor,
+  planIdFor,
+  milestonePathForPlanId,
+  readPlan,
+  writePlan,
+  renderPlanForBuild,
+  deferPlanItem,
+  deferOutstandingItems,
+  checkFirstPass,
+  checkAgainstMilestone,
+  checkPlanInternals,
+  knowledgeCoverage,
+} from './plan.js'
+
+export {
+  type PikkuMeta,
+  type PlannedTransport,
+  type PlanChecklistItem,
+  type PlanProgress,
+  type PlanShortfallResult,
+  functionsDirFor,
+  readPikkuMeta,
+  planProgress,
+  shallowScenarioProblems,
+  cascadeProblems,
+  planShortfall,
+} from './plan-meta.js'
+
+export {
+  type ScenarioDepth,
+  classifyScenario,
+  scenarioDepths,
+} from './hollow-scenarios.js'

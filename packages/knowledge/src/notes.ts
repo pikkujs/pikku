@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, join, posix, relative, sep } from 'node:path'
@@ -61,6 +62,40 @@ export type ProfileNote<Key extends string = never> = KnowledgeNote &
 
 /** The `type:` a milestone note carries. */
 export const MILESTONE_TYPE = 'milestone'
+
+export const MILESTONES_DIR = `${KNOWLEDGE_DIR}/milestones`
+
+/**
+ * What a milestone is judged as. Holding every milestone to `screens:` refused one for
+ * lacking a page it was never going to have — a CLI does not get a route, and an MCP
+ * tool is used by a machine. What the surface changes is WHICH proof a first pass owes,
+ * never whether it owes one.
+ */
+export const MILESTONE_SURFACES = [
+  'app',
+  'cli',
+  'mcp',
+  'agent',
+  'backend',
+] as const
+export type MilestoneSurface = (typeof MILESTONE_SURFACES)[number]
+
+/** Read a frontmatter scalar that carries a list, written either bare or bracketed. */
+export const listOf = (value: string | undefined): string[] =>
+  (value ?? '')
+    .replace(/^\s*\[/, '')
+    .replace(/\]\s*$/, '')
+    .split(',')
+    .map((item) => item.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean)
+
+/**
+ * Identifies a note's body, so a plan can say which revision it was written against
+ * and a later read can tell that the note moved underneath it.
+ */
+export function noteHash(body: string): string {
+  return createHash('sha256').update(body).digest('hex').slice(0, 12)
+}
 
 /**
  * The scalars this profile reads. A caller's own keys are passed to `parseNote`
