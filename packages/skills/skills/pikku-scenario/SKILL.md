@@ -1,17 +1,18 @@
 ---
 name: pikku-scenario
 description: >-
-  Use when writing or running Pikku scenarios, or when asked to test Pikku functions or improve
-  test coverage. A scenario (pikkuScenario) drives the app the way users do — steps run as actors
-  over the real transport against a running server — so a flow doubles as an e2e test and a
-  staged/production health check. Covers scenario.do / expectEventually / expectError /
-  expectService / expectScore, declared steps via pikkuScenarioStep (including browser steps driven by
-  @pikku/playwright) written as intent rather than as clicks, with the actions factored into
-  shared browser utilities, actors and environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
-  `pikku scenario list|run` commands, live function coverage via `pikku dev --coverage`, and
-  plain unit tests for pure function logic. TRIGGER when: user asks about scenarios, testing a
-  Pikku function, test coverage, end-to-end flows, browser/UI e2e, or health checks. DO NOT
-  TRIGGER when: user asks about running an existing test suite (use Bash) or CI configuration.
+  Use when writing or running Pikku scenarios, running a persona as a virtual user, or when
+  asked to test Pikku functions or improve coverage. A scenario (pikkuScenario) drives the app
+  the way users do — steps run as actors over the real transport against a running server — so a
+  flow doubles as an e2e test and a staged/production health check. Covers scenario.do /
+  expectEventually / expectError / expectService / expectScore, declared steps via
+  pikkuScenarioStep (browser steps driven by @pikku/playwright) written as intent rather than
+  clicks, personas / actors / environments in pikku.config.json, SCENARIO_ACTOR_SECRET, the
+  `pikku scenario list|run` and `pikku persona run|list|sync|secret` commands, and live coverage
+  via `pikku dev --coverage`. TRIGGER when: user asks about scenarios, testing a Pikku function,
+  coverage, e2e flows, browser/UI e2e, health checks, personas, virtual users, or adversarial
+  runs against a stage. DO NOT TRIGGER when: user asks about running an existing suite (use
+  Bash) or CI config.
 installGroups: [core]
 ---
 
@@ -28,6 +29,13 @@ Use this skill as an execution checklist, not reference material.
 5. If validation fails, fix the source cause and rerun. Do not paper over generated errors by editing generated files.
 
 **`pikku tests` does not exist.** It was removed in #865 — scenarios own coverage now. Any reference you find to it is stale.
+
+## Pick the reference
+
+| You are…                                                         | Read                        |
+| ---------------------------------------------------------------- | --------------------------- |
+| Writing or running scenarios                                     | this skill                  |
+| Running a persona as a model-driven virtual user against a stage | `references/persona-run.md` |
 
 ## What a scenario is
 
@@ -379,10 +387,13 @@ identifier is an API, and it is read by the toolchain.
 
 ```typescript
 // pikku.config.json: { "metaLocale": "de" }
-export const buysAnApple = pikkuScenarioStep<{ qty: number }, { orderId: string }>({
-  name: 'buysAnApple',          // identifier — English, always
-  description: 'kauft einen Apfel',  // prose — follows locale
-  template: 'kauft {qty} Äpfel',     // prose — follows locale
+export const buysAnApple = pikkuScenarioStep<
+  { qty: number },
+  { orderId: string }
+>({
+  name: 'buysAnApple', // identifier — English, always
+  description: 'kauft einen Apfel', // prose — follows locale
+  template: 'kauft {qty} Äpfel', // prose — follows locale
   actor: true,
   default: async (_services, { qty }, { actor }) =>
     await actor.invoke('placeOrder', { qty }),
@@ -548,7 +559,7 @@ Two consequences follow, and both shape how steps get written:
   as an RPC — which usually improves the product, since a client debugging the
   same problem needed it too.
 - **`agentRunner` is conditional.** It is built only when the project declares
-  agents, and `createDevAgentRunner` needs a base URL *and* a key together
+  agents, and `createDevAgentRunner` needs a base URL _and_ a key together
   (`OPENAI_BASE_URL` + `OPENAI_API_KEY`, or the LiteLLM pair). With a key alone
   it returns nothing and `agentRunner` is `undefined`, so `actor.converse`
   fails before the persona says anything. A suite that would rather own its own
@@ -596,12 +607,16 @@ import type messages from '../../../../apps/web/messages/en.json'
 
 export type MessageKey = keyof typeof messages
 
-export const t = (key: MessageKey, locale = baseLocale): string => { /* … */ }
+export const t = (key: MessageKey, locale = baseLocale): string => {
+  /* … */
+}
 ```
 
 ```typescript
 await page.getByLabel(t('jobs_apply_fullname')).fill(identity.name)
-await page.getByRole('button', { name: t('jobs_apply_submit'), exact: true }).click()
+await page
+  .getByRole('button', { name: t('jobs_apply_submit'), exact: true })
+  .click()
 ```
 
 - Type off `messages/<baseLocale>.json`, **not** the generated Paraglide output — `i18n/paraglide/` is build output, so typing against it makes the tests unbuildable until the app has been built. The JSON is the tracked source.
@@ -676,11 +691,11 @@ Generated files are exempt and never claim the slot.
 What that admits and what it does not:
 
 ```typescript
-personality: 'Wound up and short with it.'      // read
+personality: 'Wound up and short with it.' // read
 personality: `Wound up and short with it.
-  Says what she wants in a few blunt words.`    // read — no ${} in it
-personality: 'Wound up. ' + 'Short with it.'    // dropped, silently
-personality: TEMPERAMENTS.impatient             // dropped, silently
+  Says what she wants in a few blunt words.` // read — no ${} in it
+personality: 'Wound up. ' + 'Short with it.' // dropped, silently
+personality: TEMPERAMENTS.impatient // dropped, silently
 ```
 
 A no-substitution template literal is a string literal as far as the reader is
@@ -825,22 +840,22 @@ Services are plain objects — a Pikku function is pure business logic, so a moc
 
 ## Red flags
 
-| Smell                                               | Why it's wrong                                                                                                              |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `pikku tests …`                                     | Removed in #865. Use `pikku scenario`.                                                                                      |
-| `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                                  |
-| `scenario.do(...)` with no `{ actor }`              | Throws. Every step runs as somebody.                                                                                        |
-| A scenario per function                             | Scenarios are user flows. One flow covers many functions; that is the point.                                                |
-| Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                |
-| `sleep()` before asserting                          | Use `expectEventually`.                                                                                                     |
-| A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                   |
-| A step named `kauftEinenApfel` / a `vorgang` table   | Identifiers are English in every project. The German belongs in `description` / `template`, and only when `pikku.config.json` sets `metaLocale`.  |
-| A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                            |
-| `getByLabel('Full Name')` in a translated app        | Passes only in the base locale, and a copy edit breaks it as an unexplained timeout. Locate by message key.                 |
-| A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                             |
-| A step with a `func:` instead of a surface binding  | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.             |
-| `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                   |
-| Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured. |
+| Smell                                               | Why it's wrong                                                                                                                                   |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pikku tests …`                                     | Removed in #865. Use `pikku scenario`.                                                                                                           |
+| `.feature` files / Gherkin for function tests       | Scenarios are TypeScript, not Gherkin. The in-process cucumber function world was deleted.                                                       |
+| `scenario.do(...)` with no `{ actor }`              | Throws. Every step runs as somebody.                                                                                                             |
+| A scenario per function                             | Scenarios are user flows. One flow covers many functions; that is the point.                                                                     |
+| Assuming a clean database                           | There is no state reset — it may be a staging server. Scope what you create.                                                                     |
+| `sleep()` before asserting                          | Use `expectEventually`.                                                                                                                          |
+| A step named `clicksAddToBasket` / `opensThePage`   | That is an action, not an intent. Name the step for what the actor wanted; put the clicking in a utility.                                        |
+| A step named `kauftEinenApfel` / a `vorgang` table  | Identifiers are English in every project. The German belongs in `description` / `template`, and only when `pikku.config.json` sets `metaLocale`. |
+| A browser step that assumes it is already on a page | It can then only run mid-flow. Arrive first — check the URL, navigate if needed.                                                                 |
+| `getByLabel('Full Name')` in a translated app       | Passes only in the base locale, and a copy edit breaks it as an unexplained timeout. Locate by message key.                                      |
+| A `browser` binding guarding `if (!browser)`        | The binding guarantees it. The guard hides the real error, which is a missing actor (`PKU677`).                                                  |
+| A step with a `func:` instead of a surface binding  | There is no `func` on a step. Bodies live under `default` / `browser` / `cli`; a step with none throws at load.                                  |
+| `expectEventually` in a `pikkuWorkflowFunc`         | `PKU675` — scenario-only.                                                                                                                        |
+| Coverage silently 0                                 | Server not run with `--coverage`, verbose functions meta not deployed, `scaffold.scenarios` unset, or no actors configured.                      |
 
 `@pikku/cucumber` is a **browser/e2e** harness (`Actor`, `BrowserWorld`, `PersonaData`, `DbUtils`) — out of scope here.
 
