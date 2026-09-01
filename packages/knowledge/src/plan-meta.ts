@@ -1,7 +1,12 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { z } from 'zod'
-import { FIRST_PASS, scenarioPass, type Plan, type WireTransport } from './plan.js'
+import {
+  FIRST_PASS,
+  scenarioPass,
+  type Plan,
+  type WireTransport,
+} from './plan.js'
 import { scenarioDepths, type ScenarioDepth } from './hollow-scenarios.js'
 
 /**
