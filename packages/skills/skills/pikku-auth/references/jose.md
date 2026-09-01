@@ -64,7 +64,7 @@ await jwt.init()
 A signing key is a secret, so it comes from the secrets service rather than
 `process.env` — and because `getSecrets` is a function called on demand, reading
 it there (not once at construction) is what makes the re-init-on-unknown-kid path
-above actually see a rotated key. See `pikku-config`.
+above actually see a rotated key. See `pikku-services`.
 
 ### Secret Rotation
 

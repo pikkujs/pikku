@@ -8,7 +8,7 @@ description: >-
   TRIGGER when: code uses version: on a pikkuFunc, user asks about
   API versioning, breaking changes, contract hashes, backward compatibility, what semver a
   release should get, comparing against production/staging, or "pikku versions" / "pikku semver"
-  CLI commands. DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-config)
+  CLI commands. DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-services)
   or general function definitions (use pikku-concepts), or about updating dependency versions
   (use pikku-deps).
 ---

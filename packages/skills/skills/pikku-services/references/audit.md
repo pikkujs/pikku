@@ -1,27 +1,5 @@
----
-name: pikku-audit
-description: >-
-  Use when adding audit / activity-history / change-tracking to a Pikku app, or when a function
-  needs to record who changed what. Covers the built-in AuditService sink, the per-invocation
-  auditLog buffer (createInvocationAudit / pikkuWireServices), the `audit: true` function flag,
-  explicit `auditLog.write()` domain events, automatic query-level capture via
-  createAuditedKysely, and the durable KyselyAuditService sink. TRIGGER when: user asks for an
-  audit log, change history, activity feed, "who did this", or a custom audit/history table; code
-  uses auditLog, createInvocationAudit, createAuditedKysely, or AuditService. DO NOT TRIGGER when:
-  user wants app logging/telemetry (use the logger) or DB migrations in general (use
-  pikku-kysely).
----
-
 # Pikku Audit
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Check how services are wired (`services.ts`) and whether an `audit` table migration exists before adding audit calls.
-2. NEVER hand-roll a custom `audit_log` / history table with direct `insertInto('audit_log')` calls. The framework owns audit. A bespoke table drifts from the runtime (missing user/trace/wire context, hand-written CHECK constraints that reject valid events, no prod sink). Use the built-in path below.
-3. Make the smallest source change: mark the function `audit: true`, inject `auditLog`, call `auditLog.write(...)`. Do not invent a new service.
-4. Validate with `pikku all` (regenerates the service flags) then run the app / e2e.
 
 ## Mental model — two layers
 

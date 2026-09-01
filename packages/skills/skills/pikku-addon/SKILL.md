@@ -159,7 +159,7 @@ export const createSingletonServices = pikkuAddonServices(
 
 `secrets` and `variables` arrive **typed against the addon's own declarations**,
 and a secret is a `SecretValue` — `.reveal()` is the only way to the plaintext
-(see `pikku-config`). `pikkuAddonConfig` is the matching factory for the addon's
+(see `pikku-services`). `pikkuAddonConfig` is the matching factory for the addon's
 config object.
 
 ### `pikkuAddonWireServices(factory)`

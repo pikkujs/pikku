@@ -224,7 +224,7 @@ variant to reach for, you import them from `@pikku/kysely` whatever the engine:
 | `KyselyCredentialService`    | Encrypted third-party credentials            |
 | `KyselyAgentRunStateService` | AI run state (also implemented by AIStorage) |
 | `KyselyWorkflowMirror`       | Mirrors workflow runs into queryable tables  |
-| `KyselyAuditService`         | Durable audit sink (see `pikku-audit`)       |
+| `KyselyAuditService`         | Durable audit sink (see `pikku-services`)       |
 
 All services take a `Kysely<KyselyPikkuDB>` instance in their constructor and have an `init()` method that creates tables if needed.
 
@@ -257,7 +257,7 @@ const newVersion = await secrets.rotateKEK()
 
 `getSecret` hands back a `SecretValue<T>`, not the bare value — it serializes as
 `[secret]` until something reveals it, which is what stops a secret drifting into
-a log line or an audit row. See `pikku-config` for the reveal rules.
+a log line or an audit row. See `pikku-services` for the reveal rules.
 
 ## Usage Patterns
 

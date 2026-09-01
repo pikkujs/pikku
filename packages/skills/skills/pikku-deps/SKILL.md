@@ -10,7 +10,7 @@ description: >-
   vulnerabilities/advisories, outdated dependencies, upgrading Pikku itself, peer dependency
   conflicts, the Security screen/page in the console, updating a vulnerable dependency, or
   reading/rendering audit.json. DO NOT TRIGGER when: user asks about authentication/sessions/JWT
-  or permissions (use pikku-auth), or secrets/env vars (use pikku-config).
+  or permissions (use pikku-auth), or secrets/env vars (use pikku-services).
 ---
 
 # Pikku Dependency Audit

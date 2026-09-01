@@ -9,7 +9,7 @@ description: >-
   cookie auth, bearer tokens, API keys, JWT, Better Auth, social providers, restricting who may
   call a function, resource ownership, roles, scopes, or hits MissingScopeError or
   InvalidSessionError. DO NOT TRIGGER when: user asks about middleware mechanics with no identity
-  involved (use pikku-middleware) or about secrets and env vars (use pikku-config).
+  involved (use pikku-middleware) or about secrets and env vars (use pikku-services).
 installGroups: [core]
 ---
 

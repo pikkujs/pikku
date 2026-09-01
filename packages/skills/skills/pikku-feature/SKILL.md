@@ -137,7 +137,7 @@ in-app features don't.
   zod schema for type-safe access. Read variables with
   `services.variables.get('NAME')`. Secrets are **not available in functions** —
   read them in `services.ts` with `secrets.getSecret('NAME')` and pass the value
-  into the service the function uses. See the **pikku-config** skill for the full
+  into the service the function uses. See the **pikku-services** skill for the full
   pattern (including OAuth2 credentials). This applies even in `config.ts`.
 
 ### Conventions to copy from neighbours

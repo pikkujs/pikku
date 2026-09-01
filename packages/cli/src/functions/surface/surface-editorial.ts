@@ -58,13 +58,13 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   variables: {
     step: 'enhance it',
-    skill: 'pikku-config',
+    skill: 'pikku-services',
     summary:
       'Configuration a function reads through the variables service, declared once so a deployment can be checked for what it is missing.',
   },
   secrets: {
     step: 'enhance it',
-    skill: 'pikku-config',
+    skill: 'pikku-services',
     summary:
       'Secrets a function can use without ever holding, declared here and resolved by the secrets service at runtime.',
   },

@@ -1,29 +1,5 @@
----
-name: pikku-config
-description: >-
-  Use when managing secrets, environment variables, config, or OAuth2 credentials in a Pikku app.
-  Covers defineSecret, defineVariable, defineCredential, and typed config access. TRIGGER when:
-  code uses defineSecret/defineVariable/defineCredential, user asks about env vars, secrets,
-  config, OAuth2, SecretValue/.reveal(), SecretCoercionError, or "how do I access environment
-  variables". DO NOT TRIGGER when: user asks about API versioning/breaking changes (use
-  pikku-versioning), service factories (use pikku-services), middleware (use pikku-middleware), or
-  auth strategies and sessions (use pikku-auth).
-installGroups: [core]
----
-
 # Pikku Config, Secrets & OAuth2
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Manage secrets, variables, and OAuth2 credentials. Never use `process.env` in Pikku functions — use typed services instead.
 
 ## Before You Start
 
@@ -228,7 +204,7 @@ const apiKey = process.env.API_KEY
 const apiKey = services.variables.get('API_KEY')
 ```
 
-`process.env` belongs only in server bootstrap code (`start.ts`). Under `pikku dev` / `pikku serve` there is no `start.ts` — startup work goes in a `pikkuServerLifecycle` export, and the hooks receive the singleton services, so read configuration through `variables` there too (see pikku-services).
+`process.env` belongs only in server bootstrap code (`start.ts`). Under `pikku dev` / `pikku serve` there is no `start.ts` — startup work goes in a `pikkuServerLifecycle` export, and the hooks receive the singleton services, so read configuration through `variables` there too (see `references/services.md`).
 
 ### Lint rules
 

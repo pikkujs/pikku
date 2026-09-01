@@ -19,7 +19,7 @@ Authoritative mapping table plus side-by-side code examples showing how common b
 | **Module / Feature grouping**           | Tags + wiring files                                             | `pikku-concepts`  |
 | **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | `pikku-concepts`  |
 | **Type-safe API client**                | `npx pikku all` generates clients                               | `pikku-concepts`  |
-| **Secrets / Config**                    | `defineSecret`, `defineVariable`, `services.variables`          | `pikku-config`    |
+| **Secrets / Config**                    | `defineSecret`, `defineVariable`, `services.variables`          | `pikku-services`    |
 
 ## Route Handler / Controller → pikkuFunc
 

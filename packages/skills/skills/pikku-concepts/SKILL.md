@@ -415,7 +415,7 @@ language, it is telling you about axis three and nothing else.
 
 ## Environment Variables
 
-Never use `process.env` inside Pikku functions. Use the `variables` service (see `pikku-config`):
+Never use `process.env` inside Pikku functions. Use the `variables` service (see `pikku-services`):
 
 ```typescript
 const apiKey = services.variables.get('API_KEY')
