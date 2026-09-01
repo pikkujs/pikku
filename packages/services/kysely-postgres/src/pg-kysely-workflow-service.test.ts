@@ -641,3 +641,76 @@ describe('advisory locks', () => {
     )
   })
 })
+
+/**
+ * The claim is a status-guarded `UPDATE`, so the lease has to be part of that
+ * same statement — a lease checked in JavaScript and written afterwards would
+ * let two dispatches both read a lapsed lease and both proceed.
+ */
+describe('a step lease on Postgres', () => {
+  const claim = (runId: string, leaseMs = 60_000) =>
+    (service as any).claimStepForExecution(
+      runId,
+      'step-1',
+      'rpc.fn',
+      new Date(Date.now() + leaseMs)
+    )
+
+  /**
+   * The worker died: nothing is left to push its lease forward. Written as a
+   * JS date rather than SQL `now()`, because that is what the engine binds and
+   * the column carries no timezone to reconcile the two.
+   */
+  const lapseTheLease = () =>
+    db
+      .updateTable('workflowStep')
+      .set({ leaseExpiresAt: new Date(Date.now() - 60_000) })
+      .execute()
+
+  test('a live lease turns away a second dispatch', async () => {
+    const { runId } = await seedStep()
+
+    const first = await claim(runId)
+    const second = await claim(runId)
+
+    assert.ok(first)
+    assert.equal(second, null)
+  })
+
+  test('a lapsed lease hands the step to the next dispatch', async () => {
+    const { runId } = await seedStep()
+
+    await claim(runId)
+    await lapseTheLease()
+    const second = await claim(runId)
+
+    assert.ok(second, 'the abandoned step is claimable again')
+    assert.equal(second.attemptCount, 2, 're-claiming it counts as an attempt')
+  })
+
+  test('only the first dispatch to reach a lapsed lease gets the step', async () => {
+    const { runId } = await seedStep()
+
+    await claim(runId)
+    await lapseTheLease()
+    await claim(runId)
+    const third = await claim(runId)
+
+    assert.equal(third, null, 'the re-claim took the lease with it')
+  })
+
+  test('a run wedged on a lapsed lease is found as stalled', async () => {
+    const { runId } = await seedStep()
+    // Far enough ahead that the run and its step both read as idle, leaving
+    // what is in flight as the only thing the sweep is deciding on.
+    const longSinceIdle = new Date(Date.now() + 24 * 60 * 60_000)
+
+    await claim(runId)
+    const held = await (service as any).findStalledRunIds(longSinceIdle, 10)
+    await lapseTheLease()
+    const lapsed = await (service as any).findStalledRunIds(longSinceIdle, 10)
+
+    assert.deepEqual(held, [], 'a step under a live lease is still in flight')
+    assert.deepEqual(lapsed, [runId], 'a step with no worker on it is not')
+  })
+})
