@@ -52,6 +52,88 @@ const sidecarHandshakeLines = (): string[] => [
 const SIDECAR_RUNTIME_IMPORT = `import { watchParentProcess } from '@pikku/deploy-standalone/runtime'`
 
 /**
+ * Environment variable naming the directory the SQLite file lives in.
+ *
+ * The database has to outlive a release. A deploy that swaps the artifact
+ * directory would take the database with it if the file sat beside the bundle,
+ * so the path comes from the environment and points somewhere the operator
+ * keeps stable across releases, rather than being derived from the bundle's own
+ * location the way the frontend directory is.
+ */
+const DATA_DIR_VAR = 'PIKKU_DATA_DIR'
+
+/**
+ * Full override for the database file, for when it must match a path something
+ * else already decided — notably `pikku db migrate`, which has to open the same
+ * file this opens or the app runs against an unmigrated database.
+ */
+const DATABASE_FILE_VAR = 'PIKKU_DATABASE_FILE'
+
+const DEFAULT_DATABASE_FILENAME = 'pikku.db'
+
+/**
+ * The dialect factory each runtime opens SQLite with. bun cannot use the node
+ * one — `bun:sqlite` is a different driver, and the node build reaches for
+ * `node:sqlite`, which a compiled bun binary does not carry.
+ */
+const SQLITE_FACTORY = {
+  node: {
+    specifier: '@pikku/kysely-node-sqlite',
+    fn: 'createNodeSqliteKysely',
+  },
+  bun: { specifier: '@pikku/kysely-bun-sqlite', fn: 'createBunSqliteKysely' },
+} as const
+
+/** Imports a SQLite-backed entry needs on top of the common set. */
+const sqliteImportLines = (
+  runtime: 'node' | 'bun',
+  coercionImportPath: string
+): string[] => [
+  `import { ${SQLITE_FACTORY[runtime].fn} } from '${SQLITE_FACTORY[runtime].specifier}'`,
+  `import { createCoercionPlugin } from '@pikku/kysely'`,
+  `import { coercionMap as __pikkuCoercionMap } from '${coercionImportPath}'`,
+  `import { mkdirSync as __pikkuMkdirSync } from 'node:fs'`,
+  `import { dirname as __pikkuDbDirname, join as __pikkuDbJoin } from 'node:path'`,
+]
+
+/**
+ * Opens the database before services are built, so `createSingletonServices`
+ * receives `kysely` exactly as a hosted runtime would hand it over.
+ *
+ * Creating the directory rather than requiring it is deliberate: the artifact
+ * is expected to start on a machine where nothing has run yet, and a missing
+ * parent directory is the difference between a first boot that works and one
+ * that needs a documented mkdir nobody reads.
+ */
+const sqliteSetupLines = (runtime: 'node' | 'bun'): string[] => [
+  `  const __pikkuDbFile = process.env.${DATABASE_FILE_VAR}`,
+  `    ? process.env.${DATABASE_FILE_VAR}`,
+  `    : __pikkuDbJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
+  `  __pikkuMkdirSync(__pikkuDbDirname(__pikkuDbFile), { recursive: true })`,
+  `  const kysely = ${SQLITE_FACTORY[runtime].fn}({`,
+  `    filename: __pikkuDbFile,`,
+  `    plugins: [createCoercionPlugin({ map: __pikkuCoercionMap })],`,
+  `  })`,
+]
+
+/**
+ * Fails with the variable's name rather than whatever SQLite says about a path
+ * of `undefined/pikku.db`, which is the error an operator would otherwise have
+ * to work backwards from.
+ */
+const dataDirHelperLines = (): string[] => [
+  `function __pikkuRequireDataDir() {`,
+  `  const dir = process.env.${DATA_DIR_VAR}`,
+  `  if (!dir) {`,
+  `    throw new Error(`,
+  `      'This build bundles a SQLite database, so it needs somewhere to keep it. Set ${DATA_DIR_VAR} to a writable directory that survives a release swap, or set ${DATABASE_FILE_VAR} to the database file itself.'`,
+  `    )`,
+  `  }`,
+  `  return dir`,
+  `}`,
+]
+
+/**
  * `rustc -vV`, or nothing when no toolchain is installed. The triple then falls
  * back to the Node platform pair, which is right for every ordinary host — the
  * cases rustc knows better about (musl, Rosetta) are the ones where a Rust
@@ -129,6 +211,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
             `import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'`,
           ]
         : []),
+      ...(ctx.db ? sqliteImportLines('node', ctx.db.coercionImportPath) : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -149,8 +232,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const eventHub = new LocalEventHubService()`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
+      ...(ctx.db ? sqliteSetupLines('node') : []),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
+      ...(ctx.db ? [`    kysely,`] : []),
       `    schedulerService,`,
       `    queueService,`,
       `    workflowService,`,
@@ -195,6 +280,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  process.exit(1)`,
       `})`,
       ``,
+      ...(ctx.db ? [...dataDirHelperLines(), ``] : []),
     ].join('\n')
   }
 
@@ -210,6 +296,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.frontend
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
         : []),
+      ...(ctx.db ? sqliteImportLines('bun', ctx.db.coercionImportPath) : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -230,8 +317,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const eventHub = new BunEventHubService()`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
+      ...(ctx.db ? sqliteSetupLines('bun') : []),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
+      ...(ctx.db ? [`    kysely,`] : []),
       `    schedulerService,`,
       `    queueService,`,
       `    workflowService,`,
@@ -268,6 +357,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  process.exit(1)`,
       `})`,
       ``,
+      ...(ctx.db ? [...dataDirHelperLines(), ``] : []),
     ].join('\n')
   }
 

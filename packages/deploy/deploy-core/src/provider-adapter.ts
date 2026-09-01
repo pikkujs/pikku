@@ -53,6 +53,26 @@ export interface EntryGenerationContext {
     urlPrefix: string
     spaFallback: boolean
   }
+  /**
+   * The database the generated entry has to open for itself, or undefined when
+   * the project has none.
+   *
+   * A hosted runtime hands `kysely` to `createSingletonServices` — `pikku dev`
+   * builds one, and a Cloudflare deploy binds one — so app code is written
+   * expecting it and typically throws without it. A standalone artifact has no
+   * such host: it IS the runtime, and until this existed it started an app whose
+   * services factory had nothing to connect to.
+   *
+   * Only the engine and where to find the coercion map travel here. Which
+   * dialect package to import, and how to reach the file, is the provider's
+   * business — a compiled bun binary and a node bundle do not open SQLite the
+   * same way.
+   */
+  db?: {
+    engine: 'sqlite'
+    /** Import specifier for the generated `coercionMap`, relative to unitDir. */
+    coercionImportPath: string
+  }
 }
 
 export interface ProviderAdapter {

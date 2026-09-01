@@ -5,7 +5,7 @@
  * Outputs everything to .deploy/<provider>/ without deploying.
  */
 
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
@@ -94,6 +94,38 @@ function findLockfile(projectDir: string): string | null {
     if (existsSync(p)) return p
   }
   return null
+}
+
+/**
+ * The database a standalone bundle has to open for itself.
+ *
+ * Every other provider deploys onto a host that supplies `kysely` — `pikku dev`
+ * builds one, a Cloudflare deploy binds one — so `createSingletonServices` is
+ * written expecting it. A standalone artifact has no host, and shipped one that
+ * never got a connection at all: the app booted straight into whatever its
+ * services factory does when the database is missing, which for the generated
+ * templates is a throw.
+ *
+ * Engine comes from the migrations directory rather than the user config,
+ * because that is the same signal `loadUserConfigForDb` falls back to and it
+ * needs no module loading here. Only SQLite is wired today — Postgres self-hosts
+ * against a server this cannot assume anything about, and needs a URL rather
+ * than a path.
+ */
+function resolveStandaloneDb(
+  projectDir: string,
+  pikkuDir: string,
+  unitDir: string
+): { engine: 'sqlite'; coercionImportPath: string } | undefined {
+  if (!existsSync(join(projectDir, 'db', 'sqlite'))) return undefined
+
+  const coercionFile = join(pikkuDir, 'db', 'coercion.gen.ts')
+  if (!existsSync(coercionFile)) return undefined
+
+  let rel = relative(unitDir, coercionFile).replace(/\\/g, '/')
+  if (!rel.startsWith('.')) rel = `./${rel}`
+
+  return { engine: 'sqlite', coercionImportPath: rel.replace(/\.ts$/, '.js') }
 }
 
 export async function runBuildPipeline(options: {
@@ -202,6 +234,7 @@ export async function runBuildPipeline(options: {
         inspectorState
       ) as object),
       frontend: frontendMount,
+      db: resolveStandaloneDb(projectDir, pikkuDir, unitDir),
     }
     const source = provider.generateEntrySource(ctx as never)
 

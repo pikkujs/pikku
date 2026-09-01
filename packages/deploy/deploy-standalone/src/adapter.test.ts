@@ -184,3 +184,176 @@ describe('StandaloneProviderAdapter deploy output', () => {
     assert.equal(existsSync(join(outDir, 'frontend-assets.gen.js')), false)
   })
 })
+
+const withDb = {
+  ...(baseContext as object),
+  db: {
+    engine: 'sqlite' as const,
+    coercionImportPath: '../../.pikku/db/coercion.gen.js',
+  },
+} as never
+
+describe('StandaloneProviderAdapter database wiring', () => {
+  test('a node entry without a database opens none', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(baseContext)
+
+    assert.doesNotMatch(source, /createNodeSqliteKysely/)
+    assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
+  })
+
+  test('a node entry hands the connection to the services factory', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.match(source, /createNodeSqliteKysely/)
+    // The whole point: app code receives `kysely` the way a hosted runtime
+    // would give it, rather than the factory finding nothing there.
+    assert.match(
+      source,
+      /createSingletonServices\(config, \{[\s\S]*?\n    kysely,/,
+      'kysely must be passed into the services factory, not merely constructed'
+    )
+  })
+
+  test('the connection is opened before the services that need it', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.ok(
+      source.indexOf('createNodeSqliteKysely') <
+        source.indexOf('createSingletonServices(config'),
+      'a connection built after the factory ran would arrive too late to be used'
+    )
+  })
+
+  test('the generated coercion map is applied to the connection', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.match(source, /from '\.\.\/\.\.\/\.pikku\/db\/coercion\.gen\.js'/)
+    // Without it a `date` column reads back as a string and a `bool` as 0/1,
+    // so the deployed app disagrees with `pikku dev` about its own row shapes.
+    assert.match(
+      source,
+      /createCoercionPlugin\(\{ map: __pikkuCoercionMap \}\)/
+    )
+  })
+
+  test('the database file lives outside the release directory', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.match(source, /PIKKU_DATA_DIR/)
+    // A path derived from the bundle's own location would be swapped out —
+    // and deleted — by the next release.
+    assert.doesNotMatch(
+      source,
+      /filename: __pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath/
+    )
+  })
+
+  test('an explicit database file overrides the data directory', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    // `pikku db migrate` has to open the same file this does; without an
+    // override the two can only agree by coincidence.
+    assert.match(source, /PIKKU_DATABASE_FILE/)
+  })
+
+  test('a missing data directory fails by name', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.match(source, /__pikkuRequireDataDir/)
+    assert.match(
+      source,
+      /Set PIKKU_DATA_DIR to a writable directory/,
+      'the error has to name the variable, not surface as a path of undefined'
+    )
+  })
+
+  test('the directory is created rather than required to exist', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.match(
+      source,
+      /__pikkuMkdirSync\(__pikkuDbDirname\(__pikkuDbFile\), \{ recursive: true \}\)/
+    )
+  })
+
+  test('a database and a frontend do not fight over their path aliases', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource({
+      ...(baseContext as object),
+      frontend: { urlPrefix: '/', spaFallback: true },
+      db: {
+        engine: 'sqlite' as const,
+        coercionImportPath: './coercion.gen.js',
+      },
+    } as never)
+
+    // Two imports of node:path are legal; two bindings of one name are not.
+    const bound = source.match(/(?:dirname|join) as (\w+)/g) ?? []
+    assert.equal(
+      new Set(bound).size,
+      bound.length,
+      `each path helper must bind a distinct name, got ${bound.join(', ')}`
+    )
+    assert.match(source, /__pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath/)
+    assert.match(source, /__pikkuDbJoin\(__pikkuRequireDataDir\(\)/)
+  })
+})
+
+describe('StandaloneProviderAdapter database wiring (bun)', () => {
+  test('a bun entry opens SQLite through the bun driver', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(withDb)
+
+    // node:sqlite is not available inside a compiled bun binary, so reaching
+    // for the node factory here produces an artifact that cannot start.
+    assert.match(source, /createBunSqliteKysely/)
+    assert.doesNotMatch(source, /kysely-node-sqlite/)
+  })
+
+  test('a bun entry hands the connection to the services factory', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(withDb)
+
+    assert.match(
+      source,
+      /createSingletonServices\(config, \{[\s\S]*?\n    kysely,/
+    )
+  })
+
+  test('a bun entry defines the data-dir helper it calls', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(withDb)
+
+    // Calling it without defining it is a ReferenceError at first boot.
+    assert.match(source, /function __pikkuRequireDataDir\(\)/)
+  })
+
+  test('a bun entry without a database opens none', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'bun',
+    }).generateEntrySource(baseContext)
+
+    assert.doesNotMatch(source, /createBunSqliteKysely/)
+    assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
+  })
+})
