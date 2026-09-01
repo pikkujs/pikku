@@ -98,14 +98,15 @@ flags; the "Read" column is the skill that teaches the thing, where one does.
 
 **Running**
 
-| Command                           | What it does                                                      | Read                                    |
-| --------------------------------- | ----------------------------------------------------------------- | --------------------------------------- |
-| `dev`                             | Local dev server, all services wired, watch + HMR                 | `pikku-build`                           |
-| `serve`                           | Bundled bun/node runner — no watch, no codegen                    | `pikku-deploy`                          |
-| `watch`                           | Regenerate on file change, without a server                       | —                                       |
-| `scenario list\|run`              | Scenarios as e2e tests and health checks                          | `pikku-scenario`                        |
-| `persona run\|list\|sync\|secret` | A declared persona as a model-driven virtual user against a stage | `pikku-scenario`, persona-run reference |
-| `db`                              | Local development database                                        | `pikku-kysely`                          |
+| Command                      | What it does                                                                   | Read                                    |
+| ---------------------------- | ------------------------------------------------------------------------------ | --------------------------------------- |
+| `dev`                        | Local dev server, all services wired, watch + HMR                              | `pikku-build`                           |
+| `serve`                      | Bundled bun/node runner — no watch, no codegen                                 | `pikku-deploy`                          |
+| `watch`                      | Regenerate on file change, without a server                                    | —                                       |
+| `scenario list\|run`         | Scenarios as e2e tests and health checks                                       | `pikku-scenario`                        |
+| `persona run`                | A declared persona as a model-driven virtual user against a stage              | `pikku-scenario`, persona-run reference |
+| `persona list\|sync\|secret` | Who is declared; what an environment will provision; minting their credentials | `pikku-scenario`, persona-run reference |
+| `db`                         | Local development database                                                     | `pikku-kysely`                          |
 
 **Inspecting and evolving**
 
@@ -130,6 +131,9 @@ flags; the "Read" column is the skill that teaches the thing, where one does.
 | `dist`                        | Copy what `tsc` cannot emit — `.gen.json` meta, hand-authored `.d.ts` — into the build output. Run it after `tsc`, as a package's build script | —              |
 | `login` / `logout` / `whoami` | The CLI's session against a pikku server                                                                                                       | —              |
 | `skills`                      | Install these skills into an agent (Claude Code, opencode, pi)                                                                                 | —              |
+
+`-c/--config`, `--log-level`, `--json` and the filter flags are **global
+options**, not commands — they attach to the generating commands above.
 
 A dash means no skill covers it beyond this line. `--help` is then the whole of
 it — which is a reason to read `--help` rather than to assume the command does
