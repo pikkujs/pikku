@@ -27,6 +27,15 @@ export class LocalEmailService implements EmailService {
     if ('text' in input && typeof input.text === 'string') {
       payload.textLength = input.text.length
     }
+    if (input.attachments?.length) {
+      payload.attachments = input.attachments.map((attachment) => ({
+        filename: attachment.filename,
+        contentType: attachment.contentType ?? null,
+        contentId: attachment.contentId ?? null,
+        disposition: attachment.disposition ?? 'attachment',
+        contentLength: attachment.content.length,
+      }))
+    }
 
     console.info(JSON.stringify(payload))
     return {}

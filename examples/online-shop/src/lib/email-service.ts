@@ -42,6 +42,7 @@ export class GeneratedTemplateEmailService implements EmailService {
       cc: input.cc,
       bcc: input.bcc,
       replyTo: input.replyTo,
+      attachments: input.attachments,
       headers: {
         ...(input.headers ?? {}),
         'x-pikku-email-template': String(input.template.name),

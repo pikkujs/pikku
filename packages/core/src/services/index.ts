@@ -46,6 +46,7 @@ export type {
 // knowledge: decisions/internals/the-persona-runtime-is-exported-from-the-persona-entry-point.md
 export type { JWTService } from './jwt-service.js'
 export type {
+  EmailAttachment,
   EmailService,
   SendEmailInput,
   SendEmailResult,

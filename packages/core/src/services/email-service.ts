@@ -6,6 +6,19 @@ export interface EmailTemplateReference {
   data?: Record<string, unknown>
 }
 
+export interface EmailAttachment {
+  filename: string
+  /**
+   * Raw bytes, or the content already base64-encoded. A `string` is always
+   * read as base64 — never as a plain-text body — so text attachments must be
+   * encoded by the caller.
+   */
+  content: Uint8Array | string
+  contentType?: string
+  contentId?: string
+  disposition?: 'attachment' | 'inline'
+}
+
 export interface BaseSendEmailInput {
   to: string | string[]
   from?: string
@@ -14,6 +27,7 @@ export interface BaseSendEmailInput {
   replyTo?: string | string[]
   headers?: Record<string, string>
   subject?: string
+  attachments?: EmailAttachment[]
 }
 
 export interface SendTextEmailInput extends BaseSendEmailInput {
