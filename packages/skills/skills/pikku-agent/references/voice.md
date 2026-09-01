@@ -1,26 +1,5 @@
----
-name: pikku-ai-voice
-description: >-
-  Use when adding voice input (speech-to-text) or voice output (text-to-speech) to AI agents in a
-  Pikku app. Covers the voiceInput/voiceOutput AI middleware from @pikku/core/agent, per-script
-  voices, and barge-in. TRIGGER when: code uses voiceInput, voiceOutput, or user asks about voice
-  agents, speech-to-text, text-to-speech, transcription, or @pikku/ai-voice. DO NOT TRIGGER when:
-  user asks about AI agent wiring generally (use pikku-agent) or the runner itself (use
-  pikku-ai-vercel).
-installGroups: [core]
----
-
 # Pikku AI Voice (Speech I/O)
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 ## `@pikku/ai-voice` is deprecated and empty
 
@@ -30,7 +9,7 @@ dependency.
 
 Voice now lives in **`@pikku/core/agent`** as two AI middlewares, and the
 speech models are reached through the `agentRunner` (`transcribe` /
-`generateSpeech`) rather than through separate services. See `pikku-ai-vercel`.
+`generateSpeech`) rather than through separate services. See `references/runner-vercel.md`.
 
 ## API Reference
 

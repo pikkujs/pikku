@@ -108,7 +108,7 @@ processing, third-party calls that fail.
   fails in ways worth retrying.
 - **Prove it:** enqueue in one scenario step, assert the effect in a `then`.
 
-### An AI agent — `pikku-agent`, `pikku-ai-vercel`
+### An AI agent — `pikku-agent`
 
 The template ships agent wiring and `@ai-sdk/openai`. An agent that answers
 questions over the app's own data is the showcase; a general chatbot is not.
@@ -238,6 +238,6 @@ built.
 
 - Base workflow: `pikku-build-app` — read it first, follow it in full
 - Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
-  `pikku-ai-vercel`, `pikku-i18n`, `pikku-rtl`, `pikku-emails`,
+  `pikku-i18n`, `pikku-rtl`, `pikku-emails`,
   `pikku-versioning`, `pikku-addon`, `pikku-auth`, `pikku-services`
 - Every feature, end to end: https://pikkufabric.com/llm-all-features.txt

@@ -1,27 +1,5 @@
----
-name: pikku-ai-vercel
-description: >-
-  Use when setting up AI agent execution with the Vercel AI SDK in a Pikku app. Covers
-  VercelAgentRunner for streaming and non-streaming AI agent steps. TRIGGER when: code uses
-  VercelAgentRunner, user asks about Vercel AI SDK integration, AI agent runners, or
-  @pikku/ai-vercel. DO NOT TRIGGER when: user asks about AI agent wiring (use pikku-agent) or
-  voice I/O (use pikku-ai-voice).
-installGroups: [core]
----
-
 # Pikku AI Vercel (Agent Runner)
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-`@pikku/ai-vercel` provides an AI agent runner backed by the [Vercel AI SDK](https://sdk.vercel.ai/). Implements `AgentRunnerService` from `@pikku/core`.
 
 ## Installation
 
@@ -47,7 +25,7 @@ const runner = new VercelAgentRunner(
 
 - `stream(params: AgentRunnerParams, channel: AgentStreamChannel): Promise<AgentStepResult>` — Stream AI responses with tool calls
 - `run(params: AgentRunnerParams): Promise<AgentStepResult>` — Execute a single AI step (non-streaming)
-- `transcribe({ model, audio, … })` / `generateSpeech({ model, text, voice, … })` — what `voiceInput`/`voiceOutput` call; see `pikku-ai-voice`
+- `transcribe({ model, audio, … })` / `generateSpeech({ model, text, voice, … })` — what `voiceInput`/`voiceOutput` call; see `references/voice.md`
 - `generateImage`, `embed`, `embedMany`, `rerank` — the remaining AI SDK surfaces
 - `withApiKey(apiKey)` — returns a **new** runner built from `providerFactory`; returns `this` unchanged when no factory was supplied or the key is blank. This is the per-user-credential path
 
@@ -107,7 +85,7 @@ export const assistant = pikkuAgent({
 ```
 
 There is no `wireAgent` — agents are declared with `pikkuAgent` from the
-generated agent types. See `pikku-agent` for the full config.
+generated agent types. See `references/agents.md` for the full config.
 
 ### Testing without a real provider
 
