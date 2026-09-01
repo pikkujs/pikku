@@ -88,7 +88,7 @@ createRoot(document.getElementById('root')!).render(
 )
 ```
 
-If the project also exposes realtime events (see **pikku-realtime**), pass
+If the project also exposes realtime events (see **pikku-wiring**), pass
 the `PikkuRealtime` class as the third argument and the instance gets a
 `realtime` field too:
 
@@ -169,7 +169,7 @@ function TodoList() {
 
 The hook throws if no `PikkuRealtime` was wired — that's how you know to
 add it to `createPikku(...)`. Full event-hub setup, publishing, and SSE
-helpers live in **pikku-realtime**.
+helpers live in **pikku-wiring**.
 
 ## When to reach for what
 
@@ -183,7 +183,7 @@ helpers live in **pikku-realtime**.
 | Run one named workflow              | `usePikkuWorkflow('name')` → `.start/.run/.status` |
 | Talk to one named AI agent          | `usePikkuAgent('name')` → `.run/.stream/.approve`  |
 | Longer-running workflow UX          | **pikku-workflows-client**                         |
-| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-realtime**)      |
+| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-wiring**)      |
 
 The first three live in your generated `api.gen.ts` (see the
 **pikku-react-query** skill). This skill covers the rest.

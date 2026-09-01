@@ -1,36 +1,4 @@
----
-name: pikku-cli
-description: >-
-  Use when building CLI commands with Pikku. Covers wireCLI, pikkuCLICommand, subcommands,
-  options, parameters, custom renderers, and nested command groups. TRIGGER when: code uses
-  wireCLI/pikkuCLICommand, user asks about CLI commands, terminal tools, command-line interface,
-  or adding subcommands. DO NOT TRIGGER when: user asks about the pikku CLI tool itself (use
-  pikku-meta) or HTTP endpoints (use pikku-http).
-installGroups: [core]
----
-
 # Pikku CLI Wiring
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Wire Pikku functions as CLI commands with parameters, options, subcommands, and custom terminal renderers.
-
-## Before You Start
-
-```bash
-pikku info functions --verbose   # See existing functions and their types
-pikku info tags --verbose        # Understand project organization
-```
-
-See `pikku-concepts` for the core mental model.
 
 ## API Reference
 
@@ -244,4 +212,4 @@ session for local runs. Don't hand-write or edit the generated channel file.
 
 ## Complete Example
 
-For a full functions + renderers + nested-subcommand wiring walkthrough, see `references/complete-example.md`.
+For a full functions + renderers + nested-subcommand wiring walkthrough, see `cli-complete-example.md`.

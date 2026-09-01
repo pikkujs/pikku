@@ -1,44 +1,11 @@
----
-name: pikku-websocket
-description: >-
-  Use when adding real-time features, WebSocket channels, live updates, chat, or pub/sub to a
-  Pikku app. Covers wireChannel, action routing, auth, EventHub pub/sub, channel middleware, and
-  generated WebSocket client. TRIGGER when: code uses wireChannel, user asks about WebSocket,
-  real-time, live updates, chat, pub/sub, or the generated WebSocket client. DO NOT TRIGGER when:
-  user asks about HTTP/REST (use pikku-http), SSE (use pikku-http with sse: true), or WebSocket
-  deployment specifics (use pikku-deploy), or typed pub/sub events (use pikku-realtime).
-installGroups: [core]
----
-
 # Pikku WebSocket Wiring
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Wire Pikku functions to WebSocket channels with structured message routing, auth per-action, pub/sub via EventHub, and auto-generated type-safe clients.
-
-## Before You Start
-
-```bash
-pikku info functions --verbose   # See existing functions and their types
-pikku info tags --verbose        # Understand project organization
-```
-
-Follow existing patterns. See `pikku-concepts` for the core mental model.
 
 ## API Reference
 
 ### `wireChannel(config)`
 
 ```typescript
-import { wireChannel } from '@pikku/core/channel'
+import { wireChannel } from '#pikku/channel'
 
 wireChannel({
   name: string,                      // Channel name (e.g. 'todos')

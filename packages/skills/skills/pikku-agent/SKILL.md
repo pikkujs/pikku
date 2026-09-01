@@ -6,7 +6,7 @@ description: >-
   invocation via rpc.agent. TRIGGER when: code uses pikkuAgent/rpc.agent/runAgent/
   streamAgent, user asks about AI agents, chatbots, LLM assistants, tool-calling agents, agent
   memory/streaming, or `pikku enable agent`. DO NOT TRIGGER when: user asks about MCP tool
-  exposure (use pikku-mcp) or general function definitions (use pikku-concepts).
+  exposure (use pikku-wiring) or general function definitions (use pikku-concepts).
 installGroups: [core]
 ---
 

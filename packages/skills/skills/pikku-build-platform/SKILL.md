@@ -8,7 +8,7 @@ description: >-
   app, or asked to demonstrate what Pikku can do. DO NOT TRIGGER when: the user wants a product
   built (use pikku-build-app), something quick (use pikku-build-quick), or one specific surface
   wired into an existing app — a single workflow, cron job or agent (use that surface's own skill,
-  e.g. pikku-workflow, pikku-schedule, pikku-agent).
+  e.g. pikku-workflow, pikku-wiring, pikku-agent).
 ---
 
 # Build a platform showcase on Pikku
@@ -89,7 +89,7 @@ on a human or a timer and must survive a restart.
   from the UI.
 - Three workflows ship with the template. Read them before writing yours.
 
-### Schedules — `pikku-schedule`
+### Schedules — `pikku-wiring`
 
 Recurring work: a nightly rollup, a reminder sweep, an expiry pass.
 
@@ -99,7 +99,7 @@ Recurring work: a nightly rollup, a reminder sweep, an expiry pass.
 - **Prove it:** invoke the scheduled function directly in a scenario and assert
   its effect. Do not test by waiting.
 
-### Queues — `pikku-queue`
+### Queues — `pikku-wiring`
 
 Work that must happen but not now, and may retry: email fan-out, image
 processing, third-party calls that fail.
@@ -124,7 +124,7 @@ questions over the app's own data is the showcase; a general chatbot is not.
   matching `defineSecret`, never `process.env`, or deploy has nothing to
   provision (PKU951).
 
-### Realtime and events — `pikku-realtime`, `pikku-websocket`
+### Realtime and events — `pikku-wiring`
 
 `pikku enable events` gives a realtime channel plus an SSE stream, and the
 generated typed client.
@@ -134,12 +134,12 @@ generated typed client.
 - **Prove it:** a browser scenario is the only honest proof — assert the second
   persona's screen changed without a reload.
 
-### MCP — `pikku-mcp`
+### MCP — `pikku-wiring`
 
 Exposes functions as Model Context Protocol tools, so an outside agent can drive
 the app. Cheap once functions exist, and a genuine differentiator to show.
 
-### Triggers and webhooks — `pikku-trigger`, `pikku enable webhook`
+### Triggers and webhooks — `pikku-wiring`, `pikku enable webhook`
 
 Inbound triggers and outgoing webhook delivery. This is where `wireHTTP` is
 correct rather than a smell: a third-party caller needs a real REST shape.
@@ -237,9 +237,7 @@ built.
 ## Reference
 
 - Base workflow: `pikku-build-app` — read it first, follow it in full
-- Per-surface skills: `pikku-workflow`, `pikku-schedule`,
-  `pikku-queue`, `pikku-agent`, `pikku-ai-vercel`, `pikku-realtime`,
-  `pikku-websocket`, `pikku-mcp`, `pikku-trigger`, `pikku-i18n`, `pikku-rtl`,
-  `pikku-emails`, `pikku-versioning`, `pikku-addon`, `pikku-security`,
-  `pikku-audit`
+- Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
+  `pikku-ai-vercel`, `pikku-i18n`, `pikku-rtl`, `pikku-emails`,
+  `pikku-versioning`, `pikku-addon`, `pikku-security`, `pikku-audit`
 - Every feature, end to end: https://pikkufabric.com/llm-all-features.txt

@@ -7,8 +7,8 @@ description: >-
   plugin, machine identities, and `betterAuthSession` with the api-key branch. TRIGGER when: user
   asks about CLI login, `pikku login`, machine agents, service-to-service auth, API keys, client
   credentials, sandbox/worker tokens, or resolving a better-auth session in a Pikku function. DO
-  NOT TRIGGER when: user asks about end-user HTTP session/cookie auth only (use pikku-http + the
-  app betterAuth config) or about WebSocket channel mechanics (use pikku-websocket).
+  NOT TRIGGER when: user asks about end-user HTTP session/cookie auth only (use pikku-wiring + the
+  app betterAuth config) or about WebSocket channel mechanics (use pikku-wiring).
 installGroups: [fabric]
 ---
 

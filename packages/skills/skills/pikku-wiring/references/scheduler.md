@@ -1,45 +1,11 @@
----
-name: pikku-schedule
-description: >-
-  Use when adding scheduled tasks, recurring jobs, or cron-based automation to a Pikku app. Covers
-  wireScheduler, cron expressions, the scheduled task wire object, and scheduler middleware.
-  TRIGGER when: code uses wireScheduler, user asks about cron, scheduled tasks, recurring jobs, or
-  "run every X minutes/hours". DO NOT TRIGGER when: user asks about background jobs with retries
-  (use pikku-queue) or event-driven triggers (use pikku-trigger).
-installGroups: [core]
----
-
 # Pikku Scheduled Tasks
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Wire Pikku functions to run on a schedule using cron expressions. Uses `pikkuVoidFunc` (no input/output).
-
-`pikku dev`, `pikku serve` and the standalone deploy adapter each register a scheduler service for you, so a wired task runs without any setup. Only register one yourself when deploying somewhere those do not reach, and then take it off the queue factory (`bullFactory.getSchedulerService()`, `pgBossFactory.getSchedulerService()` — see `pikku-queue`) so it survives a restart and is shared between instances.
-
-## Before You Start
-
-```bash
-pikku info functions --verbose   # See existing functions and their types
-pikku info tags --verbose        # Understand project organization
-```
-
-See `pikku-concepts` for the core mental model.
 
 ## API Reference
 
 ### `wireScheduler(config)`
 
 ```typescript
-import { wireScheduler } from '@pikku/core/scheduler'
+import { wireScheduler } from '#pikku/scheduler'
 
 wireScheduler({
   name: string,            // Unique scheduler name

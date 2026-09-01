@@ -1,37 +1,4 @@
----
-name: pikku-trigger
-description: >-
-  Use when adding event-driven functions that respond to system events like Redis pub/sub,
-  PostgreSQL LISTEN/NOTIFY, or custom event sources. Covers wireTrigger, wireTriggerSource, and
-  pikkuTriggerFunc. TRIGGER when: code uses wireTrigger/wireTriggerSource/pikkuTriggerFunc, user
-  asks about event-driven functions, Redis pub/sub, PostgreSQL LISTEN/NOTIFY, or reacting to
-  external events. DO NOT TRIGGER when: user asks about scheduled tasks (use pikku-schedule) or
-  background job queues (use pikku-queue).
-installGroups: [core]
----
-
 # Pikku Trigger Wiring
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Wire Pikku functions to fire when external events occur. Triggers connect event sources (Redis pub/sub, PostgreSQL LISTEN/NOTIFY, polling, webhooks) to Pikku functions.
-
-## Before You Start
-
-```bash
-pikku info functions --verbose   # See existing functions and their types
-pikku info tags --verbose        # Understand project organization
-```
-
-See `pikku-concepts` for the core mental model.
 
 ## API Reference
 
@@ -172,16 +139,6 @@ wireTriggerSource({
 })
 ```
 
-### Triggers vs Queues
-
-| Feature     | Trigger                            | Queue                          |
-| ----------- | ---------------------------------- | ------------------------------ |
-| Execution   | Synchronous, in-process            | Async, distributed             |
-| Reliability | At-most-once                       | At-least-once (with retries)   |
-| Use case    | React to events immediately        | Reliable background processing |
-| Source      | External systems (Redis, PG, etc.) | Enqueued programmatically      |
-
-Use triggers for real-time reactions. Use queues for reliable, retryable background work.
 
 ## Complete Example
 

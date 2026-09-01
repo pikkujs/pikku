@@ -21,7 +21,7 @@ Use this skill as an execution checklist, not reference material.
 5. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 6. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs on Cloudflare Workers with a SQLite database (via libSQL/Turso). This skill covers what's unique to Fabric. For general Pikku concepts, function authoring, HTTP wiring, and more, see `pikku-concepts`, `pikku-http`, `pikku-services`, etc.
+Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs on Cloudflare Workers with a SQLite database (via libSQL/Turso). This skill covers what's unique to Fabric. For general Pikku concepts, function authoring, HTTP wiring, and more, see `pikku-concepts`, `pikku-wiring`, `pikku-services`, etc.
 
 ## Before you start
 

@@ -139,7 +139,7 @@ Workers runtime forbids.
 
 `SQSQueueService` sets `supportsResults = false` and `getJob()` always throws —
 the transport is fire-and-forget. So is the Azure Storage Queue backend. Reach
-for BullMQ or PgBoss (see `pikku-queue`) when a caller needs the job's result.
+for BullMQ or PgBoss (see `pikku-wiring`) when a caller needs the job's result.
 
 ## What NOT to do
 

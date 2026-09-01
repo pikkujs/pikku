@@ -153,9 +153,9 @@ pikkuFunc({
   errors?: Array<typeof PikkuError>,  // Errors this function may throw
 
   // Reachability
-  expose?: boolean,         // Allow external RPC calls (see pikku-rpc)
+  expose?: boolean,         // Allow external RPC calls (see pikku-wiring)
   remote?: boolean,         // Allow remote RPC calls
-  mcp?: boolean,            // Expose as MCP tool (see pikku-mcp)
+  mcp?: boolean,            // Expose as MCP tool (see pikku-wiring)
   readonly?: boolean,       // Declares the function performs no writes
   deploy?: 'serverless' | 'server' | 'auto',
 

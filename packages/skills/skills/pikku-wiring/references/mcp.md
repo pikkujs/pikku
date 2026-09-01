@@ -1,37 +1,4 @@
----
-name: pikku-mcp
-description: >-
-  Use when exposing Pikku functions as MCP tools, resources, or prompts for AI assistants. Covers
-  mcp: true, pikkuMCPToolFunc, pikkuMCPResourceFunc, pikkuMCPPromptFunc, wireMCPResource,
-  wireMCPPrompt, the MCP wire object and PikkuMCPServer. TRIGGER when: code uses mcp: true or any
-  pikkuMCP*Func/wireMCP* helper, user asks about MCP, Model Context Protocol, AI tool integration,
-  or exposing functions to Claude/ChatGPT. DO NOT TRIGGER when: user asks about AI agents (use
-  pikku-agent) or general function definitions (use pikku-concepts).
-installGroups: [core]
----
-
 # Pikku MCP Wiring
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Expose Pikku functions as Model Context Protocol (MCP) tools, resources, and prompts for AI assistants like Claude, ChatGPT, and others.
-
-## Before You Start
-
-```bash
-pikku info functions --verbose   # See existing functions that could become MCP tools
-pikku info tags --verbose        # Understand project organization
-```
-
-See `pikku-concepts` for the core mental model.
 
 ## The shape of MCP in Pikku
 

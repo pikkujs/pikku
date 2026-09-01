@@ -82,48 +82,48 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   http: {
     step: 'wire it up',
-    skill: 'pikku-http',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function to an HTTP route, with the path parameters checked against the function input.',
   },
   channel: {
     step: 'wire it up',
-    skill: 'pikku-websocket',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function to a websocket channel, its message routes and its pub/sub topics.',
   },
   queue: {
     step: 'wire it up',
-    skill: 'pikku-queue',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function as a queue worker, so a job on the queue runs the same handler an HTTP route would.',
   },
   scheduler: {
     step: 'wire it up',
-    skill: 'pikku-schedule',
+    skill: 'pikku-wiring',
     summary: 'Wires a function to a cron expression to run it on a schedule.',
   },
   trigger: {
     step: 'wire it up',
-    skill: 'pikku-trigger',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function to an event a source emits, rather than to a caller that asks for it.',
   },
   gateway: {
     step: 'wire it up',
-    skill: 'pikku-gateway-slack',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function behind a gateway that receives requests on behalf of another system.',
   },
   mcp: {
     step: 'wire it up',
-    skill: 'pikku-mcp',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function as an MCP tool, resource or prompt for a model to call.',
   },
   cli: {
     step: 'wire it up',
-    skill: 'pikku-cli',
+    skill: 'pikku-wiring',
     summary:
       'Wires a function as a command, with its flags and arguments derived from the function input.',
   },

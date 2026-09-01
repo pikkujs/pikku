@@ -1,40 +1,4 @@
----
-name: pikku-http
-description: >-
-  Use when adding HTTP routes, REST APIs, web endpoints, or SSE streams to a Pikku app. Covers
-  wireHTTP, defineHTTPRoutes, route groups, auth, middleware, SSE, and generated
-  fetch client. TRIGGER when: code uses wireHTTP/defineHTTPRoutes/wireHTTPRoutes, user asks about
-  REST endpoints, API routes, SSE, or the generated fetch client. DO NOT TRIGGER when: user asks
-  about WebSocket (use pikku-websocket), queue workers (use pikku-queue), or deployment (use
-  pikku-deploy-*).
-installGroups: [core]
----
-
 # Pikku HTTP Wiring
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Wire Pikku functions to HTTP endpoints. Supports single routes, composable route groups, auth, middleware, SSE, and auto-generated type-safe clients. (Authorization lives on the function, not the wiring — see `pikku-permissions`.)
-
-## Before You Start
-
-Run these commands to understand the current project:
-
-```bash
-pikku info functions --verbose   # See existing functions, their types, tags, middleware
-pikku info tags --verbose        # Understand project organization and naming conventions
-pikku info middleware --verbose  # See what middleware is already applied
-```
-
-Follow existing patterns you find (naming, tag usage, file organization). See `pikku-concepts` for the core mental model.
 
 ## API Reference
 
@@ -50,7 +14,7 @@ Function input/output types come from the function's own `input:`/`output:` zod 
 
 Config cascading across groups: `basePath` concatenates down the chain, `tags` merge (union), `auth` child overrides parent.
 
-For the full option tables (every `wireHTTP` field, the `defineHTTPRoutes`/`wireHTTPRoutes` config shape), read `references/http-options.md`.
+For the full option tables (every `wireHTTP` field, the `defineHTTPRoutes`/`wireHTTPRoutes` config shape), read `http-options.md`.
 
 ### `addHTTPMiddleware(pattern, middlewares)`
 
