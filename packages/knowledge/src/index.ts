@@ -3,9 +3,6 @@ export {
   type KnowledgeNote,
   type ProfileNote,
   MILESTONE_TYPE,
-  MILESTONES_DIR,
-  MILESTONE_SURFACES,
-  type MilestoneSurface,
   listOf,
   noteHash,
   readKnowledgeNotes,
@@ -99,6 +96,17 @@ export {
   cascadeProblems,
   planShortfall,
 } from './plan-meta.js'
+
+export {
+  MILESTONES_DIR,
+  MILESTONE_SURFACES,
+  type MilestoneSurface,
+  inMilestonesDir,
+  surfaceOf,
+  readMilestones,
+  gherkinOf,
+  personasIn,
+} from './milestone.js'
 
 export {
   type ScenarioDepth,

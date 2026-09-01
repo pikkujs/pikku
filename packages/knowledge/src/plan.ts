@@ -1,12 +1,8 @@
 import { z } from 'zod'
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import {
-  MILESTONES_DIR,
-  listOf,
-  noteHash,
-  type MilestoneSurface,
-} from './notes.js'
+import { listOf, noteHash } from './notes.js'
+import { MILESTONES_DIR, type MilestoneSurface } from './milestone.js'
 
 /**
  * The technical plan for one milestone: what has to exist for the milestone to be
