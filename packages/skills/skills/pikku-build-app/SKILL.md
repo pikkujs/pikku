@@ -686,6 +686,6 @@ cheaper to honour than to retrofit:
 - `references/theming.md` — authoring the theme (§8a)
 - `references/ship.md` — deploying, and the Fabric-readiness contract (§9)
 - Sibling skills: `pikku-knowledge` (§2), `pikku-permissions` (§3),
-  `pikku-scenario` (§7, §7a), `pikku-deploy-cloudflare` and `pikku-fabric` (§9)
+  `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
 - Project conventions written by the template: `AGENTS.md`
 - Doing less than this: `pikku-build-quick`. Doing more: `pikku-build-platform`.

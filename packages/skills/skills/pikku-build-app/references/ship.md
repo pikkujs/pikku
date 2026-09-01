@@ -16,7 +16,7 @@ bunx --bun pikku deploy apply --provider standalone --runtime bun
 bundles the project into a single unit and emits either a `bundle.js` you run
 with Node, or a self-contained executable compiled with `bun build --compile`.
 `cloudflare` (the default) and `aws` are the other providers — read the
-`pikku-deploy-cloudflare` skill before using it, as it ships the handler
+`pikku-deploy` skill before using it, as it ships the handler
 factories the deploy codegen expects, and hand-rolling an `ExportedHandler` is
 how a worker deploy fails at runtime instead of at build.
 

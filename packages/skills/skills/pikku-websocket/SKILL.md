@@ -6,7 +6,7 @@ description: >-
   generated WebSocket client. TRIGGER when: code uses wireChannel, user asks about WebSocket,
   real-time, live updates, chat, pub/sub, or the generated WebSocket client. DO NOT TRIGGER when:
   user asks about HTTP/REST (use pikku-http), SSE (use pikku-http with sse: true), or WebSocket
-  deployment specifics (use pikku-deploy-uws), or typed pub/sub events (use pikku-realtime).
+  deployment specifics (use pikku-deploy), or typed pub/sub events (use pikku-realtime).
 installGroups: [core]
 ---
 

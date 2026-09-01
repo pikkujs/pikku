@@ -5,7 +5,7 @@ description: >-
   file storage, SQSQueueService for queues, and AWSSecrets for secret management. TRIGGER when:
   code uses S3Content, SQSQueueService, AWSSecrets, or user asks about AWS integration, S3
   uploads, SQS queues, or AWS Secrets Manager with Pikku. DO NOT TRIGGER when: user asks about AWS
-  Lambda runtime (use pikku-deploy-lambda).
+  Lambda runtime (use pikku-deploy).
 ---
 
 # Pikku AWS Services

@@ -36,7 +36,6 @@ const FABRIC_SKILLS = [
   'pikku-n8n-import',
   'pikku-react-query',
   'pikku-rpc',
-  'pikku-ws',
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 

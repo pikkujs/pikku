@@ -1,30 +1,10 @@
----
-name: pikku-deploy-lambda
-description: >-
-  Use when deploying a Pikku app to AWS Lambda. Covers HTTP handlers, scheduled tasks, SQS queue
-  workers, WebSocket via API Gateway, and cold start caching. TRIGGER when: code imports
-  @pikku/lambda, user mentions Lambda/serverless/AWS deployment, or handler files export
-  Lambda-typed functions. DO NOT TRIGGER when: just defining functions/wirings without
-  Lambda-specific code.
----
-
-# Pikku AWS Lambda Deployment
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+# AWS Lambda
 
 ```bash
 yarn add @pikku/lambda
 ```
 
-## Cold Start Pattern
+## Cold start pattern
 
 Cache singleton services across Lambda invocations:
 
@@ -53,7 +33,7 @@ named exports (`handler`, `queue`, `scheduled`, or `connect`/`disconnect`/
 `default`) that `serverless.yml` references. Hand-written handlers are for cases
 the codegen does not cover.
 
-## HTTP Handler
+## HTTP handler
 
 Pick the entry point that matches the API Gateway payload version — they take
 different event types and are not interchangeable:
@@ -91,7 +71,7 @@ carried.
 Neither takes `RunHTTPWiringOptions` — there is no `maxBodySize` or
 `respondWith404` knob here; API Gateway's own payload limit is the bound.
 
-## Scheduled Tasks
+## Scheduled tasks
 
 ```typescript
 import type { ScheduledHandler } from 'aws-lambda'
@@ -113,7 +93,7 @@ Reach for `runScheduledTask({ name })` from `@pikku/core/scheduler` directly
 only when one Lambda genuinely bundles several tasks that must fire on separate
 schedules.
 
-## SQS Queue Worker
+## SQS queue worker
 
 ```typescript
 import type { SQSHandler } from 'aws-lambda'
@@ -181,8 +161,7 @@ is a separate invocation, so nothing survives in memory between `$connect` and
 `LambdaEventHubService` handles cross-connection messaging and takes
 `(logger, event, channelStore, eventHubStore)` — the `event` is needed to derive
 the API Gateway Management endpoint, so it is constructed per invocation, not
-once at cold start. It also needs an `EventHubStore` alongside the channel
-store.
+once at cold start. It also needs an `EventHubStore` alongside the channel store.
 
 Two behaviours to design around: **binary payloads throw** (`Binary data is not
 supported on serverless lambdas`), and any `PostToConnection` failure removes

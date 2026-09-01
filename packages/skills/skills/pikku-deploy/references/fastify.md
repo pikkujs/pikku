@@ -1,30 +1,10 @@
----
-name: pikku-deploy-fastify
-description: >-
-  Use when deploying a Pikku app with Fastify. Covers PikkuFastifyServer standalone and
-  pikkuFastifyPlugin for existing Fastify apps. TRIGGER when: code imports @pikku/fastify or
-  @pikku/fastify-plugin, user mentions Fastify deployment, or start.ts creates a
-  PikkuFastifyServer. DO NOT TRIGGER when: just defining functions/wirings without
-  Fastify-specific code.
----
-
-# Pikku Fastify Deployment
-
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-## Standalone Server
+# Fastify
 
 ```bash
 yarn add @pikku/fastify
 ```
+
+## Standalone server
 
 ```typescript
 import { PikkuFastifyServer } from '@pikku/fastify'
@@ -43,16 +23,12 @@ await appServer.init()
 await appServer.start()
 ```
 
-**Constructor:** `new PikkuFastifyServer(config, logger)`
+The config extends `CoreConfig` with `port`, `hostname` and an optional
+`healthCheckPath`. `app: FastifyInstance` is exposed for direct access.
 
-**Config extends CoreConfig with:** `port`, `hostname`, `healthCheckPath?`
-
-**Methods:** `init(httpOptions?: RunHTTPWiringOptions)`, `start()`, `stop()`, `enableExitOnSigInt()`
-
-**Property:** `app: FastifyInstance` — Direct access to Fastify instance.
-
-`enableCors` exists on the class but **throws `Method not implemented.`** — unlike
-the Express server. Register `@fastify/cors` on `app` yourself before `init()`.
+`enableCors` exists on the class but **throws `Method not implemented.`** —
+unlike the Express server. Register `@fastify/cors` on `app` yourself before
+`init()`.
 
 Unlike the Express server, the health check is registered by `init()`, not the
 constructor, so nothing answers before `init` runs. `init` also passes
