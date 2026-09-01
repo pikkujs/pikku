@@ -1,31 +1,5 @@
----
-name: pikku-versioning
-description: >-
-  Use when versioning Pikku function contracts, detecting breaking changes, or managing API
-  backward compatibility. Covers the version property, versions.pikku.json manifest, contract
-  hashing, and CI integration. Also covers `pikku semver`, which derives a release's semver by
-  diffing this build's surface against a deployed one and writes .pikku/changes.gen.json.
-  TRIGGER when: code uses version: on a pikkuFunc, user asks about
-  API versioning, breaking changes, contract hashes, backward compatibility, what semver a
-  release should get, comparing against production/staging, or "pikku versions" / "pikku semver"
-  CLI commands. DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-services)
-  or general function definitions (use pikku-concepts), or about updating dependency versions
-  (use pikku-deps).
----
-
 # Pikku Function Versioning
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Track and protect function contracts across releases. Pikku hashes each function's input/output schema into a manifest so you can detect breaking changes before they ship.
 
 ## Before You Start
 

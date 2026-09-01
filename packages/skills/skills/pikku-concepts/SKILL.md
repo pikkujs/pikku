@@ -143,7 +143,7 @@ pikkuFunc({
   // "What Language You Write In".
   title?: string,           // Human-readable name
   description?: string,     // What the function does
-  version?: number,         // Contract version (see pikku-versioning)
+  version?: number,         // Contract version (see pikku-meta)
   override?: string,        // Logical name override, so several exports share a versioned base
   tags?: string[],          // For grouping and middleware targeting
 

@@ -168,7 +168,7 @@ localised like every other string. The base workflow asks for one; **a showcase
 sends three** — a welcome, a transactional confirmation, and one sent from a
 schedule or queue rather than a request, because that is the interesting path.
 
-### Contract versioning — `pikku-versioning`
+### Contract versioning — `pikku-meta`
 
 ```sh
 bunx --bun pikku versions init
@@ -239,5 +239,5 @@ built.
 - Base workflow: `pikku-build-app` — read it first, follow it in full
 - Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
   `pikku-i18n`, `pikku-emails`,
-  `pikku-versioning`, `pikku-addon`, `pikku-auth`, `pikku-services`
+  `pikku-meta`, `pikku-addon`, `pikku-auth`, `pikku-services`
 - Every feature, end to end: https://pikkufabric.com/llm-all-features.txt
