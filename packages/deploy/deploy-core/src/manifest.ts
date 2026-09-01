@@ -53,6 +53,12 @@ export interface DeploymentUnit {
   /** What runtime handlers this unit needs to export */
   handlers: DeploymentHandler[]
   tags: string[]
+  /**
+   * Agents named by a `runAgent`/`rpc.agent.run` call in one of this unit's
+   * function bodies. The lookup is in-process, so the agent has to be
+   * registered here as well as in its own gateway unit.
+   */
+  invokedAgents?: string[]
   /** SHA-256 of final bundled artifact (set by build pipeline) */
   bundleHash?: string
   /** Final bundle size in bytes (set by build pipeline) */

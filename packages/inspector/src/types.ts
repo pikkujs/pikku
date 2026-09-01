@@ -636,6 +636,16 @@ export interface InspectorState {
   agents: {
     agentsMeta: AgentsMeta
     files: Map<string, { path: string; exportedName: string }>
+    /**
+     * Agent registry keys named by a `runAgent`/`rpc.agent.run` call in a
+     * function body, keyed by the file the call was written in.
+     *
+     * The lookup those calls perform is in-process, so the agent has to be
+     * registered in the same deployment unit as its caller. Without this the
+     * deploy analyzer only ever saw an agent as its own unit, and a caller in
+     * another unit failed at run time with "AI agent not found".
+     */
+    invokedAgentsByFile: Map<string, Set<string>>
   }
   scorers: {
     scorersMeta: ScorerMeta

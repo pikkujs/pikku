@@ -161,3 +161,127 @@ export async function doWork() {
     }
   })
 })
+
+describe('add-rpc-invocations — invokedAgentsByFile', () => {
+  test('a body-level runAgent() is attributed to its source file', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const runAgent: (name: string, input: unknown) => Promise<unknown>
+export async function askTheHouse() {
+  return runAgent('houseAssistant', { message: 'hi' })
+}
+`,
+      'other.ts': `
+export const unrelated = () => 'no agents here'
+`,
+    })
+    try {
+      const byFile = state.agents.invokedAgentsByFile
+      assert.strictEqual(byFile.size, 1)
+      const [file, agents] = [...byFile.entries()][0]!
+      assert.ok(file.endsWith('caller.ts'))
+      assert.deepStrictEqual([...agents], ['houseAssistant'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('rpc.agent.run() is an agent invocation too', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const rpc: { agent: { run: (name: string, input: unknown) => Promise<unknown> } }
+export async function askTheHouse() {
+  return rpc.agent.run('houseAssistant', { message: 'hi' })
+}
+`,
+    })
+    try {
+      const agents = [...state.agents.invokedAgentsByFile.values()][0]!
+      assert.deepStrictEqual([...agents], ['houseAssistant'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('a non-null assertion on the rpc receiver is still an invocation', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const rpc: { agent: { stream: (name: string, input: unknown) => Promise<unknown> } } | undefined
+export async function askTheHouse() {
+  return rpc!.agent.stream('houseAssistant', { message: 'hi' })
+}
+`,
+    })
+    try {
+      const agents = [...state.agents.invokedAgentsByFile.values()][0]!
+      assert.deepStrictEqual([...agents], ['houseAssistant'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('multiple agent calls in one file accumulate under that file', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const runAgent: (name: string, input: unknown) => Promise<unknown>
+declare const rpc: { agent: { run: (name: string, input: unknown) => Promise<unknown> } }
+export async function askEveryone() {
+  await runAgent('houseAssistant', {})
+  return rpc.agent.run('gardenAssistant', {})
+}
+`,
+    })
+    try {
+      const agents = [...state.agents.invokedAgentsByFile.values()][0]!
+      assert.deepStrictEqual([...agents].sort(), [
+        'gardenAssistant',
+        'houseAssistant',
+      ])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('a dynamic agent name is warned about, not recorded', async () => {
+    const warnings: string[] = []
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-agent-invocations-test-'))
+    const path = join(dir, 'caller.ts')
+    await writeFile(
+      path,
+      `
+declare const runAgent: (name: string, input: unknown) => Promise<unknown>
+declare const suffix: string
+export async function askTheHouse() {
+  return runAgent(\`house-\${suffix}\`, {})
+}
+`
+    )
+    const logger = makeLogger()
+    logger.warn = (message: string) => {
+      warnings.push(message)
+    }
+    try {
+      const state = await inspect(logger, [path], { rootDir: dir })
+      assert.strictEqual(state.agents.invokedAgentsByFile.size, 0)
+      assert.ok(warnings.some((w) => w.includes('dynamic agent invocation')))
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('run() on some other receiver is left alone', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const client: { agent: { run: (name: string, input: unknown) => Promise<unknown> } }
+export async function doWork() {
+  return client.agent.run('notAnAgentCall', {})
+}
+`,
+    })
+    try {
+      assert.strictEqual(state.agents.invokedAgentsByFile.size, 0)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})

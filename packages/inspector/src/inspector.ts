@@ -165,6 +165,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     agents: {
       agentsMeta: {},
       files: new Map(),
+      invokedAgentsByFile: new Map(),
     },
     scorers: {
       scorersMeta: {},

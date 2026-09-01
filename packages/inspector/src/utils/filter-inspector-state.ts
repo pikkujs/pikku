@@ -507,6 +507,15 @@ export function filterInspectorState(
       ...state.agents,
       agentsMeta: JSON.parse(JSON.stringify(state.agents?.agentsMeta ?? {})),
       files: new Map(),
+      invokedAgentsByFile: new Map(
+        [
+          ...(state.agents?.invokedAgentsByFile ??
+            new Map<string, Set<string>>()),
+        ].map(([file, agents]): [string, Set<string>] => [
+          file,
+          new Set(agents),
+        ])
+      ),
     },
     // Scorers carry through every filter. They are named by the agents that
     // survive it, and a deployment that quietly stopped grading would look
@@ -1208,6 +1217,16 @@ export function filterInspectorState(
     filteredState.serviceAggregation.requiredServices.has('workflowService')
   ) {
     filteredState.serviceAggregation.requiredServices.add('queueService')
+  }
+
+  const keptFunctionFiles = new Set<string>()
+  for (const file of filteredState.functions.files.values()) {
+    if (file?.path) keptFunctionFiles.add(file.path)
+  }
+  for (const file of filteredState.agents.invokedAgentsByFile.keys()) {
+    if (!keptFunctionFiles.has(file)) {
+      filteredState.agents.invokedAgentsByFile.delete(file)
+    }
   }
 
   if ((filteredState.rpc.wireAddonDeclarations?.size ?? 0) > 0) {

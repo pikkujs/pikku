@@ -2063,3 +2063,82 @@ describe('Workflow file pruning', () => {
     assert.equal(Object.keys(state.workflows.graphMeta).length, 2)
   })
 })
+
+describe('invokedAgentsByFile', () => {
+  test('round-trips through serialize/deserialize', () => {
+    const state = getInitialInspectorState('/test/project')
+    state.agents.invokedAgentsByFile = new Map([
+      ['/test/project/src/api/users.ts', new Set(['houseAssistant'])],
+      [
+        '/test/project/src/api/tasks.ts',
+        new Set(['houseAssistant', 'gardenAssistant']),
+      ],
+    ])
+    const restored = deserializeInspectorState(
+      JSON.parse(JSON.stringify(serializeInspectorState(state as any)))
+    )
+    assert.ok(restored.agents.invokedAgentsByFile instanceof Map)
+    assert.strictEqual(restored.agents.invokedAgentsByFile.size, 2)
+    assert.deepStrictEqual(
+      [
+        ...restored.agents.invokedAgentsByFile.get(
+          '/test/project/src/api/tasks.ts'
+        )!,
+      ].sort(),
+      ['gardenAssistant', 'houseAssistant']
+    )
+  })
+
+  test('deserializing legacy state without the field yields an empty Map', () => {
+    const serialized = JSON.parse(
+      JSON.stringify(
+        serializeInspectorState(
+          getInitialInspectorState('/test/project') as any
+        )
+      )
+    )
+    delete serialized.agents.invokedAgentsByFile
+    const restored = deserializeInspectorState(serialized)
+    assert.ok(restored.agents.invokedAgentsByFile instanceof Map)
+    assert.strictEqual(restored.agents.invokedAgentsByFile.size, 0)
+  })
+
+  test('the filtered map is a clone, not the original', () => {
+    const state = createMockInspectorState()
+    state.agents = {
+      agentsMeta: {},
+      files: new Map(),
+      invokedAgentsByFile: new Map([
+        ['/test/project/src/api/users.ts', new Set(['houseAssistant'])],
+      ]),
+    }
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    filtered.agents.invokedAgentsByFile.clear()
+    assert.strictEqual(state.agents.invokedAgentsByFile.size, 1)
+  })
+
+  test('keeps the entry of a kept function file and prunes the rest', () => {
+    const state = createMockInspectorState()
+    state.agents = {
+      agentsMeta: {},
+      files: new Map(),
+      invokedAgentsByFile: new Map([
+        ['/test/project/src/api/users.ts', new Set(['houseAssistant'])],
+        ['/test/project/src/admin/settings.ts', new Set(['adminAssistant'])],
+      ]),
+    }
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.deepStrictEqual(
+      [...filtered.agents.invokedAgentsByFile.keys()],
+      ['/test/project/src/api/users.ts']
+    )
+  })
+})

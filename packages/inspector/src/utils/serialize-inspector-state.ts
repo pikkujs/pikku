@@ -188,6 +188,7 @@ export interface SerializableInspectorState {
     files: string[]
   }
   agents: {
+    invokedAgentsByFile?: Array<[string, string[]]>
     agentsMeta: InspectorState['agents']['agentsMeta']
     files: [string, { path: string; exportedName: string }][]
   }
@@ -421,6 +422,11 @@ export function serializeInspectorState(
     agents: {
       agentsMeta: state.agents?.agentsMeta ?? {},
       files: Array.from(state.agents?.files?.entries() ?? []),
+      invokedAgentsByFile: Array.from(
+        (
+          state.agents?.invokedAgentsByFile ?? new Map<string, Set<string>>()
+        ).entries()
+      ).map(([file, agents]): [string, string[]] => [file, Array.from(agents)]),
     },
     scorers: {
       scorersMeta: state.scorers?.scorersMeta ?? {},
@@ -632,6 +638,11 @@ export function deserializeInspectorState(
     agents: {
       agentsMeta: data.agents?.agentsMeta || {},
       files: new Map(data.agents?.files || []),
+      invokedAgentsByFile: new Map(
+        (data.agents?.invokedAgentsByFile || []).map(
+          ([file, agents]): [string, Set<string>] => [file, new Set(agents)]
+        )
+      ),
     },
     scorers: {
       scorersMeta: data.scorers?.scorersMeta || {},
