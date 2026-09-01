@@ -357,3 +357,104 @@ describe('StandaloneProviderAdapter database wiring (bun)', () => {
     assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
   })
 })
+
+const withLifecycle = {
+  ...(baseContext as object),
+  lifecycle: { importPath: './lifecycle.js', variable: 'lifecycle' },
+} as never
+
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter server lifecycle (${runtime})`, () => {
+    test('an app that declares no lifecycle gets no hook calls', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(baseContext)
+
+      assert.doesNotMatch(source, /__pikkuLifecycle/)
+      assert.match(source, /server\.enableExitOnSignals\(\)/)
+    })
+
+    test('the lifecycle is imported under a reserved name', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      assert.match(
+        source,
+        /import \{ lifecycle as __pikkuLifecycle \} from '\.\/lifecycle\.js'/
+      )
+    })
+
+    test('beforeStart runs after init and before the port opens', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      const init = source.indexOf('await server.init()')
+      const before = source.indexOf('__pikkuLifecycle?.beforeStart?.')
+      const start = source.indexOf('await server.start()')
+
+      assert.ok(init !== -1 && before !== -1 && start !== -1)
+      assert.ok(
+        init < before && before < start,
+        'work a hook must finish before the first request has to run before the port opens'
+      )
+    })
+
+    test('afterStart runs once the server is listening', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      assert.ok(
+        source.indexOf('await server.start()') <
+          source.indexOf('__pikkuLifecycle?.afterStart?.')
+      )
+    })
+
+    test('the hooks are handed the services the app was built with', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      for (const hook of [
+        'beforeStart',
+        'afterStart',
+        'beforeStop',
+        'afterStop',
+      ]) {
+        assert.match(
+          source,
+          new RegExp(
+            `__pikkuLifecycle\\?\\.${hook}\\?\\.\\(singletonServices\\)`
+          ),
+          `${hook} must receive singletonServices`
+        )
+      }
+    })
+
+    test('the stop hooks are given to the signal handler that owns shutdown', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      assert.match(
+        source,
+        /server\.enableExitOnSignals\(\{ beforeStop:/,
+        'a separate signal listener would race the server teardown'
+      )
+    })
+
+    test('the lifecycle import is optional and never emitted twice', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withLifecycle)
+
+      assert.equal(
+        source.split('as __pikkuLifecycle').length - 1,
+        1,
+        'a duplicate binding would not compile'
+      )
+    })
+  })
+}

@@ -116,6 +116,34 @@ const sqliteSetupLines = (runtime: 'node' | 'bun'): string[] => [
   `  })`,
 ]
 
+/** Imports the app's own lifecycle module, when it declares one. */
+const lifecycleImportLines = (
+  lifecycle: NonNullable<EntryGenerationContext['lifecycle']>
+): string[] => [
+  `import { ${lifecycle.variable} as __pikkuLifecycle } from '${lifecycle.importPath}'`,
+]
+
+/**
+ * Runs the app's start hooks around the port opening, the same order and the
+ * same services `pikku dev` gives them.
+ *
+ * `beforeStart` runs after `init` so a hook can rely on everything the server
+ * resolved, and before `start` so work that must finish before the first
+ * request — a seeded admin account, a schema probe — is finished when one
+ * arrives.
+ */
+const lifecycleStartLines = (): string[] => [
+  `  await __pikkuLifecycle?.beforeStart?.(singletonServices)`,
+]
+
+const lifecycleAfterStartLines = (): string[] => [
+  `  await __pikkuLifecycle?.afterStart?.(singletonServices)`,
+]
+
+/** Hands the stop hooks to the signal handler that owns the shutdown. */
+const lifecycleShutdownArg = (): string =>
+  `{ beforeStop: () => __pikkuLifecycle?.beforeStop?.(singletonServices), afterStop: () => __pikkuLifecycle?.afterStop?.(singletonServices) }`
+
 /**
  * Fails with the variable's name rather than whatever SQLite says about a path
  * of `undefined/pikku.db`, which is the error an operator would otherwise have
@@ -212,6 +240,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
           ]
         : []),
       ...(ctx.db ? sqliteImportLines('node', ctx.db.coercionImportPath) : []),
+      ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -270,8 +299,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await server.init()`,
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
-      `  server.enableExitOnSignals()`,
+      ...(ctx.lifecycle ? lifecycleStartLines() : []),
+      `  server.enableExitOnSignals(${ctx.lifecycle ? lifecycleShutdownArg() : ''})`,
       `  await server.start()`,
+      ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
       ...sidecarHandshakeLines(),
       `}`,
       ``,
@@ -297,6 +328,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
         : []),
       ...(ctx.db ? sqliteImportLines('bun', ctx.db.coercionImportPath) : []),
+      ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -347,8 +379,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await server.init()`,
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
-      `  server.enableExitOnSignals()`,
+      ...(ctx.lifecycle ? lifecycleStartLines() : []),
+      `  server.enableExitOnSignals(${ctx.lifecycle ? lifecycleShutdownArg() : ''})`,
       `  await server.start()`,
+      ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
       ...sidecarHandshakeLines(),
       `}`,
       ``,

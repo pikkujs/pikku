@@ -177,6 +177,16 @@ const HARDENING_DEFAULTS = {
  * else (Cloudflare Workers, a load balancer, `pikku dev` proxy) sits in
  * front, this is the right default.
  */
+/**
+ * Work the process owes its app on the way down, run around the service
+ * teardown `enableExitOnSignals` already does. A failing hook is logged and
+ * shutdown continues: a process that has been told to stop has to stop.
+ */
+export type ShutdownHooks = {
+  beforeStop?: () => void | Promise<void>
+  afterStop?: () => void | Promise<void>
+}
+
 export class PikkuNodeHTTPServer {
   public server: Server
   private listening = false
@@ -957,12 +967,16 @@ export class PikkuNodeHTTPServer {
     }
   }
 
-  public enableExitOnSignals(): void {
+  public enableExitOnSignals(hooks?: ShutdownHooks): void {
     const shutdown = async (signal: string) => {
       this.logger.info(`pikku-node-http-server: ${signal} received, stopping`)
       try {
+        await hooks?.beforeStop?.()
         await stopSingletonServices()
         await this.stop()
+        await hooks?.afterStop?.()
+      } catch (error) {
+        this.logger.error(`pikku-node-http-server: shutdown hook failed`, error)
       } finally {
         process.exit(0)
       }

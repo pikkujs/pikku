@@ -111,6 +111,16 @@ const isSerializable = (data: unknown): boolean =>
  * Handles HTTP via the fetch handler and WebSocket via Bun.serve's native
  * websocket handler (which is backed by uWebSockets internally).
  */
+/**
+ * Work the process owes its app on the way down, run around the service
+ * teardown `enableExitOnSignals` already does. A failing hook is logged and
+ * shutdown continues: a process that has been told to stop has to stop.
+ */
+export type ShutdownHooks = {
+  beforeStop?: () => void | Promise<void>
+  afterStop?: () => void | Promise<void>
+}
+
 export class PikkuBunServer {
   private server: BunServer<WsData> | null = null
   private readonly eventHub: BunEventHubService
@@ -438,12 +448,16 @@ export class PikkuBunServer {
     this.server = null
   }
 
-  public enableExitOnSignals(): void {
+  public enableExitOnSignals(hooks?: ShutdownHooks): void {
     const shutdown = async (signal: string) => {
       this.logger.info(`pikku-bun-server: ${signal} received, stopping`)
       try {
+        await hooks?.beforeStop?.()
         await stopSingletonServices()
         await this.stop()
+        await hooks?.afterStop?.()
+      } catch (error) {
+        this.logger.error(`pikku-bun-server: shutdown hook failed`, error)
       } finally {
         process.exit(0)
       }

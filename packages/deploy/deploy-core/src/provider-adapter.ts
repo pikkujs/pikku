@@ -73,6 +73,22 @@ export interface EntryGenerationContext {
     /** Import specifier for the generated `coercionMap`, relative to unitDir. */
     coercionImportPath: string
   }
+
+  /**
+   * The app's `pikkuServerLifecycle` export, when it declares one.
+   *
+   * Only `pikku dev` and `pikku serve` have ever called these hooks, so an app
+   * that seeds its first admin account or opens a connection pool in
+   * `beforeStart` did that in development and silently skipped it everywhere it
+   * was actually deployed. A generated entry is the app's real host and owes it
+   * the same lifecycle the dev server gives it.
+   */
+  lifecycle?: {
+    /** Import specifier for the lifecycle module, relative to unitDir. */
+    importPath: string
+    /** The exported name to call the hooks on. */
+    variable: string
+  }
 }
 
 export interface ProviderAdapter {

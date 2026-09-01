@@ -128,6 +128,29 @@ function resolveStandaloneDb(
   return { engine: 'sqlite', coercionImportPath: rel.replace(/\.ts$/, '.js') }
 }
 
+/**
+ * The app's server lifecycle, for entries that can call it.
+ *
+ * The hooks are resolved to an import rather than read at build time because
+ * they are the app's own code and have to run in the app's own process, with
+ * the services that process built.
+ */
+function resolveLifecycle(
+  unitDir: string,
+  state: InspectorState
+): { importPath: string; variable: string } | undefined {
+  const factory = state.filesAndMethods.serverLifecycleFactory
+  if (!factory) return undefined
+
+  let rel = relative(unitDir, factory.file).replace(/\\/g, '/')
+  if (!rel.startsWith('.')) rel = `./${rel}`
+
+  return {
+    importPath: rel.replace(/\.tsx?$/, '.js'),
+    variable: factory.variable,
+  }
+}
+
 export async function runBuildPipeline(options: {
   projectDir: string
   projectId: string
@@ -235,6 +258,7 @@ export async function runBuildPipeline(options: {
       ) as object),
       frontend: frontendMount,
       db: resolveStandaloneDb(projectDir, pikkuDir, unitDir),
+      lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
     const source = provider.generateEntrySource(ctx as never)
 
@@ -377,7 +401,10 @@ export async function runBuildPipeline(options: {
       const entryPath = join(unitDir, 'entry.ts')
       await mkdir(unitDir, { recursive: true })
 
-      const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
+      const ctx = {
+        ...(getEntryContext(unitDir, pikkuDir, unit, inspectorState) as object),
+        lifecycle: resolveLifecycle(unitDir, inspectorState),
+      }
       const source =
         unit.target === 'server'
           ? (provider.generateServerEntrySource?.(ctx as never) ??
