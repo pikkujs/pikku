@@ -113,3 +113,24 @@ export {
   classifyScenario,
   scenarioDepths,
 } from './hollow-scenarios.js'
+
+export {
+  KnowledgePlanSchemaInput,
+  KnowledgePlanSchemaOutput,
+  type KnowledgePlanSchemaResult,
+  runKnowledgePlanSchema,
+  KnowledgePlanShowInput,
+  KnowledgePlanShowOutput,
+  type KnowledgePlanShowResult,
+  runKnowledgePlanShow,
+  KnowledgePlanSetInput,
+  KnowledgePlanSetOutput,
+  type KnowledgePlanSetResult,
+  runKnowledgePlanSet,
+  KnowledgePlanDeferInput,
+  KnowledgePlanDeferOutput,
+  type KnowledgePlanDeferResult,
+  runKnowledgePlanDefer,
+} from './plan-command.js'
+
+export { type MilestoneNote, MILESTONE_SCALARS } from './milestone.js'
