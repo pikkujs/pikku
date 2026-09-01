@@ -21,21 +21,15 @@ const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'fabric'])
  * than derived from the corpus — deriving it would make the assertion vacuous
  * (dropping a tag would shrink both sides and still pass). Adding a skill to
  * the Fabric set means updating this list on purpose.
+ *
+ * The criterion is what the skill is *about*, not who happens to use it. A
+ * Fabric sandbox relies on better-auth, Kysely and the agent runner, but those
+ * are general Pikku capabilities — tagging them here says Fabric depends on
+ * them, which is a fact about Fabric's stack rather than about the skill. That
+ * conflation grew the group to a catch-all twice; if a Fabric install needs a
+ * general skill, name it in Fabric's own install rather than tagging it here.
  */
-const FABRIC_SKILLS = [
-  'pikku-ai-vercel',
-  'pikku-ai-voice',
-  'pikku-better-auth',
-  'pikku-emails',
-  'pikku-fabric',
-  'pikku-fabric-debug',
-  'pikku-i18n',
-  'pikku-jose',
-  'pikku-kysely',
-  'pikku-machine-auth',
-  'pikku-n8n-import',
-  'pikku-react-query',
-]
+const FABRIC_SKILLS = ['pikku-fabric', 'pikku-fabric-debug']
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 
 type Frontmatter = {

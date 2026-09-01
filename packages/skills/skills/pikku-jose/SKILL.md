@@ -6,7 +6,7 @@ description: >-
   code uses JoseJWTService, user asks about JWT setup, token signing, token verification, or
   @pikku/jose. DO NOT TRIGGER when: user asks about session middleware (use pikku-security) or
   general service setup (use pikku-services).
-installGroups: [fabric]
+installGroups: [core]
 ---
 
 # Pikku Jose (JWT Service)

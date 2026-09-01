@@ -11,7 +11,7 @@ description: >-
   PikkuKysely, KyselyChannelStore, KyselyWorkflowService, KyselySecretService, or the user asks
   about SQL setup with Pikku. DO NOT TRIGGER when: user asks about MongoDB or Redis-backed
   services (use pikku-service-backends).
-installGroups: [fabric]
+installGroups: [core]
 ---
 
 # Pikku Kysely (SQL Database Services)

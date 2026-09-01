@@ -10,7 +10,7 @@ description: >-
   email (verification, password reset, invitation, receipt), wire email sending, or translate an
   email. DO NOT TRIGGER when: user asks about i18n for the app UI (use pikku-i18n) or auth flows
   in general (use pikku-better-auth).
-installGroups: [fabric]
+installGroups: [core]
 ---
 
 # Pikku Emails

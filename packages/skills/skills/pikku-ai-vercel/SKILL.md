@@ -6,7 +6,7 @@ description: >-
   VercelAgentRunner, user asks about Vercel AI SDK integration, AI agent runners, or
   @pikku/ai-vercel. DO NOT TRIGGER when: user asks about AI agent wiring (use pikku-agent) or
   voice I/O (use pikku-ai-voice).
-installGroups: [fabric]
+installGroups: [core]
 ---
 
 # Pikku AI Vercel (Agent Runner)
