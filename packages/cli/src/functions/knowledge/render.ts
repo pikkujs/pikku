@@ -1,5 +1,9 @@
 import type {
   KnowledgeIndexResult,
+  KnowledgePlanDeferResult,
+  KnowledgePlanSchemaResult,
+  KnowledgePlanSetResult,
+  KnowledgePlanShowResult,
   KnowledgeValidateResult,
 } from '@pikku/knowledge'
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
@@ -84,4 +88,53 @@ export const renderKnowledgeIndex = (
     )
     if (!ok) process.exitCode = 1
   }
+}
+
+export const renderKnowledgePlanSchema = (
+  _services: unknown,
+  { schema }: KnowledgePlanSchemaResult
+): void => {
+  console.log(schema)
+}
+
+export const renderKnowledgePlanShow = (
+  _services: unknown,
+  { ok, path, body }: KnowledgePlanShowResult
+): void => {
+  if (!ok) {
+    console.log(`${removed('✗')}  ${body}`)
+    process.exitCode = 1
+    return
+  }
+  console.log(dim(path))
+  console.log(body)
+}
+
+export const renderKnowledgePlanSet = (
+  _services: unknown,
+  { ok, path, problems, schema }: KnowledgePlanSetResult
+): void => {
+  if (ok) {
+    console.log(`${added('✓')}  plan written to ${path}`)
+    console.log(dim('the build is measured against it'))
+    return
+  }
+  console.log(`${removed('✗')}  not written:`)
+  for (const problem of problems) {
+    console.log(`   ${problem}`)
+  }
+  if (schema) {
+    console.log()
+    console.log(dim('the schema, in full — build the plan to match it:'))
+    console.log(schema)
+  }
+  process.exitCode = 1
+}
+
+export const renderKnowledgePlanDefer = (
+  _services: unknown,
+  { ok, message }: KnowledgePlanDeferResult
+): void => {
+  console.log(`${ok ? added('✓') : removed('✗')}  ${message}`)
+  if (!ok) process.exitCode = 1
 }
