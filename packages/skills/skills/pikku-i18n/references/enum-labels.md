@@ -1,9 +1,3 @@
----
-name: pikku-paraglide
-description: 'Generate typed, static enum-label maps for a Paraglide i18n frontend with `@pikku/paraglide`, and reconcile them against the database enum columns so a label can never silently drift from a DB value. Enum-valued labels live under a reserved `enum__<group>__<member>` message namespace; the generator emits `i18n-enum.gen.ts` typed `satisfies EnumLabel<DbEnum>`. TRIGGER when: labelling an enum/status/kind/role value in a Paraglide app, replacing a dynamic `mKey(...)`/`m[...]` lookup with a static map, wiring `@pikku/paraglide` into Vite, or reconciling i18n against `CHECK (col IN (...))` / Postgres enum columns. DO NOT TRIGGER for plain free-text UI copy (that is a normal `m.some_key()` message), backend errors, or logs.'
-installGroups: [client]
----
-
 # Pikku Paraglide enum labels
 
 ## Agent Operating Procedure

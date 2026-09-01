@@ -1,26 +1,5 @@
----
-name: pikku-workflows-client
-description: 'Run Pikku workflows from a React frontend and track their progress. Covers `useRunWorkflow` (run-and-wait), `useStartWorkflow` (fire-and-poll), and `useWorkflowStatus` (live status). TRIGGER when: a React component needs to invoke or display the status of a Pikku workflow, the user mentions long-running tasks / background jobs / progress UI tied to a workflow, or asks how to start/track a workflow from the client. DO NOT TRIGGER when: the user is wiring the workflow itself (use pikku-workflow) or only making regular RPC calls (use pikku-react-query).'
-installGroups: [client]
----
-
 # Pikku Workflows — Client Hooks
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-When a project defines any workflow — DSL or `pikkuWorkflowGraph` — three
-React Query hooks are auto-generated alongside the standard RPC hooks. They handle
-the two common shapes: **run-and-wait** (short workflows where the
-client waits for the result) and **fire-and-poll** (long workflows where
-the client gets a `runId` and polls status).
 
 ## Discover what workflows exist
 
@@ -36,7 +15,7 @@ below.
 
 These hooks are generated into the same `api.gen.ts` as `usePikkuQuery` —
 no extra setup beyond `PikkuProvider` + `QueryClientProvider` (see the
-**pikku-react** and **pikku-react-query** skills).
+`references/client.md` and `references/react-query.md`).
 
 ## `useRunWorkflow(name, options?)` — run and wait
 

@@ -1,25 +1,5 @@
----
-name: pikku-react-query
-description: 'Use the Pikku auto-generated React Query hooks (`usePikkuQuery`, `usePikkuMutation`, `usePikkuInfiniteQuery`) to call backend RPC functions from a React frontend with full type safety. TRIGGER when: writing React components that need to call a Pikku function, fetch data, mutate data, or paginate; user mentions React Query, useQuery, useMutation, or building a frontend that talks to a Pikku backend. DO NOT TRIGGER when: working on the backend (use pikku-wiring / pikku-feature) or wiring a non-React frontend.'
-installGroups: [client]
----
-
 # Pikku React Query Hooks
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-Pikku generates a typed React Query layer from your backend `expose: true`
-functions. You don't write `useQuery`/`useMutation` against `fetch`
-yourself — you call hooks named after RPCs and get full type inference for
-input + output.
 
 ## Discover what's available on the client
 
@@ -77,7 +57,7 @@ The two generated files come from `pikku.config.json`'s
 `clientFiles.fetchFile` and `clientFiles.rpcWiringsFile`. Hooks live in
 the file at `clientFiles.reactQueryFile` (typically `api.gen.ts`).
 
-`apiUrl()` is the shared server-URL helper — see **pikku-react**. Never
+`apiUrl()` is the shared server-URL helper — see `references/client.md`. Never
 inline `?? 'http://localhost:3000'`: a deploy that supplies the URL as a
 runtime binding leaves `import.meta.env.VITE_API_URL` undefined in the
 bundle, so the fallback is the branch that actually runs.
@@ -206,7 +186,7 @@ instead.
 When the project defines any workflow, the same file also gains
 `useStartWorkflow(name)` (mutation → `{ runId }`), `useRunWorkflow(name)`
 (mutation → the workflow's output) and `useWorkflowStatus(name, runId?)` (query,
-disabled until `runId` is set). See the **pikku-workflows-client** skill.
+disabled until `runId` is set). See `references/workflows.md`.
 
 ## Calling RPCs without React Query
 

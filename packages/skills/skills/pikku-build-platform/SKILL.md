@@ -85,7 +85,7 @@ on a human or a timer and must survive a restart.
   gap in the middle? If every operation completes in one request, you do not need
   workflows and forcing one is noise.
 - **Prove it:** a scenario that starts the workflow, advances it as a second
-  persona, and asserts the end state. `pikku-workflows-client` covers driving it
+  persona, and asserts the end state. `pikku-react` covers driving it
   from the UI.
 - Three workflows ship with the template. Read them before writing yours.
 
@@ -144,10 +144,10 @@ the app. Cheap once functions exist, and a genuine differentiator to show.
 Inbound triggers and outgoing webhook delivery. This is where `wireHTTP` is
 correct rather than a smell: a third-party caller needs a real REST shape.
 
-### Locales — `pikku-i18n`, `pikku-paraglide`
+### Locales — `pikku-i18n`
 
 `pikku-build-app` already requires every string to be a key. **Here, ship three
-locales, and make one of them RTL** (`pikku-rtl`). Two LTR locales prove the
+locales, and make one of them RTL** (`pikku-i18n`). Two LTR locales prove the
 plumbing; an RTL one proves the layout, and it will find real bugs — mirrored
 icons, hardcoded `marginLeft`, a nav that opens on the wrong side.
 
@@ -238,6 +238,6 @@ built.
 
 - Base workflow: `pikku-build-app` — read it first, follow it in full
 - Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
-  `pikku-i18n`, `pikku-rtl`, `pikku-emails`,
+  `pikku-i18n`, `pikku-emails`,
   `pikku-versioning`, `pikku-addon`, `pikku-auth`, `pikku-services`
 - Every feature, end to end: https://pikkufabric.com/llm-all-features.txt

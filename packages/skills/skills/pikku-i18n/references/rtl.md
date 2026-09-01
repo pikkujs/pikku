@@ -1,12 +1,6 @@
----
-name: pikku-rtl
-description: 'Make a Pikku frontend work in both English (LTR) and Arabic / right-to-left languages. Direction is derived from the active locale, applied once at the document root, and the layout mirrors itself — but only if styling is written flow-relative (margin-inline-start, text-align: start, Mantine ms/me) instead of left/right. TRIGGER when: adding Arabic (or Hebrew/Farsi/Urdu), asked to "support RTL / right-to-left / bidi / mirror the layout", or writing layout styles in an app that may run RTL. Builds on pikku-i18n (an RTL language is just another locale file). DO NOT TRIGGER for backend functions or for LTR-only copy changes.'
-installGroups: [client]
----
-
 # Pikku RTL (Arabic + English)
 
-This skill sits **on top of** `pikku-i18n`. That skill compiles a locale's
+This reference sits **on top of** `references/messages.md`. That one compiles a locale's
 messages into typed `m.*()` functions; this one adds the second axis: a locale
 also has a **direction**. Arabic is not special-cased — it is just another
 `messages/ar.json` listed in `project.inlang/settings.json`, plus the document
@@ -23,7 +17,7 @@ _layout_ code — directional icons still need one manual step, covered below.
 ## Agent Operating Procedure
 
 1. **Messages first.** Every visible string is already an `m.*()` message via
-   `pikku-i18n`. Arabic copy goes in `messages/ar.json`, mirroring `en.json`'s
+   `references/messages.md`. Arabic copy goes in `messages/ar.json`, mirroring `en.json`'s
    keys with the `{param}` names kept identical.
 2. **Add the direction helper** to the i18n config (one home for locale→dir):
    ```ts
@@ -219,5 +213,5 @@ left` with the flow-relative equivalent; revert any manual `row-reverse`.
 - Don't set `dir` on individual components — it belongs on `<html>` so the whole
   document (and Mantine) agrees.
 - Don't translate Arabic copy outside the message system; an RTL language is a
-  normal locale, governed by `pikku-i18n`. There is no `t()` and no i18next in a
+  normal locale, governed by `references/messages.md`. There is no `t()` and no i18next in a
   Pikku frontend — the string comes from `m.some__key()`.
