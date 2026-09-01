@@ -9,8 +9,8 @@ description: >-
   non-trivial kysely query (a join, an aggregate/count/sum, groupBy, subquery, transaction, or
   conditional query), the injected `kysely` service is used in a function body, or code uses
   PikkuKysely, KyselyChannelStore, KyselyWorkflowService, KyselySecretService, or the user asks
-  about SQL setup with Pikku. DO NOT TRIGGER when: user asks about MongoDB (use pikku-mongodb) or
-  Redis (use pikku-redis).
+  about SQL setup with Pikku. DO NOT TRIGGER when: user asks about MongoDB or Redis-backed
+  services (use pikku-service-backends).
 installGroups: [fabric]
 ---
 
