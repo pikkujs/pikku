@@ -62,5 +62,33 @@ export const REDISPATCH_BACKOFF_MS = 30_000
 /** Ceiling on the doubling backoff, so a permanently stuck step still gets swept. */
 export const REDISPATCH_BACKOFF_MAX_MS = 10 * 60_000
 
+/**
+ * How long a claim on a step is good for when the queue it was dispatched
+ * through declares no duration of its own. Sits above the queue's own lock so
+ * the two never disagree about who owns the job.
+ */
+export const DEFAULT_STEP_LEASE_MS = 60_000
+
+/**
+ * Share of the lease that elapses before its holder renews it. Half leaves a
+ * full lease of slack for a refresh that is slow or has to be retried.
+ */
+export const STEP_LEASE_REFRESH_FACTOR = 0.5
+
+/** Floor on the refresh interval, so a short lease cannot spin the timer. */
+export const STEP_LEASE_REFRESH_MIN_MS = 1_000
+
+/**
+ * Whether a `running` step is still owned by the dispatch that claimed it.
+ *
+ * No lease at all counts as live: a store that records none has no way to tell
+ * an abandoned step from a working one, so it keeps the older, safer rule that
+ * a `running` step is never taken from underneath its holder.
+ */
+export const isStepLeaseLive = (
+  leaseExpiresAt: Date | null | undefined,
+  now: number = Date.now()
+): boolean => leaseExpiresAt == null || leaseExpiresAt.getTime() > now
+
 /** Bound on the in-process backoff map, so a long-lived process cannot grow it without bound. */
 export const REDISPATCH_BACKOFF_MAX_ENTRIES = 10_000

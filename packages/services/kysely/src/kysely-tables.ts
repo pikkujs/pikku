@@ -54,6 +54,12 @@ export interface WorkflowStepTable {
   fromStepName: string | null
   /** The history attempt currently in flight; see WorkflowStepHistoryTable.attempt. */
   currentAttempt: number | null
+  /**
+   * When the dispatch holding a `running` step stops owning it. Null is a step
+   * nothing is expected to hand back — one parked on a child run, or written
+   * before it was ever claimed.
+   */
+  leaseExpiresAt: Date | null
   createdAt: Generated<Date>
   updatedAt: Generated<Date>
 }

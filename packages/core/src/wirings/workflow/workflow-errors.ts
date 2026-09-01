@@ -125,6 +125,27 @@ addError(WorkflowStepFunctionMismatchError, {
   message: 'Workflow step was dispatched with a different function.',
 })
 
+/**
+ * Every dispatch that took this step lost its worker before finishing it, and
+ * the step has no attempts left to hand out. Failing here is the loud end of
+ * the loop: without it the step would be re-claimed and abandoned forever.
+ */
+export class WorkflowStepLeaseExpiredError extends PikkuError {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string,
+    public readonly attemptCount: number
+  ) {
+    super(
+      `Workflow step '${stepName}' (run ${runId}) lost its worker on every one of its ${attemptCount} attempts: the last lease expired with the step still running`
+    )
+  }
+}
+addError(WorkflowStepLeaseExpiredError, {
+  status: 500,
+  message: 'Workflow step lost its worker and has no attempts left.',
+})
+
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: unknown) {
     super(`Workflow step name must be a string. Received: ${typeof stepName}`)
