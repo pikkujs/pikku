@@ -1,6 +1,6 @@
 # How Pikku Consumes a Product Blueprint
 
-The `.knowledge/` blueprint is designed so each concept maps onto exactly one Pikku primitive. A generator (or an agent following `pikku-feature`) walks the JSON files in this order:
+The `.knowledge/` blueprint is designed so each concept maps onto exactly one Pikku primitive. A generator (or an agent following `pikku-build`) walks the JSON files in this order:
 
 | Blueprint source                                                            | Pikku target                                                                                                                                                                                                                                                                                                                    |
 | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

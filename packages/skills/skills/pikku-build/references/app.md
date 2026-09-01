@@ -1,17 +1,3 @@
----
-name: pikku-build-app
-description: >-
-  Build a real product on open-source Pikku using the full Fabric workflow, run locally — knowledge
-  base first, personas and roles, milestones planned then built one at a time, each proven by a
-  scenario, with a design pass. The default build mode, and the one that stays importable into
-  Fabric later. TRIGGER when: the user asked for an app to be built on Pikku and picked "App" (or
-  did not pick), a freshly scaffolded pikku project needs turning into a product, or the user says
-  "build this properly / so someone can pick it up". DO NOT TRIGGER when: the user asked for
-  something quick or throwaway (use pikku-build-quick), wants every platform surface demonstrated
-  (use pikku-build-platform), or is adding one feature to an app that already has its knowledge
-  base and milestones (use pikku-feature).
----
-
 # Build a product on open-source Pikku
 
 You have a scaffolded project with skills installed. This skill owns everything
@@ -688,4 +674,4 @@ cheaper to honour than to retrofit:
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
   `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
 - Project conventions written by the template: `AGENTS.md`
-- Doing less than this: `pikku-build-quick`. Doing more: `pikku-build-platform`.
+- Doing less than this: `references/quick.md``. Doing more: `references/platform.md``.

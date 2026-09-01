@@ -1,10 +1,3 @@
----
-name: pikku-feature
-description: 'Drive create-a-feature work inside a Pikku project that already exists: discover project context, work on a feature branch, implement + verify + commit, and ask the user to review via the diff. TRIGGER when: the user asks to "create a feature", "add X to my Pikku project", "wire up a new endpoint", or anything that implies turning a natural-language request into Pikku functions/wirings/migrations within a working app. DO NOT TRIGGER when: the user asks for a one-off code edit in an existing function, asks about Pikku concepts (use pikku-concepts), or is building a whole app from a fresh scaffold rather than extending one (use pikku-build-app, or pikku-build-quick / pikku-build-platform).'
-allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx --no pikku fabric report *)
-argument-hint: '<feature description>'
----
-
 # Pikku Create-a-Feature
 
 ## Agent Operating Procedure

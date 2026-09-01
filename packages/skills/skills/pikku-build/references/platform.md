@@ -1,25 +1,12 @@
----
-name: pikku-build-platform
-description: >-
-  Build an app that exercises every Pikku surface — workflows, schedules, queues, an AI agent,
-  realtime, MCP, multiple locales, contract versioning and scenario coverage — on top of the full
-  pikku-build-app workflow. For proving what the platform does, not for shipping the smallest
-  thing that works. TRIGGER when: the user picked "Platform", asked for a showcase or reference
-  app, or asked to demonstrate what Pikku can do. DO NOT TRIGGER when: the user wants a product
-  built (use pikku-build-app), something quick (use pikku-build-quick), or one specific surface
-  wired into an existing app — a single workflow, cron job or agent (use that surface's own skill,
-  e.g. pikku-workflow, pikku-wiring, pikku-agent).
----
-
 # Build a platform showcase on Pikku
 
-**This skill is a delta. `pikku-build-app` is the base — read it and follow it in
+**This skill is a delta. `references/app.md` is the base — read it and follow it in
 full.** Everything there applies: knowledge base first, personas and roles,
 milestones planned then built one at a time, scenarios, design pass, deploy
 gates, Fabric-readiness. This file adds the surfaces that turn an app into a
 demonstration of the platform, and says where each one slots into that workflow.
 
-Read `pikku-build-app` now, then come back. Do not blend the two into one plan —
+Read `references/app.md` now, then come back. Do not blend the two into one plan —
 the phases below hang off its phases by number.
 
 ## What "platform" means here
@@ -32,7 +19,7 @@ proves it.** A cron job that logs "tick" is not a schedule — it is a comment.
 Budget the extra surfaces at one milestone each. They are not free, and a
 half-wired workflow engine is worse than no workflow engine.
 
-## Choosing surfaces — during `pikku-build-app` §5 (planning)
+## Choosing surfaces — during `references/app.md` §5 (planning)
 
 When you plan milestones, each surface below becomes its own milestone note in
 `knowledge/milestones/`, ordered after the spine it depends on.
@@ -146,7 +133,7 @@ correct rather than a smell: a third-party caller needs a real REST shape.
 
 ### Locales — `pikku-i18n`
 
-`pikku-build-app` already requires every string to be a key. **Here, ship three
+`references/app.md` already requires every string to be a key. **Here, ship three
 locales, and make one of them RTL** (`pikku-i18n`). Two LTR locales prove the
 plumbing; an RTL one proves the layout, and it will find real bugs — mirrored
 icons, hardcoded `marginLeft`, a nav that opens on the wrong side.
@@ -159,7 +146,7 @@ every added locale is cloned from, so three locales is `locales: ["en", …]` an
 never a repointed base. Shipping locales is also not a reason for anything in
 the code to stop being English: identifiers are English in every project, and
 the language of `description`/`title`/`template` is `metaLocale` in
-`pikku.config.json`. See `pikku-build-app` §1a.
+`pikku.config.json`. See `references/app.md` §1a.
 
 ### Emails — `pikku-emails`
 
@@ -186,7 +173,7 @@ the domain has a piece that genuinely belongs to no single app.
 
 ## Coverage — where the bar is higher than the base workflow
 
-`pikku-build-app` §7a already has the mechanics and the per-milestone habit:
+`references/app.md` §7a already has the mechanics and the per-milestone habit:
 run the server instrumented, run the scenarios against it, read
 `coverage/scenario-coverage.json`, and triage every gap as a missing scenario, a
 function that should not exist, or a documented deferral. Do all of that here.
@@ -205,7 +192,7 @@ Two things change in a showcase:
 
 ## The full gate
 
-Everything in `pikku-build-app` §9, plus the checks a showcase should be able to
+Everything in `references/app.md` §9, plus the checks a showcase should be able to
 survive:
 
 ```sh
@@ -227,7 +214,7 @@ bunx --bun pikku scenario run local --spawn --run browser
 
 ## Deploy
 
-`pikku-build-app` §9 covers the open-source paths (`--provider standalone`,
+`references/app.md` §9 covers the open-source paths (`--provider standalone`,
 `cloudflare`, `aws`). One thing specific to this mode: **the extra surfaces are
 extra deploy units.** Workflow workers, queue workers, schedules and the events
 channel each appear in `pikku deploy plan` as their own entries. Read the plan
@@ -236,7 +223,7 @@ built.
 
 ## Reference
 
-- Base workflow: `pikku-build-app` — read it first, follow it in full
+- Base workflow: `references/app.md` — read it first, follow it in full
 - Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
   `pikku-i18n`, `pikku-emails`,
   `pikku-meta`, `pikku-addon`, `pikku-auth`, `pikku-services`

@@ -1,19 +1,3 @@
----
-name: pikku-build-quick
-description: >-
-  Build a working app on open-source Pikku fast — scaffold to running screens, skipping the
-  knowledge base and the milestone ladder. For spikes, throwaway demos, and ideas nobody has
-  committed to yet. TRIGGER when: the user asked for something quick, a prototype, a spike, a
-  demo of an idea, or "just get it running", or picked "Quick" from the build-mode question. DO
-  NOT TRIGGER when: the request is an unqualified "build me an X on Pikku" with no signal of
-  speed or throwaway-ness — App is the default and small or toy-sounding apps do not change that
-  (use pikku-build-app); the user wants a real product someone else will pick up (use
-  pikku-build-app); the user wants a demo of Pikku itself — one that shows off surfaces like
-  workflows, queues, realtime or i18n (use pikku-build-platform); or the user is adding a feature
-  to an app that already exists rather than building one from a fresh scaffold (use
-  pikku-feature).
----
-
 # Build an app on Pikku, fast
 
 You have a scaffolded project with skills installed. Get it to working, seeded,
@@ -58,7 +42,7 @@ Identifiers are English in every project, whatever the product's market;
 `template`, which the Console renders) stays `en` unless the user already told
 you otherwise. If the request says the app's UI is not English, that is the
 message catalogue only: add the locale and set `defaultLocale`, and leave
-`baseLocale` at `en`. `pikku-build-app` §1a has the three axes in full; getting
+`baseLocale` at `en`. `references/app.md` §1a has the three axes in full; getting
 them confused is how a project ends up unable to add a second language.
 
 ## 2. Personas — 60 seconds, not optional
@@ -191,7 +175,7 @@ taller than the viewport. It is the most likely width your demo gets opened at.
 If you have five spare minutes, `npx impeccable install` (Node 22.18+) scores
 each screen against interaction heuristics and names what is wrong. Feed it
 screenshots, not source. It will polish the default look; it will not give the
-app a look — that is `pikku-build-app` §8a.
+app a look — that is `references/app.md` §8a.
 
 ## 5. One smoke scenario
 
@@ -235,7 +219,7 @@ that this is a quick build — no knowledge base, no milestones, no design pass,
 access control clicked-through rather than proven.
 
 **Upgrading to a real build is additive, not a rewrite.** If they want it, switch
-to `pikku-build-app` and do this, in order:
+to `references/app.md` and do this, in order:
 
 1. Write `knowledge/` for what already exists — `entities/` for what you built,
    `decisions/` for what you chose silently, `questions/` for what you guessed
@@ -244,7 +228,7 @@ to `pikku-build-app` and do this, in order:
    its gherkin block.
 3. Write the refusal scenarios — the ones proving one persona cannot reach
    another's rows. This is the gap that matters most.
-4. Then pick up `pikku-build-app` at its §4 (apps) or §5 (milestones) for
+4. Then pick up `references/app.md` at its §4 (apps) or §5 (milestones) for
    anything new.
 
 Nothing built here has to be thrown away to do that — which is the whole reason
