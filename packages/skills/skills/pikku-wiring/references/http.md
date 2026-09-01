@@ -23,7 +23,7 @@ addHTTPMiddleware('*', [authBearer()]) // All routes
 addHTTPMiddleware('/api/*', [rateLimit()]) // Pattern match
 ```
 
-> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-permissions`), or app-wide via `addGlobalPermission`. Tags/patterns are for _middleware_ only now.
+> HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-auth`), or app-wide via `addGlobalPermission`. Tags/patterns are for _middleware_ only now.
 
 ## Data Flow
 
@@ -86,7 +86,7 @@ wireHTTP({ method: 'get', route: '/books', func: listBooks, auth: false })
 wireHTTP({ method: 'delete', route: '/books/:bookId', func: deleteBook })
 ```
 
-Authorization is not a wiring concern — declare it on the function via `permissions` (see `pikku-permissions`), or app-wide via `addGlobalPermission`.
+Authorization is not a wiring concern — declare it on the function via `permissions` (see `pikku-auth`), or app-wide via `addGlobalPermission`.
 
 ### Middleware
 

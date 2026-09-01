@@ -102,7 +102,7 @@ rewritten to the pikku dev server).
   the permission check exists. The refusal scenario is the evidence.
 - **In production on two subdomains**, the session cookie needs a parent domain
   (`.example.com`) or each app gets its own login. Decide which, set it per the
-  `pikku-better-auth` skill, and record it in `knowledge/decisions/security/`.
+  `pikku-auth` skill, and record it in `knowledge/decisions/security/`.
 - **Never hardcode a host or port.** The API base resolves to same-origin `/api`.
 
 ## Building the second app's screens

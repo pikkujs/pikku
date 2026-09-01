@@ -101,7 +101,7 @@ The function never imports Express, never reads `req.body`, never touches `ws.se
 
 ## Concept Mapping: Generic Backend → Pikku
 
-Controllers/routes → `pikkuFunc`; auth/sessions → `pikku-security`, a separate install; authorization checks → `pikku-permissions`; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
+Controllers/routes → `pikkuFunc`; auth/sessions and authorization checks → `pikku-auth`, a separate install; request interception → `pikku-middleware`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
 
 ## Functions
 
@@ -159,7 +159,7 @@ pikkuFunc({
   readonly?: boolean,       // Declares the function performs no writes
   deploy?: 'serverless' | 'server' | 'auto',
 
-  // Authorization — see pikku-permissions
+  // Authorization — see pikku-auth
   auth?: boolean,           // Override default auth requirement
   scopes?: ScopeId[],       // AND-ed, checked before permissions; session required
   permissions?: PermissionGroup,  // OR-ed pool
@@ -317,7 +317,7 @@ src/
 ├── services.ts          # Service factories (see pikku-services)
 ├── lifecycle.ts         # Server lifecycle hooks (pikku dev/serve only)
 ├── middleware.ts         # Middleware definitions (see pikku-middleware)
-├── permissions.ts       # Permission definitions (see pikku-permissions)
+├── permissions.ts       # Permission definitions (see pikku-auth)
 └── .pikku/              # Generated (gitignored)
     ├── function/        # #pikku/function
     ├── http/            # #pikku/http

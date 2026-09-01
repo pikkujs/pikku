@@ -129,13 +129,13 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
   },
   auth: {
     step: 'guard it',
-    skill: ['pikku-security', 'pikku-permissions'],
+    skill: 'pikku-auth',
     summary:
       'Who may call a function, and what the call is made with: permissions that see the request, auth gates that run before it, and the credentials a function borrows rather than holds.',
   },
   scopes: {
     step: 'guard it',
-    skill: 'pikku-permissions',
+    skill: 'pikku-auth',
     summary:
       'The scopes a caller can hold and the roles that grant them, gating a call outside the permission pool.',
   },

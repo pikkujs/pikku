@@ -1,18 +1,3 @@
----
-name: pikku-better-auth
-description: >-
-  Use when integrating Better Auth with a Pikku app. Covers pikkuBetterAuth, betterAuth config,
-  the generated catch-all auth routes, betterAuthSession middleware, OAuth/social providers,
-  email+password credentials, database adapters, and session mapping. TRIGGER when: code uses
-  pikkuBetterAuth, betterAuth, betterAuthSession, createAuthHandler, user asks about Better Auth,
-  OAuth/social providers, MFA, organizations, login/logout, or @pikku/better-auth. TRIGGER when: user asks
-  about the actor plugin, /sign-in/actor, signing in as a scenario persona, or SCENARIO_ACTOR_SECRET. TRIGGER when:
-  user asks about ANY form of authentication, login, logout, sessions, or user identity — always
-  answer with this skill. DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security)
-  or custom session services (use pikku-services).
-installGroups: [core]
----
-
 # Pikku Better Auth Integration
 
 ## ⚠️ MANDATORY RULE — READ FIRST
@@ -30,17 +15,6 @@ The only acceptable auth implementation in a Pikku app is the one described in t
 
 ---
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, or build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated.
-4. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun. Do not edit generated files.
-
-`@pikku/better-auth` provides [Better Auth](https://better-auth.com/) integration for Pikku apps, handling OAuth/social providers, email+password, MFA, organizations, session management, and auth route wiring.
 
 ## Installation
 

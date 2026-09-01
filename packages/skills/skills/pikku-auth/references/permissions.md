@@ -1,21 +1,8 @@
----
-name: pikku-permissions
-description: >-
-  Use when adding authorization checks to Pikku functions — pikkuPermission, pikkuAuth, scopes and
-  defineScope, per-function permissions, global permissions, or understanding the scope/OR/AND
-  gating logic. TRIGGER when: user wants to restrict who can call a function, check resource
-  ownership, add role-based or scope-based access, declares or grants scopes, hits
-  MissingScopeError, or asks where permission checks belong. DO NOT TRIGGER when: user asks about
-  middleware or request interception (use pikku-middleware), authentication strategies (use
-  pikku-security), or session management.
-installGroups: [core]
----
-
 # Pikku Permissions
 
 ## ⛔ FIRST: is the caller a machine with a token? ⛔
 
-**Then this is NOT a permissions problem.** Resolve the token in `addHTTPMiddleware('*')` middleware that calls `setSession`, make the function a `pikkuFunc`, and gate it with `scopes`. A `permissions` check that verifies a bearer token and returns `true` is authentication wearing an authorization hat — and it leaves the function sessionless, so every body still has to work out who called it. See the machine-auth section of `pikku-middleware`. The only exception is a bootstrap endpoint whose caller has no identity yet (a shared-secret registration, a login): that one is sessionless and declares its gate here.
+**Then this is NOT a permissions problem.** Resolve the token in `addHTTPMiddleware('*')` middleware that calls `setSession`, make the function a `pikkuFunc`, and gate it with `scopes`. A `permissions` check that verifies a bearer token and returns `true` is authentication wearing an authorization hat — and it leaves the function sessionless, so every body still has to work out who called it. See `references/machine-auth.md`. The only exception is a bootstrap endpoint whose caller has no identity yet (a shared-secret registration, a login): that one is sessionless and declares its gate here.
 
 ## The Rule
 
@@ -43,12 +30,6 @@ export const deleteBook = pikkuFunc({
 })
 ```
 
-## Agent Operating Procedure
-
-1. Discover before editing. Run `pikku info permissions --verbose` and `pikku info functions --verbose` to understand what permissions are already defined and applied.
-2. Define permission checkers in a `src/permissions.ts` or domain-specific `src/lib/*-permissions.ts` file.
-3. Apply them via the `permissions` field on the function. For an app-wide baseline that every function must additionally satisfy, use `addGlobalPermission`.
-4. Validate: run `pikku all --tsc` to confirm permission checker signatures are correct.
 
 ## Permission Factories
 

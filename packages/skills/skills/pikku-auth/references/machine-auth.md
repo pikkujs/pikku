@@ -1,17 +1,3 @@
----
-name: pikku-machine-auth
-description: >-
-  Use when authenticating a CLI/agent/service against a Pikku server, adding machine-to-machine
-  (M2M) auth, issuing scoped API keys for sandboxes/agents/workers, or wiring better-auth sessions
-  into Pikku middleware. Covers `pikku login` (device-authorization), the better-auth API Key
-  plugin, machine identities, and `betterAuthSession` with the api-key branch. TRIGGER when: user
-  asks about CLI login, `pikku login`, machine agents, service-to-service auth, API keys, client
-  credentials, sandbox/worker tokens, or resolving a better-auth session in a Pikku function. DO
-  NOT TRIGGER when: user asks about end-user HTTP session/cookie auth only (use pikku-wiring + the
-  app betterAuth config) or about WebSocket channel mechanics (use pikku-wiring).
-installGroups: [core]
----
-
 # Pikku Machine Auth
 
 Unified authentication for humans **and** machines against a Pikku + better-auth
@@ -29,15 +15,6 @@ Both resolve to a Pikku `UserSession` through one middleware:
 > better-auth's oidc-provider. The API Key plugin gives the same capability (a
 > baked secret a service presents for scoped access), not the wire protocol.
 
-## Agent Operating Procedure
-
-1. Discover before editing — inspect the app's `betterAuth({ plugins: [...] })`
-   config and existing middleware wiring before adding anything.
-2. Server changes go in the auth factory + a middleware wiring file; never put
-   auth checks in a function body (use `permissions`).
-3. The API Key plugin contributes an `apikey` table — add the matching SQL
-   migration and regenerate DB types before relying on it.
-4. Validate with the narrowest command, then `pikku all`.
 
 ## Human path — `pikku login`
 

@@ -10,7 +10,7 @@ description: >-
   wireCLI, wireMCPResource, wireMCPPrompt, `mcp: true`, `sse: true`, `expose: true`, rpc.invoke,
   SlackGatewayAdapter, or the user asks how to expose, route, schedule, queue, stream or publish a
   function. DO NOT TRIGGER when: writing the function body itself (use pikku-concepts), declaring
-  authorization (use pikku-permissions), or serving the app on a runtime (use pikku-deploy).
+  authorization (use pikku-auth), or serving the app on a runtime (use pikku-deploy).
 installGroups: [core]
 ---
 
@@ -53,7 +53,7 @@ Three consequences that hold for every wiring below:
   are merged into the function's `data` argument.
 - **Permissions are never declared on the wiring.** Wire-level permissions were
   removed in #972 — declare them on the function (`pikkuFunc({ permissions })`,
-  see `pikku-permissions`) or app-wide via `addGlobalPermission`. Tags and
+  see `pikku-auth`) or app-wide via `addGlobalPermission`. Tags and
   patterns now target *middleware* only.
 - **The wire is the third argument**, not a service. `channel`, `rpc`, `session`,
   `setSession`, `mcp`, `queue`, `scheduledTask` and `cli` all live there.

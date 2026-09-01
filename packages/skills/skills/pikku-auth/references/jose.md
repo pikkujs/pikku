@@ -1,27 +1,5 @@
----
-name: pikku-jose
-description: >-
-  Use when setting up JWT authentication with the jose library in a Pikku app. Covers
-  JoseJWTService constructor, secret rotation, token encoding/decoding/verification. TRIGGER when:
-  code uses JoseJWTService, user asks about JWT setup, token signing, token verification, or
-  @pikku/jose. DO NOT TRIGGER when: user asks about session middleware (use pikku-security) or
-  general service setup (use pikku-services).
-installGroups: [core]
----
-
 # Pikku Jose (JWT Service)
 
-## Agent Operating Procedure
-
-Use this skill as an execution checklist, not reference material.
-
-1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
-
-`@pikku/jose` provides JWT signing, verification, and decoding using the [jose](https://github.com/panva/jose) library. Implements the `JWTService` interface from `@pikku/core`.
 
 ## Installation
 

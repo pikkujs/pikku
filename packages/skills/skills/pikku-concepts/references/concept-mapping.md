@@ -8,9 +8,9 @@ Authoritative mapping table plus side-by-side code examples showing how common b
 | --------------------------------------- | --------------------------------------------------------------- | ----------------- |
 | **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | `pikku-concepts`  |
 | **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-wiring`      |
-| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-security`  |
-| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-security`  |
-| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-security`  |
+| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-middleware` |
+| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-auth`  |
+| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-auth`  |
 | **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | `pikku-concepts`  |
 | **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`  |
 | **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-wiring` |

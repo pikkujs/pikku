@@ -239,5 +239,5 @@ built.
 - Base workflow: `pikku-build-app` — read it first, follow it in full
 - Per-surface skills: `pikku-workflow`, `pikku-wiring`, `pikku-agent`,
   `pikku-ai-vercel`, `pikku-i18n`, `pikku-rtl`, `pikku-emails`,
-  `pikku-versioning`, `pikku-addon`, `pikku-security`, `pikku-audit`
+  `pikku-versioning`, `pikku-addon`, `pikku-auth`, `pikku-audit`
 - Every feature, end to end: https://pikkufabric.com/llm-all-features.txt

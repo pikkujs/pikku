@@ -257,7 +257,7 @@ const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
   and so must not export components Mantine has no counterpart for.
 - **`secrets` is `{ address: credential }`, not one shared value** — a
   credential opens the one persona it was minted for (see
-  **pikku-better-auth**). `actors` is empty unless the host supplied both a list
+  **pikku-auth**). `actors` is empty unless the host supplied both a list
   and the credentials for it, and an actor with no credential is not offered, so
   a production build renders nothing without you testing for it.
 - **It takes `onSignedIn` rather than a router**, and takes the env values rather
@@ -265,7 +265,7 @@ const { actors, signInAs, pendingEmail, isPending, error } = useDevActors({
   (`import.meta.env.VITE_*` vs `process.env.NEXT_PUBLIC_*`).
 - The underlying `signInAsActor()` and `parseDevActors()` are exported too, for a
   non-React caller. The endpoint only accepts rows flagged `actor: true`, so it
-  can never impersonate a real user — see **pikku-better-auth**.
+  can never impersonate a real user — see **pikku-auth**.
 
 Do not hand-write the `devActors()` / `signInAsActor()` pair per app; that
 copy-paste, including the `import.meta.env.DEV` gate, is exactly what this

@@ -104,7 +104,7 @@ import cycle.
 
 `auth` defaults to `false` because agents are usually invoked from an
 already-authenticated `pikkuFunc`. `scopes` and `permissions` are enforced either
-way — see `pikku-permissions`.
+way — see `pikku-auth`.
 
 ### Invoking an agent
 

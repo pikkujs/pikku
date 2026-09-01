@@ -7,7 +7,7 @@ description: >-
   config, OAuth2, SecretValue/.reveal(), SecretCoercionError, or "how do I access environment
   variables". DO NOT TRIGGER when: user asks about API versioning/breaking changes (use
   pikku-versioning), service factories (use pikku-services), middleware (use pikku-middleware), or
-  auth strategies and sessions (use pikku-security).
+  auth strategies and sessions (use pikku-auth).
 installGroups: [core]
 ---
 

@@ -272,7 +272,7 @@ definePersonas({
   live with them.
 - **Roles are what a permission check reads, not where it lives.** The check goes
   in the function's `permissions` field (§6), never in the body. Read the
-  `pikku-permissions` skill.
+  `pikku-auth` skill.
 
 `pikku persona list` shows who is declared and `pikku roles audit` reports roles
 the database still holds that code no longer declares — both need §0's bootstrap
@@ -685,7 +685,7 @@ cheaper to honour than to retrofit:
   that needs it
 - `references/theming.md` — authoring the theme (§8a)
 - `references/ship.md` — deploying, and the Fabric-readiness contract (§9)
-- Sibling skills: `pikku-knowledge` (§2), `pikku-permissions` (§3),
+- Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
   `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
 - Project conventions written by the template: `AGENTS.md`
 - Doing less than this: `pikku-build-quick`. Doing more: `pikku-build-platform`.

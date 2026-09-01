@@ -10,8 +10,7 @@ description: >-
   vulnerabilities/advisories, outdated dependencies, upgrading Pikku itself, peer dependency
   conflicts, the Security screen/page in the console, updating a vulnerable dependency, or
   reading/rendering audit.json. DO NOT TRIGGER when: user asks about authentication/sessions/JWT
-  (use pikku-security), permissions (use pikku-permissions), or secrets/env vars (use
-  pikku-config).
+  or permissions (use pikku-auth), or secrets/env vars (use pikku-config).
 ---
 
 # Pikku Dependency Audit
@@ -98,7 +97,7 @@ lockfiles, because that field states intent before a lockfile exists and a
 project can carry a stale one from another tool. Guessing wrong is not a soft
 failure: the spawn dies with `Executable not found in $PATH`.
 Like every console RPC these require an **authenticated session** (the console
-is admin-only), so the host must have Better Auth wired — see `pikku-better-auth`.
+is admin-only), so the host must have Better Auth wired — see `pikku-auth`.
 
 - `getSecurityAudit` — reads `.pikku/audit.json`, returns the report (or `null`).
 - `runSecurityAudit` — runs `pikku audit --outdated` server-side (regenerates the

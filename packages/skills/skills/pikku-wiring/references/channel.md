@@ -33,7 +33,7 @@ wireChannel({
 
 Note there is **no `permissions` key on a message wiring** — wire-level
 permissions were removed in #972. Authorization lives on the function's own
-`permissions` field (see `pikku-permissions`).
+`permissions` field (see `pikku-auth`).
 
 ### `pikkuChannelMiddleware(fn)`
 

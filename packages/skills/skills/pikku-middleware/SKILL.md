@@ -6,8 +6,8 @@ description: >-
   understanding middleware execution order and priority. TRIGGER when: user wants middleware on
   some or all routes, machine-to-machine auth, tag-scoped cross-cutting concerns, global
   interceptors, or middleware priority/order questions. DO NOT TRIGGER when: user asks about
-  permissions/authorization checks (use pikku-permissions), auth strategies like
-  authBearer/authCookie (use pikku-security), or deployment.
+  permissions, sessions or auth strategies like authBearer/authCookie (use
+  pikku-auth), or deployment.
 installGroups: [core]
 ---
 
@@ -223,7 +223,7 @@ export const reportSomething = pikkuFunc({
 })
 ```
 
-An unresolved token leaves the session unset and the function throws `MissingSessionError` — 401, for free. Declare the scope tree once with `defineScope` (see `pikku-permissions`).
+An unresolved token leaves the session unset and the function throws `MissingSessionError` — 401, for free. Declare the scope tree once with `defineScope` (see `pikku-auth`).
 
 ### It MUST be `addHTTPMiddleware`, never `addTagMiddleware`
 
@@ -255,13 +255,13 @@ Unlike tag middleware over `/rpc`, this works: `runScheduledTask` builds its wir
 
 ### The one sessionless exception: bootstrap
 
-An endpoint that runs BEFORE the caller has an identity — registering a new host with a shared bootstrap key, a login, a device-code request — has no session to set. That one stays `pikkuSessionlessFunc` and declares its gate in `permissions` (see `pikku-permissions`).
+An endpoint that runs BEFORE the caller has an identity — registering a new host with a shared bootstrap key, a login, a device-code request — has no session to set. That one stays `pikkuSessionlessFunc` and declares its gate in `permissions` (see `pikku-auth`).
 
 ## Service-to-Service Bearer Auth (gate-only pattern)
 
 Use this when the callee needs to know only THAT the caller is trusted, not WHICH caller it is. If it needs to know which, use the session pattern above.
 
-A server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent). Auth lives in a tag middleware — NOT in the function body. Authorization/permission checks belong in the `permissions` field (see `pikku-permissions`), never inside `func`.
+A server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent). Auth lives in a tag middleware — NOT in the function body. Authorization/permission checks belong in the `permissions` field (see `pikku-auth`), never inside `func`.
 
 **On the server (the service being called):** tag the function, register a `pikkuMiddleware` that reads the `Authorization` header on that tag.
 
