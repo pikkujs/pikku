@@ -74,7 +74,11 @@ pikku-software-archaeology/
 ├── README.md                         # this file
 ├── references/
 │   ├── blueprint.schema.json         # the output contract (JSON Schema)
-│   └── pikku-mapping.md              # blueprint → Pikku primitives
+│   ├── pikku-mapping.md              # blueprint → Pikku primitives
+│   ├── second-opinion.md             # blueprint → owner-facing report: method, voice, red flags
+│   └── second-opinion-report-template.md  # the layered structure to fill in
+├── example/
+│   └── second-opinion-sample-report.md    # worked example (competitor-tracking area, founder voice)
 └── scripts/
     └── validate.mjs                  # schema + cross-file validation (node, no deps)
 ```

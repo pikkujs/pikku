@@ -1,6 +1,6 @@
 ---
 name: pikku-software-archaeology
-description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app). TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", or points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules, or a rebuild plan. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or code review.'
+description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — and when turning that blueprint into a plain-language second opinion for the non-technical owner who holds the app. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules or a rebuild plan, or asks "explain how my app works" / "what would you do differently" / "is this built well?" for a founder, PM or operator audience. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or an engineer-facing code review.'
 ---
 
 # Software Archaeology
@@ -187,3 +187,16 @@ node <skill-dir>/scripts/validate.mjs <repo>/.knowledge
 
 - Schema/contract: `references/blueprint.schema.json`
 - How Pikku consumes the blueprint: `references/pikku-mapping.md`
+
+## The second phase — a report the owner can act on
+
+Extraction produces a blueprint for a machine to rebuild from. The same
+`.knowledge/` directory is also the input to a second opinion for the person who
+holds the app: what works, what is holding them back, and what you would build
+instead, argued in business outcomes rather than architecture.
+
+That phase has its own voice rules, structure and red flags — read
+`references/second-opinion.md`, fill in
+`references/second-opinion-report-template.md`, and match the tone of
+`example/second-opinion-sample-report.md`. It consumes the blueprint; it never
+re-derives facts from the code, so run the extraction first.

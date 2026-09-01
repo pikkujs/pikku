@@ -79,10 +79,10 @@ describe('pikku skills install', () => {
   test('--only installs exactly the named skills', async () => {
     const dir = await inTemp()
     await run({
-      only: 'pikku-software-archaeology,pikku-product-second-opinion',
+      only: 'pikku-software-archaeology,pikku-kysely',
     })
     assert.deepEqual(await installed(dir), [
-      'pikku-product-second-opinion',
+      'pikku-kysely',
       'pikku-software-archaeology',
     ])
     assert.equal(process.exitCode, undefined)

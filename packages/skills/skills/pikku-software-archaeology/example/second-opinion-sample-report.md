@@ -2,7 +2,7 @@
 
 _A second opinion on the competitor-tracking system_
 
-> Worked example for the pikku-product-second-opinion skill. Shows the voice and the
+> Worked example for the pikku-software-archaeology skill. Shows the voice and the
 > layered structure on one real area (competitor tracking), drawn from a
 > pikku-software-archaeology blueprint + parity report. A full report would repeat
 > Part 2 for each major area, and cover every significant technology bet — not just

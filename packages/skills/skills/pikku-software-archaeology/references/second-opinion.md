@@ -1,8 +1,3 @@
----
-name: pikku-product-second-opinion
-description: 'Use when a non-technical owner (founder, PM, operator) wants a plain-language report on an app they hold but did not build — explaining how it works and how it could be better. Reads the .knowledge/ blueprint from pikku-software-archaeology and produces a layered, jargon-free report that credits what works, names what does not (with business impact + effort), and argues an opinionated better design. TRIGGER: "explain how my app works", "what would you do differently", "review my app for a non-technical audience", "I inherited/am stuck with an agency-built app", "is this built well?". DO NOT TRIGGER for: extracting the machine-readable blueprint itself (use pikku-software-archaeology), or an engineer-facing technical code review.'
----
-
 # Product Second Opinion
 
 ## Overview
@@ -11,7 +6,7 @@ Turn an extracted product blueprint into a **report a non-technical owner can ac
 
 The reader is a founder/PM/operator, not an engineer. If they finish a section and don't know what it means for their business or what to do about it, the report failed — no matter how correct it is.
 
-**REQUIRED INPUT:** the `.knowledge/` blueprint produced by **pikku-software-archaeology**. If none exists, run that skill first — this one consumes its output (`product.json`, `domains.json`, `workflows.json`, `gaps.json`, `invariants.json`, `migration.json`, and any `parity-*.md`), it does not re-derive facts from the code. When the optional consumer-surface files are present (`interfaces.json`, `frontend.json`, `frontend-routes.json`, `frontend-components.json`), cover them too — see "The frontend and the other ways your app is used" and "Technology choices" below.
+**REQUIRED INPUT:** the `.knowledge/` blueprint produced by the extraction phase (see SKILL.md). If none exists, run that first — this one consumes its output (`product.json`, `domains.json`, `workflows.json`, `gaps.json`, `invariants.json`, `migration.json`, and any `parity-*.md`), it does not re-derive facts from the code. When the optional consumer-surface files are present (`interfaces.json`, `frontend.json`, `frontend-routes.json`, `frontend-components.json`), cover them too — see "The frontend and the other ways your app is used" and "Technology choices" below.
 
 ## The cardinal rule: translate, don't dump
 
@@ -52,7 +47,7 @@ Write these three parts in order. A reader can stop after Part 1.
 - _The headline_: the 3–5 biggest risks/opportunities, one plain line each.
 - _Recommended order_: a table (Fix | Why it matters | Effort | Payoff). This is the part they act on.
 
-**Part 2 — One section per major area** (drive the areas from `domains.json`; skip domains with nothing worth saying). Each section follows this shape (see `example/sample-report.md`):
+**Part 2 — One section per major area** (drive the areas from `domains.json`; skip domains with nothing worth saying). Each section follows this shape (see `example/second-opinion-sample-report.md`):
 
 - _What this does_ — the capability in business terms.
 - _How it works today_ — a plain walkthrough, ideally as a small story ("on a timer, the app re-reads each site, compares…").
@@ -162,6 +157,6 @@ Produce **both**:
 | A design point with no "why it matters"               | Taste, not advice. Tie every design finding to user perception (polish/trust) or maintenance cost (change-once vs hunt-everywhere), plus effort. |
 | Reads like a code review                              | Wrong audience. Would a founder know what to _do_ after this paragraph?                                                                          |
 
-## Relationship to pikku-software-archaeology
+## Relationship to the extraction phase
 
-`pikku-software-archaeology` = facts → `.knowledge/` blueprint, for a machine to rebuild from. **This skill** = blueprint → opinionated report, for a human to decide from. One extracts; one advises. Run archaeology first (or point this skill at an existing `.knowledge/`), then translate its `gaps.json` + `invariants.json` + `migration.json` into the business-language report above.
+Extraction = facts → `.knowledge/` blueprint, for a machine to rebuild from. This report = blueprint → opinionated argument, for a human to decide from. One extracts; one advises. Run the extraction first (or point this at an existing `.knowledge/`), then translate its `gaps.json` + `invariants.json` + `migration.json` into the business-language report above.
