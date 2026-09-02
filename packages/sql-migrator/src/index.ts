@@ -17,7 +17,7 @@ export {
   type MigrationExecutor,
   type MigrateResult,
   type AppliedMigration,
-} from './db-migrator.js'
+} from './sql-migrator.js'
 
 export {
   assertSnakeCaseIdentifiers,

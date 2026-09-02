@@ -5173,7 +5173,6 @@ __metadata:
     "@pikku/bun-server": "npm:^0.12.11"
     "@pikku/code-edit": "npm:^0.12.1"
     "@pikku/core": "npm:^0.12.102"
-    "@pikku/db-migrator": "npm:^0.12.1"
     "@pikku/deploy": "npm:^0.12.5"
     "@pikku/deploy-cloudflare": "npm:^0.12.13"
     "@pikku/fetch": "npm:^0.12.10"
@@ -5186,6 +5185,7 @@ __metadata:
     "@pikku/playwright": "npm:^0.12.81"
     "@pikku/schedule": "npm:^0.12.7"
     "@pikku/skills": "npm:^0.12.23"
+    "@pikku/sql-migrator": "npm:^0.12.1"
     "@pikku/ws": "npm:^0.12.9"
     "@playwright/test": "npm:^1.50.0"
     "@types/cookie": "npm:^1.0.0"
@@ -5363,17 +5363,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/db-migrator@npm:^0.12.1, @pikku/db-migrator@workspace:packages/db-migrator":
-  version: 0.0.0-use.local
-  resolution: "@pikku/db-migrator@workspace:packages/db-migrator"
-  dependencies:
-    "@types/bun": "npm:^1.4.0"
-    "@types/node": "npm:^22"
-    tsx: "npm:^4.23.12"
-    typescript: "npm:^6.0.3"
-  languageName: unknown
-  linkType: soft
-
 "@pikku/deploy-azure@workspace:packages/deploy/deploy-azure":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-azure@workspace:packages/deploy/deploy-azure"
@@ -5405,8 +5394,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
   dependencies:
-    "@pikku/db-migrator": "npm:^0.12.1"
     "@pikku/deploy": "npm:^0.12.5"
+    "@pikku/sql-migrator": "npm:^0.12.1"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
@@ -6030,6 +6019,17 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     typescript: "npm:^6.0.3"
     yaml: "npm:^2.9.0"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/sql-migrator@npm:^0.12.1, @pikku/sql-migrator@workspace:packages/sql-migrator":
+  version: 0.0.0-use.local
+  resolution: "@pikku/sql-migrator@workspace:packages/sql-migrator"
+  dependencies:
+    "@types/bun": "npm:^1.4.0"
+    "@types/node": "npm:^22"
+    tsx: "npm:^4.23.12"
+    typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
 

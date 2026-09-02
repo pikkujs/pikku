@@ -17,8 +17,8 @@
  * in-process invoke would answer them with none of that, which on a production
  * box is a way to run any function as nobody.
  */
-import type { MigrationExecutor } from '@pikku/db-migrator'
-import type { PostgresMigrationClient } from '@pikku/db-migrator/postgres'
+import type { MigrationExecutor } from '@pikku/sql-migrator'
+import type { PostgresMigrationClient } from '@pikku/sql-migrator/postgres'
 
 /** Where the migrations live, when the operator has moved them. */
 export const MIGRATIONS_DIR_ENV = 'PIKKU_MIGRATIONS_DIR'
@@ -174,7 +174,7 @@ const executorFor = async (
 ): Promise<{ executor: MigrationExecutor; close: () => void }> => {
   if (db.engine === 'sqlite') {
     const { SqliteMigrationExecutor, loadSqliteRuntime } = await import(
-      '@pikku/db-migrator/sqlite'
+      '@pikku/sql-migrator/sqlite'
     )
     const runtime = await loadSqliteRuntime()
     const handle = runtime.open(db.databaseFile)
@@ -185,7 +185,7 @@ const executorFor = async (
   }
 
   const { PostgresMigrationExecutor } = await import(
-    '@pikku/db-migrator/postgres'
+    '@pikku/sql-migrator/postgres'
   )
   return {
     executor: new PostgresMigrationExecutor(postgresClient(db.sql)),
@@ -227,7 +227,7 @@ export async function runDbCommand(
   db: StandaloneDb,
   out: CommandOutput = stdout
 ): Promise<void> {
-  const { migrate, pendingMigrations } = await import('@pikku/db-migrator')
+  const { migrate, pendingMigrations } = await import('@pikku/sql-migrator')
   const { executor, close } = await executorFor(db)
 
   try {
@@ -268,7 +268,7 @@ export async function runBackupCommand(
   db: StandaloneSqliteDb,
   out: CommandOutput = stdout
 ): Promise<void> {
-  const { loadSqliteRuntime } = await import('@pikku/db-migrator/sqlite')
+  const { loadSqliteRuntime } = await import('@pikku/sql-migrator/sqlite')
   const runtime = await loadSqliteRuntime()
   const handle = runtime.open(db.databaseFile)
   try {
