@@ -27,6 +27,8 @@ export interface KnowledgeBrowse {
   /** Every note by path, for resolving link titles in the document. */
   byPath: Map<string, KnowledgeNote>
   stats: KnowledgeBundle['stats'] | undefined
+  /** Every milestone's plan by note path, so the document can draw its own. */
+  plans: KnowledgeBundle['plans']
   noteCount: number
   isLoading: boolean
 }
@@ -85,6 +87,7 @@ export const useKnowledgeBrowse = (): KnowledgeBrowse => {
     selectedNote,
     byPath,
     stats: bundle?.stats,
+    plans: bundle?.plans ?? {},
     noteCount: notes.length,
     isLoading,
   }
