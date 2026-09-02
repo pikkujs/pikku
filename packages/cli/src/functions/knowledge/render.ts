@@ -1,6 +1,7 @@
 import type {
   KnowledgeIndexResult,
   KnowledgePlanDeferResult,
+  KnowledgePlanProgressResult,
   KnowledgePlanSchemaResult,
   KnowledgePlanSetResult,
   KnowledgePlanShowResult,
@@ -108,6 +109,68 @@ export const renderKnowledgePlanShow = (
   }
   console.log(dim(path))
   console.log(body)
+}
+
+const list = (
+  label: string,
+  entries: string[],
+  colour: (s: string) => string
+) => {
+  if (entries.length === 0) return
+  console.log(colour(`${label} (${entries.length})`))
+  for (const entry of entries) console.log(`   ${entry}`)
+  console.log()
+}
+
+export const renderKnowledgePlanProgress = (
+  _services: unknown,
+  {
+    ok,
+    path,
+    message,
+    done,
+    missing,
+    deferred,
+    problems,
+  }: KnowledgePlanProgressResult
+): void => {
+  if (message) {
+    console.log(`${removed('✗')}  ${message}`)
+    process.exitCode = 1
+    return
+  }
+  console.log(dim(path))
+  console.log()
+  list('DONE', done, added)
+  list('MISSING', missing, removed)
+  list('DEFERRED to a later pass', deferred, dim)
+  list('PROBLEMS', problems, changed)
+
+  console.log('─'.repeat(40))
+  if (ok) {
+    console.log(`${added('✓')}  the plan's first pass is built`)
+    return
+  }
+  if (missing.length > 0) {
+    console.log(
+      `${removed('✗')}  the milestone is not built yet — build each missing item, or move it out with ` +
+        dim('pikku knowledge plan defer <milestone> <item> -r "<why>"')
+    )
+  }
+  // A problem is something that EXISTS and does not do what was planned, so there is
+  // nothing to defer — saying "defer it" here sends the reader to a command that will
+  // refuse them.
+  if (problems.length > 0) {
+    console.log(
+      `${removed('✗')}  the milestone is not built yet — fix what the problems above name. ` +
+        dim(
+          'A problem is never deferred; the thing exists, it just does something else.'
+        )
+    )
+  }
+  // A build closes a milestone on this exit code, so it has to be readable by a shell
+  // and not only by whoever is reading the output.
+  process.exitCode = 1
 }
 
 export const renderKnowledgePlanSet = (

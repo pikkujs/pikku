@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { listOf, noteHash } from './notes.js'
+import { KNOWLEDGE_DIR, listOf, noteHash } from './notes.js'
 import { MILESTONES_DIR, type MilestoneSurface } from './milestone.js'
 
 /**
@@ -191,7 +191,7 @@ const RoleItem = z.object({
     .string()
     .min(1)
     .describe(
-      'REQUIRED on every role: the slug of the app this person USES — lowercase, one word, named for what they do there (`workshop`, `storefront`, `portal`). The distinct values across all roles ARE the apps this project needs, and the build agent runs `fabric new-app` for each one after the first, so this field alone decides how many frontends exist. When everyone is on the same side, give every role the SAME slug — one app is a real answer and often the right one. The test is the counter, not the org chart: the mechanic, the person on the counter and the bookkeeper are colleagues and share ONE app, differing only by nav and permitted actions; a customer WITH AN ACCOUNT is across the counter and gets their own, as do the tenant, the patient and the practitioner. Never invent a person the milestone notes do not name in order to reach two. A ROLE WHO NEVER SIGNS IN NEVER GETS A SLUG OF THEIR OWN: an app is built around the people who log into it, so a shopper who checks out as a guest, a diner reading a menu or anyone opening a link takes the SAME slug as the signed-in role they transact with, and their screens live on that app\u2019s public routes outside `/app`. A shop where a guest buys and one seller packs is ONE app and ONE slug: `/`, `/shop` and `/checkout` public, `/app/orders` behind the login. Give that shopper their own slug and the storefront is built on a second hostname while the product\u2019s own domain answers the people it is for with a login screen \u2014 the exact failure this field exists to prevent.'
+      'REQUIRED on every role: the slug of the app this person USES — lowercase, one word, named for what they do there (`workshop`, `storefront`, `portal`). The distinct values across all roles ARE the apps this project needs, and the build creates a frontend for each one after the first, so this field alone decides how many frontends exist. When everyone is on the same side, give every role the SAME slug — one app is a real answer and often the right one. The test is the counter, not the org chart: the mechanic, the person on the counter and the bookkeeper are colleagues and share ONE app, differing only by nav and permitted actions; a customer WITH AN ACCOUNT is across the counter and gets their own, as do the tenant, the patient and the practitioner. Never invent a person the milestone notes do not name in order to reach two. A ROLE WHO NEVER SIGNS IN NEVER GETS A SLUG OF THEIR OWN: an app is built around the people who log into it, so a shopper who checks out as a guest, a diner reading a menu or anyone opening a link takes the SAME slug as the signed-in role they transact with, and their screens live on that app\u2019s public routes outside `/app`. A shop where a guest buys and one seller packs is ONE app and ONE slug: `/`, `/shop` and `/checkout` public, `/app/orders` behind the login. Give that shopper their own slug and the storefront is built on a second hostname while the product\u2019s own domain answers the people it is for with a login screen \u2014 the exact failure this field exists to prevent.'
     ),
 })
 
@@ -268,7 +268,7 @@ export const PlanSchema = z.object({
     .array(Deferral)
     .default([])
     .describe(
-      'NOT YOURS TO WRITE — leave it out. The build agent appends to this through `fabric plan-defer` when a pass-1 item turns out to be impossible, and the reason it gives is the record of where this plan was wrong.'
+      'NOT YOURS TO WRITE — leave it out. The build appends to this through the plan `defer` command when a pass-1 item turns out to be impossible, and the reason it gives is the record of where this plan was wrong.'
     ),
 })
 
@@ -484,8 +484,11 @@ export function renderPlanForBuild(plan: Plan): string {
         .map((r) => r.name)
       lines.push(`  - \`${app}\` — ${who.join(', ')}`)
     }
+    // Named as an obligation rather than as a command: this package is read by two
+    // builds that create a frontend different ways, and the one that reads the wrong
+    // command name spends a turn on a command it does not have.
     lines.push(
-      `Run \`fabric new-app --slug <slug> --serves <group> --personas <ids>\` for each one after the first, then \`fabric scaffold --app <slug>\` to write its screens.`
+      `Create a frontend for each one after the first, serving the roles listed against it, before you build its screens.`
     )
   }
   slot(
@@ -825,6 +828,51 @@ const requiredTransports = (requires: string | undefined): string[] =>
  * which catches the failure actually observed: a plan that quietly drifts off its own
  * milestone.
  */
+/**
+ * Every `covers` entry against the note it claims: the note exists, and the hash is the
+ * one that note's body has right now.
+ *
+ * `hash` is what makes coverage a claim about CONTENT rather than about a filename, and
+ * nothing else validates it — `knowledgeCoverage` only compares it much later, where a
+ * hash that was never right is indistinguishable from a note somebody edited afterwards.
+ * So a plan written with a placeholder is accepted, and the note it claims silently reads
+ * as `changed` from the moment the milestone ships.
+ *
+ * The refusal carries the correct hash, which is also the only way an author gets one:
+ * write anything, send it, and be told what the note actually hashes to.
+ */
+export function checkCovers(
+  plan: Plan,
+  notes: Array<{ path: string; body?: string }>
+): string[] {
+  // A note reads as `knowledge/entities/entry.md` from the reader and gets written into
+  // `covers` both ways, so the prefix is normalised off rather than made significant —
+  // a plan refused for a leading directory teaches nothing about the note it claims.
+  const key = (path: string): string =>
+    path.startsWith(`${KNOWLEDGE_DIR}/`)
+      ? path.slice(KNOWLEDGE_DIR.length + 1)
+      : path
+  const bodies = new Map(notes.map((note) => [key(note.path), note.body]))
+  const problems: string[] = []
+  for (const entry of plan.covers) {
+    if (!bodies.has(key(entry.note))) {
+      problems.push(
+        `covers — no knowledge note at \`${entry.note}\`. The path is relative to \`knowledge/\`, e.g. \`entities/entry.md\`.`
+      )
+      continue
+    }
+    const body = bodies.get(key(entry.note))
+    if (body === undefined) continue
+    const current = noteHash(body)
+    if (entry.hash !== current) {
+      problems.push(
+        `covers — \`${entry.note}\` hashes to \`${current}\`, not \`${entry.hash}\`. Use the current one: a hash that was never right makes the note read as edited-since the moment this milestone ships, and it drops back into the backlog nobody planned.`
+      )
+    }
+  }
+  return problems
+}
+
 export function checkAgainstMilestone(
   plan: Plan,
   milestone: { entities?: string; path: string; requires?: string },
