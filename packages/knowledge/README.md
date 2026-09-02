@@ -80,7 +80,8 @@ if (read.ok) {
 
 `missing` is the first pass and blocks; `deferred` is later work and is reported
 only. `problems` are things that exist but do not do what was planned — a function
-planned as restricted whose meta says `auth: false`, for one.
+planned as restricted whose meta says `auth: false`, for one — and they block
+whatever pass they came from, because the hole is in the app now.
 
 ## From the CLI
 

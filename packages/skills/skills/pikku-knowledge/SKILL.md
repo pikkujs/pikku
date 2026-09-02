@@ -254,7 +254,7 @@ pikku knowledge plan progress <milestone>          # what it still owes, read fr
 pikku knowledge plan defer <milestone> <item> -r "<why>"
 ```
 
-`progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short. Writing a plan is its own seat: read `pikku-architect`. Building against one is `pikku-build`.
+`progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short, or while anything already built contradicts the plan. Unbuilt work in a later pass is reported, not blocked; a function that shipped wide open against a planned permission rule blocks from any pass, because that is a hole rather than a backlog. Writing a plan is its own seat: read `pikku-architect`. Building against one is `pikku-build`.
 
 ## Profiles built on this one
 

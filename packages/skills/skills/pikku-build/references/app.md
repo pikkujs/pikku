@@ -358,11 +358,15 @@ exist for it: the tables, functions, wires, roles, scopes, screens and
 scenarios, split into passes. It is JSON, it lives beside the note, and
 `pikku knowledge plan progress` measures the finished build against it.
 
-**Read `pikku-architect` and follow it — it is a different seat from this one.**
-The plan is the denominator the completion check divides by, so a builder who
-writes their own plan can build a fraction, plan only that fraction, and certify
-itself complete. Write the plan against the note first, in its own turn, before
-you open a migration:
+**Read `pikku-architect` and follow it.** The plan is the denominator the
+completion check divides by, so a builder who writes their own plan can build a
+fraction, plan only that fraction, and certify itself complete. Fabric answers
+that by giving the plan its own seat; here the defence is the ORDER, and it only
+holds if you keep it: the plan is written against the note in its own turn,
+before any of the code it measures exists, and is never edited afterwards to
+match what you ended up building. An item that will not land is deferred with
+its reason — `plan defer` — not quietly rewritten. Write it before you open a
+migration:
 
 ```sh
 pikku knowledge plan schema                        # the only spec there is

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
 import { basePlan } from './plan-fixture.js'
+import type { Plan } from './plan.js'
 import {
   runKnowledgePlanDefer,
   runKnowledgePlanProgress,
@@ -134,6 +135,10 @@ describe('plan set', () => {
     const cwd = await project()
     try {
       const plan = basePlan()
+      // Held before it is overwritten: a refusal naming SOME twelve hex characters is
+      // useless to the author, who copies the named hash back into the plan. Matching a
+      // shape rather than the value would pass on a stale or unrelated one.
+      const current = plan.covers[0]!.hash
       plan.covers[0]!.hash = 'deadbeefcafe'
       const result = await runKnowledgePlanSet(cwd, {
         milestone: '01-the-daily-entry',
@@ -141,7 +146,7 @@ describe('plan set', () => {
       })
       assert.equal(result.ok, false)
       assert.equal(result.problems.length, 1)
-      assert.match(result.problems[0]!, /hashes to `[0-9a-f]{12}`/)
+      assert.ok(result.problems[0]!.includes(`hashes to \`${current}\``))
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
@@ -298,6 +303,24 @@ const GENERATED = {
   },
 }
 
+type BuiltFunctions = Extract<Plan['functions'], { kind: 'built' }>
+
+type BuiltPermissionScenarios = Extract<
+  Plan['scenarios']['permission'],
+  { kind: 'built' }
+>
+
+const permissionScenarios = (plan: Plan): BuiltPermissionScenarios['items'] => {
+  assert.equal(plan.scenarios.permission.kind, 'built')
+  return (plan.scenarios.permission as BuiltPermissionScenarios).items
+}
+
+/** `basePlan`'s functions slot is always `built`; this narrows it so a test can add one. */
+const itemsOfFunctions = (plan: Plan): BuiltFunctions['items'] => {
+  assert.equal(plan.functions.kind, 'built')
+  return (plan.functions as BuiltFunctions).items
+}
+
 const generate = async (
   cwd: string,
   files: Record<string, unknown>
@@ -370,6 +393,56 @@ describe('plan progress', () => {
       })
       assert.deepEqual(result.missing, [])
       assert.ok(result.deferred.includes('function createEntry'))
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  // `missing` is unbuilt work, and only the first pass blocks on it. A `problem` is not
+  // unbuilt work: the thing EXISTS and does something other than what was planned, so a
+  // later pass earns no reprieve — deferring a function that shipped wide open against a
+  // planned permission rule would be deferring the hole rather than the work.
+  test('a later-pass function that shipped wide open still blocks', async () => {
+    const cwd = await project()
+    try {
+      const plan = basePlan()
+      itemsOfFunctions(plan).push({
+        name: 'archiveEntry',
+        description: 'Archives an entry the person no longer wants.',
+        pass: 2,
+        wire: null,
+        scopes: [],
+        permission: 'Only the person who wrote the entry can archive it',
+      })
+      // A permission rule is only accepted alongside a scenario refusing someone outside it.
+      permissionScenarios(plan).push({
+        fn: 'archiveEntry',
+        feature: 'features/entry-perms.feature',
+        scenario: 'Another member cannot archive',
+        name: 'anotherMemberCannotArchiveScenario',
+      })
+      const set = await runKnowledgePlanSet(cwd, {
+        milestone: '01-the-daily-entry',
+        file: await planFile(cwd, plan),
+      })
+      assert.equal(set.ok, true, set.problems.join('\n'))
+      await generate(cwd, {
+        ...GENERATED,
+        'function/pikku-functions-meta.gen.json': {
+          createEntry: { auth: true },
+          archiveEntry: { auth: false },
+        },
+        'scenarios/pikku-scenario-functions-meta.gen.json': {
+          ...GENERATED['scenarios/pikku-scenario-functions-meta.gen.json'],
+          anotherMemberCannotArchiveScenario: {},
+        },
+      })
+      const result = await runKnowledgePlanProgress(cwd, {
+        milestone: '01-the-daily-entry',
+      })
+      assert.deepEqual(result.missing, [])
+      assert.ok(result.problems.some((p) => p.includes('archiveEntry')))
+      assert.equal(result.ok, false)
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }

@@ -156,9 +156,14 @@ export type KnowledgePlanProgressResult = z.infer<
  * catches a browser scenario that only proves its route loads, and `cascadeProblems` reads the
  * migrations, which no generated meta describes.
  *
- * Only the FIRST pass blocks. A later pass is real work the next milestone picks up, and
- * refusing on it is what made plan size fatal rather than merely slow — so it comes back
- * under `deferred`, reported and never blocking.
+ * Only the FIRST pass blocks what is MISSING. A later pass is real work the next milestone
+ * picks up, and refusing on it is what made plan size fatal rather than merely slow — so it
+ * comes back under `deferred`, reported and never blocking.
+ *
+ * `problems` block whatever pass they came from, because a problem is not unbuilt work: the
+ * thing EXISTS and does something other than what was planned. A pass-2 function that shipped
+ * wide open against a planned permission rule is a hole in the app now, and deferring it would
+ * be deferring the hole rather than the work.
  */
 export const runKnowledgePlanProgress = async (
   root: string,

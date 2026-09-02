@@ -83,8 +83,10 @@ Everything above is open source. This is the contract that keeps
   the part Fabric itself reads and continues from.
 - **Every `built` milestone passes `pikku knowledge plan progress`.** A note that
   says `built` is a claim; the plan reconciled against the generated meta is the
-  check. Anything still outstanding is either built now or deferred with its
-  reason on the record.
+  check. Anything the first pass still owes is either built now or deferred with
+  its reason on the record; anything the check calls a problem — something that
+  exists and does not do what was planned — is fixed, whatever pass it came from,
+  because deferring it defers a hole rather than the work.
 - **Every milestone has a passing scenario**, including its refusals.
 - **Permissions live in the `permissions` field**, not in function bodies and not
   in the frontends. A check hidden in a component does not survive a new client.
