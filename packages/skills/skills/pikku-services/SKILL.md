@@ -32,13 +32,14 @@ top level.
 
 ## Pick the reference
 
-| You are… | Read |
-| --- | --- |
-| Writing or wiring `services.ts` / `lifecycle.ts`, or adding a custom service | `references/services.md` |
-| Reading config — secrets, env vars, or a per-user API credential | `references/config.md` |
-| Recording audit events, or choosing a sink | `references/audit.md` and `references/audit-wire-service.md` |
-| Setting up structured logging | `references/pino.md` |
-| Reaching for Redis, S3, SQS, MongoDB or a schema backend | `pikku-service-backends` |
+| You are…                                                                     | Read                                                         |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Writing or wiring `services.ts` / `lifecycle.ts`, or adding a custom service | `references/services.md`                                     |
+| Reading config — secrets, env vars, or a per-user API credential             | `references/config.md`                                       |
+| Recording audit events, or choosing a sink                                   | `references/audit.md` and `references/audit-wire-service.md` |
+| Setting up structured logging                                                | `references/pino.md`                                         |
+| Reaching for Redis, S3, SQS, MongoDB or a schema backend                     | `pikku-service-backends`                                     |
+| Sending outgoing webhooks to a customer's endpoint                           | `pikku-webhook`                                              |
 
 ## Where a value may be read
 
