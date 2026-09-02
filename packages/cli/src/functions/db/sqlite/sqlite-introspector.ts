@@ -4,8 +4,8 @@ import type {
   ForeignKeyInfo,
   EnumInfo,
 } from '../db-introspector.js'
-import { MIGRATION_TRACKING_TABLE } from '../db-migrator.js'
-import type { SyncSqliteDatabase } from './sqlite-runtime.js'
+import { MIGRATION_TRACKING_TABLE } from '@pikku/db-migrator'
+import type { SyncSqliteDatabase } from '@pikku/db-migrator/sqlite'
 import { parseCheckEnumsFromDdl } from '../check-enums.js'
 
 const SKIP_TABLES = new Set(['sqlite_sequence', MIGRATION_TRACKING_TABLE])
