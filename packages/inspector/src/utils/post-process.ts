@@ -22,6 +22,7 @@ import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
+import type { ScenarioStepMeta } from '@pikku/core/scenario'
 import { DYNAMIC_SCENARIO_STEP_TARGET } from './workflow/dsl/patterns.js'
 
 /**
@@ -941,6 +942,85 @@ export function validateScenarioServices(
 }
 
 /**
+ * Does this step's prose open by naming the actor who is already its subject?
+ *
+ * `composeStepProse` renders the actor as the sentence's subject, so a step
+ * authored as `'sam' creates the client` reads "Given sam 'sam' creates the
+ * client". Only the subject position counts: a persona keyed after a role noun
+ * ("admin") must still be able to say "creates the admin client", and naming
+ * someone mid-sentence — "sends sam an invite" — is ordinary prose.
+ */
+export const proseOpensWithActor = (prose: string, actor: string): boolean => {
+  if (!actor) {
+    return false
+  }
+  const escaped = actor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^["'“‘\\s]*${escaped}(?:['’]s)?\\b`, 'i').test(prose)
+}
+
+/**
+ * The prose that will actually render for one step, in the runtime's own
+ * precedence: a call-site description overrides the step's template, which
+ * overrides its declared description, which falls back to the durable name.
+ *
+ * Every candidate is returned rather than only the winner, because a template
+ * is authored where the actor is not yet known — so it is wrong at every call
+ * site that runs it as the persona it names, not just the winning one.
+ */
+const renderableProse = (
+  step: ScenarioStepMeta,
+  stepMeta: { description?: string; scenarioStepTemplate?: string } | undefined
+): string[] => {
+  const description = step.options?.description
+  if (description) {
+    return [step.stepName, description]
+  }
+  return [
+    step.stepName,
+    stepMeta?.scenarioStepTemplate,
+    stepMeta?.description,
+  ].filter((prose): prose is string => typeof prose === 'string')
+}
+
+/**
+ * A step's prose must not open by naming the actor it already runs as (PKU681).
+ *
+ * The reporter renders the actor as the sentence's subject, so `'sam' creates
+ * the client` run as `actors.sam` reads "Given sam 'sam' creates the client" —
+ * and the hardcoded copy silently desyncs the moment the call site changes
+ * actor. Only the subject position is refused; naming someone mid-sentence is
+ * ordinary prose, and a persona keyed after a role noun can still say "creates
+ * the admin client".
+ */
+const validateStepProse = (
+  logger: InspectorLogger,
+  workflowName: string,
+  step: ScenarioStepMeta,
+  stepMeta: { description?: string; scenarioStepTemplate?: string } | undefined
+): void => {
+  const actor = step.actor
+  if (!actor) {
+    return
+  }
+  const offender = renderableProse(step, stepMeta).find((prose) =>
+    proseOpensWithActor(prose, actor)
+  )
+  if (offender === undefined) {
+    return
+  }
+  logger.critical(
+    ErrorCode.SCENARIO_STEP_PROSE_NAMES_ACTOR,
+    `Scenario '${workflowName}' names its actor in the step prose: '${offender}' runs as '${actor}'. ` +
+      `The reporter already renders the actor as the subject, so this reads ` +
+      `"${capitaliseFirst(step.phase)} ${actor} ${offender}". Drop the name and let ` +
+      `{ actor: actors.${actor} } supply it — the step reads as a bare third-person predicate.`
+  )
+}
+
+const capitaliseFirst = (value: string): string =>
+  value.charAt(0).toUpperCase() + value.slice(1)
+
+/**
  * Walk every scenario step, wherever it is nested, and validate the two things
  * that can only be known once both the workflow meta and the function meta
  * exist:
@@ -978,6 +1058,7 @@ export function validateScenarioSteps(
         }
         state.serviceAggregation.usedFunctions.add(step.stepFunc)
         const stepMeta = state.functions.meta[step.stepFunc]
+        validateStepProse(logger, workflowName, step, stepMeta)
         if (stepMeta?.scenarioStepRequiresActor && !step.actor) {
           const why = stepMeta.scenarioStepSurfaces?.includes('browser')
             ? 'declares a browser binding'

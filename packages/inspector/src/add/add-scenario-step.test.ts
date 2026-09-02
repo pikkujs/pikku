@@ -245,6 +245,67 @@ describe('pikkuScenarioStep', () => {
     }
   })
 
+  test('a step whose prose opens with its own actor is a PKU681 critical', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.given(`'shopper' buys an apple`, 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+    ])
+    try {
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU681'),
+        `the reporter already renders the actor as the subject, so this reads "Given shopper 'shopper' buys an apple", got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('an unquoted, capitalised actor opening the prose is caught too', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.given('Shopper buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+    ])
+    try {
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU681'),
+        `quotes and case are decoration — the subject is still doubled, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a call-site description naming the actor is caught as well as the step name', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper, description: `shopper buys an apple` })",
+      "await scenario.then('sees a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+    ])
+    try {
+      assert.ok(
+        criticals.find((c) => c.code === 'PKU681'),
+        `the description is what actually renders when it is given, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('an actor named mid-sentence is left alone', async () => {
+    const { criticals, cleanup } = await run([
+      "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",
+      "await scenario.then('sends shopper a receipt', 'seesAReceipt', {}, { actor: actors.shopper })",
+    ])
+    try {
+      assert.equal(
+        criticals.filter((c) => c.code === 'PKU681').length,
+        0,
+        `only the subject position doubles up; naming someone mid-sentence is ordinary prose, got: ${JSON.stringify(criticals)}`
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
   test('a scenario that never asserts is a PKU680 critical', async () => {
     const { criticals, cleanup } = await run([
       "await scenario.given('buys an apple', 'buysAnApple', { qty: 1 }, { actor: actors.shopper })",

@@ -13,6 +13,7 @@ import {
   validateAgentToolReferences,
   validateAgentModels,
   validateSchemaReferences,
+  proseOpensWithActor,
 } from './post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import type { InspectorState, InspectorLogger } from '../types.js'
@@ -1048,5 +1049,46 @@ describe('validateSchemaReferences', () => {
     )
     assert.equal(diagnostics.length, 1)
     assert.match(diagnostics[0]!.message, /2 function contracts name a schema/)
+  })
+})
+
+describe('proseOpensWithActor', () => {
+  test('a quoted actor opening the prose doubles the subject', () => {
+    assert.equal(
+      proseOpensWithActor(`'sam' creates the browser-journey client`, 'sam'),
+      true
+    )
+  })
+
+  test('quotes and case are decoration, not the point', () => {
+    assert.equal(proseOpensWithActor('Sam creates the client', 'sam'), true)
+    assert.equal(proseOpensWithActor('sam creates the client', 'sam'), true)
+    assert.equal(proseOpensWithActor(`"sam" creates the client`, 'sam'), true)
+  })
+
+  test("an actor's own possessive is still the doubled subject", () => {
+    assert.equal(proseOpensWithActor("sam's client is created", 'sam'), true)
+  })
+
+  test('naming someone mid-sentence is ordinary prose', () => {
+    assert.equal(proseOpensWithActor('sends sam an invite', 'sam'), false)
+  })
+
+  // A persona keyed after a role noun must keep the word as a word: refusing
+  // "creates the admin client" for an actor called `admin` would make the
+  // check the reason to rename the persona.
+  test('an actor key that is also a common noun is only refused as the subject', () => {
+    assert.equal(
+      proseOpensWithActor('creates the admin client', 'admin'),
+      false
+    )
+    assert.equal(proseOpensWithActor('admin creates the client', 'admin'), true)
+  })
+
+  test('a longer name starting with the actor key is a different person', () => {
+    assert.equal(
+      proseOpensWithActor('samantha creates the client', 'sam'),
+      false
+    )
   })
 })

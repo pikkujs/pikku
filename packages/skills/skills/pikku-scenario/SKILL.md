@@ -407,11 +407,10 @@ A product with a non-English UI is not on its own a reason to set `metaLocale` �
 is the app's language, not the team's. Ask, or leave it `en`.
 
 **Where a non-`en` `metaLocale` still shows English, today.** The reporter composes a
-sentence as `<Keyword> the <actor> <template>` (`composeStepProse`), and both the
-keyword and the article `the` are English literals. The Console translates the
-Given/When/Then keywords into its own UI language; the CLI reporter does not, and
-nothing translates `the`. So `metaLocale: "de"` gives you German step prose inside an
-English frame — `Given the shopper kauft 1 Äpfel`. Write templates that read
+sentence as `<Keyword> <actor> <template>` (`composeStepProse`), and the keyword is
+an English literal. The Console translates the Given/When/Then keywords into its own
+UI language; the CLI reporter does not, so `metaLocale: "de"` gives you German step
+prose inside an English frame — `Given shopper kauft 1 Äpfel`. Write templates that read
 acceptably in that frame rather than trying to defeat it. A second gap: where a
 function or scenario declares no `title`, the Console falls back to splitting the
 **identifier** into an English-looking label (`toEnglishName`), so under a
@@ -513,6 +512,7 @@ Rules that bite:
 - **Steps default to `retries: 0`**, unlike ordinary workflow steps. Retrying a failed assertion is wrong; pass `retries` explicitly if a step is genuinely flaky-by-nature.
 - **Step results are persisted**, so return JSON-serialisable data — never a `Locator` or a client object.
 - **`description` documents the step; `template` is what the report renders.** `template`'s `{placeholders}` are filled from the input the step was called with, so one step reads differently for each call — `sees {state} addon {packageName}` reports as "sees available addon @pikku/addon-stripe". Reflect every input field in the template, and type the values so they read as words (`state?: 'installed' | 'available'`, not `installed?: boolean`). A placeholder with no value renders as nothing and the whitespace collapses.
+- **Never write the actor into the prose.** The reporter renders the actor as the sentence's subject, so a step authored as `` `'sam' creates the client` `` run as `{ actor: actors.sam }` reads "Given sam 'sam' creates the client" — and the hardcoded name desyncs the moment the call site changes actor. Write a bare third-person predicate (`creates the {name} client`) and let the actor supply the subject. Prose that opens with its own actor's key — quoted, capitalised or possessive — is `PKU681`; naming someone **else** mid-sentence ("sends nadia an invite") is ordinary prose and is left alone, as is an actor keyed after a role noun used as a noun ("creates the admin client" as `actors.admin`).
 - Prose precedence is `options.description` → the step's `template` → the step's own `description` → the positional step name. Repeated names get `#1`, `#2` ordinals, so a `for` loop over a data set is how you write a Scenario Outline. A loop-generated step name is not statically known, so it is matched back to its declaration by step function instead — which works as long as that function's call sites agree on their phase, actor and prose. Two call sites that disagree make the loop step report under its bare runtime name.
 
 #### What a step is given
