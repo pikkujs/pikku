@@ -108,24 +108,41 @@ function findLockfile(projectDir: string): string | null {
  *
  * Engine comes from the migrations directory rather than the user config,
  * because that is the same signal `loadUserConfigForDb` falls back to and it
- * needs no module loading here. Only SQLite is wired today — Postgres self-hosts
- * against a server this cannot assume anything about, and needs a URL rather
- * than a path.
+ * needs no module loading here. `db/sqlite` and `db/postgres` are the two
+ * conventions the migrator already writes to, so a project declares its engine
+ * by having written migrations for it.
+ *
+ * Both at once is refused rather than resolved. Picking one would be picking
+ * which database the deployed app talks to on the strength of directory order,
+ * and the failure — an app running happily against the wrong, fully valid
+ * schema — is invisible until someone reads the data.
  */
 function resolveStandaloneDb(
   projectDir: string,
   pikkuDir: string,
   unitDir: string
-): { engine: 'sqlite'; coercionImportPath: string } | undefined {
-  if (!existsSync(join(projectDir, 'db', 'sqlite'))) return undefined
+): { engine: 'sqlite' | 'postgres'; coercionImportPath?: string } | undefined {
+  const hasSqlite = existsSync(join(projectDir, 'db', 'sqlite'))
+  const hasPostgres = existsSync(join(projectDir, 'db', 'postgres'))
 
+  if (hasSqlite && hasPostgres) {
+    throw new Error(
+      'This project has both db/sqlite and db/postgres migrations, so a standalone build cannot tell which database the app is meant to open. Keep the one this app deploys against.'
+    )
+  }
+
+  const engine = hasSqlite ? 'sqlite' : hasPostgres ? 'postgres' : undefined
+  if (!engine) return undefined
+
+  // Absent for an app that annotates no columns, which is a database with
+  // nothing to coerce rather than a reason to hand the app no database.
   const coercionFile = join(pikkuDir, 'db', 'coercion.gen.ts')
-  if (!existsSync(coercionFile)) return undefined
+  if (!existsSync(coercionFile)) return { engine }
 
   let rel = relative(unitDir, coercionFile).replace(/\\/g, '/')
   if (!rel.startsWith('.')) rel = `./${rel}`
 
-  return { engine: 'sqlite', coercionImportPath: rel.replace(/\.ts$/, '.js') }
+  return { engine, coercionImportPath: rel.replace(/\.ts$/, '.js') }
 }
 
 /**

@@ -64,14 +64,21 @@ export interface EntryGenerationContext {
    * services factory had nothing to connect to.
    *
    * Only the engine and where to find the coercion map travel here. Which
-   * dialect package to import, and how to reach the file, is the provider's
+   * dialect package to import, and how to reach the database, is the provider's
    * business — a compiled bun binary and a node bundle do not open SQLite the
-   * same way.
+   * same way, and Postgres is reached by URL rather than by path at all.
    */
   db?: {
-    engine: 'sqlite'
-    /** Import specifier for the generated `coercionMap`, relative to unitDir. */
-    coercionImportPath: string
+    engine: 'sqlite' | 'postgres'
+    /**
+     * Import specifier for the generated `coercionMap`, relative to unitDir.
+     *
+     * Absent when the app generates no coercion map. It is not a SQLite
+     * concern: the map is built from `db/annotations.ts` rather than from the
+     * dialect, and a Postgres app that annotates a column needs it attached for
+     * the same reason.
+     */
+    coercionImportPath?: string
   }
 
   /**

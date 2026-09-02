@@ -214,6 +214,133 @@ const withDb = {
   },
 } as never
 
+const withPostgres = {
+  ...(baseContext as object),
+  db: {
+    engine: 'postgres' as const,
+    coercionImportPath: '../../.pikku/db/coercion.gen.js',
+  },
+} as never
+
+const withPostgresNoCoercion = {
+  ...(baseContext as object),
+  db: { engine: 'postgres' as const },
+} as never
+
+const withSqliteNoCoercion = {
+  ...(baseContext as object),
+  db: { engine: 'sqlite' as const },
+} as never
+
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter postgres wiring (${runtime})`, () => {
+    test('the connection is opened from DATABASE_URL', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      assert.match(
+        source,
+        /import \{ PikkuKysely \} from '@pikku\/kysely-postgres'/
+      )
+      assert.match(source, /process\.env\.DATABASE_URL/)
+    })
+
+    test('a missing DATABASE_URL fails by name rather than by driver error', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      assert.match(source, /needs DATABASE_URL set/)
+    })
+
+    test('postgres brings none of the sqlite file handling with it', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      // PIKKU_DATA_DIR describes where a bundled database file lives. A
+      // postgres build has no file, and demanding the variable anyway would
+      // refuse to boot over a directory it never reads.
+      assert.doesNotMatch(source, /PIKKU_DATA_DIR/)
+      assert.doesNotMatch(source, /PIKKU_DATABASE_FILE/)
+      assert.doesNotMatch(source, /SqliteKysely/)
+    })
+
+    test('the connection is handed to the services factory, opened first', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      assert.match(
+        source,
+        /createSingletonServices\(config, \{[\s\S]*?\n    kysely,/
+      )
+      assert.ok(
+        source.indexOf('new PikkuKysely') <
+          source.indexOf('createSingletonServices(config')
+      )
+    })
+
+    test('the coercion map is applied to the postgres connection too', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      // The map comes from db/annotations.ts, not from the dialect: an
+      // annotated column needs coercing whichever database holds it.
+      assert.match(source, /withPlugin\(\s*createCoercionPlugin/)
+    })
+
+    test('an app with no coercion map still gets a database', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgresNoCoercion)
+
+      // Nothing to coerce is a database with no annotated columns, not a
+      // reason to boot the app with no connection at all.
+      assert.match(source, /new PikkuKysely/)
+      assert.doesNotMatch(source, /createCoercionPlugin/)
+      assert.match(source, /\n    kysely,/)
+    })
+
+    test('sqlite with no coercion map still gets a database', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withSqliteNoCoercion)
+
+      assert.match(source, /SqliteKysely/)
+      assert.doesNotMatch(source, /createCoercionPlugin/)
+      assert.match(source, /\n    kysely,/)
+    })
+
+    test('the pool is closed on shutdown, after the server has stopped', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withPostgres)
+
+      // A pool closed in beforeStop would be gone while the app's own stop
+      // hook and the draining server are still entitled to query it.
+      assert.match(
+        source,
+        /afterStop: async \(\) => \{[^}]*__pikkuPg\.close\(\)/
+      )
+      assert.doesNotMatch(
+        source,
+        /beforeStop: async \(\) => \{[^}]*__pikkuPg\.close\(\)/
+      )
+    })
+
+    test('a sqlite build closes no pool', () => {
+      const source = new StandaloneProviderAdapter({
+        runtime,
+      }).generateEntrySource(withDb)
+
+      assert.doesNotMatch(source, /__pikkuPg/)
+    })
+  })
+}
+
 describe('StandaloneProviderAdapter database wiring', () => {
   test('a node entry without a database opens none', () => {
     const source = new StandaloneProviderAdapter({

@@ -84,16 +84,33 @@ const SQLITE_FACTORY = {
   bun: { specifier: '@pikku/kysely-bun-sqlite', fn: 'createBunSqliteKysely' },
 } as const
 
-/** Imports a SQLite-backed entry needs on top of the common set. */
-const sqliteImportLines = (
-  runtime: 'node' | 'bun',
-  coercionImportPath: string
-): string[] => [
-  `import { ${SQLITE_FACTORY[runtime].fn} } from '${SQLITE_FACTORY[runtime].specifier}'`,
+/**
+ * The environment variable a Postgres build reads its connection string from.
+ *
+ * The same name every other pikku host uses, so an artifact dropped onto a
+ * machine that already runs a pikku app needs no new variable.
+ */
+const DATABASE_URL_VAR = 'DATABASE_URL'
+
+/** Imports the coercion plugin, for an app that generated a map. */
+const coercionImportLines = (coercionImportPath: string): string[] => [
   `import { createCoercionPlugin } from '@pikku/kysely'`,
   `import { coercionMap as __pikkuCoercionMap } from '${coercionImportPath}'`,
-  `import { mkdirSync as __pikkuMkdirSync } from 'node:fs'`,
-  `import { dirname as __pikkuDbDirname, join as __pikkuDbJoin } from 'node:path'`,
+]
+
+/** Imports a database-backed entry needs on top of the common set. */
+const dbImportLines = (
+  runtime: 'node' | 'bun',
+  db: NonNullable<EntryGenerationContext['db']>
+): string[] => [
+  ...(db.engine === 'sqlite'
+    ? [
+        `import { ${SQLITE_FACTORY[runtime].fn} } from '${SQLITE_FACTORY[runtime].specifier}'`,
+        `import { mkdirSync as __pikkuMkdirSync } from 'node:fs'`,
+        `import { dirname as __pikkuDbDirname, join as __pikkuDbJoin } from 'node:path'`,
+      ]
+    : [`import { PikkuKysely } from '@pikku/kysely-postgres'`]),
+  ...(db.coercionImportPath ? coercionImportLines(db.coercionImportPath) : []),
 ]
 
 /**
@@ -105,16 +122,45 @@ const sqliteImportLines = (
  * parent directory is the difference between a first boot that works and one
  * that needs a documented mkdir nobody reads.
  */
-const sqliteSetupLines = (runtime: 'node' | 'bun'): string[] => [
-  `  const __pikkuDbFile = process.env.${DATABASE_FILE_VAR}`,
-  `    ? process.env.${DATABASE_FILE_VAR}`,
-  `    : __pikkuDbJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
-  `  __pikkuMkdirSync(__pikkuDbDirname(__pikkuDbFile), { recursive: true })`,
-  `  const kysely = ${SQLITE_FACTORY[runtime].fn}({`,
-  `    filename: __pikkuDbFile,`,
-  `    plugins: [createCoercionPlugin({ map: __pikkuCoercionMap })],`,
-  `  })`,
-]
+const dbSetupLines = (
+  runtime: 'node' | 'bun',
+  db: NonNullable<EntryGenerationContext['db']>
+): string[] => {
+  const plugins = db.coercionImportPath
+    ? `[createCoercionPlugin({ map: __pikkuCoercionMap })]`
+    : `[]`
+
+  if (db.engine === 'sqlite') {
+    return [
+      `  const __pikkuDbFile = process.env.${DATABASE_FILE_VAR}`,
+      `    ? process.env.${DATABASE_FILE_VAR}`,
+      `    : __pikkuDbJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
+      `  __pikkuMkdirSync(__pikkuDbDirname(__pikkuDbFile), { recursive: true })`,
+      `  const kysely = ${SQLITE_FACTORY[runtime].fn}({`,
+      `    filename: __pikkuDbFile,`,
+      `    plugins: ${plugins},`,
+      `  })`,
+    ]
+  }
+
+  return [
+    `  const __pikkuDbUrl = process.env.${DATABASE_URL_VAR}`,
+    `  if (!__pikkuDbUrl) {`,
+    `    throw new Error(`,
+    `      'This build connects to Postgres, so it needs ${DATABASE_URL_VAR} set to the database it should open.'`,
+    `    )`,
+    `  }`,
+    `  const __pikkuPg = new PikkuKysely(logger, __pikkuDbUrl)`,
+    `  await __pikkuPg.init()`,
+    ...(db.coercionImportPath
+      ? [
+          `  const kysely = __pikkuPg.kysely.withPlugin(`,
+          `    createCoercionPlugin({ map: __pikkuCoercionMap })`,
+          `  )`,
+        ]
+      : [`  const kysely = __pikkuPg.kysely`]),
+  ]
+}
 
 /** Imports the app's own lifecycle module, when it declares one. */
 const lifecycleImportLines = (
@@ -140,9 +186,37 @@ const lifecycleAfterStartLines = (): string[] => [
   `  await __pikkuLifecycle?.afterStart?.(singletonServices)`,
 ]
 
-/** Hands the stop hooks to the signal handler that owns the shutdown. */
-const lifecycleShutdownArg = (): string =>
-  `{ beforeStop: () => __pikkuLifecycle?.beforeStop?.(singletonServices), afterStop: () => __pikkuLifecycle?.afterStop?.(singletonServices) }`
+/**
+ * Hands the stop hooks to the signal handler that owns the shutdown.
+ *
+ * The connection pool is closed in `afterStop`, once the app's own hook and the
+ * server have both finished with it — a pool closed any earlier takes the
+ * queries they are still allowed to make down with it. SQLite needs no
+ * counterpart: the process exiting releases the file.
+ */
+const shutdownHooksArg = (ctx: EntryGenerationContext): string => {
+  const before: string[] = []
+  const after: string[] = []
+
+  if (ctx.lifecycle) {
+    before.push(`await __pikkuLifecycle?.beforeStop?.(singletonServices)`)
+    after.push(`await __pikkuLifecycle?.afterStop?.(singletonServices)`)
+  }
+  if (ctx.db?.engine === 'postgres') {
+    after.push(`await __pikkuPg.close()`)
+  }
+
+  if (before.length === 0 && after.length === 0) return ''
+
+  const hooks: string[] = []
+  if (before.length > 0) {
+    hooks.push(`beforeStop: async () => { ${before.join('; ')} }`)
+  }
+  if (after.length > 0) {
+    hooks.push(`afterStop: async () => { ${after.join('; ')} }`)
+  }
+  return `{ ${hooks.join(', ')} }`
+}
 
 /**
  * Fails with the variable's name rather than whatever SQLite says about a path
@@ -239,7 +313,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
             `import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'`,
           ]
         : []),
-      ...(ctx.db ? sqliteImportLines('node', ctx.db.coercionImportPath) : []),
+      ...(ctx.db ? dbImportLines('node', ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ``,
       ctx.configImport,
@@ -261,7 +335,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const eventHub = new LocalEventHubService()`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
-      ...(ctx.db ? sqliteSetupLines('node') : []),
+      ...(ctx.db ? dbSetupLines('node', ctx.db) : []),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -300,7 +374,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
       ...(ctx.lifecycle ? lifecycleStartLines() : []),
-      `  server.enableExitOnSignals(${ctx.lifecycle ? lifecycleShutdownArg() : ''})`,
+      `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
       `  await server.start()`,
       ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
       ...sidecarHandshakeLines(),
@@ -311,7 +385,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  process.exit(1)`,
       `})`,
       ``,
-      ...(ctx.db ? [...dataDirHelperLines(), ``] : []),
+      ...(ctx.db?.engine === 'sqlite' ? [...dataDirHelperLines(), ``] : []),
     ].join('\n')
   }
 
@@ -327,7 +401,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.frontend
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
         : []),
-      ...(ctx.db ? sqliteImportLines('bun', ctx.db.coercionImportPath) : []),
+      ...(ctx.db ? dbImportLines('bun', ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ``,
       ctx.configImport,
@@ -349,7 +423,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const eventHub = new BunEventHubService()`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
-      ...(ctx.db ? sqliteSetupLines('bun') : []),
+      ...(ctx.db ? dbSetupLines('bun', ctx.db) : []),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -380,7 +454,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
       ...(ctx.lifecycle ? lifecycleStartLines() : []),
-      `  server.enableExitOnSignals(${ctx.lifecycle ? lifecycleShutdownArg() : ''})`,
+      `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
       `  await server.start()`,
       ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
       ...sidecarHandshakeLines(),
@@ -391,7 +465,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  process.exit(1)`,
       `})`,
       ``,
-      ...(ctx.db ? [...dataDirHelperLines(), ``] : []),
+      ...(ctx.db?.engine === 'sqlite' ? [...dataDirHelperLines(), ``] : []),
     ].join('\n')
   }
 
