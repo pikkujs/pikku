@@ -21,6 +21,11 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
     ctx.configImport,
     ctx.servicesImport,
     ctx.mcpImport,
+    ...(ctx.lifecycle
+      ? [
+          `import { ${ctx.lifecycle.variable} as __pikkuLifecycle } from '${ctx.lifecycle.importPath}'`,
+        ]
+      : []),
     `import '${ctx.bootstrapPath}'`,
     ``,
     `const PORT = Number(process.env.PORT ?? 8080)`,
@@ -36,9 +41,19 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
     `    singletonServices.logger,`,
     `    { ${ctx.mcpServerOption}}`,
     `  )`,
-    `  server.enableExitOnSignals()`,
+    `  server.enableExitOnSignals(${
+      ctx.lifecycle
+        ? `{ beforeStop: () => __pikkuLifecycle?.beforeStop?.(singletonServices), afterStop: () => __pikkuLifecycle?.afterStop?.(singletonServices) }`
+        : ''
+    })`,
     `  await server.init()`,
+    ...(ctx.lifecycle
+      ? [`  await __pikkuLifecycle?.beforeStart?.(singletonServices)`]
+      : []),
     `  await server.start()`,
+    ...(ctx.lifecycle
+      ? [`  await __pikkuLifecycle?.afterStart?.(singletonServices)`]
+      : []),
     `}`,
     ``,
     `main().catch((err) => {`,

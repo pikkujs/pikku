@@ -177,6 +177,16 @@ const HARDENING_DEFAULTS = {
  * else (Cloudflare Workers, a load balancer, `pikku dev` proxy) sits in
  * front, this is the right default.
  */
+/**
+ * Work the process owes its app on the way down, run around the service
+ * teardown `enableExitOnSignals` already does. A failing hook is logged and
+ * shutdown continues: a process that has been told to stop has to stop.
+ */
+export type ShutdownHooks = {
+  beforeStop?: () => void | Promise<void>
+  afterStop?: () => void | Promise<void>
+}
+
 export class PikkuNodeHTTPServer {
   public server: Server
   private listening = false
@@ -957,12 +967,32 @@ export class PikkuNodeHTTPServer {
     }
   }
 
-  public enableExitOnSignals(): void {
+  public enableExitOnSignals(hooks?: ShutdownHooks): void {
+    /**
+     * Every step of the shutdown is isolated from the ones after it. Sharing
+     * one catch means a hook that throws takes the service teardown and the
+     * socket close down with it, leaving the process to exit with connections
+     * still open and services still holding their handles.
+     */
+    const phase = async (name: string, run: () => void | Promise<void>) => {
+      try {
+        await run()
+      } catch (error) {
+        this.logger.error(
+          `pikku-node-http-server: ${name} failed during shutdown`,
+          error
+        )
+      }
+    }
     const shutdown = async (signal: string) => {
       this.logger.info(`pikku-node-http-server: ${signal} received, stopping`)
       try {
-        await stopSingletonServices()
-        await this.stop()
+        await phase('beforeStop', () => hooks?.beforeStop?.())
+        await phase('stopping singleton services', () =>
+          stopSingletonServices()
+        )
+        await phase('stopping the server', () => this.stop())
+        await phase('afterStop', () => hooks?.afterStop?.())
       } finally {
         process.exit(0)
       }

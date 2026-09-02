@@ -5,7 +5,7 @@
  * Outputs everything to .deploy/<provider>/ without deploying.
  */
 
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
@@ -94,6 +94,78 @@ function findLockfile(projectDir: string): string | null {
     if (existsSync(p)) return p
   }
   return null
+}
+
+/**
+ * The database a standalone bundle has to open for itself.
+ *
+ * Every other provider deploys onto a host that supplies `kysely` — `pikku dev`
+ * builds one, a Cloudflare deploy binds one — so `createSingletonServices` is
+ * written expecting it. A standalone artifact has no host, and shipped one that
+ * never got a connection at all: the app booted straight into whatever its
+ * services factory does when the database is missing, which for the generated
+ * templates is a throw.
+ *
+ * Engine comes from the migrations directory rather than the user config,
+ * because that is the same signal `loadUserConfigForDb` falls back to and it
+ * needs no module loading here. `db/sqlite` and `db/postgres` are the two
+ * conventions the migrator already writes to, so a project declares its engine
+ * by having written migrations for it.
+ *
+ * Both at once is refused rather than resolved. Picking one would be picking
+ * which database the deployed app talks to on the strength of directory order,
+ * and the failure — an app running happily against the wrong, fully valid
+ * schema — is invisible until someone reads the data.
+ */
+function resolveStandaloneDb(
+  projectDir: string,
+  pikkuDir: string,
+  unitDir: string
+): { engine: 'sqlite' | 'postgres'; coercionImportPath?: string } | undefined {
+  const hasSqlite = existsSync(join(projectDir, 'db', 'sqlite'))
+  const hasPostgres = existsSync(join(projectDir, 'db', 'postgres'))
+
+  if (hasSqlite && hasPostgres) {
+    throw new Error(
+      'This project has both db/sqlite and db/postgres migrations, so a standalone build cannot tell which database the app is meant to open. Keep the one this app deploys against.'
+    )
+  }
+
+  const engine = hasSqlite ? 'sqlite' : hasPostgres ? 'postgres' : undefined
+  if (!engine) return undefined
+
+  // Absent for an app that annotates no columns, which is a database with
+  // nothing to coerce rather than a reason to hand the app no database.
+  const coercionFile = join(pikkuDir, 'db', 'coercion.gen.ts')
+  if (!existsSync(coercionFile)) return { engine }
+
+  let rel = relative(unitDir, coercionFile).replace(/\\/g, '/')
+  if (!rel.startsWith('.')) rel = `./${rel}`
+
+  return { engine, coercionImportPath: rel.replace(/\.ts$/, '.js') }
+}
+
+/**
+ * The app's server lifecycle, for entries that can call it.
+ *
+ * The hooks are resolved to an import rather than read at build time because
+ * they are the app's own code and have to run in the app's own process, with
+ * the services that process built.
+ */
+function resolveLifecycle(
+  unitDir: string,
+  state: InspectorState
+): { importPath: string; variable: string } | undefined {
+  const factory = state.filesAndMethods.serverLifecycleFactory
+  if (!factory) return undefined
+
+  let rel = relative(unitDir, factory.file).replace(/\\/g, '/')
+  if (!rel.startsWith('.')) rel = `./${rel}`
+
+  return {
+    importPath: rel.replace(/\.tsx?$/, '.js'),
+    variable: factory.variable,
+  }
 }
 
 export async function runBuildPipeline(options: {
@@ -202,6 +274,8 @@ export async function runBuildPipeline(options: {
         inspectorState
       ) as object),
       frontend: frontendMount,
+      db: resolveStandaloneDb(projectDir, pikkuDir, unitDir),
+      lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
     const source = provider.generateEntrySource(ctx as never)
 
@@ -344,7 +418,10 @@ export async function runBuildPipeline(options: {
       const entryPath = join(unitDir, 'entry.ts')
       await mkdir(unitDir, { recursive: true })
 
-      const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
+      const ctx = {
+        ...(getEntryContext(unitDir, pikkuDir, unit, inspectorState) as object),
+        lifecycle: resolveLifecycle(unitDir, inspectorState),
+      }
       const source =
         unit.target === 'server'
           ? (provider.generateServerEntrySource?.(ctx as never) ??

@@ -52,6 +52,190 @@ const sidecarHandshakeLines = (): string[] => [
 const SIDECAR_RUNTIME_IMPORT = `import { watchParentProcess } from '@pikku/deploy-standalone/runtime'`
 
 /**
+ * Environment variable naming the directory the SQLite file lives in.
+ *
+ * The database has to outlive a release. A deploy that swaps the artifact
+ * directory would take the database with it if the file sat beside the bundle,
+ * so the path comes from the environment and points somewhere the operator
+ * keeps stable across releases, rather than being derived from the bundle's own
+ * location the way the frontend directory is.
+ */
+const DATA_DIR_VAR = 'PIKKU_DATA_DIR'
+
+/**
+ * Full override for the database file, for when it must match a path something
+ * else already decided — notably `pikku db migrate`, which has to open the same
+ * file this opens or the app runs against an unmigrated database.
+ */
+const DATABASE_FILE_VAR = 'PIKKU_DATABASE_FILE'
+
+const DEFAULT_DATABASE_FILENAME = 'pikku.db'
+
+/**
+ * The dialect factory each runtime opens SQLite with. bun cannot use the node
+ * one — `bun:sqlite` is a different driver, and the node build reaches for
+ * `node:sqlite`, which a compiled bun binary does not carry.
+ */
+const SQLITE_FACTORY = {
+  node: {
+    specifier: '@pikku/kysely-node-sqlite',
+    fn: 'createNodeSqliteKysely',
+  },
+  bun: { specifier: '@pikku/kysely-bun-sqlite', fn: 'createBunSqliteKysely' },
+} as const
+
+/**
+ * The environment variable a Postgres build reads its connection string from.
+ *
+ * The same name every other pikku host uses, so an artifact dropped onto a
+ * machine that already runs a pikku app needs no new variable.
+ */
+const DATABASE_URL_VAR = 'DATABASE_URL'
+
+/** Imports the coercion plugin, for an app that generated a map. */
+const coercionImportLines = (coercionImportPath: string): string[] => [
+  `import { createCoercionPlugin } from '@pikku/kysely'`,
+  `import { coercionMap as __pikkuCoercionMap } from '${coercionImportPath}'`,
+]
+
+/** Imports a database-backed entry needs on top of the common set. */
+const dbImportLines = (
+  runtime: 'node' | 'bun',
+  db: NonNullable<EntryGenerationContext['db']>
+): string[] => [
+  ...(db.engine === 'sqlite'
+    ? [
+        `import { ${SQLITE_FACTORY[runtime].fn} } from '${SQLITE_FACTORY[runtime].specifier}'`,
+        `import { mkdirSync as __pikkuMkdirSync } from 'node:fs'`,
+        `import { dirname as __pikkuDbDirname, join as __pikkuDbJoin } from 'node:path'`,
+      ]
+    : [`import { PikkuKysely } from '@pikku/kysely-postgres'`]),
+  ...(db.coercionImportPath ? coercionImportLines(db.coercionImportPath) : []),
+]
+
+/**
+ * Opens the database before services are built, so `createSingletonServices`
+ * receives `kysely` exactly as a hosted runtime would hand it over.
+ *
+ * Creating the directory rather than requiring it is deliberate: the artifact
+ * is expected to start on a machine where nothing has run yet, and a missing
+ * parent directory is the difference between a first boot that works and one
+ * that needs a documented mkdir nobody reads.
+ */
+const dbSetupLines = (
+  runtime: 'node' | 'bun',
+  db: NonNullable<EntryGenerationContext['db']>
+): string[] => {
+  const plugins = db.coercionImportPath
+    ? `[createCoercionPlugin({ map: __pikkuCoercionMap })]`
+    : `[]`
+
+  if (db.engine === 'sqlite') {
+    return [
+      `  const __pikkuDbFile = process.env.${DATABASE_FILE_VAR}`,
+      `    ? process.env.${DATABASE_FILE_VAR}`,
+      `    : __pikkuDbJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
+      `  __pikkuMkdirSync(__pikkuDbDirname(__pikkuDbFile), { recursive: true })`,
+      `  const kysely = ${SQLITE_FACTORY[runtime].fn}({`,
+      `    filename: __pikkuDbFile,`,
+      `    plugins: ${plugins},`,
+      `  })`,
+    ]
+  }
+
+  return [
+    `  const __pikkuDbUrl = process.env.${DATABASE_URL_VAR}`,
+    `  if (!__pikkuDbUrl) {`,
+    `    throw new Error(`,
+    `      'This build connects to Postgres, so it needs ${DATABASE_URL_VAR} set to the database it should open.'`,
+    `    )`,
+    `  }`,
+    `  const __pikkuPg = new PikkuKysely(logger, __pikkuDbUrl)`,
+    `  await __pikkuPg.init()`,
+    ...(db.coercionImportPath
+      ? [
+          `  const kysely = __pikkuPg.kysely.withPlugin(`,
+          `    createCoercionPlugin({ map: __pikkuCoercionMap })`,
+          `  )`,
+        ]
+      : [`  const kysely = __pikkuPg.kysely`]),
+  ]
+}
+
+/** Imports the app's own lifecycle module, when it declares one. */
+const lifecycleImportLines = (
+  lifecycle: NonNullable<EntryGenerationContext['lifecycle']>
+): string[] => [
+  `import { ${lifecycle.variable} as __pikkuLifecycle } from '${lifecycle.importPath}'`,
+]
+
+/**
+ * Runs the app's start hooks around the port opening, the same order and the
+ * same services `pikku dev` gives them.
+ *
+ * `beforeStart` runs after `init` so a hook can rely on everything the server
+ * resolved, and before `start` so work that must finish before the first
+ * request — a seeded admin account, a schema probe — is finished when one
+ * arrives.
+ */
+const lifecycleStartLines = (): string[] => [
+  `  await __pikkuLifecycle?.beforeStart?.(singletonServices)`,
+]
+
+const lifecycleAfterStartLines = (): string[] => [
+  `  await __pikkuLifecycle?.afterStart?.(singletonServices)`,
+]
+
+/**
+ * Hands the stop hooks to the signal handler that owns the shutdown.
+ *
+ * The connection pool is closed in `afterStop`, once the app's own hook and the
+ * server have both finished with it — a pool closed any earlier takes the
+ * queries they are still allowed to make down with it. SQLite needs no
+ * counterpart: the process exiting releases the file.
+ */
+const shutdownHooksArg = (ctx: EntryGenerationContext): string => {
+  const before: string[] = []
+  const after: string[] = []
+
+  if (ctx.lifecycle) {
+    before.push(`await __pikkuLifecycle?.beforeStop?.(singletonServices)`)
+    after.push(`await __pikkuLifecycle?.afterStop?.(singletonServices)`)
+  }
+  if (ctx.db?.engine === 'postgres') {
+    after.push(`await __pikkuPg.close()`)
+  }
+
+  if (before.length === 0 && after.length === 0) return ''
+
+  const hooks: string[] = []
+  if (before.length > 0) {
+    hooks.push(`beforeStop: async () => { ${before.join('; ')} }`)
+  }
+  if (after.length > 0) {
+    hooks.push(`afterStop: async () => { ${after.join('; ')} }`)
+  }
+  return `{ ${hooks.join(', ')} }`
+}
+
+/**
+ * Fails with the variable's name rather than whatever SQLite says about a path
+ * of `undefined/pikku.db`, which is the error an operator would otherwise have
+ * to work backwards from.
+ */
+const dataDirHelperLines = (): string[] => [
+  `function __pikkuRequireDataDir() {`,
+  `  const dir = process.env.${DATA_DIR_VAR}`,
+  `  if (!dir) {`,
+  `    throw new Error(`,
+  `      'This build bundles a SQLite database, so it needs somewhere to keep it. Set ${DATA_DIR_VAR} to a writable directory that survives a release swap, or set ${DATABASE_FILE_VAR} to the database file itself.'`,
+  `    )`,
+  `  }`,
+  `  return dir`,
+  `}`,
+]
+
+/**
  * `rustc -vV`, or nothing when no toolchain is installed. The triple then falls
  * back to the Node platform pair, which is right for every ordinary host — the
  * cases rustc knows better about (musl, Rosetta) are the ones where a Rust
@@ -129,6 +313,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
             `import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'`,
           ]
         : []),
+      ...(ctx.db ? dbImportLines('node', ctx.db) : []),
+      ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -149,8 +335,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const eventHub = new LocalEventHubService()`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
+      ...(ctx.db ? dbSetupLines('node', ctx.db) : []),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
+      ...(ctx.db ? [`    kysely,`] : []),
       `    schedulerService,`,
       `    queueService,`,
       `    workflowService,`,
@@ -185,8 +373,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await server.init()`,
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
-      `  server.enableExitOnSignals()`,
+      ...(ctx.lifecycle ? lifecycleStartLines() : []),
+      `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
       `  await server.start()`,
+      ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
       ...sidecarHandshakeLines(),
       `}`,
       ``,
@@ -195,6 +385,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  process.exit(1)`,
       `})`,
       ``,
+      ...(ctx.db?.engine === 'sqlite' ? [...dataDirHelperLines(), ``] : []),
     ].join('\n')
   }
 
@@ -210,6 +401,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.frontend
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
         : []),
+      ...(ctx.db ? dbImportLines('bun', ctx.db) : []),
+      ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -230,8 +423,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const eventHub = new BunEventHubService()`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
+      ...(ctx.db ? dbSetupLines('bun', ctx.db) : []),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
+      ...(ctx.db ? [`    kysely,`] : []),
       `    schedulerService,`,
       `    queueService,`,
       `    workflowService,`,
@@ -258,8 +453,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  await server.init()`,
       `  await schedulerService.start()`,
       `  await triggerService.start()`,
-      `  server.enableExitOnSignals()`,
+      ...(ctx.lifecycle ? lifecycleStartLines() : []),
+      `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
       `  await server.start()`,
+      ...(ctx.lifecycle ? lifecycleAfterStartLines() : []),
       ...sidecarHandshakeLines(),
       `}`,
       ``,
@@ -268,6 +465,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  process.exit(1)`,
       `})`,
       ``,
+      ...(ctx.db?.engine === 'sqlite' ? [...dataDirHelperLines(), ``] : []),
     ].join('\n')
   }
 

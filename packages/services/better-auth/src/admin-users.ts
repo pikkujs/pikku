@@ -21,6 +21,25 @@ export type AuthGetter = (() => Promise<BetterAuthInstance>) | undefined
  * Ban state is written here but enforced by the {@link ban} plugin, which must
  * be wired for the columns to exist.
  */
+/**
+ * The issuer better-auth stamps on accounts from providers that have none of
+ * their own, for the versions that have the column.
+ *
+ * From 1.7 a credential account is looked up by its issuer as well as its
+ * provider — sign-in, `updatePassword` and `findCredentialAccount` all filter on
+ * it — so an account written without one is invisible to every path that would
+ * use it, and a user who plainly exists is reported as not found. Before 1.7 the
+ * column does not exist and writing it fails the insert, so the field is
+ * included only when the resolved schema has it.
+ *
+ * The value is better-auth's own encoding rather than its exported helper: the
+ * helper does not exist in the versions this package still supports.
+ */
+const CREDENTIAL_ISSUER = 'local:credential'
+
+const credentialIssuerFields = (ctx: any): { issuer?: string } =>
+  ctx.tables?.account?.fields?.issuer ? { issuer: CREDENTIAL_ISSUER } : {}
+
 const context = async (auth: AuthGetter) => {
   if (!auth) {
     throw new Error(
@@ -81,6 +100,7 @@ export const createAuthUser = async (
         userId: user.id,
         accountId: user.id,
         providerId: 'credential',
+        ...credentialIssuerFields(ctx),
         password: await ctx.password.hash(password),
       })
     } catch (error) {
@@ -115,13 +135,21 @@ export const setAuthUserPassword = async (
 
   const hashed = await ctx.password.hash(newPassword)
   const accounts = await ctx.internalAdapter.findAccounts(userId)
-  if (accounts.some((account: any) => account.providerId === 'credential')) {
+  const credential = accounts.find(
+    (account: any) => account.providerId === 'credential'
+  )
+  if (credential) {
+    const issuerFields = credentialIssuerFields(ctx)
+    if (issuerFields.issuer && credential.issuer !== issuerFields.issuer) {
+      await ctx.internalAdapter.updateAccount(credential.id, issuerFields)
+    }
     await ctx.internalAdapter.updatePassword(userId, hashed)
   } else {
     await ctx.internalAdapter.createAccount({
       userId,
       accountId: userId,
       providerId: 'credential',
+      ...credentialIssuerFields(ctx),
       password: hashed,
     })
   }

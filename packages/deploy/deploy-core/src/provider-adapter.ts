@@ -53,6 +53,49 @@ export interface EntryGenerationContext {
     urlPrefix: string
     spaFallback: boolean
   }
+  /**
+   * The database the generated entry has to open for itself, or undefined when
+   * the project has none.
+   *
+   * A hosted runtime hands `kysely` to `createSingletonServices` — `pikku dev`
+   * builds one, and a Cloudflare deploy binds one — so app code is written
+   * expecting it and typically throws without it. A standalone artifact has no
+   * such host: it IS the runtime, and until this existed it started an app whose
+   * services factory had nothing to connect to.
+   *
+   * Only the engine and where to find the coercion map travel here. Which
+   * dialect package to import, and how to reach the database, is the provider's
+   * business — a compiled bun binary and a node bundle do not open SQLite the
+   * same way, and Postgres is reached by URL rather than by path at all.
+   */
+  db?: {
+    engine: 'sqlite' | 'postgres'
+    /**
+     * Import specifier for the generated `coercionMap`, relative to unitDir.
+     *
+     * Absent when the app generates no coercion map. It is not a SQLite
+     * concern: the map is built from `db/annotations.ts` rather than from the
+     * dialect, and a Postgres app that annotates a column needs it attached for
+     * the same reason.
+     */
+    coercionImportPath?: string
+  }
+
+  /**
+   * The app's `pikkuServerLifecycle` export, when it declares one.
+   *
+   * Only `pikku dev` and `pikku serve` have ever called these hooks, so an app
+   * that seeds its first admin account or opens a connection pool in
+   * `beforeStart` did that in development and silently skipped it everywhere it
+   * was actually deployed. A generated entry is the app's real host and owes it
+   * the same lifecycle the dev server gives it.
+   */
+  lifecycle?: {
+    /** Import specifier for the lifecycle module, relative to unitDir. */
+    importPath: string
+    /** The exported name to call the hooks on. */
+    variable: string
+  }
 }
 
 export interface ProviderAdapter {
