@@ -41,6 +41,16 @@ import {
   knowledgeIndex,
   renderKnowledgeIndex,
 } from './functions/commands/knowledge-index.js'
+import {
+  knowledgePlanDefer,
+  knowledgePlanSchema,
+  knowledgePlanSet,
+  knowledgePlanShow,
+  renderKnowledgePlanDefer,
+  renderKnowledgePlanSchema,
+  renderKnowledgePlanSet,
+  renderKnowledgePlanShow,
+} from './functions/commands/knowledge-plan.js'
 import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
 import {
   personaList,
@@ -635,6 +645,51 @@ wireCLI({
             },
           },
         }),
+        plan: {
+          description:
+            "Read and write a milestone's technical plan — the shape of the work, checked before it is built rather than after",
+          subcommands: {
+            schema: pikkuCLICommand({
+              func: knowledgePlanSchema,
+              render: renderKnowledgePlanSchema,
+              description:
+                'Print the plan schema, so a plan is written against what is enforced rather than guessed at',
+            }),
+            show: pikkuCLICommand({
+              func: knowledgePlanShow,
+              render: renderKnowledgePlanShow,
+              description: "Print a milestone's plan",
+              parameters: '<milestone>',
+              options: {
+                forBuild: {
+                  description:
+                    'Render it as the ordered list of work a build follows, rather than as stored',
+                  default: false,
+                },
+              },
+            }),
+            set: pikkuCLICommand({
+              func: knowledgePlanSet,
+              render: renderKnowledgePlanSet,
+              description:
+                'Validate a plan against its milestone note and write it, or write nothing and say what is wrong',
+              parameters: '<milestone> <file>',
+            }),
+            defer: pikkuCLICommand({
+              func: knowledgePlanDefer,
+              render: renderKnowledgePlanDefer,
+              description:
+                'Move one first-pass item to the next pass, with the reason on the record',
+              parameters: '<milestone> <item>',
+              options: {
+                reason: {
+                  description: 'Why this item cannot land in the first pass',
+                  short: 'r',
+                },
+              },
+            }),
+          },
+        },
       },
     },
     validate: pikkuCLICommand({

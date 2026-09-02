@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, join, posix, relative, sep } from 'node:path'
@@ -61,6 +62,23 @@ export type ProfileNote<Key extends string = never> = KnowledgeNote &
 
 /** The `type:` a milestone note carries. */
 export const MILESTONE_TYPE = 'milestone'
+
+/** Read a frontmatter scalar that carries a list, written either bare or bracketed. */
+export const listOf = (value: string | undefined): string[] =>
+  (value ?? '')
+    .replace(/^\s*\[/, '')
+    .replace(/\]\s*$/, '')
+    .split(',')
+    .map((item) => item.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean)
+
+/**
+ * Identifies a note's body, so a plan can say which revision it was written against
+ * and a later read can tell that the note moved underneath it.
+ */
+export function noteHash(body: string): string {
+  return createHash('sha256').update(body).digest('hex').slice(0, 12)
+}
 
 /**
  * The scalars this profile reads. A caller's own keys are passed to `parseNote`

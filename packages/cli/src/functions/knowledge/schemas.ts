@@ -1,6 +1,14 @@
 import {
   KnowledgeIndexInput,
   KnowledgeIndexOutput,
+  KnowledgePlanDeferInput,
+  KnowledgePlanDeferOutput,
+  KnowledgePlanSchemaInput,
+  KnowledgePlanSchemaOutput,
+  KnowledgePlanSetInput,
+  KnowledgePlanSetOutput,
+  KnowledgePlanShowInput,
+  KnowledgePlanShowOutput,
   KnowledgeValidateInput,
   KnowledgeValidateOutput,
 } from '@pikku/knowledge'
@@ -29,3 +37,11 @@ export const KnowledgeIndexInputSchema = KnowledgeIndexInput
 export const KnowledgeIndexOutputSchema = KnowledgeIndexOutput
 export const KnowledgeValidateInputSchema = KnowledgeValidateInput
 export const KnowledgeValidateOutputSchema = KnowledgeValidateOutput
+export const KnowledgePlanSchemaInputSchema = KnowledgePlanSchemaInput
+export const KnowledgePlanSchemaOutputSchema = KnowledgePlanSchemaOutput
+export const KnowledgePlanShowInputSchema = KnowledgePlanShowInput
+export const KnowledgePlanShowOutputSchema = KnowledgePlanShowOutput
+export const KnowledgePlanSetInputSchema = KnowledgePlanSetInput
+export const KnowledgePlanSetOutputSchema = KnowledgePlanSetOutput
+export const KnowledgePlanDeferInputSchema = KnowledgePlanDeferInput
+export const KnowledgePlanDeferOutputSchema = KnowledgePlanDeferOutput
