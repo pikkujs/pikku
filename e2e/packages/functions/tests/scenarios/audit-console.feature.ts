@@ -36,7 +36,7 @@ export const auditReadNeedsTheScopeScenario = pikkuScenario<
     }
 
     const call = await scenario.when(
-      'staff reads the audit trail',
+      'reads the audit trail',
       'invokesRpcRaw',
       { rpcName: GET_AUDITS, data: { limit: 10 } },
       { actor: actors.staff }
