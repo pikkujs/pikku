@@ -6,8 +6,8 @@
  */
 
 import { join, relative } from 'node:path'
-import { existsSync } from 'node:fs'
-import { mkdir, writeFile, copyFile } from 'node:fs/promises'
+import { existsSync, readFileSync } from 'node:fs'
+import { cp, mkdir, writeFile, copyFile } from 'node:fs/promises'
 import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
 
@@ -116,12 +116,34 @@ function findLockfile(projectDir: string): string | null {
  * which database the deployed app talks to on the strength of directory order,
  * and the failure — an app running happily against the wrong, fully valid
  * schema — is invisible until someone reads the data.
+ *
+ * The migrations are copied in beside the bundle under the same `db/<engine>/`
+ * path they have in the project, which is also where Fabric's build container
+ * stages them. Two producers writing the artifact cannot disagree about where
+ * the SQL lives, and `bundle.js db migrate` finds it either way.
  */
-function resolveStandaloneDb(
+/**
+ * The project's declared version, or nothing.
+ *
+ * Absent is a real answer — a project need not version itself — and is better
+ * reported as unknown than as a number this made up.
+ */
+function resolveProjectVersion(projectDir: string): string | undefined {
+  try {
+    const pkg = JSON.parse(readFileSync(join(projectDir, 'package.json'), 'utf-8'))
+    return typeof pkg.version === 'string' ? pkg.version : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function resolveStandaloneDb(
   projectDir: string,
   pikkuDir: string,
   unitDir: string
-): { engine: 'sqlite' | 'postgres'; coercionImportPath?: string } | undefined {
+): Promise<
+  { engine: 'sqlite' | 'postgres'; coercionImportPath?: string } | undefined
+> {
   const hasSqlite = existsSync(join(projectDir, 'db', 'sqlite'))
   const hasPostgres = existsSync(join(projectDir, 'db', 'postgres'))
 
@@ -133,6 +155,10 @@ function resolveStandaloneDb(
 
   const engine = hasSqlite ? 'sqlite' : hasPostgres ? 'postgres' : undefined
   if (!engine) return undefined
+
+  await cp(join(projectDir, 'db', engine), join(unitDir, 'db', engine), {
+    recursive: true,
+  })
 
   // Absent for an app that annotates no columns, which is a database with
   // nothing to coerce rather than a reason to hand the app no database.
@@ -274,7 +300,8 @@ export async function runBuildPipeline(options: {
         inspectorState
       ) as object),
       frontend: frontendMount,
-      db: resolveStandaloneDb(projectDir, pikkuDir, unitDir),
+      version: resolveProjectVersion(projectDir),
+      db: await resolveStandaloneDb(projectDir, pikkuDir, unitDir),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
     const source = provider.generateEntrySource(ctx as never)

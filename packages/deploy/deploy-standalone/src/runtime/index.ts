@@ -11,3 +11,21 @@ export {
   watchParentProcess,
 } from './parent-watch.js'
 export type { ParentWatch, ParentWatchOptions } from './parent-watch.js'
+
+export {
+  parseStandaloneCommand,
+  runStandaloneCommand,
+  runDbCommand,
+  runBackupCommand,
+  resolveMigrationsDir,
+  MIGRATIONS_DIR_ENV,
+} from './cli.js'
+export type {
+  StandaloneCommand,
+  StandaloneDb,
+  StandaloneSqliteDb,
+  StandalonePostgresDb,
+  PostgresSql,
+  CommandOutput,
+  ParseOptions,
+} from './cli.js'

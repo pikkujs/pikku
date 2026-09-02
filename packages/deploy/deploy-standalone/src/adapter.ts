@@ -49,7 +49,15 @@ const sidecarHandshakeLines = (): string[] => [
   `  console.log(\`${SERVER_READY_MARKER} on http://\${hostname}:\${server.port}\`)`,
 ]
 
-const SIDECAR_RUNTIME_IMPORT = `import { watchParentProcess } from '@pikku/deploy-standalone/runtime'`
+/**
+ * The runtime helpers the entry imports. The database ones are left out of a
+ * build with no database, so the bundle carries no migrator it can never run.
+ */
+const runtimeImport = (ctx: EntryGenerationContext): string => {
+  const names = ['watchParentProcess', 'parseStandaloneCommand']
+  if (ctx.db) names.push('runStandaloneCommand', 'resolveMigrationsDir')
+  return `import { ${names.join(', ')} } from '@pikku/deploy-standalone/runtime'`
+}
 
 /**
  * Environment variable naming the directory the SQLite file lives in.
@@ -107,7 +115,6 @@ const dbImportLines = (
     ? [
         `import { ${SQLITE_FACTORY[runtime].fn} } from '${SQLITE_FACTORY[runtime].specifier}'`,
         `import { mkdirSync as __pikkuMkdirSync } from 'node:fs'`,
-        `import { dirname as __pikkuDbDirname, join as __pikkuDbJoin } from 'node:path'`,
       ]
     : [`import { PikkuKysely } from '@pikku/kysely-postgres'`]),
   ...(db.coercionImportPath ? coercionImportLines(db.coercionImportPath) : []),
@@ -134,8 +141,8 @@ const dbSetupLines = (
     return [
       `  const __pikkuDbFile = process.env.${DATABASE_FILE_VAR}`,
       `    ? process.env.${DATABASE_FILE_VAR}`,
-      `    : __pikkuDbJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
-      `  __pikkuMkdirSync(__pikkuDbDirname(__pikkuDbFile), { recursive: true })`,
+      `    : __pikkuJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
+      `  __pikkuMkdirSync(__pikkuDirname(__pikkuDbFile), { recursive: true })`,
       `  const kysely = ${SQLITE_FACTORY[runtime].fn}({`,
       `    filename: __pikkuDbFile,`,
       `    plugins: ${plugins},`,
@@ -159,6 +166,71 @@ const dbSetupLines = (
           `  )`,
         ]
       : [`  const kysely = __pikkuPg.kysely`]),
+  ]
+}
+
+/**
+ * Where the migrations sit relative to the running artifact.
+ *
+ * A node bundle reads them from its own directory. A compiled bun binary has no
+ * directory — `import.meta.url` points inside the embedded filesystem — so it
+ * resolves them beside the executable, which is where an operator unpacking an
+ * artifact puts them.
+ */
+const bundleDirExpression = (runtime: 'node' | 'bun'): string =>
+  runtime === 'node'
+    ? `__pikkuDirname(__pikkuFileURLToPath(import.meta.url))`
+    : `__pikkuDirname(process.execPath)`
+
+/**
+ * The command line, parsed before anything is opened.
+ *
+ * `version` and `help` have to answer without a database, a config factory or a
+ * port, because the machine asking may be one where none of the three work yet
+ * — which is exactly when someone runs them.
+ */
+const commandParseLines = (ctx: EntryGenerationContext): string[] => [
+  `const __pikkuCommand = parseStandaloneCommand(process.argv.slice(2), {`,
+  `  version: '${(ctx.version ?? 'unknown').replace(/'/g, "\\'")}',`,
+  `  hasDb: ${Boolean(ctx.db)},`,
+  ...(ctx.db ? [`  engine: '${ctx.db.engine}',`] : []),
+  `})`,
+  `if (__pikkuCommand.kind === 'exit') process.exit(__pikkuCommand.code)`,
+]
+
+/**
+ * Runs a non-serve command against the database the app itself just opened, and
+ * stops before a port is bound.
+ *
+ * Reusing the app's own connection is the point: a command that resolved its
+ * own would be free to migrate a different database than the next `serve`
+ * reads, and the two would only disagree once in production.
+ */
+const commandDispatchLines = (
+  runtime: 'node' | 'bun',
+  ctx: EntryGenerationContext
+): string[] => {
+  if (!ctx.db) {
+    return [`  if (__pikkuCommand.kind !== 'serve') process.exit(0)`, ``]
+  }
+
+  const dir = `__pikkuJoin(${bundleDirExpression(runtime)}, 'db', '${ctx.db.engine}')`
+  const handle =
+    ctx.db.engine === 'sqlite'
+      ? `databaseFile: __pikkuDbFile,`
+      : `sql: __pikkuPg.sql,`
+
+  return [
+    `  const __pikkuDbCommandTarget = {`,
+    `    engine: '${ctx.db.engine}',`,
+    `    migrationsDir: resolveMigrationsDir(${dir}),`,
+    `    ${handle}`,
+    `  }`,
+    `  if ((await runStandaloneCommand(__pikkuCommand, __pikkuDbCommandTarget)) === 'done') {`,
+    ...(ctx.db.engine === 'postgres' ? [`    await __pikkuPg.close()`] : []),
+    `    return`,
+    `  }`,
+    ``,
   ]
 }
 
@@ -306,8 +378,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
       `import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'`,
       `import { WebSocketServer } from 'ws'`,
-      SIDECAR_RUNTIME_IMPORT,
-      ...(ctx.frontend
+      runtimeImport(ctx),
+      ...(ctx.frontend || ctx.db
         ? [
             `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
             `import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'`,
@@ -326,6 +398,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `const port = parseInt(process.env.PORT || '3000', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
       ``,
+      ...commandParseLines(ctx),
+      ``,
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
       `  const schedulerService = new InMemorySchedulerService()`,
@@ -336,6 +410,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
       ...(ctx.db ? dbSetupLines('node', ctx.db) : []),
+      ...commandDispatchLines('node', ctx),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -393,13 +468,18 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     return [
       `// Generated standalone entry (bun runtime) — all functions in one process`,
       `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
-      SIDECAR_RUNTIME_IMPORT,
+      runtimeImport(ctx),
       `import { pikkuState } from '@pikku/core/state'`,
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
       `import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'`,
       ...(ctx.frontend
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
+        : []),
+      ...(ctx.db
+        ? [
+            `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
+          ]
         : []),
       ...(ctx.db ? dbImportLines('bun', ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
@@ -414,6 +494,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `const port = parseInt(process.env.PORT || '3000', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
       ``,
+      ...commandParseLines(ctx),
+      ``,
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
       `  const schedulerService = new InMemorySchedulerService()`,
@@ -424,6 +506,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
       ...(ctx.db ? dbSetupLines('bun', ctx.db) : []),
+      ...commandDispatchLines('bun', ctx),
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -490,6 +573,21 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       externals.push(STANDALONE_FRONTEND_MANIFEST)
     }
     return externals
+  }
+
+  /**
+   * The SQLite driver this runtime cannot load.
+   *
+   * `loadSqliteRuntime` picks its driver by looking for `globalThis.Bun`, so a
+   * node process never runs the bun branch — but esbuild still follows the
+   * import, and `bun:sqlite` sits at the top of that module as a static import
+   * it cannot resolve. Left in, the bundle fails to build; marked external, it
+   * becomes a top-level import node fails to load. Stubbing removes the branch
+   * that was already dead.
+   */
+  getStubModules(): string[] {
+    if (this.runtime === 'bun') return []
+    return ['sqlite-runtime-bun']
   }
 
   getPlatform(): 'node' {

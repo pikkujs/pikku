@@ -5405,6 +5405,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
   dependencies:
+    "@pikku/db-migrator": "npm:^0.12.0"
     "@pikku/deploy": "npm:^0.12.4"
     typescript: "npm:^6.0.3"
   languageName: unknown

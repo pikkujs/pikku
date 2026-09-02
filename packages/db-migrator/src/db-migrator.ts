@@ -180,6 +180,23 @@ export async function migrate(
  * question about schemas, not migration files, so the caller answers it first
  * and this only runs once it has.
  */
+/**
+ * The migrations on disk that the database has not recorded.
+ *
+ * Deliberately not derived by the caller: "pending" has to mean the same set
+ * `migrate` is about to apply, and that is filename order over `*.sql` minus
+ * what is recorded — not whatever a directory listing happens to return.
+ */
+export function pendingMigrations(
+  migrationsDir: string,
+  applied: AppliedMigration[]
+): string[] {
+  const appliedNames = new Set(applied.map((row) => row.name))
+  return migrationFiles(migrationsDir).filter(
+    (name) => !appliedNames.has(name)
+  )
+}
+
 export async function baselineMigrations(
   executor: MigrationExecutor,
   migrationsDir: string

@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -b",
     "tsc": "tsc --noEmit",
-    "test": "node --test --import tsx src/*.test.ts"
+    "test": "node --test --import tsx \"src/**/*.test.ts\""
   },
   "devDependencies": {
     "typescript": "^6.0.3"
@@ -18,6 +18,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@pikku/db-migrator": "^0.12.0",
     "@pikku/deploy": "^0.12.4"
   }
 }

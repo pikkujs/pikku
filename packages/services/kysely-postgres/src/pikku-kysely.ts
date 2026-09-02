@@ -59,6 +59,17 @@ export class PikkuKysely<DB> {
     }
   }
 
+  /**
+   * The underlying postgres.js connection.
+   *
+   * Exposed for the work Kysely cannot express: applying a migration file, whose
+   * many statements need the simple protocol, on a single reserved connection.
+   * Ordinary queries go through {@link kysely}.
+   */
+  public get sql(): postgres.Sql<{}> {
+    return this.postgres
+  }
+
   public async init() {
     this.logger.info('Connecting to database...')
 
