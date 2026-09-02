@@ -5173,6 +5173,7 @@ __metadata:
     "@pikku/bun-server": "npm:^0.12.11"
     "@pikku/code-edit": "npm:^0.12.1"
     "@pikku/core": "npm:^0.12.102"
+    "@pikku/db-migrator": "npm:^0.12.0"
     "@pikku/deploy": "npm:^0.12.4"
     "@pikku/deploy-cloudflare": "npm:^0.12.13"
     "@pikku/fetch": "npm:^0.12.10"
@@ -5362,6 +5363,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/db-migrator@npm:^0.12.0, @pikku/db-migrator@workspace:packages/db-migrator":
+  version: 0.0.0-use.local
+  resolution: "@pikku/db-migrator@workspace:packages/db-migrator"
+  dependencies:
+    "@types/bun": "npm:^1.4.0"
+    "@types/node": "npm:^22"
+    tsx: "npm:^4.23.12"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/deploy-azure@workspace:packages/deploy/deploy-azure":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-azure@workspace:packages/deploy/deploy-azure"
@@ -5393,6 +5405,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
   dependencies:
+    "@pikku/db-migrator": "npm:^0.12.0"
     "@pikku/deploy": "npm:^0.12.4"
     typescript: "npm:^6.0.3"
   languageName: unknown

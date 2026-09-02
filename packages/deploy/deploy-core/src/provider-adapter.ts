@@ -68,6 +68,15 @@ export interface EntryGenerationContext {
    * business — a compiled bun binary and a node bundle do not open SQLite the
    * same way, and Postgres is reached by URL rather than by path at all.
    */
+  /**
+   * The project's own version, for the artifact to report as its own.
+   *
+   * An operator holding a bundle on a machine has no other way to tell which
+   * build it is — there is no manifest to read and no registry to ask — and
+   * "which version is actually running" is the first question of every
+   * incident.
+   */
+  version?: string
   db?: {
     engine: 'sqlite' | 'postgres'
     /**

@@ -1,0 +1,33 @@
+{
+  "name": "@pikku/db-migrator",
+  "version": "0.12.0",
+  "description": "The SQL migration applier shared by the Pikku CLI and the standalone runtime",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/src/index.js",
+  "main": "dist/src/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build": "tsc -b",
+    "test": "bash run-tests.sh",
+    "test:watch": "bash run-tests.sh --watch",
+    "test:coverage": "bash run-tests.sh --coverage",
+    "prepublishOnly": "yarn build"
+  },
+  "engines": {
+    "node": ">=22.10"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "@types/node": "^22",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3"
+  },
+  "exports": {
+    ".": "./dist/src/index.js",
+    "./sqlite": "./dist/src/sqlite/index.js",
+    "./postgres": "./dist/src/postgres/index.js"
+  }
+}

@@ -200,7 +200,7 @@ const chooseDatabaseFile = (source: string, env: NodeJS.ProcessEnv): string => {
 
   const choose = new Function(
     'process',
-    '__pikkuDbJoin',
+    '__pikkuJoin',
     `${helper[0]}\nreturn (${selection[1]})`
   ) as (proc: { env: NodeJS.ProcessEnv }, join: typeof join) => string
   return choose({ env }, join)
@@ -453,7 +453,7 @@ describe('StandaloneProviderAdapter database wiring', () => {
 
     assert.match(
       source,
-      /__pikkuMkdirSync\(__pikkuDbDirname\(__pikkuDbFile\), \{ recursive: true \}\)/
+      /__pikkuMkdirSync\(__pikkuDirname\(__pikkuDbFile\), \{ recursive: true \}\)/
     )
   })
 
@@ -477,7 +477,7 @@ describe('StandaloneProviderAdapter database wiring', () => {
       `each path helper must bind a distinct name, got ${bound.join(', ')}`
     )
     assert.match(source, /__pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath/)
-    assert.match(source, /__pikkuDbJoin\(__pikkuRequireDataDir\(\)/)
+    assert.match(source, /__pikkuJoin\(__pikkuRequireDataDir\(\)/)
   })
 })
 
@@ -623,3 +623,103 @@ for (const runtime of ['node', 'bun'] as const) {
     })
   })
 }
+
+for (const runtime of ['node', 'bun'] as const) {
+  describe(`StandaloneProviderAdapter command line (${runtime})`, () => {
+    const generate = (ctx: unknown) =>
+      new StandaloneProviderAdapter({ runtime }).generateEntrySource(
+        ctx as never
+      )
+
+    test('argv is parsed before the config factory or the database', () => {
+      const source = generate(withDb)
+
+      assert.ok(
+        source.indexOf('parseStandaloneCommand') <
+          source.indexOf('async function main()'),
+        'version and help have to answer on a machine where neither works yet'
+      )
+      assert.match(source, /if \(__pikkuCommand\.kind === 'exit'\) process\.exit/)
+    })
+
+    test('the version reported is the project’s own', () => {
+      assert.match(
+        generate({ ...(withDb as object), version: '4.5.6' }),
+        /version: '4\.5\.6'/
+      )
+      assert.match(generate(withDb), /version: 'unknown'/)
+    })
+
+    test('a command runs against the database the app itself opened', () => {
+      const source = generate(withDb)
+
+      assert.ok(
+        source.indexOf('const kysely =') <
+          source.indexOf('await runStandaloneCommand('),
+        'the database is opened first so a migration cannot target another one'
+      )
+      assert.match(source, /databaseFile: __pikkuDbFile,/)
+    })
+
+    test('a completed command returns before a port is bound', () => {
+      const source = generate(withDb)
+      const dispatch = source.indexOf('await runStandaloneCommand(')
+
+      assert.ok(dispatch < source.indexOf('createSingletonServices(config'))
+      assert.match(source, /=== 'done'\) \{\n {4}return\n {2}\}/)
+    })
+
+    test('a postgres build closes its pool before the process ends', () => {
+      assert.match(
+        generate(withPostgres),
+        /=== 'done'\) \{\n {4}await __pikkuPg\.close\(\)\n {4}return\n {2}\}/
+      )
+    })
+
+    test('the postgres command target is handed the live connection', () => {
+      assert.match(generate(withPostgres), /sql: __pikkuPg\.sql,/)
+    })
+
+    test('migrations are read from the engine directory the build wrote', () => {
+      assert.match(
+        generate(withDb),
+        /resolveMigrationsDir\(__pikkuJoin\(.*, 'db', 'sqlite'\)\)/
+      )
+      assert.match(
+        generate(withPostgres),
+        /resolveMigrationsDir\(__pikkuJoin\(.*, 'db', 'postgres'\)\)/
+      )
+    })
+
+    test('a build with no database announces none and answers no db command', () => {
+      const source = generate(baseContext)
+
+      assert.match(source, /hasDb: false,/)
+      assert.doesNotMatch(source, /engine:/)
+      assert.doesNotMatch(source, /runStandaloneCommand/)
+      assert.match(source, /if \(__pikkuCommand\.kind !== 'serve'\) process\.exit\(0\)/)
+    })
+  })
+}
+
+describe('StandaloneProviderAdapter migrations path per runtime', () => {
+  test('a node bundle reads them from its own directory', () => {
+    assert.match(
+      new StandaloneProviderAdapter({ runtime: 'node' }).generateEntrySource(
+        withDb
+      ),
+      /resolveMigrationsDir\(__pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath\(import\.meta\.url\)\), 'db', 'sqlite'\)\)/
+    )
+  })
+
+  test('a compiled bun binary reads them beside the executable', () => {
+    // import.meta.url points inside the embedded filesystem, which holds no
+    // migrations — the operator unpacked them next to the binary instead.
+    assert.match(
+      new StandaloneProviderAdapter({ runtime: 'bun' }).generateEntrySource(
+        withDb
+      ),
+      /resolveMigrationsDir\(__pikkuJoin\(__pikkuDirname\(process\.execPath\), 'db', 'sqlite'\)\)/
+    )
+  })
+})

@@ -5,7 +5,7 @@ import type {
   ForeignKeyInfo,
   EnumInfo,
 } from '../db-introspector.js'
-import { MIGRATION_TRACKING_TABLE } from '../db-migrator.js'
+import { MIGRATION_TRACKING_TABLE } from '@pikku/db-migrator'
 import { parseCheckEnumValues } from '../check-enums.js'
 
 interface PgColumnRow {

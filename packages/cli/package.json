@@ -34,6 +34,7 @@
     "@pikku/better-auth": "^0.12.36",
     "@pikku/bun-server": "^0.12.11",
     "@pikku/code-edit": "^0.12.1",
+    "@pikku/db-migrator": "^0.12.0",
     "@pikku/deploy": "^0.12.4",
     "@pikku/deploy-cloudflare": "^0.12.13",
     "@pikku/fetch": "^0.12.10",
