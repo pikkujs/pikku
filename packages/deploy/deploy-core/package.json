@@ -1,6 +1,6 @@
 {
   "name": "@pikku/deploy",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "description": "Shared deploy contract for Pikku — the deployment manifest types, the provider adapter interface, and the helpers every provider adapter needs",
   "type": "module",
   "main": "dist/index.js",
