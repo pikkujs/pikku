@@ -5160,7 +5160,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.106, @pikku/cli@npm:^0.12.120, @pikku/cli@npm:^0.12.127, @pikku/cli@npm:^0.12.130, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.106, @pikku/cli@npm:^0.12.120, @pikku/cli@npm:^0.12.127, @pikku/cli@npm:^0.12.131, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -5173,8 +5173,8 @@ __metadata:
     "@pikku/bun-server": "npm:^0.12.11"
     "@pikku/code-edit": "npm:^0.12.1"
     "@pikku/core": "npm:^0.12.102"
-    "@pikku/db-migrator": "npm:^0.12.0"
-    "@pikku/deploy": "npm:^0.12.4"
+    "@pikku/db-migrator": "npm:^0.12.1"
+    "@pikku/deploy": "npm:^0.12.5"
     "@pikku/deploy-cloudflare": "npm:^0.12.13"
     "@pikku/fetch": "npm:^0.12.10"
     "@pikku/inspector": "npm:^0.12.71"
@@ -5363,7 +5363,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/db-migrator@npm:^0.12.0, @pikku/db-migrator@workspace:packages/db-migrator":
+"@pikku/db-migrator@npm:^0.12.1, @pikku/db-migrator@workspace:packages/db-migrator":
   version: 0.0.0-use.local
   resolution: "@pikku/db-migrator@workspace:packages/db-migrator"
   dependencies:
@@ -5405,13 +5405,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
   dependencies:
-    "@pikku/db-migrator": "npm:^0.12.0"
-    "@pikku/deploy": "npm:^0.12.4"
+    "@pikku/db-migrator": "npm:^0.12.1"
+    "@pikku/deploy": "npm:^0.12.5"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy@npm:^0.12.1, @pikku/deploy@npm:^0.12.4, @pikku/deploy@workspace:packages/deploy/deploy-core":
+"@pikku/deploy@npm:^0.12.1, @pikku/deploy@npm:^0.12.5, @pikku/deploy@workspace:packages/deploy/deploy-core":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy@workspace:packages/deploy/deploy-core"
   dependencies:
@@ -5498,7 +5498,7 @@ __metadata:
     "@pikku/addon-stripe": "npm:^0.1.8"
     "@pikku/ai-vercel": "workspace:*"
     "@pikku/better-auth": "npm:^0.12.36"
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/deploy-standalone": "workspace:*"
@@ -5687,7 +5687,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-postgres@npm:^0.12.22, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
+"@pikku/kysely-postgres@npm:^0.12.23, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-postgres@workspace:packages/services/kysely-postgres"
   dependencies:
@@ -6059,10 +6059,10 @@ __metadata:
     "@ai-sdk/anthropic": "npm:^4.0.39"
     "@ai-sdk/openai": "npm:^4.0.42"
     "@pikku/ai-vercel": "npm:^0.12.13"
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express": "npm:^0.12.14"
-    "@pikku/kysely-postgres": "npm:^0.12.22"
+    "@pikku/kysely-postgres": "npm:^0.12.23"
     "@pikku/schema-cfworker": "npm:^0.12.6"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.5"
@@ -6086,7 +6086,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.1111.0"
     "@pikku/aws-services": "npm:^0.12.12"
     "@pikku/core": "npm:^0.12.102"
-    "@pikku/kysely-postgres": "npm:^0.12.22"
+    "@pikku/kysely-postgres": "npm:^0.12.23"
     "@pikku/lambda": "npm:^0.12.10"
     "@types/aws-lambda": "npm:^8.10.162"
     "@types/node": "npm:^24"
@@ -6159,7 +6159,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cli@workspace:templates/cli"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/uws": "npm:^0.12.11"
     "@pikku/websocket": "npm:^0.12.4"
@@ -6200,7 +6200,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express-middleware": "npm:^0.12.8"
     "@pikku/jose": "npm:^0.12.6"
@@ -6265,7 +6265,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-function-addon@workspace:templates/function-addon"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     typescript: "npm:^6.0.3"
     zod: "npm:^4"
@@ -6284,7 +6284,7 @@ __metadata:
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/better-auth": "npm:^0.12.36"
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/deploy-cloudflare": "workspace:*"
@@ -6324,7 +6324,7 @@ __metadata:
   resolution: "@pikku/templates-mcp-server@workspace:templates/mcp-server"
   dependencies:
     "@modelcontextprotocol/sdk": "npm:^1.30.0"
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/modelcontextprotocol": "npm:^0.12.10"
     "@types/node": "npm:^24.13.3"
@@ -6339,7 +6339,7 @@ __metadata:
   dependencies:
     "@next/swc-darwin-arm64": "npm:^16.3.1"
     "@pikku/better-auth": "npm:^0.12.36"
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/fetch": "npm:^0.12.10"
     "@pikku/jose": "npm:^0.12.6"
@@ -6376,11 +6376,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express": "npm:^0.12.14"
     "@pikku/jose": "npm:^0.12.6"
-    "@pikku/kysely-postgres": "npm:^0.12.22"
+    "@pikku/kysely-postgres": "npm:^0.12.23"
     "@pikku/schema-cfworker": "npm:^0.12.6"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.5"
@@ -6397,7 +6397,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-redis@workspace:templates/remote-rpc-redis"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express": "npm:^0.12.14"
     "@pikku/jose": "npm:^0.12.6"
@@ -6416,7 +6416,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-tanstack@workspace:templates/tanstack"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/fetch": "npm:^0.12.9"
     "@playwright/test": "npm:1.58.2"
@@ -6456,7 +6456,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express": "npm:^0.12.14"
     "@pikku/inspector": "npm:^0.12.72"
@@ -6473,11 +6473,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"
   dependencies:
-    "@pikku/cli": "npm:^0.12.130"
+    "@pikku/cli": "npm:^0.12.131"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express": "npm:^0.12.14"
     "@pikku/inspector": "npm:^0.12.72"
-    "@pikku/kysely-postgres": "npm:^0.12.22"
+    "@pikku/kysely-postgres": "npm:^0.12.23"
     "@pikku/queue-pg-boss": "npm:^0.12.10"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.5"
