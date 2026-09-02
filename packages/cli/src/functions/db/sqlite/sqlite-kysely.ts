@@ -9,7 +9,7 @@ import {
 import type {
   SyncSqliteDatabase,
   SyncSqliteStatement,
-} from '@pikku/db-migrator/sqlite'
+} from '@pikku/sql-migrator/sqlite'
 
 /**
  * Whether a value is a JSON column's worth of data rather than some other

@@ -1,5 +1,5 @@
-import type { MigrationExecutor, AppliedMigration } from '../db-migrator.js'
-import { MIGRATION_TRACKING_TABLE as TRACKING_TABLE } from '../db-migrator.js'
+import type { MigrationExecutor, AppliedMigration } from '../sql-migrator.js'
+import { MIGRATION_TRACKING_TABLE as TRACKING_TABLE } from '../sql-migrator.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
 export class SqliteMigrationExecutor implements MigrationExecutor {

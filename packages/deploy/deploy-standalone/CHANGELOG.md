@@ -32,7 +32,7 @@
 
 - Updated dependencies [a057bec]
 - Updated dependencies [a057bec]
-  - @pikku/db-migrator@0.12.1
+  - @pikku/sql-migrator@0.12.1
   - @pikku/deploy@0.12.5
 
 ## 0.12.14

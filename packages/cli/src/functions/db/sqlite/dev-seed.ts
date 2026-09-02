@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import type { SyncSqliteDatabase } from '@pikku/db-migrator/sqlite'
+import type { SyncSqliteDatabase } from '@pikku/sql-migrator/sqlite'
 
 export interface DevSeedResult {
   applied: boolean

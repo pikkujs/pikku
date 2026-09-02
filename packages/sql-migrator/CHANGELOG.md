@@ -1,10 +1,10 @@
-# @pikku/db-migrator
+# @pikku/sql-migrator
 
 ## 0.12.1
 
 ### Patch Changes
 
-- a057bec: Extract the SQL migration applier into `@pikku/db-migrator`, so the CLI is no longer the only thing that can run one.
+- a057bec: Extract the SQL migration applier into `@pikku/sql-migrator`, so the CLI is no longer the only thing that can run one.
 
   A shipped standalone bundle has to apply the same migrations to the same database as `pikku db migrate`, from a machine with no checkout. That only works if both agree on the bookkeeping table, the file hash and the file order — a second implementation that differs in any of the three reads every migration the other applied as drifted and refuses to go on.
 
