@@ -1,5 +1,78 @@
 # @pikku/skills
 
+## 0.12.23
+
+### Patch Changes
+
+- f4e2e89: Add file attachments to `EmailService`.
+
+  `BaseSendEmailInput` gains an optional `attachments: EmailAttachment[]`, so it is
+  available on all three input variants — text, HTML and template. The new
+  `EmailAttachment` type is exported from `@pikku/core/services` alongside the
+  input types, and is shaped so that mapping it onto Resend, SendGrid, Nodemailer
+  or SES v2 is a straight field rename rather than a translation.
+
+  `content` is `Uint8Array | string`, where a string is always read as base64.
+  Both forms are accepted because both are what callers already hold: bytes come
+  out of a fetch or a file read, and base64 comes out of a database column or a
+  provider API. `Buffer` is deliberately absent from the type — it is a subclass
+  of `Uint8Array`, so Node callers can still pass one, while the type stays usable
+  in Cloudflare Workers, where `Buffer` does not exist.
+
+  `LocalEmailService` now logs attachment metadata — filename, content type,
+  content id, disposition and content length — instead of dropping the field
+  silently. The content itself is deliberately not logged.
+
+  The template-rendering wrapper documented in the emails skill rebuilt its
+  delegate payload field by field and therefore dropped `attachments`; it now
+  forwards them.
+
+- 9022169: Cover `pikku persona run`, and give the corpus a CLI command inventory.
+
+  `pikku doc` computes the `#pikku/*` API surface and lists no CLI commands, so
+  for anything invoked as `pikku <cmd>` the skills corpus is the only place it
+  exists. Two things were missing from it.
+
+  `pikku-scenario` covered declaring personas but not running one. Its new
+  `references/persona-run.md` covers the virtual-user run: the seven dispositions
+  and what each one is for, the three credentials and which wins, the budget and
+  `--seed` replay, why production takes only `accountable` and why that rule is
+  checked at build time and again at sign-in, the role check that happens before
+  the first step, and `sync` / `list` / `secret`.
+
+  `pikku-concepts` gains a one-line-per-command inventory of the CLI, grouped by
+  what you are doing and pointing at the skill that teaches each one. A dash means
+  no skill covers it beyond that line, which is a reason to read `--help` rather
+  than assume the command does what its name suggests.
+
+- acca415: Consolidate the skills corpus from 63 skills to 21.
+
+  The corpus had grown one skill per package and one per transport, so an agent's
+  first decision was a routing problem — which of ten wiring skills, which of five
+  auth skills — before it could reach anything that helped. Most of what those
+  skills carried was signatures and option keys, which `pikku doc` computes from
+  the compiler and cannot go stale.
+
+  Each family collapses to one chooser skill plus per-topic `references/*.md`. The
+  chooser answers the question the compiler cannot: which thing to pick, what
+  differs between the options, and what goes wrong silently. The families:
+
+  - `pikku-deploy` — eight runtime skills
+  - `pikku-service-backends` — six adapter skills, organised by the core interface
+    they implement rather than by vendor
+  - `pikku-wiring` — ten transport skills
+  - `pikku-auth` — five skills that all answered "who is this and may they",
+    fronted by the authentication-versus-authorization distinction
+  - `pikku-services` — services, config, audit and logging
+  - `pikku-agent` — the agent, its runner and the voice middlewares
+  - `pikku-react` and `pikku-i18n` — the client and localisation families
+  - `pikku-meta` — project metadata, contract versioning and the dependency audit
+  - `pikku-build` — the three build modes, feature work and post-clone cleanup
+  - `pikku-software-archaeology` and `pikku-fabric` — each gains its second phase
+
+  The doc-surface routing table (`LEAF_EDITORIAL`) points at the merged skills, and
+  the fabric install group is back to what it names: skills about Fabric.
+
 ## 0.12.22
 
 ### Patch Changes
