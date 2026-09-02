@@ -216,15 +216,15 @@ Each database variant exports these services with a prefix (`Pg`, `MySQL`, `SQLi
 A handful more live only on the base package — there is no `Pg`/`MySQL`/`SQLite`
 variant to reach for, you import them from `@pikku/kysely` whatever the engine:
 
-| Service                      | Purpose                                      |
-| ---------------------------- | -------------------------------------------- |
-| `KyselySessionStore`         | Persisted user sessions                      |
-| `KyselyScopeService`         | Scope and role storage                       |
-| `KyselyWebhookService`       | Webhook registrations and deliveries         |
-| `KyselyCredentialService`    | Encrypted third-party credentials            |
-| `KyselyAgentRunStateService` | AI run state (also implemented by AIStorage) |
-| `KyselyWorkflowMirror`       | Mirrors workflow runs into queryable tables  |
-| `KyselyAuditService`         | Durable audit sink (see `pikku-services`)       |
+| Service                      | Purpose                                                             |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `KyselySessionStore`         | Persisted user sessions                                             |
+| `KyselyScopeService`         | Scope and role storage                                              |
+| `KyselyWebhookService`       | Outgoing webhook deliveries + attempt history (see `pikku-webhook`) |
+| `KyselyCredentialService`    | Encrypted third-party credentials                                   |
+| `KyselyAgentRunStateService` | AI run state (also implemented by AIStorage)                        |
+| `KyselyWorkflowMirror`       | Mirrors workflow runs into queryable tables                         |
+| `KyselyAuditService`         | Durable audit sink (see `pikku-services`)                           |
 
 All services take a `Kysely<KyselyPikkuDB>` instance in their constructor and have an `init()` method that creates tables if needed.
 
