@@ -5590,7 +5590,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/inspector@npm:^0.12.71, @pikku/inspector@workspace:*, @pikku/inspector@workspace:packages/inspector":
+"@pikku/inspector@npm:^0.12.71, @pikku/inspector@npm:^0.12.72, @pikku/inspector@workspace:*, @pikku/inspector@workspace:packages/inspector":
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
@@ -6446,7 +6446,7 @@ __metadata:
     "@pikku/cli": "npm:^0.12.130"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express": "npm:^0.12.14"
-    "@pikku/inspector": "npm:^0.12.71"
+    "@pikku/inspector": "npm:^0.12.72"
     "@pikku/queue-bullmq": "npm:^0.12.7"
     "@pikku/redis": "npm:^0.12.20"
     "@types/node": "npm:^24"
@@ -6463,7 +6463,7 @@ __metadata:
     "@pikku/cli": "npm:^0.12.130"
     "@pikku/core": "npm:^0.12.102"
     "@pikku/express": "npm:^0.12.14"
-    "@pikku/inspector": "npm:^0.12.71"
+    "@pikku/inspector": "npm:^0.12.72"
     "@pikku/kysely-postgres": "npm:^0.12.22"
     "@pikku/queue-pg-boss": "npm:^0.12.10"
     "@types/node": "npm:^24"
