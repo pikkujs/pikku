@@ -185,6 +185,27 @@ describe('StandaloneProviderAdapter deploy output', () => {
   })
 })
 
+/**
+ * Runs the database-file choice the generated entry makes, rather than reading
+ * the source it is written in. Asserting on the text cannot tell a working
+ * precedence from one that always takes the same branch.
+ */
+const chooseDatabaseFile = (source: string, env: NodeJS.ProcessEnv): string => {
+  const helper = source.match(/function __pikkuRequireDataDir\(\)[\s\S]*?\n\}/)
+  const selection = source.match(
+    /const __pikkuDbFile =([\s\S]*?)\n\s*__pikkuMkdirSync/
+  )
+  assert.ok(helper, 'the entry must define the data-dir helper it calls')
+  assert.ok(selection, 'the entry must choose a database file')
+
+  const choose = new Function(
+    'process',
+    '__pikkuDbJoin',
+    `${helper[0]}\nreturn (${selection[1]})`
+  ) as (proc: { env: NodeJS.ProcessEnv }, join: typeof join) => string
+  return choose({ env }, join)
+}
+
 const withDb = {
   ...(baseContext as object),
   db: {
@@ -265,7 +286,25 @@ describe('StandaloneProviderAdapter database wiring', () => {
 
     // `pikku db migrate` has to open the same file this does; without an
     // override the two can only agree by coincidence.
-    assert.match(source, /PIKKU_DATABASE_FILE/)
+    assert.equal(
+      chooseDatabaseFile(source, {
+        PIKKU_DATA_DIR: '/var/lib/pikku',
+        PIKKU_DATABASE_FILE: '/srv/shared/app.db',
+      }),
+      '/srv/shared/app.db',
+      'the override has to win over the data directory, not merely be mentioned'
+    )
+  })
+
+  test('the data directory is used when nothing overrides it', () => {
+    const source = new StandaloneProviderAdapter({
+      runtime: 'node',
+    }).generateEntrySource(withDb)
+
+    assert.equal(
+      chooseDatabaseFile(source, { PIKKU_DATA_DIR: '/var/lib/pikku' }),
+      join('/var/lib/pikku', 'pikku.db')
+    )
   })
 
   test('a missing data directory fails by name', () => {
@@ -273,9 +312,8 @@ describe('StandaloneProviderAdapter database wiring', () => {
       runtime: 'node',
     }).generateEntrySource(withDb)
 
-    assert.match(source, /__pikkuRequireDataDir/)
-    assert.match(
-      source,
+    assert.throws(
+      () => chooseDatabaseFile(source, {}),
       /Set PIKKU_DATA_DIR to a writable directory/,
       'the error has to name the variable, not surface as a path of undefined'
     )

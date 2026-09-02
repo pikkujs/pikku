@@ -869,3 +869,82 @@ describe('PikkuNodeHTTPServer dispatch routes', { concurrency: false }, () => {
     assert.notEqual(response.status, 204)
   })
 })
+
+describe('PikkuNodeHTTPServer shutdown', { concurrency: false }, () => {
+  const runShutdown = async (hooks: {
+    beforeStop?: () => void | Promise<void>
+    afterStop?: () => void | Promise<void>
+  }) => {
+    const errors: string[] = []
+    const logger = {
+      ...createMockLogger(),
+      error: (msg: string | Error) => errors.push(String(msg)),
+    }
+    const server = new PikkuNodeHTTPServer(
+      { port: 0, hostname: '127.0.0.1' },
+      logger as any
+    )
+    await server.init()
+    await server.start()
+
+    const realExit = process.exit
+    const exited = new Promise<void>((resolve) => {
+      // The shutdown ends in process.exit, which would take the test runner
+      // with it; swapping it out is the only way to observe what ran first.
+      process.exit = (() => {
+        resolve()
+      }) as never
+    })
+    try {
+      server.enableExitOnSignals(hooks)
+      process.emit('SIGTERM' as never)
+      await exited
+    } finally {
+      process.exit = realExit
+      process.removeAllListeners('SIGTERM')
+      await server.stop()
+    }
+    return { errors, listening: server.server.listening }
+  }
+
+  test('a rejected beforeStop does not skip the server stop', async () => {
+    const { errors, listening } = await runShutdown({
+      beforeStop: async () => {
+        throw new Error('beforeStop exploded')
+      },
+    })
+
+    assert.equal(
+      listening,
+      false,
+      'a hook that throws must not leave the socket open'
+    )
+    assert.ok(errors.some((e) => /beforeStop failed during shutdown/.test(e)))
+  })
+
+  test('a rejected beforeStop does not skip afterStop', async () => {
+    let afterStopRan = false
+    const { errors } = await runShutdown({
+      beforeStop: async () => {
+        throw new Error('beforeStop exploded')
+      },
+      afterStop: async () => {
+        afterStopRan = true
+      },
+    })
+
+    assert.ok(afterStopRan, 'afterStop owes the app its teardown either way')
+    assert.ok(errors.some((e) => /beforeStop failed during shutdown/.test(e)))
+  })
+
+  test('a rejected afterStop is logged rather than thrown', async () => {
+    const { errors, listening } = await runShutdown({
+      afterStop: async () => {
+        throw new Error('afterStop exploded')
+      },
+    })
+
+    assert.equal(listening, false)
+    assert.ok(errors.some((e) => /afterStop failed during shutdown/.test(e)))
+  })
+})

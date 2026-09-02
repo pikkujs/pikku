@@ -18,8 +18,9 @@ server entry — the one behind every `target: 'server'` unit — now import the
 app's lifecycle and call it: `beforeStart` after `init` and before the port
 opens, so work that must finish before the first request has, `afterStart` once
 the server is listening, and the stop hooks handed to the signal handler that
-already owns shutdown rather than a second listener racing it. A failing
-shutdown hook is logged and the process still stops.
+already owns shutdown rather than a second listener racing it. Each shutdown
+step is isolated from the ones after it, so a hook that throws is logged without
+taking the service teardown and the socket close down with it.
 
 Separately, `createAuthUser` and `setAuthUserPassword` wrote credential accounts
 with no `issuer`. From better-auth 1.7 a credential account is matched by its

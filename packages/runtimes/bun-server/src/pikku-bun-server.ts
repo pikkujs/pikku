@@ -449,15 +449,31 @@ export class PikkuBunServer {
   }
 
   public enableExitOnSignals(hooks?: ShutdownHooks): void {
+    /**
+     * Every step of the shutdown is isolated from the ones after it. Sharing
+     * one catch means a hook that throws takes the service teardown and the
+     * socket close down with it, leaving the process to exit with connections
+     * still open and services still holding their handles.
+     */
+    const phase = async (name: string, run: () => void | Promise<void>) => {
+      try {
+        await run()
+      } catch (error) {
+        this.logger.error(
+          `pikku-bun-server: ${name} failed during shutdown`,
+          error
+        )
+      }
+    }
     const shutdown = async (signal: string) => {
       this.logger.info(`pikku-bun-server: ${signal} received, stopping`)
       try {
-        await hooks?.beforeStop?.()
-        await stopSingletonServices()
-        await this.stop()
-        await hooks?.afterStop?.()
-      } catch (error) {
-        this.logger.error(`pikku-bun-server: shutdown hook failed`, error)
+        await phase('beforeStop', () => hooks?.beforeStop?.())
+        await phase('stopping singleton services', () =>
+          stopSingletonServices()
+        )
+        await phase('stopping the server', () => this.stop())
+        await phase('afterStop', () => hooks?.afterStop?.())
       } finally {
         process.exit(0)
       }
