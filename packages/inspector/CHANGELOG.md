@@ -1,3 +1,40 @@
+## 0.12.71
+
+### Patch Changes
+
+- 9015400: Derive an addon's required parent services from what its functions actually use.
+
+  An addon's functions are its published surface — a consumer calls them, nothing
+  wires them locally — so `usedFunctions` was empty for an addon's own build and no
+  function services were ever aggregated. The generated services map came out
+  claiming the addon needed nothing beyond the framework defaults, and
+  `requiredParentServices` was derived only from the second parameter of
+  `pikkuAddonServices`, which names what the factory reads rather than what its
+  functions destructure.
+
+  The visible cost was an addon that consumed `kysely` in all fifteen of its
+  functions and declared it nowhere: the consuming project was never told to supply
+  it, the addon lost it at runtime, and every query failed on the first call. The
+  only way out was to list the missing names under `forceRequiredServices`, which
+  is a detection escape hatch and was never meant to carry a contract.
+
+  An addon build now aggregates services from every declared function, and treats
+  as parent-provided whatever it uses but does not build itself. What the factory
+  builds is read from the object literals it returns, minus anything it took off
+  the parent bag first — a forwarded service is not a created one, which is how
+  `@pikku/addon-admin` returns `scopeService` and friends without claiming to own
+  them. Names destructured from the second parameter in the function body, rather
+  than in the parameter list, are picked up too.
+
+- 8852a75: Register an agent invoked from a function body in the calling deployment unit.
+
+  `runAgent('houseAssistant', ...)` and `rpc.agent.run('houseAssistant', ...)` resolve against the in-process agent registry, but the deploy analyzer only ever put an agent's registration in its own `agent-*` unit. A function calling one landed in a separate unit whose bootstrap never registered it, so the deployed worker threw `AI agent not found: houseAssistant`.
+
+  The inspector now records a string-literal agent name passed to `runAgent` / `streamAgent` / `rpc.agent.run` / `rpc.agent.stream` in a function body under `agents.invokedAgentsByFile`, mirroring what it already does for `rpc.invoke` targets. The analyzer carries those names on the calling unit as `invokedAgents` and adds the `ai-model` / `ai-storage` service requirements, and per-unit codegen puts the agent — and its tools — into that unit's filter names so its wiring is generated there too. A dynamic (template-literal) agent name is warned about, as it is for `rpc.invoke`.
+
+- Updated dependencies [f4e2e89]
+  - @pikku/core@0.12.102
+
 ## 0.12.70
 
 ### Patch Changes

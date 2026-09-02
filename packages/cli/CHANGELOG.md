@@ -1,3 +1,74 @@
+## 0.12.129
+
+### Patch Changes
+
+- 796045f: Add `pikku knowledge plan` — read and write a milestone's technical plan.
+
+      pikku knowledge plan schema
+      pikku knowledge plan show <milestone> [--for-build]
+      pikku knowledge plan set <milestone> <file>
+      pikku knowledge plan defer <milestone> <item> --reason "..."
+
+  `set` is the point of it. It runs the schema, then `checkFirstPass`,
+  `checkPlanInternals` and `checkAgainstMilestone` against the milestone note's
+  own surface and personas, and writes nothing unless all of them pass — a plan
+  validated at gate time instead has already cost the build it was measured
+  against. A shape refusal carries the schema with it, so a writer told a field
+  is invalid does not have to go looking for what the valid options are.
+
+  `defer` moves ONE first-pass item to the next pass with its reason recorded,
+  which is the only sanctioned way for something planned to stop blocking the
+  milestone. The runners live in `@pikku/knowledge` as
+  `runKnowledgePlanSchema`/`Show`/`Set`/`Defer`, so anything else driving a build
+  gets the same order of checks without reimplementing it.
+
+- 8852a75: Register an agent invoked from a function body in the calling deployment unit.
+
+  `runAgent('houseAssistant', ...)` and `rpc.agent.run('houseAssistant', ...)` resolve against the in-process agent registry, but the deploy analyzer only ever put an agent's registration in its own `agent-*` unit. A function calling one landed in a separate unit whose bootstrap never registered it, so the deployed worker threw `AI agent not found: houseAssistant`.
+
+  The inspector now records a string-literal agent name passed to `runAgent` / `streamAgent` / `rpc.agent.run` / `rpc.agent.stream` in a function body under `agents.invokedAgentsByFile`, mirroring what it already does for `rpc.invoke` targets. The analyzer carries those names on the calling unit as `invokedAgents` and adds the `ai-model` / `ai-storage` service requirements, and per-unit codegen puts the agent — and its tools — into that unit's filter names so its wiring is generated there too. A dynamic (template-literal) agent name is warned about, as it is for `rpc.invoke`.
+
+- acca415: Consolidate the skills corpus from 63 skills to 21.
+
+  The corpus had grown one skill per package and one per transport, so an agent's
+  first decision was a routing problem — which of ten wiring skills, which of five
+  auth skills — before it could reach anything that helped. Most of what those
+  skills carried was signatures and option keys, which `pikku doc` computes from
+  the compiler and cannot go stale.
+
+  Each family collapses to one chooser skill plus per-topic `references/*.md`. The
+  chooser answers the question the compiler cannot: which thing to pick, what
+  differs between the options, and what goes wrong silently. The families:
+
+  - `pikku-deploy` — eight runtime skills
+  - `pikku-service-backends` — six adapter skills, organised by the core interface
+    they implement rather than by vendor
+  - `pikku-wiring` — ten transport skills
+  - `pikku-auth` — five skills that all answered "who is this and may they",
+    fronted by the authentication-versus-authorization distinction
+  - `pikku-services` — services, config, audit and logging
+  - `pikku-agent` — the agent, its runner and the voice middlewares
+  - `pikku-react` and `pikku-i18n` — the client and localisation families
+  - `pikku-meta` — project metadata, contract versioning and the dependency audit
+  - `pikku-build` — the three build modes, feature work and post-clone cleanup
+  - `pikku-software-archaeology` and `pikku-fabric` — each gains its second phase
+
+  The doc-surface routing table (`LEAF_EDITORIAL`) points at the merged skills, and
+  the fabric install group is back to what it names: skills about Fabric.
+
+- Updated dependencies [9015400]
+- Updated dependencies [f4e2e89]
+- Updated dependencies [796045f]
+- Updated dependencies [796045f]
+- Updated dependencies [9022169]
+- Updated dependencies [8852a75]
+- Updated dependencies [acca415]
+  - @pikku/inspector@0.12.71
+  - @pikku/core@0.12.102
+  - @pikku/skills@0.12.23
+  - @pikku/knowledge@0.12.8
+  - @pikku/deploy@0.12.3
+
 ## 0.12.128
 
 ### Patch Changes

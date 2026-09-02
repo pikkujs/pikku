@@ -1,5 +1,58 @@
 # @pikku/knowledge
 
+## 0.12.8
+
+### Patch Changes
+
+- 796045f: Add `pikku knowledge plan` — read and write a milestone's technical plan.
+
+      pikku knowledge plan schema
+      pikku knowledge plan show <milestone> [--for-build]
+      pikku knowledge plan set <milestone> <file>
+      pikku knowledge plan defer <milestone> <item> --reason "..."
+
+  `set` is the point of it. It runs the schema, then `checkFirstPass`,
+  `checkPlanInternals` and `checkAgainstMilestone` against the milestone note's
+  own surface and personas, and writes nothing unless all of them pass — a plan
+  validated at gate time instead has already cost the build it was measured
+  against. A shape refusal carries the schema with it, so a writer told a field
+  is invalid does not have to go looking for what the valid options are.
+
+  `defer` moves ONE first-pass item to the next pass with its reason recorded,
+  which is the only sanctioned way for something planned to stop blocking the
+  milestone. The runners live in `@pikku/knowledge` as
+  `runKnowledgePlanSchema`/`Show`/`Set`/`Defer`, so anything else driving a build
+  gets the same order of checks without reimplementing it.
+
+- 796045f: Add the milestone plan format to `@pikku/knowledge`.
+
+  A milestone says what to build; a plan says what building it consists of —
+  which functions, wires, roles, scopes, screens and scenarios a pass owes, and
+  what was deferred to the next one. The two halves were split across two repos:
+  this package owned the note format, `MILESTONE_TYPE` and `runKnowledgeValidate`,
+  while the plan lived downstream. Anything that wanted to write a plan had to
+  reimplement the schema from an example.
+
+  `PlanSchema` and `PLAN_VERSION` are the format. `readPlan`/`writePlan` are the
+  only readers and writers. `checkFirstPass`, `checkAgainstMilestone` and
+  `checkPlanInternals` are deterministic gates over a plan and its milestone —
+  they judge whether the plan holds, never whether it is a good plan, which stays
+  a matter for whatever wrote it. `planSchemaJson` emits the schema as JSON Schema
+  so an agent can be handed the shape rather than made to infer it.
+
+  `plan-meta` reads a generated `.pikku` meta directory and reports which planned
+  items the code actually discharges: `planProgress`, `planShortfall`,
+  `cascadeProblems`. `hollow-scenarios` classifies a scenario by what it proves,
+  so a plan cannot be satisfied by scenarios that assert nothing.
+
+  `readPlan` refuses a plan whose `version` this reader does not know, naming the
+  version, rather than reporting the mismatch as a scatter of field errors. That
+  is what lets the format change later without a stale reader spending its turn
+  editing fields to satisfy a schema it cannot satisfy.
+
+  `notes` also gains `MILESTONES_DIR`, `MILESTONE_SURFACES`, `listOf` and
+  `noteHash`, which the plan reads and which belong with the note vocabulary.
+
 ## 0.12.7
 
 ### Patch Changes
