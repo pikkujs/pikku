@@ -79,6 +79,7 @@ export {
   deferOutstandingItems,
   checkFirstPass,
   checkAgainstMilestone,
+  checkCovers,
   checkPlanInternals,
   knowledgeCoverage,
 } from './plan.js'
@@ -123,6 +124,10 @@ export {
   KnowledgePlanShowOutput,
   type KnowledgePlanShowResult,
   runKnowledgePlanShow,
+  KnowledgePlanProgressInput,
+  KnowledgePlanProgressOutput,
+  type KnowledgePlanProgressResult,
+  runKnowledgePlanProgress,
   KnowledgePlanSetInput,
   KnowledgePlanSetOutput,
   type KnowledgePlanSetResult,

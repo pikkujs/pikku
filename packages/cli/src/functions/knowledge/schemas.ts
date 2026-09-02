@@ -3,6 +3,8 @@ import {
   KnowledgeIndexOutput,
   KnowledgePlanDeferInput,
   KnowledgePlanDeferOutput,
+  KnowledgePlanProgressInput,
+  KnowledgePlanProgressOutput,
   KnowledgePlanSchemaInput,
   KnowledgePlanSchemaOutput,
   KnowledgePlanSetInput,
@@ -39,6 +41,8 @@ export const KnowledgeValidateInputSchema = KnowledgeValidateInput
 export const KnowledgeValidateOutputSchema = KnowledgeValidateOutput
 export const KnowledgePlanSchemaInputSchema = KnowledgePlanSchemaInput
 export const KnowledgePlanSchemaOutputSchema = KnowledgePlanSchemaOutput
+export const KnowledgePlanProgressInputSchema = KnowledgePlanProgressInput
+export const KnowledgePlanProgressOutputSchema = KnowledgePlanProgressOutput
 export const KnowledgePlanShowInputSchema = KnowledgePlanShowInput
 export const KnowledgePlanShowOutputSchema = KnowledgePlanShowOutput
 export const KnowledgePlanSetInputSchema = KnowledgePlanSetInput

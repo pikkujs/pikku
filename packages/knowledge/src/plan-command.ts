@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { z } from 'zod'
+import { readKnowledgeNotes } from './notes.js'
 import {
   gherkinOf,
   personasIn,
@@ -8,8 +9,16 @@ import {
   type MilestoneNote,
 } from './milestone.js'
 import {
+  cascadeProblems,
+  functionsDirFor,
+  planShortfall,
+  readPikkuMeta,
+  shallowScenarioProblems,
+} from './plan-meta.js'
+import {
   PlanSchema,
   checkAgainstMilestone,
+  checkCovers,
   checkFirstPass,
   checkPlanInternals,
   deferPlanItem,
@@ -49,15 +58,17 @@ const resolve = async (
   )
 }
 
-const problemsFor = (
+const problemsFor = async (
+  root: string,
   plan: z.infer<typeof PlanSchema>,
   note: MilestoneNote
-): string[] => {
+): Promise<string[]> => {
   const surface = surfaceOf(note)
   const gherkin = gherkinOf(note)
   return [
     ...checkFirstPass(plan, surface),
     ...checkPlanInternals(plan),
+    ...checkCovers(plan, await readKnowledgeNotes(root)),
     ...checkAgainstMilestone(
       plan,
       note,
@@ -111,6 +122,80 @@ export const runKnowledgePlanShow = async (
   }
 }
 
+export const KnowledgePlanProgressInput = z.object({
+  milestone: z.string().min(1),
+})
+
+export const KnowledgePlanProgressOutput = z.object({
+  ok: z.boolean(),
+  path: z.string(),
+  /** Why nothing could be measured. Empty whenever the plan was read. */
+  message: z.string(),
+  done: z.array(z.string()),
+  missing: z.array(z.string()),
+  deferred: z.array(z.string()),
+  problems: z.array(z.string()),
+})
+
+export type KnowledgePlanProgressResult = z.infer<
+  typeof KnowledgePlanProgressOutput
+>
+
+/**
+ * What the milestone still owes its plan, read from codegen rather than from anyone's word.
+ *
+ * This is the half of the gate the build cannot edit. `missing` is set membership against
+ * pikku's generated meta — the function exists or it does not — so a build that reports
+ * itself finished with four of its planned functions unwritten is refused by a check that
+ * never consults its opinion. The build agent both writing the plan and grading it against
+ * its own todo list is the failure the plan format was introduced against; this command is
+ * where the two seats meet.
+ *
+ * The three problem sources are kept separate because they read different things and would
+ * each be missed on their own: `planShortfall` reconciles the meta, `shallowScenarioProblems`
+ * catches a browser scenario that only proves its route loads, and `cascadeProblems` reads the
+ * migrations, which no generated meta describes.
+ *
+ * Only the FIRST pass blocks what is MISSING. A later pass is real work the next milestone
+ * picks up, and refusing on it is what made plan size fatal rather than merely slow — so it
+ * comes back under `deferred`, reported and never blocking.
+ *
+ * `problems` block whatever pass they came from, because a problem is not unbuilt work: the
+ * thing EXISTS and does something other than what was planned. A pass-2 function that shipped
+ * wide open against a planned permission rule is a hole in the app now, and deferring it would
+ * be deferring the hole rather than the work.
+ */
+export const runKnowledgePlanProgress = async (
+  root: string,
+  { milestone }: z.infer<typeof KnowledgePlanProgressInput>
+): Promise<KnowledgePlanProgressResult> => {
+  const empty = { done: [], missing: [], deferred: [], problems: [] }
+  const note = await resolve(root, milestone)
+  if (!note) {
+    return { ok: false, path: '', message: NO_MILESTONE(milestone), ...empty }
+  }
+  const read = readPlan(root, note.path)
+  if (!read.ok) {
+    return { ok: false, path: read.path, message: read.reason, ...empty }
+  }
+  const meta = readPikkuMeta(functionsDirFor(root))
+  const shortfall = planShortfall(read.plan, meta)
+  const problems = [
+    ...shortfall.problems,
+    ...shallowScenarioProblems(read.plan, meta),
+    ...cascadeProblems(read.plan, root),
+  ]
+  return {
+    ok: shortfall.missing.length === 0 && problems.length === 0,
+    path: read.path,
+    message: '',
+    done: shortfall.done,
+    missing: shortfall.missing,
+    deferred: shortfall.deferred,
+    problems,
+  }
+}
+
 export const KnowledgePlanSetInput = z.object({
   milestone: z.string().min(1),
   file: z.string().min(1),
@@ -154,7 +239,7 @@ export const runKnowledgePlanSet = async (
       schema: planSchemaJson(),
     }
   }
-  const problems = problemsFor(parsed.data, note)
+  const problems = await problemsFor(root, parsed.data, note)
   if (problems.length > 0) return { ok: false, path, problems }
   return {
     ok: true,

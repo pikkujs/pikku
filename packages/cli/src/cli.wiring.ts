@@ -43,10 +43,12 @@ import {
 } from './functions/commands/knowledge-index.js'
 import {
   knowledgePlanDefer,
+  knowledgePlanProgress,
   knowledgePlanSchema,
   knowledgePlanSet,
   knowledgePlanShow,
   renderKnowledgePlanDefer,
+  renderKnowledgePlanProgress,
   renderKnowledgePlanSchema,
   renderKnowledgePlanSet,
   renderKnowledgePlanShow,
@@ -667,6 +669,13 @@ wireCLI({
                   default: false,
                 },
               },
+            }),
+            progress: pikkuCLICommand({
+              func: knowledgePlanProgress,
+              render: renderKnowledgePlanProgress,
+              description:
+                'Say what the milestone still owes its plan, read from the generated meta rather than from what was claimed',
+              parameters: '<milestone>',
             }),
             set: pikkuCLICommand({
               func: knowledgePlanSet,

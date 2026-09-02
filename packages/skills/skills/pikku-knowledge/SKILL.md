@@ -242,6 +242,20 @@ pikku knowledge index --check   # report stale indexes without writing (CI gate)
 
 `index` rewrites only the block between `<!-- pikku:knowledge-index -->` markers, creating a scaffolded `index.md` for a section that has none. It is idempotent — running it twice changes nothing.
 
+### The milestone plan
+
+A milestone note says what the app must DO. Its **plan** — JSON beside the note, not prose — says what has to exist for it, and is what a finished build is measured against:
+
+```bash
+pikku knowledge plan schema                        # the format, in full
+pikku knowledge plan set <milestone> <file>        # validate and write it
+pikku knowledge plan show <milestone> --for-build  # the ordered work a build follows
+pikku knowledge plan progress <milestone>          # what it still owes, read from .pikku/
+pikku knowledge plan defer <milestone> <item> -r "<why>"
+```
+
+`progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short, or while anything already built contradicts the plan. Unbuilt work in a later pass is reported, not blocked; a function that shipped wide open against a planned permission rule blocks from any pass, because that is a hole rather than a backlog. Writing a plan is its own seat: read `pikku-architect`. Building against one is `pikku-build`.
+
 ## Profiles built on this one
 
 OKF permits frontmatter fields a reader does not know, and the parser ignores them rather than failing. That is the extension point: a tool layered on Pikku can add its own sections and fields on top of everything above without forking the format.

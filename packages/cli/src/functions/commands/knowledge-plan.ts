@@ -1,12 +1,14 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   runKnowledgePlanDefer,
+  runKnowledgePlanProgress,
   runKnowledgePlanSchema,
   runKnowledgePlanSet,
   runKnowledgePlanShow,
 } from '@pikku/knowledge'
 import {
   renderKnowledgePlanDefer,
+  renderKnowledgePlanProgress,
   renderKnowledgePlanSchema,
   renderKnowledgePlanSet,
   renderKnowledgePlanShow,
@@ -14,6 +16,8 @@ import {
 import {
   KnowledgePlanDeferInputSchema,
   KnowledgePlanDeferOutputSchema,
+  KnowledgePlanProgressInputSchema,
+  KnowledgePlanProgressOutputSchema,
   KnowledgePlanSchemaInputSchema,
   KnowledgePlanSchemaOutputSchema,
   KnowledgePlanSetInputSchema,
@@ -39,6 +43,15 @@ export const knowledgePlanShow = pikkuSessionlessFunc({
     runKnowledgePlanShow(config.rootDir, input),
 })
 
+export const knowledgePlanProgress = pikkuSessionlessFunc({
+  description:
+    "Reconcile a milestone's plan against the generated meta and say what is still owed, so a milestone closes on what exists rather than on what was claimed.",
+  input: KnowledgePlanProgressInputSchema,
+  output: KnowledgePlanProgressOutputSchema,
+  func: async ({ config }, input) =>
+    runKnowledgePlanProgress(config.rootDir, input),
+})
+
 export const knowledgePlanSet = pikkuSessionlessFunc({
   description:
     'Validate a plan against its milestone note and write it, or write nothing and say what is wrong.',
@@ -58,6 +71,7 @@ export const knowledgePlanDefer = pikkuSessionlessFunc({
 
 export {
   renderKnowledgePlanDefer,
+  renderKnowledgePlanProgress,
   renderKnowledgePlanSchema,
   renderKnowledgePlanSet,
   renderKnowledgePlanShow,

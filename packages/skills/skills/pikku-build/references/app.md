@@ -351,17 +351,45 @@ Number the files (`01-…`, `02-…`) so the order is visible in the tree. Then
 **Show the user the list before building.** This is the last cheap moment to
 reorder — after §6 the migrations are numbered and the order is concrete.
 
+## 5a. The technical plan — one milestone at a time, before you build it
+
+The milestone note says what the app must DO. The **plan** says what has to
+exist for it: the tables, functions, wires, roles, scopes, screens and
+scenarios, split into passes. It is JSON, it lives beside the note, and
+`pikku knowledge plan progress` measures the finished build against it.
+
+**Read `pikku-architect` and follow it.** The plan is the denominator the
+completion check divides by, so a builder who writes their own plan can build a
+fraction, plan only that fraction, and certify itself complete. Fabric answers
+that by giving the plan its own seat; here the defence is the ORDER, and it only
+holds if you keep it: the plan is written against the note in its own turn,
+before any of the code it measures exists, and is never edited afterwards to
+match what you ended up building. An item that will not land is deferred with
+its reason — `plan defer` — not quietly rewritten. Write it before you open a
+migration:
+
+```sh
+pikku knowledge plan schema                        # the only spec there is
+pikku knowledge plan set <milestone> /tmp/plan.json
+pikku knowledge plan show <milestone> --for-build  # what you then build
+```
+
+**Plan one milestone at a time, at the moment you are about to build it** — not
+all of them here. A plan written against a note that later moves is worse than
+no plan, and everything after the current milestone is still allowed to move.
+
 ---
 
 ## PHASE 4 — Build
 
 ## 6. Implement milestones, one at a time
 
-**Per milestone** — set its note to `status: dispatched`, do the six steps,
-set it to `built`. Do not start the next one until §7 is green for this one *and
-§7a shows its functions covered*. A stack of half-milestones cannot be reviewed
-and cannot be handed over, and an uncovered function is a half-milestone whether
-or not the note says `built`.
+**Per milestone** — plan it (§5a), set its note to `status: dispatched`, do the
+six steps, close it out (§6a), set it to `built`. Do not start the next one
+until §6a passes, §7 is green for this one *and §7a shows its functions
+covered*. A stack of half-milestones cannot be reviewed and cannot be handed
+over, and an uncovered function is a half-milestone whether or not the note says
+`built`.
 
 1. **Migration.** SQL in `db/sqlite/` at the project root, numbered on from the
    ones already there. Apply with `bunx --bun pikku db migrate`, which also
@@ -460,6 +488,44 @@ and a regression lands silently. When a journey is worth driving through the UI,
 it is worth writing as a browser step on §7's scenario and running
 `pikku scenario run local --spawn --run browser`: same clicks, same assertions,
 in the repo, green or red on every future run.
+
+## 6a. Close the milestone against its plan, not against your memory
+
+```sh
+pikku knowledge plan progress <milestone>
+```
+
+It reads §5a's plan and reconciles it against the generated meta under
+`.pikku/` — the function exists or it does not, the route is wired or it is not,
+the `pikkuScenario` export is there or it is not. Nothing it reports comes from
+what anyone claimed, which is the whole reason it replaced a todo list. It exits
+non-zero while anything in the first pass is missing.
+
+Three things it says, and what each one asks of you:
+
+- **MISSING** — the first pass owes it and the meta cannot see it. Either build
+  it, or, if it genuinely belongs to later work, move it out with a reason on
+  the record:
+
+  ```sh
+  pikku knowledge plan defer <milestone> function:sendReminder \
+    -r "The email service it needs is the next milestone."
+  ```
+
+  **A deferral is capped at two per plan.** Past that, the plan was wrong and the
+  milestone is two milestones — say so to the user rather than deferring again.
+  What you may never do is drop the item silently: the plan is what the next
+  person reads to know what this milestone was for.
+- **PROBLEMS** — something exists but does not do what was planned. A function
+  planned as restricted whose meta says `auth: false`; a `cascade` no migration
+  declares; a browser scenario that opens a page and asserts it is still on it.
+  These are never deferred. Fix the app.
+- **DEFERRED to a later pass** — already accounted for. Reported so it is
+  visible, never blocking.
+
+**Do not set the note to `built` while this exits non-zero**, and do not edit the
+plan to match what you built — `plan set` is the architect's seat, and a builder
+rewriting its own denominator is exactly what the split exists to stop.
 
 ## 7. Prove it — scenarios
 

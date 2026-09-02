@@ -74,3 +74,118 @@ describe('KnowledgeService', () => {
     assert.equal((await instance.getBundle()).stats.notes, 2)
   })
 })
+
+describe('KnowledgeService milestone plans', () => {
+  const MILESTONE = 'knowledge/milestones/01-the-daily-entry.md'
+
+  const NOTE = `---
+type: milestone
+entities: entry
+---
+The daily entry.
+
+\`\`\`gherkin
+Given 'owner' has today free
+When 'owner' writes an entry
+Then 'owner' reads it back
+\`\`\`
+`
+
+  const plan = {
+    version: 1,
+    deferrals: [],
+    milestone: MILESTONE,
+    description: 'One person writes one entry a day.',
+    covers: [
+      { note: 'entities/entry.md', hash: 'a1b2c3d4e5f6', complete: true },
+    ],
+    model: { kind: 'n/a', description: 'No tables yet.' },
+    functions: {
+      kind: 'built',
+      description: 'Write.',
+      items: [
+        {
+          name: 'createEntry',
+          description: "Creates today's entry.",
+          pass: 1,
+          wire: { transport: 'http', route: 'POST /entry' },
+          scopes: [],
+          permission: 'Only the signed-in person writes their own entry',
+        },
+      ],
+    },
+    roles: { kind: 'n/a', description: 'One person.' },
+    scopes: { kind: 'n/a', description: 'No third-party access yet.' },
+    ui: { kind: 'n/a', description: 'No screen yet.' },
+    scenarios: {
+      backend: { kind: 'n/a', description: 'None yet.' },
+      browser: { kind: 'n/a', description: 'None yet.' },
+      permission: { kind: 'n/a', description: 'None yet.' },
+    },
+  }
+
+  test('a milestone with a plan carries it, reconciled against the meta', async () => {
+    const root = await project({
+      [MILESTONE]: NOTE,
+      'knowledge/milestones/01-the-daily-entry.plan.json': JSON.stringify(plan),
+      '.pikku/function/pikku-functions-meta.gen.json': JSON.stringify({
+        createEntry: { auth: true },
+      }),
+      '.pikku/http/pikku-http-wirings-meta.gen.json': JSON.stringify({
+        POST: { '/entry': {} },
+      }),
+    })
+    const bundle = await service(root).getBundle()
+
+    const milestone = bundle.plans[MILESTONE]
+    assert.ok(milestone)
+    assert.equal(milestone.unavailable, null)
+    assert.equal(
+      milestone.plan?.description,
+      'One person writes one entry a day.'
+    )
+    assert.equal(milestone.complete, true)
+    assert.deepEqual(
+      milestone.checklist.map((item) => [item.id, item.done]),
+      [
+        ['function:createEntry', true],
+        ['wire:POST /entry', true],
+      ]
+    )
+  })
+
+  test('a plan the meta cannot account for reads as incomplete rather than as absent', async () => {
+    const root = await project({
+      [MILESTONE]: NOTE,
+      'knowledge/milestones/01-the-daily-entry.plan.json': JSON.stringify(plan),
+    })
+    const bundle = await service(root).getBundle()
+
+    const milestone = bundle.plans[MILESTONE]
+    assert.equal(milestone?.complete, false)
+    assert.deepEqual(
+      milestone?.checklist.map((item) => item.done),
+      [false, false]
+    )
+  })
+
+  test('a milestone nobody planned says so, rather than going missing from the bundle', async () => {
+    // A note with no plan beside it is the state the console most needs to show —
+    // dropping the key would render exactly like a milestone that was never written.
+    const root = await project({ [MILESTONE]: NOTE })
+    const bundle = await service(root).getBundle()
+
+    const milestone = bundle.plans[MILESTONE]
+    assert.ok(milestone)
+    assert.equal(milestone.plan, null)
+    assert.match(milestone.unavailable ?? '', /No plan at/)
+    assert.deepEqual(milestone.checklist, [])
+  })
+
+  test('a base with no milestones carries no plans', async () => {
+    const root = await project({
+      'knowledge/decisions/why.md': '---\ntype: decision\n---\nBecause.',
+    })
+    assert.deepEqual((await service(root).getBundle()).plans, {})
+  })
+})

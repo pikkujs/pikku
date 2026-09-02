@@ -404,7 +404,7 @@ test('the apps a plan calls for are read off its roles, in order', () => {
   assert.match(rendered, /APPS: 2/)
   assert.match(rendered, /`workshop` — mechanic, counter/)
   assert.match(rendered, /`storefront` — rider/)
-  assert.match(rendered, /fabric new-app/)
+  assert.match(rendered, /Create a frontend for each one after the first/)
   assert.match(rendered, /`mechanic` \[workshop\]/)
 })
 
@@ -416,7 +416,7 @@ test('a single-audience plan is one named app, not a silence', () => {
   const rendered = renderPlanForBuild(plan)
   assert.deepEqual(plannedApps(plan), ['journal'])
   assert.equal(rendered.includes('APPS:'), false)
-  assert.equal(rendered.includes('fabric new-app'), false)
+  assert.equal(rendered.includes('Create a frontend'), false)
 })
 
 test('a screen names the app it belongs to', () => {
@@ -514,7 +514,10 @@ test('the architect is told what `app` means on a role, not just on a screen', (
   assert.ok(role, 'roles slot exposes its item shape')
   const described = role.properties.app.description
   assert.match(described, /counter, not the org chart/)
-  assert.match(described, /fabric new-app/)
+  assert.match(
+    described,
+    /the build creates a frontend for each one after the first/
+  )
   assert.match(described, /REQUIRED on every role/)
   assert.ok(
     role.required.includes('app'),

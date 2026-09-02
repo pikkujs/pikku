@@ -202,6 +202,17 @@ export { DetailHeader } from './components/ui/DetailHeader'
 export type { DetailHeaderProps } from './components/ui/DetailHeader'
 export { EmptyState } from './components/ui/EmptyState'
 export type { EmptyStateProps } from './components/ui/EmptyState'
+// A long document as one card of collapsed sections, and the band above it.
+// Shared rather than local because the plan document is not the only screen
+// shaped that way, and a host embedding it needs the same two pieces to put its
+// own sections beside them.
+export { SectionsCard } from './components/ui/SectionsCard'
+export type {
+  SectionsCardProps,
+  CardSection,
+} from './components/ui/SectionsCard'
+export { SectionHeader } from './components/ui/SectionHeader'
+export type { SectionHeaderProps } from './components/ui/SectionHeader'
 
 // A knowledge note is rendered outside this console too — the fabric console
 // draws the same notes on its own screen — and a second `<ReactMarkdown>` there
@@ -255,6 +266,38 @@ export { KnowledgeBrowseRail } from './components/knowledge/KnowledgeBrowseRail'
 export type { KnowledgeBrowseRailProps } from './components/knowledge/KnowledgeBrowseRail'
 export { useKnowledgeBrowse } from './hooks/useKnowledgeBrowse'
 export type { KnowledgeBrowse } from './hooks/useKnowledgeBrowse'
+// The milestone plan as a document. Presentational: the plan and the checklist
+// it is reconciled against arrive as props, so Fabric draws the same plan from a
+// sandbox it reaches over its own transport rather than keeping a second
+// renderer that drifts from this one.
+export { PlanDocument } from './components/knowledge/PlanDocument'
+export type { PlanDocumentProps } from './components/knowledge/PlanDocument'
+export { PlanChecklistRow } from './components/knowledge/PlanChecklistRow'
+export { PlanSlotBody } from './components/knowledge/PlanSlotBody'
+export { PlanItemCard } from './components/knowledge/PlanItemCard'
+export { PlanNamedCard } from './components/knowledge/PlanNamedCard'
+export { PlanField } from './components/knowledge/PlanField'
+export { PlanSlotProgress } from './components/knowledge/PlanSlotProgress'
+export { PlanNotApplicable } from './components/knowledge/PlanNotApplicable'
+export { planSections } from './components/knowledge/plan-sections'
+export { slotItems, planChecklistProgress, planCoverage } from './lib/plan'
+export type {
+  MilestonePlan,
+  Plan,
+  PlanChecklistItem,
+  PlanClassification,
+  PlanCovers,
+  PlanFunctionItem,
+  PlanModelField,
+  PlanModelItem,
+  PlanModelRelationship,
+  PlanNamedItem,
+  PlanRoleItem,
+  PlanScenarioItem,
+  PlanSlot,
+  PlanUiItem,
+} from './lib/plan'
+
 export { resolveNoteLink } from './lib/knowledge'
 export type {
   KnowledgeBundle,

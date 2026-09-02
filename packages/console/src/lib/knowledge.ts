@@ -4,6 +4,7 @@
  * @pikku/knowledge). The console has no type-level import of the addon, so the
  * two move together by hand — same arrangement as the db schema types.
  */
+import type { MilestonePlan } from './plan'
 
 export interface KnowledgeNote {
   path: string
@@ -46,6 +47,8 @@ export interface KnowledgeBundle {
   stats: { notes: number; sections: number; links: number; dangling: number }
   findings: KnowledgeFinding[]
   ok: boolean
+  /** Keyed by the milestone note's path, so a note document can find its own plan. */
+  plans: Record<string, MilestonePlan>
 }
 
 /**

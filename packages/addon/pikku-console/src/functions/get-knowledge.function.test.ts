@@ -12,6 +12,7 @@ const BUNDLE = {
   stats: { notes: 0, sections: 0, links: 0, dangling: 0 },
   findings: [],
   ok: true,
+  plans: {},
 } as KnowledgeBundle
 
 test('getKnowledge hands back whatever the service read off disk', async () => {

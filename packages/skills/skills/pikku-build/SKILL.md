@@ -62,12 +62,20 @@ while still planning. Those failures look alarming and are nothing but this.
   lives in `messages/*.json`.
 - **`pikku all` is the gate.** Run it after touching functions, wirings or
   schemas, and treat its criticals as real.
+- **A milestone is planned by a different seat than the one that builds it.**
+  The plan — tables, functions, wires, roles, scopes, screens, scenarios, in
+  passes — is written through `pikku knowledge plan set` by `pikku-architect`,
+  and `pikku knowledge plan progress` measures the build against it from the
+  generated meta. A builder who writes its own plan is grading itself.
 
 ## What NOT to do
 
 - **Do not skip ahead in App mode.** Knowledge, then people, then milestones,
-  then one milestone at a time, each proven by a scenario before the next
-  starts. The order is the method.
+  then one milestone at a time — planned, built, proven by a scenario, and
+  closed against its plan before the next starts. The order is the method.
+- **Do not close a milestone your plan says is unfinished.** Build the missing
+  item, or defer it with a reason through `pikku knowledge plan defer`. Never
+  edit the plan to match what you built, and never drop an item silently.
 - **Do not let a Quick build be mistaken for a real one.** It skips
   `knowledge/`, milestone planning, design direction and refusal scenarios — say
   so out loud to the user when you finish, and point at the way out.

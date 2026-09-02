@@ -14,6 +14,7 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import type { Components } from 'react-markdown'
 import type { KnowledgeFinding, KnowledgeNote } from '../../lib/knowledge'
+import type { MilestonePlan } from '../../lib/plan'
 import {
   bodyWithoutTitle,
   parseResourceUri,
@@ -27,6 +28,7 @@ import { KnowledgeResourceLink } from './KnowledgeResourceLink'
 import { KnowledgeSeverityIcon } from './KnowledgeSeverityIcon'
 import { KnowledgeStatusBadge } from './KnowledgeStatusBadge'
 import { KnowledgeTypeIcon } from './KnowledgeTypeIcon'
+import { PlanDocument } from './PlanDocument'
 import classes from '../ui/console.module.css'
 
 type KnowledgeNoteDocumentProps = {
@@ -34,6 +36,8 @@ type KnowledgeNoteDocumentProps = {
   findings: KnowledgeFinding[]
   titleFor: (path: string) => string | undefined
   onOpenNote: (path: string) => void
+  /** The plan beside a milestone note, when the note is one and a plan was read. */
+  plan?: MilestonePlan
 }
 
 /**
@@ -56,6 +60,7 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
   findings,
   titleFor,
   onOpenNote,
+  plan,
 }) => {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const detailsId = useId()
@@ -267,6 +272,21 @@ export const KnowledgeNoteDocument: React.FC<KnowledgeNoteDocumentProps> = ({
         <Markdown components={linkRenderer}>
           {bodyWithoutTitle(readableBody(note.body), note.title)}
         </Markdown>
+
+        {/*
+          Below the body, because the note is the ask and the plan is the answer
+          to it: a reader who has just read what the milestone is for is then
+          shown what was promised, and how much of it the meta can find.
+        */}
+        {plan && (
+          <>
+            <Divider />
+            <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+              {m.knowledge_plan_title()}
+            </Text>
+            <PlanDocument milestone={plan} />
+          </>
+        )}
       </Stack>
     </Box>
   )

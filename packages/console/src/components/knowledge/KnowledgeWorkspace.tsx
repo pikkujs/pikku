@@ -48,6 +48,7 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
     selectedNote,
     byPath,
     stats,
+    plans,
     noteCount,
     isLoading,
   } = browse
@@ -128,6 +129,7 @@ export const KnowledgeWorkspace: React.FC<KnowledgeWorkspaceProps> = ({
           findings={findingsForNote(findings, selectedNote.path)}
           titleFor={titleFor}
           onOpenNote={(path) => setSelection({ kind: 'note', path })}
+          plan={plans[selectedNote.path]}
         />
       ) : (
         <Center p="xl">
