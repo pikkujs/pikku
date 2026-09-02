@@ -1,7 +1,6 @@
 import {
   type KnowledgeFinding,
   type KnowledgeGraph,
-  type Plan,
   type PlanChecklistItem,
   buildKnowledgeGraph,
   functionsDirFor,
@@ -14,6 +13,98 @@ import {
 } from '@pikku/knowledge'
 
 /**
+ * The plan as it goes over the wire.
+ *
+ * Structurally the same as `Plan` in @pikku/knowledge, restated as plain interfaces
+ * because that one is inferred from a zod schema, and schema generation cannot walk
+ * an inferred type that deep — the whole bundle then names a schema nobody
+ * generated, and `getKnowledge` fails at runtime with `MissingSchemaError`.
+ *
+ * Nothing here is free to drift: `readPlan` hands back the zod type and it is
+ * assigned straight into this field, so a plan schema that grows a case these
+ * interfaces do not have stops compiling.
+ */
+export type PlanSlot<T> =
+  | { kind: 'built'; description: string; items: T[] }
+  | { kind: 'n/a'; description: string }
+
+export interface PlanModelField {
+  name: string
+  type: string
+  classification: 'public' | 'internal' | 'personal' | 'sensitive'
+}
+
+export interface PlanModelRelationship {
+  column: string
+  references: string
+  onDelete: 'cascade' | 'restrict' | 'orphan'
+  provedBy?: string
+}
+
+export interface PlanModelItem {
+  table: string
+  description: string
+  fields: PlanModelField[]
+  relationships: PlanModelRelationship[]
+}
+
+export interface PlanFunctionItem {
+  name: string
+  description: string
+  pass: number
+  wire?: { transport: string; route?: string } | null
+  scopes: string[]
+  permission: string | null
+}
+
+export interface PlanUiItem {
+  route: string
+  description: string
+  pass: number
+  app?: string
+  scenarios: string[]
+}
+
+export interface PlanNamedItem {
+  name: string
+  description: string
+}
+
+export interface PlanRoleItem extends PlanNamedItem {
+  app?: string
+}
+
+export interface PlanScenarioItem {
+  feature: string
+  scenario: string
+  fn?: string
+  name?: string
+}
+
+export interface PlanCovers {
+  note: string
+  hash: string
+  complete: boolean
+}
+
+export interface WirePlan {
+  version: number
+  milestone: string
+  description: string
+  covers: PlanCovers[]
+  model: PlanSlot<PlanModelItem>
+  functions: PlanSlot<PlanFunctionItem>
+  roles: PlanSlot<PlanRoleItem>
+  scopes: PlanSlot<PlanNamedItem>
+  ui: PlanSlot<PlanUiItem>
+  scenarios: {
+    backend: PlanSlot<PlanScenarioItem>
+    browser: PlanSlot<PlanScenarioItem>
+    permission: PlanSlot<PlanScenarioItem>
+  }
+}
+
+/**
  * One milestone's technical plan, reconciled against the generated meta.
  *
  * The milestone note is the ask — a title and a Gherkin block. The plan beside it is
@@ -23,7 +114,7 @@ import {
  * could disagree with the plan it is drawn beside.
  */
 export interface KnowledgeMilestonePlan {
-  plan: Plan | null
+  plan: WirePlan | null
   /**
    * Why there is no plan, for the reader to be told instead of being shown an empty
    * one. `readPlan` already separates "nobody wrote one" from "one is there and will
