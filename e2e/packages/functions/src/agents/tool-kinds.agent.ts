@@ -6,7 +6,7 @@ export const toolKindsHelperAgent = pikkuAgent({
   name: 'toolkindshelper',
   description: 'A sub-agent offered as a tool',
   goal: 'You are a helper sub-agent.',
-  model: 'openai/gpt-5.6-luna',
+  model: 'chat',
   tools: [ref('openTool')],
   maxSteps: 3,
 })
@@ -20,7 +20,7 @@ export const toolKindsAgent = pikkuAgent({
   name: 'tool-kinds-agent',
   description: 'Offers an RPC tool, a graph builtin, and a sub-agent tool',
   goal: 'You have several kinds of tools at your disposal.',
-  model: 'openai/gpt-5.6-luna',
+  model: 'chat',
   tools: [ref('todos:listTodos'), ref('graph:math')],
   agents: [toolKindsHelperAgent],
   maxSteps: 5,

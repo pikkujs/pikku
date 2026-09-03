@@ -124,7 +124,7 @@ export const codeEditorScenario = pikkuScenario<void, { edits: number }>({
         actual: agent.config,
         expected: {
           name: 'todo-read-agent',
-          model: 'openai/o4-mini',
+          model: 'reasoning',
           maxSteps: 10,
         },
       },

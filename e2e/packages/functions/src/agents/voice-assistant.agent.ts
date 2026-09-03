@@ -70,7 +70,7 @@ export const voiceAssistantAgent = pikkuAgent({
     'was cut off. Mention that once, briefly, as an aside, then move on. Nothing',
     'else counts: if no result says "undelivered", there is nothing to report.',
   ].join('\n'),
-  model: 'openai/gpt-5.6-luna',
+  model: 'chat',
   // The reply is listened to, not read, so the pause before the first word is
   // most of what the interaction feels like, and reasoning is paid entirely
   // inside that pause.

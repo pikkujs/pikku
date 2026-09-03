@@ -32,7 +32,7 @@ export const unhelpfulAgent = pikkuAgent({
   ].join('\n'),
   // The same model the todo agent runs on, so the difference the judge reports
   // is the answer and not the model that wrote it.
-  model: 'openai/o4-mini',
+  model: 'reasoning',
   tools: [],
   maxSteps: 1,
   toolChoice: 'none',

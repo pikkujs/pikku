@@ -5,7 +5,7 @@ export const todoAskAgent = pikkuAgent({
   name: 'todo-ask-agent',
   description: 'Manages a todo list with ask-mode workflow access',
   goal: 'You help users manage their todos. You can list all todos, get details of a specific todo, add new todos, and delete todos.',
-  model: 'openai/gpt-5.6-luna',
+  model: 'chat',
   tools: [
     ref('todos:listTodos'),
     ref('todos:getTodo'),

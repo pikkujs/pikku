@@ -59,7 +59,7 @@ export const matchesAnswerKey = pikkuAgentScorer({
 export const helpfulness = pikkuAgentJudge({
   name: 'helpfulness',
   description: 'Does the answer actually help the person who asked',
-  model: 'openai/o4-mini',
+  model: 'reasoning',
   /**
    * The ends of the scale are stated because leaving them to the model does not
    * work. Told only to "grade how well the answer addresses what was asked", it

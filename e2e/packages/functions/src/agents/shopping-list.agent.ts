@@ -28,7 +28,7 @@ export const shoppingListAgent = pikkuAgent({
     'working memory, and it stays there until they say they no longer need it.',
     'Reply in one short sentence naming the items currently on the list.',
   ].join('\n'),
-  model: 'openai/gpt-4.1-mini',
+  model: 'cheap',
   memory: { workingMemory: ShoppingListWorkingMemory },
   tools: [],
   maxSteps: 1,

@@ -5,7 +5,7 @@ export const emailAgent = pikkuAgent({
   name: 'email-agent',
   description: 'Sends and lists emails',
   goal: 'You help users send and view emails.',
-  model: 'openai/gpt-5.6-luna',
+  model: 'chat',
   tools: [ref('emails:sendEmail'), ref('doubleValue')],
   maxSteps: 5,
   toolChoice: 'auto',

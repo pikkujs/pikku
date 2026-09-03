@@ -53,9 +53,14 @@
       "signInPath": "/api/auth/sign-in/actor"
     }
   },
+  "models": {
+    "chat": "openai/gpt-5.6-luna",
+    "reasoning": "openai/gpt-5.6-luna",
+    "cheap": "openai/gpt-5.6-luna"
+  },
   "scenarios": {
     "emailDomain": "actors.local",
-    "model": "openai/gpt-4.1-mini"
+    "model": "openai/gpt-5.6-luna"
   },
   "allow": {
     "complexWorkflows": true

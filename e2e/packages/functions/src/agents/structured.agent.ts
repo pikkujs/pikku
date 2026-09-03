@@ -16,7 +16,7 @@ export const structuredAgent = pikkuAgent({
   name: 'structured-agent',
   description: 'Classifies a message and returns a structured verdict',
   goal: 'You classify the sentiment of the user message and return a structured result.',
-  model: 'openai/gpt-5.6-luna',
+  model: 'chat',
   output: StructuredAgentOutput,
   maxSteps: 3,
   toolChoice: 'auto',
