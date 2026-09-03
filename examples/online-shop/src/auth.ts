@@ -1,5 +1,10 @@
 import { betterAuth } from 'better-auth'
-import { pikkuActor, pikkuBan, pikkuFabric } from '@pikku/better-auth'
+import {
+  ACTOR_SIGN_IN_OPT_IN_ENV,
+  pikkuActor,
+  pikkuBan,
+  pikkuFabric,
+} from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/auth'
 import {
   personaConfigs,
@@ -56,6 +61,10 @@ export const auth = pikkuBetterAuth(
     // every stage; locally it's simply absent, which disables /sign-in/fabric.
     // Asymmetric — the app verifies, it can never forge an operator login.
     const FABRIC_AUTH_PUBLIC_KEY = await variables.get('FABRIC_AUTH_PUBLIC_KEY')
+    // The opt-in that lets a deployed stage run scenarios. Read through
+    // `variables` rather than left to `process.env`, because a Worker receives
+    // it as a binding and has no populated environment to find it in.
+    const ALLOW_ACTOR_SIGN_IN = await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)
 
     return betterAuth({
       secret: BETTER_AUTH_SECRET,
@@ -106,7 +115,10 @@ export const auth = pikkuBetterAuth(
       // afterStart: that hook only ever runs under `pikku dev` and `pikku serve`,
       // so a deployed stage would provision nobody.
       plugins: [
-        pikkuActor({ secret: SCENARIO_ACTOR_SECRET }),
+        pikkuActor({
+          secret: SCENARIO_ACTOR_SECRET,
+          allowSignIn: ALLOW_ACTOR_SIGN_IN,
+        }),
         pikkuBan(),
         pikkuFabric({
           publicKey: FABRIC_AUTH_PUBLIC_KEY,
