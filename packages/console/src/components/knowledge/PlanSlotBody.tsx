@@ -1,7 +1,7 @@
 import React from 'react'
 import { Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import type { PlanSlot } from '@/lib/plan'
+import type { PlanSlot } from '../../lib/plan'
 
 type PlanSlotBodyProps<T> = {
   slot: PlanSlot<T>

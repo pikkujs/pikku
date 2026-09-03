@@ -3,7 +3,7 @@ import { Badge, Group, Stack, Text } from '@pikku/mantine/core'
 import { Check, Circle } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import type { PlanChecklistItem } from '@/lib/plan'
+import type { PlanChecklistItem } from '../../lib/plan'
 
 type PlanChecklistRowProps = { item: PlanChecklistItem }
 
