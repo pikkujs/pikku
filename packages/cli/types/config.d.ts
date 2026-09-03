@@ -95,10 +95,11 @@ export interface PikkuCLICoreOutputFiles {
   scenariosFunctionsFile: string
   scenariosSchemasFile?: string
 
-  // User administration functions (derived from scaffold.pikkuDir when scaffold.userAdmin is enabled).
-  // Optional: left undefined when scaffold.userAdmin is not enabled, so consumers must guard.
-  userAdminFunctionsFile?: string
-  userAdminSchemasFile?: string
+  // Where the scaffold is written, absolute and already resolved against rootDir.
+  // Carried on the config so a consumer can name a scaffold file pikku no longer
+  // derives a field for — a retired generator's output, say. Optional because a
+  // hand-built config in a test never goes through that resolution.
+  resolvedScaffoldDir?: string
 
   // Virtual user run/read RPCs (derived from scaffold.pikkuDir when scaffold.virtualUser is enabled).
   // Optional: left undefined when scaffold.virtualUser is not enabled, so consumers must guard.
@@ -604,13 +605,6 @@ export type PikkuCLIInput = {
     rpc?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
     scenarios?: PikkuScaffoldFeature
-    /**
-     * List, create, ban, delete, session-revocation and set-password functions
-     * driving better-auth's internal adapter. Requires better-auth to be wired —
-     * codegen fails if it is not — and banning additionally requires the
-     * pikkuBan() plugin from @pikku/better-auth.
-     */
-    userAdmin?: PikkuScaffoldFeature
     /**
      * Start a virtual user against this application over RPC and read back what
      * it found — the same run `pikku persona run` does from a terminal, kept in

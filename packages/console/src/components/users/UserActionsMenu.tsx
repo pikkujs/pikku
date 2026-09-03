@@ -8,7 +8,8 @@ import {
   Undo2,
 } from 'lucide-react'
 import { m } from '@/i18n/messages'
-import { useAuth, type AuthUser } from '../../context/AuthContext'
+import type { AuthUser } from '../../context/AuthContext'
+import { useUserAdmin } from '../../context/UserAdminContext'
 import { USER_ACTION_SCOPE, type UserAction } from './user-actions'
 
 type UserActionsMenuProps = {
@@ -27,7 +28,7 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
   onAction,
   onUnbanned,
 }) => {
-  const { can, setUserBanned } = useAuth()
+  const { can, setUserBanned } = useUserAdmin()
   const canBan = can(USER_ACTION_SCOPE.ban)
   const canRevoke = can(USER_ACTION_SCOPE.revoke)
   const canPassword = can(USER_ACTION_SCOPE.password)

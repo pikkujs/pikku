@@ -526,6 +526,7 @@ const _getPikkuCLIConfig = async (
     const resolvedScaffoldDir = isAbsolute(scaffoldDir)
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)
+    result.resolvedScaffoldDir = resolvedScaffoldDir
 
     // Per-unit deploy codegen re-runs the whole of `pikku all` with `--outDir`
     // pointed at one unit's `.pikku`. It needs the `.pikku` artifacts and
@@ -550,7 +551,6 @@ const _getPikkuCLIConfig = async (
       agent: 'publicAgentFile',
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
-      userAdmin: 'userAdminFunctionsFile',
       virtualUser: 'virtualUserFunctionsFile',
       workflow: 'workflowRoutesFile',
       events: 'eventsChannelFile',
@@ -659,20 +659,6 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'console',
         'console.schemas.gen.ts'
-      )
-    }
-    if (result.scaffold?.userAdmin && !result.userAdminFunctionsFile) {
-      result.userAdminFunctionsFile = join(
-        resolvedScaffoldDir,
-        'admin',
-        'user-admin.gen.ts'
-      )
-    }
-    if (result.scaffold?.userAdmin && !result.userAdminSchemasFile) {
-      result.userAdminSchemasFile = join(
-        resolvedScaffoldDir,
-        'admin',
-        'user-admin.schemas.gen.ts'
       )
     }
     if (result.scaffold?.virtualUser && !result.virtualUserFunctionsFile) {
@@ -1231,7 +1217,9 @@ const _getPikkuCLIConfig = async (
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }
 
-    assertMetaLocaleNotSpelledLocale(result as unknown as Record<string, unknown>)
+    assertMetaLocaleNotSpelledLocale(
+      result as unknown as Record<string, unknown>
+    )
     result.metaLocale = normalizeMetaLocale(result.metaLocale)
 
     assertSchemaDirectoriesAreDistinct(result)

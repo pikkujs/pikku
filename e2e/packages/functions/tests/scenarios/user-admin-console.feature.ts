@@ -1,9 +1,12 @@
 /**
  * The console's Users page, driven end to end.
  *
- * The page calls the host's own scaffolded `admin:users:*` functions — nothing
- * about user management lives in the console addon — so this exercises the
- * scaffold a host app ships, through a browser.
+ * The page calls the `@pikku/addon-admin` RPCs — `admin:listUsers`,
+ * `admin:createUser` and the rest — each gated on its own `admin:users:*`
+ * scope. Nothing about user management lives in the console addon itself; the
+ * console is only the browser surface over the admin addon a host wires in, so
+ * this exercises that addon through a browser, where `user-admin.feature.ts`
+ * exercises the same RPCs directly.
  *
  * It is deliberately ONE scenario. The lifecycle is sequential: you cannot ban
  * a user you have not created, or prove a delete without one to delete. Every

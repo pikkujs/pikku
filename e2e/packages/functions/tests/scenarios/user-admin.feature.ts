@@ -7,11 +7,13 @@
  * `user.role` column behind them, and these scenarios are the proof that the
  * one gate that remains actually holds.
  *
- * Two surfaces ship the same capabilities: the `scaffold.userAdmin` functions a
- * host generates, and `@pikku/addon-admin`. The refusal scenarios below use
- * whichever surface names the scope most directly; the lifecycle uses the addon,
- * because the console — and so `user-admin-console.feature.ts` — can only reach
- * the scaffold, and neither surface should be left to the other's word.
+ * The capabilities come from `@pikku/addon-admin`, wired in
+ * `src/wirings/admin.wirings.ts` under the name `admin`, so every function it
+ * ships is reachable over RPC as `admin:<function>` — the same namespacing by
+ * which the console addon answers to `console:*`. There is no generated copy of
+ * these functions in this app any more; the addon is the only surface, and the
+ * console's Users page calls the very same RPCs, which is what
+ * `user-admin-console.feature.ts` drives through a browser.
  *
  * The `admin` actor holds the umbrella `admin` scope, which covers every
  * `admin:users:*` leaf by pikku's parent-grant rule. The `guest` actor holds
@@ -22,26 +24,12 @@
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 import { TARGET_USER } from '../../../../src/auth-fixtures.js'
 
-const BAN = 'pikkuAdminSetUserBanned'
-const REMOVE = 'pikkuAdminRemoveUser'
-const SESSIONS = 'pikkuAdminRevokeUserSessions'
-const PASSWORD = 'pikkuAdminSetUserPassword'
-
-/**
- * The same capabilities as shipped by `@pikku/addon-admin`.
- *
- * Both surfaces call one implementation in `@pikku/better-auth`, but they are
- * wired differently — the addon resolves its own services and unions its scopes
- * with each function's — and only the scaffold is reachable from the console.
- * So the addon is proven here, over RPC, and the scaffold in the browser by
- * `user-admin-console.feature.ts`. Neither surface is left to the other's word.
- */
-const ADDON_LIST = 'admin:listUsers'
-const ADDON_CREATE = 'admin:createUser'
-const ADDON_BAN = 'admin:setUserBanned'
-const ADDON_REMOVE = 'admin:removeUser'
-const ADDON_SESSIONS = 'admin:revokeUserSessions'
-const ADDON_PASSWORD = 'admin:setUserPassword'
+const LIST = 'admin:listUsers'
+const CREATE = 'admin:createUser'
+const BAN = 'admin:setUserBanned'
+const REMOVE = 'admin:removeUser'
+const SESSIONS = 'admin:revokeUserSessions'
+const PASSWORD = 'admin:setUserPassword'
 
 const NEW_USER = {
   email: 'api-lifecycle@e2e.test',
@@ -337,7 +325,7 @@ export const userAdminUnscopedCannotCreateScenario = pikkuScenario<
       'the guest creates a user',
       'invokesRpcRaw',
       {
-        rpcName: ADDON_CREATE,
+        rpcName: CREATE,
         data: { email: 'never-created@e2e.test', password: 'never-created' },
       },
       { actor: actors.guest }
@@ -380,7 +368,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin creates a user',
       'invokesRpcRaw',
       {
-        rpcName: ADDON_CREATE,
+        rpcName: CREATE,
         data: { email: NEW_USER.email, password: NEW_USER.password },
       },
       { actor: actors.admin }
@@ -417,7 +405,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin creates the same email again',
       'invokesRpcRaw',
       {
-        rpcName: ADDON_CREATE,
+        rpcName: CREATE,
         data: { email: NEW_USER.email, password: NEW_USER.password },
       },
       { actor: actors.admin }
@@ -433,7 +421,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin bans the new user',
       'invokesRpcRaw',
       {
-        rpcName: ADDON_BAN,
+        rpcName: BAN,
         data: { userId: target.userId, banned: true, reason: 'e2e' },
       },
       { actor: actors.admin }
@@ -457,7 +445,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
     const lifted = await scenario.when(
       'the admin lifts the ban',
       'invokesRpcRaw',
-      { rpcName: ADDON_BAN, data: { userId: target.userId, banned: false } },
+      { rpcName: BAN, data: { userId: target.userId, banned: false } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -471,7 +459,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
       'the admin rotates the password',
       'invokesRpcRaw',
       {
-        rpcName: ADDON_PASSWORD,
+        rpcName: PASSWORD,
         data: { userId: target.userId, newPassword: NEW_USER.rotated },
       },
       { actor: actors.admin }
@@ -506,7 +494,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
     const revoked = await scenario.when(
       'the admin signs the user out everywhere',
       'invokesRpcRaw',
-      { rpcName: ADDON_SESSIONS, data: { userId: target.userId } },
+      { rpcName: SESSIONS, data: { userId: target.userId } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -529,7 +517,7 @@ export const userAdminApiLifecycleScenario = pikkuScenario<
     const removed = await scenario.when(
       'the admin deletes the user',
       'invokesRpcRaw',
-      { rpcName: ADDON_REMOVE, data: { userId: target.userId } },
+      { rpcName: REMOVE, data: { userId: target.userId } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -578,7 +566,7 @@ export const userAdminCannotActOnSelfScenario = pikkuScenario<
     const selfBan = await scenario.when(
       'the admin bans itself',
       'invokesRpcRaw',
-      { rpcName: ADDON_BAN, data: { userId: me.userId, banned: true } },
+      { rpcName: BAN, data: { userId: me.userId, banned: true } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -591,7 +579,7 @@ export const userAdminCannotActOnSelfScenario = pikkuScenario<
     const selfDelete = await scenario.when(
       'the admin deletes itself',
       'invokesRpcRaw',
-      { rpcName: ADDON_REMOVE, data: { userId: me.userId } },
+      { rpcName: REMOVE, data: { userId: me.userId } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -607,7 +595,7 @@ export const userAdminCannotActOnSelfScenario = pikkuScenario<
     const stillThere = await scenario.when(
       'the admin reads the directory',
       'invokesRpcRaw',
-      { rpcName: ADDON_LIST, data: {} },
+      { rpcName: LIST, data: {} },
       { actor: actors.admin }
     )
     await scenario.then(

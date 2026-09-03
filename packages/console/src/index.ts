@@ -38,6 +38,18 @@ export type {
   UsersTableProps,
 } from './components/users/UsersTable'
 
+// The actions on a user, and the seam that lets a host other than AuthProvider
+// answer them. Fabric mounts these against a control plane that brokers
+// `admin:*` through to a deployed stage.
+export { UserAdminProvider, useUserAdmin } from './context/UserAdminContext'
+export type { UserAdminValue } from './context/UserAdminContext'
+export { UserActionsMenu } from './components/users/UserActionsMenu'
+export { UserActionDrawer } from './components/users/UserActionDrawer'
+export { CreateUserDrawer } from './components/users/CreateUserDrawer'
+export { UserStatusBadge } from './components/users/UserStatusBadge'
+export { USER_ACTION_SCOPE } from './components/users/user-actions'
+export type { UserAction } from './components/users/user-actions'
+
 // Layout
 export { AppLayout } from './components/layout/AppLayout'
 export type { AppLayoutProps } from './components/layout/AppLayout'

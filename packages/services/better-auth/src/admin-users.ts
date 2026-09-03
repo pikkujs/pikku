@@ -14,9 +14,10 @@ export type AuthGetter = (() => Promise<BetterAuthInstance>) | undefined
  * and leaves the scope on each function as the single decision about who may do
  * this.
  *
- * They live in this package rather than in `@pikku/addon-admin` so the addon
- * and the `scaffold.userAdmin` generator share one implementation, and so a host
- * can drive the same operations from its own hand-written functions.
+ * They live in this package rather than in `@pikku/addon-admin` so a host can
+ * drive the same operations from its own hand-written functions without taking
+ * the addon. They were also what the retired `scaffold.userAdmin` generator
+ * called, which is why the addon that replaced it needed no new implementation.
  *
  * Ban state is written here but enforced by the {@link ban} plugin, which must
  * be wired for the columns to exist.
