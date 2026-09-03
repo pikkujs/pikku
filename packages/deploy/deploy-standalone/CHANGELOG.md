@@ -1,5 +1,18 @@
 # @pikku/deploy-standalone
 
+## 0.12.16
+
+### Patch Changes
+
+- f970f8f: Rename `@pikku/db-migrator` to `@pikku/sql-migrator`.
+
+  It applies `.sql` files and keeps their bookkeeping; it is not a database
+  service, and `db-` read as though it were one. Nothing was ever published under
+  the old name, so there is no alias to keep.
+
+- Updated dependencies [f970f8f]
+  - @pikku/sql-migrator@0.12.2
+
 ## 0.12.15
 
 ### Patch Changes
