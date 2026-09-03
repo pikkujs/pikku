@@ -66,8 +66,7 @@ test('secretSet refuses a console user without the secrets scope', () => {
   )
 })
 
-// The seam the pair exists for: reading a secret and overwriting one are
-// separate grants, so a reader cannot set.
+// Reading a secret and overwriting one are separate grants.
 test('secretSet refuses a holder of only the secrets read scope', () => {
   assert.throws(
     () =>

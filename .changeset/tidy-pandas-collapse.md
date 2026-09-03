@@ -1,6 +1,6 @@
 ---
-'@pikku/cli': minor
-'@pikku/console': minor
+'@pikku/cli': patch
+'@pikku/console': patch
 '@pikku/better-auth': patch
 ---
 

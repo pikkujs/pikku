@@ -8,12 +8,9 @@
  * one gate that remains actually holds.
  *
  * The capabilities come from `@pikku/addon-admin`, wired in
- * `src/wirings/admin.wirings.ts` under the name `admin`, so every function it
- * ships is reachable over RPC as `admin:<function>` — the same namespacing by
- * which the console addon answers to `console:*`. There is no generated copy of
- * these functions in this app any more; the addon is the only surface, and the
- * console's Users page calls the very same RPCs, which is what
- * `user-admin-console.feature.ts` drives through a browser.
+ * `src/wirings/admin.wirings.ts` as `admin`, so each is reachable as
+ * `admin:<function>`. `user-admin-console.feature.ts` drives the same RPCs
+ * through a browser.
  *
  * The `admin` actor holds the umbrella `admin` scope, which covers every
  * `admin:users:*` leaf by pikku's parent-grant rule. The `guest` actor holds

@@ -63,11 +63,8 @@ export interface AuthContextValue {
    * The user directory and the actions on it, each gated on its own
    * `admin:users:*` scope.
    *
-   * These live in `@pikku/addon-admin`, which the host app wires for itself, not
-   * in the console addon — listing or banning a user is ordinary application
-   * behaviour and must not require running a console. A host that has not wired
-   * the admin addon has no such RPC and no such scopes, so `can(...)` returns
-   * false and the UI leaves the actions out entirely.
+   * These live in `@pikku/addon-admin`, which the host app wires for itself.
+   * A host that has not wired it has no such RPC, so `can(...)` returns false.
    */
   listUsers: (search?: string) => Promise<AuthUser[]>
   createUser: (input: {
@@ -95,9 +92,7 @@ export interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
 /**
- * The user-management RPCs of `@pikku/addon-admin`, under the `admin` namespace
- * that `wireAddon({ name: 'admin' })` gives it — the same convention by which
- * this console reaches its own addon as `console:*`. They cannot appear in the
+ * The user-management RPCs of `@pikku/addon-admin`. They cannot appear in the
  * console's `RPCMap`, which only knows the console addon's own functions, so
  * the name is passed untyped — the payloads are pinned by
  * {@link AuthContextValue} instead.

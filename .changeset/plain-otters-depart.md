@@ -1,5 +1,5 @@
 ---
-'@pikku/addon-console': minor
+'@pikku/addon-console': patch
 ---
 
 Ship the administration split that landed in the source but never in a release.

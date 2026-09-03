@@ -95,10 +95,8 @@ export interface PikkuCLICoreOutputFiles {
   scenariosFunctionsFile: string
   scenariosSchemasFile?: string
 
-  // Where the scaffold is written, absolute and already resolved against rootDir.
-  // Carried on the config so a consumer can name a scaffold file pikku no longer
-  // derives a field for — a retired generator's output, say. Optional because a
-  // hand-built config in a test never goes through that resolution.
+  // Where the scaffold is written, absolute and resolved against rootDir.
+  // Optional: a hand-built config in a test never goes through that resolution.
   resolvedScaffoldDir?: string
 
   // Virtual user run/read RPCs (derived from scaffold.pikkuDir when scaffold.virtualUser is enabled).

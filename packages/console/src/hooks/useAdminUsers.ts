@@ -4,9 +4,8 @@ import type { AuthUser } from '../context/AuthContext'
 import { useUserAdmin } from '../context/UserAdminContext'
 
 /**
- * The user directory, searched through whichever caller is mounted — the
- * ambient auth client, or a host's own via `UserAdminProvider`. The search term
- * is debounced here so a host can hand over its raw input value.
+ * The user directory, through whichever caller is mounted. The search term is
+ * debounced here so a host can hand over its raw input value.
  */
 export const useAdminUsers = (search: string = '') => {
   const { listUsers } = useUserAdmin()

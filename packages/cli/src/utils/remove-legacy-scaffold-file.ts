@@ -46,11 +46,10 @@ export const removeLegacyScaffoldFile = async (file: string) => {
  * an unregenerated project is already safe, but the file is then dead code that
  * still imports `zod`, so it goes.
  *
- * The user-admin scaffold joined it when `@pikku/addon-admin` superseded it. That
- * one is not merely dead: left on disk it keeps registering `pikkuAdminListUsers`
- * and its five siblings, so a project that installs the addon would answer to two
- * spellings of the same six calls. It is named by path rather than by a config
- * field because there is no longer a `scaffold.userAdmin` to derive one from.
+ * A leftover user-admin scaffold still registers `pikkuAdminListUsers` and its
+ * five siblings, so a project installing `@pikku/addon-admin` would answer to
+ * two spellings of the same six calls. Named by path: there is no longer a
+ * `scaffold.userAdmin` field to derive one from.
  *
  * Unlike `pruneLegacyScaffoldFiles`, which removes a file from a path pikku used
  * to write to, this removes a file pikku no longer writes at all.

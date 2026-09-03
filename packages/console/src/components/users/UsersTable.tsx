@@ -15,12 +15,7 @@ export interface UsersTableUser {
   name?: string | null
   image?: string | null
   createdAt?: string | Date | null
-  /**
-   * Ban state, as the server reported it. `undefined` is not "not banned": it
-   * means the host has no `pikkuBan()` plugin and so has no such state to
-   * report, which is why the status column is left out rather than filled with
-   * an invented "active".
-   */
+  /** `undefined` means the host reports no ban state, not "not banned". */
   banned?: boolean | null
 }
 
@@ -31,13 +26,7 @@ export interface UsersTableLabels {
   columnCreated: I18nString
   /** Shown in the joined column when a user row carries no creation date. */
   emptyCreated: I18nString
-  /**
-   * Header for the ban-state column. Supplying all three status labels opts the
-   * column in; omitting them leaves it out, which is what a host without a ban
-   * plugin wants. The column is additionally suppressed when no row actually
-   * carries a `banned` value, so asking for it costs nothing where the server
-   * has nothing to say.
-   */
+  /** Supplying all three status labels opts the ban-state column in. */
   columnStatus?: I18nString
   statusBanned?: I18nString
   statusActive?: I18nString
@@ -65,9 +54,6 @@ export const UsersTable: React.FC<UsersTableProps> = ({
   labels,
   renderActions,
 }) => {
-  // Mirrors UsersDirectoryPanel: the column appears only where the host asked
-  // for it *and* the server reported ban state for someone. Either alone would
-  // render a column that is always empty.
   const showStatus =
     labels.columnStatus !== undefined &&
     labels.statusBanned !== undefined &&

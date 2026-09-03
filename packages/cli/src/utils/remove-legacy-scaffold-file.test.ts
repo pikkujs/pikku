@@ -156,9 +156,7 @@ describe('removeRetiredScaffoldFiles', () => {
   }
 
   test('deletes the retired user-admin scaffold', async () => {
-    // Not tidying: the file registers pikkuAdminListUsers and its five siblings,
-    // so a project that has installed @pikku/addon-admin would otherwise answer
-    // to two spellings of the same six calls.
+    // Not tidying: a leftover registers pikkuAdminListUsers and its siblings.
     const { scaffold, functions, schemas } = await adminScaffold()
 
     await removeRetiredScaffoldFiles({
