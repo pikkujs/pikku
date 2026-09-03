@@ -15,7 +15,7 @@ import {
   slotItems,
   type Plan,
   type PlanChecklistItem,
-} from '@/lib/plan'
+} from '../../lib/plan'
 import type { CardSection } from '../ui/SectionsCard'
 import { PlanField } from './PlanField'
 import { PlanItemCard } from './PlanItemCard'
