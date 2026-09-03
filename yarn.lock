@@ -5179,13 +5179,13 @@ __metadata:
     "@pikku/inspector": "npm:^0.12.71"
     "@pikku/knowledge": "npm:^0.12.9"
     "@pikku/kysely": "npm:^0.13.23"
+    "@pikku/migrator-sql": "npm:^0.12.2"
     "@pikku/n8n-import": "npm:^0.0.7"
     "@pikku/node-http-server": "npm:^0.12.13"
     "@pikku/openapi-parser": "npm:^0.12.20"
     "@pikku/playwright": "npm:^0.12.81"
     "@pikku/schedule": "npm:^0.12.7"
     "@pikku/skills": "npm:^0.12.25"
-    "@pikku/sql-migrator": "npm:^0.12.2"
     "@pikku/ws": "npm:^0.12.9"
     "@playwright/test": "npm:^1.50.0"
     "@types/cookie": "npm:^1.0.0"
@@ -5395,7 +5395,7 @@ __metadata:
   resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
   dependencies:
     "@pikku/deploy": "npm:^0.12.5"
-    "@pikku/sql-migrator": "npm:^0.12.2"
+    "@pikku/migrator-sql": "npm:^0.12.2"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
@@ -5762,6 +5762,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/migrator-sql@npm:^0.12.2, @pikku/migrator-sql@workspace:packages/migrator-sql":
+  version: 0.0.0-use.local
+  resolution: "@pikku/migrator-sql@workspace:packages/migrator-sql"
+  dependencies:
+    "@types/bun": "npm:^1.4.0"
+    "@types/node": "npm:^22"
+    tsx: "npm:^4.23.12"
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/modelcontextprotocol@npm:^0.12.10, @pikku/modelcontextprotocol@workspace:*, @pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
   version: 0.0.0-use.local
   resolution: "@pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol"
@@ -6019,17 +6030,6 @@ __metadata:
     "@types/node": "npm:^24.13.3"
     typescript: "npm:^6.0.3"
     yaml: "npm:^2.9.0"
-  languageName: unknown
-  linkType: soft
-
-"@pikku/sql-migrator@npm:^0.12.2, @pikku/sql-migrator@workspace:packages/sql-migrator":
-  version: 0.0.0-use.local
-  resolution: "@pikku/sql-migrator@workspace:packages/sql-migrator"
-  dependencies:
-    "@types/bun": "npm:^1.4.0"
-    "@types/node": "npm:^22"
-    tsx: "npm:^4.23.12"
-    typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
 

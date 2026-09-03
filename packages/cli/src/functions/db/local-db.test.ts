@@ -29,8 +29,8 @@ import {
   createKysely,
 } from './local-db.js'
 import type { ColumnInfo } from './db-introspector.js'
-import { MigrationDriftError } from '@pikku/sql-migrator'
-import { loadSqliteRuntime } from '@pikku/sql-migrator/sqlite'
+import { MigrationDriftError } from '@pikku/migrator-sql'
+import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 
 let root: string
 

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { dbReset } from './db-reset.js'
 import { resolveDb } from '../db/local-db.js'
-import { loadSqliteRuntime } from '@pikku/sql-migrator/sqlite'
+import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 
 /**
  * Drives the real command against a real sqlite database, so `--no-seed` is

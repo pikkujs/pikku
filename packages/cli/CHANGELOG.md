@@ -12,7 +12,7 @@
 
   Two things `plan set` needed before an architect could actually satisfy it: it now refuses a `covers` entry naming a note that does not exist, or carrying a hash that is not that note's current one — and names the correct hash, which is also the only way to obtain one. Unchecked, a placeholder hash was accepted and the note it claimed read as edited-since from the moment the milestone shipped, dropping silently back into a backlog nobody had planned. The plan's build rendering no longer names a runtime-specific command for creating a frontend, since two builds read it and each creates one a different way.
 
-- f970f8f: Rename `@pikku/db-migrator` to `@pikku/sql-migrator`.
+- f970f8f: Rename `@pikku/db-migrator` to `@pikku/migrator-sql`.
 
   It applies `.sql` files and keeps their bookkeeping; it is not a database
   service, and `db-` read as though it were one. Nothing was ever published under
@@ -23,13 +23,13 @@
 - Updated dependencies [f970f8f]
   - @pikku/knowledge@0.12.9
   - @pikku/skills@0.12.25
-  - @pikku/sql-migrator@0.12.2
+  - @pikku/migrator-sql@0.12.2
 
 ## 0.12.131
 
 ### Patch Changes
 
-- a057bec: Extract the SQL migration applier into `@pikku/sql-migrator`, so the CLI is no longer the only thing that can run one.
+- a057bec: Extract the SQL migration applier into `@pikku/migrator-sql`, so the CLI is no longer the only thing that can run one.
 
   A shipped standalone bundle has to apply the same migrations to the same database as `pikku db migrate`, from a machine with no checkout. That only works if both agree on the bookkeeping table, the file hash and the file order — a second implementation that differs in any of the three reads every migration the other applied as drifted and refuses to go on.
 
@@ -63,7 +63,7 @@
 
 - Updated dependencies [a057bec]
 - Updated dependencies [a057bec]
-  - @pikku/sql-migrator@0.12.1
+  - @pikku/migrator-sql@0.12.1
   - @pikku/deploy@0.12.5
 
 ## 0.12.130

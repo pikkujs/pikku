@@ -19,6 +19,6 @@
   "license": "MIT",
   "dependencies": {
     "@pikku/deploy": "^0.12.5",
-    "@pikku/sql-migrator": "^0.12.2"
+    "@pikku/migrator-sql": "^0.12.2"
   }
 }

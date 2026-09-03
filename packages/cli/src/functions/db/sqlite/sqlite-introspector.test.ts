@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { loadSqliteRuntime } from '@pikku/sql-migrator/sqlite'
+import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite-introspector.js'
 
 test('getColumns derives enumValues from CHECK (col IN (…)) constraints', async () => {

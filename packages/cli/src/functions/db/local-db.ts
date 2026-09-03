@@ -17,7 +17,7 @@ import {
   migrate,
   baselineMigrations,
   type MigrateResult,
-} from '@pikku/sql-migrator'
+} from '@pikku/migrator-sql'
 import type { ColumnInfo, DbIntrospector } from './db-introspector.js'
 import {
   applyPikkuSchemas,
@@ -33,13 +33,13 @@ import {
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
-import { tableCreationSql } from '@pikku/sql-migrator'
-import { SqliteMigrationExecutor } from '@pikku/sql-migrator/sqlite'
+import { tableCreationSql } from '@pikku/migrator-sql'
+import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
-import { loadSqliteRuntime } from '@pikku/sql-migrator/sqlite'
+import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
-import { PostgresMigrationExecutor } from '@pikku/sql-migrator/postgres'
+import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { PostgresIntrospector } from './postgres/postgres-introspector.js'
 import type { UserConfigShape } from '../commands/db-shared.js'

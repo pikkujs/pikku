@@ -17,9 +17,9 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { PGlite } from '@electric-sql/pglite'
 import type { Client } from 'pg'
-import { PostgresMigrationExecutor } from '../../../../packages/sql-migrator/src/postgres/index.js'
+import { PostgresMigrationExecutor } from '../../../../packages/migrator-sql/src/postgres/index.js'
 import { PostgresIntrospector } from '../../../../packages/cli/src/functions/db/postgres/postgres-introspector.js'
-import { migrate } from '../../../../packages/sql-migrator/src/index.js'
+import { migrate } from '../../../../packages/migrator-sql/src/index.js'
 import { generateSchemaTypes } from '../../../../packages/cli/src/functions/db/db-codegen.js'
 
 type ColumnEntry = {
