@@ -121,6 +121,31 @@ With neither secret set, deliveries go **unsigned**. A missing named secret is
 logged as an error and still sends unsigned; treat that log line as a
 misconfiguration, not noise.
 
+## What this does not give you
+
+There is no subscription model. `webhookSchema` owns exactly two tables —
+`webhookDelivery` and `webhookDeliveryAttempt` — and both are delivery-side
+history. Nothing stores _which_ URL belongs to which customer, which events
+they asked for, or whether their endpoint is still enabled.
+
+That is the app's table, and every app that exposes webhooks to its users
+needs one:
+
+| Column    | Why                                                                                                           |
+| --------- | ------------------------------------------------------------------------------------------------------------- |
+| `url`     | where to POST                                                                                                 |
+| `secret`  | the raw HMAC key, passed as `SendWebhookInput.secret`                                                         |
+| `events`  | which event names this endpoint subscribed to                                                                 |
+| `enabled` | so a failing endpoint can be paused without deleting it                                                       |
+| scope     | the org/tenant column you filter on — mirror it into `organizationId` so the delivery log scopes the same way |
+
+So one emitted event becomes a `SELECT` over your endpoint table and one
+`send()` per row. Everything after that call — signing, queueing, retrying,
+recording — is the primitive's.
+
+The single-integration case needs none of this: one fixed URL on the row it
+belongs to, and `send()` straight at it.
+
 ## Verifying on the receiving side
 
 `sign()` produces `sha256=<hex>` (GitHub style, body only, no timestamp) into
