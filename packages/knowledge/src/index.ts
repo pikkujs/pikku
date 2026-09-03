@@ -139,3 +139,5 @@ export {
 } from './plan-command.js'
 
 export { type MilestoneNote, MILESTONE_SCALARS } from './milestone.js'
+
+export { basePlan } from './plan-fixture.js'

@@ -423,8 +423,12 @@ export function readPlan(cwd: string, milestonePath: string): PlanRead {
  * An `n/a` slot is printed WITH its reason — the whole point of the discriminated slot is
  * that "no roles, because this app has one kind of user" and "nobody thought about roles"
  * stop looking alike, and that distinction is only useful if the builder sees it.
+ *
+ * @param closing what the agent should do once pass 1 is built, appended verbatim. The
+ * harness driving the build owns that instruction — naming one here would put a specific
+ * product's command in the mouth of every reader of a plan.
  */
-export function renderPlanForBuild(plan: Plan): string {
+export function renderPlanForBuild(plan: Plan, closing?: string): string {
   const lines: string[] = []
   const slot = <T>(
     name: string,
@@ -445,7 +449,8 @@ export function renderPlanForBuild(plan: Plan): string {
     plan.description,
     '',
     'PASS 1 COMPLETES THIS MILESTONE. Items marked pass 2 or higher are deferred — the gate does',
-    'not ask for them and the next milestone picks them up. Build pass 1, then run `fabric build-complete`.',
+    'not ask for them and the next milestone picks them up. Build pass 1.',
+    ...(closing ? [closing] : []),
     ''
   )
   slot(
