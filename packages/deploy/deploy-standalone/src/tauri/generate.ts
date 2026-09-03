@@ -3,7 +3,12 @@ import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 import { renderPlaceholderIcon } from './icon.js'
-import { renderMainRs } from './main-rs.js'
+import { renderLibRs, renderMainRs } from './main-rs.js'
+import {
+  iosUsageDescriptions,
+  resolveNativeApis,
+  type NativeApi,
+} from './native.js'
 import { hostTargetTriple, sidecarFileName } from './target-triple.js'
 
 /** Directory the shell crate is generated into, relative to the project root. */
@@ -80,6 +85,12 @@ export type GenerateTauriShellOptions = {
    * one. The shell then bundles nothing: no sidecar, no binary, no supervision.
    */
   remoteUrl?: string
+  /**
+   * Native APIs the webview may call, by name — see {@link NATIVE_APIS}. Each
+   * one adds a crate, a plugin initialiser and a permission granted to the
+   * origin the window loads.
+   */
+  native?: string | readonly string[]
 }
 
 export type GenerateTauriShellResult = {
@@ -91,6 +102,8 @@ export type GenerateTauriShellResult = {
   preserved: string[]
   targetTriple: string
   sidecar?: { fileName: string; path: string }
+  /** The native APIs the crate was generated with, resolved. */
+  native: NativeApi[]
 }
 
 const renderConfig = (options: {
@@ -144,29 +157,63 @@ const renderConfig = (options: {
     2
   ) + '\n'
 
+/** The library target's name — what `main.rs` calls `run()` on. */
+export const shellLibName = (crateName: string): string =>
+  `${crateName.replace(/-/g, '_')}_lib`
+
+const DESKTOP_CFG =
+  'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'
+const MOBILE_CFG = 'cfg(any(target_os = "android", target_os = "ios"))'
+
 const renderCargoToml = (options: {
   crateName: string
   version: string
   remoteUrl?: string
-}): string =>
-  `[package]
+  native: readonly NativeApi[]
+}): string => {
+  const portable = options.native.filter((api) => api.support === 'all')
+  const mobileOnly = options.native.filter((api) => api.support === 'mobile')
+  const dep = (api: NativeApi) => `${api.crate} = "2"\n`
+
+  return `[package]
 name = "${options.crateName}"
 version = "${options.version}"
 edition = "2021"
+
+# A mobile build never calls \`main\`: Android loads the crate as a cdylib through
+# JNI and iOS links it as a staticlib. Both need a library target, and its name
+# is what main.rs calls into.
+[lib]
+name = "${shellLibName(options.crateName)}"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
-${options.remoteUrl ? '' : 'tauri-plugin-shell = "2"\n'}tauri-plugin-single-instance = "2"
-
+${options.remoteUrl ? '' : 'tauri-plugin-shell = "2"\n'}${portable.map(dep).join('')}
+# Focusing an already-open window is a desktop concept, and the plugin has no
+# build for a mobile target. Gating the dependency to match the \`#[cfg(desktop)]\`
+# on its initialiser is what lets one crate build for both.
+[target.'${DESKTOP_CFG}'.dependencies]
+tauri-plugin-single-instance = "2"
+${
+  mobileOnly.length > 0
+    ? `
+# These plugins exist only for iOS and Android; naming them as plain
+# dependencies would break every desktop build of the same crate.
+[target.'${MOBILE_CFG}'.dependencies]
+${mobileOnly.map(dep).join('')}`
+    : ''
+}
 [profile.release]
 panic = "abort"
 codegen-units = 1
 lto = true
 strip = true
 `
+}
 
 const PLACEHOLDER_UI = `<!doctype html>
 <meta charset="utf-8" />
@@ -186,9 +233,94 @@ const CAPABILITIES = JSON.stringify(
   2
 )
 
+/**
+ * The origin pattern a native-API grant is scoped to.
+ *
+ * A remote shell knows its origin exactly, so the grant names it. A sidecar's
+ * port is chosen by the OS at launch and is unknowable here, so the only
+ * expressible scope is every port on loopback — wider than one would like, but
+ * loopback is not reachable from off the machine and the alternative is a shell
+ * whose native APIs never work.
+ */
+export const nativeGrantUrl = (remoteUrl?: string): string =>
+  remoteUrl ? new URL(remoteUrl).origin : 'http://127.0.0.1:*'
+
+/**
+ * Permissions for the origin the webview actually loads.
+ *
+ * This file is the reason native APIs work at all. A webview showing a remote
+ * origin gets no IPC access from the `default` capability above — Tauri treats
+ * a page it did not ship as untrusted, and every `invoke` from it fails until
+ * an origin is named here. Granting it is a deliberate act: the server that
+ * serves that origin can now reach the device.
+ *
+ * Split in two because a capability is validated against the platforms it
+ * claims, and a mobile-only permission listed for a desktop build is an error
+ * rather than a no-op.
+ */
+const renderRemoteCapabilities = (options: {
+  remoteUrl?: string
+  native: readonly NativeApi[]
+}): Array<[string, string]> => {
+  const url = nativeGrantUrl(options.remoteUrl)
+  const portable = options.native.filter((api) => api.support === 'all')
+  const mobileOnly = options.native.filter((api) => api.support === 'mobile')
+  const files: Array<[string, string]> = []
+  const write = (name: string, body: unknown) =>
+    files.push([`capabilities/${name}.json`, JSON.stringify(body, null, 2)])
+
+  write('remote', {
+    $schema: '../gen/schemas/desktop-schema.json',
+    identifier: 'remote',
+    description: `Native APIs the app at ${url} may call.`,
+    windows: ['main'],
+    remote: { urls: [url] },
+    permissions: ['core:default', ...portable.map((api) => api.permission)],
+  })
+
+  if (mobileOnly.length > 0) {
+    write('remote-mobile', {
+      $schema: '../gen/schemas/mobile-schema.json',
+      identifier: 'remote-mobile',
+      description: `Native APIs the app at ${url} may call on a phone.`,
+      windows: ['main'],
+      platforms: ['iOS', 'android'],
+      remote: { urls: [url] },
+      permissions: mobileOnly.map((api) => api.permission),
+    })
+  }
+
+  return files
+}
+
+/**
+ * iOS refuses a guarded API without a reason to show the person being asked —
+ * it terminates the process rather than returning an error, so a missing key is
+ * a crash on first use and not a failed call. Tauri merges this file into the
+ * generated app's Info.plist.
+ */
+const renderIosPlist = (entries: Record<string, string>): string =>
+  `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+${Object.entries(entries)
+  .map(
+    ([key, value]) =>
+      `    <key>${key}</key>\n    <string>${value}</string>`
+  )
+  .join('\n')}
+  </dict>
+</plist>
+`
+
+// `gen/schemas` is regenerated on every build, but `gen/android` and
+// `gen/apple` are the Gradle and Xcode projects: they carry the manifest, the
+// signing setup and any app-link entry, and are meant to be committed. Ignoring
+// all of `gen` silently discards that work.
 const GITIGNORE = `/target
 /binaries
-/gen
+/gen/schemas
 `
 
 /**
@@ -231,12 +363,16 @@ export const generateTauriShell = async (
     )
   }
 
+  const native = resolveNativeApis(options.native)
   const version = options.version ?? '0.1.0'
   const windowTitle = options.windowTitle ?? appName
   const width = options.width ?? 1200
   const height = options.height ?? 800
   const targetTriple = options.targetTriple ?? hostTargetTriple()
   const shellDir = join(options.projectDir, TAURI_SHELL_DIR)
+
+  const crateName = `${appName}-shell`
+  const plist = iosUsageDescriptions(native)
 
   const files: Array<[string, Buffer | string]> = [
     [
@@ -251,21 +387,25 @@ export const generateTauriShell = async (
         remoteUrl,
       }),
     ],
-    [
-      'Cargo.toml',
-      renderCargoToml({ crateName: `${appName}-shell`, version, remoteUrl }),
-    ],
+    ['Cargo.toml', renderCargoToml({ crateName, version, remoteUrl, native })],
     ['build.rs', 'fn main() {\n    tauri_build::build()\n}\n'],
+    ['src/main.rs', renderMainRs(crateName)],
     [
-      'src/main.rs',
-      renderMainRs(
+      'src/lib.rs',
+      renderLibRs(
         remoteUrl
-          ? { remoteUrl, windowTitle, width, height }
-          : { sidecarName: appName, windowTitle, width, height }
+          ? { remoteUrl, windowTitle, width, height, native }
+          : { sidecarName: appName, windowTitle, width, height, native }
       ),
     ],
     ['ui/index.html', PLACEHOLDER_UI],
     ['capabilities/default.json', CAPABILITIES],
+    ...(native.length > 0 ? renderRemoteCapabilities({ remoteUrl, native }) : []),
+    ...(Object.keys(plist).length > 0
+      ? ([['Info.ios.plist', renderIosPlist(plist)]] as Array<
+          [string, string]
+        >)
+      : []),
     ['icons/icon.png', renderPlaceholderIcon(ICON_SIZE)],
     ['.gitignore', GITIGNORE],
   ]
@@ -323,5 +463,5 @@ export const generateTauriShell = async (
     'utf-8'
   )
 
-  return { dir: shellDir, written, preserved, targetTriple, sidecar }
+  return { dir: shellDir, written, preserved, targetTriple, sidecar, native }
 }
