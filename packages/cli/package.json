@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.134",
+  "version": "0.12.135",
   "description": "Pikku CLI — code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
@@ -31,7 +31,7 @@
     "@jridgewell/trace-mapping": "^0.3.31",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
     "@pikku/ai-vercel": "^0.12.13",
-    "@pikku/better-auth": "^0.12.36",
+    "@pikku/better-auth": "^0.12.37",
     "@pikku/bun-server": "^0.12.11",
     "@pikku/code-edit": "^0.12.1",
     "@pikku/deploy": "^0.12.5",
