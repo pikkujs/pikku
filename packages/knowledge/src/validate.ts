@@ -3,6 +3,13 @@ import { z } from 'zod'
 import { checkKnowledgeResources } from './check-resources.js'
 import { decisionFences } from './decision-fence.js'
 import {
+  functionsDirFor,
+  type PikkuMeta,
+  planShortfall,
+  readPikkuMeta,
+} from './plan-meta.js'
+import { checkPlanInternals, type PlanRead, readPlan } from './plan.js'
+import {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
   MILESTONE_TYPE,
@@ -35,6 +42,15 @@ export const KnowledgeFindingSchema = z.object({
   path: z.string(),
   fixHint: z.string(),
 }) satisfies z.ZodType<KnowledgeFinding>
+
+/** How a check files a finding. */
+type Add = (
+  severity: KnowledgeFinding['severity'],
+  id: string,
+  message: string,
+  path: string,
+  fixHint: string
+) => void
 
 export const KnowledgeValidateInput = z.object({})
 
@@ -102,6 +118,108 @@ const isGherkinFirstPerson = (body: string): boolean =>
 const hasGherkinBlock = (body: string): boolean => /```gherkin/i.test(body)
 
 /**
+ * Whether codegen has run at all.
+ *
+ * `readPikkuMeta` answers with empty collections for a project that was never generated,
+ * which is indistinguishable from one that generated nothing — and a shortfall computed
+ * against it reports every planned item as unbuilt. A knowledge base is validated long
+ * before there is any code, so the honest reading of no meta is "cannot say", not "none
+ * of it was built".
+ */
+const hasCodegen = (meta: PikkuMeta): boolean =>
+  Object.keys(meta.functions).length > 0 || meta.httpRoutes.size > 0
+
+/**
+ * What each milestone's plan says, checked against the plan schema and — once codegen has
+ * run — against the code that actually landed.
+ *
+ * Three outcomes rather than two, which is the whole reason this runs: an item is built,
+ * or it was deferred to a later pass and says so, or it is neither. The third is a promise
+ * that left the world silently, and nothing else reports it.
+ *
+ * Only a `built` milestone is held to the code. Before that the plan is a statement of
+ * intent and every item is legitimately absent.
+ *
+ * A milestone with no plan is only worth reporting on a project that plans at all —
+ * `usesPlans`. Plans are optional here, and a knowledge base that has never written one
+ * is not a knowledge base with a missing plan on every milestone.
+ */
+const planFindings = (
+  read: PlanRead,
+  note: KnowledgeNote,
+  meta: PikkuMeta,
+  usesPlans: boolean,
+  add: Add
+): void => {
+  if (!read.ok) {
+    if (!read.missing) {
+      add(
+        'error',
+        `knowledge-plan-unreadable-${note.path}`,
+        read.reason,
+        read.path,
+        'Fix the plan against the schema — `knowledge plan schema` prints it'
+      )
+      return
+    }
+    if (
+      usesPlans &&
+      (note.status === 'dispatched' || note.status === 'built')
+    ) {
+      add(
+        'error',
+        `knowledge-plan-missing-${note.path}`,
+        `${note.path} is \`${note.status}\` with no plan, so there is nothing to hold the build to`,
+        note.path,
+        'Write the plan before dispatching, or move the note back to `proposed`'
+      )
+    }
+    return
+  }
+
+  for (const problem of checkPlanInternals(read.plan)) {
+    add(
+      'error',
+      `knowledge-plan-internal-${note.path}-${problem}`,
+      `${read.path}: ${problem}`,
+      read.path,
+      'Correct the plan — this is decidable from the plan alone'
+    )
+  }
+
+  if (note.status !== 'built' || !hasCodegen(meta)) return
+
+  const shortfall = planShortfall(read.plan, meta)
+  for (const item of shortfall.missing) {
+    add(
+      'error',
+      `knowledge-plan-unbuilt-${note.path}-${item}`,
+      `${note.path} is marked built, but the plan promised ${item} and the code has no such thing`,
+      read.path,
+      'Build it, or defer it to a later pass so the promise is recorded rather than dropped'
+    )
+  }
+  for (const item of shortfall.deferred) {
+    add(
+      'info',
+      `knowledge-plan-deferred-${note.path}-${item}`,
+      `${note.path} deferred ${item} to a later pass`,
+      read.path,
+      'Nothing to do — a later milestone picks it up'
+    )
+  }
+  for (const problem of shortfall.problems) {
+    add(
+      'warn',
+      `knowledge-plan-problem-${note.path}-${problem}`,
+      `${note.path}: ${problem}`,
+      read.path,
+      'Reconcile what landed with what the plan said'
+    )
+  }
+}
+
+/**
  * @param alreadyRead the notes to validate, for a caller that has just read them
  * itself. Passing them keeps the verdict and whatever the caller built from those
  * same notes describing one revision of the files: a knowledge base is edited by
@@ -115,15 +233,16 @@ export const runKnowledgeValidate = async (
 ): Promise<KnowledgeValidateResult> => {
   const notes = alreadyRead ?? (await readKnowledgeNotes(root))
   const findings: KnowledgeFinding[] = []
-  const add = (
-    severity: KnowledgeFinding['severity'],
-    id: string,
-    message: string,
-    path: string,
-    fixHint: string
-  ): void => {
+  const add: Add = (severity, id, message, path, fixHint) => {
     findings.push({ id, severity, message, path, fixHint })
   }
+  const meta = readPikkuMeta(functionsDirFor(root))
+  const plans = new Map<string, PlanRead>()
+  for (const note of notes) {
+    if (note.type === MILESTONE_TYPE)
+      plans.set(note.path, readPlan(root, note.path))
+  }
+  const usesPlans = [...plans.values()].some((read) => read.ok)
 
   if (notes.length === 0) {
     add(
@@ -299,6 +418,8 @@ export const runKnowledgeValidate = async (
         `Split it into milestones of at most ${MAX_MILESTONE_ENTITIES} entities each`
       )
     }
+
+    planFindings(plans.get(note.path)!, note, meta, usesPlans, add)
 
     if (!hasGherkinBlock(note.body)) {
       add(
