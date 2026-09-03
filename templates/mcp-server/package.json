@@ -16,7 +16,7 @@
     "test:mcp:http": "npx tsx client/mcp-http.ts"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.133",
+    "@pikku/cli": "^0.12.134",
     "@types/node": "^24.13.3",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3"
