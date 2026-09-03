@@ -15,6 +15,13 @@ const skipped = new Set([
   '.git',
   '.deploy',
   'coverage',
+  // Nested checkouts of this same repository. A worktree under `.claude`
+  // carries its own copy of this file, and a copy of a scan for a specifier
+  // necessarily contains that specifier — so the guard reports itself, once
+  // per worktree, on a machine that happens to have some. Dropping the
+  // extension excludes only *this* path, not the same path inside another
+  // tree, and the failure never reproduces in CI, whose checkout is clean.
+  '.claude',
 ])
 
 const collectSourceFiles = (
