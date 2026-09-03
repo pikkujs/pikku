@@ -1,6 +1,6 @@
 {
   "name": "@pikku/migrator-sql",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "The SQL migration applier shared by the Pikku CLI and the standalone runtime",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

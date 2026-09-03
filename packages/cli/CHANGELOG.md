@@ -1,3 +1,13 @@
+## 0.12.133
+
+### Patch Changes
+
+- b2e038b: Rename `@pikku/sql-migrator` to `@pikku/migrator-sql`, so a future migrator for
+  another store sorts beside it rather than under a second prefix. The package has
+  never been published under either name, so nothing depends on the old one.
+- Updated dependencies [b2e038b]
+  - @pikku/migrator-sql@0.12.3
+
 ## 0.12.132
 
 ### Patch Changes
