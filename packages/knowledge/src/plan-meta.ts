@@ -48,9 +48,9 @@ function shallowScenarioProblem(
 /**
  * Every planned scenario that exists but proves less than its level claims.
  *
- * Exported so `fabric verify` can say it as a warning mid-build without re-deriving the
- * whole shortfall — the finding is worth hearing while scenarios are still being written,
- * and `fabric build-complete` refuses on the same list at the end.
+ * Exported so a mid-build check can say it as a warning without re-deriving the whole
+ * shortfall — the finding is worth hearing while scenarios are still being written, and
+ * the closing gate refuses on the same list at the end.
  */
 export function shallowScenarioProblems(plan: Plan, meta: PikkuMeta): string[] {
   const problems: string[] = []
@@ -338,7 +338,7 @@ export type PlanChecklistItem = {
   kind: 'function' | 'wire' | 'scope' | 'scenario'
   done: boolean
   /**
-   * Promised by a later pass, so `fabric build-complete` never asks for it.
+   * Promised by a later pass, so the closing gate never asks for it.
    *
    * Set by `planShortfall`, which is the only caller that can see every pass at once —
    * `planProgress` works one pass at a time and leaves it false.
@@ -521,7 +521,7 @@ const RENAME_STATEMENT =
  * That leaves the `on delete cascade` sitting in a `create table` for the TEMPORARY name,
  * which the plan never mentions — so a literal match reads the migration as absent and
  * the gate refuses a build that did exactly the right thing. Run hmt09oj7q died there,
- * rewriting the same migration on every `fabric build-complete` until it was killed.
+ * rewriting the same migration on every closing gate until it was killed.
  *
  * Chains are followed to the end so a rebuild done twice still lands on the real table.
  */
@@ -619,7 +619,7 @@ export type PlanShortfallResult = Omit<PlanProgress, 'pass'> & {
  *
  * What the union cost instead: a milestone ships only when every pass is done, so plan SIZE
  * became fatal. Run hmt3fz3c0 planned 14 items whose 10 permission scenarios were the role x
- * resource cross product, refused `fabric build-complete` thirteen times, and surrendered
+ * resource cross product, failed the closing gate thirteen times, and surrendered
  * with a deployed, rendering, signed-in app carrying 15 passing scenarios. Blocking on pass 1
  * alone makes an over-large plan slow rather than fatal, which is the only durable answer
  * when the budget cannot be expressed as a number of items.
