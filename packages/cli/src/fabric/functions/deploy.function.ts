@@ -2,7 +2,11 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
-import { assertNamedBranchDeploySafety, resolveRef } from '../lib/git.js'
+import {
+  assertNamedBranchDeploySafety,
+  currentBranch,
+  resolveRef,
+} from '../lib/git.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { added, changed, removed, dim, table } from '../lib/output.js'
 import {
@@ -32,7 +36,7 @@ export const FabricDeployInput = z.object({
   production: z.boolean().optional(),
   ref: z.string().optional(),
   deploymentId: z.string().optional(),
-  sync: z.boolean().optional(),
+  detach: z.boolean().optional(),
   autoApprove: z.boolean().optional(),
   allowDestructive: z.boolean().optional(),
   timeout: z.number().optional(),
@@ -46,15 +50,16 @@ export const FabricDeployValidatedInput = FabricDeployInput.superRefine(
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            '--deployment-id already names its target — drop --branch/--production.',
+            '--deployment-id already names its target — drop the branch/--production.',
         })
       }
       return
     }
-    if (!!value.branch === !!value.production) {
+    if (value.branch && value.production) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Pass exactly one of --branch or --production.',
+        message:
+          'Pass a branch or --production, not both — --production is always main.',
       })
     }
   }
@@ -131,16 +136,25 @@ async function prepDeploy({ branch, production, ref }: DeployInput) {
     throw new Error('No fabric project linked. Run `pikku fabric link` first.')
   }
 
-  // Guarded rather than asserted: the schema-level refine is bypassed whenever
-  // the function is called outside CLI arg parsing, and `branch!` turned that
-  // into "local branch undefined does not exist" — an error that names nothing.
-  if (!production && !branch) {
-    throw new Error('Pass exactly one of --branch or --production.')
-  }
-  const targetBranch = production ? 'main' : branch!
+  // With no target named, deploy the branch that is checked out — the common
+  // case, and the one worth not making people type twice. It is only safe to
+  // infer because `assertNamedBranchDeploySafety` below refuses any branch that
+  // is missing an upstream or out of sync with it, so an inferred target cannot
+  // ship something that was never pushed.
+  const inferred = !production && !branch
+  const targetBranch = production
+    ? 'main'
+    : (branch ?? branchFromHead(await currentBranch()))
   const safety = await assertNamedBranchDeploySafety(targetBranch)
   const resolved = ref ? ((await resolveRef(ref)) ?? ref) : safety.headSha
-  return { ctx, projectId: ctx.projectId, targetBranch, resolved, safety }
+  return {
+    ctx,
+    projectId: ctx.projectId,
+    targetBranch,
+    resolved,
+    safety,
+    inferred,
+  }
 }
 
 async function prepAttach() {
@@ -162,6 +176,23 @@ const EXIT_BY_OUTCOME: Record<ApplyOutput['outcome'], number> = {
   timeout: 4,
 }
 
+/**
+ * The branch to deploy when none was named, read off the checkout.
+ *
+ * `git rev-parse --abbrev-ref HEAD` answers the literal string `HEAD` on a
+ * detached checkout, which is not a branch and would be reported downstream as
+ * a branch that does not exist locally. Naming the real problem here is the
+ * difference between "check out a branch" and a puzzle.
+ */
+export const branchFromHead = (head: string): string => {
+  if (head === 'HEAD' || head === '') {
+    throw new Error(
+      'Deployment blocked: HEAD is detached, so there is no current branch to deploy.\nCheck out a branch, or name the target: `pikku fabric deploy apply <branch>`.'
+    )
+  }
+  return head
+}
+
 export const FabricDeployApply = pikkuSessionlessFunc({
   description:
     'Build + deploy a named branch or production (main), or attach to an existing deployment.',
@@ -179,7 +210,7 @@ export const FabricDeployApply = pikkuSessionlessFunc({
 
     if (input.deploymentId && (input.branch || input.production)) {
       throw new Error(
-        '--deployment-id already names its target — drop --branch/--production.'
+        '--deployment-id already names its target — drop the branch/--production.'
       )
     }
 
@@ -208,11 +239,19 @@ export const FabricDeployApply = pikkuSessionlessFunc({
         targetBranch,
         resolved,
         safety,
+        inferred,
       } = await prepDeploy(input)
       projectId = id
       branch = targetBranch
       ref = resolved
       rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+
+      // An inferred target is said out loud before anything is built. Under -y
+      // there is no confirmation prompt to name it, and a deploy that never
+      // told you which branch it picked is the one that ships the wrong branch.
+      if (inferred && !input.json) {
+        console.log(dim(`Deploying the current branch: ${targetBranch}`))
+      }
 
       if (!input.autoApprove) {
         const target = `${branch} @ ${resolved.slice(0, 8)}`
@@ -260,7 +299,7 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       ...(runId ? { runId } : {}),
     }
 
-    if (!input.sync && !attaching) {
+    if (input.detach && !attaching) {
       return { ...base, outcome: 'queued' as const }
     }
 
@@ -292,7 +331,7 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       )
     }
 
-    if (!input.sync) {
+    if (input.detach) {
       const status = await readDeploymentStatus(rpc, deploymentId)
       const klass = classifyStatus(status.status)
       const outcome: ApplyOutput['outcome'] =
@@ -435,7 +474,7 @@ const missingLines = (
 
 const reattachHint = (deploymentId: string): string =>
   dim(
-    `Re-attach with \`pikku fabric deploy apply --deployment-id ${deploymentId} --sync\`.`
+    `Re-attach with \`pikku fabric deploy apply --deployment-id ${deploymentId}\`.`
   )
 
 export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
@@ -510,13 +549,13 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
       )
       console.log(
         dim(
-          `\`pikku fabric deploy apply --deployment-id ${deploymentId} --sync --auto-approve --allow-destructive\``
+          `\`pikku fabric deploy apply --deployment-id ${deploymentId} -y --allow-destructive\``
         )
       )
     } else if (isApprovable(reason) && !approved) {
       console.log(
         dim(
-          `Approve it with \`pikku fabric deploy apply --deployment-id ${deploymentId} --sync --auto-approve\`.`
+          `Approve it with \`pikku fabric deploy apply --deployment-id ${deploymentId} -y\`.`
         )
       )
     } else if (reason === 'needs_config') {

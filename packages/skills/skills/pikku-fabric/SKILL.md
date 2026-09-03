@@ -291,24 +291,40 @@ reload).
 pikku fabric login              # opens a browser; needs a human, wait for it
 pikku fabric init https://github.com/<owner>/<repo>
 pikku fabric validate           # must pass clean
-pikku fabric deploy apply --production --sync --auto-approve
+pikku fabric deploy apply --production -y
 ```
+
+The branch is positional and defaults to the checked-out one, and `-y` is the
+short form of `--auto-approve`, so a one-shot deploy is:
+
+```bash
+pikku fabric deploy apply -y            # the branch you are standing on
+pikku fabric deploy apply my-branch -y  # a named one
+```
+
+`-y` answers the prompts and nothing more. It does **not** approve migrations
+that drop or rewrite data — that stays `--allow-destructive`, typed out on
+purpose.
+
+Inferring the branch is safe because the git safety check refuses any branch
+without an upstream or out of sync with it, so it cannot ship an unpushed
+commit; the branch it picked is printed before the build starts. A detached
+HEAD is refused by name rather than travelling on as a branch called `HEAD`.
 
 There is no `deploy plan` subcommand — `apply` runs the same auth, git-safety
 and ref resolution itself, and fabric produces the real plan server-side.
 
 `apply` confirms before deploying, and with no TTY to ask — CI, an agent shell —
-it refuses rather than hangs. `--auto-approve` supplies that confirmation; drop
-it only when a human is at a real terminal.
+it refuses rather than hangs. `--auto-approve` (`-y`) supplies that confirmation;
+drop it only when a human is at a real terminal.
 
-By default `apply` queues the deploy, prints the deployment id and returns. That
-tells you nothing about whether it worked. `--sync` waits for a terminal state
-and exits non-zero unless the deployment went live, which is the only form worth
-running in CI:
+`apply` waits for a terminal state and exits non-zero unless the deployment went
+live. `--detach` opts out — it queues the deploy, prints the deployment id and
+returns 0, which tells you nothing about whether it worked:
 
 | exit | meaning                                                                 |
 | ---- | ----------------------------------------------------------------------- |
-| 0    | live (or queued, without `--sync`)                                      |
+| 0    | live (or queued, under `--detach`)                                      |
 | 1    | the command could not run — not logged in, unsafe git state, bad flags  |
 | 2    | the deployment failed, errored, timed out server-side, or was cancelled |
 | 3    | the deployment is blocked and nothing the CLI can do will unblock it    |
@@ -318,14 +334,14 @@ Fabric parks every deploy at a gate after the plan phase (`status: suspended`).
 Why it parked is the whole story, and it is `statusReason`, not `status`:
 
 - `awaiting_approval` — the plan is fine, a human has to publish it.
-  `--auto-approve` does that; without it you get exit 3 and the command to run.
+  `-y` does that; without it you get exit 3 and the command to run.
   One exception: if fabric marked any pending migration **destructive** — a
-  drop, a truncate, a rewrite — `--auto-approve` alone declines and exits 3,
+  drop, a truncate, a rewrite — `-y` alone declines and exits 3,
   because a standing yes was given before anyone knew the plan dropped a table.
   The CLI lists the migrations and fabric's reasons; `--allow-destructive`
-  accepts them for that deploy.
+  accepts them for that deploy, and `-y` implies it.
 - `needs_config` — a declared secret or variable has no value covering the
-  stage. The CLI names them. `--auto-approve` will **not** force this through;
+  stage. The CLI names them. `-y` will **not** force this through;
   set the values and re-attach — `pikku fabric secrets set <name>` for a
   declared secret, `pikku fabric variables set <name> --value <v>` for a declared
   variable. They are separate stores: a secret is sealed to the stage and cannot
@@ -334,24 +350,25 @@ Why it parked is the whole story, and it is `statusReason`, not `status`:
   stage exactly as it is from `.env`, and `--value '"true"'` is the string.
 - `needs_attention` — the plan is red. Nothing to approve.
 
-`--sync` defaults to a 900s ceiling; `--timeout <seconds>` moves it. On timeout
+The wait defaults to a 900s ceiling; `--timeout <seconds>` moves it. On timeout
 it prints the deployment id and the re-attach command rather than lying about
 the outcome.
 
 Splitting kick-off from waiting across two CI jobs is the reason
-`--deployment-id` exists:
+`--deployment-id` exists, and what `--detach` is for — the first job here has to
+return the id and exit rather than wait:
 
 ```bash
-id=$(pikku fabric deploy apply --production --auto-approve --json | jq -r 'select(.event=="result").deploymentId')
+id=$(pikku fabric deploy apply --production -y --detach --json | jq -r 'select(.event=="result").deploymentId')
 # …later, in another job…
-pikku fabric deploy apply --deployment-id "$id" --sync --auto-approve
+pikku fabric deploy apply --deployment-id "$id" -y
 ```
 
 `--deployment-id` skips the git safety check entirely (the deployment already
 pins a sha, and the checkout is allowed to have moved on) and refuses to be
-combined with `--branch`/`--production`, which would let the two disagree.
+combined with a branch or `--production`, which would let the two disagree.
 
-Under `--json`, `--sync` emits one NDJSON event per line — `created`/`attached`,
+Under `--json`, the wait emits one NDJSON event per line — `created`/`attached`,
 `status` on each transition, `blocked`, `approved` — and the last line is the
 terminal result object, tagged `"event": "result"`.
 

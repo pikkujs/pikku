@@ -198,12 +198,12 @@ export const fabricCommands = defineCLICommands({
     description: 'Apply and inspect deploys for a named branch or production',
     subcommands: {
       apply: pikkuCLICommand({
+        parameters: '[branch]',
         func: FabricDeployApply,
         render: renderDeployApply,
         description:
           'Build + deploy a named branch or production (main), or attach to an existing deployment',
         options: {
-          branch: { description: 'Target branch to deploy', short: 'b' },
           production: {
             description: 'Deploy production (always main)',
             default: false,
@@ -213,25 +213,26 @@ export const fabricCommands = defineCLICommands({
           },
           deploymentId: {
             description:
-              'Attach to an existing deployment instead of creating one (not with --branch/--production)',
+              'Attach to an existing deployment instead of creating one (not with a branch/--production)',
           },
-          sync: {
+          detach: {
             description:
-              'Wait for the deployment to finish and exit non-zero unless it went live',
+              'Queue the deployment and exit without waiting, reporting nothing about whether it landed',
             default: false,
           },
           autoApprove: {
             description:
               'Answer the confirmation prompt and publish a plan parked at the approval gate',
+            short: 'y',
             default: false,
           },
           allowDestructive: {
             description:
-              'Approve a plan whose migrations drop or rewrite data (--auto-approve alone will not)',
+              'Approve a plan whose migrations drop or rewrite data (-y alone will not)',
             default: false,
           },
           timeout: {
-            description: 'Seconds to wait under --sync (default 900)',
+            description: 'Seconds to wait for the deployment (default 900)',
           },
           json: {
             description: 'Machine-readable output (NDJSON)',

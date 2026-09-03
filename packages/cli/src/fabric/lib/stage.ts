@@ -36,7 +36,7 @@ export async function resolveStage(
     }
     throw new Error(
       stages.length === 0
-        ? 'No stages deployed for this project yet — run `pikku fabric deploy apply --branch <branch>` first.'
+        ? 'No stages deployed for this project yet — run `pikku fabric deploy apply <branch>` first.'
         : `--branch is required — this project has ${stages.length} stages: ${known.join(', ')}`
     )
   }
