@@ -1,6 +1,6 @@
 {
   "name": "@pikku/deploy-standalone",
-  "version": "0.12.16",
+  "version": "0.12.17",
   "description": "Standalone deploy adapter for Pikku — bundles a project into a node bundle or a compiled bun executable",
   "type": "module",
   "main": "dist/index.js",
@@ -19,6 +19,6 @@
   "license": "MIT",
   "dependencies": {
     "@pikku/deploy": "^0.12.5",
-    "@pikku/migrator-sql": "^0.12.2"
+    "@pikku/migrator-sql": "^0.12.3"
   }
 }
