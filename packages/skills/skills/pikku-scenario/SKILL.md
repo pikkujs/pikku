@@ -739,9 +739,7 @@ generated persona meta (`<outDir>/workflow/personas.gen.json`, which already
 carries the derived `email`):
 
 ```js
-const personas = Object.values(
-  JSON.parse(readFileSync(personasPath, 'utf8'))
-).filter((persona) => persona.runnable !== false && persona.email)
+const personas = Object.values(JSON.parse(readFileSync(personasPath, 'utf8')))
 
 env.VITE_DEV_ACTORS = JSON.stringify(
   personas.map(({ id, email, name, jobTitle }) => ({
@@ -763,9 +761,12 @@ env.VITE_DEV_ACTOR_SECRETS = JSON.stringify(
 )
 ```
 
-Two things bite here. `useDevActors()` drops any actor with no credential in the
-map, so an unset `SCENARIO_ACTOR_SECRET` — nothing to derive from — hides the
-switcher exactly as if it were never built. And on a brand-new project the
+Two things bite here. **Set `SCENARIO_ACTOR_SECRET` yourself**, at least 32
+characters, in the environment both processes read. Left unset, `pikku dev`
+mints an ephemeral root for its own run that a separately spawned vite cannot
+see, so the two derive from different roots: the switcher renders every persona
+and each click is refused at the endpoint, which reads as a broken login rather
+than as missing configuration. And on a brand-new project the
 generated file does not exist yet — codegen writes it during the first
 `pikku dev`, by which point vite has already baked an empty list, since vite
 reads `import.meta.env` once at boot. Watch the file and restart the frontend
