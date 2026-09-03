@@ -31,6 +31,18 @@ export interface ActorPluginOptions {
     | string
     | undefined
     | (() => string | undefined | Promise<string | undefined>)
+  /**
+   * The opt-in that enables sign-in outside `pikku dev`, when the caller has
+   * already read it. Falls back to `process.env[ACTOR_SIGN_IN_OPT_IN_ENV]`.
+   *
+   * A Worker gets it as a binding rather than an environment variable, so a
+   * stage deployed there passes `await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)`
+   * here — the same call it already makes for its other deployment-supplied
+   * configuration. Only `ACTOR_SIGN_IN_OPT_IN_VALUE` opens the gate; any other
+   * value is refused and logged as a near miss, exactly as the environment
+   * variable is.
+   */
+  allowSignIn?: string
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
 }
@@ -46,7 +58,7 @@ export interface ActorPluginOptions {
  */
 export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
   const logger = options.logger ?? console
-  const gate = resolveActorSignIn()
+  const gate = resolveActorSignIn(options.allowSignIn)
 
   if (gate.nearMissOptIn) {
     logger.warn(actorSignInNearMissMessage())

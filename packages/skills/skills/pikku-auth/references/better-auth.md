@@ -15,7 +15,6 @@ The only acceptable auth implementation in a Pikku app is the one described in t
 
 ---
 
-
 ## Installation
 
 ```bash
@@ -448,9 +447,14 @@ someone" means **a particular kind of user** rather than one fixed admin.
 Register it explicitly — it is not automatic:
 
 ```typescript
-import { pikkuActor } from '@pikku/better-auth'
+import { ACTOR_SIGN_IN_OPT_IN_ENV, pikkuActor } from '@pikku/better-auth'
 
-plugins: [pikkuActor({ secret: SCENARIO_ACTOR_SECRET })]
+plugins: [
+  pikkuActor({
+    secret: SCENARIO_ACTOR_SECRET,
+    allowSignIn: await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV),
+  }),
+]
 ```
 
 `POST ${basePath}/sign-in/actor` `{ email, secret, name? }` → 200 + the normal
@@ -481,9 +485,19 @@ itself instead.
 A stage that genuinely must run scenarios opts in on purpose, with
 `PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in`. Any other value is
 ignored and warned about, so the hatch cannot be opened by copying a `true` from
-the line above, and it is the only hatch — there is no build-time option, because
-an option compiled into the bundle cannot be audited from the environment it
-runs in.
+the line above.
+
+**Pass it in on any runtime without a populated `process.env`.** The gate reads
+the environment by default, which is enough for Node but not for a Worker: there
+the opt-in arrives as a binding and reaches user code through the variables
+service, so a gate left to `process.env` stays shut on exactly the stages a
+deployment targets. `allowSignIn` takes the value the caller already read —
+`await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)` — and is checked against the same
+literal, near-miss warning included. It is deliberately a value and not a flag:
+what opens the gate is still something the deployment set and an operator can
+read back out of it, never something compiled into the bundle. A value passed
+here is the one consulted, so the environment cannot quietly override what the
+stage was configured with.
 
 **Signing in and provisioning are separate powers.** An unknown address becomes
 an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
