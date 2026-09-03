@@ -476,6 +476,15 @@ jobs:
     # What stays: validate-deps (workspace-protocol deps and peer ranges are
     # precisely what must not reach npm), lint, build, unit-tests, e2e.
     needs: [validate-deps, build, lint, unit-tests, e2e]
+    # Publishing is npm trusted publishing (OIDC), so the job needs to mint an
+    # id-token. Naming any permission drops the repo-wide `write` default for
+    # every one not listed, so the two this job already relied on are spelled
+    # out: `contents` pushes the git tags and creates the GitHub releases the
+    # binary upload then attaches to, and `pull-requests` opens Version Packages.
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
     outputs:
       published: ${{ steps.changesets.outputs.published }}
       publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
@@ -494,10 +503,14 @@ jobs:
           version: node .github/changeset-version.cjs
           publish: yarn release
           createGithubReleases: true
+        # No NPM_TOKEN, deliberately. npm now demands a 2FA OTP that a classic
+        # token cannot answer, which is what had every release since 2026-09-02
+        # failing on `child "otp" fails`. Trusted publishing is exempt — but in
+        # yarn the OIDC branch sits *after* the token check, so a token left in
+        # this env would short-circuit OIDC and put the failure straight back.
+        # changesets/action is likewise guarded on NPM_TOKEN being absent.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           HUSKY: '0'
       - name: Upload CLI native binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'
