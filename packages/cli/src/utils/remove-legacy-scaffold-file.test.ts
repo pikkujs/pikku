@@ -8,6 +8,7 @@ import {
   pruneLegacyScaffoldFiles,
   refreshScaffoldsImportingRemovedEntryPoints,
   removeLegacyScaffoldFile,
+  removeRetiredScaffoldFiles,
 } from './remove-legacy-scaffold-file.js'
 import type { PikkuCLIConfig } from '../../types/config.js'
 
@@ -140,5 +141,44 @@ describe('refreshScaffoldsImportingRemovedEntryPoints', () => {
 
   test('tolerates a config with no agent scaffold', async () => {
     await refreshScaffoldsImportingRemovedEntryPoints({} as PikkuCLIConfig)
+  })
+})
+
+describe('removeRetiredScaffoldFiles', () => {
+  const adminScaffold = async () => {
+    const scaffold = await scaffoldDir()
+    await mkdir(join(scaffold, 'admin'), { recursive: true })
+    const functions = join(scaffold, 'admin', 'user-admin.gen.ts')
+    const schemas = join(scaffold, 'admin', 'user-admin.schemas.gen.ts')
+    await writeFile(functions, 'export const pikkuAdminListUsers = null\n')
+    await writeFile(schemas, '// schemas\n')
+    return { scaffold, functions, schemas }
+  }
+
+  test('deletes the retired user-admin scaffold', async () => {
+    // Not tidying: a leftover registers pikkuAdminListUsers and its siblings.
+    const { scaffold, functions, schemas } = await adminScaffold()
+
+    await removeRetiredScaffoldFiles({
+      resolvedScaffoldDir: scaffold,
+    } as PikkuCLIConfig)
+
+    assert.ok(!existsSync(functions))
+    assert.ok(!existsSync(schemas))
+  })
+
+  test('leaves the rest of the scaffold directory alone', async () => {
+    const { scaffold } = await adminScaffold()
+    await seed(scaffold, 'console', 'console.gen.ts')
+
+    await removeRetiredScaffoldFiles({
+      resolvedScaffoldDir: scaffold,
+    } as PikkuCLIConfig)
+
+    assert.ok(existsSync(join(scaffold, 'console', 'console.gen.ts')))
+  })
+
+  test('tolerates a config that never went through scaffold resolution', async () => {
+    await removeRetiredScaffoldFiles({} as PikkuCLIConfig)
   })
 })

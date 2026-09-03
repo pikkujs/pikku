@@ -15,6 +15,9 @@ const skipped = new Set([
   '.git',
   '.deploy',
   'coverage',
+  // A worktree here carries its own copy of this file, which necessarily
+  // contains the specifier being scanned for — the guard would report itself.
+  '.claude',
 ])
 
 const collectSourceFiles = (

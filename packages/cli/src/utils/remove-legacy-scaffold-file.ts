@@ -21,8 +21,6 @@ const scaffoldFiles = (config: PikkuCLIConfig): (string | undefined)[] => {
     config.consoleSchemasFile,
     config.scenariosFunctionsFile,
     config.scenariosSchemasFile,
-    config.userAdminFunctionsFile,
-    config.userAdminSchemasFile,
     config.eventsChannelFile,
     config.eventsSchemasFile,
     config.authFile,
@@ -48,6 +46,11 @@ export const removeLegacyScaffoldFile = async (file: string) => {
  * an unregenerated project is already safe, but the file is then dead code that
  * still imports `zod`, so it goes.
  *
+ * A leftover user-admin scaffold still registers `pikkuAdminListUsers` and its
+ * five siblings, so a project installing `@pikku/addon-admin` would answer to
+ * two spellings of the same six calls. Named by path: there is no longer a
+ * `scaffold.userAdmin` field to derive one from.
+ *
  * Unlike `pruneLegacyScaffoldFiles`, which removes a file from a path pikku used
  * to write to, this removes a file pikku no longer writes at all.
  */
@@ -55,6 +58,16 @@ export const removeRetiredScaffoldFiles = async (config: PikkuCLIConfig) => {
   for (const file of [
     config.scenariosFunctionsFile,
     config.scenariosSchemasFile,
+    ...(config.resolvedScaffoldDir
+      ? [
+          join(config.resolvedScaffoldDir, 'admin', 'user-admin.gen.ts'),
+          join(
+            config.resolvedScaffoldDir,
+            'admin',
+            'user-admin.schemas.gen.ts'
+          ),
+        ]
+      : []),
   ]) {
     if (file && existsSync(file)) {
       await rm(file, { force: true })

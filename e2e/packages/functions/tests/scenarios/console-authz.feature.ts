@@ -14,7 +14,7 @@ import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const CREDENTIAL_GET = 'admin:credentialGet'
 const FUNCTIONS_META = 'console:getFunctionsMeta'
-const DIRECTORY = 'pikkuAdminListUsers'
+const DIRECTORY = 'admin:listUsers'
 const SCENARIO_RUNS = 'console:listScenarioRuns'
 
 /** The sharp edge: credential read returns a resolved access token. */

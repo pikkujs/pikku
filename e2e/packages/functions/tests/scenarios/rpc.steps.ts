@@ -86,7 +86,7 @@ export const expectsRpcResponse = pikkuScenarioStep<
  * Resolves a seeded person's Better Auth id from their email, through the
  * directory the console itself reads.
  *
- * Only works for people: `pikkuAdminListUsers` filters out rows flagged
+ * Only works for people: `admin:listUsers` filters out rows flagged
  * `actor: true`, so an ACTOR's own id comes from `readsActorUserId` instead.
  * The caller needs `admin:users:list`.
  */
@@ -100,7 +100,7 @@ export const readsUserIdByEmail = pikkuScenarioStep<
   template: 'resolves {email}',
   default: async (_services, { email }, { actor }) => {
     const directory = (await actor.invoke(
-      'pikkuAdminListUsers' as never,
+      'admin:listUsers' as never,
       {
         limit: 100,
       } as never
@@ -122,7 +122,7 @@ export const readsUserIdByEmail = pikkuScenarioStep<
  *
  * Better Auth owns the user table, so ids are only knowable at runtime, and an
  * impersonation header or a direct scope grant is keyed by id. The directory
- * cannot answer this: `pikkuAdminListUsers` deliberately filters out rows
+ * cannot answer this: `admin:listUsers` deliberately filters out rows
  * flagged `actor: true`, because a scenario actor is not a person a human picks
  * from. Asking the session itself is both the supported route and the honest
  * one — it reports the identity the request really ran under.

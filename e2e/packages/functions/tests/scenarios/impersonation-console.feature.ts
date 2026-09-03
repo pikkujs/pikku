@@ -76,7 +76,7 @@ export const impersonationConsoleScopeScenario = pikkuScenario<
       'expectsImpersonationHeader',
       {
         requests: chrome.requests,
-        urlContains: '/rpc/pikkuAdminListUsers',
+        urlContains: '/rpc/admin:listUsers',
         present: false,
       }
     )

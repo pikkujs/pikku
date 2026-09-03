@@ -29,7 +29,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc && (cp .pikku/addon/rpc/*.d.ts dist/.pikku/addon/rpc/ 2>/dev/null || true) && (cp .pikku/addon/agent/*.d.ts dist/.pikku/addon/agent/ 2>/dev/null || true) && (cp .pikku/addon/workflow/*.d.ts dist/.pikku/addon/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/addon/function && cp .pikku/addon/function/*-verbose.gen.json dist/.pikku/addon/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/)",
+    "build": "rm -rf dist && pikku all && tsc && (cp .pikku/addon/rpc/*.d.ts dist/.pikku/addon/rpc/ 2>/dev/null || true) && (cp .pikku/addon/agent/*.d.ts dist/.pikku/addon/agent/ 2>/dev/null || true) && (cp .pikku/addon/workflow/*.d.ts dist/.pikku/addon/workflow/ 2>/dev/null || true) && (mkdir -p dist/.pikku/addon/function && cp .pikku/addon/function/*-verbose.gen.json dist/.pikku/addon/function/ 2>/dev/null || true) && (mkdir -p dist/types && cp types/*.d.ts dist/types/)",
     "pikku": "pikku all",
     "pretest": "pikku all",
     "test": "tsc --noEmit",

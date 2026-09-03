@@ -11,7 +11,7 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import { useAuth } from '../../context/AuthContext'
+import { useUserAdmin } from '../../context/UserAdminContext'
 
 type CreateUserDrawerProps = {
   opened: boolean
@@ -29,7 +29,7 @@ export const CreateUserDrawer: React.FC<CreateUserDrawerProps> = ({
   onClose,
   onDone,
 }) => {
-  const { createUser } = useAuth()
+  const { createUser } = useUserAdmin()
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')

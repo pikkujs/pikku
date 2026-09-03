@@ -4,7 +4,6 @@ import { serializePublicRPC } from './rpc/serialize-public-rpc.js'
 import { serializePublicAgent } from './agent/serialize-public-agent.js'
 import { serializeWorkflowRoutes } from './workflow/serialize-workflow-routes.js'
 import { serializeEventsScaffold } from './realtime/serialize-events-scaffold.js'
-import { serializeUserAdminFunctions } from './user-admin/serialize-user-admin-functions.js'
 import { serializeVirtualUserFunctions } from './virtual-user/serialize-virtual-user-functions.js'
 
 const leaf = (name: string) => `#pikku/${name}`
@@ -72,7 +71,6 @@ describe('the exposed scaffold functions gate themselves', () => {
 
 describe('the scoped admin surfaces emit no auth field', () => {
   const surfaces: Array<[string, string]> = [
-    ['user admin', serializeUserAdminFunctions(leaf).functions],
     [
       'virtual user',
       serializeVirtualUserFunctions(leaf, '#personas').functions,

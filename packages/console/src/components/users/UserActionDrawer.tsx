@@ -11,7 +11,8 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import { useAuth, type AuthUser } from '../../context/AuthContext'
+import type { AuthUser } from '../../context/AuthContext'
+import { useUserAdmin } from '../../context/UserAdminContext'
 import type { UserAction } from './user-actions'
 
 type UserActionDrawerProps = {
@@ -33,7 +34,7 @@ export const UserActionDrawer: React.FC<UserActionDrawerProps> = ({
   onDone,
 }) => {
   const { setUserBanned, removeUser, revokeUserSessions, setUserPassword } =
-    useAuth()
+    useUserAdmin()
   const [reason, setReason] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
