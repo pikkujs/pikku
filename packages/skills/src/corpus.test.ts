@@ -234,6 +234,48 @@ describe('bundled skills corpus', () => {
     )
   })
 
+  test('no skill outside pikku-fabric teaches a bare `fabric` command', async () => {
+    // The corpus is the OSS one: a reader running these skills has the `pikku`
+    // CLI and no `fabric` binary, so `fabric verify` is a command that does not
+    // exist on their machine. Fabric's own overlay skills keep those; what must
+    // not happen is one migrating back in as a skill moves out of Fabric.
+    //
+    // `pikku fabric <verb>` is the real OSS command and stays, as does
+    // `pikkufabric.config.json`, the `fabric-theme` tool named as Fabric's, and
+    // prose about the platform — only a bare `fabric ` + verb is a hit.
+    const offenders: string[] = []
+    for (const skill of await readSkills()) {
+      if (FABRIC_SKILLS.includes(skill.name)) continue
+      const docs: Array<[string, string]> = [['SKILL.md', skill.body]]
+      const refs = join(skill.dir, 'references')
+      if (existsSync(refs))
+        for (const file of await readdir(refs))
+          docs.push([`references/${file}`, await readFile(join(refs, file), 'utf-8')])
+
+      for (const [where, doc] of docs) {
+        let inFence = false
+        for (const [i, line] of doc.split('\n').entries()) {
+          if (line.startsWith('```')) {
+            inFence = !inFence
+            continue
+          }
+          // A command an agent would copy: inside a fence, or backticked in
+          // prose. A lowercase noun phrase ("the fabric plugin", "a fabric
+          // dispatcher") is describing Fabric, not telling anyone to run it.
+          const commands = inFence
+            ? [...line.matchAll(/(?<!pikku )(?<![\w/@-])fabric ([a-z][a-z-]+)/g)]
+            : [...line.matchAll(/`(?<!pikku )fabric ([a-z][a-z-]+)[^`]*`/g)]
+          for (const m of commands) offenders.push(`${skill.name}/${where}:${i + 1}: ${m[0]}`)
+        }
+      }
+    }
+    assert.deepEqual(
+      offenders,
+      [],
+      `the OSS corpus has no fabric binary — use the pikku equivalent:\n  ${offenders.join('\n  ')}`
+    )
+  })
+
   test('relative paths referenced in a skill resolve on disk', async () => {
     for (const skill of await readSkills()) {
       const docs = [skill.body]

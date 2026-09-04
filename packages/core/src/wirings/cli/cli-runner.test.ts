@@ -829,4 +829,141 @@ describe('CLI Runner', () => {
       assert.ok(printed.includes('at '))
     })
   })
+  describe('--json output', () => {
+    const wireGreet = (renderers: Record<string, any>, defaultRenderer: any) => {
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              greet: {
+                command: 'greet',
+                pikkuFuncId: 'greetFunc',
+                positionals: [],
+                options: {},
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+
+      pikkuState(null, 'cli', 'programs', {
+        'test-cli': { defaultRenderer, middleware: [], renderers },
+      })
+
+      pikkuState(null, 'function', 'meta', {
+        greetFunc: {
+          pikkuFuncId: 'greetFunc',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+      })
+
+      addFunction('greetFunc', {
+        func: async () => ({ name: 'Alice' }),
+        auth: false,
+      })
+    }
+
+    const captureStdout = async (fn: () => Promise<unknown>) => {
+      const lines: string[] = []
+      const original = console.log
+      console.log = (...args: unknown[]) => {
+        lines.push(args.map(String).join(' '))
+      }
+      try {
+        await fn()
+      } finally {
+        console.log = original
+      }
+      return lines
+    }
+
+    test('serialises the result for a command with no renderer of its own', async () => {
+      const textOnly = () => {}
+      wireGreet({}, textOnly)
+
+      const lines = await captureStdout(() =>
+        runCLICommand({
+          program: 'test-cli',
+          commandPath: ['greet'],
+          data: { json: true },
+          singletonServices,
+          createWireServices,
+        })
+      )
+
+      assert.deepEqual(lines, ['{"name":"Alice"}'])
+    })
+
+    test('--output json is equivalent to --json', async () => {
+      const textOnly = () => {}
+      wireGreet({}, textOnly)
+
+      const lines = await captureStdout(() =>
+        runCLICommand({
+          program: 'test-cli',
+          commandPath: ['greet'],
+          data: { output: 'json' },
+          singletonServices,
+          createWireServices,
+        })
+      )
+
+      assert.deepEqual(lines, ['{"name":"Alice"}'])
+    })
+
+    test('json overrides a command renderer', async () => {
+      let renderedWith: unknown
+      wireGreet(
+        {
+          greet: (_s: any, data: any) => {
+            renderedWith = data
+          },
+        },
+        () => {}
+      )
+
+      const lines = await captureStdout(() =>
+        runCLICommand({
+          program: 'test-cli',
+          commandPath: ['greet'],
+          data: { json: true },
+          singletonServices,
+          createWireServices,
+        })
+      )
+
+      assert.equal(renderedWith, undefined)
+      assert.deepEqual(lines, ['{"name":"Alice"}'])
+    })
+
+    test('without json the command renderer still wins', async () => {
+      let renderedWith: unknown
+      wireGreet(
+        {
+          greet: (_s: any, data: any) => {
+            renderedWith = data
+          },
+        },
+        () => {}
+      )
+
+      const lines = await captureStdout(() =>
+        runCLICommand({
+          program: 'test-cli',
+          commandPath: ['greet'],
+          data: {},
+          singletonServices,
+          createWireServices,
+        })
+      )
+
+      assert.deepEqual(renderedWith, { name: 'Alice' })
+      assert.deepEqual(lines, [])
+    })
+  })
 })

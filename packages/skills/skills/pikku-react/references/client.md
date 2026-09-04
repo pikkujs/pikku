@@ -195,6 +195,26 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, {
 })
 ```
 
+`transformDate: true` revives **fully-zoned ISO-8601 instants** — `2026-03-14T08:12:00Z`,
+`2026-03-14T08:12:00.000+01:00` — into `Date` objects. Nothing else is touched: a bare
+`2026-03-14`, a zoneless `2026-03-14T08:12:00`, and a shaped-but-impossible
+`2026-02-31T00:00:00Z` all stay the strings the server sent, because each names a reading
+rather than a moment and `new Date` would guess a different instant per machine.
+
+So the field's runtime type follows the VALUE, not the schema — one `z.string()` column can
+arrive as a `Date` from one row and a string from the next. Two consequences, both of which
+typecheck:
+
+- **A string method on a revived field throws at runtime.** `row.createdAt.split('T')[0]` —
+  there is no string to slice.
+- **A raw `Date` in JSX crashes the route.** `<span>{row.createdAt}</span>` throws
+  `Objects are not valid as a React child (found: [object Date])` and the page falls into its
+  error boundary — a white screen, with nothing catching it first.
+
+Format before rendering, with whatever date library the project already uses, and let it take
+either type. Coercing instead (`` `${d}` ``, `String(d)`) does not crash but prints
+`Mon Jun 15 2026 02:00:00 GMT+0200`, which is a different bug.
+
 There is no request-interceptor hook. For a token that changes after startup,
 call the setter on the shared instance — RPC and realtime pick it up because
 they hold the same fetch:

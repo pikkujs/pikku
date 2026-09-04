@@ -391,10 +391,9 @@ export async function runCLICommand({
       const jsonMode =
         (data as { json?: unknown; output?: unknown }).json === true ||
         (data as { json?: unknown; output?: unknown }).output === 'json'
-      const finalRenderer: CorePikkuCLIRender<any> | undefined =
-        jsonMode && commandRenderer !== undefined
-          ? defaultJSONRenderer
-          : (commandRenderer ?? programData?.defaultRenderer)
+      const finalRenderer: CorePikkuCLIRender<any> | undefined = jsonMode
+        ? defaultJSONRenderer
+        : (commandRenderer ?? programData?.defaultRenderer)
       if (finalRenderer !== undefined) {
         await Promise.resolve(
           finalRenderer(

@@ -63,9 +63,11 @@ is what makes an RTL language just another locale file.
 - **Do not `asI18n()` a hardcoded English string.** `asI18n` exists to pass
   opaque server data (a name, a slug, an id) through the i18n gate. An enum value
   goes through its generated label map.
-- **Do not wrap `m`.** No re-export module, no branding layer. `m.some__key()`
-  already satisfies the `I18nNode` gate; a wrapper adds nothing and costs
-  per-message tree-shaking.
+- **Do not wrap `m` without a reason you can name.** `m.some__key()` already
+  satisfies the `I18nNode` gate, so a plain re-export module adds nothing and
+  costs per-message tree-shaking. Wrapping the namespace is only worth it when it
+  buys a feature the gate cannot — debug masking of translated copy, say — and
+  then the catalogue has to be small enough to ship whole.
 - **Do not translate message keys.** `auth__login__title` stays English in
   `de.json`; only the value changes.
 - **Do not edit or commit `src/paraglide/`, `i18n-enum.gen.ts` or `enums.gen.ts`.**
