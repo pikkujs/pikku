@@ -710,9 +710,17 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   the rows to a `const` above the loop and iterate that. One milestone here lost
   a codegen round to each half of that rule, because the first half does not
   imply the second.
-- **Write the refusals.** The third step above is the whole point of §4: one
-  persona reaching for another's row has to be rejected, and that rejection is a
-  scenario. It is how you prove access control instead of asserting it.
+- **Write the refusals, and assert WHY.** The third step above is the whole
+  point of §4: one persona reaching for another's row has to be rejected, and
+  that rejection is a scenario. It is how you prove access control instead of
+  asserting it — but only if the step reads the reason. "Not ok" is also what a
+  malformed request returns, and a refusal step that stops at the status code
+  passes on a call the function never even ran. One here posted straight to
+  `/rpc/<name>` with the function's input as the body; that route validates an
+  ENVELOPE (`{ rpcName, data }`), so the input read as a bag of unknown
+  properties and came back 422. Asserting the refusal MENTIONED the rule — a
+  company, an owner, a scope — is what turned a green false positive into a
+  one-line fix.
 - **`SCENARIO_ACTOR_SECRET` must be in `.env`** (§6, before the first run).
   Without it `/api/auth/sign-in/actor` is disabled — every scenario then fails
   at sign-in, before its first step, for a reason that reads like an auth bug.
