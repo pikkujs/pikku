@@ -597,10 +597,16 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   is a `pikkuScenarioStep` that says what a person is doing and holds one
   implementation per surface (server-side by default, plus a `browser` one that
   drives the page). Reaching for an RPC name in a `then` will not resolve.
-- **Every scenario must assert.** A ladder of `given`/`when` with no `then` is a
-  PKU680 critical — it fails `pikku all`, so it stops codegen rather than a test.
-  Coverage counts every step, so without that rule an assertion-free ladder of
-  clicks would score a perfect run while checking nothing.
+- **Every scenario must assert, and `return await scenario.then(...)` does not
+  count as one.** A ladder of `given`/`when` with no `then` is a PKU680 critical
+  — it fails `pikku all`, so it stops codegen rather than a test. Coverage counts
+  every step, so without that rule an assertion-free ladder of clicks would score
+  a perfect run while checking nothing. The extractor reads the body statically,
+  and a `then` in `return` position is not seen: seven refusal scenarios here,
+  each ending `return await scenario.then('is refused …', …)`, were all reported
+  as never asserting. Bind it — `const asserted = await scenario.then(...)` and
+  `return asserted` on the next line — which is also how the value stays
+  inspectable when the step's output is what the scenario returns.
 - **A scenario body is extracted as a DSL workflow, so it is not ordinary
   TypeScript.** Only `const`/`let`, `if`/`else`, `switch`, `for..of`, `return`,
   `throw` and workflow calls survive extraction: a counting `for` is refused by
