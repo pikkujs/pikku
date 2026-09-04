@@ -8,6 +8,61 @@ leaves `pikkufabric.config.json` pointing at an app nobody has designed yet.
 If the split is "one app with paths", you never need this file — add route
 segments under `/app` and give each audience its own entries in `useNavItems()`.
 
+## Deciding it is two apps, not one
+
+The split you are acting on should already be recorded, but this is the reasoning
+behind it — and the place people get it wrong is the third case at the bottom.
+
+**A group that comes in through its own front door gets its own app.** A role
+*inside* an app is not that: it changes which nav items and which buttons a person
+sees, and lives in `useNavItems()` and the `permissions` on the function, not in a
+route subtree.
+
+**The test is which side of the counter they are on.** Colleagues share one app and
+differ by nav — the mechanic, the person on the counter, the bookkeeper. Someone
+across the counter with an account of their own gets their own — the customer, the
+tenant, the patient. One app is a real answer and often the right one.
+
+**The asymmetry that forces a split is sign-up.** Where staff accounts are created
+*for* people and customers create their own, the two need different sign-up, different
+onboarding and different session shape, and bending one app around both costs more
+than the second app does. Do not collapse two audiences into one app to save a build.
+
+Never invent a person the notes do not name in order to reach two.
+
+### The group that never signs in
+
+Some people use the product with no account at all — ordering from a menu, booking a
+table, opening an invitation. They are not a third case, and **they do not get their
+own frontend**: an app is built around the personas who sign into it. What they get is
+the public route space every app already has.
+
+- **`/app/*` is the signed-in application.** One `beforeLoad` on `/app` bounces a
+  signed-out visitor to the login. There is no per-route exception.
+- **Every other route is public** — `/`, `/menu`, `/book`, `/r/$code`. No gate, no
+  session.
+- **`/` is a landing page and you must write it.** A starter that forwards `/` to
+  `/app` does so only because it ships no homepage. Leave the forward in and the
+  product's front door is a sign-in form: the anonymous visitor arrives at a login it
+  has no account for and never reaches the thing it came for — **while every check
+  still passes**, because everything that looks at the app signs in first. This is the
+  failure this section exists for.
+
+So a screen whose users have no account goes at `/menu`, never `/app/menu`.
+
+### The frontend guard is UX and proves nothing
+
+The bundle is on the origin and the nav is a client-side decision; anyone can read
+both. The security boundary is the `permissions` field on the function — see
+pikku-permissions. Hiding a nav item keeps people out of screens that would confuse
+them; it never protects data. Never let a hidden UI be the only thing between a user
+and someone else's record: if the invoices nav item is hidden but `listAllInvoices`
+has no `permissions`, the app is wide open and the nav is decoration.
+
+Worth a scenario each, because they are two different claims: that a mechanic cannot
+*see* the invoices nav item, and that their call to an invoices RPC is *refused*. The
+second is the one that catches a `permissions` field nobody wired.
+
 ## The clone
 
 ```bash
