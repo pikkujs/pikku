@@ -652,7 +652,15 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   an import seeded at the same coordinates as another scenario's salons
   accumulated one row per run until it crowded that scenario's own salon out of
   a nearest-N list. Anything a scenario asserts by proximity, recency or a
-  top-N cut is asserting against every row every previous run left behind.
+  top-N cut is asserting against every row every previous run left behind. The
+  same reasoning runs one level up: **a screen that totals or counts every row —
+  a revenue tile, a queue count, a dashboard — can only be asserted as a DELTA.**
+  Read the summary before the journey, read it after, and assert what the
+  journey moved; an absolute ("the failed count is zero") is asserting the whole
+  history of the database. And when a tile turns out to be one no journey in the
+  app can move at all, that is a finding about the app, not an assertion to
+  force: assert it held still, say why in the step's doc comment, and tell the
+  user.
 - **A shared step is only as proven as its best-exercised branch.** One here
   read the wrong field off a raw invocation (`attempt.data`; the payload is
   `attempt.body`), so its found-case could never pass — invisible for as long as

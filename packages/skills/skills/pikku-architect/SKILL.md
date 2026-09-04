@@ -266,6 +266,13 @@ cover it — so a role × resource cross product there costs the milestone nothi
   fact — plan it as a browser scenario that opens the route signed out. Before writing a scenario's
   prose, ask which persona performs it; if the answer is "nobody", the claim belongs one level up or
   it belongs to no pass at all.
+- **A scenario that asserts an absolute total.** The suite runs against a live
+  database nobody resets, so "the payment-failed count is zero, then one" is a
+  claim about every run that came before. Write summary and dashboard scenarios
+  as deltas — read the figure, do the thing, assert what moved — and before you
+  plan a tile, name the function in this plan that can move it. One planned here
+  counted uncaptured paid orders, which the checkout function makes impossible
+  to produce, so the scenario could only ever assert a zero.
 - **A permission rule invented here.** If the notes do not say who may do a thing, the answer is
   `null` with the reason, not a rule you made up. A rule the user never agreed to is one they find
   out about by being locked out of their own app.
