@@ -265,7 +265,7 @@ the database still holds that code no longer declares — both need §0's bootst
 to have run, and both are worth a look once it has.
 
 **One warning about the scaffold's own notes:** `knowledge/index.md` may claim
-the people live in `pikku.config.json`, put there by a `fabric persona` command.
+the people live in `pikku.config.json`, put there by a persona command.
 That is stale. In this template they live in `personas.ts` as above, and
 `pikku.config.json` carries no personas key at all — only `scenarios.emailDomain`.
 Trust the file you can read over the note describing it.
