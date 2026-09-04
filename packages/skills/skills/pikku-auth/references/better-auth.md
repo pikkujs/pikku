@@ -638,3 +638,82 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => be
 - Export exactly ONE `pikkuBetterAuth` per project; the CLI generates a single catch-all worker for all auth routes.
 - `betterAuthSession({ auth })` (generated) bridges the better-auth session into the Pikku session on every request — you never add it by hand.
 - MFA, organizations, passkeys, etc. are better-auth plugins: add them to `betterAuth({ plugins: [...] })`. The catch-all route already forwards their endpoints.
+
+---
+
+## Post-signup side effects
+
+Anything that must happen after a user signs up — a welcome email, seeding a first
+row, creating a personal organization — goes in `databaseHooks.user.create.after`
+inside the `betterAuth({...})` config. Never a custom signup RPC that writes the
+user itself: better-auth owns the `user` table, and a second write path desyncs it
+from the session bridge.
+
+## Two-factor (2FA / MFA)
+
+TOTP authenticator apps, email/SMS OTP, backup codes and trusted devices are all
+better-auth's `twoFactor()` plugin. Never hand-roll TOTP or OTP.
+
+1. **Enable + migrate** — add `twoFactor({ issuer: '<AppName>' })` to the `plugins`
+   array in the `pikkuBetterAuth` factory, then generate its schema
+   (`npx @better-auth/cli generate`) and apply it as a migration like any other
+   table change. `twoFactorSecret` lands on `user`.
+2. **Client** — add `twoFactorClient({ onTwoFactorRedirect() { /* go to /2fa */ } })`
+   to `createAuthClient({ plugins: [...] })`, and expose thin wrappers
+   (`enable2FA`, `verifyTotp`, `disable2FA`, …) rather than leaking the raw
+   `authClient`, same as every other auth call.
+3. **OTP delivery** — `otpOptions.sendOTP` goes through the injected email service
+   and a rendered template, not a raw `sendEmail`. Set `storeOTP: 'encrypted'`.
+4. **Sign-in flow** — after `signIn.email(...)`, check `context.data.twoFactorRedirect`
+   in `onSuccess`; if true, route to a `/2fa` page to verify via
+   `verifyTotp`/`verifyOtp`/`verifyBackupCode` (`trustDevice: true` for a 30-day
+   trusted device). The session cookie is only created after verification.
+5. **UI** — a QR rendered from `data.totpURI` plus the `data.backupCodes` list.
+   Enabling, disabling and regenerating backup codes all require the user's
+   password.
+
+TOTP secrets and backup codes are encrypted at rest with the auth secret, and 2FA
+endpoints are rate-limited (3/10s) out of the box. 2FA only applies to
+email/password accounts.
+
+## Security hardening
+
+The `pikkuBetterAuth` factory — where `betterAuth({...})` is built — is the one
+place to harden. Everything below is a `betterAuth` option, not a pikku one.
+
+- **Secret** — `BETTER_AUTH_SECRET` comes from the injected secrets service
+  (`await secrets.getSecret('BETTER_AUTH_SECRET')`), never `process.env`, a
+  literal, or a fallback default. 32+ chars, high entropy
+  (`openssl rand -base64 32`). Better Auth rejects placeholder secrets in
+  production.
+- **Trusted origins** — the `baseURL` origin is auto-trusted, so a single-domain
+  app serving its API same-origin needs nothing. Add `trustedOrigins` (or a
+  comma-separated `BETTER_AUTH_TRUSTED_ORIGINS` variable; wildcards like
+  `*.example.com` allowed) ONLY when the browser origin differs from the API
+  origin — embedded, preview, or custom-domain deployments. An untrusted
+  `callbackURL`/`redirectTo`/`origin` is a 403.
+- **CSRF** — keep it on (`advanced.disableCSRFCheck: false`, the default). A
+  proxy in front of the app must preserve the `/api/auth/*` prefix so origin
+  checks still work; do not disable the check to "fix" a redirect.
+- **Rate limiting** — on by default in production (100/10s global, 3/10s on
+  sign-in/up/change-password). `storage: 'memory'` resets on restart, so a
+  deployed app wants `storage: 'database'`. Tighten sensitive routes with
+  `customRules`, e.g. `'/api/auth/sign-in/email': { window: 60, max: 5 }`.
+- **Cookies & sessions** — the defaults are already secure (`httpOnly`, `secure`,
+  `sameSite: 'lax'`, `__Secure-` prefix), with `session.expiresIn` 7d and
+  `updateAge` 1d. Add `freshAge` for sensitive actions, and
+  `cookieCache: { strategy: 'jwe' }` if the session carries sensitive data — see
+  the cookieCache section above, which you want enabled regardless. Only enable
+  `crossSubDomainCookies` if auth is genuinely shared across subdomains.
+- **OAuth tokens** — set `account.encryptOAuthTokens: true` (AES-256-GCM) if you
+  store provider tokens to call their APIs later.
+- **Audit** — drive auth events from `databaseHooks` (`session.create.after`,
+  `user.update.after` for email changes, `account.create.after` for links) into
+  whatever audit service the app injects, never a bespoke audit table wired into
+  a function body. Returning `false` from a `before` hook blocks the operation.
+- **Background tasks** — on a serverless target, hand fire-and-forget work
+  (emails, logging) to `advanced.backgroundTasks.handler` → `ctx.waitUntil(promise)`
+  so it does not delay the response.
+- **Enumeration** — handled already (generic "Invalid credentials", dummy work on
+  unknown users). Keep your own error copy generic too; never leak "user not
+  found".
