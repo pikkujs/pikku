@@ -11,6 +11,7 @@ description: >-
   NOT TRIGGER when: the milestone notes themselves are still being written (use pikku-knowledge),
   the plan already exists and the job is to build it (use pikku-build), or the ask is a one-off
   edit to a working app.
+installGroups: [core]
 ---
 
 # Plan one milestone

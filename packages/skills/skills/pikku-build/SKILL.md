@@ -12,6 +12,7 @@ description: >-
   or wants one specific surface explained rather than built (use that surface's skill).
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx --no pikku fabric report *)
 argument-hint: '[feature description]'
+installGroups: [core]
 ---
 
 # Build on Pikku
