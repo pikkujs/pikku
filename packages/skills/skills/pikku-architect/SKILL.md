@@ -288,6 +288,12 @@ cover it — so a role × resource cross product there costs the milestone nothi
   third" against a function that refuses a second completion the same calendar day — discovered
   mid-build, with nothing to do but write the leg out. Wherever a scenario repeats a call, check the
   existing function for a per-period guard before you write the sentence.
+  The same trap runs through the milestone's own opening paragraph, and it is easier to miss there:
+  a screen named in that prose but carried by no `ui` item is invisible to `plan progress`, so the
+  milestone closes green with a sentence of itself unbuilt. One promised "the interval control on
+  the admin product form" — a form that does not exist anywhere in the app — while the plan's `ui`
+  slot listed two other routes and nothing else. Every screen your summary paragraph names is either
+  a `ui` item or a sentence to cut.
 - **A table planned into a later pass.** The model slot has no passes: a `model` item is checked
   from the moment the milestone starts, so a table whose migration belongs to pass 3 is a PROBLEM
   from pass 1 — and `plan progress` refuses a milestone on a problem, never defers one. So a
