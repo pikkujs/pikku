@@ -166,11 +166,6 @@ export const betterAuthTableAliases = (
  * an esbuild message that names the stub rather than the mistake. Type-only
  * imports are erased before bundling and a side-effect import binds nothing,
  * so neither is reported.
- *
- * One finding per import, named for the first service that stubs it: several
- * services share a pattern list (the AI SDKs stub for both `agentRunner` and
- * `ai`), and reporting the same import once per service says the same thing
- * twice about one line of code.
  */
 export const staticStubbedImports = (
   code: string
@@ -195,7 +190,6 @@ export const staticStubbedImports = (
     for (const [service, patterns] of Object.entries(SERVICE_MODULE_MAP)) {
       if (patterns.some((pattern) => pattern.test(specifier))) {
         found.push({ module: specifier, service })
-        break
       }
     }
   }
