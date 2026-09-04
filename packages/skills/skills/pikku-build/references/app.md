@@ -393,7 +393,11 @@ over, and an uncovered function is a half-milestone whether or not the note says
 
 1. **Migration.** SQL in `db/sqlite/` at the project root, numbered on from the
    ones already there. Apply with `bunx --bun pikku db migrate`, which also
-   regenerates the Kysely types your functions import.
+   regenerates the Kysely types your functions import. **Neither `pikku all` nor
+   restarting `pikku dev` applies a migration** — so a new column reads as
+   `TS2353 … does not exist in type 'InsertExpression<DB, "…">'` on the function
+   that writes it. That error means the migration has not run, never that the
+   column name is wrong; run `db migrate` before you go looking at the SQL.
 2. **Seed.** Demo rows in `db/sqlite-dev-seed.sql`. **There is no seed command** —
    `bunx --bun pikku db reset` is the only thing that applies the file, and it
    wipes, migrates and seeds in one go (`--no-seed` stops after the migration,
@@ -527,6 +531,29 @@ Three things it says, and what each one asks of you:
 plan to match what you built — `plan set` is the architect's seat, and a builder
 rewriting its own denominator is exactly what the split exists to stop.
 
+### 6b. Feed the milestone back into the seats
+
+Before starting the next milestone, answer two questions out loud:
+
+- **What did the plan fail to say?** A field nothing wrote, a promise no function
+  could keep, a pass 1 that turned out to be two. That is a `pikku-architect`
+  lesson.
+- **What did the build learn the hard way?** Anything that cost a wasted run —
+  a stale process, a scenario that only passes once, a diagnostic that turned
+  out to be an echo of an earlier one. That is a `pikku-build` lesson.
+
+Then edit the skill — **at most one change to each per milestone**, and only for
+something that actually went wrong here. A rule with no incident behind it is a
+guess, and these files are read in full every time: they earn their length by
+naming failures a reader would otherwise repeat. Prefer sharpening an existing
+line to appending a new one, and delete a rule the last few milestones have
+shown to be noise.
+
+The gates are the compounding part. A lesson written into a scenario the suite
+runs, or into a check `plan progress` can see, is enforced; the same lesson
+written as prose is a thing the next reader has to remember. Reach for prose
+only when there is nothing to hang a check on.
+
 ## 7. Prove it — scenarios
 
 A scenario is a user journey run as one of your personas, over the real
@@ -574,6 +601,14 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   PKU680 critical — it fails `pikku all`, so it stops codegen rather than a test.
   Coverage counts every step, so without that rule an assertion-free ladder of
   clicks would score a perfect run while checking nothing.
+- **A scenario body is extracted as a DSL workflow, so it is not ordinary
+  TypeScript.** Only `const`/`let`, `if`/`else`, `switch`, `for..of`, `return`,
+  `throw` and workflow calls survive extraction: a counting `for` is refused by
+  PKU679, and so is a `for..of` whose iterable is written inline — it must be a
+  named identifier or a field (`data.items`). Bind the seat numbers, the ids,
+  the rows to a `const` above the loop and iterate that. One milestone here lost
+  a codegen round to each half of that rule, because the first half does not
+  imply the second.
 - **Write the refusals.** The third step above is the whole point of §4: one
   persona reaching for another's row has to be rejected, and that rejection is a
   scenario. It is how you prove access control instead of asserting it.
@@ -583,6 +618,80 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   before its first step, for a reason that reads like an auth bug.
 - **There is no state reset.** A scenario runs against a live server: scope what
   you create to your own rows and unique ids, and never assume a clean database.
+  A scenario that leaves durable state changed has to put it back — the one that
+  archives a product unarchives it, the one that cancels a plan restarts it —
+  because its own second run starts where its first one stopped. **Run the suite
+  twice and require the second run green.** A suite that only passes on a fresh
+  database is a suite that passes once.
+- **A shared step is only as proven as its best-exercised branch.** One here
+  read the wrong field off a raw invocation (`attempt.data`; the payload is
+  `attempt.body`), so its found-case could never pass — invisible for as long as
+  every caller asked for ABSENCE. Drive a new step from both sides in the
+  milestone that adds it. The same rule bites from the other end: a step that
+  picks "the newest X" stops meaning "the one this scenario just made" the moment
+  a second function produces X, so a renewal job that raised invoices broke three
+  invoice scenarios that had been green for months. When you add a writer of a
+  row an existing step selects by recency, give that step an explicit filter in
+  the same change.
+- **A route nested under an existing screen is unreachable until its parent
+  renders an `Outlet`.** A milestone added `/app/academy/$slug` under an
+  `/app/academy` that already had a component of its own; the parent swallowed
+  the child, so the editor's URL rendered the list — every link, every route file
+  and every type check looked right, and the only thing that noticed was a
+  browser scenario that OPENED the child path and found the parent's controls on
+  screen. When a milestone deepens a path an earlier one already owns, split the
+  parent into a layout (`Outlet`) and an `index` route in the same change, and
+  make one scenario open the child by path rather than reach it by clicking.
+- **Green twice is not the same as unchanged twice.** Count the rows a run
+  writes, run it again, and require the same count — a save that appends where
+  it should replace passes every assertion while doubling a table. One here
+  re-sent a product's variants without their ids, so the addon read each as new:
+  1, 2, 4, 8, and by the nineteenth save 262,144 rows, every run green until the
+  request crossed a body-size limit and surfaced as a `413` that read like an
+  infrastructure fault. The assertion nobody writes is the count, and it is one
+  SQL query.
+- **A click returns before its effect lands — assert the effect, then navigate.**
+  A browser step's click resolves when the button was pressed, not when the
+  mutation it fired came back. So a step that presses "Add to cart" and the next
+  one that opens `/app/cart` are in a race with the `onSuccess` that writes the
+  cart token to `localStorage`, and the loser arrives at an empty basket. It
+  passed on the first run here and failed on the second, which is the worst way
+  to find out. Put an assertion on the confirmation between them — the button's
+  own "Added", the toast, the row that appeared — so the navigation waits on the
+  write instead of on luck. This is also the reason a browser scenario reads
+  better than it tests when it is only clicks: every `when` that writes wants a
+  `then` before the next page.
+- **A control the browser cannot NAME is a control it cannot drive.** A testid is
+  derived from a message key at build time, which has two consequences that only
+  show up when a scenario tries to press something. A label chosen at runtime —
+  `label={isCancel ? m.a() : m.b()}` — derives no key at all, so the field is
+  unreachable and the failure reads as a missing element rather than a
+  conditional. Write the two controls out separately, each with its own static
+  call. And every row of a list carries the SAME keys, so `pause` on a list of
+  twelve licenses is twelve matches and a strict-mode violation; scoping by text
+  does not save it either, because a button's own text is "Pause" and not the
+  row's. Give the row an address of its own — `data-testid={id.slice(0, 8)}` on
+  the card, rendered beside the title so a person can read it too — and address
+  the control `within` it. Both of these are screen defects before they are test
+  defects: a field whose label changes identity under it, and a list whose rows
+  are indistinguishable to anyone on the phone to support.
+- **Never hard-code the target's origin.** A raw-HTTP step — a webhook, a
+  check-in a scanner posts — runs in the CLI process, not on the server, so it
+  has to be told where to post. That is `wire.scenarioStep.env.apiUrl`, which
+  carries the environment and whatever `--api-url` overrode it. A literal
+  `http://localhost:3000` does not merely break on another port: it silently
+  posts into whatever else is listening there, so the scenario goes green having
+  never touched this app at all.
+- **A scenario step's input is a recorded contract, and it does not take a
+  version.** Widening one — an extra optional field so a step can name a
+  particular row — trips PKU861 exactly like a function's does, but the fix that
+  works for a function does not work here: adding `version: 2` to a
+  `pikkuScenarioStep` makes the runner unable to find the step at all, and every
+  scenario using it fails with `Function not found`. Add a NEW step beside the
+  old one instead. That is the better answer anyway, because a step that has
+  grown an optional field is usually two questions wearing one name — "does she
+  have an invoice like this" and "what became of the invoice I am holding" — and
+  the scenarios read better once they say which one they are asking.
 
 Run them:
 
@@ -595,6 +704,16 @@ bunx --bun pikku scenario run local-admin --spawn --run browser   # the second a
 `--spawn` starts and stops the server for the run; drop it if `bun run dev` is
 already up. The browser pass needs the environment's `appUrl` and a browser
 driver installed — without them the run fails fast rather than half-running.
+
+**Run the whole suite, not the milestone's own scenarios.** The milestone's
+scenarios are the ones you wrote to pass; the regression lives in someone
+else's. Tightening what "archived" means is a one-function change that reads as
+local and quietly breaks the milestone-01 scenario nobody re-ran.
+
+**Restart the server after adding a function.** Hot reload does not register a
+new RPC and does not re-run `afterStart`, so a fresh function answers 404 and
+anything provisioned at boot is missing — failures that read like a wiring bug
+and are nothing but a stale process.
 
 ### 7a. Coverage — which functions have actually been run
 

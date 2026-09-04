@@ -254,6 +254,74 @@ cover it — so a role × resource cross product there costs the milestone nothi
 - **A permission rule invented here.** If the notes do not say who may do a thing, the answer is
   `null` with the reason, not a rule you made up. A rule the user never agreed to is one they find
   out about by being locked out of their own app.
+- **Prose that promises what the plan cannot reach.** Every clause of a scenario's `feature` or
+  `scenario` text has to be performed by a function — one in this plan, or one already in the meta.
+  Write "when the distributor is removed its companies fall back to the direct catalog" with no
+  function that removes a distributor, and `plan set` accepts it, `plan progress` passes, and the
+  milestone ships a sentence nothing proves. Read each description back asking *which function does
+  this*, and cut the half you cannot name.
+- **A field the plan reads and nothing writes — or a state nothing leaves behind.** If the plan
+  filters, orders or badges on a column, name the function that sets it — or say it is seed data and
+  why. A catalog planned to hide products by country, with no way to mark a product's countries, is
+  a milestone that cannot be proven without amending the plan mid-build. Walk the model's fields and
+  ask *who writes this* before sending the plan; that pass is cheap here and expensive later.
+
+  The same question has to be asked of every state a scenario waits in, against the code that is
+  ALREADY built. One milestone planned a staff queue of "paid orders with no invoice yet" and a
+  journey through it; an earlier milestone had made the invoice at checkout, so no order a customer
+  could place was ever in that state, and the queue could only ever hold rows from before that
+  change. Three scenarios passed once against stale data and then failed. Read each precondition
+  back asking *which function leaves the world like this*, and if the answer is "one that ran two
+  milestones ago and no longer does", the journey is fiction — plan the one the app can actually
+  reach.
+- **Two sentences in the plan that cannot both be true.** A plan is read one
+  field at a time, so a contradiction between two scenario descriptions survives
+  every check `plan set` makes and is discovered by the builder, mid-build, with
+  the code already written one of the two ways. One plan here said a cancel on a
+  paid-up licence lands in `canceled` in one scenario and in `active_until_
+  expired` in the next; the legacy state machine settled it, but only because
+  the builder went and read it. Wherever the milestone has a STATE MACHINE —
+  anything with more than two states and a clock — write the transitions out
+  once, in the model slot, as the table they are, and let every scenario
+  description quote that table instead of restating it from memory.
+
+  Writing the table is not the end of it, because the table itself is where the
+  next contradiction hides. **Every timestamp a rule counts FROM is a clock;
+  find each clock, name who sets it and who reads it, and check that every rule
+  reading it agrees about when it starts.** The next plan wrote exactly this
+  table and still shipped one: it re-stamped `paused_at` at the moment a pause
+  took effect (so that "resume after four weeks paused" meant four weeks) and
+  left `canceled_at` at the moment the customer ASKED, as the legacy source
+  does — and so a licence cancelled in month one was, on the night its year ran
+  out, already past both the 28-day chase and the 60-day reactivation, and got
+  both in the same sweep before anyone could post anything back. One clock, two
+  readings, in one table, on one screen. When one clock in a family is
+  deliberately diverged from the source, the sibling clocks are where you look
+  next — either the same reasoning applies to them or the plan has to say why
+  it does not.
+- **A scenario that presupposes a control no `ui` item names.** A plan wrote
+  "the desk lists what is due, and staff run the collection as of that date"
+  while its screen only ever asked about today — and deliveries fall on the
+  first of a month, so the only thing that scenario could have asserted was an
+  empty desk. Read every scenario's prose back against the `ui` items the same
+  way you read it against the functions: each input the person is described as
+  giving has to be a field somebody planned.
+- **A refusal scenario naming a state the plan's own rules do not refuse.** A
+  plan asked for "a paused licence is refused the academy" in the same milestone
+  whose gate admitted `active_until_expired` — and pausing inside the paid
+  period is exactly what produces that state, so the scenario could only ever
+  have asserted a bug. A refusal is a claim about TWO things at once: that the
+  rule shuts, and that the described situation reaches the shut state. Write
+  every refusal scenario as "X, which is <state>, is refused because <rule>", and
+  check that state against the rule you wrote in the same plan.
+- **A child collection whose save says nothing about the rows already there.** Wherever a function
+  writes a set under a parent — a product's variants, an order's lines, a company's members — the
+  plan has to say whether a save REPLACES that set or ADDS to it. The two produce identical tables
+  and identical scenarios, and differ only on the second save. Left unsaid, one milestone shipped an
+  input schema that could not carry a variant's id, so every save re-added the variants it was given
+  to update: 1, 2, 4, 8, and by the nineteenth save 262,144 rows, with the suite green throughout.
+  Say it in the model slot, in the same breath as `onDelete` — that field settles what happens when
+  the parent goes, and this settles what happens when it stays.
 
 ---
 

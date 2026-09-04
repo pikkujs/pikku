@@ -52,16 +52,42 @@ while still planning. Those failures look alarming and are nothing but this.
 - **The branch and the diff are the contract.** There is no plan JSON. A
   reviewer sees real, compiled, working code: apply is a merge, reject is a
   `git branch -D`.
-- **Discover before editing.** `yarn pikku meta context --json` returns
-  functions, wires, middleware, permissions, workflows, `capabilities` and
-  `layout` in one call. Fall back to targeted `meta` commands only for a full
-  schema or a workflow's steps.
+- **Discover before editing, and there are two questions, not one.** What THIS
+  PROJECT has wired: `pikku meta context --json` returns functions, wires,
+  middleware, permissions, workflows, `capabilities` and `layout` in one call
+  (fall back to targeted `meta` commands only for a full schema or a workflow's
+  steps). What PIKKU ITSELF offers: `pikku doc <door|export>` — the surface of
+  the pikku installed here, every option key with what it is for, and a worked
+  example. `pikku doc scheduler wireScheduler pikkuVoidFunc` answers in one call
+  what reading `node_modules/@pikku/core` answers slowly and wrongly. **Never
+  open node_modules to find a signature, and never write an import, an export
+  name or an option key you have not seen in `pikku doc`.**
+- **`capabilities.<type>` reports what this app USES, not what pikku offers.**
+  A `false` there is "no wire of this type is declared yet", so the rule below
+  about not introducing one is about not widening an app's surface on a whim —
+  it is not a statement that the surface is unavailable. When a milestone's plan
+  calls for a scheduled task and `capabilities.scheduler` is `false`, check
+  `pikku doc` for the door before concluding you cannot build it.
 - **`metaLocale` in `pikku.config.json` is the language of authored meta** —
   every `description`, `title` and step `template` the console renders.
   Identifiers stay English whatever it says, and the product's own language
   lives in `messages/*.json`.
 - **`pikku all` is the gate.** Run it after touching functions, wirings or
-  schemas, and treat its criticals as real.
+  schemas, and treat its criticals as real. A run that fails on a critical still
+  records the contract hashes it got to, so the next run adds a PKU861 drift on
+  top of the original error — and `pikku versions update` cannot clear it,
+  because codegen refuses before it gets there. Delete those contracts' entries
+  from `versions.pikku.json` and re-run; they are re-recorded. Fix the real
+  diagnostic first, or you will chase the echo instead.
+- **A new migration reaches the database through `pikku db migrate`, and
+  nothing else.** `pikku dev` does not apply one — it will happily serve a
+  schema older than the file you just wrote, and the failure surfaces as a
+  function reading a column that is not there yet. Run `pikku db migrate`, then
+  restart the dev server. And never put an underscore before a digit in a column
+  name: `address_line_1` writes correctly from `addressLine_1` and reads back as
+  `addressLine1`, so a value saved through the query builder comes back missing
+  with no error anywhere. Follow the columns already in `db/sqlite/`
+  (`address_line1`), and check a new one round-trips before building on it.
 - **A milestone is planned by a different seat than the one that builds it.**
   The plan — tables, functions, wires, roles, scopes, screens, scenarios, in
   passes — is written through `pikku knowledge plan set` by `pikku-architect`,

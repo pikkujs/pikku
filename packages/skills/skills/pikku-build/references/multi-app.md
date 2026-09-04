@@ -77,12 +77,42 @@ Make it read the `frontends` map and spawn one child per entry, rather than
 adding a second hardcoded line. Two sources of truth for "which apps exist" is
 the drift this whole file is trying to avoid.
 
-### 4. `pikku.config.json` → `environments`
+### 4. `personas.ts` → `app`, and `pikku.config.json` → `appUrls`
 
-`local.appUrl` points at one app. Add an environment per frontend (`local`,
-`local-admin`) so the browser scenario pass can drive either one. A browser
-scenario run against the wrong `appUrl` fails on a missing element and reads like
-a UI bug rather than a config one.
+The `personas` array in `pikkufabric.config.json` documents the split. It is NOT
+what the scenario runner reads: each persona in `packages/functions/src/personas.ts`
+carries its own `app: '<frontend>'`, and `@pikku/playwright` resolves a persona's
+base url from that name at sign-in. Set it on every persona in both apps — a
+persona with no `app` lands on the fallback frontend, which is the other app's
+screens with the right session on them.
+
+One environment is enough. `pikku.config.json` takes an `appUrls` map beside the
+single `appUrl` fallback, and the CLI takes `--app-url <app>=<url>,<app>=<url>`:
+
+```json
+"local": {
+  "apiUrl": "http://localhost:3000",
+  "appUrl": "http://localhost:7104",
+  "appUrls": { "app": "http://localhost:7104", "admin": "http://localhost:7105" }
+}
+```
+
+Three things follow, and each one has cost a run:
+
+- **An actor is bound to ONE app for the whole run.** The resolution happens once,
+  at sign-in. A staff persona cannot be walked through the customer app to check
+  something is absent from it — drive that assertion with a persona who lives
+  there, and say in the scenario's docblock why the witness is who it is.
+- **Every frontend needs its API proxy pointed at the API you are actually
+  running.** `vite.config.ts` reads a variable (`VITE_API_PROXY`) with a default
+  port in it; start the second app without it and every RPC from that app
+  answers 500 while the first app is green, which reads as an auth bug for as
+  long as you let it.
+- **A route sweep must be scoped to one app.** `staticRoutes(repoRoot)` in
+  `@pikku/playwright` unions the route trees of every directory under `apps/`, so
+  a sweep driven by a customer opens the admin app's routes and reports 404s that
+  are correct behaviour. Give the sweep step an `app` input and hand it a root
+  containing only that app.
 
 ### 5. Re-run `bun install`
 
