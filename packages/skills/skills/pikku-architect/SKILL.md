@@ -251,6 +251,12 @@ cover it — so a role × resource cross product there costs the milestone nothi
   a person writes something, comes back, and it is still there. A browser scenario that opens a page
   and asserts it is still on it proves the route loads and nothing else —
   `pikku knowledge plan progress` names it as a problem and refuses the milestone.
+- **A refusal planned at a level that cannot state it.** A scenario runner drives the app as the
+  personas the project declares; there is no anonymous RPC caller, so "a caller with no session is
+  refused" is a sentence a backend or permission scenario cannot perform. Signed-out is a BROWSER
+  fact — plan it as a browser scenario that opens the route signed out. Before writing a scenario's
+  prose, ask which persona performs it; if the answer is "nobody", the claim belongs one level up or
+  it belongs to no pass at all.
 - **A permission rule invented here.** If the notes do not say who may do a thing, the answer is
   `null` with the reason, not a rule you made up. A rule the user never agreed to is one they find
   out about by being locked out of their own app.

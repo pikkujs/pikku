@@ -78,7 +78,12 @@ while still planning. Those failures look alarming and are nothing but this.
   top of the original error — and `pikku versions update` cannot clear it,
   because codegen refuses before it gets there. Delete those contracts' entries
   from `versions.pikku.json` and re-run; they are re-recorded. Fix the real
-  diagnostic first, or you will chase the echo instead.
+  diagnostic first, or you will chase the echo instead. Deleting is right only
+  for a contract first recorded INSIDE the milestone you are building — nothing
+  has consumed it, so there is no version to keep. A contract that shipped and
+  then genuinely changed shape gets `version: N+1` on its `pikkuFunc({...})`
+  followed by `pikku versions update`; delete its entry and you erase a version
+  a client is holding.
 - **A new migration reaches the database through `pikku db migrate`, and
   nothing else.** `pikku dev` does not apply one — it will happily serve a
   schema older than the file you just wrote, and the failure surfaces as a
