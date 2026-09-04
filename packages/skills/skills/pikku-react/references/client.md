@@ -195,6 +195,19 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, {
 })
 ```
 
+`transformDate: true` means every date field arrives as a real `Date`, not the ISO string
+the schema declared. Two consequences that both typecheck:
+
+- **A string method on one throws at runtime.** `row.createdAt.split('T')[0]` — there is no
+  string to slice.
+- **A raw `Date` in JSX crashes the route.** `<span>{row.createdAt}</span>` throws
+  `Objects are not valid as a React child (found: [object Date])` and the page falls into its
+  error boundary — a white screen, with nothing catching it first.
+
+Format before rendering, with whatever date library the project already uses. Coercing
+instead (`` `${d}` ``, `String(d)`) does not crash but prints
+`Mon Jun 15 2026 02:00:00 GMT+0200`, which is a different bug.
+
 There is no request-interceptor hook. For a token that changes after startup,
 call the setter on the shared instance — RPC and realtime pick it up because
 they hold the same fetch:
