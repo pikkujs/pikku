@@ -614,7 +614,14 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   named identifier or a field (`data.items`). Bind the seat numbers, the ids,
   the rows to a `const` above the loop and iterate that. One milestone here lost
   a codegen round to each half of that rule, because the first half does not
-  imply the second.
+  imply the second. The rule's quiet half: a shared local helper holding a
+  scenario's setup steps does NOT fail extraction — the steps are recorded and
+  the suite goes green — but the extractor cannot bind an `actor` that arrives as
+  a function parameter, so the transcript credits every setup step to whoever the
+  last literal binding named. Seven permission scenarios here read "henrik sets
+  up her company Salon Nordlicht" in a suite whose whole point was that the
+  company is finja's. Write the setup out in each scenario; a scenario body is a
+  recorded document, and the duplication is the price of it saying who did what.
 - **Write the refusals, and assert WHY.** The third step above is the whole
   point of §4: one persona reaching for another's row has to be rejected, and
   that rejection is a scenario. It is how you prove access control instead of

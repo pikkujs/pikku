@@ -181,6 +181,15 @@ callback, a public URL another system posts to), a queue job, a channel, a sched
 workflow entry point. Those last two are not alternate URLs — they are what the milestone IS, and a
 plan that omits them ships a `status` column nothing advances or a job nobody runs.
 
+A wire is also a constraint on the function's SHAPE, not only an address for it. `wireScheduler`
+takes a function of `void` to `void` — the clock passes nothing and reads nothing back — so a
+function that answers with a report cannot be the one on the clock. One plan here put
+`wire: scheduler` on a nightly collector whose output was the counts a member of staff needed to
+see, and the build had to split it in two: a void shell for the clock, and the exposed collector it
+calls. That was the right answer, but it was a design decision made mid-build because the plan had
+not asked what the wire would accept. Before you write a wire, name what that wire hands the
+function and what it does with the answer; where the two disagree, plan BOTH halves.
+
 `permission` is a SENTENCE, not a role name — "only the person who wrote it can edit it". The roles
 are the engineer's choice; the rule is the part that has to survive being implemented, in the
 function's `permissions` field and never in its body. `null` means open to anyone signed in, and
