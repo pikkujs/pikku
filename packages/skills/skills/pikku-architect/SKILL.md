@@ -293,6 +293,16 @@ cover it — so a role × resource cross product there costs the milestone nothi
   back asking *which function leaves the world like this*, and if the answer is "one that ran two
   milestones ago and no longer does", the journey is fiction — plan the one the app can actually
   reach.
+
+  And a `model` slot that says "this milestone adds no table" has to be true of the DATA the
+  scenarios read, not only of the entities they name. One here promised a checkout priced by
+  delivery country — a shipping rate per country, a VAT rate per country — against an `n/a` model,
+  while the only shipping table in the tree (an addon's) carries no country column at all. The
+  builder is then choosing between altering someone else's table and amending the plan, mid-build,
+  with neither choice recorded. Wherever a description prices, rates or tiers something BY a
+  dimension, say in the `model` slot where that lookup lives: a table this milestone adds, a column
+  on one that exists, or config-as-code — and if it is config, say so and why, exactly as you would
+  for seed data.
 - **Two sentences in the plan that cannot both be true.** A plan is read one
   field at a time, so a contradiction between two scenario descriptions survives
   every check `plan set` makes and is discovered by the builder, mid-build, with
