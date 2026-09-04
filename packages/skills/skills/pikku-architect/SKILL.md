@@ -292,7 +292,14 @@ cover it — so a role × resource cross product there costs the milestone nothi
   change. Three scenarios passed once against stale data and then failed. Read each precondition
   back asking *which function leaves the world like this*, and if the answer is "one that ran two
   milestones ago and no longer does", the journey is fiction — plan the one the app can actually
-  reach.
+  reach. Worse than stale is a state NOTHING reaches: a later plan wanted staff to "capture the
+  payment on an authorised order", and no function in the app or its addons could ever put an order
+  in `authorized` — the addon only holds money when checkout was started with a flag the plan's own
+  checkout input did not carry. The named person is part of the same question. Actors are not
+  interchangeable: one scenario was planned around a distributor salon owner buying from a catalogue
+  that is scoped by distributor and does not show her the product, so the journey could not start.
+  Before you name a state or a person in a scenario, name the function that produces it — and if
+  there is none, plan that function too.
 
   And a `model` slot that says "this milestone adds no table" has to be true of the DATA the
   scenarios read, not only of the entities they name. One here promised a checkout priced by
