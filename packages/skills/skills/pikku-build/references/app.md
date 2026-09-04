@@ -622,7 +622,16 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   archives a product unarchives it, the one that cancels a plan restarts it —
   because its own second run starts where its first one stopped. **Run the suite
   twice and require the second run green.** A suite that only passes on a fresh
-  database is a suite that passes once.
+  database is a suite that passes once. Two corollaries, both of which cost a
+  milestone a red run here: **name nothing a setup step might already own** —
+  `setsUpHerCompany` returns the company that actor already has rather than
+  renaming it, so a later step passed the literal name it had asked for and was
+  told no such company exists; read the name, slug or id back off the step's
+  output and pass THAT. And **put rows somewhere the other scenarios are not** —
+  an import seeded at the same coordinates as another scenario's salons
+  accumulated one row per run until it crowded that scenario's own salon out of
+  a nearest-N list. Anything a scenario asserts by proximity, recency or a
+  top-N cut is asserting against every row every previous run left behind.
 - **A shared step is only as proven as its best-exercised branch.** One here
   read the wrong field off a raw invocation (`attempt.data`; the payload is
   `attempt.body`), so its found-case could never pass — invisible for as long as
