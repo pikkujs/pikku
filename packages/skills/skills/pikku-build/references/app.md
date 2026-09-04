@@ -730,6 +730,15 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   grown an optional field is usually two questions wearing one name — "does she
   have an invoice like this" and "what became of the invoice I am holding" — and
   the scenarios read better once they say which one they are asking.
+- **One screen's extra field does not belong on the shared output schema.** A
+  detail page almost always wants one column the list does not — when the
+  licence was handed over, who last touched the row. Extending the shared
+  `XDetail` that four functions already return bumps the contract of all four,
+  for a field three of them never render. Extend at the new function's own
+  output instead — `XDetail.extend({ assignedAt })`, named for the screen that
+  asked — and every existing contract stays exactly where it was. Say in the new
+  type's doc comment WHY it is not on the base, or the next build merges them
+  back.
 
 Run them:
 
