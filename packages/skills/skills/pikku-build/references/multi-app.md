@@ -102,7 +102,13 @@ Three things follow, and each one has cost a run:
 - **An actor is bound to ONE app for the whole run.** The resolution happens once,
   at sign-in. A staff persona cannot be walked through the customer app to check
   something is absent from it — drive that assertion with a persona who lives
-  there, and say in the scenario's docblock why the witness is who it is.
+  there, and say in the scenario's docblock why the witness is who it is. This
+  binds a SIGNED-OUT scenario too, and that is where it bites: 'a visitor with no
+  session cannot open the admin desk' driven by a customer-app persona points the
+  browser at a router with no such route at all, so what the assertion measures is
+  a 404, not the guard — and on an app with a catch-all redirect to login it
+  passes while proving nothing. Pick the actor by which app owns the ROUTE, not by
+  who should be refused, and drop their session instead.
 - **Every frontend needs its API proxy pointed at the API you are actually
   running.** `vite.config.ts` reads a variable (`VITE_API_PROXY`) with a default
   port in it; start the second app without it and every RPC from that app

@@ -265,7 +265,13 @@ cover it — so a role × resource cross product there costs the milestone nothi
   Write "when the distributor is removed its companies fall back to the direct catalog" with no
   function that removes a distributor, and `plan set` accepts it, `plan progress` passes, and the
   milestone ships a sentence nothing proves. Read each description back asking *which function does
-  this*, and cut the half you cannot name.
+  this*, and cut the half you cannot name. Naming the function is not enough on its own when the
+  scenario asks it to run TWICE: a guard that is one-per-day, one-per-order or one-per-person makes
+  the second call a refusal, and a scenario built on it cannot be performed in a single run however
+  correct the code is. One milestone planned "she finishes the second lesson and is nudged about the
+  third" against a function that refuses a second completion the same calendar day — discovered
+  mid-build, with nothing to do but write the leg out. Wherever a scenario repeats a call, check the
+  existing function for a per-period guard before you write the sentence.
 - **A table planned into a later pass.** The model slot has no passes: a `model` item is checked
   from the moment the milestone starts, so a table whose migration belongs to pass 3 is a PROBLEM
   from pass 1 — and `plan progress` refuses a milestone on a problem, never defers one. So a
