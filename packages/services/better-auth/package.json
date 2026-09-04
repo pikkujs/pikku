@@ -1,6 +1,6 @@
 {
   "name": "@pikku/better-auth",
-  "version": "0.12.37",
+  "version": "0.12.38",
   "description": "Better Auth integration for Pikku — auth handler, sessions and scope resolution",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
