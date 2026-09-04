@@ -112,6 +112,15 @@ while still planning. Those failures look alarming and are nothing but this.
   so out loud to the user when you finish, and point at the way out.
 - **Do not introduce a wire of a type whose `capabilities.<type>` is `false`**
   unless the user asked for it.
+- **Do not assume an addon's mounted route works because it mounted.** An
+  addon's singleton services are narrowed to the handful its own factory returns
+  plus config, logger, schema, variables and secrets — the host's `queueService`,
+  `kysely` and the rest never reach it. So an addon route whose handler asks the
+  host for one of those answers 500 on every call, with codegen, typecheck and
+  the route table all clean. Send one real request at the surface a mounted
+  contract claims before you build scenarios on top of it; when it cannot work,
+  wire your own function on the same path (the host's services are yours) and
+  report the addon bug upstream rather than working around it in the caller.
 - **Do not hand-edit generated files** — `.pikku/`, `*.gen.*` or the SDK. Fix the
   source and regenerate.
 - **Do not invent a role.** An invented role becomes invented screens; build only

@@ -266,6 +266,13 @@ cover it — so a role × resource cross product there costs the milestone nothi
   function that removes a distributor, and `plan set` accepts it, `plan progress` passes, and the
   milestone ships a sentence nothing proves. Read each description back asking *which function does
   this*, and cut the half you cannot name.
+- **A table planned into a later pass.** The model slot has no passes: a `model` item is checked
+  from the moment the milestone starts, so a table whose migration belongs to pass 3 is a PROBLEM
+  from pass 1 — and `plan progress` refuses a milestone on a problem, never defers one. So a
+  milestone that finishes pass 1 green cannot be closed, and the only honest fixes are outside the
+  build's hands. Put in `model` only the tables THIS milestone's pass 1 (or at worst its pass 2)
+  actually migrates; when a later pass needs its own tables, that is the signal it is a second
+  milestone, and `covers` is where you say so.
 - **A field the plan reads and nothing writes — or a state nothing leaves behind.** If the plan
   filters, orders or badges on a column, name the function that sets it — or say it is seed data and
   why. A catalog planned to hide products by country, with no way to mark a product's countries, is
