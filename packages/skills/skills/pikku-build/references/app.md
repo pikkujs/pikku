@@ -661,6 +661,15 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   app can move at all, that is a finding about the app, not an assertion to
   force: assert it held still, say why in the step's doc comment, and tell the
   user.
+- **Moving the clock forward runs every rule between here and there.** A step
+  that time-travels so a scheduled job will fire is not asking for that job — it
+  is asking for all of them, in order. One swept to 2030 to reach a four-week
+  chase and found the pile it was about to assert on empty, because an unreturned
+  pen reactivates a membership sixty days after cancellation and the sweep had
+  walked straight past that window. Travel to the day the rule under test fires
+  and no further, computed off a date the scenario read back (`daysAfter(periodEnd,
+  1)`), never to a round far-future date — and when a sweep surprises you, the
+  next rule in the calendar is the first place to look.
 - **A shared step is only as proven as its best-exercised branch.** One here
   read the wrong field off a raw invocation (`attempt.data`; the payload is
   `attempt.body`), so its found-case could never pass — invisible for as long as
@@ -670,7 +679,13 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   a second function produces X, so a renewal job that raised invoices broke three
   invoice scenarios that had been green for months. When you add a writer of a
   row an existing step selects by recency, give that step an explicit filter in
-  the same change.
+  the same change. A selector on IDENTITY alone rots the same way once rows gain
+  a lifecycle: one reused the first licence assigned to an email regardless of
+  its state, which was correct until a new milestone's refusal scenarios left
+  that actor holding cancelled ones — and it then handed back a dead licence,
+  read as success, and failed a scenario two milestones older at a step that
+  needed a live one. Whatever a step selects by, ask what ELSE will match it
+  after the suite has run a hundred times.
 - **A route nested under an existing screen is unreachable until its parent
   renders an `Outlet`.** A milestone added `/app/academy/$slug` under an
   `/app/academy` that already had a component of its own; the parent swallowed
