@@ -55,12 +55,16 @@ export const listItems = pikkuListFunc<{ status?: string }, Item>({
   // `input` is inferred as ListInput<{ status?: string }> from the generics above —
   // never re-annotate it inline.
   func: async ({ kysely }, input, { session }) => {
-    const limit = input.limit ?? 20
-    const offset = input.cursor ? Number(input.cursor) : 0
+    // `limit` is caller-supplied on an exposed RPC, so it is CAPPED, not trusted —
+    // `ListInput` says "server may cap" and this is where that happens.
+    const limit = Math.min(Math.max(Math.trunc(input.limit ?? 20) || 20, 1), 100)
+    const parsed = input.cursor ? Number(input.cursor) : 0
+    const offset = Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : 0
 
     let query = kysely.selectFrom('item').where('userId', '=', session!.userId)
-    if (input.filter && 'status' in input.filter) {
-      query = query.where('status', '=', (input.filter as any).status)
+    const status = leafEquals(input.filter, 'status')
+    if (status !== undefined) {
+      query = query.where('status', '=', status)
     }
 
     const rows = await query.orderBy('createdAt', 'desc').offset(offset).limit(limit).execute()
@@ -117,3 +121,43 @@ For scroll-triggered loading (rather than a button), pair it with an `Intersecti
 - **Bespoke output shape** (`{items, total}` with no `nextCursor`) — compiles, but disqualifies the function from `usePikkuInfiniteQuery`; you're left hand-rolling pagination state. Use `ListOutput<Row>`'s field names (`rows`, `nextCursor`) even if you don't need `filter`/`sort`/`search` yet — they're optional.
 - **Fixed large `limit` instead of real pagination** (e.g. `{ limit: 500 }` fetched once) — works until the collection outgrows the cap, then silently truncates. If a list can grow unbounded, page it from the start.
 - **Passing `cursor` manually into `usePikkuInfiniteQuery`'s input argument** — the hook injects it into each page request itself; the input you pass is the _base_ filter/limit shared by every page.
+
+## `filter` is a TREE, not a bag of fields
+
+`Filter<F>` is recursive: an **array** is an AND of its children, a **multi-key object** is
+an OR keyed by labels that mean nothing at evaluation time, and only a **single-key object**
+is a leaf. A leaf's value is either the value itself or an operator object
+(`{ contains, in, gt, gte, lt, lte, not, startsWith, … }`).
+
+So `'status' in input.filter` answers `false` for `[{ status: 'open' }, { userId: 'u1' }]`
+and for `{ status: { in: ['open', 'held'] } }` — the first because the filter is an array,
+the second because the value is an operator object rather than the string the code then
+compares. Both cases **silently return unfiltered rows**, which on a list endpoint means
+handing back records the caller asked to exclude. Pikku ships no filter-to-SQL helper: the
+backend decides what it accepts, and it has to say so.
+
+Read exactly the shape you support, and refuse the rest rather than ignoring it:
+
+```typescript
+import type { Filter } from '@pikku/core/function'
+
+/** The one shape this endpoint accepts: a single-key leaf with a plain value. */
+function leafEquals<F extends Record<string, unknown>, K extends keyof F & string>(
+  filter: Filter<F> | undefined,
+  field: K,
+): F[K] | undefined {
+  if (!filter || Array.isArray(filter)) return undefined
+  const keys = Object.keys(filter)
+  if (keys.length !== 1 || keys[0] !== field) return undefined
+  const value = (filter as Record<string, unknown>)[field]
+  if (value !== null && typeof value === 'object') {
+    throw new Error(`filter.${field} takes a value, not an operator object`)
+  }
+  return value as F[K]
+}
+```
+
+Supporting AND/OR or operators means walking the tree properly — recurse into the array and
+the multi-key object, and map each leaf operator to its Kysely equivalent. Do that when the
+UI needs it; until then, throwing on the shapes you do not handle is what stops a filter
+from being quietly dropped.

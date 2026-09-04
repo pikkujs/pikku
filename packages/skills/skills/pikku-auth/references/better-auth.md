@@ -655,26 +655,39 @@ TOTP authenticator apps, email/SMS OTP, backup codes and trusted devices are all
 better-auth's `twoFactor()` plugin. Never hand-roll TOTP or OTP.
 
 1. **Enable + migrate** — add `twoFactor({ issuer: '<AppName>' })` to the `plugins`
-   array in the `pikkuBetterAuth` factory, then generate its schema
-   (`npx @better-auth/cli generate`) and apply it as a migration like any other
-   table change. `twoFactorSecret` lands on `user`.
+   array in the `pikkuBetterAuth` factory, then generate its schema and apply it as a
+   migration like any other table change. Run the CLI at the version of better-auth the
+   project actually has installed (`npx @better-auth/cli@<that version> generate`) — a
+   bare `npx @better-auth/cli` resolves the latest release, which can emit a schema for
+   a library you are not running. `twoFactorSecret` lands on `user`.
 2. **Client** — add `twoFactorClient({ onTwoFactorRedirect() { /* go to /2fa */ } })`
    to `createAuthClient({ plugins: [...] })`, and expose thin wrappers
    (`enable2FA`, `verifyTotp`, `disable2FA`, …) rather than leaking the raw
    `authClient`, same as every other auth call.
 3. **OTP delivery** — `otpOptions.sendOTP` goes through the injected email service
    and a rendered template, not a raw `sendEmail`. Set `storeOTP: 'encrypted'`.
-4. **Sign-in flow** — after `signIn.email(...)`, check `context.data.twoFactorRedirect`
-   in `onSuccess`; if true, route to a `/2fa` page to verify via
-   `verifyTotp`/`verifyOtp`/`verifyBackupCode` (`trustDevice: true` for a 30-day
-   trusted device). The session cookie is only created after verification.
+4. **Sign-in flow** — the challenge is raised on the three CREDENTIAL endpoints:
+   `signIn.email`, `signIn.username` and `signIn.phoneNumber`. Check
+   `context.data.twoFactorRedirect` in `onSuccess`; if true, route to a `/2fa` page
+   and verify via `verifyTotp`/`verifyOtp`/`verifyBackupCode` (`trustDevice: true`
+   for a 30-day trusted device). The response also carries `twoFactorMethods`
+   (`'totp'` only once that user has a verified secret, `'otp'` whenever
+   `otpOptions.sendOTP` is configured) — render the choice from it rather than
+   assuming TOTP. The session cookie is only created after verification: the
+   credential handler's session is deleted while the challenge is in flight, so a
+   hook reading `ctx.context.newSession` after sign-in must null-check it.
 5. **UI** — a QR rendered from `data.totpURI` plus the `data.backupCodes` list.
    Enabling, disabling and regenerating backup codes all require the user's
    password.
 
-TOTP secrets and backup codes are encrypted at rest with the auth secret, and 2FA
-endpoints are rate-limited (3/10s) out of the box. 2FA only applies to
-email/password accounts.
+TOTP secrets and backup codes are encrypted at rest with the auth secret, and
+`/two-factor/*` is rate-limited (3/10s) out of the box.
+
+**2FA gates credential sign-in only.** Magic link, email OTP and OAuth are not
+matched by the plugin's hook, so a user with 2FA enabled who signs in through one
+of them is NOT challenged. If every route into the app must be gated, either do not
+offer the passwordless ones to 2FA users or add your own check — enabling the
+plugin does not do it.
 
 ## Security hardening
 
@@ -698,9 +711,17 @@ place to harden. Everything below is a `betterAuth` option, not a pikku one.
 - **Rate limiting** — on by default in production (100/10s global, 3/10s on
   sign-in/up/change-password). `storage: 'memory'` resets on restart, so a
   deployed app wants `storage: 'database'`. Tighten sensitive routes with
-  `customRules`, e.g. `'/api/auth/sign-in/email': { window: 60, max: 5 }`.
-- **Cookies & sessions** — the defaults are already secure (`httpOnly`, `secure`,
-  `sameSite: 'lax'`, `__Secure-` prefix), with `session.expiresIn` 7d and
+  `customRules`, e.g. `'/sign-in/email': { window: 60, max: 5 }` — the key is matched
+  against the path with the base path ALREADY STRIPPED, so a rule written as
+  `'/api/auth/sign-in/email'` matches nothing and silently leaves the route on the
+  default.
+- **Cookies & sessions** — `httpOnly`, `sameSite: 'lax'` and `path: '/'` are
+  unconditional, but `secure` and the `__Secure-` name prefix are NOT: they follow a
+  `baseURL` on `https://` (or production, or an explicit
+  `advanced.useSecureCookies: true`). A deployment whose TLS terminates at a proxy
+  and passes an `http://` baseURL through therefore ships session cookies with no
+  `secure` flag — set `useSecureCookies` there rather than assuming. Defaults are
+  `session.expiresIn` 7d and
   `updateAge` 1d. Add `freshAge` for sensitive actions, and
   `cookieCache: { strategy: 'jwe' }` if the session carries sensitive data — see
   the cookieCache section above, which you want enabled regardless. Only enable
@@ -711,9 +732,13 @@ place to harden. Everything below is a `betterAuth` option, not a pikku one.
   `user.update.after` for email changes, `account.create.after` for links) into
   whatever audit service the app injects, never a bespoke audit table wired into
   a function body. Returning `false` from a `before` hook blocks the operation.
-- **Background tasks** — on a serverless target, hand fire-and-forget work
-  (emails, logging) to `advanced.backgroundTasks.handler` → `ctx.waitUntil(promise)`
-  so it does not delay the response.
+- **Background tasks** — on a serverless target, hand genuinely disposable work
+  (analytics, logging) to `advanced.backgroundTasks.handler` → `ctx.waitUntil(promise)`
+  so it does not delay the response. Not mail: the default handler is
+  `p.catch(() => {})`, so anything that must actually arrive — an invitation, a
+  password reset — is lost without a trace if the platform reaps the request first.
+  Better Auth sends its own through `runInBackgroundOrAwait`, which awaits when no
+  handler is configured; do the same for yours.
 - **Enumeration** — handled already (generic "Invalid credentials", dummy work on
   unknown users). Keep your own error copy generic too; never leak "user not
   found".

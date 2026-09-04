@@ -41,11 +41,21 @@ const lot = await kysely
   .updateTable('lot')
   .set({ status: 'sold' })
   .where('id', '=', input.lotId)
-  .returningAll()
+  .returning(['id', 'status', 'currentBid', 'updatedAt'])
   .executeTakeFirstOrThrow()
 await eventHub.publish('lot-updated', null, { topic: 'lot-updated', data: lot })
 return lot
 ```
+
+**A topic is PUBLIC — publish a projection, never `returningAll()`.** The generated
+`/events/:topic` route is wired `auth: false` with a sessionless handler, so anyone who can
+reach the origin can subscribe to any topic name and read every frame on it. `returningAll()`
+then ships the whole row — `reservePrice`, `sellerId`, internal notes, whatever the table
+grows next — to unauthenticated subscribers, and it does it silently because the RPC's own
+`output` schema never sees the event payload. List the columns the topic is FOR, the way the
+example does. If a change genuinely has per-viewer content, it does not belong on a topic:
+publish an id-only "something changed" frame and let each client refetch through an
+authenticated RPC that applies its own permissions.
 
 The **2nd arg is the channel to EXCLUDE** from the broadcast: pass `null` from a
 normal HTTP/RPC write (there is no one to skip); pass `channel.channelId` ONLY
@@ -66,16 +76,25 @@ export function useLiveLots() {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    const subscription = realtime.subscribeToTopic('lot-updated', (event) => {
-      const lot = event.data
-      queryClient.setQueryData(['listLots'], (rows: Lot[] = []) =>
-        rows.map((row) => (row.id === lot.id ? lot : row))
-      )
+    const subscription = realtime.subscribeToTopic('lot-updated', () => {
+      queryClient.invalidateQueries({ queryKey: ['listLots'] })
     })
     return () => subscription.close()
   }, [queryClient])
 }
 ```
+
+**Invalidate; do not hand-patch the cache.** The generated hooks key a query as
+`[name, input]` — `['listLots', { status: 'open', cursor: undefined }]`, one entry per set of
+arguments — so `setQueryData(['listLots'], …)` writes to a key nothing reads and the screen
+never changes. `invalidateQueries({ queryKey: ['listLots'] })` prefix-matches, so it refreshes
+every variant of that list whatever input each one was fetched with.
+
+Patching also has to know the payload's shape, and a list RPC returns
+`ListOutput<Lot>` — `{ rows, nextCursor, totalCount? }`, not `Lot[]` — so a `rows.map(...)`
+updater is reading `.map` off an object. Refetching sidesteps both, and it re-applies the server's own filtering,
+which a locally patched row does not: a lot that just moved to `sold` may no longer belong in
+an "open lots" list at all.
 
 `subscribeToTopic` returns `{ close }` — ALWAYS close on unmount or you leak the
 stream. Never hand-roll an `EventSource`.
