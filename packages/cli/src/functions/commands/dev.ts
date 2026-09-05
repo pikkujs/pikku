@@ -338,16 +338,19 @@ export const dev = pikkuSessionlessFunc<
     // has no equivalent, so construct one from env or agents 503 with
     // AIProviderNotConfiguredError. The template forwards injected services
     // (`...existingServices`) so this reaches getSingletonServices().
-    // Only when the project declares agents — otherwise the runner's
-    // missing-SDK warning fires spuriously for projects with global AI env.
+    // Only when the project actually reaches for one — a declared agent, or a
+    // function destructuring `agentRunner` for a one-shot vision / speech call.
+    // Otherwise the runner's missing-SDK warning fires spuriously for every
+    // project that happens to have AI env set.
     const hasAgents = Object.keys(inspectorState.agents.agentsMeta).length > 0
-    const agentRunner = hasAgents
-      ? await createDevAgentRunner({
-          logger,
-          projectRoot: config.rootDir,
-          variables,
-        })
-      : undefined
+    const agentRunner =
+      hasAgents || requiredServices.has('agentRunner')
+        ? await createDevAgentRunner({
+            logger,
+            projectRoot: config.rootDir,
+            variables,
+          })
+        : undefined
     // The dev server runner (node http+ws, or bun-server) is resolved by DI in
     // services.ts. Its EventHub is shared into the singleton services so
     // function-side broadcasts reach the sockets the transport holds.
