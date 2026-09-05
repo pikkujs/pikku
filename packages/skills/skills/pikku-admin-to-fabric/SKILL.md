@@ -1,6 +1,6 @@
 ---
 name: pikku-admin-to-fabric
-description: 'Port a legacy back-office admin (ActiveAdmin, Django admin, Rails Admin, Laravel Nova, Filament) to Fabric admin screens, driven by a `.knowledge/` Product Blueprint. Covers the admin-DSL→Fabric mapping (resources→screens, index/column→tables, filter→query params, scope→query variants, member_action/collection_action→pikkuFuncs, permit_params→input schemas), the "the admin is half your app" audit, and admin-specific permissions. TRIGGER when: porting/rebuilding a legacy app that has a generated/DSL-driven admin, or the user says "port the admin screens" / "implement the admin". DO NOT TRIGGER when: no legacy admin exists (use pikku-fabric to build screens fresh), or the app is being extended rather than ported (use pikku-feature).'
+description: 'Port a legacy back-office admin (ActiveAdmin, Django admin, Rails Admin, Laravel Nova, Filament) to Fabric admin screens, driven by a `.knowledge/` Product Blueprint. Covers the admin-DSL→Fabric mapping (resources→screens, index/column→tables, filter→query params, scope→query variants, member_action/collection_action→pikkuFuncs, permit_params→input schemas), the "the admin is half your app" audit, and admin-specific permissions. TRIGGER when: porting/rebuilding a legacy app that has a generated/DSL-driven admin, or the user says "port the admin screens" / "implement the admin". DO NOT TRIGGER when: no legacy admin exists (use pikku-fabric to build screens fresh), or the app is being extended rather than ported (use pikku-build).'
 installGroups: [fabric]
 argument-hint: '<path to .knowledge/> [resource to port next]'
 ---
@@ -208,5 +208,5 @@ pikku all && pikku fabric validate --json
 
 - **pikku-software-archaeology** — produces the `.knowledge/` blueprint this needs.
 - **pikku-blueprint-to-fabric** — the parent port; run this per-domain alongside it.
-- **pikku-better-auth** — `admin()` plugin: roles, ban, impersonation.
+- **pikku-auth** — roles, ban and impersonation, and the scopes that gate them.
 - **pikku-fabric** — screens, theme, Mantine conventions.

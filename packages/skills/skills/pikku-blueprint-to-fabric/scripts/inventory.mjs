@@ -25,22 +25,63 @@ if (!dir) {
   process.exit(2)
 }
 
-const read = (f) => {
-  const p = join(dir, f)
-  if (!existsSync(p)) return null
-  return JSON.parse(readFileSync(p, 'utf-8'))
+// The four files pikku-software-archaeology's schema marks `x-optional` — an
+// API-only app really has no frontend. Every other file is REQUIRED, and a
+// missing or unparseable one is fatal rather than an empty list: this script's
+// whole claim is that its counts come from the blueprint, so silently reporting
+// "0 commands" for a directory that isn't a blueprint tells the exact lie the
+// inventory exists to prevent.
+const OPTIONAL = new Set([
+  'interfaces.json',
+  'frontend.json',
+  'frontend-routes.json',
+  'frontend-components.json',
+])
+
+const fatal = (msg) => {
+  console.error(`inventory: ${msg}`)
+  process.exit(1)
 }
 
-const domains = read('domains.json')?.domains ?? []
-const entities = read('entities.json')?.entities ?? []
-const commands = read('commands.json')?.commands ?? []
-const queries = read('queries.json')?.queries ?? []
-const events = read('events.json')?.events ?? []
-const policies = read('policies.json')?.policies ?? []
-const workflows = read('workflows.json')?.workflows ?? []
-const api = read('api.json')?.surfaces ?? read('api.json')?.api ?? []
-const integrations = read('integrations.json')?.integrations ?? []
-const migration = read('migration.json') ?? {}
+if (!existsSync(dir)) fatal(`no such directory: ${dir}`)
+
+const read = (f) => {
+  const p = join(dir, f)
+  if (!existsSync(p)) {
+    if (OPTIONAL.has(f)) return null
+    fatal(
+      `${dir} is missing ${f}. Run the archaeology validator first — ` +
+        `an incomplete blueprint gives a count that reads as complete.`
+    )
+  }
+  try {
+    return JSON.parse(readFileSync(p, 'utf-8'))
+  } catch (e) {
+    fatal(`${f} is not valid JSON: ${e.message}`)
+  }
+}
+
+/** A required file that parsed but carries the wrong shape is the same lie. */
+const list = (f, key) => {
+  const doc = read(f)
+  if (doc === null) return []
+  const rows = doc[key]
+  if (rows === undefined) fatal(`${f} has no "${key}" array — blueprint shape changed?`)
+  if (!Array.isArray(rows)) fatal(`${f}: "${key}" is ${typeof rows}, expected an array`)
+  return rows
+}
+
+const domains = list('domains.json', 'domains')
+const entities = list('entities.json', 'entities')
+const commands = list('commands.json', 'commands')
+const queries = list('queries.json', 'queries')
+const events = list('events.json', 'events')
+const policies = list('policies.json', 'policies')
+const workflows = list('workflows.json', 'workflows')
+const apiDoc = read('api.json')
+const api = apiDoc.surfaces ?? apiDoc.api ?? fatal('api.json has neither "surfaces" nor "api"')
+const integrations = list('integrations.json', 'integrations')
+const migration = read('migration.json')
 const interfaces = read('interfaces.json')?.interfaces ?? []
 const feComponents = read('frontend-components.json')?.components ?? []
 const feRoutes = read('frontend-routes.json')?.routes ?? []

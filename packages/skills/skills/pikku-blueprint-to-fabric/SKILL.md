@@ -1,6 +1,6 @@
 ---
 name: pikku-blueprint-to-fabric
-description: 'Rebuild a legacy app as a Pikku Fabric app from a `.knowledge/` Product Blueprint (produced by pikku-software-archaeology). Covers the blueprint→Fabric mapping (domains→slices, commands/queries→pikkuFuncs, entities→SQLite migrations, policies→permissions, invariants→DB constraints, workflows→schedulers, frontend-routes→TanStack+Mantine), the decisions gate, and the parity report. TRIGGER when: a `.knowledge/` blueprint exists and the user wants to rebuild/port/recreate that app in Pikku or Fabric, or says "rebuild this from the blueprint". DO NOT TRIGGER when: no blueprint exists (run pikku-software-archaeology first), or the user wants a single new feature in an existing app (use pikku-feature).'
+description: 'Rebuild a legacy app as a Pikku Fabric app from a `.knowledge/` Product Blueprint (produced by pikku-software-archaeology). Covers the blueprint→Fabric mapping (domains→slices, commands/queries→pikkuFuncs, entities→SQLite migrations, policies→permissions, invariants→DB constraints, workflows→schedulers, frontend-routes→TanStack+Mantine), the decisions gate, and the parity report. TRIGGER when: a `.knowledge/` blueprint exists and the user wants to rebuild/port/recreate that app in Pikku or Fabric, or says "rebuild this from the blueprint". DO NOT TRIGGER when: no blueprint exists (run pikku-software-archaeology first), or the user wants a single new feature in an existing app (use pikku-build).'
 installGroups: [fabric]
 argument-hint: '<path to .knowledge/> [domain to slice next]'
 ---
@@ -15,7 +15,7 @@ Use this skill as an execution checklist, not reference material.
 2. **Clear the decisions gate.** Unresolved `decisionsNeeded` block the domains they touch. Ask; do not invent.
 3. **Build the schema first**, from `entities.json` — everything else hangs off it.
 4. **Then one vertical slice per domain, in dependency order.** Each slice ships functions + permissions + migrations + scenarios and verifies green before the next starts.
-5. **Verify with `pikku fabric validate --json`, then `pikku-verify`** after every slice. Never batch a whole app and verify at the end.
+5. **Verify with `pikku fabric validate --json`, then codegen and `tsc`** after every slice (Stage 8 has the exact commands). Never batch a whole app and verify at the end.
 6. **Write the parity report as you go**, not at the end — it is the deliverable that proves the rebuild is complete.
 
 This skill is the **translation layer** only. For how Fabric itself works (SQLite/libSQL, `fabric.config.json`, deploy provider, project layout) read **pikku-fabric**. For everything else, delegate to the sibling skill named at each step.
@@ -110,18 +110,18 @@ cheapest progress report you have.
 
 ## Stage 2 — Scaffold
 
-Clone the Fabric starter template, then run **pikku-template-clone** (README, package name, lockfile, template artifacts). Set `projectId`, `production.branch` and the frontend entry in `fabric.config.json` per **pikku-fabric**.
+Clone the Fabric starter template, then do the post-clone cleanup **pikku-build** covers (README, package name, lockfile, leftover template artifacts) — a rebuild that ships the template's own name and readme is the first thing a reviewer notices. Set `projectId`, `production.branch` and the frontend entry in `fabric.config.json` per **pikku-fabric**.
 
 Map `architecture.json` onto Fabric honestly, and expect it to shrink:
 
 | Blueprint `architecture.json` | Fabric |
 |---|---|
 | API/web process (Puma, Express, …) | the Fabric worker — no component to build |
-| Worker process + queue | `wireQueueWorker` (**pikku-queue**) |
-| Cron/scheduler component | `wireScheduler` (**pikku-cron**) |
+| Worker process + queue | `wireQueueWorker` (**pikku-wiring**) |
+| Cron/scheduler component | `wireScheduler` (**pikku-wiring**) |
 | Reverse proxy, deploy tooling, process manager | **drop** — the platform does this |
 | Admin console (ActiveAdmin, Django admin, …) | `scaffold.console: true` first; only build screens for what it genuinely can't express |
-| Session/auth store | Better Auth (**pikku-better-auth**) |
+| Session/auth store | Better Auth (**pikku-auth**) |
 | Relational datastore | SQLite via libSQL/Kysely (**pikku-fabric**, **pikku-kysely**) |
 | Redis for cache/locks/queues | usually **nothing** — see the trap below |
 
@@ -184,11 +184,11 @@ Leave for last: thin CRUD domains with no events and no invariants (content, dow
 | `commands[].preconditions` | guards in the function body, throwing typed errors | **pikku-fabric** hard rules |
 | `policies[]` | `pikkuPermission` on the function's `permissions:` field | **pikku-permissions** |
 | `queries[].scoping` | the permission + the query's `where` | **pikku-permissions**, **pikku-kysely** |
-| `events[]` | realtime topic / queue message | **pikku-realtime**, **pikku-queue** |
-| `workflows[] kind: system` | `wireScheduler` | **pikku-cron** |
+| `events[]` | realtime topic / queue message | **pikku-realtime**, **pikku-wiring** |
+| `workflows[] kind: system` | `wireScheduler` | **pikku-wiring** |
 | `workflows[]` multi-step | `pikkuWorkflowFunc` + `*.steps.ts` | **pikku-workflow** |
 | `workflows[].scenarios[]` | scenario tests | **pikku-scenario** |
-| `api[]` | mostly **nothing** — see below | **pikku-http** |
+| `api[]` | mostly **nothing** — see below | **pikku-wiring** |
 | `invariants[]` | DB constraints, in the migration | **pikku-fabric** |
 | `integrations[]` | services | **pikku-services** |
 
@@ -207,7 +207,7 @@ Every function needs a real `description` — take it from the concept's `descri
 Add `wireHTTP` only where the URL shape is a real external contract:
 
 - `auth: "none"` public pages that must keep their paths (SEO, printed links, QR codes)
-- **inbound webhooks** — the sender's URL is fixed (**pikku-http**)
+- **inbound webhooks** — the sender's URL is fixed (**pikku-wiring**)
 - surfaces `interfaces.json` marks as a genuine `openapi-rest` channel with external consumers
 
 A 200-surface `api.json` typically yields a handful of `wireHTTP` calls. If you're wiring HTTP for most of it, you're transcribing the legacy router.
@@ -231,7 +231,7 @@ Two patterns worth naming, because they recur:
 
 Most `events[]` in a legacy blueprint carry `explicit: false`: there was no event bus, and the archaeologist reconstructed the event from a side-effect cluster (an email + a status flip + a counter bump in one handler). The `consumers` field lists what reacted.
 
-In the rebuild these become real: publish the event (**pikku-realtime**) or enqueue it (**pikku-queue**), and make each listed consumer its own subscriber. That is the structural upgrade — the handler stops doing five unrelated things, and adding a sixth consumer stops meaning editing the handler.
+In the rebuild these become real: publish the event (**pikku-realtime**) or enqueue it (**pikku-wiring**), and make each listed consumer its own subscriber. That is the structural upgrade — the handler stops doing five unrelated things, and adding a sixth consumer stops meaning editing the handler.
 
 Two disciplines:
 
@@ -263,11 +263,11 @@ Two rules:
 
 - `replacementDifficulty: "hard"` + `importance: "critical"` → **keep**, and put it behind a service (**pikku-services**). These are the load-bearing vendors; a rebuild is not the time to also swap them.
 - `"trivial"` → candidates for a platform-native equivalent, but only if the user wants it. Swapping a vendor mid-rebuild makes every failure ambiguous.
-- `envVars` → `wireVariable` / `wireSecret` (**pikku-config**). Per **pikku-fabric**: no `process.env`, ever.
+- `envVars` → `defineVariable` / `defineSecret` (**pikku-services**). Per **pikku-fabric**: no `process.env`, ever.
 
 **Secrets in the blueprint are live secrets.** `gaps.json` security entries routinely name credentials hardcoded in the legacy source *and its committed history*. They must be **rotated**, not copied into the new app's secret store — and rotation is the legacy app's problem, today, independent of the rebuild. Say so; don't let the rebuild timeline become the remediation timeline.
 
-**Inbound webhooks deserve a real look.** They're the surfaces most likely to be carrying a `gaps.json` security entry (unverified signatures, disabled checks). Rebuild the verification properly (**pikku-http**), and if the reason it was disabled was a vendor that doesn't reliably sign, that's a `decisionsNeeded` — not something to replicate.
+**Inbound webhooks deserve a real look.** They're the surfaces most likely to be carrying a `gaps.json` security entry (unverified signatures, disabled checks). Rebuild the verification properly (**pikku-wiring**), and if the reason it was disabled was a vendor that doesn't reliably sign, that's a `decisionsNeeded` — not something to replicate.
 
 ## Stage 7 — Frontend
 
@@ -279,7 +279,7 @@ Only when `frontend*.json` is present. Target: TanStack Start + Mantine.
 
 `frontend-routes[]` → TanStack routes. `path` and `purpose` carry over; `auth` becomes the route guard.
 
-**`dataFrom` is the payoff.** It lists query/command names — the *same* names as `queries.json`/`commands.json`, which are the same names as your `pikkuFunc`s, which are the same names in the generated client. So a route's data layer is mechanical: each `dataFrom` entry is a generated hook (**pikku-react-query**). If `dataFrom` contains a name that isn't a real function, the blueprint wasn't reconciled — go fix it there.
+**`dataFrom` is the payoff.** It lists query/command names — the *same* names as `queries.json`/`commands.json`, which are the same names as your `pikkuFunc`s, which are the same names in the generated client. So a route's data layer is mechanical: each `dataFrom` entry is a generated hook (**pikku-react**). If `dataFrom` contains a name that isn't a real function, the blueprint wasn't reconciled — go fix it there.
 
 ### Components — the honest cost
 
@@ -309,15 +309,17 @@ yarn pikku all                   # codegen + version compliance
 yarn tsc --noEmit
 ```
 
-Then run the slice's scenarios. Then `pikku-verify` (or the `pikku-verify` tool) before calling the slice done.
+Then run the slice's scenarios. All four green — validate, codegen, `tsc`, scenarios — is what "slice done" means; three of four is a slice you have not finished. **pikku-fabric** owns the loop and what each finding means.
 
 Never batch. A rebuild verified only at the end gives you an undifferentiated pile of failures with no bisect point, and the whole reason for slicing is that each slice is a checkpoint you can trust.
 
-New functions with `expose: true` are versioned from the start — see **pikku-versioning**; you're establishing v1 contracts, not migrating them.
+New functions with `expose: true` are versioned from the start — `pikku versions` / `pikku semver` (**pikku-meta**); you're establishing v1 contracts, not migrating them.
 
 ## Stage 9 — The parity report (the deliverable)
 
-Write `<repo>/.knowledge/parity-<domain>.md` per slice, as you finish it. This is a real output: **pikku-product-second-opinion reads `parity-*.md`** alongside the blueprint, and it's what a reviewer uses to answer "is the rebuild done?"
+Write `<repo>/.knowledge/parity-<domain>.md` per slice, as you finish it. This is a real output, not
+bookkeeping: it is the one place a human can answer "is the rebuild done?" without reading the
+diff, because it is the only document that holds the blueprint and the new code side by side.
 
 Per domain:
 
@@ -351,7 +353,7 @@ Per domain:
 ```bash
 node <archaeology-skill>/scripts/validate.mjs <repo>/.knowledge   # Stage 0 — must be 0 errors
 # Stage 1 — decisions gate: ask, don't invent
-# Stage 2 — clone starter template + pikku-template-clone
+# Stage 2 — clone starter template, then the post-clone cleanup (pikku-build)
 # Stage 3 — entities.json -> db/sqlite/NNNN-*.sql ; pikku db migrate
 # Stage 4..7 — one domain slice at a time, dependency order
 pikku fabric validate --json
@@ -362,11 +364,14 @@ yarn pikku all && yarn tsc --noEmit
 ## Relationship to the other skills
 
 ```
-legacy repo → pikku-software-archaeology → .knowledge/ blueprint ─┬→ pikku-product-second-opinion → founder report
-                                                            └→ pikku-blueprint-to-fabric → Fabric app + parity-*.md
-                                                                                              ↑ (feeds back into the report)
+legacy repo → pikku-software-archaeology → .knowledge/ blueprint
+                                                  └→ pikku-blueprint-to-fabric → Fabric app + parity-*.md
 ```
 
-**pikku-software-archaeology** extracts facts. **pikku-product-second-opinion** advises a human. **This skill** builds the thing — and emits `parity-*.md`, which the second opinion then reads to report on the rebuild rather than the legacy app.
+**pikku-software-archaeology** extracts the facts and validates them. **This skill** builds the
+thing, and emits `parity-*.md` so the rebuild can be reviewed against the blueprint rather than
+against the legacy code.
 
-For Fabric mechanics use **pikku-fabric**; for a single feature *after* the rebuild use **pikku-feature**.
+For Fabric mechanics — project layout, `fabric.config.json`, the validate loop, reading a deployed
+stage — use **pikku-fabric**. For a single feature *after* the rebuild, and for the post-clone
+cleanup in Stage 2, use **pikku-build**.
