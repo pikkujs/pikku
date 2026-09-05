@@ -9,10 +9,7 @@ import {
   serializeTriggerSourceMetaTS,
 } from './serialize-trigger-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
 
 export const pikkuTrigger = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -34,42 +31,22 @@ export const pikkuTrigger = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const fullMeta = serializeTriggerMeta(triggers.meta)
 
-    // Write minimal JSON (runtime-only fields)
-    const minimalMeta = stripVerboseFields(fullMeta)
-    await writeFileInDir(
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+
+    await writeWiringMeta({
       logger,
-      triggersWiringMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    // Write verbose JSON only if it has additional fields
-    if (hasVerboseFields(fullMeta)) {
-      const verbosePath = triggersWiringMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
-      await writeFileInDir(
-        logger,
-        verbosePath,
-        JSON.stringify(fullMeta, null, 2)
-      )
-    }
-
-    const jsonImportPath = getFileImportRelativePath(
-      triggersWiringMetaFile,
-      triggersWiringMetaJsonFile,
-      packageMappings
-    )
-
-    await writeFileInDir(
-      logger,
-      triggersWiringMetaFile,
-      serializeTriggerMetaTS(
-        triggers.meta,
-        jsonImportPath,
-        schema?.supportsImportAttributes ?? false
-      )
-    )
+      meta: fullMeta,
+      metaJsonFile: triggersWiringMetaJsonFile,
+      metaFile: triggersWiringMetaFile,
+      packageMappings,
+      supportsImportAttributes,
+      serializeMetaTS: ({ jsonImportPath }) =>
+        serializeTriggerMetaTS(
+          triggers.meta,
+          jsonImportPath,
+          supportsImportAttributes
+        ),
+    })
 
     await writeFileInDir(
       logger,

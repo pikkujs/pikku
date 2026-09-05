@@ -223,18 +223,6 @@ export function resolveDb(
   return null
 }
 
-/** @deprecated Use resolveDb(userConfig, ...) instead. */
-export function resolveLocalDb(
-  sqliteDb: string | undefined,
-  rootDir: string,
-  outDir: string,
-  runtimeDir?: string
-): ResolvedSqliteDb | null {
-  if (!sqliteDb) return null
-  const result = resolveDb({ sqliteDb }, rootDir, outDir, runtimeDir)
-  return result as ResolvedSqliteDb | null
-}
-
 function resolveAgainst(root: string, p: string): string {
   return isAbsolute(p) ? p : resolve(root, p)
 }

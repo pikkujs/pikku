@@ -1,13 +1,9 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { ErrorCode } from '@pikku/inspector'
-import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join, isAbsolute } from 'path'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeMetaSidecar } from '../../../utils/write-wiring-meta.js'
 import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
 
 const loadIcon = async (
@@ -106,31 +102,12 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
     }
 
     if (addonMetaJsonFile && (config.scaffold?.console || config.addon)) {
-      const minimalMeta = stripVerboseFields(metaData)
-      await writeFileInDir(
+      await writeMetaSidecar({
         logger,
-        addonMetaJsonFile,
-        JSON.stringify(minimalMeta, null, 2),
-        { ignoreModifyComment: true }
-      )
-
-      if (hasVerboseFields(metaData)) {
-        const verbosePath = addonMetaJsonFile.endsWith('.gen.json')
-          ? addonMetaJsonFile.replace(/\.gen\.json$/, '-verbose.gen.json')
-          : addonMetaJsonFile.replace(/(\.\w+)$/, '-verbose$1')
-        if (verbosePath === addonMetaJsonFile) {
-          logger.warn(
-            `Cannot derive verbose path from ${addonMetaJsonFile}, skipping verbose metadata`
-          )
-        } else {
-          await writeFileInDir(
-            logger,
-            verbosePath,
-            JSON.stringify(metaData, null, 2),
-            { ignoreModifyComment: true }
-          )
-        }
-      }
+        meta: metaData,
+        metaJsonFile: addonMetaJsonFile,
+        ignoreModifyComment: true,
+      })
     }
 
     return true

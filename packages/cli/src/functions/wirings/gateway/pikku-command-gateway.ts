@@ -2,11 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
 import {
   serializeGatewayMeta,
   serializeGatewayMetaTS,
@@ -29,39 +25,18 @@ export const pikkuGateway = pikkuSessionlessFunc<void, boolean | undefined>({
     }
 
     const fullMeta = serializeGatewayMeta(gateways.meta)
-    const minimalMeta = stripVerboseFields(fullMeta)
-    await writeFileInDir(
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+
+    await writeWiringMeta({
       logger,
-      gatewaysWiringMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    if (hasVerboseFields(fullMeta)) {
-      const verbosePath = gatewaysWiringMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
-      await writeFileInDir(
-        logger,
-        verbosePath,
-        JSON.stringify(fullMeta, null, 2)
-      )
-    }
-
-    const jsonImportPath = getFileImportRelativePath(
-      gatewaysWiringMetaFile,
-      gatewaysWiringMetaJsonFile,
-      packageMappings
-    )
-
-    await writeFileInDir(
-      logger,
-      gatewaysWiringMetaFile,
-      serializeGatewayMetaTS(
-        jsonImportPath,
-        schema?.supportsImportAttributes ?? false
-      )
-    )
+      meta: fullMeta,
+      metaJsonFile: gatewaysWiringMetaJsonFile,
+      metaFile: gatewaysWiringMetaFile,
+      packageMappings,
+      supportsImportAttributes,
+      serializeMetaTS: ({ jsonImportPath }) =>
+        serializeGatewayMetaTS(jsonImportPath, supportsImportAttributes),
+    })
 
     await writeFileInDir(
       logger,

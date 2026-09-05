@@ -4,11 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
 
 // Helper function to generate arguments from schema
 const generateArgumentsFromSchema = async (
@@ -125,42 +121,15 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
       promptsMeta: promptsMetaWithArguments,
     }
 
-    // Write minimal JSON (runtime-only fields)
-    const minimalMeta = stripVerboseFields(metaData)
-    await writeFileInDir(
+    await writeWiringMeta({
       logger,
-      config.mcpWiringsMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    // Write verbose JSON only if it has additional fields
-    if (hasVerboseFields(metaData)) {
-      const verbosePath = config.mcpWiringsMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
-      await writeFileInDir(
-        logger,
-        verbosePath,
-        JSON.stringify(metaData, null, 2)
-      )
-    }
-
-    const jsonImportPath = getFileImportRelativePath(
-      mcpWiringsMetaFile,
-      config.mcpWiringsMetaJsonFile,
-      packageMappings
-    )
-
-    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
-
-    await writeFileInDir(
-      logger,
-      mcpWiringsMetaFile,
-      `import { pikkuState } from '@pikku/core/state'
+      meta: metaData,
+      metaJsonFile: config.mcpWiringsMetaJsonFile,
+      metaFile: mcpWiringsMetaFile,
+      packageMappings,
+      supportsImportAttributes: schema?.supportsImportAttributes ?? false,
+      serializeMetaTS: ({ importStatement }) =>
+        `import { pikkuState } from '@pikku/core/state'
 import type {
   MCPResourceMeta,
   MCPToolMeta,
@@ -169,8 +138,8 @@ import type {
 ${importStatement}
 pikkuState(null, 'mcp', 'resourcesMeta', metaData.resourcesMeta as MCPResourceMeta)
 pikkuState(null, 'mcp', 'toolsMeta', metaData.toolsMeta as MCPToolMeta)
-pikkuState(null, 'mcp', 'promptsMeta', metaData.promptsMeta as MCPPromptMeta)`
-    )
+pikkuState(null, 'mcp', 'promptsMeta', metaData.promptsMeta as MCPPromptMeta)`,
+    })
 
     return true
   },

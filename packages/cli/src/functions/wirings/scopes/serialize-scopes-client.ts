@@ -1,11 +1,10 @@
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializeScopesClientOptions {
   definitions: ScopeDefinitions
 }
-
-const quote = (value: string) => `'${value.replace(/'/g, "\\'")}'`
 
 /**
  * Generates the browser-side scope client: the `ScopeId` union and a
@@ -34,7 +33,7 @@ export const serializeScopesClient = ({
 
   const union =
     requirable.length > 0
-      ? `\n${requirable.map((id) => `  | ${quote(id)}`).join('\n')}`
+      ? `\n${requirable.map((id) => `  | ${tsLiteral(id)}`).join('\n')}`
       : ' never'
 
   return `/**

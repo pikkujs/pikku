@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
+import ts from 'typescript'
 import { hasScopes as coreHasScopes } from '@pikku/core/scope'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import { serializeScopesClient } from './serialize-scopes-client.js'
@@ -33,7 +34,10 @@ const cases: Array<[readonly string[] | undefined, string[] | undefined]> = [
   [['admin:*'], ['admin:*']],
   [['admin:*'], ['admin:invoices']],
   [['admin', 'billing'], ['admin']],
-  [['admin', 'billing'], ['admin', 'billing']],
+  [
+    ['admin', 'billing'],
+    ['admin', 'billing'],
+  ],
   [['admin', 'billing'], ['*']],
 ]
 
@@ -60,11 +64,33 @@ describe('serializeScopesClient', () => {
   test('emits the requirable union', () => {
     const output = serializeScopesClient({ definitions })
 
-    assert.ok(output.includes("'admin'"))
-    assert.ok(output.includes("'admin:invoices'"))
-    assert.ok(output.includes("'admin:invoices:create'"))
-    assert.ok(output.includes("'admin:*'"))
-    assert.ok(output.includes("'billing'"))
+    assert.ok(output.includes('"admin"'))
+    assert.ok(output.includes('"admin:invoices"'))
+    assert.ok(output.includes('"admin:invoices:create"'))
+    assert.ok(output.includes('"admin:*"'))
+    assert.ok(output.includes('"billing"'))
+  })
+
+  test('emits a parseable file for a scope id needing escaping', () => {
+    const output = serializeScopesClient({
+      definitions: [{ name: 'admin\\legacy' }],
+    })
+    const file = ts.createSourceFile(
+      'pikku-scopes-client.gen.ts',
+      output,
+      ts.ScriptTarget.Latest,
+      true
+    )
+
+    assert.deepEqual(
+      (file as unknown as { parseDiagnostics: ts.Diagnostic[] })
+        .parseDiagnostics,
+      []
+    )
+    assert.ok(
+      output.includes(JSON.stringify('admin\\legacy')),
+      'expected the backslash to survive rather than escape the next character'
+    )
   })
 
   test('emits a file a browser can bundle, with no imports', () => {

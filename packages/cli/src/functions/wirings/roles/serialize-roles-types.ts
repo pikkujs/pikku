@@ -1,10 +1,9 @@
 import type { SystemRoleDefinitions } from '@pikku/core/role'
+import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializeRolesOptions {
   definitions: SystemRoleDefinitions
 }
-
-const quote = (value: string) => `'${value.replace(/'/g, "\\'")}'`
 
 /**
  * Generates the `SystemRoleName` union and role metadata from
@@ -20,7 +19,7 @@ export const serializeRolesTypes = ({ definitions }: SerializeRolesOptions) => {
 
   const union =
     names.length > 0
-      ? `\n${names.map((name) => `  | ${quote(name)}`).join('\n')}`
+      ? `\n${names.map((name) => `  | ${tsLiteral(name)}`).join('\n')}`
       : ' never'
 
   return `/**
