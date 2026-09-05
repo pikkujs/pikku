@@ -16,8 +16,23 @@
  *   compiles the bundle into a single self-contained executable via
  *   `bun build --compile`. No runtime needed on the target host.
  */
-import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
-import { nodeBuiltinExternals, SERVER_READY_MARKER } from '@pikku/deploy'
+import type {
+  BindingSource,
+  ContributorPlatform,
+  EntryGenerationContext,
+  PlatformServiceContributor,
+  ProviderAdapter,
+} from '@pikku/deploy'
+import {
+  assertContributorsSupported,
+  collectContributorImports,
+  collectContributorLines,
+  dedupeContributors,
+  nodeBuiltinExternals,
+  SERVER_READY_MARKER,
+} from '@pikku/deploy'
+
+export const STANDALONE_BINDING_SOURCES: readonly BindingSource[] = ['env']
 
 export type StandaloneRuntime = 'node' | 'bun'
 
@@ -340,6 +355,21 @@ export interface StandaloneProviderAdapterOptions {
    * The window is a webview onto that origin and nothing else is shipped.
    */
   desktopUrl?: string
+  contributors?: PlatformServiceContributor[]
+}
+
+const contributorPlatform = (
+  ctx: EntryGenerationContext
+): ContributorPlatform => {
+  const services = ctx.unit.services ?? []
+  return {
+    serviceNames: services.map((s) => s.sourceServiceName),
+    needsQueue: services.some((s) => s.capability === 'queue'),
+    needsWorkflow: services.some((s) => s.capability === 'workflow-state'),
+    needsAgent: services.some(
+      (s) => s.capability === 'ai-storage' || s.capability === 'ai-model'
+    ),
+  }
 }
 
 export class StandaloneProviderAdapter implements ProviderAdapter {
@@ -351,6 +381,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly projectDir?: string
   readonly desktopIdentifier?: string
   readonly desktopUrl?: string
+  readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.runtime = options.runtime ?? 'node'
@@ -358,6 +389,48 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     this.projectDir = options.projectDir
     this.desktopIdentifier = options.desktopIdentifier
     this.desktopUrl = options.desktopUrl
+    this.contributors = dedupeContributors(options.contributors)
+    assertContributorsSupported(
+      this.contributors,
+      STANDALONE_BINDING_SOURCES,
+      this.name
+    )
+  }
+
+  private contributorImportLines(ctx: EntryGenerationContext): string[] {
+    if (this.contributors.length === 0) return []
+    return collectContributorImports(
+      this.contributors,
+      contributorPlatform(ctx)
+    )
+  }
+
+  private platformServicesBlock(ctx: EntryGenerationContext): string[] {
+    if (this.contributors.length === 0) return []
+    return [
+      `const createPlatformServices = async (env: Record<string, string | undefined>): Promise<${ctx.servicesType}> => {`,
+      `  const services: ${ctx.servicesType} = {}`,
+      ...collectContributorLines(this.contributors, {
+        ctx,
+        platform: contributorPlatform(ctx),
+        isGateway: false,
+      }),
+      `  return services`,
+      `}`,
+      ``,
+    ]
+  }
+
+  private platformServicesCallLines(): string[] {
+    if (this.contributors.length === 0) return []
+    return [
+      `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>)`,
+    ]
+  }
+
+  private platformServicesSpreadLines(): string[] {
+    if (this.contributors.length === 0) return []
+    return [`    ...platformServices,`]
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
@@ -387,6 +460,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         : []),
       ...(ctx.db ? dbImportLines('node', ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
+      ...this.contributorImportLines(ctx),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -400,8 +474,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       ...commandParseLines(ctx),
       ``,
+      ...this.platformServicesBlock(ctx),
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
+      ...this.platformServicesCallLines(),
       `  const schedulerService = new InMemorySchedulerService()`,
       `  const queueService = new InMemoryQueueService()`,
       `  const workflowService = new InMemoryWorkflowService()`,
@@ -420,6 +496,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    workflowRunService: workflowService,`,
       `    triggerService,`,
       `    eventHub,`,
+      ...this.platformServicesSpreadLines(),
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
@@ -483,6 +560,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         : []),
       ...(ctx.db ? dbImportLines('bun', ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
+      ...this.contributorImportLines(ctx),
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -496,8 +574,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       ...commandParseLines(ctx),
       ``,
+      ...this.platformServicesBlock(ctx),
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
+      ...this.platformServicesCallLines(),
       `  const schedulerService = new InMemorySchedulerService()`,
       `  const queueService = new InMemoryQueueService()`,
       `  const workflowService = new InMemoryWorkflowService()`,
@@ -516,6 +596,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    workflowRunService: workflowService,`,
       `    triggerService,`,
       `    eventHub,`,
+      ...this.platformServicesSpreadLines(),
       `  })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
