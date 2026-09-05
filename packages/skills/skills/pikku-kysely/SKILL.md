@@ -4,12 +4,13 @@ description: >-
   Use when WRITING KYSELY QUERIES (select/join/aggregate/insert/update/delete) inside a Pikku
   function body, or when setting up SQL database services with Kysely. Covers the query builder
   API (joins, aggregates + groupBy/having, returning, sql template, expression builder, $if,
-  transactions, jsonArrayFrom relation helpers) AND @pikku/kysely service setup (channel stores,
+  transactions, jsonArrayFrom relation helpers), HOW MANY ROUND TRIPS a function body costs and how to
+  collapse sequential awaits into one statement, AND @pikku/kysely service setup (channel stores,
   workflow services, secret services, AI storage, deployment services). TRIGGER when: writing any
   non-trivial kysely query (a join, an aggregate/count/sum, groupBy, subquery, transaction, or
   conditional query), the injected `kysely` service is used in a function body, or code uses
-  PikkuKysely, KyselyChannelStore, KyselyWorkflowService, KyselySecretService, or the user asks
-  about SQL setup with Pikku. DO NOT TRIGGER when: user asks about MongoDB or Redis-backed
+  PikkuKysely, KyselyChannelStore, KyselyWorkflowService, KyselySecretService, a function body
+  awaits more than one query, or the user asks about SQL setup with Pikku. DO NOT TRIGGER when: user asks about MongoDB or Redis-backed
   services (use pikku-service-backends).
 installGroups: [core]
 ---
@@ -118,6 +119,109 @@ await kysely.transaction().execute(async (trx) => {
     .execute()
 })
 ```
+
+## One statement, not five
+
+**Count the `await`s in the function body before you finish it.** In a deployed
+stage the database is not in the process — every terminal (`.execute()`,
+`.executeTakeFirst()`) is a network hop, and five in a row is five latencies the
+caller waits through in series. This is the single most common thing wrong with a
+generated function body, and it never shows up locally against a socket on the
+same machine.
+
+**Sequential is only correct when the second query needs the first one's
+VALUES.** Everything else is one of these four:
+
+**1. Independent reads → `Promise.all`.** Nothing about the SQL changes; they
+just stop queuing behind each other.
+
+```typescript
+// Three hops, in series
+const item = await kysely.selectFrom('item').where('id','=',id).selectAll().executeTakeFirst()
+const bins = await kysely.selectFrom('bin').where('warehouseId','=',wid).selectAll().execute()
+const moves = await kysely.selectFrom('stockMove').where('itemId','=',id).selectAll().execute()
+
+// One hop's worth of latency
+const [item, bins, moves] = await Promise.all([
+  kysely.selectFrom('item').where('id','=',id).selectAll().executeTakeFirst(),
+  kysely.selectFrom('bin').where('warehouseId','=',wid).selectAll().execute(),
+  kysely.selectFrom('stockMove').where('itemId','=',id).selectAll().execute(),
+])
+```
+
+**2. Parent, then its children → `jsonArrayFrom` / `jsonObjectFrom`.** A loop
+containing an `await` is an N+1: one query per row, so the cost is the size of the
+result set rather than the size of the code. **Never `await` inside a `for`/`map`
+over rows you just fetched.** The relation helpers in the cookbook above collapse
+it into one statement that returns the nested shape your output schema already
+wants.
+
+```typescript
+// N+1 — one extra hop per warehouse
+const warehouses = await kysely.selectFrom('warehouse').selectAll().execute()
+for (const w of warehouses) {
+  w.bins = await kysely.selectFrom('bin').where('warehouseId','=',w.id).selectAll().execute()
+}
+// One hop — see NESTED DATA above
+```
+
+If the shape genuinely cannot be nested, fetch the children in **one** query with
+`where('warehouseId', 'in', warehouses.map((w) => w.id))` and group them in JS.
+Two hops beats N.
+
+**3. Read, decide, write → one write that returns.** A `select` to check
+existence followed by an `insert` is both two hops and a race — another request
+can insert between them. `returning()` and `onConflict` do it in one statement,
+and what comes back tells you which branch happened.
+
+```typescript
+// Two hops and a race
+const existing = await kysely.selectFrom('item').where('sku','=',sku).select('id').executeTakeFirst()
+if (existing) throw new ConflictError()
+await kysely.insertInto('item').values({ sku, name }).execute()
+
+// One hop, and the database arbitrates
+const created = await kysely
+  .insertInto('item')
+  .values({ sku, name })
+  .onConflict((oc) => oc.column('sku').doNothing())
+  .returning(['id', 'sku'])
+  .executeTakeFirst()
+if (!created) throw new ConflictError()
+```
+
+The same applies to fetch-then-update: `updateTable(...).where(...).returning(...)`
+in one call, and `undefined` back means the row was not there — that is your
+`NotFoundError`, not a reason for a preceding `select`. Many single-row inserts
+are one `.values([...])` with an array.
+
+**4. A read that only feeds the next query's `where` → a subquery or a CTE.**
+If the first result never reaches the response and never reaches JS, it should
+never have crossed the wire.
+
+```typescript
+// Two hops — the ids are only ever used as a filter
+const ids = await kysely.selectFrom('bin').where('warehouseId','=',wid).select('id').execute()
+const stock = await kysely.selectFrom('stock').where('binId','in', ids.map((b) => b.id)).selectAll().execute()
+
+// One hop
+const stock = await kysely
+  .selectFrom('stock')
+  .where('binId', 'in', (eb) =>
+    eb.selectFrom('bin').select('bin.id').where('bin.warehouseId', '=', wid)
+  )
+  .selectAll()
+  .execute()
+```
+
+`.with('name', (db) => ...)` builds a CTE when the same intermediate is needed
+twice inside one statement. A total alongside a page is a window function —
+`eb.fn.countAll<number>().over().as('total')` — not a second `count` query.
+
+**A transaction does NOT reduce round trips.** It adds `BEGIN` and `COMMIT` around
+whatever is inside it. Reach for it when several writes must land together or not
+at all; never as a way to make sequential queries cheaper, and never wrapped round
+reads that only needed `Promise.all`.
 
 Pikku provides SQL database services through six packages:
 
