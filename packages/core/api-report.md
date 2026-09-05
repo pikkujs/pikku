@@ -5135,8 +5135,8 @@ export abstract class WebhookService {
   protected sign(secret: string, body: string): string
   public verify(secret: string, signature: string, body: string): boolean
   public recordAttempt(_deliveryId: string, _result: WebhookAttemptResult): Promise<void>
-  public listDeliveries(_opts?: { organizationId?: string; limit?: number }): Promise<WebhookDeliveryRecord[]>
-  public getDelivery(_deliveryId: string): Promise<WebhookDeliveryWithAttempts | null>
+  public async listDeliveries(_opts?: { organizationId?: string; limit?: number }): Promise<WebhookDeliveryRecord[]>
+  public async getDelivery(_deliveryId: string): Promise<WebhookDeliveryWithAttempts | null>
 }
 export interface WebhookServiceConfig {
   retries?: number
