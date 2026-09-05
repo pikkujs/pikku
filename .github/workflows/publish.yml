@@ -102,7 +102,17 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+      # `download-build: false` because there is no `build-output` artifact to
+      # download: it is uploaded by the `Build` job of the *Release* run, and a
+      # `workflow_run` job can only reach its own run's artifacts. `yarn release`
+      # below rebuilds every package from source anyway (`build:packages` →
+      # `pikku` → `build:addons` → `build:console`), which is also where
+      # `packages/cli/release/binaries/` comes from — so nothing is lost. The
+      # default left every publish dead on `Artifact not found for name:
+      # build-output` before `changesets/action` ever ran.
       - uses: ./.github/actions/setup
+        with:
+          download-build: 'false'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
