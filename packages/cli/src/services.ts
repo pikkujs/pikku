@@ -360,6 +360,16 @@ export const createSingletonServices: CreateSingletonServices<
         ? ((await loadManifest(join(config.rootDir, 'versions.pikku.json'))) ??
           undefined)
         : undefined
+      // The outgoing state's `typesLookup` holds live `ts.Type`s. A type reaches
+      // its checker and the checker reaches the whole program, so that one map
+      // pins a parsed program and an exercised checker for as long as the state
+      // exists — `releaseProgram` alone frees nothing. Every reader of the old
+      // state is done once a re-inspection is asked for, so drop the types here
+      // and the old program is collectable while the new one is built, instead
+      // of both being live at once.
+      if (unfilteredState && 'typesLookup' in unfilteredState) {
+        unfilteredState.typesLookup.clear()
+      }
       const oldProgram = unfilteredState?.program ?? undefined
       const inspectStart = Date.now()
       unfilteredStateIsSetupOnly = setupOnly
