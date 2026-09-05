@@ -163,13 +163,14 @@ export const serve = pikkuSessionlessFunc<
 
     const devLogger = new ConsoleLogger()
     const hasAgents = Object.keys(inspectorState.agents.agentsMeta).length > 0
-    const agentRunner = hasAgents
-      ? await createDevAgentRunner({
-          logger,
-          projectRoot: config.rootDir,
-          variables,
-        })
-      : undefined
+    const agentRunner =
+      hasAgents || requiredServices.has('agentRunner')
+        ? await createDevAgentRunner({
+            logger,
+            projectRoot: config.rootDir,
+            variables,
+          })
+        : undefined
 
     const eventHub = await devServerRunner.createEventHub()
     const serveQueueService = new InMemoryQueueService()
