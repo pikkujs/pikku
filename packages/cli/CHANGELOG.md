@@ -1,3 +1,14 @@
+## 0.12.137
+
+### Patch Changes
+
+- 4871c32: Release the previous inspector state's `typesLookup` before re-inspecting. The live `ts.Type`s in that map kept the old `ts.Program` and its exercised type checker reachable across every re-inspection in `pikku all`, so two full programs were alive at once and large projects ran out of heap in CI. The codegen benchmark now measures live heap at the start of each inspector pass and peak heap, and fails when a pass starts a program's worth above the first.
+- Updated dependencies [28f39f2]
+- Updated dependencies [f10162a]
+  - @pikku/skills@0.12.27
+  - @pikku/kysely@0.13.24
+  - @pikku/core@0.12.104
+
 ## 0.12.136
 
 ### Patch Changes
