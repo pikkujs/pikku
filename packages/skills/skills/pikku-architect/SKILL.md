@@ -250,137 +250,27 @@ cover it — so a role × resource cross product there costs the milestone nothi
 
 ## What makes a plan wrong
 
-`plan set` catches the mechanical failures. These are the ones it cannot:
+`plan set` catches the mechanical failures — a missing slot, a bad hash, a pass 1 with no `ui` item.
+Read your draft back against these six questions, which it cannot ask. Each has cost a real
+milestone; **[references/plan-defects.md](references/plan-defects.md)** carries the case behind every
+one, and is worth opening for any question you cannot answer with a flat yes.
 
-- **A plan for a different milestone.** The note is about `entries`; the plan builds `projects`.
-  Every entity the note names must appear in a function or a table.
-- **A pass 1 that is a layer, not a slice.** "Pass 1: the data model. Pass 2: the API. Pass 3: the
-  screens." That is three passes of nothing working.
-- **Scenarios that assert the code ran rather than that the person got what they came for.** A
-  scenario proving `saveEntry` returns 200 proves the wire. The one worth planning is the one where
-  a person writes something, comes back, and it is still there. A browser scenario that opens a page
-  and asserts it is still on it proves the route loads and nothing else —
-  `pikku knowledge plan progress` names it as a problem and refuses the milestone.
-- **A refusal planned at a level that cannot state it.** A scenario runner drives the app as the
-  personas the project declares; there is no anonymous RPC caller, so "a caller with no session is
-  refused" is a sentence a backend or permission scenario cannot perform. Signed-out is a BROWSER
-  fact — plan it as a browser scenario that opens the route signed out. Before writing a scenario's
-  prose, ask which persona performs it; if the answer is "nobody", the claim belongs one level up or
-  it belongs to no pass at all.
-- **A scenario that asserts an absolute total.** The suite runs against a live
-  database nobody resets, so "the payment-failed count is zero, then one" is a
-  claim about every run that came before. Write summary and dashboard scenarios
-  as deltas — read the figure, do the thing, assert what moved — and before you
-  plan a tile, name the function in this plan that can move it. One planned here
-  counted uncaptured paid orders, which the checkout function makes impossible
-  to produce, so the scenario could only ever assert a zero.
-- **A permission rule invented here.** If the notes do not say who may do a thing, the answer is
-  `null` with the reason, not a rule you made up. A rule the user never agreed to is one they find
-  out about by being locked out of their own app.
-- **Prose that promises what the plan cannot reach.** Every clause of a scenario's `feature` or
-  `scenario` text has to be performed by a function — one in this plan, or one already in the meta.
-  Write "when the distributor is removed its companies fall back to the direct catalog" with no
-  function that removes a distributor, and `plan set` accepts it, `plan progress` passes, and the
-  milestone ships a sentence nothing proves. Read each description back asking *which function does
-  this*, and cut the half you cannot name. Naming the function is not enough on its own when the
-  scenario asks it to run TWICE: a guard that is one-per-day, one-per-order or one-per-person makes
-  the second call a refusal, and a scenario built on it cannot be performed in a single run however
-  correct the code is. One milestone planned "she finishes the second lesson and is nudged about the
-  third" against a function that refuses a second completion the same calendar day — discovered
-  mid-build, with nothing to do but write the leg out. Wherever a scenario repeats a call, check the
-  existing function for a per-period guard before you write the sentence.
-  The same trap runs through the milestone's own opening paragraph, and it is easier to miss there:
-  a screen named in that prose but carried by no `ui` item is invisible to `plan progress`, so the
-  milestone closes green with a sentence of itself unbuilt. One promised "the interval control on
-  the admin product form" — a form that does not exist anywhere in the app — while the plan's `ui`
-  slot listed two other routes and nothing else. Every screen your summary paragraph names is either
-  a `ui` item or a sentence to cut.
-- **A table planned into a later pass.** The model slot has no passes: a `model` item is checked
-  from the moment the milestone starts, so a table whose migration belongs to pass 3 is a PROBLEM
-  from pass 1 — and `plan progress` refuses a milestone on a problem, never defers one. So a
-  milestone that finishes pass 1 green cannot be closed, and the only honest fixes are outside the
-  build's hands. Put in `model` only the tables THIS milestone's pass 1 (or at worst its pass 2)
-  actually migrates; when a later pass needs its own tables, that is the signal it is a second
-  milestone, and `covers` is where you say so.
-- **A field the plan reads and nothing writes — or a state nothing leaves behind.** If the plan
-  filters, orders or badges on a column, name the function that sets it — or say it is seed data and
-  why. A catalog planned to hide products by country, with no way to mark a product's countries, is
-  a milestone that cannot be proven without amending the plan mid-build. Walk the model's fields and
-  ask *who writes this* before sending the plan; that pass is cheap here and expensive later.
-
-  The same question has to be asked of every state a scenario waits in, against the code that is
-  ALREADY built. One milestone planned a staff queue of "paid orders with no invoice yet" and a
-  journey through it; an earlier milestone had made the invoice at checkout, so no order a customer
-  could place was ever in that state, and the queue could only ever hold rows from before that
-  change. Three scenarios passed once against stale data and then failed. Read each precondition
-  back asking *which function leaves the world like this*, and if the answer is "one that ran two
-  milestones ago and no longer does", the journey is fiction — plan the one the app can actually
-  reach. Worse than stale is a state NOTHING reaches: a later plan wanted staff to "capture the
-  payment on an authorised order", and no function in the app or its addons could ever put an order
-  in `authorized` — the addon only holds money when checkout was started with a flag the plan's own
-  checkout input did not carry. The named person is part of the same question. Actors are not
-  interchangeable: one scenario was planned around a distributor salon owner buying from a catalogue
-  that is scoped by distributor and does not show her the product, so the journey could not start.
-  Before you name a state or a person in a scenario, name the function that produces it — and if
-  there is none, plan that function too.
-
-  And a `model` slot that says "this milestone adds no table" has to be true of the DATA the
-  scenarios read, not only of the entities they name. One here promised a checkout priced by
-  delivery country — a shipping rate per country, a VAT rate per country — against an `n/a` model,
-  while the only shipping table in the tree (an addon's) carries no country column at all. The
-  builder is then choosing between altering someone else's table and amending the plan, mid-build,
-  with neither choice recorded. Wherever a description prices, rates or tiers something BY a
-  dimension, say in the `model` slot where that lookup lives: a table this milestone adds, a column
-  on one that exists, or config-as-code — and if it is config, say so and why, exactly as you would
-  for seed data.
-- **Two sentences in the plan that cannot both be true.** A plan is read one
-  field at a time, so a contradiction between two scenario descriptions survives
-  every check `plan set` makes and is discovered by the builder, mid-build, with
-  the code already written one of the two ways. One plan here said a cancel on a
-  paid-up licence lands in `canceled` in one scenario and in `active_until_
-  expired` in the next; the legacy state machine settled it, but only because
-  the builder went and read it. Wherever the milestone has a STATE MACHINE —
-  anything with more than two states and a clock — write the transitions out
-  once, in the model slot, as the table they are, and let every scenario
-  description quote that table instead of restating it from memory.
-
-  Writing the table is not the end of it, because the table itself is where the
-  next contradiction hides. **Every timestamp a rule counts FROM is a clock;
-  find each clock, name who sets it and who reads it, and check that every rule
-  reading it agrees about when it starts.** The next plan wrote exactly this
-  table and still shipped one: it re-stamped `paused_at` at the moment a pause
-  took effect (so that "resume after four weeks paused" meant four weeks) and
-  left `canceled_at` at the moment the customer ASKED, as the legacy source
-  does — and so a licence cancelled in month one was, on the night its year ran
-  out, already past both the 28-day chase and the 60-day reactivation, and got
-  both in the same sweep before anyone could post anything back. One clock, two
-  readings, in one table, on one screen. When one clock in a family is
-  deliberately diverged from the source, the sibling clocks are where you look
-  next — either the same reasoning applies to them or the plan has to say why
-  it does not.
-- **A scenario that presupposes a control no `ui` item names.** A plan wrote
-  "the desk lists what is due, and staff run the collection as of that date"
-  while its screen only ever asked about today — and deliveries fall on the
-  first of a month, so the only thing that scenario could have asserted was an
-  empty desk. Read every scenario's prose back against the `ui` items the same
-  way you read it against the functions: each input the person is described as
-  giving has to be a field somebody planned.
-- **A refusal scenario naming a state the plan's own rules do not refuse.** A
-  plan asked for "a paused licence is refused the academy" in the same milestone
-  whose gate admitted `active_until_expired` — and pausing inside the paid
-  period is exactly what produces that state, so the scenario could only ever
-  have asserted a bug. A refusal is a claim about TWO things at once: that the
-  rule shuts, and that the described situation reaches the shut state. Write
-  every refusal scenario as "X, which is <state>, is refused because <rule>", and
-  check that state against the rule you wrote in the same plan.
-- **A child collection whose save says nothing about the rows already there.** Wherever a function
-  writes a set under a parent — a product's variants, an order's lines, a company's members — the
-  plan has to say whether a save REPLACES that set or ADDS to it. The two produce identical tables
-  and identical scenarios, and differ only on the second save. Left unsaid, one milestone shipped an
-  input schema that could not carry a variant's id, so every save re-added the variants it was given
-  to update: 1, 2, 4, 8, and by the nineteenth save 262,144 rows, with the suite green throughout.
-  Say it in the model slot, in the same breath as `onDelete` — that field settles what happens when
-  the parent goes, and this settles what happens when it stays.
+1. **Is this a plan for THIS note?** Every entity the note names appears in a function or a table.
+2. **Does pass 1 slice, and does the model fit inside it?** Not "pass 1: the data model, pass 2: the
+   API" — and `model` holds only the tables pass 1 or 2 actually migrates, because the model slot has
+   no passes and a later table is a PROBLEM from the first day.
+3. **Can each scenario actually be performed?** Name the persona; assert what the person got rather
+   than that the code ran; write totals as deltas against a database nobody resets; check that every
+   input the prose describes is a field somebody planned.
+4. **Does something produce every state and field the plan reads?** For each clause of a description,
+   each screen the opening paragraph names, each field you filter or badge on, and each state a
+   scenario waits in — name the function that gets the world there, checked against code that already
+   exists.
+5. **Can two sentences in the plan both be true?** Write a state machine out once as a table in
+   `model`, name who sets and reads every clock in it, and say whether saving a child collection
+   REPLACES it or ADDS to it.
+6. **Did you invent anything?** If the notes do not say who may do a thing, that is `null` with a
+   reason, not a rule you made up.
 
 ---
 
