@@ -19,3 +19,10 @@ it across a process boundary.
 Both take a profile's frontmatter keys, so a profile's gate is handed notes carrying its
 own keys and a repair to one of them refunds the attempt budget. `readMilestones` takes
 those keys too.
+
+A refusal a person has to settle also comes back as a `question`: a header, the question
+in the language of the app, and `options` when the answer comes from a vocabulary this
+package closes over — which `status:` a note is at, which `surface:` it has. Refusals
+about missing content carry no options, because inventing them would be inventing the
+answer. It is a value rather than a tool call, so a harness with a picker renders one and
+a harness without prints a list.

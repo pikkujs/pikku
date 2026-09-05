@@ -248,3 +248,71 @@ describe('runKnowledgeReconcile', () => {
     assert.equal(result.note, undefined)
   })
 })
+
+describe('the refusal as a question', () => {
+  test('a closed vocabulary becomes real options, in the language of the app', async () => {
+    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
+    await burn(path, SEATS.author)
+
+    const action = await nextAction(cwd)
+    assert.equal(action.kind, 'ask-user')
+    const question = action.kind === 'ask-user' ? action.question : null
+    assert.equal(question?.header, 'Where it stands')
+    assert.match(
+      question?.question ?? '',
+      /Where has "The daily entry" got to\?/
+    )
+    assert.deepEqual(
+      question?.options.map((o) => o.label),
+      ['designing', 'proposed', 'dispatched', 'built']
+    )
+    assert.equal(
+      question?.options.find((o) => o.label === 'dispatched')?.description,
+      'being built right now'
+    )
+
+    // The machine wording stays on `reason`, and must never be what a person is shown.
+    assert.match(
+      action.kind === 'ask-user' ? action.reason : '',
+      /`status: ready`/
+    )
+    assert.doesNotMatch(question?.question ?? '', /status|note|frontmatter/i)
+  })
+
+  test('an unreadable surface offers the five surfaces', async () => {
+    const path = milestone('01-the-daily-entry.md', { surface: 'telepathy' })
+    await burn(path, SEATS.author)
+    const action = await nextAction(cwd)
+    assert.equal(action.kind, 'ask-user')
+    assert.deepEqual(
+      action.kind === 'ask-user'
+        ? action.question.options.map((o) => o.label)
+        : [],
+      ['app', 'cli', 'mcp', 'agent', 'backend']
+    )
+  })
+
+  test('a refusal about missing content offers free text rather than inventing options', async () => {
+    const path = milestone('01-the-daily-entry.md', { entities: '' })
+    await burn(path, SEATS.author)
+    const action = await nextAction(cwd)
+    assert.equal(action.kind, 'ask-user')
+    assert.deepEqual(
+      action.kind === 'ask-user' ? action.question.options : null,
+      []
+    )
+    assert.match(
+      action.kind === 'ask-user' ? action.question.question : '',
+      /What is the main thing "The daily entry" is about/
+    )
+  })
+
+  test('the question survives the flattening to a command result', async () => {
+    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
+    await burn(path, SEATS.author)
+    const result = await runKnowledgeReconcile(cwd)
+    assert.equal(result.kind, 'ask-user')
+    assert.equal(result.note, path)
+    assert.equal(result.question?.options.length, 4)
+  })
+})

@@ -173,6 +173,17 @@ export {
 } from './milestone-gate.js'
 
 export {
+  KnowledgeQuestionOptionSchema,
+  KnowledgeQuestionSchema,
+  type KnowledgeQuestion,
+  type KnowledgeQuestionOption,
+  STATUS_DESCRIPTIONS,
+  SURFACE_DESCRIPTIONS,
+  askFreely,
+  chooseFrom,
+} from './question.js'
+
+export {
   MAX_ATTEMPTS,
   SEATS,
   type Seat,

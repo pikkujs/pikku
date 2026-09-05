@@ -243,6 +243,32 @@ pikku knowledge index --check   # report stale indexes without writing (CI gate)
 
 `index` rewrites only the block between `<!-- pikku:knowledge-index -->` markers, creating a scaffolded `index.md` for a section that has none. It is idempotent — running it twice changes nothing.
 
+### What to do next
+
+```bash
+pikku knowledge next            # the one thing to do next, derived from what is on disk
+```
+
+`next` is a pure read: it looks at the notes and answers with exactly one action —
+`repair-note`, `write-plan`, `ask-user`, `dispatch`, `hold`, or `idle`. Nothing has to
+be armed by whoever noticed a transition, so calling it twice is free and a state
+nobody anticipated is a missing answer rather than a run that quietly stops.
+
+Two things about the output matter if you are driving it:
+
+- **`reason` is machine wording.** It names the note, the frontmatter key and what the
+  gate wanted. Never repeat it to a person — they have not seen a note and it will read
+  as gibberish about files.
+- **`ask-user` carries a `question` as well.** That IS the version for a person: a
+  `header`, the question in the language of their app, and `options` when the answer
+  comes from a closed vocabulary (which `status:` it is, which `surface:` it is).
+  `options` is empty when the answer is free text, and an empty list means offer free
+  text — never invent choices to fill it.
+
+`hold` means a profile's own gate is holding the milestone and no seat this loop knows
+about can clear it. It names the hold and the notes it is about; what to do then
+belongs to that profile, not here.
+
 ### The milestone plan
 
 A milestone note says what the app must DO. Its **plan** — JSON beside the note, not prose — says what has to exist for it, and is what a finished build is measured against:

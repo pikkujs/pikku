@@ -11,6 +11,8 @@ import {
   KnowledgePlanSetOutput,
   KnowledgePlanShowInput,
   KnowledgePlanShowOutput,
+  KnowledgeReconcileInput,
+  KnowledgeReconcileOutput,
   KnowledgeValidateInput,
   KnowledgeValidateOutput,
 } from '@pikku/knowledge'
@@ -49,3 +51,6 @@ export const KnowledgePlanSetInputSchema = KnowledgePlanSetInput
 export const KnowledgePlanSetOutputSchema = KnowledgePlanSetOutput
 export const KnowledgePlanDeferInputSchema = KnowledgePlanDeferInput
 export const KnowledgePlanDeferOutputSchema = KnowledgePlanDeferOutput
+
+export const KnowledgeReconcileInputSchema = KnowledgeReconcileInput
+export const KnowledgeReconcileOutputSchema = KnowledgeReconcileOutput

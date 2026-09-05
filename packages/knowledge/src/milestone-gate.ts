@@ -10,9 +10,17 @@ import {
   readMilestones,
   surfaceOf,
   toolsOf,
+  withoutMilestonesDir,
   type MilestoneNote,
 } from './milestone.js'
 import type { KnowledgeNote } from './notes.js'
+import {
+  STATUS_DESCRIPTIONS,
+  SURFACE_DESCRIPTIONS,
+  askFreely,
+  chooseFrom,
+  type KnowledgeQuestion,
+} from './question.js'
 
 /**
  * Is there a milestone ready to hand to a builder, and which one?
@@ -74,6 +82,18 @@ export type MilestoneReadiness =
       awaitingNote?: true
       /** A profile's own hold — see {@link MilestoneHold}. */
       awaiting?: MilestoneHold
+      /**
+       * The refusal put to a person, when it is worth putting to one.
+       *
+       * `reason` is machine wording for a machine audience: it names the note, the
+       * frontmatter key and what the gate wanted, none of which means anything to
+       * somebody who has never seen a note. This is the same refusal asked as a
+       * question about their app, and it carries options only where the answer comes
+       * from a vocabulary this package closes over — a status, a surface. Everything
+       * else refuses on missing CONTENT, where the honest offer is free text and
+       * inventing options would be inventing the answer.
+       */
+      question?: KnowledgeQuestion
     }
 
 export type MilestoneRefusal = Extract<MilestoneReadiness, { ok: false }>
@@ -146,6 +166,12 @@ export async function readyMilestone(
       ok: false,
       reason: `Not dispatched: ${unreadable.path} has \`status: ${unreadable.status}\`, which is not a status. It is one of ${MILESTONE_STATUSES.join(', ')}, on its own line. Rewrite that line and leave the rest of the note alone.`,
       repairable: unreadable,
+      question: chooseFrom(
+        'Where it stands',
+        `Where has "${unreadable.title ?? withoutMilestonesDir(unreadable.path)}" got to?`,
+        MILESTONE_STATUSES,
+        (status) => STATUS_DESCRIPTIONS[status]
+      ),
     }
   }
 
@@ -196,6 +222,10 @@ async function noteReadiness(
       ok: false,
       reason: `Not dispatched: ${milestone.path} has no \`entities:\` — name the thing this milestone is about, so it is one buildable piece rather than an intention.`,
       repairable: milestone,
+      question: askFreely(
+        'What it is about',
+        `What is the main thing "${milestone.title ?? withoutMilestonesDir(milestone.path)}" is about — the thing people would be creating, listing or changing?`
+      ),
     }
   }
 
@@ -260,6 +290,12 @@ async function noteReadiness(
       ok: false,
       reason: `Not dispatched: ${milestone.path} has \`surface: ${milestone.surface}\`, which is not one of ${MILESTONE_SURFACES.join(', ')}. Use the one this milestone reaches its person through, or drop the line — absent means \`app\`.`,
       repairable: milestone,
+      question: chooseFrom(
+        'Where it lives',
+        `How do people reach "${milestone.title ?? withoutMilestonesDir(milestone.path)}"?`,
+        MILESTONE_SURFACES,
+        (surface) => SURFACE_DESCRIPTIONS[surface]
+      ),
     }
   }
 

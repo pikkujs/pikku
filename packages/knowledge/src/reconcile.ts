@@ -7,6 +7,11 @@ import {
   type MilestoneReadiness,
 } from './milestone-gate.js'
 import type { KnowledgeNote } from './notes.js'
+import {
+  KnowledgeQuestionSchema,
+  askFreely,
+  type KnowledgeQuestion,
+} from './question.js'
 import { readPlan } from './plan.js'
 
 /**
@@ -76,7 +81,20 @@ export type ReconcileAction =
   | { kind: 'idle'; why: string }
   | { kind: 'repair-note'; note: MilestoneNote; reason: string }
   | { kind: 'write-plan'; note: MilestoneNote; reason: string }
-  | { kind: 'ask-user'; note: MilestoneNote; reason: string }
+  /**
+   * Only a person can settle this, and every seat that could have resolved it has
+   * spent its budget.
+   *
+   * `reason` is the machine wording and must not be repeated to anybody — the reader
+   * has no idea what a milestone note is. `question` is the same refusal asked about
+   * their app, which is what a harness renders.
+   */
+  | {
+      kind: 'ask-user'
+      note: MilestoneNote
+      reason: string
+      question: KnowledgeQuestion
+    }
   | { kind: 'dispatch'; note: MilestoneNote }
   /**
    * A profile's gate is holding the milestone, and no seat this loop knows about can
@@ -165,7 +183,18 @@ export async function nextAction(
       return { kind: 'write-plan', note: ready.milestone, reason: plan.reason }
     }
     if (!isSpent(ready.milestone, SEATS.user)) {
-      return { kind: 'ask-user', note: ready.milestone, reason: plan.reason }
+      return {
+        kind: 'ask-user',
+        note: ready.milestone,
+        reason: plan.reason,
+        // A plan that could not be written is not a closed question: what is missing
+        // is whatever the conversation never settled, and this package cannot know
+        // what that is. Free text is the honest offer.
+        question: askFreely(
+          'What to build',
+          `What should "${ready.milestone.title ?? ready.milestone.path}" actually do first?`
+        ),
+      }
     }
     return {
       kind: 'idle',
@@ -193,7 +222,17 @@ export async function nextAction(
       }
     }
     if (!isSpent(ready.repairable, SEATS.user)) {
-      return { kind: 'ask-user', note: ready.repairable, reason: ready.reason }
+      return {
+        kind: 'ask-user',
+        note: ready.repairable,
+        reason: ready.reason,
+        question:
+          ready.question ??
+          askFreely(
+            'What to build',
+            `What should "${ready.repairable.title ?? ready.repairable.path}" actually do?`
+          ),
+      }
     }
     return {
       kind: 'idle',
@@ -230,6 +269,8 @@ export const KnowledgeReconcileOutput = z.object({
   hold: z.string().optional(),
   /** The notes a hold is about, on `hold`. */
   notes: z.array(z.string()).optional(),
+  /** The refusal as a question for a person, on `ask-user`. */
+  question: KnowledgeQuestionSchema.optional(),
 })
 
 export type KnowledgeReconcileResult = z.infer<typeof KnowledgeReconcileOutput>
@@ -255,6 +296,13 @@ export const runKnowledgeReconcile = async (
         reason: action.reason,
         hold: action.hold,
         notes: action.notes.map((note) => note.path),
+      }
+    case 'ask-user':
+      return {
+        kind: 'ask-user',
+        reason: action.reason,
+        note: action.note.path,
+        question: action.question,
       }
     default:
       return {

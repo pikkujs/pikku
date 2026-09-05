@@ -1,7 +1,13 @@
 import assert from 'node:assert'
 import { afterEach, describe, test } from 'node:test'
-import type { KnowledgePlanProgressResult } from '@pikku/knowledge'
-import { renderKnowledgePlanProgress } from './render.js'
+import type {
+  KnowledgePlanProgressResult,
+  KnowledgeReconcileResult,
+} from '@pikku/knowledge'
+import {
+  renderKnowledgePlanProgress,
+  renderKnowledgeReconcile,
+} from './render.js'
 
 const result = (
   over: Partial<KnowledgePlanProgressResult> = {}
@@ -85,5 +91,98 @@ describe('renderKnowledgePlanProgress', () => {
     )
     assert.equal(process.exitCode, 1)
     assert.ok(out.includes('No milestone'))
+  })
+})
+
+describe('renderKnowledgeReconcile', () => {
+  afterEach(() => {
+    process.exitCode = 0
+  })
+
+  const action = (
+    over: Partial<KnowledgeReconcileResult> = {}
+  ): KnowledgeReconcileResult => ({
+    kind: 'idle',
+    reason: 'nothing is written down yet',
+    ...over,
+  })
+
+  test('idle says why and nothing else', () => {
+    const out = capture(() =>
+      renderKnowledgeReconcile(null, action({ kind: 'idle' }))
+    )
+    assert.match(out, /nothing is written down yet/)
+    assert.doesNotMatch(out, /IDLE/)
+  })
+
+  test('a question is numbered with its options, and the machine reason is demoted', () => {
+    const out = capture(() =>
+      renderKnowledgeReconcile(
+        null,
+        action({
+          kind: 'ask-user',
+          note: 'knowledge/milestones/01-the-daily-entry.md',
+          reason: 'Not dispatched: `status: ready` is not a status.',
+          question: {
+            header: 'Where it stands',
+            question: 'Where has "The daily entry" got to?',
+            options: [
+              {
+                label: 'proposed',
+                description: 'settled, and ready to be built',
+              },
+              { label: 'built', description: 'already built' },
+            ],
+          },
+        })
+      )
+    )
+    assert.match(out, /ASK/)
+    assert.match(out, /Where has "The daily entry" got to\?/)
+    assert.match(out, /1\. proposed/)
+    assert.match(out, /2\. built/)
+    // The refusal is still readable, but under `why:` rather than as the question.
+    assert.match(out, /why:/)
+    const question = out.indexOf('Where has')
+    assert.ok(
+      question < out.indexOf('why:'),
+      'the question comes before the reason'
+    )
+  })
+
+  test('a free-text question says so rather than printing an empty list', () => {
+    const out = capture(() =>
+      renderKnowledgeReconcile(
+        null,
+        action({
+          kind: 'ask-user',
+          note: 'knowledge/milestones/01-the-daily-entry.md',
+          reason: 'Not dispatched: no `entities:`.',
+          question: {
+            header: 'What it is about',
+            question: 'What is the main thing this is about?',
+            options: [],
+          },
+        })
+      )
+    )
+    assert.match(out, /\(free text\)/)
+  })
+
+  test('a hold names what it is held on and which notes', () => {
+    const out = capture(() =>
+      renderKnowledgeReconcile(
+        null,
+        action({
+          kind: 'hold',
+          reason: 'Not dispatched: nobody has agreed the screen yet.',
+          hold: 'screens',
+          notes: ['knowledge/screens/today.md'],
+        })
+      )
+    )
+    assert.match(out, /HELD/)
+    assert.match(out, /held on:\s+screens/)
+    assert.match(out, /knowledge\/screens\/today\.md/)
   })
 })
