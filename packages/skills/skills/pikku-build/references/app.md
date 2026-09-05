@@ -577,10 +577,12 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
 - **Write the refusals.** The third step above is the whole point of §4: one
   persona reaching for another's row has to be rejected, and that rejection is a
   scenario. It is how you prove access control instead of asserting it.
-- **Add `SCENARIO_ACTOR_SECRET` to `.env`.** `bun run dev` generates that file
-  with a `BETTER_AUTH_SECRET` and nothing else, and without the actor secret
+- **Check `.env` has a `SCENARIO_ACTOR_SECRET`, and add one if not.** Recent
+  scaffolds generate it alongside `BETTER_AUTH_SECRET` on the first
+  `bun run dev`; older ones generated only the latter. Without the actor secret
   `/api/auth/sign-in/actor` is disabled — every scenario then fails at sign-in,
-  before its first step, for a reason that reads like an auth bug.
+  before its first step, for a reason that reads like an auth bug, and the login
+  screen's "Sign in as …" switcher renders nothing.
 - **There is no state reset.** A scenario runs against a live server: scope what
   you create to your own rows and unique ids, and never assume a clean database.
 
