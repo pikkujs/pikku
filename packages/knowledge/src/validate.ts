@@ -10,6 +10,10 @@ import {
 } from './plan-meta.js'
 import { checkPlanInternals, type PlanRead, readPlan } from './plan.js'
 import {
+  MILESTONE_STATUSES,
+  type MilestoneStatus,
+} from './milestone.js'
+import {
   KNOWLEDGE_DIR,
   type KnowledgeNote,
   MILESTONE_TYPE,
@@ -17,6 +21,8 @@ import {
   sectionOf,
   toPosix,
 } from './notes.js'
+
+export { MILESTONE_STATUSES, type MilestoneStatus }
 
 /**
  * Declared, not inferred from the schema below.
@@ -90,21 +96,6 @@ const FORBIDDEN_SECTIONS: Record<string, string> = {
   tables: '`pikku meta` — the generated db schema is the schema',
   routes: '`pikku meta` — the generated http meta is the routes',
 }
-
-/**
- * `designing` sits before `proposed`: the milestone is written down but is NOT to
- * be built yet, because whoever is being shown its looks has not picked one. Only
- * `proposed` is dispatchable, so the two cannot be one status without a milestone
- * being built out from under the person still choosing how it should look.
- */
-export const MILESTONE_STATUSES = [
-  'designing',
-  'proposed',
-  'dispatched',
-  'built',
-] as const
-
-export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number]
 
 /** Max entities per milestone: more than three and it is not one buildable piece. */
 const MAX_MILESTONE_ENTITIES = 3
