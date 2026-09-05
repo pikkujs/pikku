@@ -20,6 +20,14 @@ export interface SendWebhookInput {
 
 export interface SendWebhookResult {
   jobId: string
+  /**
+   * The delivery row's id, which is what `getDelivery` reads back. Present only
+   * on store-backed implementations. It is not interchangeable with `jobId`: a
+   * broker is free to assign its own identity — the JetStream queue returns a
+   * stream sequence — so a caller that hands `jobId` to `getDelivery` looks up
+   * an id that was never written.
+   */
+  deliveryId?: string
 }
 
 export interface WebhookServiceConfig {
