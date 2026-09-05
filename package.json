@@ -120,6 +120,10 @@
     "*.ts": [
       "oxlint",
       "prettier --write"
+    ],
+    "packages/core/src/**/*.ts": [
+      "yarn workspace @pikku/core run api-report",
+      "git add packages/core/api-report.md"
     ]
   }
 }
