@@ -50,7 +50,10 @@ export const pikkuCLITypes = pikkuSessionlessFunc<CLITypesCommandInput, void>({
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(cliTypesFile, userSessionType.typePath, packageMappings)}'`,
       userSessionType.type,
       `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(cliTypesFile, singletonServicesType.typePath, packageMappings)}'`,
-      singletonServicesType.type
+      singletonServicesType.type,
+      {
+        addon: !!config.addon,
+      }
     )
     await writeFileInDir(logger, cliTypesFile, content)
   },
