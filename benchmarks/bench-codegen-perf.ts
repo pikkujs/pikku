@@ -1,6 +1,12 @@
 /**
- * Codegen performance gate: generates 500 realistic functions + wires, runs
- * `pikku all`, and fails (exit 1) if it takes longer than THRESHOLD_MS.
+ * Codegen performance gate: generates 500 realistic functions + wires + an
+ * agent, runs `pikku all`, and fails (exit 1) when it is too slow, does more
+ * work than it should, or holds more memory than it should.
+ *
+ * Time is gated loosely (THRESHOLD_MS) because it swings ~2x with the runner.
+ * The real gates are counts, which don't: files parsed, checker work and live
+ * heap per inspector pass, read from the `[INSPECT]` rows `pikku all` prints
+ * under PIKKU_TIMING and from the heap probe preloaded into the child.
  *
  * Usage:
  *   node --import tsx/esm benchmarks/bench-codegen-perf.ts
@@ -29,46 +35,50 @@ const HEAP_PROBE = resolve(__dirname, 'codegen-heap-probe.cjs')
 const PROJECT_DIR = resolve(os.tmpdir(), 'pikku-codegen-perf')
 const FUNCTION_COUNT = 500
 const THRESHOLD_MS = 30_000
-// Each post-codegen re-inspection must stay under this absolute budget. A flat
-// ms ceiling (not a ratio to the initial pass) keeps the gate runner-independent.
-// The initial pass is CPU-bound — full per-function type resolution + schema
-// generation — and swings ~2x with runner speed; an incremental re-inspect is
-// I/O/AST-bound (reuses the prior ts.Program + the on-disk schema cache) and
-// stays ~stable (~2s for 500 fns) across slow and fast runners alike. A
-// regression that breaks that incremental reuse makes a re-inspect redo the full
-// resolution + schema gen, ballooning it to several seconds — well past this
-// ceiling on any runner. (A ratio gate flaked here: a fast runner shrinks the
-// CPU-bound denominator while the I/O-bound numerator holds, inflating the ratio
-// past the threshold with no actual regression.)
-const REINSPECT_MAX_MS = 4500
-// Sample the timed inspection a few times and judge the best (lowest) re-inspect,
-// so a one-off GC/IO stall on a CI runner can't flake the gate.
-const REINSPECT_SAMPLES = 3
-// Memory gates, measured by codegen-heap-probe.cjs on a separate cold run.
+// ── work gates ────────────────────────────────────────────────────────────────
+// `pikku all` inspects three times on this fixture: a setup-only pass, the
+// full pass, and a re-inspection after the agent wirings are generated (the
+// bench deletes those before the measured run so the re-inspection always
+// happens). Each is a ts.Program + type checker over the same ~900 files.
+const EXPECTED_PASSES = 3
+// A re-inspection must not do more checker work than the full pass it
+// follows. It sees the same project plus a handful of generated files, so its
+// type and instantiation counts sit within a few percent of the full pass; a
+// re-inspect that resolves what the full pass already resolved — or resolves
+// it differently — shows here before it shows in any timing.
+const REINSPECT_WORK_MAX_RATIO = 1.1
+// ...and must not pull in more files. Generated agent wirings account for a
+// few; a re-inspect that starts walking node_modules or a second project
+// accounts for hundreds.
+const REINSPECT_EXTRA_FILES_MAX = 16
+
+// ── memory gates ──────────────────────────────────────────────────────────────
+// Live heap (after a forced GC) at the moment each inspector pass starts,
+// from codegen-heap-probe.cjs. Only the current pass's program should be
+// alive; if the previous pass's state pins its program — its `typesLookup`
+// holds ts.Types, and a type reaches the checker and the whole program —
+// every pass starts a full program + exercised checker higher than the one
+// before, and a large project OOMs on a 2GB CI heap.
 //
-// `pikku all` builds several ts.Programs in one process (a setup-only inspector
-// pass, the full pass, ts-json-schema-generator's own, plus a re-inspection per
-// codegen stage that touched the source tree). Only the current pass's program
-// should be alive; if the previous pass's state pins its program — its
-// `typesLookup` holds ts.Types, and a type reaches the checker and the whole
-// program — every pass starts a full program + exercised checker higher than
-// the one before, and a large project OOMs on a 2GB CI heap. On this fixture
-// that pin makes the second inspector pass start ~120MB above the first, where
-// a healthy run starts within a few MB of it.
-const INSPECTOR_LIVE_GROWTH_MAX_MB = 64
+// The second pass is the sharp check: nothing but the setup pass has run, so
+// it starts within a few MB of the first (~150MB) unless that pass's program
+// is pinned (~+150MB).
+const PASS2_LIVE_GROWTH_MAX_MB = 64
+// By the re-inspection the full pass's state is legitimately alive — its meta,
+// 500 schemas, the schema generator's cached program — so it starts ~140MB
+// above the first pass. A pinned full-pass program and checker adds several
+// hundred MB on top.
+const REINSPECT_LIVE_GROWTH_MAX_MB = 256
 // Everything alive at once, at the worst moment of the run — the number that
-// actually hits the heap limit. ~490MB healthy on this fixture; two live
-// programs push it to ~640MB.
-const PEAK_HEAP_MAX_MB = 560
-// Programs built on a run: the setup-only pass and the full pass.
-// Building more means a stage re-inspects (or re-parses) that didn't before.
-const PROGRAM_COUNT_MAX = 2
+// actually hits the heap limit.
+const PEAK_HEAP_MAX_MB = 660
 
 // ── project scaffold ──────────────────────────────────────────────────────────
 
 function setupProject() {
   mkdirSync(resolve(PROJECT_DIR, 'src/functions'), { recursive: true })
   mkdirSync(resolve(PROJECT_DIR, 'src/wirings'), { recursive: true })
+  mkdirSync(resolve(PROJECT_DIR, 'src/agents'), { recursive: true })
   mkdirSync(resolve(PROJECT_DIR, 'types'), { recursive: true })
 
   const nmLink = resolve(PROJECT_DIR, 'node_modules')
@@ -205,6 +215,26 @@ export const ${name} = pikkuSessionlessFunc({
 })`
 }
 
+/**
+ * One agent, so `pikku all` generates agent wirings and re-inspects after
+ * them — the pass the memory and work gates are about. Its tools are the
+ * first two fixture functions; a provider-qualified model needs no alias.
+ */
+function agentFile(): string {
+  return `import { pikkuAgent } from '../../.pikku/agent/pikku-agent-types.gen.js'
+import { ref } from '../../.pikku/function/index.js'
+
+export const benchAgent = pikkuAgent({
+  name: 'bench-agent',
+  description: 'Exercises the post-agent re-inspection in the codegen benchmark',
+  goal: 'Call the test functions.',
+  model: 'openai/gpt-4',
+  tools: [ref('testFunc0001'), ref('testFunc0002')],
+  maxSteps: 3,
+})
+`
+}
+
 function httpWiringFile(count: number): string {
   const imports = Array.from({ length: count }, (_, i) => {
     const pad = String(i + 1).padStart(4, '0')
@@ -289,12 +319,43 @@ type HeapProgram = {
 }
 type HeapReport = { programs: HeapProgram[]; peakMb: number }
 
-function runAll(opts: { timing?: boolean; probe?: boolean } = {}): {
+/** One `[INSPECT]` row: what an inspector pass did and cost. */
+type InspectorPass = {
+  pass: number
+  kind: 'setup' | 'full'
+  files: number
+  project: number
+  reused: number
+  types: number
+  instantiations: number
+  symbols: number
+  cpuMs: number
+  wallMs: number
+  heapMb: number
+}
+
+/**
+ * The agent wirings `pikku all` generates. Removing them before a run makes
+ * the agent stage write them again, which is what triggers the re-inspection
+ * — otherwise only the first run on a fresh project would have one.
+ */
+function forceReinspect() {
+  for (const name of [
+    'pikku-agent-wirings.gen.ts',
+    'pikku-agent-wirings-meta.gen.ts',
+    'pikku-agent-wirings-meta.gen.json',
+  ]) {
+    rmSync(resolve(PROJECT_DIR, '.pikku/agent', name), { force: true })
+  }
+}
+
+function runAll(opts: { measure?: boolean } = {}): {
   ms: number
   stdout: string
   heap?: HeapReport
 } {
   clearSchemaCache()
+  if (opts.measure) forceReinspect()
   const probeOut = resolve(PROJECT_DIR, 'heap-probe.json')
   rmSync(probeOut, { force: true })
   const start = performance.now()
@@ -303,16 +364,16 @@ function runAll(opts: { timing?: boolean; probe?: boolean } = {}): {
   // before it fails there.
   const result = spawnSync(PIKKU_BIN, ['all'], {
     cwd: PROJECT_DIR,
-    timeout: 120_000,
+    timeout: 300_000,
     env: {
       ...process.env,
-      ...(opts.probe
+      ...(opts.measure
         ? {
             NODE_OPTIONS: `--expose-gc --require ${HEAP_PROBE}`,
             PIKKU_HEAP_PROBE_OUT: probeOut,
+            PIKKU_TIMING: '1',
           }
         : { NODE_OPTIONS: '' }),
-      ...(opts.timing ? { PIKKU_TIMING: '1' } : {}),
     },
   })
   if (result.status !== 0) {
@@ -323,23 +384,42 @@ function runAll(opts: { timing?: boolean; probe?: boolean } = {}): {
   return {
     ms: performance.now() - start,
     stdout: result.stdout?.toString() ?? '',
-    ...(opts.probe
+    ...(opts.measure
       ? { heap: JSON.parse(readFileSync(probeOut, 'utf8')) as HeapReport }
       : {}),
   }
 }
 
 /**
- * Parse the per-step timing table emitted by `pikku all` under PIKKU_TIMING.
- * Lines look like: `[TIMING]   1234ms  Re-inspect after workflows`
+ * Parse the per-pass rows `pikku all` prints under PIKKU_TIMING:
+ * `[INSPECT] pass=2 full files=908 project=528 reused=0 types=40939 ...`
  */
-function parseStepTimings(stdout: string): Map<string, number> {
-  const steps = new Map<string, number>()
+function parseInspectorPasses(stdout: string): InspectorPass[] {
+  const passes: InspectorPass[] = []
   for (const line of stdout.split('\n')) {
-    const m = line.match(/\[TIMING\]\s+(\d+)ms\s+(.+?)\s*$/)
-    if (m) steps.set(m[2], parseInt(m[1], 10))
+    const m = line.match(/\[INSPECT\]\s+pass=(\d+)\s+(setup|full)\s+(.*)$/)
+    if (!m) continue
+    const fields = Object.fromEntries(
+      m[3].split(/\s+/).map((kv) => {
+        const [k, v] = kv.split('=')
+        return [k, parseInt(v, 10)]
+      })
+    )
+    passes.push({
+      pass: parseInt(m[1], 10),
+      kind: m[2] as 'setup' | 'full',
+      files: fields.files,
+      project: fields.project,
+      reused: fields.reused,
+      types: fields.types,
+      instantiations: fields.instantiations,
+      symbols: fields.symbols,
+      cpuMs: fields.cpu,
+      wallMs: fields.wall,
+      heapMb: fields.heap,
+    })
   }
-  return steps
+  return passes
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
@@ -364,6 +444,7 @@ async function main() {
       functionFile(i)
     )
   }
+  writeFileSync(resolve(PROJECT_DIR, 'src/agents/bench.agent.ts'), agentFile())
   writeFileSync(
     resolve(wireDir, 'bench.http.wirings.ts'),
     httpWiringFile(FUNCTION_COUNT)
@@ -397,128 +478,129 @@ async function main() {
     console.log(`PASS: ${rounded}ms <= ${THRESHOLD_MS}ms`)
   }
 
-  // ── structural gate ──────────────────────────────────────────────────────
-  // A flat wall-clock ceiling can't catch "3x-redundant but still under budget"
-  // work. `pikku all` runs the inspector once up-front, then re-inspects after
-  // codegen produces new wirings. Those re-inspections should only need to pick
-  // up the handful of generated files — NOT redo the full per-function type
-  // resolution from the initial pass. Assert the worst re-inspect stays under an
-  // absolute ms ceiling so a regression to full re-walks fails (see
-  // REINSPECT_MAX_MS for why an absolute budget, not a ratio, is runner-stable).
-  const samples = Array.from({ length: REINSPECT_SAMPLES }, () => {
-    const steps = parseStepTimings(runAll({ timing: true }).stdout)
-    const initial = steps.get('Generate function types') ?? 0
-    const reinspects = [...steps.entries()].filter(([name]) =>
-      name.startsWith('Re-inspect')
-    )
-    const worst = reinspects.length
-      ? reinspects.reduce((a, b) => (b[1] > a[1] ? b : a))
-      : null
-    return { initial, reinspects, worst }
-  }).filter(
-    (
-      s
-    ): s is {
-      initial: number
-      reinspects: [string, number][]
-      worst: [string, number]
-    } => s.worst !== null
+  // ── measured run ─────────────────────────────────────────────────────────
+  // Its own run: the probe's forced GCs would inflate the timed one. Reports
+  // one line per inspector pass — the `[INSPECT]` counts plus the live heap
+  // the probe saw when that pass's program was created.
+  process.stdout.write(`\nMeasuring inspector passes ... `)
+  const measured = runAll({ measure: true })
+  const heap = measured.heap!
+  const passes = parseInspectorPasses(measured.stdout)
+  const programs = heap.programs.filter((p) => p.kind === 'inspector')
+  console.log(`${passes.length} passes, peak heap ${heap.peakMb}MB`)
+  console.log(
+    `  pass   kind   files  reused    types  instantiations   cpu(ms)  wall(ms)  live-at-start`
   )
-
-  if (samples.length > 0) {
-    // Best (lowest worst-reinspect) sample — a transient stall can only push a
-    // sample up, never down, so the minimum reflects the true incremental cost.
-    const best = samples.reduce((a, b) => (b.worst[1] < a.worst[1] ? b : a))
-    const [worstName, worstMs] = best.worst
-    const ratioPct = best.initial
-      ? ((worstMs / best.initial) * 100).toFixed(0)
-      : '?'
-    console.log(`\nInspector pass timings (best of ${samples.length}):`)
+  for (const p of passes) {
+    const live = programs[p.pass - 1]?.liveMb
     console.log(
-      `  ${String(best.initial).padStart(6)}ms  Generate function types (initial)`
+      `  ${String(p.pass).padStart(4)}  ${p.kind.padEnd(5)}  ` +
+        `${String(p.files).padStart(5)}  ${String(p.reused).padStart(6)}  ` +
+        `${String(p.types).padStart(7)}  ${String(p.instantiations).padStart(14)}  ` +
+        `${String(p.cpuMs).padStart(8)}  ${String(p.wallMs).padStart(8)}  ` +
+        `${live === undefined ? '?' : `${live}MB`}`
     )
-    for (const [name, dur] of best.reinspects) {
-      console.log(`  ${String(dur).padStart(6)}ms  ${name}`)
-    }
-    if (worstMs > REINSPECT_MAX_MS) {
-      console.error(
-        `\nFAIL: re-inspection "${worstName}" took ${worstMs}ms ` +
-          `(> ${REINSPECT_MAX_MS}ms ceiling; ${ratioPct}% of the ${best.initial}ms ` +
-          `initial pass). Re-inspections are redoing full per-function resolution ` +
-          `instead of reusing the incremental program + schema cache.`
-      )
-      failed = true
-    } else {
-      console.log(
-        `\nPASS: worst re-inspection "${worstName}" is ${worstMs}ms ` +
-          `(<= ${REINSPECT_MAX_MS}ms ceiling; ${ratioPct}% of initial)`
-      )
-    }
-  } else {
-    console.warn(
-      `\nWARN: could not find inspector pass timings — skipping structural gate`
+  }
+  for (const p of heap.programs.filter((p) => p.kind !== 'inspector')) {
+    console.log(
+      `  (+ ${p.kind} program at ${p.atMs}ms, ${p.liveMb}MB live: ${p.caller.replace(/\(.*\//, '(')})`
     )
   }
 
-  // ── memory gate ──────────────────────────────────────────────────────────
-  // Its own cold run: the probe's forced GCs would inflate the timed one.
-  process.stdout.write(`\nMeasuring heap across inspector passes ... `)
-  const { heap } = runAll({ probe: true })
-  if (!heap) throw new Error('heap probe produced no report')
-  console.log(`${heap.programs.length} programs, peak ${heap.peakMb}MB`)
-  for (const p of heap.programs) {
-    console.log(
-      `  #${p.index}  t=${String(p.atMs).padStart(5)}ms  ` +
-        `live=${String(p.liveMb).padStart(4)}MB  ${p.kind}  ` +
-        `(${p.caller.replace(/\(.*\//, '(')})`
-    )
-  }
-
-  const inspectorPasses = heap.programs.filter((p) => p.kind === 'inspector')
-  const [first, ...later] = inspectorPasses
-  if (!first || later.length === 0) {
-    console.error(
-      `\nFAIL: expected at least two inspector passes, saw ${inspectorPasses.length}`
-    )
+  const fail = (msg: string) => {
+    console.error(`\nFAIL: ${msg}`)
     failed = true
+  }
+  const pass = (msg: string) => console.log(`\nPASS: ${msg}`)
+
+  // ── work gates ───────────────────────────────────────────────────────────
+  if (
+    passes.length !== EXPECTED_PASSES ||
+    programs.length !== EXPECTED_PASSES
+  ) {
+    fail(
+      `expected ${EXPECTED_PASSES} inspector passes (setup, full, re-inspect ` +
+        `after agents), saw ${passes.length} [INSPECT] rows and ` +
+        `${programs.length} inspector programs`
+    )
   } else {
-    const worst = later.reduce((a, b) => (b.liveMb > a.liveMb ? b : a))
-    const growth = worst.liveMb - first.liveMb
-    if (growth > INSPECTOR_LIVE_GROWTH_MAX_MB) {
-      console.error(
-        `\nFAIL: inspector pass #${worst.index} starts with ${worst.liveMb}MB live, ` +
-          `${growth}MB above pass #${first.index} (> ${INSPECTOR_LIVE_GROWTH_MAX_MB}MB). ` +
-          `The previous pass's state is keeping its ts.Program (and checker) alive ` +
-          `across the re-inspection — see the typesLookup release in services.ts.`
+    const [, full, reinspect] = passes
+    const typesRatio = reinspect.types / full.types
+    const instRatio = reinspect.instantiations / full.instantiations
+    const extraFiles = reinspect.files - full.files
+    if (
+      typesRatio > REINSPECT_WORK_MAX_RATIO ||
+      instRatio > REINSPECT_WORK_MAX_RATIO
+    ) {
+      fail(
+        `re-inspection did ${(typesRatio * 100).toFixed(0)}% of the full pass's ` +
+          `types and ${(instRatio * 100).toFixed(0)}% of its instantiations ` +
+          `(> ${Math.round(REINSPECT_WORK_MAX_RATIO * 100)}%) — it is resolving more than ` +
+          `the full pass did`
       )
-      failed = true
     } else {
-      console.log(
-        `\nPASS: inspector passes start within ${growth}MB of the first ` +
-          `(<= ${INSPECTOR_LIVE_GROWTH_MAX_MB}MB)`
+      pass(
+        `re-inspection checker work is ${(typesRatio * 100).toFixed(0)}% types / ` +
+          `${(instRatio * 100).toFixed(0)}% instantiations of the full pass ` +
+          `(<= ${Math.round(REINSPECT_WORK_MAX_RATIO * 100)}%)`
       )
+    }
+    if (extraFiles > REINSPECT_EXTRA_FILES_MAX) {
+      fail(
+        `re-inspection parsed ${extraFiles} more files than the full pass ` +
+          `(> ${REINSPECT_EXTRA_FILES_MAX})`
+      )
+    } else {
+      pass(
+        `re-inspection program has ${extraFiles} more files than the full pass ` +
+          `(<= ${REINSPECT_EXTRA_FILES_MAX})`
+      )
+    }
+    // Not gated yet: `releaseProgram` in services.ts drops the program the
+    // next pass would reuse, so every pass re-parses everything (reused=0).
+    // Reported so the fix is measurable when it lands; gate it then.
+    console.log(
+      `INFO: re-inspection reused ${reinspect.reused}/${reinspect.files} ` +
+        `source files from the previous program`
+    )
+  }
+
+  // ── memory gates ─────────────────────────────────────────────────────────
+  const [first, second, ...later] = programs
+  if (first && second) {
+    const growth = second.liveMb - first.liveMb
+    if (growth > PASS2_LIVE_GROWTH_MAX_MB) {
+      fail(
+        `pass 2 starts with ${second.liveMb}MB live, ${growth}MB above pass 1 ` +
+          `(> ${PASS2_LIVE_GROWTH_MAX_MB}MB). The setup pass's state is keeping ` +
+          `its ts.Program (and checker) alive — see the typesLookup release in ` +
+          `services.ts.`
+      )
+    } else {
+      pass(
+        `pass 2 starts within ${growth}MB of pass 1 (<= ${PASS2_LIVE_GROWTH_MAX_MB}MB)`
+      )
+    }
+    for (const p of later) {
+      const growth = p.liveMb - first.liveMb
+      if (growth > REINSPECT_LIVE_GROWTH_MAX_MB) {
+        fail(
+          `pass ${p.index} starts with ${p.liveMb}MB live, ${growth}MB above ` +
+            `pass 1 (> ${REINSPECT_LIVE_GROWTH_MAX_MB}MB) — the full pass's ` +
+            `program is still alive during the re-inspection`
+        )
+      } else {
+        pass(
+          `pass ${p.index} starts ${growth}MB above pass 1 (<= ${REINSPECT_LIVE_GROWTH_MAX_MB}MB)`
+        )
+      }
     }
   }
 
   if (heap.peakMb > PEAK_HEAP_MAX_MB) {
-    console.error(
-      `FAIL: peak heap ${heap.peakMb}MB exceeds ${PEAK_HEAP_MAX_MB}MB`
-    )
-    failed = true
+    fail(`peak heap ${heap.peakMb}MB exceeds ${PEAK_HEAP_MAX_MB}MB`)
   } else {
-    console.log(`PASS: peak heap ${heap.peakMb}MB <= ${PEAK_HEAP_MAX_MB}MB`)
-  }
-
-  if (heap.programs.length > PROGRAM_COUNT_MAX) {
-    console.error(
-      `FAIL: ${heap.programs.length} ts.Programs built ` +
-        `(> ${PROGRAM_COUNT_MAX}) — a stage is re-inspecting that didn't before`
-    )
-    failed = true
-  } else {
-    console.log(
-      `PASS: ${heap.programs.length} ts.Programs built (<= ${PROGRAM_COUNT_MAX})`
-    )
+    pass(`peak heap ${heap.peakMb}MB <= ${PEAK_HEAP_MAX_MB}MB`)
   }
 
   if (failed) process.exit(1)

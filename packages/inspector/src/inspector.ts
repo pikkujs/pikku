@@ -335,6 +335,7 @@ export const inspect = async (
     allowJs: false,
     checkJs: false,
   }
+  const cpuStart = process.cpuUsage()
   const startProgram = performance.now()
   const program = ts.createProgram(
     normalizedRouteFiles,
@@ -345,6 +346,13 @@ export const inspect = async (
   logger.debug(
     `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${normalizedRouteFiles.length} files${options.oldProgram ? ', incremental' : ''})`
   )
+
+  // TS hands back the same SourceFile object for a file `oldProgram` already
+  // had and that hasn't changed, so identity is the reuse count.
+  const oldSourceFiles = new Set(options.oldProgram?.getSourceFiles() ?? [])
+  const filesReused = program
+    .getSourceFiles()
+    .filter((sf) => oldSourceFiles.has(sf)).length
 
   const startChecker = performance.now()
   const checker = program.getTypeChecker()
@@ -552,6 +560,18 @@ export const inspect = async (
     logger.endValidationPass?.()
   }
 
+  const cpu = process.cpuUsage(cpuStart)
+  state.stats = {
+    files: program.getSourceFiles().length,
+    projectFiles: sourceFiles.length,
+    filesReused,
+    types: program.getTypeCount(),
+    instantiations: program.getInstantiationCount(),
+    symbols: program.getSymbolCount(),
+    cpuMs: Math.round((cpu.user + cpu.system) / 1000),
+    wallMs: Math.round(performance.now() - startProgram),
+    heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1048576),
+  }
   state.program = program
 
   return state

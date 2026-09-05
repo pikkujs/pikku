@@ -290,6 +290,27 @@ export type AddonConfig = {
   forceInclude?: boolean
 }
 
+export interface InspectorPassStats {
+  /** Source files in the ts.Program, node_modules and lib included. */
+  files: number
+  /** Files under rootDir the inspector actually swept. */
+  projectFiles: number
+  /**
+   * Files taken over from `oldProgram` without re-parsing. Zero on a first
+   * pass; on a re-inspection it should be nearly all of `files` — the
+   * incremental reuse is what keeps a re-inspection cheaper than a cold one.
+   */
+  filesReused: number
+  /** Checker work, as `tsc --extendedDiagnostics` counts it. */
+  types: number
+  instantiations: number
+  symbols: number
+  cpuMs: number
+  wallMs: number
+  /** V8 heap in use when the pass finished, before any GC. */
+  heapUsedMb: number
+}
+
 export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
@@ -534,6 +555,12 @@ export interface InspectorState {
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
   typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
+  /**
+   * What this pass cost, in counts rather than time where it can be counted:
+   * counts don't move with the machine, so they are what a perf gate can
+   * compare across runners (see benchmarks/bench-codegen-perf.ts).
+   */
+  stats?: InspectorPassStats
   schemaLookup: Map<string, SchemaRef> // Lookup for schemas by name for deferred JSON Schema conversion (supports Standard Schema vendors)
   schemas: Record<string, JSONValue>
   http: InspectorHTTPState
