@@ -29,7 +29,11 @@ const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'fabric'])
  * conflation grew the group to a catch-all twice; if a Fabric install needs a
  * general skill, name it in Fabric's own install rather than tagging it here.
  */
-const FABRIC_SKILLS = ['pikku-fabric']
+const FABRIC_SKILLS = [
+  'pikku-admin-to-fabric',
+  'pikku-blueprint-to-fabric',
+  'pikku-fabric',
+]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
 
 type Frontmatter = {
