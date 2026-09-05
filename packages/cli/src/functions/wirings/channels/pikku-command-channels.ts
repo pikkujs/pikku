@@ -3,10 +3,7 @@ import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
 
 export const pikkuCommandChannels = pikkuSessionlessFunc<
   void,
@@ -51,25 +48,6 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       )
     )
 
-    const minimalMeta = stripVerboseFields(channels.meta)
-    await writeFileInDir(
-      logger,
-      channelsWiringMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    if (hasVerboseFields(channels.meta)) {
-      const verbosePath = channelsWiringMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
-      await writeFileInDir(
-        logger,
-        verbosePath,
-        JSON.stringify(channels.meta, null, 2)
-      )
-    }
-
     await writeFileInDir(
       logger,
       channelContractsMetaJsonFile,
@@ -94,21 +72,16 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       )
     }
 
-    const jsonImportPath = getFileImportRelativePath(
-      channelsWiringMetaFile,
-      channelsWiringMetaJsonFile,
-      packageMappings
-    )
-    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
-
-    await writeFileInDir(
+    await writeWiringMeta({
       logger,
-      channelsWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/state'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
-    )
+      meta: channels.meta,
+      metaJsonFile: channelsWiringMetaJsonFile,
+      metaFile: channelsWiringMetaFile,
+      packageMappings,
+      supportsImportAttributes: schema?.supportsImportAttributes ?? false,
+      serializeMetaTS: ({ importStatement }) =>
+        `import { pikkuState } from '@pikku/core/state'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`,
+    })
 
     return true
   },

@@ -16,10 +16,7 @@ import { serializeScenarioRegistration } from '../scenarios/serialize-scenario-r
 import { buildFeaturesMeta } from '../scenarios/serialize-feature-meta.js'
 import { serializeScenarioWorkflowMeta } from '../scenarios/serialize-scenario-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeMetaSidecar } from '../../../utils/write-wiring-meta.js'
 import { join, dirname } from 'path'
 import { rm } from 'fs/promises'
 
@@ -100,24 +97,12 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         const metaDir = scenarioNameSet.has(name)
           ? config.scenarioMetaDir
           : workflowMetaDir
-        const minimalMeta = stripVerboseFields(graphMeta)
-        const minimalPath = join(metaDir, `${name}.gen.json`)
-        await writeFileInDir(
+        await writeMetaSidecar({
           logger,
-          minimalPath,
-          JSON.stringify(minimalMeta, null, 2),
-          { ignoreModifyComment: true }
-        )
-
-        if (hasVerboseFields(graphMeta)) {
-          const verbosePath = join(metaDir, `${name}-verbose.gen.json`)
-          await writeFileInDir(
-            logger,
-            verbosePath,
-            JSON.stringify(graphMeta, null, 2),
-            { ignoreModifyComment: true }
-          )
-        }
+          meta: graphMeta,
+          metaJsonFile: join(metaDir, `${name}.gen.json`),
+          ignoreModifyComment: true,
+        })
       }
     }
 

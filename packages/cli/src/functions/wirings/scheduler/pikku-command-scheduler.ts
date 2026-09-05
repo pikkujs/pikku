@@ -6,11 +6,7 @@ import {
   serializeSchedulerMeta,
   serializeSchedulerMetaTS,
 } from './serialize-scheduler-meta.js'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
 
 export const pikkuScheduler = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -33,42 +29,22 @@ export const pikkuScheduler = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const fullMeta = serializeSchedulerMeta(scheduledTasks.meta)
 
-    // Write minimal JSON (runtime-only fields)
-    const minimalMeta = stripVerboseFields(fullMeta)
-    await writeFileInDir(
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+
+    await writeWiringMeta({
       logger,
-      schedulersWiringMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    // Write verbose JSON only if it has additional fields
-    if (hasVerboseFields(fullMeta)) {
-      const verbosePath = schedulersWiringMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
-      await writeFileInDir(
-        logger,
-        verbosePath,
-        JSON.stringify(fullMeta, null, 2)
-      )
-    }
-
-    const jsonImportPath = getFileImportRelativePath(
-      schedulersWiringMetaFile,
-      schedulersWiringMetaJsonFile,
-      packageMappings
-    )
-
-    await writeFileInDir(
-      logger,
-      schedulersWiringMetaFile,
-      serializeSchedulerMetaTS(
-        scheduledTasks.meta,
-        jsonImportPath,
-        schema?.supportsImportAttributes ?? false
-      )
-    )
+      meta: fullMeta,
+      metaJsonFile: schedulersWiringMetaJsonFile,
+      metaFile: schedulersWiringMetaFile,
+      packageMappings,
+      supportsImportAttributes,
+      serializeMetaTS: ({ jsonImportPath }) =>
+        serializeSchedulerMetaTS(
+          scheduledTasks.meta,
+          jsonImportPath,
+          supportsImportAttributes
+        ),
+    })
 
     await writeFileInDir(
       logger,

@@ -5,9 +5,12 @@ import { serializeFunctionImports } from './serialize-function-imports.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
   stripVerboseFields,
-  hasVerboseFields,
   reattachFunctionServices,
 } from '../../../utils/strip-verbose-meta.js'
+import {
+  writeMetaSidecar,
+  writeWiringMeta,
+} from '../../../utils/write-wiring-meta.js'
 import {
   partitionScenarioFunctions,
   partitionScenarioFunctionsMeta,
@@ -35,43 +38,21 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
     if (config.addonName) {
       minimalMeta = reattachFunctionServices(minimalMeta, appFunctionsMeta)
     }
-    await writeFileInDir(
-      logger,
-      functionsMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    // Write verbose JSON only if it has additional fields
-    if (hasVerboseFields(appFunctionsMeta)) {
-      const verbosePath = functionsMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
-      await writeFileInDir(
-        logger,
-        verbosePath,
-        JSON.stringify(appFunctionsMeta, null, 2)
-      )
-    }
-
-    const jsonImportPath = getFileImportRelativePath(
-      functionsMetaFile,
-      functionsMetaJsonFile,
-      packageMappings
-    )
-
-    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
 
     const packageName = config.addonName ? `'${config.addonName}'` : 'null'
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
 
-    await writeFileInDir(
+    await writeWiringMeta({
       logger,
-      functionsMetaFile,
-      `import { pikkuState } from '@pikku/core/state'\nimport type { FunctionsMeta } from '@pikku/core/services'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
-    )
+      meta: appFunctionsMeta,
+      minimalMeta,
+      metaJsonFile: functionsMetaJsonFile,
+      metaFile: functionsMetaFile,
+      packageMappings,
+      supportsImportAttributes,
+      serializeMetaTS: ({ importStatement }) =>
+        `import { pikkuState } from '@pikku/core/state'\nimport type { FunctionsMeta } from '@pikku/core/services'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`,
+    })
 
     // For addon packages, register ALL functions (they'll be invoked by consumers)
     // For main packages, only register functions that are invoked via internal RPCs
@@ -103,21 +84,15 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
     // Always written, even when empty: a project that deletes its last scenario
     // must stop registering the one it had, and the scenario bootstrap imports
     // these unconditionally.
-    await writeFileInDir(
-      logger,
-      scenarioStepsMetaJsonFile,
-      JSON.stringify(stripVerboseFields(scenarioFunctionsMeta), null, 2)
-    )
+    //
     // The bootstrap imports the stripped copy; the verbose one is read off disk
     // by whatever documents a scenario — the console needs `sourceFile` and
     // `exportedName` to show the code a step runs.
-    if (hasVerboseFields(scenarioFunctionsMeta)) {
-      await writeFileInDir(
-        logger,
-        scenarioStepsMetaJsonFile.replace(/\.gen\.json$/, '-verbose.gen.json'),
-        JSON.stringify(scenarioFunctionsMeta, null, 2)
-      )
-    }
+    await writeMetaSidecar({
+      logger,
+      meta: scenarioFunctionsMeta,
+      metaJsonFile: scenarioStepsMetaJsonFile,
+    })
     await writeFileInDir(
       logger,
       scenarioStepsMetaFile,

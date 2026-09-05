@@ -2,10 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import {
-  stripVerboseFields,
-  hasVerboseFields,
-} from '../../../utils/strip-verbose-meta.js'
+import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
 import { serializeAgentMap } from './serialize-agent-map.js'
 import { serializeModelAliases } from './serialize-model-aliases.js'
 
@@ -85,44 +82,19 @@ export const pikkuAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       agentsMeta: agents.agentsMeta,
     }
 
-    const minimalMeta = stripVerboseFields(metaData)
-    await writeFileInDir(
+    await writeWiringMeta({
       logger,
-      agentWiringMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    if (hasVerboseFields(metaData)) {
-      const verbosePath = agentWiringMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
-      await writeFileInDir(
-        logger,
-        verbosePath,
-        JSON.stringify(metaData, null, 2)
-      )
-    }
-
-    const jsonImportPath = getFileImportRelativePath(
-      agentWiringMetaFile,
-      agentWiringMetaJsonFile,
-      packageMappings
-    )
-
-    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
-
-    await writeFileInDir(
-      logger,
-      agentWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/state'
+      meta: metaData,
+      metaJsonFile: agentWiringMetaJsonFile,
+      metaFile: agentWiringMetaFile,
+      packageMappings,
+      supportsImportAttributes: schema?.supportsImportAttributes ?? false,
+      serializeMetaTS: ({ importStatement }) =>
+        `import { pikkuState } from '@pikku/core/state'
 import type { AgentsMeta } from '@pikku/core/agent'
 ${importStatement}
-pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AgentsMeta)`
-    )
+pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AgentsMeta)`,
+    })
 
     await writeFileInDir(
       logger,

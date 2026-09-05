@@ -278,30 +278,3 @@ export function hasVerboseFields(obj: unknown): boolean {
 
   return false
 }
-
-/**
- * Write both minimal and verbose meta files
- * Only writes verbose file if it differs from minimal
- *
- * @returns Object with paths that were written
- */
-export async function writeMetaFiles(
-  writeFile: (path: string, content: string) => Promise<void>,
-  basePath: string,
-  meta: unknown
-): Promise<{ minimal: string; verbose?: string }> {
-  const minimalMeta = stripVerboseFields(meta)
-  const minimalPath = basePath.replace(/\.gen\.json$/, '.gen.json')
-  const verbosePath = basePath.replace(/\.gen\.json$/, '-verbose.gen.json')
-
-  // Always write minimal
-  await writeFile(minimalPath, JSON.stringify(minimalMeta, null, 2))
-
-  // Only write verbose if it has additional fields
-  if (hasVerboseFields(meta)) {
-    await writeFile(verbosePath, JSON.stringify(meta, null, 2))
-    return { minimal: minimalPath, verbose: verbosePath }
-  }
-
-  return { minimal: minimalPath }
-}
