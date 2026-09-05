@@ -1,3 +1,10 @@
+## 0.12.73
+
+### Patch Changes
+
+- 6519c66: Report what each inspector pass did, not only how long it took. `inspect()` now records per-pass work counters on the state (`stats`: files in the program, files reused from the previous program, type/instantiation/symbol counts, CPU and wall time, heap in use), and `pikku all` prints one `[INSPECT]` row per pass under `PIKKU_TIMING`. The codegen benchmark gates on those counts and on live heap per pass instead of on step timings, which swing with the runner, and its fixture now includes an agent so the post-agent re-inspection is actually exercised.
+- 5447dba: Keep parsed source files across inspector passes. A re-inspection in `pikku all` used to re-parse and re-bind every file, because the previous `ts.Program` — the thing TypeScript reuses parses from — had to be dropped to free its type checker. The inspector now builds each program through a compiler host with a content-hashed `SourceFile` cache, so a re-inspection parses only what codegen just wrote while holding no checker: on the 500-function benchmark the re-inspection reuses all 908 files, its CPU time falls by a third, and peak heap drops.
+
 ## 0.12.72
 
 ### Patch Changes

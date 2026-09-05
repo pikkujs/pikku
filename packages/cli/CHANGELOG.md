@@ -1,3 +1,27 @@
+## 0.12.138
+
+### Patch Changes
+
+- 657de9e: Keep the description of a function an agent lists as a tool in the runtime meta
+
+  `description` is classed as a verbose field and stripped from the meta a
+  deployment ships, but `agent-prepare` needs it to tell the model what each tool
+  does. Where the verbose file is unreadable — a deployed bundle, or any app
+  shipping only the stripped copy — every tool was offered under its bare name.
+
+  The functions an agent actually lists as tools now keep their description in the
+  minimal meta, so the model sees them everywhere the agent runs. Descriptions for
+  functions no agent calls stay stripped.
+
+- 6519c66: Report what each inspector pass did, not only how long it took. `inspect()` now records per-pass work counters on the state (`stats`: files in the program, files reused from the previous program, type/instantiation/symbol counts, CPU and wall time, heap in use), and `pikku all` prints one `[INSPECT]` row per pass under `PIKKU_TIMING`. The codegen benchmark gates on those counts and on live heap per pass instead of on step timings, which swing with the runner, and its fixture now includes an agent so the post-agent re-inspection is actually exercised.
+- 984753f: Escape generated TypeScript string literals correctly. A scope display name, role name or environment name containing a backslash, a newline or an escaped quote produced a file that no longer parsed — or, worse, one that parsed with the value silently corrupted. All of the serializers now share one `tsLiteral` helper.
+- Updated dependencies [6519c66]
+- Updated dependencies [265df92]
+- Updated dependencies [5447dba]
+  - @pikku/inspector@0.12.73
+  - @pikku/deploy@0.12.6
+  - @pikku/deploy-cloudflare@0.12.14
+
 ## 0.12.137
 
 ### Patch Changes
