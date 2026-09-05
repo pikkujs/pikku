@@ -2141,4 +2141,67 @@ describe('invokedAgentsByFile', () => {
       ['/test/project/src/api/users.ts']
     )
   })
+
+  describe('Wired addon retention', () => {
+    // A unit that owns the generic `/rpc/:rpcName` catch-all (the rpcCaller
+    // unit, and agent units) dispatches arbitrary RPCs at runtime via
+    // `rpc.exposed(name)`, including namespaced addon RPCs like
+    // `admin:createUser`. No app-local function statically references those
+    // ids, so the catch-all must be enough to keep every wired addon's
+    // declaration — otherwise the per-unit bootstrap omits the addon package
+    // bootstrap and `rpc.exposed('admin:createUser')` throws RPCNotFoundError
+    // on a deployed stage.
+    const withAddons = () => {
+      const state = createMockInspectorState()
+      state.rpc.wireAddonDeclarations = new Map([
+        ['admin', { package: '@pikku/addon-admin' } as any],
+        ['console', { package: '@pikku/addon-console' } as any],
+      ])
+      state.rpc.usedAddons = new Set(['admin', 'console'])
+      return state
+    }
+
+    test('keeps all wired addons for a unit with the /rpc/:rpcName catch-all', () => {
+      const result = filterInspectorState(
+        withAddons(),
+        { names: ['/rpc/:rpcName', 'http:post:/rpc/:rpcName', 'rpcCaller'] },
+        mockLogger
+      )
+      assert.deepStrictEqual(
+        [...result.rpc.wireAddonDeclarations.keys()].sort(),
+        ['admin', 'console']
+      )
+      assert.deepStrictEqual([...result.rpc.usedAddons].sort(), [
+        'admin',
+        'console',
+      ])
+    })
+
+    test('drops wired addons for a unit without the catch-all that references no namespace', () => {
+      const result = filterInspectorState(
+        withAddons(),
+        { names: ['getUsers'] },
+        mockLogger
+      )
+      assert.deepStrictEqual([...result.rpc.wireAddonDeclarations.keys()], [])
+      assert.deepStrictEqual([...result.rpc.usedAddons], [])
+    })
+
+    test('still keeps an addon a surviving function statically references, without the catch-all', () => {
+      const state = withAddons()
+      state.serviceAggregation.usedFunctions.add('getUsers')
+      state.rpc.invokedFunctionsByFile = new Map([
+        ['/test/project/src/api/users.ts', new Set(['admin:createUser'])],
+      ])
+      const result = filterInspectorState(
+        state,
+        { names: ['getUsers'] },
+        mockLogger
+      )
+      assert.deepStrictEqual(
+        [...result.rpc.wireAddonDeclarations.keys()],
+        ['admin']
+      )
+    })
+  })
 })
