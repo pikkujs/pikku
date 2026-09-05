@@ -243,6 +243,7 @@ export const createSingletonServices: CreateSingletonServices<
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false
 
+  let inspectPass = 0
   const releaseProgram = (state: { program?: unknown } | undefined) => {
     if (state) state.program = undefined
   }
@@ -413,6 +414,19 @@ export const createSingletonServices: CreateSingletonServices<
       })
 
       logger.debug(`Inspector took ${Date.now() - inspectStart}ms`)
+      // One row per inspector pass under PIKKU_TIMING, next to the step table
+      // `pikku all` prints: the counts say what the pass did, the ms say what
+      // it cost here. The benchmark gates on the counts.
+      if (process.env.PIKKU_TIMING && unfilteredState.stats) {
+        const s = unfilteredState.stats
+        inspectPass++
+        logger.info(
+          `[INSPECT] pass=${inspectPass} ${setupOnly ? 'setup' : 'full'} ` +
+            `files=${s.files} project=${s.projectFiles} reused=${s.filesReused} ` +
+            `types=${s.types} instantiations=${s.instantiations} symbols=${s.symbols} ` +
+            `cpu=${s.cpuMs}ms wall=${s.wallMs}ms heap=${s.heapUsedMb}MB`
+        )
+      }
       inspectedTsGeneration = tsGenerationAtInspect
       inspectorInvalidated = false
 
