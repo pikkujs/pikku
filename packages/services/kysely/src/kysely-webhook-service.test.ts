@@ -75,6 +75,35 @@ describe('KyselyWebhookService', () => {
     assert.equal(delivery!.attempts.length, 0)
   })
 
+  test('send() reports the delivery id even when the broker assigns its own', async () => {
+    const db = createDb()
+    const added: { data: any; options: any }[] = []
+    const queue = {
+      supportsResults: false,
+      add: async (_name: string, data: any, options: any) => {
+        added.push({ data, options })
+        return '42'
+      },
+      getJob: async () => null,
+    }
+    await applyPikkuSchemas(db, [webhookSchema])
+    const service = new KyselyWebhookService(queue as any, db)
+    await service.init()
+
+    const { jobId, deliveryId } = await service.send({
+      url: 'https://example.com/hook',
+      event: 'user.created',
+      data: { id: 'u1' },
+      organizationId: 'org-1',
+    })
+
+    assert.equal(jobId, '42')
+    assert.notEqual(deliveryId, jobId)
+    assert.equal(deliveryId, added[0]!.options.jobId)
+    assert.ok(await service.getDelivery(deliveryId!))
+    assert.equal(await service.getDelivery(jobId), null)
+  })
+
   test('recordAttempt() appends attempts and rolls status forward', async () => {
     const db = createDb()
     const { queue } = createQueue()

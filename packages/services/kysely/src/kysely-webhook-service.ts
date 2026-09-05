@@ -36,7 +36,9 @@ export class KyselyWebhookService extends QueueWebhookService {
     this.initialized = true
   }
 
-  public async send(input: SendWebhookInput): Promise<SendWebhookResult> {
+  public async send(
+    input: SendWebhookInput
+  ): Promise<Required<SendWebhookResult>> {
     const deliveryId = globalThis.crypto.randomUUID()
     const { jobData, options } = await this.prepareDelivery(input)
 
@@ -57,7 +59,7 @@ export class KyselyWebhookService extends QueueWebhookService {
       { ...jobData, deliveryId },
       { ...options, jobId: deliveryId }
     )
-    return { jobId }
+    return { jobId, deliveryId }
   }
 
   public async recordAttempt(
