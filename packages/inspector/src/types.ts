@@ -296,9 +296,9 @@ export interface InspectorPassStats {
   /** Files under rootDir the inspector actually swept. */
   projectFiles: number
   /**
-   * Files taken over from `oldProgram` without re-parsing. Zero on a first
-   * pass; on a re-inspection it should be nearly all of `files` — the
-   * incremental reuse is what keeps a re-inspection cheaper than a cold one.
+   * Files served from the source-file cache without re-parsing. Zero on a
+   * first pass; on a re-inspection it should be nearly all of `files` — that
+   * reuse is what keeps a re-inspection cheaper than a cold one.
    */
   filesReused: number
   /** Checker work, as `tsc --extendedDiagnostics` counts it. */
