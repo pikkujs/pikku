@@ -25,6 +25,22 @@ export type {
   ProviderAdapter,
 } from './provider-adapter.js'
 
+export type {
+  BindingSource,
+  ContributorPlatform,
+  PlatformServiceContributor,
+} from './platform-service-contributor.js'
+
+export {
+  DEFAULT_BINDING_SOURCES,
+  assertContributorsSupported,
+  collectContributorImports,
+  collectContributorLines,
+  contributorBindingSources,
+  dedupeContributors,
+  partitionContributors,
+} from './platform-service-contributor.js'
+
 export { nodeBuiltinExternals } from './node-builtins.js'
 
 export { SERVER_READY_MARKER, serverReadyLine } from './server-ready.js'

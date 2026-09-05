@@ -14,7 +14,9 @@ const repoRoot = join(packageDir, '..', '..', '..')
  */
 const OWNED_NAMES = [
   'AgentDefinition',
+  'BindingSource',
   'ChannelDefinition',
+  'ContributorPlatform',
   'DeploymentHandler',
   'DeploymentManifest',
   'DeploymentUnit',
@@ -23,6 +25,7 @@ const OWNED_NAMES = [
   'GrantedAddon',
   'HttpRouteInfo',
   'MCPEndpointDefinition',
+  'PlatformServiceContributor',
   'ProviderAdapter',
   'QueueDefinition',
   'ScheduledTaskDefinition',

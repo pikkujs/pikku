@@ -2,7 +2,7 @@
  * Full dry-run deploy test: analyze → codegen per worker → bundle → plan
  *
  * Generates all files locally without hitting Cloudflare.
- * Usage: npx tsx packages/deploy/deploy-cloudflare/test-full-deploy.ts
+ * Usage: npx tsx packages/deploy/deploy-cloudflare/full-deploy-dry-run.ts
  */
 
 import { resolve, join } from 'node:path'

@@ -17,6 +17,7 @@ import {
 
 export { StandaloneProviderAdapter }
 export type { StandaloneProviderAdapterOptions } from './adapter.js'
+export type { PlatformServiceContributor } from '@pikku/deploy'
 
 export const createAdapter = (options?: StandaloneProviderAdapterOptions) =>
   new StandaloneProviderAdapter(options)

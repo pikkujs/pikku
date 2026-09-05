@@ -14,56 +14,32 @@ import {
   serverProxyConstants,
 } from './server-proxy-entry.js'
 import type {
+  BindingSource,
+  ContributorPlatform,
   DeploymentManifest,
   DeploymentUnit,
   EntryGenerationContext,
+  PlatformServiceContributor,
   ProviderAdapter,
 } from '@pikku/deploy'
+import {
+  assertContributorsSupported,
+  collectContributorImports,
+  collectContributorLines,
+  dedupeContributors,
+  partitionContributors,
+} from '@pikku/deploy'
 
-export type PlatformImports = {
+export type { PlatformServiceContributor } from '@pikku/deploy'
+
+export const CLOUDFLARE_BINDING_SOURCES: readonly BindingSource[] = [
+  'env',
+  'cloudflare',
+]
+
+export type PlatformImports = ContributorPlatform & {
   cfImports: string[]
   needsD1: boolean
-  needsQueue: boolean
-  needsWorkflow: boolean
-  needsAgent: boolean
-  /**
-   * Wired service names required by this unit (from each unit-service's
-   * `sourceServiceName`). Lets a contributor gate its imports on a custom,
-   * platform-specific service being present without the OSS adapter needing to
-   * know that service by name (e.g. a fabric contributor gating on 'browser').
-   */
-  serviceNames: string[]
-}
-
-/**
- * Hook for callers (custom deployers, orchestrators) to inject extra services
- * into the generated `createPlatformServices` block. Each contributor is
- * called once per entry; lines are emitted before `return services`. Imports
- * are spliced into the entry's import header.
- *
- * Contributors should gate their service wiring on env bindings being present
- * (`if (env.MY_BINDING) { ... }`) so the same generated entry runs both for
- * users who declare the bindings and for those who don't.
- */
-export interface PlatformServiceContributor {
-  /** Identifier — used for diagnostics and dedup if a contributor is passed twice. */
-  name: string
-  /**
-   * Module-level import lines this contributor's emitted code depends on.
-   * May be a static array or a function gated on platform capabilities —
-   * useful to avoid bundling heavy packages into workers that don't need them.
-   */
-  imports?: string[] | ((platform: PlatformImports) => string[])
-  /**
-   * Lines emitted inside `createPlatformServices`, before `return services`.
-   * `services` is in scope (typed as `ctx.servicesType`); so is `env` and
-   * `logger`. Return `[]` to opt out for the given context.
-   */
-  emit(args: {
-    ctx: EntryGenerationContext
-    platform: PlatformImports
-    isGateway: boolean
-  }): string[]
 }
 
 export interface CloudflareProviderAdapterOptions {
@@ -119,49 +95,42 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
   constructor(options: CloudflareProviderAdapterOptions = {}) {
     this.workflowQueues = options.workflowQueues ?? false
     this.httpQueueJobs = options.httpQueueJobs ?? false
-    // De-dupe contributors by name (last wins).
-    const byName = new Map<string, PlatformServiceContributor>()
-    for (const c of options.contributors ?? []) {
-      byName.set(c.name, c)
-    }
-    this.contributors = [...byName.values()]
+    this.contributors = dedupeContributors(options.contributors)
+    assertContributorsSupported(
+      this.contributors,
+      CLOUDFLARE_BINDING_SOURCES,
+      this.name
+    )
   }
 
   getPlatform(): 'browser' {
     return 'browser'
   }
 
-  /** Collect all contributor imports as a flat, de-duplicated array. */
-  private contributorImports(platform: PlatformImports): string[] {
-    const seen = new Set<string>()
-    const out: string[] = []
-    for (const c of this.contributors) {
-      const lines =
-        typeof c.imports === 'function'
-          ? c.imports(platform)
-          : (c.imports ?? [])
-      for (const line of lines) {
-        if (!seen.has(line)) {
-          seen.add(line)
-          out.push(line)
-        }
-      }
-    }
-    return out
+  private contributorImports(
+    platform: PlatformImports,
+    sources: readonly BindingSource[] = CLOUDFLARE_BINDING_SOURCES
+  ): string[] {
+    return collectContributorImports(this.contributorsFor(sources), platform)
   }
 
-  /** Run every contributor's emit() and concatenate the resulting lines. */
   private contributorLines(
     ctx: EntryGenerationContext,
     platform: PlatformImports,
-    isGateway: boolean
+    isGateway: boolean,
+    sources: readonly BindingSource[] = CLOUDFLARE_BINDING_SOURCES
   ): string[] {
-    const out: string[] = []
-    for (const c of this.contributors) {
-      const lines = c.emit({ ctx, platform, isGateway })
-      if (lines.length > 0) out.push(...lines)
-    }
-    return out
+    return collectContributorLines(this.contributorsFor(sources), {
+      ctx,
+      platform,
+      isGateway,
+    })
+  }
+
+  private contributorsFor(
+    sources: readonly BindingSource[]
+  ): PlatformServiceContributor[] {
+    return partitionContributors(this.contributors, sources).supported
   }
 
   /**
@@ -246,7 +215,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `import { pikkuState } from '@pikku/core/state'`,
       `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
-      ...this.contributorImports(platform),
+      ...this.contributorImports(platform, ['env']),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -308,7 +277,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,
       `  services.schema = new CFWorkerSchemaService(logger)`,
-      ...this.contributorLines(ctx, platform, false),
+      ...this.contributorLines(ctx, platform, false, ['env']),
       `  return services`,
       `}`,
     ]
