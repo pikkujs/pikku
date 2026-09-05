@@ -30,8 +30,10 @@ export type MilestoneSurface = (typeof MILESTONE_SURFACES)[number]
  * `surface:` is what the milestone reaches its person THROUGH, and it lives on the note
  * rather than in the plan: a milestone that is a CLI is a fact about the milestone, not
  * about the document written from it. `requires:` is what it cannot be built without.
+ * `tools:` is the functions a `surface: agent` milestone lets its model call, which is
+ * the one surface whose capability is not implied by anything else on the note.
  */
-export const MILESTONE_SCALARS = ['surface', 'requires'] as const
+export const MILESTONE_SCALARS = ['surface', 'requires', 'tools'] as const
 export type MilestoneNote = ProfileNote<(typeof MILESTONE_SCALARS)[number]>
 
 export const inMilestonesDir = (path: string): boolean =>
@@ -63,8 +65,25 @@ export function surfaceOf(note: MilestoneNote): MilestoneSurface {
   return isSurface(raw) ? raw : 'app'
 }
 
-export async function readMilestones(cwd: string): Promise<MilestoneNote[]> {
-  return (await readKnowledgeNotes(cwd, MILESTONE_SCALARS)).filter(
+/**
+ * Every milestone note, index and log excluded.
+ *
+ * @param extraScalars a profile's own frontmatter keys, read alongside this one's. A
+ * profile that gates on a key of its own — or whose repair budget must notice that key
+ * changing — has to be handed the note WITH it: read without, the key is absent from
+ * the parsed note, so a gate reads it as empty and a fingerprint taken over it cannot
+ * tell that it moved.
+ */
+export async function readMilestones<Key extends string = never>(
+  cwd: string,
+  extraScalars: readonly Key[] = []
+): Promise<ProfileNote<(typeof MILESTONE_SCALARS)[number] | Key>[]> {
+  return (
+    await readKnowledgeNotes<(typeof MILESTONE_SCALARS)[number] | Key>(cwd, [
+      ...MILESTONE_SCALARS,
+      ...extraScalars,
+    ])
+  ).filter(
     (note) =>
       inMilestonesDir(note.path) &&
       !note.reserved &&
@@ -97,7 +116,33 @@ export function personasIn(gherkin: string): string[] {
 }
 
 /** The entities a milestone's `entities:` names. */
-export const entitiesOf = (note: KnowledgeNote): string[] => listOf(note.entities)
+export const entitiesOf = (note: KnowledgeNote): string[] =>
+  listOf(note.entities)
+
+/**
+ * The functions a `surface: agent` milestone lets its model call.
+ *
+ * An agent milestone is a model holding the app's own functions and deciding when to
+ * use them. Given none it ships a chat box that answers questions about the app
+ * confidently and cannot do one thing in it — and no dependency gate catches that,
+ * because a milestone that declared nothing has nothing unmet.
+ */
+export const toolsOf = (note: MilestoneNote): string[] =>
+  listOf(note.tools?.replace(/[[\]]/g, ''))
+
+/**
+ * The `addon:<name>` tokens on a milestone's `requires:` line, in declaration order.
+ *
+ * A `requires:` token names ONE published addon, never a category or a kind of
+ * service, and whether a given name resolves is not knowable here — the registry
+ * behind it belongs to whoever is driving the build. This is the parse; the
+ * resolution is a profile gate's.
+ */
+export const addonsOf = (note: MilestoneNote): string[] =>
+  listOf(note.requires)
+    .map((token) => token.split(':').map((part) => part.trim()))
+    .filter(([kind, name]) => kind === 'addon' && !!name)
+    .map(([, name]) => name!)
 
 const PERSONA_QUOTE = /'([A-Za-z][A-Za-z0-9]*)'/g
 
@@ -289,7 +334,10 @@ export async function holdMilestoneLifecycle(
   try {
     for (const note of await readMilestones(cwd)) {
       if (!note.status || note.status === 'proposed') continue
-      held.set(note.path, { status: note.status, statusAt: note.statusAt ?? null })
+      held.set(note.path, {
+        status: note.status,
+        statusAt: note.statusAt ?? null,
+      })
     }
   } catch (err) {
     console.warn(`[milestone] could not snapshot the lifecycle: ${String(err)}`)
@@ -309,7 +357,9 @@ export async function holdMilestoneLifecycle(
         })
       }
     } catch (err) {
-      console.warn(`[milestone] could not restore the lifecycle: ${String(err)}`)
+      console.warn(
+        `[milestone] could not restore the lifecycle: ${String(err)}`
+      )
     }
   }
 }
