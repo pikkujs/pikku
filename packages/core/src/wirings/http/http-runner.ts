@@ -260,7 +260,11 @@ const executeRoute = async (
       remote: unsupportedChannelRemote,
     }
 
-    if (singletonServices.eventHub?.onChannelOpened) {
+    if (!singletonServices.eventHub) {
+      singletonServices.logger.warn(
+        `SSE route ${route.route} has no eventHub configured: the stream will open but never receive a published event`
+      )
+    } else {
       const channelRef = channel
       const channelHandler = {
         getChannel: () => channelRef,
@@ -270,10 +274,10 @@ const executeRoute = async (
         },
         sendBinary: (data: any) => channelRef.sendBinary(data),
       }
-      singletonServices.eventHub.onChannelOpened(channelHandler)
+      await singletonServices.eventHub.onChannelOpened(channelHandler)
       const originalClose = channel.close
       channel.close = () => {
-        singletonServices.eventHub.onChannelClosed(channelId)
+        singletonServices.eventHub!.onChannelClosed(channelId)
         originalClose()
       }
     }
