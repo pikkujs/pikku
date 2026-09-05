@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2877 observable things**: 913 exported names, plus
-1964 members on the classes and interfaces among them, reachable
+**2878 observable things**: 913 exported names, plus
+1965 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 148 | 116 | 418 |
+| `./services` | 148 | 116 | 419 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
@@ -4988,6 +4988,7 @@ export interface SendWebhookInput {
 }
 export interface SendWebhookResult {
   jobId: string
+  deliveryId?: string
 }
 export interface ServiceMeta {
   name: string
