@@ -30,6 +30,11 @@ export const sectionOf = (path: string): string => {
  * `status`, `entities` and `statusAt` apply to `type: milestone`, which is a piece
  * of work rather than a fact — so unlike every other note it has a state, a size,
  * and a time its state last changed.
+ *
+ * `attempts` is the loop's ledger — see `ledger.ts`. It is read here rather than
+ * left to a profile because a note carrying one is not a profile's private
+ * business: any reader that renders or diffs a note has to know the key is
+ * bookkeeping, not content.
  */
 export const KnowledgeNoteSchema = z.object({
   path: z.string(),
@@ -42,6 +47,7 @@ export const KnowledgeNoteSchema = z.object({
   status: z.string().optional(),
   entities: z.string().optional(),
   statusAt: z.string().optional(),
+  attempts: z.string().optional(),
   reserved: z.enum(['index', 'log']).optional(),
   body: z.string(),
 })
@@ -93,6 +99,7 @@ const SCALARS = [
   'status',
   'entities',
   'statusAt',
+  'attempts',
 ] as const
 
 /** `type` and `status` are closed vocabularies compared literally by every gate. */
