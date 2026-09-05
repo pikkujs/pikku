@@ -121,6 +121,31 @@ describe('createModuleRunner', { concurrency: false }, () => {
     assert.equal(runner.size, 1)
   })
 
+  test('import.meta survives the cjs transform', async () => {
+    const runner = createModuleRunner()
+    const file = join(tmpDir, 'meta.ts')
+
+    // A package with a native binding resolves its own neighbours through
+    // `createRequire(import.meta.url)`. Left to the cjs transform that reads
+    // `undefined` and every such package fails with "from ''".
+    await writeFile(
+      file,
+      `import { createRequire } from 'node:module'
+       export const url = import.meta.url
+       export const dir = import.meta.dirname
+       export const resolves = () =>
+         createRequire(import.meta.url).resolve('./sibling.cjs')`
+    )
+    await writeFile(join(tmpDir, 'sibling.cjs'), 'module.exports = {}')
+
+    const result = await runner.run(file)
+    assert.equal(result.ok, true)
+    const mod = (result as { exports: Record<string, unknown> }).exports
+    assert.equal(mod.url, pathToFileURL(file).href)
+    assert.equal(mod.dir, tmpDir)
+    assert.match((mod.resolves as () => string)(), /sibling\.cjs$/)
+  })
+
   test('reports a bad edit with its reason so the caller can say why', async () => {
     const runner = createModuleRunner()
     const file = join(tmpDir, 'broken.ts')
