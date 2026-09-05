@@ -115,10 +115,19 @@ export {
   MILESTONE_SURFACES,
   type MilestoneSurface,
   inMilestonesDir,
+  withoutMilestonesDir,
   surfaceOf,
   readMilestones,
   gherkinOf,
   personasIn,
+  quotedIn,
+  entitiesOf,
+  firstPersonStep,
+  setMilestoneStatus,
+  nominatedMilestone,
+  dispatchedMilestone,
+  markDispatchedMilestoneBuilt,
+  holdMilestoneLifecycle,
 } from './milestone.js'
 
 export {
