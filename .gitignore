@@ -1,6 +1,5 @@
 .gitignore
 lcov.info
-*.bun-build
 e2e/**/reports/
 
 .typedocs

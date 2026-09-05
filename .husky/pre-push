@@ -6,6 +6,16 @@
 cat > /dev/null
 
 set -e
+
+# `yarn build` and the binary verifier both shell out to `bun build`, which drops
+# a ~60 MB `.<hash>-00000000.bun-build` compile cache beside every entry point
+# and never removes it. Sweeping them here is why this runs on EXIT rather than
+# as a final line: the steps below are what create the files, so cleaning first
+# reclaims nothing, and cleaning only on success leaves a failed push's junk
+# behind. A cleanup failure must never fail an otherwise-green push, hence the
+# `|| true`. Left unswept these reached 236 files and 13.9 GB.
+trap 'node scripts/clean-bun-build-artifacts.mjs || true' EXIT
+
 yarn build
 yarn test
 yarn test:verifiers
