@@ -152,11 +152,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuVariableDefinitionTypes',
         null
       )
-      if (!config.addon) {
-        await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', {
-          bootstrap: true,
-        })
-      }
+      await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', {
+        bootstrap: true,
+      })
       // Before the re-inspect, not after: the inspector builds its own TS
       // program, and every user file reaches the wirings through
       // `#pikku/<leaf>`. Without the indexes those specifiers do not resolve,
@@ -236,9 +234,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
     await Promise.all(typeGenerators)
-    if (!config.addon) {
-      await workflow.do('CLI types', 'pikkuCLITypes', null)
-    }
+    await workflow.do('CLI types', 'pikkuCLITypes', null)
 
     const [middleware, permissions] = await Promise.all([
       workflow.do('Middleware', 'pikkuMiddleware', null),
