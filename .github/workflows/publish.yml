@@ -23,13 +23,65 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # `workflow_run` reports the conclusion of the WHOLE `Release` run, and that
+  # run carries the verifier and template matrices too — ~100 jobs `main.yml`
+  # deliberately does not gate a publish on ("they no longer stand between a
+  # merge and the registry"). Keying the publish on the run conclusion put them
+  # back in front of npm through the back door: one red
+  # `Verifiers (deploy-standalone, …)` and the Version Packages PR never opens,
+  # silently, because a skipped job reads as a green workflow.
+  #
+  # So resolve the five protecting jobs by name instead. The `workflow_run`
+  # payload carries no per-job results, hence the jobs API. A name that matches
+  # nothing counts as a failure: renaming a job in `main.yml` must close this
+  # gate loudly rather than open it.
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'cancelled'
+    permissions:
+      actions: read
+    outputs:
+      ok: ${{ steps.gate.outputs.ok }}
+    steps:
+      - name: Check the jobs that protect a publish
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs[] | [.name, (.conclusion // "pending")] | @tsv' > jobs.tsv
+
+          ok=true
+          for name in 'Validate Package Deps' 'Lint & Format' 'Build' 'Unit Tests' 'E2E Standard'; do
+            # Last occurrence wins so a re-run of a single job is what counts.
+            conclusion=$(awk -F'\t' -v n="$name" '$1==n {c=$2} END {print (c=="" ? "missing" : c)}' jobs.tsv)
+            if [ "$conclusion" = success ]; then
+              echo "- \`$name\`: success" >> "$GITHUB_STEP_SUMMARY"
+            else
+              ok=false
+              echo "::error::publish gate job '$name' is '$conclusion'"
+              echo "- \`$name\`: **$conclusion**" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+          if [ "$ok" = true ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Publishing." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Not publishing** — a job that protects the registry did not pass." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+
   publish:
     name: Publish
     runs-on: ubuntu-latest
-    # The gates that protect a publish (validate-deps, lint, build, unit-tests,
-    # e2e) ran in `main.yml`; this workflow only starts once that whole run
-    # succeeded, so there is nothing left to wait on here.
-    if: github.event.workflow_run.conclusion == 'success'
+    needs: gate
+    if: needs.gate.outputs.ok == 'true'
     # Publishing is npm trusted publishing (OIDC), so the job needs to mint an
     # id-token. Naming any permission drops the repo-wide `write` default for
     # every one not listed, so the two this job already relied on are spelled

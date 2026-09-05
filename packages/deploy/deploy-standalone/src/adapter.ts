@@ -671,6 +671,16 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     return ['sqlite-runtime-bun']
   }
 
+  /**
+   * The bun bundle is not the artifact that runs — `bun build --compile` turns
+   * it into the binary — so esbuild must not rename anything bun will rename
+   * again. See `getMangleIdentifiers` on the adapter interface for the boot
+   * failure the two passes produce together.
+   */
+  getMangleIdentifiers(): boolean {
+    return this.runtime !== 'bun'
+  }
+
   getPlatform(): 'node' {
     return 'node'
   }

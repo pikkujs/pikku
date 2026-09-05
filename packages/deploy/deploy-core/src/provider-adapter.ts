@@ -211,6 +211,20 @@ export interface ProviderAdapter {
   getFormat?(): 'esm' | 'cjs'
 
   /**
+   * Whether the bundler may rename identifiers. Defaults to true, which is
+   * right whenever `bundle.js` is the artifact that runs.
+   *
+   * Return false when the bundle is fed to a SECOND bundler, because the two
+   * renamers do not agree on what is safe. `bun build --compile` renamed the
+   * parameter of a mangled `wireCLI` to `t6` — the name esbuild had already
+   * given the top-level `registerCLICommands` that same function calls — so
+   * every compiled bun binary died at boot on `t6 is not a function`. The
+   * second pass mangles anyway, so nothing is lost but an intermediate file
+   * being larger on disk.
+   */
+  getMangleIdentifiers?(): boolean
+
+  /**
    * Skip the createRequire banner. CF Workers should return true —
    * `import.meta.url` is undefined there and the banner crashes at boot.
    */

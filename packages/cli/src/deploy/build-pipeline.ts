@@ -130,7 +130,9 @@ function findLockfile(projectDir: string): string | null {
  */
 function resolveProjectVersion(projectDir: string): string | undefined {
   try {
-    const pkg = JSON.parse(readFileSync(join(projectDir, 'package.json'), 'utf-8'))
+    const pkg = JSON.parse(
+      readFileSync(join(projectDir, 'package.json'), 'utf-8')
+    )
     return typeof pkg.version === 'string' ? pkg.version : undefined
   } catch {
     return undefined
@@ -324,6 +326,7 @@ export async function runBuildPipeline(options: {
         define: provider.getDefine?.(),
         platform: provider.getPlatform?.(),
         format: provider.getFormat?.(),
+        mangleIdentifiers: provider.getMangleIdentifiers?.(),
         noRequireShim: provider.getNoRequireShim?.(),
         sourcemap: debugArtifacts,
         emitMetafile: debugArtifacts,
@@ -483,6 +486,7 @@ export async function runBuildPipeline(options: {
           define: provider.getDefine?.(),
           platform: provider.getPlatform?.(),
           format: provider.getFormat?.(),
+          mangleIdentifiers: provider.getMangleIdentifiers?.(),
           noRequireShim: provider.getNoRequireShim?.(),
           sourcemap: debugArtifacts,
           emitMetafile: debugArtifacts,

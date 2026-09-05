@@ -235,6 +235,7 @@ export abstract class BaseBundler implements Bundler {
       sourcemap,
       emitMetafile,
       deadPatterns,
+      mangleIdentifiers: options.mangleIdentifiers !== false,
     })
 
     // Metafile is large (~1.6MB/unit) and never needed at runtime — only

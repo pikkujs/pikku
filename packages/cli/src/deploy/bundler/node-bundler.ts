@@ -64,7 +64,14 @@ export class NodeBundler extends BaseBundler {
       // runtime (CF Workers / container), tsc is never the bundler. keepNames
       // preserves Function.name / constructor.name so name-based reflection
       // still works.
-      minify: true,
+      //
+      // Whitespace and syntax always; identifiers only when this bundle is the
+      // shipped artifact. `minify: true` cannot express that — esbuild ORs it
+      // over the granular flags, so a `minifyIdentifiers: false` beside it is
+      // silently ignored.
+      minifyWhitespace: true,
+      minifySyntax: true,
+      minifyIdentifiers: input.mangleIdentifiers,
       keepNames: true,
       sourcemap: input.sourcemap,
       logLevel: 'warning',

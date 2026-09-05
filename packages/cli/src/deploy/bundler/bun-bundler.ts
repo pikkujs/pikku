@@ -173,7 +173,7 @@ export class BunBundler extends BaseBundler {
       minify: {
         whitespace: true,
         syntax: true,
-        identifiers: true,
+        identifiers: input.mangleIdentifiers,
         keepNames: true,
       },
       sourcemap: input.sourcemap ? 'external' : 'none',

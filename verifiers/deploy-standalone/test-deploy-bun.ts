@@ -162,28 +162,40 @@ async function startBinary(): Promise<void> {
   // Track immediately so cleanup can always kill it, even on a start timeout.
   serverProc = proc
 
+  // Both streams, and the whole tail rather than one line. A bun crash ends
+  // with its own version banner (`Bun v1.4.0 (Linux x64)`), so reporting only
+  // the LAST line threw away every crash this check exists to surface and left
+  // CI saying nothing but the bun version.
   let stderr = ''
+  let stdout = ''
   proc.stderr?.on('data', (d) => {
     stderr += d.toString()
   })
+  proc.stdout?.on('data', (d) => {
+    stdout += d.toString()
+  })
+  const output = () => {
+    const text = [stderr, stdout]
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join('\n')
+    if (!text) return ''
+    return `:\n${text
+      .split('\n')
+      .slice(-30)
+      .map((l) => `      ${l}`)
+      .join('\n')}`
+  }
 
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       clearInterval(interval)
-      reject(
-        new Error(
-          `Binary start timeout (10s)${stderr ? `: ${stderr.trim().split('\n').slice(-1)[0]}` : ''}`
-        )
-      )
+      reject(new Error(`Binary start timeout (10s)${output()}`))
     }, 10000)
     proc.on('exit', (code) => {
       clearInterval(interval)
       clearTimeout(timeout)
-      reject(
-        new Error(
-          `Binary exited early (code ${code})${stderr ? `: ${stderr.trim().split('\n').slice(-1)[0]}` : ''}`
-        )
-      )
+      reject(new Error(`Binary exited early (code ${code})${output()}`))
     })
     // Readiness = the server is listening (any HTTP response), independent of
     // auth/DB so the probe doesn't hang when a request happens to 500.

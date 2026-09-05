@@ -36,6 +36,12 @@ export interface CompileInput {
   emitMetafile: boolean
   /** Regexes for modules to replace with an empty `export {}` module. */
   deadPatterns: RegExp[]
+  /**
+   * Whether the compile may rename identifiers. False when the bundle is an
+   * INPUT to a second bundler rather than the shipped artifact — see
+   * `getMangleIdentifiers` on the provider adapter.
+   */
+  mangleIdentifiers: boolean
 }
 
 export interface CompileResult {
@@ -55,6 +61,8 @@ export interface BundleUnitsOptions {
   sourcemap?: boolean
   emitMetafile?: boolean
   stubModules?: string[]
+  /** Defaults to true; see {@link CompileInput.mangleIdentifiers}. */
+  mangleIdentifiers?: boolean
   resolveOutputDir?: (unit: DeploymentUnit, baseOutputDir: string) => string
 }
 
