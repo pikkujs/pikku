@@ -171,7 +171,18 @@ jobs:
           OPENAI_BASE_URL: https://openrouter.ai/api/v1
 
   verifiers:
-    name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
+    # One row per verifier, run under bun. There used to be a second row per
+    # verifier for yarn, and it proved nothing the bun row did not: verifiers are
+    # workspace members installed by the root `yarn install` in the shared setup
+    # action, so neither row does its own resolution, and every verifier's `test`
+    # script is package-manager-agnostic (`npx tsx ...`, `pikku && tsc`). The axis
+    # only chose which binary launched an identical script — one duplicate job per
+    # verifier, in a run that was already queueing ~10 at a time.
+    #
+    # Real package-manager coverage lives where it can differ: `develop.yml`
+    # scaffolds each template under yarn AND bun through `test-template.sh`, which
+    # installs from npm for real. Everything reaching main goes through that first.
+    name: Verifiers (${{ matrix.verifier }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
@@ -203,11 +214,10 @@ jobs:
             webhooks,
             db-schema,
           ]
-        package-manager: [yarn, bun]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
+      - run: cd verifiers/${{ matrix.verifier }} && bun run test
 
   # The only verifier that runs a browser, so it gets its own job rather than a
   # row in the matrix: every other row would pay for a ~90MB chromium download
