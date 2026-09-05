@@ -5,6 +5,7 @@ import type {
   KnowledgePlanSchemaResult,
   KnowledgePlanSetResult,
   KnowledgePlanShowResult,
+  KnowledgeReconcileResult,
   KnowledgeValidateResult,
 } from '@pikku/knowledge'
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
@@ -200,4 +201,59 @@ export const renderKnowledgePlanDefer = (
 ): void => {
   console.log(`${ok ? added('✓') : removed('✗')}  ${message}`)
   if (!ok) process.exitCode = 1
+}
+
+/**
+ * What to do next, and — when only a person can settle it — the question to put to
+ * them.
+ *
+ * The action's `reason` is machine wording that names the note and the frontmatter
+ * key; on `ask-user` it is deliberately NOT what gets printed as the question, because
+ * the reader there has never seen a note. The options are numbered rather than
+ * rendered as a picker: this is the fallback every harness has, and one that can do
+ * better reads the same answer as JSON.
+ */
+export const renderKnowledgeReconcile = (
+  _services: unknown,
+  { kind, reason, note, hold, notes, question }: KnowledgeReconcileResult
+): void => {
+  if (kind === 'idle') {
+    console.log(`${dim('=')}  ${dim(reason)}`)
+    return
+  }
+
+  const label: Record<string, string> = {
+    'repair-note': 'REPAIR',
+    'write-plan': 'PLAN',
+    'ask-user': 'ASK',
+    dispatch: 'BUILD',
+    hold: 'HELD',
+  }
+  const paint = kind === 'dispatch' ? added : kind === 'hold' ? dim : changed
+  console.log(
+    `${paint(label[kind] ?? kind.toUpperCase())}  ${note ?? ''}`.trim()
+  )
+  console.log()
+
+  if (question) {
+    console.log(`${dim(question.header)}`)
+    console.log(question.question)
+    question.options.forEach((option, index) => {
+      const description = option.description
+        ? `  ${dim(option.description)}`
+        : ''
+      console.log(`  ${index + 1}. ${option.label}${description}`)
+    })
+    if (question.options.length === 0) console.log(dim('  (free text)'))
+    console.log()
+    console.log(`${dim('why:')}  ${dim(reason)}`)
+    return
+  }
+
+  console.log(reason)
+  if (hold) {
+    console.log()
+    console.log(`${dim('held on:')}  ${hold}`)
+    for (const path of notes ?? []) console.log(`  ${dim(path)}`)
+  }
 }

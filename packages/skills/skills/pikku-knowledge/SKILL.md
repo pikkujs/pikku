@@ -141,7 +141,8 @@ And writing again replaces it rather than adding a second
 ```
 ````
 
-- **`status`** is `proposed` → `dispatched` → `built`. Nothing else. Every gate compares it literally.
+- **`status`** is `designing` → `proposed` → `dispatched` → `built`. Nothing else. Every gate compares it literally. `designing` sits BEFORE `proposed`: the slice is written down but must not be built yet, because whoever is being shown its looks has not picked one. Only `proposed` is dispatchable, so the two cannot be one status without a slice being built out from under the person still choosing.
+- **`statusAt:` and `attempts:` are bookkeeping, not content — never hand-edit them.** A loop driving this base writes both. `statusAt:` is stamped by whatever moved the status, and is what makes "how long has this been building?" answerable; the file's mtime is not the transition time, because a note is edited after dispatch for all sorts of reasons. `attempts:` is `seat@hash` entries recording which seat has already tried to move this note forward, against the content it was trying to move — it is the loop's only brake, and clearing it by hand hands back a budget that exists to stop a note nothing can satisfy being rewritten forever. Rewriting the note's real content refunds that budget on its own, which is the point: an answer that changes the note is what unsticks it.
 - **`entities`** lists what the slice touches, **at most three**. Past three it is not one buildable piece — split it.
 - **The scenario is a fenced `gherkin` block, in the third person.** `Given 'owner' has no entry` — never `Given I have no entry`. A quoted word _means a persona_, which is what lets a reader (and a test) tell who is acting. First person hides that, so it is rejected. The console draws the keywords as a column and each quoted persona as a chip, so a first-person scenario is visibly a block with no personas in it.
 
@@ -242,6 +243,32 @@ pikku knowledge index --check   # report stale indexes without writing (CI gate)
 `validate` reports: notes with no `type`, a missing `knowledge/index.md`, a section with no `index.md`, notes flat at the root, sections that duplicate what the project already declares, slices with a bad or missing `status`, slices over three entities, slices with no gherkin block or a first-person one, `decision` fences that state no `chosen:` or rule nothing out, and every `resource:` that no longer resolves. Errors fail the command; warnings do not.
 
 `index` rewrites only the block between `<!-- pikku:knowledge-index -->` markers, creating a scaffolded `index.md` for a section that has none. It is idempotent — running it twice changes nothing.
+
+### What to do next
+
+```bash
+pikku knowledge next            # the one thing to do next, derived from what is on disk
+```
+
+`next` is a pure read: it looks at the notes and answers with exactly one action —
+`repair-note`, `write-plan`, `ask-user`, `dispatch`, `hold`, or `idle`. Nothing has to
+be armed by whoever noticed a transition, so calling it twice is free and a state
+nobody anticipated is a missing answer rather than a run that quietly stops.
+
+Two things about the output matter if you are driving it:
+
+- **`reason` is machine wording.** It names the note, the frontmatter key and what the
+  gate wanted. Never repeat it to a person — they have not seen a note and it will read
+  as gibberish about files.
+- **`ask-user` carries a `question` as well.** That IS the version for a person: a
+  `header`, the question in the language of their app, and `options` when the answer
+  comes from a closed vocabulary (which `status:` it is, which `surface:` it is).
+  `options` is empty when the answer is free text, and an empty list means offer free
+  text — never invent choices to fill it.
+
+`hold` means a profile's own gate is holding the milestone and no seat this loop knows
+about can clear it. It names the hold and the notes it is about; what to do then
+belongs to that profile, not here.
 
 ### The milestone plan
 

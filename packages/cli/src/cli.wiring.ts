@@ -42,6 +42,10 @@ import {
   renderKnowledgeIndex,
 } from './functions/commands/knowledge-index.js'
 import {
+  knowledgeReconcile,
+  renderKnowledgeReconcile,
+} from './functions/commands/knowledge-reconcile.js'
+import {
   knowledgePlanDefer,
   knowledgePlanProgress,
   knowledgePlanSchema,
@@ -646,6 +650,12 @@ wireCLI({
               default: false,
             },
           },
+        }),
+        next: pikkuCLICommand({
+          func: knowledgeReconcile,
+          render: renderKnowledgeReconcile,
+          description:
+            'Say the one thing to do next — repair a note, write a plan, ask the user, build, or nothing',
         }),
         plan: {
           description:

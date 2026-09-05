@@ -122,6 +122,8 @@ export {
   personasIn,
   quotedIn,
   entitiesOf,
+  toolsOf,
+  addonsOf,
   firstPersonStep,
   setMilestoneStatus,
   nominatedMilestone,
@@ -160,5 +162,38 @@ export {
 } from './plan-command.js'
 
 export { type MilestoneNote, MILESTONE_SCALARS } from './milestone.js'
+
+export {
+  type MilestoneHold,
+  type MilestoneReadiness,
+  type MilestoneRefusal,
+  type MilestoneGate,
+  type ReadyMilestoneOptions,
+  readyMilestone,
+} from './milestone-gate.js'
+
+export {
+  KnowledgeQuestionOptionSchema,
+  KnowledgeQuestionSchema,
+  type KnowledgeQuestion,
+  type KnowledgeQuestionOption,
+  STATUS_DESCRIPTIONS,
+  SURFACE_DESCRIPTIONS,
+  askFreely,
+  chooseFrom,
+} from './question.js'
+
+export {
+  MAX_ATTEMPTS,
+  SEATS,
+  type Seat,
+  type ReconcileAction,
+  type ReconcileOptions,
+  nextAction,
+  KnowledgeReconcileInput,
+  KnowledgeReconcileOutput,
+  type KnowledgeReconcileResult,
+  runKnowledgeReconcile,
+} from './reconcile.js'
 
 export { basePlan } from './plan-fixture.js'
