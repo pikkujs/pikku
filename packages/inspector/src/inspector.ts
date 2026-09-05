@@ -10,6 +10,7 @@ import type {
 } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
+import { createSourceFileCacheHost } from './source-file-cache.js'
 import { createNestedProjectFilter } from './utils/nested-project-filter.js'
 import {
   aggregateRequiredServices,
@@ -337,22 +338,18 @@ export const inspect = async (
   }
   const cpuStart = process.cpuUsage()
   const startProgram = performance.now()
+  const host = createSourceFileCacheHost(compilerOptions)
   const program = ts.createProgram(
     normalizedRouteFiles,
     compilerOptions,
-    undefined, // host
+    host,
     options.oldProgram
   )
+  host.prune(program)
+  const filesReused = host.reused()
   logger.debug(
-    `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${normalizedRouteFiles.length} files${options.oldProgram ? ', incremental' : ''})`
+    `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${normalizedRouteFiles.length} files, ${filesReused} source files reused)`
   )
-
-  // TS hands back the same SourceFile object for a file `oldProgram` already
-  // had and that hasn't changed, so identity is the reuse count.
-  const oldSourceFiles = new Set(options.oldProgram?.getSourceFiles() ?? [])
-  const filesReused = program
-    .getSourceFiles()
-    .filter((sf) => oldSourceFiles.has(sf)).length
 
   const startChecker = performance.now()
   const checker = program.getTypeChecker()

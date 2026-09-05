@@ -51,6 +51,12 @@ const REINSPECT_WORK_MAX_RATIO = 1.1
 // few; a re-inspect that starts walking node_modules or a second project
 // accounts for hundreds.
 const REINSPECT_EXTRA_FILES_MAX = 16
+// ...and must not re-parse what it already had. The inspector keeps parsed
+// source files across programs (see packages/inspector/src/source-file-cache.ts),
+// so a re-inspection parses only the files codegen just wrote. Reuse dropping
+// to zero means every pass pays the full parse + bind again — the CPU half of
+// the memory/CPU trade the gates above watch the other half of.
+const REINSPECT_REUSE_MIN_RATIO = 0.9
 
 // ── memory gates ──────────────────────────────────────────────────────────────
 // Live heap (after a forced GC) at the moment each inspector pass starts,
@@ -61,14 +67,17 @@ const REINSPECT_EXTRA_FILES_MAX = 16
 // before, and a large project OOMs on a 2GB CI heap.
 //
 // The second pass is the sharp check: nothing but the setup pass has run, so
-// it starts within a few MB of the first (~150MB) unless that pass's program
-// is pinned (~+150MB).
-const PASS2_LIVE_GROWTH_MAX_MB = 64
-// By the re-inspection the full pass's state is legitimately alive — its meta,
-// 500 schemas, the schema generator's cached program — so it starts ~140MB
-// above the first pass. A pinned full-pass program and checker adds several
-// hundred MB on top.
-const REINSPECT_LIVE_GROWTH_MAX_MB = 256
+// the only thing legitimately carried over is the inspector's source-file
+// cache — the parsed ASTs of all ~900 files, ~75MB here — and the pass starts
+// that far above the first. A pinned program adds its checker on top, ~+165MB
+// even for the barely-exercised setup pass.
+const PASS2_LIVE_GROWTH_MAX_MB = 128
+// By the re-inspection the full pass's state is legitimately alive too — its
+// meta, 500 schemas, the schema generator's cached program — so it starts
+// ~210MB above the first pass. A pinned full-pass program and its exercised
+// checker add several hundred MB on top (~+450MB total when #1581's release
+// is reverted).
+const REINSPECT_LIVE_GROWTH_MAX_MB = 320
 // Everything alive at once, at the worst moment of the run — the number that
 // actually hits the heap limit.
 const PEAK_HEAP_MAX_MB = 660
@@ -556,13 +565,19 @@ async function main() {
           `(<= ${REINSPECT_EXTRA_FILES_MAX})`
       )
     }
-    // Not gated yet: `releaseProgram` in services.ts drops the program the
-    // next pass would reuse, so every pass re-parses everything (reused=0).
-    // Reported so the fix is measurable when it lands; gate it then.
-    console.log(
-      `INFO: re-inspection reused ${reinspect.reused}/${reinspect.files} ` +
-        `source files from the previous program`
-    )
+    const reuseRatio = reinspect.reused / reinspect.files
+    if (reuseRatio < REINSPECT_REUSE_MIN_RATIO) {
+      fail(
+        `re-inspection reused only ${reinspect.reused}/${reinspect.files} ` +
+          `source files (< ${Math.round(REINSPECT_REUSE_MIN_RATIO * 100)}%) — ` +
+          `it is re-parsing files the previous pass already had`
+      )
+    } else {
+      pass(
+        `re-inspection reused ${reinspect.reused}/${reinspect.files} source ` +
+          `files (>= ${Math.round(REINSPECT_REUSE_MIN_RATIO * 100)}%)`
+      )
+    }
   }
 
   // ── memory gates ─────────────────────────────────────────────────────────
