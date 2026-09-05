@@ -7,7 +7,14 @@
  *   # or via the CI job (see .github/workflows/develop.yml)
  */
 import { spawnSync } from 'child_process'
-import { mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'fs'
+import {
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+  symlinkSync,
+  readFileSync,
+} from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import os from 'os'
@@ -17,6 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, '..')
 const PIKKU_BIN = resolve(REPO_ROOT, 'node_modules/.bin/pikku')
 const PIKKU_NODE_MODULES = resolve(REPO_ROOT, 'node_modules')
+const HEAP_PROBE = resolve(__dirname, 'codegen-heap-probe.cjs')
 
 const PROJECT_DIR = resolve(os.tmpdir(), 'pikku-codegen-perf')
 const FUNCTION_COUNT = 500
@@ -36,6 +44,25 @@ const REINSPECT_MAX_MS = 4500
 // Sample the timed inspection a few times and judge the best (lowest) re-inspect,
 // so a one-off GC/IO stall on a CI runner can't flake the gate.
 const REINSPECT_SAMPLES = 3
+// Memory gates, measured by codegen-heap-probe.cjs on a separate cold run.
+//
+// `pikku all` builds several ts.Programs in one process (a setup-only inspector
+// pass, the full pass, ts-json-schema-generator's own, plus a re-inspection per
+// codegen stage that touched the source tree). Only the current pass's program
+// should be alive; if the previous pass's state pins its program — its
+// `typesLookup` holds ts.Types, and a type reaches the checker and the whole
+// program — every pass starts a full program + exercised checker higher than
+// the one before, and a large project OOMs on a 2GB CI heap. On this fixture
+// that pin makes the second inspector pass start ~120MB above the first, where
+// a healthy run starts within a few MB of it.
+const INSPECTOR_LIVE_GROWTH_MAX_MB = 64
+// Everything alive at once, at the worst moment of the run — the number that
+// actually hits the heap limit. ~490MB healthy on this fixture; two live
+// programs push it to ~640MB.
+const PEAK_HEAP_MAX_MB = 560
+// Programs built on a run: the setup-only pass and the full pass.
+// Building more means a stage re-inspects (or re-parses) that didn't before.
+const PROGRAM_COUNT_MAX = 2
 
 // ── project scaffold ──────────────────────────────────────────────────────────
 
@@ -253,16 +280,39 @@ function clearSchemaCache(): void {
   })
 }
 
-function runAll(timing = false): { ms: number; stdout: string } {
+type HeapProgram = {
+  index: number
+  kind: 'inspector' | 'schema' | 'other'
+  caller: string
+  atMs: number
+  liveMb: number
+}
+type HeapReport = { programs: HeapProgram[]; peakMb: number }
+
+function runAll(opts: { timing?: boolean; probe?: boolean } = {}): {
+  ms: number
+  stdout: string
+  heap?: HeapReport
+} {
   clearSchemaCache()
+  const probeOut = resolve(PROJECT_DIR, 'heap-probe.json')
+  rmSync(probeOut, { force: true })
   const start = performance.now()
+  // No `--max-old-space-size` override: the child gets Node's default heap,
+  // like the CI jobs that run `pikku all`, so a memory regression fails here
+  // before it fails there.
   const result = spawnSync(PIKKU_BIN, ['all'], {
     cwd: PROJECT_DIR,
     timeout: 120_000,
     env: {
       ...process.env,
-      NODE_OPTIONS: '--max-old-space-size=4096',
-      ...(timing ? { PIKKU_TIMING: '1' } : {}),
+      ...(opts.probe
+        ? {
+            NODE_OPTIONS: `--expose-gc --require ${HEAP_PROBE}`,
+            PIKKU_HEAP_PROBE_OUT: probeOut,
+          }
+        : { NODE_OPTIONS: '' }),
+      ...(opts.timing ? { PIKKU_TIMING: '1' } : {}),
     },
   })
   if (result.status !== 0) {
@@ -273,6 +323,9 @@ function runAll(timing = false): { ms: number; stdout: string } {
   return {
     ms: performance.now() - start,
     stdout: result.stdout?.toString() ?? '',
+    ...(opts.probe
+      ? { heap: JSON.parse(readFileSync(probeOut, 'utf8')) as HeapReport }
+      : {}),
   }
 }
 
@@ -353,7 +406,7 @@ async function main() {
   // absolute ms ceiling so a regression to full re-walks fails (see
   // REINSPECT_MAX_MS for why an absolute budget, not a ratio, is runner-stable).
   const samples = Array.from({ length: REINSPECT_SAMPLES }, () => {
-    const steps = parseStepTimings(runAll(true).stdout)
+    const steps = parseStepTimings(runAll({ timing: true }).stdout)
     const initial = steps.get('Generate function types') ?? 0
     const reinspects = [...steps.entries()].filter(([name]) =>
       name.startsWith('Re-inspect')
@@ -404,6 +457,67 @@ async function main() {
   } else {
     console.warn(
       `\nWARN: could not find inspector pass timings — skipping structural gate`
+    )
+  }
+
+  // ── memory gate ──────────────────────────────────────────────────────────
+  // Its own cold run: the probe's forced GCs would inflate the timed one.
+  process.stdout.write(`\nMeasuring heap across inspector passes ... `)
+  const { heap } = runAll({ probe: true })
+  if (!heap) throw new Error('heap probe produced no report')
+  console.log(`${heap.programs.length} programs, peak ${heap.peakMb}MB`)
+  for (const p of heap.programs) {
+    console.log(
+      `  #${p.index}  t=${String(p.atMs).padStart(5)}ms  ` +
+        `live=${String(p.liveMb).padStart(4)}MB  ${p.kind}  ` +
+        `(${p.caller.replace(/\(.*\//, '(')})`
+    )
+  }
+
+  const inspectorPasses = heap.programs.filter((p) => p.kind === 'inspector')
+  const [first, ...later] = inspectorPasses
+  if (!first || later.length === 0) {
+    console.error(
+      `\nFAIL: expected at least two inspector passes, saw ${inspectorPasses.length}`
+    )
+    failed = true
+  } else {
+    const worst = later.reduce((a, b) => (b.liveMb > a.liveMb ? b : a))
+    const growth = worst.liveMb - first.liveMb
+    if (growth > INSPECTOR_LIVE_GROWTH_MAX_MB) {
+      console.error(
+        `\nFAIL: inspector pass #${worst.index} starts with ${worst.liveMb}MB live, ` +
+          `${growth}MB above pass #${first.index} (> ${INSPECTOR_LIVE_GROWTH_MAX_MB}MB). ` +
+          `The previous pass's state is keeping its ts.Program (and checker) alive ` +
+          `across the re-inspection — see the typesLookup release in services.ts.`
+      )
+      failed = true
+    } else {
+      console.log(
+        `\nPASS: inspector passes start within ${growth}MB of the first ` +
+          `(<= ${INSPECTOR_LIVE_GROWTH_MAX_MB}MB)`
+      )
+    }
+  }
+
+  if (heap.peakMb > PEAK_HEAP_MAX_MB) {
+    console.error(
+      `FAIL: peak heap ${heap.peakMb}MB exceeds ${PEAK_HEAP_MAX_MB}MB`
+    )
+    failed = true
+  } else {
+    console.log(`PASS: peak heap ${heap.peakMb}MB <= ${PEAK_HEAP_MAX_MB}MB`)
+  }
+
+  if (heap.programs.length > PROGRAM_COUNT_MAX) {
+    console.error(
+      `FAIL: ${heap.programs.length} ts.Programs built ` +
+        `(> ${PROGRAM_COUNT_MAX}) — a stage is re-inspecting that didn't before`
+    )
+    failed = true
+  } else {
+    console.log(
+      `PASS: ${heap.programs.length} ts.Programs built (<= ${PROGRAM_COUNT_MAX})`
     )
   }
 
