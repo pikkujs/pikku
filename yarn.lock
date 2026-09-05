@@ -5164,6 +5164,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
+    "@ai-sdk/openai": "npm:^4.0.42"
     "@ai-sdk/openai-compatible": "npm:^3.0.30"
     "@electric-sql/pglite": "npm:^0.5.5"
     "@jridgewell/trace-mapping": "npm:^0.3.31"

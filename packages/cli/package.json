@@ -26,6 +26,7 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.42",
     "@ai-sdk/openai-compatible": "^3.0.30",
     "@electric-sql/pglite": "^0.5.5",
     "@jridgewell/trace-mapping": "^0.3.31",

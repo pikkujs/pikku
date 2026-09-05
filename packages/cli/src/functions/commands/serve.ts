@@ -2,6 +2,8 @@ import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryQueueService, QueueWebhookService } from '@pikku/core/services'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
   LocalEmailService,
@@ -13,6 +15,8 @@ import {
   KyselyAgentStorageService,
   KyselyAgentRunStateService,
   KyselyAgentRunService,
+  KyselyScopeService,
+  KyselyWebhookService,
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
@@ -142,18 +146,41 @@ export const serve = pikkuSessionlessFunc<
       await agentRunState.init()
     }
 
+    const requiredServices = inspectorState.serviceAggregation.requiredServices
+    const scopeService =
+      kysely && requiredServices.has('scopeService')
+        ? new KyselyScopeService(kysely as any)
+        : undefined
+    if (scopeService) {
+      await scopeService.init()
+      await scopeService.syncScopes(
+        flattenScopeDefinitions(inspectorState.scopes.definitions)
+      )
+      await scopeService.syncSystemRoles(
+        flattenSystemRoleDefinitions(inspectorState.systemRoles.definitions)
+      )
+    }
+
     const devLogger = new ConsoleLogger()
     const hasAgents = Object.keys(inspectorState.agents.agentsMeta).length > 0
-    const agentRunner = hasAgents
-      ? await createDevAgentRunner({
-          logger,
-          projectRoot: config.rootDir,
-          variables,
-        })
-      : undefined
+    const agentRunner =
+      hasAgents || requiredServices.has('agentRunner')
+        ? await createDevAgentRunner({
+            logger,
+            projectRoot: config.rootDir,
+            variables,
+          })
+        : undefined
 
     const eventHub = await devServerRunner.createEventHub()
     const serveQueueService = new InMemoryQueueService()
+    const serveWebhookService =
+      kysely && requiredServices.has('webhookService')
+        ? new KyselyWebhookService(serveQueueService, kysely as any)
+        : new QueueWebhookService(serveQueueService)
+    if (serveWebhookService instanceof KyselyWebhookService) {
+      await serveWebhookService.init()
+    }
     const inMemoryServices = {
       logger: devLogger,
       ...(agentRunner ? { agentRunner } : {}),
@@ -161,7 +188,8 @@ export const serve = pikkuSessionlessFunc<
       metaService: new LocalMetaService(pikkuDir),
       schedulerService,
       queueService: serveQueueService,
-      webhookService: new QueueWebhookService(serveQueueService),
+      webhookService: serveWebhookService,
+      ...(scopeService ? { scopeService } : {}),
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),
