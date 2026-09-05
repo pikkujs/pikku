@@ -9,6 +9,8 @@ import {
   reconcileAddonRegistry,
 } from '@pikku/core/dev'
 import { InMemoryQueueService, QueueWebhookService } from '@pikku/core/services'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
   LocalEmailService,
@@ -22,6 +24,8 @@ import {
   KyselyAgentStorageService,
   KyselyAgentRunStateService,
   KyselyAgentRunService,
+  KyselyScopeService,
+  KyselyWebhookService,
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
@@ -288,6 +292,8 @@ export const dev = pikkuSessionlessFunc<
         ? new LocalContent(localContentConfig, logger, contentSigningJWT)
         : undefined
 
+    const requiredServices = inspectorState.serviceAggregation.requiredServices
+
     const schedulerService = new InMemorySchedulerService()
     const agentStorage = kysely
       ? new KyselyAgentStorageService(kysely as any)
@@ -302,6 +308,24 @@ export const dev = pikkuSessionlessFunc<
     if (agentStorage) await agentStorage.init()
     if ('init' in agentRunState && typeof agentRunState.init === 'function') {
       await agentRunState.init()
+    }
+
+    // Gated on `requiredServices` rather than on `kysely` alone, because that is
+    // the same set `pikku db generate` filters the runtime schemas by: a project
+    // that never asks for `scopeService` has no scope tables, and `init()` here
+    // would fail its boot over a service nothing uses.
+    const scopeService =
+      kysely && requiredServices.has('scopeService')
+        ? new KyselyScopeService(kysely as any)
+        : undefined
+    if (scopeService) {
+      await scopeService.init()
+      await scopeService.syncScopes(
+        flattenScopeDefinitions(inspectorState.scopes.definitions)
+      )
+      await scopeService.syncSystemRoles(
+        flattenSystemRoleDefinitions(inspectorState.systemRoles.definitions)
+      )
     }
 
     // InMemoryWorkflowService implements both the workflowService and
@@ -329,6 +353,16 @@ export const dev = pikkuSessionlessFunc<
     // function-side broadcasts reach the sockets the transport holds.
     const eventHub = await devServerRunner.createEventHub()
     const devQueueService = new InMemoryQueueService()
+    // The queue-only service delivers but keeps no history, so the console's
+    // webhooks page is empty on a project that has the tables for it. Same
+    // `requiredServices` gate as the scope service above.
+    const devWebhookService =
+      kysely && requiredServices.has('webhookService')
+        ? new KyselyWebhookService(devQueueService, kysely as any)
+        : new QueueWebhookService(devQueueService)
+    if (devWebhookService instanceof KyselyWebhookService) {
+      await devWebhookService.init()
+    }
     const inMemoryServices = {
       logger: devLogger,
       ...(agentRunner ? { agentRunner } : {}),
@@ -339,7 +373,8 @@ export const dev = pikkuSessionlessFunc<
       ...(coverageService ? { coverageService } : {}),
       schedulerService,
       queueService: devQueueService,
-      webhookService: new QueueWebhookService(devQueueService),
+      webhookService: devWebhookService,
+      ...(scopeService ? { scopeService } : {}),
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),
