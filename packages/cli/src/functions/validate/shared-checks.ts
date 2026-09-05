@@ -187,10 +187,14 @@ export const staticStubbedImports = (
     ) {
       continue
     }
-    for (const [service, patterns] of Object.entries(SERVICE_MODULE_MAP)) {
-      if (patterns.some((pattern) => pattern.test(specifier))) {
-        found.push({ module: specifier, service })
-      }
+    // Services share pattern arrays — the AI SDKs gate on both `agentRunner`
+    // and `ai` — so a per-service push reports one import as many findings.
+    // The remedy is the same whichever service names it: one entry per import.
+    const service = Object.entries(SERVICE_MODULE_MAP).find(([, patterns]) =>
+      patterns.some((pattern) => pattern.test(specifier))
+    )?.[0]
+    if (service) {
+      found.push({ module: specifier, service })
     }
   }
   return found

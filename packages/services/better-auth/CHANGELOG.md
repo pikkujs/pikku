@@ -1,5 +1,73 @@
 # @pikku/better-auth
 
+## 0.12.38
+
+### Patch Changes
+
+- 70eeede: Let the actor gate take the opt-in from the caller, not only `process.env`.
+
+  `resolveActorSignIn()` read `PIKKU_ALLOW_ACTOR_SIGN_IN` off the environment and
+  nowhere else, which quietly excluded the runtime most stages deploy to. A
+  Cloudflare Worker has no populated `process.env`: bindings reach user code
+  through the variables service, and workerd mirrors them into `process.env` only
+  under `nodejs_compat_populate_process_env`, default for compatibility dates from
+  2025-04-01. A deployment that pushed the opt-in as a binding — the only shape a
+  Worker takes — therefore configured a stage whose gate could never see it, and
+  `/sign-in/actor` answered `Actor sign-in is disabled outside \`pikku dev\`` with
+  the value sitting right there on the script.
+
+  `pikkuActor` now accepts `allowSignIn`, and `resolveActorSignIn(optIn?)` prefers
+  it over the environment. Such a stage passes
+  `await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)`, beside the secret it already
+  reads there. Everything the gate decided before, it decides identically: only
+  `passwordless-actor-sign-in` opens it, any other value is a logged near miss
+  whose text still never reproduces what it was given, and provisioning stays a
+  separate power held by `pikku dev` alone.
+
+  The value is passed, never a boolean, and never baked in: what opens the gate
+  remains something the deployment set and an operator can read back out of it.
+  When a caller passes one, the environment is not consulted — a stage is opened by
+  its own configuration or not at all.
+
+## 0.12.37
+
+### Patch Changes
+
+- dc3ac77: Retire the `scaffold.userAdmin` generator in favour of `@pikku/addon-admin`, and
+  point the console's user directory at it.
+
+  The generator and the addon shipped the same six operations — list, create, ban,
+  remove, revoke-sessions, set-password — over the same `admin:users:*` scopes and
+  the same `@pikku/better-auth` implementation, differing only in what the RPCs
+  were called. The console named the generator's spelling, `pikkuAdminListUsers`
+  and its siblings, so the addon that superseded it had no caller at all: wiring
+  `@pikku/addon-admin` into an app left the Users page as dead as before.
+
+  The console now calls `admin:listUsers`, `admin:createUser`,
+  `admin:setUserBanned`, `admin:removeUser`, `admin:revokeUserSessions` and
+  `admin:setUserPassword` — the addon under the `admin` namespace that
+  `wireAddon({ name: 'admin', package: '@pikku/addon-admin' })` gives it, the same
+  convention by which the console reaches its own addon as `console:*`.
+
+  To migrate, drop `userAdmin` from the `scaffold` block of `pikku.config.json` and
+  wire the addon once, anywhere under your functions source:
+
+  ```ts
+  import { wireAddon } from '#pikku/addon'
+
+  wireAddon({ name: 'admin', package: '@pikku/addon-admin' })
+  ```
+
+  `pikku all` deletes the generated `admin/user-admin.gen.ts` and its schemas on
+  the next run. That deletion is not tidying: left on disk the file keeps
+  registering the old six, so an app that installed the addon would answer to two
+  spellings of the same calls. `pikku validate` already fails an app with a console
+  and no admin addon wired, and names this wiring in the fix.
+
+  A host driving these operations from its own hand-written functions is
+  unaffected — the implementations still live in `@pikku/better-auth`, which is why
+  the addon needed none of its own.
+
 ## 0.12.36
 
 ### Patch Changes

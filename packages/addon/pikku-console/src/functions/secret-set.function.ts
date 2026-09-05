@@ -7,6 +7,7 @@ export const secretSet = pikkuFunc<
   title: 'Set Secret',
   description: 'Sets the value of a secret.',
   expose: true,
+  scopes: ['pikku:console:secrets:write'],
   func: async ({ secretAdminService }, { secretId, value }) => {
     await secretAdminService.write(secretId, value)
     return { success: true }

@@ -27,6 +27,43 @@ See `pikku-concepts` for the core mental model.
 
 Build durable, multi-step workflows with automatic retry, sleep, suspend/resume, and parallel execution. Steps are cached for replay safety.
 
+## Decide FIRST: should this even BE a workflow?
+
+The deciding question is: **does any part of this cross an external boundary that can fail and MUST NOT be lost or double-run** — a payment authorised/captured through a provider, a third-party API call, an email/webhook, a wait for approval? If yes → workflow (durability, retries, restart-survival, and a visible run). If it's **a single algorithm done in one shot, purely local, and not reused elsewhere** → a plain `pikkuFunc` is correct; do NOT wrap it in a workflow.
+
+- **Checkout WITH payment → workflow.** Get cart → compute total → **(atomic: create order + order items, deduct stock, clear cart)** → **charge payment through the provider** → send confirmation email. It's a workflow because the payment leg (and the email) are external and must be **retried, not lost, and not charged twice** across a restart — and the user benefits from seeing where the run is.
+- **Checkout with NO external payment** — e.g. it just records the order and decrements stock in one transaction, nothing leaves the process — is a **single-shot algorithm**: a plain `pikkuFunc` wrapping one `kysely.transaction`. Not a workflow. A workflow here would add durability machinery for a thing that already commits atomically in one shot.
+- **One durable step is NOT a workflow — it's a queue worker.** A lone side-effect that must be retried / not lost (send one email, fire one webhook, one external charge) → a **queue worker** (`pikku-queue`), enqueued fire-and-forget. A workflow adds a step graph for a thing that has no steps to orchestrate. (A single non-durable step is just a direct RPC call.)
+- Also workflows: onboarding sequences, settlements/payouts, digests and batch sends, anything that waits (`sleep`/`suspend`) or fans out with retries — the common thread is **multiple** steps or a durable wait, never a single step.
+
+**HARD RULE — never a single-RPC (one-step) workflow.** A workflow whose body is one `workflow.do('x', 'someRpc', …)` is a mislabeled durable function, not orchestration. Route by durability, NOT into a workflow:
+
+- **Not durable** — the caller wants the result now / it can just run in-request → **call the RPC directly** (this is also the synchronous path). No workflow, no queue.
+- **Durable** — must be **retried / not lost / survive a restart** (one email, one webhook, one external charge) → a **queue worker** (`wireQueueWorker` + `queueService.add(...)`). Fire-and-forget, retried by the queue.
+
+There is no "one-step workflow is justified for the durability" exception — durability for a single step is a QUEUE. A workflow earns its name only with genuine multi-step orchestration (a `sleep`/`suspend` wait, fan-out, or a saga).
+
+**Atomicity is a TRANSACTION, not a workflow.** All-or-nothing multi-write units (create order + items + deduct stock + clear cart) belong inside ONE `kysely.transaction(async (trx) => { … })` — a single step or a single plain `pikkuFunc` — **never split across workflow steps.** A step is a unit of RETRY and REPLAY, not a unit of atomicity: pikku opens no transaction around `workflow.do`, so a step that does three writes and throws on the third leaves the first two committed, and the retry runs them again. Spreading one logical transaction over several steps is the same failure one level up. Your writes are atomic only where YOU opened a transaction, so open one inside the step (reach for compensating/saga steps only when you truly need cross-service rollback). So a payment checkout is a workflow whose _atomic DB writes are ONE step that opens ONE transaction_, with the payment charge and email as the other durable steps around it.
+
+**A retried step re-runs its side effects.** Replay caching only covers steps that already
+returned; a step that failed — or that timed out after the provider accepted it — runs again
+from the top, so a charge, an email or a webhook can fire twice. Durability is at-least-once,
+not exactly-once. Pass a stable idempotency key the provider deduplicates on, derived from the
+workflow's own data rather than generated inside the step:
+
+```typescript
+await workflow.do('Charge', 'chargePayment', {
+  orderId: data.orderId,
+  amount: data.amount,
+  idempotencyKey: `order-${data.orderId}-charge`,
+})
+```
+
+`randomUUID()` or `Date.now()` inside the step is a different key on every attempt, which is
+the double-charge. Where the provider has no such header, make the step itself idempotent —
+check for the effect before performing it, or record a unique row that the second attempt
+collides with.
+
 ## Choosing the right factory
 
 | Factory                    | When to use                                                                                                                                                                                                | Step-graph view?              |

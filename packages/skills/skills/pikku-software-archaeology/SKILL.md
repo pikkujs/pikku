@@ -1,6 +1,7 @@
 ---
 name: pikku-software-archaeology
 description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — and when turning that blueprint into a plain-language second opinion for the non-technical owner who holds the app. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules or a rebuild plan, or asks "explain how my app works" / "what would you do differently" / "is this built well?" for a founder, PM or operator audience. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or an engineer-facing code review.'
+installGroups: [core]
 ---
 
 # Software Archaeology

@@ -2,8 +2,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 // How much a scenario PROVES, read statically off pikku's generated step meta — one JSON
-// read per scenario, no browser, no dev server, no instrumentation. Cheap enough for
-// `fabric verify` rather than only the closing gate.
+// read per scenario, no browser, no dev server, no instrumentation. Cheap enough for a
+// mid-build check rather than only the closing gate.
 //
 // `scenario-rpc-coverage.ts` answers which mutations a journey drives. It is blind to a
 // browser journey twice over: the scenario drives no RPC, so it contributes nothing there

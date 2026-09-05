@@ -621,3 +621,18 @@ test('a build defers one impossible pass-1 item, and only within its budget', ()
   )
   assert.match(renderPlanForBuild(second.plan), /DEFERRED/)
 })
+
+// What to do once pass 1 is built belongs to whoever drives the build, not to the plan
+// format: naming one harness's command here would put it in front of every reader.
+test('the closing instruction is the caller’s, and absent by default', () => {
+  const plan = basePlan()
+  const bare = renderPlanForBuild(plan)
+  assert.match(bare, /Build pass 1\./)
+  assert.equal(/then run/.test(bare), false)
+
+  const driven = renderPlanForBuild(
+    plan,
+    'When pass 1 is done, run `acme finish`.'
+  )
+  assert.match(driven, /When pass 1 is done, run `acme finish`\./)
+})

@@ -13,8 +13,7 @@ import { defineScope } from '#pikku/addon/scopes'
  * make every leaf below pointless. Each function carries its own.
  *
  * pikku requires every declaration of a shared scope root to be identical, so
- * this must stay byte-identical to `ADMIN_SCOPE_TREE` in `@pikku/better-auth`
- * and to the copy the `scaffold.userAdmin` generator emits.
+ * this must stay byte-identical to `ADMIN_SCOPE_TREE` in `@pikku/better-auth`.
  */
 defineScope({
   admin: {

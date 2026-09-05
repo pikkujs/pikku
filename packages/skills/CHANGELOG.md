@@ -1,5 +1,38 @@
 # @pikku/skills
 
+## 0.12.26
+
+### Patch Changes
+
+- 206dc04: pikku-auth's Better Auth reference gains two-factor, security hardening and post-signup hooks
+- 206dc04: pikku-react's client reference now says what `transformDate: true` costs you: a fully-zoned ISO instant arrives as a `Date` while a bare or zoneless date stays a string, so one field's runtime type follows the value — a string method on a revived one throws, and a raw one in JSX crashes the route.
+- 206dc04: Add `pikku-a11y`, `pikku-seo`, `pikku-permissions`, `pikku-list-query` and
+  `pikku-realtime`, which lived in Fabric's sandbox image and are not about Fabric.
+
+  None of them needs a sandbox, a console or the `fabric` CLI, so a local project
+  gets the same guidance the hosted build agent has been getting. `pikku-realtime`
+  carries the SSE and channel patterns inline rather than pointing at a scaffold
+  command that only exists inside Fabric.
+
+- 206dc04: pikku-build's multi-app reference now says how to decide it is two apps, not just how to clone one
+- 206dc04: The corpus now fails on a bare `fabric` command, which the OSS reader has no binary for
+- 206dc04: Three review fixes across the wiring skills: pikku-list-query now caps `limit` and reads `filter` as the recursive AND/OR tree it is (a `'status' in filter` check silently returns unfiltered rows for a group or an operator leaf); pikku-realtime warns that `/events/:topic` is unauthenticated so a topic must carry a projection rather than `returningAll()`, and invalidates the `[name, input]` query key instead of hand-patching a `ListOutput`; pikku-workflow replaces "each step is its own transaction" — pikku opens none — with where atomicity actually comes from, plus provider idempotency keys for retried external side effects.
+- 206dc04: Give `pikku-architect`, `pikku-build`, `pikku-knowledge` and
+  `pikku-software-archaeology` an `installGroups`. A skill with none is skipped
+  whenever any group is requested, so `pikku skills install --core` never
+  installed these four — including the archaeology skill other tooling documents
+  as installed by that command.
+
+  Also qualify pikku-i18n's "do not wrap `m`" rule: wrapping the namespace is a
+  real tradeoff (it forgoes per-message tree-shaking) rather than a mistake, and
+  is worth it when it buys something the gate cannot, such as debug masking.
+
+- 206dc04: Give `pikku-workflow` the "should this even BE a workflow?" section: the
+  external-boundary test, the checkout-with/without-payment split, "one durable
+  step is a queue worker, not a workflow", and "atomicity is a TRANSACTION, not a
+  workflow". It answers the question that comes before choosing a factory, and it
+  was only written down in Fabric's copy of the skill.
+
 ## 0.12.25
 
 ### Patch Changes

@@ -55,7 +55,7 @@
     "test": "yarn workspaces foreach -A --exclude '@pikku/templates-*' --exclude '@pikku/example-*' --exclude '@pikku/verifiers-*' --exclude '@pikku/addon-console' --exclude '@pikku/console' --exclude '@pikku/e2e' run test",
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
     "test:bun": "bun test packages/core/src packages/openapi-parser/src packages/openapi-to-zod-schema/src packages/pikku/src packages/runtimes/cloudflare/src packages/schedule/src packages/services/kysely-bun-sqlite/src",
-    "lint": "npx --yes oxlint@latest",
+    "lint": "oxlint",
     "prettier": "npx --yes prettier . --write --log-level warn",
     "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
     "changeset": "npx changeset",

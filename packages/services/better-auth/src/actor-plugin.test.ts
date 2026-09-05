@@ -35,7 +35,7 @@ const recordingLogger = () => {
 const makeAuth = (
   db: Record<string, any[]>,
   secret?: string,
-  options: { logger?: any } = {}
+  options: { logger?: any; allowSignIn?: string } = {}
 ) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
@@ -43,7 +43,11 @@ const makeAuth = (
     database: memoryAdapter(db),
     emailAndPassword: { enabled: true },
     plugins: [
-      pikkuActor({ secret, logger: options.logger ?? recordingLogger() }),
+      pikkuActor({
+        secret,
+        allowSignIn: options.allowSignIn,
+        logger: options.logger ?? recordingLogger(),
+      }),
     ],
   })
 
@@ -304,6 +308,57 @@ describe('actor sign-in gate', () => {
       logger.lines.info.join('\n'),
       new RegExp(DEV_ACTOR_SIGN_IN_ENV)
     )
+  })
+
+  test('a caller that holds the opt-in itself opens the gate', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    db.user!.push({
+      id: 'provisioned-1',
+      email: 'customer@actors.local',
+      name: 'customer',
+      actor: true,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    assert.equal(
+      process.env[ACTOR_SIGN_IN_OPT_IN_ENV],
+      undefined,
+      'the environment is empty — this is the Worker case, where the opt-in arrives as a binding'
+    )
+    const res = await signInActor(
+      makeAuth(db, ROOT, { allowSignIn: ACTOR_SIGN_IN_OPT_IN_VALUE }),
+      {
+        email: 'customer@actors.local',
+        secret: await credentialFor('customer@actors.local'),
+      }
+    )
+    assert.equal(res.status, 200)
+  })
+
+  test('a passed opt-in is spelt exactly, and is not rescued by the environment', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    process.env[ACTOR_SIGN_IN_OPT_IN_ENV] = ACTOR_SIGN_IN_OPT_IN_VALUE
+
+    const nearMiss = recordingLogger()
+    const refused = await signInActor(
+      makeAuth(db, ROOT, { allowSignIn: 'true', logger: nearMiss }),
+      {
+        email: 'customer@actors.local',
+        secret: await credentialFor('customer@actors.local'),
+      }
+    )
+    assert.equal(
+      refused.status,
+      401,
+      'the caller said where to read the opt-in from, so the environment is not consulted'
+    )
+    assert.match(
+      nearMiss.lines.warn.join('\n'),
+      new RegExp(ACTOR_SIGN_IN_OPT_IN_VALUE)
+    )
+    assert.doesNotMatch(nearMiss.lines.warn.join('\n'), /'true'/)
   })
 
   test('still declares the actor column while disabled', () => {

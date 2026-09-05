@@ -47,8 +47,12 @@ const SERVICE_GEN_FILE_MAP: Record<string, RegExp> = {
 /**
  * Read the per-unit pikku-services.gen.ts and return the set of gen file
  * patterns that should be stubbed (because their service is not required).
+ *
+ * Exported for tests: the decision is easy to get subtly wrong and impossible
+ * to observe from outside a real bundle, where it surfaces only as a missing
+ * export at compile time.
  */
-async function getDeadGenFilePatterns(
+export async function getDeadGenFilePatterns(
   unitOutputDir: string
 ): Promise<RegExp[]> {
   const patterns: RegExp[] = []
@@ -58,17 +62,36 @@ async function getDeadGenFilePatterns(
     const match = content.match(
       /export const requiredSingletonServices = \{([^}]+)\}/
     )
-    if (match) {
-      for (const line of match[1].split('\n')) {
-        const kv = line.match(/'([^']+)':\s*false/)
-        if (!kv) continue
-        const service = kv[1]
-        if (SERVICE_GEN_FILE_MAP[service]) {
-          patterns.push(SERVICE_GEN_FILE_MAP[service])
-        }
-        if (SERVICE_MODULE_MAP[service]) {
-          patterns.push(...SERVICE_MODULE_MAP[service])
-        }
+    if (!match) return patterns
+
+    const services = new Map<string, boolean>()
+    for (const line of match[1].split('\n')) {
+      const kv = line.match(/'([^']+)':\s*(true|false)/)
+      if (kv) services.set(kv[1], kv[2] === 'true')
+    }
+
+    // Several service names can front the same npm modules — `agentRunner` and
+    // `ai` both mean "this unit has a model" (SERVICE_CAPABILITY_MAP grants
+    // 'ai-model' to each). A module set is therefore dead only when NO required
+    // service claims it. Reading the unrequired services alone stubbed the AI
+    // SDKs out of every unit that wired `ai`, because those units still report
+    // `'agentRunner': false` on the line above `'ai': true` — and a unit that
+    // asks for a model does import them, so the bundle failed rather than
+    // shrinking.
+    const claimed = new Set<string>()
+    for (const [service, required] of services) {
+      if (!required) continue
+      for (const pattern of SERVICE_MODULE_MAP[service] ?? []) {
+        claimed.add(pattern.source)
+      }
+    }
+
+    for (const [service, required] of services) {
+      if (required) continue
+      const genPattern = SERVICE_GEN_FILE_MAP[service]
+      if (genPattern) patterns.push(genPattern)
+      for (const pattern of SERVICE_MODULE_MAP[service] ?? []) {
+        if (!claimed.has(pattern.source)) patterns.push(pattern)
       }
     }
   } catch {

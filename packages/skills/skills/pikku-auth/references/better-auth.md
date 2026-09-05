@@ -15,7 +15,6 @@ The only acceptable auth implementation in a Pikku app is the one described in t
 
 ---
 
-
 ## Installation
 
 ```bash
@@ -448,9 +447,14 @@ someone" means **a particular kind of user** rather than one fixed admin.
 Register it explicitly — it is not automatic:
 
 ```typescript
-import { pikkuActor } from '@pikku/better-auth'
+import { ACTOR_SIGN_IN_OPT_IN_ENV, pikkuActor } from '@pikku/better-auth'
 
-plugins: [pikkuActor({ secret: SCENARIO_ACTOR_SECRET })]
+plugins: [
+  pikkuActor({
+    secret: SCENARIO_ACTOR_SECRET,
+    allowSignIn: await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV),
+  }),
+]
 ```
 
 `POST ${basePath}/sign-in/actor` `{ email, secret, name? }` → 200 + the normal
@@ -481,9 +485,19 @@ itself instead.
 A stage that genuinely must run scenarios opts in on purpose, with
 `PIKKU_ALLOW_ACTOR_SIGN_IN=passwordless-actor-sign-in`. Any other value is
 ignored and warned about, so the hatch cannot be opened by copying a `true` from
-the line above, and it is the only hatch — there is no build-time option, because
-an option compiled into the bundle cannot be audited from the environment it
-runs in.
+the line above.
+
+**Pass it in on any runtime without a populated `process.env`.** The gate reads
+the environment by default, which is enough for Node but not for a Worker: there
+the opt-in arrives as a binding and reaches user code through the variables
+service, so a gate left to `process.env` stays shut on exactly the stages a
+deployment targets. `allowSignIn` takes the value the caller already read —
+`await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)` — and is checked against the same
+literal, near-miss warning included. It is deliberately a value and not a flag:
+what opens the gate is still something the deployment set and an operator can
+read back out of it, never something compiled into the bundle. A value passed
+here is the one consulted, so the environment cannot quietly override what the
+stage was configured with.
 
 **Signing in and provisioning are separate powers.** An unknown address becomes
 an `actor: true` row only under `pikku dev`. With the opt-in set, a stage signs
@@ -624,3 +638,107 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => be
 - Export exactly ONE `pikkuBetterAuth` per project; the CLI generates a single catch-all worker for all auth routes.
 - `betterAuthSession({ auth })` (generated) bridges the better-auth session into the Pikku session on every request — you never add it by hand.
 - MFA, organizations, passkeys, etc. are better-auth plugins: add them to `betterAuth({ plugins: [...] })`. The catch-all route already forwards their endpoints.
+
+---
+
+## Post-signup side effects
+
+Anything that must happen after a user signs up — a welcome email, seeding a first
+row, creating a personal organization — goes in `databaseHooks.user.create.after`
+inside the `betterAuth({...})` config. Never a custom signup RPC that writes the
+user itself: better-auth owns the `user` table, and a second write path desyncs it
+from the session bridge.
+
+## Two-factor (2FA / MFA)
+
+TOTP authenticator apps, email/SMS OTP, backup codes and trusted devices are all
+better-auth's `twoFactor()` plugin. Never hand-roll TOTP or OTP.
+
+1. **Enable + migrate** — add `twoFactor({ issuer: '<AppName>' })` to the `plugins`
+   array in the `pikkuBetterAuth` factory, then generate its schema and apply it as a
+   migration like any other table change. Run the CLI at the version of better-auth the
+   project actually has installed (`npx @better-auth/cli@<that version> generate`) — a
+   bare `npx @better-auth/cli` resolves the latest release, which can emit a schema for
+   a library you are not running. `twoFactorSecret` lands on `user`.
+2. **Client** — add `twoFactorClient({ onTwoFactorRedirect() { /* go to /2fa */ } })`
+   to `createAuthClient({ plugins: [...] })`, and expose thin wrappers
+   (`enable2FA`, `verifyTotp`, `disable2FA`, …) rather than leaking the raw
+   `authClient`, same as every other auth call.
+3. **OTP delivery** — `otpOptions.sendOTP` goes through the injected email service
+   and a rendered template, not a raw `sendEmail`. Set `storeOTP: 'encrypted'`.
+4. **Sign-in flow** — the challenge is raised on the three CREDENTIAL endpoints:
+   `signIn.email`, `signIn.username` and `signIn.phoneNumber`. Check
+   `context.data.twoFactorRedirect` in `onSuccess`; if true, route to a `/2fa` page
+   and verify via `verifyTotp`/`verifyOtp`/`verifyBackupCode` (`trustDevice: true`
+   for a 30-day trusted device). The response also carries `twoFactorMethods`
+   (`'totp'` only once that user has a verified secret, `'otp'` whenever
+   `otpOptions.sendOTP` is configured) — render the choice from it rather than
+   assuming TOTP. The session cookie is only created after verification: the
+   credential handler's session is deleted while the challenge is in flight, so a
+   hook reading `ctx.context.newSession` after sign-in must null-check it.
+5. **UI** — a QR rendered from `data.totpURI` plus the `data.backupCodes` list.
+   Enabling, disabling and regenerating backup codes all require the user's
+   password.
+
+TOTP secrets and backup codes are encrypted at rest with the auth secret, and
+`/two-factor/*` is rate-limited (3/10s) out of the box.
+
+**2FA gates credential sign-in only.** Magic link, email OTP and OAuth are not
+matched by the plugin's hook, so a user with 2FA enabled who signs in through one
+of them is NOT challenged. If every route into the app must be gated, either do not
+offer the passwordless ones to 2FA users or add your own check — enabling the
+plugin does not do it.
+
+## Security hardening
+
+The `pikkuBetterAuth` factory — where `betterAuth({...})` is built — is the one
+place to harden. Everything below is a `betterAuth` option, not a pikku one.
+
+- **Secret** — `BETTER_AUTH_SECRET` comes from the injected secrets service
+  (`await secrets.getSecret('BETTER_AUTH_SECRET')`), never `process.env`, a
+  literal, or a fallback default. 32+ chars, high entropy
+  (`openssl rand -base64 32`). Better Auth rejects placeholder secrets in
+  production.
+- **Trusted origins** — the `baseURL` origin is auto-trusted, so a single-domain
+  app serving its API same-origin needs nothing. Add `trustedOrigins` (or a
+  comma-separated `BETTER_AUTH_TRUSTED_ORIGINS` variable; wildcards like
+  `*.example.com` allowed) ONLY when the browser origin differs from the API
+  origin — embedded, preview, or custom-domain deployments. An untrusted
+  `callbackURL`/`redirectTo`/`origin` is a 403.
+- **CSRF** — keep it on (`advanced.disableCSRFCheck: false`, the default). A
+  proxy in front of the app must preserve the `/api/auth/*` prefix so origin
+  checks still work; do not disable the check to "fix" a redirect.
+- **Rate limiting** — on by default in production (100/10s global, 3/10s on
+  sign-in/up/change-password). `storage: 'memory'` resets on restart, so a
+  deployed app wants `storage: 'database'`. Tighten sensitive routes with
+  `customRules`, e.g. `'/sign-in/email': { window: 60, max: 5 }` — the key is matched
+  against the path with the base path ALREADY STRIPPED, so a rule written as
+  `'/api/auth/sign-in/email'` matches nothing and silently leaves the route on the
+  default.
+- **Cookies & sessions** — `httpOnly`, `sameSite: 'lax'` and `path: '/'` are
+  unconditional, but `secure` and the `__Secure-` name prefix are NOT: they follow a
+  `baseURL` on `https://` (or production, or an explicit
+  `advanced.useSecureCookies: true`). A deployment whose TLS terminates at a proxy
+  and passes an `http://` baseURL through therefore ships session cookies with no
+  `secure` flag — set `useSecureCookies` there rather than assuming. Defaults are
+  `session.expiresIn` 7d and
+  `updateAge` 1d. Add `freshAge` for sensitive actions, and
+  `cookieCache: { strategy: 'jwe' }` if the session carries sensitive data — see
+  the cookieCache section above, which you want enabled regardless. Only enable
+  `crossSubDomainCookies` if auth is genuinely shared across subdomains.
+- **OAuth tokens** — set `account.encryptOAuthTokens: true` (AES-256-GCM) if you
+  store provider tokens to call their APIs later.
+- **Audit** — drive auth events from `databaseHooks` (`session.create.after`,
+  `user.update.after` for email changes, `account.create.after` for links) into
+  whatever audit service the app injects, never a bespoke audit table wired into
+  a function body. Returning `false` from a `before` hook blocks the operation.
+- **Background tasks** — on a serverless target, hand genuinely disposable work
+  (analytics, logging) to `advanced.backgroundTasks.handler` → `ctx.waitUntil(promise)`
+  so it does not delay the response. Not mail: the default handler is
+  `p.catch(() => {})`, so anything that must actually arrive — an invitation, a
+  password reset — is lost without a trace if the platform reaps the request first.
+  Better Auth sends its own through `runInBackgroundOrAwait`, which awaits when no
+  handler is configured; do the same for yours.
+- **Enumeration** — handled already (generic "Invalid credentials", dummy work on
+  unknown users). Keep your own error copy generic too; never leak "user not
+  found".

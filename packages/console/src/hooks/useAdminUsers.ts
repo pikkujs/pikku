@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { useDebouncedValue } from '@mantine/hooks'
-import { useAuth, type AuthUser } from '../context/AuthContext'
+import type { AuthUser } from '../context/AuthContext'
+import { useUserAdmin } from '../context/UserAdminContext'
 
 /**
- * The user directory, searched through whichever auth client is mounted. The
- * search term is debounced here so a host can hand over its raw input value.
+ * The user directory, through whichever caller is mounted. The search term is
+ * debounced here so a host can hand over its raw input value.
  */
 export const useAdminUsers = (search: string = '') => {
-  const { listUsers } = useAuth()
+  const { listUsers } = useUserAdmin()
   const [debounced] = useDebouncedValue(search, 250)
 
   const usersQuery = useQuery({

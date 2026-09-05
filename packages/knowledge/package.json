@@ -1,6 +1,6 @@
 {
   "name": "@pikku/knowledge",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "description": "The Open Knowledge Format app-project profile — read, validate and index a project's knowledge/ notes",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

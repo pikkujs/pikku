@@ -1,3 +1,130 @@
+## 0.12.136
+
+### Patch Changes
+
+- c31f341: Stop stubbing the AI SDKs out of units that wire `ai` rather than `agentRunner`.
+
+  Two names reach a model. `agentRunner` is the core `AgentRunnerService` that runs
+  declared agents; `ai` is not a core service at all, but the conventional name for
+  an app's own model wrapper. The deploy analyzer has always known both —
+  `SERVICE_CAPABILITY_MAP` grants `ai-model` to each — while `SERVICE_MODULE_MAP`
+  listed only `agentRunner`, and the stub pass read only the services marked
+  `false`.
+
+  A unit that destructured `ai` therefore got the model capability and had
+  `@pikku/ai-vercel`, `@ai-sdk/*` and `ai` replaced with `export {}` in the same
+  build, because its generated services report `'agentRunner': false` on the line
+  above `'ai': true`. That is not a smaller bundle, it is a broken one: a unit
+  asking for a model does import those packages, so every such unit failed with
+  `No matching export in "pikku-stub:@pikku/ai-vercel" for import
+"VercelAgentRunner"` and the deploy died with nine bundle failures.
+
+  The stub decision now spans all the services in the file: a module set is dead
+  only when no required service claims it. `ai` is listed alongside `agentRunner`
+  and shares its pattern array, so the two are identity-equal and either one keeps
+  the SDKs. Services that front nothing else — `metaService` and its gen file — are
+  unaffected.
+
+  This only became reachable when an app renamed a model-bearing service to `ai`.
+  Before that the capability was never granted, the SDKs were correctly stubbed,
+  and the symptom was the opposite one: a runner that was never constructed.
+
+- feeef82: Report one `services-static-stubbed-import` finding per import, not one per service that stubs it.
+
+  `SERVICE_MODULE_MAP` deliberately shares a single pattern array between `agentRunner` and `ai`, so a validate run reported the same import twice with only the service name differing. The remedy is identical either way, so the first matching service names the finding.
+
+- Updated dependencies [70eeede]
+- Updated dependencies [11ce9c0]
+- Updated dependencies [af6a29c]
+  - @pikku/better-auth@0.12.38
+  - @pikku/knowledge@0.12.10
+
+## 0.12.135
+
+### Patch Changes
+
+- dc3ac77: Retire the `scaffold.userAdmin` generator in favour of `@pikku/addon-admin`, and
+  point the console's user directory at it.
+
+  The generator and the addon shipped the same six operations — list, create, ban,
+  remove, revoke-sessions, set-password — over the same `admin:users:*` scopes and
+  the same `@pikku/better-auth` implementation, differing only in what the RPCs
+  were called. The console named the generator's spelling, `pikkuAdminListUsers`
+  and its siblings, so the addon that superseded it had no caller at all: wiring
+  `@pikku/addon-admin` into an app left the Users page as dead as before.
+
+  The console now calls `admin:listUsers`, `admin:createUser`,
+  `admin:setUserBanned`, `admin:removeUser`, `admin:revokeUserSessions` and
+  `admin:setUserPassword` — the addon under the `admin` namespace that
+  `wireAddon({ name: 'admin', package: '@pikku/addon-admin' })` gives it, the same
+  convention by which the console reaches its own addon as `console:*`.
+
+  To migrate, drop `userAdmin` from the `scaffold` block of `pikku.config.json` and
+  wire the addon once, anywhere under your functions source:
+
+  ```ts
+  import { wireAddon } from '#pikku/addon'
+
+  wireAddon({ name: 'admin', package: '@pikku/addon-admin' })
+  ```
+
+  `pikku all` deletes the generated `admin/user-admin.gen.ts` and its schemas on
+  the next run. That deletion is not tidying: left on disk the file keeps
+  registering the old six, so an app that installed the addon would answer to two
+  spellings of the same calls. `pikku validate` already fails an app with a console
+  and no admin addon wired, and names this wiring in the fix.
+
+  A host driving these operations from its own hand-written functions is
+  unaffected — the implementations still live in `@pikku/better-auth`, which is why
+  the addon needed none of its own.
+
+- Updated dependencies [dc3ac77]
+  - @pikku/better-auth@0.12.37
+
+## 0.12.134
+
+### Patch Changes
+
+- a0047d1: `fabric deploy apply` waits by default, takes the branch positionally, and gains `-y`
+
+  Shipping a branch unattended took four flags and a `--branch` that would not
+  accept the branch as an argument:
+
+  ```bash
+  pikku fabric deploy apply --branch my-branch --sync --auto-approve
+  ```
+
+  Three changes, all subtractive:
+
+  - The branch is **positional**, matching `fabric rollback`, and defaults to the
+    checked-out branch when nothing names a target.
+  - `--auto-approve` gains the short form **`-y`**, matching `rollback --yes`.
+  - **`--sync` is gone: waiting is now the default.** `--detach` opts out.
+
+  ```bash
+  pikku fabric deploy apply -y                 # deploys, waits, reports
+  pikku fabric deploy apply my-branch -y       # a named branch
+  pikku fabric deploy apply --detach -y --json # queue and exit, for split CI jobs
+  ```
+
+  Waiting became the default because the old one reported success before anything
+  had happened: without `--sync`, `apply` queued the deployment and exited 0
+  whether or not it went on to fail. That is the exotic case, and it now costs the
+  flag rather than the other way round.
+
+  `-y` answers prompts and nothing else — in particular it does **not** approve
+  migrations that drop or rewrite data. That remains `--allow-destructive`, typed
+  out on purpose, and still refuses to self-approve without it.
+
+  Branch inference is safe because the existing git safety check refuses a branch
+  with no upstream or one out of sync with it, so it cannot ship an unpushed
+  commit; the chosen branch is printed before the build starts, and a detached
+  HEAD is refused by name.
+
+  Breaking: `--sync` and `--branch`/`-b` are gone. Pass the branch positionally,
+  and `--detach` where you relied on queue-and-exit. Passing a branch together
+  with `--production` is now an error, where previously passing neither was.
+
 ## 0.12.133
 
 ### Patch Changes

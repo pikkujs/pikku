@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
+import { basePlan } from './plan-fixture.js'
 import { runKnowledgeValidate } from './validate.js'
 
 const project = async (files: Record<string, string>): Promise<string> => {
@@ -456,5 +457,121 @@ describe('runKnowledgeValidate on decisions', () => {
     assert.deepEqual(ids((await validate(root)).findings), [
       'knowledge-decision-nothing-ruled-out-knowledge/milestones/02-b.md-1',
     ])
+  })
+
+  // The three outcomes the plan pass exists to tell apart: an item that landed, one that
+  // was deferred and says so, and one that is neither — a promise that left the world
+  // without anybody recording that it had.
+  describe('plans', () => {
+    const BUILT = MILESTONE.replace('status: proposed', 'status: built')
+    const PLAN_PATH = 'knowledge/milestones/01-the-daily-entry.plan.json'
+    const plan = (
+      edit: (p: ReturnType<typeof basePlan>) => void = () => {}
+    ) => {
+      const p = basePlan()
+      edit(p)
+      return JSON.stringify(p, null, 2)
+    }
+    /** Codegen that ran and produced something, but not what the plan promised. */
+    const OTHER_META = {
+      '.pikku/function/pikku-functions-meta.gen.json': JSON.stringify({
+        somethingElse: { auth: true },
+      }),
+    }
+
+    test('a milestone with no plan is silent on a project that does not plan', async () => {
+      const result = await validate(
+        await project({
+          ...CLEAN,
+          'knowledge/milestones/01-the-daily-entry.md': BUILT,
+        })
+      )
+      assert.deepEqual(ids(result.findings), [])
+    })
+
+    test('a milestone with no plan is reported once the project plans at all', async () => {
+      const result = await validate(
+        await project({
+          ...CLEAN,
+          'knowledge/milestones/01-the-daily-entry.md': BUILT,
+          [PLAN_PATH]: plan(),
+          'knowledge/milestones/02-b.md': BUILT,
+        })
+      )
+      assert.deepEqual(ids(result.findings), [
+        'knowledge-plan-missing-knowledge/milestones/02-b.md',
+      ])
+    })
+
+    test('a plan that does not parse is an error against the plan file', async () => {
+      const result = await validate(
+        await project({ ...CLEAN, [PLAN_PATH]: '{"version": 1}' })
+      )
+      assert.equal(result.ok, false)
+      assert.deepEqual(ids(result.findings), [
+        'knowledge-plan-unreadable-knowledge/milestones/01-the-daily-entry.md',
+      ])
+      assert.equal(result.findings[0]!.path, PLAN_PATH)
+    })
+
+    test('no codegen means no verdict on what was built', async () => {
+      // A knowledge base is validated long before there is code. Reporting every
+      // planned item as unbuilt here would make the command useless on day one.
+      const result = await validate(
+        await project({
+          ...CLEAN,
+          'knowledge/milestones/01-the-daily-entry.md': BUILT,
+          [PLAN_PATH]: plan(),
+        })
+      )
+      assert.deepEqual(ids(result.findings), [])
+    })
+
+    test('a pass-1 promise the code does not have is reported as unbuilt', async () => {
+      const result = await validate(
+        await project({
+          ...CLEAN,
+          'knowledge/milestones/01-the-daily-entry.md': BUILT,
+          [PLAN_PATH]: plan(),
+          ...OTHER_META,
+        })
+      )
+      assert.equal(result.ok, false)
+      assert.ok(
+        ids(result.findings).some((id) =>
+          id.startsWith('knowledge-plan-unbuilt-')
+        ),
+        `expected an unbuilt finding, got ${ids(result.findings).join(', ')}`
+      )
+    })
+
+    test('the same promise deferred to a later pass is info, not an error', async () => {
+      const result = await validate(
+        await project({
+          ...CLEAN,
+          'knowledge/milestones/01-the-daily-entry.md': BUILT,
+          [PLAN_PATH]: plan((p) => {
+            if (p.functions.kind === 'built') {
+              for (const item of p.functions.items) item.pass = 2
+            }
+          }),
+          ...OTHER_META,
+        })
+      )
+      const deferred = result.findings.filter((f) =>
+        f.id.startsWith('knowledge-plan-deferred-')
+      )
+      assert.ok(deferred.length > 0, 'expected the deferral to be reported')
+      assert.deepEqual(
+        new Set(deferred.map((f) => f.severity)),
+        new Set(['info'])
+      )
+      assert.equal(
+        ids(result.findings).some((id) =>
+          id.startsWith('knowledge-plan-unbuilt-createEntry')
+        ),
+        false
+      )
+    })
   })
 })
