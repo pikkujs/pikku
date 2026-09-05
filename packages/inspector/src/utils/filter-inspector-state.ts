@@ -1258,8 +1258,21 @@ export function filterInspectorState(
     ) as Array<{ tools?: string[] }>) {
       for (const tool of agentMeta.tools ?? []) referencedIds.add(tool)
     }
+    // A unit carrying the generic `/rpc/:rpcName` catch-all (the rpcCaller
+    // unit, and agent units) dispatches arbitrary RPCs at runtime via
+    // `rpc.exposed(name)`, including namespaced addon RPCs (e.g.
+    // `admin:createUser`). Those never appear in referencedIds because no
+    // app-local function statically references them, so keep every wired
+    // addon's declaration for such units — otherwise the per-unit bootstrap
+    // omits the addon package bootstrap and `rpc.exposed('admin:createUser')`
+    // throws RPCNotFoundError on the deployed stage.
+    const hasRpcCatchAll = (filters.names ?? []).includes('/rpc/:rpcName')
     const keptNamespaces = new Set<string>()
     for (const namespace of filteredState.rpc.wireAddonDeclarations.keys()) {
+      if (hasRpcCatchAll) {
+        keptNamespaces.add(namespace)
+        continue
+      }
       const prefix = `${namespace}:`
       for (const id of referencedIds) {
         if (id.startsWith(prefix)) {
