@@ -115,8 +115,13 @@ export abstract class WebhookService {
 
   /**
    * The three methods below are optional capability: the default queue-only
-   * service keeps no history and throws, and a store-backed implementation
-   * (e.g. `KyselyWebhookService` in `@pikku/kysely`) overrides them.
+   * service keeps no history, and a store-backed implementation (e.g.
+   * `KyselyWebhookService` in `@pikku/kysely`) overrides them.
+   *
+   * Only the write throws. A write that goes nowhere loses the caller's data,
+   * so it has to say so; a read of a history nobody keeps is honestly empty,
+   * and throwing there turns the console's webhooks page into an error on
+   * every app that has not opted into persistence.
    */
   public recordAttempt(
     _deliveryId: string,
@@ -128,20 +133,16 @@ export abstract class WebhookService {
   }
 
   /** Most recent first. */
-  public listDeliveries(_opts?: {
+  public async listDeliveries(_opts?: {
     organizationId?: string
     limit?: number
   }): Promise<WebhookDeliveryRecord[]> {
-    throw new NotImplementedError(
-      'webhook delivery persistence is not configured'
-    )
+    return []
   }
 
-  public getDelivery(
+  public async getDelivery(
     _deliveryId: string
   ): Promise<WebhookDeliveryWithAttempts | null> {
-    throw new NotImplementedError(
-      'webhook delivery persistence is not configured'
-    )
+    return null
   }
 }
