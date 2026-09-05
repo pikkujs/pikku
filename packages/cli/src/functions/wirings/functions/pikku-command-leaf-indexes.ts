@@ -48,8 +48,15 @@ export const leafEntries = [
  * than inferred from what is on disk: a project that used to be an application
  * still has the files an earlier run wrote, which would otherwise keep the leaf
  * looking alive to `existsSync` forever.
+ *
+ * `cli` is deliberately not one of them. It reads like one — `wireCLI` is a
+ * registry an addon cannot reach — but the leaf also carries
+ * `defineCLICommands`, which is exactly the contract an addon is *supposed* to
+ * ship: the inspector permits it (CONTRACT_DEFINERS in add-addon-bans.ts) and
+ * `refCLI` exists for the consuming app to mount it. Retiring the leaf left
+ * that helper unimportable from addon code, so the whole path was dead.
  */
-const ADDON_RETIRED_LEAVES = new Set(['queue', 'scheduler', 'gateway', 'cli'])
+const ADDON_RETIRED_LEAVES = new Set(['queue', 'scheduler', 'gateway'])
 
 export const pikkuLeafIndexes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
