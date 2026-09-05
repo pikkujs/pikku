@@ -1,5 +1,36 @@
 # @pikku/skills
 
+## 0.12.28
+
+### Patch Changes
+
+- 591593a: Document `pikku knowledge next` in the `pikku-knowledge` skill: what the six actions mean,
+  that `reason` is machine wording never to be repeated to a person, and that `ask-user`
+  carries a separate `question` whose empty `options` list means offer free text rather than
+  invent choices.
+- 591593a: Document the two frontmatter keys a driving loop writes, in `pikku-knowledge`.
+
+  `statusAt:` and `attempts:` are bookkeeping rather than content, and an agent
+  that rewrites a note has to know not to hand-edit them — clearing `attempts:`
+  hands back a budget that exists to stop a note nothing can satisfy being
+  rewritten forever.
+
+  Also corrects the status vocabulary: it is `designing` → `proposed` →
+  `dispatched` → `built`. The skill said `proposed` → `dispatched` → `built`,
+  "nothing else", while `validate` has always accepted `designing`.
+
+- f5a8ee4: Teach `pikku-kysely` to count round trips.
+
+  The skill documented the query builder API but said nothing about how many times
+  a function body crosses the wire, so generated functions routinely awaited four
+  or five queries in series — invisible locally, a stacked latency in a deployed
+  stage. Adds the four shapes that collapse: independent reads into `Promise.all`,
+  parent-then-children into the `jsonArrayFrom` helpers already documented below
+  it, read-then-write into one `returning()`/`onConflict` statement that also
+  closes the race, and a read that only feeds the next `where` into a subquery or
+  CTE. Plus the correction that a transaction adds round trips rather than
+  removing them.
+
 ## 0.12.27
 
 ### Patch Changes

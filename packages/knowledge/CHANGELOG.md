@@ -1,5 +1,56 @@
 # @pikku/knowledge
 
+## 0.12.11
+
+### Patch Changes
+
+- 2273c92: Add the attempt ledger: `attemptsSpent`, `recordNoteAttempt`, `noteAttempts`,
+  `noteFingerprint` and the single frontmatter writer `setNoteScalars`. A loop
+  driving seats over a knowledge base needs a bound on how many turns one seat may
+  spend on one note, and one that refunds itself when the note is rewritten — this
+  is that bound, keyed on a fingerprint of the note's content and the scalars a
+  profile's gates refuse on. `attempts:` is now read as an OKF scalar.
+- 0303b27: Add the milestone lifecycle and the Gherkin lints.
+
+  `setMilestoneStatus` is the one function that moves a milestone's state and the
+  one that dates it (`statusAt:`) — the note's mtime is not the transition time.
+  `holdMilestoneLifecycle` snapshots and restores that state across a turn that
+  rewrites notes, because re-filing the body is wanted and reverting `status:` is
+  how one milestone gets built twice. With them come `nominatedMilestone`,
+  `dispatchedMilestone`, `markDispatchedMilestoneBuilt`, `withoutMilestonesDir`
+  and `entitiesOf`.
+
+  `firstPersonStep` and `quotedIn` are the two lints that decide whether a
+  scenario can name an actor at all.
+
+  `MILESTONE_STATUSES` moves from `validate.ts` to `milestone.ts`; it is still
+  re-exported from both, so the public surface is unchanged.
+
+- 591593a: Add the dispatch gate and the reconcile loop, with a seam for a profile's own gates.
+
+  `readyMilestone` decides whether a milestone note is buildable: it carries `entities:`,
+  a `gherkin` block that is not written in the first person, a scenario that names somebody
+  who acts, a readable `surface:`, and `tools:` when that surface is an agent. It refuses
+  with one sentence a seat can act on, and says who the refusal belongs to — the note's
+  author, nobody yet, or a profile's own hold.
+
+  `nextAction` derives the one thing to do next from what is on disk: repair a note, write a
+  plan, ask the user, dispatch, or hold. Deriving it means calling it twice is free, nothing
+  has to be armed by whoever noticed a transition, and the pipeline is testable in a temp
+  directory. `runKnowledgeReconcile` flattens the same answer to paths, for a driver reading
+  it across a process boundary.
+
+  Both take a profile's frontmatter keys, so a profile's gate is handed notes carrying its
+  own keys and a repair to one of them refunds the attempt budget. `readMilestones` takes
+  those keys too.
+
+  A refusal a person has to settle also comes back as a `question`: a header, the question
+  in the language of the app, and `options` when the answer comes from a vocabulary this
+  package closes over — which `status:` a note is at, which `surface:` it has. Refusals
+  about missing content carry no options, because inventing them would be inventing the
+  answer. It is a value rather than a tool call, so a harness with a picker renders one and
+  a harness without prints a list.
+
 ## 0.12.10
 
 ### Patch Changes
