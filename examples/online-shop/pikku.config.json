@@ -38,7 +38,8 @@
     "workflow": true,
     "scenarios": true,
     "virtualUser": true,
-    "events": true
+    "events": true,
+    "webhook": true
   },
   "scenarios": {
     "emailDomain": "actors.local",
