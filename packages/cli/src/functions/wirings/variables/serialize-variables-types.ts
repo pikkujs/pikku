@@ -2,14 +2,7 @@ import type { VariableDefinitions } from '@pikku/core/variable'
 import { validateAndBuildVariableDefinitionsMeta } from '@pikku/core/variable'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-
-/**
- * A display name is the human-facing label a developer wrote, so an apostrophe
- * in it is ordinary. `JSON.stringify` emits a valid, escaped TypeScript string
- * literal; interpolating the raw text into a quoted one terminates the string
- * and the generated file stops parsing.
- */
-const literal = (value: string) => JSON.stringify(value)
+import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializeVariablesOptions {
   definitions: VariableDefinitions
@@ -54,7 +47,7 @@ export const serializeVariablesTypes = ({
         // are still initializing throws `Cannot access '<schema>' before
         // initialization`, and deferring the read to first use avoids the cycle.
         metaEntries.push(
-          `  '${meta.variableId}': { name: '${name}', displayName: ${literal(meta.displayName)}, schema: () => ${schemaRef.variableName} }`
+          `  '${meta.variableId}': { name: '${name}', displayName: ${tsLiteral(meta.displayName)}, schema: () => ${schemaRef.variableName} }`
         )
       }
     }

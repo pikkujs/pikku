@@ -1,7 +1,19 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
+import ts from 'typescript'
 import { serializeScopesTypes } from './serialize-scopes-types.js'
 import type { ScopeDefinitions } from '@pikku/core/scope'
+
+const parseErrors = (source: string) => {
+  const file = ts.createSourceFile(
+    'pikku-scopes.gen.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true
+  )
+  return (file as unknown as { parseDiagnostics: ts.Diagnostic[] })
+    .parseDiagnostics
+}
 
 describe('serializeScopesTypes', () => {
   test('emits a union of a flat scope', () => {
@@ -9,7 +21,7 @@ describe('serializeScopesTypes', () => {
 
     const output = serializeScopesTypes({ definitions })
 
-    assert.match(output, /export type ScopeId =\s*\|\s*'admin'/)
+    assert.match(output, /export type ScopeId =\s*\|\s*["']admin["']/)
   })
 
   test('emits every node of a nested tree', () => {
@@ -22,13 +34,13 @@ describe('serializeScopesTypes', () => {
 
     const output = serializeScopesTypes({ definitions })
 
-    assert.ok(output.includes("'admin'"), 'expected the root scope')
+    assert.ok(output.includes('"admin"'), 'expected the root scope')
     assert.ok(
-      output.includes("'admin:invoices'"),
+      output.includes('"admin:invoices"'),
       'expected the intermediate scope'
     )
     assert.ok(
-      output.includes("'admin:invoices:create'"),
+      output.includes('"admin:invoices:create"'),
       'expected the leaf scope'
     )
   })
@@ -40,9 +52,9 @@ describe('serializeScopesTypes', () => {
 
     const output = serializeScopesTypes({ definitions })
 
-    assert.ok(output.includes("'admin:*'"), 'expected a wildcard for the root')
+    assert.ok(output.includes('"admin:*"'), 'expected a wildcard for the root')
     assert.ok(
-      output.includes("'admin:invoices:*'"),
+      output.includes('"admin:invoices:*"'),
       'expected a wildcard for the intermediate node'
     )
   })
@@ -53,7 +65,7 @@ describe('serializeScopesTypes', () => {
     const output = serializeScopesTypes({ definitions })
 
     assert.ok(
-      !output.includes("'admin:*'"),
+      !output.includes('"admin:*"'),
       'a leaf has no descendants, so its wildcard is meaningless'
     )
   })
@@ -109,8 +121,43 @@ describe('serializeScopesTypes', () => {
       .split('\n\n')[0]!
 
     assert.deepEqual(
-      [...union.matchAll(/'([^']+)'/g)].map((m) => m[1]).sort(),
+      [...union.matchAll(/["']([^"']+)["']/g)].map((m) => m[1]).sort(),
       ['admin', 'admin:*', 'admin:invoices', 'admin:users'].sort()
+    )
+  })
+})
+
+describe('serializeScopesTypes — escaping', () => {
+  test('emits a parseable file for a display name needing escaping', () => {
+    const definitions: ScopeDefinitions = [
+      { name: 'admin', displayName: 'Bob\'s "live" key \\' },
+    ]
+
+    assert.deepEqual(parseErrors(serializeScopesTypes({ definitions })), [])
+  })
+
+  test('emits a parseable file for a scope id needing escaping', () => {
+    const definitions: ScopeDefinitions = [{ name: 'admin\\legacy' }]
+
+    const output = serializeScopesTypes({ definitions })
+
+    assert.deepEqual(parseErrors(output), [])
+    assert.ok(
+      output.includes(JSON.stringify('admin\\legacy')),
+      'expected the backslash to survive rather than escape the next character'
+    )
+  })
+
+  test('keeps a display name readable through the escaping', () => {
+    const definitions: ScopeDefinitions = [
+      { name: 'admin', displayName: "Bob's team" },
+    ]
+
+    const output = serializeScopesTypes({ definitions })
+
+    assert.ok(
+      output.includes(JSON.stringify("Bob's team")),
+      'expected the display name to survive as a single escaped literal'
     )
   })
 })
@@ -139,6 +186,6 @@ describe('serializeScopesTypes — shipping the declared set', () => {
   test('still emits the union as a literal type', () => {
     const output = serializeScopesTypes({ definitions: [{ name: 'admin' }] })
 
-    assert.match(output, /export type ScopeId =\s*\|\s*'admin'/)
+    assert.match(output, /export type ScopeId =\s*\|\s*["']admin["']/)
   })
 })

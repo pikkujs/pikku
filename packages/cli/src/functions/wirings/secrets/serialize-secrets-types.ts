@@ -2,14 +2,7 @@ import type { SecretDefinitions } from '@pikku/core/secret'
 import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-
-/**
- * A display name is the human-facing label a developer wrote, so an apostrophe
- * in it is ordinary. `JSON.stringify` emits a valid, escaped TypeScript string
- * literal; interpolating the raw text into a quoted one terminates the string
- * and the generated file stops parsing.
- */
-const literal = (value: string) => JSON.stringify(value)
+import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializeSecretsOptions {
   definitions: SecretDefinitions
@@ -44,10 +37,10 @@ export const serializeSecretsTypes = ({
       mapEntries.push(`  '${meta.oauth2.tokenSecretId}': OAuth2Token`)
 
       metaEntries.push(
-        `  '${meta.secretId}': { name: '${name}', displayName: ${literal(meta.displayName)}, oauth2: { tokenSecretId: '${meta.oauth2.tokenSecretId}' } }`
+        `  '${meta.secretId}': { name: '${name}', displayName: ${tsLiteral(meta.displayName)}, oauth2: { tokenSecretId: '${meta.oauth2.tokenSecretId}' } }`
       )
       metaEntries.push(
-        `  '${meta.oauth2.tokenSecretId}': { name: '${name}_tokens', displayName: ${literal(`${meta.displayName} Tokens`)} }`
+        `  '${meta.oauth2.tokenSecretId}': { name: '${name}_tokens', displayName: ${tsLiteral(`${meta.displayName} Tokens`)} }`
       )
     } else if (meta.schema && typeof meta.schema === 'string') {
       const schemaRef = schemaLookup.get(meta.schema)
@@ -62,7 +55,7 @@ export const serializeSecretsTypes = ({
           `  '${meta.secretId}'${meta.optional ? '?' : ''}: z.infer<typeof ${schemaRef.variableName}>`
         )
         metaEntries.push(
-          `  '${meta.secretId}': { name: '${name}', displayName: ${literal(meta.displayName)}${meta.optional ? ', optional: true' : ''} }`
+          `  '${meta.secretId}': { name: '${name}', displayName: ${tsLiteral(meta.displayName)}${meta.optional ? ', optional: true' : ''} }`
         )
       }
     }

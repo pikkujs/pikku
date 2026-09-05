@@ -2,14 +2,7 @@ import type { CredentialDefinitions } from '@pikku/core/credential'
 import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/credential'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-
-/**
- * A display name is the human-facing label a developer wrote, so an apostrophe
- * in it is ordinary. `JSON.stringify` emits a valid, escaped TypeScript string
- * literal; interpolating the raw text into a quoted one terminates the string
- * and the generated file stops parsing.
- */
-const literal = (value: string) => JSON.stringify(value)
+import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializeCredentialsOptions {
   definitions: CredentialDefinitions
@@ -55,7 +48,7 @@ export const serializeCredentialsTypes = ({
 
     const metaParts = [
       `name: '${name}'`,
-      `displayName: ${literal(meta.displayName)}`,
+      `displayName: ${tsLiteral(meta.displayName)}`,
       `type: '${meta.type}'`,
     ]
     if (meta.oauth2) {

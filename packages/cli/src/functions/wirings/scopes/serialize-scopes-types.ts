@@ -1,11 +1,10 @@
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializeScopesOptions {
   definitions: ScopeDefinitions
 }
-
-const quote = (value: string) => `'${value.replace(/'/g, "\\'")}'`
 
 /**
  * Generates the `ScopeId` union and scope metadata from `defineScope`
@@ -33,7 +32,7 @@ export const serializeScopesTypes = ({
 
   const union =
     requirable.length > 0
-      ? `\n${requirable.map((id) => `  | ${quote(id)}`).join('\n')}`
+      ? `\n${requirable.map((id) => `  | ${tsLiteral(id)}`).join('\n')}`
       : ' never'
 
   const displayNames = [...flat]
@@ -42,7 +41,9 @@ export const serializeScopesTypes = ({
       const displayName = definitions.find(
         (d) => d.name === scope.id
       )?.displayName
-      return displayName ? [`  ${quote(scope.id)}: ${quote(displayName)},`] : []
+      return displayName
+        ? [`  ${tsLiteral(scope.id)}: ${tsLiteral(displayName)},`]
+        : []
     })
 
   return `/**

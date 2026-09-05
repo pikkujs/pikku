@@ -1,4 +1,5 @@
 import type { PersonaDefinitions } from '@pikku/core/persona'
+import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializePersonasOptions {
   definitions: PersonaDefinitions
@@ -7,8 +8,6 @@ export interface SerializePersonasOptions {
   /** Keys of `environments` in pikku.config.json. */
   environmentNames: string[]
 }
-
-const quote = (value: string) => `'${value.replace(/'/g, "\\'")}'`
 
 /**
  * Generates the `PersonaId` union and a `definePersonas` whose `roles` are
@@ -27,7 +26,7 @@ export const serializePersonasTypes = ({
     environmentNames.length > 0
       ? `\n${[...environmentNames]
           .sort()
-          .map((name) => `  | ${quote(name)}`)
+          .map((name) => `  | ${tsLiteral(name)}`)
           .join('\n')}`
       : ' never'
 
