@@ -6,7 +6,11 @@ import {
   NoopAuditService,
   createInvocationAudit,
 } from '@pikku/core/services'
-import { createAuditedKysely, KyselyScopeService } from '@pikku/kysely'
+import {
+  createAuditedKysely,
+  KyselyScopeService,
+  KyselyWebhookService,
+} from '@pikku/kysely'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
 import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
 import type { KyselyPikkuDB } from '@pikku/kysely'
@@ -109,6 +113,28 @@ export const createSingletonServices = pikkuServices(
     await scopeService.syncScopes(SCOPES)
     await scopeService.syncSystemRoles(SYSTEM_ROLES)
 
+    // Outgoing webhook delivery history, so the console's webhooks page has
+    // something to read. Opt-in per app: this shop turns it on with
+    // `scaffold.webhook` (which generates the `pikku-outgoing-webhooks` queue
+    // worker that actually does the sending) and wires the store-backed service
+    // here. An app that never sends a webhook wires neither and the page is
+    // simply empty.
+    //
+    // On the shared kysely rather than a database of its own — the
+    // webhook_delivery tables are already in this project's migrations, so
+    // `init()` only has to find them. It requires the schema and does not create
+    // it; a project that wires this without generating the tables fails at boot
+    // rather than on the first send.
+    let webhookService = existingServices?.webhookService
+    if (!webhookService && existingServices?.queueService) {
+      const kyselyWebhooks = new KyselyWebhookService(
+        existingServices.queueService,
+        kysely as unknown as Kysely<KyselyPikkuDB>
+      )
+      await kyselyWebhooks.init()
+      webhookService = kyselyWebhooks
+    }
+
     return {
       ...(existingServices ?? {}),
       config,
@@ -128,6 +154,7 @@ export const createSingletonServices = pikkuServices(
       // SecretlessServices).
       ...(credentialService ? { credentialService } : {}),
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
+      ...(webhookService ? { webhookService } : {}),
     }
   }
 )
