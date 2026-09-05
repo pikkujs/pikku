@@ -16,6 +16,18 @@ export {
   parseDecisionFence,
 } from './decision-fence.js'
 
+export {
+  ATTEMPTS_KEY,
+  type AttemptOptions,
+  type NoteAttempt,
+  type RecordAttemptOptions,
+  attemptsSpent,
+  noteAttempts,
+  noteFingerprint,
+  recordNoteAttempt,
+  setNoteScalars,
+} from './ledger.js'
+
 export { type ResourcePrefix, type ResourceUri } from './resource-uri.js'
 
 export {
