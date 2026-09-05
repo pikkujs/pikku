@@ -6,6 +6,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
   stripVerboseFields,
   reattachFunctionServices,
+  reattachAgentToolDescriptions,
 } from '../../../utils/strip-verbose-meta.js'
 import {
   writeMetaSidecar,
@@ -19,7 +20,7 @@ import { serializeScenarioFunctionMeta } from '../scenarios/serialize-scenario-m
 
 export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { functions, rpc } = await getInspectorState()
+    const { functions, rpc, agents } = await getInspectorState()
     const {
       functionsMetaFile,
       functionsMetaJsonFile,
@@ -38,6 +39,13 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
     if (config.addonName) {
       minimalMeta = reattachFunctionServices(minimalMeta, appFunctionsMeta)
     }
+    minimalMeta = reattachAgentToolDescriptions(
+      minimalMeta,
+      appFunctionsMeta,
+      new Set(
+        Object.values(agents.agentsMeta).flatMap((agent) => agent.tools ?? [])
+      )
+    )
 
     const packageName = config.addonName ? `'${config.addonName}'` : 'null'
     const supportsImportAttributes = schema?.supportsImportAttributes ?? false

@@ -226,6 +226,24 @@ export function reattachFunctionServices<
 }
 
 /**
+ * `description` is stripped as visualization-only, but an agent's tools are
+ * offered to the model by name and description — without it the model chooses
+ * between bare RPC names. Re-attach it for the functions some agent actually
+ * lists as a tool, rather than shipping every description at runtime.
+ */
+export function reattachAgentToolDescriptions<
+  T extends Record<string, { description?: unknown }>,
+>(minimalMeta: T, fullMeta: T, toolNames: Iterable<string>): T {
+  for (const name of toolNames) {
+    const full = fullMeta[name]
+    if (full?.description && minimalMeta[name]) {
+      minimalMeta[name].description = full.description
+    }
+  }
+  return minimalMeta
+}
+
+/**
  * Check if an object has any verbose fields that would be stripped
  */
 export function hasVerboseFields(obj: unknown): boolean {

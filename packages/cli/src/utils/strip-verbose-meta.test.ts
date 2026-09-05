@@ -4,6 +4,7 @@ import {
   stripVerboseFields,
   hasVerboseFields,
   reattachFunctionServices,
+  reattachAgentToolDescriptions,
 } from './strip-verbose-meta.js'
 
 describe('stripVerboseFields', () => {
@@ -187,5 +188,52 @@ describe('reattachFunctionServices', () => {
       { ghost: { services: { optimized: true, services: ['kysely'] } } } as any
     )
     assert.deepStrictEqual(result, {})
+  })
+})
+
+describe('reattachAgentToolDescriptions', () => {
+  const fullMeta = {
+    getDeploymentStatus: {
+      pikkuFuncId: 'getDeploymentStatus',
+      description: 'State of one deployment, and why it failed',
+    },
+    listInvoices: {
+      pikkuFuncId: 'listInvoices',
+      description: 'Every invoice on the organization',
+    },
+  } as any
+
+  test('restores the description of a function an agent lists as a tool', () => {
+    const minimal = stripVerboseFields(fullMeta) as any
+    assert.strictEqual(minimal.getDeploymentStatus.description, undefined)
+
+    const result = reattachAgentToolDescriptions(minimal, fullMeta, [
+      'getDeploymentStatus',
+    ]) as any
+
+    assert.strictEqual(
+      result.getDeploymentStatus.description,
+      'State of one deployment, and why it failed'
+    )
+  })
+
+  test('leaves a function no agent calls stripped', () => {
+    const result = reattachAgentToolDescriptions(
+      stripVerboseFields(fullMeta) as any,
+      fullMeta,
+      ['getDeploymentStatus']
+    ) as any
+
+    assert.strictEqual(result.listInvoices.description, undefined)
+  })
+
+  test('ignores a tool name with no matching function', () => {
+    const result = reattachAgentToolDescriptions(
+      stripVerboseFields(fullMeta) as any,
+      fullMeta,
+      ['someAgentDelegate']
+    ) as any
+
+    assert.strictEqual(result.someAgentDelegate, undefined)
   })
 })
