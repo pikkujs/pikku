@@ -1,0 +1,179 @@
+name: Publish
+
+# Publishing is split out of `main.yml` because the two want opposite
+# concurrency. CI is latest-wins: a new push to main should discard the run
+# before it and give feedback on the newest tree. A publish must never be
+# discarded — `cancel-in-progress` killed the `Create Release Pull Request or
+# Publish` step of five consecutive runs on main, each time with "Canceling
+# since a higher priority waiting request exists", so a merged version bump sat
+# in package.json with nothing on npm.
+#
+# Queueing rather than cancelling also closes the partial-publish window: a run
+# stopped part-way through `yarn release` can leave some packages published at
+# the new version and others not. A queued publish waits for the one ahead of it
+# to finish instead of interrupting it.
+on:
+  workflow_run:
+    workflows: ['Release']
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    # The gates that protect a publish (validate-deps, lint, build, unit-tests,
+    # e2e) ran in `main.yml`; this workflow only starts once that whole run
+    # succeeded, so there is nothing left to wait on here.
+    if: github.event.workflow_run.conclusion == 'success'
+    # Publishing is npm trusted publishing (OIDC), so the job needs to mint an
+    # id-token. Naming any permission drops the repo-wide `write` default for
+    # every one not listed, so the two this job already relied on are spelled
+    # out: `contents` pushes the git tags and creates the GitHub releases the
+    # binary upload then attaches to, and `pull-requests` opens Version Packages.
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+    steps:
+      # `workflow_run` starts from the default branch, so the commit that was
+      # actually tested has to be named explicitly. Full history is what
+      # changesets reads tags from.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: node .github/changeset-version.cjs
+          publish: yarn release
+          createGithubReleases: true
+        # No NPM_TOKEN, deliberately. npm now demands a 2FA OTP that a classic
+        # token cannot answer, which is what had every release since 2026-09-02
+        # failing on `child "otp" fails`. Trusted publishing is exempt — but in
+        # yarn the OIDC branch sits *after* the token check, so a token left in
+        # this env would short-circuit OIDC and put the failure straight back.
+        # changesets/action is likewise guarded on NPM_TOKEN being absent.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: '0'
+      - name: Upload CLI native binaries to GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        id: upload-binaries
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          published='${{ steps.changesets.outputs.publishedPackages }}'
+          cli_version=$(echo "$published" | node -e "
+            const pkgs = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            const cli = pkgs.find(p => p.name === '@pikku/cli');
+            if (cli) process.stdout.write(cli.version);
+          ")
+          if [ -z "$cli_version" ]; then
+            echo "@pikku/cli was not published this run — skipping binary upload"
+            exit 0
+          fi
+          echo "cli_version=${cli_version}" >> "$GITHUB_OUTPUT"
+          tag="@pikku/cli@${cli_version}"
+          echo "Uploading binaries for $tag"
+          for f in packages/cli/release/binaries/*; do
+            [ -f "$f" ] || continue
+            echo "  Uploading $(basename $f)"
+            gh release upload "$tag" "$f" --clobber
+          done
+      - name: Update Homebrew tap
+        if: steps.upload-binaries.outputs.cli_version != ''
+        shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          CLI_VERSION="${{ steps.upload-binaries.outputs.cli_version }}"
+          ARM_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-arm64 | cut -d' ' -f1)
+          X64_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-x64 | cut -d' ' -f1)
+          ENCODED_TAG="%40pikku%2Fcli%40${CLI_VERSION}"
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/pikkujs/homebrew-pikku.git" tap
+          cd tap
+
+          mkdir -p Casks
+          cat > Casks/pikku.rb << CASK
+          cask "pikku" do
+            version "${CLI_VERSION}"
+
+            on_arm do
+              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-arm64"
+              sha256 "${ARM_SHA}"
+              binary "pikku-darwin-arm64", target: "pikku"
+            end
+            on_intel do
+              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-x64"
+              sha256 "${X64_SHA}"
+              binary "pikku-darwin-x64", target: "pikku"
+            end
+
+            name "Pikku"
+            desc "Code generation tool for type-safe backend development"
+            homepage "https://pikku.dev"
+          end
+          CASK
+
+          git config user.email "ci@pikku.dev"
+          git config user.name "Pikku CI"
+          git add Casks/pikku.rb
+          git commit -m "pikku ${CLI_VERSION}"
+          git push
+
+  sync-templates-stackblitz:
+    name: Sync Templates
+    runs-on: ubuntu-latest
+    needs: publish
+    environment: sync-templates-approval
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [24]
+        template:
+          [
+            express,
+            express-middleware,
+            fastify,
+            fastify-plugin,
+            uws,
+            ws,
+            aws-lambda,
+            aws-lambda-websocket,
+            cloudflare-workers,
+            cloudflare-websocket,
+            nextjs,
+            mcp-server,
+            cli,
+            pg-boss,
+            bullmq,
+            workflows-bullmq,
+            workflows-pg-boss,
+            remote-rpc-pg,
+            remote-rpc-redis,
+          ]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v7
+
+      - name: Create Template
+        run: npm create pikku@latest -- --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../test-app --install --package-manager npm --stackblitz
+
+      - name: Sync template repository
+        run: ./scripts/sync-template-repos.sh ${{ matrix.template }} --apply --token ${{ secrets.SYNC_TOKEN_GITHUB }}
