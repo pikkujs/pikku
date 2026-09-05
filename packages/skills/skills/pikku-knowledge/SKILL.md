@@ -141,7 +141,8 @@ And writing again replaces it rather than adding a second
 ```
 ````
 
-- **`status`** is `proposed` → `dispatched` → `built`. Nothing else. Every gate compares it literally.
+- **`status`** is `designing` → `proposed` → `dispatched` → `built`. Nothing else. Every gate compares it literally. `designing` sits BEFORE `proposed`: the slice is written down but must not be built yet, because whoever is being shown its looks has not picked one. Only `proposed` is dispatchable, so the two cannot be one status without a slice being built out from under the person still choosing.
+- **`statusAt:` and `attempts:` are bookkeeping, not content — never hand-edit them.** A loop driving this base writes both. `statusAt:` is stamped by whatever moved the status, and is what makes "how long has this been building?" answerable; the file's mtime is not the transition time, because a note is edited after dispatch for all sorts of reasons. `attempts:` is `seat@hash` entries recording which seat has already tried to move this note forward, against the content it was trying to move — it is the loop's only brake, and clearing it by hand hands back a budget that exists to stop a note nothing can satisfy being rewritten forever. Rewriting the note's real content refunds that budget on its own, which is the point: an answer that changes the note is what unsticks it.
 - **`entities`** lists what the slice touches, **at most three**. Past three it is not one buildable piece — split it.
 - **The scenario is a fenced `gherkin` block, in the third person.** `Given 'owner' has no entry` — never `Given I have no entry`. A quoted word _means a persona_, which is what lets a reader (and a test) tell who is acting. First person hides that, so it is rejected. The console draws the keywords as a column and each quoted persona as a chip, so a first-person scenario is visibly a block with no personas in it.
 
