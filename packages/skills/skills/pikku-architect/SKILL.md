@@ -264,8 +264,9 @@ one, and is worth opening for any question you cannot answer with a flat yes.
    input the prose describes is a field somebody planned.
 4. **Does something produce every state and field the plan reads?** For each clause of a description,
    each screen the opening paragraph names, each field you filter or badge on, and each state a
-   scenario waits in — name the function that gets the world there, checked against code that already
-   exists.
+   scenario waits in — name the function that gets the world there. A producer you are reusing is
+   checked against code that already exists; a producer this milestone is adding is checked against
+   the plan that adds it. What is never allowed is a state with no named producer at all.
 5. **Can two sentences in the plan both be true?** Write a state machine out once as a table in
    `model`, name who sets and reads every clock in it, and say whether saving a child collection
    REPLACES it or ADDS to it.

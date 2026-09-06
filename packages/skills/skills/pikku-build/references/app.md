@@ -404,8 +404,10 @@ over, and an uncovered function is a half-milestone whether or not the note says
    regenerates the Kysely types your functions import. **Neither `pikku all` nor
    restarting `pikku dev` applies a migration** — so a new column reads as
    `TS2353 … does not exist in type 'InsertExpression<DB, "…">'` on the function
-   that writes it. That error means the migration has not run, never that the
-   column name is wrong; run `db migrate` before you go looking at the SQL.
+   that writes it. An unapplied migration is the usual cause and the cheapest to
+   rule out, so run `db migrate` first — but the same error is what a misspelt
+   column or a stale generated type looks like, so if it survives the migration,
+   go and read the SQL.
 2. **Seed.** Demo rows in `db/sqlite-dev-seed.sql`. **There is no seed command** —
    `bunx --bun pikku db reset` is the only thing that applies the file, and it
    wipes, migrates and seeds in one go (`--no-seed` stops after the migration,
@@ -593,10 +595,13 @@ proves nothing:
 Run them:
 
 ```sh
-bunx --bun pikku scenario run local --spawn                       # server-side, the fast path
-bunx --bun pikku scenario run local --spawn --run browser         # the same journeys, driven as a human
-bunx --bun pikku scenario run local-admin --spawn --run browser   # the second app
+bunx --bun pikku scenario run local --spawn                  # server-side, the fast path
+bunx --bun pikku scenario run local --spawn --run browser    # the same journeys, driven as a human
 ```
+
+In a multi-app project that one run covers both frontends: each persona carries
+its own `app` and `@pikku/playwright` resolves the base url from the
+environment's `appUrls` map, so there is no second environment to run.
 
 **Run the whole suite, not the milestone's own scenarios.** The milestone's
 scenarios are the ones you wrote to pass; the regression lives in someone
@@ -618,9 +623,10 @@ bunx --bun pikku dev --coverage                        # server, instrumented
 bunx --bun pikku scenario run local --coverage         # against that server
 ```
 
-**A function no scenario touches has never been run by anything but you, by
-hand, once.** Read `coverage/scenario-coverage.json` **as each milestone
-closes** — per milestone it is a short list you can act on, whereas read for the
+**A function no scenario touches has no scenario coverage** — the file knows
+what the suite exercises and nothing else, so a unit test, a scheduled job, a
+webhook or a hand call leaves no trace in it. Read
+`coverage/scenario-coverage.json` **as each milestone closes** — per milestone it is a short list you can act on, whereas read for the
 first time after ten milestones it is a wall of red nobody triages. Every gap is
 a missing scenario, a function that should not exist, or a deferral worth
 writing down; [scenarios.md](references/scenarios.md) says how to tell them apart. Report

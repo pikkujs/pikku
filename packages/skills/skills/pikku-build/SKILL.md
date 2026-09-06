@@ -114,7 +114,10 @@ while still planning. Those failures look alarming and are nothing but this.
   `knowledge/`, milestone planning, design direction and refusal scenarios — say
   so out loud to the user when you finish, and point at the way out.
 - **Do not introduce a wire of a type whose `capabilities.<type>` is `false`**
-  unless the user asked for it.
+  unless the user asked for it — and an approved milestone plan counts as them
+  asking. A plan the user signed off on authorizes the wires it names, so build
+  them and flip the capability, rather than refusing planned work because the
+  flag still reads `false` from before the plan.
 - **Do not assume an addon's mounted route works because it mounted.** An
   addon's singleton services are narrowed to the handful its own factory returns
   plus config, logger, schema, variables and secrets — the host's `queueService`,
