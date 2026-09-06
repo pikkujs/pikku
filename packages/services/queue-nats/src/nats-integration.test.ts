@@ -12,7 +12,11 @@
  */
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { jetstream, jetstreamManager, RetentionPolicy } from '@nats-io/jetstream'
+import {
+  jetstream,
+  jetstreamManager,
+  RetentionPolicy,
+} from '@nats-io/jetstream'
 import { connect, type NatsConnection } from '@nats-io/transport-node'
 import { NatsServiceFactory } from './nats-service-factory.js'
 import { NatsQueueService } from './nats-queue-service.js'
@@ -126,7 +130,11 @@ it('jobId dedupes a duplicate publish, like a pg-boss singleton key', async () =
     await delay(300)
 
     const info = await consumer.info()
-    assert.equal(info.num_pending, 1, 'second publish with the same jobId should be dropped')
+    assert.equal(
+      info.num_pending,
+      1,
+      'second publish with the same jobId should be dropped'
+    )
   } finally {
     await cleanup()
   }
@@ -150,7 +158,11 @@ it('nak redelivers, and the attempt count climbs', async () => {
     }
     messages.stop()
 
-    assert.deepEqual(attempts, [1, 2], 'a naked message should come back as a second attempt')
+    assert.deepEqual(
+      attempts,
+      [1, 2],
+      'a naked message should come back as a second attempt'
+    )
   } finally {
     await cleanup()
   }
@@ -174,7 +186,11 @@ it('term does NOT redeliver — the discard path is permanent', async () => {
     await delay(2_500)
     const info = await consumer.info()
     assert.equal(deliveries, 1)
-    assert.equal(info.num_pending, 0, 'a termed message must not be redelivered')
+    assert.equal(
+      info.num_pending,
+      0,
+      'a termed message must not be redelivered'
+    )
     assert.equal(info.num_ack_pending, 0)
   } finally {
     await cleanup()
@@ -186,7 +202,11 @@ it('a slow job does not block the messages behind it', async () => {
   // one slow job froze every sibling in its batch AND stalled the next fetch.
   // The equivalent client-side mistake is awaiting each handler in the consume
   // loop. Either way this test fails.
-  const { service, consumer, cleanup } = await setup('PIKKUTEST_HOL', 'jobs', 10)
+  const { service, consumer, cleanup } = await setup(
+    'PIKKUTEST_HOL',
+    'jobs',
+    10
+  )
   try {
     for (let i = 0; i < 5; i++) {
       await service.add('jobs', { i })
@@ -199,7 +219,10 @@ it('a slow job does not block the messages behind it', async () => {
         for await (const msg of messages) {
           // Mirrors the worker: launch, do not await.
           void (async () => {
-            const { i } = mapJsMsgToQueueJob<{ i: number }, void>('jobs', msg).data
+            const { i } = mapJsMsgToQueueJob<{ i: number }, void>(
+              'jobs',
+              msg
+            ).data
             if (i === 0) await delay(1_500)
             finished.push(i)
             msg.ack()
@@ -213,8 +236,16 @@ it('a slow job does not block the messages behind it', async () => {
     messages.stop()
 
     assert.equal(finished.length, 5, 'all five jobs should complete')
-    assert.notEqual(finished[0], 0, 'the slow job must not be the first to finish')
-    assert.equal(finished[finished.length - 1], 0, 'the slow job should finish last')
+    assert.notEqual(
+      finished[0],
+      0,
+      'the slow job must not be the first to finish'
+    )
+    assert.equal(
+      finished[finished.length - 1],
+      0,
+      'the slow job should finish last'
+    )
   } finally {
     await cleanup()
   }
@@ -256,7 +287,10 @@ it('a job that exhausts its attempts is dropped, not retried forever', async () 
   // per-consumer max_deliver — and unset max_deliver means UNLIMITED. Without
   // client-side enforcement a workflow step marked "do not retry" would be
   // redelivered until it succeeded, i.e. forever.
-  const { service, consumer, cleanup } = await setup('PIKKUTEST_ATTEMPTS', 'jobs')
+  const { service, consumer, cleanup } = await setup(
+    'PIKKUTEST_ATTEMPTS',
+    'jobs'
+  )
   try {
     await service.add('jobs', { x: 1 }, { attempts: 2 })
 
@@ -316,7 +350,7 @@ it('a delayed job is rejected loudly when no delayedPublisher is wired', async (
   try {
     await assert.rejects(
       () => service.add('jobs', { x: 1 }, { delay: 60_000 }),
-      /no delayedPublisher is configured/i,
+      /no delayedPublisher is configured/i
     )
   } finally {
     await cleanup()
@@ -327,7 +361,10 @@ it('drain waits for an in-flight handler to ack instead of killing it', async ()
   // The shutdown guarantee: a job already being processed when a deploy lands
   // finishes and acks, rather than being killed and redelivered after ack_wait
   // (which would re-run whatever side effects it had already performed).
-  const { service, nc, prefix, cleanup } = await setup('PIKKUTEST_DRAIN', 'jobs')
+  const { service, nc, prefix, cleanup } = await setup(
+    'PIKKUTEST_DRAIN',
+    'jobs'
+  )
   try {
     const jsm = await jetstreamManager(nc)
     const js = jetstream(nc)
@@ -353,7 +390,11 @@ it('drain waits for an in-flight handler to ack instead of killing it', async ()
     while (handle.inFlight === 0) {
       await delay(10)
     }
-    assert.equal(finished, false, 'handler should still be running before drain')
+    assert.equal(
+      finished,
+      false,
+      'handler should still be running before drain'
+    )
 
     const drained = await handle.drain(5_000)
     assert.equal(drained, true, 'drain should report a clean finish')
@@ -362,7 +403,11 @@ it('drain waits for an in-flight handler to ack instead of killing it', async ()
 
     // Acked during the drain, so nothing is left to redeliver.
     const info = await jsm.streams.info('PIKKUTEST_DRAIN')
-    assert.equal(info.state.messages, 0, 'acked job must be gone from the stream')
+    assert.equal(
+      info.state.messages,
+      0,
+      'acked job must be gone from the stream'
+    )
   } finally {
     await cleanup()
   }
@@ -371,7 +416,10 @@ it('drain waits for an in-flight handler to ack instead of killing it', async ()
 it('drain reports false when a handler outlives the budget, and the job survives', async () => {
   // Timing out must be safe, not lossy: the message stays unacked and is
   // redelivered after ack_wait.
-  const { service, nc, prefix, cleanup } = await setup('PIKKUTEST_DRAIN_TIMEOUT', 'jobs')
+  const { service, nc, prefix, cleanup } = await setup(
+    'PIKKUTEST_DRAIN_TIMEOUT',
+    'jobs'
+  )
   try {
     const jsm = await jetstreamManager(nc)
     const js = jetstream(nc)
@@ -397,7 +445,11 @@ it('drain reports false when a handler outlives the budget, and the job survives
     assert.equal(drained, false, 'drain should report it gave up')
 
     const info = await jsm.streams.info('PIKKUTEST_DRAIN_TIMEOUT')
-    assert.equal(info.state.messages, 1, 'unacked job must remain for redelivery')
+    assert.equal(
+      info.state.messages,
+      1,
+      'unacked job must remain for redelivery'
+    )
   } finally {
     await cleanup()
   }
@@ -416,7 +468,10 @@ it(
     // Deleting the consumer server-side ends the delivery session the same way a
     // restart does, and is deterministic. What must happen is that the session is
     // re-established and a message published AFTER the break still gets handled.
-    const { service, nc, prefix, cleanup } = await setup('PIKKUTEST_REATTACH', 'jobs')
+    const { service, nc, prefix, cleanup } = await setup(
+      'PIKKUTEST_REATTACH',
+      'jobs'
+    )
     try {
       const jsm = await jetstreamManager(nc)
       const js = jetstream(nc)
@@ -450,8 +505,12 @@ it(
 
       try {
         await service.add('jobs', { id: `before-${token}` })
-        for (let i = 0; i < 200 && !handled.includes(`before-${token}`); i++) await delay(25)
-        assert.ok(handled.includes(`before-${token}`), 'baseline delivery must work')
+        for (let i = 0; i < 200 && !handled.includes(`before-${token}`); i++)
+          await delay(25)
+        assert.ok(
+          handled.includes(`before-${token}`),
+          'baseline delivery must work'
+        )
 
         // Kill the delivery session out from under the consumer.
         await jsm.consumers.delete('PIKKUTEST_REATTACH', durable)
@@ -461,21 +520,22 @@ it(
         await delay(500)
         await service.add('jobs', { id: `after-${token}` })
 
-        for (let i = 0; i < 400 && !handled.includes(`after-${token}`); i++) await delay(25)
+        for (let i = 0; i < 400 && !handled.includes(`after-${token}`); i++)
+          await delay(25)
         assert.ok(
           handled.includes(`after-${token}`),
-          `consumer never re-attached — handled ${JSON.stringify(handled)}`,
+          `consumer never re-attached — handled ${JSON.stringify(handled)}`
         )
 
         // Recovering silently would be almost as bad as not recovering: an
         // operator needs to see that the queue went deaf, even briefly.
         assert.ok(
           logged.some((m) => m.includes('consumer deleted server-side')),
-          `the reason was never logged — logged ${JSON.stringify(logged)}`,
+          `the reason was never logged — logged ${JSON.stringify(logged)}`
         )
         assert.ok(
           logged.some((m) => m.includes('re-attached')),
-          `the recovery was never logged — logged ${JSON.stringify(logged)}`,
+          `the recovery was never logged — logged ${JSON.stringify(logged)}`
         )
       } finally {
         handle.stop()
@@ -483,7 +543,7 @@ it(
     } finally {
       await cleanup()
     }
-  },
+  }
 )
 
 it('re-consuming with a CHANGED consumer config converges instead of throwing', async () => {
@@ -518,10 +578,18 @@ it('re-consuming with a CHANGED consumer config converges instead of throwing', 
 
     const info = await jsm.consumers.info(
       'PIKKUTEST_CONSUMER_CONV',
-      consumerNameForQueue(prefix, 'jobs'),
+      consumerNameForQueue(prefix, 'jobs')
     )
-    assert.equal(info.config.max_ack_pending, 25, 'batchSize change must be applied')
-    assert.equal(info.config.ack_wait, 9_000 * 1_000_000, 'lockDuration change must be applied')
+    assert.equal(
+      info.config.max_ack_pending,
+      25,
+      'batchSize change must be applied'
+    )
+    assert.equal(
+      info.config.ack_wait,
+      9_000 * 1_000_000,
+      'lockDuration change must be applied'
+    )
   } finally {
     await cleanup()
   }

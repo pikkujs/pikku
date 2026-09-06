@@ -18,7 +18,10 @@ test('defaults to 10 concurrent when no batchSize is given', () => {
 })
 
 test('lockDuration converts from ms to ns for ack_wait', () => {
-  assert.equal(mapPikkuWorkerToNats({ lockDuration: 45_000 }).ack_wait, 45_000_000_000)
+  assert.equal(
+    mapPikkuWorkerToNats({ lockDuration: 45_000 }).ack_wait,
+    45_000_000_000
+  )
 })
 
 test('explicit ack policy is always set', () => {
@@ -36,5 +39,9 @@ test('ack_wait defaults to pg-boss parity (900s), never the 30s server default',
   assert.equal(config.ack_wait, 900_000 * 1_000_000)
 
   const explicit = mapPikkuWorkerToNats({ lockDuration: 5_000 })
-  assert.equal(explicit.ack_wait, 5_000 * 1_000_000, 'an explicit lockDuration still wins')
+  assert.equal(
+    explicit.ack_wait,
+    5_000 * 1_000_000,
+    'an explicit lockDuration still wins'
+  )
 })

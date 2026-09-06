@@ -35,6 +35,11 @@ export interface NatsServiceFactoryOptions {
    * short enough that a retrying producer can double-enqueue.
    */
   duplicateWindowMs?: number
+  /**
+   * Zone for recurring tasks that do not name one with a `TZ=` prefix. Absent
+   * means the server's own zone.
+   */
+  schedulerTimezone?: string
   /** Credentials/auth passthrough. */
   user?: string
   pass?: string
@@ -81,13 +86,14 @@ const assertSchedulerSupport = (version: string | undefined): void => {
   const [reqMajor, reqMinor, reqPatch] = MIN_SCHEDULER_VERSION
   const ok =
     major > reqMajor ||
-    (major === reqMajor && (minor > reqMinor || (minor === reqMinor && patch >= reqPatch)))
+    (major === reqMajor &&
+      (minor > reqMinor || (minor === reqMinor && patch >= reqPatch)))
   if (ok) return
   throw new Error(
     `NATS server ${version} is too old: message schedules (cron and delayed publish) need ` +
       `${MIN_SCHEDULER_VERSION.join('.')}+. Upgrading is one-way — the stream-state file format ` +
       `changed in 2.11 and again in 2.12, and there is no documented path back to 2.10 — so back ` +
-      `up the JetStream store directory before upgrading the server.`,
+      `up the JetStream store directory before upgrading the server.`
   )
 }
 
@@ -210,20 +216,21 @@ export class NatsServiceFactory {
     this.queueService = new NatsQueueService(
       js,
       this.options.subjectPrefix,
-      new NatsDelayedPublisher(js, this.options.subjectPrefix),
+      new NatsDelayedPublisher(js, this.options.subjectPrefix)
     )
     this.queueWorkers = new NatsQueueWorkers(
       js,
       jsm,
       this.options.streamName,
       this.options.subjectPrefix,
-      this.options.defaultConsumerConfig,
+      this.options.defaultConsumerConfig
     )
     this.schedulerService = new NatsSchedulerService(
       js,
       jsm,
       this.options.streamName,
       this.options.subjectPrefix,
+      this.options.schedulerTimezone
     )
     this.initialized = true
   }
@@ -233,12 +240,14 @@ export class NatsServiceFactory {
    * `onConnectionLost`. Detached on purpose: `closed()` resolves only at the end
    * of the connection's life, so awaiting it would never let `init()` return.
    */
-  private async watchForUnexpectedClose(connection: NatsConnection): Promise<void> {
+  private async watchForUnexpectedClose(
+    connection: NatsConnection
+  ): Promise<void> {
     const err = await connection.closed()
     if (this.closing) return
     const reason = err instanceof Error ? err : undefined
     console.error(
-      `NATS connection closed unexpectedly and will not reopen — this process can no longer publish jobs or run cron. ${reason?.message ?? ''}`,
+      `NATS connection closed unexpectedly and will not reopen — this process can no longer publish jobs or run cron. ${reason?.message ?? ''}`
     )
     this.options.onConnectionLost?.(reason)
   }

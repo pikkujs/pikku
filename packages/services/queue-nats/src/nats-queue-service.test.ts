@@ -1,7 +1,10 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { NatsQueueService, type DelayedPublisher } from './nats-queue-service.js'
+import {
+  NatsQueueService,
+  type DelayedPublisher,
+} from './nats-queue-service.js'
 import {
   ATTEMPTS_HEADER,
   BACKOFF_DELAY_HEADER,
@@ -57,7 +60,11 @@ describe('NatsQueueService.add — publish target and identity', () => {
 
   test('the returned id is the stream sequence, not the caller jobId', async () => {
     const { js } = fakeJs(42)
-    const id = await new NatsQueueService(js, 'pikku').add('q', {}, { jobId: 'mine' })
+    const id = await new NatsQueueService(js, 'pikku').add(
+      'q',
+      {},
+      { jobId: 'mine' }
+    )
     assert.equal(id, '42')
   })
 })
@@ -65,13 +72,21 @@ describe('NatsQueueService.add — publish target and identity', () => {
 describe('NatsQueueService.add — headers', () => {
   test('jobId becomes Nats-Msg-Id, which is what JetStream dedupes on', async () => {
     const { js, published } = fakeJs()
-    await new NatsQueueService(js, 'pikku').add('q', {}, { jobId: 'singleton-key' })
+    await new NatsQueueService(js, 'pikku').add(
+      'q',
+      {},
+      { jobId: 'singleton-key' }
+    )
     assert.equal(published[0]!.headers[NATS_MSG_ID_HEADER], 'singleton-key')
   })
 
   test('pikkuUserId rides along so the worker can restore the session', async () => {
     const { js, published } = fakeJs()
-    await new NatsQueueService(js, 'pikku').add('q', {}, { pikkuUserId: 'user-1' })
+    await new NatsQueueService(js, 'pikku').add(
+      'q',
+      {},
+      { pikkuUserId: 'user-1' }
+    )
     assert.equal(published[0]!.headers[PIKKU_USER_ID_HEADER], 'user-1')
   })
 
@@ -103,9 +118,13 @@ describe('NatsQueueService.add — headers', () => {
     assert.equal(published[0]!.headers[ATTEMPTS_HEADER], '1')
   })
 
-  test("string backoff sets a type with no base delay", async () => {
+  test('string backoff sets a type with no base delay', async () => {
     const { js, published } = fakeJs()
-    await new NatsQueueService(js, 'pikku').add('q', {}, { backoff: 'exponential' })
+    await new NatsQueueService(js, 'pikku').add(
+      'q',
+      {},
+      { backoff: 'exponential' }
+    )
     assert.equal(published[0]!.headers[BACKOFF_TYPE_HEADER], 'exponential')
     assert.equal(published[0]!.headers[BACKOFF_DELAY_HEADER], undefined)
   })
@@ -115,7 +134,7 @@ describe('NatsQueueService.add — headers', () => {
     await new NatsQueueService(js, 'pikku').add(
       'q',
       {},
-      { backoff: { type: 'fixed', delay: 5_000 } },
+      { backoff: { type: 'fixed', delay: 5_000 } }
     )
     assert.equal(published[0]!.headers[BACKOFF_TYPE_HEADER], 'fixed')
     assert.equal(published[0]!.headers[BACKOFF_DELAY_HEADER], '5000')
@@ -151,9 +170,12 @@ describe('NatsQueueService.add — delay', () => {
     // Silently dropping the delay would turn a one-hour workflow.sleep() into a
     // zero-second one and an exponential backoff into a hot retry loop.
     const { js } = fakeJs()
-    await assert.rejects(() => new NatsQueueService(js, 'pikku').add('q', {}, { delay: 1_000 }), {
-      message: /no delayedPublisher is configured/,
-    })
+    await assert.rejects(
+      () => new NatsQueueService(js, 'pikku').add('q', {}, { delay: 1_000 }),
+      {
+        message: /no delayedPublisher is configured/,
+      }
+    )
   })
 
   test('delay: 0 is not a delay — it publishes inline', async () => {

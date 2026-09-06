@@ -32,7 +32,11 @@ export type { DelayedPublisher } from './nats-queue-service.js'
 // Wired automatically by NatsServiceFactory; exported for tests and for callers
 // building a queue service by hand.
 export { NatsDelayedPublisher } from './nats-delayed-publisher.js'
-export { NatsSchedulerService, toNatsCron } from './nats-scheduler-service.js'
+export {
+  NatsSchedulerService,
+  toNatsCron,
+  parseNatsSchedule,
+} from './nats-scheduler-service.js'
 export { NatsQueueWorkers, mapPikkuWorkerToNats } from './nats-queue-worker.js'
 // For consumers that need their own dispatch loop rather than pikku's queue
 // registry — e.g. a dispatcher whose queues are shared across tenants and must

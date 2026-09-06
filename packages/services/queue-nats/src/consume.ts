@@ -33,7 +33,9 @@ const REATTACH_NOTIFICATION_THRESHOLD = 3
  * is the only way to find out, which is why the supervisor below cannot rely on
  * the iterator ending on its own.
  */
-const fatalNotificationReason = (notification: ConsumerNotification): string | null => {
+const fatalNotificationReason = (
+  notification: ConsumerNotification
+): string | null => {
   switch (notification.type) {
     case 'consumer_deleted':
       return `consumer deleted server-side (${notification.code} ${notification.description})`
@@ -105,8 +107,19 @@ export interface ConsumeHandle {
  * This exists as a shared function precisely so that invariant is written down
  * once and every consumer inherits it, rather than being re-derived per caller.
  */
-export const consumeQueue = async (options: ConsumeOptions): Promise<ConsumeHandle> => {
-  const { js, jsm, streamName, subjectPrefix, queueName, config, handler, logger } = options
+export const consumeQueue = async (
+  options: ConsumeOptions
+): Promise<ConsumeHandle> => {
+  const {
+    js,
+    jsm,
+    streamName,
+    subjectPrefix,
+    queueName,
+    config,
+    handler,
+    logger,
+  } = options
   const durable = consumerNameForQueue(subjectPrefix, queueName)
 
   // `add` is CONSUMER.CREATE: a no-op when the existing durable matches, but it
@@ -139,11 +152,15 @@ export const consumeQueue = async (options: ConsumeOptions): Promise<ConsumeHand
   // can never stop the session that replaced it.
   let generation = 0
 
-  const describe = (err: unknown) => (err instanceof Error ? err.message : String(err))
+  const describe = (err: unknown) =>
+    err instanceof Error ? err.message : String(err)
 
   // Turns a silently-dead session into an ended one, which is the single shape
   // the supervisor below knows how to recover from.
-  const watchStatus = (session: ConsumerMessages, sessionGeneration: number) => {
+  const watchStatus = (
+    session: ConsumerMessages,
+    sessionGeneration: number
+  ) => {
     void (async () => {
       try {
         for await (const notification of session.status()) {
@@ -151,7 +168,7 @@ export const consumeQueue = async (options: ConsumeOptions): Promise<ConsumeHand
           const reason = fatalNotificationReason(notification)
           if (reason === null) continue
           logger?.error(
-            `NATS consumer ${durable} on ${streamName}: ${reason} — dropping the pull session so it can re-attach`,
+            `NATS consumer ${durable} on ${streamName}: ${reason} — dropping the pull session so it can re-attach`
           )
           session.stop()
           return
@@ -209,12 +226,12 @@ export const consumeQueue = async (options: ConsumeOptions): Promise<ConsumeHand
         }
         if (stopped) return
         logger?.error(
-          `NATS consumer ${durable} on ${streamName}: pull session ended unexpectedly — re-attaching`,
+          `NATS consumer ${durable} on ${streamName}: pull session ended unexpectedly — re-attaching`
         )
       } catch (err) {
         if (stopped) return
         logger?.error(
-          `NATS consumer ${durable} on ${streamName}: pull session threw (${describe(err)}) — re-attaching`,
+          `NATS consumer ${durable} on ${streamName}: pull session threw (${describe(err)}) — re-attaching`
         )
       }
 
@@ -242,7 +259,7 @@ export const consumeQueue = async (options: ConsumeOptions): Promise<ConsumeHand
           break
         } catch (err) {
           logger?.error(
-            `NATS consumer ${durable} on ${streamName}: re-attach failed (${describe(err)}), retrying in ${backoffMs}ms`,
+            `NATS consumer ${durable} on ${streamName}: re-attach failed (${describe(err)}), retrying in ${backoffMs}ms`
           )
           backoffMs = Math.min(backoffMs * 2, REATTACH_MAX_DELAY_MS)
         }

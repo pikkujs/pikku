@@ -32,10 +32,13 @@ export const BACKOFF_DELAY_HEADER = 'Pikku-Backoff-Delay'
  * Both are caller mistakes, so they are refused at enqueue rather than turned
  * into an infinite redelivery loop nobody asked for.
  */
-export const attemptsHeaderValue = (attempts: number, queueName: string): string => {
+export const attemptsHeaderValue = (
+  attempts: number,
+  queueName: string
+): string => {
   if (!Number.isSafeInteger(attempts) || attempts < 1) {
     throw new Error(
-      `Queue "${queueName}" was given attempts=${attempts}, which is not a positive integer. An unenforceable limit reads back as "no limit" and the job would be retried forever; pass attempts >= 1 or omit it.`,
+      `Queue "${queueName}" was given attempts=${attempts}, which is not a positive integer. An unenforceable limit reads back as "no limit" and the job would be retried forever; pass attempts >= 1 or omit it.`
     )
   }
   return String(attempts)
@@ -52,7 +55,7 @@ export const DEFAULT_BACKOFF_DELAY_MS = 1_000
 export const backoffDelayMs = (
   deliveryCount: number,
   type: string | undefined,
-  baseMs: number = DEFAULT_BACKOFF_DELAY_MS,
+  baseMs: number = DEFAULT_BACKOFF_DELAY_MS
 ): number => {
   if (!type) return 0
   if (type === 'fixed') return baseMs
@@ -76,7 +79,8 @@ export const backoffDelayMs = (
  * the backlog on the old names. Not worth it for a collision that needs two
  * queue names differing only in a separator.
  */
-export const queueNameToToken = (queueName: string): string => queueName.replace(/[.*>\s]/g, '_')
+export const queueNameToToken = (queueName: string): string =>
+  queueName.replace(/[.*>\s]/g, '_')
 
 /** Subject a job for `queueName` is published to. */
 export const subjectForQueue = (prefix: string, queueName: string): string =>
@@ -120,7 +124,11 @@ export const SCHEDULE_SUBJECT_SEGMENT = '_schedule'
  * identity, and reusing a subject would make two concurrent delayed jobs
  * silently overwrite each other, so an absent key gets a unique suffix.
  */
-export const scheduleSubjectFor = (prefix: string, queueName: string, key?: string): string =>
+export const scheduleSubjectFor = (
+  prefix: string,
+  queueName: string,
+  key?: string
+): string =>
   `${prefix}.${SCHEDULE_SUBJECT_SEGMENT}.${queueNameToToken(queueName)}.${
     key
       ? queueNameToToken(key)
@@ -133,8 +141,10 @@ export const scheduleSubjectFor = (prefix: string, queueName: string, key?: stri
  * hierarchical prefix like `app.dispatch` is perfectly valid as a subject
  * and would otherwise produce a name the server refuses.
  */
-export const consumerNameForQueue = (prefix: string, queueName: string): string =>
-  `${queueNameToToken(prefix)}_${queueNameToToken(queueName)}`
+export const consumerNameForQueue = (
+  prefix: string,
+  queueName: string
+): string => `${queueNameToToken(prefix)}_${queueNameToToken(queueName)}`
 
 /**
  * A JetStream message has no terminal states to report: once it is acked it is
@@ -161,7 +171,7 @@ export const backoffFor = (msg: JsMsg): number => {
   return backoffDelayMs(
     msg.info.deliveryCount,
     type,
-    Number.isFinite(base) && base! > 0 ? base : DEFAULT_BACKOFF_DELAY_MS,
+    Number.isFinite(base) && base! > 0 ? base : DEFAULT_BACKOFF_DELAY_MS
   )
 }
 
@@ -175,7 +185,10 @@ export const jsMsgMetadata = (msg: JsMsg) => ({
  * Wrap a JetStream message as a pikku QueueJob. `waitForCompletion` is absent
  * deliberately — see NatsQueueService.supportsResults.
  */
-export const mapJsMsgToQueueJob = <T, R>(queueName: string, msg: JsMsg): QueueJob<T, R> => ({
+export const mapJsMsgToQueueJob = <T, R>(
+  queueName: string,
+  msg: JsMsg
+): QueueJob<T, R> => ({
   id: String(msg.seq),
   queueName,
   status: jsMsgStatus,

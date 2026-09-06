@@ -21,7 +21,7 @@ export interface DelayedPublisher {
     queueName: string,
     data: T,
     delayMs: number,
-    options?: JobOptions,
+    options?: JobOptions
   ): Promise<string>
 }
 
@@ -45,7 +45,7 @@ export class NatsQueueService implements QueueService {
   constructor(
     private readonly js: JetStreamClient,
     private readonly subjectPrefix: string,
-    delayedPublisher?: DelayedPublisher,
+    delayedPublisher?: DelayedPublisher
   ) {
     this.delayedPublisher = delayedPublisher
   }
@@ -59,7 +59,11 @@ export class NatsQueueService implements QueueService {
     this.delayedPublisher = publisher
   }
 
-  async add<T>(queueName: string, data: T, options?: JobOptions): Promise<string> {
+  async add<T>(
+    queueName: string,
+    data: T,
+    options?: JobOptions
+  ): Promise<string> {
     const hdrs = headers()
     if (options?.pikkuUserId) {
       hdrs.set(PIKKU_USER_ID_HEADER, options.pikkuUserId)
@@ -72,11 +76,16 @@ export class NatsQueueService implements QueueService {
     // Retry policy travels with the job — see ATTEMPTS_HEADER. The worker
     // enforces it; JetStream itself has no per-message equivalent.
     if (options?.attempts !== undefined) {
-      hdrs.set(ATTEMPTS_HEADER, attemptsHeaderValue(options.attempts, queueName))
+      hdrs.set(
+        ATTEMPTS_HEADER,
+        attemptsHeaderValue(options.attempts, queueName)
+      )
     }
     if (options?.backoff !== undefined) {
       const backoff =
-        typeof options.backoff === 'string' ? { type: options.backoff } : options.backoff
+        typeof options.backoff === 'string'
+          ? { type: options.backoff }
+          : options.backoff
       hdrs.set(BACKOFF_TYPE_HEADER, backoff.type)
       if (backoff.delay !== undefined) {
         hdrs.set(BACKOFF_DELAY_HEADER, String(backoff.delay))
@@ -91,16 +100,21 @@ export class NatsQueueService implements QueueService {
       // only fires for a hand-built service.
       if (!this.delayedPublisher) {
         throw new Error(
-          `Queue "${queueName}" was given delay=${options.delay}ms but no delayedPublisher is configured. Construct NatsQueueService with a NatsDelayedPublisher (NatsServiceFactory does this for you) or enqueue without a delay.`,
+          `Queue "${queueName}" was given delay=${options.delay}ms but no delayedPublisher is configured. Construct NatsQueueService with a NatsDelayedPublisher (NatsServiceFactory does this for you) or enqueue without a delay.`
         )
       }
-      return await this.delayedPublisher.publishAfter(queueName, data, options.delay, options)
+      return await this.delayedPublisher.publishAfter(
+        queueName,
+        data,
+        options.delay,
+        options
+      )
     }
 
     const ack = await this.js.publish(
       subjectForQueue(this.subjectPrefix, queueName),
       JSON.stringify(data),
-      { headers: hdrs },
+      { headers: hdrs }
     )
 
     // The stream sequence is the only broker-assigned identity a message has.
@@ -116,7 +130,10 @@ export class NatsQueueService implements QueueService {
    * keeps callers that poll for optional status working; callers that genuinely
    * need per-job state should read it from telemetry.
    */
-  async getJob<T, R>(_queueName: string, _jobId: string): Promise<QueueJob<T, R> | null> {
+  async getJob<T, R>(
+    _queueName: string,
+    _jobId: string
+  ): Promise<QueueJob<T, R> | null> {
     return null
   }
 }

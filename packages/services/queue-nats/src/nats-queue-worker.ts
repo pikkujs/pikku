@@ -1,4 +1,9 @@
-import type { ConsumerConfig, JetStreamClient, JetStreamManager, JsMsg } from '@nats-io/jetstream'
+import type {
+  ConsumerConfig,
+  JetStreamClient,
+  JetStreamManager,
+  JsMsg,
+} from '@nats-io/jetstream'
 import { AckPolicy, DeliverPolicy } from '@nats-io/jetstream'
 import type {
   ConfigValidationResult,
@@ -40,7 +45,9 @@ const DEFAULT_ACK_WAIT_MS = 900_000
  * waits for all of them, which is the shape that produces head-of-line blocking
  * on a shared queue. Keep it that way.
  */
-export const mapPikkuWorkerToNats = (workerConfig?: PikkuWorkerConfig): Partial<ConsumerConfig> => {
+export const mapPikkuWorkerToNats = (
+  workerConfig?: PikkuWorkerConfig
+): Partial<ConsumerConfig> => {
   const config: Partial<ConsumerConfig> = {
     ack_policy: AckPolicy.Explicit,
     deliver_policy: DeliverPolicy.All,
@@ -52,7 +59,8 @@ export const mapPikkuWorkerToNats = (workerConfig?: PikkuWorkerConfig): Partial<
   // It must exceed the longest a handler can legitimately run, or a still-running
   // job gets redelivered and executed twice. Always set, never left to the
   // server default — see DEFAULT_ACK_WAIT_MS.
-  config.ack_wait = (workerConfig?.lockDuration ?? DEFAULT_ACK_WAIT_MS) * MS_TO_NS
+  config.ack_wait =
+    (workerConfig?.lockDuration ?? DEFAULT_ACK_WAIT_MS) * MS_TO_NS
 
   return config
 }
@@ -132,39 +140,49 @@ export class NatsQueueWorkers implements QueueWorkers {
     private readonly jsm: JetStreamManager,
     private readonly streamName: string,
     private readonly subjectPrefix: string,
-    private readonly defaultConsumerConfig: Partial<ConsumerConfig> = {},
+    private readonly defaultConsumerConfig: Partial<ConsumerConfig> = {}
   ) {}
 
-  async registerQueues(logger?: Logger): Promise<Record<string, ConfigValidationResult[]>> {
+  async registerQueues(
+    logger?: Logger
+  ): Promise<Record<string, ConfigValidationResult[]>> {
     if (!logger) {
       logger = pikkuState(null, 'package', 'singletonServices')?.logger
     }
     if (!logger) {
       throw new Error(
-        'Logger is required for registerQueues — pass it explicitly or ensure singleton services are initialized first',
+        'Logger is required for registerQueues — pass it explicitly or ensure singleton services are initialized first'
       )
     }
     const log = logger
 
-    return await registerQueueWorkers(this.configMappings, log, async (queueName, processor) => {
-      const handle = await consumeQueue({
-        js: this.js,
-        jsm: this.jsm,
-        streamName: this.streamName,
-        subjectPrefix: this.subjectPrefix,
-        queueName,
-        config: {
-          ...this.defaultConsumerConfig,
-          ...mapPikkuWorkerToNats(processor.config),
-        },
-        handler: (msg) => this.handleMessage(queueName, msg, log),
-        logger: log,
-      })
-      this.activeConsumers.set(queueName, handle)
-    })
+    return await registerQueueWorkers(
+      this.configMappings,
+      log,
+      async (queueName, processor) => {
+        const handle = await consumeQueue({
+          js: this.js,
+          jsm: this.jsm,
+          streamName: this.streamName,
+          subjectPrefix: this.subjectPrefix,
+          queueName,
+          config: {
+            ...this.defaultConsumerConfig,
+            ...mapPikkuWorkerToNats(processor.config),
+          },
+          handler: (msg) => this.handleMessage(queueName, msg, log),
+          logger: log,
+        })
+        this.activeConsumers.set(queueName, handle)
+      }
+    )
   }
 
-  private async handleMessage(queueName: string, msg: JsMsg, logger: Logger): Promise<void> {
+  private async handleMessage(
+    queueName: string,
+    msg: JsMsg,
+    logger: Logger
+  ): Promise<void> {
     try {
       await runQueueJob({ job: mapJsMsgToQueueJob(queueName, msg) })
       msg.ack()
@@ -172,7 +190,9 @@ export class NatsQueueWorkers implements QueueWorkers {
       if (error instanceof QueueJobDiscardedError) {
         // Permanently done, do not redeliver — the JetStream equivalent of
         // pg-boss completing a job in order to discard it.
-        logger.info(`NATS message ${msg.seq} on ${queueName} discarded: ${error.message}`)
+        logger.info(
+          `NATS message ${msg.seq} on ${queueName} discarded: ${error.message}`
+        )
         msg.term()
         return
       }
@@ -189,7 +209,7 @@ export class NatsQueueWorkers implements QueueWorkers {
       const attempts = attemptsFor(msg)
       if (attempts !== undefined && msg.info.deliveryCount >= attempts) {
         logger.error(
-          `NATS message ${msg.seq} on ${queueName} failed after ${msg.info.deliveryCount}/${attempts} attempts, giving up: ${message}`,
+          `NATS message ${msg.seq} on ${queueName} failed after ${msg.info.deliveryCount}/${attempts} attempts, giving up: ${message}`
         )
         msg.term()
         return
@@ -197,7 +217,7 @@ export class NatsQueueWorkers implements QueueWorkers {
 
       const delayMs = backoffFor(msg)
       logger.error(
-        `NATS message ${msg.seq} on ${queueName} failed (attempt ${msg.info.deliveryCount}${attempts ? `/${attempts}` : ''}), retrying in ${delayMs}ms: ${message}`,
+        `NATS message ${msg.seq} on ${queueName} failed (attempt ${msg.info.deliveryCount}${attempts ? `/${attempts}` : ''}), retrying in ${delayMs}ms: ${message}`
       )
       // nak(delay) is what makes backoff real. A bare nak() redelivers as fast
       // as the server can, which turns an exponential-backoff policy into a hot
@@ -233,7 +253,7 @@ export class NatsQueueWorkers implements QueueWorkers {
       entries.map(async ([queueName, handle]) => {
         const drained = await handle.drain(Math.max(0, deadline - Date.now()))
         return drained ? null : queueName
-      }),
+      })
     )
     return results.filter((name): name is string => name !== null)
   }

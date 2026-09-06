@@ -21,7 +21,7 @@ import {
 test('ordinary queue names pass through unchanged', () => {
   assert.equal(
     subjectForQueue('pikku', 'pikku-remote-internal-rpc'),
-    'pikku.pikku-remote-internal-rpc',
+    'pikku.pikku-remote-internal-rpc'
   )
 })
 
@@ -54,12 +54,18 @@ test('consumer names avoid dots, which NATS rejects in durable names', () => {
 test('a hierarchical prefix is tokenised too, not just the queue name', () => {
   // `app.dispatch` is a valid subject prefix but an invalid durable name —
   // the server rejects the whole consumer if the dot survives.
-  assert.equal(consumerNameForQueue('app.dispatch', 'fast'), 'app_dispatch_fast')
+  assert.equal(
+    consumerNameForQueue('app.dispatch', 'fast'),
+    'app_dispatch_fast'
+  )
   assert.ok(!consumerNameForQueue('app.dispatch.fast', 'a.b').includes('.'))
 })
 
 /** Just enough of a JsMsg for the header/delivery-count readers. */
-const fakeMsg = (deliveryCount: number, hdrs: Record<string, string> = {}): JsMsg => {
+const fakeMsg = (
+  deliveryCount: number,
+  hdrs: Record<string, string> = {}
+): JsMsg => {
   const h = headers()
   for (const [key, value] of Object.entries(hdrs)) h.set(key, value)
   return { headers: h, info: { deliveryCount } } as unknown as JsMsg
@@ -112,7 +118,7 @@ test('an unrecognised backoff type grows rather than hot-loops', () => {
   assert.equal(backoffDelayMs(3, 'nonsense', 1_000), 4_000)
 })
 
-test('attemptsFor reads the job\'s own retry limit off the header', () => {
+test("attemptsFor reads the job's own retry limit off the header", () => {
   assert.equal(attemptsFor(fakeMsg(1, { [ATTEMPTS_HEADER]: '3' })), 3)
 })
 

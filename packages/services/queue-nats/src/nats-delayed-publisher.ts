@@ -43,22 +43,28 @@ import {
 export class NatsDelayedPublisher implements DelayedPublisher {
   constructor(
     private readonly js: JetStreamClient,
-    private readonly subjectPrefix: string,
+    private readonly subjectPrefix: string
   ) {}
 
   async publishAfter<T>(
     queueName: string,
     data: T,
     delayMs: number,
-    options?: JobOptions,
+    options?: JobOptions
   ): Promise<string> {
     const hdrs = headers()
     // RFC3339, which is what the server parses. A timestamp already in the past
     // fires immediately rather than erroring — the same shape as pg-boss's
     // `startAfter` with an elapsed date, so a delay that races the clock still
     // delivers instead of being dropped.
-    hdrs.set(SCHEDULE_HEADER, `@at ${new Date(Date.now() + delayMs).toISOString()}`)
-    hdrs.set(SCHEDULE_TARGET_HEADER, subjectForQueue(this.subjectPrefix, queueName))
+    hdrs.set(
+      SCHEDULE_HEADER,
+      `@at ${new Date(Date.now() + delayMs).toISOString()}`
+    )
+    hdrs.set(
+      SCHEDULE_TARGET_HEADER,
+      subjectForQueue(this.subjectPrefix, queueName)
+    )
 
     // Every non-schedule header is copied onto the produced message verbatim,
     // so the job's retry policy survives the delay. `jobId` is deliberately not
@@ -80,7 +86,7 @@ export class NatsDelayedPublisher implements DelayedPublisher {
     const ack = await this.js.publish(
       scheduleSubjectFor(this.subjectPrefix, queueName),
       JSON.stringify(data),
-      { headers: hdrs },
+      { headers: hdrs }
     )
     return String(ack.seq)
   }
@@ -94,7 +100,7 @@ export class NatsDelayedPublisher implements DelayedPublisher {
 const applyJobHeaders = (
   hdrs: ReturnType<typeof headers>,
   options: Omit<JobOptions, 'delay' | 'jobId'>,
-  queueName: string,
+  queueName: string
 ): void => {
   if (options.pikkuUserId) {
     hdrs.set(PIKKU_USER_ID_HEADER, options.pikkuUserId)
@@ -104,7 +110,9 @@ const applyJobHeaders = (
   }
   if (options.backoff !== undefined) {
     const backoff =
-      typeof options.backoff === 'string' ? { type: options.backoff } : options.backoff
+      typeof options.backoff === 'string'
+        ? { type: options.backoff }
+        : options.backoff
     hdrs.set(BACKOFF_TYPE_HEADER, backoff.type)
     if (backoff.delay !== undefined) {
       hdrs.set(BACKOFF_DELAY_HEADER, String(backoff.delay))

@@ -1,8 +1,15 @@
-import type { JetStreamClient, JetStreamManager, JsMsg } from '@nats-io/jetstream'
+import type {
+  JetStreamClient,
+  JetStreamManager,
+  JsMsg,
+} from '@nats-io/jetstream'
 import { AckPolicy, DeliverPolicy } from '@nats-io/jetstream'
 import { headers } from '@nats-io/nats-core'
 import type { CoreUserSession } from '@pikku/core/types'
-import type { ScheduledTaskInfo, ScheduledTaskSummary } from '@pikku/core/services'
+import type {
+  ScheduledTaskInfo,
+  ScheduledTaskSummary,
+} from '@pikku/core/services'
 import { SchedulerService } from '@pikku/core/services'
 import { parseDurationString } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
@@ -11,6 +18,7 @@ import { consumeQueue, type ConsumeHandle } from './consume.js'
 import {
   SCHEDULE_HEADER,
   SCHEDULE_TARGET_HEADER,
+  SCHEDULE_TIMEZONE_HEADER,
   SCHEDULE_SUBJECT_SEGMENT,
   queueNameToToken,
   scheduleSubjectFor,
@@ -47,16 +55,50 @@ const RECURRING_MAX_ACK_PENDING = 5
 const RECURRING_ACK_WAIT_NS = 15 * 60_000 * 1_000_000
 
 /**
+ * Crontab's timezone prefix. Both spellings are in the wild — `CRON_TZ=` is
+ * what vixie-cron documents, `TZ=` is what most people write.
+ */
+const TIMEZONE_PREFIX = /^(?:TZ|CRON_TZ)=(\S+)\s+(.+)$/
+
+/** Add the seconds field NATS requires, if the expression is 5-field crontab. */
+const toSixFields = (cronExpr: string): string => {
+  const trimmed = cronExpr.trim()
+  const fields = trimmed.split(/\s+/)
+  return fields.length === 5 ? `0 ${fields.join(' ')}` : trimmed
+}
+
+/**
+ * Split a crontab expression into the schedule NATS wants and the timezone it
+ * was written in.
+ *
+ * The timezone has to come out of the expression because pikku's
+ * `CoreScheduledTask` has no timezone field — the cron string is the only place
+ * an author can say what zone they meant, and `TZ=`/`CRON_TZ=` is how crontab
+ * has always said it. It cannot be left in place either: NATS carries the zone
+ * in a header, and a prefix left in the expression lands in the seconds field,
+ * where it is rejected outright (`TZ=... 0 3 * * *`) or, from a 4-field
+ * expression, silently shifts every field along.
+ */
+export const parseNatsSchedule = (
+  cronExpr: string
+): { schedule: string; timezone?: string } => {
+  const match = TIMEZONE_PREFIX.exec(cronExpr.trim())
+  if (!match) return { schedule: toSixFields(cronExpr) }
+  return { schedule: toSixFields(match[2]!), timezone: match[1]! }
+}
+
+/**
  * Translate a 5-field crontab expression into the 6-field form NATS requires.
  *
  * NATS cron is seconds-first and rejects anything that is not exactly 6 fields.
  * Pikku's `wireScheduler` schedules are ordinary 5-field crontab, so the
  * leading `0` is added here rather than pushed onto every task definition.
+ *
+ * A `TZ=`/`CRON_TZ=` prefix is stripped, since it belongs in a header rather
+ * than in the expression — use `parseNatsSchedule` to get the zone as well.
  */
-export const toNatsCron = (cronExpr: string): string => {
-  const fields = cronExpr.trim().split(/\s+/)
-  return fields.length === 5 ? `0 ${fields.join(' ')}` : cronExpr.trim()
-}
+export const toNatsCron = (cronExpr: string): string =>
+  parseNatsSchedule(cronExpr).schedule
 
 /**
  * Scheduler backed by JetStream's own message scheduler (server 2.14+).
@@ -80,11 +122,27 @@ export const toNatsCron = (cronExpr: string): string => {
 export class NatsSchedulerService extends SchedulerService {
   private consumer?: ConsumeHandle
 
+  /**
+   * Tasks whose schedule could not be registered on the last `start()`, by name.
+   *
+   * A schedule that fails to register is the worst failure this service has:
+   * every other task keeps firing, so the service and the process both look
+   * healthy while one task silently never runs. Kept so a caller can assert on
+   * it — a health check, or a boot that would rather fail than run degraded.
+   */
+  readonly failedSchedules = new Map<string, string>()
+
   constructor(
     private readonly js: JetStreamClient,
     private readonly jsm: JetStreamManager,
     private readonly streamName: string,
     private readonly subjectPrefix: string,
+    /**
+     * Zone for tasks that do not name one themselves. Applies to every task
+     * without a `TZ=` prefix; absent means the server's own zone, which is UTC
+     * unless it was configured otherwise.
+     */
+    private readonly defaultTimezone?: string
   ) {
     super()
   }
@@ -104,19 +162,26 @@ export class NatsSchedulerService extends SchedulerService {
     delay: number | string,
     rpcName: string,
     data?: any,
-    session?: CoreUserSession,
+    session?: CoreUserSession
   ): Promise<string> {
-    const delayMs = typeof delay === 'string' ? parseDurationString(delay) : delay
+    const delayMs =
+      typeof delay === 'string' ? parseDurationString(delay) : delay
     const subject = scheduleSubjectFor(this.subjectPrefix, REMOTE_RPC_QUEUE)
     const hdrs = headers()
     // A timestamp already in the past fires immediately rather than erroring,
     // which matches pg-boss's `startAfter` with an elapsed date.
-    hdrs.set(SCHEDULE_HEADER, `@at ${new Date(Date.now() + delayMs).toISOString()}`)
-    hdrs.set(SCHEDULE_TARGET_HEADER, subjectForQueue(this.subjectPrefix, REMOTE_RPC_QUEUE))
+    hdrs.set(
+      SCHEDULE_HEADER,
+      `@at ${new Date(Date.now() + delayMs).toISOString()}`
+    )
+    hdrs.set(
+      SCHEDULE_TARGET_HEADER,
+      subjectForQueue(this.subjectPrefix, REMOTE_RPC_QUEUE)
+    )
     await this.js.publish(
       subject,
       JSON.stringify({ rpcName, data, session } satisfies ScheduledJobData),
-      { headers: hdrs },
+      { headers: hdrs }
     )
     return subject
   }
@@ -128,7 +193,9 @@ export class NatsSchedulerService extends SchedulerService {
    */
   async unschedule(taskId: string): Promise<boolean> {
     if (!this.ownsSubject(taskId)) return false
-    const res = await this.jsm.streams.purge(this.streamName, { filter: taskId })
+    const res = await this.jsm.streams.purge(this.streamName, {
+      filter: taskId,
+    })
     return (res.purged ?? 0) > 0
   }
 
@@ -136,13 +203,17 @@ export class NatsSchedulerService extends SchedulerService {
     if (!this.ownsSubject(taskId)) return null
     let msg
     try {
-      msg = await this.jsm.streams.getMessage(this.streamName, { last_by_subj: taskId })
+      msg = await this.jsm.streams.getMessage(this.streamName, {
+        last_by_subj: taskId,
+      })
     } catch {
       // 10037 "no message found" — an unknown or already-fired task.
       return null
     }
     if (!msg) return null
-    const jobData = JSON.parse(new TextDecoder().decode(msg.data)) as ScheduledJobData
+    const jobData = JSON.parse(
+      new TextDecoder().decode(msg.data)
+    ) as ScheduledJobData
     return {
       taskId,
       rpcName: jobData.rpcName,
@@ -208,24 +279,49 @@ export class NatsSchedulerService extends SchedulerService {
     })
 
     const expected = new Set<string>()
+    this.failedSchedules.clear()
     for (const [name, task] of scheduledTasks) {
       const subject = this.recurringSubjectFor(name)
       expected.add(subject)
+      const { schedule, timezone } = parseNatsSchedule(task.schedule)
       const hdrs = headers()
-      hdrs.set(SCHEDULE_HEADER, toNatsCron(task.schedule))
-      hdrs.set(SCHEDULE_TARGET_HEADER, subjectForQueue(this.subjectPrefix, RECURRING_TASK_QUEUE))
+      hdrs.set(SCHEDULE_HEADER, schedule)
+      hdrs.set(
+        SCHEDULE_TARGET_HEADER,
+        subjectForQueue(this.subjectPrefix, RECURRING_TASK_QUEUE)
+      )
+      const zone = timezone ?? this.defaultTimezone
+      // Omitted rather than defaulted to 'UTC': the server resolves IANA names
+      // against its own tzdata and rejects the whole schedule if the zone is
+      // unknown, so an absent value — which already means UTC — is safer than
+      // naming it.
+      if (zone && zone !== 'UTC') {
+        hdrs.set(SCHEDULE_TIMEZONE_HEADER, zone)
+      }
       try {
         await this.js.publish(
           subject,
           JSON.stringify({ rpcName: name } satisfies ScheduledJobData),
-          { headers: hdrs },
+          { headers: hdrs }
         )
       } catch (err) {
         // One bad cron expression must not take every other task down with it.
-        logger.error(
-          `Failed to schedule ${name} (${task.schedule}): ${err instanceof Error ? err.message : String(err)}`,
-        )
+        const reason = err instanceof Error ? err.message : String(err)
+        this.failedSchedules.set(name, reason)
+        logger.error(`Failed to schedule ${name} (${task.schedule}): ${reason}`)
       }
+    }
+
+    // The per-task catch above keeps one bad expression from taking the rest
+    // down, but on its own it leaves the outcome as a line in a log nobody
+    // reads while `start()` returns as if everything registered. Say plainly,
+    // once, that this process is running with tasks that will never fire.
+    if (this.failedSchedules.size > 0) {
+      logger.error(
+        `${this.failedSchedules.size} scheduled task(s) were NOT registered and will never fire: ${[
+          ...this.failedSchedules.keys(),
+        ].join(', ')}`
+      )
     }
 
     try {
@@ -236,7 +332,7 @@ export class NatsSchedulerService extends SchedulerService {
       }
     } catch (err) {
       logger.warn(
-        `Failed to prune orphaned scheduled tasks: ${err instanceof Error ? err.message : String(err)}`,
+        `Failed to prune orphaned scheduled tasks: ${err instanceof Error ? err.message : String(err)}`
       )
     }
   }
@@ -303,13 +399,19 @@ export class NatsSchedulerService extends SchedulerService {
 
   /** Stable schedule subject for a code-declared recurring task. */
   private recurringSubjectFor(taskName: string): string {
-    return scheduleSubjectFor(this.subjectPrefix, RECURRING_TASK_QUEUE, taskName)
+    return scheduleSubjectFor(
+      this.subjectPrefix,
+      RECURRING_TASK_QUEUE,
+      taskName
+    )
   }
 
   /** Guards against a caller passing an id from some other scheduler, which
    *  would otherwise purge an arbitrary subject in this stream. */
   private ownsSubject(subject: string): boolean {
-    return subject.startsWith(`${this.subjectPrefix}.${SCHEDULE_SUBJECT_SEGMENT}.`)
+    return subject.startsWith(
+      `${this.subjectPrefix}.${SCHEDULE_SUBJECT_SEGMENT}.`
+    )
   }
 
   /**
@@ -321,7 +423,9 @@ export class NatsSchedulerService extends SchedulerService {
     const filter = queueName
       ? `${this.subjectPrefix}.${SCHEDULE_SUBJECT_SEGMENT}.${queueNameToToken(queueName)}.>`
       : `${this.subjectPrefix}.${SCHEDULE_SUBJECT_SEGMENT}.>`
-    const info = await this.jsm.streams.info(this.streamName, { subjects_filter: filter })
+    const info = await this.jsm.streams.info(this.streamName, {
+      subjects_filter: filter,
+    })
     return Object.keys(info.state.subjects ?? {})
   }
 }

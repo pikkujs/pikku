@@ -46,16 +46,29 @@ describe('NatsDelayedPublisher — schedule headers', () => {
     const schedule = published[0]!.headers[SCHEDULE_HEADER]!
     assert.match(schedule, /^@at /)
     const at = new Date(schedule.slice(4)).getTime()
-    assert.ok(at >= before + 60_000 && at <= after + 60_000, `@at ${schedule} is out of range`)
+    assert.ok(
+      at >= before + 60_000 && at <= after + 60_000,
+      `@at ${schedule} is out of range`
+    )
   })
 
   test('the target is the real queue subject, never the schedule subject', async () => {
     // The server rejects a schedule that targets its own subject (10190), and
     // one that did would reproduce itself forever.
     const { js, published } = fakeJs()
-    await new NatsDelayedPublisher(js, 'pikku').publishAfter('my.queue', {}, 1_000)
-    assert.equal(published[0]!.headers[SCHEDULE_TARGET_HEADER], 'pikku.my_queue')
-    assert.notEqual(published[0]!.headers[SCHEDULE_TARGET_HEADER], published[0]!.subject)
+    await new NatsDelayedPublisher(js, 'pikku').publishAfter(
+      'my.queue',
+      {},
+      1_000
+    )
+    assert.equal(
+      published[0]!.headers[SCHEDULE_TARGET_HEADER],
+      'pikku.my_queue'
+    )
+    assert.notEqual(
+      published[0]!.headers[SCHEDULE_TARGET_HEADER],
+      published[0]!.subject
+    )
   })
 
   test('the schedule lands under the reserved segment, which nothing consumes', async () => {
@@ -63,18 +76,27 @@ describe('NatsDelayedPublisher — schedule headers', () => {
     // load-bearing that no consumer filters this subject.
     const { js, published } = fakeJs()
     await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1_000)
-    assert.ok(published[0]!.subject.startsWith(`pikku.${SCHEDULE_SUBJECT_SEGMENT}.q.`))
+    assert.ok(
+      published[0]!.subject.startsWith(`pikku.${SCHEDULE_SUBJECT_SEGMENT}.q.`)
+    )
   })
 
   test('the body is published verbatim, since the server produces it untouched', async () => {
     const { js, published } = fakeJs()
-    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', { hello: 'world' }, 1_000)
+    await new NatsDelayedPublisher(js, 'pikku').publishAfter(
+      'q',
+      { hello: 'world' },
+      1_000
+    )
     assert.equal(published[0]!.payload, JSON.stringify({ hello: 'world' }))
   })
 
   test('the returned id is the schedule message sequence', async () => {
     const { js } = fakeJs(99)
-    assert.equal(await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1), '99')
+    assert.equal(
+      await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1),
+      '99'
+    )
   })
 })
 
@@ -95,12 +117,10 @@ describe('NatsDelayedPublisher — job options that survive the delay', () => {
     // Every non-schedule header is reproduced verbatim by the server, which is
     // the only way a delayed job keeps its retry policy.
     const { js, published } = fakeJs()
-    await new NatsDelayedPublisher(js, 'pikku').publishAfter(
-      'q',
-      {},
-      1_000,
-      { attempts: 3, backoff: { type: 'exponential', delay: 2_000 } },
-    )
+    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1_000, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2_000 },
+    })
     assert.equal(published[0]!.headers[ATTEMPTS_HEADER], '3')
     assert.equal(published[0]!.headers[BACKOFF_TYPE_HEADER], 'exponential')
     assert.equal(published[0]!.headers[BACKOFF_DELAY_HEADER], '2000')
@@ -108,14 +128,18 @@ describe('NatsDelayedPublisher — job options that survive the delay', () => {
 
   test('a string backoff sets a type with no base delay', async () => {
     const { js, published } = fakeJs()
-    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1, { backoff: 'fixed' })
+    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1, {
+      backoff: 'fixed',
+    })
     assert.equal(published[0]!.headers[BACKOFF_TYPE_HEADER], 'fixed')
     assert.equal(published[0]!.headers[BACKOFF_DELAY_HEADER], undefined)
   })
 
   test('pikkuUserId survives the delay', async () => {
     const { js, published } = fakeJs()
-    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1, { pikkuUserId: 'u1' })
+    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1, {
+      pikkuUserId: 'u1',
+    })
     assert.equal(published[0]!.headers[PIKKU_USER_ID_HEADER], 'u1')
   })
 
@@ -134,15 +158,20 @@ describe('NatsDelayedPublisher — job options that survive the delay', () => {
 
   test('the delay itself is not copied through as a job option', async () => {
     const { js, published } = fakeJs()
-    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1_000, { delay: 1_000 })
+    await new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1_000, {
+      delay: 1_000,
+    })
     assert.equal(published[0]!.headers['Pikku-Delay'], undefined)
   })
 
   test('an unenforceable attempts value is refused instead of retrying forever', async () => {
     const { js } = fakeJs()
     await assert.rejects(
-      () => new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1, { attempts: 0 }),
-      { message: /not a positive integer/ },
+      () =>
+        new NatsDelayedPublisher(js, 'pikku').publishAfter('q', {}, 1, {
+          attempts: 0,
+        }),
+      { message: /not a positive integer/ }
     )
   })
 })
