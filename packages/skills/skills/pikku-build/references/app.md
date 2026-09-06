@@ -418,6 +418,12 @@ over, and an uncovered function is a half-milestone whether or not the note says
    file. Compose the kit from `@/components/<Name>` rather than hand-rolling.
    Register the screen in `useNavItems()` — that one file feeds both the desktop
    sidebar and the phone navigation.
+   **Read `references/design.md` before you write the first screen**, and hold
+   each one to it as you go: what leads the screen, where a list stops being
+   cards, how much of it is chrome, and the login page that is the first thing
+   anyone sees. Screenshot it at 390 and 1440 with the seed in place at the END
+   of every milestone — not once at §8, where the only affordable fix is a
+   repaint of eight screens.
 6. **Scenario** (§7), then `status: built`.
 
 Rules that are not optional:
@@ -635,17 +641,28 @@ loud is a number nobody acts on.
 
 ## 8. Make it look like someone designed it
 
-Two separate jobs, and conflating them is why open-source builds come out looking
-like the template:
+**This section numbers 8, but half of it has already happened.** Read
+`references/design.md` before the first screen is built — a design pass run on
+eight milestones of scaffolded screens is a repaint, and it shows. What is left
+here at §8 is the theme you may have deferred and the critique you cannot run
+until there are screens to critique.
 
-- **8a. Direction** — deciding what it should look like. **No open-source tool
-  does this.** Fabric has `fabric-theme`; you have §1's answer and this section.
-- **8b. Critique** — judging how well the built screens execute that direction.
+Three separate jobs, and conflating them is why open-source builds come out
+looking like the template:
+
+- **Direction** — deciding what it should look like. **No open-source tool does
+  this.** Fabric has `fabric-theme`; you have §1's answer and 8a below.
+- **Composition** — how a screen is actually laid out: what leads, what is a row
+  and what is a card, how much of the screen is chrome. No theme does this, and
+  it is where "works but looks like nobody decided anything" comes from.
+  `references/design.md` is that doctrine, and it belongs at §6, per screen.
+- **Critique** — judging how well the built screens execute the direction.
   `impeccable` does this well, and it is free.
 
 Impeccable audits the design you chose. It will never tell you the app should
 have looked like something else — it will happily award a clean bill of health to
-a perfectly-executed default. Skip 8a and you ship Neutral with good spacing.
+a perfectly-executed default. Skip the first two and you ship Neutral with good
+spacing.
 
 ### 8a. Author the theme — the step nothing does for you
 
@@ -673,6 +690,11 @@ user gave you, what you chose, and what it rules out. The JSON records what the
 theme is; only the note records why.
 
 ### 8b. Compose real components, then critique
+
+**`references/design.md` carries the composition doctrine** — what leads a
+screen, when a list stops being cards, how much of a screen may be chrome, the
+login page nobody designs, and why you reset the dev database before judging
+anything. Read it there; what follows is only the component inventory.
 
 **Compose with Mantine's rich components — not tables and text everywhere:**
 
@@ -710,8 +732,15 @@ a modal taller than the viewport. Mantine gives you the tools (responsive `Grid`
 them. The template already mounts a phone navigation per `AGENTS.md` — pick
 `MobileTabBar` or `MobileNavDrawer` deliberately per app, never both.
 
-The gate: **no P0 findings left on any screen, in any app, at either width.**
+The gate: **no P0 findings left on any screen, in any app, at either width**,
+and every screen answers the six questions at the top of `references/design.md`.
 Don't silence a finding by deleting the feature it is about.
+
+**Critique the data too, not just the layout.** Scenario runs write run-tagged
+rows into the dev database, so by §8 the app is full of `Ripe peaches d193e2aa`
+seven copies deep. Run `pikku db reset` and restart the dev server before you
+screenshot anything — a screen judged against that data gets designed for a
+problem it does not have.
 
 ## 9. Ship it, and stay Fabric-ready
 
@@ -735,6 +764,8 @@ cheaper to honour than to retrofit:
 
 - `references/multi-app.md` — adding a second frontend (§4), at the milestone
   that needs it
+- `references/design.md` — composition, the screens agents forget, and the bar
+  a screen has to clear. Read BEFORE the first screen (§6), not at §8
 - `references/theming.md` — authoring the theme (§8a)
 - `references/ship.md` — deploying, and the Fabric-readiness contract (§9)
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
