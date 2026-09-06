@@ -16,7 +16,9 @@ const makeSocket = (): FakeSocket => {
     subscribed: [],
     published: [],
     subscribe: (topic) => socket.subscribed.push(topic),
-    unsubscribe: () => {},
+    unsubscribe: (topic) => {
+      socket.subscribed = socket.subscribed.filter((t) => t !== topic)
+    },
     publish: (topic, data, binary) =>
       socket.published.push([topic, data, binary]),
   }
@@ -56,6 +58,34 @@ describe('UWSEventHubService', () => {
       ['news', JSON.stringify({ hello: 'world' }), false],
     ])
     assert.deepEqual(received, [{ hello: 'world' }])
+  })
+
+  test('a registered socket unsubscribes natively, not through the local hub', async () => {
+    const hub = new UWSEventHubService()
+    const socket = makeSocket()
+    hub.registerSocket('c1', socket as any)
+    await hub.subscribe('news', 'c1')
+
+    await hub.unsubscribe('news', 'c1')
+    await hub.publish('news', null, { hello: 'world' })
+
+    assert.deepEqual(socket.subscribed, [], 'uWS owns the subscription')
+  })
+
+  test('a closed channel keeps no socket behind', async () => {
+    const hub = new UWSEventHubService()
+    const socket = makeSocket()
+    hub.registerSocket('c1', socket as any)
+    await hub.subscribe('news', 'c1')
+
+    await hub.onChannelClosed('c1')
+    await hub.subscribe('news', 'c1')
+
+    assert.deepEqual(
+      socket.subscribed,
+      ['news'],
+      'the second subscribe went to the local hub, because the socket is gone'
+    )
   })
 })
 
