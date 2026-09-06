@@ -79,7 +79,28 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # @pikku/queue-nats' integration suite skips itself when NATS_TEST_URL is
+      # unset, so until this existed it reported pass without ever connecting.
+      # Not a `services:` container: `-js` is a command argument and `services:`
+      # has no `command:` key, so there is no way to enable JetStream there.
+      - name: Start JetStream NATS
+        run: |
+          docker run -d --rm --name pikku-nats \
+            -p 4222:4222 -p 8222:8222 nats:2.14-alpine -js -m 8222
+          # /healthz reports JetStream health, not just a bound port, so this
+          # waits for a server the tests can actually use.
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8222/healthz >/dev/null; then
+              echo "NATS ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "NATS did not become ready" >&2
+          docker logs pikku-nats >&2 || true
+          exit 1
       - run: yarn test
+        env:
+          NATS_TEST_URL: nats://127.0.0.1:4222
 
   e2e:
     name: E2E Standard

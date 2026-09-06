@@ -17,17 +17,23 @@ import {
   jetstreamManager,
   RetentionPolicy,
 } from '@nats-io/jetstream'
+import { headers } from '@nats-io/nats-core'
 import { connect, type NatsConnection } from '@nats-io/transport-node'
 import { NatsServiceFactory } from './nats-service-factory.js'
 import { NatsQueueService } from './nats-queue-service.js'
 import { consumeQueue } from './consume.js'
 import { mapPikkuWorkerToNats } from './nats-queue-worker.js'
+import { parseNatsSchedule } from './nats-scheduler-service.js'
 import {
   attemptsFor,
   backoffFor,
   consumerNameForQueue,
   mapJsMsgToQueueJob,
   subjectForQueue,
+  SCHEDULE_HEADER,
+  SCHEDULE_SUBJECT_SEGMENT,
+  SCHEDULE_TARGET_HEADER,
+  SCHEDULE_TIMEZONE_HEADER,
 } from './utils.js'
 
 const SERVER = process.env.NATS_TEST_URL
@@ -592,5 +598,74 @@ it('re-consuming with a CHANGED consumer config converges instead of throwing', 
     )
   } finally {
     await cleanup()
+  }
+})
+
+/**
+ * The point of `parseNatsSchedule` that only a real server can show.
+ *
+ * A unit test can assert which headers we set, but not that the server accepts
+ * them — and accepting them is the whole bug: a `TZ=`-prefixed expression sent
+ * through unparsed puts `TZ=Europe/Berlin` in the seconds field, which the
+ * server rejects outright.
+ */
+it('a TZ-prefixed cron is accepted once parsed, and rejected when it is not', async () => {
+  const streamName = 'PIKKUTEST_SCHEDULE_TZ'
+  const nc = await connect({ servers: SERVER! })
+  const jsm = await jetstreamManager(nc)
+  const js = jetstream(nc)
+  const prefix = `${PREFIX}.${streamName}`
+
+  await jsm.streams.add({
+    name: streamName,
+    subjects: [`${prefix}.>`],
+    retention: RetentionPolicy.Limits,
+    num_replicas: 1,
+    allow_msg_schedules: true,
+  })
+
+  try {
+    const target = subjectForQueue(prefix, 'jobs')
+    const subject = `${prefix}.${SCHEDULE_SUBJECT_SEGMENT}.nightly`
+    const cron = 'TZ=Europe/Berlin 0 3 * * *'
+
+    const { schedule, timezone } = parseNatsSchedule(cron)
+    assert.equal(schedule, '0 0 3 * * *')
+    assert.equal(timezone, 'Europe/Berlin')
+
+    const good = headers()
+    good.set(SCHEDULE_HEADER, schedule)
+    good.set(SCHEDULE_TARGET_HEADER, target)
+    good.set(SCHEDULE_TIMEZONE_HEADER, timezone!)
+    await js.publish(subject, JSON.stringify({ rpcName: 'nightly' }), {
+      headers: good,
+    })
+
+    // The unparsed expression — what start() used to send — is refused.
+    const bad = headers()
+    bad.set(SCHEDULE_HEADER, cron)
+    bad.set(SCHEDULE_TARGET_HEADER, target)
+    await assert.rejects(
+      js.publish(subject, JSON.stringify({ rpcName: 'nightly' }), {
+        headers: bad,
+      }),
+      'the server must refuse a schedule whose seconds field is "TZ=Europe/Berlin"'
+    )
+
+    // An unknown zone is refused too, which is why start() omits the header
+    // rather than defaulting it to a name the server may not carry.
+    const unknownZone = headers()
+    unknownZone.set(SCHEDULE_HEADER, '0 0 3 * * *')
+    unknownZone.set(SCHEDULE_TARGET_HEADER, target)
+    unknownZone.set(SCHEDULE_TIMEZONE_HEADER, 'Mars/Olympus_Mons')
+    await assert.rejects(
+      js.publish(subject, JSON.stringify({ rpcName: 'nightly' }), {
+        headers: unknownZone,
+      }),
+      'an unknown IANA zone must be refused, not silently ignored'
+    )
+  } finally {
+    await jsm.streams.delete(streamName).catch(() => {})
+    await nc.close()
   }
 })
