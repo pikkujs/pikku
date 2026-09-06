@@ -1,149 +1,128 @@
-# Making it look like a studio built it
+# Design
 
-Read this **before the first screen is built**, not at §8. A design pass on eight
-milestones of scaffolded screens is a repaint; a direction decided first is a
-design.
+Your job here is to design something worth the product — not to apply a house
+style. **There is no house style, and this file is not one.** Two apps built from
+this skill should not look like each other; if they do, something has gone wrong
+that no amount of spacing will fix.
 
-The failure this exists to prevent has a signature. It is not ugly colours or bad
-spacing — the theme usually handles those. It is a screen assembled out of
-whatever component was nearest: a `Stack` of `Card`s, a form at the top, one
-`Title`, a grid of identical boxes, sixty rows that all look equally important.
-It typechecks, it passes contrast, every feature works, and it looks like nobody
-decided anything. **Working is the floor, not the deliverable.**
+So: no prescribed layouts, no component rules, no ratios. What follows is the
+process that makes freedom accountable, the handful of facts that are not
+matters of taste, and the symptoms of a screen nobody actually designed.
 
-## The bar
+## Commit to a direction before the first screen
 
-Before you hand a screen over, answer these out loud. They are not rhetorical —
-each one has caught a real screen.
+An agent given "make it look good" and nothing else defaults — to the component
+nearest to hand, on every screen, in every app. Not because it lacks taste, but
+because there is nothing to be wrong against. A direction fixes that: state one,
+in words, before any screen exists.
 
-1. **What question does someone open this screen to ask?** Is the answer in the
-   first viewport, in the largest type on the page? If the top of the screen is a
-   form, the answer is no.
-2. **Could you take in the state of things in two seconds without reading?**
-   Something must carry meaning pre-attentively — a colour rail, a weight, a
-   count. If the only difference between "expired" and "fine" is words in the
-   same grey, the screen cannot be scanned.
-3. **What is the ratio of chrome to content?** Count the buttons. A per-item
-   action repeated down a list of sixty is a hundred and twenty buttons, and they
-   are painted over the names you are trying to read.
-4. **Does every group have a reason to exist?** A section called "urgent" holding
-   half the list triages nothing. If a threshold puts most of the data in the
-   exception bucket, the threshold is wrong, not the data.
-5. **What does it look like with real volume?** Design against the seed you would
-   demo, not three rows. Sixty is a different screen from three, and the layout
-   that survives three often collapses at sixty.
-6. **Would you show it to the user without apologising for it?** If the honest
-   answer is "it works", it is not finished.
+Say what this product *is* — its register, its reference points, what it feels
+like to use, what it is deliberately not. "A warm, food-forward thing you use
+standing at an open fridge door, closer to a recipe card than to a dashboard, and
+never clinical" is a direction. "Clean and modern" is not — it rules nothing out,
+so it cannot be departed from.
 
-## Composition — the part no theme can do for you
+Write it to `knowledge/decisions/design/`, then build the theme from it
+(`references/theming.md`). **From that point you are accountable to your own
+direction, not to this file.** That is the whole mechanism: the freedom is real,
+and so is the commitment.
 
-A theme sets colour, radius, type and shadow. Everything below is layout, and no
-`defaultProps` will save a screen that gets it wrong.
+Be ambitious with it. A direction that could describe any SaaS app has not been
+chosen — it has been defaulted to in words instead of in components.
 
-**Content before controls.** The list is why the screen exists; the form that
-adds to it is not. A three-field add form at the top of a phone screen is the
-entire first viewport, and the fridge you opened the app to look at starts below
-the fold. Put the answer first, and let the input be a control you open — or a
-single tight row, never a stacked column of full-width fields.
+## One screen, designed properly, before the rest exist
 
-**One entry point per job, not two.** Two cards stacked at the top of a screen,
-both meaning "add something", is a decision nobody made. Merge them: one surface,
-the common way in and the other way in beside it.
+Design the first real screen as if it were the only one, and take it further than
+feels necessary. Every screen after it inherits its register — its density, its
+rhythm, what a row of data looks like, how state is signalled. That inheritance
+happens whether you plan it or not, so make the first one worth inheriting.
 
-**Rows, not cards, once a list has depth.** A card says "this is a thing worth
-looking at on its own"; sixty of them say nothing. Past roughly a dozen items,
-one-line rows scan better, fit twice the information per screen, and let a
-coloured rail down the left carry urgency at a glance. Keep cards for a handful
-of rich objects, a gallery, or a dashboard tile.
+This is also the cheapest design work in the project. The eighth screen is a
+repaint of eight; the first is a decision.
 
-**Group with headings that carry their count.** `Eat these first 5` is a heading
-somebody can act on; a heading with a sentence underneath saying "5 things are
-about to turn" says it twice and reads as filler. The count is the number you
-check before deciding whether to read the group at all.
+## Judge it — and don't grade your own homework
 
-**Quiet the repeated action.** Per-row buttons should be `subtle` or revealed on
-the row, never filled — but still 44px, because quiet is a visual decision and
-tap targets are not. Filled buttons are for the one action the screen is for.
+Models rate their own output generously, and "does this look good?" answered by
+the thing that made it is always yes. Use evidence.
 
-**One meta line, not three badges.** State, quantity, date — in the order they
-are asked for, in one text node so it wraps like a sentence. Three separate pills
-in a `Group` wrap into a ragged pile at 390px and leave separators stranded at
-the end of a line.
+- **Screenshot every screen and look at the image**, at ~390px and at ~1440px.
+  Judging your own UI from source is guessing, and the failures that matter —
+  proportion, hierarchy, a wall of identical boxes — are invisible in JSX.
+- **Run `impeccable`** (`npx impeccable install`, Node 22.18+) and feed it the
+  screenshots. It is external, it does not flatter, and it scores execution
+  against interaction heuristics. But it audits how well you executed the design
+  you chose — it will award a clean bill of health to a perfectly executed
+  default. It checks step 2; it never replaces it.
+- **Look at every milestone, not once at the end.** A screen that was fine at
+  three rows is a different screen at sixty, and the milestone that added the
+  sixty is the cheapest place to notice.
 
-**Never say the same thing twice in one row.** "Use by tomorrow · 1 bag · Use by
-Sep 7" is one fact wearing two hats. Cut one.
+Questions worth answering honestly, per screen. The answers are yours; only the
+questions are fixed:
 
-**Every colour means something.** If the palette has an urgency ramp, nothing
-decorative may use it, and nothing that means urgency may be drawn in anything
-else. A colour used both ways stops being a signal.
+1. What question does someone open this screen to ask, and how fast do they get
+   the answer?
+2. What can be understood before reading a word?
+3. What is here that is not earning its space?
+4. What does it look like at real volume, and at 390px?
+5. Does it look like the direction you committed to — or like the components you
+   had?
+6. Would you show it to the user without apologising for it?
 
-**Colour is never the only signal.** Whatever the rail says, the words say too —
-for greyscale, for colour blindness, and for a screen reader.
+## Facts, not taste
 
-## The screens agents forget
+These are not design opinions and are not open to a different answer.
 
-**The login page is the entry point, and it is usually the least designed screen
-in the app.** It is the first thing anyone sees, it is where a demo starts, and a
-default auth card with a wordmark on it says "scaffold" before the product has
-said anything. Give it the direction the rest of the app has: real proportions, a
-considered background, the product's voice in the heading rather than "Sign in".
+- **Reset the dev database before judging anything.** Scenario runs deliberately
+  tag rows with a run id so assertions do not collide, so after a few runs the
+  app is full of `Ripe peaches d193e2aa`, seven copies deep. Nobody's data looks
+  like that, and a screen designed against it is designed for a problem it does
+  not have. `pikku db reset` replays the migrations and the seed — and the dev
+  server holds an open handle to the file, so **restart it after**, or every call
+  fails with `disk I/O error` and the app looks broken for reasons that are not
+  the app.
+- **Seed generously and realistically.** A seed with a deliberate spread designs
+  the hard cases for you. Three identical rows teach you nothing.
+- **Never render a sign-in method that is not configured.** A "Continue with
+  Google" button on an app with no Google credentials is a dead control on the
+  first screen anyone sees. Render social buttons from what `socialProviders`
+  actually declares — and when it declares none, the divider goes too.
+- **Empty, loading and error are states that exist.** The empty state is what a
+  new user meets first and the one most often skipped entirely.
+- **Contrast and tap targets are measured, not judged.** `pikku-a11y` covers it.
+  One trap worth knowing: a Mantine `light` variant paints its label at the
+  generated ramp's stop, which lands just under AA on its own tint — name the
+  darker ink once and reuse it.
 
-**Never render a sign-in method that is not configured.** A "Continue with
-Google" button on an app with no Google credentials is a dead control on the
-first screen. Render the social buttons from what `socialProviders` actually
-declares, and when it declares none, the divider goes too — not just the button.
+## Two screens that get skipped
 
-**The navigation is a design surface, not shell furniture.** The scaffold mounts
-a working nav; working is not the same as considered. Decide the destinations
-(five at most — a tab bar overflows past four), give the labels room to be
-legible at 11px or more, and style it through the theme's `NavLink` /
-`defaultProps` rather than leaving the component defaults. A nav bar is on every
-screen; it is the highest-leverage surface in the app.
+Not rules about how they should look — only that they are yours to design.
 
-**Empty, loading and error are three designed states, not three omissions.** An
-empty list is the state a new user sees first and the one most likely to be
-skipped. Skeletons should be the shape of the rows they replace.
+**The login page is the entry point.** It is the first thing anyone sees, where
+every demo starts, and routinely the least designed screen in the app: a default
+card with a wordmark, saying "scaffold" before the product has said anything. It
+gets the same direction as everything else.
 
-## Judge it against real data
+**The navigation is on every screen**, which makes it the highest-leverage
+surface you have. The scaffold mounts one that works; working is not the same as
+considered. Decide the destinations and their number deliberately, and style it
+through the theme rather than leaving the component defaults — the same look on
+every app is the tell.
 
-**Reset the dev database before you look at anything.** Scenario runs write into
-it, and they deliberately tag rows with a run id so assertions do not collide —
-so after a few runs the app is full of `Ripe peaches d193e2aa` and `Soured cream
-f7b8cef7`, seven copies deep. Nobody's fridge looks like that, and a screen
-judged against that data gets designed for a problem it does not have. `pikku db
-reset` replays the migrations and the seed.
+## Symptoms of a screen nobody designed
 
-The dev server holds an open handle to the database file, so **restart it after a
-reset** — otherwise every call fails with `disk I/O error` and the app looks
-broken for a reason that has nothing to do with the app.
+If a screen shows these, you defaulted. **The fix is yours to choose** — these
+are a diagnosis, not a prescription, and the interesting answer is rarely the
+first one.
 
-**Make the seed realistic while you are there.** A seed with a deliberate spread —
-a couple already expired, some due tomorrow, a normal week's worth, a few that
-never expire — designs the urgency bands for you. A seed of three identical rows
-teaches you nothing about the screen you are building.
-
-## Order of work
-
-1. **Direction first** — §1's answer, then the theme (`references/theming.md`),
-   then a note in `knowledge/decisions/design/` saying what you chose and what it
-   rules out.
-2. **One reference screen, designed properly, before the second milestone builds
-   anything.** Every screen after it copies its register — its density, its row
-   shape, its heading rhythm. Getting the first one right is the cheapest design
-   work in the project; the eighth screen is a repaint of eight.
-3. **Look at it at 390 and at 1440, with real data, at every milestone** — not
-   once at the end. A screen that was fine at three rows is a different screen at
-   sixty, and the milestone that added the sixty is the cheapest place to notice.
-4. **Critique last.** `impeccable` scores execution against the direction you
-   chose. It will award a clean bill of health to a perfectly executed default,
-   so it is the check on step 2, never the substitute for it.
-
-## The gate
-
-- No P0 findings on any screen, at 390 and at 1440.
-- Contrast and tap targets pass — `pikku-a11y` covers the measurement, and note
-  that a Mantine `light` variant paints its label at the generated ramp's stop,
-  which lands just under AA on its own tint. Name the darker ink once and reuse
-  it.
-- Every screen answers the six questions at the top of this file.
-- The first screen anyone sees — the login — has been designed, not scaffolded.
+- The top of the screen is a form, and the content it acts on starts below the
+  fold.
+- Two adjacent surfaces do the same job because both were added separately.
+- Everything is the same size, weight and colour, so nothing can be found
+  without reading it.
+- The same fact is stated twice in one line, in two different components.
+- A section named for an exception holds half the data.
+- Every row carries the same buttons, and the buttons outweigh the content.
+- The palette's meaningful colours are also used decoratively, so they have
+  stopped meaning anything.
+- It looks like the last app you built.

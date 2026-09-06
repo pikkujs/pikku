@@ -418,12 +418,12 @@ over, and an uncovered function is a half-milestone whether or not the note says
    file. Compose the kit from `@/components/<Name>` rather than hand-rolling.
    Register the screen in `useNavItems()` — that one file feeds both the desktop
    sidebar and the phone navigation.
-   **Read `references/design.md` before you write the first screen**, and hold
-   each one to it as you go: what leads the screen, where a list stops being
-   cards, how much of it is chrome, and the login page that is the first thing
-   anyone sees. Screenshot it at 390 and 1440 with the seed in place at the END
-   of every milestone — not once at §8, where the only affordable fix is a
-   repaint of eight screens.
+   **Read `references/design.md` before you write the first screen.** You commit
+   to a design direction there and are then accountable to it — it hands you no
+   layouts, because the design is yours to make. Screenshot each screen at 390
+   and 1440 with the seed in place at the END of every milestone, and look at the
+   images — not once at §8, where the only affordable fix is a repaint of eight
+   screens.
 6. **Scenario** (§7), then `status: built`.
 
 Rules that are not optional:
@@ -652,10 +652,11 @@ looking like the template:
 
 - **Direction** — deciding what it should look like. **No open-source tool does
   this.** Fabric has `fabric-theme`; you have §1's answer and 8a below.
-- **Composition** — how a screen is actually laid out: what leads, what is a row
-  and what is a card, how much of the screen is chrome. No theme does this, and
-  it is where "works but looks like nobody decided anything" comes from.
-  `references/design.md` is that doctrine, and it belongs at §6, per screen.
+- **Execution** — whether the screens actually realise that direction, or
+  default to whatever component was nearest. No theme does this, and it is where
+  "works but looks like nobody decided anything" comes from.
+  `references/design.md` carries the process for it, and it belongs at §6, per
+  screen.
 - **Critique** — judging how well the built screens execute the direction.
   `impeccable` does this well, and it is free.
 
@@ -691,10 +692,12 @@ theme is; only the note records why.
 
 ### 8b. Compose real components, then critique
 
-**`references/design.md` carries the composition doctrine** — what leads a
-screen, when a list stops being cards, how much of a screen may be chrome, the
-login page nobody designs, and why you reset the dev database before judging
-anything. Read it there; what follows is only the component inventory.
+**`references/design.md` is where design actually lives** — committing to a
+direction before the first screen, judging the result from screenshots rather
+than from source, the two screens that get skipped, and why you reset the dev
+database before judging anything. It prescribes no layouts on purpose: two apps
+built from this skill should not look like each other. What follows here is only
+the component inventory.
 
 **Compose with Mantine's rich components — not tables and text everywhere:**
 
@@ -733,8 +736,10 @@ them. The template already mounts a phone navigation per `AGENTS.md` — pick
 `MobileTabBar` or `MobileNavDrawer` deliberately per app, never both.
 
 The gate: **no P0 findings left on any screen, in any app, at either width**,
-and every screen answers the six questions at the top of `references/design.md`.
-Don't silence a finding by deleting the feature it is about.
+and every screen honestly answers the questions in `references/design.md` —
+including whether it looks like the direction you committed to or like the
+components you had. Don't silence a finding by deleting the feature it is
+about.
 
 **Critique the data too, not just the layout.** Scenario runs write run-tagged
 rows into the dev database, so by §8 the app is full of `Ripe peaches d193e2aa`
@@ -764,8 +769,8 @@ cheaper to honour than to retrofit:
 
 - `references/multi-app.md` — adding a second frontend (§4), at the milestone
   that needs it
-- `references/design.md` — composition, the screens agents forget, and the bar
-  a screen has to clear. Read BEFORE the first screen (§6), not at §8
+- `references/design.md` — committing to a design direction, and how to tell
+  whether the screens realise it. Read BEFORE the first screen (§6), not at §8
 - `references/theming.md` — authoring the theme (§8a)
 - `references/ship.md` — deploying, and the Fabric-readiness contract (§9)
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
