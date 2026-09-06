@@ -2,8 +2,8 @@
 name: pikku-addon
 description: >-
   Use when creating or consuming reusable function packages (addons) in Pikku. Covers wireAddon,
-  ref(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, and cross-project
-  function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, user asks about
+  ref(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, addons that ship
+  database tables (pikku db export), and cross-project function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, user asks about
   addons, reusable function packages, cross-project sharing, or addon package structure. DO NOT
   TRIGGER when: user asks about internal function composition (use pikku-wiring) or general function
   definitions (use pikku-concepts).
@@ -264,6 +264,49 @@ addon` above is the exception — it runs before the addon, and its CLI, exist.
 addon installs fine and fails to typecheck in every app that depends on it —
 which is what `pikku validate` is there to catch before you publish.
 
+### Database tables
+
+An addon may **ship** tables. It must never **create** them: it runs inside the
+consumer, against the consumer's database, so a boot-time `CREATE TABLE` puts a
+second authority on a schema the consumer's migrations own. It declares instead,
+and the consumer's migration history absorbs the declaration.
+
+Author the DDL per dialect, and publish it from the build:
+
+```text
+db/sqlite/0001-labels.sql
+db/postgres/0001-labels.sql
+```
+
+```json
+{ "scripts": { "prebuild": "pikku all && pikku db export" } }
+```
+
+`pikku db export` writes `<outDir>/db/pikku-db-meta.gen.json` — per dialect, the
+SQL verbatim plus a table/column map. The consumer resolves it **through the
+package name**, so it must be exported and packed, or it never arrives:
+
+```json
+{
+  "exports": {
+    "./.pikku/db/pikku-db-meta.gen.json": "./dist/.pikku/addon/db/pikku-db-meta.gen.json"
+  },
+  "files": ["dist"]
+}
+```
+
+**An unresolvable artifact is silent.** A wired addon whose artifact cannot be
+resolved is indistinguishable from the majority that publish no schema at all —
+no error, no migration, and a runtime failure much later against a table nobody
+created. When an addon that ships tables generates no migration, suspect the
+`exports` entry and `files` before suspecting the pipeline.
+
+An addon that publishes only one dialect *does* fail loudly: a consumer on
+another dialect gets an error naming what the addon supports.
+
+`verifiers/db-schema` runs this end to end on both dialects — copy its addon
+`package.json` when wiring a new one.
+
 ## Consuming an Addon
 
 ### Install & Register
@@ -280,6 +323,14 @@ wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 ```
 
 After registration, run `yarn pikku all` to generate types for the addon's functions.
+
+If the addon ships tables, `pikku db generate` then writes one migration per
+addon — named after the package, carrying the addon's own SQL — after Better
+Auth's and the runtime's, so an addon table may reference `user` or a runtime
+table. `pikku db migrate` applies it; re-running `generate` writes nothing once
+covered, and writes only the delta after an addon upgrade. An addon wired with
+`wireRemoteAddon` contributes no schema at all: its tables belong to the
+deployment that runs its functions.
 
 ### Call via RPC
 

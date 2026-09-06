@@ -57,7 +57,8 @@ package that declared them, and the extra segment is what stops a linked addon's
     "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/addon/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
       "types": "./dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
-    }
+    },
+    "./.pikku/db/pikku-db-meta.gen.json": "./dist/.pikku/addon/db/pikku-db-meta.gen.json"
   },
   "files": ["dist"],
   "peerDependencies": {
@@ -65,7 +66,7 @@ package that declared them, and the extra segment is what stops a linked addon's
     "zod": "^4"
   },
   "scripts": {
-    "prebuild": "pikku all",
+    "prebuild": "pikku all && pikku db export",
     "pikku": "pikku all",
     "build": "tsc && cp -r .pikku types dist/"
   }
