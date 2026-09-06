@@ -34,6 +34,8 @@
       "@pikku/inspector/*": ["./packages/inspector/*"],
       "@pikku/queue-bullmq": ["./packages/services/queue-bullmq"],
       "@pikku/queue-bullmq/*": ["./packages/services/queue-bullmq/*"],
+      "@pikku/queue-nats": ["./packages/services/queue-nats"],
+      "@pikku/queue-nats/*": ["./packages/services/queue-nats/*"],
       "@pikku/queue-pg-boss": ["./packages/services/queue-pg-boss"],
       "@pikku/queue-pg-boss/*": ["./packages/services/queue-pg-boss/*"],
       "@pikku/skills": ["./packages/skills"],
