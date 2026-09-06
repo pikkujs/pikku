@@ -182,4 +182,41 @@ describe('readJsonSafe', () => {
   test('a missing file is null, not a throw', async () => {
     assert.strictEqual(await readJsonSafe(join(dir, 'gone.json')), null)
   })
+
+  test('a block comment separates the tokens it sat between', async () => {
+    const path = await write('a.json', '{ "value": 1/* why */2 }')
+
+    await assert.rejects(
+      readJsonSafe(path),
+      /Invalid JSON/,
+      'closing the gap would silently read this as 12'
+    )
+  })
+
+  test('a comma inside a string survives', async () => {
+    const path = await write('a.json', '{ "value": ",}", "other": 1 }')
+
+    assert.deepStrictEqual(await readJsonSafe(path), {
+      value: ',}',
+      other: 1,
+    })
+  })
+
+  test('a comment character inside a string is not a comment', async () => {
+    const path = await write('a.json', '{ "url": "https://example.com/*x*/" }')
+
+    assert.deepStrictEqual(await readJsonSafe(path), {
+      url: 'https://example.com/*x*/',
+    })
+  })
+
+  test('an unterminated block comment is named, not swallowed', async () => {
+    const path = await write('a.json', '{ "a": 1 }\n/* the rest of this file')
+
+    await assert.rejects(
+      readJsonSafe(path),
+      /Unterminated block comment/,
+      'a truncated file must not parse as though it were whole'
+    )
+  })
 })
