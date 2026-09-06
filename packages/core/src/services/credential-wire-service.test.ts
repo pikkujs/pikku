@@ -122,6 +122,69 @@ describe('PikkuCredentialWireService', () => {
     assert.deepStrictEqual(r1, r2)
   })
 
+  /**
+   * The regression the `loaded` flag was written to avoid.
+   *
+   * `get` answers synchronously once `loaded` is set, so setting the flag
+   * before the fetch resolved gave every caller that arrived during the load a
+   * confident `null` for a credential that exists. `getAll` hid it: it hands
+   * back the live `credentials` object, which is filled in before anyone
+   * asserts on it, so only a reader that copies a VALUE out sees the gap.
+   */
+  test('should not answer null while a lazy load is still in flight', async () => {
+    const credService = mockCredentialService({ stripe: { key: 'sk_live' } })
+    const wire: PikkuWire = { session: { userId: 'user-1' } as any }
+    const service = new PikkuCredentialWireService(credService, wire)
+
+    // Issued in one tick, exactly as `Promise.all` over sibling RPC calls does.
+    const results = await Promise.all([
+      service.get('stripe'),
+      service.get('stripe'),
+      service.get('stripe'),
+    ])
+
+    for (const [index, result] of results.entries()) {
+      assert.deepStrictEqual(
+        result,
+        { key: 'sk_live' },
+        `concurrent reader ${index} lost the credential`
+      )
+    }
+  })
+
+  test('should not answer null during a slow lazy load', async () => {
+    const credService: CredentialService = {
+      get: async () => null,
+      set: async () => {},
+      delete: async () => {},
+      has: async () => true,
+      getAll: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        return { stripe: { key: 'sk_live' } }
+      },
+    }
+    const wire: PikkuWire = { session: { userId: 'user-1' } as any }
+    const service = new PikkuCredentialWireService(credService, wire)
+
+    const first = service.get('stripe')
+    const second = service.get('stripe')
+    assert.deepStrictEqual(await first, { key: 'sk_live' })
+    assert.deepStrictEqual(await second, { key: 'sk_live' })
+  })
+
+  test('should still take the sync path when there is nothing to load', async () => {
+    // Both early returns are settled states, so they must set `loaded` too.
+    const service = new PikkuCredentialWireService(
+      mockCredentialService({ stripe: { key: '1' } }),
+      {}
+    )
+    await service.getAll()
+    assert.ok(
+      !(service.getAll() instanceof Promise),
+      'expected sync return after an unresolvable user'
+    )
+  })
+
   test('getScoped should only return allowed names', async () => {
     const credService = mockCredentialService({
       stripe: { key: '1' },
