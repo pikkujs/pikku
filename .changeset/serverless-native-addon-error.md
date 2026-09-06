@@ -19,10 +19,16 @@ Could not resolve "detect-libc"        @ sharp/dist/libvips.mjs
 Read as missing polyfills, that sends people to `nodejs_compat`, which cannot
 help — the blocker is the binary underneath.
 
-A failed serverless compile now reads the owning packages back out of those
-paths, checks each for a native binary (`gypfile`, a `binary` declaration, a
-node-gyp install script, per-platform optional dependencies, an `os`
-restriction), and when it finds one leads with the package, the evidence, and
+A failed serverless compile now reads the owning packages back out of the
+unresolved-import lines only, checks each for a native binary (`gypfile`, a
+`binary` declaration, a node-gyp install script, per-platform optional
+dependencies), and when it finds one leads with the package, the evidence, and
 the two ways out: `deploy.serverlessIncompatible` in `pikku.config.json`, or
 `deploy: 'server'` on the function. The original error is kept underneath. A
 failure with no native addon behind it is rethrown untouched.
+
+An `os` restriction is not counted: a pure-JS package pinned to one platform
+carries no binary, and reporting it as an addon says Node compatibility cannot
+help when it is exactly what is needed. Nor is any failure other than an
+unresolved import — a syntax error inside a native package is still a syntax
+error, and keeps its own message.

@@ -133,6 +133,7 @@ describe('createModuleRunner', { concurrency: false }, () => {
       `import { createRequire } from 'node:module'
        export const url = import.meta.url
        export const dir = import.meta.dirname
+       export const filename = import.meta.filename
        export const resolves = () =>
          createRequire(import.meta.url).resolve('./sibling.cjs')`
     )
@@ -143,6 +144,7 @@ describe('createModuleRunner', { concurrency: false }, () => {
     const mod = (result as { exports: Record<string, unknown> }).exports
     assert.equal(mod.url, pathToFileURL(file).href)
     assert.equal(mod.dir, tmpDir)
+    assert.equal(mod.filename, file)
     assert.match((mod.resolves as () => string)(), /sibling\.cjs$/)
   })
 
