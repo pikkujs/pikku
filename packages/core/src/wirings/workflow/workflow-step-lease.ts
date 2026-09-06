@@ -33,20 +33,30 @@ export const startStepLeaseRefresh = (
   leaseMs: number,
   refresh: (expiresAt: Date) => Promise<void>
 ): (() => void) => {
-  const timer = setInterval(
-    () => {
-      refresh(new Date(Date.now() + leaseMs)).catch((error) =>
-        getSingletonServices()?.logger?.warn(
-          `Workflow step ${stepId}: could not refresh its lease; another worker may take the step`,
-          error
-        )
-      )
-    },
-    Math.max(
-      STEP_LEASE_REFRESH_MIN_MS,
-      Math.floor(leaseMs * STEP_LEASE_REFRESH_FACTOR)
+  // Half the lease, and never more. The floor is there to stop a short lease
+  // spinning the timer, but it may not be applied as a maximum: a lease under
+  // twice the floor would then be renewed for the first time after it had
+  // already lapsed, and a duplicate dispatch is free to claim and run the step
+  // alongside the worker still executing it — the exact race the lease exists
+  // to close. A lease that short spins instead, and says so once, because a
+  // busy timer is cheaper than two workers on one step.
+  const interval = Math.max(1, Math.floor(leaseMs * STEP_LEASE_REFRESH_FACTOR))
+  if (interval < STEP_LEASE_REFRESH_MIN_MS) {
+    getSingletonServices()?.logger?.warn(
+      `Workflow step ${stepId}: a ${leaseMs}ms lease is refreshed every ${interval}ms. Raise the queue's lockDuration or visibilityTimeout above ${
+        STEP_LEASE_REFRESH_MIN_MS * 2
+      }ms.`
     )
-  )
+  }
+
+  const timer = setInterval(() => {
+    refresh(new Date(Date.now() + leaseMs)).catch((error) =>
+      getSingletonServices()?.logger?.warn(
+        `Workflow step ${stepId}: could not refresh its lease; another worker may take the step`,
+        error
+      )
+    )
+  }, interval)
   timer.unref?.()
   return () => clearInterval(timer)
 }
