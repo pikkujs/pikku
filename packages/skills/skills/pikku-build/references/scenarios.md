@@ -236,10 +236,13 @@ whatever else is listening there, so the scenario goes green having never touche
 ## Running them
 
 ```sh
-bunx --bun pikku scenario run local --spawn                       # server-side, the fast path
-bunx --bun pikku scenario run local --spawn --run browser         # the same journeys, driven as a human
-bunx --bun pikku scenario run local-admin --spawn --run browser   # the second app
+bunx --bun pikku scenario run local --spawn                  # server-side, the fast path
+bunx --bun pikku scenario run local --spawn --run browser    # the same journeys, driven as a human
 ```
+
+In a multi-app project that one run covers both frontends: each persona carries
+its own `app` and `@pikku/playwright` resolves the base url from the
+environment's `appUrls` map, so there is no second environment to run.
 
 `--spawn` starts and stops the server for the run; drop it if `bun run dev` is already up. The
 browser pass needs the environment's `appUrl` and a browser driver installed — without them the run
