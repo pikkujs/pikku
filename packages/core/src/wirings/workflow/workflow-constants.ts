@@ -75,7 +75,12 @@ export const DEFAULT_STEP_LEASE_MS = 60_000
  */
 export const STEP_LEASE_REFRESH_FACTOR = 0.5
 
-/** Floor on the refresh interval, so a short lease cannot spin the timer. */
+/**
+ * The refresh interval below which a lease is short enough to be worth saying
+ * so. It is a warning threshold, not a floor: applied as one it would push the
+ * first refresh past the expiry of any lease under twice this, which is how a
+ * step ends up claimed twice.
+ */
 export const STEP_LEASE_REFRESH_MIN_MS = 1_000
 
 /**
