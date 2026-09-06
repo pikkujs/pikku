@@ -16,3 +16,7 @@ Fix SSE channels never receiving published events.
 Lambda and Cloudflare cannot hold a stream the publisher can reach, so they throw from `onChannelOpened` rather than accept and drop. Core warns when an SSE route has no hub configured.
 
 Adds `defineEventHubServiceTests` to `@pikku/core/testing`, a conformance suite covering delivery to a channel that is not the runtime's native socket.
+
+An SSE stream whose hub refuses the channel is now closed rather than left
+open: `onChannelOpened` runs before `close` is wrapped, so a rejection used to
+leave the client holding a stream no hub would ever publish to.
