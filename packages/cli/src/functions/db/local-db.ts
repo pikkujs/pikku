@@ -1617,6 +1617,80 @@ export async function exportSchema(
 }
 
 /**
+ * Write the artifact a consumer reads, whether or not this package has tables.
+ *
+ * An addon with no tables still publishes, because the consumer's only other
+ * reading of an absent file is "this package cannot say", which it must treat
+ * as a broken publish. The empty artifact is the addon stating, in a file that
+ * ships, that it needs nothing.
+ */
+export async function writeSchemaArtifact(
+  rootDir: string,
+  outDir: string,
+  pgliteExtensions?: string[]
+): Promise<{ file: string; dialects: string[] }> {
+  const artifact = await exportSchema(rootDir, pgliteExtensions)
+  const file = join(outDir, 'db', 'pikku-db-meta.gen.json')
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(file, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8')
+  return { file, dialects: Object.keys(artifact) }
+}
+
+/**
+ * Read and check one addon's published artifact.
+ *
+ * The file is generated, so a malformed one is not an authoring mistake to be
+ * explained away — it is a broken publish, and every branch here says which
+ * package to go and rebuild. Answering with half an artifact would be worse
+ * than refusing: a dialect carrying tables but no SQL generates a migration
+ * that creates nothing, and the schema silently drifts from what the addon's
+ * own functions expect.
+ */
+function readSchemaArtifact(
+  artifactPath: string,
+  pkg: string
+): SchemaArtifact {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(readFileSync(artifactPath, 'utf8'))
+  } catch (error: any) {
+    throw new Error(
+      `The '${pkg}' addon publishes an unreadable ${ADDON_DB_ARTIFACT} ` +
+        `(${artifactPath}): ${error.message}. Rebuild the addon.`
+    )
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(
+      `The '${pkg}' addon publishes a ${ADDON_DB_ARTIFACT} that is not an ` +
+        'object of dialects. Rebuild the addon.'
+    )
+  }
+
+  for (const [dialect, exported] of Object.entries(
+    parsed as Record<string, unknown>
+  )) {
+    const entry = exported as { sql?: unknown; tables?: unknown }
+    const hasSql = typeof entry?.sql === 'string' && entry.sql.trim().length > 0
+    const hasTables =
+      typeof entry?.tables === 'object' &&
+      entry.tables !== null &&
+      !Array.isArray(entry.tables)
+
+    if (!hasSql || !hasTables) {
+      throw new Error(
+        `The '${pkg}' addon publishes a ${dialect} schema that is incomplete — ` +
+          `it needs both the SQL to run and the tables that SQL creates, and it ` +
+          `has ${!hasSql ? 'no sql' : 'sql'} and ${!hasTables ? 'no tables' : 'tables'}. ` +
+          'Rebuild the addon.'
+      )
+    }
+  }
+
+  return parsed as SchemaArtifact
+}
+
+/**
  * The schema every wired addon publishes, as sources.
  *
  * An addon never creates its own tables. It has no database of its own — it
@@ -1644,14 +1718,26 @@ export async function addonSchemaSources(
     try {
       artifactPath = require.resolve(`${addon.package}/${ADDON_DB_ARTIFACT}`)
     } catch {
-      // Most addons have no schema at all, so an unresolvable artifact is the
-      // ordinary case and says nothing is contributed — not that anything failed.
-      continue
+      // Every addon publishes this file, and one with no tables publishes an
+      // empty one. Absence is therefore never "contributes nothing" — it is a
+      // package that cannot say, and the two used to be indistinguishable:
+      // the addon was skipped in silence and the mistake surfaced much later,
+      // as a function querying a table nobody created.
+      throw new Error(
+        `The '${addon.package}' addon does not publish ${ADDON_DB_ARTIFACT}, so ` +
+          'there is no way to tell whether it ships tables. Build it with a ' +
+          "current CLI (`pikku all` writes the file, empty when there are no " +
+          'tables), and make sure the package exports and packs it:\n' +
+          `  "exports": { "./${ADDON_DB_ARTIFACT}": "./dist/.pikku/addon/db/pikku-db-meta.gen.json" }\n` +
+          '  "files": ["dist"]'
+      )
     }
 
-    const artifact = JSON.parse(
-      readFileSync(artifactPath, 'utf8')
-    ) as SchemaArtifact
+    const artifact = readSchemaArtifact(artifactPath, addon.package)
+    // An addon with no tables says so with an empty artifact, which is the
+    // ordinary case and contributes nothing.
+    if (Object.keys(artifact).length === 0) continue
+
     const exported = artifact[dialect]
     if (!exported) {
       logger.error(

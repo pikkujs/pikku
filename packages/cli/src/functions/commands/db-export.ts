@@ -1,7 +1,5 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { exportSchema } from '../db/local-db.js'
+import { writeSchemaArtifact } from '../db/local-db.js'
 
 /**
  * Publish this package's schema so a project consuming it as an addon can
@@ -17,22 +15,19 @@ import { exportSchema } from '../db/local-db.js'
 export const dbExport = pikkuSessionlessFunc<{}, void>({
   remote: true,
   func: async ({ logger, config }) => {
-    const artifact = await exportSchema(
+    const { file, dialects } = await writeSchemaArtifact(
       config.rootDir,
+      config.outDir,
       config.db?.pgliteExtensions
     )
-    const dialects = Object.keys(artifact)
 
     if (dialects.length === 0) {
       logger.info(
-        'db export: no db/sqlite or db/postgres migrations — nothing to publish'
+        `db export: no db/sqlite or db/postgres migrations — wrote ${file} empty, ` +
+          'which is how a consumer tells "no tables" from "never published"'
       )
       return
     }
-
-    const file = join(config.outDir, 'db', 'pikku-db-meta.gen.json')
-    mkdirSync(dirname(file), { recursive: true })
-    writeFileSync(file, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8')
 
     logger.info(`db export: wrote ${file} for ${dialects.join(', ')}`)
     logger.info(

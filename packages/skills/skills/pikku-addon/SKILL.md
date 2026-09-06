@@ -271,20 +271,19 @@ consumer, against the consumer's database, so a boot-time `CREATE TABLE` puts a
 second authority on a schema the consumer's migrations own. It declares instead,
 and the consumer's migration history absorbs the declaration.
 
-Author the DDL per dialect, and publish it from the build:
+Author the DDL per dialect:
 
 ```text
 db/sqlite/0001-labels.sql
 db/postgres/0001-labels.sql
 ```
 
-```json
-{ "scripts": { "prebuild": "pikku all && pikku db export" } }
-```
-
-`pikku db export` writes `<outDir>/db/pikku-db-meta.gen.json` — per dialect, the
-SQL verbatim plus a table/column map. The consumer resolves it **through the
-package name**, so it must be exported and packed, or it never arrives:
+`pikku all` publishes `<outDir>/db/pikku-db-meta.gen.json` on every build — per
+dialect, the SQL verbatim plus a table/column map — and writes it **empty** when
+the addon has no tables, because a consumer reads an absent file as a package
+that cannot say. (`pikku db export` writes the same file on demand.) The
+consumer resolves it **through the package name**, so it must be exported and
+packed, or it never arrives:
 
 ```json
 {
@@ -295,14 +294,15 @@ package name**, so it must be exported and packed, or it never arrives:
 }
 ```
 
-**An unresolvable artifact is silent.** A wired addon whose artifact cannot be
-resolved is indistinguishable from the majority that publish no schema at all —
-no error, no migration, and a runtime failure much later against a table nobody
-created. When an addon that ships tables generates no migration, suspect the
-`exports` entry and `files` before suspecting the pipeline.
+**An unresolvable artifact stops `db generate`.** Because the file is
+unconditional, absence means the package cannot say whether it ships tables —
+either it was built with an older CLI, or `exports`/`files` do not carry it. The
+error names both causes. An addon with genuinely no tables is *not* this case:
+it publishes `{}` and is waved through.
 
-An addon that publishes only one dialect *does* fail loudly: a consumer on
-another dialect gets an error naming what the addon supports.
+Two more loud ones: a malformed artifact (missing the SQL for a dialect it
+claims) is rejected rather than half-applied, and an addon publishing only a
+dialect the consumer does not use gets an error naming what it does support.
 
 `verifiers/db-schema` runs this end to end on both dialects — copy its addon
 `package.json` when wiring a new one.

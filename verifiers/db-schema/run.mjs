@@ -47,6 +47,7 @@ import {
   readdirSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -233,6 +234,15 @@ await store.reset()
 
 // 1. Both addons publish what they need. Neither creates it.
 run('addon: pikku all', 'node', [PIKKU, 'all'], addonDir)
+// `pikku all` publishes the artifact by itself. A consumer reads an absent one
+// as a package that cannot say whether it ships tables, so an addon must never
+// depend on the author remembering a second command for the file to exist.
+check(
+  existsSync(
+    join(addonDir, '.pikku', 'addon', 'db', 'pikku-db-meta.gen.json')
+  ),
+  'pikku all published the schema artifact on its own'
+)
 run('addon: pikku db export', 'node', [PIKKU, 'db', 'export'], addonDir)
 run('remote addon: pikku all', 'node', [PIKKU, 'all'], remoteAddonDir)
 run(
@@ -541,6 +551,44 @@ check(
   (await store.appliedCount()) === 0,
   'the refusal recorded nothing (a partial baseline is the worst outcome)'
 )
+
+// 15. An addon whose artifact never shipped must stop the command, not be read
+//     as an addon with no tables. The two were indistinguishable until the file
+//     became unconditional, and the silence surfaced much later — as an addon
+//     function querying a table nobody had created.
+console.log('\n▶ a mispackaged addon is refused, not skipped')
+const linkedArtifact = join(
+  linkPath,
+  '.pikku',
+  'addon',
+  'db',
+  'pikku-db-meta.gen.json'
+)
+const savedArtifact = readFileSync(linkedArtifact, 'utf8')
+rmSync(linkedArtifact)
+const mispackaged = expectFailure('app: pikku db generate (artifact missing)', [
+  PIKKU,
+  'db',
+  'generate',
+])
+check(
+  mispackaged.status !== 0,
+  'db generate refused an addon that publishes no artifact at all'
+)
+writeFileSync(linkedArtifact, savedArtifact)
+
+// And an addon that genuinely has no tables says so, and is waved through.
+writeFileSync(linkedArtifact, '{}\n')
+const empty = expectFailure('app: pikku db generate (empty artifact)', [
+  PIKKU,
+  'db',
+  'generate',
+])
+check(
+  empty.status === 0,
+  'an empty artifact still means "this addon needs no tables"'
+)
+writeFileSync(linkedArtifact, savedArtifact)
 
 await store.close()
 
