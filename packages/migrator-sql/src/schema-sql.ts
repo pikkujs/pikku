@@ -153,3 +153,27 @@ export function tableCreationSql(sql: string, table: string): string[] {
   // and their presence says the table came from somewhere this cannot read.
   return creates ? statements : []
 }
+
+/**
+ * `tables`, in the order `sql` creates them.
+ *
+ * A diff hands its missing tables back in whatever order it walked them, which
+ * is usually alphabetical and is never the order they can be created in: a
+ * table that references another has to come after it, and `channel_subscriptions`
+ * sorts before `channels`. The source's own SQL already has a workable order —
+ * it was applied in it — so that is the order used, with anything the source
+ * does not visibly create left at the end for the caller to render its own way.
+ */
+export function tablesInSourceOrder(sql: string, tables: string[]): string[] {
+  const position = new Map<string, number>()
+  let index = 0
+  for (const statement of splitStatements(sql)) {
+    const create = CREATE_TABLE.exec(statement)
+    if (create) {
+      const name = bareTableName(create[1]!)
+      if (!position.has(name)) position.set(name, index++)
+    }
+  }
+  const rank = (table: string) => position.get(bareTableName(table)) ?? Number.MAX_SAFE_INTEGER
+  return [...tables].sort((a, b) => rank(a) - rank(b))
+}

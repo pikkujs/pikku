@@ -33,7 +33,7 @@ import {
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
-import { tableCreationSql } from '@pikku/migrator-sql'
+import { tableCreationSql, tablesInSourceOrder } from '@pikku/migrator-sql'
 import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
@@ -1867,7 +1867,7 @@ export async function generateMigrations(
       body = source.desired.sql
     } else {
       const statements: string[] = []
-      for (const table of missingTables) {
+      for (const table of tablesInSourceOrder(source.desired.sql, missingTables)) {
         // A wholly new table is the first-time case in miniature: nothing to
         // diff against, and the source's own SQL already says exactly how to
         // build it. Rendering the column map instead would drop the primary

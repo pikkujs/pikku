@@ -1047,6 +1047,56 @@ test('db generate adds only the columns a partially covered source is missing', 
   assert.match(body, /-- REVIEW: owner is NOT NULL with no default/)
 })
 
+test('a partially covered source creates a referenced table before the one referencing it', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
+
+  // Introspection hands a source's tables back alphabetically, so
+  // `basket_items` arrives before the `baskets` it references. Emitting them in
+  // that order writes a migration that cannot be applied.
+  publishAddonSchema(
+    'addon-baskets',
+    {
+      sqlite: {
+        sql: [
+          'CREATE TABLE todos (id INTEGER PRIMARY KEY);',
+          'CREATE TABLE baskets (basket_id TEXT NOT NULL PRIMARY KEY);',
+          'CREATE TABLE basket_items (basket_id TEXT NOT NULL REFERENCES baskets (basket_id), sku TEXT NOT NULL);',
+        ].join('\n'),
+        tables: {
+          todos: [column('id', 'INTEGER', { notNull: true, pk: true })],
+          basket_items: [
+            column('basket_id', 'TEXT', { notNull: true }),
+            column('sku', 'TEXT', { notNull: true }),
+          ],
+          baskets: [column('basket_id', 'TEXT', { notNull: true, pk: true })],
+        },
+      },
+    } satisfies SchemaArtifact,
+    root
+  )
+
+  const { written } = await generateMigrations(
+    resolved,
+    root,
+    ['src'],
+    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
+    [{ package: 'addon-baskets' }]
+  )
+
+  const migration = written.find((w) => w.source === 'addon-baskets')
+  assert.ok(migration, 'the missing tables were written')
+  const body = readFileSync(migration.file, 'utf8')
+  assert.ok(
+    body.indexOf('CREATE TABLE baskets') <
+      body.indexOf('CREATE TABLE basket_items'),
+    'baskets is created before the table referencing it'
+  )
+
+  // The proof the order is right is that it applies.
+  await migrateAndCodegen(resolved)
+  assert.equal((await driftOf(resolved)).inSync, true)
+})
+
 /**
  * Publish an addon's schema artifact under `root/node_modules`, overwriting any
  * earlier one.

@@ -31,4 +31,5 @@ export {
   splitStatements,
   bareTableName,
   tableCreationSql,
+  tablesInSourceOrder,
 } from './schema-sql.js'
