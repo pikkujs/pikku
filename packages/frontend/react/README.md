@@ -103,6 +103,37 @@ saying so, and does not.
 `<html lang>` → `defaultLocale`. Pass your own when locale comes from somewhere
 else, such as the route or the signed-in user.
 
+## Photo capture
+
+```tsx
+import { usePhotoCapture } from '@pikku/react'
+
+const { photo, open, preparing, error, clear } = usePhotoCapture({ maxEdge: 1024 })
+
+<button onClick={() => open({ camera: true })}>Take a photo</button>
+<button onClick={() => open()}>Choose one</button>
+{photo ? <img src={photo.dataUrl} /> : null}
+```
+
+There is no input to render. `open()` creates one, opens the dialog and throws it
+away again — a hidden `<input type="file">` plus a ref plus a change handler is
+the same fifteen lines in every app that has ever needed this. `{ camera: true }`
+sets `capture="environment"`, which phones honour by opening the rear camera and
+desktop browsers ignore, so the same button works while you develop on a laptop.
+
+`photo` is already downscaled: a phone frame is several megabytes and every byte
+is paid for more than once — the upload, the row it is stored in, and a vision
+model's context window. A model reads a 1024px JPEG as well as it reads a 12MP
+one. `photo.data` is base64 with no `data:` prefix, which is what an agent
+attachment takes; `photo.dataUrl` is the same bytes ready for an `<img src>`.
+
+Two phone-specific traps are handled: EXIF orientation is applied during decode,
+so a portrait photo does not reach the model on its side, and an iPhone HEIC that
+`createImageBitmap` refuses falls back to decoding through an `<img>`.
+
+`prepareImage(file, options)` is the same work without the hook, for a file you
+already have — a drop target, a paste handler.
+
 ## Docs
 
 https://pikku.dev/docs
