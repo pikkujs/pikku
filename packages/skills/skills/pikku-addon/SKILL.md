@@ -273,7 +273,7 @@ and the consumer's migration history absorbs the declaration.
 
 Author the DDL per dialect, and publish it from the build:
 
-```
+```text
 db/sqlite/0001-labels.sql
 db/postgres/0001-labels.sql
 ```

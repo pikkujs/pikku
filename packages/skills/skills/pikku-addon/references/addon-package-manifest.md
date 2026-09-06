@@ -66,7 +66,7 @@ package that declared them, and the extra segment is what stops a linked addon's
     "zod": "^4"
   },
   "scripts": {
-    "prebuild": "pikku all",
+    "prebuild": "pikku all && pikku db export",
     "pikku": "pikku all",
     "build": "tsc && cp -r .pikku types dist/"
   }
