@@ -9,6 +9,7 @@ import {
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
+import { writeSchemaArtifact } from '../db/local-db.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -434,6 +435,15 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         workflow.do('Channels', 'pikkuCommandChannels', null),
         workflow.do('CLI', 'pikkuCLI', null),
       ])
+
+      // Written on every build, empty when the addon has no tables: the
+      // consumer reads an absent file as a package that cannot say whether it
+      // ships a schema, which is a broken publish rather than a quiet no.
+      await writeSchemaArtifact(
+        config.rootDir,
+        config.outDir,
+        config.db?.pgliteExtensions
+      )
     }
 
     const hasFunctionRegistrations = await workflow.do(

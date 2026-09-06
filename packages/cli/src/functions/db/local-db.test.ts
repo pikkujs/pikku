@@ -21,6 +21,7 @@ import {
   computeSchemaDrift,
   baseline,
   exportSchema,
+  writeSchemaArtifact,
   generateMigrations,
   parseDatabaseUrl,
   migrateAndCodegen,
@@ -861,6 +862,17 @@ describe('the addon schema channel', () => {
     )
   })
 
+  test('an addon with no tables still publishes, so the file always ships', async () => {
+    const outDir = join(root, 'out-empty')
+    rmSync(join(root, 'db'), { recursive: true, force: true })
+
+    const { file, dialects } = await writeSchemaArtifact(root, outDir)
+
+    assert.deepEqual(dialects, [])
+    assert.equal(existsSync(file), true)
+    assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), {})
+  })
+
   test('a wired addon becomes a schema source the consumer can migrate', async () => {
     publishAddon('addon-labels', labels)
 
@@ -888,12 +900,10 @@ describe('the addon schema channel', () => {
   })
 
   test('an addon that publishes no schema at all is not a finding', async () => {
-    const dir = join(root, 'node_modules', 'addon-quiet')
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: 'addon-quiet', version: '1.0.0' })
-    )
+    // The artifact is always written, so an addon with no tables says so with
+    // an empty one. That is what separates it from an addon whose schema never
+    // shipped, which is a mistake and must not read as this case.
+    publishAddon('addon-quiet', {})
 
     const sources = await addonSchemaSources(
       root,
@@ -902,6 +912,71 @@ describe('the addon schema channel', () => {
       silent
     )
     assert.deepEqual(sources, [])
+  })
+
+  test('an addon whose artifact never shipped fails loudly', async () => {
+    const dir = join(root, 'node_modules', 'addon-mispackaged')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'addon-mispackaged', version: '1.0.0' })
+    )
+
+    await assert.rejects(
+      addonSchemaSources(
+        root,
+        'sqlite',
+        [{ package: 'addon-mispackaged' }],
+        silent
+      ),
+      /addon-mispackaged.*pikku-db-meta\.gen\.json/s
+    )
+  })
+
+  test('a remote addon with no artifact is still silent', async () => {
+    const dir = join(root, 'node_modules', 'addon-remote-quiet')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'addon-remote-quiet', version: '1.0.0' })
+    )
+
+    const sources = await addonSchemaSources(
+      root,
+      'sqlite',
+      [{ package: 'addon-remote-quiet', remote: true }],
+      silent
+    )
+    assert.deepEqual(sources, [])
+  })
+
+  test('an unparseable artifact names the file it could not read', async () => {
+    const dir = join(root, 'node_modules', 'addon-broken')
+    mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'addon-broken', version: '1.0.0' })
+    )
+    writeFileSync(
+      join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+      '{ this is not json'
+    )
+
+    await assert.rejects(
+      addonSchemaSources(root, 'sqlite', [{ package: 'addon-broken' }], silent),
+      /addon-broken.*pikku-db-meta\.gen\.json/s
+    )
+  })
+
+  test('an artifact missing the sql it claims to carry is rejected', async () => {
+    publishAddon('addon-hollow', {
+      sqlite: { tables: { labels: [] } },
+    } as unknown as SchemaArtifact)
+
+    await assert.rejects(
+      addonSchemaSources(root, 'sqlite', [{ package: 'addon-hollow' }], silent),
+      /addon-hollow.*sqlite/s
+    )
   })
 
   test('an addon with no schema for this dialect is reported, not skipped quietly', async () => {
