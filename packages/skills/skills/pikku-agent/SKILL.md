@@ -23,7 +23,7 @@ than what they look like.
 
 | You are… | Read |
 | --- | --- |
-| Defining or invoking an agent — tools, memory, streaming, approval, threads | `references/agents.md` |
+| Defining or invoking an agent — tools, memory, streaming, approval, threads, images | `references/agents.md` |
 | Wiring the runner, or pointing model strings at a provider or gateway | `references/runner-vercel.md` |
 | Adding speech in or out of an agent | `references/voice.md` |
 
@@ -44,7 +44,9 @@ session, the credentials and the RPC depth for you.
   key. `role`, `personality` and `goal` are concatenated in that order and
   nothing validates which text lands where, so the split buys legibility only.
 - **`output` is honoured only when the agent has no tools.** A structured-output
-  schema on a tool-calling agent is silently inert.
+  schema on a tool-calling agent is silently inert. The pairing that wants it is
+  reading an image or a document into typed data — one tool-free agent, an
+  `output` schema, and the picture passed as an `attachments` entry.
 - **`auth` defaults to `false`**, because agents are normally invoked from an
   already-authenticated `pikkuFunc`. `scopes` and `permissions` are enforced
   either way — see `pikku-auth`.

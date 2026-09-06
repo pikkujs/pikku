@@ -285,6 +285,39 @@ script, run `pikku dev` from the **project root** (it resolves `srcDirectories`
 relative to the config, so a nested cwd yields a doubled watch path and no hot
 reload).
 
+## Reaching a model
+
+An agent needs an `agentRunner` in singleton services, and locally you do not
+write one: `pikku dev` builds it from env when it finds a **matching pair** —
+`OPENAI_BASE_URL` + `OPENAI_API_KEY`, or `LITELLM_PROXY_URL` + `LITELLM_API_KEY`
+— and registers it under `'*'`, so every `provider/model` prefix resolves
+through it. With neither pair complete it builds nothing and every agent call
+fails with `AIProviderNotConfiguredError` (a 503) — which reads like a broken
+agent rather than a missing key, so check `.env` first. Mixing halves is worse
+than missing them: a URL from one source with a key from the other 401s on every
+call, so the pairs are taken whole, OpenAI first.
+
+Two ways to fill them in:
+
+**The Fabric AI gateway.** One key, and every model the gateway fronts —
+OpenAI, Anthropic, Google, the OpenRouter catalogue — is reachable by id, billed
+through your Fabric account rather than per-vendor:
+
+```bash
+pikku fabric login
+pikku fabric llm key --env >> .env    # writes both pairs; --shell and --json also exist
+```
+
+It mints or reuses a developer-scoped key against your Fabric login. `link` is
+not required — the key is yours, not the project's.
+
+**Your own vendor key.** `OPENAI_BASE_URL=https://api.openai.com/v1` with your
+`OPENAI_API_KEY`, and model ids are then only the ones that vendor serves.
+
+A deployed stage takes the same names through `pikku fabric secrets set` /
+`variables set` — the agent units get their runner wired by the bundler, from
+those values.
+
 ## Deploy
 
 ```bash

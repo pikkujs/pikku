@@ -201,6 +201,36 @@ export const structuredAgent = pikkuAgent({
 })
 ```
 
+### Images and files
+
+`attachments` on the agent input is how a picture, a scan or a PDF reaches the
+model. Each entry carries **either** `data` (base64, no `data:` prefix) **or**
+`url`, plus a `mediaType`:
+
+```typescript
+const { object } = await rpc.agent.run('read-receipt', {
+  message: 'List every line item on this receipt.',
+  threadId, resourceId,
+  attachments: [{ type: 'image', data: base64Jpeg, mediaType: 'image/jpeg' }],
+})
+```
+
+- **`url` is downloaded server-side**, by the runner, before the model sees it —
+  so a caller-supplied URL is an SSRF surface. `VercelAgentRunner`'s third
+  constructor argument is a host allowlist; set it whenever an HTTP wiring
+  accepts attachment URLs, or take `data` and never accept a URL at all.
+- **The model has to be a vision model.** The provider prefix does not decide
+  this — `openai/gpt-5-mini` reads images, a text-only id in the same family
+  answers as though the attachment were not there rather than erroring.
+- **Reading an image into data is the tool-free case**, so it can use `output`:
+  an agent with an `output` schema and no tools resolves `result.object` as the
+  typed extraction. Add one tool and you get prose back instead — see
+  **Structured output** above.
+- **Base64 is the request body.** A phone photo is measured in megabytes and
+  goes through your function's input schema, the RPC payload and the model's
+  context. Downscale on the client before uploading — the model does not read
+  the pixels you paid to send.
+
 ### Narrowing tools per step
 
 `prepareStep` runs before each step with the live tool array for that step, so
