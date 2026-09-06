@@ -31,7 +31,6 @@ interface PackageManifest {
   name?: string
   gypfile?: boolean
   binary?: unknown
-  os?: unknown
   optionalDependencies?: Record<string, string>
   scripts?: Record<string, string>
 }
@@ -54,25 +53,38 @@ const nativeEvidence = (pkg: PackageManifest): string | null => {
       return `runs a native build on ${stage}`
     }
   }
-  if (Array.isArray(pkg.os) && pkg.os.length > 0) {
-    return `is restricted to specific operating systems (${pkg.os.join(', ')})`
-  }
+  // `os` is deliberately NOT evidence. A pure-JS package may restrict itself to
+  // one platform for reasons that have nothing to do with a binary, and
+  // reporting it as a native addon tells the reader that Node compatibility
+  // cannot save them when it might be exactly what they need.
   return null
 }
 
 /**
- * Every `node_modules/<pkg>` root mentioned in a bundler error, innermost wins
- * so a package inside a content-addressed store (`node_modules/.bun/sharp@1.2.3
- * +hash/node_modules/sharp`) resolves to the package rather than the store.
+ * The only failure this module can diagnose: an import the bundler could not
+ * resolve. A package named by a syntax error, a plugin crash or any other
+ * compile failure is not evidence of a native addon, and replacing that error
+ * with "it imports a native addon" sends the reader somewhere the fix is not.
+ */
+const UNRESOLVED_IMPORT = /could not resolve/i
+
+/**
+ * Every `node_modules/<pkg>` root mentioned by an unresolved-import line of a
+ * bundler error, innermost wins so a package inside a content-addressed store
+ * (`node_modules/.bun/sharp@1.2.3+hash/node_modules/sharp`) resolves to the
+ * package rather than the store.
  */
 const packageRootsIn = (message: string): Map<string, string> => {
   const roots = new Map<string, string>()
   const pattern =
     /((?:[^\s"'()]*\/)?node_modules\/(@[^/\s"']+\/[^/\s"']+|[^@/\s"'][^/\s"']*))(?=[/\s"']|$)/g
-  for (const match of message.matchAll(pattern)) {
-    const [, root, name] = match
-    if (!root || !name || name === '.bun' || name === '.pnpm') continue
-    roots.set(name, root)
+  for (const line of message.split('\n')) {
+    if (!UNRESOLVED_IMPORT.test(line)) continue
+    for (const match of line.matchAll(pattern)) {
+      const [, root, name] = match
+      if (!root || !name || name === '.bun' || name === '.pnpm') continue
+      roots.set(name, root)
+    }
   }
   return roots
 }
@@ -83,10 +95,10 @@ export interface NativeAddonHit {
 }
 
 /**
- * Reads the packages named by a failed bundle's error text and returns those
- * that carry a native binary. Empty when the failure was something else — the
- * caller keeps the original message in that case, because a guess dressed as a
- * diagnosis is worse than the raw error.
+ * Reads the packages named by the unresolved-import lines of a failed bundle's
+ * error text and returns those that carry a native binary. Empty when the
+ * failure was something else — the caller keeps the original message in that
+ * case, because a guess dressed as a diagnosis is worse than the raw error.
  */
 export const findNativeAddons = async (
   message: string

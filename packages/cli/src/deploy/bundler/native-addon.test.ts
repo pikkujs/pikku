@@ -67,13 +67,18 @@ describe('findNativeAddons', () => {
       binary: { napi_versions: [6] },
     })
 
-    const hits = await findNativeAddons(`failed @ ${root}/lib/index.js`)
+    const hits = await findNativeAddons(
+      `Could not resolve "node:path" @ ${root}/lib/index.js`
+    )
     assert.match(hits[0]!.evidence, /prebuilt native binary/)
   })
 
   test('a plain package is not reported', async () => {
     const root = await writePackage('node_modules/lodash', { name: 'lodash' })
-    assert.deepEqual(await findNativeAddons(`failed @ ${root}/index.js`), [])
+    assert.deepEqual(
+      await findNativeAddons(`Could not resolve "node:fs" @ ${root}/index.js`),
+      []
+    )
   })
 
   test('a path that is not a package root is skipped rather than guessed at', async () => {
@@ -82,6 +87,36 @@ describe('findNativeAddons', () => {
         `Could not resolve "node:util" @ ${dir}/node_modules/gone/dist/x.mjs`
       ),
       []
+    )
+  })
+
+  test('an os restriction alone is not a native addon', async () => {
+    const root = await writePackage('node_modules/fsevents-ish', {
+      name: 'fsevents-ish',
+      os: ['darwin'],
+    })
+
+    assert.deepEqual(
+      await findNativeAddons(
+        `Could not resolve "node:events" @ ${root}/index.js`
+      ),
+      [],
+      'a pure-JS package pinned to one platform carries no binary'
+    )
+  })
+
+  test('a failure that resolved everything is not diagnosed as an addon', async () => {
+    const root = await writePackage('node_modules/sharp', {
+      name: 'sharp',
+      gypfile: true,
+    })
+
+    assert.deepEqual(
+      await findNativeAddons(
+        `Expected ")" but found ";" @ ${root}/dist/constructor.mjs`
+      ),
+      [],
+      'a syntax error in a native package is still a syntax error'
     )
   })
 })
