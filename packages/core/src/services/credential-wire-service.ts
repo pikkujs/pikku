@@ -62,17 +62,35 @@ export class PikkuCredentialWireService {
     return this.loadPromise
   }
 
+  /**
+   * `loaded` means "the credentials are in hand", never "a load has started".
+   *
+   * The distinction matters because `get`, `getAll` and `getScoped` all answer
+   * SYNCHRONOUSLY once it is set. Setting it before the await let every caller
+   * that arrived while the fetch was still in flight take that synchronous path
+   * over an empty map and receive `null` for a credential that exists — the
+   * first of N concurrent readers got the value and the rest silently did not.
+   * `loadPromise` is what guards against loading twice; this flag is only ever
+   * about whether the fast path is safe to take.
+   *
+   * `finally` rather than a trailing assignment: the two early returns (no
+   * service or wire, no resolvable user) are settled states as well — there is
+   * nothing to fetch — so they should reach the fast path too.
+   */
   private async doLoad(): Promise<void> {
-    this.loaded = true
-    if (!this.credentialService || !this.wire) return
-    const userId = defaultPikkuUserIdResolver(this.wire)
-    if (!userId) return
-    this.wire.pikkuUserId = userId
-    const allCreds = await this.credentialService.getAll(userId)
-    for (const [name, value] of Object.entries(allCreds)) {
-      if (!(name in this.credentials)) {
-        this.credentials[name] = value
+    try {
+      if (!this.credentialService || !this.wire) return
+      const userId = defaultPikkuUserIdResolver(this.wire)
+      if (!userId) return
+      this.wire.pikkuUserId = userId
+      const allCreds = await this.credentialService.getAll(userId)
+      for (const [name, value] of Object.entries(allCreds)) {
+        if (!(name in this.credentials)) {
+          this.credentials[name] = value
+        }
       }
+    } finally {
+      this.loaded = true
     }
   }
 }
