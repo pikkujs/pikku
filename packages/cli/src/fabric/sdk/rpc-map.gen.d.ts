@@ -3492,6 +3492,19 @@ export type ImportProjectAssetsOutput = {
     committed: boolean;
     paths: string[];
 }
+export type ProvisionRepoInput = {
+    name?: string | undefined;
+    organizationId?: string | undefined;
+}
+export type ProvisionRepoOutput = {
+    repoUrl: string;
+    cloneUrl: string;
+    username: string;
+    password: string;
+    expiresAt: string;
+    commitName: string;
+    commitEmail: string;
+}
 export type ImportProjectInput = {
     organizationId?: string | undefined;
     repoUrl: string;
@@ -6997,6 +7010,7 @@ export type RPCMap = {
   readonly 'listHarnessRuns': RPCHandler<ListHarnessRunsInput, ListHarnessRunsOutput>,
   readonly 'listHarnessScenarios': RPCHandler<ListHarnessScenariosInput, ListHarnessScenariosOutput>,
   readonly 'preflightHarnessModels': RPCHandler<PreflightHarnessModelsInput, PreflightHarnessModelsOutput>,
+  readonly 'provisionRepo': RPCHandler<ProvisionRepoInput, ProvisionRepoOutput>,
   readonly 'publishAgentBundle': RPCHandler<PublishAgentBundleInput, PublishAgentBundleOutput>,
   readonly 'requestHarnessScreenshotUpload': RPCHandler<RequestHarnessScreenshotUploadInput, RequestHarnessScreenshotUploadOutput>,
   readonly 'sleepHarnessSandbox': RPCHandler<SleepHarnessSandboxInput, SleepHarnessSandboxOutput>,

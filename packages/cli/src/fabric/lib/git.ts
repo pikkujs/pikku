@@ -44,11 +44,15 @@ function envWithoutInheritedRepo(): NodeJS.ProcessEnv {
   return env
 }
 
-function git(args: string[], cwd = process.cwd()): Promise<string> {
+function git(
+  args: string[],
+  cwd = process.cwd(),
+  extraEnv?: NodeJS.ProcessEnv
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('git', args, {
       cwd,
-      env: envWithoutInheritedRepo(),
+      env: { ...envWithoutInheritedRepo(), ...extraEnv },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     let stdout = ''
@@ -279,4 +283,90 @@ export async function isGitRepo(cwd = process.cwd()): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/**
+ * Does this repository have the given remote?
+ *
+ * Separate from `getRemoteUrl` throwing, because "no origin" is an ordinary
+ * state that `link` acts on rather than an error it reports: a developer who
+ * has not pushed anywhere yet is exactly who repo provisioning is for.
+ */
+export async function hasRemote(
+  remote = 'origin',
+  cwd?: string
+): Promise<boolean> {
+  try {
+    await git(['remote', 'get-url', remote], cwd)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Does HEAD resolve? False in a repository with no commits yet. */
+export async function hasCommits(cwd?: string): Promise<boolean> {
+  try {
+    await git(['rev-parse', '--verify', 'HEAD'], cwd)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function addRemote(
+  name: string,
+  url: string,
+  cwd?: string
+): Promise<void> {
+  await git(['remote', 'add', name, url], cwd)
+}
+
+export async function removeRemote(name: string, cwd?: string): Promise<void> {
+  try {
+    await git(['remote', 'remove', name], cwd)
+  } catch {
+    /* best-effort: only used to undo a remote we just added */
+  }
+}
+
+/**
+ * Push `branch` to `remote` and set it as upstream, authenticating with a
+ * one-shot credential.
+ *
+ * The credential is passed through the ENVIRONMENT and read back by an inline
+ * credential helper, rather than embedded in the remote URL. Both a URL like
+ * `https://user:token@host/...` and `-c http.<url>.extraheader=...` put the
+ * secret in the process's argv, where any other user on the machine can read it
+ * out of `ps`. This way argv holds only the shape of the helper, and the token
+ * never reaches `.git/config` either — so it cannot outlive the push.
+ */
+export async function pushWithCredential(
+  remote: string,
+  branch: string,
+  credential: { username: string; password: string },
+  cwd?: string
+): Promise<void> {
+  await git(
+    [
+      '-c',
+      'credential.helper=',
+      '-c',
+      'credential.helper=!f() { echo "username=$PIKKU_GIT_USERNAME"; echo "password=$PIKKU_GIT_PASSWORD"; }; f',
+      'push',
+      '-u',
+      remote,
+      `HEAD:refs/heads/${branch}`,
+    ],
+    cwd,
+    {
+      PIKKU_GIT_USERNAME: credential.username,
+      PIKKU_GIT_PASSWORD: credential.password,
+      // Any configured interactive helper (osxkeychain, a GUI prompt) would be
+      // consulted first and could hang a CLI with no one at the terminal. The
+      // empty `credential.helper=` above resets the inherited list; this stops
+      // git falling back to a terminal prompt if ours somehow yields nothing.
+      GIT_TERMINAL_PROMPT: '0',
+    }
+  )
 }
