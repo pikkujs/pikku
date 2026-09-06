@@ -19,3 +19,9 @@ attempts run out, rather than looping.
 
 The lease duration is taken from the queue the step is dispatched through, so the
 lease and the queue lock never disagree about who owns the job.
+
+The refresh runs at half the lease and never later, even when that is under the
+one-second floor the interval otherwise respects: applying that floor as a
+maximum would renew a shorter lease for the first time after it had already
+lapsed, which is the double-claim the lease exists to prevent. A lease that
+short is logged once, pointing at the queue's `lockDuration`.
