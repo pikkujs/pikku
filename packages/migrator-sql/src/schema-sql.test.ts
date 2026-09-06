@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { splitStatements, tableCreationSql } from './schema-sql.js'
+import {
+  splitStatements,
+  tableCreationSql,
+  tablesInSourceOrder,
+} from './schema-sql.js'
 
 test('a semicolon inside a string literal is not a statement boundary', () => {
   const sql = `CREATE TABLE a (id TEXT, note TEXT DEFAULT 'one; two');
@@ -63,4 +67,26 @@ test('a table the SQL never creates yields nothing to copy', () => {
 CREATE INDEX "orphan_idx" ON "orders" ("id");`
 
   assert.deepEqual(tableCreationSql(sql, 'orders'), [])
+})
+
+test('a referencing table is created after the one it references, not alphabetically', () => {
+  const sql = `create table "channels" ("channel_id" text primary key);
+create table "channel_subscriptions" ("channel_id" text not null references "channels" ("channel_id"));`
+
+  assert.deepEqual(
+    tablesInSourceOrder(sql, ['channel_subscriptions', 'channels']),
+    ['channels', 'channel_subscriptions']
+  )
+})
+
+test('a table the source does not create is left at the end', () => {
+  const sql = 'create table "a" ("id" text);'
+  assert.deepEqual(tablesInSourceOrder(sql, ['unknown', 'a']), ['a', 'unknown'])
+})
+
+test('source order survives a schema qualifier on either side', () => {
+  const sql = `create table app."b" ("id" text);
+create table "a" ("id" text);`
+
+  assert.deepEqual(tablesInSourceOrder(sql, ['a', 'app.b']), ['app.b', 'a'])
 })
