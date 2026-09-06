@@ -1,7 +1,9 @@
-import { describe, test } from 'node:test'
+import { describe, mock, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
+import { startStepLeaseRefresh } from './workflow-step-lease.js'
+import { STEP_LEASE_REFRESH_MIN_MS } from './workflow-constants.js'
 import { pikkuState } from '../../pikku-state.js'
 import type { StepState } from './workflow.types.js'
 
@@ -132,5 +134,29 @@ describe('step leases', () => {
     const step = await ws.getStepState(runId, 'Charge card')
     assert.equal(step.status, 'failed', 'it fails loudly rather than wedging')
     assert.match(String(step.error?.message), /lease/i)
+  })
+
+  test('a lease shorter than the refresh floor is still refreshed before it lapses', async () => {
+    trackResumes()
+    // Under twice the floor, which is where applying the floor as a maximum
+    // pushes the first refresh past the expiry it is meant to prevent.
+    const leaseMs = STEP_LEASE_REFRESH_MIN_MS
+    const refreshes: Date[] = []
+
+    mock.timers.enable({ apis: ['setInterval'] })
+    try {
+      const stop = startStepLeaseRefresh('step-1', leaseMs, async (expiresAt) => {
+        refreshes.push(expiresAt)
+      })
+      mock.timers.tick(leaseMs - 1)
+      stop()
+    } finally {
+      mock.timers.reset()
+    }
+
+    assert.ok(
+      refreshes.length > 0,
+      `a ${leaseMs}ms lease was never refreshed in the ${leaseMs - 1}ms before it expired`
+    )
   })
 })
