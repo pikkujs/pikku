@@ -45,3 +45,16 @@ export type {
 // The app owns the union and the endpoint; this package owns the transport.
 export { createAnalytics } from './analytics.js'
 export type { AnalyticsClient, CreateAnalyticsOptions } from './analytics.js'
+
+// Take or choose a photo, downscaled and base64-encoded in the browser before it
+// costs anything to send. The hidden input is created on demand rather than
+// handed back as props — it is the same fifteen lines in every app.
+export { usePhotoCapture, prepareImage, fitWithin } from './photo-capture.js'
+export type {
+  PreparedImage,
+  PreparedImageType,
+  PrepareImageOptions,
+  UsePhotoCaptureOptions,
+  UsePhotoCaptureResult,
+  OpenPhotoPickerOptions,
+} from './photo-capture.js'
