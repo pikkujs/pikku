@@ -289,14 +289,21 @@ export class NatsServiceFactory {
   }
 
   async close(): Promise<void> {
-    if (!this.initialized) return
+    // Guarded on the connection rather than on `initialized`, because the two
+    // diverge exactly when it matters: if `init()` fails after `connect()`
+    // resolved — an old server rejected by `assertSchedulerSupport` is the
+    // likely one — `initialized` is still false while a live connection is
+    // already reconnecting forever, and an `initialized` guard would leak it
+    // and keep the process alive.
+    if (!this.connection) return
     this.closing = true
     await this.schedulerService?.stop()
     await this.queueWorkers?.stop()
     // `drain` rather than `close`: it flushes pending acks and lets in-flight
     // publishes land instead of dropping them, which is the difference between
     // a clean deploy and a batch of messages redelivered after ack_wait.
-    await this.connection?.drain()
+    await this.connection.drain()
+    this.connection = undefined
     this.initialized = false
   }
 

@@ -7,6 +7,7 @@ import {
   BACKOFF_TYPE_HEADER,
   NATS_MSG_ID_HEADER,
   PIKKU_USER_ID_HEADER,
+  attemptsHeaderValue,
   subjectForQueue,
 } from './utils.js'
 
@@ -71,7 +72,7 @@ export class NatsQueueService implements QueueService {
     // Retry policy travels with the job — see ATTEMPTS_HEADER. The worker
     // enforces it; JetStream itself has no per-message equivalent.
     if (options?.attempts !== undefined) {
-      hdrs.set(ATTEMPTS_HEADER, String(options.attempts))
+      hdrs.set(ATTEMPTS_HEADER, attemptsHeaderValue(options.attempts, queueName))
     }
     if (options?.backoff !== undefined) {
       const backoff =

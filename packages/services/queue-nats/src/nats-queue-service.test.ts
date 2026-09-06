@@ -84,6 +84,25 @@ describe('NatsQueueService.add — headers', () => {
     assert.equal(published[0]!.headers[ATTEMPTS_HEADER], '1')
   })
 
+  test('an attempts value the worker could not enforce is refused at enqueue', async () => {
+    // 0, negatives and NaN all read back out of the header as "no limit set",
+    // which turns a caller asking for fewer retries into infinite ones. A
+    // fraction is quietly rounded up by the >= comparison in the worker.
+    const { js } = fakeJs()
+    const service = new NatsQueueService(js, 'pikku')
+    for (const attempts of [0, -1, 2.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await assert.rejects(() => service.add('q', {}, { attempts }), {
+        message: /not a positive integer/,
+      })
+    }
+  })
+
+  test('attempts: 1 is valid — it is how a caller says "never retry this"', async () => {
+    const { js, published } = fakeJs()
+    await new NatsQueueService(js, 'pikku').add('q', {}, { attempts: 1 })
+    assert.equal(published[0]!.headers[ATTEMPTS_HEADER], '1')
+  })
+
   test("string backoff sets a type with no base delay", async () => {
     const { js, published } = fakeJs()
     await new NatsQueueService(js, 'pikku').add('q', {}, { backoff: 'exponential' })

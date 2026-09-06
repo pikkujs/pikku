@@ -9,6 +9,7 @@ import {
   PIKKU_USER_ID_HEADER,
   SCHEDULE_HEADER,
   SCHEDULE_TARGET_HEADER,
+  attemptsHeaderValue,
   scheduleSubjectFor,
   subjectForQueue,
 } from './utils.js'
@@ -74,7 +75,7 @@ export class NatsDelayedPublisher implements DelayedPublisher {
     //
     // Hence: no key, and every delayed publish gets its own subject.
     const { delay: _delay, jobId: _jobId, ...rest } = options ?? {}
-    applyJobHeaders(hdrs, rest)
+    applyJobHeaders(hdrs, rest, queueName)
 
     const ack = await this.js.publish(
       scheduleSubjectFor(this.subjectPrefix, queueName),
@@ -93,12 +94,13 @@ export class NatsDelayedPublisher implements DelayedPublisher {
 const applyJobHeaders = (
   hdrs: ReturnType<typeof headers>,
   options: Omit<JobOptions, 'delay' | 'jobId'>,
+  queueName: string,
 ): void => {
   if (options.pikkuUserId) {
     hdrs.set(PIKKU_USER_ID_HEADER, options.pikkuUserId)
   }
   if (options.attempts !== undefined) {
-    hdrs.set(ATTEMPTS_HEADER, String(options.attempts))
+    hdrs.set(ATTEMPTS_HEADER, attemptsHeaderValue(options.attempts, queueName))
   }
   if (options.backoff !== undefined) {
     const backoff =

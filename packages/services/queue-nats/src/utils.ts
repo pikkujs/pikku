@@ -21,6 +21,26 @@ export const ATTEMPTS_HEADER = 'Pikku-Attempts'
 export const BACKOFF_TYPE_HEADER = 'Pikku-Backoff-Type'
 export const BACKOFF_DELAY_HEADER = 'Pikku-Backoff-Delay'
 
+/**
+ * Header value for a job's retry limit, rejecting anything the worker could not
+ * enforce.
+ *
+ * `JobOptions.attempts` is typed as a plain number, and an unenforceable value
+ * fails in the worst direction: `attemptsFor` reads a zero, a negative or a NaN
+ * back as "no limit set", and the worker then naks forever. A fraction is worse
+ * than useless — it survives as a number and silently means `ceil(attempts)`.
+ * Both are caller mistakes, so they are refused at enqueue rather than turned
+ * into an infinite redelivery loop nobody asked for.
+ */
+export const attemptsHeaderValue = (attempts: number, queueName: string): string => {
+  if (!Number.isSafeInteger(attempts) || attempts < 1) {
+    throw new Error(
+      `Queue "${queueName}" was given attempts=${attempts}, which is not a positive integer. An unenforceable limit reads back as "no limit" and the job would be retried forever; pass attempts >= 1 or omit it.`,
+    )
+  }
+  return String(attempts)
+}
+
 /** Default base delay when a job asks for backoff without naming one. */
 export const DEFAULT_BACKOFF_DELAY_MS = 1_000
 
@@ -48,6 +68,13 @@ export const backoffDelayMs = (
  * any of them would silently widen a consumer's filter and start stealing other
  * queues' messages. Replace them rather than rejecting, and keep the mapping
  * total so the same queue name always resolves to the same subject.
+ *
+ * Not injective, and knowingly so: `a.b` and `a_b` collapse to the same token,
+ * so two queues named that way would share one subject and one durable
+ * consumer. An escaping scheme would fix it, at the cost of changing the
+ * subject and durable name of every queue that already exists — which strands
+ * the backlog on the old names. Not worth it for a collision that needs two
+ * queue names differing only in a separator.
  */
 export const queueNameToToken = (queueName: string): string => queueName.replace(/[.*>\s]/g, '_')
 

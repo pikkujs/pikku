@@ -9,6 +9,7 @@ import {
   DEFAULT_BACKOFF_DELAY_MS,
   SCHEDULE_SUBJECT_SEGMENT,
   attemptsFor,
+  attemptsHeaderValue,
   backoffDelayMs,
   backoffFor,
   consumerNameForQueue,
@@ -139,4 +140,38 @@ test('a backoff type with no base delay falls back to the default base', () => {
 
 test('a message with no backoff headers is redelivered immediately', () => {
   assert.equal(backoffFor(fakeMsg(2)), 0)
+})
+
+test('KNOWN LIMITATION: the token mapping is not injective', () => {
+  // `a.b` and `a_b` collapse together, so those two queue names would share a
+  // subject and a durable consumer. Asserted so the collision is a recorded
+  // property rather than a surprise: fixing it means re-encoding every existing
+  // subject and durable name, which strands whatever backlog sits on the old
+  // ones. See the note on queueNameToToken.
+  assert.equal(queueNameToToken('a.b'), queueNameToToken('a_b'))
+  assert.equal(subjectForQueue('pikku', 'a.b'), subjectForQueue('pikku', 'a_b'))
+})
+
+test('attemptsHeaderValue accepts a positive integer and stringifies it', () => {
+  assert.equal(attemptsHeaderValue(3, 'q'), '3')
+  assert.equal(attemptsHeaderValue(1, 'q'), '1')
+})
+
+test('attemptsHeaderValue refuses values that would read back as "no limit"', () => {
+  // attemptsFor maps 0, negatives and non-numbers to undefined, and the worker
+  // reads undefined as "no cap" and naks forever — the opposite of what a
+  // caller passing 0 meant. Refusing at enqueue is the only loud option.
+  for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.throws(() => attemptsHeaderValue(bad, 'q'), /not a positive integer/)
+  }
+})
+
+test('attemptsHeaderValue refuses a fraction, which the worker would silently round up', () => {
+  // 2.5 survives as a number, and `deliveryCount >= 2.5` terminates on the
+  // third delivery — a limit the caller never asked for.
+  assert.throws(() => attemptsHeaderValue(2.5, 'q'), /not a positive integer/)
+})
+
+test('the refusal names the queue, so a bad enqueue is traceable', () => {
+  assert.throws(() => attemptsHeaderValue(0, 'orchestrator'), /orchestrator/)
 })

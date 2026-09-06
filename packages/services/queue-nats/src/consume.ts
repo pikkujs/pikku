@@ -196,7 +196,12 @@ export const consumeQueue = async (options: ConsumeOptions): Promise<ConsumeHand
           // lets shutdown wait for these without serialising them; `finally` is
           // chained rather than `catch`ed so a rejecting handler still surfaces
           // as an unhandled rejection exactly as it did before.
-          const settled = handler(msg)
+          //
+          // Started through a resolved promise so that a handler which throws
+          // SYNCHRONOUSLY rejects like any other failure instead of unwinding
+          // into the catch below, which would diagnose a handler bug as a dead
+          // pull session and re-attach for no reason.
+          const settled = Promise.resolve().then(() => handler(msg))
           inFlight++
           void settled.finally(() => {
             inFlight--
@@ -221,6 +226,15 @@ export const consumeQueue = async (options: ConsumeOptions): Promise<ConsumeHand
         if (stopped) return
         try {
           messages = await attach()
+          // `stop()` only stops the session it can see, so one that arrives
+          // after shutdown began has to stop itself. Without this the loop
+          // below would enter `for await` on a live session whose only exit is
+          // a message arriving — on an idle queue, never — leaving a pull
+          // consumer on the connection after `drain()` reported it settled.
+          if (stopped) {
+            messages.stop()
+            return
+          }
           generation++
           watchStatus(messages, generation)
           logger?.info(`NATS consumer ${durable} on ${streamName}: re-attached`)
