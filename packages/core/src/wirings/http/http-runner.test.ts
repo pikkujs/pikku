@@ -500,4 +500,77 @@ describe('http-runner helpers', () => {
     assert.equal(response.closed, true)
     assert.equal(response.bufferBody, JSON.stringify({ hello: 'world' }))
   })
+
+  test('an SSE stream whose hub refuses the channel is closed, not left open', async () => {
+    const singletonServices = pikkuState(null, 'package', 'singletonServices')
+    let closes = 0
+    ;(singletonServices as any).eventHub = {
+      onChannelOpened: async () => {
+        throw new Error('LambdaEventHubService cannot serve SSE.')
+      },
+      onChannelClosed: async () => {},
+    }
+
+    setRouteMeta('/sse-refused', 'get', { sse: true })
+    wireHTTP({
+      route: '/sse-refused',
+      method: 'get',
+      sse: true,
+      auth: false,
+      func: { func: async () => {} },
+    })
+    httpRouter.initialize()
+
+    const request = new TestRequest('/sse-refused', 'get')
+    request.setData({ open: true })
+    const response = new TestResponse()
+    const closeOnce = response.close.bind(response)
+    response.close = () => {
+      closes++
+      closeOnce()
+    }
+
+    await fetchData(request, response)
+
+    assert.equal(
+      response.closed,
+      true,
+      'the client would otherwise hold a stream no hub will ever publish to'
+    )
+    assert.equal(closes, 1, 'and it is closed exactly once')
+  })
+
+  test('an SSE stream with no hub configured still opens, and says why it is quiet', async () => {
+    const warnings: string[] = []
+    const singletonServices = pikkuState(null, 'package', 'singletonServices')
+    ;(singletonServices as any).logger.warn = (message: string) =>
+      warnings.push(message)
+
+    setRouteMeta('/sse-no-hub', 'get', { sse: true })
+    wireHTTP({
+      route: '/sse-no-hub',
+      method: 'get',
+      sse: true,
+      auth: false,
+      func: {
+        func: async (_services, _data, wire) => {
+          await wire.channel.send({ hello: 'world' })
+        },
+      },
+    })
+    httpRouter.initialize()
+
+    const request = new TestRequest('/sse-no-hub', 'get')
+    request.setData({ open: true })
+    const response = new TestResponse()
+
+    await fetchData(request, response)
+
+    assert.equal(response.mode, 'stream')
+    assert.equal(response.bufferBody, JSON.stringify({ hello: 'world' }))
+    assert.ok(
+      warnings.some((line) => line.includes('has no eventHub configured')),
+      `a stream that can never receive a published event is worth a word: ${warnings.join('\n')}`
+    )
+  })
 })

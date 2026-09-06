@@ -274,7 +274,15 @@ const executeRoute = async (
         },
         sendBinary: (data: any) => channelRef.sendBinary(data),
       }
-      await singletonServices.eventHub.onChannelOpened(channelHandler)
+      try {
+        await singletonServices.eventHub.onChannelOpened(channelHandler)
+      } catch (error) {
+        // The stream is already open and `close` is not yet wrapped, so the
+        // error handler below has nothing to close it with: the client would
+        // hold an SSE connection that no hub will ever publish to.
+        channel.close()
+        throw error
+      }
       const originalClose = channel.close
       channel.close = () => {
         singletonServices.eventHub!.onChannelClosed(channelId)
