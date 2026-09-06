@@ -154,6 +154,19 @@ const wanted = (config) =>
   config.repository === REPO &&
   config.file === WORKFLOW
 
+// npm allows several trusted publishers on one package, and a publish is
+// authorized if the token matches ANY of them — so anything this script did not
+// put there is somebody else's working configuration, not rubbish to sweep up.
+// The only entry it may retire is the one it is replacing: this repo's own
+// GitHub entry naming a workflow file that no longer publishes (`main.yml`,
+// per #1599). A different repo, a different provider, or a hand-added entry is
+// left alone.
+const obsolete = (config) =>
+  config.id &&
+  config.type === 'github' &&
+  config.repository === REPO &&
+  config.file !== WORKFLOW
+
 // A one-time password is good for the ~30 seconds of its own step, which
 // covers roughly 15 packages at three requests each — so a full run is
 // expected to be cut short, and the interesting question is where. The loop
@@ -196,11 +209,10 @@ for (const name of names) {
     continue
   }
 
-  // npm allows one trusted publisher per package and errors rather than
-  // updating, so re-pointing an existing entry means revoking it first. Reading
-  // the current state also makes the script idempotent: a package already on
-  // the right workflow is left alone, which matters because the whole loop runs
-  // inside one 2FA window.
+  // npm has no "update" for a trusted publisher, so re-pointing one is an add
+  // of the new entry and a revoke of the old. Reading the current state makes
+  // the script idempotent: a package already on the right workflow is left
+  // alone, which matters because the whole loop runs inside one 2FA window.
   // A package with no trust configuration is not an error — npm says so and
   // exits 0 — so a non-zero exit here is a real failure, `EOTP` most often.
   // Reading that as "nothing configured" would plan an add for a package that
@@ -214,7 +226,7 @@ for (const name of names) {
     break
   }
 
-  const stale = existing.filter((config) => config.id && !wanted(config))
+  const stale = existing.filter(obsolete)
   const alreadyCorrect = existing.some(wanted)
 
   if (alreadyCorrect && stale.length === 0) {
@@ -222,14 +234,11 @@ for (const name of names) {
     continue
   }
 
+  // Add first, revoke second. The two calls are separate requests inside a 2FA
+  // window that can expire between them, and of the two orders only this one
+  // fails safe: the package is briefly trusted by both workflows, rather than
+  // briefly trusted by none.
   const plan = [
-    ...stale.map((config) => [
-      'trust',
-      'revoke',
-      name,
-      '--id',
-      String(config.id),
-    ]),
     ...(alreadyCorrect
       ? []
       : [
@@ -245,6 +254,13 @@ for (const name of names) {
             '--yes',
           ],
         ]),
+    ...stale.map((config) => [
+      'trust',
+      'revoke',
+      name,
+      '--id',
+      String(config.id),
+    ]),
   ]
 
   if (dryRun) {
@@ -255,9 +271,9 @@ for (const name of names) {
   try {
     for (const step of plan) run(step)
   } catch {
-    // The revoke is issued before the add, so a code that dies between the two
-    // would leave the package with no trusted publisher at all. Resuming from
-    // this name re-reads it and adds what is missing.
+    // The add is issued before the revoke, so a code that dies between the two
+    // leaves the package trusted by both workflows rather than by neither.
+    // Resuming from this name re-reads it and retires what is left over.
     resumeAt = name
     break
   }
