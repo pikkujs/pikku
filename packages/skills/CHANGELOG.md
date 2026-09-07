@@ -1,5 +1,38 @@
 # @pikku/skills
 
+## 0.12.30
+
+### Patch Changes
+
+- 9c5aa96: dev/serve: always inject the local content service
+
+  `pikku dev` and `pikku serve` only built `LocalContent` when `pikku.config.json`
+  declared a `content` block, so a project without one type-checks, renders and
+  starts clean and then throws the first time anything uploads a file. Every field
+  already had a default, so the block was gating a service that needed no
+  configuration. It is now always constructed; the `content` block still overrides
+  the storage path, URL prefixes and size limit.
+
+  Also documents it in the `pikku-services` skill: these singletons arrive as
+  `existingServices` and are never named in `services.ts`, so their absence there
+  is not evidence they are off — which is what makes the `if (!content) throw`
+  guard the skill already forbids look justified.
+
+- 5e2a579: pikku-wiring: document how an MCP tool is actually reached
+
+  `references/mcp.md` ended with a standalone `PikkuMCPServer` bootstrap — a
+  `start.ts` that builds services, loads `mcp.gen.json` and calls `connectStdio()`.
+  Nothing in a `pikku dev` / `pikku serve` / deployed app does that: the runtime
+  mounts the MCP server itself at `/mcp` (`mcpPath` to move it) whenever
+  `mcp.gen.json` has at least one entry. An agent following the old section wrote a
+  server process nobody runs, and then could not tell the person who asked for the
+  tool where to point their assistant.
+
+  Replaces it with the reachable URL, the two things that read as breakage — the
+  mount is skipped while there is nothing to serve, and correct MCP wiring has no
+  `wires/mcp` directory and no `mcp` config block — and the instruction to hand over
+  the URL. Swaps the stdio-logger red flag for a `/mcp` 404 one.
+
 ## 0.12.29
 
 ### Patch Changes
