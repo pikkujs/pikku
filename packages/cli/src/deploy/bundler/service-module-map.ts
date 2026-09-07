@@ -2,8 +2,8 @@
  * Mapping of service name -> npm module patterns to stub when the service is
  * NOT required by a deployment unit. These are external packages, not gen
  * files: a unit that doesn't wire the service never executes the code path
- * that imports them, so replacing them with `export {}` keeps their (often
- * large) trees out of the bundle.
+ * that imports them, so replacing them with an empty module keeps their
+ * (often large) trees out of the bundle.
  *
  * The AI SDKs (@pikku/ai-vercel + @ai-sdk/* + `ai`, ~3MB) are only constructed
  * when a model-bearing service is wired. Every other unit stubs them. The

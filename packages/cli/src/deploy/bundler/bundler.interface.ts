@@ -34,7 +34,7 @@ export interface CompileInput {
   bannerJs?: string
   sourcemap: boolean
   emitMetafile: boolean
-  /** Regexes for modules to replace with an empty `export {}` module. */
+  /** Regexes for modules to replace with an empty module. */
   deadPatterns: RegExp[]
   /**
    * Whether the compile may rename identifiers. False when the bundle is an

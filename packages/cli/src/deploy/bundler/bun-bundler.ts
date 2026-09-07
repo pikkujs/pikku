@@ -149,8 +149,11 @@ function createBunResolvePlugin(opts: {
         // Unreachable: the filter above is built from these same three lists.
         return
       })
+      // CJS, not `export {}`: the stubbed packages are imported in every shape
+      // (`import pg from 'pg'`, `import { PostgresDialect } from 'kysely'`), and
+      // an ESM stub fails the build on each one it cannot statically satisfy.
       build.onLoad({ filter: /.*/, namespace: 'pikku-stub' }, () => ({
-        contents: 'export {}',
+        contents: 'module.exports = {}',
         loader: 'js',
       }))
     },

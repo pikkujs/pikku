@@ -29,8 +29,11 @@ function createDeadModuleStubPlugin(patterns: RegExp[]): Plugin {
         path: args.path,
         namespace: 'pikku-stub',
       }))
+      // CJS, not `export {}`: the stubbed packages are imported in every shape
+      // (`import pg from 'pg'`, `import { PostgresDialect } from 'kysely'`), and
+      // an ESM stub fails the build on each one it cannot statically satisfy.
       build.onLoad({ filter: /.*/, namespace: 'pikku-stub' }, () => ({
-        contents: 'export {}',
+        contents: 'module.exports = {}',
         loader: 'js',
       }))
     },
