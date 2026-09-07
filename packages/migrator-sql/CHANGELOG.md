@@ -1,5 +1,11 @@
 # @pikku/migrator-sql
 
+## 0.12.4
+
+### Patch Changes
+
+- 7262b4c: `db generate` now creates a referenced table before the one referencing it
+
 ## 0.12.3
 
 ### Patch Changes
