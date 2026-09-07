@@ -268,25 +268,21 @@ export const dev = pikkuSessionlessFunc<
 
     const resolvedRuntimeDir =
       config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
-    const localContentConfig: LocalContentConfig | undefined =
-      userConfig.content
-        ? {
-            localFileUploadPath: userConfig.content.contentPath
-              ? resolve(config.rootDir, userConfig.content.contentPath)
-              : join(resolvedRuntimeDir, 'content'),
-            uploadUrlPrefix: userConfig.content.uploadUrlPrefix ?? '/upload',
-            assetUrlPrefix: userConfig.content.assetUrlPrefix ?? '/assets',
-            server: `http://${hostname}:${resolvedPort}`,
-            sizeLimit: userConfig.content.sizeLimit,
-          }
-        : undefined
-    const contentSigningJWT = localContentConfig
-      ? createEphemeralContentSigningJWT()
-      : undefined
-    const localContent =
-      localContentConfig && contentSigningJWT
-        ? new LocalContent(localContentConfig, logger, contentSigningJWT)
-        : undefined
+    const localContentConfig: LocalContentConfig = {
+      localFileUploadPath: userConfig.content?.contentPath
+        ? resolve(config.rootDir, userConfig.content.contentPath)
+        : join(resolvedRuntimeDir, 'content'),
+      uploadUrlPrefix: userConfig.content?.uploadUrlPrefix ?? '/upload',
+      assetUrlPrefix: userConfig.content?.assetUrlPrefix ?? '/assets',
+      server: `http://${hostname}:${resolvedPort}`,
+      sizeLimit: userConfig.content?.sizeLimit,
+    }
+    const contentSigningJWT = createEphemeralContentSigningJWT()
+    const localContent = new LocalContent(
+      localContentConfig,
+      logger,
+      contentSigningJWT
+    )
 
     const schedulerService = new InMemorySchedulerService()
     const agentStorage = kysely
@@ -349,7 +345,7 @@ export const dev = pikkuSessionlessFunc<
       agentRunService,
       eventHub,
       ...(kysely ? { kysely } : {}),
-      ...(localContent ? { content: localContent } : {}),
+      content: localContent,
     }
 
     const singletonServices = await userCreateSingletonServices(userConfig, {

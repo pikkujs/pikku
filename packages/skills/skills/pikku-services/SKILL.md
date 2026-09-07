@@ -30,6 +30,16 @@ request-scoped logger or audit buffer is a wire service, and startup work that
 needs the singletons goes in `pikkuServerLifecycle` rather than in a module's
 top level.
 
+## Services the runtime injects
+
+`pikku dev` and `pikku serve` build a set of singletons before your
+`createSingletonServices` runs and hand them in as `existingServices` — among
+them `content`, a `LocalContent` storing files under `.pikku-runtime/content`
+and serving them from `/upload` and `/assets`. **You never construct these in
+`services.ts`, and their absence from that file is not evidence they are off.**
+The optional `content` block in `pikku.config.json` only overrides that
+service's paths and size limit; omitting it does not disable it.
+
 ## Pick the reference
 
 | You are…                                                                     | Read                                                         |
