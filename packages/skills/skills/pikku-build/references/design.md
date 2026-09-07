@@ -44,11 +44,31 @@ If they accept, this is the cheapest decision in the project — a picture of ei
 screens costs a fraction of eight built screens, and it is the only point where
 "that is not what I meant" is free.
 
+**Author the theme first, then draw the mock from it.** This order is the whole
+point. A beautiful page in hand-rolled CSS sets a bar Mantine then misses, and
+what the user approved is not what ships — they signed off on a picture and
+received an approximation of it. So write `themes/<name>.json` first
+(`references/theming.md`), and let the mock take its every value from that file:
+the palette, `structure.radius`, the spacing scale, the fonts, the component
+`defaultProps`. Approving the mock then approves the theme, and the built screens
+inherit it rather than chase it.
+
+Draw only what Mantine can actually build, at the metrics it actually uses —
+its control heights, its input shapes, its table and menu behaviour. A control
+the mock invents is a promise the app cannot keep. If the mock wants something
+Mantine does not do, that is a real finding: change the theme so it does, or
+change the mock, and say which.
+
 **What to make.** One self-contained HTML page holding every screen the app
 needs — not a prototype, not a click-through. Static markup, real content from
 their domain (never lorem), the empty and error states beside the happy path,
-laid out so the whole app is legible by scrolling. Plain hand-written CSS.
-Whatever your host offers for showing a page is how you show it — a Claude
+laid out so the whole app is legible by scrolling. Its CSS is custom properties
+on `:root` carrying the theme JSON's values, so a change to either is a change
+to one number in both. Mantine itself will not load here — it is a React library
+and a page like this has no bundler, and on hosts that sandbox the page (a Claude
+Artifact) external stylesheets are blocked outright — so do not try; the mock
+reproduces the theme's values by hand, which is why they have to be written down
+first. Whatever your host offers for showing a page is how you show it: an
 Artifact, a file they open, a preview server. The page is the deliverable; how it
 gets in front of them is not this file's business.
 
@@ -65,22 +85,22 @@ stating:
   owns what the screens look like. When they disagree about a *fact*, knowledge
   wins; when they disagree about a *layout*, the mock wins.
 
-**Then realise it in Mantine — in the theme, not in overrides.** The mock is
-plain CSS and knows nothing about Mantine, so closing the gap is real work, and
-there are two ways to do it. Only one of them is worth having:
+**Building it is then a transcription, not a translation.** Because the theme
+already exists and the mock was drawn from it, the screen is Mantine components
+arranged the way the mock arranges them — the look arrives with the theme. Two
+rules keep it that way:
 
-- **In the theme.** Push the mock's decisions into the Mantine theme object and
-  its CSS variables — the palette, the radius scale, the spacing rhythm, the
-  font stack, the default props components inherit. Do this and you end up with a
-  component library that is actually themed, and the next screen is free.
-- **In per-component overrides.** A stack of one-off `className`s and
-  `!important` fighting Mantine's defaults screen by screen. This looks like
+- **Layout is yours to write; components are Mantine's.** The page shape — the
+  regions, the columns, the rhythm, what sits beside what — is ordinary markup
+  and your own CSS. Anything a person would point at and call a control comes
+  from Mantine: buttons, inputs, selects, tables, badges, menus. Those carry
+  focus rings, keyboard behaviour and i18n, and hand-rolling one throws all of
+  it away.
+- **A gap goes back to the theme, never into a component override.** If a screen
+  does not match the mock, the fix is a value in `themes/<name>.json`. A stack of
+  one-off `className`s and `!important` fighting Mantine's defaults looks like
   progress on screen one and is unmaintainable by screen five, and the screens
   drift apart because nothing central holds them together.
-
-Author the mock's CSS as custom properties on `:root` from the start, using the
-names `references/theming.md` gives the theme. Then the gap is largely a mapping
-rather than a translation, and the mock doubles as the theme spec.
 
 **Checking the built screen against the mock** is a structural comparison, not a
 pixel one: the same regions in the same order, the same hierarchy, the same
