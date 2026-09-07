@@ -26,6 +26,7 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
         leftSection={a.icon}
         onClick={a.onClick}
         disabled={a.disabled}
+        data-help={a.helpAnchor}
         styles={{
           root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H },
         }}
@@ -48,6 +49,7 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
         size={CONTROL_H}
         onClick={a.onClick}
         disabled={a.disabled}
+        data-help={a.helpAnchor}
         aria-label={a.label}
       >
         {a.icon}
@@ -94,6 +96,7 @@ export const ActionCluster: React.FC<ActionClusterProps> = ({
                 leftSection={a.icon}
                 onClick={a.onClick}
                 disabled={a.disabled}
+                data-help={a.helpAnchor}
               >
                 {a.label}
               </Menu.Item>

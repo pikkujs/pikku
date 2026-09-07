@@ -1105,5 +1105,16 @@
   "knowledge_plan_section_scenarios_browser": "Browser scenarios",
   "knowledge_plan_section_scenarios_permission": "Permission scenarios",
   "knowledge_plan_item_deferred": "deferred",
-  "knowledge_plan_item_deferred_why": "Promised by a later pass, so this build was never asked for it."
+  "knowledge_plan_item_deferred_why": "Promised by a later pass, so this build was never asked for it.",
+  "help_open": "What is this screen?",
+  "help_actions_title": "What you can do here",
+  "help_read_more": "Read the full documentation",
+  "help_functions_title": "Functions",
+  "help_functions_what": "A function is one piece of your app's logic — “create a booking”, “send the welcome email”. You write it once, and it knows nothing about how it was called.",
+  "help_functions_behaviour": "Every function your project defines is on [this list](#list), whether it is reached over HTTP, from a queue, on a schedule, or by another function. Use [the search box](#search) to find one by name, then [pick it](#list) to see what it takes in, what it gives back, and which wirings call it.",
+  "help_functions_surprise": "Functions are read from your code, not registered here — this screen is a view of what you have written, so nothing on it can be added or edited from the console. Pikku's own internal functions are hidden by default; [show them](#internals) only when you are debugging the framework itself.",
+  "help_functions_examples": "Examples: createBooking, sendWelcomeEmail, listInvoices.",
+  "help_functions_do_search": "[Find a function by name](#search)",
+  "help_functions_do_select": "[Open one to see its inputs, outputs and wirings](#list)",
+  "help_functions_do_internals": "[Show pikku's own internal functions](#internals)"
 }

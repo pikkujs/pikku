@@ -45,6 +45,11 @@ export interface ShellHeaderAction {
   tooltip?: I18nString
   /** Always render icon-only (with tooltip), never showing the label. */
   iconOnly?: boolean
+  /** Stamps `data-help` on the rendered control so the help panel can point at
+   *  it. The bar collapses labels to icons to a kebab menu and the attribute
+   *  rides all three, so an anchor survives every width except a menu item that
+   *  is not currently dropped down. */
+  helpAnchor?: string
 }
 
 export interface ShellHeaderProps<T extends string = string> {

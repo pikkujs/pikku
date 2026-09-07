@@ -677,3 +677,14 @@ export type {
   ScenarioFlowEntries,
   ScenarioPersonaEntries,
 } from './hooks/useScenarioEntries'
+
+// Help — the per-screen `?` panel. The affordance is wired into PageLayout and
+// resolves its copy from the route, so pages pass nothing; a host registers
+// screens for its own routes and marks up controls with `data-help="<anchor>"`.
+export { HelpText } from './help/HelpText'
+export { HelpPanel } from './help/HelpPanel'
+export { HelpAffordance } from './help/HelpAffordance'
+export { registerHelpScreens, resolveHelpScreen } from './help/screens'
+export type { HelpScreen } from './help/screens'
+export { parseHelpText } from './help/parseHelpText'
+export type { HelpSegment } from './help/parseHelpText'

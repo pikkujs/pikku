@@ -4,6 +4,7 @@ import type { Stack } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { useLocale } from '@/i18n/config'
 import DocLink from '../ui/DocLink'
+import { HelpAffordance } from '../../help/HelpAffordance'
 import {
   ShellHeader,
   type ShellHeaderAction,
@@ -45,15 +46,15 @@ export function ListPageHeader<T extends string = string>({
   selection,
 }: ListPageHeaderProps<T>) {
   const docsButton = docsHref ? <DocLink href={docsHref} /> : null
-  const right =
-    filters || view || lead || docsButton ? (
-      <>
-        {filters}
-        {view}
-        {lead}
-        {docsButton}
-      </>
-    ) : undefined
+  const right = (
+    <>
+      {filters}
+      {view}
+      {lead}
+      {docsButton}
+      <HelpAffordance />
+    </>
+  )
   return (
     <ShellHeader
       title={title}
@@ -324,13 +325,13 @@ export function PageHeader<S extends string = string>({
   panel,
 }: PageHeaderProps<S>) {
   useLocale()
-  const right =
-    actions || docsHref ? (
-      <>
-        {actions}
-        {docsHref && <DocLink href={docsHref} />}
-      </>
-    ) : undefined
+  const right = (
+    <>
+      {actions}
+      {docsHref && <DocLink href={docsHref} />}
+      <HelpAffordance />
+    </>
+  )
   // Inline mode: fold the subtitle into the title row (title + count on one line)
   // so ShellHeader's stacked title/count slot renders a single row.
   const inline = countInline && subtitle != null
