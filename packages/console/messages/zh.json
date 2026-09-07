@@ -354,6 +354,8 @@
   "credentials_empty_description": "使用 defineCredential 声明凭据，以管理项目连接的 OAuth2 提供方和 API 密钥。",
   "credentials_type_oauth2": "OAuth2",
   "credentials_type_api_key": "API 密钥",
+  "credentials_source_vault": "密钥库",
+  "credentials_configured_in_vault": "已在密钥库中配置",
   "credentials_connected": "已连接",
   "credentials_not_connected": "未连接",
   "credentials_reconnect": "重新连接",

@@ -1,4 +1,7 @@
-import type { CredentialDefinitions } from '@pikku/core/credential'
+import type {
+  CredentialDefinitions,
+  CredentialDefinitionsMeta,
+} from '@pikku/core/credential'
 import { validateAndBuildCredentialDefinitionsMeta } from '@pikku/core/credential'
 import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -6,21 +9,26 @@ import { tsLiteral } from '../../../utils/ts-literal.js'
 
 export interface SerializeCredentialsOptions {
   definitions: CredentialDefinitions
+  /** The already-resolved meta, so a mode a `wireAddon` overrode is the one that reaches the generated file. */
+  credentials?: CredentialDefinitionsMeta
   schemaLookup: Map<string, SchemaRef>
   credentialsFile: string
   packageMappings: Record<string, string>
+  /** Registers the meta into the app's pikku state so `wire.getCredential` can resolve a credential the project itself declares. Addons register theirs from their package file instead. */
+  registerAppMeta?: boolean
 }
 
 export const serializeCredentialsTypes = ({
   definitions,
+  credentials: resolvedCredentials,
   schemaLookup,
   credentialsFile,
   packageMappings,
+  registerAppMeta,
 }: SerializeCredentialsOptions) => {
-  const credentials = validateAndBuildCredentialDefinitionsMeta(
-    definitions,
-    schemaLookup
-  )
+  const credentials =
+    resolvedCredentials ??
+    validateAndBuildCredentialDefinitionsMeta(definitions, schemaLookup)
   const credentialEntries = Object.entries(credentials)
 
   const schemaImports: Map<string, Set<string>> = new Map()
@@ -51,6 +59,9 @@ export const serializeCredentialsTypes = ({
       `displayName: ${tsLiteral(meta.displayName)}`,
       `type: '${meta.type}'`,
     ]
+    if (meta.secret) {
+      metaParts.push(`secret: ${tsLiteral(meta.secret)}`)
+    }
     if (meta.oauth2) {
       metaParts.push(`oauth2: true`)
       // `type` rides along so consumers can tell a platform-wide credential from
@@ -72,6 +83,10 @@ export const serializeCredentialsTypes = ({
 import type { CredentialMetaInfo } from '@pikku/core/services'`
   )
   imports.push(`import type { CredentialService } from '@pikku/core/services'`)
+
+  if (registerAppMeta) {
+    imports.push(`import { pikkuState } from '@pikku/core/state'`)
+  }
 
   if (oauth2Entries.length > 0) {
     imports.push(
@@ -117,7 +132,11 @@ ${mapEntries.join('\n')}
 const CREDENTIALS_META: Record<string, CredentialMetaInfo> = {
 ${metaEntries.join(',\n')}
 }
-${oauth2Configs}
+${
+  registerAppMeta
+    ? `\npikkuState(null, 'package', 'credentialsMeta', CREDENTIALS_META)\n`
+    : ''
+}${oauth2Configs}
 
 export class TypedCredentialService extends CoreTypedCredentialService<CredentialsMap> {
   constructor(credentials: CredentialService) {

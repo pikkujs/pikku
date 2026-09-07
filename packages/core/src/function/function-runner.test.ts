@@ -765,6 +765,48 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.deepEqual(receivedCredential, { accessToken: 'token-1' })
   })
 
+  /**
+   * Resolution reads the declared mode from the package the function belongs
+   * to, and a project's own functions belong to no package. Scoping the lookup
+   * to a package name left every app-level credential undeclared, so a
+   * singleton one was never loaded for a wire with no user.
+   */
+  test('should resolve an app-level singleton credential declared outside an addon', async () => {
+    pikkuState(null, 'package', 'credentialsMeta', {
+      'platform-stripe': {
+        name: 'platform-stripe',
+        displayName: 'Stripe',
+        type: 'singleton',
+      },
+    })
+
+    let receivedCredential: any
+
+    addTestFunction('appCredential', {
+      func: async () => null,
+    })
+
+    await runPikkuFunc('rpc', Math.random().toString(), 'appCredential', {
+      singletonServices: {
+        ...mockSingletonServices,
+        credentialService: {
+          get: async (name: string, userId?: string) =>
+            userId ? null : { key: `platform-${name}` },
+          getAll: async () => ({}),
+        },
+      } as any,
+      createWireServices: async (_services: any, wire: any) => {
+        receivedCredential = await wire.getCredential('platform-stripe')
+        return {}
+      },
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+    assert.deepEqual(receivedCredential, { key: 'platform-platform-stripe' })
+  })
+
   test('should pass addon-scoped singleton services and wrap bare workflow names', async () => {
     pikkuState(null, 'addons', 'packages').set('stripe', {
       package: '@addon/stripe',

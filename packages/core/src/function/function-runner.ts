@@ -241,9 +241,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
       : wire
 
-  const declaredCredentials = funcPackageName
-    ? pikkuState(funcPackageName, 'package', 'credentialsMeta')
-    : null
+  const declaredCredentials = pikkuState(
+    funcPackageName ?? null,
+    'package',
+    'credentialsMeta'
+  )
 
   // Set up early so middleware can use setCredential. An addon instance with
   // credentialOverrides always gets a fresh alias-aware service, even when a

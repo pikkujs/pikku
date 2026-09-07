@@ -31,6 +31,7 @@ const applyWiredCredentialModes = (
       if (!target) continue
       if (override.secret) {
         target.type = 'singleton'
+        target.secret = override.secret
       } else if (override.mode) {
         target.type = override.mode
       }
@@ -52,20 +53,23 @@ export const pikkuCredentials = pikkuSessionlessFunc<void, void>({
       return
     }
 
+    const meta = validateAndBuildCredentialDefinitionsMeta(
+      state.credentials.definitions,
+      state.schemaLookup
+    )
+    applyWiredCredentialModes(meta, state.rpc?.wireAddonDeclarations)
+
     const content = serializeCredentialsTypes({
       definitions: state.credentials.definitions,
+      credentials: meta,
       schemaLookup: state.schemaLookup,
       credentialsFile,
       packageMappings,
+      registerAppMeta: !config.addon,
     })
     await writeFileInDir(logger, credentialsFile, content)
 
     if (credentialsMetaJsonFile) {
-      const meta = validateAndBuildCredentialDefinitionsMeta(
-        state.credentials.definitions,
-        state.schemaLookup
-      )
-      applyWiredCredentialModes(meta, state.rpc?.wireAddonDeclarations)
       await writeFileInDir(
         logger,
         credentialsMetaJsonFile,

@@ -354,6 +354,8 @@
   "credentials_empty_description": "Declare credentials with defineCredential to manage the OAuth2 providers and API keys your project connects to.",
   "credentials_type_oauth2": "OAuth2",
   "credentials_type_api_key": "API key",
+  "credentials_source_vault": "Vault",
+  "credentials_configured_in_vault": "Configured in the vault",
   "credentials_connected": "Connected",
   "credentials_not_connected": "Not connected",
   "credentials_reconnect": "Reconnect",

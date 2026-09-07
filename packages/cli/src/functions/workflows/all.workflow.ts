@@ -331,6 +331,17 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       ])
     }
 
+    // The generated credentials file registers the project's own credential
+    // meta into pikku state, which is what lets `wire.getCredential` resolve a
+    // credential the app declares rather than one an addon brought with it.
+    if (
+      !config.addon &&
+      config.credentialsFile &&
+      stateAfterScaffold.credentials?.definitions.length
+    ) {
+      allImports.push(config.credentialsFile)
+    }
+
     const schemas = await workflow.do('Schemas', 'pikkuSchemas', null)
     if (schemas) {
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)

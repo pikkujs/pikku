@@ -354,6 +354,8 @@
   "credentials_empty_description": "أعلن بيانات الاعتماد باستخدام defineCredential لإدارة مزوّدي OAuth2 ومفاتيح API التي يتصل بها مشروعك.",
   "credentials_type_oauth2": "OAuth2",
   "credentials_type_api_key": "مفتاح API",
+  "credentials_source_vault": "الخزنة",
+  "credentials_configured_in_vault": "مُهيَّأ في الخزنة",
   "credentials_connected": "متصل",
   "credentials_not_connected": "غير متصل",
   "credentials_reconnect": "إعادة الاتصال",
