@@ -422,7 +422,14 @@ async function createEmbeddedPostgres(
     loadPGliteExtensions(context.rootDir, context.pgliteExtensions),
   ])
 
-  return new PGlite({
+  // PGlite runs Postgres as an Emscripten module, and Emscripten's exit handler
+  // writes the WASM program's status straight to `process.exitCode` — booting a
+  // database leaves it at 99 even though nothing failed. The CLI's bin then
+  // ends with `process.exit(process.exitCode ?? 0)`, so any command that merely
+  // touched the embedded database reported failure after doing all of its work
+  // correctly. Restore whatever the process had before the boot.
+  const exitCodeBeforeBoot = process.exitCode
+  const db = new PGlite({
     ...(dataDir ? { dataDir } : {}),
     ...wasm,
     extensions: {
@@ -430,6 +437,13 @@ async function createEmbeddedPostgres(
       ...declared,
     },
   })
+  await db.waitReady
+  if (process.exitCode !== exitCodeBeforeBoot) {
+    // `?? 0` because assigning `undefined` does not clear an already-set
+    // exitCode under bun, which is the runtime the boot pollutes it on.
+    process.exitCode = exitCodeBeforeBoot ?? 0
+  }
+  return db
 }
 
 /**
