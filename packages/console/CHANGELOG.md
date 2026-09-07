@@ -1,3 +1,17 @@
+## 0.12.75
+
+### Patch Changes
+
+- 8d0672b: The user-directory and scope surfaces open as end-edge panels rather than
+  drawers: `CreateUserPanel`, `UserActionPanel`, `UserRolesPanel` and
+  `RoleEditorPanel` replace the four drawers of the same name, so the page card
+  shrinks beside them instead of being covered by a scrim. `UserRolesPanel` is now
+  exported, for a host that mounts the directory itself.
+- Updated dependencies [1ab831e]
+- Updated dependencies [1ecf8a1]
+  - @pikku/core@0.12.105
+  - @pikku/react@0.12.10
+
 ## 0.12.74
 
 ### Patch Changes

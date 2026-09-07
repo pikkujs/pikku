@@ -1,0 +1,9 @@
+# @pikku/queue-nats
+
+## 0.12.1
+
+### Patch Changes
+
+- 427c4fe: **`@pikku/queue-nats`** — NATS JetStream queue, worker and scheduler services, alongside the pg-boss and bullmq adapters. Jobs publish to a work-queue stream, each queue gets its own durable pull consumer, and `max_ack_pending` is real per-message concurrency rather than a batch size, so a slow job occupies one slot instead of holding its batch siblings. The per-job retry policy travels in headers because JetStream's `max_deliver` is per-consumer and cannot express a step marked "never retry", and `ack_wait` is always set to pg-boss's 900s parity rather than left to the server's 30s default — unset, any job running longer than 30s is redelivered while it is still running and executed twice. Cron and one-shot delays use the server's own message scheduler, so a schedule is a retained message on a reserved subject: publishing registers it, republishing replaces it, purging cancels it. That needs a server on 2.14+, and `NatsServiceFactory` refuses to start against anything older rather than silently not scheduling. `supportsResults` is `false`, deliberately — a work-queue stream deletes a message on ack, so there is nowhere for a job result or any job history to live, and per-job outcomes come from telemetry instead.
+- Updated dependencies [1ab831e]
+  - @pikku/core@0.12.105

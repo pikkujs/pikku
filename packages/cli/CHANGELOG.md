@@ -1,3 +1,38 @@
+## 0.12.140
+
+### Patch Changes
+
+- c5574a3: An addon now publishes its schema artifact on every `pikku all`, empty when it
+  has no tables, and `db generate` refuses an addon that publishes none at all.
+
+  The two used to be one case. A wired addon whose artifact could not be resolved
+  was read as an addon that ships no schema — no error, no migration — so a
+  mispackaged `exports` entry surfaced much later, as an addon function querying a
+  table nobody had created. Making the file unconditional separates "needs
+  nothing" from "cannot say", and a malformed artifact is now rejected rather than
+  half-applied.
+
+- 7262b4c: `db generate` now creates a referenced table before the one referencing it
+- f847a97: `pikku fabric link` can now start from a repo with no remote. `--github` and
+  `--gitea` name where the project lives; with no flag and no `origin` the CLI
+  asks before creating anything, and a non-interactive session is told which flag
+  to pass rather than being hung on a prompt.
+- 4e7f4b3: Stub dead modules as CommonJS so every import shape resolves. The stub was
+  `export {}`, which has no default export, so a unit reaching
+  `import postgres from 'postgres'` failed to bundle with "No matching export in
+  pikku-stub:postgres for import default" — on Cloudflare, where the Postgres
+  drivers are stubbed precisely because the runtime never reaches them.
+- Updated dependencies [96b65ae]
+- Updated dependencies [1ab831e]
+- Updated dependencies [7262b4c]
+- Updated dependencies [c4ee98d]
+- Updated dependencies [3cd4e13]
+- Updated dependencies [f99547e]
+  - @pikku/skills@0.12.29
+  - @pikku/core@0.12.105
+  - @pikku/migrator-sql@0.12.4
+  - @pikku/knowledge@0.12.12
+
 ## 0.12.139
 
 ### Patch Changes
