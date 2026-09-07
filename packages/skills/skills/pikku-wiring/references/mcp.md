@@ -166,49 +166,25 @@ export const deleteTodo = pikkuFunc({
 })
 ```
 
-## MCP Server Setup
+## Reaching the server
 
-`PikkuMCPServer` takes the server config and a logger — not your services. It
-loads the generated `mcp.gen.json`, and the bootstrap import is what registers
-your functions.
+You do not start an MCP server. `pikku dev`, `pikku serve` and a deployed app all
+mount one for you: codegen writes `.pikku/mcp/mcp.gen.json`, the runtime loads it,
+and the server is served at **`/mcp`** — so a tool you export is reachable at
+`https://<your-app-url>/mcp` with nothing else to wire. Set `mcpPath` to move it.
 
-```typescript
-// start.ts
-import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
-import { createConfig, createSingletonServices } from './services.js'
-import mcpJSON from '../.pikku/mcp/mcp.gen.json' with { type: 'json' }
-import '../.pikku/pikku-bootstrap.gen.js'
+Two consequences worth stating outright, because both read as breakage:
 
-const config = await createConfig()
-const singletonServices = await createSingletonServices(config)
+- The mount is **conditional on there being something to serve**. An `mcp.gen.json`
+  with no tools, resources or prompts is not mounted at all, so `/mcp` 404s until
+  the first `mcp: true` function or `pikkuMCP*Func` exists.
+- There is no `wires/mcp` directory and no `mcp` block in `pikku.config.json`.
+  A tool *is* its own registration, so the absence of both is what correct MCP
+  wiring looks like — not evidence that something was missed.
 
-const server = new PikkuMCPServer(
-  {
-    name: 'pikku-mcp-server',
-    version: '1.0.0',
-    mcpJSON,
-    capabilities: { logging: {}, tools: {}, resources: {}, prompts: {} },
-  },
-  singletonServices.logger
-)
-
-await server.init()
-
-// stdio — the transport desktop MCP clients spawn
-await server.connectStdio()
-singletonServices.logger = server.createMCPLogger()
-
-// …or streamable HTTP, for a hosted server
-const { close } = await server.connectHTTP({ port: 3000, host: '127.0.0.1' })
-```
-
-`capabilities` is a filter, not documentation: a surface you leave out is not
-advertised and its endpoints are never loaded, which is how you ship a tools-only
-server.
-
-Over stdio the protocol owns stdout, so an ordinary console logger corrupts the
-frames — that is what `createMCPLogger()` is for. Swap the logger before
-anything logs.
+When you add a tool, tell whoever asked for it the URL. An assistant that cannot
+be pointed at an endpoint has not been connected to anything, and `/mcp` is the
+whole answer.
 
 ## Red flags
 
@@ -218,4 +194,4 @@ anything logs.
 | `uri`/`title` rejected on `pikkuMCPResourceFunc` | Those belong on `wireMCPResource`                               |
 | Resource returning `{ uri, blob, mimeType }`     | Resources are text only: `{ uri, text }`                        |
 | Client sees a tool with no description           | `mcp: true` without a `description` — check the codegen warning |
-| stdio client disconnects on the first log line   | Logger still writing to stdout; use `createMCPLogger()`         |
+| `/mcp` 404s                                      | Nothing to serve yet — the mount is skipped until one tool, resource or prompt exists |
