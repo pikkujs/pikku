@@ -105,6 +105,24 @@ describe('the milestone lifecycle', () => {
     assert.match(raw, /status: dispatched/)
     assert.match(raw, /Re-filed from a later answer/)
   })
+
+  test('a dropped `statusAt` is restored even when the status came back unchanged', async () => {
+    const path = milestone('01-tonight.md', ['status: dispatched'])
+    setMilestoneStatus(cwd, path, 'built')
+    const stamped = readFileSync(join(cwd, path), 'utf8').match(/statusAt: (\S+)/)?.[1]
+    const release = await holdMilestoneLifecycle(cwd)
+
+    writeFileSync(
+      join(cwd, path),
+      '---\ntype: milestone\nstatus: built\n---\n\nRe-filed from a later answer.\n'
+    )
+    await release()
+
+    const raw = readFileSync(join(cwd, path), 'utf8')
+    assert.match(raw, /status: built/)
+    assert.equal(readFileSync(join(cwd, path), 'utf8').match(/statusAt: (\S+)/)?.[1], stamped)
+    assert.match(raw, /Re-filed from a later answer/)
+  })
 })
 
 describe('nominatedMilestone', () => {

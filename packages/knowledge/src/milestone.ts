@@ -347,9 +347,23 @@ export async function holdMilestoneLifecycle(
     try {
       for (const note of await readMilestones(cwd)) {
         const was = held.get(note.path)
-        if (!was || note.status === was.status) continue
+        if (!was) continue
+        // BOTH held scalars are compared, because the pair is what the state machine
+        // owns. Comparing `status` alone lets through the rewrite that keeps `built`
+        // and drops the `statusAt` beside it, and the stamp is not decoration: it is
+        // the only evidence that this status was reached by a transition rather than
+        // typed into the frontmatter by whoever filed the note, and the only thing
+        // "how long has this been building?" can be answered from. Seen on a four
+        // milestone run — one note came back `built` carrying no stamp, and nothing
+        // downstream could tell it from a milestone that was really dispatched, built
+        // and closed by the gates.
+        const statusDrifted = note.status !== was.status
+        const stampDropped = (note.statusAt ?? null) !== was.statusAt
+        if (!statusDrifted && !stampDropped) continue
         console.warn(
-          `[milestone] ${note.path} came back \`${note.status ?? 'none'}\` from a turn that rewrites notes — restoring \`${was.status}\``
+          statusDrifted
+            ? `[milestone] ${note.path} came back \`${note.status ?? 'none'}\` from a turn that rewrites notes — restoring \`${was.status}\``
+            : `[milestone] ${note.path} came back \`${was.status}\` without its \`statusAt\` from a turn that rewrites notes — restoring the stamp`
         )
         setNoteScalars(cwd, note.path, {
           status: was.status,
