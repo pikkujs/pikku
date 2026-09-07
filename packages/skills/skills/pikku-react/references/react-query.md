@@ -203,6 +203,53 @@ const handleClick = async () => {
 But prefer the React Query hooks for anything that touches render state —
 caching, retries, dedup, and dev-tools come for free.
 
+## Continuous input: sliders, toggles, anything tapped fast
+
+A control that fires on every move — a range slider, a colour picker, a
+text field that saves as you type — must not call `mutate` on every event,
+and must not have its `value` bound straight to the query's data. Doing both
+turns each drag tick into a request, and every refetch snaps the control back
+to the last value the server saw, under the user's finger.
+
+Hold the in-progress value locally; write once when it settles; let the query
+take over again after the write lands.
+
+```tsx
+const plate = usePikkuQuery('listImpressions', {})
+const setLoudness = usePikkuMutation('setLoudness', {
+  onSettled: () => queryClient.invalidateQueries({ queryKey: ['listImpressions'] }),
+})
+
+const [dragging, setDragging] = useState<Record<string, number>>({})
+const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+const write = (wordId: string, loudness: number) => {
+  clearTimeout(timers.current[wordId])
+  setLoudness.mutate({ wordId, loudness })
+  setDragging(({ [wordId]: _, ...rest }) => rest) // the query is the truth again
+}
+const move = (wordId: string, loudness: number) => {
+  setDragging((d) => ({ ...d, [wordId]: loudness }))
+  clearTimeout(timers.current[wordId])
+  timers.current[wordId] = setTimeout(() => write(wordId, loudness), 300)
+}
+const settle = (wordId: string) => {
+  if (dragging[wordId] !== undefined) write(wordId, dragging[wordId])
+}
+
+// value = dragging[w.wordId] ?? w.loudness
+// onChange → move · onPointerUp / onKeyUp / onBlur → settle
+```
+
+Release (`onPointerUp`, `onKeyUp`, `onBlur`) writes immediately; the timer
+covers a drag that pauses without releasing. Clear the timers on unmount.
+
+For a control that is tapped rather than dragged — a chip that adds or
+removes an item — an optimistic `onMutate` on the list query is the right
+shape instead: flip the row in the cache, let `onSettled` refetch. Do not
+disable every sibling control while one write is in flight; only the one
+whose write has not landed needs holding.
+
 ## Common patterns
 
 - **Optimistic updates**: pass `onMutate` to `usePikkuMutation` to update
@@ -219,6 +266,8 @@ caching, retries, dedup, and dev-tools come for free.
   use the hooks. They handle dedup, caching, and unmount safely.
 - Don't hand-write `useQuery({ queryKey: ['listTodos'], queryFn: ... })`
   — `usePikkuQuery('listTodos', {})` does it correctly with one line.
+- Don't call `mutate` from a slider's or text field's `onChange`, and don't
+  bind such a control's `value` to query data — see *Continuous input*.
 - Don't construct hook names dynamically. Hook names = RPC names known at
   generation time.
 - Don't bypass the type system with `as any` — if a hook's types don't

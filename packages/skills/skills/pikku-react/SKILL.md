@@ -54,6 +54,10 @@ start-plus-observe, or the component holds a pending state with nothing to show.
   `usePikkuRPC()` outside `<PikkuProvider>` throws.
 - **Do not call the RPC client inside a `useEffect`.** The hooks handle
   deduplication, caching and unmounting; a manual effect handles none of them.
+- **Do not write on every move of a slider or keystroke of a field.** Hold the
+  in-progress value in local state and `mutate` once when it settles; a
+  control whose `value` is bound to query data snaps back on every refetch.
+  See `references/react-query.md` → *Continuous input*.
 - **Do not construct a hook name at runtime.** Hook names are the RPC names known
   at generation time, and a computed one is not type-checked.
 - **Do not poll a workflow with `setInterval`.** `useWorkflowStatus` with a
