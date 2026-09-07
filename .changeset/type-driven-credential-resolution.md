@@ -3,6 +3,7 @@
 '@pikku/inspector': patch
 '@pikku/cli': patch
 '@pikku/console': patch
+'@pikku/addon-console': patch
 ---
 
 A wiring can now decide whether an addon's credential is per-user, deployment-wide, or read from a secret
