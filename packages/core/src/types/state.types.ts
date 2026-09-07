@@ -1,3 +1,4 @@
+import type { CredentialOverrides } from '../wirings/credential/credential-overrides.js'
 import type {
   PikkuErrorConstructor,
   ErrorDetails,
@@ -100,7 +101,7 @@ export interface PikkuPackageState {
         /** Per-instance name-aliases: logical name the addon reads -> actual project variable name */
         variableOverrides?: Record<string, string>
         /** Per-instance name-aliases: logical name the addon reads -> actual project credential name */
-        credentialOverrides?: Record<string, string>
+        credentialOverrides?: CredentialOverrides
         /** Secrets the host lends this instance, named as the addon reads them */
         secretGrants?: string[]
         /** Credentials the host lends this instance, named as the addon reads them */

@@ -5,3 +5,11 @@ export type {
   CredentialDefinitionsMeta,
   CredentialDefinitions,
 } from './credential.types.js'
+export {
+  credentialOverrideAliases,
+  buildCredentialResolutions,
+} from './credential-overrides.js'
+export type {
+  CredentialOverride,
+  CredentialOverrides,
+} from './credential-overrides.js'
