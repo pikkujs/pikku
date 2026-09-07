@@ -1,3 +1,4 @@
+import type { CredentialOverrideMeta } from '../types.js'
 import type {
   InspectorState,
   InspectorLogger,
@@ -467,11 +468,18 @@ export function validateCredentialOverrides(
     state.credentials?.definitions.map((d) => d.name) ?? []
   )
 
+  /** Only a rename has a target to check; a mode-only override renames nothing. */
+  const renameTarget = (
+    override: CredentialOverrideMeta
+  ): string | undefined =>
+    typeof override === 'string' ? override : override.name
+
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    for (const [logicalName, resolvedName] of Object.entries(
+    for (const [logicalName, override] of Object.entries(
       addonDecl.credentialOverrides ?? {}
     )) {
-      if (!credentialNames.has(resolvedName)) {
+      const resolvedName = renameTarget(override)
+      if (resolvedName && !credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
@@ -481,8 +489,9 @@ export function validateCredentialOverrides(
     }
 
     for (const logicalName of addonDecl.credentialGrants ?? []) {
+      const override = addonDecl.credentialOverrides?.[logicalName]
       const resolvedName =
-        addonDecl.credentialOverrides?.[logicalName] ?? logicalName
+        (override ? renameTarget(override) : undefined) ?? logicalName
       if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
         logger.critical(

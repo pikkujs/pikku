@@ -6,13 +6,14 @@ import type {
 import type { SecretService } from '../../services/secret-service.js'
 import { ScopedSecretService } from '../../services/scoped-secret-service.js'
 import { ScopedCredentialService } from '../../services/scoped-credential-service.js'
+import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import type { VariablesService } from '../../services/variables-service.js'
 
 export type AddonInstance = {
   namespace: string
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
-  credentialOverrides?: Record<string, string>
+  credentialOverrides?: CredentialOverrides
   /** Set by the consuming app: secrets it lends this instance, as the addon names them. */
   secretGrants?: string[]
   /** Set by the consuming app: credentials it lends this instance, as the addon names them. */
@@ -31,7 +32,7 @@ export type AddonInstance = {
 const allowedNames = (
   declared: string[] | null | undefined,
   grants: string[] | undefined,
-  overrides: Record<string, string> | undefined
+  overrides: Record<string, unknown> | undefined
 ): Set<string> =>
   new Set([
     ...(declared ?? []),

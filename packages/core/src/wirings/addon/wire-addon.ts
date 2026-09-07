@@ -1,4 +1,5 @@
 import { pikkuState } from '../../pikku-state.js'
+import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 export type WireAddonConfig = {
@@ -20,8 +21,12 @@ export type WireAddonConfig = {
   secretOverrides?: Record<string, string>
   /** Points a variable the addon reads at a different key in this deployment. */
   variableOverrides?: Record<string, string>
-  /** Points a credential the addon reads at a different key in this deployment. */
-  credentialOverrides?: Record<string, string>
+  /**
+   * Points a credential the addon reads at a different key in this deployment,
+   * and — in the object form — decides whether it is per-user, deployment-wide,
+   * or read from a secret. An addon declares a default; the wiring decides.
+   */
+  credentialOverrides?: CredentialOverrides
   /** Extra secrets this instance may read, named as the addon reads them — the scope check runs before `secretOverrides` renames them. */
   secretGrants?: string[]
   /** Credentials this instance may read on top of the ones it declared. */

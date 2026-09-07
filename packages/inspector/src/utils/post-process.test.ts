@@ -1,3 +1,4 @@
+import type { CredentialOverrideMeta } from '../types.js'
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
@@ -69,7 +70,7 @@ const makeGrantState = (
     secretGrants?: string[]
     credentialGrants?: string[]
     secretOverrides?: Record<string, string>
-    credentialOverrides?: Record<string, string>
+    credentialOverrides?: Record<string, CredentialOverrideMeta>
   }
 ): Omit<InspectorState, 'typesLookup'> =>
   ({

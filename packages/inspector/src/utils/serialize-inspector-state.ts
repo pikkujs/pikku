@@ -1,3 +1,4 @@
+import type { CredentialOverrideMeta } from '../types.js'
 import type { SecretUsage } from './extract-secret-usage.js'
 import type { JSONValue } from '@pikku/core/utils'
 import type {
@@ -171,7 +172,7 @@ export interface SerializableInspectorState {
           authSecretId?: string
           secretOverrides?: Record<string, string>
           variableOverrides?: Record<string, string>
-          credentialOverrides?: Record<string, string>
+          credentialOverrides?: Record<string, CredentialOverrideMeta>
           secretGrants?: string[]
           credentialGrants?: string[]
           globalSecrets?: string
