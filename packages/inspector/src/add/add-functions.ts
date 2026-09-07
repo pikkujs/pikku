@@ -1431,13 +1431,26 @@ export const addFunctions: AddWiring = (
   }
 
   if (mcpEnabled) {
+    // `pikkuMCPToolFunc`'s config accepts `name`, and it is the name an AI client
+    // calls the tool by — `runMCPTool` looks the tool up in `toolsMeta` by exactly
+    // this key and then dispatches through `pikkuFuncId`, so it is a public label
+    // rather than an identity. It was never read here, so a declared `name` was
+    // silently dropped and the tool published under whatever the export happened to
+    // be called. It does NOT become the `pikkuFuncId`: renaming an export's rpc id
+    // is a different decision, and the scenario-step wrappers are the only place
+    // `name` carries that weight.
+    const declaredName = objectNode
+      ? getPropertyValue(objectNode, 'name')
+      : undefined
+    const toolName =
+      typeof declaredName === 'string' && declaredName ? declaredName : name
     if (!description) {
-      logger.warn(`MCP tool '${name}' is missing a description.`)
+      logger.warn(`MCP tool '${toolName}' is missing a description.`)
     }
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
-    state.mcpEndpoints.toolsMeta[name] = {
+    state.mcpEndpoints.toolsMeta[toolName] = {
       pikkuFuncId,
-      name,
+      name: toolName,
       title: title || undefined,
       description: description || undefined,
       summary,
