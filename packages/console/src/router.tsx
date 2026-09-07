@@ -41,6 +41,14 @@ export const useConsoleRouter = (): ConsoleRouter => {
   return ctx
 }
 
+/**
+ * The router if one is mounted, else null — for chrome that renders in both a
+ * routed app and a bare host embed, where `useConsoleRouter` throwing would take
+ * the page down over an optional feature.
+ */
+export const useOptionalConsoleRouter = (): ConsoleRouter | null =>
+  useContext(RouterContext)
+
 export const useLink = (): LinkComponent => useConsoleRouter().Link
 export const useNavigate = () => useConsoleRouter().useNavigate()
 export const useLocation = () => useConsoleRouter().useLocation()

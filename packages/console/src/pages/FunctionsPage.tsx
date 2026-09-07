@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useSearchParams } from '../router'
-import { Group, TextInput } from '@pikku/mantine/core'
+import { Box, Group, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -51,6 +51,7 @@ export const FunctionsPage: React.FC<{
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
+                  data-help="search"
                   placeholder={m.functions_search_placeholder()}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
@@ -58,11 +59,13 @@ export const FunctionsPage: React.FC<{
                   size="xs"
                   style={{ width: 240 }}
                 />
-                <PikkuToggle
-                  checked={showPikkuFunctions}
-                  onChange={setShowPikkuFunctions}
-                  tooltip={m.common_show_pikku_internals()}
-                />
+                <Box data-help="internals">
+                  <PikkuToggle
+                    checked={showPikkuFunctions}
+                    onChange={setShowPikkuFunctions}
+                    tooltip={m.common_show_pikku_internals()}
+                  />
+                </Box>
                 {headerRight}
               </Group>
             }
@@ -75,13 +78,15 @@ export const FunctionsPage: React.FC<{
           (rawFunctions as unknown as any[]).length === 0
         }
       >
-        <FunctionsListPanel
-          searchQuery={searchQuery}
-          showPikkuFunctions={showPikkuFunctions}
-          extraColumns={extraColumns}
-          testsByFunction={testsByFunction}
-          emptyHero={emptyHero}
-        />
+        <Box data-help="list" style={{ height: '100%' }}>
+          <FunctionsListPanel
+            searchQuery={searchQuery}
+            showPikkuFunctions={showPikkuFunctions}
+            extraColumns={extraColumns}
+            testsByFunction={testsByFunction}
+            emptyHero={emptyHero}
+          />
+        </Box>
       </ResizablePanelLayout>
     </ConsoleSurface>
   )
