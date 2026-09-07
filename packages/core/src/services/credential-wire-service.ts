@@ -2,7 +2,6 @@ import { isSecretValue } from '../classification/secret-value.js'
 import type { CredentialService } from './credential-service.js'
 import { defaultPikkuUserIdResolver } from './pikku-user-id.js'
 import type { PikkuRawWire } from '../types/core.types.js'
-import type { SecretService } from './secret-service.js'
 
 /**
  * Where one credential's value is read from. Decided by what the credential IS
@@ -10,13 +9,11 @@ import type { SecretService } from './secret-service.js'
  * whether a per-user lookup came back empty. An absence-driven fallback would
  * let a user who has not connected read the deployment's own token.
  */
-export type CredentialResolution =
-  { mode: 'wire' } | { mode: 'singleton' } | { mode: 'secret'; key: string }
+export type CredentialResolution = { mode: 'wire' } | { mode: 'singleton' }
 
 export type CredentialResolutionConfig = {
   /** Keyed by the resolved (post-alias) credential name. */
   resolutions: Record<string, CredentialResolution>
-  secrets?: SecretService
 }
 
 export class PikkuCredentialWireService {
@@ -116,30 +113,22 @@ export class PikkuCredentialWireService {
   }
 
   /**
-   * The `singleton` and `secret` halves of the dispatch. `wire` is absent here
-   * on purpose: those values arrive with `getAll(userId)` above, so a wire
-   * credential can never pick up a platform value that happens to exist.
+   * The `singleton` half of the dispatch. `wire` is absent here on purpose:
+   * those values arrive with `getAll(userId)` above, so a wire credential can
+   * never pick up a platform value that happens to exist.
    */
   private async loadDeploymentCredentials(): Promise<void> {
     const resolutions = this.resolution?.resolutions
     if (!resolutions) return
+    if (!this.credentialService) return
 
     for (const [name, resolution] of Object.entries(resolutions)) {
       if (resolution.mode === 'wire' || name in this.credentials) continue
 
-      if (resolution.mode === 'singleton') {
-        if (!this.credentialService) continue
-        const value = await this.credentialService.get(name)
-        if (value !== null) {
-          this.credentials[name] = value
-        }
-        continue
+      const value = await this.credentialService.get(name)
+      if (value !== null) {
+        this.credentials[name] = value
       }
-
-      const secrets = this.resolution?.secrets
-      if (!secrets) continue
-      const secret = await secrets.getSecret(resolution.key)
-      this.credentials[name] = isSecretValue(secret) ? secret.reveal() : secret
     }
   }
 }
