@@ -154,6 +154,20 @@ export const fabricCommands = defineCLICommands({
     description:
       'Register the current git repo as a fabric project and queue an initial deploy',
     options: {
+      github: {
+        description:
+          'Assert the repo is on github.com (fails if origin points elsewhere)',
+        default: false,
+      },
+      gitea: {
+        description:
+          "Host the repo on fabric's git server — creates and pushes to it when there is no origin",
+        default: false,
+      },
+      repoName: {
+        description:
+          'Name for a repo created by --gitea (defaults to the directory name)',
+      },
       apiUrl: {
         description: 'Override the fabric-api URL stored in fabric.config.json',
       },
