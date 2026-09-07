@@ -132,3 +132,86 @@ describe('pikkuAddonServices — what an addon takes from its parent', () => {
     assert.equal(restored.addonServicesFactorySeen, true)
   })
 })
+
+describe('pikkuAddonWireServices — what an addon builds per wire', () => {
+  test('the parent bag is the wire factory first parameter', async () => {
+    const { state } = await inspectSource(
+      'pikku-addon-wire-forwarded-',
+      [
+        "import { pikkuAddonWireServices } from '#pikku/addon/setup'",
+        'export const createWireServices = pikkuAddonWireServices(',
+        '  async ({ kysely }, { getCredential }) => {',
+        '    return { reporting: makeReporting(kysely, getCredential) }',
+        '  }',
+        ')',
+      ].join('\n')
+    )
+
+    assert.ok(
+      state.addonRequiredParentServices.includes('kysely'),
+      'kysely is read off the parent bag and must be declared as required'
+    )
+    assert.ok(
+      !state.addonRequiredParentServices.includes('getCredential'),
+      'the second parameter is the wire, and nothing on it is a parent service'
+    )
+  })
+
+  test('a service the wire factory returns is built by the addon, not owed to the parent', async () => {
+    const { state } = await inspectSource(
+      'pikku-addon-wire-created-',
+      [
+        "import { pikkuAddonWireServices } from '#pikku/addon/setup'",
+        'export const createWireServices = pikkuAddonWireServices(',
+        '  async ({ variables }, wire) => {',
+        '    const gcs = makeStorage(await variables.get("ID"), wire.getCredential)',
+        '    return { googleCloudStorage: gcs }',
+        '  }',
+        ')',
+      ].join('\n')
+    )
+
+    assert.deepEqual(state.addonCreatedServices, ['googleCloudStorage'])
+    assert.ok(
+      !state.addonRequiredParentServices.includes('getCredential'),
+      'the wire is the second parameter, not the parent bag'
+    )
+    assert.ok(
+      !state.addonRequiredParentServices.includes('googleCloudStorage'),
+      'the addon builds it per wire, so a consumer must not be asked for it'
+    )
+    assert.equal(state.addonServicesFactorySeen, true)
+  })
+
+  test('an addon with both factories owes the parent only what neither builds', async () => {
+    const { state } = await inspectSource(
+      'pikku-addon-both-factories-',
+      [
+        "import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/addon/setup'",
+        'export const createSingletonServices = pikkuAddonServices(',
+        '  async (_config, { secrets, kysely }) => {',
+        '    return { analytics: makeAnalytics(secrets, kysely) }',
+        '  }',
+        ')',
+        'export const createWireServices = pikkuAddonWireServices(',
+        '  async ({ variables }, wire) => {',
+        '    return { reporting: makeReporting(variables, wire.getCredential) }',
+        '  }',
+        ')',
+      ].join('\n')
+    )
+
+    assert.deepEqual(state.addonCreatedServices.sort(), [
+      'analytics',
+      'reporting',
+    ])
+    assert.ok(
+      state.addonRequiredParentServices.includes('kysely'),
+      'kysely comes off the parent bag and is genuinely owed'
+    )
+    assert.ok(
+      !state.addonRequiredParentServices.includes('reporting'),
+      'the wire factory builds reporting, so it is not owed'
+    )
+  })
+})

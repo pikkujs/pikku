@@ -31,3 +31,5 @@ Modes are resolved at generation time into the credentials meta, so the console'
 A credential a wiring points at a secret is marked as such in the meta, so the console shows it as configured in the vault rather than offering a connect flow nobody can use. And the project's own credentials are registered into pikku state from the generated credentials file, so `wire.getCredential` resolves an app-level singleton the same way it resolves an addon's.
 
 `pikku new addon` no longer requires a `pikku.config.json` in the working directory. Scaffolding an addon is something you do before a project config exists, so the command now reads one when it is there and falls back to the working directory when it is not.
+
+An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all.
