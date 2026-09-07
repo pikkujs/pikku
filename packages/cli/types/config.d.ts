@@ -85,6 +85,11 @@ export interface PikkuCLICoreOutputFiles {
   webhookWorkersFile?: string
   webhookSchemasFile?: string
 
+  // Remote job inbox routes (derived from scaffold.pikkuDir when scaffold.remoteJobs is enabled).
+  // Optional: left undefined when scaffold.remoteJobs is not enabled, so consumers must guard.
+  remoteJobsFile?: string
+  remoteJobsSchemasFile?: string
+
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string
   publicRpcSchemasFile?: string
@@ -614,6 +619,13 @@ export type PikkuCLIInput = {
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature
     remoteRpc?: PikkuScaffoldFeature
+    /**
+     * HTTP routes an external dispatcher posts to so a runtime that holds
+     * neither a queue consumer nor a clock still runs its queue workers and
+     * scheduled tasks. Guarded by `PIKKU_DISPATCH_SECRET`, which must be set
+     * for the routes to serve anyone at all.
+     */
+    remoteJobs?: PikkuScaffoldFeature
     /**
      * The outgoing webhook delivery worker exposes no endpoint of its own and
      * has no output path to override — it is on or off.

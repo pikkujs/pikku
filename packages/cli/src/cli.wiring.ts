@@ -91,6 +91,7 @@ import {
   enableWorkflow,
   enableEvents,
   enableRemoteRpc,
+  enableRemoteJobs,
   enableWebhook,
 } from './functions/commands/enable.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
@@ -951,6 +952,11 @@ wireCLI({
           func: enableWebhook,
           description:
             'Enable the outgoing webhook delivery queue worker (scaffolds webhook.gen.ts)',
+        }),
+        'remote-jobs': pikkuCLICommand({
+          func: enableRemoteJobs,
+          description:
+            'Enable the remote job inbox routes for queue and scheduled work (scaffolds remote-jobs.gen.ts)',
         }),
       },
     },

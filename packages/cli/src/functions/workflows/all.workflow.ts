@@ -347,10 +347,12 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     let remoteRPC = false
     let webhook = false
+    let remoteJobs = false
     let workflowRoutes = false
     if (!config.addon) {
       remoteRPC = await workflow.do('Remote RPC', 'pikkuRemoteRPC', null)
       webhook = await workflow.do('Webhook', 'pikkuWebhook', null)
+      remoteJobs = await workflow.do('Remote jobs', 'pikkuRemoteJobs', null)
       if (workflows) {
         workflowRoutes = await workflow.do(
           'Workflow routes',
@@ -379,6 +381,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflows ||
       remoteRPC ||
       webhook ||
+      remoteJobs ||
       workflowRoutes ||
       unresolvedSchemas
     ) {
