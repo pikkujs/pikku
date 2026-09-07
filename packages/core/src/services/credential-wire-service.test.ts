@@ -7,7 +7,6 @@ import {
 } from './credential-wire-service.js'
 import type { CredentialService } from './credential-service.js'
 import type { PikkuWire } from '../types/core.types.js'
-import { SecretValue } from '../classification/secret-value.js'
 
 const mockCredentialService = (
   creds: Record<string, unknown>
@@ -276,27 +275,6 @@ describe('PikkuCredentialWireService type-driven resolution', () => {
       null,
       'an unconnected user must not inherit the deployment credential'
     )
-  })
-
-  test('should read a secret-backed credential from the secret service', async () => {
-    const secrets = {
-      getSecret: async (key: string) =>
-        new SecretValue({ accessToken: `from-${key}` }),
-    } as any
-
-    const service = new PikkuCredentialWireService(
-      platformOnly({}),
-      {},
-      undefined,
-      {
-        resolutions: { gmailOAuth: { mode: 'secret', key: 'GMAIL_TOKENS' } },
-        secrets,
-      }
-    )
-
-    assert.deepStrictEqual(await service.get('gmailOAuth'), {
-      accessToken: 'from-GMAIL_TOKENS',
-    })
   })
 
   test('should resolve a singleton credential under its overridden name', async () => {

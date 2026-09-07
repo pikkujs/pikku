@@ -81,29 +81,4 @@ describe('serializeCredentialsTypes', () => {
   test('an addon file registers nothing, its package file already does', () => {
     assert.doesNotMatch(serialize(credential('Stripe')), /pikkuState/)
   })
-
-  /**
-   * A credential a wiring pointed at a secret has no one to connect it: the
-   * value comes from the vault. The generated meta has to say so, or the
-   * console offers a connect flow that would never be used.
-   */
-  test('carries a vault-backed credential through to the generated meta', () => {
-    const source = serializeCredentialsTypes({
-      definitions: credential('Stripe'),
-      credentials: {
-        stripe: {
-          name: 'stripe',
-          displayName: 'Stripe',
-          type: 'singleton',
-          secret: 'STRIPE_TOKENS',
-        },
-      },
-      schemaLookup: new Map(),
-      credentialsFile: '/project/.pikku/credentials/pikku-credentials.gen.ts',
-      packageMappings: {},
-    })
-
-    assert.match(source, /secret: "STRIPE_TOKENS"/)
-    assert.deepEqual(parseErrors(source), [])
-  })
 })

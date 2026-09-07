@@ -23,8 +23,8 @@ export type WireAddonConfig = {
   variableOverrides?: Record<string, string>
   /**
    * Points a credential the addon reads at a different key in this deployment,
-   * and — in the object form — decides whether it is per-user, deployment-wide,
-   * or read from a secret. An addon declares a default; the wiring decides.
+   * and — in the object form — decides whether it is per-user or
+   * deployment-wide. An addon declares a default; the wiring decides.
    */
   credentialOverrides?: CredentialOverrides
   /** Extra secrets this instance may read, named as the addon reads them — the scope check runs before `secretOverrides` renames them. */

@@ -13,8 +13,6 @@ export type CredentialOverride =
       name?: string
       /** `wire` is per user, `singleton` is one value for the deployment. */
       mode?: 'singleton' | 'wire'
-      /** Reads the value from this secret instead. Static, so it is never refreshed for you. */
-      secret?: string
     }
 
 export type CredentialOverrides = Record<string, CredentialOverride>
@@ -54,11 +52,6 @@ export const buildCredentialResolutions = (
     const override = overrides?.[name]
     const resolved =
       (typeof override === 'string' ? override : override?.name) ?? name
-
-    if (typeof override === 'object' && override.secret) {
-      resolutions[resolved] = { mode: 'secret', key: override.secret }
-      continue
-    }
 
     const mode =
       (typeof override === 'object' ? override.mode : undefined) ??
