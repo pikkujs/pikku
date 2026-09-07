@@ -52,7 +52,7 @@ export const wireScheduler = <
   tasks.set(scheduledTask.name, scheduledTask)
 }
 
-class ScheduledTaskNotFoundError extends PikkuError {
+export class ScheduledTaskNotFoundError extends PikkuError {
   constructor(title: string) {
     super(`Scheduled task not found: ${title}`)
   }

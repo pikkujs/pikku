@@ -9,56 +9,46 @@ describe('serializeRemoteJobs', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(functions.includes("route: '/__pikku/queue-job'"))
     assert.ok(functions.includes("route: '/__pikku/scheduler-job'"))
-    assert.ok(functions.includes('runQueueJob'))
-    assert.ok(functions.includes('runScheduledTask'))
+    assert.ok(functions.includes("tags: ['pikku']"))
   })
 
-  test('guards both routes with the dispatch secret', () => {
-    const { functions } = serializeRemoteJobs(leaf)
-    assert.equal(
-      functions.split('middleware: [remoteJobsSecretMiddleware]').length - 1,
-      2,
-      'both routes carry the guard'
-    )
-    assert.ok(functions.includes("variables?.get?.('PIKKU_DISPATCH_SECRET')"))
-    assert.ok(functions.includes("http?.request?.header?.('x-pikku-dispatch')"))
-  })
-
-  test('rejects when no secret is configured', () => {
+  test('spells the routes out so the inspector can read them', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(
-      functions.includes(
-        "if (!expected || typeof provided !== 'string' || !safeEqual(provided, expected))"
-      ),
-      'an unset secret must reject rather than open the inbox'
+      !functions.includes('REMOTE_QUEUE_JOB_PATH'),
+      'a constant would leave the HTTP map without a route'
     )
   })
 
-  test('separates a permanent failure from one worth redelivering', () => {
+  test('delegates the work to core rather than generating it', () => {
     const { functions } = serializeRemoteJobs(leaf)
-    assert.ok(functions.includes('PikkuMissingMetaError'))
-    assert.ok(functions.includes('QueueJobDiscardedError'))
-    assert.ok(functions.includes('ScheduledTaskNotFoundError'))
+    assert.ok(functions.includes('pikkuRemoteQueueJobFunc'))
+    assert.ok(functions.includes('pikkuRemoteScheduledJobFunc'))
+    assert.ok(functions.includes("from '@pikku/core/services'"))
+    assert.ok(
+      !functions.includes('runQueueJob') && !functions.includes('runScheduledTask'),
+      'the runners belong to core, not to generated source'
+    )
+  })
+
+  test('guards both routes with the middleware core exports', () => {
+    const { functions } = serializeRemoteJobs(leaf)
+    assert.ok(
+      functions.includes("import { remoteJobsSecret } from '@pikku/core/middleware'")
+    )
     assert.equal(
-      functions.split('throw new BadRequestError').length - 1,
+      functions.split('middleware: [remoteJobsSecret]').length - 1,
       2,
-      'each route acks its own permanent failure'
+      'both routes carry the guard'
     )
   })
 
   test('imports each wiring helper from its own leaf', () => {
     const { functions } = serializeRemoteJobs(leaf)
     assert.ok(
-      functions.includes(
-        "import { pikkuSessionlessFunc, type SingletonServices } from './function/index.js'"
-      )
+      functions.includes("import { pikkuSessionlessFunc } from './function/index.js'")
     )
     assert.ok(functions.includes("import { wireHTTP } from './http/index.js'"))
-    assert.ok(
-      functions.includes(
-        "import { pikkuMiddleware } from './middleware/index.js'"
-      )
-    )
   })
 
   test('describes both payloads with zod schemas from the sibling module', () => {

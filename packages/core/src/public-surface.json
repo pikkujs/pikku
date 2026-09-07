@@ -16,6 +16,7 @@
     "pikkuMiddleware",
     "pikkuMiddlewareFactory",
     "pikkuRemoteAuthMiddleware",
+    "remoteJobsSecret",
     "requireOrigin",
     "runMiddleware",
     "telemetryInner",
@@ -98,7 +99,9 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./actor-flow": ["runConversation"],
+  "./actor-flow": [
+    "runConversation"
+  ],
   "./virtual-user": [
     "DEFAULT_MAX_INTERVAL_MS",
     "DEFAULT_MIN_INTERVAL_MS",
@@ -161,7 +164,9 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": ["buildRemoteHeaders"],
+  "./remote": [
+    "buildRemoteHeaders"
+  ],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -171,12 +176,17 @@
     "wireQueueWorker"
   ],
   "./scheduler": [
+    "ScheduledTaskNotFoundError",
     "getScheduledTasks",
     "logSchedulers",
     "runScheduledTask",
     "wireScheduler"
   ],
-  "./trigger": ["PikkuTriggerService", "wireTrigger", "wireTriggerSource"],
+  "./trigger": [
+    "PikkuTriggerService",
+    "wireTrigger",
+    "wireTriggerSource"
+  ],
   "./rpc": [
     "PikkuRPCService",
     "RPCNotFoundError",
@@ -196,7 +206,10 @@
     "safeFetch",
     "setDefaultHostResolver"
   ],
-  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
+  "./node-host-resolver": [
+    "installNodeHostResolver",
+    "nodeHostResolver"
+  ],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -265,7 +278,10 @@
     "runCLICommand",
     "wireCLI"
   ],
-  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
+  "./cli/command-parser": [
+    "generateCommandHelp",
+    "parseCLIArguments"
+  ],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -318,8 +334,14 @@
     "verifyActorSecret",
     "verifyPersonaRoles"
   ],
-  "./secret": ["defineSecret", "validateAndBuildSecretDefinitionsMeta"],
-  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
+  "./secret": [
+    "defineSecret",
+    "validateAndBuildSecretDefinitionsMeta"
+  ],
+  "./variable": [
+    "defineVariable",
+    "validateAndBuildVariableDefinitionsMeta"
+  ],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -394,6 +416,10 @@
     "PikkuCredentialWireService",
     "PikkuSessionService",
     "QueueWebhookService",
+    "REMOTE_JOBS_SECRET_HEADER",
+    "REMOTE_JOBS_SECRET_VARIABLE",
+    "REMOTE_QUEUE_JOB_PATH",
+    "REMOTE_SCHEDULER_JOB_PATH",
     "SchedulerService",
     "ScopedCredentialService",
     "ScopedSecretService",
@@ -412,6 +438,8 @@
     "deriveActorSecret",
     "getStubTracker",
     "isTestRun",
+    "pikkuRemoteQueueJobFunc",
+    "pikkuRemoteScheduledJobFunc",
     "pikkuWebhookWorkerFunc",
     "renderEmail",
     "scenarioArtifactContentType",
@@ -421,10 +449,19 @@
     "verifyActorSecret",
     "withoutSecrets"
   ],
-  "./services/local-meta": ["LocalMetaService"],
-  "./services/v8-coverage": ["V8CoverageService"],
-  "./services/istanbul-coverage": ["IstanbulCoverageService"],
-  "./services/local-content": ["LocalContent", "signedContentPath"],
+  "./services/local-meta": [
+    "LocalMetaService"
+  ],
+  "./services/v8-coverage": [
+    "V8CoverageService"
+  ],
+  "./services/istanbul-coverage": [
+    "IstanbulCoverageService"
+  ],
+  "./services/local-content": [
+    "LocalContent",
+    "signedContentPath"
+  ],
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
@@ -454,7 +491,10 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
+  "./hmac": [
+    "hmacSha256Hex",
+    "timingSafeStringEqual"
+  ],
   "./state": [
     "addPackageServiceFactories",
     "getAllPackageStates",
@@ -501,6 +541,13 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": ["clearPikkuRuntimeState", "defineServiceTests"],
-  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
+  "./testing": [
+    "clearPikkuRuntimeState",
+    "defineServiceTests"
+  ],
+  "./dev": [
+    "pikkuDevReloader",
+    "reconcileAddonRegistry",
+    "reloadGeneratedMeta"
+  ]
 }
