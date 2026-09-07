@@ -19,10 +19,19 @@ installed surface. This skill is the part the compiler cannot tell you: how an
 agent reaches the rest of the app, and which of its knobs mean something other
 than what they look like.
 
+## Ask before you write
+
+**The model is not your decision.** Read `prompt.md` and ask the question in it
+before the first agent file exists — a `provider/model` string is a hard
+dependency on somebody's account and allow-list, and it fails at runtime, so
+choosing one for them is how an app ships pinned to a model its owner cannot
+call.
+
 ## Pick the reference
 
 | You are… | Read |
 | --- | --- |
+| About to create an agent — which provider, which model, whose key | `prompt.md` |
 | Defining or invoking an agent — tools, memory, streaming, approval, threads, images | `references/agents.md` |
 | Wiring the runner, or pointing model strings at a provider or gateway | `references/runner-vercel.md` |
 | Adding speech in or out of an agent | `references/voice.md` |
