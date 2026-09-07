@@ -6,16 +6,12 @@ import {
   NoopAuditService,
   createInvocationAudit,
 } from '@pikku/core/services'
-import { createAuditedKysely, KyselyScopeService } from '@pikku/kysely'
-import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
-import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import { createAuditedKysely } from '@pikku/kysely'
 import { pikkuServices, pikkuWireServices } from '#pikku/setup'
 import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
 import { TypedVariablesService } from '../.pikku/variables/pikku-variables.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { Kysely } from 'kysely'
-import type { VercelAgentRunner } from '@pikku/ai-vercel'
 import { GeneratedTemplateEmailService } from './lib/email-service.js'
 import type { DB } from '#pikku/db/schema.gen.js'
 
@@ -58,61 +54,9 @@ export const createSingletonServices = pikkuServices(
     // wire services; wire your own `credentialService` here if you need one.
     const credentialService = existingServices?.credentialService
 
-    const litellmProxyUrl = process.env.LITELLM_PROXY_URL ?? null
-    const litellmApiKey = process.env.LITELLM_API_KEY ?? null
-    let aiAgentRunner: VercelAgentRunner | undefined
-    if (litellmProxyUrl && litellmApiKey) {
-      // The AI SDKs (~3MB) are stubbed out of non-agent units at bundle time —
-      // only units with the `ai-model` capability keep them. So import them
-      // dynamically and guard on the module resolving to a real export; in a
-      // stubbed unit the import yields `{}` and the runner is simply not built.
-      const aiVercel = await import('@pikku/ai-vercel')
-      const aiSdk = await import('@ai-sdk/openai-compatible')
-      if (aiVercel.VercelAgentRunner && aiSdk.createOpenAICompatible) {
-        const litellmProvider = aiSdk.createOpenAICompatible({
-          name: 'litellm',
-          baseURL: litellmProxyUrl,
-          apiKey: litellmApiKey,
-        })
-        aiAgentRunner = new aiVercel.VercelAgentRunner({
-          openai: (modelId: string) => litellmProvider.chatModel(modelId),
-          anthropic: (modelId: string) => litellmProvider.chatModel(modelId),
-          google: (modelId: string) => litellmProvider.chatModel(modelId),
-          deepseek: (modelId: string) => litellmProvider.chatModel(modelId),
-        })
-      }
-    }
-
-    // Without a ScopeService no user can hold any scope, so every function that
-    // requires one denies everybody — `defineScope`, `defineSystemRole` and the
-    // role grants `pikku persona sync` writes all exist and none of them reach a
-    // request. It resolves userId -> roles -> scopes out of the four pikku_* tables.
-    //
-    // Built as the concrete class rather than the `ScopeService` interface because
-    // `init()` (which creates those tables if they are absent) is the
-    // implementation's, not the contract's. The cast is the app's own `DB` — which
-    // includes the pikku_* tables — against the narrower shape the service
-    // declares; the two differ only in kysely's internal builder generics.
-    let scopeService = existingServices?.scopeService
-    if (!scopeService) {
-      const kyselyScopes = new KyselyScopeService(
-        kysely as unknown as Kysely<KyselyPikkuDB>
-      )
-      await kyselyScopes.init()
-      scopeService = kyselyScopes
-    }
-
-    // The definitions in scopes.ts and roles.ts are declarations until something
-    // writes them down. Nothing else does, and a role with no row cannot be
-    // granted — `addUserToRole` fails the pikku_role_scopes foreign key, which is
-    // how persona provisioning discovers it.
-    await scopeService.syncScopes(SCOPES)
-    await scopeService.syncSystemRoles(SYSTEM_ROLES)
-
     return {
       ...(existingServices ?? {}),
       config,
-      scopeService,
       workflowService: existingServices?.workflowService,
       workflowRunService: existingServices?.workflowRunService,
       variables,
@@ -127,7 +71,6 @@ export const createSingletonServices = pikkuServices(
       // `secrets` at all (every function-facing services type is bounded by
       // SecretlessServices).
       ...(credentialService ? { credentialService } : {}),
-      ...(aiAgentRunner ? { aiAgentRunner } : {}),
     }
   }
 )
