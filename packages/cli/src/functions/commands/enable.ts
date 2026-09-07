@@ -11,6 +11,7 @@ type SurfaceFeature =
   | 'workflow'
   | 'events'
   | 'remoteRpc'
+  | 'remoteJobs'
 
 type WorkerFeature = 'webhook'
 
@@ -76,6 +77,11 @@ export const enableEvents = pikkuVoidFunc({
 export const enableRemoteRpc = pikkuVoidFunc({
   func: async ({ logger, config }) =>
     enableFeature('remoteRpc', logger, config),
+})
+
+export const enableRemoteJobs = pikkuVoidFunc({
+  func: async ({ logger, config }) =>
+    enableFeature('remoteJobs', logger, config),
 })
 
 export const enableWebhook = pikkuVoidFunc({

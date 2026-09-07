@@ -18,6 +18,16 @@ export {
   QueueWebhookService,
   pikkuWebhookWorkerFunc,
 } from './queue-webhook-service.js'
+export {
+  REMOTE_JOBS_SECRET_HEADER,
+  REMOTE_JOBS_SECRET_VARIABLE,
+  REMOTE_QUEUE_JOB_PATH,
+  REMOTE_SCHEDULER_JOB_PATH,
+  pikkuRemoteQueueJobFunc,
+  pikkuRemoteScheduledJobFunc,
+  type RemoteQueueJobData,
+  type RemoteScheduledJobData,
+} from './remote-jobs.js'
 export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'

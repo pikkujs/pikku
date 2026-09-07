@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2878 observable things**: 913 exported names, plus
-1965 members on the classes and interfaces among them, reachable
+**2894 observable things**: 923 exported names, plus
+1971 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 148 | 116 | 419 |
+| `./services` | 156 | 124 | 424 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
@@ -32,8 +32,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./classification` | 22 | 22 | 14 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
+| `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
-| `./middleware` | 26 | 24 | 0 |
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
@@ -49,11 +49,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./role` | 9 | 9 | 0 |
+| `./scheduler` | 7 | 7 | 1 |
 | `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
 | `./secret` | 7 | 7 | 0 |
-| `./scheduler` | 6 | 6 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
 | `./dev` | 4 | 4 | 2 |
@@ -478,6 +478,7 @@ pikkuChannelMiddlewareFactory: <In = any>(factory: CorePikkuChannelMiddlewareFac
 pikkuMiddleware: <SingletonServices extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, UserSession extends CoreUserSession = CoreUserSession>(middleware: CorePikkuMiddleware<SingletonServices, UserSession> | CorePikkuMiddlewareConfig<SingletonServices, UserSession>) => CorePikkuMiddleware<SingletonServices, UserSession>
 pikkuMiddlewareFactory: <In = any>(factory: CorePikkuMiddlewareFactory<In>) => CorePikkuMiddlewareFactory<In>
 pikkuRemoteAuthMiddleware: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
+remoteJobsSecret: CorePikkuMiddleware<CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, CoreUserSession>
 requireOrigin: CorePikkuMiddlewareFactory<{ origins?: string[] | ((services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => string[] | Promise<string[]>) | undefined; }>
 runMiddleware: <Middleware extends CorePikkuMiddleware<any, any>>(services: Parameters<Middleware>[0], wire: Parameters<Middleware>[1], middlewares: readonly Middleware[], main?: (() => Promise<unknown>) | undefined) => Promise<unknown>
 telemetryInner: CorePikkuMiddlewareFactory<void | { environmentId?: string | undefined; orgId?: string | undefined; }>
@@ -2823,6 +2824,9 @@ export type CoreScheduledTask<
 getScheduledTasks: () => Map<string, CoreScheduledTask>
 logSchedulers: (logger: Logger) => void
 runScheduledTask: ({ name, session, traceId, }: RunScheduledTasksParams) => Promise<void>
+export class ScheduledTaskNotFoundError extends PikkuError {
+  constructor(title: string)
+}
 export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
   Record<
     string,
@@ -4816,6 +4820,8 @@ export class PikkuCredentialWireService {
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>>
   getScoped(allowedNames: string[]): Record<string, unknown> | Promise<Record<string, unknown>>
 }
+pikkuRemoteQueueJobFunc: ({ logger }: { logger: Logger; }, { queueName, data, jobId, traceId }: RemoteQueueJobData) => Promise<void>
+pikkuRemoteScheduledJobFunc: ({ logger }: { logger: Logger; }, { taskName }: RemoteScheduledJobData) => Promise<void>
 export class PikkuSessionService< UserSession extends CoreUserSession, > implements SessionService<UserSession> {
   public sessionChanged: boolean
   public initial: UserSession | undefined
@@ -4834,6 +4840,19 @@ export class QueueWebhookService extends WebhookService {
   constructor(protected queueService: QueueService)
   public async send(input: SendWebhookInput): Promise<SendWebhookResult>
   protected async prepareDelivery(input: SendWebhookInput): Promise<{ jobData: WebhookJobData; options: JobOptions }>
+}
+REMOTE_JOBS_SECRET_HEADER: "x-pikku-dispatch"
+REMOTE_JOBS_SECRET_VARIABLE: "PIKKU_DISPATCH_SECRET"
+REMOTE_QUEUE_JOB_PATH: "/__pikku/queue-job"
+REMOTE_SCHEDULER_JOB_PATH: "/__pikku/scheduler-job"
+export interface RemoteQueueJobData {
+  queueName: string
+  data?: unknown
+  jobId?: string
+  traceId?: string
+}
+export interface RemoteScheduledJobData {
+  taskName: string
 }
 export interface RenderedEmailResult {
   locale: string

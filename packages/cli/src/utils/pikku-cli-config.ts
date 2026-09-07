@@ -555,6 +555,7 @@ const _getPikkuCLIConfig = async (
       workflow: 'workflowRoutesFile',
       events: 'eventsChannelFile',
       remoteRpc: 'remoteRpcWorkersFile',
+      remoteJobs: 'remoteJobsFile',
     }
     const scaffoldBlock = result.scaffold as
       Record<string, PikkuScaffoldFeature> | undefined
@@ -603,6 +604,13 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'webhook',
         'webhook.schemas.gen.ts'
+      )
+    }
+    if (result.scaffold?.remoteJobs && !result.remoteJobsFile) {
+      result.remoteJobsFile = join(
+        resolvedScaffoldDir,
+        'remote-jobs',
+        'remote-jobs.gen.ts'
       )
     }
     if (result.scaffold?.workflow && !result.workflowRoutesFile) {

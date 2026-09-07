@@ -1,4 +1,5 @@
 export {
+  ScheduledTaskNotFoundError,
   runScheduledTask,
   wireScheduler,
   getScheduledTasks,
