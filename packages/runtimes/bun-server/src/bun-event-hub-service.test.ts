@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { defineEventHubServiceTests } from '@pikku/core/testing'
 import { BunEventHubService } from './bun-event-hub-service.js'
 
 type FakeSocket = {
@@ -23,7 +24,7 @@ describe('BunEventHubService', () => {
   test('subscribe/unsubscribe proxy to the registered socket', async () => {
     const hub = new BunEventHubService()
     const socket = makeSocket()
-    await hub.onChannelOpened('c1', socket as any)
+    hub.registerSocket('c1', socket as any)
 
     await hub.subscribe('news', 'c1')
     await hub.unsubscribe('news', 'c1')
@@ -32,7 +33,7 @@ describe('BunEventHubService', () => {
     assert.deepEqual(socket.unsubscribed, ['news'])
   })
 
-  test('subscribe is a no-op for unknown channels', async () => {
+  test('a channel with no socket falls through to the local hub', async () => {
     const hub = new BunEventHubService()
     await assert.doesNotReject(hub.subscribe('news', 'missing'))
     await assert.doesNotReject(hub.unsubscribe('news', 'missing'))
@@ -65,13 +66,15 @@ describe('BunEventHubService', () => {
     assert.equal(calls[1][2], true)
   })
 
-  test('onChannelClosed removes the socket so later subscribes are no-ops', async () => {
+  test('onChannelClosed removes the socket so later subscribes miss it', async () => {
     const hub = new BunEventHubService()
     const socket = makeSocket()
-    await hub.onChannelOpened('c1', socket as any)
+    hub.registerSocket('c1', socket as any)
     await hub.onChannelClosed('c1')
 
     await hub.subscribe('news', 'c1')
     assert.deepEqual(socket.subscribed, [])
   })
 })
+
+defineEventHubServiceTests('BunEventHubService', () => new BunEventHubService())

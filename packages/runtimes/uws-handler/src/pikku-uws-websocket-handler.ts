@@ -107,7 +107,7 @@ export const pikkuWebsocketHandler = ({
       channelHandler.registerOnClose(() => {
         ws.close()
       })
-      eventHub.onChannelOpened(channelHandler.channelId, ws)
+      eventHub.registerSocket(channelHandler.channelId, ws)
       channelHandler.open()
     },
     message: async (ws, message, isBinary) => {
