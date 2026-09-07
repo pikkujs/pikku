@@ -36,6 +36,10 @@ import {
   PikkuCredentialWireService,
   createWireServicesCredentialWireProps,
 } from '../services/credential-wire-service.js'
+import {
+  buildCredentialResolutions,
+  credentialOverrideAliases,
+} from '../wirings/credential/credential-overrides.js'
 import { defaultPikkuUserIdResolver } from '../services/pikku-user-id.js'
 import {
   createInvocationAudit,
@@ -241,6 +245,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
       : wire
 
+  const declaredCredentials = funcPackageName
+    ? pikkuState(funcPackageName, 'package', 'credentialsMeta')
+    : null
+
   // Set up early so middleware can use setCredential. An addon instance with
   // credentialOverrides always gets a fresh alias-aware service, even when a
   // parent credential service is already present on the wire.
@@ -251,7 +259,14 @@ export const runPikkuFunc = async <In = any, Out = any>(
       singletonServices.credentialService ??
         resolvedSingletonServices.credentialService,
       resolvedWire,
-      addonInstance.credentialOverrides
+      credentialOverrideAliases(addonInstance.credentialOverrides),
+      {
+        resolutions: buildCredentialResolutions(
+          declaredCredentials,
+          addonInstance.credentialOverrides
+        ),
+        secrets: resolvedSingletonServices.secrets,
+      }
     )
     Object.assign(
       resolvedWire,
@@ -262,7 +277,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
       credentialWireService ??
       new PikkuCredentialWireService(
         resolvedSingletonServices.credentialService,
-        resolvedWire
+        resolvedWire,
+        undefined,
+        {
+          resolutions: buildCredentialResolutions(
+            declaredCredentials,
+            undefined
+          ),
+          secrets: resolvedSingletonServices.secrets,
+        }
       )
     Object.assign(
       resolvedWire,

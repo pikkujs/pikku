@@ -2,6 +2,22 @@ import { isSecretValue } from '../classification/secret-value.js'
 import type { CredentialService } from './credential-service.js'
 import { defaultPikkuUserIdResolver } from './pikku-user-id.js'
 import type { PikkuRawWire } from '../types/core.types.js'
+import type { SecretService } from './secret-service.js'
+
+/**
+ * Where one credential's value is read from. Decided by what the credential IS
+ * — its declared type, as the wiring may have overridden it — and never by
+ * whether a per-user lookup came back empty. An absence-driven fallback would
+ * let a user who has not connected read the deployment's own token.
+ */
+export type CredentialResolution =
+  { mode: 'wire' } | { mode: 'singleton' } | { mode: 'secret'; key: string }
+
+export type CredentialResolutionConfig = {
+  /** Keyed by the resolved (post-alias) credential name. */
+  resolutions: Record<string, CredentialResolution>
+  secrets?: SecretService
+}
 
 export class PikkuCredentialWireService {
   private credentials: Record<string, unknown> = {}
@@ -11,7 +27,8 @@ export class PikkuCredentialWireService {
   constructor(
     private credentialService?: CredentialService,
     private wire?: PikkuRawWire,
-    private aliases?: Record<string, string>
+    private aliases?: Record<string, string>,
+    private resolution?: CredentialResolutionConfig
   ) {}
 
   private resolveName(name: string): string {
@@ -79,18 +96,50 @@ export class PikkuCredentialWireService {
    */
   private async doLoad(): Promise<void> {
     try {
-      if (!this.credentialService || !this.wire) return
-      const userId = defaultPikkuUserIdResolver(this.wire)
-      if (!userId) return
-      this.wire.pikkuUserId = userId
-      const allCreds = await this.credentialService.getAll(userId)
-      for (const [name, value] of Object.entries(allCreds)) {
-        if (!(name in this.credentials)) {
-          this.credentials[name] = value
+      if (!this.credentialService && !this.resolution) return
+      const userId = this.wire
+        ? defaultPikkuUserIdResolver(this.wire)
+        : undefined
+      if (this.credentialService && this.wire && userId) {
+        this.wire.pikkuUserId = userId
+        const allCreds = await this.credentialService.getAll(userId)
+        for (const [name, value] of Object.entries(allCreds)) {
+          if (!(name in this.credentials)) {
+            this.credentials[name] = value
+          }
         }
       }
+      await this.loadDeploymentCredentials()
     } finally {
       this.loaded = true
+    }
+  }
+
+  /**
+   * The `singleton` and `secret` halves of the dispatch. `wire` is absent here
+   * on purpose: those values arrive with `getAll(userId)` above, so a wire
+   * credential can never pick up a platform value that happens to exist.
+   */
+  private async loadDeploymentCredentials(): Promise<void> {
+    const resolutions = this.resolution?.resolutions
+    if (!resolutions) return
+
+    for (const [name, resolution] of Object.entries(resolutions)) {
+      if (resolution.mode === 'wire' || name in this.credentials) continue
+
+      if (resolution.mode === 'singleton') {
+        if (!this.credentialService) continue
+        const value = await this.credentialService.get(name)
+        if (value !== null) {
+          this.credentials[name] = value
+        }
+        continue
+      }
+
+      const secrets = this.resolution?.secrets
+      if (!secrets) continue
+      const secret = await secrets.getSecret(resolution.key)
+      this.credentials[name] = isSecretValue(secret) ? secret.reveal() : secret
     }
   }
 }

@@ -1,3 +1,4 @@
+import type { CredentialOverrideMeta } from '../types.js'
 import * as ts from 'typescript'
 import { existsSync, readFileSync } from 'fs'
 import { dirname, join, parse } from 'path'
@@ -49,7 +50,7 @@ export const resolveAddonName = (
       rpcEndpoint?: string
       secretOverrides?: Record<string, string>
       variableOverrides?: Record<string, string>
-      credentialOverrides?: Record<string, string>
+      credentialOverrides?: Record<string, CredentialOverrideMeta>
     }
   >
 ): string | null => {
