@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { serializeRemoteJobs } from './serialize-remote-jobs.js'
+import { remoteJobsSchemasFile } from '../../../utils/remote-jobs-schemas-file.js'
 
 const leaf = (name: string) => `./${name}/index.js`
 
@@ -60,6 +61,22 @@ describe('serializeRemoteJobs', () => {
     assert.ok(functions.includes('input: RemoteScheduledJob'))
     assert.ok(functions.includes("from './remote-jobs.schemas.gen.js'"))
     assert.ok(!functions.includes('pikkuSessionlessFunc<'))
+  })
+
+  test('imports the schemas by the name the command writes them under', () => {
+    const { functions } = serializeRemoteJobs(leaf)
+    const written = remoteJobsSchemasFile('/app/.pikku/remote-jobs/remote-jobs.gen.ts')
+    assert.ok(
+      functions.includes(`from './${written!.split('/').pop()!.replace('.ts', '.js')}'`)
+    )
+  })
+
+  test('follows the routes file wherever a path override moves it', () => {
+    assert.equal(
+      remoteJobsSchemasFile('/app/generated/jobs/remote-jobs.gen.ts'),
+      '/app/generated/jobs/remote-jobs.schemas.gen.ts'
+    )
+    assert.equal(remoteJobsSchemasFile(undefined), undefined)
   })
 
   test('keeps the schemas module free of anything but zod', () => {

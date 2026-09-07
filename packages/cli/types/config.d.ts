@@ -88,7 +88,6 @@ export interface PikkuCLICoreOutputFiles {
   // Remote job inbox routes (derived from scaffold.pikkuDir when scaffold.remoteJobs is enabled).
   // Optional: left undefined when scaffold.remoteJobs is not enabled, so consumers must guard.
   remoteJobsFile?: string
-  remoteJobsSchemasFile?: string
 
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string

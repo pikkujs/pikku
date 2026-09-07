@@ -613,15 +613,6 @@ const _getPikkuCLIConfig = async (
         'remote-jobs.gen.ts'
       )
     }
-    if (result.scaffold?.remoteJobs && !result.remoteJobsSchemasFile) {
-      // Derived from the routes file rather than the scaffold dir: the routes
-      // import the schemas as a sibling, so a `path` override that moved one
-      // without the other would generate an import of a file nothing writes.
-      result.remoteJobsSchemasFile = join(
-        dirname(result.remoteJobsFile!),
-        'remote-jobs.schemas.gen.ts'
-      )
-    }
     if (result.scaffold?.workflow && !result.workflowRoutesFile) {
       result.workflowRoutesFile = join(
         resolvedScaffoldDir,
