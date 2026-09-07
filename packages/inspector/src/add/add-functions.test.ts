@@ -643,3 +643,69 @@ describe('pikkuRemoteChannelFunc', () => {
     )
   })
 })
+
+describe('MCP tool naming', () => {
+  const quietLogger = (): InspectorLogger => ({
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    diagnostic: () => {},
+    critical: () => {},
+    hasCriticalErrors: () => false,
+  })
+
+  test('a declared name is what the tool is published as', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-mcp-tool-name-'))
+    const file = join(rootDir, 'tool.ts')
+    await writeFile(
+      file,
+      [
+        "import { pikkuMCPToolFunc } from '@pikku/core'",
+        'export const createUnansweredCountTool = pikkuMCPToolFunc({',
+        "  name: 'getUnansweredConversationCount',",
+        "  description: 'How many conversations are unanswered.',",
+        '  func: async () => ({ ok: true })',
+        '})',
+      ].join('\n')
+    )
+
+    try {
+      const state = await inspect(quietLogger(), [file], { rootDir })
+      const tools = state.mcpEndpoints.toolsMeta
+      assert.ok(
+        tools['getUnansweredConversationCount'],
+        `expected the declared name, got: ${Object.keys(tools).join(', ')}`
+      )
+      assert.strictEqual(tools['createUnansweredCountTool'], undefined)
+      assert.strictEqual(
+        tools['getUnansweredConversationCount']!.pikkuFuncId,
+        'createUnansweredCountTool'
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('with no declared name the export still names the tool', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-mcp-tool-export-'))
+    const file = join(rootDir, 'tool.ts')
+    await writeFile(
+      file,
+      [
+        "import { pikkuMCPToolFunc } from '@pikku/core'",
+        'export const listOpenTickets = pikkuMCPToolFunc({',
+        "  description: 'Tickets still open.',",
+        '  func: async () => ({ ok: true })',
+        '})',
+      ].join('\n')
+    )
+
+    try {
+      const state = await inspect(quietLogger(), [file], { rootDir })
+      assert.ok(state.mcpEndpoints.toolsMeta['listOpenTickets'])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+})
