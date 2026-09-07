@@ -1,4 +1,7 @@
-export { BunSqliteDatabase } from './bun-sqlite-adapter.js'
+export {
+  BunSqliteDatabase,
+  openBunSqliteDatabase,
+} from './bun-sqlite-adapter.js'
 export {
   createBunSqliteKysely,
   type CreateBunSqliteKyselyOptions,

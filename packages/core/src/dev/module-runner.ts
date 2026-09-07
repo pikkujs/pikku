@@ -43,6 +43,44 @@ export interface PikkuModuleRunner {
 export const isTopLevelAwaitLimitation = (error: Error): boolean =>
   /top-level await/i.test(error.message)
 
+interface BunResolver {
+  resolveSync: (specifier: string, parent: string) => string
+}
+
+/** The `require` a reloaded module is run with.
+ *
+ *  On Bun, `createRequire`'s referrer stops being honoured somewhere in a
+ *  long-running process: the same relative specifier that resolves in a fresh
+ *  script fails inside a `pikku dev` that has been up for a while, so a file
+ *  importing `./sibling.js` reloads as `Cannot find module` and the developer
+ *  is left serving the previous code from an edit that looked applied. Bun's
+ *  own resolver still answers correctly when handed the importer's directory
+ *  outright, so the specifier is resolved to an absolute path first and the
+ *  referrer never has to survive the trip. Anything Bun's resolver declines —
+ *  builtins among them — falls through to `require` unchanged.
+ */
+const createRequireForFile = (absPath: string): NodeRequire => {
+  const base = createRequire(pathToFileURL(absPath))
+  const bun = (globalThis as { Bun?: BunResolver }).Bun
+  if (!bun) return base
+
+  const importerDir = dirname(absPath)
+  const resolveThroughBun = (specifier: string): string => {
+    try {
+      return bun.resolveSync(specifier, importerDir)
+    } catch {
+      return specifier
+    }
+  }
+
+  // Only resolution is delegated; the require itself stays outside the guard so
+  // a module that throws while evaluating reports its own error rather than
+  // being retried under a second specifier.
+  const bunRequire = ((specifier: string) =>
+    base(resolveThroughBun(specifier))) as NodeRequire
+  return Object.assign(bunRequire, base)
+}
+
 export const createModuleRunner = (): PikkuModuleRunner => {
   const registry = new Map<string, Record<string, unknown>>()
 
@@ -63,7 +101,7 @@ export const createModuleRunner = (): PikkuModuleRunner => {
         { filename: absPath }
       )
 
-      const require = createRequire(pathToFileURL(absPath))
+      const require = createRequireForFile(absPath)
       const moduleObj: { exports: Record<string, unknown> } = { exports: {} }
       fn(require, moduleObj.exports, moduleObj, absPath, dirname(absPath))
 
