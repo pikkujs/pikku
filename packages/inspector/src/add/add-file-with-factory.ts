@@ -14,15 +14,19 @@ const wrapperFunctionMap: Record<string, string> = {
 }
 
 /**
- * What an addon's `pikkuAddonServices` factory takes from the parent: the names
- * destructured off its second parameter, either in the parameter list or from a
- * `const { … } = existingServices` in the body.
+ * What an addon's services factory takes from the parent: the names
+ * destructured off the parameter carrying the parent's bag, either in the
+ * parameter list or from a `const { … } = existingServices` in the body.
+ *
+ * `pikkuAddonServices` receives it second, after the config;
+ * `pikkuAddonWireServices` receives it first, ahead of the wire.
  */
 const extractForwardedServices = (
-  functionNode: ts.ArrowFunction | ts.FunctionExpression
+  functionNode: ts.ArrowFunction | ts.FunctionExpression,
+  servicesParamIndex: number
 ): string[] => {
   const forwarded: string[] = []
-  const secondParam = functionNode.parameters[1]
+  const secondParam = functionNode.parameters[servicesParamIndex]
   if (!secondParam) return forwarded
 
   const collectBinding = (pattern: ts.ObjectBindingPattern) => {
@@ -176,10 +180,22 @@ export const addFileWithFactory = (
             }
 
             // Extract existing services an addon needs from the parent
-            // (second parameter of pikkuAddonServices callback)
-            if (wrapperFunctionName === 'pikkuAddonServices' && functionNode) {
+            // (second parameter of pikkuAddonServices callback). A wire
+            // factory reads the same parent bag and returns services of its
+            // own, so it declares the same contract — a service it builds per
+            // wire is one the addon owns, not one its consumer owes.
+            if (
+              (wrapperFunctionName === 'pikkuAddonServices' ||
+                wrapperFunctionName === 'pikkuAddonWireServices') &&
+              functionNode
+            ) {
               state.addonServicesFactorySeen = true
-              const forwarded = new Set(extractForwardedServices(functionNode))
+              const forwarded = new Set(
+                extractForwardedServices(
+                  functionNode,
+                  wrapperFunctionName === 'pikkuAddonWireServices' ? 0 : 1
+                )
+              )
               for (const name of forwarded) {
                 state.addonRequiredParentServices.push(name)
               }
