@@ -18,6 +18,7 @@ import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
 import { findSecretAliasServices } from './secret-alias-services.js'
+import { deriveOAuth2AppSecrets } from '@pikku/core/secret'
 import { resolveCoreType } from './resolve-core-type.js'
 import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
@@ -1266,6 +1267,21 @@ export function validateNoSecretAliasServices(
  * at first request rather than at deploy; a non-literal key is a read the
  * manifest cannot cover, so a per-unit scope cannot be narrowed around it.
  */
+/**
+ * Registers the app secrets the project's OAuth2 credentials imply, so a
+ * deployment is asked for the client id and secret every connect flow needs
+ * without an author restating a shape the runtime already fixes.
+ */
+export function registerDerivedOAuth2AppSecrets(
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const derived = deriveOAuth2AppSecrets(
+    state.credentials?.definitions ?? [],
+    state.secrets.definitions
+  )
+  state.secrets.definitions.push(...derived)
+}
+
 export function validateSecretUsage(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>

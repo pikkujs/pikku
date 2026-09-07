@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2898 observable things**: 927 exported names, plus
+**2899 observable things**: 928 exported names, plus
 1971 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
@@ -51,10 +51,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
 | `./scheduler` | 7 | 7 | 1 |
+| `./secret` | 8 | 8 | 0 |
 | `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
-| `./secret` | 7 | 7 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
 | `./dev` | 4 | 4 | 2 |
@@ -4072,6 +4072,7 @@ export type CoreSecret<T = unknown> = {
   allowedHosts?: string[]
 }
 defineSecret: <T>(_config: CoreSecret<T>) => void
+deriveOAuth2AppSecrets: (credentials: CredentialDefinitions, declared: SecretDefinitions) => SecretDefinitions
 export type OAuth2CredentialConfig = {
   tokenSecretId: string
   authorizationUrl: string

@@ -31,6 +31,7 @@ import {
   computePermissionsGroupsMeta,
   computeRequiredSchemas,
   validateNoSecretAliasServices,
+  registerDerivedOAuth2AppSecrets,
   validateSecretUsage,
   computeDiagnostics,
   validateSchemaReferences,
@@ -518,6 +519,7 @@ export const inspect = async (
     computeMiddlewareGroupsMeta(state)
     computePermissionsGroupsMeta(state)
     validateNoSecretAliasServices(logger, checker, state)
+    registerDerivedOAuth2AppSecrets(state)
     validateSecretUsage(logger, state)
     computeDiagnostics(state)
     validateSchemaWiringSeparation(logger, state)
