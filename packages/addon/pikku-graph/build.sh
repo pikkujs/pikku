@@ -17,6 +17,7 @@ copy_generated_types() {
   cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true
   cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true
   copy_verbose_meta
+  copy_db_meta
   copy_application_types
 }
 
@@ -39,6 +40,14 @@ copy_verbose_meta() {
     mkdir -p "dist/$(dirname "$file")"
     cp "$file" "dist/$file"
   done
+}
+
+# The consumer resolves this through the package name and refuses an addon that
+# publishes none, so it must ship even when it is empty. Not silenced: `pikku
+# all` always writes it for an addon, so a missing file is a broken build.
+copy_db_meta() {
+  mkdir -p dist/.pikku/addon/db
+  cp .pikku/addon/db/pikku-db-meta.gen.json dist/.pikku/addon/db/
 }
 
 if [ "${1:-}" = "pikku" ]; then
