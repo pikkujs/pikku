@@ -410,11 +410,11 @@ export class PikkuNodeHTTPServer {
         return
       }
 
-      if (await this.handleContentRequest(req, res)) {
+      if (await this.handleStaticFileRequest(req, res)) {
         return
       }
 
-      if (await this.handleStaticFileRequest(req, res)) {
+      if (await this.handleContentRequest(req, res)) {
         return
       }
 
