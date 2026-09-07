@@ -1,5 +1,19 @@
 # @pikku/addon-admin
 
+## 0.12.3
+
+### Patch Changes
+
+- 712991d: Ship the generated `pikku-db-meta.gen.json` in `dist`. `pikku all` writes it
+  under `.pikku/addon/db/`, but `tsc` only emits the JSON it sees imported and
+  nothing imports this one, so it never reached the published package. Every
+  consumer running `pikku db generate` then failed with "does not publish
+  .pikku/db/pikku-db-meta.gen.json" — an addon that cannot say whether it ships
+  tables — which took out the `ai-postgres`, `remote-rpc-pg` and
+  `workflows-pg-boss` templates.
+- Updated dependencies [bbb9e3b]
+  - @pikku/core@0.12.106
+
 ## 0.12.2
 
 ### Patch Changes

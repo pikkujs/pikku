@@ -1,3 +1,11 @@
+## 0.12.141
+
+### Patch Changes
+
+- bbb9e3b: Add a `scaffold.remoteJobs` flag that generates HTTP routes an external dispatcher posts to, so a runtime holding neither a queue consumer nor a clock still runs its queue workers and scheduled tasks. The runners and the secret guard live in `@pikku/core`; the scaffold only wires them.
+- Updated dependencies [bbb9e3b]
+  - @pikku/core@0.12.106
+
 ## 0.12.140
 
 ### Patch Changes
