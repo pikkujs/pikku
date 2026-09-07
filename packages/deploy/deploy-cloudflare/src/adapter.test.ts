@@ -77,3 +77,47 @@ describe('CloudflareProviderAdapter contributors', () => {
     assert.doesNotMatch(source, /new Kysely/)
   })
 })
+
+const inboxUnit = {
+  ...(unit as object),
+  handlers: [
+    {
+      type: 'fetch',
+      routes: [
+        {
+          method: 'post',
+          route: '/__pikku/queue-job',
+          pikkuFuncId: 'runRemoteQueueJob',
+        },
+      ],
+    },
+    { type: 'queue', queueName: 'emails' },
+  ],
+} as never
+
+const inboxCtx = { ...(ctx as object), unit: inboxUnit } as never
+
+describe('CloudflareProviderAdapter remote job inbox', () => {
+  test('the container entry mounts the runtime inbox by default', () => {
+    const source = new CloudflareProviderAdapter().generateServerEntrySource(
+      ctx
+    )
+
+    assert.match(source, /dispatchJobs: true/)
+  })
+
+  test('the container entry stands down where the unit wires the inbox', () => {
+    const source = new CloudflareProviderAdapter().generateServerEntrySource(
+      inboxCtx
+    )
+
+    assert.match(source, /dispatchJobs: false/)
+  })
+
+  test('httpQueueJobs stands down where the unit wires the inbox', () => {
+    const adapter = new CloudflareProviderAdapter({ httpQueueJobs: true })
+
+    assert.match(adapter.generateEntrySource(ctx), /httpQueueJobs: true/)
+    assert.match(adapter.generateEntrySource(inboxCtx), /httpQueueJobs: false/)
+  })
+})

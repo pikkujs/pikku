@@ -28,6 +28,7 @@ import {
   collectContributorLines,
   dedupeContributors,
   partitionContributors,
+  unitWiresRemoteJobInbox,
 } from '@pikku/deploy'
 
 export type { PlatformServiceContributor } from '@pikku/deploy'
@@ -101,6 +102,16 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       CLOUDFLARE_BINDING_SOURCES,
       this.name
     )
+  }
+
+  /**
+   * The runtime's own inbox is mounted ahead of route dispatch, so it would
+   * shadow the one `scaffold.remoteJobs` wires — along with any middleware in
+   * front of it. Where the unit wires the inbox itself, the runtime shim
+   * stands down and the wired routes serve dispatch.
+   */
+  private resolveHttpQueueJobs(unit: DeploymentUnit): boolean {
+    return this.httpQueueJobs && !unitWiresRemoteJobInbox(unit)
   }
 
   getPlatform(): 'browser' {
@@ -241,7 +252,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `  const server = new PikkuNodeHTTPServer(`,
       `    { ...config, hostname: HOST, port: PORT, healthCheckPath: '/__pikku/health' },`,
       `    singletonServices.logger,`,
-      `    { dispatchJobs: true, dispatchSecret: process.env.PIKKU_DISPATCH_SECRET },`,
+      `    { dispatchJobs: ${!unitWiresRemoteJobInbox(ctx.unit)}, dispatchSecret: process.env.PIKKU_DISPATCH_SECRET },`,
       `  )`,
       `  server.enableExitOnSignals()`,
       `  await server.init()`,
@@ -335,7 +346,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `export default createCloudflareHandler(`,
       `  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },`,
       `  ${JSON.stringify(handlerTypes)},`,
-      `  { httpQueueJobs: ${this.httpQueueJobs} }`,
+      `  { httpQueueJobs: ${this.resolveHttpQueueJobs(ctx.unit)} }`,
       `)`,
       ``,
     ]
@@ -425,8 +436,10 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
 
     const handlerTypes = includeQueueHandler ? `["fetch", "queue"]` : ''
 
+    const httpQueueJobs = this.resolveHttpQueueJobs(ctx.unit)
+
     const exportLine = includeQueueHandler
-      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes},\n  { httpQueueJobs: ${this.httpQueueJobs} }\n)`
+      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes},\n  { httpQueueJobs: ${httpQueueJobs} }\n)`
       : `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`
 
     const handlerImport = includeQueueHandler
