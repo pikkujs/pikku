@@ -25,6 +25,14 @@ import { expect, testIdSelector } from '@pikku/playwright'
 /** How long a model-backed turn is given to complete. */
 const RESPONSE_TIMEOUT = 60_000
 
+/**
+ * How long a purely client-side render is given. Nothing here waits on a model,
+ * so a minute of it is a minute of a failure taking to report itself: the
+ * element either paints once the bundle and its queries settle, or it never
+ * will.
+ */
+const RENDER_TIMEOUT = 10_000
+
 const COMPOSER: TestIdSelector = { testId: 'agent-composer' }
 const PENDING_APPROVAL: TestIdSelector = {
   testId: 'approval-card',
@@ -69,10 +77,10 @@ export const opensAgentPlayground = pikkuScenarioStep<
     await Promise.race([
       browser
         .locate(COMPOSER)
-        .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT }),
+        .waitFor({ state: 'visible', timeout: RENDER_TIMEOUT }),
       browser
         .locate({ testId: 'agent-credential-prompt' })
-        .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT }),
+        .waitFor({ state: 'visible', timeout: RENDER_TIMEOUT }),
     ])
     return { threadId }
   },
@@ -516,13 +524,13 @@ export const seesCredentialPrompt = pikkuScenarioStep<
   browser: async (_services, { credentialName }, { browser }) => {
     await browser
       .locate({ testId: 'agent-credential-prompt' })
-      .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
+      .waitFor({ state: 'visible', timeout: RENDER_TIMEOUT })
     await browser
       .locate({
         testId: 'agent-credential-requirement',
         where: { 'data-credential-name': credentialName },
       })
-      .waitFor({ state: 'visible', timeout: RESPONSE_TIMEOUT })
+      .waitFor({ state: 'visible', timeout: RENDER_TIMEOUT })
     return { credentialName }
   },
 })
