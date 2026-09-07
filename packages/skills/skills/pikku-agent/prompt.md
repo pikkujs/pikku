@@ -8,37 +8,48 @@ for. **Ask, then write.** One question, before the first agent file exists.
 
 ## The question
 
-> Which model should this run on? I can use the Pikku Fabric gateway (nothing to
-> set up), or point it at your own provider — tell me which and I'll wire the key.
+> Which model should this run on? If you're on a gateway I can use its default
+> and there's nothing to set up — otherwise tell me the provider and I'll wire
+> the key.
 
 Two answers, and they lead to different files.
 
-### They are on the Pikku Fabric gateway
+### They are on a gateway
 
-Nothing to set up: the gateway credentials are injected into the sandbox, so
-there is no key to ask for and no `.env` line to add. **Default to
-`gateway/luna`** unless they name something else — it is the cheap general
-route and the right first choice for drafting, extraction and chat.
+A gateway is one provider entry that accepts many model names, so there is no
+per-vendor key to ask for. Pikku Fabric injects one: it points `openai`,
+`anthropic`, `gemini`, `deepseek` and `zai` at a LiteLLM proxy, and the cheap
+general route is **`openai/gpt-5.6-luna`** — use it unless they name something
+else. It is the right first choice for drafting, extraction and chat.
 
-Do not tell them a key is missing. Do not raise a key-setup card. If a model
-call fails here it is a routing or allow-list problem, not a missing credential,
-and the fix is a different model string rather than a key.
+Read that prefix correctly: `openai/` here selects **the gateway**, not OpenAI,
+and `gpt-5.6-luna` is a name the gateway serves rather than a vendor model. A
+bare alias with no slash throws.
+
+Do not tell them a key is missing, and do not raise a key-setup card. On an
+injected gateway the credentials are already there — a failing call is a routing
+or allow-list problem, and the fix is a different model string, not a key.
 
 ### They are bringing their own provider
 
-Ask which one, then wire exactly that provider into `providers` and read its key
-through `secrets`/`variables` — never a literal. Name the model they actually
-have access to; do not substitute a cheaper one you prefer.
+Ask which one, wire exactly that provider into `providers`, and read its key
+through `secrets`/`variables` — never a literal. Name a model they actually have
+access to; do not substitute a cheaper one you prefer.
 
-## Do not pin a gateway model under a vendor's prefix
+## The prefix you pick is a claim on that vendor's name
 
-`providers` is public and mutable so deploy-time contributors can swap a
-gateway-routed provider in after construction — and an exact entry always beats
-`'*'`. So `openai/<a-model-only-the-gateway-serves>` works until the day
-something registers a real `openai` provider, at which point every agent in the
-app starts calling the vendor directly and gets `model does not exist`. It looks
-like the gateway refusing a model; it is the gateway no longer being in the
-call. Give a gateway model a prefix no vendor contributor will claim.
+`providers` is public and mutable so deploy-time contributors can swap providers
+in after construction, and an exact entry always beats `'*'`. So a gateway model
+named `openai/…` keeps working only while nothing registers a real `openai`
+provider — and adding an OpenAI key to the app is exactly what does that. From
+then on every agent under that prefix calls the vendor directly and gets
+`model does not exist`, which reads like the gateway refusing a model when it is
+really the gateway no longer being in the call.
+
+There is no prefix that is safe in the abstract, so make it a question rather
+than a guess: if they are likely to bring their own OpenAI or Anthropic key
+later, put the gateway models under one of its other names (`zai/`, `deepseek/`,
+`gemini/`) and leave `openai/` free for the key they will add.
 
 ## Once it is written, say how to reach it
 
