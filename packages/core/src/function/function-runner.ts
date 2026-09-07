@@ -201,6 +201,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
       ]
       if (funcMeta) {
         funcPackageName = addonTarget.packageName
+        // A `ref('ns:fn')` the app wired arrives with no instance, because the
+        // wiring is the app's. Without adopting the one the namespace resolves
+        // to, the function runs with the addon's declared secrets alone — the
+        // consuming app's `secretOverrides` and grants silently do not apply,
+        // and the app's own global middleware, running inside that scope, is
+        // denied secrets it owns.
+        addonInstance = addonInstance ?? addonTarget.instance
       }
     }
   }
