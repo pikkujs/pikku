@@ -401,7 +401,10 @@ jobs:
             workflows-pg-boss,
             remote-rpc-pg,
             remote-rpc-redis,
-            ai-postgres,
+            # ai-postgres is disabled: the OPENROUTER_API_KEY secret it runs its
+            # live agent turn against has expired, so every run retries 31 times
+            # and fails on `API key expired.`. Re-enable once the secret is rotated.
+            # ai-postgres,
           ]
         package-manager: [yarn]
     steps:
