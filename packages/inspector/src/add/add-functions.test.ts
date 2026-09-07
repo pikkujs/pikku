@@ -708,4 +708,36 @@ describe('MCP tool naming', () => {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
+  test('a plain func with mcp: true is published under its declared name', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-mcp-flag-name-'))
+    const file = join(rootDir, 'tool.ts')
+    await writeFile(
+      file,
+      [
+        "import { pikkuFunc } from '@pikku/core'",
+        'export const countUnanswered = pikkuFunc({',
+        '  mcp: true,',
+        "  name: 'getUnansweredConversationCount',",
+        "  description: 'How many conversations are unanswered.',",
+        '  func: async () => ({ ok: true })',
+        '})',
+      ].join('\n')
+    )
+
+    try {
+      const state = await inspect(quietLogger(), [file], { rootDir })
+      const tools = state.mcpEndpoints.toolsMeta
+      assert.ok(
+        tools['getUnansweredConversationCount'],
+        `expected the declared name, got: ${Object.keys(tools).join(', ')}`
+      )
+      assert.strictEqual(tools['countUnanswered'], undefined)
+      assert.strictEqual(
+        tools['getUnansweredConversationCount']!.pikkuFuncId,
+        'countUnanswered'
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
 })
