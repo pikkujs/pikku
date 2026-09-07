@@ -163,6 +163,70 @@ test('a plan whose every function and wire exists has nothing outstanding', () =
   }
 })
 
+// A version is an implementation fact, not something a plan states: codegen keys a
+// versioned function as `name@vN`, and a milestone that amended two existing functions
+// had both reported MISSING while they were built, wired and covered.
+test('a versioned function discharges the plan item that names it plainly', () => {
+  const dir = project({
+    ...bothBuilt,
+    'function/pikku-functions-meta.gen.json': {
+      'createEntry@v3': { auth: true },
+      'listEntries@v2': { auth: true },
+    },
+  })
+  try {
+    const { missing, deferred } = planShortfall(plan(), readPikkuMeta(dir))
+    assert.deepEqual(missing, [])
+    assert.deepEqual(deferred, [])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+// The `auth: false` cross-check has to read the revision that is actually deployed.
+test('the newest revision is the one a plan is measured against', () => {
+  const dir = project({
+    ...bothBuilt,
+    'function/pikku-functions-meta.gen.json': {
+      'createEntry@v1': { auth: true },
+      'createEntry@v2': { auth: false },
+      listEntries: { auth: true },
+    },
+  })
+  try {
+    const { problems } = planShortfall(plan(), readPikkuMeta(dir))
+    assert.equal(
+      problems.some(
+        (p) => p.includes('createEntry') && p.includes('auth: false')
+      ),
+      true
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('an unversioned function is never shadowed by a versioned one', () => {
+  const dir = project({
+    ...bothBuilt,
+    'function/pikku-functions-meta.gen.json': {
+      createEntry: { auth: true },
+      'createEntry@v2': { auth: false },
+      listEntries: { auth: true },
+    },
+  })
+  try {
+    const meta = readPikkuMeta(dir)
+    const { problems } = planShortfall(plan(), meta)
+    assert.equal(
+      problems.some((p) => p.includes('createEntry')),
+      false
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 // Completion asks whether the milestone's WALKING SKELETON is done. A later pass is real
 // work the next milestone picks up, and blocking on it is what made plan size fatal.
 test('a function planned for a later pass is deferred, not blocking', () => {
