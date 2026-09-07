@@ -9,6 +9,7 @@ import {
 } from '@pikku/core/services'
 import type { EmailService } from '@pikku/core/services'
 import { existsSync } from 'node:fs'
+import { openSqliteDatabase } from './sqlite-database.js'
 import { pikkuServices } from '#pikku/setup'
 import { pikkuState } from '@pikku/core/state'
 import { BetterAuthCredentialService } from '@pikku/better-auth'
@@ -85,7 +86,6 @@ export const createSingletonServices = pikkuServices(
     let workflowRunService: any
 
     if (backend === 'sqlite') {
-      const { default: Database } = await import('better-sqlite3')
       const { CamelCasePlugin, Kysely, SqliteDialect } = await import('kysely')
       const {
         SQLiteKyselyAgentStorageService,
@@ -107,7 +107,9 @@ export const createSingletonServices = pikkuServices(
       // file the last run left behind already has these tables.
       const freshDb = sqlitePath === ':memory:' || !existsSync(sqlitePath)
       const db = new Kysely<KyselyPikkuDB>({
-        dialect: new SqliteDialect({ database: new Database(sqlitePath) }),
+        dialect: new SqliteDialect({
+          database: await openSqliteDatabase(sqlitePath),
+        }),
         plugins: [new CamelCasePlugin(), new SerializePlugin()],
       })
       if (freshDb) {
@@ -179,14 +181,13 @@ export const createSingletonServices = pikkuServices(
     // names, so it gets its own SQLite instance rather than sharing the
     // AI/workflow db (which runs CamelCase/Serialize plugins). The auth factory
     // runs Better Auth's migrations against it on first request.
-    const { default: AuthDatabase } = await import('better-sqlite3')
     const {
       CamelCasePlugin: AuthCamelCase,
       Kysely: AuthKysely,
       SqliteDialect: AuthSqliteDialect,
     } = await import('kysely')
     const { SerializePlugin: AuthSerialize } = await import('@pikku/kysely')
-    const authDatabase = new AuthDatabase(':memory:')
+    const authDatabase = await openSqliteDatabase(':memory:')
     const kysely = new AuthKysely<KyselyPikkuDB>({
       dialect: new AuthSqliteDialect({ database: authDatabase }),
     })
@@ -208,7 +209,6 @@ export const createSingletonServices = pikkuServices(
     // deliberately plugin-free), kept separate so it works across DB_BACKEND.
     const { KyselyWebhookService, SerializePlugin: WebhookSerializePlugin } =
       await import('@pikku/kysely')
-    const { default: WebhookDatabase } = await import('better-sqlite3')
     const {
       Kysely: WebhookKysely,
       SqliteDialect: WebhookSqliteDialect,
@@ -216,7 +216,7 @@ export const createSingletonServices = pikkuServices(
     } = await import('kysely')
     const webhookDb = new WebhookKysely<KyselyPikkuDB>({
       dialect: new WebhookSqliteDialect({
-        database: new WebhookDatabase(':memory:'),
+        database: await openSqliteDatabase(':memory:'),
       }),
       plugins: [new WebhookCamelCasePlugin(), new WebhookSerializePlugin()],
     })
@@ -232,7 +232,7 @@ export const createSingletonServices = pikkuServices(
     const { KyselyAuditService } = await import('@pikku/kysely')
     const auditDb = new WebhookKysely<KyselyPikkuDB>({
       dialect: new WebhookSqliteDialect({
-        database: new WebhookDatabase(':memory:'),
+        database: await openSqliteDatabase(':memory:'),
       }),
       plugins: [new WebhookCamelCasePlugin(), new WebhookSerializePlugin()],
     })

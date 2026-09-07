@@ -209,4 +209,27 @@ describe('createModuleRunner', { concurrency: false }, () => {
       `heap grew ${growth.toFixed(1)} MB over 200 edits (expected < 15 MB)`
     )
   })
+
+  test('a .js specifier resolves to the .ts file that actually exists', async () => {
+    // How every TypeScript source in a pikku app refers to a sibling: the
+    // import is written `.js` and only the `.ts` is on disk. Nothing else here
+    // covers it — the delegated-import test writes a real `.js` — and it is the
+    // shape that breaks under Bun once `pikku dev` has been running, where the
+    // reload fails and the process quietly keeps serving the previous code.
+    await writeFile(join(tmpDir, 'dep.ts'), `export const value = 'from-dep'`)
+
+    const runner = createModuleRunner()
+    const userFile = join(tmpDir, 'importer.ts')
+    await writeFile(
+      userFile,
+      `import { value } from './dep.js'
+       export const fn = { func: async () => value }`
+    )
+
+    const result = await runner.run(userFile)
+    assert.equal(result.ok, true)
+    const mod = (result as { exports: Record<string, unknown> }).exports
+    assert.equal(await (mod.fn as { func: () => Promise<string> }).func(), 'from-dep')
+  })
+
 })

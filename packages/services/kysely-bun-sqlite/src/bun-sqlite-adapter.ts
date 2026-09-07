@@ -1,4 +1,4 @@
-import type { Database, Statement } from 'bun:sqlite'
+import { Database, type Statement } from 'bun:sqlite'
 import type { SqliteDatabase, SqliteStatement } from 'kysely'
 
 function coerce(v: unknown): unknown {
@@ -49,3 +49,16 @@ export class BunSqliteDatabase implements SqliteDatabase {
     this.db.close()
   }
 }
+
+/**
+ * Opens a `bun:sqlite` database as the `SqliteDatabase` Kysely's `SqliteDialect`
+ * binds to.
+ *
+ * `createBunSqliteKysely` covers the common case of one database behind one
+ * Kysely. This is for the case it cannot express: several Kysely instances —
+ * differing in their plugins — sharing a single underlying database, which is
+ * what lets a plugin-free instance (Better Auth needs unmangled column names)
+ * and a CamelCase one address the same tables.
+ */
+export const openBunSqliteDatabase = (filename: string): SqliteDatabase =>
+  new BunSqliteDatabase(new Database(filename))

@@ -5494,6 +5494,7 @@ __metadata:
     "@pikku/core": "workspace:*"
     "@pikku/jose": "workspace:*"
     "@pikku/kysely": "workspace:*"
+    "@pikku/kysely-bun-sqlite": "workspace:*"
     "@pikku/kysely-mysql": "workspace:*"
     "@pikku/kysely-postgres": "workspace:*"
     "@pikku/kysely-sqlite": "workspace:*"
@@ -5678,7 +5679,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite":
+"@pikku/kysely-bun-sqlite@workspace:*, @pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite"
   dependencies:

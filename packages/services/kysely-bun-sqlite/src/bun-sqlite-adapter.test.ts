@@ -1,8 +1,11 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { Database } from 'bun:sqlite'
-import { Kysely, SqliteDialect } from 'kysely'
-import { BunSqliteDatabase } from './bun-sqlite-adapter.js'
+import { Kysely, SqliteDialect, CamelCasePlugin } from 'kysely'
+import {
+  BunSqliteDatabase,
+  openBunSqliteDatabase,
+} from './bun-sqlite-adapter.js'
 
 interface TestDB {
   items: { id: number; name: string; active: number; score: number | null }
@@ -172,5 +175,38 @@ describe('BunSqliteDatabase', () => {
       .where('name', '=', 'meta')
       .executeTakeFirstOrThrow()
     assert.equal(updated.numUpdatedRows, 1n)
+  })
+})
+
+describe('openBunSqliteDatabase', () => {
+  test('opens a database two Kysely instances can share', async () => {
+    const database = openBunSqliteDatabase(':memory:')
+    const plain = new Kysely<TestDB>({ dialect: new SqliteDialect({ database }) })
+    const camelCase = new Kysely<TestDB>({
+      dialect: new SqliteDialect({ database }),
+      plugins: [new CamelCasePlugin()],
+    })
+
+    await plain.schema
+      .createTable('items')
+      .addColumn('id', 'integer', (c) => c.primaryKey().autoIncrement())
+      .addColumn('name', 'text', (c) => c.notNull())
+      .addColumn('active', 'integer', (c) => c.notNull())
+      .addColumn('score', 'real')
+      .execute()
+    await plain
+      .insertInto('items')
+      .values({ name: 'shared', active: 1, score: null })
+      .execute()
+
+    // The second instance addresses the same underlying database, which is the
+    // only reason a plugin-free and a CamelCase Kysely can span one schema.
+    const row = await camelCase
+      .selectFrom('items')
+      .selectAll()
+      .executeTakeFirstOrThrow()
+    assert.equal(row.name, 'shared')
+
+    await plain.destroy()
   })
 })
