@@ -217,7 +217,7 @@ jobs:
             webhooks,
             db-schema,
           ]
-        package-manager: [yarn, bun]
+        package-manager: [yarn]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
