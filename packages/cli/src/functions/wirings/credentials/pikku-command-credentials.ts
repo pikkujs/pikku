@@ -29,10 +29,7 @@ const applyWiredCredentialModes = (
       if (typeof override === 'string') continue
       const target = meta[override.name ?? logicalName]
       if (!target) continue
-      if (override.secret) {
-        target.type = 'singleton'
-        target.secret = override.secret
-      } else if (override.mode) {
+      if (override.mode) {
         target.type = override.mode
       }
     }

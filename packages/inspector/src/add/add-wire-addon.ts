@@ -73,7 +73,6 @@ function parseCredentialOverrideRecord(
           : undefined
       if (!memberKey || !ts.isStringLiteral(member.initializer)) continue
       if (memberKey === 'name') override.name = member.initializer.text
-      else if (memberKey === 'secret') override.secret = member.initializer.text
       else if (
         memberKey === 'mode' &&
         (member.initializer.text === 'wire' ||

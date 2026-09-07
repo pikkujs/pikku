@@ -263,7 +263,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
           declaredCredentials,
           addonInstance.credentialOverrides
         ),
-        secrets: resolvedSingletonServices.secrets,
       }
     )
     Object.assign(
@@ -282,7 +281,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
             declaredCredentials,
             undefined
           ),
-          secrets: resolvedSingletonServices.secrets,
         }
       )
     Object.assign(

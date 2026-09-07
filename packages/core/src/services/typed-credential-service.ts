@@ -6,8 +6,6 @@ export interface CredentialStatusInfo {
   isConfigured: boolean
   type: 'singleton' | 'wire'
   oauth2?: boolean
-  /** The secret key holding the value, when a wiring pointed the credential at the vault rather than at anyone to connect. */
-  secret?: string
 }
 
 export type CredentialMetaInfo = {
@@ -15,8 +13,6 @@ export type CredentialMetaInfo = {
   displayName: string
   type: 'singleton' | 'wire'
   oauth2?: boolean
-  /** The secret key holding the value, when a wiring pointed the credential at the vault rather than at anyone to connect. */
-  secret?: string
 }
 
 export class TypedCredentialService<
@@ -74,7 +70,6 @@ export class TypedCredentialService<
         isConfigured: await this.credentials.has(name, userId),
         type: meta.type,
         oauth2: meta.oauth2,
-        secret: meta.secret,
       })
     }
 

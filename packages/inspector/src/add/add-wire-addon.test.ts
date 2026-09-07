@@ -205,7 +205,6 @@ describe('addWireAddon', () => {
         credentialOverrides: {
           gmailOAuth: { mode: 'wire' },
           calendarOAuth: { name: 'CAL_SUPPORT', mode: 'singleton' },
-          driveOAuth: { secret: 'DRIVE_TOKENS' },
         },
       })
     `)
@@ -213,7 +212,6 @@ describe('addWireAddon', () => {
     assert.deepEqual(declarations.get('gmail').credentialOverrides, {
       gmailOAuth: { mode: 'wire' },
       calendarOAuth: { name: 'CAL_SUPPORT', mode: 'singleton' },
-      driveOAuth: { secret: 'DRIVE_TOKENS' },
     })
   })
 

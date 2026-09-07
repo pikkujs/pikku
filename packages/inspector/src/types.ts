@@ -542,7 +542,7 @@ export interface InspectorFeature {
  * string, or the object form that also decides how the value resolves.
  */
 export type CredentialOverrideMeta =
-  string | { name?: string; mode?: 'singleton' | 'wire'; secret?: string }
+  string | { name?: string; mode?: 'singleton' | 'wire' }
 
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files

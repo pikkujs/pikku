@@ -57,16 +57,6 @@ describe('buildCredentialResolutions', () => {
     assert.equal(resolutions.gmailOAuth, undefined)
   })
 
-  test('a secret-backed override wins over the declared type', () => {
-    const resolutions = buildCredentialResolutions(declared, {
-      gmailOAuth: { secret: 'GMAIL_TOKENS' },
-    })
-    assert.deepEqual(resolutions.gmailOAuth, {
-      mode: 'secret',
-      key: 'GMAIL_TOKENS',
-    })
-  })
-
   test('an undeclared credential defaults to per-user', () => {
     const resolutions = buildCredentialResolutions(null, {
       stripe: { name: 'STRIPE_LIVE' },

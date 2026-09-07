@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Box, Group, Button, Alert, Text } from '@pikku/mantine/core'
-import { KeyRound, Link2, Circle, AlertTriangle, Lock } from 'lucide-react'
+import { KeyRound, Link2, Circle, AlertTriangle } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useOptionalAuth } from '../../context/AuthContext'
@@ -18,7 +18,6 @@ interface CredentialMeta {
   description?: string
   type: 'singleton' | 'wire'
   isOAuth2: boolean
-  isVaultBacked: boolean
 }
 
 // Which addon (if any) declares each credential — so a row can show its origin
@@ -52,7 +51,6 @@ export const CredentialsOverviewTab: React.FC<{
             description: data.description,
             type: 'singleton',
             isOAuth2: !!data.oauth2,
-            isVaultBacked: !!data.secret,
           }) as CredentialMeta
       )
   }, [meta])
@@ -137,14 +135,6 @@ export const CredentialsOverviewTab: React.FC<{
                 : m.credentials_type_api_key(),
               tone: cred.isOAuth2 ? ('accent' as const) : ('neutral' as const),
             },
-            ...(cred.isVaultBacked
-              ? [
-                  {
-                    label: m.credentials_source_vault(),
-                    tone: 'neutral' as const,
-                  },
-                ]
-              : []),
           ],
           tags: owner ? [owner.namespace] : undefined,
         }
@@ -235,19 +225,6 @@ const CredentialRowActions: React.FC<{
 
   // Clicks on the action buttons must not also trigger the row's onOpen.
   const stop = (e: React.MouseEvent) => e.stopPropagation()
-
-  // A wiring pointed this credential at a secret, so its value is read from the
-  // vault at wire time. There is no account to link and no token to revoke.
-  if (credential.isVaultBacked) {
-    return (
-      <Group gap={6} wrap="nowrap">
-        <Lock size={12} color="var(--mantine-color-dimmed)" />
-        <Text size="sm" c="dimmed">
-          {m.credentials_configured_in_vault()}
-        </Text>
-      </Group>
-    )
-  }
 
   return (
     <Group gap="sm" wrap="nowrap" onClick={stop}>

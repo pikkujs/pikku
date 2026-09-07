@@ -59,9 +59,6 @@ export const serializeCredentialsTypes = ({
       `displayName: ${tsLiteral(meta.displayName)}`,
       `type: '${meta.type}'`,
     ]
-    if (meta.secret) {
-      metaParts.push(`secret: ${tsLiteral(meta.secret)}`)
-    }
     if (meta.oauth2) {
       metaParts.push(`oauth2: true`)
       // `type` rides along so consumers can tell a platform-wide credential from

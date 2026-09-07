@@ -354,8 +354,6 @@
   "credentials_empty_description": "Deklariere Zugangsdaten mit defineCredential, um die OAuth2-Anbieter und API-Schlüssel zu verwalten, mit denen sich dein Projekt verbindet.",
   "credentials_type_oauth2": "OAuth2",
   "credentials_type_api_key": "API-Schlüssel",
-  "credentials_source_vault": "Tresor",
-  "credentials_configured_in_vault": "Im Tresor konfiguriert",
   "credentials_connected": "Verbunden",
   "credentials_not_connected": "Nicht verbunden",
   "credentials_reconnect": "Erneut verbinden",
