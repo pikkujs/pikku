@@ -1,5 +1,13 @@
 # @pikku/deploy-cloudflare
 
+## 0.12.15
+
+### Patch Changes
+
+- a1eb8d2: the runtime's built-in remote job inbox stands down on units that wire the inbox themselves, so `scaffold.remoteJobs` routes and their middleware actually serve dispatch
+- Updated dependencies [a1eb8d2]
+  - @pikku/deploy@0.12.8
+
 ## 0.12.14
 
 ### Patch Changes

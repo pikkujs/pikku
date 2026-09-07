@@ -5422,7 +5422,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare"
   dependencies:
-    "@pikku/deploy": "npm:^0.12.6"
+    "@pikku/deploy": "npm:^0.12.8"
     typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
@@ -5446,7 +5446,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy@npm:^0.12.1, @pikku/deploy@npm:^0.12.6, @pikku/deploy@npm:^0.12.7, @pikku/deploy@workspace:packages/deploy/deploy-core":
+"@pikku/deploy@npm:^0.12.1, @pikku/deploy@npm:^0.12.7, @pikku/deploy@npm:^0.12.8, @pikku/deploy@workspace:packages/deploy/deploy-core":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy@workspace:packages/deploy/deploy-core"
   dependencies:
