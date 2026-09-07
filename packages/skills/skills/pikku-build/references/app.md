@@ -65,8 +65,8 @@ in one message. Then stop; do not interview the user.
   this same round, as a question and not a gate: one HTML page mocking the main
   screens, a few minutes, far cheaper to change than built screens. If they say
   yes, `references/design.md` owns what to make and what it then binds — the
-  approved page becomes source of truth for the screens and the milestones are
-  read off it. If they say no or say nothing, build.
+  approved page becomes source of truth for the screens, and the theme is written
+  before it so what they approve is what ships. If they say no, build.
 - **What language should the app speak, and what language does the team work
   in?** Two answers, not one — see §1a, which is where they go. Ask only if the
   request is not obviously English; a brief written in English about an English
