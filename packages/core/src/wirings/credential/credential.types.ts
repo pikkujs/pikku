@@ -29,6 +29,8 @@ export type CredentialDefinitionMeta = {
   oauth2?: OAuth2CredentialConfig & {
     appCredentialSecretId: string
   }
+  /** The secret key a `wireAddon` pointed this credential at. The value lives in the vault, so there is nothing for anyone to connect. */
+  secret?: string
   sourceFile?: string
 }
 
