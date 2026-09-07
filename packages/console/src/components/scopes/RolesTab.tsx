@@ -2,7 +2,7 @@ import { Alert, Badge, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { UsersRound } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
-import { RoleEditorDrawer, type EditableRole } from './RoleEditorDrawer'
+import { RoleEditorPanel, type EditableRole } from './RoleEditorPanel'
 import { isForbiddenScopeError } from './scope-error'
 import { useRoles, useDeclaredScopes } from '../../hooks/useScopes'
 import { m } from '@/i18n/messages'
@@ -12,9 +12,9 @@ const DOCS_HREF = 'https://pikku.dev/docs/authentication/scopes'
 type RolesTabProps = {
   search: string
   editing: EditableRole | null
-  drawerOpen: boolean
+  panelOpen: boolean
   onOpenRole: (role: EditableRole | null) => void
-  onCloseDrawer: () => void
+  onClosePanel: () => void
 }
 
 /**
@@ -25,9 +25,9 @@ type RolesTabProps = {
 export const RolesTab: React.FC<RolesTabProps> = ({
   search,
   editing,
-  drawerOpen,
+  panelOpen,
   onOpenRole,
-  onCloseDrawer,
+  onClosePanel,
 }) => {
   const rolesQuery = useRoles()
   const declaredQuery = useDeclaredScopes()
@@ -112,9 +112,9 @@ export const RolesTab: React.FC<RolesTabProps> = ({
           },
         ]}
       />
-      <RoleEditorDrawer
-        opened={drawerOpen}
-        onClose={onCloseDrawer}
+      <RoleEditorPanel
+        opened={panelOpen}
+        onClose={onClosePanel}
         role={editing}
         declaredScopes={declaredScopes}
       />

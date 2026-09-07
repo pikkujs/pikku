@@ -5,11 +5,11 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
 import { TableListPage } from '../layout/TableListPage'
-import { UserRolesDrawer } from './UserRolesDrawer'
+import { UserRolesPanel } from './UserRolesPanel'
 import { UserStatusBadge } from './UserStatusBadge'
 import { UserActionsMenu } from './UserActionsMenu'
-import { UserActionDrawer } from './UserActionDrawer'
-import { CreateUserDrawer } from './CreateUserDrawer'
+import { UserActionPanel } from './UserActionPanel'
+import { CreateUserPanel } from './CreateUserPanel'
 import type { UserAction } from './user-actions'
 import { useAdminUsers } from '../../hooks/useAdminUsers'
 import type { AuthUser } from '../../context/AuthContext'
@@ -17,15 +17,15 @@ import type { AuthUser } from '../../context/AuthContext'
 export interface UsersDirectoryPanelProps {
   /** Search term, already raw — the panel debounces before querying. */
   search?: string
-  /** Opens the create-user drawer. The button that sets it lives with whoever
+  /** Opens the create-user panel. The button that sets it lives with whoever
    * owns the header, because only they know if the viewer may create users. */
   creating?: boolean
   onCreatingChange?: (creating: boolean) => void
 }
 
 /**
- * The user directory table together with the drawers its rows open — roles,
- * ban/unban and the rest of the per-user actions, plus the create drawer.
+ * The user directory table together with the panels its rows open — roles,
+ * ban/unban and the rest of the per-user actions, plus the create panel.
  *
  * Fetches its own list through the ambient auth client, so a host can mount it
  * on its own and only has to supply a header if it wants search or create.
@@ -138,18 +138,18 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
           ]}
         />
       )}
-      <UserRolesDrawer
+      <UserRolesPanel
         opened={rolesFor !== null}
         onClose={() => setRolesFor(null)}
         userId={rolesFor?.id}
         userLabel={rolesFor?.label ?? ''}
       />
-      <CreateUserDrawer
+      <CreateUserPanel
         opened={creating}
         onClose={() => onCreatingChange?.(false)}
         onDone={refetchUsers}
       />
-      <UserActionDrawer
+      <UserActionPanel
         action={actionFor?.action ?? null}
         user={actionFor?.user ?? null}
         onClose={() => setActionFor(null)}

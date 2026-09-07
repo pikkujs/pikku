@@ -4,7 +4,6 @@ import {
   Box,
   CloseButton,
   Divider,
-  Drawer,
   Group,
   Menu,
   Button,
@@ -26,8 +25,9 @@ import { ScopeTreeSelector } from '../scopes/ScopeTreeSelector'
 import { diffScopeSelection } from '../scopes/scope-tree'
 import { m } from '@/i18n/messages'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { ConsolePanel } from '../shell/ConsolePanel'
 
-type UserRolesDrawerProps = {
+type UserRolesPanelProps = {
   opened: boolean
   onClose: () => void
   userId: string | undefined
@@ -35,11 +35,11 @@ type UserRolesDrawerProps = {
 }
 
 /**
- * Right drawer for granting and revoking a user's roles. The resolved scopes
+ * End-edge panel for granting and revoking a user's roles. The resolved scopes
  * are shown read-only — they are the union the user's session will carry, and
  * change only by editing the roles above.
  */
-export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
+export const UserRolesPanel: React.FC<UserRolesPanelProps> = ({
   opened,
   onClose,
   userId,
@@ -74,17 +74,17 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
   }
 
   return (
-    <Drawer
+    <ConsolePanel
       opened={opened}
       onClose={onClose}
-      position="right"
-      size={420}
+      width="md"
+      testId="user-roles-panel"
       title={m.scopes_user_roles_title({ label: userLabel })}
     >
       {userRolesQuery.isLoading ? (
         <ConsoleLoading py="xl" />
       ) : (
-        <Stack gap="md" data-testid="user-roles-drawer">
+        <Stack gap="md">
           {mutationError && (
             <Alert color="red" variant="light" title={m.scopes_grant_failed()}>
               {asI18n(mutationError.message)}
@@ -193,6 +193,6 @@ export const UserRolesDrawer: React.FC<UserRolesDrawerProps> = ({
           )}
         </Stack>
       )}
-    </Drawer>
+    </ConsolePanel>
   )
 }
