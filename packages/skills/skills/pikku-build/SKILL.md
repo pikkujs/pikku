@@ -33,9 +33,10 @@ plus more effort" — it is App plus a deliberate surface checklist, so read the
 base first and follow it in full rather than blending the two into one plan.
 
 The supporting references belong to whichever mode sends you to them:
-`references/multi-app.md` (a second frontend), `references/design.md` (committing
-to a design direction and judging whether the screens realise it — read before
-the first screen is built, not after the last), `references/theming.md`
+`references/multi-app.md` (a second frontend), `references/design.md` (offering
+to mock the screens first, committing to a design direction, and judging whether
+the screens realise it — read before the first screen is built, not after the
+last), `references/theming.md`
 (authoring the theme),
 `references/ship.md` (deploying, and the Fabric-readiness contract).
 

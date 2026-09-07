@@ -30,6 +30,64 @@ and so is the commitment.
 Be ambitious with it. A direction that could describe any SaaS app has not been
 chosen — it has been defaulted to in words instead of in components.
 
+## Offer to draw the screens before you build them
+
+Before the first milestone, **ask** whether they want to see the screens first.
+One question, in §1's round, not a gate of its own:
+
+> Want me to mock the main screens as a page you can look at before I build
+> anything? It takes a few minutes and it is much cheaper to change a picture
+> than a built screen.
+
+If they decline, build; the direction in words is enough to be accountable to.
+If they accept, this is the cheapest decision in the project — a picture of eight
+screens costs a fraction of eight built screens, and it is the only point where
+"that is not what I meant" is free.
+
+**What to make.** One self-contained HTML page holding every screen the app
+needs — not a prototype, not a click-through. Static markup, real content from
+their domain (never lorem), the empty and error states beside the happy path,
+laid out so the whole app is legible by scrolling. Plain hand-written CSS.
+Whatever your host offers for showing a page is how you show it — a Claude
+Artifact, a file they open, a preview server. The page is the deliverable; how it
+gets in front of them is not this file's business.
+
+Write it to `knowledge/decisions/design/screens.html` and treat it as **source of
+truth for the screens** once they approve it. That has consequences worth
+stating:
+
+- The milestones are read off it. A screen in the mock that no milestone builds
+  is a gap in the plan, not a spare drawing.
+- A screen the build turns out to need that the mock does not have means the
+  mock was wrong. Update it, and say you did. Do not let the app and the mock
+  drift and then quietly prefer the app.
+- The knowledge graph still owns the domain — objects, roles, rules. The mock
+  owns what the screens look like. When they disagree about a *fact*, knowledge
+  wins; when they disagree about a *layout*, the mock wins.
+
+**Then realise it in Mantine — in the theme, not in overrides.** The mock is
+plain CSS and knows nothing about Mantine, so closing the gap is real work, and
+there are two ways to do it. Only one of them is worth having:
+
+- **In the theme.** Push the mock's decisions into the Mantine theme object and
+  its CSS variables — the palette, the radius scale, the spacing rhythm, the
+  font stack, the default props components inherit. Do this and you end up with a
+  component library that is actually themed, and the next screen is free.
+- **In per-component overrides.** A stack of one-off `className`s and
+  `!important` fighting Mantine's defaults screen by screen. This looks like
+  progress on screen one and is unmaintainable by screen five, and the screens
+  drift apart because nothing central holds them together.
+
+Author the mock's CSS as custom properties on `:root` from the start, using the
+names `references/theming.md` gives the theme. Then the gap is largely a mapping
+rather than a translation, and the mock doubles as the theme spec.
+
+**Checking the built screen against the mock** is a structural comparison, not a
+pixel one: the same regions in the same order, the same hierarchy, the same
+states present, the same tokens used. Do not chase pixel equality — Mantine's
+components have their own metrics and the mock was drawn without them. A built
+screen that reads as the same screen has passed.
+
 ## One screen, designed properly, before the rest exist
 
 Design the first real screen as if it were the only one, and take it further than
