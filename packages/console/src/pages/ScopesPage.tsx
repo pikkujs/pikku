@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { RolesTab } from '../components/scopes/RolesTab'
 import { ScopesVocabularyTab } from '../components/scopes/ScopesVocabularyTab'
-import type { EditableRole } from '../components/scopes/RoleEditorDrawer'
+import type { EditableRole } from '../components/scopes/RoleEditorPanel'
 import { useSearchParams } from '../router'
 import { useLocale } from '@/i18n/config'
 import { m } from '@/i18n/messages'
@@ -20,11 +20,11 @@ export const ScopesPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
   const [editing, setEditing] = useState<EditableRole | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const openRole = (role: EditableRole | null) => {
     setEditing(role)
-    setDrawerOpen(true)
+    setPanelOpen(true)
   }
 
   const changeTab = (next: Tab) => {
@@ -82,9 +82,9 @@ export const ScopesPage: React.FC = () => {
         <RolesTab
           search={search}
           editing={editing}
-          drawerOpen={drawerOpen}
+          panelOpen={panelOpen}
           onOpenRole={openRole}
-          onCloseDrawer={() => setDrawerOpen(false)}
+          onClosePanel={() => setPanelOpen(false)}
         />
       ) : (
         <ScopesVocabularyTab search={search} />

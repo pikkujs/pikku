@@ -3,7 +3,6 @@ import {
   Alert,
   Button,
   Group,
-  Drawer,
   PasswordInput,
   Stack,
   Text,
@@ -11,11 +10,12 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
+import { ConsolePanel } from '../shell/ConsolePanel'
 import type { AuthUser } from '../../context/AuthContext'
 import { useUserAdmin } from '../../context/UserAdminContext'
 import type { UserAction } from './user-actions'
 
-type UserActionDrawerProps = {
+type UserActionPanelProps = {
   action: UserAction | null
   user: AuthUser | null
   onClose: () => void
@@ -27,7 +27,7 @@ type UserActionDrawerProps = {
  * the extra field vary by action; the shape — confirm, run, report — does not,
  * which is why these are one component rather than four near-identical ones.
  */
-export const UserActionDrawer: React.FC<UserActionDrawerProps> = ({
+export const UserActionPanel: React.FC<UserActionPanelProps> = ({
   action,
   user,
   onClose,
@@ -105,12 +105,28 @@ export const UserActionDrawer: React.FC<UserActionDrawerProps> = ({
           : m.users_set_password_action()
 
   return (
-    <Drawer
+    <ConsolePanel
       opened={action !== null && user !== null}
       onClose={onClose}
-      position="right"
-      size={420}
       title={title}
+      width="sm"
+      testId="user-action-panel"
+      footer={
+        <Group justify="flex-end" gap="sm">
+          <Button variant="subtle" onClick={onClose} disabled={running}>
+            {m.common_cancel()}
+          </Button>
+          <Button
+            color={action === 'password' ? undefined : 'red'}
+            loading={running}
+            disabled={action === 'password' && password.length === 0}
+            onClick={run}
+            data-testid="user-action-confirm"
+          >
+            {confirmLabel}
+          </Button>
+        </Group>
+      }
     >
       <Stack gap="md">
         <Text size="sm">{body}</Text>
@@ -136,21 +152,7 @@ export const UserActionDrawer: React.FC<UserActionDrawerProps> = ({
             <Text size="sm">{asI18n(error)}</Text>
           </Alert>
         )}
-        <Group justify="flex-end" gap="sm">
-          <Button variant="subtle" onClick={onClose} disabled={running}>
-            {m.common_cancel()}
-          </Button>
-          <Button
-            color={action === 'password' ? undefined : 'red'}
-            loading={running}
-            disabled={action === 'password' && password.length === 0}
-            onClick={run}
-            data-testid="user-action-confirm"
-          >
-            {confirmLabel}
-          </Button>
-        </Group>
       </Stack>
-    </Drawer>
+    </ConsolePanel>
   )
 }

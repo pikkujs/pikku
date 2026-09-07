@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Button,
-  Drawer,
   Group,
   PasswordInput,
   Stack,
@@ -11,9 +10,10 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
+import { ConsolePanel } from '../shell/ConsolePanel'
 import { useUserAdmin } from '../../context/UserAdminContext'
 
-type CreateUserDrawerProps = {
+type CreateUserPanelProps = {
   opened: boolean
   onClose: () => void
   onDone: () => void
@@ -24,7 +24,7 @@ type CreateUserDrawerProps = {
  * — password bounds, duplicate emails — so this deliberately validates nothing
  * beyond "the required fields are filled in" and surfaces what comes back.
  */
-export const CreateUserDrawer: React.FC<CreateUserDrawerProps> = ({
+export const CreateUserPanel: React.FC<CreateUserPanelProps> = ({
   opened,
   onClose,
   onDone,
@@ -64,15 +64,32 @@ export const CreateUserDrawer: React.FC<CreateUserDrawerProps> = ({
   }
 
   return (
-    <Drawer
+    <ConsolePanel
       opened={opened}
       onClose={onClose}
-      position="right"
-      size={420}
       title={m.users_create_title()}
+      width="sm"
+      testId="create-user-panel"
+      footer={
+        <Group justify="flex-end" gap="sm">
+          <Button variant="subtle" onClick={onClose} disabled={running}>
+            {m.common_cancel()}
+          </Button>
+          <Button
+            loading={running}
+            disabled={email.trim().length === 0 || password.length === 0}
+            onClick={run}
+            data-testid="create-user-submit"
+          >
+            {m.users_create_action()}
+          </Button>
+        </Group>
+      }
     >
       <Stack gap="md">
-        <Text size="sm">{m.users_create_body()}</Text>
+        <Text size="sm" c="dimmed">
+          {m.users_create_body()}
+        </Text>
         <TextInput
           label={m.users_create_email_label()}
           value={email}
@@ -96,20 +113,7 @@ export const CreateUserDrawer: React.FC<CreateUserDrawerProps> = ({
             <Text size="sm">{asI18n(error)}</Text>
           </Alert>
         )}
-        <Group justify="flex-end" gap="sm">
-          <Button variant="subtle" onClick={onClose} disabled={running}>
-            {m.common_cancel()}
-          </Button>
-          <Button
-            loading={running}
-            disabled={email.trim().length === 0 || password.length === 0}
-            onClick={run}
-            data-testid="create-user-submit"
-          >
-            {m.users_create_action()}
-          </Button>
-        </Group>
       </Stack>
-    </Drawer>
+    </ConsolePanel>
   )
 }

@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Divider,
-  Drawer,
   Group,
   Stack,
   Text,
@@ -15,6 +14,7 @@ import { Trash2 } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import type { DeclaredScope } from './scope-tree'
 import { ScopeTreeSelector } from './ScopeTreeSelector'
+import { ConsolePanel } from '../shell/ConsolePanel'
 import {
   useCreateRole,
   useDeleteRole,
@@ -27,7 +27,7 @@ export type EditableRole = {
   scopes: string[]
 }
 
-type RoleEditorDrawerProps = {
+type RoleEditorPanelProps = {
   opened: boolean
   onClose: () => void
   /** The role being edited, or `null` to create a new one. */
@@ -36,11 +36,11 @@ type RoleEditorDrawerProps = {
 }
 
 /**
- * Right drawer for composing a role from the declared scope vocabulary. Creates
+ * End-edge panel for composing a role from the declared scope vocabulary. Creates
  * a new role or edits an existing one — the name is immutable once created, so
  * it is read-only in edit mode.
  */
-export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
+export const RoleEditorPanel: React.FC<RoleEditorPanelProps> = ({
   opened,
   onClose,
   role,
@@ -102,13 +102,40 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
     deleteRole.error) as Error | null
 
   return (
-    <Drawer
+    <ConsolePanel
       opened={opened}
       onClose={onClose}
-      position="right"
-      size={480}
+      width="lg"
+      testId="role-editor-panel"
       title={
         isNew ? m.scopes_create_role() : m.scopes_edit_role({ name: role.name })
+      }
+      footer={
+        <Group justify="space-between" w="100%">
+          {!isNew ? (
+            <Button
+              color="red"
+              variant={confirmingDelete ? 'filled' : 'subtle'}
+              leftSection={<Trash2 size={14} />}
+              onClick={remove}
+              loading={deleteRole.isPending}
+              data-testid="role-delete"
+            >
+              {confirmingDelete
+                ? m.scopes_delete_confirm({ name: role.name })
+                : m.scopes_delete_role()}
+            </Button>
+          ) : (
+            <span />
+          )}
+          <Button
+            onClick={save}
+            loading={pending && !deleteRole.isPending}
+            data-testid="role-save"
+          >
+            {m.common_save()}
+          </Button>
+        </Group>
       }
     >
       <Stack gap="md" data-testid="role-editor">
@@ -151,32 +178,7 @@ export const RoleEditorDrawer: React.FC<RoleEditorDrawerProps> = ({
             {asI18n(error.message)}
           </Text>
         )}
-        <Group justify="space-between" mt="sm">
-          {!isNew ? (
-            <Button
-              color="red"
-              variant={confirmingDelete ? 'filled' : 'subtle'}
-              leftSection={<Trash2 size={14} />}
-              onClick={remove}
-              loading={deleteRole.isPending}
-              data-testid="role-delete"
-            >
-              {confirmingDelete
-                ? m.scopes_delete_confirm({ name: role.name })
-                : m.scopes_delete_role()}
-            </Button>
-          ) : (
-            <span />
-          )}
-          <Button
-            onClick={save}
-            loading={pending && !deleteRole.isPending}
-            data-testid="role-save"
-          >
-            {m.common_save()}
-          </Button>
-        </Group>
       </Stack>
-    </Drawer>
+    </ConsolePanel>
   )
 }

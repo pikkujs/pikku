@@ -27,7 +27,7 @@ export const opensUserRolesDrawer = pikkuScenarioStep<
       .first()
       .click()
     await browser
-      .locate({ testId: 'user-roles-drawer' })
+      .locate({ testId: 'user-roles-panel' })
       .first()
       .waitFor({ state: 'visible' })
     return { opened: email }
