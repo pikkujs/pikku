@@ -13,6 +13,10 @@ import type { SecretDefinitions } from './secret.types.js'
  *
  * A declaration that already covers the secret id wins, so an author who wants
  * their own description or `docsUrl` keeps it.
+ *
+ * The derived secret is optional, matching what every hand-written declaration
+ * chose: an addon that also authenticates by API key must still deploy without
+ * an OAuth app configured.
  */
 export const deriveOAuth2AppSecrets = (
   credentials: CredentialDefinitions,
@@ -32,6 +36,7 @@ export const deriveOAuth2AppSecrets = (
       displayName: `${credential.displayName} OAuth App`,
       description: `OAuth2 app client id and secret for ${credential.displayName}.`,
       secretId: oauth2.appCredentialSecretId,
+      optional: true,
       docsUrl: credential.docsUrl,
       oauth2: {
         tokenSecretId: oauth2.tokenSecretId,

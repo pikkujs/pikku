@@ -26,6 +26,7 @@ describe('deriveOAuth2AppSecrets', () => {
     assert.equal(derived.length, 1)
     assert.equal(derived[0]!.secretId, 'GMAIL_APP')
     assert.equal(derived[0]!.oauth2?.tokenSecretId, 'GMAIL_TOKENS')
+    assert.equal(derived[0]!.optional, true)
   })
 
   test('a hand-written declaration wins, so an author keeps their own copy', () => {
