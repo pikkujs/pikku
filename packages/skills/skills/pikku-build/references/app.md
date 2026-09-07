@@ -61,6 +61,12 @@ in one message. Then stop; do not interview the user.
   Neutral (fine for an internal tool, but say so out loud); a direction in words;
   a reference (brand guide, screenshots, a site whose register they want); or
   their own design agent/prompt, whose output you take as the direction.
+- **Do they want to see the screens before you build them?** Offer it here, in
+  this same round, as a question and not a gate: one HTML page mocking the main
+  screens, a few minutes, far cheaper to change than built screens. If they say
+  yes, `references/design.md` owns what to make and what it then binds — the
+  approved page becomes source of truth for the screens and the milestones are
+  read off it. If they say no or say nothing, build.
 - **What language should the app speak, and what language does the team work
   in?** Two answers, not one — see §1a, which is where they go. Ask only if the
   request is not obviously English; a brief written in English about an English
@@ -331,6 +337,10 @@ What a milestone is:
 - **It ends in something a person can do**, in a browser, signed in as a named
   persona. If you cannot write the gherkin, you cannot build it yet — that is a
   `questions/` note, not a milestone.
+
+If §1's screen mock was made and approved, the milestones are read off it: every
+screen on that page belongs to some milestone, and a screen no milestone builds
+is a hole in this plan. Say which milestone covers which screen.
 
 How to order them:
 
