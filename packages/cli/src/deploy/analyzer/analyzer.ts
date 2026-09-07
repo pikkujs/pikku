@@ -496,6 +496,51 @@ export function analyzeDeployment(
     }
   }
 
+  // ── Step 9: Remote job inbox units bundle the work they dispatch ───
+  // The inbox runs a worker in-process, so it needs the worker's code in its
+  // own bundle. Any server-target worker pulls the inbox to server, since a
+  // server unit can host a serverless-compatible function but not the reverse.
+  const REMOTE_JOB_INBOX_SOURCES: Record<string, () => string[]> = {
+    runRemoteQueueJob: () =>
+      values(state.queueWorkers.meta).map((m) => m.pikkuFuncId),
+    runRemoteScheduledJob: () =>
+      values(state.scheduledTasks.meta).map((m) => m.pikkuFuncId),
+  }
+  for (const unit of units) {
+    if (unit.role !== 'function') continue
+    const source = REMOTE_JOB_INBOX_SOURCES[unit.functionIds[0] ?? '']
+    if (!source || unit.functionIds.length !== 1) continue
+
+    const workerIds = [...new Set(source())].filter(
+      (id) => id && functionsMeta[id]
+    )
+    if (workerIds.length === 0) continue
+
+    const targets = workerIds.map((id) =>
+      resolveDeployTarget(
+        functionsMeta[id]!,
+        serverlessIncompatible,
+        id,
+        defaultTarget
+      )
+    )
+    unit.target = targets.includes('server') ? 'server' : 'serverless'
+    unit.functionIds = [...unit.functionIds, ...workerIds]
+    for (const id of workerIds) {
+      for (const service of collectServicesForFunction(functionsMeta[id]!)) {
+        if (
+          !unit.services.some(
+            (s) =>
+              s.capability === service.capability &&
+              s.sourceServiceName === service.sourceServiceName
+          )
+        ) {
+          unit.services.push(service)
+        }
+      }
+    }
+  }
+
   // ── Secrets & Variables ────────────────────────────────────────────
   const readSecretIds = new Set<string>()
   const unresolvedSecretReads: string[] = []
