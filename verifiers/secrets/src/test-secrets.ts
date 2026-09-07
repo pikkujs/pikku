@@ -108,17 +108,26 @@ async function testTypedSecretService() {
     )
   }
 
-  if (allStatus.length !== 1) {
-    throw new Error(`Expected 1 secret, got ${allStatus.length}`)
+  if (allStatus.length !== 3) {
+    throw new Error(`Expected 3 secrets, got ${allStatus.length}`)
   }
 
-  // Test 4: getMissing() - should be empty since all are configured
+  // The OAuth2 credential declares no secret of its own: the app credential
+  // and the token store are derived from `oauth2`, so a deployment is asked
+  // for them without anyone restating a shape the runtime already fixes.
+  for (const secretId of ['MOCK_OAUTH_APP', 'MOCK_OAUTH_TOKENS'] as const) {
+    if (!allStatus.some((status) => status.secretId === secretId)) {
+      throw new Error(`Expected ${secretId} to be derived from the credential`)
+    }
+  }
+
+  // Test 4: getMissing() - the two derived OAuth2 secrets are unconfigured
   console.log('\nTest 4: getMissing()')
   const missing = await secrets.getMissing()
   console.log(`  Missing secrets: ${missing.length}`)
 
-  if (missing.length !== 0) {
-    throw new Error(`Expected 0 missing secrets, got ${missing.length}`)
+  if (missing.length !== 2) {
+    throw new Error(`Expected 2 missing secrets, got ${missing.length}`)
   }
 
   // Test 5: Test with missing secrets
@@ -131,8 +140,8 @@ async function testTypedSecretService() {
   const missingCreds = await emptySecrets.getMissing()
   console.log(`  Missing when empty: ${missingCreds.length}`)
 
-  if (missingCreds.length !== 1) {
-    throw new Error(`Expected 1 missing secret, got ${missingCreds.length}`)
+  if (missingCreds.length !== 3) {
+    throw new Error(`Expected 3 missing secrets, got ${missingCreds.length}`)
   }
 
   // Test 6: setSecret() type enforcement
