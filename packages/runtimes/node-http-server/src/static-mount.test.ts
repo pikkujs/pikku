@@ -384,3 +384,69 @@ describe(
     })
   }
 )
+
+describe(
+  'PikkuNodeHTTPServer static mounts with a content service',
+  { concurrency: false },
+  () => {
+    let tmpDir: string
+    let server: PikkuNodeHTTPServer | undefined
+    let origin: string
+
+    beforeEach(async () => {
+      resetPikkuState()
+      tmpDir = await mkdtemp(join(tmpdir(), 'pikku-static-content-'))
+      pikkuState(null, 'package', 'singletonServices', {
+        logger: createMockLogger(),
+        schema: {
+          compileSchema: async () => {},
+          getSchemaNames: () => new Set<string>(),
+        },
+      } as any)
+
+      await writeFile(
+        join(tmpDir, 'index.html'),
+        '<!doctype html><title>app</title>'
+      )
+      await mkdir(join(tmpDir, 'assets'))
+      await writeFile(join(tmpDir, 'assets', 'app.js'), 'console.log("app")')
+
+      server = new PikkuNodeHTTPServer(
+        {
+          hostname: '127.0.0.1',
+          port: 0,
+          content: {
+            localFileUploadPath: join(tmpDir, 'uploads'),
+            uploadUrlPrefix: '/upload',
+            assetUrlPrefix: '/assets',
+          },
+          staticMounts: [
+            { urlPrefix: '/', directory: tmpDir, spaFallback: true },
+          ],
+        } as any,
+        createMockLogger() as any
+      )
+      await server.init()
+      await server.start()
+      const address = server.server.address()
+      assert.ok(address && typeof address === 'object')
+      origin = `http://127.0.0.1:${address.port}`
+    })
+
+    afterEach(async () => {
+      if (server) {
+        await server.stop()
+        server = undefined
+      }
+      await rm(tmpDir, { recursive: true, force: true })
+    })
+
+    test('a built frontend bundle wins over the content asset prefix', async () => {
+      const response = await fetch(`${origin}/assets/app.js`, {
+        headers: { connection: 'close' },
+      })
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'console.log("app")')
+    })
+  }
+)
