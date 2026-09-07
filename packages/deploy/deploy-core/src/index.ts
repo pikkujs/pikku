@@ -20,6 +20,11 @@ export type {
   WorkflowStepDefinition,
 } from './manifest.js'
 
+export {
+  REMOTE_JOB_INBOX_PATHS,
+  unitWiresRemoteJobInbox,
+} from './remote-job-inbox.js'
+
 export type {
   EntryGenerationContext,
   ProviderAdapter,
