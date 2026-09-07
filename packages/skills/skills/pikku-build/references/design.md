@@ -53,11 +53,23 @@ the palette, `structure.radius`, the spacing scale, the fonts, the component
 `defaultProps`. Approving the mock then approves the theme, and the built screens
 inherit it rather than chase it.
 
-Draw only what Mantine can actually build, at the metrics it actually uses —
-its control heights, its input shapes, its table and menu behaviour. A control
-the mock invents is a promise the app cannot keep. If the mock wants something
-Mantine does not do, that is a real finding: change the theme so it does, or
-change the mock, and say which.
+**The mock has two halves, and only one of them is Mantine's.** This is the same
+split the built screen lives under, applied a step earlier so the two agree by
+construction. The PAGE — the shell, the regions, the columns, the rhythm, the
+material behind the content, what overlaps what — is plain HTML and your own
+CSS, arranged however the layout decision demands; that half is free, and it is
+where the design actually happens. The COMPONENTS — anything a person would
+point at and call a control, and that the app will adopt as itself: buttons,
+inputs, selects, tables, badges, menus, modals — are drawn as *Mantine's*, at the
+metrics Mantine actually uses: its control heights, its input shapes, its table
+and menu behaviour. The test is the one the build will apply too: is this thing
+the SHAPE OF THE PAGE, or a COMPONENT someone would point at?
+
+Getting that second half wrong is what makes a mock a lie. A control the mock
+invents is a promise the app cannot keep, and a beautiful hand-rolled input sets
+a bar the real one misses on screen one. If the mock wants something Mantine
+does not do, that is a real finding, and finding it here is the point: change the
+theme so it does, or change the mock, and say which.
 
 **What to make.** One self-contained HTML page holding every screen the app
 needs — not a prototype, not a click-through. Static markup, real content from
