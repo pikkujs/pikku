@@ -170,6 +170,27 @@ describe('serializeSecretsTypes — optional secrets', () => {
     assert.deepEqual(parseErrors(output), [])
   })
 
+  // An OAuth2 secret went down a branch that never looked at `optional`, so a
+  // declaration that said absence was supported still generated a required key
+  // and a deployment was told it was missing something it never had to supply.
+  test('an optional OAuth2 secret stays optional in the map and the meta', () => {
+    const [secret] = oauth2Secret('Stripe')
+    const source = serialize([{ ...secret!, optional: true }])
+
+    assert.match(source, /'STRIPE_KEY'\?: OAuth2AppCredential/)
+    assert.match(source, /'STRIPE_TOKENS'\?: OAuth2Token/)
+    assert.match(source, /'STRIPE_KEY': \{[^}]*optional: true/)
+    assert.match(source, /'STRIPE_TOKENS': \{[^}]*optional: true/)
+    assert.deepEqual(parseErrors(source), [])
+  })
+
+  test('a required OAuth2 secret is not marked optional', () => {
+    const source = serialize(oauth2Secret('Stripe'))
+
+    assert.doesNotMatch(source, /optional: true/)
+    assert.match(source, /'STRIPE_KEY': OAuth2AppCredential/)
+  })
+
   // An interface has no implicit index signature, so `CredentialsMap` was not
   // assignable to the `Record<string, unknown>` that `GetCredential` is
   // constrained by — every generated project reported the same two errors on

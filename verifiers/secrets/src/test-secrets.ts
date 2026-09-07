@@ -121,13 +121,14 @@ async function testTypedSecretService() {
     }
   }
 
-  // Test 4: getMissing() - the two derived OAuth2 secrets are unconfigured
+  // Test 4: getMissing() - the derived OAuth2 secrets are optional, so an
+  // unconfigured OAuth app is not something the deployment is missing
   console.log('\nTest 4: getMissing()')
   const missing = await secrets.getMissing()
   console.log(`  Missing secrets: ${missing.length}`)
 
-  if (missing.length !== 2) {
-    throw new Error(`Expected 2 missing secrets, got ${missing.length}`)
+  if (missing.length !== 0) {
+    throw new Error(`Expected 0 missing secrets, got ${missing.length}`)
   }
 
   // Test 5: Test with missing secrets
@@ -140,8 +141,8 @@ async function testTypedSecretService() {
   const missingCreds = await emptySecrets.getMissing()
   console.log(`  Missing when empty: ${missingCreds.length}`)
 
-  if (missingCreds.length !== 3) {
-    throw new Error(`Expected 3 missing secrets, got ${missingCreds.length}`)
+  if (missingCreds.length !== 1) {
+    throw new Error(`Expected 1 missing secret, got ${missingCreds.length}`)
   }
 
   // Test 6: setSecret() type enforcement
