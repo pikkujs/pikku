@@ -76,6 +76,58 @@ function getHandlerTypes(unit: DeploymentUnit): string[] {
   return [...types]
 }
 
+const NODE_BUILTINS = [
+  'assert',
+  'async_hooks',
+  'buffer',
+  'child_process',
+  'cluster',
+  'console',
+  'constants',
+  'crypto',
+  'dgram',
+  'dns',
+  'domain',
+  'events',
+  'fs',
+  'http',
+  'http2',
+  'https',
+  'inspector',
+  'module',
+  'net',
+  'os',
+  'path',
+  'perf_hooks',
+  'process',
+  'punycode',
+  'querystring',
+  'readline',
+  'repl',
+  'stream',
+  'string_decoder',
+  'sys',
+  'timers',
+  'tls',
+  'trace_events',
+  'tty',
+  'url',
+  'util',
+  'v8',
+  'vm',
+  'wasi',
+  'worker_threads',
+  'zlib',
+]
+
+// `node:fs` has no implementation on Workers under any compatibility flag, so a
+// bundle that imports it dies at module load with `No such module "node:fs"`
+// before a line of it runs. Leaving it in the externals meant esbuild resolved
+// it before the stub plugin ever saw it — `external` is matched ahead of an
+// `onResolve` hook — so listing the builtins individually is what lets the stub
+// below take it.
+const CF_UNSUPPORTED_BUILTINS = new Set(['fs'])
+
 export class CloudflareProviderAdapter implements ProviderAdapter {
   readonly name = 'cloudflare'
   readonly deployDirName = 'cloudflare'
@@ -675,7 +727,14 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
   }
 
   getExternals(): string[] {
-    return ['node:*', 'cloudflare:*', 'uWebSockets.js']
+    const supported = NODE_BUILTINS.filter(
+      (b) => !CF_UNSUPPORTED_BUILTINS.has(b)
+    )
+    return [
+      ...supported.flatMap((b) => [`node:${b}`, `node:${b}/*`]),
+      'cloudflare:*',
+      'uWebSockets.js',
+    ]
   }
 
   getStubModules(): string[] {
@@ -689,55 +748,20 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     // the two in application code, it is equally unreachable on CF, and it
     // additionally reaches for `net`/`tls` and `pg-native`, which a worker
     // build cannot resolve at all.
-    return ['^postgres$', '^kysely-postgres-js$', '^pg$', '^pg-native$']
+    return [
+      '^postgres$',
+      '^kysely-postgres-js$',
+      '^pg$',
+      '^pg-native$',
+      '^node:fs$',
+      '^node:fs/promises$',
+    ]
   }
 
   getAliases(): Record<string, string> {
     // Map every node builtin to its `node:`-prefixed form. CF's
     // nodejs_compat_v2 only resolves prefixed imports.
-    const builtins = [
-      'assert',
-      'async_hooks',
-      'buffer',
-      'child_process',
-      'cluster',
-      'console',
-      'constants',
-      'crypto',
-      'dgram',
-      'dns',
-      'domain',
-      'events',
-      'fs',
-      'http',
-      'http2',
-      'https',
-      'inspector',
-      'module',
-      'net',
-      'os',
-      'path',
-      'perf_hooks',
-      'process',
-      'punycode',
-      'querystring',
-      'readline',
-      'repl',
-      'stream',
-      'string_decoder',
-      'sys',
-      'timers',
-      'tls',
-      'trace_events',
-      'tty',
-      'url',
-      'util',
-      'v8',
-      'vm',
-      'wasi',
-      'worker_threads',
-      'zlib',
-    ]
+    const builtins = NODE_BUILTINS
     const aliases: Record<string, string> = {}
     for (const b of builtins) aliases[b] = `node:${b}`
     return aliases

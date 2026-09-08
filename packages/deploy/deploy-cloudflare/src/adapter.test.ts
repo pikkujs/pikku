@@ -121,3 +121,20 @@ describe('CloudflareProviderAdapter remote job inbox', () => {
     assert.match(adapter.generateEntrySource(inboxCtx), /httpQueueJobs: false/)
   })
 })
+
+describe('node builtins on Workers', () => {
+  test('node:fs is stubbed rather than left external', () => {
+    const adapter = new CloudflareProviderAdapter()
+    const externals = adapter.getExternals()
+
+    assert.ok(!externals.includes('node:*'))
+    assert.ok(!externals.includes('node:fs'))
+    assert.ok(externals.includes('node:path'))
+    assert.ok(adapter.getStubModules().includes('^node:fs$'))
+    assert.ok(adapter.getStubModules().includes('^node:fs/promises$'))
+  })
+
+  test('fs still aliases to its prefixed form so the stub can match it', () => {
+    assert.equal(new CloudflareProviderAdapter().getAliases()['fs'], 'node:fs')
+  })
+})
