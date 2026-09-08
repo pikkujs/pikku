@@ -64,7 +64,7 @@ if [ ${#MISSING[@]} -gt 0 ]; then
     echo "  - $pkg"
   done
   echo ""
-  echo "Run 'yarn changeset' to add one, or create a .changeset/*.md file manually."
+  echo "Run 'bun run changeset' to add one, or create a .changeset/*.md file manually."
   exit 1
 fi
 

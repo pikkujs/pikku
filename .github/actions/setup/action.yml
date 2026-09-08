@@ -8,16 +8,22 @@ inputs:
   download-build:
     description: Whether to download build output artifact
     default: 'true'
+  enable-yarn:
+    description: >-
+      Enable Corepack's Yarn 4. The monorepo itself installs with bun, but the
+      template jobs scaffold user-facing apps with whichever package manager
+      their matrix row names, and the yarn rows need a yarn on PATH.
+    default: 'false'
 
 runs:
   using: composite
   steps:
-    - run: corepack enable
+    - if: ${{ inputs.enable-yarn == 'true' }}
+      run: corepack enable
       shell: bash
     - uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
-        cache: yarn
     - uses: oven-sh/setup-bun@v2
       with:
         bun-version: 1.4.0
@@ -28,19 +34,19 @@ runs:
         name: build-output
     # A dependency whose postinstall downloads a release binary (serverless,
     # workerd, esbuild) fails the whole install when that fetch blips, and the
-    # job then reads as a broken pull request. Yarn resumes from what it
+    # job then reads as a broken pull request. Bun resumes from what it
     # already resolved, so a repeat attempt is cheap.
     - name: Install dependencies
       shell: bash
       run: |
         for attempt in 1 2 3; do
-          if yarn install; then
+          if bun install --frozen-lockfile; then
             exit 0
           fi
           if [ "$attempt" = 3 ]; then
-            echo "::error::yarn install failed after $attempt attempts"
+            echo "::error::bun install failed after $attempt attempts"
             exit 1
           fi
-          echo "::warning::yarn install failed (attempt $attempt), retrying"
+          echo "::warning::bun install failed (attempt $attempt), retrying"
           sleep $((attempt * 15))
         done

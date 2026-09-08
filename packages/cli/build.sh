@@ -237,8 +237,11 @@ if [ -f dist/.pikku/mcp/pikku-mcp-types.gen.js ]; then
       dist/.pikku/mcp/pikku-mcp-types.gen.js > "$tmp" && mv "$tmp" dist/.pikku/mcp/pikku-mcp-types.gen.js
 fi
 
-# Rebuild Pikku using the local CLI and recompile
-yarn pikku
+# Rebuild Pikku using the local CLI and recompile. `node`, not `npx pikku`: the
+# chmod that makes `dist/bin/pikku.js` executable only happens further down, so
+# execing it directly here exits 126 — and an `npx` that cannot find a runnable
+# local bin goes to the registry and runs the published CLI instead.
+node dist/bin/pikku.js
 
 # Patch stale startWorkflow calls in generated scaffold (data arg needs cast with new TypedStartWorkflow)
 for f in src/scaffold/workflow-routes.gen.ts; do
@@ -247,8 +250,8 @@ for f in src/scaffold/workflow-routes.gen.ts; do
   sed 's/data ?? {}/\(data ?? {}) as any/g' "$f" > "$tmp" && mv "$tmp" "$f"
 done
 
-# `npx`, not `yarn tsc -b`: the package's `tsc` script chains a second pass over
-# tsconfig.type-tests.json, and yarn appends `-b` to the end of the whole chain,
+# `npx`, not `bun run tsc -b`: the package's `tsc` script chains a second pass over
+# tsconfig.type-tests.json, and a package-manager run appends `-b` to the end of the whole chain,
 # where it lands on the `-p` invocation and fails as an unknown option.
 npx tsc -b
 

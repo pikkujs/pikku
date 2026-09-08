@@ -17,10 +17,10 @@
   "scripts": {
     "tsc": "tsc",
     "build": "tsc -b",
-    "release": "yarn build && npm test",
+    "release": "bun run build && npm test",
     "test": "bash run-tests.sh",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "typescript": "^6.0.3"

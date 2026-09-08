@@ -51,10 +51,10 @@ runs:
       # codegen emits here is still missing from the running registry.
       shell: bash
       run: |
-        yarn workspace @pikku/addon-console build
-        yarn workspace @pikku/addon-graph build
-        yarn workspace @pikku/addon-todos build
-        yarn workspace @pikku/addon-emails build
-        yarn workspace @pikku/addon-hmac-signer build
-        yarn workspace @pikku/addon-oauth-api build
-        yarn workspace @pikku/addon-fake-crm build
+        bun run --filter @pikku/addon-console build
+        bun run --filter @pikku/addon-graph build
+        bun run --filter @pikku/addon-todos build
+        bun run --filter @pikku/addon-emails build
+        bun run --filter @pikku/addon-hmac-signer build
+        bun run --filter @pikku/addon-oauth-api build
+        bun run --filter @pikku/addon-fake-crm build

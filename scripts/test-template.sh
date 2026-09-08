@@ -263,7 +263,7 @@ Object.entries(all)
 " 2>/dev/null); do
         if [ -d "$pkg_path" ] && [ ! -f "$pkg_path/dist/index.d.ts" ]; then
             log_info "Rebuilding $pkg_path (dist/index.d.ts missing)..."
-            (cd "$pkg_path" && yarn build 2>/dev/null) || log_warning "Build failed for $pkg_path"
+            (cd "$pkg_path" && bun run build 2>/dev/null) || log_warning "Build failed for $pkg_path"
         fi
     done
 

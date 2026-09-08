@@ -14,7 +14,7 @@ runs:
         #
         # node_modules is excluded because `packages/**/dist` otherwise also
         # matches a dependency's own dist — e.g. packages/console/node_modules/
-        # tinyglobby/dist. Restore happens after `yarn install`, so once a run
+        # tinyglobby/dist. Restore happens after `bun install`, so once a run
         # where Yarn nested that dependency is cached, every later run whose
         # hoisting differs gets the directory re-created without its
         # package.json, and Node resolves the shadowed folder instead of the
@@ -24,50 +24,50 @@ runs:
           packages/**/tsconfig.tsbuildinfo
           packages/**/dist
           !packages/**/node_modules/**
-        key: ts-build-v2-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'yarn.lock') }}
+        key: ts-build-v2-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
         restore-keys: |
           ts-build-v2-
     - name: Build packages
       shell: bash
       run: |
         start=$SECONDS
-        yarn build:packages
+        bun run build:packages
         echo "::notice::⏱ Build packages: $((SECONDS - start))s"
     - name: Build addons
       shell: bash
       run: |
         start=$SECONDS
-        yarn build:addons
+        bun run build:addons
         echo "::notice::⏱ Build addons: $((SECONDS - start))s"
     - name: Build function-addon template
       shell: bash
       run: |
         start=$SECONDS
-        cd templates/function-addon && yarn pikku && yarn build
+        cd templates/function-addon && bun run pikku && bun run build
         echo "::notice::⏱ Build function-addon template: $((SECONDS - start))s"
     - name: Generate pikku files
       shell: bash
       run: |
         start=$SECONDS
-        yarn pikku
+        bun run pikku
         echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
     - name: Build templates
       shell: bash
       run: |
         start=$SECONDS
-        yarn build:templates
+        bun run build:templates
         echo "::notice::⏱ Build templates: $((SECONDS - start))s"
     - name: Generate and type-check console
       shell: bash
       run: |
         start=$SECONDS
-        cd packages/console && yarn generate && yarn tsc --noEmit
+        cd packages/console && bun run generate && bun run tsc --noEmit
         echo "::notice::⏱ Console type-check: $((SECONDS - start))s"
     - name: Build console
       shell: bash
       run: |
         start=$SECONDS
-        yarn build:console
+        bun run build:console
         echo "::notice::⏱ Build console: $((SECONDS - start))s"
 
     - name: Save build output (for later jobs)

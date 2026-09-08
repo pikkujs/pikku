@@ -54,9 +54,9 @@ jobs:
         with:
           download-build: 'false'
       - name: Check formatting
-        run: yarn prettier
+        run: bun run prettier
       - name: Lint
-        run: yarn lint
+        run: bun run lint
       - name: Check no runtime i18n key resolvers
         run: node scripts/check-no-i18n-key-resolver.mjs
 
@@ -98,7 +98,7 @@ jobs:
           echo "NATS did not become ready" >&2
           docker logs pikku-nats >&2 || true
           exit 1
-      - run: yarn test
+      - run: bun run test
         env:
           NATS_TEST_URL: nats://127.0.0.1:4222
 
@@ -117,7 +117,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
-        run: yarn test:e2e
+        run: bun run test:e2e
 
   e2e-agent:
     name: E2E Agent (deterministic)
@@ -134,7 +134,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run deterministic agent e2e tests
-        run: yarn test:e2e:agent
+        run: bun run test:e2e:agent
 
   e2e-cli:
     name: E2E CLI
@@ -151,7 +151,7 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run CLI e2e tests
-        run: yarn test:e2e:cli
+        run: bun run test:e2e:cli
 
   # PARKED: nine live-model scenarios plus a browser run, gated behind every
   # other job, so it added up to 30 minutes to a run that a publish waits on
@@ -181,7 +181,7 @@ jobs:
 #      - uses: ./.github/actions/e2e-codegen
 #      - name: Run live-model AI e2e tests
 #        timeout-minutes: 22
-#        run: yarn test:e2e:ai-live
+#        run: bun run test:e2e:ai-live
 #        env:
 #          # OpenRouter, reached through the standard OPENAI_* pair because
 #          # `createDevAgentRunner` builds one openai-compatible provider from
@@ -198,7 +198,7 @@ jobs:
 #          OPENAI_BASE_URL: https://openrouter.ai/api/v1
 
   verifiers:
-    name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
+    name: Verifiers (${{ matrix.verifier }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
@@ -231,11 +231,10 @@ jobs:
             webhooks,
             db-schema,
           ]
-        package-manager: [yarn]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
+      - run: cd verifiers/${{ matrix.verifier }} && bun run test
 
   # The only verifier that runs a browser, so it gets its own job rather than a
   # row in the matrix: every other row would pay for a ~90MB chromium download
@@ -252,7 +251,7 @@ jobs:
       - name: Install chromium
         run: cd verifiers/fullstack && npx playwright install --with-deps chromium
       - name: Run fullstack verifier
-        run: cd verifiers/fullstack && yarn test
+        run: cd verifiers/fullstack && bun run test
 
   verifiers-binary:
     name: Binary (${{ matrix.os }})
@@ -263,7 +262,7 @@ jobs:
       fail-fast: false
       matrix:
         # windows-latest excluded: its pre-installed global Yarn 1.22 shadows
-        # Corepack's Yarn 4 in the shared setup action, breaking `yarn install`.
+        # Corepack's Yarn 4 in the shared setup action, breaking `bun install`.
         # The pikku-windows-x64.exe is still cross-compiled and published on each
         # release (see packages/cli/build.sh).
         os: [ubuntu-latest, macos-latest]
@@ -275,7 +274,7 @@ jobs:
           bun-version: 1.4.0
       - name: Run binary verifier
         shell: bash
-        run: cd verifiers/binary && yarn test
+        run: cd verifiers/binary && bun run test
 
   # The workflow verifier's pg/redis runners need real queue + storage backends,
   # so they can't run in the plain `verifiers` job. This job gives them Postgres
@@ -307,7 +306,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: cd verifiers/workflows && yarn test:db
+      - run: cd verifiers/workflows && bun run test:db
     env:
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_queue
       REDIS_URL: redis://localhost:6379
@@ -340,7 +339,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: cd verifiers/db-schema && yarn test:db
+      - run: cd verifiers/db-schema && bun run test:db
     env:
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_db_schema
 
@@ -357,9 +356,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Generate, migrate and type-check
-        run: cd examples/${{ matrix.example }} && yarn build
+        run: cd examples/${{ matrix.example }} && bun run build
       - name: Test
-        run: cd examples/${{ matrix.example }} && yarn test
+        run: cd examples/${{ matrix.example }} && bun run test
 
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
@@ -419,6 +418,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
+          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test template
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION"
@@ -452,6 +452,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
+          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test template
         timeout-minutes: 5
         run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION"
@@ -484,9 +485,10 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
+          enable-yarn: ${{ matrix.package-manager == 'yarn' }}
       - name: Test functions template runtime target
         timeout-minutes: 5
-        run: cd templates/functions && yarn test:runtime ${{ matrix.target }}
+        run: cd templates/functions && bun run test:runtime ${{ matrix.target }}
         env:
           AWS_ACCESS_KEY_ID: local
           AWS_SECRET_ACCESS_KEY: local

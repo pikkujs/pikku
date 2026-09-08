@@ -12,7 +12,7 @@
     "ncu": "npx npm-check-updates",
     "build": "tsc -b",
     "test": "node --import tsx --test src/**/*.test.ts",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "exports": {
     ".": "./dist/index.js"

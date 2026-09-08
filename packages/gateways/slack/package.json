@@ -13,7 +13,7 @@
     "build": "tsc -b",
     "test": "node --import tsx --test src/**/*.test.ts",
     "release": "npm run build && npm test",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.85"
