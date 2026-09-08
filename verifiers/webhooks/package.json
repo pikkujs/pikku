@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/schema-cfworker": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*",
+    "zod": "^4"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",

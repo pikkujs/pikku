@@ -10,6 +10,7 @@
       },
       "devDependencies": {
         "0x": "^6.0.0",
+        "@pikku/cli": "workspace:*",
         "@pikku/core": "workspace:*",
         "@pikku/express-middleware": "workspace:*",
         "@pikku/fastify-plugin": "workspace:*",
@@ -29,7 +30,7 @@
         "prettier": "3.9.6",
         "tsx": "^4.23.12",
         "typedoc": "^0.28.20",
-        "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ff",
+        "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
       },
     },
     "e2e": {
@@ -40,14 +41,20 @@
         "@pikku/addon-admin": "workspace:*",
         "@pikku/addon-console": "workspace:*",
         "@pikku/addon-email-send": "0.1.2",
+        "@pikku/addon-emails": "workspace:*",
+        "@pikku/addon-fake-crm": "workspace:*",
         "@pikku/addon-gmail": "0.1.2",
         "@pikku/addon-graph": "workspace:*",
         "@pikku/addon-hmac-signer": "workspace:*",
         "@pikku/addon-mandrill": "0.1.2",
+        "@pikku/addon-oauth-api": "workspace:*",
+        "@pikku/addon-todos": "workspace:*",
         "@pikku/ai-deepinfra": "workspace:*",
         "@pikku/ai-vercel": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
+        "@pikku/e2e-functions": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/jose": "workspace:*",
         "@pikku/kysely": "workspace:*",
         "@pikku/kysely-bun-sqlite": "workspace:*",
@@ -193,8 +200,10 @@
         "@pikku/better-auth": "^0.12.38",
         "@pikku/cloudflare": "workspace:*",
         "@pikku/core": "^0.12.106",
+        "@pikku/fetch": "^0.12.10",
         "@pikku/kysely": "workspace:^",
         "@pikku/schema-cfworker": "^0.12.6",
+        "@pikku/websocket": "^0.12.4",
         "@standard-schema/spec": "^1.1.0",
         "ai": "^6.0.0",
         "better-auth": "^1.6.29",
@@ -985,7 +994,7 @@
         "@pikku/uws-handler": "^0.12.9",
         "@types/qs": "^6",
         "qs": "^6.15.3",
-        "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ff",
+        "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
       },
       "devDependencies": {
         "@pikku/core": "^0.12.87",
@@ -1634,8 +1643,10 @@
       "devDependencies": {
         "@aws-sdk/client-sqs": "^3.1111.0",
         "@modelcontextprotocol/sdk": "1.30.0",
+        "@pikku/azure-functions": "workspace:*",
         "@pikku/cli": "^0.12.143",
         "@pikku/cloudflare": "workspace:*",
+        "@pikku/deploy-azure": "workspace:*",
         "@pikku/deploy-cloudflare": "workspace:*",
         "@pikku/deploy-serverless": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
@@ -1859,7 +1870,9 @@
       "name": "@pikku/verifiers-addon",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/templates-function-addon": "workspace:*",
+        "@pikku/websocket": "workspace:*",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -1872,6 +1885,38 @@
     },
     "verifiers/addon-registry": {
       "name": "@pikku/verifiers-addon-registry",
+    },
+    "verifiers/addon-registry/consumer": {
+      "name": "@pikku/verifier-registry-consumer",
+      "dependencies": {
+        "@pikku/core": "*",
+        "@pikku/verifier-registry-addon": "*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^24",
+        "typescript": "^6.0.3",
+        "zod": "^4",
+      },
+    },
+    "verifiers/addon-registry/source": {
+      "name": "@pikku/verifier-registry-addon",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "*",
+        "@pikku/core": "*",
+        "@standard-schema/spec": "^1.1.0",
+        "typescript": "^6.0.3",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "*",
+        "zod": "^4",
+      },
     },
     "verifiers/addon-treeshake": {
       "name": "@pikku/verifiers-addon-treeshake",
@@ -1899,6 +1944,7 @@
         "better-auth": "^1.6.29",
         "better-sqlite3": "^13.0.3",
         "kysely": "^0.29.5",
+        "zod": "^4",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -1974,11 +2020,46 @@
         "zod": "^4",
       },
     },
+    "verifiers/db-schema/addon": {
+      "name": "@pikku/verifier-db-addon",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@pikku/cli": "*",
+        "@pikku/core": "*",
+        "@standard-schema/spec": "^1.1.0",
+        "kysely": "^0.29.5",
+        "typescript": "^6.0.3",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "*",
+        "kysely": "^0.29.0",
+        "zod": "^4",
+      },
+    },
+    "verifiers/db-schema/remote-addon": {
+      "name": "@pikku/verifier-db-remote-addon",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@pikku/cli": "*",
+        "@pikku/core": "*",
+        "@standard-schema/spec": "^1.1.0",
+        "kysely": "^0.29.5",
+        "typescript": "^6.0.3",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "*",
+        "kysely": "^0.29.0",
+        "zod": "^4",
+      },
+    },
     "verifiers/deploy-azure": {
       "name": "@pikku/verifiers-deploy-azure",
       "devDependencies": {
         "@pikku/cli": "workspace:*",
         "@pikku/core": "workspace:*",
+        "@pikku/deploy-azure": "workspace:*",
         "@types/node": "^24",
         "typescript": "^6.0.3",
       },
@@ -1988,6 +2069,7 @@
       "devDependencies": {
         "@pikku/cli": "workspace:*",
         "@pikku/core": "workspace:*",
+        "@pikku/deploy-cloudflare": "workspace:*",
         "@types/node": "^24",
         "typescript": "^6.0.3",
       },
@@ -1997,6 +2079,7 @@
       "devDependencies": {
         "@pikku/cli": "workspace:*",
         "@pikku/core": "workspace:*",
+        "@pikku/deploy-serverless": "workspace:*",
         "@types/node": "^24",
         "typescript": "^6.0.3",
       },
@@ -2006,6 +2089,7 @@
       "devDependencies": {
         "@pikku/cli": "workspace:*",
         "@pikku/core": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
         "@types/node": "^24",
         "typescript": "^6.0.3",
       },
@@ -2117,6 +2201,7 @@
         "next": "15.5.23",
         "react": "^19",
         "react-dom": "^19",
+        "zod": "^4",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -2163,6 +2248,7 @@
       "dependencies": {
         "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/kysely": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "@pikku/tanstack-start": "workspace:*",
@@ -2174,6 +2260,7 @@
         "kysely": "^0.29.5",
         "react": "^19",
         "react-dom": "^19",
+        "zod": "^4",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -2236,6 +2323,7 @@
       "dependencies": {
         "@pikku/core": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
+        "zod": "^4",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -2249,6 +2337,7 @@
       "name": "@pikku/verifiers-workflows",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
         "@pikku/jose": "workspace:*",
         "@pikku/kysely": "workspace:*",
         "@pikku/kysely-postgres": "workspace:*",
@@ -2259,6 +2348,7 @@
         "kysely": "^0.29.5",
         "kysely-postgres-js": "^3.0.0",
         "postgres": "^3.4.9",
+        "zod": "^4",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -3297,6 +3387,14 @@
     "@pikku/uws": ["@pikku/uws@workspace:packages/runtimes/uws-server"],
 
     "@pikku/uws-handler": ["@pikku/uws-handler@workspace:packages/runtimes/uws-handler"],
+
+    "@pikku/verifier-db-addon": ["@pikku/verifier-db-addon@workspace:verifiers/db-schema/addon"],
+
+    "@pikku/verifier-db-remote-addon": ["@pikku/verifier-db-remote-addon@workspace:verifiers/db-schema/remote-addon"],
+
+    "@pikku/verifier-registry-addon": ["@pikku/verifier-registry-addon@workspace:verifiers/addon-registry/source"],
+
+    "@pikku/verifier-registry-consumer": ["@pikku/verifier-registry-consumer@workspace:verifiers/addon-registry/consumer"],
 
     "@pikku/verifiers-addon": ["@pikku/verifiers-addon@workspace:verifiers/addon"],
 
@@ -6054,6 +6152,10 @@
 
     "@pikku/templates-ws-server/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/uws/uWebSockets.js": ["uWebSockets.js@github:uNetworking/uWebSockets.js#dddd8ff", {}, "uNetworking-uWebSockets.js-dddd8ff", "sha512-fDaDQQEj+Jn8LsDXGGE629Nna1MGnRS8j9kxsaqtPHBMq3pBDIbKs2sGxk1QMWpQ78+o4F9jV/tuBZZqfanBWQ=="],
+
+    "@pikku/verifier-registry-consumer/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-addon/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-addon-treeshake/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -6631,6 +6733,8 @@
     "@pikku/templates-workflows-pg-boss/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/templates-ws-server/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifier-registry-consumer/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-addon-treeshake/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 

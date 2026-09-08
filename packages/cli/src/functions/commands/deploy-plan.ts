@@ -70,6 +70,7 @@ export const deployPlan = pikkuSessionlessFunc<
     const projectId = await resolveProjectId(projectDir)
     const provider = await resolveProvider(config, data?.provider, {
       runtime: data?.runtime,
+      projectDir,
     })
 
     const result = await runBuildPipeline({

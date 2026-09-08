@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/templates-function-addon": "workspace:*"
+    "@pikku/fetch": "workspace:*",
+    "@pikku/templates-function-addon": "workspace:*",
+    "@pikku/websocket": "workspace:*"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
