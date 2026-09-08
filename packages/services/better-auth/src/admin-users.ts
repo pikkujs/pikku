@@ -216,3 +216,47 @@ export const revokeAuthUserSessions = async (
   const ctx = await context(auth)
   await ctx.internalAdapter.deleteUserSessions(userId)
 }
+
+/**
+ * Mail a user a magic link they can sign in with.
+ *
+ * This is the invite: an account created without a password has no credential
+ * to sign in with, and `magicLink({ disableSignUp: true })` only ever admits an
+ * email that already has a user row — so the link is an invitation by
+ * construction rather than by a separate invitation table. Clicking it verifies
+ * the address as a side effect.
+ *
+ * Goes through `auth.api` rather than the internal adapter because the token,
+ * its expiry and the send are the plugin's, and the endpoint it exposes is the
+ * only place they are assembled. `email` is not checked against the directory
+ * first: the plugin refuses an unknown address itself, and looking it up here
+ * would only turn one authoritative answer into two that can disagree.
+ */
+export const sendAuthUserSignInLink = async (
+  auth: AuthGetter,
+  { email, callbackURL }: { email: string; callbackURL?: string }
+): Promise<void> => {
+  if (!auth) {
+    throw new Error(
+      'Sign-in links require better-auth to be wired (services.auth is missing)'
+    )
+  }
+  const instance = (await auth()) as any
+  if (typeof instance.api?.signInMagicLink !== 'function') {
+    throw new Error(
+      'Sign-in links require the magicLink() plugin to be wired into better-auth'
+    )
+  }
+  await instance.api.signInMagicLink({
+    // The endpoint is declared `requireHeaders: true`, so better-call refuses
+    // the call with "Headers is required" before the handler — and the mailer —
+    // ever runs. Empty ones satisfy it: the handler reads none, and its CSRF
+    // middleware is a no-op without a `request`. Not the caller's own headers,
+    // which would hand an admin's cookies to a send made for someone else.
+    headers: new Headers(),
+    body: {
+      email: email.toLowerCase().trim(),
+      ...(callbackURL ? { callbackURL } : {}),
+    },
+  })
+}

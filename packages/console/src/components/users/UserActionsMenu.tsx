@@ -3,6 +3,7 @@ import {
   Ban,
   KeyRound,
   LogOut,
+  Mail,
   MoreHorizontal,
   Trash2,
   Undo2,
@@ -33,8 +34,15 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
   const canRevoke = can(USER_ACTION_SCOPE.revoke)
   const canPassword = can(USER_ACTION_SCOPE.password)
   const canRemove = can(USER_ACTION_SCOPE.remove)
+  const canSendSignInLink = can(USER_ACTION_SCOPE.signInLink)
 
-  if (!canBan && !canRevoke && !canPassword && !canRemove) {
+  if (
+    !canBan &&
+    !canRevoke &&
+    !canPassword &&
+    !canRemove &&
+    !canSendSignInLink
+  ) {
     return null
   }
 
@@ -81,6 +89,15 @@ export const UserActionsMenu: React.FC<UserActionsMenuProps> = ({
             data-testid="user-action-revoke"
           >
             {m.users_revoke_sessions_action()}
+          </Menu.Item>
+        )}
+        {canSendSignInLink && (
+          <Menu.Item
+            leftSection={<Mail size={14} />}
+            onClick={() => onAction('signInLink')}
+            data-testid="user-action-send-link"
+          >
+            {m.users_send_sign_in_link_action()}
           </Menu.Item>
         )}
         {canPassword && (

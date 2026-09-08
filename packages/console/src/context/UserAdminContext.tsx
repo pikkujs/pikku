@@ -7,6 +7,7 @@ export type UserAdminValue = Pick<
   | 'can'
   | 'listUsers'
   | 'createUser'
+  | 'sendSignInLink'
   | 'setUserBanned'
   | 'removeUser'
   | 'revokeUserSessions'

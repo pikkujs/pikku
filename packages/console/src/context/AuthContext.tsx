@@ -69,9 +69,15 @@ export interface AuthContextValue {
   listUsers: (search?: string) => Promise<AuthUser[]>
   createUser: (input: {
     email: string
-    password: string
+    password?: string
     name?: string
   }) => Promise<void>
+  /**
+   * Mail a user a magic link. With `magicLink({ disableSignUp: true })` a link
+   * only admits an email that already has a user row, so this is how an account
+   * created without a password is invited in.
+   */
+  sendSignInLink: (email: string) => Promise<void>
   setUserBanned: (input: {
     userId: string
     banned: boolean
@@ -104,6 +110,7 @@ const USER_ADMIN_RPC = {
   remove: 'admin:removeUser',
   revokeSessions: 'admin:revokeUserSessions',
   setPassword: 'admin:setUserPassword',
+  sendSignInLink: 'admin:sendSignInLink',
 } as const
 
 const SESSION_QUERY_KEY = ['console-auth-session']
@@ -224,6 +231,9 @@ export const AuthProvider: React.FC<{
           userId,
           newPassword,
         })
+      },
+      sendSignInLink: async (email) => {
+        await invokeUserAdmin(USER_ADMIN_RPC.sendSignInLink, { email })
       },
     }
   }, [
