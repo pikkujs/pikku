@@ -22,6 +22,29 @@ import { toSafeKebab } from '../analyzer/analyzer.js'
 
 const execFileAsync = promisify(execFile)
 
+/**
+ * The generic dispatcher route. A unit only counts as the catch-all when it
+ * actually serves this — the same string is also added to a unit's filter
+ * names so it can serve its own `/rpc/<funcName>`, which is not the same
+ * thing.
+ */
+const RPC_CATCH_ALL_ROUTE = '/rpc/:rpcName'
+
+/**
+ * Whether this unit is the generic dispatcher — it serves `/rpc/:rpcName` and
+ * so resolves RPC names only known at run time. Read from the unit's handlers,
+ * never from its filter names: `collectFilterNames` adds the same route string
+ * to every unit holding an exposed function so it can serve its own
+ * `/rpc/<funcName>`.
+ */
+export function servesRpcCatchAll(unit: DeploymentUnit): boolean {
+  return unit.handlers.some(
+    (handler) =>
+      handler.type === 'fetch' &&
+      handler.routes.some((route) => route.route === RPC_CATCH_ALL_ROUTE)
+  )
+}
+
 export interface PerUnitCodegenOptions {
   /** Root directory of the project (where pikku.config.json lives) */
   projectDir: string
@@ -274,6 +297,8 @@ export async function generatePerUnitCodegen(
         workflowQueues
       )
 
+      const isDispatcher = servesRpcCatchAll(unit)
+
       if (filterNames.length === 0) {
         errors.push({
           unitName: unit.name,
@@ -302,6 +327,7 @@ export async function generatePerUnitCodegen(
             `--names=${namesArg}`,
             `--outDir=${unitPikkuDir}`,
             '--force-relative-imports',
+            ...(isDispatcher ? ['--rpc-catch-all'] : []),
             '--silent',
           ],
           {

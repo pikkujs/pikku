@@ -90,6 +90,10 @@ export function parseCLIFilters(
     excludeTarget: data.excludeTarget,
   })
 
+  if (data.rpcCatchAll === true) {
+    filters.rpcCatchAll = true
+  }
+
   const validateTargetList = (
     values: string[] | undefined,
     argName: '--target' | '--exclude-target'

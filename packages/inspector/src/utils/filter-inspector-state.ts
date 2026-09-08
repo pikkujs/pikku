@@ -1258,15 +1258,22 @@ export function filterInspectorState(
     ) as Array<{ tools?: string[] }>) {
       for (const tool of agentMeta.tools ?? []) referencedIds.add(tool)
     }
-    // A unit carrying the generic `/rpc/:rpcName` catch-all (the rpcCaller
-    // unit, and agent units) dispatches arbitrary RPCs at runtime via
-    // `rpc.exposed(name)`, including namespaced addon RPCs (e.g.
-    // `admin:createUser`). Those never appear in referencedIds because no
-    // app-local function statically references them, so keep every wired
-    // addon's declaration for such units — otherwise the per-unit bootstrap
-    // omits the addon package bootstrap and `rpc.exposed('admin:createUser')`
-    // throws RPCNotFoundError on the deployed stage.
-    const hasRpcCatchAll = (filters.names ?? []).includes('/rpc/:rpcName')
+    // A unit that serves the generic `/rpc/:rpcName` route dispatches
+    // arbitrary RPCs at runtime via `rpc.exposed(name)`, including namespaced
+    // addon RPCs (e.g. `admin:createUser`). Those never appear in
+    // referencedIds because no app-local function statically references them,
+    // so keep every wired addon's declaration for such units — otherwise the
+    // per-unit bootstrap omits the addon package bootstrap and
+    // `rpc.exposed('admin:createUser')` throws RPCNotFoundError on the
+    // deployed stage.
+    //
+    // The deploy pipeline sets this from the unit's own handlers. It must not
+    // be inferred from `filters.names`: every unit holding an exposed function
+    // is given the `/rpc/:rpcName` scaffold name so it can serve its own
+    // `/rpc/<funcName>`, which made almost every unit look like the
+    // dispatcher and pulled each addon's whole package bootstrap — and its
+    // node-only modules — into all of them.
+    const hasRpcCatchAll = filters.rpcCatchAll === true
     const keptNamespaces = new Set<string>()
     for (const namespace of filteredState.rpc.wireAddonDeclarations.keys()) {
       if (hasRpcCatchAll) {
