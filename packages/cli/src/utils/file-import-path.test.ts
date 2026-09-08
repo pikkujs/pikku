@@ -147,6 +147,20 @@ describe('getFileImportRelativePath', () => {
     assert.strictEqual(result, '@pikku/core/dist/types/core.types')
   })
 
+  // An isolated store (bun's node_modules/.bun, pnpm's node_modules/.pnpm)
+  // nests a second node_modules inside the first, so the package specifier
+  // follows the *last* separator rather than the first.
+  test('should read the package name from the innermost node_modules', () => {
+    const from =
+      '/project/packages/addon/console/.pikku/addon/rpc/pikku-rpc-wirings-map.gen.d.ts'
+    const to =
+      '/project/node_modules/.bun/@types+json-schema@7.0.15/node_modules/@types/json-schema/index.d.ts'
+
+    const result = getFileImportRelativePath(from, to, {})
+
+    assert.strictEqual(result, 'json-schema')
+  })
+
   test('should handle node_modules path with package mappings', () => {
     const from = '/project/packages/app/src/file1.ts'
     const to = '/project/packages/app/node_modules/@myorg/utils/dist/utils.d.ts'
