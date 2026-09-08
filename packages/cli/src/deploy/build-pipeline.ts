@@ -12,6 +12,7 @@ import type { InspectorState } from '@pikku/inspector'
 import { PikkuError } from '@pikku/core/errors'
 
 import { analyzeDeployment } from './analyzer/index.js'
+import type { GroupingConfig } from './analyzer/index.js'
 import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partition.js'
 import type { DeploymentManifest } from '@pikku/deploy'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
@@ -203,6 +204,7 @@ export async function runBuildPipeline(options: {
   inspectorState: InspectorState
   serverlessIncompatible?: string[]
   defaultTarget?: 'serverless' | 'server'
+  grouping?: GroupingConfig
   globalHTTPPrefix?: string
   getEntryContext: (
     unitDir: string,
@@ -247,6 +249,7 @@ export async function runBuildPipeline(options: {
     projectId,
     serverlessIncompatible: options.serverlessIncompatible,
     defaultTarget: options.defaultTarget,
+    grouping: options.grouping,
     globalHTTPPrefix: options.globalHTTPPrefix,
     workflowQueues,
   })

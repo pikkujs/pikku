@@ -21,6 +21,8 @@ import {
   withoutScenarios,
   withoutScenarioWorkflows,
 } from '../../functions/wirings/scenarios/scenario-partition.js'
+import { toSafeKebab } from './naming.js'
+import { createUnitResolver, type GroupingConfig } from './grouping.js'
 
 import type {
   DeploymentManifest,
@@ -72,6 +74,12 @@ export interface AnalyzerOptions {
    */
   workflowQueues?: boolean
   globalHTTPPrefix?: string
+  /**
+   * Sourced from `pikku.config.json` → `deploy.grouping`. Decides how many
+   * deployment units the `role: 'function'` units collapse into. Omitted
+   * means one unit per function.
+   */
+  grouping?: GroupingConfig
 }
 
 export function analyzeDeployment(
@@ -99,6 +107,95 @@ export function analyzeDeployment(
   const functionsMeta = withoutScenarios(state.functions.meta)
   const graphMeta = withoutScenarioWorkflows(state.workflows.graphMeta)
   const httpMeta = state.http.meta
+
+  const resolver = createUnitResolver(options.grouping, {
+    routesForFunction: (funcId) =>
+      collectHttpRoutes(httpMeta, funcId).flatMap((r) => [
+        r.route,
+        prefixed(r.route),
+      ]),
+    tagsForFunction: (funcId) => functionsMeta[funcId]?.tags ?? [],
+  })
+
+  const addFunctionUnit = (unit: DeploymentUnit) => {
+    const existing = units.find((u) => u.name === unit.name)
+    if (!existing) {
+      units.push(unit)
+      return
+    }
+    if (existing.target !== unit.target) {
+      const rule = resolver.ruleForUnit(unit.name)
+      throw new Error(
+        `deploy.grouping: unit "${unit.name}" would hold both serverless and server functions ` +
+          `(${existing.functionIds.join(', ')} vs ${unit.functionIds.join(', ')}). ` +
+          (rule
+            ? `Give the server-target functions their own rule, or drop them from "${unit.name}".`
+            : `A grouping rule cannot change a function's target.`)
+      )
+    }
+    for (const id of unit.functionIds) {
+      if (!existing.functionIds.includes(id)) {
+        existing.functionIds.push(id)
+      }
+    }
+    for (const service of unit.services) {
+      if (
+        !existing.services.some(
+          (s) =>
+            s.capability === service.capability &&
+            s.sourceServiceName === service.sourceServiceName
+        )
+      ) {
+        existing.services.push(service)
+      }
+    }
+    for (const dep of unit.dependsOn) {
+      if (dep !== existing.name && !existing.dependsOn.includes(dep)) {
+        existing.dependsOn.push(dep)
+      }
+    }
+    for (const tag of unit.tags) {
+      if (!existing.tags.includes(tag)) {
+        existing.tags.push(tag)
+      }
+    }
+    for (const handler of unit.handlers) {
+      if (handler.type === 'fetch') {
+        const fetchHandler = existing.handlers.find(
+          (h): h is Extract<DeploymentHandler, { type: 'fetch' }> =>
+            h.type === 'fetch'
+        )
+        if (fetchHandler) {
+          fetchHandler.routes.push(...handler.routes)
+        } else {
+          existing.handlers.push(handler)
+        }
+      } else {
+        existing.handlers.push(handler)
+      }
+    }
+    if (unit.invokedAgents?.length) {
+      const merged = new Set([
+        ...(existing.invokedAgents ?? []),
+        ...unit.invokedAgents,
+      ])
+      existing.invokedAgents = [...merged]
+    }
+  }
+
+  const unitFunctionIds = new Map<string, string[]>()
+  const unitFor = (funcId: string) => {
+    const name = resolver.forFunction(funcId)
+    const existing = unitFunctionIds.get(name)
+    if (existing) {
+      if (!existing.includes(funcId)) {
+        existing.push(funcId)
+      }
+    } else {
+      unitFunctionIds.set(name, [funcId])
+    }
+    return name
+  }
 
   // ── Step 1: Create function units ──────────────────────────────────
   // Each function gets one unit. Collect all its triggers.
@@ -149,7 +246,7 @@ export function analyzeDeployment(
         handlers.push({ type: 'queue', queueName: queueMeta.name ?? queueName })
         queues.push({
           name: queueMeta.name ?? queueName,
-          consumerUnit: toSafeKebab(funcId),
+          consumerUnit: unitFor(funcId),
           consumerFunctionId: funcId,
         })
       }
@@ -166,7 +263,7 @@ export function analyzeDeployment(
         scheduledTasks.push({
           name: schedMeta.name,
           schedule: schedMeta.schedule,
-          unitName: toSafeKebab(funcId),
+          unitName: unitFor(funcId),
           functionId: funcId,
         })
       }
@@ -216,8 +313,8 @@ export function analyzeDeployment(
 
     const invokedAgents = collectInvokedAgents(state, funcId)
 
-    units.push({
-      name: toSafeKebab(funcId),
+    addFunctionUnit({
+      name: unitFor(funcId),
       role: 'function',
       target: resolveDeployTarget(
         funcMeta,
@@ -245,7 +342,7 @@ export function analyzeDeployment(
       continue
     }
 
-    const unitName = `addon-${toSafeKebab(namespace)}`
+    const unitName = resolver.forAddon(namespace)
     const addonIncompatible = new Set(
       state.addonServerlessIncompatible?.get(namespace) ?? []
     )
@@ -289,7 +386,7 @@ export function analyzeDeployment(
       }
     }
 
-    units.push({
+    addFunctionUnit({
       name: unitName,
       role: 'function',
       target,
@@ -308,7 +405,7 @@ export function analyzeDeployment(
     const unitName = `agent-${toSafeKebab(agentName)}`
 
     // Agent gateway depends on its tool function units
-    const toolUnitNames = toolIds.map((id) => toSafeKebab(id))
+    const toolUnitNames = toolIds.map((id) => unitFor(id))
     const subAgentUnitNames = subAgentNames.map(
       (sa) => `agent-${toSafeKebab(sa)}`
     )
@@ -398,7 +495,7 @@ export function analyzeDeployment(
   const allMcpIds = [...mcpToolIds, ...mcpResourceIds, ...mcpPromptIds]
   if (allMcpIds.length > 0) {
     const unitName = 'mcp-server'
-    const mcpFuncUnitNames = allMcpIds.map((id) => toSafeKebab(id))
+    const mcpFuncUnitNames = allMcpIds.map((id) => unitFor(id))
 
     units.push({
       name: unitName,
@@ -425,7 +522,7 @@ export function analyzeDeployment(
     if (funcIds.length === 0) continue
 
     const unitName = `channel-${toSafeKebab(channelName)}`
-    const funcUnitNames = funcIds.map((id) => toSafeKebab(id))
+    const funcUnitNames = funcIds.map((id) => unitFor(id))
 
     units.push({
       name: unitName,
@@ -455,45 +552,46 @@ export function analyzeDeployment(
     units,
     workflows,
     queues,
-    workflowQueues
+    workflowQueues,
+    unitFor
   )
 
   // ── Step 6: Ensure function units exist for gateway dependencies ───
   // Gateways depend on function units. If a function is only used via
   // a gateway (not directly wired to HTTP/queue/cron), it still needs
   // a unit with a fetch handler for RPC access.
-  const existingUnitNames = new Set(units.map((u) => u.name))
-
   const unitsSnapshot = Array.from(units)
   for (const unit of unitsSnapshot) {
     for (const dep of unit.dependsOn) {
-      if (!existingUnitNames.has(dep)) {
-        // Find the function ID for this dependency
-        const funcId = fromKebab(dep)
-        const funcMeta = functionsMeta[funcId]
-        if (funcMeta) {
-          const invokedAgents = collectInvokedAgents(state, funcId)
-          units.push({
-            name: dep,
-            role: 'function',
-            target: resolveDeployTarget(
-              funcMeta,
-              serverlessIncompatible,
-              funcId,
-              defaultTarget
-            ),
-            functionIds: [funcId],
-            services: withAgentServices(
-              collectServicesForFunction(funcMeta),
-              invokedAgents
-            ),
-            dependsOn: [],
-            handlers: [{ type: 'fetch', routes: [] }],
-            tags: funcMeta.tags ?? [],
-            ...(invokedAgents.length > 0 && { invokedAgents }),
-          })
-          existingUnitNames.add(dep)
+      for (const funcId of unitFunctionIds.get(dep) ?? []) {
+        const existing = units.find((u) => u.name === dep)
+        if (existing?.functionIds.includes(funcId)) {
+          continue
         }
+        const funcMeta = functionsMeta[funcId]
+        if (!funcMeta) {
+          continue
+        }
+        const invokedAgents = collectInvokedAgents(state, funcId)
+        addFunctionUnit({
+          name: dep,
+          role: 'function',
+          target: resolveDeployTarget(
+            funcMeta,
+            serverlessIncompatible,
+            funcId,
+            defaultTarget
+          ),
+          functionIds: [funcId],
+          services: withAgentServices(
+            collectServicesForFunction(funcMeta),
+            invokedAgents
+          ),
+          dependsOn: [],
+          handlers: [{ type: 'fetch', routes: [] }],
+          tags: funcMeta.tags ?? [],
+          ...(invokedAgents.length > 0 && { invokedAgents }),
+        })
       }
     }
   }
@@ -755,7 +853,8 @@ function buildWorkflows(
   units: DeploymentUnit[],
   workflows: WorkflowDefinition[],
   queues: QueueDefinition[],
-  workflowQueues: boolean
+  workflowQueues: boolean,
+  unitFor: (funcId: string) => string
 ): void {
   for (const [_wfName, graph] of entries(graphMeta)) {
     const steps: WorkflowStepDefinition[] = []
@@ -765,7 +864,7 @@ function buildWorkflows(
       if ('flow' in node) continue
       if (!('rpcName' in node)) continue
 
-      const stepUnitName = toSafeKebab(node.rpcName)
+      const stepUnitName = unitFor(node.rpcName)
       // Step dispatch is decided per-function: a step runs inline unless its
       // function is marked `workflowQueued: true` (then it dispatches via queue).
       const stepFuncId = rpcMeta[node.rpcName] ?? node.rpcName
@@ -862,7 +961,7 @@ function buildWorkflows(
 
         queues.push({
           name: stepQueueName,
-          consumerUnit: toSafeKebab(step.functionId),
+          consumerUnit: unitFor(step.functionId),
           consumerFunctionId: `pikkuWorkflowWorker:${step.functionId}`,
         })
       }
@@ -1029,19 +1128,7 @@ function collectChannelFunctionIds(channelMeta: ChannelMeta): string[] {
 // Naming helpers
 // ---------------------------------------------------------------------------
 
-export function toSafeKebab(str: string): string {
-  return str
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
-    .replace(/[:/\\]/g, '-')
-    .replace(/--+/g, '-')
-    .replace(/^-|-$/g, '')
-    .toLowerCase()
-}
-
-function fromKebab(str: string): string {
-  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-}
+export { toSafeKebab } from './naming.js'
 
 // ---------------------------------------------------------------------------
 // Tag helpers
