@@ -3,6 +3,10 @@ import { rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
+import {
+  SHARED_BOOTSTRAP_FILE,
+  resolveSplitAddonImports,
+} from '../../utils/addon-split-imports.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
 
 export type BootstrapInput = {
@@ -14,13 +18,28 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     const stateBeforeBootstrap = await getInspectorState()
     const addonBootstraps: string[] = []
 
-    for (const [, decl] of stateBeforeBootstrap.rpc?.wireAddonDeclarations ??
-      []) {
+    for (const [namespace, decl] of stateBeforeBootstrap.rpc
+      ?.wireAddonDeclarations ?? []) {
       // Remote addons (wireRemoteAddon) run on the host — never import their
       // runtime bootstrap here; that would register their functions locally
       // and drag in the runtime deps remote consumption exists to avoid. The
       // consumer's own wireRemoteAddon() call registers the remote binding.
       if (decl.remote) continue
+      const funcNames = Object.keys(
+        stateBeforeBootstrap.addonFunctions?.[namespace] ?? {}
+      )
+      const split = resolveSplitAddonImports(
+        stateBeforeBootstrap.rootDir,
+        decl.package,
+        funcNames
+      )
+      if (split) {
+        addonBootstraps.push(...split)
+        logger.debug(
+          `• Addon bootstrap: ${decl.package} (${funcNames.length} of its functions)`
+        )
+        continue
+      }
       addonBootstraps.push(`${decl.package}/.pikku/pikku-bootstrap.gen.js`)
       logger.debug(`• Addon bootstrap: ${decl.package}`)
     }
@@ -97,6 +116,22 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       .join('\n')
 
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
+
+    // An addon also publishes its bootstrap without the combined function
+    // registration, so a consumer can pair it with just the per-function files
+    // it needs instead of taking every function the package defines.
+    if (config.addonName) {
+      const functionsImport = `import '${getFileImportRelativePath(config.bootstrapFile, config.functionsFile, config.packageMappings, config.forceRelativeImports)}'`
+      const sharedImports = allBootstrapImports
+        .split('\n')
+        .filter((line) => line !== functionsImport)
+        .join('\n')
+      await writeFileInDir(
+        logger,
+        join(outDir, SHARED_BOOTSTRAP_FILE),
+        sharedImports
+      )
+    }
 
     // The scenario bootstrap is the only entry point that registers scenarios,
     // features and their steps. It pulls in the app bootstrap first so a runner

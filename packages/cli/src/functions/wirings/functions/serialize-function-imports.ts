@@ -1,5 +1,9 @@
+import { join } from 'node:path'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { FunctionsMeta } from '@pikku/core/services'
+
+/** Directory, relative to the combined registration file, holding the per-function ones. */
+export const SINGLE_FUNCTION_DIR = 'single'
 
 export const serializeFunctionImports = (
   outputPath: string,
@@ -62,4 +66,36 @@ export const serializeFunctionImports = (
 
   // Combine the imports and registrations
   return [...serializedImports, ...serializedRegistrations].join('\n')
+}
+
+/**
+ * One registration file per function, so a consumer can bundle a single addon
+ * function instead of the package's whole registration module.
+ *
+ * The combined file stays alongside these — a project on an older addon build,
+ * or one that wants every function, still imports that.
+ */
+export const serializeSingleFunctionImports = (
+  outputDir: string,
+  functionsMap: Map<string, { path: string; exportedName: string }>,
+  functionsMeta: FunctionsMeta,
+  packageMappings: Record<string, string> = {},
+  addonName?: string
+): Map<string, string> => {
+  const files = new Map<string, string>()
+  for (const [name, entry] of functionsMap) {
+    if (!(name in functionsMeta)) continue
+    const outputPath = join(outputDir, `${name}.gen.ts`)
+    files.set(
+      outputPath,
+      serializeFunctionImports(
+        outputPath,
+        new Map([[name, entry]]),
+        functionsMeta,
+        packageMappings,
+        addonName
+      )
+    )
+  }
+  return files
 }

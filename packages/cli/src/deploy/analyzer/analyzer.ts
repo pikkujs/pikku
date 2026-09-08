@@ -13,6 +13,7 @@ import {
   type SerializedWorkflowGraph,
 } from '@pikku/inspector'
 import { relative } from 'node:path'
+import { resolveSplitAddonImports } from '../../utils/addon-split-imports.js'
 import type { FunctionMeta } from '@pikku/core/services'
 import type { ChannelMeta } from '@pikku/core/channel'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -238,6 +239,10 @@ export function analyzeDeployment(
   }
 
   // ── Step 1b: Addon units ───────────────────────────────────────────
+  //
+  // An addon that publishes per-function registration files is split the same
+  // way app code is: one exposed function, one unit. An addon built before that
+  // existed can only be imported whole, so its exposed functions share a unit.
   const addonUnitByRpcName = new Map<string, string>()
   for (const [namespace, addonMeta] of entries(state.addonFunctions ?? {})) {
     const exposed = entries(addonMeta).filter(([, meta]) => meta.expose)
@@ -245,60 +250,82 @@ export function analyzeDeployment(
       continue
     }
 
-    const unitName = `addon-${toSafeKebab(namespace)}`
+    const decl = state.rpc?.wireAddonDeclarations?.get(namespace)
+    const splittable =
+      !!decl &&
+      !decl.remote &&
+      resolveSplitAddonImports(
+        state.rootDir,
+        decl.package,
+        exposed.map(([funcName]) => funcName)
+      ) !== null
+
     const addonIncompatible = new Set(
       state.addonServerlessIncompatible?.get(namespace) ?? []
     )
-    const routes: HttpRouteInfo[] = []
-    const functionIds: string[] = []
-    const services: ServiceRequirement[] = []
-    let target: 'serverless' | 'server' = defaultTarget
 
-    for (const [funcName, funcMeta] of exposed) {
-      const rpcName = `${namespace}:${funcName}`
-      functionIds.push(rpcName)
-      addonUnitByRpcName.set(rpcName, unitName)
-      routes.push({
-        method: 'post',
-        route: prefixed(`/rpc/${rpcName}`),
-        pikkuFuncId: rpcName,
-      })
-      routes.push({
-        method: 'post',
-        route: prefixed(`/remote/rpc/${rpcName}`),
-        pikkuFuncId: rpcName,
-      })
-      for (const service of collectServicesForFunction(funcMeta)) {
+    const groups: Array<{
+      unitName: string
+      members: Array<[string, FunctionMeta]>
+    }> = splittable
+      ? exposed.map(([funcName, funcMeta]) => ({
+          unitName: `addon-${toSafeKebab(namespace)}-${toSafeKebab(funcName)}`,
+          members: [[funcName, funcMeta]] as Array<[string, FunctionMeta]>,
+        }))
+      : [{ unitName: `addon-${toSafeKebab(namespace)}`, members: exposed }]
+
+    for (const { unitName, members } of groups) {
+      const routes: HttpRouteInfo[] = []
+      const functionIds: string[] = []
+      const services: ServiceRequirement[] = []
+      let target: 'serverless' | 'server' = defaultTarget
+
+      for (const [funcName, funcMeta] of members) {
+        const rpcName = `${namespace}:${funcName}`
+        functionIds.push(rpcName)
+        addonUnitByRpcName.set(rpcName, unitName)
+        routes.push({
+          method: 'post',
+          route: prefixed(`/rpc/${rpcName}`),
+          pikkuFuncId: rpcName,
+        })
+        routes.push({
+          method: 'post',
+          route: prefixed(`/remote/rpc/${rpcName}`),
+          pikkuFuncId: rpcName,
+        })
+        for (const service of collectServicesForFunction(funcMeta)) {
+          if (
+            !services.some(
+              (s) => s.sourceServiceName === service.sourceServiceName
+            )
+          ) {
+            services.push(service)
+          }
+        }
         if (
-          !services.some(
-            (s) => s.sourceServiceName === service.sourceServiceName
-          )
+          resolveDeployTarget(
+            funcMeta,
+            addonIncompatible,
+            rpcName,
+            defaultTarget
+          ) === 'server'
         ) {
-          services.push(service)
+          target = 'server'
         }
       }
-      if (
-        resolveDeployTarget(
-          funcMeta,
-          addonIncompatible,
-          rpcName,
-          defaultTarget
-        ) === 'server'
-      ) {
-        target = 'server'
-      }
-    }
 
-    units.push({
-      name: unitName,
-      role: 'function',
-      target,
-      functionIds,
-      services,
-      dependsOn: [],
-      handlers: [{ type: 'fetch', routes }],
-      tags: [],
-    })
+      units.push({
+        name: unitName,
+        role: 'function',
+        target,
+        functionIds,
+        services,
+        dependsOn: [],
+        handlers: [{ type: 'fetch', routes }],
+        tags: [],
+      })
+    }
   }
 
   // ── Step 2: Agent gateways ─────────────────────────────────────────

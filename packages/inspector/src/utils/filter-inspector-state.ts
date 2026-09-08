@@ -4,6 +4,7 @@ import type {
   InspectorLogger,
 } from '../types.js'
 import type { PikkuWiringTypes } from '@pikku/core/types'
+import type { FunctionsMeta } from '@pikku/core/services'
 import { parseVersionedId } from '@pikku/core/utils'
 import { makeContextBasedId } from './extract-function-name.js'
 import { aggregateRequiredServices } from './post-process.js'
@@ -1287,6 +1288,26 @@ export function filterInspectorState(
         keptNamespaces.has(namespace)
       )
     )
+
+    // Narrow each surviving addon to the functions this filter actually
+    // reaches, so the bootstrap can import those alone rather than the
+    // package's combined registration.
+    const narrowedAddonFunctions: Record<string, FunctionsMeta> = {}
+    for (const namespace of keptNamespaces) {
+      const addonMeta = state.addonFunctions?.[namespace]
+      if (!addonMeta) continue
+      const prefix = `${namespace}:`
+      const kept: FunctionsMeta = {}
+      for (const id of referencedIds) {
+        if (!id.startsWith(prefix)) continue
+        const funcName = id.slice(prefix.length)
+        const meta = addonMeta[funcName]
+        if (meta) kept[funcName] = meta
+      }
+      narrowedAddonFunctions[namespace] =
+        Object.keys(kept).length > 0 ? kept : addonMeta
+    }
+    filteredState.addonFunctions = narrowedAddonFunctions
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions

@@ -1,7 +1,13 @@
+import { dirname, join } from 'node:path'
+import { rm } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializeFunctionImports } from './serialize-function-imports.js'
+import {
+  serializeFunctionImports,
+  serializeSingleFunctionImports,
+  SINGLE_FUNCTION_DIR,
+} from './serialize-function-imports.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
   stripVerboseFields,
@@ -86,6 +92,24 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
           packageMappings,
           config.addonName
         )
+      )
+    }
+
+    if (isAddon) {
+      const singleDir = join(dirname(functionsFile), SINGLE_FUNCTION_DIR)
+      await rm(singleDir, { recursive: true, force: true })
+      const singles = serializeSingleFunctionImports(
+        singleDir,
+        appFiles,
+        appFunctionsMeta,
+        packageMappings,
+        config.addonName
+      )
+      for (const [path, contents] of singles) {
+        await writeFileInDir(logger, path, contents)
+      }
+      logger.debug(
+        `• Wrote ${singles.size} per-function registration files to ${singleDir}`
       )
     }
 
