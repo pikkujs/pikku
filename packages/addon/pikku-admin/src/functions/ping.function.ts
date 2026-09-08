@@ -3,11 +3,10 @@ import { pikkuFunc } from '#pikku/addon/function'
 /**
  * Answers "am I wired?" and nothing else.
  *
- * The console UI is a static bundle the CLI serves at `/console`, so it is
- * present whether or not this addon is wired into the host — in a deployed app
- * it usually is not. Rather than hide those screens, the UI probes for this
- * function so it can say the addon is not enabled, instead of failing one
- * request at a time.
+ * The console UI ships with screens for users, roles and scopes, credentials
+ * and the audit trail, but the app serving it may never have wired this addon.
+ * Those screens probe for this function so they can say the addon is not
+ * enabled, instead of failing one request at a time.
  *
  * The probe discriminates on `RPCNotFoundError` (404), not on success: name
  * resolution runs before the session check, so an unwired addon 404s even for
@@ -21,7 +20,7 @@ import { pikkuFunc } from '#pikku/addon/function'
 export const ping = pikkuFunc<null, { pong: true }>({
   title: 'Ping',
   description:
-    'Health check for the Pikku Console addon. The console UI probes it to tell "addon not installed" apart from a real failure.',
+    'Health check for the Pikku Admin addon. The console UI probes it to tell "addon not installed" apart from a real failure.',
   expose: true,
   func: async () => {
     return { pong: true }
