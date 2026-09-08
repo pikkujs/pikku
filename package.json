@@ -110,7 +110,8 @@
     "esbuild": "0.28.2",
     "@playwright/test": "1.58.2",
     "playwright-core": "1.58.2",
-    "zustand": "5.0.14"
+    "zustand": "5.0.14",
+    "better-auth": "1.6.29"
   },
   "engines": {
     "node": ">=24"
