@@ -35,7 +35,7 @@
     "build:templates": "bun run --filter './templates/**' build",
     "build:examples": "bun run --filter './examples/**' build",
     "build:verifiers": "bun run --filter './verifiers/**' build",
-    "build": "bun run build:packages && bun run build:addons && bun run pikku && bun run build:templates",
+    "build": "bun run build:packages && bun install && bun run build:addons && bun run pikku && bun run build:templates",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:workspace-protocol": "node scripts/check-no-workspace-protocol.mjs",
     "check:no-publish-rebuild": "node scripts/check-no-publish-time-cli-rebuild.mjs",

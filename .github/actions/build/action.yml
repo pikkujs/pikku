@@ -33,6 +33,14 @@ runs:
         start=$SECONDS
         bun run build:packages
         echo "::notice::⏱ Build packages: $((SECONDS - start))s"
+    # bun only links a workspace package's bin when the file it points at exists
+    # at install time, and never backfills it. The Build job installs before
+    # anything is built, so `pikku` is missing from node_modules/.bin until the
+    # CLI's dist does exist — every other job downloads the build artifact first
+    # and is unaffected. A repeat install is a no-op apart from the symlinks.
+    - name: Link workspace bins built by the previous step
+      shell: bash
+      run: bun install --frozen-lockfile
     - name: Build addons
       shell: bash
       run: |
