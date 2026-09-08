@@ -78,6 +78,11 @@ function isReaderSql(sql: string): boolean {
 
 export const bunSqliteRuntime: SqliteRuntime = {
   open(filename) {
-    return new BunSqliteDatabase(new Database(filename))
+    const db = new Database(filename)
+    // node:sqlite's DatabaseSync enforces foreign keys by default; bun:sqlite
+    // leaves sqlite's own default of off, which turns every ON DELETE CASCADE
+    // into a silent no-op. Both runtimes have to agree about what a delete does.
+    db.exec('PRAGMA foreign_keys = ON')
+    return new BunSqliteDatabase(db)
   },
 }

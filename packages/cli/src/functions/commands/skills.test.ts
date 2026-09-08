@@ -54,13 +54,21 @@ async function installed(root: string, agent = 'claude'): Promise<string[]> {
     .sort()
 }
 
+/**
+ * Whether the command signalled failure. Assigning `undefined` clears
+ * `process.exitCode` on node but leaves it untouched on bun, so a run that
+ * succeeded is read as "no failing code" rather than as "unset".
+ */
+const exitedWithFailure = () =>
+  process.exitCode !== undefined && process.exitCode !== 0
+
 describe('pikku skills install', () => {
   const cwd = process.cwd()
   const temps: string[] = []
 
   afterEach(async () => {
     process.chdir(cwd)
-    process.exitCode = undefined
+    process.exitCode = 0
     for (const dir of temps.splice(0)) {
       await rm(dir, { recursive: true, force: true })
     }
@@ -85,7 +93,7 @@ describe('pikku skills install', () => {
       'pikku-kysely',
       'pikku-software-archaeology',
     ])
-    assert.equal(process.exitCode, undefined)
+    assert.equal(exitedWithFailure(), false)
   })
 
   test('--only copies the whole skill directory, not just SKILL.md', async () => {
@@ -130,7 +138,7 @@ describe('pikku skills install', () => {
     assert.deepEqual(await installed(dir, 'pi'), ['pikku-software-archaeology'])
     assert.deepEqual(await installed(dir, 'claude'), [])
     assert.deepEqual(await installed(dir, 'opencode'), [])
-    assert.equal(process.exitCode, undefined)
+    assert.equal(exitedWithFailure(), false)
   })
 
   test('--agent pi copies the whole skill directory', async () => {

@@ -34,10 +34,18 @@ files=($(find src -type f -name "*.test.ts"))
 # Check if any files matched the pattern
 if [ ${#files[@]} -eq 0 ]; then
   echo "No test files found matching pattern: $pattern"
+  if [ "${STRICT_TEST_DISCOVERY}" = "1" ]; then
+    exit 1
+  fi
   exit 0
 fi
 
 # Construct the node command
+#
+# Every other package runs its tests on bun. This one stays on node because
+# bun substitutes its own `ws` implementation for the package's, and that one
+# does not honour `maxPayload` — so under bun these tests would be asserting
+# about a websocket library the package never ships with.
 node_cmd=(node --import tsx --test)
 
 # Append options based on flags
@@ -47,6 +55,7 @@ fi
 
 if [ "$coverage_mode" = true ]; then
   node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info)
+  export PIKKU_TEST_COVERAGE=1
 fi
 
 # Execute the node command with the expanded list of files

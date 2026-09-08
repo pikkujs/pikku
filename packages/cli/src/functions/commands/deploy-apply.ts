@@ -1,4 +1,4 @@
-import { basename, join, relative } from 'node:path'
+import { basename, isAbsolute, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { readFile } from 'node:fs/promises'
@@ -142,6 +142,11 @@ async function resolveProjectId(projectDir: string): Promise<string> {
  * found the provider because yarn hoisted every workspace package to a shared
  * root. An isolated node_modules layout (bun, pnpm) gives the CLI only what the
  * CLI declares, so the provider has to be resolved against the project.
+ *
+ * Only an absolute path counts as having resolved to the project's own copy: a
+ * configured provider may also be a URL, and a runtime whose `require.resolve`
+ * hands a bare specifier straight back for its own built-ins has resolved
+ * nothing. Both of those import as written.
  */
 const importProviderPackage = async (
   packageName: string,
@@ -151,7 +156,10 @@ const importProviderPackage = async (
     join(projectDir ?? process.cwd(), 'package.json')
   )
   try {
-    return await import(pathToFileURL(require.resolve(packageName)).href)
+    const resolved = require.resolve(packageName)
+    if (isAbsolute(resolved)) {
+      return await import(pathToFileURL(resolved).href)
+    }
   } catch (e: unknown) {
     const err = e as { code?: string }
     if (
@@ -160,8 +168,8 @@ const importProviderPackage = async (
     ) {
       throw e
     }
-    return await import(packageName)
   }
+  return await import(packageName)
 }
 
 export async function resolveProvider(

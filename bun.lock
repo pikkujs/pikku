@@ -30,7 +30,7 @@
         "prettier": "3.9.6",
         "tsx": "^4.23.12",
         "typedoc": "^0.28.20",
-        "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
+        "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.69.0",
       },
     },
     "e2e": {
@@ -994,7 +994,7 @@
         "@pikku/uws-handler": "^0.12.9",
         "@types/qs": "^6",
         "qs": "^6.15.3",
-        "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
+        "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.69.0",
       },
       "devDependencies": {
         "@pikku/core": "^0.12.87",
@@ -1159,6 +1159,7 @@
         "kysely": "^0.29.5",
       },
       "devDependencies": {
+        "@electric-sql/pglite": "^0.5.5",
         "@types/better-sqlite3": "^9.6.0",
         "better-sqlite3": "^13.0.3",
         "kysely-codegen": "^0.20.0",
@@ -6151,8 +6152,6 @@
     "@pikku/templates-workflows-pg-boss/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/templates-ws-server/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
-
-    "@pikku/uws/uWebSockets.js": ["uWebSockets.js@github:uNetworking/uWebSockets.js#dddd8ff", {}, "uNetworking-uWebSockets.js-dddd8ff", "sha512-fDaDQQEj+Jn8LsDXGGE629Nna1MGnRS8j9kxsaqtPHBMq3pBDIbKs2sGxk1QMWpQ78+o4F9jV/tuBZZqfanBWQ=="],
 
     "@pikku/verifier-registry-consumer/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 

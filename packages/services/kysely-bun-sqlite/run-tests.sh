@@ -1,10 +1,13 @@
 #!/bin/bash
 
+# Enable nullglob to handle cases where no files match the pattern
 shopt -s nullglob
 
+# Initialize variables for options
 watch_mode=false
 coverage_mode=false
 
+# Parse command-line options
 while [[ $# -gt 0 ]]; do
   case $1 in
     --watch)
@@ -22,33 +25,44 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-files=()
-while IFS= read -r -d '' file; do
-  files+=("$file")
-done < <(find src -type f -name "*.test.ts" -print0)
+# Define the pattern to match your test files
+pattern="src/*.test.ts"
 
+# Expand the pattern into an array of files
+files=($(find src -type f -name "*.test.ts"))
+
+# Check if any files matched the pattern
 if [ ${#files[@]} -eq 0 ]; then
-  echo "No test files found"
+  echo "No test files found matching pattern: $pattern"
+  if [ "${STRICT_TEST_DISCOVERY}" = "1" ]; then
+    exit 1
+  fi
   exit 0
 fi
 
-if [ "$coverage_mode" = true ]; then
-  # Bun writes coverage/lcov.info and instruments imported dist files too.
-  # Re-emit a package-root lcov.info containing only src/ records so the
-  # repo-wide unit-coverage merge — which expects <pkg>/lcov.info and prefixes
-  # its SF paths — maps them correctly, exactly like the node packages'
-  # --test-reporter=lcov output.
-  bun test --coverage --coverage-reporter=lcov "${files[@]}"
-  status=$?
-  awk '/^SF:/{keep=/^SF:src\//} keep' coverage/lcov.info > lcov.info 2>/dev/null || true
-  rm -rf coverage
-  exit $status
-fi
+# Construct the bun command
+#
+# --parallel gives every test file its own worker process, which is what node's
+# `--test` did. Several suites keep module-level caches (a TypeScript program, a
+# temp fixture directory) that a shared process would leak between files.
+#
+# --timeout because bun caps a test at 5s by default where node had no cap, and
+# the suites that build real TypeScript programs run well past that.
+bun_cmd=(bun test --parallel --timeout 120000)
 
-bun_cmd="bun test"
-
+# Append options based on flags
 if [ "$watch_mode" = true ]; then
-  bun_cmd="$bun_cmd --watch"
+  # --watch reruns in one process; parallel workers have nothing to watch.
+  bun_cmd=(bun test --watch --timeout 120000)
 fi
 
-$bun_cmd "${files[@]}"
+if [ "$coverage_mode" = true ]; then
+  # --coverage-dir=. keeps lcov.info at the package root: CI merges every
+  # package's report by prefixing its SF paths with the file's own directory,
+  # so a nested coverage/ directory would re-root them one level too deep.
+  bun_cmd+=(--coverage --coverage-reporter=lcov --coverage-reporter=text --coverage-dir=.)
+  export PIKKU_TEST_COVERAGE=1
+fi
+
+# Execute the bun command with the expanded list of files
+"${bun_cmd[@]}" "${files[@]}"

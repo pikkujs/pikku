@@ -70,7 +70,15 @@ describe('generateAllSchemas', () => {
   // Only the program is released; cachedTSSchemas (the small result cache that
   // powers the same-process fast path) is deliberately kept.
   test('does not retain the schema ts.Program after returning', async (t) => {
-    if (typeof global.gc !== 'function') {
+    // node needs --expose-gc for global.gc; bun always offers Bun.gc, and does
+    // not surface a global.gc to the test runner even when the flag is passed.
+    const collect =
+      typeof global.gc === 'function'
+        ? () => global.gc!()
+        : typeof Bun !== 'undefined'
+          ? () => Bun.gc(true)
+          : undefined
+    if (!collect) {
       t.skip('requires --expose-gc')
       return
     }
@@ -84,7 +92,7 @@ describe('generateAllSchemas', () => {
       []
     )
 
-    global.gc!()
+    collect()
     const before = process.memoryUsage().heapUsed
 
     await generateAllSchemas(
@@ -93,7 +101,7 @@ describe('generateAllSchemas', () => {
       state
     )
 
-    global.gc!()
+    collect()
     const retainedMB = (process.memoryUsage().heapUsed - before) / 1024 / 1024
 
     // A retained program (with its SourceFiles and TypeChecker) measures tens of

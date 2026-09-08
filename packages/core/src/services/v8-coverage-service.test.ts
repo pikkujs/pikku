@@ -1,4 +1,4 @@
-import { describe, test, after } from 'node:test'
+import { describe, test, after, before } from 'node:test'
 import assert from 'node:assert/strict'
 import { V8CoverageService } from './v8-coverage-service.js'
 
@@ -8,12 +8,44 @@ function coveredProbe(n: number): number {
   return n * 2
 }
 
+/**
+ * Precise coverage is read through the inspector's Debugger domain, which not
+ * every runtime that offers `node:inspector` implements — bun answers
+ * `Debugger.enable` with "requires an active inspector". The service is node
+ * tooling, so elsewhere there is nothing to assert rather than something to
+ * fix, and probing the domain itself keeps a genuine node regression failing.
+ */
+const debuggerDomainAvailable = async (): Promise<boolean> => {
+  const inspector = await import('node:inspector')
+  const session = new inspector.Session()
+  session.connect()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      session.post('Debugger.enable', (error) =>
+        error ? reject(error) : resolve()
+      )
+    })
+    return true
+  } catch {
+    return false
+  } finally {
+    session.disconnect()
+  }
+}
+
+let available = true
+
 describe('V8CoverageService', () => {
-  after(async () => {
-    await service.stop()
+  before(async () => {
+    available = await debuggerDomainAvailable()
   })
 
-  test('start + takeCoverage reports call counts for functions invoked after start', async () => {
+  after(async () => {
+    if (available) await service.stop()
+  })
+
+  test('start + takeCoverage reports call counts for functions invoked after start', async (t) => {
+    if (!available) return t.skip('inspector has no Debugger domain')
     await service.start()
     coveredProbe(21)
 
@@ -34,7 +66,8 @@ describe('V8CoverageService', () => {
     )
   })
 
-  test('reset clears call counts so attribution per run is possible', async () => {
+  test('reset clears call counts so attribution per run is possible', async (t) => {
+    if (!available) return t.skip('inspector has no Debugger domain')
     coveredProbe(1)
     await service.reset()
     const snapshot = await service.takeCoverage()
@@ -53,7 +86,8 @@ describe('V8CoverageService', () => {
     )
   })
 
-  test('getScriptSource returns the executed source for mapping', async () => {
+  test('getScriptSource returns the executed source for mapping', async (t) => {
+    if (!available) return t.skip('inspector has no Debugger domain')
     const snapshot = await service.takeCoverage()
     if (snapshot.kind !== 'v8-scripts') return assert.fail('expected scripts')
     const own = snapshot.scripts.find((s) =>

@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 
 /**
  * Resolves a package as the *project* would, not as the CLI would.
@@ -12,13 +12,21 @@ import { join } from 'node:path'
  * skew surfaces as a missing subpath export from a package the project never
  * imported. Resolving against the project's own package.json keeps one core in
  * play.
+ *
+ * Only an absolute path is a copy in the project. A runtime that hands a bare
+ * specifier straight back — bun does this for the modules it implements itself,
+ * `ws` among them — has resolved nothing from the project, and saying so lets
+ * the caller fall back rather than import the runtime's own copy by accident.
  */
 export const resolveFromProject = (
   rootDir: string,
   specifier: string
 ): string | undefined => {
   try {
-    return createRequire(join(rootDir, 'package.json')).resolve(specifier)
+    const resolved = createRequire(join(rootDir, 'package.json')).resolve(
+      specifier
+    )
+    return isAbsolute(resolved) ? resolved : undefined
   } catch {
     return undefined
   }
