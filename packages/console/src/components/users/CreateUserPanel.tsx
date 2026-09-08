@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Button,
+  Checkbox,
   Group,
   PasswordInput,
   Stack,
@@ -29,10 +30,15 @@ export const CreateUserPanel: React.FC<CreateUserPanelProps> = ({
   onClose,
   onDone,
 }) => {
-  const { createUser } = useUserAdmin()
+  const { createUser, sendSignInLink } = useUserAdmin()
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
+  // The invite. An account with no password cannot be signed into, so the link
+  // is the only way in and the box is forced on; once a password is typed it is
+  // the admin's choice, defaulted off — a host without the magicLink plugin has
+  // no link to send, and must still be able to provision an account.
+  const [invite, setInvite] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
 
@@ -41,19 +47,35 @@ export const CreateUserPanel: React.FC<CreateUserPanelProps> = ({
       setEmail('')
       setName('')
       setPassword('')
+      setInvite(false)
       setError(null)
     }
   }, [opened])
+
+  const sendLink = invite || password.length === 0
 
   const run = async () => {
     setRunning(true)
     setError(null)
     try {
+      const address = email.trim()
       await createUser({
-        email: email.trim(),
-        password,
+        email: address,
+        ...(password ? { password } : {}),
         ...(name.trim() ? { name: name.trim() } : {}),
       })
+      // Sent after the account exists, because a link only admits an email that
+      // already has a user row. The user is created either way: a failed send
+      // refreshes the list and reports itself, so the operator retries the link
+      // from the row menu rather than creating the account a second time.
+      if (sendLink) {
+        try {
+          await sendSignInLink(address)
+        } catch (e) {
+          onDone()
+          throw e
+        }
+      }
       onDone()
       onClose()
     } catch (e) {
@@ -77,7 +99,7 @@ export const CreateUserPanel: React.FC<CreateUserPanelProps> = ({
           </Button>
           <Button
             loading={running}
-            disabled={email.trim().length === 0 || password.length === 0}
+            disabled={email.trim().length === 0}
             onClick={run}
             data-testid="create-user-submit"
           >
@@ -107,6 +129,14 @@ export const CreateUserPanel: React.FC<CreateUserPanelProps> = ({
           value={password}
           onChange={(e) => setPassword(e.currentTarget.value)}
           data-testid="create-user-password"
+        />
+        <Checkbox
+          label={m.users_create_send_link_label()}
+          description={m.users_create_send_link_description()}
+          checked={sendLink}
+          disabled={password.length === 0}
+          onChange={(e) => setInvite(e.currentTarget.checked)}
+          data-testid="create-user-send-link"
         />
         {error && (
           <Alert color="red" variant="light">

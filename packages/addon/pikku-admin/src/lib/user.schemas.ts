@@ -26,9 +26,15 @@ export const ListUsersOutput = z.object({
   users: z.array(User),
 })
 
+/**
+ * A password is optional: an account created without one has no credential
+ * row, so it cannot be signed into until `setUserPassword` gives it one — the
+ * provisioning half of an invite, for an app that mails its own link or signs
+ * users in through a social provider.
+ */
 export const CreateUserInput = z.object({
   email: z.string(),
-  password: z.string(),
+  password: z.string().optional(),
   name: z.string().optional(),
 })
 
@@ -51,6 +57,16 @@ export const SetUserBannedInput = z.object({
 export const SetUserPasswordInput = z.object({
   userId: z.string(),
   newPassword: z.string(),
+})
+
+/**
+ * An invite is addressed by email rather than by id: the link is mailed to an
+ * address, and the plugin resolves the user from it. `callbackURL` is where the
+ * app wants the accepted invite to land.
+ */
+export const SendSignInLinkInput = z.object({
+  email: z.string(),
+  callbackURL: z.string().optional(),
 })
 
 export const Success = z.object({

@@ -18,6 +18,7 @@ export {
   createAuthUser,
   deleteAuthUser,
   revokeAuthUserSessions,
+  sendAuthUserSignInLink,
   setAuthUserBanned,
   setAuthUserPassword,
 } from './admin-users.js'

@@ -33,8 +33,13 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
   onClose,
   onDone,
 }) => {
-  const { setUserBanned, removeUser, revokeUserSessions, setUserPassword } =
-    useUserAdmin()
+  const {
+    setUserBanned,
+    removeUser,
+    revokeUserSessions,
+    setUserPassword,
+    sendSignInLink,
+  } = useUserAdmin()
   const [reason, setReason] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -67,6 +72,8 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
         await revokeUserSessions(user.id)
       } else if (action === 'password') {
         await setUserPassword(user.id, password)
+      } else if (action === 'signInLink') {
+        await sendSignInLink(user.email)
       }
       onDone()
       onClose()
@@ -77,32 +84,34 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
     }
   }
 
-  const title =
-    action === 'ban'
-      ? m.users_ban_confirm_title()
-      : action === 'remove'
-        ? m.users_remove_confirm_title()
-        : action === 'revoke'
-          ? m.users_revoke_confirm_title()
-          : m.users_set_password_title()
+  const title = {
+    ban: m.users_ban_confirm_title(),
+    remove: m.users_remove_confirm_title(),
+    revoke: m.users_revoke_confirm_title(),
+    password: m.users_set_password_title(),
+    signInLink: m.users_send_sign_in_link_title(),
+  }[action ?? 'password']
 
-  const body =
-    action === 'ban'
-      ? m.users_ban_confirm_body({ email })
-      : action === 'remove'
-        ? m.users_remove_confirm_body({ email })
-        : action === 'revoke'
-          ? m.users_revoke_confirm_body({ email })
-          : m.users_set_password_body({ email })
+  const body = {
+    ban: m.users_ban_confirm_body({ email }),
+    remove: m.users_remove_confirm_body({ email }),
+    revoke: m.users_revoke_confirm_body({ email }),
+    password: m.users_set_password_body({ email }),
+    signInLink: m.users_send_sign_in_link_body({ email }),
+  }[action ?? 'password']
 
-  const confirmLabel =
-    action === 'ban'
-      ? m.users_ban_action()
-      : action === 'remove'
-        ? m.users_remove_action()
-        : action === 'revoke'
-          ? m.users_revoke_sessions_action()
-          : m.users_set_password_action()
+  const confirmLabel = {
+    ban: m.users_ban_action(),
+    remove: m.users_remove_action(),
+    revoke: m.users_revoke_sessions_action(),
+    password: m.users_set_password_action(),
+    signInLink: m.users_send_sign_in_link_action(),
+  }[action ?? 'password']
+
+  // Red is for what cannot be undone from this panel. Setting a password and
+  // mailing a link are both recoverable, so neither wears it.
+  const destructive =
+    action === 'ban' || action === 'remove' || action === 'revoke'
 
   return (
     <ConsolePanel
@@ -117,7 +126,7 @@ export const UserActionPanel: React.FC<UserActionPanelProps> = ({
             {m.common_cancel()}
           </Button>
           <Button
-            color={action === 'password' ? undefined : 'red'}
+            color={destructive ? 'red' : undefined}
             loading={running}
             disabled={action === 'password' && password.length === 0}
             onClick={run}
