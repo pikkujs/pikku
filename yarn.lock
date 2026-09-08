@@ -4881,17 +4881,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pikku/addon-admin@npm:^0.12.2, @pikku/addon-admin@workspace:*, @pikku/addon-admin@workspace:packages/addon/pikku-admin":
+"@pikku/addon-admin@npm:^0.12.4, @pikku/addon-admin@workspace:*, @pikku/addon-admin@workspace:packages/addon/pikku-admin":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-admin@workspace:packages/addon/pikku-admin"
   dependencies:
-    "@pikku/better-auth": "npm:^0.12.34"
+    "@pikku/better-auth": "npm:^0.12.39"
     "@pikku/cli": "npm:^0.12.141"
     "@pikku/core": "npm:*"
     typescript: "npm:^6.0.3"
     zod: "npm:^4"
   peerDependencies:
-    "@pikku/better-auth": ^0.12.34
+    "@pikku/better-auth": ^0.12.39
     "@pikku/core": ^0.12.106
     zod: ^4
   peerDependenciesMeta:
@@ -4900,11 +4900,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/addon-console@npm:^0.12.50, @pikku/addon-console@workspace:*, @pikku/addon-console@workspace:packages/addon/pikku-console":
+"@pikku/addon-console@npm:^0.12.52, @pikku/addon-console@workspace:*, @pikku/addon-console@workspace:packages/addon/pikku-console":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
   dependencies:
-    "@pikku/better-auth": "npm:^0.12.37"
+    "@pikku/better-auth": "npm:^0.12.39"
     "@pikku/cli": "npm:^0.12.141"
     "@pikku/code-edit": "npm:^0.12.1"
     "@pikku/core": "npm:^0.12.106"
@@ -4914,7 +4914,7 @@ __metadata:
     open: "npm:^11.0.1"
     typescript: "npm:^6.0.3"
   peerDependencies:
-    "@pikku/better-auth": ^0.12.37
+    "@pikku/better-auth": ^0.12.39
     "@pikku/core": ^0.12.106
   peerDependenciesMeta:
     "@pikku/better-auth":
@@ -5154,7 +5154,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/better-auth@npm:^0.12.26, @pikku/better-auth@npm:^0.12.34, @pikku/better-auth@npm:^0.12.37, @pikku/better-auth@npm:^0.12.38, @pikku/better-auth@workspace:*, @pikku/better-auth@workspace:packages/services/better-auth":
+"@pikku/better-auth@npm:^0.12.26, @pikku/better-auth@npm:^0.12.38, @pikku/better-auth@npm:^0.12.39, @pikku/better-auth@workspace:*, @pikku/better-auth@workspace:packages/services/better-auth":
   version: 0.0.0-use.local
   resolution: "@pikku/better-auth@workspace:packages/services/better-auth"
   dependencies:
@@ -5330,8 +5330,8 @@ __metadata:
     "@mantine/hooks": "npm:^9.5.1"
     "@mantine/notifications": "npm:^9.5.1"
     "@mantine/spotlight": "npm:^9.5.1"
-    "@pikku/addon-admin": "npm:^0.12.2"
-    "@pikku/addon-console": "npm:^0.12.50"
+    "@pikku/addon-admin": "npm:^0.12.4"
+    "@pikku/addon-console": "npm:^0.12.52"
     "@pikku/assistant-ui": "npm:^0.12.12"
     "@pikku/cli": "npm:^0.12.140"
     "@pikku/core": "npm:^0.12.105"
@@ -5533,7 +5533,7 @@ __metadata:
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-stripe": "npm:^0.1.8"
     "@pikku/ai-vercel": "workspace:*"
-    "@pikku/better-auth": "npm:^0.12.38"
+    "@pikku/better-auth": "npm:^0.12.39"
     "@pikku/cli": "npm:^0.12.143"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.106"
@@ -6343,7 +6343,7 @@ __metadata:
     "@modelcontextprotocol/sdk": "npm:1.30.0"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
-    "@pikku/better-auth": "npm:^0.12.38"
+    "@pikku/better-auth": "npm:^0.12.39"
     "@pikku/cli": "npm:^0.12.143"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.106"
@@ -6398,7 +6398,7 @@ __metadata:
   resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
   dependencies:
     "@next/swc-darwin-arm64": "npm:^16.3.1"
-    "@pikku/better-auth": "npm:^0.12.38"
+    "@pikku/better-auth": "npm:^0.12.39"
     "@pikku/cli": "npm:^0.12.143"
     "@pikku/core": "npm:^0.12.106"
     "@pikku/fetch": "npm:^0.12.10"
