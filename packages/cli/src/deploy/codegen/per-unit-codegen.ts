@@ -22,26 +22,9 @@ import { toSafeKebab } from '../analyzer/analyzer.js'
 
 const execFileAsync = promisify(execFile)
 
-/**
- * The generic dispatcher route. A unit only counts as the catch-all when it
- * actually serves this — the same string is also added to a unit's filter
- * names so it can serve its own `/rpc/<funcName>`, which is not the same
- * thing.
- */
-const RPC_CATCH_ALL_ROUTE = '/rpc/:rpcName'
-
-/**
- * Whether this unit is the generic dispatcher — it serves `/rpc/:rpcName` and
- * so resolves RPC names only known at run time. Read from the unit's handlers,
- * never from its filter names: `collectFilterNames` adds the same route string
- * to every unit holding an exposed function so it can serve its own
- * `/rpc/<funcName>`.
- */
-export function servesRpcCatchAll(unit: DeploymentUnit): boolean {
-  return unit.handlers.some(
-    (handler) =>
-      handler.type === 'fetch' &&
-      handler.routes.some((route) => route.route === RPC_CATCH_ALL_ROUTE)
+function fetchRoutes(unit: DeploymentUnit) {
+  return unit.handlers.flatMap((handler) =>
+    handler.type === 'fetch' ? handler.routes : []
   )
 }
 
@@ -110,8 +93,16 @@ export function collectFilterNames(
 
   // Include catch-all scaffold routes based on unit contents
   const functionsMeta = inspectorState.functions.meta
-  const hasExposed = unit.functionIds.some((id) => functionsMeta[id]?.expose)
-  const hasRemote = unit.functionIds.some((id) => functionsMeta[id]?.remote)
+  const routes = fetchRoutes(unit)
+  const hasExposed =
+    unit.functionIds.some((id) => functionsMeta[id]?.expose) ||
+    routes.some(
+      (route) =>
+        route.route.includes('/rpc/') && !route.route.includes('/remote/rpc/')
+    )
+  const hasRemote =
+    unit.functionIds.some((id) => functionsMeta[id]?.remote) ||
+    routes.some((route) => route.route.includes('/remote/rpc/'))
 
   if (hasExposed) {
     // Include the RPC catch-all scaffold function + route
@@ -297,8 +288,6 @@ export async function generatePerUnitCodegen(
         workflowQueues
       )
 
-      const isDispatcher = servesRpcCatchAll(unit)
-
       if (filterNames.length === 0) {
         errors.push({
           unitName: unit.name,
@@ -327,7 +316,6 @@ export async function generatePerUnitCodegen(
             `--names=${namesArg}`,
             `--outDir=${unitPikkuDir}`,
             '--force-relative-imports',
-            ...(isDispatcher ? ['--rpc-catch-all'] : []),
             '--silent',
           ],
           {

@@ -174,6 +174,9 @@ export class ContextAwareRPCService {
       ]
     }
     if (!functionMeta) {
+      if (funcName.includes(':') && this.services.deploymentService) {
+        return await this.rpc(funcName, data)
+      }
       throw new RPCNotFoundError(funcName)
     }
     if (!functionMeta.expose || functionMeta.scenarioStep) {

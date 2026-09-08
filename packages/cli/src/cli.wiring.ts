@@ -314,11 +314,6 @@ wireCLI({
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
           default: false,
         },
-        rpcCatchAll: {
-          description:
-            'This unit serves the generic /rpc/:rpcName route, so keep every wired addon reachable by name (used by per-unit deploy codegen)',
-          default: false,
-        },
       },
     }),
     bootstrap: pikkuCLICommand({

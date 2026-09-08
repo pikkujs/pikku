@@ -50,6 +50,12 @@ export interface DeploymentUnit {
   services: ServiceRequirement[]
   /** Other unit names this unit calls via RPC / service bindings */
   dependsOn: string[]
+  /**
+   * RPC name -> unit name, for calls whose target unit cannot be derived from
+   * the RPC name itself. A namespaced addon RPC (`console:runSecurityAudit`)
+   * is served by a unit named after the addon, not after the function.
+   */
+  dispatch?: Record<string, string>
   /** What runtime handlers this unit needs to export */
   handlers: DeploymentHandler[]
   tags: string[]

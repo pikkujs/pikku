@@ -281,11 +281,6 @@ export type InspectorFilters = {
   // Sourced from `pikku.config.json` → `deploy.defaultTarget`. Used only
   // when deploy filters are set. Defaults to 'serverless'.
   defaultTarget?: 'serverless' | 'server'
-  // This unit serves the generic `/rpc/:rpcName` route and therefore
-  // dispatches RPCs whose names are only known at runtime. Set by the deploy
-  // pipeline from the unit's own handlers — never inferred from `names`,
-  // which also carries the per-function `/rpc/<funcName>` scaffold.
-  rpcCatchAll?: boolean
 }
 
 export type AddonConfig = {

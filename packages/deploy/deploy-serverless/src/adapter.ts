@@ -137,11 +137,17 @@ export class ServerlessProviderAdapter implements ProviderAdapter {
     ctx: EntryGenerationContext,
     includeQueueHandler = false
   ): string {
-    // Build the function binding map from dependsOn
-    const bindingEntries = ctx.unit.dependsOn.map((dep) => {
-      const envKey = `LAMBDA_FUNC_${toScreamingSnake(dep)}`
-      return `    ${JSON.stringify(fromKebab(dep))}: process.env.${envKey} || ''`
-    })
+    const bindings = new Map<string, string>()
+    for (const dep of ctx.unit.dependsOn) {
+      bindings.set(fromKebab(dep), `LAMBDA_FUNC_${toScreamingSnake(dep)}`)
+    }
+    for (const [rpcName, unitName] of Object.entries(ctx.unit.dispatch ?? {})) {
+      bindings.set(rpcName, `LAMBDA_FUNC_${toScreamingSnake(unitName)}`)
+    }
+    const bindingEntries = [...bindings].map(
+      ([rpcName, envKey]) =>
+        `    ${JSON.stringify(rpcName)}: process.env.${envKey} || ''`
+    )
     const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
 
     const handlerImport = includeQueueHandler

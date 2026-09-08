@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { collectFilterNames, servesRpcCatchAll } from './per-unit-codegen.js'
+import { collectFilterNames } from './per-unit-codegen.js'
 import type { InspectorState } from '@pikku/inspector'
 import type { DeploymentManifest, DeploymentUnit } from '@pikku/deploy'
 
@@ -64,37 +64,48 @@ describe('collectFilterNames - agents invoked from a function body', () => {
   })
 })
 
-describe('servesRpcCatchAll', () => {
-  // Only the rpcCaller unit serves the generic dispatcher route. Every unit
-  // holding an exposed function is handed the same route string as a filter
-  // name so it can serve its own `/rpc/<funcName>` — reading that back as
-  // "this is the dispatcher" put every wired addon, and its node-only
-  // modules, into almost every worker.
-  const unitServing = (route: string): DeploymentUnit => ({
-    ...callingUnit(),
+describe('collectFilterNames - addon units', () => {
+  const addonUnit = (): DeploymentUnit => ({
+    name: 'addon-console',
+    role: 'function',
+    target: 'serverless',
+    functionIds: ['console:runSecurityAudit'],
+    services: [],
+    dependsOn: [],
     handlers: [
-      { type: 'fetch', routes: [{ method: 'POST', route, pikkuFuncId: 'x' }] },
+      {
+        type: 'fetch',
+        routes: [
+          {
+            method: 'post',
+            route: '/rpc/console:runSecurityAudit',
+            pikkuFuncId: 'console:runSecurityAudit',
+          },
+          {
+            method: 'post',
+            route: '/remote/rpc/console:runSecurityAudit',
+            pikkuFuncId: 'console:runSecurityAudit',
+          },
+        ],
+      },
     ],
+    tags: [],
   })
 
-  test('true for the unit serving /rpc/:rpcName', () => {
-    assert.equal(servesRpcCatchAll(unitServing('/rpc/:rpcName')), true)
+  const names = () =>
+    collectFilterNames(addonUnit(), manifestWithAgent(), inspectorState, true)
+
+  test('the addon function id joins the filter', () => {
+    assert.ok(names().includes('console:runSecurityAudit'))
   })
 
-  test('false for a unit serving only its own /rpc/<funcName>', () => {
-    assert.equal(servesRpcCatchAll(unitServing('/rpc/askTheHouse')), false)
+  test('the RPC catch-all scaffold joins the filter', () => {
+    assert.ok(names().includes('rpcCaller'))
+    assert.ok(names().includes('/rpc/:rpcName'))
   })
 
-  test('false for a unit with no fetch routes', () => {
-    assert.equal(servesRpcCatchAll(callingUnit()), false)
-  })
-
-  test('false even when the filter names carry the catch-all scaffold', () => {
-    const unit = unitServing('/rpc/askTheHouse')
-    const names = collectFilterNames(unit, manifestWithAgent(), {
-      functions: { meta: { askTheHouse: { expose: true } } },
-    } as unknown as InspectorState, true)
-    assert.ok(names.includes('/rpc/:rpcName'))
-    assert.equal(servesRpcCatchAll(unit), false)
+  test('the remote RPC scaffold joins the filter', () => {
+    assert.ok(names().includes('remoteRPCHandler'))
+    assert.ok(names().includes('/remote/rpc/:rpcName'))
   })
 })

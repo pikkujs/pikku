@@ -2143,13 +2143,6 @@ describe('invokedAgentsByFile', () => {
   })
 
   describe('Wired addon retention', () => {
-    // A unit that serves the generic `/rpc/:rpcName` route dispatches
-    // arbitrary RPCs at runtime via `rpc.exposed(name)`, including namespaced
-    // addon RPCs like `admin:createUser`. No app-local function statically
-    // references those ids, so `rpcCatchAll` must be enough to keep every
-    // wired addon's declaration — otherwise the per-unit bootstrap omits the
-    // addon package bootstrap and `rpc.exposed('admin:createUser')` throws
-    // RPCNotFoundError on a deployed stage.
     const withAddons = () => {
       const state = createMockInspectorState()
       state.rpc.wireAddonDeclarations = new Map([
@@ -2160,29 +2153,39 @@ describe('invokedAgentsByFile', () => {
       return state
     }
 
-    test('keeps all wired addons for the unit serving the catch-all', () => {
+    test('keeps only the addon whose function the unit is built for', () => {
       const result = filterInspectorState(
         withAddons(),
         {
-          names: ['/rpc/:rpcName', 'http:post:/rpc/:rpcName', 'rpcCaller'],
-          rpcCatchAll: true,
+          names: [
+            'console:runSecurityAudit',
+            '/rpc/:rpcName',
+            'http:post:/rpc/:rpcName',
+            'rpcCaller',
+          ],
         },
         mockLogger
       )
       assert.deepStrictEqual(
-        [...result.rpc.wireAddonDeclarations.keys()].sort(),
-        ['admin', 'console']
+        [...result.rpc.wireAddonDeclarations.keys()],
+        ['console']
       )
-      assert.deepStrictEqual([...result.rpc.usedAddons].sort(), [
-        'admin',
-        'console',
-      ])
+      assert.deepStrictEqual([...result.rpc.usedAddons], ['console'])
     })
 
-    test('drops wired addons for a unit given the scaffold names but not serving the catch-all', () => {
-      // Every unit holding an exposed function is handed the `/rpc/:rpcName`
-      // scaffold name so it can serve its own `/rpc/<funcName>`. That is not
-      // the dispatcher, and it must not retain the addons.
+    test('drops every wired addon for a unit serving the catch-all', () => {
+      const result = filterInspectorState(
+        withAddons(),
+        {
+          names: ['/rpc/:rpcName', 'http:post:/rpc/:rpcName', 'rpcCaller'],
+        },
+        mockLogger
+      )
+      assert.deepStrictEqual([...result.rpc.wireAddonDeclarations.keys()], [])
+      assert.deepStrictEqual([...result.rpc.usedAddons], [])
+    })
+
+    test('drops wired addons for a unit given the scaffold names', () => {
       const result = filterInspectorState(
         withAddons(),
         {
