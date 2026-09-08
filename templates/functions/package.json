@@ -32,6 +32,7 @@
     "@pikku/schedule": "workspace:*",
     "@pikku/websocket": "^0.12.4",
     "@pikku/ws": "^0.12.9",
+    "@standard-schema/spec": "^1.1.0",
     "@types/aws-lambda": "^8.10.162",
     "@types/node": "^24",
     "@types/ws": "^8",

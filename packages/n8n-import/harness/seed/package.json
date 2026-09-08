@@ -9,5 +9,8 @@
   "dependencies": {
     "@pikku/core": "*",
     "@pikku/addon-graph": "*"
+  },
+  "devDependencies": {
+    "@standard-schema/spec": "^1.1.0"
   }
 }

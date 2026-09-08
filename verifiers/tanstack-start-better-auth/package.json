@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
     "@types/react": "^19",

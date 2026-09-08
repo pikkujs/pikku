@@ -20,6 +20,7 @@
     "@pikku/fetch": "workspace:*",
     "@pikku/react": "workspace:*",
     "@pikku/websocket": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@tanstack/react-query": "^5",
     "@types/node": "^24",
     "@types/react": "^19",

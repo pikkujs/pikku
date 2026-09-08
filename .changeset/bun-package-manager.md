@@ -1,4 +1,5 @@
 ---
+'@pikku/addon-graph': patch
 '@pikku/ai-deepinfra': patch
 '@pikku/ai-vercel': patch
 '@pikku/ai-voice': patch
