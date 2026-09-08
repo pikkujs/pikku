@@ -20,6 +20,7 @@ import { useLocale } from '@/i18n/config'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useOptionalAuth } from '../../context/AuthContext'
 import { useSecretValue, useSetSecret } from '../../hooks/useSecrets'
+import { useAddonEnabled } from '../../hooks/useAddonEnabled'
 
 interface CredentialEntry {
   name: string
@@ -49,6 +50,11 @@ export const AddonSetupTab: React.FC<{
 }> = ({ credentials, secrets, credentialOverrides, secretOverrides }) => {
   useLocale()
   const rpc = usePikkuRPC()
+  // Connecting an OAuth credential is `@pikku/addon-admin` work, but the rest
+  // of this tab is not, and the tab lives on a console screen — so the gate is
+  // here rather than on the route. Without it the section would report every
+  // integration as disconnected on a deployment that simply cannot be asked.
+  const adminAddon = useAddonEnabled('admin')
 
   // Overrides key on the credential NAME / secretId the addon reads by.
   const resolveCred = (name: string) => credentialOverrides?.[name] ?? name
@@ -69,7 +75,7 @@ export const AddonSetupTab: React.FC<{
       })
       return (result.statuses ?? {}) as Record<string, boolean>
     },
-    enabled: oauthCreds.length > 0,
+    enabled: oauthCreds.length > 0 && adminAddon === 'enabled',
   })
 
   if (oauthCreds.length === 0 && secretList.length === 0) {
@@ -94,19 +100,29 @@ export const AddonSetupTab: React.FC<{
             <Text fw={600} size="sm">
               {m.addon_setup_oauth_heading()}
             </Text>
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-              {oauthCreds.map((cred) => {
-                const resolvedName = resolveCred(cred.name)
-                return (
-                  <OAuthRequirementCard
-                    key={cred.name}
-                    credential={cred}
-                    resolvedName={resolvedName}
-                    isConnected={credStatus?.[resolvedName] === true}
-                  />
-                )
-              })}
-            </SimpleGrid>
+            {adminAddon === 'not-wired' ? (
+              <Alert
+                icon={<AlertTriangle size={16} />}
+                color="gray"
+                variant="light"
+              >
+                {m.addon_setup_oauth_admin_required()}
+              </Alert>
+            ) : (
+              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                {oauthCreds.map((cred) => {
+                  const resolvedName = resolveCred(cred.name)
+                  return (
+                    <OAuthRequirementCard
+                      key={cred.name}
+                      credential={cred}
+                      resolvedName={resolvedName}
+                      isConnected={credStatus?.[resolvedName] === true}
+                    />
+                  )
+                })}
+              </SimpleGrid>
+            )}
           </Stack>
         )}
 
