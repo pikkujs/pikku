@@ -19,8 +19,24 @@ export type ImpersonationOptions = {
     result: SessionLike,
     services: CoreServices
   ) => boolean | Promise<boolean>
-  /** Load the target user by id; return falsy if it doesn't exist. */
-  loadUser: (userId: string, services: CoreServices) => any | Promise<any>
+  /**
+   * Load the target user by id; return falsy if it doesn't exist. Defaults to
+   * better-auth's own `internalAdapter.findUserById`, which is what an app
+   * wiring this by hand writes anyway — supply one only to read the user from
+   * somewhere else.
+   */
+  loadUser?: (userId: string, services: CoreServices) => any | Promise<any>
+}
+
+const findUserById = async (userId: string, services: CoreServices) => {
+  const auth = (services as { auth?: () => Promise<{ $context?: any }> }).auth
+  if (!auth) {
+    throw new Error(
+      'better-auth impersonation: no `loadUser` and no wired `services.auth` to default it from'
+    )
+  }
+  const ctx = await (await auth()).$context
+  return ctx.internalAdapter.findUserById(userId)
 }
 
 export type MapSession = (
@@ -74,7 +90,8 @@ export const resolveImpersonatedSession = async (
     return null
   }
 
-  const targetUser = await impersonation.loadUser(targetId, services)
+  const loadUser = impersonation.loadUser ?? findUserById
+  const targetUser = await loadUser(targetId, services)
   if (!targetUser) {
     services.logger?.warn(
       `better-auth impersonation: target user ${targetId} not found; running as ${caller.user.id}`

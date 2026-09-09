@@ -1,11 +1,15 @@
 import { pikkuMiddleware } from '@pikku/core/middleware'
 import type { CoreServices, CoreUserSession } from '@pikku/core/types'
-import type { CorePikkuMiddleware } from '@pikku/core/middleware'
+import type {
+  CorePikkuMiddleware,
+  MiddlewarePriority,
+} from '@pikku/core/middleware'
 import { getSessionCookie } from 'better-auth/cookies'
 import {
   resolveImpersonatedSession,
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
+import { defaultSession } from './default-session.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { verifySessionCredential } from './session-credential.js'
@@ -26,6 +30,12 @@ export type BetterAuthStoreSessionOptions = {
     services: CoreServices
   ) => CoreUserSession | Promise<CoreUserSession>
   impersonation?: ImpersonationOptions
+  /**
+   * Where this sits in the middleware order. The CLI generates its default-map
+   * registration at `lowest` so an app's own registration (default `medium`)
+   * resolves the session first and this one short-circuits.
+   */
+  priority?: MiddlewarePriority
 }
 
 const bearerCredential = (raw: string | undefined | null): string | null => {
@@ -85,13 +95,15 @@ export const betterAuthStoreSession = (
     transports = ['header', 'cookie'] as const,
     headerName = 'authorization',
     secretId = 'BETTER_AUTH_SECRET',
+    priority,
   } = options
 
   const headerEnabled = transports.includes('header')
   const cookieEnabled = transports.includes('cookie')
 
-  return pikkuMiddleware(
-    async (services, { http, setSession, session }, next) => {
+  return pikkuMiddleware({
+    priority,
+    func: async (services, { http, setSession, session }, next) => {
       if (!http?.request || !setSession || session) {
         return next()
       }
@@ -163,7 +175,7 @@ export const betterAuthStoreSession = (
 
       const mapped = mapSession
         ? await mapSession(stored, services as CoreServices)
-        : ({ userId: stored.user.id } as CoreUserSession)
+        : defaultSession(stored)
 
       setSession(
         await withResolvedScopes(
@@ -173,6 +185,6 @@ export const betterAuthStoreSession = (
       )
 
       return next()
-    }
-  )
+    },
+  })
 }

@@ -61,7 +61,6 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       authFile,
       (name) => getLeafImportPath(authFile, name, config),
       packageMappings ?? {},
-      state.auth.hasUserSessionMiddleware ?? false,
       Boolean(config.scaffold?.console)
     )
     // The secrets file sits alongside authFile so re-inspection rediscovers it.
@@ -72,12 +71,8 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     await writeFileInDir(logger, secretsFile, secrets)
 
     // Stateless split: session middleware in its own file (see serializeAuthGen).
-    // Skip it when the project registers its own betterAuthStatelessSession — the
-    // generated default-map one would run first and pre-empt the user's custom
-    // mapSession (pikkujs/pikku#754). Remove a stale file so it can't linger and
-    // double-register.
     const middlewareFile = join(dirname(authFile), 'auth-middleware.gen.ts')
-    if (middleware && !state.auth.userStatelessSession) {
+    if (middleware) {
       await writeFileInDir(logger, middlewareFile, middleware)
     } else if (existsSync(middlewareFile)) {
       await rm(middlewareFile, { force: true })

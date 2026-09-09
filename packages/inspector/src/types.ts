@@ -694,17 +694,6 @@ export interface InspectorState {
      *  codebase, if any. The CLI generates the `/auth/*` HTTP wiring from it.
      *  More than one `pikkuBetterAuth` is a critical error. */
     definition: AuthDefinition | null
-    /** True when a user (non-generated) file already registers
-     *  `betterAuthStatelessSession(...)`. The CLI then skips auto-generating its
-     *  own default-map stateless middleware, which would otherwise pre-empt the
-     *  user's custom mapSession (pikkujs/pikku#754). */
-    userStatelessSession?: boolean
-    /** True when a user (non-generated) file already registers a global
-     *  `betterAuthSession(...)`. The CLI then skips auto-generating its own
-     *  default stateful middleware, which would otherwise run first and pre-empt
-     *  the user's config (mapSession/impersonation/apiKey). Stateful analogue of
-     *  `userStatelessSession`. */
-    hasUserSessionMiddleware?: boolean
   }
   secrets: {
     definitions: SecretDefinitions
