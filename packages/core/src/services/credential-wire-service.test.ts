@@ -233,3 +233,75 @@ describe('createWireServicesCredentialWireProps', () => {
     assert.deepStrictEqual(result, { stripe: { key: '1' } })
   })
 })
+
+/**
+ * Type-driven resolution: what a credential IS decides where it is read from,
+ * never whether a per-user lookup happened to come back empty. An absence-driven
+ * fallback would let an unconnected user read the deployment's own token.
+ */
+describe('PikkuCredentialWireService type-driven resolution', () => {
+  const platformOnly = (creds: Record<string, unknown>): CredentialService => ({
+    get: async (name: string, userId?: string) =>
+      userId ? null : (creds[name] ?? null),
+    set: async () => {},
+    delete: async () => {},
+    has: async (name: string) => name in creds,
+    getAll: async () => ({}),
+  })
+
+  test('should load a singleton credential on a wire with no user', async () => {
+    const service = new PikkuCredentialWireService(
+      platformOnly({ gmailOAuth: { accessToken: 'team' } }),
+      {},
+      undefined,
+      { resolutions: { gmailOAuth: { mode: 'singleton' } } }
+    )
+
+    assert.deepStrictEqual(await service.get('gmailOAuth'), {
+      accessToken: 'team',
+    })
+  })
+
+  test('should not let a wire credential read an existing platform value', async () => {
+    const service = new PikkuCredentialWireService(
+      platformOnly({ gmailOAuth: { accessToken: 'team' } }),
+      { session: { userId: 'unconnected-user' } as any },
+      undefined,
+      { resolutions: { gmailOAuth: { mode: 'wire' } } }
+    )
+
+    assert.strictEqual(
+      await service.get('gmailOAuth'),
+      null,
+      'an unconnected user must not inherit the deployment credential'
+    )
+  })
+
+  test('should resolve a singleton credential under its overridden name', async () => {
+    const service = new PikkuCredentialWireService(
+      platformOnly({ GMAIL_SUPPORT: { accessToken: 'support' } }),
+      {},
+      { gmailOAuth: 'GMAIL_SUPPORT' },
+      { resolutions: { GMAIL_SUPPORT: { mode: 'singleton' } } }
+    )
+
+    assert.deepStrictEqual(await service.get('gmailOAuth'), {
+      accessToken: 'support',
+    })
+  })
+
+  test('should keep a manually set credential over a singleton load', async () => {
+    const service = new PikkuCredentialWireService(
+      platformOnly({ gmailOAuth: { accessToken: 'team' } }),
+      {},
+      undefined,
+      { resolutions: { gmailOAuth: { mode: 'singleton' } } }
+    )
+
+    service.set('gmailOAuth', { accessToken: 'from-middleware' })
+
+    assert.deepStrictEqual(await service.get('gmailOAuth'), {
+      accessToken: 'from-middleware',
+    })
+  })
+})

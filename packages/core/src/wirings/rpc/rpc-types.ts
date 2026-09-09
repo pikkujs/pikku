@@ -1,3 +1,4 @@
+import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import type { PikkuRawWire } from '../../types/core.types.js'
 import type { AgentInterruptResult } from '../agent/agent-interrupt.js'
 
@@ -66,7 +67,7 @@ export interface ResolvedFunction {
     rpcEndpoint?: string
     secretOverrides?: Record<string, string>
     variableOverrides?: Record<string, string>
-    credentialOverrides?: Record<string, string>
+    credentialOverrides?: CredentialOverrides
     /** Set by the consuming app: secrets it lends this instance, as the addon names them */
     secretGrants?: string[]
     /** Set by the consuming app: credentials it lends this instance, as the addon names them */

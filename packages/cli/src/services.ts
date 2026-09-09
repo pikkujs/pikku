@@ -118,6 +118,7 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
  * at the moment it is most worth having.
  */
 const CONFIG_FREE_COMMANDS = new Set([
+  'new.addon',
   'skills',
   'skills.list',
   'skills.install',

@@ -182,4 +182,50 @@ describe('addWireAddon', () => {
 
     assert.deepEqual(declarations.get('console').scopes, [])
   })
+
+  test('reads a credential override that only renames', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'gmail',
+        package: '@pikku/addon-gmail',
+        credentialOverrides: { gmailOAuth: 'GMAIL_TEAM' },
+      })
+    `)
+
+    assert.deepEqual(declarations.get('gmail').credentialOverrides, {
+      gmailOAuth: 'GMAIL_TEAM',
+    })
+  })
+
+  test('reads the mode a wiring puts a credential in', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'gmail',
+        package: '@pikku/addon-gmail',
+        credentialOverrides: {
+          gmailOAuth: { mode: 'wire' },
+          calendarOAuth: { name: 'CAL_SUPPORT', mode: 'singleton' },
+        },
+      })
+    `)
+
+    assert.deepEqual(declarations.get('gmail').credentialOverrides, {
+      gmailOAuth: { mode: 'wire' },
+      calendarOAuth: { name: 'CAL_SUPPORT', mode: 'singleton' },
+    })
+  })
+
+  test('drops a mode that is not a statically knowable literal', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'gmail',
+        package: '@pikku/addon-gmail',
+        credentialOverrides: { gmailOAuth: { mode: runtimeMode } },
+      })
+    `)
+
+    assert.deepEqual(declarations.get('gmail').credentialOverrides, {
+      gmailOAuth: {},
+    })
+  })
 })

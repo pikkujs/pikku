@@ -537,6 +537,13 @@ export interface InspectorFeature {
   hasAfter: boolean
 }
 
+/**
+ * A `wireAddon` credential override as it survives static reading: a rename
+ * string, or the object form that also decides how the value resolves.
+ */
+export type CredentialOverrideMeta =
+  string | { name?: string; mode?: 'singleton' | 'wire' }
+
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
@@ -635,7 +642,7 @@ export interface InspectorState {
         authSecretId?: string
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
-        credentialOverrides?: Record<string, string>
+        credentialOverrides?: Record<string, CredentialOverrideMeta>
         /** Secrets the app lends this instance, named as the addon reads them. */
         secretGrants?: string[]
         /** Credentials the app lends this instance, named as the addon reads them. */

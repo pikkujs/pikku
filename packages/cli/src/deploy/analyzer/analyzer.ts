@@ -775,7 +775,7 @@ export function analyzeDeployment(
   // the key is a name the addon may read that it never declared.
   const grantedNames = (
     grants: string[] | undefined,
-    overrides: Record<string, string> | undefined
+    overrides: Record<string, unknown> | undefined
   ) => [...new Set([...(grants ?? []), ...Object.keys(overrides ?? {})])].sort()
 
   for (const [namespace, addon] of state.rpc?.wireAddonDeclarations ?? []) {

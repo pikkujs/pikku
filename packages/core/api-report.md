@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2894 observable things**: 923 exported names, plus
+**2899 observable things**: 928 exported names, plus
 1971 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
@@ -48,16 +48,16 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
+| `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
 | `./scheduler` | 7 | 7 | 1 |
+| `./secret` | 8 | 8 | 0 |
 | `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
-| `./secret` | 7 | 7 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
 | `./dev` | 4 | 4 | 2 |
-| `./credential` | 5 | 5 | 0 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
 | `./testing` | 3 | 3 | 2 |
@@ -259,7 +259,7 @@ export type GetCredential<TCredentials = Record<string, unknown>> = {
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
@@ -2989,7 +2989,7 @@ export type WireAddonConfig = {
   scopes?: string[]
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
-  credentialOverrides?: Record<string, string>
+  credentialOverrides?: CredentialOverrides
   secretGrants?: string[]
   credentialGrants?: string[]
   globalSecrets?: string
@@ -3817,6 +3817,7 @@ export type NodeType = 'trigger' | 'action' | 'end'
 ## ./credential
 
 ```ts
+buildCredentialResolutions: (declared: Record<string, { type?: string | undefined; }> | null | undefined, overrides: CredentialOverrides | undefined) => Record<string, CredentialResolution>
 export type CoreCredential<T = unknown> = {
   name: string
   displayName: string
@@ -3830,6 +3831,14 @@ export type CoreCredential<T = unknown> = {
 }
 export type CredentialDefinitions = CredentialDefinitionMeta[]
 export type CredentialDefinitionsMeta = Record<string, CredentialDefinitionMeta>
+export type CredentialOverride =
+  | string
+  | {
+      name?: string
+      mode?: 'singleton' | 'wire'
+    }
+credentialOverrideAliases: (overrides: CredentialOverrides | undefined) => Record<string, string>
+export type CredentialOverrides = Record<string, CredentialOverride>
 defineCredential: <T>(_config: CoreCredential<T>) => void
 validateAndBuildCredentialDefinitionsMeta: (definitions: CredentialDefinitions, schemaLookup: Map<string, SchemaRefLike>) => CredentialDefinitionsMeta
 ```
@@ -4063,6 +4072,7 @@ export type CoreSecret<T = unknown> = {
   allowedHosts?: string[]
 }
 defineSecret: <T>(_config: CoreSecret<T>) => void
+deriveOAuth2AppSecrets: (credentials: CredentialDefinitions, declared: SecretDefinitions) => SecretDefinitions
 export type OAuth2CredentialConfig = {
   tokenSecretId: string
   authorizationUrl: string
@@ -4814,7 +4824,7 @@ export interface PermissionsGroupsMeta {
 }
 PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME: "pikku-outgoing-webhooks"
 export class PikkuCredentialWireService {
-  constructor(private credentialService?: CredentialService, private wire?: PikkuRawWire, private aliases?: Record<string, string>)
+  constructor(private credentialService?: CredentialService, private wire?: PikkuRawWire, private aliases?: Record<string, string>, private resolution?: CredentialResolutionConfig)
   set(name: string, value: unknown): void
   get<T = unknown>(name: string): T | null | Promise<T | null>
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>>
@@ -5590,7 +5600,7 @@ initializePikkuState: (packageName: string) => void
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
