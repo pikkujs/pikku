@@ -49,6 +49,13 @@ runs:
     # read, and there a git failure would read as a changed lockfile.
     - name: Install dependencies
       shell: bash
+      # The cache lives in the workspace rather than under $HOME so that it
+      # shares a filesystem with node_modules. In the container jobs it does
+      # not otherwise: the checkout is a volume mounted from the host and
+      # $HOME is the container's own writable layer, and bun links packages out
+      # of the cache and into the store across that boundary.
+      env:
+        BUN_INSTALL_CACHE_DIR: ${{ github.workspace }}/.bun-install-cache
       run: |
         before=$(sha256sum bun.lock | cut -d' ' -f1)
         for attempt in 1 2 3; do
@@ -58,6 +65,16 @@ runs:
               echo "::error::bun install updated bun.lock — commit the updated lockfile"
               exit 1
             fi
+            # A dangling link means bun linked a package whose store entry
+            # never landed. `bun install` reports success either way, and the
+            # job then fails much later as a missing module — which is how a
+            # flake extracting uWebSockets.js surfaced four jobs downstream as
+            # `Cannot find package 'better-sqlite3'`.
+            dangling=$(find . -maxdepth 6 -path '*/node_modules/*' -type l ! -exec test -e {} \; -print 2>/dev/null | head -20)
+            if [ -n "$dangling" ]; then
+              echo "::warning::node_modules holds links to packages that were never installed:"
+              echo "$dangling"
+            fi
             exit 0
           fi
           if [ "$attempt" = 3 ]; then
@@ -65,5 +82,10 @@ runs:
             exit 1
           fi
           echo "::warning::bun install failed (attempt $attempt), retrying"
+          # The retry starts from nothing, because a failed install leaves a
+          # half-linked tree and the next one reads what is already there as
+          # work it has done — reporting success over a node_modules still
+          # missing whatever the failure interrupted.
+          find . -maxdepth 5 -name node_modules -type d -prune -exec rm -rf {} +
           sleep $((attempt * 15))
         done
