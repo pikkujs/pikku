@@ -112,6 +112,14 @@ the 6 API — only module resolution of `typescript` has to stay on 6. Emit was
 verified identical: zero `.js` differences, and `.d.ts` differences confined to
 quote style and declaration ordering.
 
+The one exception is the dual CommonJS emit. Seven packages —
+`assistant-ui`, `client-fetch`, `client-websocket`, `mantine`, `react`,
+`paraglide`, `voice-agents` — build a second output through a
+`tsconfig.cjs.json` that sets `moduleResolution: node`, which 7 removed.
+Dropping the option is not equivalent: `assistant-ui` then resolves two copies
+of `@ag-ui/client`. Their `build:cjs` calls `tsc6`; their ESM build and their
+type check stay on 7.
+
 ## Configuration
 
 `pikku.config.json` is the main configuration file:
