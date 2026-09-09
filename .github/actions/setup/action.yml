@@ -49,25 +49,28 @@ runs:
     # read, and there a git failure would read as a changed lockfile.
     - name: Install dependencies
       shell: bash
-      # The cache lives beside the workspace rather than under $HOME so that it
-      # shares a filesystem with node_modules. In the container jobs it does
-      # not otherwise: the checkout and the runner temp directory are volumes
-      # mounted from the host while $HOME is the container's own writable
-      # layer, and bun links packages out of the cache and into the store
-      # across that boundary. It sits in the temp directory rather than in the
-      # checkout so that prettier, oxlint and knip do not walk it.
+      # The cache and the extraction temp directory both sit one level above the
+      # checkout, so that they share a mount point with node_modules.
       #
-      # TMPDIR sits beside it for the same reason one step further in. Bun
-      # extracts a package into a temp directory and renames the result into
-      # the cache, and a rename is only atomic within one filesystem. In the
-      # container jobs the default /tmp is the container's own writable layer
-      # while the cache is on the mounted volume, so that rename crosses a
-      # device boundary and degrades into a copy that readers of the cache
-      # entry can observe half-finished. Outside a container both are the
-      # host's disk already, which is why only those four jobs ever saw it.
+      # Sharing a filesystem is not enough. The container jobs are handed
+      # `-v /home/runner/work:/__w` and `-v /home/runner/work/_temp:/__w/_temp`,
+      # so the runner temp directory is a second bind mount nested inside the
+      # first. Both report the same st_dev, being the same disk, but the kernel
+      # refuses to hardlink or rename across a mount boundary whatever the
+      # device says — so with the cache under $RUNNER_TEMP, bun cannot link a
+      # package out of it and into the store and falls back to copying the
+      # package file by file. That copy is what fails, as `ENOENT: copy file`
+      # naming a different file of uWebSockets.js each time. No other job splits
+      # those two directories across mounts, and none of them has ever failed
+      # this way.
+      #
+      # Above the checkout rather than inside it so that prettier, oxlint and
+      # knip do not walk either directory, and $HOME is no good either: in a
+      # container that is the container's own writable layer, a different
+      # filesystem again.
       env:
-        BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-install-cache
-        TMPDIR: ${{ runner.temp }}/bun-tmp
+        BUN_INSTALL_CACHE_DIR: ${{ github.workspace }}/../.bun-install-cache
+        TMPDIR: ${{ github.workspace }}/../.bun-tmp
       run: |
         mkdir -p "$TMPDIR"
         before=$(sha256sum bun.lock | cut -d' ' -f1)
@@ -125,6 +128,9 @@ runs:
             stat -c 'workspace dev: %d' . 2>&1 || true
             stat -c 'tmpdir dev:    %d' "$TMPDIR" 2>&1 || true
             df -Pk . | tail -1
+            # The mount point, not just the device: the two can differ, and it
+            # is the mount that decides whether a link can be made.
+            df -Pk "$BUN_INSTALL_CACHE_DIR" | tail -1
             # The entry a github: dependency is copied out of is the `@GH@` one.
             # Bun also leaves an empty directory under the bare package name,
             # which is there on a healthy install too and means nothing.
