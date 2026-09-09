@@ -55,7 +55,6 @@ bun run test:templates    # template suites
 bun run test:e2e          # end-to-end
 bun run lint
 bun run prettier
-bun run typedoc
 bun run changeset         # for PRs
 bun run release
 ```
