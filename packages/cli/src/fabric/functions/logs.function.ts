@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricLogsInput = z.object({
   branch: z.string().optional(),
@@ -48,7 +49,8 @@ export const FabricLogs = pikkuSessionlessFunc({
       throw new Error(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
-    if (!branch) throw new Error('Specify --branch <branch-name>.')
+    if (!branch)
+      throw new FabricPreconditionError('Specify --branch <branch-name>.')
 
     const seen = new Set<string>()
     const cursorWindow = 5_000

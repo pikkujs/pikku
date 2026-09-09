@@ -14,6 +14,7 @@ import {
   pushWithCredential,
   removeRemote,
 } from '../lib/git.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 import { promptConfirm } from '../lib/prompt.js'
 
 export const FabricLinkInput = z.object({
@@ -63,12 +64,12 @@ export const FabricLink = pikkuSessionlessFunc({
     // link because of a dirty tree, having already provisioned a repo the user
     // now has to clean up, is a worse answer than refusing first.
     if (!(await hasCommits())) {
-      throw new Error(
+      throw new FabricPreconditionError(
         'Nothing to link: this repository has no commits yet. Commit your work first — fabric deploys a pushed commit, not a working directory.'
       )
     }
     if (!(await isWorkingTreeClean())) {
-      throw new Error(
+      throw new FabricPreconditionError(
         'Deployment blocked: uncommitted changes detected.\nCommit and push your changes before deploying.'
       )
     }
