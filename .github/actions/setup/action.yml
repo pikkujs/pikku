@@ -56,9 +56,20 @@ runs:
       # layer, and bun links packages out of the cache and into the store
       # across that boundary. It sits in the temp directory rather than in the
       # checkout so that prettier, oxlint and knip do not walk it.
+      #
+      # TMPDIR sits beside it for the same reason one step further in. Bun
+      # extracts a package into a temp directory and renames the result into
+      # the cache, and a rename is only atomic within one filesystem. In the
+      # container jobs the default /tmp is the container's own writable layer
+      # while the cache is on the mounted volume, so that rename crosses a
+      # device boundary and degrades into a copy that readers of the cache
+      # entry can observe half-finished. Outside a container both are the
+      # host's disk already, which is why only those four jobs ever saw it.
       env:
         BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-install-cache
+        TMPDIR: ${{ runner.temp }}/bun-tmp
       run: |
+        mkdir -p "$TMPDIR"
         before=$(sha256sum bun.lock | cut -d' ' -f1)
         for attempt in 1 2 3; do
           # The second attempt runs verbose into a log. The failure this loop
@@ -108,6 +119,7 @@ runs:
             stat -f -c 'workspace fs: %T' . 2>&1 || true
             stat -c 'cache dev:     %d' "$BUN_INSTALL_CACHE_DIR" 2>&1 || true
             stat -c 'workspace dev: %d' . 2>&1 || true
+            stat -c 'tmpdir dev:    %d' "$TMPDIR" 2>&1 || true
             df -Pk . | tail -1
             # The entry a github: dependency is copied out of is the `@GH@` one.
             # Bun also leaves an empty directory under the bare package name,
