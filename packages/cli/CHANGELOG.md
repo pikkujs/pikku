@@ -1,3 +1,24 @@
+## 0.12.145
+
+### Patch Changes
+
+- df83171: fix(deploy): read tags from wirings, and keep the server container's queues wired
+
+  `deploy.grouping` and every unit's `tags` field read `FunctionMeta.tags`, but
+  tags are written on the wiring — `wireHTTP({ tags: [...] })` — so in a typical
+  project they were empty and a `tags` rule matched nothing. The analyzer now
+  unions a function's own tags with those of every wiring that reaches it.
+
+  Separately, folding server units into `pikku-server-container` left
+  `queues[].consumerUnit`, `scheduledTasks[].unitName` and `dependsOn` pointing at
+  the unit names it had just removed. The merge rewrites them.
+
+- df83171: Add `deploy.grouping` to `pikku.config.json`, deciding how many deployment units an app's functions collapse into.
+
+  `strategy` sets what happens to a function no rule matches — `function` (the default, and today's behaviour) gives it its own unit, `single` puts it in one shared unit. `rules` are evaluated in order, first match wins, matching on `tags`, `addon` or `routes` globs. Under `function` a rule merges functions together; under `single` it carves them out.
+
+  Functions whose deploy target differs cannot share a unit, and the build fails naming them rather than promoting one to `server`.
+
 ## 0.12.144
 
 ### Patch Changes
