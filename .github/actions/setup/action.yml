@@ -76,12 +76,15 @@ runs:
           # exists for reproduces nowhere but the container jobs — not locally
           # in the same image, on overlayfs, btrfs or a plain volume — so the
           # only place its detail can be read is a job that is failing.
+          # `rc=` rather than a bare call: the step runs under `bash -e`, where
+          # a failing command outside a condition ends the script and the retry
+          # below never happens.
           if [ "$attempt" = 2 ]; then
-            bun install --verbose > "$RUNNER_TEMP/install-verbose.log" 2>&1
+            bun install --verbose > "$RUNNER_TEMP/install-verbose.log" 2>&1 && rc=0 || rc=$?
           else
-            bun install
+            bun install && rc=0 || rc=$?
           fi
-          if [ $? -eq 0 ]; then
+          if [ "$rc" -eq 0 ]; then
             after=$(sha256sum bun.lock | cut -d' ' -f1)
             if [ "$before" != "$after" ]; then
               echo "::error::bun install updated bun.lock — commit the updated lockfile"
@@ -115,6 +118,7 @@ runs:
           # them rather than guess again.
           if [ "$attempt" = 1 ]; then
             echo "cache dir: $BUN_INSTALL_CACHE_DIR"
+            echo "tmpdir:    $TMPDIR"
             stat -f -c 'cache fs:     %T' "$BUN_INSTALL_CACHE_DIR" 2>&1 || true
             stat -f -c 'workspace fs: %T' . 2>&1 || true
             stat -c 'cache dev:     %d' "$BUN_INSTALL_CACHE_DIR" 2>&1 || true
