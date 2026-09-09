@@ -84,10 +84,15 @@ runs:
             exit 1
           fi
           echo "::warning::bun install failed (attempt $attempt), retrying"
-          # The retry starts from nothing, because a failed install leaves a
-          # half-linked tree and the next one reads what is already there as
-          # work it has done — reporting success over a node_modules still
-          # missing whatever the failure interrupted.
+          # The retry starts from nothing. A failed install leaves a half-linked
+          # tree that the next one reads as work it has done, reporting success
+          # over a node_modules still missing whatever the failure interrupted.
+          # The cache goes too: a failure part-way through extracting a package
+          # leaves that package's cache entry short of files, and every later
+          # attempt copies from it and fails on the same missing file — which
+          # is what `ENOENT: copy file uws_win32_x64_137.node` is, twice in a
+          # row, after a first attempt died on a different file.
           find . -maxdepth 5 -name node_modules -type d -prune -exec rm -rf {} +
+          rm -rf "$BUN_INSTALL_CACHE_DIR"
           sleep $((attempt * 15))
         done
