@@ -774,3 +774,119 @@ describe('analyzeDeployment - addon units', () => {
     assert.equal(unit?.target, 'serverless')
   })
 })
+
+/**
+ * A project with one grouping rule per predicate kind, one function forced off
+ * serverless by a service, and one function left to the fallback — so a single
+ * fixture covers every way a unit can end up where it is.
+ */
+function stateWithRules(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        renderInvoice: {
+          pikkuFuncId: 'renderInvoice',
+          name: 'renderInvoice',
+          services: { services: ['pdfService'] },
+        },
+        listTodos: { pikkuFuncId: 'listTodos', name: 'listTodos' },
+      },
+    },
+    http: {
+      meta: {
+        post: {
+          '/api/invoices/:id/pdf': {
+            pikkuFuncId: 'renderInvoice',
+            method: 'post',
+            route: '/api/invoices/:id/pdf',
+          },
+          '/todo': {
+            pikkuFuncId: 'listTodos',
+            method: 'post',
+            route: '/todo',
+          },
+        },
+      },
+    },
+    addonFunctions: {
+      admin: {
+        createUser: {
+          pikkuFuncId: 'admin:createUser',
+          name: 'createUser',
+          expose: true,
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - a unit records why it is where it is', () => {
+  const pdfRule = { unit: 'pdf', routes: ['/api/invoices/*'] }
+  const consoleRule = { unit: 'console', addon: 'admin' }
+
+  const analyze = (state = stateWithRules()) =>
+    analyzeDeployment(state, {
+      serverlessIncompatible: ['pdfService'],
+      grouping: { rules: [pdfRule, consoleRule] },
+    })
+
+  const unit = (name: string, state?: InspectorState) =>
+    analyze(state).units.find((u) => u.name === name)
+
+  test('a unit matched by a rule names that rule', () => {
+    assert.deepEqual(unit('pdf')?.groupedBy, pdfRule)
+  })
+
+  test('an addon unit matched by a rule names that rule', () => {
+    assert.deepEqual(unit('console')?.groupedBy, consoleRule)
+  })
+
+  test('a unit left to the fallback names no rule', () => {
+    assert.equal(unit('list-todos')?.groupedBy, undefined)
+  })
+
+  test('a unit crossed to server names the services that crossed it', () => {
+    assert.equal(unit('pdf')?.target, 'server')
+    assert.deepEqual(unit('pdf')?.targetForcedBy, ['pdfService'])
+  })
+
+  test('a unit that was not crossed names no service', () => {
+    assert.equal(unit('list-todos')?.target, 'serverless')
+    assert.equal(unit('list-todos')?.targetForcedBy, undefined)
+  })
+
+  test('a unit on the default target alone names no service', () => {
+    const plain = analyzeDeployment(stateWithRules(), {}).units.find(
+      (u) => u.name === 'render-invoice'
+    )
+    assert.equal(plain?.target, 'serverless')
+    assert.equal(plain?.targetForcedBy, undefined)
+  })
+
+  test('a unit holding two crossed functions unions their services', () => {
+    const state = stateWithRules()
+    ;(state as any).functions.meta.renderStatement = {
+      pikkuFuncId: 'renderStatement',
+      name: 'renderStatement',
+      services: { services: ['ghostscript'] },
+    }
+    ;(state as any).http.meta.post['/api/invoices/:id/statement'] = {
+      pikkuFuncId: 'renderStatement',
+      method: 'post',
+      route: '/api/invoices/:id/statement',
+    }
+    const merged = analyzeDeployment(state, {
+      serverlessIncompatible: ['pdfService', 'ghostscript'],
+      grouping: { rules: [pdfRule, consoleRule] },
+    }).units.find((u) => u.name === 'pdf')
+    assert.deepEqual(merged?.targetForcedBy, ['pdfService', 'ghostscript'])
+  })
+})

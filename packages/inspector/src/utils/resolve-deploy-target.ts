@@ -22,6 +22,23 @@ export class IncompatibleDeployTargetError extends Error {
 }
 
 /**
+ * The function's services that are declared `serverlessIncompatible`. A
+ * non-empty result is exactly the condition that crosses a function to
+ * 'server', so callers that need to explain a target — rather than only
+ * resolve it — read the reason from here.
+ */
+export function incompatibleServicesFor(
+  funcMeta: Pick<FunctionMeta, 'services'>,
+  serverlessIncompatible: Set<string>
+): string[] {
+  const hits: string[] = []
+  for (const svc of funcMeta.services?.services ?? []) {
+    if (serverlessIncompatible.has(svc)) hits.push(svc)
+  }
+  return hits
+}
+
+/**
  * Determine the effective deploy target for a function.
  *
  * Resolution order:
@@ -45,12 +62,10 @@ export function resolveDeployTarget(
 ): 'serverless' | 'server' {
   // Service compatibility wins over the explicit flag — a serverless
   // bundle of a function that needs (e.g.) node:fs would crash at runtime.
-  const incompatibleHits: string[] = []
-  if (funcMeta.services?.services) {
-    for (const svc of funcMeta.services.services) {
-      if (serverlessIncompatible.has(svc)) incompatibleHits.push(svc)
-    }
-  }
+  const incompatibleHits = incompatibleServicesFor(
+    funcMeta,
+    serverlessIncompatible
+  )
 
   if (incompatibleHits.length > 0) {
     if (funcMeta.deploy === 'serverless') {

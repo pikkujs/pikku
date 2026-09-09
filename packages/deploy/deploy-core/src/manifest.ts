@@ -40,6 +40,17 @@ export interface HttpRouteInfo {
   pikkuFuncId: string
 }
 
+/**
+ * One `deploy.grouping` rule, as written in `pikku.config.json`. A function
+ * joins a rule's unit when it matches every predicate the rule sets.
+ */
+export interface GroupingRule {
+  unit: string
+  tags?: string[]
+  addon?: string
+  routes?: string[]
+}
+
 export interface DeploymentUnit {
   name: string
   role: DeploymentUnitRole
@@ -50,6 +61,19 @@ export interface DeploymentUnit {
   services: ServiceRequirement[]
   /** Other unit names this unit calls via RPC / service bindings */
   dependsOn: string[]
+  /**
+   * The `deploy.grouping` rule that put these functions together. Absent when
+   * the unit came from the fallback — one unit per function, or the single
+   * `app` unit under `strategy: 'single'`.
+   */
+  groupedBy?: GroupingRule
+  /**
+   * Services in `deploy.serverlessIncompatible` that forced `target: 'server'`.
+   * Absent when the target came from a function's own `deploy` flag or from
+   * `defaultTarget`, so its presence is what distinguishes a chosen target
+   * from a crossed one.
+   */
+  targetForcedBy?: string[]
   /**
    * RPC name -> unit name, for calls whose target unit cannot be derived from
    * the RPC name itself. A namespaced addon RPC (`console:runSecurityAudit`)

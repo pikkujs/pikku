@@ -28,6 +28,13 @@ type Unit = {
   services: Array<{ capability: string; sourceServiceName: string }>
   handlers: Array<Record<string, unknown>>
   tags: string[]
+  groupedBy?: {
+    unit: string
+    tags?: string[]
+    addon?: string
+    routes?: string[]
+  }
+  targetForcedBy?: string[]
 }
 type Manifest = {
   units: Unit[]
@@ -66,7 +73,8 @@ function withGrouping(grouping: unknown | undefined): void {
   writeFileSync(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
 }
 
-function runPlan(): { ok: true; manifest: Manifest } | { ok: false; output: string } {
+function runPlan():
+  { ok: true; manifest: Manifest } | { ok: false; output: string } {
   try {
     execSync(`node ${PIKKU_BIN} deploy plan --provider cloudflare`, {
       cwd: FUNCTIONS_DIR,
@@ -80,7 +88,10 @@ function runPlan(): { ok: true; manifest: Manifest } | { ok: false; output: stri
       output: `${err.stdout?.toString() ?? ''}${err.stderr?.toString() ?? ''}${err.message}`,
     }
   }
-  return { ok: true, manifest: JSON.parse(readFileSync(MANIFEST_FILE, 'utf-8')) }
+  return {
+    ok: true,
+    manifest: JSON.parse(readFileSync(MANIFEST_FILE, 'utf-8')),
+  }
 }
 
 function functionUnits(manifest: Manifest): Unit[] {
@@ -109,16 +120,62 @@ try {
   console.log('\nBaseline: no grouping block')
   withGrouping(undefined)
   const baseline = runPlan()
-  assert(baseline.ok, `baseline plan failed:\n${!baseline.ok ? baseline.output : ''}`)
+  assert(
+    baseline.ok,
+    `baseline plan failed:\n${!baseline.ok ? baseline.output : ''}`
+  )
   const baseUnits = functionUnits(baseline.manifest)
   const baseNames = new Set(baseUnits.map((u) => u.name))
 
   check('the ungrouped build gives every function its own unit', () => {
     assert(
-      baseUnits.every((u) => u.functionIds.length <= 1 || u.name.startsWith('addon-') || u.name.startsWith('run-remote')),
+      baseUnits.every(
+        (u) =>
+          u.functionIds.length <= 1 ||
+          u.name.startsWith('addon-') ||
+          u.name.startsWith('run-remote')
+      ),
       'an ungrouped unit holds more than one function without being an addon or job inbox'
     )
   })
+
+  check('an ungrouped unit names no rule', () => {
+    const named = baseUnits.filter((u) => u.groupedBy)
+    assert(
+      named.length === 0,
+      `${named.map((u) => u.name).join(', ')} claim a rule with no grouping block`
+    )
+  })
+
+  check(
+    'a chosen server target names no service, a crossed one names a real one',
+    () => {
+      const incompatible = new Set(
+        JSON.parse(originalConfig).deploy.serverlessIncompatible as string[]
+      )
+      const onServer = baseUnits.filter((u) => u.target === 'server')
+      assert(
+        onServer.length > 0,
+        'the template built no server-target unit to check'
+      )
+      for (const unit of onServer) {
+        for (const service of unit.targetForcedBy ?? []) {
+          assert(
+            incompatible.has(service),
+            `${unit.name} blames ${service}, which is not in serverlessIncompatible`
+          )
+        }
+      }
+      const chosen = baseUnits.find((u) =>
+        u.functionIds.includes('processReminder@v2')
+      )
+      assert(!!chosen, 'expected a unit holding processReminder@v2')
+      assert(
+        chosen!.target === 'server' && !chosen!.targetForcedBy,
+        `${chosen!.name} holds a function that declared deploy: 'server', so nothing crossed it and it must name nothing`
+      )
+    }
+  )
 
   const todoUnits = baseUnits.filter((u) => u.tags.includes('todos'))
   check('the template has several todos-tagged units to merge', () => {
@@ -131,12 +188,23 @@ try {
   console.log('\nGrouped: one unit for everything tagged todos')
   withGrouping({ rules: [{ unit: 'todos', tags: ['todos'] }] })
   const grouped = runPlan()
-  assert(grouped.ok, `grouped plan failed:\n${!grouped.ok ? grouped.output : ''}`)
+  assert(
+    grouped.ok,
+    `grouped plan failed:\n${!grouped.ok ? grouped.output : ''}`
+  )
   const groupedUnits = functionUnits(grouped.manifest)
   const todos = groupedUnits.find((u) => u.name === 'todos')
 
   check('the rule produces a single named unit', () => {
     assert(todos, 'no unit named "todos" in the manifest')
+  })
+
+  check('the merged unit names the rule that made it', () => {
+    assert(
+      JSON.stringify(todos!.groupedBy) ===
+        JSON.stringify({ unit: 'todos', tags: ['todos'] }),
+      `expected the todos rule, got ${JSON.stringify(todos!.groupedBy)}`
+    )
   })
 
   check('it holds every function the rule matched', () => {
@@ -165,13 +233,19 @@ try {
   check('every other unit is untouched', () => {
     for (const unit of groupedUnits) {
       if (unit.name === 'todos') continue
-      assert(baseNames.has(unit.name), `${unit.name} appeared only in the grouped build`)
+      assert(
+        baseNames.has(unit.name),
+        `${unit.name} appeared only in the grouped build`
+      )
     }
   })
 
   check('routes from every member are on one fetch handler', () => {
     const fetchHandlers = todos!.handlers.filter((h) => h.type === 'fetch')
-    assert(fetchHandlers.length === 1, `expected 1 fetch handler, got ${fetchHandlers.length}`)
+    assert(
+      fetchHandlers.length === 1,
+      `expected 1 fetch handler, got ${fetchHandlers.length}`
+    )
     const routes = (fetchHandlers[0] as { routes: unknown[] }).routes
     const baselineRoutes = todoUnits.flatMap((u) =>
       u.handlers
@@ -203,17 +277,24 @@ try {
   check('no queue or cron points at a unit that no longer exists', () => {
     const names = new Set(grouped.manifest.units.map((u) => u.name))
     for (const queue of grouped.manifest.queues) {
-      assert(names.has(queue.consumerUnit), `queue ${queue.name} points at missing unit ${queue.consumerUnit}`)
+      assert(
+        names.has(queue.consumerUnit),
+        `queue ${queue.name} points at missing unit ${queue.consumerUnit}`
+      )
     }
     for (const task of grouped.manifest.scheduledTasks) {
-      assert(names.has(task.unitName), `cron ${task.name} points at missing unit ${task.unitName}`)
+      assert(
+        names.has(task.unitName),
+        `cron ${task.name} points at missing unit ${task.unitName}`
+      )
     }
   })
 
   check('no unit depends on a unit that no longer exists', () => {
     const names = new Set(grouped.manifest.units.map((u) => u.name))
     for (const unit of grouped.manifest.units) {
-      for (const dep of (unit as unknown as { dependsOn: string[] }).dependsOn) {
+      for (const dep of (unit as unknown as { dependsOn: string[] })
+        .dependsOn) {
         assert(names.has(dep), `${unit.name} depends on missing unit ${dep}`)
       }
     }
