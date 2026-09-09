@@ -33,7 +33,7 @@
     "pre-commit": "bun run test && bun run prettier && bun run lint",
     "pre-push": "bun run pre-commit",
     "tsc": "bun run --filter '*' tsc",
-    "build:packages": "bun run --filter './packages/**' --filter '!@pikku/console' --filter '!@pikku/addon-*' build",
+    "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/console' --filter '!@pikku/addon-*' build",
     "build:addons": "bun run --filter './packages/addon/**' build",
     "build:console": "cd packages/console && bun run generate && bun run build && rm -rf ../cli/console-app && cp -r dist ../cli/console-app",
     "build:templates": "bun run --filter './templates/**' build",

@@ -20,13 +20,18 @@ runs:
         # package.json, and Node resolves the shadowed folder instead of the
         # hoisted package. The prefix is versioned so entries poisoned that way
         # are never reached through restore-keys.
+        #
+        # v3 because the compiler changed: a dist and tsbuildinfo emitted by
+        # TypeScript 6 are not a base TypeScript 7 can build on, and the source
+        # hash does not see the difference. Bump the prefix whenever the
+        # compiler that writes this cache changes.
         path: |
           packages/**/tsconfig.tsbuildinfo
           packages/**/dist
           !packages/**/node_modules/**
-        key: ts-build-v2-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
+        key: ts-build-v3-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'bun.lock') }}
         restore-keys: |
-          ts-build-v2-
+          ts-build-v3-
     - name: Build packages
       shell: bash
       run: |
