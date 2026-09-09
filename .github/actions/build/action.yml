@@ -42,7 +42,7 @@ runs:
     # workspace declares, which is why the root declares @pikku/cli too.
     - name: Link workspace bins built by the previous step
       shell: bash
-      run: bun install --frozen-lockfile
+      run: bun install
     - name: Build addons
       shell: bash
       run: |

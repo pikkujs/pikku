@@ -36,11 +36,22 @@ runs:
     # workerd, esbuild) fails the whole install when that fetch blips, and the
     # job then reads as a broken pull request. Bun resumes from what it
     # already resolved, so a repeat attempt is cheap.
+    # `--frozen-lockfile` cannot be used here: `uWebSockets.js` is a `github:`
+    # dependency of both the root and @pikku/uws, and bun re-resolves it on
+    # every frozen install and then declares the lockfile changed — every
+    # attempt, so the retry above never gets past it. A plain install leaves
+    # bun.lock byte-identical, so diffing it afterwards asks the same question
+    # the frozen flag was there to ask: is the committed lockfile complete and
+    # up to date with the manifests?
     - name: Install dependencies
       shell: bash
       run: |
         for attempt in 1 2 3; do
-          if bun install --frozen-lockfile; then
+          if bun install; then
+            if ! git diff --exit-code -- bun.lock; then
+              echo "::error::bun install updated bun.lock — commit the updated lockfile"
+              exit 1
+            fi
             exit 0
           fi
           if [ "$attempt" = 3 ]; then
