@@ -95,7 +95,7 @@ exactly where it gets shipped past. Run the browser pass, and run it **for every
 environment in `pikkufabric.config.json`**, not just the first:
 
 ```sh
-bunx --bun pikku scenario run local-admin --spawn --run browser
+bunx --bun pikku scenario run local --spawn --run browser
 ```
 
 `bun run build` is what type-checks each frontend (each app's `tsc` script runs

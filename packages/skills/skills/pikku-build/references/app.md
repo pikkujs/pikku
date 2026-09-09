@@ -11,6 +11,14 @@ project shaped so `pikku fabric init` later adopts it with zero rework.
 3. Plan the milestones — the buildable pieces, in dependency order
 4. Implement them one at a time — each proven by a scenario before the next starts
 
+The sections below follow those phases in order, and are meant to be worked
+through rather than searched: §0 bootstrap, §1-§1a the last questions and the
+three languages, §2 the knowledge graph, §3-§4 personas and apps, §5-§5a the
+milestones and each one's technical plan, §6-§6a building and closing one,
+§7-§7a proving it, §8 design, §9 ship. Four of them hand off to their own file —
+[scenarios.md](references/scenarios.md), [design.md](references/design.md),
+[multi-app.md](references/multi-app.md) and [ship.md](references/ship.md) — at the point you need it.
+
 ## Agent Operating Procedure
 
 1. Discover before editing. Run `pikku info functions --verbose --silent` and
@@ -393,7 +401,13 @@ over, and an uncovered function is a half-milestone whether or not the note says
 
 1. **Migration.** SQL in `db/sqlite/` at the project root, numbered on from the
    ones already there. Apply with `bunx --bun pikku db migrate`, which also
-   regenerates the Kysely types your functions import.
+   regenerates the Kysely types your functions import. **Neither `pikku all` nor
+   restarting `pikku dev` applies a migration** — so a new column reads as
+   `TS2353 … does not exist in type 'InsertExpression<DB, "…">'` on the function
+   that writes it. An unapplied migration is the usual cause and the cheapest to
+   rule out, so run `db migrate` first — but the same error is what a misspelt
+   column or a stale generated type looks like, so if it survives the migration,
+   go and read the SQL.
 2. **Seed.** Demo rows in `db/sqlite-dev-seed.sql`. **There is no seed command** —
    `bunx --bun pikku db reset` is the only thing that applies the file, and it
    wipes, migrates and seeds in one go (`--no-seed` stops after the migration,
@@ -533,6 +547,29 @@ Three things it says, and what each one asks of you:
 plan to match what you built — `plan set` is the architect's seat, and a builder
 rewriting its own denominator is exactly what the split exists to stop.
 
+### 6b. Feed the milestone back into the seats
+
+Before starting the next milestone, answer two questions out loud:
+
+- **What did the plan fail to say?** A field nothing wrote, a promise no function
+  could keep, a pass 1 that turned out to be two. That is a `pikku-architect`
+  lesson.
+- **What did the build learn the hard way?** Anything that cost a wasted run —
+  a stale process, a scenario that only passes once, a diagnostic that turned
+  out to be an echo of an earlier one. That is a `pikku-build` lesson.
+
+Then edit the skill — **at most one change to each per milestone**, and only for
+something that actually went wrong here. A rule with no incident behind it is a
+guess, and these files are read in full every time: they earn their length by
+naming failures a reader would otherwise repeat. Prefer sharpening an existing
+line to appending a new one, and delete a rule the last few milestones have
+shown to be noise.
+
+The gates are the compounding part. A lesson written into a scenario the suite
+runs, or into a check `plan progress` can see, is enforced; the same lesson
+written as prose is a thing the next reader has to remember. Reach for prose
+only when there is nothing to hang a check on.
+
 ## 7. Prove it — scenarios
 
 A scenario is a user journey run as one of your personas, over the real
@@ -541,103 +578,59 @@ here, because a passing one proves the app works the way a signed-in person
 experiences it. Three ship in `packages/functions/test/scenarios/` — keep them
 green — and every milestone's gherkin block from §5 becomes one more.
 
-```typescript
-import { pikkuScenario } from '#pikku/scenarios'
+**Read [scenarios.md](references/scenarios.md) before writing the milestone's scenarios,
+and again whenever one of these describes what you are doing.** It is the file
+where the expensive lessons live, and most of them produce a GREEN suite that
+proves nothing:
 
-export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
-  title: 'A tenant reports a fault and the owner sees it',
-  description: 'The report lands on the owning landlord’s queue, and nobody else’s',
-  tags: ['scenario', 'maintenance'],
-  func: async (_services, _data, { scenario, actors }) => {
-    const report = await scenario.do(
-      'reports a broken boiler',
-      'createMaintenanceReport',
-      { summary: 'No hot water' },
-      { actor: actors.chidi },
-    )
-    await scenario.then(
-      'appears on the owner’s queue',
-      'reportShowsOnQueue',
-      { id: report.id },
-      { actor: actors.amina },
-    )
-    await scenario.then(
-      'is invisible to the other owner',
-      'reportIsNotVisible',
-      { id: report.id },
-      { actor: actors.bilal },
-    )
-    return { id: report.id }
-  },
-})
-```
-
-- **`do` takes an RPC name; `given`/`when`/`then` take a declared step.** A step
-  is a `pikkuScenarioStep` that says what a person is doing and holds one
-  implementation per surface (server-side by default, plus a `browser` one that
-  drives the page). Reaching for an RPC name in a `then` will not resolve.
-- **Every scenario must assert.** A ladder of `given`/`when` with no `then` is a
-  PKU680 critical — it fails `pikku all`, so it stops codegen rather than a test.
-  Coverage counts every step, so without that rule an assertion-free ladder of
-  clicks would score a perfect run while checking nothing.
-- **Write the refusals.** The third step above is the whole point of §4: one
-  persona reaching for another's row has to be rejected, and that rejection is a
-  scenario. It is how you prove access control instead of asserting it.
-- **Add `SCENARIO_ACTOR_SECRET` to `.env`.** `bun run dev` generates that file
-  with a `BETTER_AUTH_SECRET` and nothing else, and without the actor secret
-  `/api/auth/sign-in/actor` is disabled — every scenario then fails at sign-in,
-  before its first step, for a reason that reads like an auth bug.
-- **There is no state reset.** A scenario runs against a live server: scope what
-  you create to your own rows and unique ids, and never assume a clean database.
+- the shape of a scenario, and `do` vs `given`/`when`/`then`
+- what survives DSL extraction — a `then` in `return` position asserts nothing,
+  and a shared setup helper credits its steps to the wrong actor
+- what to assert — refusals must read the REASON, totals must be deltas, and the
+  assertion nobody writes is the row count
+- living without a state reset: the suite must be green on its SECOND run
+- how a shared step rots as later milestones add writers of the rows it selects
+- browser specifics — the click/navigate race, testids, and `Outlet` nesting
 
 Run them:
 
 ```sh
-bunx --bun pikku scenario run local --spawn                       # server-side, the fast path
-bunx --bun pikku scenario run local --spawn --run browser         # the same journeys, driven as a human
-bunx --bun pikku scenario run local-admin --spawn --run browser   # the second app
+bunx --bun pikku scenario run local --spawn                  # server-side, the fast path
+bunx --bun pikku scenario run local --spawn --run browser    # the same journeys, driven as a human
 ```
 
-`--spawn` starts and stops the server for the run; drop it if `bun run dev` is
-already up. The browser pass needs the environment's `appUrl` and a browser
-driver installed — without them the run fails fast rather than half-running.
+In a multi-app project that one run covers both frontends: each persona carries
+its own `app` and `@pikku/playwright` resolves the base url from the
+environment's `appUrls` map, so there is no second environment to run.
+
+**Run the whole suite, not the milestone's own scenarios.** The milestone's
+scenarios are the ones you wrote to pass; the regression lives in someone
+else's. Tightening what "archived" means is a one-function change that reads as
+local and quietly breaks the milestone-01 scenario nobody re-ran.
+
+**Restart the server after adding a function.** Hot reload does not register a
+new RPC and does not re-run `afterStart`, so a fresh function answers 404 and
+anything provisioned at boot is missing — failures that read like a wiring bug
+and are nothing but a stale process.
 
 ### 7a. Coverage — which functions have actually been run
 
 Green scenarios tell you the journeys you wrote still work. They say nothing
-about the code you never wrote a journey for, and that gap is invisible without
-measuring it:
+about the code you never wrote a journey for:
 
 ```sh
 bunx --bun pikku dev --coverage                        # server, instrumented
 bunx --bun pikku scenario run local --coverage         # against that server
 ```
 
-That writes `coverage/scenario-coverage.json` — which functions each journey
-exercised. **A function no scenario touches has never been run by anything but
-you, by hand, once.** It compiles, it typechecks, `pikku all` is happy, and
-nobody has proven it does what it says.
-
-Run it **as each milestone closes**, not once at the end. Coverage read per
-milestone is a short list you can act on — the milestone you just built either
-covered its own functions or it did not. Read for the first time after ten
-milestones it is a wall of red that nobody triages, and the honest response to a
-wall of red is to ignore it.
-
-Every gap is one of three things, and naming which is the point of looking:
-
-- **A missing scenario** — the function matters and no journey reaches it. Write
-  the journey. Refusal paths dominate this category, because it is the case you
-  are least likely to have clicked through by hand.
-- **A function that should not exist** — nothing reaches it because nothing needs
-  it. Delete it. An unused exposed function is also reachable over
-  `POST /rpc/:rpcName`, so this is a security finding, not only dead weight.
-- **Genuinely deferred** — real, not yet reachable from the UI. Say so in the
-  milestone note that will cover it, so the gap is a decision rather than a
-  hole.
-
-Report the number when you hand the milestone over. A number nobody says out
-loud is a number nobody acts on.
+**A function no scenario touches has no scenario coverage** — the file knows
+what the suite exercises and nothing else, so a unit test, a scheduled job, a
+webhook or a hand call leaves no trace in it. Read
+`coverage/scenario-coverage.json` **as each milestone closes** — per milestone it is a short list you can act on, whereas read for the
+first time after ten milestones it is a wall of red nobody triages. Every gap is
+a missing scenario, a function that should not exist, or a deferral worth
+writing down; [scenarios.md](references/scenarios.md) says how to tell them apart. Report
+the number when you hand the milestone over.
 
 ## 8. Make it look like someone designed it
 
@@ -767,8 +760,11 @@ cheaper to honour than to retrofit:
 
 ## Reference
 
-- `references/multi-app.md` — adding a second frontend (§4), at the milestone
+Read these when the section that names them comes up, not up front:
+
+- [multi-app.md](references/multi-app.md) — adding a second frontend (§4), at the milestone
   that needs it
+- [scenarios.md](references/scenarios.md) — writing journeys that stay proven (§7, §7a)
 - `references/design.md` — committing to a design direction, and how to tell
   whether the screens realise it. Read BEFORE the first screen (§6), not at §8
 - `references/theming.md` — authoring the theme (§8a)
@@ -776,4 +772,4 @@ cheaper to honour than to retrofit:
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
   `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
 - Project conventions written by the template: `AGENTS.md`
-- Doing less than this: `references/quick.md``. Doing more: `references/platform.md``.
+- Doing less than this: [quick.md](references/quick.md). Doing more: [platform.md](references/platform.md).
