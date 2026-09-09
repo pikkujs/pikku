@@ -16,7 +16,7 @@
   "scripts": {
     "tsc": "tsc",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
-    "build:cjs": "tsc -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
+    "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
     "build": "bun run build:esm && bun run build:cjs",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "bun run build && npm test",
