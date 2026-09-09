@@ -53,6 +53,53 @@ Then **write the direction into `knowledge/decisions/design/`** — the words th
 user gave you, what you chose, and what it rules out. The JSON records what the
 theme is; only the note records why.
 
+## The colours the theme has no field for
+
+`brand` is the product's accent. It is not the only colour a screen needs, and
+the missing ones are why "don't hardcode colours per component" gets broken by
+the same agent that wrote it down.
+
+A screen has to say *covered* and *still open*, *fine* and *needs attention* —
+and those are not the accent. Using the accent for them is worse than a stray
+hex: the brand colour stops meaning "this product" and starts meaning "good", so
+it means nothing. But there is no `brand.covered` field, so the value lands
+inline as `#3f7d5c`, once per component, slightly different each time.
+
+Give them a home. A small stylesheet of custom properties, imported once beside
+the Mantine styles, is enough:
+
+```css
+:root {
+  --app-covered: #3f7d5c;  --app-covered-bg: #e6f1ea;
+  --app-open:    #a8701a;  --app-open-bg:    #fbeedb;
+  --app-sunk:    #fbf6f3;  /* a recessed surface, for forms and asides */
+  --app-hairline: var(--mantine-color-gray-2);
+}
+[data-mantine-color-scheme='dark'] {
+  --app-covered: #7fc09a;  --app-covered-bg: #1e2f26;
+  --app-open:    #e0ab5c;  --app-open-bg:    #33271a;
+  --app-sunk:    #241b18;
+  --app-hairline: var(--mantine-color-dark-4);
+}
+```
+
+Name them for what they *mean* in this product, never for the colour — `covered`,
+not `green`. The name is the whole value: it survives a change of palette, and it
+is the thing that makes the second use agree with the first. Define both colour
+schemes at once; a token defined only in light is the classic unreadable-in-dark
+bug, and Mantine will happily render it.
+
+The same file is where a couple of other things belong that the theme JSON has no
+field for and every screen otherwise re-invents: the hairline that separates rows
+in a list, the recessed surface a form sits on so it does not carry the same
+weight as the content it adds to, and the one animation the product is allowed
+(behind `prefers-reduced-motion`). Two or three rules, not a framework.
+
+If the app ships template screens you did not write — the error and not-found
+pages usually — read them before you call the palette done. They arrive with the
+scaffold's colours hardcoded, and a stock blue accent on an app whose direction
+says warm is the single loudest contradiction in the build.
+
 **Set the theme once, don't hardcode colours per component.** A screen full of
 inline `color="blue"` and one-off hex values is why apps look templated. Change
 the theme, not the components — and keep it theme-aware for light and dark.
