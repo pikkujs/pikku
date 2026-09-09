@@ -311,7 +311,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.144",
+      "version": "0.12.145",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -1614,7 +1614,7 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.144",
+        "@pikku/cli": "^0.12.145",
         "@pikku/core": "^0.12.107",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
