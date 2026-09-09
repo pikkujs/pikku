@@ -34,7 +34,7 @@
     "build": "pikku all && pikku db migrate && tsc --noEmit",
     "tsc": "tsc --noEmit",
     "pikku": "pikku all && pikku db migrate",
-    "test": "node --import tsx --test \"test/**/*.test.ts\""
+    "test": "bun test test"
   },
   "imports": {
     "#pikku/*.gen.js": "./.pikku/*.gen.ts",
