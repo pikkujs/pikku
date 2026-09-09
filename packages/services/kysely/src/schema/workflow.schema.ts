@@ -66,6 +66,7 @@ export const workflowSchema: PikkuSchema = {
         .addColumn('retryDelay', 'text')
         .addColumn('fromStepName', 'text')
         .addColumn('currentAttempt', 'integer')
+        .addColumn('leaseExpiresAt', 'timestamp')
         .addColumn('createdAt', 'timestamp', (col) =>
           col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
         )

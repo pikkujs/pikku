@@ -105,6 +105,13 @@ export interface StepState {
   createdAt: Date
   updatedAt: Date
   childRunId?: string
+  /**
+   * When the dispatch that claimed this step stops owning it. The holder pushes
+   * it forward while it is still working, so a lapsed lease means the worker is
+   * gone and the step may be claimed again. `undefined` is a store that keeps no
+   * lease, where a `running` step is owned until it moves on its own.
+   */
+  leaseExpiresAt?: Date
   runningAt?: Date
   scheduledAt?: Date
   succeededAt?: Date
