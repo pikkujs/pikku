@@ -2077,6 +2077,15 @@
         "typescript": "^6.0.3",
       },
     },
+    "verifiers/deploy-grouping": {
+      "name": "@pikku/verifiers-deploy-grouping",
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@pikku/core": "workspace:*",
+        "@types/node": "^24",
+        "typescript": "^6.0.3",
+      },
+    },
     "verifiers/deploy-serverless": {
       "name": "@pikku/verifiers-deploy-serverless",
       "devDependencies": {
@@ -3418,6 +3427,8 @@
     "@pikku/verifiers-deploy-azure": ["@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"],
 
     "@pikku/verifiers-deploy-cloudflare": ["@pikku/verifiers-deploy-cloudflare@workspace:verifiers/deploy-cloudflare"],
+
+    "@pikku/verifiers-deploy-grouping": ["@pikku/verifiers-deploy-grouping@workspace:verifiers/deploy-grouping"],
 
     "@pikku/verifiers-deploy-serverless": ["@pikku/verifiers-deploy-serverless@workspace:verifiers/deploy-serverless"],
 
@@ -6177,6 +6188,8 @@
 
     "@pikku/verifiers-deploy-cloudflare/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/verifiers-deploy-grouping/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-deploy-serverless/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-deploy-standalone/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -6752,6 +6765,8 @@
     "@pikku/verifiers-deploy-azure/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-deploy-cloudflare/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-deploy-grouping/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-deploy-serverless/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
