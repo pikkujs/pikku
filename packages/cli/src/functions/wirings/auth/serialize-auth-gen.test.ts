@@ -81,7 +81,7 @@ describe('serializeAuthGen', () => {
     const output = genWiring(['github'], def({ exportName: 'myAuth' }))
     assert.match(output, /import '\.\.\/src\/auth\.js'/)
     assert.match(output, /createAuthHandler\(\)/)
-    assert.match(output, /betterAuthSession\(\)/)
+    assert.match(output, /betterAuthSession\(\{ priority: 'lowest' \}\)/)
   })
 
   test('does not wire provider metadata at runtime (emitted as auth-meta.gen.json)', () => {
@@ -125,7 +125,10 @@ describe('serializeAuthGen', () => {
 
   test('registers the better-auth session-bridge middleware globally', () => {
     const output = genWiring([])
-    assert.match(output, /addGlobalMiddleware\(\[betterAuthSession\(\)\]\)/)
+    assert.match(
+      output,
+      /addGlobalMiddleware\(\[\s*betterAuthSession\(\{ priority: 'lowest' \}\),\s*\]\)/
+    )
   })
 
   test('wires a catch-all route per method to the shared handler', () => {
@@ -217,7 +220,7 @@ describe('serializeAuthGen', () => {
       assert.equal(out.middleware, undefined)
       assert.match(
         out.wiring,
-        /addGlobalMiddleware\(\[betterAuthSession\(\)\]\)/
+        /addGlobalMiddleware\(\[\s*betterAuthSession\(\{ priority: 'lowest' \}\),\s*\]\)/
       )
     })
 
@@ -249,7 +252,7 @@ describe('serializeAuthGen', () => {
       )
       assert.match(
         mw,
-        /addGlobalMiddleware\(\[betterAuthStatelessSession\(\)\]\)/
+        /addGlobalMiddleware\(\[\s*betterAuthStatelessSession\(\{ priority: 'lowest' \}\),\s*\]\)/
       )
       // Critically: it must NOT pull the full better-auth server in.
       assert.doesNotMatch(mw, /import '\.\.\/src\/auth\.js'/)
@@ -260,30 +263,25 @@ describe('serializeAuthGen', () => {
   describe('console bearer token (scaffold.console enabled)', () => {
     const statelessDef = def({ cookieCache: true })
     const genConsole = (d: AuthDefinition = def()) =>
-      serializeAuthGen(d, ['github'], AUTH_FILE, leaf, {}, false, true)
+      serializeAuthGen(d, ['github'], AUTH_FILE, leaf, {}, true)
 
-    test('stateless: the middleware file registers authBearer alongside the session verifier', () => {
-      const out = genConsole(statelessDef)
-      assert.ok(out.middleware, 'middleware file should be emitted')
-      const mw = out.middleware!
-      assert.match(mw, /import { authBearer } from '@pikku\/core\/middleware'/)
-      assert.match(
-        mw,
-        /addGlobalMiddleware\(\[\s*betterAuthStatelessSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
-      )
-      assert.doesNotMatch(mw, /process\.env/)
-    })
-
-    test('stateful: the wiring file registers authBearer alongside betterAuthSession', () => {
-      const out = genConsole()
-      assert.match(
-        out.wiring,
-        /import { authBearer } from '@pikku\/core\/middleware'/
-      )
-      assert.match(
-        out.wiring,
-        /addGlobalMiddleware\(\[\s*betterAuthSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
-      )
+    // The token rides in whichever file carries the session registration. That
+    // is safe only because the session registration is now always emitted: it
+    // used to be skipped when the app supplied its own session middleware, and
+    // the token vanished with it, 403ing every console:* RPC.
+    test('rides alongside the session registration on both paths', () => {
+      const stateless = genConsole(statelessDef).middleware!
+      const stateful = genConsole().wiring
+      for (const file of [stateless, stateful]) {
+        assert.match(file, /authBearer \} from '@pikku\/core\/middleware'/)
+        assert.match(
+          file,
+          /addGlobalMiddleware\(\[[\s\S]*?authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
+        )
+        assert.doesNotMatch(file, /process\.env/)
+      }
+      assert.match(stateless, /betterAuthStatelessSession/)
+      assert.match(stateful, /betterAuthSession/)
     })
 
     // `wireAddon({ name: 'console', ..., scopes: ['pikku:console'] })` gates
@@ -304,40 +302,25 @@ describe('serializeAuthGen', () => {
     })
 
     test('without scaffold.console no authBearer is emitted', () => {
-      const stateful = gen(['github'])
-      const stateless = gen(['github'], statelessDef)
-      assert.doesNotMatch(stateful.wiring, /authBearer/)
-      assert.doesNotMatch(stateless.middleware ?? '', /authBearer/)
+      assert.doesNotMatch(gen(['github']).wiring, /authBearer/)
+      assert.doesNotMatch(
+        gen(['github'], statelessDef).middleware ?? '',
+        /authBearer/
+      )
     })
   })
 
-  describe('user-registered global betterAuthSession → CLI steps aside', () => {
-    const genSkip = (providers: string[], d: AuthDefinition = def()) =>
-      serializeAuthGen(d, providers, AUTH_FILE, leaf, {}, true)
-
-    test('drops the generated stateful session middleware (no double-register)', () => {
-      const out = genSkip(['github'])
-      // Both names: `addHTTPMiddleware` is no longer emitted anywhere, so
-      // asserting only its absence would pass whatever this branch did.
-      assert.doesNotMatch(out.wiring, /addGlobalMiddleware/)
-      assert.doesNotMatch(out.wiring, /addHTTPMiddleware/)
-      assert.doesNotMatch(out.wiring, /betterAuthSession/)
-    })
-
-    test('still keeps the handler, routes and createAuthHandler import', () => {
-      const out = genSkip(['github'])
+  // pikkujs/pikku#754: two session middlewares used to be reconciled by having
+  // the CLI detect the app's own registration and generate nothing — a silent
+  // drop that also took the console token with it. `lowest` orders the
+  // generated one after the app's `medium` default, so the app resolves the
+  // session first and the generated one short-circuits.
+  describe('generated session middleware is deprioritised, never skipped', () => {
+    test('both paths register at lowest priority', () => {
+      assert.match(gen(['github']).wiring, /priority: 'lowest'/)
       assert.match(
-        out.wiring,
-        /import { createAuthHandler } from '@pikku\/better-auth'/
-      )
-      assert.match(out.wiring, /wireHTTPRoutes\(/)
-      assert.match(out.wiring, /getAuthCatchAll:/)
-    })
-
-    test('by default (no user registration) the middleware is still generated', () => {
-      assert.match(
-        genWiring(['github']),
-        /addGlobalMiddleware\(\[betterAuthSession\(\)\]\)/
+        gen(['github'], def({ cookieCache: true })).middleware!,
+        /priority: 'lowest'/
       )
     })
   })

@@ -215,6 +215,44 @@ describe('resolveImpersonatedSession', () => {
     )
   })
 
+  test("with no loadUser it defaults to better-auth's own user lookup", async () => {
+    const { services } = svc()
+    const looked: string[] = []
+    services.auth = async () => ({
+      $context: Promise.resolve({
+        internalAdapter: {
+          findUserById: async (id: string) => {
+            looked.push(id)
+            return USERS[id] ?? null
+          },
+        },
+      }),
+    })
+
+    const session = await resolveImpersonatedSession(
+      caller('u_admin'),
+      {},
+      services,
+      () => 'u_guest'
+    )
+
+    assert.deepEqual(looked, ['u_guest'])
+    assert.equal(session?.userId, 'u_guest')
+  })
+
+  test('with no loadUser and no wired auth it says which is missing', async () => {
+    const { services } = svc()
+    await assert.rejects(
+      resolveImpersonatedSession(
+        caller('u_admin'),
+        {},
+        services,
+        () => 'u_guest'
+      ),
+      /no `loadUser` and no wired `services.auth`/
+    )
+  })
+
   test('a request with no impersonation header says nothing', () => {
     const { services, logs } = svc()
     warnImpersonationUnconfigured(services, () => undefined)

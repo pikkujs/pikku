@@ -1,12 +1,16 @@
 import { pikkuMiddleware } from '@pikku/core/middleware'
 import type { CoreServices, CoreUserSession } from '@pikku/core/types'
-import type { CorePikkuMiddleware } from '@pikku/core/middleware'
+import type {
+  CorePikkuMiddleware,
+  MiddlewarePriority,
+} from '@pikku/core/middleware'
 import { getCookieCache } from 'better-auth/cookies'
 import {
   resolveImpersonatedSession,
   warnImpersonationUnconfigured,
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
+import { defaultSession } from './default-session.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
@@ -26,6 +30,12 @@ export type BetterAuthStatelessSessionOptions = {
    * `canImpersonate`, the session resolves as the target (via `loadUser`).
    */
   impersonation?: ImpersonationOptions
+  /**
+   * Where this sits in the middleware order. The CLI generates its default-map
+   * registration at `lowest` so an app's own registration (default `medium`)
+   * resolves the session first and this one short-circuits on `session`.
+   */
+  priority?: MiddlewarePriority
 }
 
 /**
@@ -51,10 +61,16 @@ export type BetterAuthStatelessSessionOptions = {
 export const betterAuthStatelessSession = (
   options: BetterAuthStatelessSessionOptions = {}
 ): CorePikkuMiddleware => {
-  const { mapSession, impersonation, secretId = 'BETTER_AUTH_SECRET' } = options
+  const {
+    mapSession,
+    impersonation,
+    priority,
+    secretId = 'BETTER_AUTH_SECRET',
+  } = options
 
-  return pikkuMiddleware(
-    async (services, { http, setSession, session }, next) => {
+  return pikkuMiddleware({
+    priority,
+    func: async (services, { http, setSession, session }, next) => {
       if (!http?.request || !setSession || session) {
         return next()
       }
@@ -120,14 +136,13 @@ export const betterAuthStatelessSession = (
             return next()
           }
         } else {
-          warnImpersonationUnconfigured(
-            services as CoreServices,
-            (name) => headers.get(name)
+          warnImpersonationUnconfigured(services as CoreServices, (name) =>
+            headers.get(name)
           )
         }
         const mapped = mapSession
           ? await mapSession(cached, services as CoreServices)
-          : ({ userId: cached.user.id } as CoreUserSession)
+          : defaultSession(cached)
         setSession(
           await withResolvedScopes(
             stampActorFlag(mapped, cached.user),
@@ -137,6 +152,6 @@ export const betterAuthStatelessSession = (
       }
 
       return next()
-    }
-  )
+    },
+  })
 }
