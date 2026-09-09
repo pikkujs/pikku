@@ -138,6 +138,23 @@ the thing that made it is always yes. Use evidence.
 - **Screenshot every screen and look at the image**, at ~390px and at ~1440px.
   Judging your own UI from source is guessing, and the failures that matter —
   proportion, hierarchy, a wall of identical boxes — are invisible in JSX.
+  **Sort out how you will take that screenshot before you need it**, because an
+  instruction with no working mechanism behind it is one that gets skipped, and
+  this is the one that gets skipped. If a browser-driving tool is wired up, use
+  it. If it is not — or it fails to connect, which happens — the fallback is
+  short enough to write once and keep:
+
+  ```sh
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    --headless=new --remote-debugging-port=9333 --user-data-dir=/tmp/gc-shots &
+  ```
+
+  Then drive it over CDP from a script: `Page.navigate`,
+  `Emulation.setDeviceMetricsOverride` for the two widths,
+  `Page.captureScreenshot`, write the PNG, and open it. Sign in the way a person
+  does — click the dev actor switcher on the login page — rather than reaching
+  for the secret the client uses; the UI path is shorter and it also proves the
+  login screen works. Keep the script; you will run it at every milestone.
 - **Run `impeccable`** (`npx impeccable install`, Node 22.18+) and feed it the
   screenshots. It is external, it does not flatter, and it scores execution
   against interaction heuristics. But it audits how well you executed the design
@@ -158,6 +175,56 @@ questions are fixed:
 5. Does it look like the direction you committed to — or like the components you
    had?
 6. Would you show it to the user without apologising for it?
+
+## The kit is a floor, not a ceiling
+
+The scaffold hands you a component kit, and the build instructions tell you to
+compose from it rather than hand-roll. Both are right, and together they have a
+failure mode worth naming: an app whose every screen is `Card` + `Stack` + `Text`
+because those were the pieces in the box. That is not a composed design, it is an
+inventory, and it produces the wall of identical boxes further down this file.
+
+**Composing from the kit means using its primitives, not being limited to its
+list.** A product has objects of its own, and the ones that carry its meaning are
+the ones no generic kit ships:
+
+- the thing the product is *about*, rendered as itself — a funding meter, a
+  streak, a seat map, a run's status over time. If a decision note says the
+  progress toward a goal is the primary object, then a component that draws that
+  progress has to exist, or the note is describing an app you did not build.
+- the repeated furniture that is currently copy-pasted — the page header, the
+  section label, the empty state, the recessed panel a form sits in. Eight inline
+  copies of a heading block will not agree with each other; they will disagree by
+  a few pixels each, and the screens will read as unrelated for reasons nobody
+  can point at.
+
+Both kinds are ordinary components built out of kit primitives and theme values.
+Adding them is not hand-rolling, and they are the difference between an app that
+uses a design system and an app that looks like one.
+
+The tell that you skipped this: your `components/` directory maps one-to-one onto
+your data model and contains nothing that names a *quality* of the product.
+
+## Design is a gate on the milestone, not a phase at the end
+
+The loop that actually runs is plan, build, prove, close. Design advice that
+lives outside that loop does not run — it gets read, agreed with, and skipped,
+because nothing blocks on it. Milestones close on green scenarios, and scenarios
+say nothing about how anything looks.
+
+So put it in the loop. **A milestone is not built until its screens have been
+looked at**, in the same sense that it is not built until its scenario passes:
+
+- Screenshot every screen the milestone touched, at both widths, with the seed
+  in place.
+- Look at the images. Not the JSX.
+- Fix what they show, in this milestone, while it is one screen and not eight.
+- Say in the milestone note what you looked at and what you changed.
+
+A milestone closed without that is closed on a claim, not on evidence. The cost
+of being honest about it now is minutes; the cost at §8 is a repaint of the whole
+app, and by then the wrong register has been inherited by every screen so the
+repaint is a rewrite.
 
 ## Facts, not taste
 
@@ -215,4 +282,10 @@ first one.
 - Every row carries the same buttons, and the buttons outweigh the content.
 - The palette's meaningful colours are also used decoratively, so they have
   stopped meaning anything.
+- A decision note describes something the screens do not do — the note says
+  progress is the primary object and no screen draws progress, or it says warm
+  and not clinical and the error page is still template blue.
+- The theme JSON is rich and the screens are bare. Tokens are the cheapest half
+  of design and the easiest to mistake for the whole of it: a considered palette
+  and a display font applied to a default layout is a well-dressed default.
 - It looks like the last app you built.

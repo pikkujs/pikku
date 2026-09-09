@@ -425,16 +425,27 @@ over, and an uncovered function is a half-milestone whether or not the note says
 5. **UI.** Pages in `<app>/src/pages/`, one route file each in `<app>/src/routes/`,
    calling functions through the generated `usePikkuQuery` / `usePikkuMutation`
    hooks from `@project/functions-sdk/pikku/api.gen`. One component per `.tsx`
-   file. Compose the kit from `@/components/<Name>` rather than hand-rolling.
-   Register the screen in `useNavItems()` — that one file feeds both the desktop
-   sidebar and the phone navigation.
+   file. Compose the kit from `@/components/<Name>` rather than hand-rolling
+   controls — and **add to that kit**: the component that draws the thing this
+   product is actually about, and the furniture you would otherwise copy-paste
+   into eight pages. The kit is where you start, not where you stop; an app whose
+   every screen is `Card` + `Stack` + `Text` composed the inventory rather than a
+   design. Register the screen in `useNavItems()` — that one file feeds both the
+   desktop sidebar and the phone navigation.
    **Read `references/design.md` before you write the first screen.** You commit
    to a design direction there and are then accountable to it — it hands you no
    layouts, because the design is yours to make. Screenshot each screen at 390
    and 1440 with the seed in place at the END of every milestone, and look at the
    images — not once at §8, where the only affordable fix is a repaint of eight
    screens.
-6. **Scenario** (§7), then `status: built`.
+6. **Scenario** (§7).
+7. **Look at it.** Screenshot every screen this milestone touched, at both
+   widths, with the seed in place, and look at the images. This is a gate, the
+   same as the scenario: a milestone whose screens nobody has seen is not built,
+   it is unproven at the one layer scenarios cannot reach. `references/design.md`
+   carries how to take the shot when no browser tool is wired up, and what to
+   look for. Then `status: built`, and say in the note what you looked at and
+   what it made you change.
 
 Rules that are not optional:
 
