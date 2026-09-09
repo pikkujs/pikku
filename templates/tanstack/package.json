@@ -15,8 +15,8 @@
     "test:browser": "npx tsx client/browser.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.107",
-    "@pikku/fetch": "^0.12.9",
+    "@pikku/core": "^0.12.108",
+    "@pikku/fetch": "^0.12.11",
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-start": "^1.168.49",
     "react": "^19.2.8",
@@ -25,7 +25,7 @@
     "tsx": "^4.23.12"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.145",
+    "@pikku/cli": "^0.12.146",
     "@playwright/test": "1.58.2",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^24",

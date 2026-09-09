@@ -1,6 +1,6 @@
 {
   "name": "@pikku/fastify",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "description": "Fastify server for Pikku, wrapping @pikku/fastify-plugin",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,14 +18,14 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.87",
+    "@pikku/core": "^0.12.108",
     "fastify": "^5.8.2"
   },
   "dependencies": {
-    "@pikku/fastify-plugin": "^0.12.8"
+    "@pikku/fastify-plugin": "^0.12.9"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.87",
+    "@pikku/core": "^0.12.108",
     "fastify": "^5.12.0"
   },
   "engines": {

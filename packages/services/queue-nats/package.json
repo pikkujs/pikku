@@ -1,6 +1,6 @@
 {
   "name": "@pikku/queue-nats",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "NATS JetStream queue, worker and scheduler services for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.105"
+    "@pikku/core": "^0.12.108"
   },
   "dependencies": {
     "@nats-io/jetstream": "^3.4.0",
