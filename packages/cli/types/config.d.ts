@@ -748,6 +748,31 @@ export type PikkuCLIInput = {
      * Defaults to 'serverless'.
      */
     defaultTarget?: 'serverless' | 'server'
+    /**
+     * How many deployment units the app's functions collapse into.
+     *
+     * `strategy` decides what happens to a function no rule matches:
+     * 'function' (the default) gives it its own unit, 'single' puts it in
+     * one shared unit. `rules` are evaluated in order, first match wins —
+     * under 'function' a rule merges functions together, under 'single' it
+     * carves them out.
+     *
+     * A rule's predicates are ANDed; `tags` is ORed across its own list.
+     * Functions whose deploy target differs cannot share a unit.
+     */
+    grouping?: {
+      strategy?: 'function' | 'single'
+      rules?: Array<{
+        /** Deployment unit name. Must be unique across rules. */
+        unit: string
+        /** Matches a function carrying any one of these tags. */
+        tags?: string[]
+        /** Matches an addon namespace, placing all its exposed functions here. */
+        addon?: string
+        /** Glob patterns matched against a function's wired HTTP routes. */
+        routes?: string[]
+      }>
+    }
     /** Desktop shell settings, used by `pikku deploy apply --desktop`. */
     desktop?: {
       /**
