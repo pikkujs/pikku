@@ -43,6 +43,45 @@ describe('getPikkuCLIConfig', () => {
     return root
   }
 
+  test('derives the analytics scaffold outputs and leaves the union in src', async () => {
+    const root = await writeConfig({ scaffold: { analytics: true } })
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+
+    assert.equal(
+      config.analyticsFile,
+      join(root, 'src', 'scaffold', 'analytics', 'analytics.gen.ts')
+    )
+    assert.equal(
+      config.analyticsSchemasFile,
+      join(root, 'src', 'scaffold', 'analytics', 'analytics.schemas.gen.ts')
+    )
+    // The event union is project source, not generated output, so it defaults
+    // beside the first source directory rather than under the scaffold dir.
+    assert.equal(
+      config.analyticsEventsFile,
+      join(root, 'src', 'analytics-events.ts')
+    )
+  })
+
+  test('derives no analytics paths when the scaffold is off', async () => {
+    const root = await writeConfig()
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+
+    assert.equal(config.analyticsFile, undefined)
+    assert.equal(config.analyticsSchemasFile, undefined)
+    assert.equal(config.analyticsEventsFile, undefined)
+  })
+
   test('rejects the old startServerFnsFile key by name', async () => {
     const root = await writeConfig({
       clientFiles: { startServerFnsFile: './src/lib/pikku-start.gen.ts' },
