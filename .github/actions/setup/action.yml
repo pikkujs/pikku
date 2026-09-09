@@ -61,7 +61,16 @@ runs:
       run: |
         before=$(sha256sum bun.lock | cut -d' ' -f1)
         for attempt in 1 2 3; do
-          if bun install; then
+          # The second attempt runs verbose into a log. The failure this loop
+          # exists for reproduces nowhere but the container jobs — not locally
+          # in the same image, on overlayfs, btrfs or a plain volume — so the
+          # only place its detail can be read is a job that is failing.
+          if [ "$attempt" = 2 ]; then
+            bun install --verbose > "$RUNNER_TEMP/install-verbose.log" 2>&1
+          else
+            bun install
+          fi
+          if [ $? -eq 0 ]; then
             after=$(sha256sum bun.lock | cut -d' ' -f1)
             if [ "$before" != "$after" ]; then
               echo "::error::bun install updated bun.lock — commit the updated lockfile"
@@ -94,24 +103,31 @@ runs:
           # properties of their filesystems, which exist nowhere else; print
           # them rather than guess again.
           if [ "$attempt" = 1 ]; then
-            echo "cache dir:    $BUN_INSTALL_CACHE_DIR"
+            echo "cache dir: $BUN_INSTALL_CACHE_DIR"
             stat -f -c 'cache fs:     %T' "$BUN_INSTALL_CACHE_DIR" 2>&1 || true
             stat -f -c 'workspace fs: %T' . 2>&1 || true
             stat -c 'cache dev:     %d' "$BUN_INSTALL_CACHE_DIR" 2>&1 || true
             stat -c 'workspace dev: %d' . 2>&1 || true
-            uws=$(find "$BUN_INSTALL_CACHE_DIR" -maxdepth 1 -name '*uWebSockets*' 2>/dev/null | head -1)
-            if [ -n "$uws" ]; then
-              echo "cache entry $uws holds $(find "$uws" -type f | wc -l) files"
-            else
-              echo "no uWebSockets.js entry in the cache"
-            fi
+            df -Pk . | tail -1
+            # The entry a github: dependency is copied out of is the `@GH@` one.
+            # Bun also leaves an empty directory under the bare package name,
+            # which is there on a healthy install too and means nothing.
+            find "$BUN_INSTALL_CACHE_DIR" -maxdepth 1 -name '*uWebSockets*' 2>/dev/null |
+              while read -r entry; do
+                echo "$entry holds $(find "$entry" -type f | wc -l) files"
+              done
+          fi
+          if [ "$attempt" = 2 ] && [ -f "$RUNNER_TEMP/install-verbose.log" ]; then
+            echo "--- verbose install, uWebSockets.js and the tail:"
+            grep -inE 'uNetworking|uWebSockets|hardlink|copy|extract' "$RUNNER_TEMP/install-verbose.log" | tail -40 || true
+            tail -30 "$RUNNER_TEMP/install-verbose.log"
           fi
           # The tree goes but the cache stays. A failed install leaves a
           # half-linked node_modules that the next one reads as work it has
           # already done, reporting success over a tree still missing whatever
-          # the failure interrupted. The cache entry, by contrast, is what the
-          # next attempt needs: finding a package already extracted there is
-          # what lets it skip the extract-and-publish that races.
+          # the failure interrupted. Clearing the cache alongside it only made
+          # things worse: every attempt then had to extract and publish the
+          # entry again, which is the step the copy races against.
           find . -maxdepth 5 -name node_modules -type d -prune -exec rm -rf {} +
           sleep $((attempt * 15))
         done
