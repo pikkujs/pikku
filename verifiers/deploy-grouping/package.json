@@ -1,0 +1,17 @@
+{
+  "name": "@pikku/verifiers-deploy-grouping",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "pikku": "echo 'skip'",
+    "tsc": "echo 'skip'",
+    "build": "echo 'skip'",
+    "test": "npx tsx test-grouping.ts"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@types/node": "^24",
+    "typescript": "^6.0.3"
+  }
+}

@@ -328,6 +328,7 @@ export const deployApply = pikkuSessionlessFunc<
       inspectorState,
       serverlessIncompatible: config.deploy?.serverlessIncompatible,
       defaultTarget: config.deploy?.defaultTarget,
+      grouping: config.deploy?.grouping,
       globalHTTPPrefix: config.globalHTTPPrefix,
       getEntryContext,
       frontend: config.frontend,

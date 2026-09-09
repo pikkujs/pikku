@@ -23,6 +23,45 @@ how a worker deploy fails at runtime instead of at build.
 Always run `plan` before `apply`, and read it. It names what will be created,
 updated and deleted — the deletions are the reason to look.
 
+### How many workers you get
+
+By default every function is its own deployment unit. That is the right default
+— maximum isolation — but on a large app it means a hundred workers whose
+bundles are mostly the same framework code repeated, and a build and an upload
+for each. `deploy.grouping` in `pikku.config.json` sets the shape:
+
+```json
+"deploy": {
+  "grouping": {
+    "strategy": "single",
+    "rules": [
+      { "unit": "console", "addon": "console" },
+      { "unit": "pdf", "tags": ["pdf"] }
+    ]
+  }
+}
+```
+
+`strategy` is the fallback for a function no rule matches — `function` (one unit
+each, the default) or `single` (one shared unit). Rules are ordered, first match
+wins, and match on `tags`, an `addon` namespace or `routes` globs; under
+`function` a rule merges, under `single` it carves out.
+
+`tags` matches the tags a function inherits from its wirings — `wireHTTP({ ...,
+tags: ['pdf'] })` — as well as any on the function itself, which is where almost
+every project writes them.
+
+Two things that bite:
+
+- **Grouping cannot change a deploy target.** Put a `serverlessIncompatible`
+  function in a group with serverless ones and the build fails naming both
+  sides. Give it its own rule — that refusal is the design, not a bug.
+- **Grouping widens secret scope.** Every function in a unit reads every secret
+  that unit is granted, so treat a merge as a security decision too.
+
+Group by something that means something — a domain, a secret scope, a deploy
+cadence. There is deliberately no automatic packing by bundle size.
+
 The frontends build independently (`bun run build` at the root builds every
 workspace). Serve each behind its own hostname, and put the API behind `/api` on
 **all of them**, mirroring the Vite proxy from the multi-app reference: `/api/auth/*` keeps its
