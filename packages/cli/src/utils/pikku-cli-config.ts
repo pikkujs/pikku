@@ -548,6 +548,7 @@ const _getPikkuCLIConfig = async (
     // setting it here wins and the pikkuDir-derived default is skipped.
     const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
       rpc: 'publicRpcFile',
+      analytics: 'analyticsFile',
       agent: 'publicAgentFile',
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
@@ -625,6 +626,30 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'workflow',
         'workflow-routes.schemas.gen.ts'
+      )
+    }
+    if (result.scaffold?.analytics && !result.analyticsFile) {
+      result.analyticsFile = join(
+        resolvedScaffoldDir,
+        'analytics',
+        'analytics.gen.ts'
+      )
+    }
+    if (result.scaffold?.analytics && !result.analyticsSchemasFile) {
+      result.analyticsSchemasFile = join(
+        resolvedScaffoldDir,
+        'analytics',
+        'analytics.schemas.gen.ts'
+      )
+    }
+    // The event union is project source, so it defaults beside the first source
+    // directory rather than into the scaffold — putting it under scaffold/ is
+    // what made it look disposable to tooling that cleans generated output.
+    if (result.scaffold?.analytics && !result.analyticsEventsFile) {
+      result.analyticsEventsFile = join(
+        result.rootDir,
+        result.srcDirectories?.[0] ?? 'src',
+        'analytics-events.ts'
       )
     }
     if (result.scaffold?.rpc && !result.publicRpcFile) {

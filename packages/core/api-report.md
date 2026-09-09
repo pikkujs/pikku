@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2894 observable things**: 923 exported names, plus
-1971 members on the classes and interfaces among them, reachable
-through 53 entry points.
+**2905 observable things**: 930 exported names, plus
+1975 members on the classes and interfaces among them, reachable
+through 54 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -45,6 +45,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/types` | 45 | 1 | 11 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
+| `./analytics` | 7 | 7 | 4 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
@@ -3607,6 +3608,28 @@ export interface ScorerOutput {
   metadata?: Record<string, unknown>
 }
 wireAgentScorerQueueWorkers: () => void
+```
+
+## ./analytics
+
+```ts
+export interface AnalyticsEventInput {
+  name: string
+  props?: Record<string, unknown>
+  at?: number
+}
+export interface AnalyticsIdentity {
+  userId: string | null
+}
+export type AnalyticsSink = (
+  services: CoreSingletonServices,
+  events: AnalyticsEventInput[],
+  identity: AnalyticsIdentity
+) => Promise<void>
+flattenAnalyticsEvent: (event: { name: string; } & Record<string, unknown>, at?: number | undefined) => AnalyticsEventInput
+getAnalyticsSink: () => AnalyticsSink | undefined
+recordAnalyticsEvents: (services: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, events: AnalyticsEventInput[], identity: AnalyticsIdentity) => Promise<number>
+setAnalyticsSink: (next: AnalyticsSink | undefined) => void
 ```
 
 ## ./gateway
