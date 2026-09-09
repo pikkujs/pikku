@@ -63,6 +63,55 @@ Individual packages carry their own runner: `./run-tests.sh` from inside the pac
 
 **Changesets: every package name listed must exist as a workspace package.** Read the `name` out of each workspace's own `package.json` for the exact names before writing the `.changeset/*.md` file — a wrong name (`@pikku/services-redis` for `@pikku/redis`) makes `changeset status` throw and blocks CI.
 
+### TypeScript 6 and 7 side by side
+
+Type checking runs on **TypeScript 7**, which is roughly three times faster
+(`bun run tsc` across the monorepo: 192s → 65s). TypeScript 6 stays installed
+because 7 ships no compiler API — its `.` export is only a version stub, and
+the replacement lives behind `./unstable/*` pending the 7.1 API.
+
+The root installs both, following the arrangement TypeScript ships for exactly
+this case:
+
+```json
+"@typescript/native": "npm:typescript@^7.0.2",
+"typescript": "npm:@typescript/typescript6@^6.0.2"
+```
+
+So `tsc` at the root is 7, `tsc6` is 6, and `import ts from 'typescript'`
+resolves to the 6 compat package with the full 6 API. Every workspace that
+does not declare its own `typescript` inherits the root `tsc`, which is why
+the dependency was dropped from the ~100 workspaces that only ever needed a
+compiler binary.
+
+Three packages still declare a real `typescript: ^6.0.3`, because they call
+the compiler API at runtime: `inspector`, `code-edit` and `n8n-import`. Under
+bun's isolated layout that nests a real 6, whose `tsc` shadows the root's — so
+those three type-check on 6. Templates keep theirs too: their `package.json` is
+copied into a user's app, and an aliased dependency there would be a surprise.
+
+**The inspector owns the compiler API.** Anything that has to parse or
+type-check TypeScript belongs there, behind a named export, rather than in the
+package that wants the answer. `collectSurface` (`@pikku/inspector/surface`),
+`readModuleSpecifiers` and `readTsconfigOutDir` all moved out of the CLI for
+this reason. `code-edit` is the exception, and deliberately so — the console
+imports it lazily and degrades to a null service, because it is the one package
+a self-contained bundle can ship without.
+
+**Why none of this can move to 7 yet.** 7.0.2 does ship an AST surface at
+`typescript/unstable/ast` — 409 exports, all 347 `is*` predicates,
+`SyntaxKind`, a factory, a visitor, a scanner — so the _walking_ code would
+port almost unchanged. What is missing is the entry point: there is no
+`createSourceFile` and no `forEachChild`, so nothing can turn a string into a
+tree. The only route to a `SourceFile` is `API` → `Snapshot` → `Project` →
+`Program.getSourceFile()`, which needs a whole project loaded. Re-check this
+when 7.1 lands its stable API.
+
+Compiling _with_ 7 is safe for every package, including the ones that import
+the 6 API — only module resolution of `typescript` has to stay on 6. Emit was
+verified identical: zero `.js` differences, and `.d.ts` differences confined to
+quote style and declaration ordering.
+
 ## Configuration
 
 `pikku.config.json` is the main configuration file:

@@ -26,7 +26,6 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
     "tsx": "^4.23.12",
-    "typescript": "^6.0.3",
     "zod": "^4"
   },
   "scripts": {

@@ -27,8 +27,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.5",
-    "@pikku/core": "^0.12.89",
-    "typescript": "^6.0.3"
+    "@pikku/core": "^0.12.89"
   },
   "exports": {
     ".": "./dist/src/index.js"

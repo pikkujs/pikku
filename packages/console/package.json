@@ -107,7 +107,6 @@
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7",
     "react-router": "^8",
-    "typescript": "^6.0.3",
     "vite": "^8.2.1"
   },
   "license": "BUSL-1.1"

@@ -12,7 +12,6 @@
     "@pikku/cli": "workspace:*",
     "@pikku/core": "workspace:*",
     "@standard-schema/spec": "^1.1.0",
-    "@types/node": "^24",
-    "typescript": "^6.0.3"
+    "@types/node": "^24"
   }
 }

@@ -21,8 +21,7 @@
     "@pikku/core": "^0.12.87"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.87",
-    "typescript": "^6.0.3"
+    "@pikku/core": "^0.12.87"
   },
   "exports": {
     ".": "./dist/src/index.js"

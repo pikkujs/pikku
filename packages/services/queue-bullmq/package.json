@@ -22,9 +22,6 @@
     "bullmq": "^6.1.1",
     "ioredis": "^6.0.0"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "exports": {
     ".": "./dist/index.js"
   }

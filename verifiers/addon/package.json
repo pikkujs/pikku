@@ -18,7 +18,6 @@
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^24",
     "tsx": "^4.23.12",
-    "typescript": "^6.0.3",
     "zod": "^4"
   },
   "scripts": {

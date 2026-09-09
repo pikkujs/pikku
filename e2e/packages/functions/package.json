@@ -25,7 +25,6 @@
   "devDependencies": {
     "@pikku/core": "*",
     "@pikku/e2e": "workspace:*",
-    "@types/node": "^22",
-    "typescript": "^6.0.3"
+    "@types/node": "^22"
   }
 }

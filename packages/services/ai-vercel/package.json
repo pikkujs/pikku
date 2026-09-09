@@ -26,7 +26,6 @@
   "devDependencies": {
     "@ai-sdk/provider": "^4.0.7",
     "ai": "^7.0.66",
-    "typescript": "^6.0.3",
     "zod": "^4.4.3"
   }
 }

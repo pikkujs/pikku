@@ -30,8 +30,7 @@
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.87",
-    "typescript": "^6.0.3"
+    "@pikku/core": "^0.12.87"
   },
   "engines": {
     "node": ">=24"

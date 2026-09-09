@@ -20,8 +20,5 @@
   "dependencies": {
     "yaml": "^2.9.0",
     "zod": "^4"
-  },
-  "devDependencies": {
-    "typescript": "^6.0.3"
   }
 }

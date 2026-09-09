@@ -20,9 +20,6 @@
   "dependencies": {
     "jose": "^6.2.9"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "exports": {
     ".": "./dist/index.js"
   }

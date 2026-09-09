@@ -1,7 +1,7 @@
 {
   "name": "@pikku/kysely",
   "version": "0.13.24",
-  "description": "Kysely-backed Pikku services \u2014 workflow state, secrets, sessions, scopes and audit",
+  "description": "Kysely-backed Pikku services — workflow state, secrets, sessions, scopes and audit",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",
@@ -32,8 +32,7 @@
     "better-sqlite3": "^13.0.3",
     "kysely-codegen": "^0.20.0",
     "kysely-postgres-js": "^3.0.0",
-    "postgres": "^3.4.9",
-    "typescript": "^6.0.3"
+    "postgres": "^3.4.9"
   },
   "exports": {
     ".": "./dist/src/index.js"

@@ -24,9 +24,6 @@
     "@nats-io/nats-core": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "exports": {
     ".": "./dist/index.js"
   }

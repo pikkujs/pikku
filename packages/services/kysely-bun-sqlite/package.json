@@ -28,7 +28,6 @@
   },
   "devDependencies": {
     "@pikku/core": "^0.12.105",
-    "@types/bun": "^1.4.0",
-    "typescript": "^6.0.3"
+    "@types/bun": "^1.4.0"
   }
 }

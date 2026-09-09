@@ -39,7 +39,6 @@
     "@pikku/core": "*",
     "@standard-schema/spec": "^1.1.0",
     "kysely": "^0.29.5",
-    "typescript": "^6.0.3",
     "zod": "^4"
   }
 }

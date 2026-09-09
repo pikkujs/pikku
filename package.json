@@ -89,6 +89,7 @@
     "@pikku/uws-handler": "workspace:*",
     "@types/autocannon": "^7.12.7",
     "@types/node": "^25.9.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "0x": "^6.0.0",
     "autocannon": "^8.0.0",
     "esbuild": "^0.28.2",
@@ -102,12 +103,12 @@
     "pinst": "^3.0.0",
     "prettier": "3.9.6",
     "tsx": "^4.23.12",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
     "zod": "^4"
   },
   "dependencies": {
-    "@changesets/cli": "^3.0.0",
-    "typescript": "^6.0.3"
+    "@changesets/cli": "^3.0.0"
   },
   "resolutions": {
     "esbuild": "0.28.2",

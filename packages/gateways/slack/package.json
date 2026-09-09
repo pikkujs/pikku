@@ -21,9 +21,6 @@
   "dependencies": {
     "@slack/web-api": "^8.0.0"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "exports": {
     ".": "./dist/index.js"
   }

@@ -9,8 +9,7 @@
     "@pikku/inspector": "workspace:*",
     "@types/node": "^24",
     "pg": "^8.23.0",
-    "tsx": "^4.23.12",
-    "typescript": "^6.0.3"
+    "tsx": "^4.23.12"
   },
   "scripts": {
     "test": "npx tsx --test src/tests/codegen.assert.ts src/tests/codegen-postgres.assert.ts src/tests/audit.assert.ts src/tests/pii-gate.assert.ts src/tests/classified-sink-gate.assert.ts"
