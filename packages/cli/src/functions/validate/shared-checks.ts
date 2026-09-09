@@ -61,10 +61,93 @@ export type SharedCheckResult = {
  * `pikku-config-missing` for a file that is right there — the one message
  * guaranteed to send you looking in the wrong place.
  */
+/**
+ * Comments and trailing commas out, string literals untouched.
+ *
+ * `tsconfig.json` is JSONC by definition -- TypeScript documents comments in it
+ * and real projects use them -- so a strict `JSON.parse` rejects a file the
+ * compiler itself accepts, and validate fails on a config that is not wrong.
+ */
+const stripJsonc = (text: string): string => {
+  const out: string[] = []
+  let inString = false
+  let quote = ''
+  // Where a comma sits that nothing but whitespace and comments have followed,
+  // so it can still turn out to be a trailing one. Cleared by the first real
+  // character after it. Tracked during the scan rather than swept up afterwards
+  // with a regular expression, which cannot tell `{"a": ",}"}` — a comma inside
+  // a string — from a comma before a brace.
+  let pendingComma: number | null = null
+
+  const push = (ch: string) => {
+    out.push(ch)
+    return out.length - 1
+  }
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!
+    const next = text[i + 1]
+    if (inString) {
+      push(ch)
+      if (ch === '\\') {
+        push(next ?? '')
+        i++
+      } else if (ch === quote) {
+        inString = false
+      }
+      continue
+    }
+    if (ch === '"' || ch === "'") {
+      inString = true
+      quote = ch
+      pendingComma = null
+      push(ch)
+      continue
+    }
+    if (ch === '/' && next === '/') {
+      while (i < text.length && text[i] !== '\n') i++
+      push('\n')
+      continue
+    }
+    if (ch === '/' && next === '*') {
+      const opened = i
+      i += 2
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i++
+      if (i >= text.length) {
+        // Everything after it would otherwise be dropped in silence, so a file
+        // whose tail is missing parses as though it were complete.
+        throw new SyntaxError(
+          `Unterminated block comment at position ${opened}`
+        )
+      }
+      i++
+      // A space, not nothing: `{"value": 1/*x*/2}` is two tokens, and closing
+      // the gap makes it the number 12.
+      push(' ')
+      continue
+    }
+    if (ch === ',') {
+      pendingComma = push(ch)
+      continue
+    }
+    if ((ch === '}' || ch === ']') && pendingComma !== null) {
+      out[pendingComma] = ''
+      pendingComma = null
+      push(ch)
+      continue
+    }
+    if (!/\s/.test(ch)) {
+      pendingComma = null
+    }
+    push(ch)
+  }
+  return out.join('')
+}
+
 export async function readJsonSafe<T>(path: string): Promise<T | null> {
   if (!existsSync(path)) return null
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T
+    return JSON.parse(stripJsonc(await readFile(path, 'utf8'))) as T
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     throw new Error(`Invalid JSON in ${path}: ${message}`)
