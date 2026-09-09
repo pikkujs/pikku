@@ -1,5 +1,11 @@
 set -e
-yarn install --immutable
+# Not `--frozen-lockfile`: `uWebSockets.js` is a `github:` dependency of both
+# the root and @pikku/uws, and bun re-resolves it on every frozen install and
+# then declares the lockfile changed. A plain install leaves bun.lock
+# byte-identical, so diffing it afterwards asks the same question — is the
+# committed lockfile up to date with the manifests?
+bun install
+git diff --exit-code -- bun.lock
 npx lint-staged
 npx changeset status
 node scripts/check-licenses.mjs

@@ -1,4 +1,6 @@
-import { basename, join, relative } from 'node:path'
+import { basename, isAbsolute, join, relative } from 'node:path'
+import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
 import { readFile } from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -133,6 +135,43 @@ async function resolveProjectId(projectDir: string): Promise<string> {
   return sanitizeProjectId(basename(projectDir))
 }
 
+/**
+ * A deploy provider is a dependency of the project being deployed, which is
+ * what the "is not installed" error asks the user to add. A bare
+ * `import(packageName)` resolves from the CLI's own location instead, and only
+ * found the provider because yarn hoisted every workspace package to a shared
+ * root. An isolated node_modules layout (bun, pnpm) gives the CLI only what the
+ * CLI declares, so the provider has to be resolved against the project.
+ *
+ * Only an absolute path counts as having resolved to the project's own copy: a
+ * configured provider may also be a URL, and a runtime whose `require.resolve`
+ * hands a bare specifier straight back for its own built-ins has resolved
+ * nothing. Both of those import as written.
+ */
+const importProviderPackage = async (
+  packageName: string,
+  projectDir?: string
+): Promise<any> => {
+  const require = createRequire(
+    join(projectDir ?? process.cwd(), 'package.json')
+  )
+  try {
+    const resolved = require.resolve(packageName)
+    if (isAbsolute(resolved)) {
+      return await import(pathToFileURL(resolved).href)
+    }
+  } catch (e: unknown) {
+    const err = e as { code?: string }
+    if (
+      err?.code !== 'ERR_MODULE_NOT_FOUND' &&
+      err?.code !== 'MODULE_NOT_FOUND'
+    ) {
+      throw e
+    }
+  }
+  return await import(packageName)
+}
+
 export async function resolveProvider(
   config?: {
     deploy?: { providers: Record<string, string>; defaultProvider?: string }
@@ -166,7 +205,7 @@ export async function resolveProvider(
     name.charAt(0).toUpperCase() + name.slice(1) + 'ProviderAdapter'
 
   try {
-    const mod = await import(packageName)
+    const mod = await importProviderPackage(packageName, options?.projectDir)
     if (typeof mod.createAdapter === 'function') {
       return mod.createAdapter(options)
     }
@@ -183,7 +222,7 @@ export async function resolveProvider(
       err?.code === 'MODULE_NOT_FOUND'
     ) {
       throw new Error(
-        `Deploy provider '${packageName}' is not installed. Run: yarn add ${packageName}`
+        `Deploy provider '${packageName}' is not installed. Add ${packageName} to this project's dependencies.`
       )
     }
     throw e

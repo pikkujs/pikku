@@ -1,5 +1,5 @@
 # git writes the ref list being pushed to this hook's stdin. Nothing here reads
-# it, and once yarn's subprocesses have closed the descriptor git's write lands
+# it, and once bun's subprocesses have closed the descriptor git's write lands
 # on a closed pipe: the hook exits 0 after several minutes of green build and
 # tests, and the push dies of SIGPIPE (141) without ever contacting the remote.
 # Draining it first is what makes a passing hook actually push.
@@ -7,7 +7,7 @@ cat > /dev/null
 
 set -e
 
-# `yarn build` and the binary verifier both shell out to `bun build`, which drops
+# `bun run build` and the binary verifier both shell out to `bun build`, which drops
 # a ~60 MB `.<hash>-00000000.bun-build` compile cache beside every entry point
 # and never removes it. Sweeping them here is why this runs on EXIT rather than
 # as a final line: the steps below are what create the files, so cleaning first
@@ -16,6 +16,6 @@ set -e
 # `|| true`. Left unswept these reached 236 files and 13.9 GB.
 trap 'node scripts/clean-bun-build-artifacts.mjs || true' EXIT
 
-yarn build
-yarn test
-yarn test:verifiers
+bun run build
+bun run test
+bun run test:verifiers

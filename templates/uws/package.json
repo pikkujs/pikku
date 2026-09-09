@@ -20,6 +20,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@standard-schema/spec": "^1.1.0",
     "@types/node": "^24",
     "@types/ws": "^8",
     "typescript": "^6.0.3"

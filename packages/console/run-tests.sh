@@ -59,7 +59,9 @@ files=($(find src -type f -name "*.test.ts"))
 
 # The theme contract is asserted against this app's sources but the test itself
 # lives in @pikku/mantine, so it is named explicitly rather than found under src.
-theme_contract="../../node_modules/@pikku/mantine/src/theme/theme-contract.test.ts"
+# The `./` prefix is load-bearing: bun reads a bare argument as a name filter and
+# never searches node_modules, so without it the file is silently not run.
+theme_contract="./node_modules/@pikku/mantine/src/theme/theme-contract.test.ts"
 if [ -f "$theme_contract" ]; then
   files+=("$theme_contract")
 fi
@@ -67,25 +69,36 @@ fi
 # Check if any files matched the pattern
 if [ ${#files[@]} -eq 0 ]; then
   echo "No test files found matching pattern: $pattern"
+  if [ "${STRICT_TEST_DISCOVERY}" = "1" ]; then
+    exit 1
+  fi
   exit 0
 fi
 
-# Construct the node command
-node_cmd=(node --import tsx --test)
+# Construct the bun command
+#
+# --parallel gives every test file its own worker process, which is what node's
+# `--test` did. Several suites keep module-level caches (a TypeScript program, a
+# temp fixture directory) that a shared process would leak between files.
+#
+# --timeout because bun caps a test at 5s by default where node had no cap, and
+# the suites that build real TypeScript programs run well past that.
+bun_cmd=(bun test --parallel --timeout 120000)
 
 # Append options based on flags
 if [ "$watch_mode" = true ]; then
-  node_cmd+=(--watch)
+  # --watch reruns in one process; parallel workers have nothing to watch.
+  bun_cmd=(bun test --watch --timeout 120000)
 fi
 
 if [ "$coverage_mode" = true ]; then
-  # Emit lcov to a file AND a human-readable spec report to stdout. Without the
-  # second reporter, a coverage-mode failure sends everything to lcov.info and
-  # leaves stdout empty, so CI shows only a non-zero exit with no test name —
-  # an invisible failure. The paired reporters keep coverage while naming what broke.
-  node_cmd+=(--test-coverage-include="src/**/*.{ts,tsx}" --test-coverage-exclude="**/dist/**" --test-coverage-exclude="src/paraglide/**" --test-coverage-exclude="src/pikku/*.gen.ts" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info --test-reporter=spec --test-reporter-destination=stdout)
+  # --coverage-dir=. keeps lcov.info at the package root: CI merges every
+  # package's report by prefixing its SF paths with the file's own directory,
+  # so a nested coverage/ directory would re-root them one level too deep.
+  bun_cmd+=(--coverage --coverage-reporter=lcov --coverage-reporter=text --coverage-dir=.)
+  export PIKKU_TEST_COVERAGE=1
 fi
 
 # THEME_CONTRACT_ROOTS tells the shared contract test which sources to scan.
-# Execute the node command with the expanded list of files
-THEME_CONTRACT_ROOTS=src "${node_cmd[@]}" "${files[@]}"
+# Execute the bun command with the expanded list of files
+THEME_CONTRACT_ROOTS=src "${bun_cmd[@]}" "${files[@]}"

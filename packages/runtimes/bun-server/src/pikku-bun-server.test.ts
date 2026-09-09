@@ -5,7 +5,6 @@ import { resetPikkuState } from '@pikku/core/state'
 import type { Logger } from '@pikku/core/services'
 import { PikkuBunServer } from './pikku-bun-server.js'
 
-const PORT = 47817
 const HEALTH = '/__health'
 
 const noopLogger = {
@@ -19,6 +18,7 @@ const noopLogger = {
 
 describe('PikkuBunServer', () => {
   let server: PikkuBunServer
+  let origin: string
 
   before(async () => {
     setSingletonServices({
@@ -29,11 +29,12 @@ describe('PikkuBunServer', () => {
       },
     } as any)
     server = new PikkuBunServer(
-      { port: PORT, hostname: 'localhost', healthCheckPath: HEALTH },
+      { port: 0, hostname: 'localhost', healthCheckPath: HEALTH },
       noopLogger
     )
     await server.init()
     await server.start()
+    origin = `http://localhost:${server.port}`
   })
 
   after(async () => {
@@ -42,19 +43,19 @@ describe('PikkuBunServer', () => {
   })
 
   test('serves the configured health-check path', async () => {
-    const res = await fetch(`http://localhost:${PORT}${HEALTH}`)
+    const res = await fetch(`${origin}${HEALTH}`)
     assert.equal(res.status, 200)
     assert.equal(res.headers.get('content-type'), 'application/json')
     assert.deepEqual(await res.json(), { ok: true })
   })
 
   test('returns 404 for unregistered routes', async () => {
-    const res = await fetch(`http://localhost:${PORT}/nothing/here`)
+    const res = await fetch(`${origin}/nothing/here`)
     assert.equal(res.status, 404)
   })
 
   test('stop() is idempotent', async () => {
-    const extra = new PikkuBunServer({ port: PORT + 1 }, noopLogger)
+    const extra = new PikkuBunServer({ port: 0 }, noopLogger)
     await extra.start()
     await extra.stop()
     await assert.doesNotReject(extra.stop())

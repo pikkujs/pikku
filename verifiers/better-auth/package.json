@@ -13,10 +13,12 @@
     "@pikku/schema-cfworker": "workspace:*",
     "better-auth": "^1.6.29",
     "better-sqlite3": "^13.0.3",
-    "kysely": "^0.29.5"
+    "kysely": "^0.29.5",
+    "zod": "^4"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
     "tsx": "^4.23.12",

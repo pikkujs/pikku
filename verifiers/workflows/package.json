@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
     "@pikku/jose": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/kysely-postgres": "workspace:*",
@@ -18,11 +19,13 @@
     "@pikku/schema-cfworker": "workspace:*",
     "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "zod": "^4"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@pikku/inspector": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@types/node": "^24",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3"
@@ -35,15 +38,15 @@
     "test": "pikku && npx tsx --test src/tests/complex-inline.assert.ts && npx tsx --test src/tests/dsl-validation.assert.ts && npx tsx --test src/tests/graph-foreach.assert.ts && npx tsx --test src/tests/planned-steps.assert.ts && npx tsx --test src/tests/scenario.assert.ts && npx tsx src/tests/serialize-dsl.test.ts",
     "migrate": "pikku db generate && pikku db migrate",
     "test:bullmq": "npx tsx src/runners/bullmq.runner.ts",
-    "test:pgboss": "yarn migrate && npx tsx src/runners/pgboss.runner.ts",
+    "test:pgboss": "bun run migrate && npx tsx src/runners/pgboss.runner.ts",
     "test:function-versioning": "npx tsx src/runners/function-versioning.runner.ts",
     "test:version-mismatch": "npx tsx src/runners/version-mismatch.runner.ts",
-    "test:version-mismatch:pg": "yarn migrate && npx tsx src/runners/version-mismatch.runner.ts --pg",
+    "test:version-mismatch:pg": "bun run migrate && npx tsx src/runners/version-mismatch.runner.ts --pg",
     "test:version-mismatch:redis": "npx tsx src/runners/version-mismatch.runner.ts --redis",
-    "test:retry-idempotency:pg": "yarn migrate && npx tsx src/runners/retry-idempotency.runner.ts --pg",
+    "test:retry-idempotency:pg": "bun run migrate && npx tsx src/runners/retry-idempotency.runner.ts --pg",
     "test:retry-idempotency:redis": "npx tsx src/runners/retry-idempotency.runner.ts --redis",
-    "test:cyclic-graph:pg": "yarn migrate && npx tsx src/runners/cyclic-graph.runner.ts --pg",
+    "test:cyclic-graph:pg": "bun run migrate && npx tsx src/runners/cyclic-graph.runner.ts --pg",
     "test:cyclic-graph:redis": "npx tsx src/runners/cyclic-graph.runner.ts --redis",
-    "test:db": "pikku && yarn migrate && npx tsx src/runners/cyclic-graph.runner.ts --redis && npx tsx src/runners/cyclic-graph.runner.ts --pg && npx tsx src/runners/retry-idempotency.runner.ts --redis && npx tsx src/runners/retry-idempotency.runner.ts --pg"
+    "test:db": "pikku && bun run migrate && npx tsx src/runners/cyclic-graph.runner.ts --redis && npx tsx src/runners/cyclic-graph.runner.ts --pg && npx tsx src/runners/retry-idempotency.runner.ts --redis && npx tsx src/runners/retry-idempotency.runner.ts --pg"
   }
 }

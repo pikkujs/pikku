@@ -17,10 +17,6 @@
     // `cloudflare:workers` is the Workers built-in module scheme, not the
     // `cloudflare` npm package. Installing that package would be wrong.
     "cloudflare",
-    // Lives at `verifiers/db-schema/addon` and is deliberately outside the
-    // workspace globs — that verifier exists to prove an addon resolves when
-    // it is not a workspace, so declaring it as one would defeat the test.
-    "@pikku/verifier-db-addon",
   ],
 
   "ignoreBinaries": [

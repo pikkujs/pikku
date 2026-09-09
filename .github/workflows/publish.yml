@@ -9,7 +9,7 @@ name: Publish
 # in package.json with nothing on npm.
 #
 # Queueing rather than cancelling also closes the partial-publish window: a run
-# stopped part-way through `yarn release` can leave some packages published at
+# stopped part-way through `bun run release` can leave some packages published at
 # the new version and others not. A queued publish waits for the one ahead of it
 # to finish instead of interrupting it.
 on:
@@ -104,7 +104,7 @@ jobs:
           fetch-depth: 0
       # `download-build: false` because there is no `build-output` artifact to
       # download: it is uploaded by the `Build` job of the *Release* run, and a
-      # `workflow_run` job can only reach its own run's artifacts. `yarn release`
+      # `workflow_run` job can only reach its own run's artifacts. `bun run release`
       # below rebuilds every package from source anyway (`build:packages` →
       # `pikku` → `build:addons` → `build:console`), which is also where
       # `packages/cli/release/binaries/` comes from — so nothing is lost. The
@@ -121,12 +121,12 @@ jobs:
         uses: changesets/action@v1
         with:
           version: node .github/changeset-version.cjs
-          publish: yarn release
+          publish: bun run release
           createGithubReleases: true
         # No NPM_TOKEN, deliberately. npm now demands a 2FA OTP that a classic
         # token cannot answer, which is what had every release since 2026-09-02
         # failing on `child "otp" fails`. Trusted publishing is exempt — but in
-        # yarn the OIDC branch sits *after* the token check, so a token left in
+        # bun run the OIDC branch sits *after* the token check, so a token left in
         # this env would short-circuit OIDC and put the failure straight back.
         # changesets/action is likewise guarded on NPM_TOKEN being absent.
         env:

@@ -8,16 +8,22 @@ inputs:
   download-build:
     description: Whether to download build output artifact
     default: 'true'
+  enable-yarn:
+    description: >-
+      Enable Corepack's Yarn 4. The monorepo itself installs with bun, but the
+      template jobs scaffold user-facing apps with whichever package manager
+      their matrix row names, and the yarn rows need a yarn on PATH.
+    default: 'false'
 
 runs:
   using: composite
   steps:
-    - run: corepack enable
+    - if: ${{ inputs.enable-yarn == 'true' }}
+      run: corepack enable
       shell: bash
     - uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
-        cache: yarn
     - uses: oven-sh/setup-bun@v2
       with:
         bun-version: 1.4.0
@@ -28,19 +34,122 @@ runs:
         name: build-output
     # A dependency whose postinstall downloads a release binary (serverless,
     # workerd, esbuild) fails the whole install when that fetch blips, and the
-    # job then reads as a broken pull request. Yarn resumes from what it
+    # job then reads as a broken pull request. Bun resumes from what it
     # already resolved, so a repeat attempt is cheap.
+    # `--frozen-lockfile` cannot be used here: `uWebSockets.js` is a `github:`
+    # dependency of both the root and @pikku/uws, and bun re-resolves it on
+    # every frozen install and then declares the lockfile changed — every
+    # attempt, so the retry above never gets past it. A plain install leaves
+    # bun.lock byte-identical, so comparing it afterwards asks the same question
+    # the frozen flag was there to ask: is the committed lockfile complete and
+    # up to date with the manifests?
+    #
+    # Compared by checksum rather than `git diff`: the e2e jobs run inside a
+    # container where the checkout is not a git directory the container user may
+    # read, and there a git failure would read as a changed lockfile.
     - name: Install dependencies
       shell: bash
+      # The cache and the extraction temp directory both sit one level above the
+      # checkout, so that they share a mount point with node_modules.
+      #
+      # Sharing a filesystem is not enough. The container jobs are handed
+      # `-v /home/runner/work:/__w` and `-v /home/runner/work/_temp:/__w/_temp`,
+      # so the runner temp directory is a second bind mount nested inside the
+      # first. Both report the same st_dev, being the same disk, but the kernel
+      # refuses to hardlink or rename across a mount boundary whatever the
+      # device says — so with the cache under $RUNNER_TEMP, bun cannot link a
+      # package out of it and into the store and falls back to copying the
+      # package file by file. That copy is what fails, as `ENOENT: copy file`
+      # naming a different file of uWebSockets.js each time. No other job splits
+      # those two directories across mounts, and none of them has ever failed
+      # this way.
+      #
+      # Above the checkout rather than inside it so that prettier, oxlint and
+      # knip do not walk either directory, and $HOME is no good either: in a
+      # container that is the container's own writable layer, a different
+      # filesystem again.
+      env:
+        BUN_INSTALL_CACHE_DIR: ${{ github.workspace }}/../.bun-install-cache
+        TMPDIR: ${{ github.workspace }}/../.bun-tmp
       run: |
+        mkdir -p "$TMPDIR"
+        before=$(sha256sum bun.lock | cut -d' ' -f1)
         for attempt in 1 2 3; do
-          if yarn install; then
+          # The second attempt runs verbose into a log. The failure this loop
+          # exists for reproduces nowhere but the container jobs — not locally
+          # in the same image, on overlayfs, btrfs or a plain volume — so the
+          # only place its detail can be read is a job that is failing.
+          # `rc=` rather than a bare call: the step runs under `bash -e`, where
+          # a failing command outside a condition ends the script and the retry
+          # below never happens.
+          if [ "$attempt" = 2 ]; then
+            bun install --verbose > "$RUNNER_TEMP/install-verbose.log" 2>&1 && rc=0 || rc=$?
+          else
+            bun install && rc=0 || rc=$?
+          fi
+          if [ "$rc" -eq 0 ]; then
+            after=$(sha256sum bun.lock | cut -d' ' -f1)
+            if [ "$before" != "$after" ]; then
+              echo "::error::bun install updated bun.lock — commit the updated lockfile"
+              exit 1
+            fi
+            # A dangling link means bun linked a package whose store entry
+            # never landed. `bun install` reports success either way, and the
+            # job then fails much later as a missing module — which is how a
+            # flake extracting uWebSockets.js surfaced four jobs downstream as
+            # `Cannot find package 'better-sqlite3'`.
+            dangling=$(find . -maxdepth 6 -path '*/node_modules/*' -type l ! -exec test -e {} \; -print 2>/dev/null | head -20)
+            if [ -n "$dangling" ]; then
+              echo "::warning::node_modules holds links to packages that were never installed:"
+              echo "$dangling"
+            fi
             exit 0
           fi
           if [ "$attempt" = 3 ]; then
-            echo "::error::yarn install failed after $attempt attempts"
+            echo "::error::bun install failed after $attempt attempts"
             exit 1
           fi
-          echo "::warning::yarn install failed (attempt $attempt), retrying"
+          echo "::warning::bun install failed (attempt $attempt), retrying"
+          # The failure this retry exists for is `ENOENT: copy file <name>`,
+          # naming a different file of uWebSockets.js on every attempt. Bun
+          # links a package out of its cache entry into the store, and that is
+          # the copy fallback for when the hardlink cannot be made — so a file
+          # vanishing mid-copy means something is rewriting the cache entry
+          # while it is being read (oven-sh/bun#36227, whose fix is unmerged).
+          # Only the container jobs hit it, so the facts that decide it are
+          # properties of their filesystems, which exist nowhere else; print
+          # them rather than guess again.
+          if [ "$attempt" = 1 ]; then
+            echo "cache dir: $BUN_INSTALL_CACHE_DIR"
+            echo "tmpdir:    $TMPDIR"
+            stat -f -c 'cache fs:     %T' "$BUN_INSTALL_CACHE_DIR" 2>&1 || true
+            stat -f -c 'workspace fs: %T' . 2>&1 || true
+            stat -c 'cache dev:     %d' "$BUN_INSTALL_CACHE_DIR" 2>&1 || true
+            stat -c 'workspace dev: %d' . 2>&1 || true
+            stat -c 'tmpdir dev:    %d' "$TMPDIR" 2>&1 || true
+            df -Pk . | tail -1
+            # The mount point, not just the device: the two can differ, and it
+            # is the mount that decides whether a link can be made.
+            df -Pk "$BUN_INSTALL_CACHE_DIR" | tail -1
+            # The entry a github: dependency is copied out of is the `@GH@` one.
+            # Bun also leaves an empty directory under the bare package name,
+            # which is there on a healthy install too and means nothing.
+            find "$BUN_INSTALL_CACHE_DIR" -maxdepth 1 -name '*uWebSockets*' 2>/dev/null |
+              while read -r entry; do
+                echo "$entry holds $(find "$entry" -type f | wc -l) files"
+              done
+          fi
+          if [ "$attempt" = 2 ] && [ -f "$RUNNER_TEMP/install-verbose.log" ]; then
+            echo "--- verbose install, uWebSockets.js and the tail:"
+            grep -inE 'uNetworking|uWebSockets|hardlink|copy|extract' "$RUNNER_TEMP/install-verbose.log" | tail -40 || true
+            tail -30 "$RUNNER_TEMP/install-verbose.log"
+          fi
+          # The tree goes but the cache stays. A failed install leaves a
+          # half-linked node_modules that the next one reads as work it has
+          # already done, reporting success over a tree still missing whatever
+          # the failure interrupted. Clearing the cache alongside it only made
+          # things worse: every attempt then had to extract and publish the
+          # entry again, which is the step the copy races against.
+          find . -maxdepth 5 -name node_modules -type d -prune -exec rm -rf {} +
           sleep $((attempt * 15))
         done

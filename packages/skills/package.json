@@ -10,13 +10,13 @@
   "type": "module",
   "scripts": {
     "embed": "node scripts/embed.mjs",
-    "tsc": "yarn embed && tsc",
-    "build": "yarn embed && tsc -b",
+    "tsc": "bun run embed && tsc",
+    "build": "bun run embed && tsc -b",
     "ncu": "npx npm-check-updates",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "exports": {
     ".": "./dist/index.js"

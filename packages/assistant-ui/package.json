@@ -17,8 +17,8 @@
     "tsc": "tsc",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
     "build:cjs": "tsc -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
-    "build": "yarn build:esm && yarn build:cjs",
-    "prepublishOnly": "yarn build"
+    "build": "bun run build:esm && bun run build:cjs",
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@ag-ui/client": "^0.0.57",

@@ -19,11 +19,11 @@
     "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
     "build": "./build.sh",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
-    "release": "yarn build && npm test",
+    "release": "bun run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.30",
@@ -46,6 +46,7 @@
     "@pikku/openapi-parser": "^0.12.20",
     "@pikku/schedule": "^0.12.7",
     "@pikku/skills": "^0.12.30",
+    "@pikku/websocket": "^0.12.4",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
     "ai": "^7.0.66",
@@ -79,6 +80,7 @@
     "@pikku/playwright": "^0.12.81",
     "@pikku/ws": "^0.12.9",
     "@playwright/test": "^1.50.0",
+    "@standard-schema/spec": "^1.1.0",
     "@types/istanbul-lib-instrument": "^1.7.8",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.21.0",

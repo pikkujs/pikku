@@ -17,10 +17,12 @@
     "kysely": "^0.29.5",
     "next": "15.5.23",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "zod": "^4"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
     "@types/react": "^19",

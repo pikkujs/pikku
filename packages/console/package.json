@@ -25,7 +25,7 @@
   "scripts": {
     "ncu": "ncu",
     "dev": "vite --port 7070",
-    "build": "yarn generate && vite build",
+    "build": "bun run generate && vite build",
     "preview": "vite preview",
     "generate": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide && cd backend && pikku all",
     "lint": "tsc --noEmit",
@@ -48,6 +48,7 @@
     "@mantine/notifications": "^9.5.1",
     "@mantine/spotlight": "^9.5.1",
     "@pikku/assistant-ui": "^0.12.12",
+    "@pikku/better-auth": "^0.12.38",
     "@pikku/fetch": "^0.12.10",
     "@pikku/mantine": "^0.12.11",
     "@pikku/react": "^0.12.10",
@@ -79,7 +80,8 @@
     "react-medium-image-zoom": "^5.4.9",
     "react-router": "^8",
     "reactflow": "^11.11.4",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "zod": "^4"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.105"
@@ -92,7 +94,9 @@
     "@pikku/cli": "^0.12.140",
     "@pikku/core": "^0.12.105",
     "@pikku/websocket": "^0.12.4",
+    "@standard-schema/spec": "^1.1.0",
     "@types/chroma-js": "^3",
+    "@types/json-schema": "^7.0.15",
     "@types/lodash": "^4",
     "@types/node": "^24",
     "@types/react": "^19",

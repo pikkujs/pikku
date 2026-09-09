@@ -9,6 +9,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { InspectorState } from '@pikku/inspector'
 
 import { deployPlan } from './deploy-plan.js'
@@ -17,29 +18,36 @@ import type { Bundler } from '../../deploy/bundler/bundler.interface.js'
 import type { BundleError } from '../../deploy/bundler/types.js'
 
 /**
- * A single-unit provider loaded straight from a data: URL, so the deploy
- * commands run their real resolveProvider path without a provider package
- * being installed. `deployed` records whether apply reached the deploy step.
+ * A single-unit provider written into the project as a plain module, so the
+ * deploy commands run their real resolveProvider path without a provider
+ * package being installed. `deployed` records whether apply reached the deploy
+ * step.
  */
 const deployed: string[] = []
 
-const providerModule = (): string =>
-  `data:text/javascript,${encodeURIComponent(`
-    export const createAdapter = () => ({
-      name: 'fake',
-      deployDirName: 'fake',
-      singleUnit: true,
-      generateEntrySource: () => 'export default {}',
-      generateUnitConfigs: () => new Map(),
-      generateInfraManifest: () => null,
-      deploy: async () => {
-        globalThis.__pikkuFakeProviderDeployed.push('deploy')
-        return { success: true, workersDeployed: [], resourcesCreated: [], errors: [] }
-      },
-    })
-  `)}`
+const PROVIDER_SOURCE = `
+export const createAdapter = () => ({
+  name: 'fake',
+  deployDirName: 'fake',
+  singleUnit: true,
+  generateEntrySource: () => 'export default {}',
+  generateUnitConfigs: () => new Map(),
+  generateInfraManifest: () => null,
+  deploy: async () => {
+    globalThis.__pikkuFakeProviderDeployed.push('deploy')
+    return { success: true, workersDeployed: [], resourcesCreated: [], errors: [] }
+  },
+})
+`
+
+const writeProviderModule = (): string => {
+  const file = join(root, 'fake-provider.mjs')
+  writeFileSync(file, PROVIDER_SOURCE, 'utf-8')
+  return pathToFileURL(file).href
+}
 
 let root: string
+let providerUrl: string
 let logs: string[]
 
 const logger = {
@@ -53,7 +61,7 @@ const config = () => ({
   rootDir: root,
   outDir: join(root, '.pikku'),
   deploy: {
-    providers: { fake: providerModule() },
+    providers: { fake: providerUrl },
     defaultProvider: 'fake',
   },
 })
@@ -151,6 +159,7 @@ beforeEach(() => {
     JSON.stringify({ name: 'todo-app' }),
     'utf-8'
   )
+  providerUrl = writeProviderModule()
 })
 
 afterEach(() => {

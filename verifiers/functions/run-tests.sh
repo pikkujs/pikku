@@ -2,7 +2,7 @@
 set -e
 
 # -------- DEFAULTS --------
-SERVER_CMD="yarn run start"
+SERVER_CMD="bun run start"
 BUILD_CMD=""
 HELLO_WORLD_URL_PREFIX="http://localhost:4002"
 RUN_HTTP_TESTS=false
@@ -123,52 +123,52 @@ fi
 # -------- RUN HTTP TESTS IF REQUESTED --------
 if $RUN_HTTP_TESTS; then
     echo "Running HTTP tests..."
-    yarn run test:http-fetch
+    bun run test:http-fetch
 fi
 
 # -------- RUN WEBSOCKET TESTS IF REQUESTED --------
 if $RUN_WS_TESTS; then
     echo "Running WebSocket tests..."
-    yarn run test:websocket
+    bun run test:websocket
 fi
 
 # -------- RUN RPC TESTS IF REQUESTED --------
 if $RUN_RPC_TESTS; then
     echo "Running RPC tests..."
-    yarn run test:rpc
+    bun run test:rpc
 fi
 
 # -------- RUN HTTP-SSE TESTS IF REQUESTED --------
 if $RUN_HTTP_SSE_TESTS; then
     echo "Running HTTP-SSE tests..."
-    yarn run test:http-sse
+    bun run test:http-sse
 fi
 
 # -------- RUN QUEUE TESTS IF REQUESTED --------
 if $RUN_QUEUE_TESTS; then
     echo "Running Queue tests..."
-    yarn run test:queue
+    bun run test:queue
 fi
 
 # -------- RUN MCP TESTS IF REQUESTED --------
 if $RUN_MCP_TESTS; then
     echo "Running MCP tests..."
-    yarn run test:mcp
+    bun run test:mcp
 fi
 
 # -------- RUN CLI TESTS IF REQUESTED --------
 if $RUN_CLI_TESTS; then
     echo "Running CLI tests..."
     echo "Testing local CLI..."
-    yarn run test:cli:local
+    bun run test:cli:local
     # echo "Testing remote CLI..."
-    # yarn run test:cli:remote
+    # bun run test:cli:remote
 fi
 
 # -------- RUN WORKFLOWS TESTS IF REQUESTED --------
 if $RUN_WORKFLOW_TESTS; then
     echo "Running Workflow tests..."
-    yarn run test:workflows
+    bun run test:workflows
 fi
 
 echo "✅ All tests completed successfully."

@@ -46,7 +46,7 @@ for (const file of files) {
 for (const dir of packageDirs) {
   const pkgJson = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
   const skipDirs = ['e2e', 'templates', 'verifiers'];
-  if (pkgJson.name && !skipDirs.some(p => dir === p || dir.startsWith(p + '/'))) console.log(pkgJson.name);
+  if (pkgJson.name && !pkgJson.private && !skipDirs.some(p => dir === p || dir.startsWith(p + '/'))) console.log(pkgJson.name);
 }
 ")
 
@@ -64,7 +64,7 @@ if [ ${#MISSING[@]} -gt 0 ]; then
     echo "  - $pkg"
   done
   echo ""
-  echo "Run 'yarn changeset' to add one, or create a .changeset/*.md file manually."
+  echo "Run 'bun run changeset' to add one, or create a .changeset/*.md file manually."
   exit 1
 fi
 

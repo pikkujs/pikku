@@ -25,7 +25,25 @@ function captureStream(stream: NodeJS.WriteStream, run: () => void): string[] {
 }
 
 const captureStderr = (run: () => void) => captureStream(process.stderr, run)
-const captureStdout = (run: () => void) => captureStream(process.stdout, run)
+
+/**
+ * Text mode reaches stdout through `console.log`, and not every runtime routes
+ * that through `process.stdout.write` — bun writes the descriptor directly. So
+ * capture the call the logger actually makes.
+ */
+function captureConsoleLog(run: () => void): string[] {
+  const lines: string[] = []
+  const original = console.log
+  console.log = (...args: unknown[]) => {
+    lines.push(args.map(String).join(' '))
+  }
+  try {
+    run()
+  } finally {
+    console.log = original
+  }
+  return lines
+}
 
 describe('CLILogger json output mode', () => {
   test('writes json logs immediately (streaming, no buffering)', () => {
@@ -115,7 +133,7 @@ describe('CLILogger json output mode', () => {
 
     logger.setOutputMode('text')
 
-    const textLines = captureStdout(() => {
+    const textLines = captureConsoleLog(() => {
       logger.info('\x1b[31mRed Message\x1b[0m')
     })
     // text mode writes to stdout via console.log, which is a single

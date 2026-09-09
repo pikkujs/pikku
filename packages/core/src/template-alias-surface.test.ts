@@ -15,7 +15,14 @@ import { fileURLToPath } from 'node:url'
  */
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 const templatesDir = join(repoRoot, 'templates')
-const skipped = new Set(['node_modules', 'dist', '.pikku', '.next', 'build'])
+const skipped = new Set([
+  'node_modules',
+  'dist',
+  '.pikku',
+  '.deploy',
+  '.next',
+  'build',
+])
 
 const walk = (dir: string, out: string[] = []): string[] => {
   for (const entry of readdirSync(dir)) {

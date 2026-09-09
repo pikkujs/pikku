@@ -1,8 +1,5 @@
 #!/bin/bash
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$script_dir"
-
 # Enable nullglob to handle cases where no files match the pattern
 shopt -s nullglob
 
@@ -43,18 +40,29 @@ if [ ${#files[@]} -eq 0 ]; then
   exit 0
 fi
 
-# Construct the node command
-node_cmd=(node --import tsx --test)
+# Construct the bun command
+#
+# --parallel gives every test file its own worker process, which is what node's
+# `--test` did. Several suites keep module-level caches (a TypeScript program, a
+# temp fixture directory) that a shared process would leak between files.
+#
+# --timeout because bun caps a test at 5s by default where node had no cap, and
+# the suites that build real TypeScript programs run well past that.
+bun_cmd=(bun test --parallel --timeout 120000)
 
 # Append options based on flags
 if [ "$watch_mode" = true ]; then
-  node_cmd+=(--watch)
+  # --watch reruns in one process; parallel workers have nothing to watch.
+  bun_cmd=(bun test --watch --timeout 120000)
 fi
 
 if [ "$coverage_mode" = true ]; then
-  node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info)
+  # --coverage-dir=. keeps lcov.info at the package root: CI merges every
+  # package's report by prefixing its SF paths with the file's own directory,
+  # so a nested coverage/ directory would re-root them one level too deep.
+  bun_cmd+=(--coverage --coverage-reporter=lcov --coverage-reporter=text --coverage-dir=.)
   export PIKKU_TEST_COVERAGE=1
 fi
 
-# Execute the node command with the expanded list of files
-"${node_cmd[@]}" "${files[@]}"
+# Execute the bun command with the expanded list of files
+"${bun_cmd[@]}" "${files[@]}"

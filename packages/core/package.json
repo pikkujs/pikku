@@ -13,7 +13,7 @@
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "yarn build",
+    "prepublishOnly": "bun run build",
     "api-report": "tsx scripts/generate-api-report.mts"
   },
   "sideEffects": [

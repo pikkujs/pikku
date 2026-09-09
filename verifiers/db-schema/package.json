@@ -20,7 +20,9 @@
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
-    "@pikku/verifier-db-remote-addon": "link:./remote-addon",
+    "@pikku/verifier-db-addon": "workspace:*",
+    "@pikku/verifier-db-remote-addon": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
     "tsx": "^4.23.12",

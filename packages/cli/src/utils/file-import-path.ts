@@ -27,7 +27,10 @@ export const getFileImportRelativePath = (
   const posixPath = filePath.replace(/\\/g, '/')
 
   if (posixPath.includes('node_modules/')) {
-    const nodeModulesIndex = posixPath.indexOf('node_modules/')
+    // An isolated store (bun's node_modules/.bun, pnpm's node_modules/.pnpm)
+    // nests a second node_modules inside the first, so the package specifier
+    // follows the last separator rather than the first.
+    const nodeModulesIndex = posixPath.lastIndexOf('node_modules/')
     filePath = posixPath.substring(nodeModulesIndex + 'node_modules/'.length)
 
     if (filePath.startsWith('@types/')) {

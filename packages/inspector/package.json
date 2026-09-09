@@ -28,11 +28,11 @@
     "tsc": "tsc",
     "build": "tsc -b",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
-    "release": "yarn build && npm test",
+    "release": "bun run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",

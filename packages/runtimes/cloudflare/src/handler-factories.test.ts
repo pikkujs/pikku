@@ -1,26 +1,41 @@
 import { test, describe, before } from 'node:test'
 import assert from 'node:assert/strict'
-import { registerHooks } from 'node:module'
 import { constantTimeEqual } from './dispatch-auth.js'
 // Type-only, so it is erased before runtime and does not load the module ahead
 // of the `cloudflare:workers` stub registered below.
 import type { createCloudflareHandler as CreateCloudflareHandler } from './handler-factories.js'
 
+class WorkerEntrypointStub {
+  constructor(
+    readonly ctx: unknown,
+    readonly env: unknown
+  ) {}
+}
+
 // `cloudflare:workers` only exists inside the workerd runtime. The handler
 // factories import `WorkerEntrypoint` from it at module scope, so stub the
 // specifier before the module graph is loaded to exercise the real fetch()
-// routing under `node --test`.
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (specifier === 'cloudflare:workers') {
-      return {
-        url: 'data:text/javascript,export class WorkerEntrypoint { constructor(ctx, env) { this.ctx = ctx; this.env = env } }',
-        shortCircuit: true,
+// routing outside workerd. Each runtime offers its own way in: bun through
+// `mock.module`, node through a module hook.
+if (typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined') {
+  const { mock } = await import('bun:test')
+  mock.module('cloudflare:workers', () => ({
+    WorkerEntrypoint: WorkerEntrypointStub,
+  }))
+} else {
+  const { registerHooks } = await import('node:module')
+  registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (specifier === 'cloudflare:workers') {
+        return {
+          url: 'data:text/javascript,export class WorkerEntrypoint { constructor(ctx, env) { this.ctx = ctx; this.env = env } }',
+          shortCircuit: true,
+        }
       }
-    }
-    return nextResolve(specifier, context)
-  },
-})
+      return nextResolve(specifier, context)
+    },
+  })
+}
 
 type CreateHandler = typeof CreateCloudflareHandler
 

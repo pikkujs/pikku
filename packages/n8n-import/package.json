@@ -12,7 +12,7 @@
     "build": "tsc -b",
     "test": "node --import tsx --test src/**/*.test.ts",
     "harness": "node --import tsx harness/run.ts",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "exports": {
     ".": "./dist/index.js"

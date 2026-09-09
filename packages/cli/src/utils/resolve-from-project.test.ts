@@ -2,7 +2,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type * as Ws from 'ws'
+import type * as Pg from 'pg'
 
 import {
   cjsInterop,
@@ -10,12 +10,16 @@ import {
   resolveFromProject,
 } from './resolve-from-project.js'
 
-/** The CLI package root — a real project with `ws` installed. */
+/**
+ * The CLI package root — a real project with `pg` installed. `pg` stands in for
+ * the `ws` the interop exists for: it is the same CJS shape, and unlike `ws` it
+ * is not a module bun implements itself and resolves to a bare specifier.
+ */
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 describe('resolveFromProject', () => {
   test('resolves a package installed for the project', () => {
-    assert.match(resolveFromProject(projectRoot, 'ws') ?? '', /[\\/]ws[\\/]/)
+    assert.match(resolveFromProject(projectRoot, 'pg') ?? '', /[\\/]pg[\\/]/)
   })
 
   test('is undefined for a package the project does not have', () => {
@@ -26,7 +30,7 @@ describe('resolveFromProject', () => {
   })
 
   test('is undefined for a directory that is not a project', () => {
-    assert.equal(resolveFromProject('/nowhere-at-all', 'ws'), undefined)
+    assert.equal(resolveFromProject('/nowhere-at-all', 'pg'), undefined)
   })
 })
 
@@ -41,29 +45,27 @@ describe('importFromProject', () => {
 
 describe('cjsInterop', () => {
   test('reaches the named exports of a CJS package imported by path', async () => {
-    const ws = await importFromProject<typeof Ws & { default?: typeof Ws }>(
+    const pg = await importFromProject<typeof Pg & { default?: typeof Pg }>(
       projectRoot,
-      'ws'
+      'pg'
     )
-    assert.ok(ws, 'ws should resolve from the CLI package')
+    assert.ok(pg, 'pg should resolve from the CLI package')
 
-    // The shape this interop exists for: imported by absolute path, `ws` comes
-    // back with no named exports at all. If Node ever starts reconstructing
-    // them, the interop stays correct and this assertion is what says so.
-    assert.ok('default' in ws)
+    // The shape this interop exists for: imported by absolute path, a CJS
+    // package comes back carrying `default`. If Node ever starts reconstructing
+    // the named exports too, the interop stays correct and this says so.
+    assert.ok('default' in pg)
 
-    const resolved = cjsInterop(ws, 'WebSocketServer')
-    assert.equal(typeof resolved.WebSocketServer, 'function')
-    const server = new resolved.WebSocketServer({ noServer: true })
-    server.close()
+    const resolved = cjsInterop(pg, 'Client')
+    assert.equal(typeof resolved.Client, 'function')
   })
 
   test('leaves a namespace that already has the export alone', () => {
     const mod = {
-      WebSocketServer: 'named',
-      default: { WebSocketServer: 'cjs' },
+      Client: 'named',
+      default: { Client: 'cjs' },
     }
-    assert.equal(cjsInterop(mod, 'WebSocketServer').WebSocketServer, 'named')
+    assert.equal(cjsInterop(mod, 'Client').Client, 'named')
   })
 
   test('falls back to the namespace when there is no default either', () => {

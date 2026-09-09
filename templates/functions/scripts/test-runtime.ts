@@ -91,7 +91,7 @@ async function main() {
     await runPikkuAll()
     startProcess(
       'dev',
-      'yarn',
+      'bun',
       [
         'run',
         'pikku',
@@ -129,9 +129,9 @@ async function main() {
     await runPikkuDeployPlan('serverless')
     startProcess(
       'serverless',
-      'yarn',
+      'bun',
       [
-        'exec',
+        'x',
         'serverless',
         'offline',
         '--config',
@@ -232,13 +232,13 @@ function runPikkuAll(targetName?: 'serverless') {
   if (targetName) {
     args.push('--target', targetName)
   }
-  return runCommand('yarn', args)
+  return runCommand('bun', args)
 }
 
 function runPikkuDeployPlan(
   provider: 'standalone' | 'serverless' | 'cloudflare'
 ) {
-  return runCommand('yarn', [
+  return runCommand('bun', [
     'run',
     'pikku',
     'deploy',
@@ -310,8 +310,8 @@ async function startCloudflareProxy(port: number) {
       const workerPort = nextPort
       const inspectorPort = 9230 + (workerPort - 8810)
       selectedUnits.set(unit.name, workerPort)
-      startProcess('cf:' + unit.name, 'yarn', [
-        'exec',
+      startProcess('cf:' + unit.name, 'bun', [
+        'x',
         'wrangler',
         'dev',
         '--config',
@@ -465,7 +465,7 @@ function filterHeaders(headers: NodeJS.Dict<string | string[]>) {
 async function runRuntimeTests(targetName: RuntimeTarget, baseUrl: string) {
   if (targetName === 'dev' || targetName === 'standalone') {
     const mcpBaseUrl = `http://127.0.0.1:${mcpPorts[targetName]}`
-    startProcess('mcp', 'yarn', ['run', 'start:mcp:http'], {
+    startProcess('mcp', 'bun', ['run', 'start:mcp:http'], {
       ...sharedRuntimeEnv,
       MCP_PORT: String(mcpPorts[targetName]),
     })
@@ -488,13 +488,13 @@ async function runRuntimeTests(targetName: RuntimeTarget, baseUrl: string) {
         PIKKU_WS_URL: `${toWsUrl(baseUrl)}/cli/todo-cli`,
       }
     )
-    await runCommand('yarn', ['run', 'test:runtime-rpc'], {
+    await runCommand('bun', ['run', 'test:runtime-rpc'], {
       ...sharedRuntimeEnv,
       TODO_APP_URL: baseUrl,
     })
-    await runCommand('yarn', ['run', 'test:queue'], sharedRuntimeEnv)
-    await runCommand('yarn', ['run', 'test:triggers'], sharedRuntimeEnv)
-    await runCommand('yarn', ['run', 'test:mcp:http'], {
+    await runCommand('bun', ['run', 'test:queue'], sharedRuntimeEnv)
+    await runCommand('bun', ['run', 'test:triggers'], sharedRuntimeEnv)
+    await runCommand('bun', ['run', 'test:mcp:http'], {
       ...sharedRuntimeEnv,
       MCP_BASE_URL: mcpBaseUrl,
     })
@@ -515,7 +515,7 @@ async function runRuntimeTests(targetName: RuntimeTarget, baseUrl: string) {
     ],
     sharedRuntimeEnv
   )
-  await runCommand('yarn', ['run', 'test:runtime-rpc'], {
+  await runCommand('bun', ['run', 'test:runtime-rpc'], {
     ...sharedRuntimeEnv,
     TODO_APP_URL: baseUrl,
   })

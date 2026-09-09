@@ -5,10 +5,10 @@
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {
-    "build:esm": "yarn tsc",
-    "build": "yarn build:esm",
+    "build:esm": "npx tsc",
+    "build": "bun run build:esm",
     "test": "bash run-tests.sh",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.5.2",

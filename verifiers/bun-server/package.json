@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@types/node": "^24",
     "@types/ws": "^8",
     "tsx": "^4.23.12",

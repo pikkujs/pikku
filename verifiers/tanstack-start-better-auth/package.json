@@ -12,6 +12,7 @@
   "dependencies": {
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
+    "@pikku/fetch": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/tanstack-start": "workspace:*",
@@ -22,10 +23,12 @@
     "better-sqlite3": "^13.0.3",
     "kysely": "^0.29.5",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "zod": "^4"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24",
     "@types/react": "^19",

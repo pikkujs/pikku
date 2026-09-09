@@ -34,5 +34,5 @@ for (const name of await listSkillNames()) {
 Reads prefer the `skills/` directory on disk, so editing a `SKILL.md` is live
 immediately. `SKILL_FILES` is the same content as an embedded path → contents map,
 which is what makes the skills available inside the `bun --compile` CLI binaries
-where no filesystem copy exists. Regenerate it with `yarn embed` after changing
+where no filesystem copy exists. Regenerate it with `bun run embed` after changing
 anything under `skills/`.
