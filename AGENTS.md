@@ -131,6 +131,23 @@ OPENAI_API_KEY=<key> API_URL=http://localhost:4077 \
 
 The console lands at **http://localhost:4077/console**. Being same-origin with the API, cookies are first-party and no `?server=` param is needed.
 
+## PR checklist
+
+A PR is not "the code plus a unit test". Every item below is part of the
+change. A PR that skips one says so explicitly and why, in the PR body — the
+reviewer decides whether that is acceptable, not the author.
+
+- [ ] **Unit tests** — in the package, `*.test.ts`, covering the refusals as well as the happy path.
+- [ ] **Verifier** — a suite under `verifiers/` that fails before the change and passes after. Unit tests exercise the function; the verifier exercises a real project being generated, built and inspected, which is where the assumptions a unit test mocked away actually break.
+- [ ] **E2E** — when the change is reachable from a running app, `e2e/` covers it end to end.
+- [ ] **Skills** — if the change alters how an agent should work in this repo (a new command, a new failure mode, a workflow that is now different), update `.claude/skills/` or this file.
+- [ ] **Docs** — user-facing behaviour goes in the website docs. A config key nobody can find is a config key nobody uses.
+- [ ] **Knowledge** — durable decisions, rejected alternatives and gotchas go in the `knowledge/` bundle, **not** in code comments. A comment explaining why one approach was chosen over another is knowledge in the wrong place; see Code style → Comments.
+- [ ] **Changeset** — `yarn changeset`, always `patch`.
+
+Roughly the order to do them in, because each one finds what the previous one
+missed.
+
 ## Git workflow
 
 Multiple agents work this checkout concurrently, so the worktree is routinely dirty with changes you did not make.
