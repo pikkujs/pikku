@@ -31,7 +31,7 @@ A TypeScript framework that normalizes the different ways you interact with Node
 
 ### Repository layout
 
-A Yarn workspace monorepo with strict TypeScript and Husky pre-commit hooks:
+A bun workspace monorepo with strict TypeScript and Husky pre-commit hooks:
 
 - `packages/` — the Pikku packages
 - `templates/` — runtime templates
@@ -42,27 +42,27 @@ A Yarn workspace monorepo with strict TypeScript and Husky pre-commit hooks:
 
 ## Commands
 
-Use `yarn` throughout this monorepo.
+Use `bun` throughout this monorepo.
 
 ```bash
-yarn                  # install
-yarn tsc              # type check
-yarn build            # build all packages
-yarn test             # run tests
-yarn test:coverage    # tests with coverage
-yarn test:verifiers   # verifier suites
-yarn test:templates   # template suites
-yarn test:e2e         # end-to-end
-yarn lint
-yarn prettier
-yarn typedoc
-yarn changeset        # for PRs
-yarn release
+bun install               # install
+bun run tsc               # type check
+bun run build             # build all packages
+bun run test              # run tests
+bun run test:coverage     # tests with coverage
+bun run test:verifiers    # verifier suites
+bun run test:templates    # template suites
+bun run test:e2e          # end-to-end
+bun run lint
+bun run prettier
+bun run typedoc
+bun run changeset         # for PRs
+bun run release
 ```
 
 Individual packages carry their own runner: `./run-tests.sh` from inside the package, with `--watch` or `--coverage`.
 
-**Changesets: every package name listed must exist as a workspace package.** Run `yarn workspaces list --json` for the exact names before writing the `.changeset/*.md` file — a wrong name (`@pikku/services-redis` for `@pikku/redis`) makes `changeset status` throw and blocks CI.
+**Changesets: every package name listed must exist as a workspace package.** Read the `name` out of each workspace's own `package.json` for the exact names before writing the `.changeset/*.md` file — a wrong name (`@pikku/services-redis` for `@pikku/redis`) makes `changeset status` throw and blocks CI.
 
 ## Configuration
 
@@ -85,7 +85,7 @@ Individual packages carry their own runner: `./run-tests.sh` from inside the pac
 
 ## Code generation
 
-`npx pikku prebuild` (or `yarn prebuild`) generates HTTP clients, WebSocket clients, and type definitions. Run it after modifying function definitions.
+`npx pikku prebuild` (or `bun run prebuild`) generates HTTP clients, WebSocket clients, and type definitions. Run it after modifying function definitions.
 
 **Generated DB files are output** — change the source and regenerate:
 
@@ -95,7 +95,11 @@ Individual packages carry their own runner: `./run-tests.sh` from inside the pac
 
 ## Testing
 
-- Node's built-in test runner with tsx; test files follow `*.test.ts`; each package's tests are isolated; coverage via `--experimental-test-coverage`.
+- `bun test`; test files follow `*.test.ts`; each package's `run-tests.sh` runs
+  them with `--parallel`, so every file gets its own worker process, and
+  `--coverage` writes an `lcov.info` at the package root. Three packages stay on
+  node's runner because bun cannot host them — `@pikku/ws`, `@pikku/uws` and
+  `@pikku/kysely` — and each says why at the top of its own runner.
 - **Every change, branch, or PR needs verifier coverage following a TDD/BDD flow** — the verifier test fails before the code change and passes after.
 
 ### Testing templates
@@ -119,7 +123,7 @@ Against the e2e project (backend on `4077`, from `e2e/tests/support/types.ts`):
 
 ```bash
 # 1. Build the console and bundle it into the CLI
-cd packages/console && yarn build           # → packages/console/dist
+cd packages/console && bun run build        # → packages/console/dist
 cd ../cli && rm -rf console-app && cp -r ../console/dist console-app
 chmod +x dist/bin/pikku.js
 

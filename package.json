@@ -60,7 +60,6 @@
     "test:e2e:ai-live": "bun run --filter @pikku/e2e test:ai-live",
     "test": "bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/console' --filter '!@pikku/e2e' --sequential test",
     "test:coverage": "bun run --filter '*' --sequential test:coverage",
-    "test:bun": "bun test packages/core/src packages/openapi-parser/src packages/openapi-to-zod-schema/src packages/pikku/src packages/runtimes/cloudflare/src packages/schedule/src packages/services/kysely-bun-sqlite/src",
     "lint": "oxlint",
     "prettier": "npx --yes prettier . --write --log-level warn",
     "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",

@@ -36,8 +36,10 @@ runs:
     # bun only links a workspace package's bin when the file it points at exists
     # at install time, and never backfills it. The Build job installs before
     # anything is built, so `pikku` is missing from node_modules/.bin until the
-    # CLI's dist does exist — every other job downloads the build artifact first
-    # and is unaffected. A repeat install is a no-op apart from the symlinks.
+    # CLI's dist does exist. A repeat install is a no-op apart from the symlinks.
+    # Every other job installs after downloading the build artifact, so its dist
+    # is already in place by then — but only for a package that job's own
+    # workspace declares, which is why the root declares @pikku/cli too.
     - name: Link workspace bins built by the previous step
       shell: bash
       run: bun install --frozen-lockfile
