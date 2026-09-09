@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import ts from 'typescript'
+import { readModuleSpecifiers } from '@pikku/inspector'
 import type { ValidateFinding } from './persona-checks.js'
 
 const SKIP_DIRS = new Set([
@@ -32,32 +32,8 @@ const isGenerated = (path: string) =>
 const isBarrel = (specifier: string) =>
   specifier === '#pikku' || /^#pikku\/pikku-types\.gen(\.js)?$/.test(specifier)
 
-/**
- * Parsed rather than grepped: a project's own codegen templates hold the
- * specifiers they emit inside template literals, and those are output text
- * rather than imports the file itself makes.
- */
-const barrelImports = (file: string, content: string): string[] => {
-  const source = ts.createSourceFile(
-    file,
-    content,
-    ts.ScriptTarget.Latest,
-    true
-  )
-  const found: string[] = []
-  for (const statement of source.statements) {
-    if (
-      !ts.isImportDeclaration(statement) &&
-      !ts.isExportDeclaration(statement)
-    ) {
-      continue
-    }
-    const moduleSpecifier = statement.moduleSpecifier
-    if (!moduleSpecifier || !ts.isStringLiteral(moduleSpecifier)) continue
-    if (isBarrel(moduleSpecifier.text)) found.push(moduleSpecifier.text)
-  }
-  return found
-}
+const barrelImports = (file: string, content: string): string[] =>
+  readModuleSpecifiers(file, content).filter(isBarrel)
 
 const collectSources = async (
   dir: string,

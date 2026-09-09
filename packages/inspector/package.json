@@ -18,6 +18,11 @@
       "import": "./dist/schema-generator.js",
       "default": "./dist/schema-generator.js"
     },
+    "./surface": {
+      "types": "./dist/surface/collect-surface.d.ts",
+      "import": "./dist/surface/collect-surface.js",
+      "default": "./dist/surface/collect-surface.js"
+    },
     "./workflow-graph": {
       "types": "./dist/utils/workflow/graph/index.d.ts",
       "import": "./dist/utils/workflow/graph/index.js",

@@ -1,4 +1,4 @@
-import type { SurfaceKind, SurfaceMember } from './collect-surface.js'
+import type { SurfaceKind, SurfaceMember } from '@pikku/inspector/surface'
 
 export type { SurfaceKind, SurfaceMember }
 
