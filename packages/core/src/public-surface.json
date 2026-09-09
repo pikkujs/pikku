@@ -549,5 +549,11 @@
     "pikkuDevReloader",
     "reconcileAddonRegistry",
     "reloadGeneratedMeta"
+  ],
+  "./analytics": [
+    "flattenAnalyticsEvent",
+    "getAnalyticsSink",
+    "recordAnalyticsEvents",
+    "setAnalyticsSink"
   ]
 }
