@@ -49,13 +49,15 @@ runs:
     # read, and there a git failure would read as a changed lockfile.
     - name: Install dependencies
       shell: bash
-      # The cache lives in the workspace rather than under $HOME so that it
+      # The cache lives beside the workspace rather than under $HOME so that it
       # shares a filesystem with node_modules. In the container jobs it does
-      # not otherwise: the checkout is a volume mounted from the host and
-      # $HOME is the container's own writable layer, and bun links packages out
-      # of the cache and into the store across that boundary.
+      # not otherwise: the checkout and the runner temp directory are volumes
+      # mounted from the host while $HOME is the container's own writable
+      # layer, and bun links packages out of the cache and into the store
+      # across that boundary. It sits in the temp directory rather than in the
+      # checkout so that prettier, oxlint and knip do not walk it.
       env:
-        BUN_INSTALL_CACHE_DIR: ${{ github.workspace }}/.bun-install-cache
+        BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-install-cache
       run: |
         before=$(sha256sum bun.lock | cut -d' ' -f1)
         for attempt in 1 2 3; do
