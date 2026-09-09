@@ -13,8 +13,8 @@
     "test": "bash ../functions/run-tests.sh --websocket"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.107",
-    "@pikku/ws": "^0.12.9",
+    "@pikku/core": "^0.12.108",
+    "@pikku/ws": "^0.12.10",
     "tslib": "^2.8.1",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3",

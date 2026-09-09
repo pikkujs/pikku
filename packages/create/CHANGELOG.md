@@ -1,3 +1,28 @@
+## 0.12.8
+
+### Patch Changes
+
+- 4c7a1b5: Run the monorepo's own scripts through bun instead of yarn. What moves is the
+  package manager each package's `prepublishOnly` and build scripts invoke, plus
+  the two manifest fixes bun needs to resolve the tree: `uWebSockets.js` is
+  declared with an explicit `github:` specifier, and `@pikku/uws-handler` marks
+  its `uWebSockets.js` peer optional so a bun install of a consumer that brings
+  its own uWS app does not try to fetch it from the registry.
+
+  Three published behaviours change, all of them cases where an isolated
+  `node_modules` or bun as the runtime had been papered over by yarn's hoisting:
+
+  - `@pikku/migrator-sql` turns foreign keys on when it opens a sqlite database
+    through bun. `node:sqlite` enforces them by default and `bun:sqlite` does not,
+    which silently turned every `ON DELETE CASCADE` into a no-op under
+    `bunx --bun pikku`.
+  - `@pikku/cli` resolves a deploy provider against the project being deployed
+    rather than against wherever the CLI itself is installed, which is what its
+    own "is not installed" error asks the user to arrange.
+  - `@pikku/cli` treats a specifier a runtime hands straight back — bun does this
+    for the modules it implements itself — as not resolved from the project, so
+    it falls back rather than loading the runtime's own copy.
+
 ## 0.12.7
 
 ### Patch Changes

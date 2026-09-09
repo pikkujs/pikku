@@ -12,8 +12,8 @@
     "test": "bash ../functions/run-tests.sh --url http://localhost:8787 --http --websocket"
   },
   "dependencies": {
-    "@pikku/cloudflare": "^0.12.22",
-    "@pikku/core": "^0.12.107"
+    "@pikku/cloudflare": "^0.12.23",
+    "@pikku/core": "^0.12.108"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260815.1",

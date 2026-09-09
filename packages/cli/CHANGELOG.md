@@ -1,3 +1,78 @@
+## 0.12.146
+
+### Patch Changes
+
+- 4c7a1b5: Run the monorepo's own scripts through bun instead of yarn. What moves is the
+  package manager each package's `prepublishOnly` and build scripts invoke, plus
+  the two manifest fixes bun needs to resolve the tree: `uWebSockets.js` is
+  declared with an explicit `github:` specifier, and `@pikku/uws-handler` marks
+  its `uWebSockets.js` peer optional so a bun install of a consumer that brings
+  its own uWS app does not try to fetch it from the registry.
+
+  Three published behaviours change, all of them cases where an isolated
+  `node_modules` or bun as the runtime had been papered over by yarn's hoisting:
+
+  - `@pikku/migrator-sql` turns foreign keys on when it opens a sqlite database
+    through bun. `node:sqlite` enforces them by default and `bun:sqlite` does not,
+    which silently turned every `ON DELETE CASCADE` into a no-op under
+    `bunx --bun pikku`.
+  - `@pikku/cli` resolves a deploy provider against the project being deployed
+    rather than against wherever the CLI itself is installed, which is what its
+    own "is not installed" error asks the user to arrange.
+  - `@pikku/cli` treats a specifier a runtime hands straight back — bun does this
+    for the modules it implements itself — as not resolved from the project, so
+    it falls back rather than loading the runtime's own copy.
+
+- 9d7a96d: Deprioritise the generated session middleware instead of skipping it
+
+  Two session middlewares were reconciled by having the CLI inspect the app for
+  its own `betterAuthSession` / `betterAuthStatelessSession` registration and then
+  generate nothing (pikkujs/pikku#754). That silently dropped everything emitted
+  alongside — including the `PIKKU_CONSOLE_TOKEN` bearer, so an app that
+  customized `mapSession` answered `MissingScopeError` on every `console:*` RPC.
+
+  All three session middlewares now take a `priority`, and the CLI generates its
+  registration at `lowest`. An app's own registration defaults to `medium`, so it
+  resolves the session first and the generated one short-circuits on its existing
+  `if (session) next()`. Nothing is detected and nothing is skipped;
+  `state.auth.userStatelessSession` and `state.auth.hasUserSessionMiddleware` are
+  gone.
+
+  `betterAuthSession`, `betterAuthStatelessSession` and the session store now also
+  carry the organization plugin's `activeOrganizationId` onto `session.orgId`
+  without a `mapSession`, and `impersonation.loadUser` defaults to better-auth's
+  own `findUserById` — the two things an app most often wrote a whole `mapSession`
+  for.
+
+- bb6abc2: The CLI's own code no longer imports the TypeScript compiler API. `collectSurface` moved out of `@pikku/cli` into a new `@pikku/inspector/surface` entry point, and the two smaller compiler needs the CLI had are exposed as `readModuleSpecifiers` and `readTsconfigOutDir`.
+
+  `typescript` drops to a devDependency on `@pikku/cli`. It still arrives transitively through `@pikku/code-edit`, which needs a parser to rewrite your source and is loaded only by `pikku meta apply` and the console's edit RPCs.
+
+- bb6abc2: The `--tsc` / `--tsc-summary` gate now runs the project's own `tsc` binary instead of loading its `typescript` module and driving the compiler API. TypeScript 7 ships a compiler binary but no importable API, so the old code crashed on any project that had upgraded; shelling out works the same on 5, 6 and 7.
+
+  Full output is now a plain line per diagnostic rather than a colour-highlighted code frame.
+
+- Updated dependencies [4c7a1b5]
+- Updated dependencies [9d7a96d]
+- Updated dependencies [bb6abc2]
+  - @pikku/ai-vercel@0.12.14
+  - @pikku/better-auth@0.12.40
+  - @pikku/code-edit@0.12.2
+  - @pikku/core@0.12.108
+  - @pikku/fetch@0.12.11
+  - @pikku/inspector@0.12.76
+  - @pikku/knowledge@0.12.13
+  - @pikku/kysely@0.13.25
+  - @pikku/migrator-sql@0.12.5
+  - @pikku/n8n-import@0.0.8
+  - @pikku/node-http-server@0.12.15
+  - @pikku/openapi-parser@0.12.21
+  - @pikku/playwright@0.12.82
+  - @pikku/schedule@0.12.8
+  - @pikku/skills@0.12.31
+  - @pikku/websocket@0.12.5
+  - @pikku/ws@0.12.10
+
 ## 0.12.145
 
 ### Patch Changes
