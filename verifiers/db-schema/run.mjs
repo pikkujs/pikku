@@ -314,8 +314,10 @@ console.log(`\n▶ linked node_modules/${ADDON_PKG} → ./addon`)
 // The remote addon is not linked here: `wireRemoteAddon` requires the package
 // to be a devDependency (it ships types only, its handlers run on the host), and
 // `pikku all` fails the project if it is not — so it is declared in
-// package.json and yarn links it, which is also the only way that rule gets
-// exercised.
+// package.json as a workspace and the install links it, which is also the only
+// way that rule gets exercised. A `file:` specifier will not do: bun copies one
+// into the store, so the artifact `pikku db export` writes here never reaches
+// the copy the consumer resolves.
 check(
   existsSync(
     createRequire(join(here, 'package.json')).resolve(

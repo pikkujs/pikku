@@ -31,6 +31,7 @@
         "tsx": "^4.23.12",
         "typedoc": "^0.28.20",
         "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
+        "zod": "^4",
       },
     },
     "e2e": {
@@ -2012,8 +2013,8 @@
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
-        "@pikku/verifier-db-addon": "file:./addon",
-        "@pikku/verifier-db-remote-addon": "file:./remote-addon",
+        "@pikku/verifier-db-addon": "workspace:*",
+        "@pikku/verifier-db-remote-addon": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "@types/better-sqlite3": "^9.6.0",
         "@types/node": "^24",
@@ -6169,10 +6170,6 @@
     "@pikku/verifiers-bun-server/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-classification/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
-
-    "@pikku/verifiers-db-schema/@pikku/verifier-db-addon": ["@pikku/verifier-db-addon@file:verifiers/db-schema/addon", { "devDependencies": { "@pikku/cli": "*", "@pikku/core": "*", "@standard-schema/spec": "^1.1.0", "kysely": "^0.29.5", "typescript": "^6.0.3", "zod": "^4" }, "peerDependencies": { "@pikku/core": "*", "kysely": "^0.29.0", "zod": "^4" } }],
-
-    "@pikku/verifiers-db-schema/@pikku/verifier-db-remote-addon": ["@pikku/verifier-db-remote-addon@file:verifiers/db-schema/remote-addon", { "devDependencies": { "@pikku/cli": "*", "@pikku/core": "*", "@standard-schema/spec": "^1.1.0", "kysely": "^0.29.5", "typescript": "^6.0.3", "zod": "^4" }, "peerDependencies": { "@pikku/core": "*", "kysely": "^0.29.0", "zod": "^4" } }],
 
     "@pikku/verifiers-db-schema/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 

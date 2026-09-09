@@ -25,11 +25,46 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# The typed `m` namespace is compiled from messages/*.json into src/paraglide,
+# which is gitignored and absent from the build artifact later jobs download.
+# Any test touching a module that imports `m` would fail on a fresh checkout, so
+# compile it here when it is missing. It is a local, offline compile of KB of
+# JSON — a couple of seconds, and a no-op once present.
+if [ ! -f "src/paraglide/messages.js" ]; then
+  echo "Compiling paraglide messages (src/paraglide is generated and gitignored)"
+  npx paraglide-js compile --project ./project.inlang --outdir ./src/paraglide
+fi
+
+# The typed client under src/pikku is generated from backend/ the same way, and
+# is gitignored for the same reason — so src/pikku/http.ts imports a module that
+# is simply absent on a fresh checkout, and every test reaching it dies on
+# ERR_MODULE_NOT_FOUND. `pikku all` is pure codegen: no network, no database, no
+# server, a few seconds cold and skipped once the file is there.
+#
+# The CLI is invoked by path rather than through `npx`, because backend/ holds a
+# pikku.config.json but no package.json: npx picks its own working directory
+# from the nearest package root, so under CI's corepack shim it started the CLI
+# somewhere above backend/ and the run died on `Config file pikku.config.json
+# not found`. Running node directly keeps the cd we just did.
+if [ ! -f "src/pikku/pikku-fetch.gen.ts" ]; then
+  echo "Generating the console client (src/pikku/*.gen.ts is generated and gitignored)"
+  (cd backend && node ../../cli/dist/bin/pikku.js all)
+fi
+
 # Define the pattern to match your test files
 pattern="src/*.test.ts"
 
 # Expand the pattern into an array of files
 files=($(find src -type f -name "*.test.ts"))
+
+# The theme contract is asserted against this app's sources but the test itself
+# lives in @pikku/mantine, so it is named explicitly rather than found under src.
+# The `./` prefix is load-bearing: bun reads a bare argument as a name filter and
+# never searches node_modules, so without it the file is silently not run.
+theme_contract="./node_modules/@pikku/mantine/src/theme/theme-contract.test.ts"
+if [ -f "$theme_contract" ]; then
+  files+=("$theme_contract")
+fi
 
 # Check if any files matched the pattern
 if [ ${#files[@]} -eq 0 ]; then
@@ -64,5 +99,6 @@ if [ "$coverage_mode" = true ]; then
   export PIKKU_TEST_COVERAGE=1
 fi
 
+# THEME_CONTRACT_ROOTS tells the shared contract test which sources to scan.
 # Execute the bun command with the expanded list of files
-"${bun_cmd[@]}" "${files[@]}"
+THEME_CONTRACT_ROOTS=src "${bun_cmd[@]}" "${files[@]}"

@@ -104,7 +104,8 @@
     "prettier": "3.9.6",
     "tsx": "^4.23.12",
     "typedoc": "^0.28.20",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4"
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
+    "zod": "^4"
   },
   "dependencies": {
     "@changesets/cli": "^3.0.0",

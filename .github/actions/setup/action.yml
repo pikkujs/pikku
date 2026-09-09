@@ -40,15 +40,21 @@ runs:
     # dependency of both the root and @pikku/uws, and bun re-resolves it on
     # every frozen install and then declares the lockfile changed — every
     # attempt, so the retry above never gets past it. A plain install leaves
-    # bun.lock byte-identical, so diffing it afterwards asks the same question
+    # bun.lock byte-identical, so comparing it afterwards asks the same question
     # the frozen flag was there to ask: is the committed lockfile complete and
     # up to date with the manifests?
+    #
+    # Compared by checksum rather than `git diff`: the e2e jobs run inside a
+    # container where the checkout is not a git directory the container user may
+    # read, and there a git failure would read as a changed lockfile.
     - name: Install dependencies
       shell: bash
       run: |
+        before=$(sha256sum bun.lock | cut -d' ' -f1)
         for attempt in 1 2 3; do
           if bun install; then
-            if ! git diff --exit-code -- bun.lock; then
+            after=$(sha256sum bun.lock | cut -d' ' -f1)
+            if [ "$before" != "$after" ]; then
               echo "::error::bun install updated bun.lock — commit the updated lockfile"
               exit 1
             fi
