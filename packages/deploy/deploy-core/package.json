@@ -10,8 +10,7 @@
     "test": "node --test --import tsx src/*.test.ts"
   },
   "devDependencies": {
-    "tsx": "^4.23.12",
-    "typescript": "^6.0.3"
+    "tsx": "^4.23.12"
   },
   "exports": {
     ".": "./dist/index.js"

@@ -41,8 +41,7 @@
     "better-auth": "^1.6.29",
     "next": "15.5.23",
     "react": "^19",
-    "react-dom": "^19",
-    "typescript": "^6.0.3"
+    "react-dom": "^19"
   },
   "engines": {
     "node": ">=24"

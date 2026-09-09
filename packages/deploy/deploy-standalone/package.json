@@ -9,9 +9,6 @@
     "tsc": "tsc --noEmit",
     "test": "node --test --import tsx \"src/**/*.test.ts\""
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "exports": {
     ".": "./dist/index.js",
     "./runtime": "./dist/runtime/index.js"

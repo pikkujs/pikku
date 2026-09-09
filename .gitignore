@@ -2,7 +2,6 @@
 lcov.info
 e2e/**/reports/
 
-.typedocs
 .DS_Store
 benchmarks/result-*.json
 

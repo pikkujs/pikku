@@ -41,7 +41,6 @@
     "@pikku/cli": "^0.12.141",
     "@pikku/core": "*",
     "@standard-schema/spec": "^1.1.0",
-    "typescript": "^6.0.3",
     "zod": "^4"
   },
   "license": "MIT"

@@ -37,8 +37,7 @@
     "@aws-sdk/cloudfront-signer": "^3.1111.0",
     "@aws-sdk/s3-request-presigner": "^3.1111.0",
     "@types/sinon": "^22.0.0",
-    "sinon": "^22.1.0",
-    "typescript": "^6.0.3"
+    "sinon": "^22.1.0"
   },
   "engines": {
     "node": ">=24"

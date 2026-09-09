@@ -34,7 +34,6 @@
     "@pikku/cli": "*",
     "@pikku/core": "*",
     "@standard-schema/spec": "^1.1.0",
-    "typescript": "^6.0.3",
     "zod": "^4"
   },
   "private": true

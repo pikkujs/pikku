@@ -13,9 +13,6 @@
     "build": "tsc -b",
     "prepublishOnly": "bun run build"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "engines": {
     "node": ">=24"
   },

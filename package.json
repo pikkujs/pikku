@@ -30,10 +30,10 @@
     "postinstall": "husky && node scripts/setup-merge-drivers.mjs",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
-    "pre-commit": "bun run test && bun run prettier && bun run lint && bun run typedoc",
+    "pre-commit": "bun run test && bun run prettier && bun run lint",
     "pre-push": "bun run pre-commit",
     "tsc": "bun run --filter '*' tsc",
-    "build:packages": "bun run --filter './packages/**' --filter '!@pikku/console' --filter '!@pikku/addon-*' build",
+    "build:packages": "bun run --filter '@pikku/core' build && bun run --filter './packages/**' --filter '!@pikku/console' --filter '!@pikku/addon-*' build",
     "build:addons": "bun run --filter './packages/addon/**' build",
     "build:console": "cd packages/console && bun run generate && bun run build && rm -rf ../cli/console-app && cp -r dist ../cli/console-app",
     "build:templates": "bun run --filter './templates/**' build",
@@ -62,7 +62,6 @@
     "test:coverage": "bun run --filter '*' --sequential test:coverage",
     "lint": "oxlint",
     "prettier": "npx --yes prettier . --write --log-level warn",
-    "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
     "changeset": "npx changeset",
     "pikku:functions": "cd templates/functions && bun run pikku",
     "pikku:functions:addon": "cd templates/function-addon && bun run pikku",
@@ -90,6 +89,7 @@
     "@pikku/uws-handler": "workspace:*",
     "@types/autocannon": "^7.12.7",
     "@types/node": "^25.9.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "0x": "^6.0.0",
     "autocannon": "^8.0.0",
     "esbuild": "^0.28.2",
@@ -103,13 +103,12 @@
     "pinst": "^3.0.0",
     "prettier": "3.9.6",
     "tsx": "^4.23.12",
-    "typedoc": "^0.28.20",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#dddd8ffd1b2c28a66022160923ca92f064cdacb4",
     "zod": "^4"
   },
   "dependencies": {
-    "@changesets/cli": "^3.0.0",
-    "typescript": "^6.0.3"
+    "@changesets/cli": "^3.0.0"
   },
   "resolutions": {
     "esbuild": "0.28.2",

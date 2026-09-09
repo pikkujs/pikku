@@ -18,9 +18,6 @@
     "@pikku/core": "^0.12.85",
     "pino": "^9.5.0"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "exports": {
     ".": "./dist/index.js"
   }

@@ -1,61 +1,30 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import ts from 'typescript'
-import { collectTscDiagnostics, renderTscSummary } from './tsc-check.js'
+import { parseTscOutput, renderTscSummary, renderTscFull } from './tsc-check.js'
 
 const ROOT = '/project'
 
-/**
- * Build a minimal ts.Diagnostic. `fileName` null makes a file-less (global)
- * diagnostic; otherwise line/character are returned verbatim by a stub
- * getLineAndCharacterOfPosition so we can assert 1-based conversion.
- */
-function diag(
+/** One `tsc --pretty false` diagnostic line. */
+const line = (
+  file: string | null,
+  ln: number,
+  col: number,
+  category: string,
   code: number,
-  message: string,
-  category: ts.DiagnosticCategory,
-  fileName: string | null,
-  line = 0,
-  character = 0
-): ts.Diagnostic {
-  const file =
-    fileName === null
-      ? undefined
-      : ({
-          fileName,
-          getLineAndCharacterOfPosition: () => ({ line, character }),
-        } as unknown as ts.SourceFile)
-  return {
-    file,
-    start: 0,
-    length: 0,
-    code,
-    category,
-    messageText: message,
-  } as ts.Diagnostic
-}
+  message: string
+) =>
+  file === null
+    ? `${category} TS${code}: ${message}`
+    : `${file}(${ln},${col}): ${category} TS${code}: ${message}`
 
-describe('collectTscDiagnostics', () => {
-  test('counts errors/warnings and converts positions to 1-based', () => {
-    const result = collectTscDiagnostics(
+describe('parseTscOutput', () => {
+  test('counts errors/warnings and keeps tsc positions verbatim', () => {
+    const result = parseTscOutput(
       [
-        diag(
-          2345,
-          'bad arg',
-          ts.DiagnosticCategory.Error,
-          `${ROOT}/src/a.ts`,
-          4,
-          2
-        ),
-        diag(
-          6133,
-          'unused',
-          ts.DiagnosticCategory.Warning,
-          `${ROOT}/src/b.ts`,
-          0,
-          0
-        ),
-      ],
+        line(`${ROOT}/src/a.ts`, 5, 3, 'error', 2345, 'bad arg'),
+        line(`${ROOT}/src/b.ts`, 1, 1, 'warning', 6133, 'unused'),
+        'Found 1 error in 1 file.',
+      ].join('\n'),
       ROOT
     )
     assert.equal(result.errorCount, 1)
@@ -67,27 +36,21 @@ describe('collectTscDiagnostics', () => {
     assert.equal(first.column, 3)
   })
 
+  test('resolves paths tsc reports relative to the project root', () => {
+    const result = parseTscOutput(
+      line('src/a.ts', 2, 4, 'error', 2345, 'bad arg'),
+      ROOT
+    )
+    assert.equal(result.diagnostics[0]!.file, 'src/a.ts')
+  })
+
   test('drops node_modules and out-of-root diagnostics', () => {
-    const result = collectTscDiagnostics(
+    const result = parseTscOutput(
       [
-        diag(
-          1,
-          'x',
-          ts.DiagnosticCategory.Error,
-          `${ROOT}/node_modules/dep/index.d.ts`,
-          1,
-          1
-        ),
-        diag(2, 'y', ts.DiagnosticCategory.Error, '/elsewhere/z.ts', 1, 1),
-        diag(
-          3,
-          'keep',
-          ts.DiagnosticCategory.Error,
-          `${ROOT}/src/keep.ts`,
-          1,
-          1
-        ),
-      ],
+        line(`${ROOT}/node_modules/dep/index.d.ts`, 1, 1, 'error', 1, 'x'),
+        line('/elsewhere/z.ts', 1, 1, 'error', 2, 'y'),
+        line(`${ROOT}/src/keep.ts`, 1, 1, 'error', 3, 'keep'),
+      ].join('\n'),
       ROOT
     )
     assert.equal(result.errorCount, 1)
@@ -95,9 +58,35 @@ describe('collectTscDiagnostics', () => {
     assert.equal(result.diagnostics[0]!.file, 'src/keep.ts')
   })
 
+  test('folds indented elaborations into the message they belong to', () => {
+    const result = parseTscOutput(
+      [
+        line(`${ROOT}/src/a.ts`, 1, 1, 'error', 2345, 'Argument bad.'),
+        "  Type 'string' is not assignable to type 'number'.",
+      ].join('\n'),
+      ROOT
+    )
+    assert.equal(result.diagnostics.length, 1)
+    assert.equal(
+      result.diagnostics[0]!.message,
+      "Argument bad. Type 'string' is not assignable to type 'number'."
+    )
+  })
+
+  test('drops the elaborations of a filtered-out diagnostic too', () => {
+    const result = parseTscOutput(
+      [
+        line(`${ROOT}/node_modules/dep/index.d.ts`, 1, 1, 'error', 1, 'x'),
+        '  some elaboration',
+      ].join('\n'),
+      ROOT
+    )
+    assert.equal(result.diagnostics.length, 0)
+  })
+
   test('keeps file-less (global) diagnostics under the project label', () => {
-    const result = collectTscDiagnostics(
-      [diag(18003, 'No inputs were found', ts.DiagnosticCategory.Error, null)],
+    const result = parseTscOutput(
+      line(null, 0, 0, 'error', 18003, 'No inputs were found'),
       ROOT
     )
     assert.equal(result.errorCount, 1)
@@ -118,17 +107,8 @@ describe('renderTscSummary', () => {
   })
 
   test('renders a compact header + one line per diagnostic, no code frames', () => {
-    const result = collectTscDiagnostics(
-      [
-        diag(
-          2345,
-          'Argument bad',
-          ts.DiagnosticCategory.Error,
-          `${ROOT}/src/a.ts`,
-          4,
-          2
-        ),
-      ],
+    const result = parseTscOutput(
+      line(`${ROOT}/src/a.ts`, 5, 3, 'error', 2345, 'Argument bad'),
       ROOT
     )
     const out = renderTscSummary(result)
@@ -139,21 +119,28 @@ describe('renderTscSummary', () => {
   })
 
   test('caps output and reports the remainder', () => {
-    const many = Array.from({ length: 5 }, (_, i) =>
-      diag(
-        1000 + i,
-        `err ${i}`,
-        ts.DiagnosticCategory.Error,
-        `${ROOT}/src/f${i}.ts`,
-        i,
-        0
-      )
+    const result = parseTscOutput(
+      Array.from({ length: 5 }, (_, i) =>
+        line(`${ROOT}/src/f${i}.ts`, i + 1, 1, 'error', 1000 + i, `err ${i}`)
+      ).join('\n'),
+      ROOT
     )
-    const result = collectTscDiagnostics(many, ROOT)
     const out = renderTscSummary(result, 2)
     const lines = out.split('\n')
     // header + 2 shown + 1 "and N more"
     assert.equal(lines.length, 4)
     assert.match(lines.at(-1)!, /… and 3 more/)
+  })
+})
+
+describe('renderTscFull', () => {
+  test('renders every diagnostic, past the summary cap', () => {
+    const result = parseTscOutput(
+      Array.from({ length: 5 }, (_, i) =>
+        line(`${ROOT}/src/f${i}.ts`, i + 1, 1, 'error', 1000 + i, `err ${i}`)
+      ).join('\n'),
+      ROOT
+    )
+    assert.equal(renderTscFull(result).split('\n').length, 5)
   })
 })

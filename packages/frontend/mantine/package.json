@@ -23,7 +23,7 @@
     "tsc": "tsc",
     "test": "tsc -p tsconfig.test-d.json && node --test src/theme/theme-contract.test.ts && tsx --test src/core/original.test.ts",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
-    "build:cjs": "tsc -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
+    "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
     "build": "bun run build:esm && bun run build:cjs",
     "prepublishOnly": "bun run build"
   },
@@ -41,7 +41,6 @@
     "@types/react": "^19",
     "react": "^19",
     "react-dom": "^19",
-    "tsx": "^4.23.12",
-    "typescript": "^6.0.3"
+    "tsx": "^4.23.12"
   }
 }

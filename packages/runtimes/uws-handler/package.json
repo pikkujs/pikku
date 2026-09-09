@@ -33,9 +33,6 @@
     "cookie": "^2.0.1",
     "picoquery": "^2.5.0"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "engines": {
     "node": ">=24"
   }

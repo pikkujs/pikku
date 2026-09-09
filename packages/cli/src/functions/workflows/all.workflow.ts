@@ -584,14 +584,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // (like assertSingleCoreVersion) so it reliably fails the run.
     if (config.tsc || config.tscSummary) {
       const errorCount = await workflow.do('Type check', async () => {
-        const { result, diagnostics, formatHost } = runProjectTypecheck(
-          config.tsconfig,
-          config.rootDir
-        )
+        const result = runProjectTypecheck(config.tsconfig, config.rootDir)
         logger.info(
-          config.tsc
-            ? renderTscFull(diagnostics, config.rootDir, formatHost)
-            : renderTscSummary(result)
+          config.tsc ? renderTscFull(result) : renderTscSummary(result)
         )
         return result.errorCount
       })

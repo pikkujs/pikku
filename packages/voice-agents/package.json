@@ -17,7 +17,7 @@
     "tsc": "tsc",
     "test": "bash run-tests.sh",
     "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
-    "build:cjs": "tsc -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
+    "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
     "build": "bun run build:esm && bun run build:cjs",
     "prepublishOnly": "bun run build"
   },
@@ -27,7 +27,6 @@
   "devDependencies": {
     "@ricky0123/vad-web": "^0.0.30",
     "@types/react": "^19",
-    "react": "^19",
-    "typescript": "^6.0.3"
+    "react": "^19"
   }
 }

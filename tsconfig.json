@@ -42,5 +42,5 @@
       "@pikku/skills/*": ["./packages/skills/*"]
     }
   },
-  "exclude": ["node_modules", ".typedocs"]
+  "exclude": ["node_modules"]
 }

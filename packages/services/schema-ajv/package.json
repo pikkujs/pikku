@@ -24,9 +24,6 @@
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1"
   },
-  "devDependencies": {
-    "typescript": "^6.0.3"
-  },
   "engines": {
     "node": ">=24"
   },

@@ -25,8 +25,7 @@
   },
   "devDependencies": {
     "mongodb": "^7.5.0",
-    "mongodb-memory-server": "^11.2.0",
-    "typescript": "^6.0.3"
+    "mongodb-memory-server": "^11.2.0"
   },
   "exports": {
     ".": "./dist/src/index.js"

@@ -1,6 +1,0 @@
-{
-  "entryPoints": ["packages/**/index.ts"],
-  "entryPointStrategy": "expand",
-  "excludeInternal": true,
-  "out": ".typedocs"
-}

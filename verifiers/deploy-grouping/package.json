@@ -11,7 +11,6 @@
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@types/node": "^24",
-    "typescript": "^6.0.3"
+    "@types/node": "^24"
   }
 }

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { cp, mkdir, readdir } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
-import ts from 'typescript'
+import { readTsconfigOutDir } from '@pikku/inspector'
 import { pikkuSessionlessFunc } from '#pikku/function'
 
 /**
@@ -57,21 +57,13 @@ export const planDistCopies = (
     }))
 }
 
-const readTsOutDir = (tsconfig: string): string | undefined => {
-  const parsed = ts.getParsedCommandLineOfConfigFile(tsconfig, {}, {
-    ...ts.sys,
-    onUnRecoverableConfigFileDiagnostic: () => {},
-  } as ts.ParseConfigFileHost)
-  return parsed?.options.outDir
-}
-
 export const pikkuDist = pikkuSessionlessFunc<{ distDir?: string }, void>({
   func: async ({ logger, config }, data) => {
     const { rootDir, outDir, srcDirectories, tsconfig } = config as any
 
     const distDir = data.distDir
       ? resolve(rootDir, data.distDir)
-      : readTsOutDir(resolve(rootDir, tsconfig))
+      : readTsconfigOutDir(resolve(rootDir, tsconfig))
 
     if (!distDir) {
       logger.error(
