@@ -223,6 +223,7 @@ jobs:
             dev-bun,
             deploy-cloudflare,
             deploy-serverless,
+            deploy-grouping,
             deploy-azure,
             deploy-standalone,
             better-auth,
