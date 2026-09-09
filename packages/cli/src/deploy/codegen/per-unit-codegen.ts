@@ -22,6 +22,12 @@ import { toSafeKebab } from '../analyzer/analyzer.js'
 
 const execFileAsync = promisify(execFile)
 
+function fetchRoutes(unit: DeploymentUnit) {
+  return unit.handlers.flatMap((handler) =>
+    handler.type === 'fetch' ? handler.routes : []
+  )
+}
+
 export interface PerUnitCodegenOptions {
   /** Root directory of the project (where pikku.config.json lives) */
   projectDir: string
@@ -87,8 +93,16 @@ export function collectFilterNames(
 
   // Include catch-all scaffold routes based on unit contents
   const functionsMeta = inspectorState.functions.meta
-  const hasExposed = unit.functionIds.some((id) => functionsMeta[id]?.expose)
-  const hasRemote = unit.functionIds.some((id) => functionsMeta[id]?.remote)
+  const routes = fetchRoutes(unit)
+  const hasExposed =
+    unit.functionIds.some((id) => functionsMeta[id]?.expose) ||
+    routes.some(
+      (route) =>
+        route.route.includes('/rpc/') && !route.route.includes('/remote/rpc/')
+    )
+  const hasRemote =
+    unit.functionIds.some((id) => functionsMeta[id]?.remote) ||
+    routes.some((route) => route.route.includes('/remote/rpc/'))
 
   if (hasExposed) {
     // Include the RPC catch-all scaffold function + route

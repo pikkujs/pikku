@@ -126,7 +126,7 @@ const NODE_BUILTINS = [
 // it before the stub plugin ever saw it — `external` is matched ahead of an
 // `onResolve` hook — so listing the builtins individually is what lets the stub
 // below take it.
-const CF_UNSUPPORTED_BUILTINS = new Set(['fs'])
+const CF_UNSUPPORTED_BUILTINS = new Set(['fs', 'child_process'])
 
 export class CloudflareProviderAdapter implements ProviderAdapter {
   readonly name = 'cloudflare'
@@ -361,6 +361,11 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { createCloudflareHandler } from '@pikku/cloudflare/handler'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
+      ...(ctx.unit.dependsOn.length > 0
+        ? [
+            `import { CloudflareDeploymentService } from '@pikku/cloudflare/deployment'`,
+          ]
+        : []),
       ...(platform.needsQueue
         ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
         : []),
@@ -419,6 +424,11 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare/handler'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
+      ...(ctx.unit.dependsOn.length > 0
+        ? [
+            `import { CloudflareDeploymentService } from '@pikku/cloudflare/deployment'`,
+          ]
+        : []),
       ...(platform.needsQueue
         ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
         : []),
@@ -471,12 +481,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
   ): string {
     const isWorkflowRole = ctx.unit.role === 'workflow'
 
-    // Build the service binding map from dependsOn
-    const bindingEntries = ctx.unit.dependsOn.map((dep) => {
-      const bindingName = toWorkerBinding(dep)
-      return `    '${fromKebab(dep)}': '${bindingName}'`
-    })
-    const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
+    const bindingsMap = buildBindingsMap(ctx.unit)
 
     const handlerName = includeQueueHandler
       ? 'createCloudflareHandler'
@@ -645,6 +650,16 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
         `  }`
       )
     }
+    if (ctx.unit.dependsOn.length > 0) {
+      lines.push(
+        `  services.deploymentService = new CloudflareDeploymentService(`,
+        `    env,`,
+        `    services.jwt,`,
+        `    services.secrets,`,
+        `    ${buildBindingsMap(ctx.unit)}`,
+        `  )`
+      )
+    }
     lines.push(...this.contributorLines(ctx, platform, false))
     lines.push(`  return services`, `}`)
     return lines
@@ -755,6 +770,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       '^pg-native$',
       '^node:fs$',
       '^node:fs/promises$',
+      '^node:child_process$',
     ]
   }
 
@@ -883,4 +899,25 @@ function toWorkerBinding(name: string): string {
 /** Convert kebab-case to camelCase (for function name lookup) */
 function fromKebab(str: string): string {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+}
+
+/**
+ * RPC name -> service binding, for the CloudflareDeploymentService.
+ *
+ * A unit name is normally the kebab-cased RPC name, so the mapping is derived
+ * from `dependsOn`. `dispatch` overrides that for names that don't follow —
+ * an addon RPC is served by a unit named after the addon, not the function.
+ */
+function buildBindingsMap(unit: DeploymentUnit): string {
+  const entries = new Map<string, string>()
+  for (const dep of unit.dependsOn) {
+    entries.set(fromKebab(dep), toWorkerBinding(dep))
+  }
+  for (const [rpcName, unitName] of Object.entries(unit.dispatch ?? {})) {
+    entries.set(rpcName, toWorkerBinding(unitName))
+  }
+  const lines = [...entries].map(
+    ([rpcName, binding]) => `    '${rpcName}': '${binding}'`
+  )
+  return `{\n${lines.join(',\n')}\n  }`
 }

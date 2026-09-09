@@ -648,3 +648,129 @@ describe('analyzeDeployment - the remote job inbox lands on the work', () => {
     assert.ok(unit?.services.some((s) => s.capability === 'database'))
   })
 })
+
+/**
+ * A project with the generic `/rpc/:rpcName` dispatcher, one ordinary
+ * function, and one wired addon publishing an exposed and a non-exposed
+ * function.
+ */
+function stateWithAddon(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        rpcCaller: { pikkuFuncId: 'rpcCaller', name: 'rpcCaller' },
+        createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' },
+      },
+    },
+    http: {
+      meta: {
+        post: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'rpcCaller',
+            method: 'post',
+            route: '/rpc/:rpcName',
+          },
+          '/todo': {
+            pikkuFuncId: 'createTodo',
+            method: 'post',
+            route: '/todo',
+          },
+        },
+      },
+    },
+    addonFunctions: {
+      admin: {
+        createUser: {
+          pikkuFuncId: 'admin:createUser',
+          name: 'createUser',
+          expose: true,
+        },
+        internalSweep: {
+          pikkuFuncId: 'admin:internalSweep',
+          name: 'internalSweep',
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - addon units', () => {
+  // Before this, no unit owned an addon's functions: the dispatcher kept every
+  // wired addon's declaration and bundled the addon's whole package bootstrap,
+  // node-only modules included. The addon now gets its own unit and the
+  // dispatcher reaches it over a service binding.
+  const analyze = (state = stateWithAddon()) =>
+    analyzeDeployment(state, { projectId: 'test' })
+
+  test('an addon namespace gets one unit', () => {
+    const unit = analyze().units.find((u) => u.name === 'addon-admin')
+    assert.ok(unit)
+    assert.equal(unit.role, 'function')
+  })
+
+  test('the unit holds only the exposed functions', () => {
+    const unit = analyze().units.find((u) => u.name === 'addon-admin')
+    assert.deepEqual(unit?.functionIds, ['admin:createUser'])
+  })
+
+  test('a namespace with nothing exposed gets no unit', () => {
+    const state = stateWithAddon()
+    delete (state as any).addonFunctions.admin.createUser
+    assert.equal(
+      analyze(state).units.some((u) => u.name === 'addon-admin'),
+      false
+    )
+  })
+
+  test('the unit serves the rpc route for each exposed function', () => {
+    const unit = analyze().units.find((u) => u.name === 'addon-admin')
+    const routes = unit?.handlers
+      .flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      .map((r) => r.route)
+    assert.deepEqual(routes, [
+      '/rpc/admin:createUser',
+      '/remote/rpc/admin:createUser',
+    ])
+  })
+
+  test('the dispatcher routes the addon rpc to that unit', () => {
+    const unit = analyze().units.find((u) => u.name === 'rpc-caller')
+    assert.equal(unit?.dispatch?.['admin:createUser'], 'addon-admin')
+  })
+
+  test('the dispatcher depends on the addon unit', () => {
+    const unit = analyze().units.find((u) => u.name === 'rpc-caller')
+    assert.ok(unit?.dependsOn.includes('addon-admin'))
+  })
+
+  test('a unit that does not serve the catch-all gets no dispatch', () => {
+    const unit = analyze().units.find((u) => u.name === 'create-todo')
+    assert.equal(unit?.dispatch, undefined)
+    assert.deepEqual(unit?.dependsOn, [])
+  })
+
+  test('an addon needing a serverless-incompatible service lands on server', () => {
+    const state = stateWithAddon()
+    ;(state as any).addonFunctions.admin.createUser.services = {
+      services: ['fileStore'],
+    }
+    ;(state as any).addonServerlessIncompatible = new Map([
+      ['admin', ['fileStore']],
+    ])
+    const unit = analyze(state).units.find((u) => u.name === 'addon-admin')
+    assert.equal(unit?.target, 'server')
+  })
+
+  test('an addon on serverless-safe services stays serverless', () => {
+    const unit = analyze().units.find((u) => u.name === 'addon-admin')
+    assert.equal(unit?.target, 'serverless')
+  })
+})

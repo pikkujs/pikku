@@ -237,6 +237,70 @@ export function analyzeDeployment(
     })
   }
 
+  // ── Step 1b: Addon units ───────────────────────────────────────────
+  const addonUnitByRpcName = new Map<string, string>()
+  for (const [namespace, addonMeta] of entries(state.addonFunctions ?? {})) {
+    const exposed = entries(addonMeta).filter(([, meta]) => meta.expose)
+    if (exposed.length === 0) {
+      continue
+    }
+
+    const unitName = `addon-${toSafeKebab(namespace)}`
+    const addonIncompatible = new Set(
+      state.addonServerlessIncompatible?.get(namespace) ?? []
+    )
+    const routes: HttpRouteInfo[] = []
+    const functionIds: string[] = []
+    const services: ServiceRequirement[] = []
+    let target: 'serverless' | 'server' = defaultTarget
+
+    for (const [funcName, funcMeta] of exposed) {
+      const rpcName = `${namespace}:${funcName}`
+      functionIds.push(rpcName)
+      addonUnitByRpcName.set(rpcName, unitName)
+      routes.push({
+        method: 'post',
+        route: prefixed(`/rpc/${rpcName}`),
+        pikkuFuncId: rpcName,
+      })
+      routes.push({
+        method: 'post',
+        route: prefixed(`/remote/rpc/${rpcName}`),
+        pikkuFuncId: rpcName,
+      })
+      for (const service of collectServicesForFunction(funcMeta)) {
+        if (
+          !services.some(
+            (s) => s.sourceServiceName === service.sourceServiceName
+          )
+        ) {
+          services.push(service)
+        }
+      }
+      if (
+        resolveDeployTarget(
+          funcMeta,
+          addonIncompatible,
+          rpcName,
+          defaultTarget
+        ) === 'server'
+      ) {
+        target = 'server'
+      }
+    }
+
+    units.push({
+      name: unitName,
+      role: 'function',
+      target,
+      functionIds,
+      services,
+      dependsOn: [],
+      handlers: [{ type: 'fetch', routes }],
+      tags: [],
+    })
+  }
+
   // ── Step 2: Agent gateways ─────────────────────────────────────────
   for (const [agentName, agentMeta] of entries(state.agents.agentsMeta)) {
     const toolIds = agentMeta.tools ?? []
@@ -622,6 +686,27 @@ export function analyzeDeployment(
       }
     }
   }
+  if (addonUnitByRpcName.size > 0) {
+    const catchAll = prefixed('/rpc/:rpcName')
+    for (const unit of units) {
+      if (addonUnitByRpcName.has(unit.functionIds[0] ?? '')) continue
+      const servesCatchAll = unit.handlers.some(
+        (handler) =>
+          handler.type === 'fetch' &&
+          handler.routes.some((route) => route.route === catchAll)
+      )
+      if (!servesCatchAll) continue
+      const dispatch = { ...(unit.dispatch ?? {}) }
+      for (const [rpcName, unitName] of addonUnitByRpcName) {
+        dispatch[rpcName] = unitName
+        if (!unit.dependsOn.includes(unitName)) {
+          unit.dependsOn.push(unitName)
+        }
+      }
+      unit.dispatch = dispatch
+    }
+  }
+
   const byNamespace = (
     a: UnscopedAddon | GrantedAddon,
     b: UnscopedAddon | GrantedAddon

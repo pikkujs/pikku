@@ -63,3 +63,49 @@ describe('collectFilterNames - agents invoked from a function body', () => {
     assert.deepEqual(names(callingUnit()), ['askTheHouse'])
   })
 })
+
+describe('collectFilterNames - addon units', () => {
+  const addonUnit = (): DeploymentUnit => ({
+    name: 'addon-console',
+    role: 'function',
+    target: 'serverless',
+    functionIds: ['console:runSecurityAudit'],
+    services: [],
+    dependsOn: [],
+    handlers: [
+      {
+        type: 'fetch',
+        routes: [
+          {
+            method: 'post',
+            route: '/rpc/console:runSecurityAudit',
+            pikkuFuncId: 'console:runSecurityAudit',
+          },
+          {
+            method: 'post',
+            route: '/remote/rpc/console:runSecurityAudit',
+            pikkuFuncId: 'console:runSecurityAudit',
+          },
+        ],
+      },
+    ],
+    tags: [],
+  })
+
+  const names = () =>
+    collectFilterNames(addonUnit(), manifestWithAgent(), inspectorState, true)
+
+  test('the addon function id joins the filter', () => {
+    assert.ok(names().includes('console:runSecurityAudit'))
+  })
+
+  test('the RPC catch-all scaffold joins the filter', () => {
+    assert.ok(names().includes('rpcCaller'))
+    assert.ok(names().includes('/rpc/:rpcName'))
+  })
+
+  test('the remote RPC scaffold joins the filter', () => {
+    assert.ok(names().includes('remoteRPCHandler'))
+    assert.ok(names().includes('/remote/rpc/:rpcName'))
+  })
+})
