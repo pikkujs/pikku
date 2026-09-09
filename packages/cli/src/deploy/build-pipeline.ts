@@ -428,7 +428,31 @@ export async function runBuildPipeline(options: {
       codegenErrors.push(...serverCodegenErrors)
 
       // Replace individual server units with the merged one in the manifest
+      const mergedNames = new Set(serverUnits.map((u) => u.name))
       manifest.units = [...serverlessUnits, mergedServerUnit]
+
+      // Anything that named one of the units just folded away has to follow it,
+      // or the manifest ships a queue consumer and a cron pointing at a unit
+      // that no longer exists.
+      for (const queue of manifest.queues) {
+        if (mergedNames.has(queue.consumerUnit)) {
+          queue.consumerUnit = serverUnitName
+        }
+      }
+      for (const task of manifest.scheduledTasks) {
+        if (mergedNames.has(task.unitName)) {
+          task.unitName = serverUnitName
+        }
+      }
+      for (const unit of manifest.units) {
+        unit.dependsOn = [
+          ...new Set(
+            unit.dependsOn.map((dep) =>
+              mergedNames.has(dep) ? serverUnitName : dep
+            )
+          ),
+        ].filter((dep) => dep !== unit.name)
+      }
 
       logger.info(
         `  Server container: ${serverUnits.length} functions merged into one unit`

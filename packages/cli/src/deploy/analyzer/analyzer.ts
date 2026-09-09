@@ -108,13 +108,16 @@ export function analyzeDeployment(
   const graphMeta = withoutScenarioWorkflows(state.workflows.graphMeta)
   const httpMeta = state.http.meta
 
+  const tagIndex = buildFunctionTagIndex(state, functionsMeta)
+  const tagsFor = (funcId: string) => tagIndex.get(funcId) ?? []
+
   const resolver = createUnitResolver(options.grouping, {
     routesForFunction: (funcId) =>
       collectHttpRoutes(httpMeta, funcId).flatMap((r) => [
         r.route,
         prefixed(r.route),
       ]),
-    tagsForFunction: (funcId) => functionsMeta[funcId]?.tags ?? [],
+    tagsForFunction: tagsFor,
   })
 
   const addFunctionUnit = (unit: DeploymentUnit) => {
@@ -329,7 +332,7 @@ export function analyzeDeployment(
       ),
       dependsOn: [],
       handlers,
-      tags: funcMeta.tags ?? [],
+      tags: tagsFor(funcId),
       ...(invokedAgents.length > 0 && { invokedAgents }),
     })
   }
@@ -505,7 +508,7 @@ export function analyzeDeployment(
       services: [],
       dependsOn: mcpFuncUnitNames,
       handlers: [{ type: 'fetch', routes: [] }],
-      tags: collectTags(allMcpIds, functionsMeta),
+      tags: collectTags(allMcpIds, tagsFor),
     })
 
     mcpEndpoints.push({
@@ -589,7 +592,7 @@ export function analyzeDeployment(
           ),
           dependsOn: [],
           handlers: [{ type: 'fetch', routes: [] }],
-          tags: funcMeta.tags ?? [],
+          tags: tagsFor(funcId),
           ...(invokedAgents.length > 0 && { invokedAgents }),
         })
       }
@@ -1136,16 +1139,75 @@ export { toSafeKebab } from './naming.js'
 
 function collectTags(
   funcIds: string[],
-  functionsMeta: Record<string, FunctionMeta>
+  tagsFor: (funcId: string) => string[]
 ): string[] {
   const tags = new Set<string>()
   for (const id of funcIds) {
-    const meta = functionsMeta[id]
-    if (meta?.tags) {
-      for (const tag of meta.tags) tags.add(tag)
-    }
+    for (const tag of tagsFor(id)) tags.add(tag)
   }
   return [...tags]
+}
+
+/**
+ * Every tag that applies to a function, from the function itself and from every
+ * wiring that reaches it.
+ *
+ * Tags are almost always written on the wiring — `wireHTTP({ tags: ['todos'] })`
+ * — not on the `pikkuFunc`, so reading `FunctionMeta.tags` alone sees nothing in
+ * a typical project. `deploy.grouping` matches on the tags a user actually
+ * wrote, which means the union.
+ */
+function buildFunctionTagIndex(
+  state: InspectorState,
+  functionsMeta: Record<string, FunctionMeta>
+): Map<string, string[]> {
+  const index = new Map<string, Set<string>>()
+
+  const add = (funcId: string | undefined, tags: string[] | undefined) => {
+    if (!funcId || !tags?.length) return
+    let set = index.get(funcId)
+    if (!set) {
+      set = new Set()
+      index.set(funcId, set)
+    }
+    for (const tag of tags) set.add(tag)
+  }
+
+  for (const [funcId, meta] of entries(functionsMeta)) {
+    add(funcId, meta.tags)
+  }
+
+  for (const method of HTTP_METHODS) {
+    const methodRoutes = state.http?.meta?.[method]
+    if (!methodRoutes) continue
+    for (const routeMeta of values(methodRoutes)) {
+      add(routeMeta.pikkuFuncId, routeMeta.tags)
+    }
+  }
+
+  for (const meta of values(state.queueWorkers?.meta ?? {})) {
+    add(meta.pikkuFuncId, meta.tags)
+  }
+
+  for (const meta of values(state.scheduledTasks?.meta ?? {})) {
+    add(meta.pikkuFuncId, meta.tags)
+  }
+
+  for (const meta of [
+    ...values(state.mcpEndpoints?.toolsMeta ?? {}),
+    ...values(state.mcpEndpoints?.resourcesMeta ?? {}),
+    ...values(state.mcpEndpoints?.promptsMeta ?? {}),
+  ]) {
+    add(meta.pikkuFuncId, meta.tags)
+  }
+
+  for (const channelMeta of values(state.channels?.meta ?? {})) {
+    for (const funcId of collectChannelFunctionIds(channelMeta)) {
+      add(funcId, channelMeta.tags)
+    }
+  }
+
+  return new Map([...index].map(([funcId, tags]) => [funcId, [...tags]]))
 }
 
 // ---------------------------------------------------------------------------

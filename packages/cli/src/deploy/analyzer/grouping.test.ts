@@ -311,3 +311,44 @@ describe('deploy.grouping - refusals', () => {
     )
   })
 })
+
+describe('deploy.grouping - tags written on a wiring', () => {
+  const wiringTagged = (grouping?: GroupingConfig) => {
+    const s = state() as any
+    s.http.meta.post['/api/webhooks/stripe'].tags = ['webhooks']
+    s.queueWorkers.meta.emails.tags = ['webhooks']
+    s.scheduledTasks.meta.nightly.tags = ['webhooks']
+    return analyzeDeployment(s as InspectorState, {
+      projectId: 'test',
+      serverlessIncompatible: ['fileStore'],
+      grouping,
+    })
+  }
+
+  test('an http wiring tag groups the function it wires', () => {
+    const units = wiringTagged({
+      rules: [{ unit: 'webhooks', tags: ['webhooks'] }],
+    }).units.filter((u) => u.role === 'function')
+    const webhooks = units.find((u) => u.name === 'webhooks')
+    assert.ok(webhooks, 'no unit named webhooks')
+    assert.ok(webhooks.functionIds.includes('handleWebhook'))
+  })
+
+  test('queue and cron wiring tags group too', () => {
+    const webhooks = wiringTagged({
+      rules: [{ unit: 'webhooks', tags: ['webhooks'] }],
+    }).units.find((u) => u.name === 'webhooks')
+    assert.deepEqual(webhooks?.functionIds.sort(), [
+      'handleWebhook',
+      'nightlyReport',
+      'sendEmail',
+    ])
+  })
+
+  test('the wiring tag reaches the unit it lands on', () => {
+    const unit = wiringTagged()
+      .units.filter((u) => u.role === 'function')
+      .find((u) => u.name === 'handle-webhook')
+    assert.deepEqual(unit?.tags, ['webhooks'])
+  })
+})
