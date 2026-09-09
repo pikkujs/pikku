@@ -1,13 +1,10 @@
+import type { GroupingRule } from '@pikku/deploy'
+
 import { toSafeKebab } from './naming.js'
 
 export type GroupingStrategy = 'function' | 'single'
 
-export interface GroupingRule {
-  unit: string
-  tags?: string[]
-  addon?: string
-  routes?: string[]
-}
+export type { GroupingRule } from '@pikku/deploy'
 
 export interface GroupingConfig {
   strategy?: GroupingStrategy

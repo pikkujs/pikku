@@ -8,6 +8,7 @@
  */
 
 import {
+  incompatibleServicesFor,
   resolveDeployTarget,
   type InspectorState,
   type SerializedWorkflowGraph,
@@ -161,6 +162,15 @@ export function analyzeDeployment(
       if (!existing.tags.includes(tag)) {
         existing.tags.push(tag)
       }
+    }
+    if (unit.targetForcedBy?.length) {
+      const forcedBy = existing.targetForcedBy ?? []
+      for (const svc of unit.targetForcedBy) {
+        if (!forcedBy.includes(svc)) {
+          forcedBy.push(svc)
+        }
+      }
+      existing.targetForcedBy = forcedBy
     }
     for (const handler of unit.handlers) {
       if (handler.type === 'fetch') {
@@ -316,8 +326,12 @@ export function analyzeDeployment(
 
     const invokedAgents = collectInvokedAgents(state, funcId)
 
+    const unitName = unitFor(funcId)
+    const groupedBy = resolver.ruleForUnit(unitName)
+    const forcedBy = incompatibleServicesFor(funcMeta, serverlessIncompatible)
+
     addFunctionUnit({
-      name: unitFor(funcId),
+      name: unitName,
       role: 'function',
       target: resolveDeployTarget(
         funcMeta,
@@ -334,6 +348,8 @@ export function analyzeDeployment(
       handlers,
       tags: tagsFor(funcId),
       ...(invokedAgents.length > 0 && { invokedAgents }),
+      ...(groupedBy && { groupedBy }),
+      ...(forcedBy.length > 0 && { targetForcedBy: forcedBy }),
     })
   }
 
@@ -346,12 +362,14 @@ export function analyzeDeployment(
     }
 
     const unitName = resolver.forAddon(namespace)
+    const addonGroupedBy = resolver.ruleForUnit(unitName)
     const addonIncompatible = new Set(
       state.addonServerlessIncompatible?.get(namespace) ?? []
     )
     const routes: HttpRouteInfo[] = []
     const functionIds: string[] = []
     const services: ServiceRequirement[] = []
+    const addonForcedBy: string[] = []
     let target: 'serverless' | 'server' = defaultTarget
 
     for (const [funcName, funcMeta] of exposed) {
@@ -377,6 +395,11 @@ export function analyzeDeployment(
           services.push(service)
         }
       }
+      for (const svc of incompatibleServicesFor(funcMeta, addonIncompatible)) {
+        if (!addonForcedBy.includes(svc)) {
+          addonForcedBy.push(svc)
+        }
+      }
       if (
         resolveDeployTarget(
           funcMeta,
@@ -398,6 +421,8 @@ export function analyzeDeployment(
       dependsOn: [],
       handlers: [{ type: 'fetch', routes }],
       tags: [],
+      ...(addonGroupedBy && { groupedBy: addonGroupedBy }),
+      ...(addonForcedBy.length > 0 && { targetForcedBy: addonForcedBy }),
     })
   }
 

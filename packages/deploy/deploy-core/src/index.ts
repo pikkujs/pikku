@@ -6,6 +6,7 @@ export type {
   DeploymentUnit,
   DeploymentUnitRole,
   GrantedAddon,
+  GroupingRule,
   HttpRouteInfo,
   MCPEndpointDefinition,
   QueueDefinition,

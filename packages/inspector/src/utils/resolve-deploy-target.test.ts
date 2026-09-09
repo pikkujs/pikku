@@ -2,6 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import {
   IncompatibleDeployTargetError,
+  incompatibleServicesFor,
   resolveDeployTarget,
 } from './resolve-deploy-target.js'
 
@@ -131,5 +132,31 @@ describe('resolveDeployTarget', () => {
       ),
       'server'
     )
+  })
+})
+
+describe('incompatibleServicesFor', () => {
+  test('names every incompatible service the function uses', () => {
+    assert.deepEqual(
+      incompatibleServicesFor(
+        { services: { services: ['kysely', 'pdfService', 'ghostscript'] } },
+        new Set(['pdfService', 'ghostscript'])
+      ),
+      ['pdfService', 'ghostscript']
+    )
+  })
+
+  test('a function on compatible services names none', () => {
+    assert.deepEqual(
+      incompatibleServicesFor(
+        { services: { services: ['kysely'] } },
+        new Set(['pdfService'])
+      ),
+      []
+    )
+  })
+
+  test('a function with no services names none', () => {
+    assert.deepEqual(incompatibleServicesFor({}, new Set(['pdfService'])), [])
   })
 })

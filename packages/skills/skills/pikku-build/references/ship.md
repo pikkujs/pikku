@@ -55,7 +55,10 @@ Two things that bite:
 
 - **Grouping cannot change a deploy target.** Put a `serverlessIncompatible`
   function in a group with serverless ones and the build fails naming both
-  sides. Give it its own rule — that refusal is the design, not a bug.
+  sides. Give it its own rule — that refusal is the design, not a bug. To find
+  the culprit, read `deployment-manifest.json`: a unit carries `targetForcedBy`
+  naming the services that crossed it to `server`, and `groupedBy` naming the
+  rule that made it, so you can see which rule to carve the function out of.
 - **Grouping widens secret scope.** Every function in a unit reads every secret
   that unit is granted, so treat a merge as a security decision too.
 
