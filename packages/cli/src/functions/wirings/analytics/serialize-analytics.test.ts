@@ -86,7 +86,7 @@ describe('serializeAnalytics', () => {
   // What separates a relayed page view from an outcome a function recorded.
   test('relays a client event as client-sourced, with its own clock', () => {
     const { functions } = serializeAnalytics(leaf, [declaration()])
-    assert.match(functions, /analytics!\.record\(event, \{ at \}\)/)
+    assert.match(functions, /analyticsLog!\.record\(event, \{ at \}\)/)
   })
 
   test('leaves the route unauthed and emits no middleware of its own', () => {

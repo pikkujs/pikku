@@ -5,7 +5,7 @@ import { defineAnalyticsEvents } from '@pikku/core/analytics'
  * What this app can measure. **Add a key when you add an event.**
  *
  * The declaration is the input schema of the generated `POST /analytics` ingest
- * and of `services.analytics.record()`, which is what makes it more than
+ * and of `services.analyticsLog.record()`, which is what makes it more than
  * documentation: a name it does not declare fails to compile at the call site
  * and is rejected at the wire, rather than quietly becoming a second series
  * that fragments the dashboard.

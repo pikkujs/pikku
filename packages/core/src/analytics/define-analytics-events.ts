@@ -12,7 +12,7 @@ export type AnalyticsEventDefinitions = Record<string, StandardSchemaV1>
  * Declare what this module can measure.
  *
  * The declaration is the input schema of the generated `POST /analytics`
- * ingest and of `services.analytics.record()`, which is what makes it more than
+ * ingest and of `services.analyticsLog.record()`, which is what makes it more than
  * documentation: a name it does not declare fails to compile at the call site
  * and is rejected at the wire, rather than quietly becoming a second series
  * that fragments the dashboard.

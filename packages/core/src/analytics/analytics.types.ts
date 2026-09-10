@@ -79,7 +79,7 @@ export interface AnalyticsService {
 }
 
 /**
- * What a function records through: `services.analytics`.
+ * What a function records through: `services.analyticsLog`.
  *
  * Buffered for the length of the invocation and flushed when it ends, so a
  * function that records three events costs the destination one write. Always

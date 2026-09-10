@@ -23,7 +23,7 @@ const alias = (index: number) => `events${index}`
  * Generate the product-analytics ingest.
  *
  * Only the wire and its schemas: the app declares what its events are, pikku
- * validates and identifies them, and `services.analytics` hands them to
+ * validates and identifies them, and `services.analyticsLog` hands them to
  * whatever `AnalyticsService` is wired. Nothing here decides where they are
  * stored.
  *
@@ -117,7 +117,7 @@ export type { AnalyticsEvent } from './analytics.schemas.gen.js'
  * Unauthenticated by necessity: anonymous visitors are most of what this
  * measures.
  *
- * Identity is stamped by \`services.analytics\` from the session and never read
+ * Identity is stamped by \`services.analyticsLog\` from the session and never read
  * from the body, so there is no field a caller could set to attribute events to
  * someone else. A signed-in request records the user; anything else records
  * nothing — no device storage, no visitor id, no consent banner.
@@ -132,9 +132,9 @@ export const analyticsIngest = pikkuSessionlessFunc({
   description: 'Records product-analytics events from a client.',
   input: AnalyticsIngest,
   output: AnalyticsIngestOutput,
-  func: async ({ analytics }, { events }) => {
+  func: async ({ analyticsLog }, { events }) => {
     for (const { at, event } of events) {
-      await analytics!.record(event, { at })
+      await analyticsLog!.record(event, { at })
     }
     return { accepted: events.length }
   },

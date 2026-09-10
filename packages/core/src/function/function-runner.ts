@@ -439,9 +439,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
       //
       // Built on first access rather than up front — most invocations record
       // nothing, and a buffer nobody wrote to is two allocations per call.
-      if (!services.analytics) {
+      if (!services.analyticsLog) {
         services = { ...services }
-        Object.defineProperty(services, 'analytics', {
+        Object.defineProperty(services, 'analyticsLog', {
           get() {
             invocationAnalytics ??= createInvocationAnalytics(
               resolvedSingletonServices.analyticsService ??

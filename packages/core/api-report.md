@@ -220,7 +220,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   coverageService?: CoverageService
   audit?: AuditService
   analyticsService?: AnalyticsService
-  analytics?: AnalyticsLog
+  analyticsLog?: AnalyticsLog
   auditLog?: AuditLog
   sessionStore?: SessionStore
   scopeService?: ScopeService
