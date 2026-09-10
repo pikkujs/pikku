@@ -26,6 +26,11 @@
   --pf-status-ok: #16a34a;
   --pf-status-warn: #b45309;
   --pf-status-error: #dc2626;
+  /* Production is not an error state — borrowing the error red said "something
+     is wrong here" on every healthy prod stage. Violet is the one hue the dock
+     spends nowhere else. */
+  --pf-status-prod: #7c3aed;
+  --pf-status-preview: #0891b2;
 }
 
 :global([data-mantine-color-scheme='dark']) :is(.dockStrip, .flyout, .dockTip) {
@@ -39,6 +44,8 @@
   --pf-status-ok: #4ade80;
   --pf-status-warn: #fbbf24;
   --pf-status-error: #f87171;
+  --pf-status-prod: #a78bfa;
+  --pf-status-preview: #22d3ee;
 }
 
 .dockStrip {
@@ -411,21 +418,19 @@
   transform: translateY(-2px) scale(1.08);
 }
 
-/* The environment ring. Two rings, not one: the inner one is the dock's own
-   fill, so the outer colour reads as a ring rather than a glow at any tile size
-   and on either glass ground.
+/* The environment colours the mark itself rather than ringing it: a ring around
+   a 24px logo is three pixels of chrome, where recolouring the weave changes the
+   thing the eye already tracks.
 
    This stops being decoration the moment a deployment and a workspace share one
    nav: "Operations → Database" is then the same three pixels in both, and one of
    them is customer data. */
 .tile[data-env] .mark {
-  box-shadow:
-    0 0 0 2px var(--pf-dock-fill),
-    0 0 0 4px var(--pf-env);
+  --wm-weave: var(--pf-env);
 }
 
 .tile[data-env='prod'] {
-  --pf-env: var(--pf-status-error);
+  --pf-env: var(--pf-status-prod);
 }
 
 .tile[data-env='staging'] {
@@ -433,7 +438,7 @@
 }
 
 .tile[data-env='preview'] {
-  --pf-env: var(--app-accent);
+  --pf-env: var(--pf-status-preview);
 }
 
 /* The one primary action in the row, so the one filled tile. It carries a
@@ -744,7 +749,7 @@
 }
 
 .envChip[data-env='prod'] {
-  --pf-env: var(--pf-status-error);
+  --pf-env: var(--pf-status-prod);
 }
 
 .envChip[data-env='staging'] {
@@ -752,7 +757,7 @@
 }
 
 .envChip[data-env='preview'] {
-  --pf-env: var(--app-accent);
+  --pf-env: var(--pf-status-preview);
 }
 
 .flyoutItem:hover,
