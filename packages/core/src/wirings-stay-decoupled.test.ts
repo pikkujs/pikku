@@ -31,10 +31,11 @@ const ALLOWED: Record<string, string[]> = {
   // A judge is a degenerate agent — it builds agent messages and runs them —
   // and a grade is dispatched to a queue.
   'agent-scorer': ['agent', 'queue'],
-  // `wire.rpc.agent` — the facade lives with the agent runtime it delegates to.
   // An rpc call is how an installed addon's function is reached, so the runner
-  // resolves the addon instance that owns the namespace.
-  rpc: ['agent', 'addon'],
+  // resolves the addon instance that owns the namespace. `wire.rpc.agent` is
+  // deliberately absent: the runner reaches the facade through state, because a
+  // value import here pins the agent runtime into every deployment unit.
+  rpc: ['addon'],
   gateway: ['http'],
   mcp: ['rpc'],
   trigger: ['rpc'],

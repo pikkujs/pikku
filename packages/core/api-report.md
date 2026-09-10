@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2894 observable things**: 923 exported names, plus
+**2896 observable things**: 925 exported names, plus
 1971 members on the classes and interfaces among them, reachable
 through 53 entry points.
 
@@ -18,7 +18,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
-| `./agent` | 50 | 48 | 81 |
+| `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 73 |
 | `./queue` | 22 | 22 | 71 |
@@ -267,7 +267,7 @@ export interface PikkuPackageState {
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
   trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
+  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
@@ -3212,6 +3212,13 @@ export interface AgentMessage {
   createdAt: Date
 }
 agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
+export type AgentRPCFactory = (
+  wire: PikkuRawWire,
+  options: AgentRPCOptions
+) => PikkuRPC['agent']
+export type AgentRPCOptions = {
+  sessionService?: SessionService<CoreUserSession>
+}
 export interface AgentRunRow {
   runId: string
   agentName: string
@@ -5598,7 +5605,7 @@ export interface PikkuPackageState {
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
   trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
+  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }

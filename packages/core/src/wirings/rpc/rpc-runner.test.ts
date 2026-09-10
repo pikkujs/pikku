@@ -1128,3 +1128,35 @@ describe('rpcService.getContextRPCService', () => {
     assert.deepEqual(await rpc.invoke('echo', { ok: true }), { ok: true })
   })
 })
+
+describe('ContextAwareRPCService.agent', () => {
+  test('refuses when no unit registered the agent runtime', () => {
+    const service = new ContextAwareRPCService(
+      createServices(),
+      { traceId: 'trace-agent' } as never,
+      { requiresAuth: false }
+    )
+
+    assert.throws(() => service.agent, /import @pikku\/core\/agent/)
+  })
+
+  test('builds the facade from the registered factory', () => {
+    const built: unknown[] = []
+    const facade = { run: async () => 'ran' }
+    pikkuState(null, 'agent', 'rpcFactory', ((wire, options) => {
+      built.push({ wire, options })
+      return facade
+    }) as never)
+
+    const service = new ContextAwareRPCService(
+      createServices(),
+      { traceId: 'trace-agent' } as never,
+      { requiresAuth: false }
+    )
+
+    assert.equal(service.agent, facade)
+    assert.deepEqual(built, [
+      { wire: { traceId: 'trace-agent' }, options: { requiresAuth: false } },
+    ])
+  })
+})
