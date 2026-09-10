@@ -409,12 +409,12 @@ describe('runPikkuFunc - Integration Tests', () => {
   })
 
   /**
-   * The runner installs `analytics` on every invocation, so a services
+   * The runner installs `analyticsLog` on every invocation, so a services
    * assertion is about everything else. Its presence is asserted once, on its
    * own.
    */
   const withoutAnalytics = (services: any) => {
-    const { analytics: _analytics, ...rest } = services
+    const { analyticsLog: _analyticsLog, ...rest } = services
     return rest
   }
 
@@ -442,7 +442,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     assert.deepEqual(withoutAnalytics(receivedServices), mockServices)
-    assert.ok(receivedServices.analytics, 'every invocation can record')
+    assert.ok(receivedServices.analyticsLog, 'every invocation can record')
     assert.equal(receivedData, testData)
     assert.ok(receivedWire.rpc)
     assert.equal(receivedWire.session, undefined)

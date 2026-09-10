@@ -69,8 +69,8 @@ export const serializeServicesMap = (
   // destructures one is not asking `createSingletonServices` for it, so marking
   // them required would make every project's factory fail to typecheck for a
   // service it must not build. The generated analytics ingest is exactly this
-  // case: it destructures `analytics`, which the runner supplies.
-  const runnerInstalledServices = ['analytics', 'auditLog']
+  // case: it destructures `analyticsLog`, which the runner supplies.
+  const runnerInstalledServices = ['analyticsLog', 'auditLog']
   runnerInstalledServices.forEach((service) => usedServices.delete(service))
 
   // Create singleton services map: all singleton services with true/false based on usage

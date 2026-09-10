@@ -196,8 +196,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
    * Request-scoped analytics buffer that writes into `analyticsService`.
    * Narrow it to the app's own event union in `SingletonServices` to have
    * `record()` typed against the declared names.
+   *
+   * Named for the buffer rather than the subject, like `auditLog`: `analytics`
+   * is a name an application is likely to have already given a service of its
+   * own, and core has no business taking it.
    */
-  analytics?: AnalyticsLog
+  analyticsLog?: AnalyticsLog
   /**
    * Request-scoped audit buffer that writes into `audit` (the durable sink).
    * Returned as a wire service so the runner flushes it via `close()` when the

@@ -51,7 +51,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
    * project declared and nothing else. The runner installs the buffer; wiring
    * `analyticsService` is what decides where the events go.
    */
-  analytics?: AnalyticsLog<AnalyticsEvent>
+  analyticsLog?: AnalyticsLog<AnalyticsEvent>
 }
 
 export interface Services extends CoreServices<SingletonServices> {}
