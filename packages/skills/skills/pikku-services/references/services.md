@@ -1,6 +1,5 @@
 # Pikku Services (Dependency Injection)
 
-
 ## Before You Start
 
 ```bash
@@ -194,6 +193,13 @@ const createSingletonServices = pikkuServices(async (config) => {
   return { config, logger, jwt, database }
 })
 ```
+
+A deployment split regenerates this manifest **per unit**, so the same
+`services.ts` sees a different manifest in each bundle and each unit builds only
+what its own functions, middleware and permissions reach. A `services.ts` that
+constructs unconditionally gets none of that: every unit pays for every service,
+and the split buys nothing but duplicated bytes. Branching on the manifest is
+what makes the split real.
 
 ### Audit Wire Service
 

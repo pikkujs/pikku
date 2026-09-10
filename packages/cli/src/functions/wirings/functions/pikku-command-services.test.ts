@@ -172,6 +172,54 @@ describe('pikkuServices', () => {
     assert.match(content, /'auth': true,/)
   })
 
+  const createAgentContext = async (
+    servicesFile: string,
+    agentsMeta: Record<string, unknown>
+  ) => {
+    const context = await createContext(servicesFile)
+    const visitState = await context.getInspectorState()
+    visitState.serviceAggregation.allSingletonServices = [
+      'agentRunService',
+      'todoStore',
+    ]
+    return {
+      ...context,
+      config: { ...context.config, scaffold: { agent: true } },
+      getInspectorState: async () => ({
+        ...visitState,
+        agents: { agentsMeta },
+      }),
+    }
+  }
+
+  test('leaves agentRunService optional when the state carries no agent', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'pikku-command-services-'))
+    const servicesFile = join(outDir, 'pikku-services.gen.ts')
+
+    await (pikkuServices as any).func(
+      await createAgentContext(servicesFile, {}),
+      undefined,
+      {}
+    )
+
+    const content = await readFile(servicesFile, 'utf8')
+    assert.match(content, /'agentRunService': false,/)
+  })
+
+  test('marks agentRunService required when the state carries an agent', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'pikku-command-services-'))
+    const servicesFile = join(outDir, 'pikku-services.gen.ts')
+
+    await (pikkuServices as any).func(
+      await createAgentContext(servicesFile, { supportAgent: {} }),
+      undefined,
+      {}
+    )
+
+    const content = await readFile(servicesFile, 'utf8')
+    assert.match(content, /'agentRunService': true,/)
+  })
+
   // An unresolved `SingletonServices` used to be written out as an empty map,
   // which made every service optional downstream and surfaced as a scatter of
   // "possibly undefined" errors in files that had not changed. The type is

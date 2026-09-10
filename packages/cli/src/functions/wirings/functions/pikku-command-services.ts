@@ -60,7 +60,9 @@ export const serializeServicesMap = (
   // The generated public-agent permission (isThreadOwner) always destructures
   // agentRunService, but agent.gen.ts is written after requiredServices is
   // computed from inspecting hand-written sources, so the inspector never
-  // sees that usage — force it required whenever the agent scaffold runs.
+  // sees that usage. The caller decides whether this state actually carries an
+  // agent surface — the scaffold being configured is a project-wide fact and
+  // says nothing about a single deployment unit.
   if (agentScaffoldEnabled) {
     usedServices.add('agentRunService')
   }
@@ -175,7 +177,10 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       wireServicesImport,
       config.addonName ? visitState.addonRequiredParentServices : [],
       Boolean(visitState.auth?.definition),
-      Boolean(config.scaffold?.agent)
+      Boolean(
+        config.scaffold?.agent &&
+        Object.keys(visitState.agents?.agentsMeta ?? {}).length > 0
+      )
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
   },
