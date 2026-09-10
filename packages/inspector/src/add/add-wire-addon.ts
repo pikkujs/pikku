@@ -128,6 +128,7 @@ export function addWireAddon(
   logger.debug(`• Found wireAddon: ${name} → ${pkg}`)
   state.rpc.wireAddonDeclarations.set(name, {
     package: pkg,
+    file: node.getSourceFile().fileName,
     rpcEndpoint,
     mcp,
     auth,

@@ -614,6 +614,8 @@ export interface InspectorState {
       string,
       {
         package: string
+        /** The app source file whose `wireAddon` call declared this instance. */
+        file?: string
         rpcEndpoint?: string
         mcp?: boolean
         /**

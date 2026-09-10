@@ -164,6 +164,7 @@ export interface SerializableInspectorState {
         string,
         {
           package: string
+          file?: string
           rpcEndpoint?: string
           remote?: boolean
           hasAuth?: boolean
