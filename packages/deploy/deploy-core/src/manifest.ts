@@ -68,6 +68,13 @@ export interface DeploymentUnit {
    */
   groupedBy?: GroupingRule
   /**
+   * The services that named this unit under `deploy.grouping.strategy:
+   * 'services'` — the set left after the ones every unit builds regardless.
+   * Absent under every other strategy. Recorded because `services` below is
+   * keyed by capability and so cannot tell two different service sets apart.
+   */
+  servicesKey?: string[]
+  /**
    * Services in `deploy.serverlessIncompatible` that forced `target: 'server'`.
    * Absent when the target came from a function's own `deploy` flag or from
    * `defaultTarget`, so its presence is what distinguishes a chosen target

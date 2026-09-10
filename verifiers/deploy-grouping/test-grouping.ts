@@ -34,6 +34,7 @@ type Unit = {
     addon?: string
     routes?: string[]
   }
+  servicesKey?: string[]
   targetForcedBy?: string[]
 }
 type Manifest = {
@@ -297,6 +298,117 @@ try {
         .dependsOn) {
         assert(names.has(dep), `${unit.name} depends on missing unit ${dep}`)
       }
+    }
+  })
+
+  console.log("\nGrouped: strategy 'services'")
+  withGrouping({ strategy: 'services' })
+  const byServices = runPlan()
+
+  assert(
+    byServices.ok,
+    `services-strategy plan failed:\n${!byServices.ok ? byServices.output : ''}`
+  )
+  const svcUnits = functionUnits(byServices.manifest)
+
+  check('it produces fewer units than one-per-function', () => {
+    assert(
+      svcUnits.length < baseUnits.length,
+      `${svcUnits.length} units vs ${baseUnits.length} ungrouped — nothing merged`
+    )
+  })
+
+  // The server units are merged into one container downstream of the analyzer,
+  // so it is the only unit in the manifest that the strategy never named.
+  const SERVER_CONTAINER = 'pikku-server-container'
+
+  check('every app unit is named after its service set', () => {
+    const stray = svcUnits.filter(
+      (u) =>
+        !u.name.startsWith('svc-') &&
+        !u.name.startsWith('addon-') &&
+        u.name !== SERVER_CONTAINER
+    )
+    assert(
+      stray.length === 0,
+      `not named by service set: ${stray.map((u) => u.name).join(', ')}`
+    )
+  })
+
+  check('no function was lost or duplicated', () => {
+    const before = baseUnits.flatMap((u) => u.functionIds).sort()
+    const after = svcUnits.flatMap((u) => u.functionIds).sort()
+    assert(
+      after.join(',') === before.join(','),
+      `functions changed:\n  ungrouped: ${before.join(', ')}\n  grouped:   ${after.join(', ')}`
+    )
+  })
+
+  check('every service unit records the key that made it', () => {
+    for (const unit of svcUnits) {
+      if (unit.name.startsWith('addon-') || unit.name === SERVER_CONTAINER)
+        continue
+      assert(
+        Array.isArray(unit.servicesKey),
+        `${unit.name} does not record the service set it was named for`
+      )
+    }
+  })
+
+  check('two units never share one service key', () => {
+    // The whole premise: if two units need the same services they should have
+    // been one unit, and the strategy did not do its job. Compared on the
+    // recorded key, not on `services` — that list is keyed by capability, so
+    // workflowService and workflowRunService both read as `workflow-state`.
+    const seen = new Map<string, string>()
+    for (const unit of svcUnits) {
+      if (!unit.servicesKey) continue
+      const key = `${unit.target}:${unit.servicesKey.join(',')}`
+      const other = seen.get(key)
+      assert(!other, `${unit.name} and ${other} share the key (${key})`)
+      seen.set(key, unit.name)
+    }
+  })
+
+  check('a server unit is named apart from its serverless twin', () => {
+    // Why this strategy never hits the mixed-target refusal below: the target
+    // is part of the key. Keying on services alone merged `processReminder@v2`
+    // with `dailySummary` — same services, one serverless and one server — and
+    // the whole plan was refused.
+    const server = svcUnits.filter((u) => u.target === 'server')
+    assert(server.length > 0, 'the template has no server-target unit to check')
+    for (const unit of server) {
+      assert(
+        unit.name.endsWith('-server') ||
+          unit.name.startsWith('addon-') ||
+          unit.name === SERVER_CONTAINER,
+        `${unit.name} runs on server but is not named as one`
+      )
+    }
+  })
+
+  check('no queue or cron points at a unit that no longer exists', () => {
+    const names = new Set(byServices.manifest.units.map((u) => u.name))
+    for (const queue of byServices.manifest.queues) {
+      assert(
+        names.has(queue.consumerUnit),
+        `queue ${queue.name} points at missing unit ${queue.consumerUnit}`
+      )
+    }
+    for (const task of byServices.manifest.scheduledTasks) {
+      assert(
+        names.has(task.unitName),
+        `cron ${task.name} points at missing unit ${task.unitName}`
+      )
+    }
+  })
+
+  check('every service unit actually bundles', () => {
+    for (const unit of svcUnits) {
+      if (unit.target !== 'serverless') continue
+      const bundle = join(UNITS_DIR, unit.name, 'bundle.js')
+      assert(existsSync(bundle), `no bundle at ${bundle}`)
+      assert(statSync(bundle).size > 0, `${unit.name} bundled empty`)
     }
   })
 

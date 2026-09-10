@@ -42,10 +42,36 @@ for each. `deploy.grouping` in `pikku.config.json` sets the shape:
 }
 ```
 
-`strategy` is the fallback for a function no rule matches — `function` (one unit
-each, the default) or `single` (one shared unit). Rules are ordered, first match
-wins, and match on `tags`, an `addon` namespace or `routes` globs; under
-`function` a rule merges, under `single` it carves out.
+`strategy` is the fallback for a function no rule matches:
+
+| strategy | fallback |
+| --- | --- |
+| `function` | one unit each (the default) |
+| `services` | one unit per distinct set of singleton services |
+| `single` | one shared unit |
+
+Rules are ordered, first match wins, and match on `tags`, an `addon` namespace
+or `routes` globs. A rule always beats the strategy, so under `function` a rule
+merges and under `single` or `services` it carves out.
+
+`services` is the middle ground when `single` is too coarse. Functions are keyed
+on the singleton services their bodies destructure, minus the ones every unit
+builds anyway (`config`, `logger`, `variables`, `schema`, `secrets`, and the
+per-request `rpc`/`mcp`/`channel`/`userSession`). Units are named for that set —
+`svc-todo-store`, `svc-event-hub-todo-store`, `svc-base` for functions needing
+nothing else — and each records it as `servicesKey` in the manifest. On the
+`templates/functions` app it turns 44 units into 10.
+
+The deploy target is part of the key, so a `server` unit is named `-server` and
+can never merge with its serverless twin. That is what keeps `services` from
+tripping the mixed-target refusal below: two functions can carry identical
+services and still run in different places, because a function may name
+`deploy: 'server'` itself without any service crossing it.
+
+Read the shape before adopting it. The win depends entirely on how varied the
+app's service use is: an app where nearly every function reaches the same
+database collapses to roughly `single` with a few carve-outs, which may or may
+not be what you want.
 
 `tags` matches the tags a function inherits from its wirings — `wireHTTP({ ...,
 tags: ['pdf'] })` — as well as any on the function itself, which is where almost
