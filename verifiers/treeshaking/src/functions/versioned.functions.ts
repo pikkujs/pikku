@@ -9,8 +9,8 @@ export const analyzeDataV1 = pikkuFunc<{ id: string }, void>({
 })
 
 export const analyzeData = pikkuFunc<{ id: string }, void>({
-  func: async ({ analytics, storage }, data) => {
-    await analytics.track('analyze', { id: data.id })
+  func: async ({ tracker, storage }, data) => {
+    await tracker.track('analyze', { id: data.id })
     await storage.save(data.id, 'v2 result')
   },
 })

@@ -65,12 +65,9 @@ export const serializeServicesMap = (
     usedServices.add('agentRunService')
   }
 
-  // Services the function runner installs on every invocation. A function that
-  // destructures one is not asking `createSingletonServices` for it, so marking
-  // them required would make every project's factory fail to typecheck for a
-  // service it must not build. The generated analytics ingest is exactly this
-  // case: it destructures `analyticsLog`, which the runner supplies.
-  const runnerInstalledServices = ['analyticsLog', 'auditLog']
+  // Installed by the runner, so destructuring one must not make it required of
+  // `createSingletonServices` — the generated analytics ingest does exactly that.
+  const runnerInstalledServices = ['analytics', 'auditLog']
   runnerInstalledServices.forEach((service) => usedServices.delete(service))
 
   // Create singleton services map: all singleton services with true/false based on usage

@@ -432,16 +432,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
         services = { ...services, auditLog: invocationAuditLog }
       }
-      // Unconditional, unlike the audit: analytics has no per-function config
-      // to opt in with, and an app that declared events expects every function
-      // to be able to record one. With no service wired the events go to the
-      // logger rather than nowhere.
-      //
-      // Built on first access rather than up front — most invocations record
-      // nothing, and a buffer nobody wrote to is two allocations per call.
-      if (!services.analyticsLog) {
+      // Unconditional, unlike the audit — every function can record. Built on
+      // first access, since most invocations record nothing.
+      if (!services.analytics) {
         services = { ...services }
-        Object.defineProperty(services, 'analyticsLog', {
+        Object.defineProperty(services, 'analytics', {
           get() {
             invocationAnalytics ??= createInvocationAnalytics(
               resolvedSingletonServices.analyticsService ??

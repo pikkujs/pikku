@@ -21,12 +21,12 @@ its events beside its functions — and the CLI unions them into the generated
 `/analytics` ingest and its schemas. The inspector finds the declarations the
 way it finds every other wiring, so there is no path to configure.
 
-Where events go is not part of the declaration. `services.analyticsLog` is the
+Where events go is not part of the declaration. `services.analytics` is the
 request-scoped buffer a function records into, typed against the declared
 names:
 
 ```ts
-await analyticsLog.record({ name: 'todo_created', priority: 'high' })
+await analytics.record({ name: 'todo_created', priority: 'high' })
 ```
 
 It stamps identity, trace and wire fields from the invocation, buffers for the

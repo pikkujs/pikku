@@ -9,14 +9,7 @@ import type {
   AnalyticsService,
 } from './analytics.types.js'
 
-/**
- * Split a declared event into the shape a service stores.
- *
- * The app declares events as `{ name, ...props }`, so removing the
- * discriminator here — rather than in each service — keeps `props` free of a
- * field that is already the series key, which would otherwise be stored twice
- * and diverge under renames.
- */
+/** Removes the discriminator, so `props` is free of the series key. */
 export const flattenAnalyticsEvent = (
   event: AnalyticsEventBase,
   at?: number
@@ -25,14 +18,6 @@ export const flattenAnalyticsEvent = (
   return { name, props, ...(at === undefined ? {} : { at }) }
 }
 
-/**
- * The buffer one invocation records into.
- *
- * Identity, trace and wire fields are resolved here rather than in the service
- * for the same reason {@link flattenAnalyticsEvent} lives here: two
- * implementations that each derived the user from the session would eventually
- * disagree about who it was.
- */
 class InvocationAnalyticsLog implements AnalyticsLog {
   private readonly buffer: AnalyticsRecord[] = []
 

@@ -187,21 +187,13 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */
   coverageService?: CoverageService
   audit?: AuditService
-  /**
-   * Where product-analytics events go. The runner installs a logging
-   * implementation when this is unset, so events are never silently dropped.
-   */
+  /** Where product-analytics events go; unset means the logger. */
   analyticsService?: AnalyticsService
   /**
-   * Request-scoped analytics buffer that writes into `analyticsService`.
-   * Narrow it to the app's own event union in `SingletonServices` to have
-   * `record()` typed against the declared names.
-   *
-   * Named for the buffer rather than the subject, like `auditLog`: `analytics`
-   * is a name an application is likely to have already given a service of its
-   * own, and core has no business taking it.
+   * Request-scoped buffer writing into `analyticsService`. Narrow it to the
+   * app's own event union in `SingletonServices` to type `record()`.
    */
-  analyticsLog?: AnalyticsLog
+  analytics?: AnalyticsLog
   /**
    * Request-scoped audit buffer that writes into `audit` (the durable sink).
    * Returned as a wire service so the runner flushes it via `close()` when the
