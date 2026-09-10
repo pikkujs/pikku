@@ -7,6 +7,7 @@ import {
   currentBranch,
   resolveRef,
 } from '../lib/git.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { added, changed, removed, dim, table } from '../lib/output.js'
 import {
@@ -186,7 +187,7 @@ const EXIT_BY_OUTCOME: Record<ApplyOutput['outcome'], number> = {
  */
 export const branchFromHead = (head: string): string => {
   if (head === 'HEAD' || head === '') {
-    throw new Error(
+    throw new FabricPreconditionError(
       'Deployment blocked: HEAD is detached, so there is no current branch to deploy.\nCheck out a branch, or name the target: `pikku fabric deploy apply <branch>`.'
     )
   }
@@ -205,11 +206,13 @@ export const FabricDeployApply = pikkuSessionlessFunc({
 
     const timeoutSeconds = input.timeout ?? DEFAULT_TIMEOUT_SECONDS
     if (timeoutSeconds <= 0) {
-      throw new Error('--timeout must be a positive number of seconds.')
+      throw new FabricPreconditionError(
+        '--timeout must be a positive number of seconds.'
+      )
     }
 
     if (input.deploymentId && (input.branch || input.production)) {
-      throw new Error(
+      throw new FabricPreconditionError(
         '--deployment-id already names its target — drop the branch/--production.'
       )
     }
@@ -256,12 +259,12 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       if (!input.autoApprove) {
         const target = `${branch} @ ${resolved.slice(0, 8)}`
         if (!process.stdin.isTTY) {
-          throw new Error(
+          throw new FabricPreconditionError(
             `Refusing to deploy ${target} without confirmation — re-run with --auto-approve to deploy non-interactively.`
           )
         }
         if (!(await promptConfirm(`Deploy ${target}?`))) {
-          throw new Error('Deploy aborted.')
+          throw new FabricPreconditionError('Deploy aborted.')
         }
       }
 

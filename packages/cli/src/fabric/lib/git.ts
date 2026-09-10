@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { FabricPreconditionError } from './errors.js'
 
 /**
  * Local git probes for the deploy safety checks (clean tree, HEAD == remote,
@@ -180,28 +181,29 @@ export interface DeploySafetyResult {
 }
 
 /**
- * Spec §10 deploy ref safety checks. Throws on any failure with a CLI-friendly
- * message; returns the resolved commit context on pass.
+ * Spec §10 deploy ref safety checks. Throws `FabricPreconditionError` on any
+ * failure, with a message written to be the whole output; returns the resolved
+ * commit context on pass.
  */
 export async function assertDeploySafety(
   cwd?: string
 ): Promise<DeploySafetyResult> {
   if (!(await isWorkingTreeClean(cwd))) {
-    throw new Error(
+    throw new FabricPreconditionError(
       'Deployment blocked: uncommitted changes detected.\nCommit and push your changes before deploying.'
     )
   }
   const branch = await currentBranch(cwd)
   const upstream = await upstreamBranch(cwd)
   if (!upstream) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `Deployment blocked: branch ${branch} has no upstream.\nPush it (\`git push -u origin ${branch}\`) before deploying.`
     )
   }
   const head = await headSha(cwd)
   const remote = await remoteHeadSha(upstream, cwd)
   if (head !== remote) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `Deployment blocked: local HEAD ${head.slice(0, 8)} ≠ remote ${remote.slice(0, 8)} (${upstream}).\nPush or pull before deploying.`
     )
   }
@@ -221,21 +223,21 @@ export async function assertNamedBranchDeploySafety(
   try {
     head = await localBranchHeadSha(branch, cwd)
   } catch (error: any) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `Deployment blocked: local branch ${branch} does not exist (${error.message}).\nFetch or create it before deploying.`
     )
   }
 
   const upstream = await upstreamForBranch(branch, cwd)
   if (!upstream) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `Deployment blocked: branch ${branch} has no upstream.\nPush it (\`git push -u origin ${branch}\`) before deploying.`
     )
   }
 
   const remote = await remoteHeadSha(upstream, cwd)
   if (head !== remote) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `Deployment blocked: ${branch} ${head.slice(0, 8)} ≠ remote ${remote.slice(0, 8)} (${upstream}).\nPush or pull ${branch} before deploying.`
     )
   }
