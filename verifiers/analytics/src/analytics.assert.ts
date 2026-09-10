@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict'
-import { after, beforeEach, before, describe, test } from 'node:test'
+import { beforeEach, before, describe, test } from 'node:test'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 import { fetch } from '@pikku/core/http'
 import {
-  setAnalyticsSink,
-  type AnalyticsEventInput,
-  type AnalyticsIdentity,
-} from '@pikku/core/analytics'
-import { createConfig, createSingletonServices } from './services.js'
+  collectedAnalytics,
+  createConfig,
+  createSingletonServices,
+} from './services.js'
 
 /**
  * The whole ingest, generated from `src/analytics.ts` and nothing else:
@@ -21,10 +20,6 @@ import { createConfig, createSingletonServices } from './services.js'
  * explicitly inspected is registered nowhere, and every test below 404s.
  */
 
-type Batch = { events: AnalyticsEventInput[]; identity: AnalyticsIdentity }
-
-const collected: Batch[] = []
-
 const post = (body: unknown) =>
   fetch(
     new Request('http://localhost/analytics', {
@@ -34,18 +29,16 @@ const post = (body: unknown) =>
     })
   )
 
+/** Every event across every batch the invocation flushed. */
+const recorded = () => collectedAnalytics.flat()
+
 before(async () => {
   const config = await createConfig()
   await createSingletonServices(config)
-  setAnalyticsSink(async (_services, events, identity) => {
-    collected.push({ events, identity })
-  })
 })
 
-after(() => setAnalyticsSink(undefined))
-
 beforeEach(() => {
-  collected.length = 0
+  collectedAnalytics.length = 0
 })
 
 describe('the generated analytics ingest', () => {
@@ -64,7 +57,7 @@ describe('the generated analytics ingest', () => {
     assert.deepEqual(await response.json(), { accepted: 1 })
   })
 
-  test('hands the sink the event name, its props and the client timestamp', async () => {
+  test('hands the service the event name, its props and the client timestamp', async () => {
     await post({
       events: [
         {
@@ -78,14 +71,39 @@ describe('the generated analytics ingest', () => {
       ],
     })
 
-    assert.equal(collected.length, 1)
-    assert.deepEqual(collected[0]!.events, [
-      {
-        name: 'checkout_completed',
-        props: { amount: 42, currency: 'EUR' },
-        at: 1_700_000_000_000,
-      },
-    ])
+    const events = recorded()
+    assert.equal(events.length, 1)
+    assert.equal(events[0]!.name, 'checkout_completed')
+    assert.deepEqual(events[0]!.props, { amount: 42, currency: 'EUR' })
+    assert.equal(events[0]!.at, 1_700_000_000_000)
+  })
+
+  /**
+   * The only thing separating a page view a browser sent from an outcome a
+   * function recorded, once both are in the same series.
+   */
+  test('marks a relayed event as client-sourced', async () => {
+    await post({
+      events: [{ event: { name: 'page_viewed', path: '/' } }],
+    })
+
+    assert.equal(recorded()[0]!.source, 'client')
+  })
+
+  /**
+   * One flush per invocation: a batch the browser sent as one request costs the
+   * destination one write.
+   */
+  test('flushes the whole beacon as a single batch', async () => {
+    await post({
+      events: [
+        { event: { name: 'page_viewed', path: '/' } },
+        { event: { name: 'page_viewed', path: '/pricing' } },
+      ],
+    })
+
+    assert.equal(collectedAnalytics.length, 1)
+    assert.equal(collectedAnalytics[0]!.length, 2)
   })
 
   /**
@@ -97,7 +115,7 @@ describe('the generated analytics ingest', () => {
       events: [{ event: { name: 'page_viewed', path: '/' } }],
     })
 
-    assert.deepEqual(collected[0]!.identity, { userId: null })
+    assert.equal(recorded()[0]!.userIdentity.userId, null)
   })
 
   test('rejects an event the union does not declare', async () => {
@@ -106,7 +124,7 @@ describe('the generated analytics ingest', () => {
     })
 
     assert.equal(response.status, 422)
-    assert.equal(collected.length, 0)
+    assert.equal(recorded().length, 0)
   })
 
   test('rejects a declared event missing a required prop', async () => {
@@ -115,7 +133,7 @@ describe('the generated analytics ingest', () => {
     })
 
     assert.equal(response.status, 422)
-    assert.equal(collected.length, 0)
+    assert.equal(recorded().length, 0)
   })
 
   /**
@@ -130,13 +148,13 @@ describe('the generated analytics ingest', () => {
     })
 
     assert.equal(response.status, 422)
-    assert.equal(collected.length, 0)
+    assert.equal(recorded().length, 0)
   })
 
   test('rejects an empty batch', async () => {
     const response = await post({ events: [] })
 
     assert.equal(response.status, 422)
-    assert.equal(collected.length, 0)
+    assert.equal(recorded().length, 0)
   })
 })

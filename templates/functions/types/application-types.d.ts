@@ -12,6 +12,8 @@ import type {
   AgentRunnerService,
   AgentRunStateService,
 } from '@pikku/core/services'
+import type { AnalyticsLog } from '@pikku/core/analytics'
+import type { AnalyticsEvent } from '../pikku/analytics/analytics.gen.js'
 import type { EventHubTopics } from './eventhub-topics.js'
 import type { TodoStore } from '../src/services/store.service.ts'
 import type { auth } from '../src/auth.ts'
@@ -44,6 +46,12 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   agentRunState?: AgentRunStateService
   kysely?: Kysely<KyselyPikkuDB>
   auth: () => Promise<Awaited<ReturnType<typeof auth>>>
+  /**
+   * Narrowed to this app's declared events, so `record()` takes a name the
+   * project declared and nothing else. The runner installs the buffer; wiring
+   * `analyticsService` is what decides where the events go.
+   */
+  analytics?: AnalyticsLog<AnalyticsEvent>
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

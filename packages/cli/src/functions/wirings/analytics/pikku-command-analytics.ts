@@ -4,13 +4,16 @@ import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
-import { serializeAnalytics } from './serialize-analytics.js'
+import {
+  serializeAnalytics,
+  type AnalyticsDeclaration,
+} from './serialize-analytics.js'
 import { analyticsSchemasFile } from '../../../utils/analytics-schemas-file.js'
 import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
 
 /**
- * ESM specifier from the generated ingest to the app's `pikkuAnalytics`
- * declaration.
+ * ESM specifier from the generated ingest to one of the app's
+ * `defineAnalyticsEvents` declarations.
  *
  * Relative rather than aliased: the declaration is ordinary project source that
  * a consumer may put anywhere, and a `#pikku` leaf would imply pikku generated
@@ -43,20 +46,29 @@ export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
     // Refuse rather than emit an ingest that imports a declaration which is not
     // there: the generated wire would fail to typecheck, pointing at generated
     // code instead of at the one thing the project actually has to supply.
-    if (!analytics) {
+    if (!analytics || analytics.length === 0) {
       logger.error(
-        `scaffold.analytics is enabled but no pikkuAnalytics declaration was found. ` +
-          `Add one in a source directory: \`export const analytics = pikkuAnalytics({ events, sink })\`.`
+        `scaffold.analytics is enabled but no defineAnalyticsEvents declaration was found. ` +
+          `Add one in a source directory: \`export const analyticsEvents = defineAnalyticsEvents({ page_viewed: z.object({ path: z.string() }) })\`.`
       )
       return false
     }
 
     const leaf = (name: string) =>
       getLeafImportPath(config.analyticsFile!, name, config)
+    const declarations: AnalyticsDeclaration[] = analytics.map(
+      (declaration) => ({
+        specifier: analyticsSpecifier(
+          config.analyticsFile!,
+          declaration.file
+        ),
+        variable: declaration.variable,
+        events: declaration.events,
+      })
+    )
     const { schemas, functions } = serializeAnalytics(
       leaf,
-      analyticsSpecifier(config.analyticsFile, analytics.file),
-      analytics.variable,
+      declarations,
       config.globalHTTPPrefix || ''
     )
     await writeFileInDir(

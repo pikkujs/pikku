@@ -609,10 +609,12 @@ export type PikkuCLIInput = {
     graph?: boolean
     rpc?: PikkuScaffoldFeature
     /**
-     * A typed `POST /analytics` ingest, validated against the event union the
-     * app declares with `pikkuAnalytics`. Generates the wire and its schemas
-     * only — events go to that declaration's sink, and nowhere if it has none. No middleware is emitted: an origin lock suits a browser-only
-     * app and breaks a native one, so it stays the project's call.
+     * A typed `POST /analytics` ingest, validated against the events the app
+     * declares with `defineAnalyticsEvents`. Generates the wire and its schemas
+     * only — where events go is the `AnalyticsService` on singleton services,
+     * which defaults to logging them. No middleware is emitted: an origin lock
+     * suits a browser-only app and breaks a native one, so it stays the
+     * project's call.
      */
     analytics?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
