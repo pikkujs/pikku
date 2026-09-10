@@ -37,6 +37,7 @@ export const ScenarioLadder: React.FC<ScenarioLadderProps> = ({
           key={step.id}
           step={step}
           continuation={steps[index - 1]?.phase === step.phase}
+          continuesActor={steps[index - 1]?.actor === step.actor}
           actorName={step.actor ? actorNames?.get(step.actor) : undefined}
           onOpenPersona={onOpenPersona}
           onSelectStep={onSelectStep}

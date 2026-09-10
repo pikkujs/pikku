@@ -15,6 +15,8 @@ type LadderStepProps = {
   step: ScenarioLadderStep
   /** True when the step above declared the same phase — gherkin's `And`. */
   continuation: boolean
+  /** True when the step above named the same actor, so the subject carries over. */
+  continuesActor?: boolean
   /** The actor's display name, when the project configures one. */
   actorName?: string
   onOpenPersona?: (key: string) => void
@@ -29,12 +31,15 @@ type LadderStepProps = {
 export const LadderStep: React.FC<LadderStepProps> = ({
   step,
   continuation,
+  continuesActor,
   actorName,
   onOpenPersona,
   onSelectStep,
 }) => {
   const label = PHASE_LABEL[step.phase]?.()
+  const carried = continuation && continuesActor === true
   const actor = step.actor
+  const subject = carried ? undefined : actor
 
   return (
     <Group
@@ -60,9 +65,9 @@ export const LadderStep: React.FC<LadderStepProps> = ({
       style={{ paddingLeft: 8 + step.depth * 24 }}
     >
       <Box style={{ width: 52, flexShrink: 0, textAlign: 'right' }}>
-        {label && !continuation && !step.repeat && (
+        {label && !step.repeat && (
           <Text size="sm" fw={600} c="dimmed" style={{ lineHeight: 1.6 }}>
-            {asI18n(label)}
+            {continuation ? m.scenarios_phase_and() : asI18n(label)}
           </Text>
         )}
       </Box>
@@ -77,23 +82,23 @@ export const LadderStep: React.FC<LadderStepProps> = ({
         </Text>
       ) : (
         <Text size="sm" style={{ lineHeight: 1.6 }}>
-          {actor ? (
+          {subject ? (
             <Anchor
               component="span"
               fw={600}
               data-testid="ladder-actor"
-              data-persona-key={actor}
+              data-persona-key={subject}
               className={classes.ladderActor}
               onClick={(event: React.MouseEvent) => {
                 event.stopPropagation()
-                onOpenPersona?.(actor)
+                onOpenPersona?.(subject)
               }}
               style={{
                 cursor: onOpenPersona ? 'pointer' : 'default',
                 marginRight: 6,
               }}
             >
-              {asI18n(actorName ?? actor)}
+              {asI18n(actorName ?? subject)}
             </Anchor>
           ) : null}
           <span className={classes.ladderSentence}>

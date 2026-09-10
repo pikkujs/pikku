@@ -878,6 +878,7 @@
   "scenarios_no_steps": "此场景未声明任何步骤",
   "scenarios_scenario_count": "{count} 个场景",
   "scenarios_scenario_count_one": "1 个场景",
+  "scenarios_phase_and": "并且",
   "scenarios_phase_given": "假设",
   "scenarios_phase_when": "当",
   "scenarios_phase_then": "那么",
