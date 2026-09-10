@@ -12,6 +12,24 @@ import type { AIProviderOptions } from '../../services/agent-runner-service.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
 import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
 import type { ApprovalPolicy } from '../channel/channel-rpc.js'
+import type { PikkuRawWire } from '../../types/core.types.js'
+import type { PikkuRPC } from '../rpc/rpc-types.js'
+import type { SessionService } from '../../services/user-session-service.js'
+import type { CoreUserSession } from '../../types/core.types.js'
+
+export type AgentRPCOptions = {
+  sessionService?: SessionService<CoreUserSession>
+}
+
+/**
+ * Builds `wire.rpc.agent`. Registered by `agent-rpc.ts` when a unit imports
+ * `@pikku/core/agent`, so the RPC primitive can offer the agent surface
+ * without naming the agent runtime.
+ */
+export type AgentRPCFactory = (
+  wire: PikkuRawWire,
+  options: AgentRPCOptions
+) => PikkuRPC['agent']
 
 export interface AgentThread {
   id: string

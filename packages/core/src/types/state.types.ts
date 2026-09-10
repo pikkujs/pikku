@@ -26,7 +26,11 @@ import type {
   CoreMCPPrompt,
   MCPPromptMeta,
 } from '../wirings/mcp/mcp.types.js'
-import type { CoreAgent, AgentsMeta } from '../wirings/agent/agent.types.js'
+import type {
+  CoreAgent,
+  AgentsMeta,
+  AgentRPCFactory,
+} from '../wirings/agent/agent.types.js'
 import type {
   PikkuAgentScorer,
   ScorerMeta,
@@ -169,6 +173,11 @@ export interface PikkuPackageState {
     scorersMeta: ScorerMeta
     /** Alias -> `provider/model`, from the `models` table in pikku.config.json. */
     modelAliases: Record<string, string>
+    /**
+     * Set by `@pikku/core/agent` on import. Absent in a deployment unit that
+     * holds no agent, which is what keeps the agent runtime out of its bundle.
+     */
+    rpcFactory?: AgentRPCFactory
   }
   gateway: {
     gateways: Map<string, CoreGateway>
