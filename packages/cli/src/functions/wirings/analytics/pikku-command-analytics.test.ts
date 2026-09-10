@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { pikkuAnalytics } from './pikku-command-analytics.js'
+import { analyticsSchemasFile } from '../../../utils/analytics-schemas-file.js'
 
 const tempDirs: string[] = []
 
@@ -14,7 +15,9 @@ after(() => {
   }
 })
 
-const project = async ({ withEvents = true }: { withEvents?: boolean } = {}) => {
+const project = async ({
+  withEvents = true,
+}: { withEvents?: boolean } = {}) => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-analytics-'))
   tempDirs.push(root)
   await mkdir(join(root, 'src', 'scaffold', 'analytics'), { recursive: true })
@@ -35,10 +38,6 @@ const config = (root: string, extra: Record<string, unknown> = {}) =>
     packageMappings: {},
     scaffold: { analytics: true },
     analyticsFile: join(root, 'src/scaffold/analytics/analytics.gen.ts'),
-    analyticsSchemasFile: join(
-      root,
-      'src/scaffold/analytics/analytics.schemas.gen.ts'
-    ),
     analyticsEventsFile: join(root, 'src/analytics-events.ts'),
     ...extra,
   }) as never
@@ -66,13 +65,17 @@ describe('pikkuAnalytics', () => {
     const root = await project()
     const cfg = config(root)
 
-    assert.equal(await run({ logger, config: cfg, variables: variables() }), true)
+    assert.equal(
+      await run({ logger, config: cfg, variables: variables() }),
+      true
+    )
     assert.ok(existsSync(cfg.analyticsFile))
-    assert.ok(existsSync(cfg.analyticsSchemasFile))
+    const schemasFile = analyticsSchemasFile(cfg.analyticsFile)!
+    assert.ok(existsSync(schemasFile))
 
     const functions = await readFile(cfg.analyticsFile, 'utf8')
     assert.match(functions, /route: '\/analytics'/)
-    const schemas = await readFile(cfg.analyticsSchemasFile, 'utf8')
+    const schemas = await readFile(schemasFile, 'utf8')
     // Reached back out of scaffold/analytics/ to the project's own union.
     assert.match(
       schemas,
@@ -98,17 +101,16 @@ describe('pikkuAnalytics', () => {
     const root = await project()
     const cfg = config(root, { scaffold: {} })
 
-    assert.equal(await run({ logger, config: cfg, variables: variables() }), false)
+    assert.equal(
+      await run({ logger, config: cfg, variables: variables() }),
+      false
+    )
     assert.equal(existsSync(cfg.analyticsFile), false)
   })
 
   test('declines when a required output path is unset', async () => {
     const root = await project()
-    for (const missing of [
-      'analyticsFile',
-      'analyticsSchemasFile',
-      'analyticsEventsFile',
-    ]) {
+    for (const missing of ['analyticsFile', 'analyticsEventsFile']) {
       const cfg = config(root, { [missing]: undefined })
       assert.equal(
         await run({ logger, config: cfg, variables: variables() }),
@@ -126,18 +128,45 @@ describe('pikkuAnalytics', () => {
     const cfg = config(root)
     errors.length = 0
 
-    assert.equal(await run({ logger, config: cfg, variables: variables() }), false)
+    assert.equal(
+      await run({ logger, config: cfg, variables: variables() }),
+      false
+    )
     assert.equal(existsSync(cfg.analyticsFile), false)
     assert.equal(errors.length, 1)
     assert.match(errors[0]!, /analytics-events\.ts/)
     assert.match(errors[0]!, /analyticsEvent/)
   })
 
+  // A configured `scaffold.analytics.path` moves the ingest, and the schemas
+  // module has to move with it — the generated wire imports it as a sibling.
+  test('writes the schemas beside a relocated ingest', async () => {
+    const root = await project()
+    await mkdir(join(root, 'src', 'elsewhere'), { recursive: true })
+    const cfg = config(root, {
+      analyticsFile: join(root, 'src/elsewhere/analytics.gen.ts'),
+    })
+
+    assert.equal(
+      await run({ logger, config: cfg, variables: variables() }),
+      true
+    )
+    assert.ok(
+      existsSync(join(root, 'src/elsewhere/analytics.schemas.gen.ts')),
+      'schemas must sit beside the relocated ingest'
+    )
+    const functions = await readFile(cfg.analyticsFile, 'utf8')
+    assert.match(functions, /from '\.\/analytics\.schemas\.gen\.js'/)
+  })
+
   test('resolves a relative events path against rootDir', async () => {
     const root = await project()
     const cfg = config(root, { analyticsEventsFile: 'src/analytics-events.ts' })
 
-    assert.equal(await run({ logger, config: cfg, variables: variables() }), true)
+    assert.equal(
+      await run({ logger, config: cfg, variables: variables() }),
+      true
+    )
     assert.ok(existsSync(cfg.analyticsFile))
   })
 })

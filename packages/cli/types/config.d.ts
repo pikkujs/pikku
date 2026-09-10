@@ -95,7 +95,6 @@ export interface PikkuCLICoreOutputFiles {
   // Product-analytics ingest (derived from scaffold.pikkuDir when scaffold.analytics is enabled).
   // Optional: left undefined when scaffold.analytics is not enabled, so consumers must guard.
   analyticsFile?: string
-  analyticsSchemasFile?: string
   // The app's own event union, which the generated ingest validates against.
   // Project source, never generated — it is the one thing only the app can say.
   analyticsEventsFile?: string

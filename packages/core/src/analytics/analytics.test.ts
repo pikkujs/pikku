@@ -68,6 +68,25 @@ describe('recordAnalyticsEvents', () => {
     assert.deepEqual(seen[0]![1], { userId: 'u1' })
   })
 
+  // A sink that drains the array it was handed (a queue push, say) must not
+  // turn the caller's submitted count into zero.
+  it('reports the submitted count even if the sink drains the batch', async () => {
+    setAnalyticsSink(async (_s, events) => {
+      events.length = 0
+    })
+
+    const accepted = await recordAnalyticsEvents(
+      services,
+      [
+        { name: 'page_viewed', props: { path: '/' } },
+        { name: 'signed_up', props: {} },
+      ],
+      anonymous
+    )
+
+    assert.equal(accepted, 2)
+  })
+
   it('does not call the sink for an empty batch', async () => {
     let calls = 0
     setAnalyticsSink(async () => {
