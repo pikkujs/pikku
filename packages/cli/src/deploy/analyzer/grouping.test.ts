@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { analyzeDeployment } from './analyzer.js'
-import type { GroupingConfig } from './grouping.js'
+import { serviceUnitName, type GroupingConfig } from './grouping.js'
 import type { InspectorState } from '@pikku/inspector'
 
 function state(): InspectorState {
@@ -276,6 +276,162 @@ describe("deploy.grouping - strategy 'single'", () => {
       rules: [{ unit: 'purge', tags: ['heavy'] }],
     }).scheduledTasks.find((t) => t.name === 'nightly')
     assert.equal(task?.unitName, 'app')
+  })
+})
+
+describe("deploy.grouping - strategy 'services'", () => {
+  test('functions sharing a service set share a unit', () => {
+    assert.deepEqual(unitNames({ strategy: 'services' }), [
+      'addon-console',
+      'svc-base',
+      'svc-file-store-server',
+      'svc-kysely',
+    ])
+  })
+
+  test('a unit is named after the services it builds', () => {
+    const unit = analyze({ strategy: 'services' }).units.find(
+      (u) => u.name === 'svc-kysely'
+    )
+    assert.deepEqual(unit!.functionIds, ['bookRetreat'])
+  })
+
+  test('functions that need nothing beyond the base land together', () => {
+    const unit = analyze({ strategy: 'services' }).units.find(
+      (u) => u.name === 'svc-base'
+    )
+    assert.deepEqual(unit!.functionIds.sort(), [
+      'handleWebhook',
+      'listRetreats',
+      'nightlyReport',
+      'sendEmail',
+    ])
+  })
+
+  test('a rule still beats the strategy', () => {
+    assert.deepEqual(
+      unitNames({
+        strategy: 'services',
+        rules: [{ unit: 'purge', tags: ['heavy'] }],
+      }),
+      ['addon-console', 'purge', 'svc-base', 'svc-kysely']
+    )
+  })
+
+  test('the scheduled task follows its function into the service unit', () => {
+    const task = analyze({ strategy: 'services' }).scheduledTasks.find(
+      (t) => t.name === 'nightly'
+    )
+    assert.equal(task?.unitName, 'svc-base')
+  })
+
+  test('the queue follows its function into the service unit', () => {
+    const queue = analyze({ strategy: 'services' }).queues.find(
+      (q) => q.name === 'emails'
+    )
+    assert.equal(queue?.consumerUnit, 'svc-base')
+  })
+
+  test('a unit never mixes targets, because the target is part of the key', () => {
+    const units = analyze({ strategy: 'services' }).units
+    assert.equal(
+      units.find((u) => u.name === 'svc-file-store-server')?.target,
+      'server'
+    )
+    assert.equal(units.find((u) => u.name === 'svc-base')?.target, 'serverless')
+  })
+
+  test('the same service set on two targets is two units', () => {
+    // A function may name `deploy: 'server'` itself while carrying exactly the
+    // services a serverless one does. Keying on services alone merged them and
+    // hit the mixed-target refusal.
+    const s = state()
+    s.functions.meta.serverSideEffect = {
+      pikkuFuncId: 'serverSideEffect',
+      name: 'serverSideEffect',
+      deploy: 'server',
+      services: { services: ['kysely'] },
+    } as never
+    ;(s.http.meta as Record<string, unknown>).post = {
+      ...(s.http.meta.post as object),
+      '/api/side-effect': {
+        pikkuFuncId: 'serverSideEffect',
+        method: 'post',
+        route: '/api/side-effect',
+      },
+    }
+    const units = analyzeDeployment(s, {
+      projectId: 'test',
+      serverlessIncompatible: ['fileStore'],
+      grouping: { strategy: 'services' },
+    }).units
+    assert.equal(
+      units.find((u) => u.name === 'svc-kysely')?.target,
+      'serverless'
+    )
+    assert.equal(
+      units.find((u) => u.name === 'svc-kysely-server')?.target,
+      'server'
+    )
+  })
+})
+
+describe('deploy.grouping - service unit names', () => {
+  test('a server set never collides with the serverless one', () => {
+    assert.notEqual(
+      serviceUnitName(['kysely'], 'serverless'),
+      serviceUnitName(['kysely'], 'server')
+    )
+    assert.notEqual(
+      serviceUnitName([], 'serverless'),
+      serviceUnitName([], 'server')
+    )
+  })
+
+  test('the name is stable under a reordered set', () => {
+    assert.equal(
+      serviceUnitName(['kysely', 'eventHub']),
+      serviceUnitName(['eventHub', 'kysely'])
+    )
+  })
+
+  test('base services never reach the name', () => {
+    assert.equal(
+      serviceUnitName(['logger', 'config', 'secrets', 'schema', 'variables']),
+      'svc-base'
+    )
+    assert.equal(
+      serviceUnitName(['rpc', 'userSession', 'kysely']),
+      'svc-kysely'
+    )
+  })
+
+  test('a long set keeps a readable head and a digest of the whole', () => {
+    const long = [
+      'agentRunService',
+      'agentRunState',
+      'agentRunner',
+      'agentStorage',
+      'eventHub',
+      'kysely',
+      'scopeService',
+      'workflowService',
+    ]
+    const name = serviceUnitName(long)
+    assert.ok(name.length <= 58, `name too long: ${name}`)
+    assert.ok(name.startsWith('svc-agent-run-service'), name)
+    // A different set of the same shape must not collide with it.
+    assert.notEqual(
+      name,
+      serviceUnitName([...long.slice(0, 7), 'workflowRunService'])
+    )
+  })
+
+  test('an unlisted service still keys, so a new service splits a unit', () => {
+    assert.notEqual(
+      serviceUnitName(['kysely']),
+      serviceUnitName(['kysely', 'redis'])
+    )
   })
 })
 

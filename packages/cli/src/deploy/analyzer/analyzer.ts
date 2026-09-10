@@ -119,9 +119,29 @@ export function analyzeDeployment(
         prefixed(r.route),
       ]),
     tagsForFunction: tagsFor,
+    servicesForFunction: (funcId) =>
+      functionsMeta[funcId]?.services?.services ?? [],
+    targetForFunction: (funcId) => {
+      const funcMeta = functionsMeta[funcId]
+      return funcMeta
+        ? resolveDeployTarget(
+            funcMeta,
+            serverlessIncompatible,
+            funcId,
+            defaultTarget
+          )
+        : defaultTarget
+    },
   })
 
   const addFunctionUnit = (unit: DeploymentUnit) => {
+    // Set here rather than at each call site: a unit is created from six
+    // places (functions, channels, agents, MCP, workflow orchestrators, steps)
+    // and a unit missing its key reads as one the strategy never named.
+    if (!unit.servicesKey) {
+      const key = resolver.serviceKeyForUnit(unit.name)
+      if (key) unit.servicesKey = key
+    }
     const existing = units.find((u) => u.name === unit.name)
     if (!existing) {
       units.push(unit)
