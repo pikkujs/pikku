@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/verifiers-analytics",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^24",
+    "tsx": "^4.23.12"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "pikku": "pikku",
+    "test": "pikku && tsc --noEmit && node --import tsx --test src/analytics.assert.ts"
+  }
+}
