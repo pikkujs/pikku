@@ -878,6 +878,7 @@
   "scenarios_no_steps": "Dieses Szenario deklariert keine Schritte",
   "scenarios_scenario_count": "{count} Szenarien",
   "scenarios_scenario_count_one": "1 Szenario",
+  "scenarios_phase_and": "Und",
   "scenarios_phase_given": "Angenommen",
   "scenarios_phase_when": "Wenn",
   "scenarios_phase_then": "Dann",

@@ -918,6 +918,7 @@
   "scenarios_no_steps": "This scenario declares no steps",
   "scenarios_scenario_count": "{count} scenarios",
   "scenarios_scenario_count_one": "1 scenario",
+  "scenarios_phase_and": "And",
   "scenarios_phase_given": "Given",
   "scenarios_phase_when": "When",
   "scenarios_phase_then": "Then",

@@ -878,6 +878,7 @@
   "scenarios_no_steps": "لا يعلن هذا السيناريو أي خطوات",
   "scenarios_scenario_count": "{count} سيناريوهات",
   "scenarios_scenario_count_one": "سيناريو واحد",
+  "scenarios_phase_and": "و",
   "scenarios_phase_given": "بافتراض",
   "scenarios_phase_when": "عندما",
   "scenarios_phase_then": "عندئذٍ",
