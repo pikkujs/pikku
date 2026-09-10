@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import type { PikkuCLIConfig } from '../../types/config.js'
 import { remoteJobsSchemasFile } from './remote-jobs-schemas-file.js'
+import { analyticsSchemasFile } from './analytics-schemas-file.js'
 
 const scaffoldFiles = (config: PikkuCLIConfig): (string | undefined)[] => {
   const authDir = config.authFile ? dirname(config.authFile) : undefined
@@ -15,7 +16,7 @@ const scaffoldFiles = (config: PikkuCLIConfig): (string | undefined)[] => {
     config.publicRpcFile,
     config.publicRpcSchemasFile,
     config.analyticsFile,
-    config.analyticsSchemasFile,
+    analyticsSchemasFile(config.analyticsFile),
     config.remoteRpcWorkersFile,
     config.remoteRpcSchemasFile,
     config.remoteJobsFile,

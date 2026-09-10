@@ -6,6 +6,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import { serializeAnalytics } from './serialize-analytics.js'
+import { analyticsSchemasFile } from '../../../utils/analytics-schemas-file.js'
 import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
 
 /**
@@ -36,7 +37,6 @@ export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
     if (
       !config.scaffold?.analytics ||
       !config.analyticsFile ||
-      !config.analyticsSchemasFile ||
       !config.analyticsEventsFile
     ) {
       return false
@@ -65,7 +65,11 @@ export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
       analyticsEventsSpecifier(config.analyticsFile, eventsFile),
       config.globalHTTPPrefix || ''
     )
-    await writeFileInDir(logger, config.analyticsSchemasFile, schemas)
+    await writeFileInDir(
+      logger,
+      analyticsSchemasFile(config.analyticsFile)!,
+      schemas
+    )
     await writeFileInDir(logger, config.analyticsFile, functions)
     await removeLegacyScaffoldFile(config.analyticsFile)
     return true

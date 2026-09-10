@@ -56,10 +56,6 @@ describe('getPikkuCLIConfig', () => {
       config.analyticsFile,
       join(root, 'src', 'scaffold', 'analytics', 'analytics.gen.ts')
     )
-    assert.equal(
-      config.analyticsSchemasFile,
-      join(root, 'src', 'scaffold', 'analytics', 'analytics.schemas.gen.ts')
-    )
     // The event union is project source, not generated output, so it defaults
     // beside the first source directory rather than under the scaffold dir.
     assert.equal(
@@ -78,7 +74,6 @@ describe('getPikkuCLIConfig', () => {
     )
 
     assert.equal(config.analyticsFile, undefined)
-    assert.equal(config.analyticsSchemasFile, undefined)
     assert.equal(config.analyticsEventsFile, undefined)
   })
 
@@ -402,7 +397,10 @@ describe('normalizeMetaLocale', () => {
   test('rejects what is not a tag at all', () => {
     assert.throws(() => normalizeMetaLocale(''), PikkuCLIConfigError)
     assert.throws(() => normalizeMetaLocale('   '), PikkuCLIConfigError)
-    assert.throws(() => normalizeMetaLocale('German, please'), PikkuCLIConfigError)
+    assert.throws(
+      () => normalizeMetaLocale('German, please'),
+      PikkuCLIConfigError
+    )
     assert.throws(() => normalizeMetaLocale(42), PikkuCLIConfigError)
     assert.throws(() => normalizeMetaLocale(['de']), PikkuCLIConfigError)
   })

@@ -50,9 +50,12 @@ export const recordAnalyticsEvents = async (
   events: AnalyticsEventInput[],
   identity: AnalyticsIdentity
 ): Promise<number> => {
-  if (events.length === 0) return 0
+  // Counted before the sink runs: a sink is free to drain or reorder the array
+  // it was handed, and the caller asked how many events it submitted.
+  const accepted = events.length
+  if (accepted === 0) return 0
   if (sink) {
     await sink(services, events, identity)
   }
-  return events.length
+  return accepted
 }
