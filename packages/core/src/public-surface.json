@@ -553,6 +553,7 @@
   "./analytics": [
     "flattenAnalyticsEvent",
     "getAnalyticsSink",
+    "loggerAnalyticsSink",
     "recordAnalyticsEvents",
     "setAnalyticsSink"
   ]

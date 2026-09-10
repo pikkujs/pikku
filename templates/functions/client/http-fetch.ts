@@ -36,6 +36,21 @@ async function check() {
     })
     console.log('Deleted todo:', deleted)
 
+    // The analytics ingest is generated rather than written, so nothing in the
+    // project's source would fail if it stopped being wired. Posting one event
+    // here is what catches a route that is emitted and never registered.
+    const analytics = await pikkuFetch.post('/analytics', {
+      events: [
+        { at: Date.now(), event: { name: 'todo_created', priority: 'high' } },
+      ],
+    })
+    console.log('Analytics:', analytics)
+    if (analytics.accepted !== 1) {
+      throw new Error(
+        `analytics ingest accepted ${analytics.accepted} events, expected 1`
+      )
+    }
+
     console.log('✅ HTTP test passed')
 
     process.exit(0)

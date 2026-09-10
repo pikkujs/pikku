@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import type { CoreSingletonServices } from '../types/core.types.js'
+import type { CoreSecretlessSingletonServices } from '../types/core.types.js'
 import type {
   AnalyticsEventInput,
   AnalyticsIdentity,
@@ -12,7 +12,7 @@ import {
   setAnalyticsSink,
 } from './analytics.js'
 
-const services = {} as CoreSingletonServices
+const services = {} as CoreSecretlessSingletonServices
 const anonymous: AnalyticsIdentity = { userId: null }
 
 describe('flattenAnalyticsEvent', () => {

@@ -25,6 +25,7 @@
   "scaffold": {
     "rpc": true,
     "agent": true,
+    "analytics": true,
     "workflow": true,
     "console": true,
     "events": true,
