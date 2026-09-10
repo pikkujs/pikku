@@ -26,6 +26,7 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
   useLocale()
   return (
     <Stack
+      data-testid="empty-state"
       align="center"
       justify="center"
       gap="md"
