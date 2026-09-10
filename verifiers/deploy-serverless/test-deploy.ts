@@ -413,6 +413,32 @@ check(`${AGENT_UNIT}: requires agentRunService (marker valid)`, () => {
     throw new Error('agentRunService is optional in a unit that holds an agent')
 })
 
+// --- Agent runtime tree-shaking ---
+// `wire.rpc.agent` is reached through state rather than a static import, so the
+// agent runtime — runner, stream, memory, AGUI — lands only in a unit that
+// imports `@pikku/core/agent`. A value import from `rpc-runner` would pin it
+// into every unit, because every unit reaches that file through the function
+// runner.
+
+const AGENT_RUNTIME_RE =
+  /core\/dist\/wirings\/agent\/(agent-runner|agent-stream|agent-agui|agent-rpc)\.js$/
+
+check(`${LEAN_UNIT}: bundles zero agent runtime code`, () => {
+  const hits = bundledModules(LEAN_UNIT).filter((m) => AGENT_RUNTIME_RE.test(m))
+  if (hits.length > 0)
+    throw new Error(`unexpected agent modules: ${hits.slice(0, 5).join(', ')}`)
+})
+
+check(`${AGENT_UNIT}: bundles the agent runtime (markers valid)`, () => {
+  // Anti-tautology: prove the markers match real modules where an agent runs,
+  // so the LEAN_UNIT check above cannot pass on a typo.
+  const hits = bundledModules(AGENT_UNIT).filter((m) =>
+    AGENT_RUNTIME_RE.test(m)
+  )
+  if (hits.length === 0)
+    throw new Error('agent unit unexpectedly has no agent runtime modules')
+})
+
 // --- Results ---
 console.log('='.repeat(60))
 console.log('Serverless Deploy Verifier Results')

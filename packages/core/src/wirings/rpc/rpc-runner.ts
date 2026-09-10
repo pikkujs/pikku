@@ -13,7 +13,6 @@ import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { resolveRemoteAddonToken } from '../addon/remote-addon-auth.js'
-import { createAgentRPC } from '../agent/agent-rpc.js'
 
 /**
  * The session for a wire: read through `getSession` when a runner attached one,
@@ -467,11 +466,20 @@ export class ContextAwareRPCService {
   /**
    * The agent facade, built on access.
    *
-   * The implementation lives in `agent/agent-rpc.ts` so the agent surface is
-   * one file rather than a wing of this one; a getter rather than a field so a
-   * request that never touches an agent never builds it.
+   * Resolved through state rather than imported: naming `agent-rpc.ts` here
+   * pinned the agent runtime — runner, stream, memory, AGUI — into every
+   * deployment unit, because every unit reaches this file through
+   * `function-runner`. `@pikku/core/agent` registers the factory on import, so
+   * a unit that holds an agent has one and a unit that does not never bundles
+   * the tree behind it.
    */
   public get agent(): PikkuRPC['agent'] {
+    const createAgentRPC = pikkuState(null, 'agent', 'rpcFactory')
+    if (!createAgentRPC) {
+      throw new Error(
+        'Agent runtime not available: import @pikku/core/agent in this deployment unit to use rpc.agent'
+      )
+    }
     return createAgentRPC(this.wire, this.options)
   }
 
