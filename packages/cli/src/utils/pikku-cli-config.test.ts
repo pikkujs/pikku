@@ -56,12 +56,6 @@ describe('getPikkuCLIConfig', () => {
       config.analyticsFile,
       join(root, 'src', 'scaffold', 'analytics', 'analytics.gen.ts')
     )
-    // The event union is project source, not generated output, so it defaults
-    // beside the first source directory rather than under the scaffold dir.
-    assert.equal(
-      config.analyticsEventsFile,
-      join(root, 'src', 'analytics-events.ts')
-    )
   })
 
   test('derives no analytics paths when the scaffold is off', async () => {
@@ -74,7 +68,6 @@ describe('getPikkuCLIConfig', () => {
     )
 
     assert.equal(config.analyticsFile, undefined)
-    assert.equal(config.analyticsEventsFile, undefined)
   })
 
   test('rejects the old startServerFnsFile key by name', async () => {

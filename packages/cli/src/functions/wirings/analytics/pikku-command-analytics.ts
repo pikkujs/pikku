@@ -1,5 +1,4 @@
-import { dirname, relative, isAbsolute } from 'node:path'
-import { existsSync } from 'node:fs'
+import { dirname, relative } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
@@ -10,18 +9,19 @@ import { analyticsSchemasFile } from '../../../utils/analytics-schemas-file.js'
 import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
 
 /**
- * ESM specifier from the generated ingest to the app's event union.
+ * ESM specifier from the generated ingest to the app's `pikkuAnalytics`
+ * declaration.
  *
- * Relative rather than aliased: the union is ordinary project source that a
- * consumer may put anywhere, and a `#pikku` leaf would imply pikku generated
+ * Relative rather than aliased: the declaration is ordinary project source that
+ * a consumer may put anywhere, and a `#pikku` leaf would imply pikku generated
  * it. Emitted with a `.js` extension and a leading `./` so the specifier is
  * valid ESM rather than a bare module id.
  */
-export const analyticsEventsSpecifier = (
+export const analyticsSpecifier = (
   analyticsFile: string,
-  analyticsEventsFile: string
+  declarationFile: string
 ): string => {
-  const rel = relative(dirname(analyticsFile), analyticsEventsFile)
+  const rel = relative(dirname(analyticsFile), declarationFile)
     .replace(/\.tsx?$/, '.js')
     .split(/[\\/]/)
     .join('/')
@@ -29,31 +29,24 @@ export const analyticsEventsSpecifier = (
 }
 
 export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config, variables }) => {
+  func: async ({ logger, config, variables, getInspectorState }) => {
     if (await isDeployCodegen(variables)) {
       return false
     }
 
-    if (
-      !config.scaffold?.analytics ||
-      !config.analyticsFile ||
-      !config.analyticsEventsFile
-    ) {
+    if (!config.scaffold?.analytics || !config.analyticsFile) {
       return false
     }
 
-    const eventsFile = isAbsolute(config.analyticsEventsFile)
-      ? config.analyticsEventsFile
-      : `${config.rootDir}/${config.analyticsEventsFile}`
+    const { analytics } = await getInspectorState()
 
-    // Refuse rather than emit an ingest that imports a file which is not there:
-    // the generated wire would fail to typecheck, pointing at generated code
-    // instead of at the one thing the project actually has to supply.
-    if (!existsSync(eventsFile)) {
+    // Refuse rather than emit an ingest that imports a declaration which is not
+    // there: the generated wire would fail to typecheck, pointing at generated
+    // code instead of at the one thing the project actually has to supply.
+    if (!analytics) {
       logger.error(
-        `scaffold.analytics is enabled but no event union was found at ${eventsFile}. ` +
-          `Create it exporting \`analyticsEvent\` (a zod discriminated union on \`name\`), ` +
-          `or point \`analyticsEventsFile\` at it.`
+        `scaffold.analytics is enabled but no pikkuAnalytics declaration was found. ` +
+          `Add one in a source directory: \`export const analytics = pikkuAnalytics({ events, sink })\`.`
       )
       return false
     }
@@ -62,7 +55,8 @@ export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
       getLeafImportPath(config.analyticsFile!, name, config)
     const { schemas, functions } = serializeAnalytics(
       leaf,
-      analyticsEventsSpecifier(config.analyticsFile, eventsFile),
+      analyticsSpecifier(config.analyticsFile, analytics.file),
+      analytics.variable,
       config.globalHTTPPrefix || ''
     )
     await writeFileInDir(

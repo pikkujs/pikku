@@ -10,3 +10,5 @@ export {
   setAnalyticsSink,
 } from './analytics.js'
 export { loggerAnalyticsSink } from './logger-analytics-sink.js'
+export { pikkuAnalytics } from './pikku-analytics.js'
+export type { PikkuAnalytics } from './pikku-analytics.js'

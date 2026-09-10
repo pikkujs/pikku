@@ -635,16 +635,6 @@ const _getPikkuCLIConfig = async (
         'analytics.gen.ts'
       )
     }
-    // The event union is project source, so it defaults beside the first source
-    // directory rather than into the scaffold — putting it under scaffold/ is
-    // what made it look disposable to tooling that cleans generated output.
-    if (result.scaffold?.analytics && !result.analyticsEventsFile) {
-      result.analyticsEventsFile = join(
-        result.rootDir,
-        result.srcDirectories?.[0] ?? 'src',
-        'analytics-events.ts'
-      )
-    }
     if (result.scaffold?.rpc && !result.publicRpcFile) {
       result.publicRpcFile = join(
         resolvedScaffoldDir,

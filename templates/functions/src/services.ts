@@ -7,7 +7,6 @@ import {
   QueueWebhookService,
 } from '@pikku/core/services'
 import { LocalEventHubService } from '@pikku/core/channel/local'
-import { loggerAnalyticsSink, setAnalyticsSink } from '@pikku/core/analytics'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { JoseJWTService } from '@pikku/jose'
 import { pikkuServices, pikkuWireServices } from '#pikku/setup'
@@ -22,11 +21,6 @@ export const createSingletonServices = pikkuServices(
     const variables = existingServices?.variables || new LocalVariablesService()
     const logger = new ConsoleLogger()
 
-    // Where the events accepted by the generated `/analytics` ingest go. The
-    // logger sink is the starting point, not the destination: swap this one
-    // call for a sink that writes to your warehouse and every call site,
-    // schema and route stays as it is.
-    setAnalyticsSink(loggerAnalyticsSink)
     const schema = new CFWorkerSchemaService(logger)
     const secrets = new LocalSecretService(variables)
 

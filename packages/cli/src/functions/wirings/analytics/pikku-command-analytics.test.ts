@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile } from 'node:fs/promises'
 import { existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -15,18 +15,10 @@ after(() => {
   }
 })
 
-const project = async ({
-  withEvents = true,
-}: { withEvents?: boolean } = {}) => {
+const project = async () => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-analytics-'))
   tempDirs.push(root)
   await mkdir(join(root, 'src', 'scaffold', 'analytics'), { recursive: true })
-  if (withEvents) {
-    await writeFile(
-      join(root, 'src', 'analytics-events.ts'),
-      `import { z } from 'zod'\nexport const analyticsEvent = z.object({ name: z.literal('page_viewed') })\n`
-    )
-  }
   return root
 }
 
@@ -38,7 +30,6 @@ const config = (root: string, extra: Record<string, unknown> = {}) =>
     packageMappings: {},
     scaffold: { analytics: true },
     analyticsFile: join(root, 'src/scaffold/analytics/analytics.gen.ts'),
-    analyticsEventsFile: join(root, 'src/analytics-events.ts'),
     ...extra,
   }) as never
 
@@ -53,6 +44,16 @@ const logger = {
 const variables = (flag?: string | number) =>
   ({ get: async () => flag }) as never
 
+/** The project declared its analytics; `undefined` means it did not. */
+const getInspectorState =
+  (analytics?: { file: string; variable: string }) => async () =>
+    ({ analytics }) as never
+
+const declared = (root: string, variable = 'analytics') => ({
+  file: join(root, 'src', 'analytics.ts'),
+  variable,
+})
+
 const run = (services: Record<string, unknown>) =>
   (pikkuAnalytics as unknown as { func: Function }).func(
     services,
@@ -66,7 +67,12 @@ describe('pikkuAnalytics', () => {
     const cfg = config(root)
 
     assert.equal(
-      await run({ logger, config: cfg, variables: variables() }),
+      await run({
+        logger,
+        config: cfg,
+        variables: variables(),
+        getInspectorState: getInspectorState(declared(root)),
+      }),
       true
     )
     assert.ok(existsSync(cfg.analyticsFile))
@@ -76,11 +82,32 @@ describe('pikkuAnalytics', () => {
     const functions = await readFile(cfg.analyticsFile, 'utf8')
     assert.match(functions, /route: '\/analytics'/)
     const schemas = await readFile(schemasFile, 'utf8')
-    // Reached back out of scaffold/analytics/ to the project's own union.
+    // Reached back out of scaffold/analytics/ to the project's own declaration.
     assert.match(
       schemas,
-      /import \{ analyticsEvent \} from '\.\.\/\.\.\/analytics-events\.js'/
+      /import \{ analytics \} from '\.\.\/\.\.\/analytics\.js'/
     )
+  })
+
+  // The declaration is an ordinary export, so its name is the project's to
+  // choose — the generated import has to follow it rather than assume one.
+  test('follows the name the declaration is exported under', async () => {
+    const root = await project()
+    const cfg = config(root)
+
+    await run({
+      logger,
+      config: cfg,
+      variables: variables(),
+      getInspectorState: getInspectorState(declared(root, 'usage')),
+    })
+
+    const schemas = await readFile(
+      analyticsSchemasFile(cfg.analyticsFile)!,
+      'utf8'
+    )
+    assert.match(schemas, /import \{ usage \} from/)
+    assert.match(schemas, /event: usage\.events/)
   })
 
   // Deploy plan runs codegen once per unit with outDir redirected, so writing
@@ -91,7 +118,12 @@ describe('pikkuAnalytics', () => {
     const cfg = config(root)
 
     assert.equal(
-      await run({ logger, config: cfg, variables: variables('1') }),
+      await run({
+        logger,
+        config: cfg,
+        variables: variables('1'),
+        getInspectorState: getInspectorState(declared(root)),
+      }),
       false
     )
     assert.equal(existsSync(cfg.analyticsFile), false)
@@ -102,40 +134,52 @@ describe('pikkuAnalytics', () => {
     const cfg = config(root, { scaffold: {} })
 
     assert.equal(
-      await run({ logger, config: cfg, variables: variables() }),
+      await run({
+        logger,
+        config: cfg,
+        variables: variables(),
+        getInspectorState: getInspectorState(declared(root)),
+      }),
       false
     )
     assert.equal(existsSync(cfg.analyticsFile), false)
   })
 
-  test('declines when a required output path is unset', async () => {
+  test('declines when the output path is unset', async () => {
     const root = await project()
-    for (const missing of ['analyticsFile', 'analyticsEventsFile']) {
-      const cfg = config(root, { [missing]: undefined })
-      assert.equal(
-        await run({ logger, config: cfg, variables: variables() }),
-        false,
-        `${missing} unset should decline`
-      )
-    }
+    const cfg = config(root, { analyticsFile: undefined })
+
+    assert.equal(
+      await run({
+        logger,
+        config: cfg,
+        variables: variables(),
+        getInspectorState: getInspectorState(declared(root)),
+      }),
+      false
+    )
   })
 
-  // The generated wire imports the union, so emitting one without it would fail
-  // to typecheck and point at generated code. The error has to name the file the
-  // project actually has to write.
-  test('refuses, naming the path, when the event union is missing', async () => {
-    const root = await project({ withEvents: false })
+  // The generated wire imports the declaration, so emitting one without it
+  // would fail to typecheck and point at generated code. The error has to name
+  // the one thing the project actually has to write.
+  test('refuses, naming the call, when nothing is declared', async () => {
+    const root = await project()
     const cfg = config(root)
     errors.length = 0
 
     assert.equal(
-      await run({ logger, config: cfg, variables: variables() }),
+      await run({
+        logger,
+        config: cfg,
+        variables: variables(),
+        getInspectorState: getInspectorState(undefined),
+      }),
       false
     )
     assert.equal(existsSync(cfg.analyticsFile), false)
     assert.equal(errors.length, 1)
-    assert.match(errors[0]!, /analytics-events\.ts/)
-    assert.match(errors[0]!, /analyticsEvent/)
+    assert.match(errors[0]!, /pikkuAnalytics/)
   })
 
   // A configured `scaffold.analytics.path` moves the ingest, and the schemas
@@ -148,7 +192,12 @@ describe('pikkuAnalytics', () => {
     })
 
     assert.equal(
-      await run({ logger, config: cfg, variables: variables() }),
+      await run({
+        logger,
+        config: cfg,
+        variables: variables(),
+        getInspectorState: getInspectorState(declared(root)),
+      }),
       true
     )
     assert.ok(
@@ -157,16 +206,5 @@ describe('pikkuAnalytics', () => {
     )
     const functions = await readFile(cfg.analyticsFile, 'utf8')
     assert.match(functions, /from '\.\/analytics\.schemas\.gen\.js'/)
-  })
-
-  test('resolves a relative events path against rootDir', async () => {
-    const root = await project()
-    const cfg = config(root, { analyticsEventsFile: 'src/analytics-events.ts' })
-
-    assert.equal(
-      await run({ logger, config: cfg, variables: variables() }),
-      true
-    )
-    assert.ok(existsSync(cfg.analyticsFile))
   })
 })

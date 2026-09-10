@@ -549,6 +549,8 @@ export interface InspectorState {
   addonRequiredParentServices: string[] // services an addon needs from the parent (extracted from pikkuAddonServices 2nd param)
   addonCreatedServices: string[] // services an addon's own pikkuAddonServices factory builds itself
   addonServicesFactorySeen: boolean // this project declares a pikkuAddonServices factory, i.e. it is an addon
+  /** The project's single `pikkuAnalytics` declaration, if it has one. */
+  analytics?: { file: string; variable: string }
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType

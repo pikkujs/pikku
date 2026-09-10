@@ -17,11 +17,13 @@ export interface AnalyticsGenOutput {
  * be a security boundary in either case: `Origin` is trusted from browsers and
  * forgeable by everyone else, and volume is a rate limit's job at the edge.
  *
- * @param eventsImport specifier for the app's own event union, e.g. `../../analytics-events.js`
+ * @param analyticsImport specifier for the module holding the app's `pikkuAnalytics` declaration, e.g. `../../analytics.js`
+ * @param analyticsVariable the name that declaration is exported under
  */
 export const serializeAnalytics = (
   leaf: (name: string) => string,
-  eventsImport: string,
+  analyticsImport: string,
+  analyticsVariable: string,
   globalHTTPPrefix: string = ''
 ): AnalyticsGenOutput => {
   const schemas = `/**
@@ -29,7 +31,7 @@ export const serializeAnalytics = (
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { z } from 'zod'
-import { analyticsEvent } from '${eventsImport}'
+import { ${analyticsVariable} } from '${analyticsImport}'
 
 /**
  * A batch of events from one beacon.
@@ -44,7 +46,7 @@ export const AnalyticsIngest = z.object({
     .array(
       z.object({
         at: z.number().int().optional(),
-        event: analyticsEvent,
+        event: ${analyticsVariable}.events,
       })
     )
     .min(1)

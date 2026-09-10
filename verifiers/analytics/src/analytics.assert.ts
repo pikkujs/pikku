@@ -11,7 +11,7 @@ import {
 import { createConfig, createSingletonServices } from './services.js'
 
 /**
- * The whole ingest, generated from `src/analytics-events.ts` and nothing else:
+ * The whole ingest, generated from `src/analytics.ts` and nothing else:
  * this project wires no route, declares no function and imports no generated
  * file except the bootstrap.
  *

@@ -1,6 +1,7 @@
 ---
 '@pikku/core': patch
 '@pikku/cli': patch
+'@pikku/inspector': patch
 ---
 
 Product analytics moves into core behind a `scaffold.analytics` generator.
@@ -9,9 +10,19 @@ Product analytics moves into core behind a `scaffold.analytics` generator.
 `recordAnalyticsEvents`, which counts events and forwards them to whatever sink
 is registered. `loggerAnalyticsSink` is the one an app gets before it has
 chosen a store, so turning the scaffold on is enough to watch events arrive.
-The CLI's new `pikkuAnalytics` generator emits the `/analytics` ingest and its
-schemas from the project's own `analytics-events.ts` event union, so the only
-analytics file a project owns is the declaration of what it measures.
+
+An app declares what it measures — and where the events go — in one place:
+
+```ts
+export const analytics = pikkuAnalytics({
+  events: z.discriminatedUnion('name', [ ... ]),
+  sink: loggerAnalyticsSink,
+})
+```
+
+The inspector finds that declaration the way it finds every other wiring, so
+there is no path to configure and no sink to register by hand; the CLI
+generates the `/analytics` ingest and its schemas from it.
 
 The generated wire is added to the set of scaffolds the inspector reads.
 Nothing imports it — it is a wiring, not a module anyone calls — so without
