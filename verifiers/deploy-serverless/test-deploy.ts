@@ -384,6 +384,35 @@ check(
   }
 )
 
+// --- Per-unit service requirements ---
+// `scaffold.agent` is a project-wide config flag. A unit that holds no agent
+// must not be told it needs agentRunService, or every unit in the app pays for
+// the service its factory builds behind that flag.
+
+const AGENT_UNIT = 'agent-todo-assistant'
+
+function requiredSingletons(unitName: string): string {
+  const path = join(getUnitPath(unitName), '.pikku', 'pikku-services.gen.ts')
+  if (!existsSync(path))
+    throw new Error(`${unitName}: missing .pikku/pikku-services.gen.ts`)
+  return readText(path)
+}
+
+check(`${LEAN_UNIT}: does not require agentRunService`, () => {
+  const content = requiredSingletons(LEAN_UNIT)
+  if (!content.includes("'agentRunService': false,"))
+    throw new Error('agentRunService is required in a unit that holds no agent')
+})
+
+check(`${AGENT_UNIT}: requires agentRunService (marker valid)`, () => {
+  // Anti-tautology: prove the flag still turns on where an agent actually runs.
+  if (!unitDirs.includes(AGENT_UNIT))
+    throw new Error(`${AGENT_UNIT} unit not found`)
+  const content = requiredSingletons(AGENT_UNIT)
+  if (!content.includes("'agentRunService': true,"))
+    throw new Error('agentRunService is optional in a unit that holds an agent')
+})
+
 // --- Results ---
 console.log('='.repeat(60))
 console.log('Serverless Deploy Verifier Results')
