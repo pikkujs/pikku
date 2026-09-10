@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2906 observable things**: 931 exported names, plus
-1975 members on the classes and interfaces among them, reachable
+**2910 observable things**: 933 exported names, plus
+1977 members on the classes and interfaces among them, reachable
 through 54 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -41,9 +41,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow/timeline` | 9 | 4 | 14 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
+| `./analytics` | 10 | 10 | 6 |
 | `./rpc` | 7 | 7 | 6 |
 | `./workflow/types` | 45 | 1 | 11 |
-| `./analytics` | 8 | 8 | 4 |
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
@@ -3629,6 +3629,11 @@ export type AnalyticsSink = (
 flattenAnalyticsEvent: (event: { name: string; } & Record<string, unknown>, at?: number | undefined) => AnalyticsEventInput
 getAnalyticsSink: () => AnalyticsSink | undefined
 loggerAnalyticsSink: AnalyticsSink
+pikkuAnalytics: <Events>(analytics: PikkuAnalytics<Events>) => PikkuAnalytics<Events>
+export interface PikkuAnalytics<Events> {
+  events: Events
+  sink?: AnalyticsSink
+}
 recordAnalyticsEvents: (services: CoreSecretlessSingletonServices, events: AnalyticsEventInput[], identity: AnalyticsIdentity) => Promise<number>
 setAnalyticsSink: (next: AnalyticsSink | undefined) => void
 ```

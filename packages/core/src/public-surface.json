@@ -554,6 +554,7 @@
     "flattenAnalyticsEvent",
     "getAnalyticsSink",
     "loggerAnalyticsSink",
+    "pikkuAnalytics",
     "recordAnalyticsEvents",
     "setAnalyticsSink"
   ]

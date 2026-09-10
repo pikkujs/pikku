@@ -95,9 +95,6 @@ export interface PikkuCLICoreOutputFiles {
   // Product-analytics ingest (derived from scaffold.pikkuDir when scaffold.analytics is enabled).
   // Optional: left undefined when scaffold.analytics is not enabled, so consumers must guard.
   analyticsFile?: string
-  // The app's own event union, which the generated ingest validates against.
-  // Project source, never generated — it is the one thing only the app can say.
-  analyticsEventsFile?: string
   publicAgentFile: string
   publicAgentSchemasFile?: string
   consoleFunctionsFile: string
@@ -612,10 +609,9 @@ export type PikkuCLIInput = {
     graph?: boolean
     rpc?: PikkuScaffoldFeature
     /**
-     * A typed `POST /analytics` ingest, validated against the app's own event
-     * union in `analyticsEventsFile`. Generates the wire and its schemas only —
-     * events go wherever `setAnalyticsSink` says, and nowhere if nothing is
-     * registered. No middleware is emitted: an origin lock suits a browser-only
+     * A typed `POST /analytics` ingest, validated against the event union the
+     * app declares with `pikkuAnalytics`. Generates the wire and its schemas
+     * only — events go to that declaration's sink, and nowhere if it has none. No middleware is emitted: an origin lock suits a browser-only
      * app and breaks a native one, so it stays the project's call.
      */
     analytics?: PikkuScaffoldFeature
