@@ -324,6 +324,11 @@ wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 
 After registration, run `yarn pikku all` to generate types for the addon's functions.
 
+Give each addon its own wiring file. A deployment unit imports a `wireAddon`
+file only while at least one addon that file wires survives the unit's filter,
+so wiring two addons from one file means a unit needing either one registers
+both and bundles both packages' dependencies.
+
 If the addon ships tables, `pikku db generate` then writes one migration per
 addon — named after the package, carrying the addon's own SQL — after Better
 Auth's and the runtime's, so an addon table may reference `user` or a runtime

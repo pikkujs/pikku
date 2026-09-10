@@ -1287,6 +1287,22 @@ export function filterInspectorState(
         keptNamespaces.has(namespace)
       )
     )
+    const keptAddonFiles = new Set<string>()
+    for (const decl of filteredState.rpc.wireAddonDeclarations.values()) {
+      if (decl.file) keptAddonFiles.add(decl.file)
+    }
+    const droppedAddonFiles = new Set<string>()
+    for (const [namespace, decl] of state.rpc.wireAddonDeclarations) {
+      if (keptNamespaces.has(namespace)) continue
+      if (decl.file && !keptAddonFiles.has(decl.file)) {
+        droppedAddonFiles.add(decl.file)
+      }
+    }
+    filteredState.rpc.wireAddonFiles = new Set(
+      [...(filteredState.rpc.wireAddonFiles ?? [])].filter(
+        (file) => !droppedAddonFiles.has(file)
+      )
+    )
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions

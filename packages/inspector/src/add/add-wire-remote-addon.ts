@@ -70,6 +70,7 @@ export function addWireRemoteAddon(
   logger.debug(`• Found wireRemoteAddon: ${name} → ${pkg} (remote)`)
   state.rpc.wireAddonDeclarations.set(name, {
     package: pkg,
+    file: node.getSourceFile().fileName,
     remote: true,
     hasAuth,
     authCredentialId,

@@ -2146,10 +2146,26 @@ describe('invokedAgentsByFile', () => {
     const withAddons = () => {
       const state = createMockInspectorState()
       state.rpc.wireAddonDeclarations = new Map([
-        ['admin', { package: '@pikku/addon-admin' } as any],
-        ['console', { package: '@pikku/addon-console' } as any],
+        [
+          'admin',
+          {
+            package: '@pikku/addon-admin',
+            file: '/test/project/src/addons/admin.addon.ts',
+          } as any,
+        ],
+        [
+          'console',
+          {
+            package: '@pikku/addon-console',
+            file: '/test/project/src/addons/console.addon.ts',
+          } as any,
+        ],
       ])
       state.rpc.usedAddons = new Set(['admin', 'console'])
+      state.rpc.wireAddonFiles = new Set([
+        '/test/project/src/addons/admin.addon.ts',
+        '/test/project/src/addons/console.addon.ts',
+      ])
       return state
     }
 
@@ -2227,6 +2243,76 @@ describe('invokedAgentsByFile', () => {
         [...result.rpc.wireAddonDeclarations.keys()],
         ['admin']
       )
+    })
+
+    test('prunes the wiring file of a dropped addon so the unit never imports it', () => {
+      const result = filterInspectorState(
+        withAddons(),
+        {
+          names: [
+            'console:runSecurityAudit',
+            '/rpc/:rpcName',
+            'http:post:/rpc/:rpcName',
+            'rpcCaller',
+          ],
+        },
+        mockLogger
+      )
+      assert.deepStrictEqual(
+        [...result.rpc.wireAddonFiles],
+        ['/test/project/src/addons/console.addon.ts']
+      )
+    })
+
+    test('a unit referencing no addon imports no wiring file', () => {
+      const result = filterInspectorState(
+        withAddons(),
+        { names: ['getUsers'] },
+        mockLogger
+      )
+      assert.deepStrictEqual([...result.rpc.wireAddonFiles], [])
+    })
+
+    test('one file wiring both addons survives while either is kept', () => {
+      const state = withAddons()
+      const shared = '/test/project/src/addons/all.addon.ts'
+      for (const decl of state.rpc.wireAddonDeclarations.values()) {
+        ;(decl as any).file = shared
+      }
+      state.rpc.wireAddonFiles = new Set([shared])
+      const result = filterInspectorState(
+        state,
+        {
+          names: [
+            'console:runSecurityAudit',
+            '/rpc/:rpcName',
+            'http:post:/rpc/:rpcName',
+            'rpcCaller',
+          ],
+        },
+        mockLogger
+      )
+      assert.deepStrictEqual([...result.rpc.wireAddonFiles], [shared])
+    })
+
+    test('a wiring file no declaration claims is left alone', () => {
+      const state = withAddons()
+      state.rpc.wireAddonFiles.add('/test/project/src/addons/legacy.addon.ts')
+      const result = filterInspectorState(
+        state,
+        { names: ['getUsers'] },
+        mockLogger
+      )
+      assert.deepStrictEqual(
+        [...result.rpc.wireAddonFiles],
+        ['/test/project/src/addons/legacy.addon.ts']
+      )
+    })
+
+    test('the original state keeps every wiring file', () => {
+      const state = withAddons()
+      filterInspectorState(state, { names: ['getUsers'] }, mockLogger)
+      assert.strictEqual(state.rpc.wireAddonFiles.size, 2)
     })
   })
 })

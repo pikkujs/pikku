@@ -53,6 +53,7 @@ describe('addWireAddon', () => {
 
     assert.deepEqual(declarations.get('console'), {
       package: '@pikku/addon-console',
+      file: 'wiring.ts',
       rpcEndpoint: '/rpc',
       mcp: undefined,
       auth: true,
