@@ -30,6 +30,27 @@ and so is the commitment.
 Be ambitious with it. A direction that could describe any SaaS app has not been
 chosen — it has been defaulted to in words instead of in components.
 
+### The looks you will default to
+
+Being ambitious is easier against a list of specific things to not be. Generated
+interfaces cluster hard, and these are the attractors — not because any is ugly,
+but because arriving at one *by default* means no choice was made:
+
+- **Stock Mantine.** The strongest pull, and the hardest to see: a component
+  library's untouched defaults do not look broken, they look finished. Blue
+  accent, `#dee2e6` borders, `md` radius on everything, `Card` + `Stack` + `Text`
+  down every page. An app can be entirely this and never trip a critique, because
+  nothing on any screen is *wrong*.
+- Warm cream ground with a serif display face and a terracotta accent.
+- Near-black with one acid-green or vermilion pop.
+- A purple-to-blue gradient header on white.
+- Inter, or Space Grotesk, as the "safe" typeface.
+- Emoji as section markers; everything centre-aligned; one radius and one shadow
+  stamped on every block, which flattens hierarchy instead of creating it.
+
+If the user asks for one of these, build it — their words win. What is not
+allowed is landing on one because it was nearest to hand.
+
 ## Offer to draw the screens before you build them
 
 Before the first milestone, **ask** whether they want to see the screens first.
@@ -226,6 +247,27 @@ of being honest about it now is minutes; the cost at §8 is a repaint of the who
 app, and by then the wrong register has been inherited by every screen so the
 repaint is a rewrite.
 
+### The seed is part of the gate
+
+A screenshot is only evidence if the screen has something on it. Before the gate
+runs, the dev seed must populate what each screen *is for* — not one row, and not
+an empty state.
+
+This is a real and quiet failure: a list app whose seed has no list, a countdown
+whose seed has no dates, judged for weeks against its own empty state while the
+screen it was built for was never once looked at. The empty state is worth
+designing and is not what the milestone is about.
+
+Seed enough to be judged against: several rows, not three identical ones, and a
+deliberate spread of the cases the screen has to hold — a long title that wraps,
+a missing optional field, a picture and no picture, one item in each state the
+screen can show. Anything derived from *today* — a countdown, "3 days ago", an
+expiry — is seeded as an interval from `now`, never as a fixed date: fixed dates
+are correct on the afternoon they are written and meaningless a month later.
+
+Data left over from a scenario run is not a seed. If the screens are full of
+`Filter coffee grinder mttqdvsx`, you are designing against test debris.
+
 ## Facts, not taste
 
 These are not design opinions and are not open to a different answer.
@@ -288,4 +330,9 @@ first one.
 - The theme JSON is rich and the screens are bare. Tokens are the cheapest half
   of design and the easiest to mistake for the whole of it: a considered palette
   and a display font applied to a default layout is a well-dressed default.
+- Every border, divider and disabled control is a cool blue-grey while the
+  accent is not — the surest sign the neutrals were inherited rather than
+  chosen. See `references/theming.md`.
 - It looks like the last app you built.
+- It looks like Mantine. Not *built with* Mantine, which it is and should be —
+  but indistinguishable from a component gallery with the brand hue swapped in.
