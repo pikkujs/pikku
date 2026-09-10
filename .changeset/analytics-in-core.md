@@ -6,30 +6,46 @@
 
 Product analytics moves into core behind a `scaffold.analytics` generator.
 
-`@pikku/core/analytics` holds a sink registry — `setAnalyticsSink` plus
-`recordAnalyticsEvents`, which counts events and forwards them to whatever sink
-is registered. `loggerAnalyticsSink` is the one an app gets before it has
-chosen a store, so turning the scaffold on is enough to watch events arrive.
-
-An app declares what it measures — and where the events go — in one place:
+An app declares what it measures, and nothing else:
 
 ```ts
-export const analytics = pikkuAnalytics({
-  events: z.discriminatedUnion('name', [ ... ]),
-  sink: loggerAnalyticsSink,
+export const analyticsEvents = defineAnalyticsEvents({
+  page_viewed: z.object({ path: z.string() }),
+  todo_created: z.object({ priority: z.enum(['low', 'medium', 'high']) }),
 })
 ```
 
-The inspector finds that declaration the way it finds every other wiring, so
-there is no path to configure and no sink to register by hand; the CLI
-generates the `/analytics` ingest and its schemas from it.
+The name is the key, so it is never repeated as a `z.literal` inside the
+schema. Declare in as many modules as suits the project — a feature declares
+its events beside its functions — and the CLI unions them into the generated
+`/analytics` ingest and its schemas. The inspector finds the declarations the
+way it finds every other wiring, so there is no path to configure.
+
+Where events go is not part of the declaration. `services.analytics` is the
+request-scoped buffer a function records into, typed against the declared
+names:
+
+```ts
+await analytics.record({ name: 'todo_created', priority: 'high' })
+```
+
+It stamps identity, trace and wire fields from the invocation, buffers for the
+length of the call and flushes once when it ends. Identity is always
+server-side and never read from a request body, which is what makes the
+unauthenticated ingest safe to expose.
+
+The transport behind it is an `AnalyticsService` on singleton services — the
+one swappable slot. With none wired the runner installs
+`LoggerAnalyticsService`, so an app that turns the scaffold on can watch events
+arrive without first choosing a store; a platform injects its own through
+singleton services, and an app that wants neither sets `analyticsService` in
+its own `services.ts`, which runs last and wins. There is no process-global
+sink registry and no noop: events are never silently dropped.
 
 The generated wire is added to the set of scaffolds the inspector reads.
 Nothing imports it — it is a wiring, not a module anyone calls — so without
 that the route was written and never registered: no HTTP wiring, no entry in
 the fetch client, an endpoint that 404s.
 
-Identity is stamped server-side from the session and never read from the
-request body. No middleware is emitted with the wire: an origin lock rejects
-every native client and is forgeable anyway, so guarding the route is the
-project's call.
+No middleware is emitted with the wire: an origin lock rejects every native
+client and is forgeable anyway, so guarding the route is the project's call.

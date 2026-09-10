@@ -46,13 +46,16 @@ const variables = (flag?: string | number) =>
 
 /** The project declared its analytics; `undefined` means it did not. */
 const getInspectorState =
-  (analytics?: { file: string; variable: string }) => async () =>
+  (analytics?: Array<{ file: string; variable: string; events: string[] }>) =>
+  async () =>
     ({ analytics }) as never
 
-const declared = (root: string, variable = 'analytics') => ({
-  file: join(root, 'src', 'analytics.ts'),
-  variable,
-})
+const declared = (
+  root: string,
+  variable = 'analyticsEvents',
+  events = ['page_viewed'],
+  file = 'analytics.ts'
+) => [{ file: join(root, 'src', file), variable, events }]
 
 const run = (services: Record<string, unknown>) =>
   (pikkuAnalytics as unknown as { func: Function }).func(
@@ -85,7 +88,7 @@ describe('pikkuAnalytics', () => {
     // Reached back out of scaffold/analytics/ to the project's own declaration.
     assert.match(
       schemas,
-      /import \{ analytics \} from '\.\.\/\.\.\/analytics\.js'/
+      /import \{ analyticsEvents as events0 \} from '\.\.\/\.\.\/analytics\.js'/
     )
   })
 
@@ -106,8 +109,8 @@ describe('pikkuAnalytics', () => {
       analyticsSchemasFile(cfg.analyticsFile)!,
       'utf8'
     )
-    assert.match(schemas, /import \{ usage \} from/)
-    assert.match(schemas, /event: usage\.events/)
+    assert.match(schemas, /import \{ usage as events0 \} from/)
+    assert.match(schemas, /events0\['page_viewed'\]\.shape/)
   })
 
   // Deploy plan runs codegen once per unit with outDir redirected, so writing
@@ -179,7 +182,7 @@ describe('pikkuAnalytics', () => {
     )
     assert.equal(existsSync(cfg.analyticsFile), false)
     assert.equal(errors.length, 1)
-    assert.match(errors[0]!, /pikkuAnalytics/)
+    assert.match(errors[0]!, /defineAnalyticsEvents/)
   })
 
   // A configured `scaffold.analytics.path` moves the ingest, and the schemas

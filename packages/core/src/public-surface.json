@@ -551,11 +551,9 @@
     "reloadGeneratedMeta"
   ],
   "./analytics": [
-    "flattenAnalyticsEvent",
-    "getAnalyticsSink",
-    "loggerAnalyticsSink",
-    "pikkuAnalytics",
-    "recordAnalyticsEvents",
-    "setAnalyticsSink"
+    "LoggerAnalyticsService",
+    "createInvocationAnalytics",
+    "defineAnalyticsEvents",
+    "flattenAnalyticsEvent"
   ]
 }

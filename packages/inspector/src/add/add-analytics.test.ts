@@ -36,41 +36,87 @@ const inspectSources = async (sources: Record<string, string>) => {
   }
 }
 
-const declaration = (variable = 'analytics') =>
-  `import { pikkuAnalytics } from '@pikku/core/analytics'\n` +
-  `export const ${variable} = pikkuAnalytics({ events: {} as never })\n`
+const declaration = (
+  variable = 'analyticsEvents',
+  events: string[] = ['page_viewed']
+) =>
+  `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+  `export const ${variable} = defineAnalyticsEvents({ ` +
+  events.map((event) => `${event}: {} as never`).join(', ') +
+  ` })\n`
 
 describe('addAnalytics', () => {
-  // The CLI generates an ingest that imports this declaration by name, so
-  // where it is and what it is called is the whole of what has to be found.
-  test('records the file and the exported name', async () => {
+  // The CLI generates an ingest that imports each declaration by name and
+  // unions the keys, so where it is, what it is called and which names it
+  // declares is the whole of what has to be found.
+  test('records the file, the exported name and the event names', async () => {
     const { state, files } = await inspectSources({
-      'analytics.ts': declaration('usage'),
+      'analytics.ts': declaration('usage', ['page_viewed', 'todo_created']),
     })
 
-    assert.deepEqual(state.analytics, {
-      file: files[0]!,
-      variable: 'usage',
-    })
+    assert.deepEqual(state.analytics, [
+      {
+        file: files[0]!,
+        variable: 'usage',
+        events: ['page_viewed', 'todo_created'],
+      },
+    ])
   })
 
   test('leaves analytics unset when nothing declares it', async () => {
     const { state } = await inspectSources({
-      'other.ts': `export const notAnalytics = { events: {} }\n`,
+      'other.ts': `export const notAnalytics = { page_viewed: {} }\n`,
     })
 
     assert.equal(state.analytics, undefined)
   })
 
-  // There is one ingest route, so a second union would silently lose to
-  // whichever file happened to be visited first.
-  test('refuses a second declaration rather than picking one', async () => {
+  // A feature module declares its own events beside its own functions, and the
+  // generator unions them.
+  test('collects declarations from several modules', async () => {
+    const { state, errors } = await inspectSources({
+      'analytics.ts': declaration('appEvents', ['page_viewed']),
+      'billing-analytics.ts': declaration('billingEvents', ['checkout_completed']),
+    })
+
+    assert.deepEqual(errors, [])
+    assert.deepEqual(
+      state.analytics?.flatMap((declaration) => declaration.events).sort(),
+      ['checkout_completed', 'page_viewed']
+    )
+  })
+
+  // One of the two schemas would silently lose.
+  test('refuses the same event name in two declarations', async () => {
     const { errors } = await inspectSources({
-      'analytics.ts': declaration(),
-      'more-analytics.ts': declaration('extra'),
+      'analytics.ts': declaration('appEvents', ['page_viewed']),
+      'more-analytics.ts': declaration('extraEvents', ['page_viewed']),
     })
 
     assert.equal(errors.length, 1)
-    assert.match(errors[0]!, /more than one pikkuAnalytics/)
+    assert.match(errors[0]!, /declared twice/)
+  })
+
+  test('refuses a declaration that is not an object literal', async () => {
+    const { errors, state } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `const events = {} as never\n` +
+        `export const analyticsEvents = defineAnalyticsEvents(events)\n`,
+    })
+
+    assert.equal(state.analytics, undefined)
+    assert.match(errors[0]!, /object literal/)
+  })
+
+  test('refuses a declaration with no events', async () => {
+    const { errors, state } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `export const analyticsEvents = defineAnalyticsEvents({})\n`,
+    })
+
+    assert.equal(state.analytics, undefined)
+    assert.match(errors[0]!, /declares no events/)
   })
 })

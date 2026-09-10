@@ -41,6 +41,9 @@ import {
   resolveAuditConfig,
   type AuditLog,
 } from '../services/audit-service.js'
+import { createInvocationAnalytics } from '../analytics/analytics.js'
+import { LoggerAnalyticsService } from '../analytics/logger-analytics-service.js'
+import type { AnalyticsLog } from '../analytics/analytics.types.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { getOrCreatePackageSingletonServices } from '../wirings/addon/addon-runner.js'
 import {
@@ -406,6 +409,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     let wireServices: Record<string, unknown> | undefined
     let invocationAuditLog: AuditLog | undefined
+    let invocationAnalytics: AnalyticsLog | undefined
     try {
       wireServices = (await resolvedCreateWireServices?.(
         resolvedSingletonServices,
@@ -427,6 +431,29 @@ export const runPikkuFunc = async <In = any, Out = any>(
           resolvedSingletonServices.logger
         )
         services = { ...services, auditLog: invocationAuditLog }
+      }
+      // Unconditional, unlike the audit: analytics has no per-function config
+      // to opt in with, and an app that declared events expects every function
+      // to be able to record one. With no service wired the events go to the
+      // logger rather than nowhere.
+      //
+      // Built on first access rather than up front — most invocations record
+      // nothing, and a buffer nobody wrote to is two allocations per call.
+      if (!services.analytics) {
+        services = { ...services }
+        Object.defineProperty(services, 'analytics', {
+          get() {
+            invocationAnalytics ??= createInvocationAnalytics(
+              resolvedSingletonServices.analyticsService ??
+                new LoggerAnalyticsService(resolvedSingletonServices.logger),
+              invocationWire,
+              resolvedSingletonServices.logger
+            )
+            return invocationAnalytics
+          },
+          configurable: true,
+          enumerable: true,
+        })
       }
       const callerPackageName = funcPackageName
       Object.defineProperty(invocationWire, 'rpc', {
@@ -456,6 +483,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     } finally {
       // Flush the runner-installed audit buffer before wire services close.
       await invocationAuditLog?.close()
+      await invocationAnalytics?.close()
       if (wireServices && Object.keys(wireServices).length > 0) {
         await closeWireServices(resolvedSingletonServices.logger, wireServices)
       }

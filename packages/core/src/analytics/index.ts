@@ -1,14 +1,16 @@
 export type {
+  AnalyticsClientContext,
+  AnalyticsEventBase,
   AnalyticsEventInput,
   AnalyticsIdentity,
-  AnalyticsSink,
+  AnalyticsLog,
+  AnalyticsRecord,
+  AnalyticsService,
 } from './analytics.types.js'
 export {
+  createInvocationAnalytics,
   flattenAnalyticsEvent,
-  getAnalyticsSink,
-  recordAnalyticsEvents,
-  setAnalyticsSink,
 } from './analytics.js'
-export { loggerAnalyticsSink } from './logger-analytics-sink.js'
-export { pikkuAnalytics } from './pikku-analytics.js'
-export type { PikkuAnalytics } from './pikku-analytics.js'
+export { LoggerAnalyticsService } from './logger-analytics-service.js'
+export { defineAnalyticsEvents } from './define-analytics-events.js'
+export type { AnalyticsEventDefinitions } from './define-analytics-events.js'

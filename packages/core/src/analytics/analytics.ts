@@ -1,33 +1,27 @@
-import type { CoreSecretlessSingletonServices } from '../types/core.types.js'
 import type {
+  CoreUserSession,
+  PikkuWire,
+} from '../types/core.types.js'
+import type { Logger } from '../services/logger.js'
+import type {
+  AnalyticsClientContext,
+  AnalyticsEventBase,
   AnalyticsEventInput,
-  AnalyticsIdentity,
-  AnalyticsSink,
+  AnalyticsLog,
+  AnalyticsRecord,
+  AnalyticsService,
 } from './analytics.types.js'
 
-let sink: AnalyticsSink | undefined
-
 /**
- * Register where accepted events go. Called once at boot by whatever provides
- * the analytics backend; calling it again replaces the sink.
- */
-export const setAnalyticsSink = (next: AnalyticsSink | undefined): void => {
-  sink = next
-}
-
-/** The registered sink, or undefined when nothing is collecting. */
-export const getAnalyticsSink = (): AnalyticsSink | undefined => sink
-
-/**
- * Split a registry event into the shape a sink stores.
+ * Split a declared event into the shape a service stores.
  *
- * The app's registry declares events as a discriminated union on `name`, so
- * every event is `{ name, ...props }`. Removing the discriminator here — rather
- * than in each sink — keeps `props` free of a field that is already the series
- * key, which would otherwise be stored twice and diverge under renames.
+ * The app declares events as `{ name, ...props }`, so removing the
+ * discriminator here — rather than in each service — keeps `props` free of a
+ * field that is already the series key, which would otherwise be stored twice
+ * and diverge under renames.
  */
 export const flattenAnalyticsEvent = (
-  event: { name: string } & Record<string, unknown>,
+  event: AnalyticsEventBase,
   at?: number
 ): AnalyticsEventInput => {
   const { name, ...props } = event
@@ -35,27 +29,77 @@ export const flattenAnalyticsEvent = (
 }
 
 /**
- * Hand a validated batch to the registered sink.
+ * The buffer one invocation records into.
  *
- * Returns how many events were accepted, which is the whole batch: acceptance
- * means "validated and handed on", not "durably stored". The browser cannot act
- * on a storage failure — it has already navigated away — so reporting delivery
- * would be a promise the response cannot keep.
- *
- * With no sink registered this is a no-op that still reports the batch
- * accepted, for the same reason: the caller has nothing useful to do about it.
+ * Identity, trace and wire fields are resolved here rather than in the service
+ * for the same reason {@link flattenAnalyticsEvent} lives here: two
+ * implementations that each derived the user from the session would eventually
+ * disagree about who it was.
  */
-export const recordAnalyticsEvents = async (
-  services: CoreSecretlessSingletonServices,
-  events: AnalyticsEventInput[],
-  identity: AnalyticsIdentity
-): Promise<number> => {
-  // Counted before the sink runs: a sink is free to drain or reorder the array
-  // it was handed, and the caller asked how many events it submitted.
-  const accepted = events.length
-  if (accepted === 0) return 0
-  if (sink) {
-    await sink(services, events, identity)
+class InvocationAnalyticsLog implements AnalyticsLog {
+  private readonly buffer: AnalyticsRecord[] = []
+
+  constructor(
+    private readonly service: AnalyticsService,
+    private readonly wire: PikkuWire<any, any, any, CoreUserSession>,
+    private readonly logger?: Logger
+  ) {}
+
+  async record(
+    event: AnalyticsEventBase,
+    client?: AnalyticsClientContext
+  ): Promise<void> {
+    this.buffer.push(this.resolveEvent(event, client))
   }
-  return accepted
+
+  async flush(): Promise<void> {
+    if (this.buffer.length === 0) return
+
+    const batch = this.buffer.splice(0, this.buffer.length)
+    try {
+      if (this.service.write) {
+        await this.service.write(batch)
+        return
+      }
+      for (const event of batch) {
+        await this.service.record(event)
+      }
+    } catch (error) {
+      const logger = this.wire.logger ?? this.logger
+      logger?.warn?.('analytics flush failed', error)
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.flush()
+  }
+
+  private resolveEvent(
+    event: AnalyticsEventBase,
+    client?: AnalyticsClientContext
+  ): AnalyticsRecord {
+    const session = this.wire.session as CoreUserSession | undefined
+    const { name, props } = flattenAnalyticsEvent(event)
+    return {
+      name,
+      props,
+      occurredAt: new Date().toISOString(),
+      ...(client?.at === undefined ? {} : { at: client.at }),
+      userIdentity: {
+        userId: session?.userId ?? null,
+        orgId: session?.orgId,
+        pikkuUserId: this.wire.pikkuUserId,
+      },
+      traceId: this.wire.traceId,
+      functionId: this.wire.functionId,
+      wireType: this.wire.wireType,
+      source: client === undefined ? 'server' : 'client',
+    }
+  }
 }
+
+export const createInvocationAnalytics = (
+  service: AnalyticsService,
+  wire: PikkuWire<any, any, any, CoreUserSession>,
+  logger?: Logger
+): AnalyticsLog => new InvocationAnalyticsLog(service, wire, logger)

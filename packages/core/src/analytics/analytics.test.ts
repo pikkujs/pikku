@@ -1,19 +1,30 @@
-import { describe, it, beforeEach, afterEach } from 'node:test'
+import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import type { CoreSecretlessSingletonServices } from '../types/core.types.js'
-import type {
-  AnalyticsEventInput,
-  AnalyticsIdentity,
-} from './analytics.types.js'
-import {
-  flattenAnalyticsEvent,
-  getAnalyticsSink,
-  recordAnalyticsEvents,
-  setAnalyticsSink,
-} from './analytics.js'
+import type { CoreUserSession, PikkuWire } from '../types/core.types.js'
+import type { AnalyticsRecord, AnalyticsService } from './analytics.types.js'
+import { createInvocationAnalytics, flattenAnalyticsEvent } from './analytics.js'
 
-const services = {} as CoreSecretlessSingletonServices
-const anonymous: AnalyticsIdentity = { userId: null }
+const makeWire = (session?: CoreUserSession) =>
+  ({
+    session,
+    traceId: 'trace-1',
+    functionId: 'completeCheckout',
+    wireType: 'http',
+    pikkuUserId: 'pikku-1',
+  }) as unknown as PikkuWire<any, any, any, CoreUserSession>
+
+const recordingService = () => {
+  const batches: AnalyticsRecord[][] = []
+  const service: AnalyticsService = {
+    async record(event) {
+      batches.push([event])
+    },
+    async write(batch) {
+      batches.push(batch)
+    },
+  }
+  return { service, batches }
+}
 
 describe('flattenAnalyticsEvent', () => {
   it('splits the discriminator off the props', () => {
@@ -28,8 +39,8 @@ describe('flattenAnalyticsEvent', () => {
   })
 
   it('omits `at` entirely when the client sent none', () => {
-    // Not `at: undefined` — a sink that stores props verbatim would then write
-    // an explicit null timestamp and lose "the client never said".
+    // Not `at: undefined` — a service that stores props verbatim would then
+    // write an explicit null timestamp and lose "the client never said".
     assert.equal('at' in flattenAnalyticsEvent({ name: 'signed_up' }), false)
   })
 
@@ -38,68 +49,122 @@ describe('flattenAnalyticsEvent', () => {
   })
 })
 
-describe('recordAnalyticsEvents', () => {
-  beforeEach(() => setAnalyticsSink(undefined))
-  afterEach(() => setAnalyticsSink(undefined))
+describe('createInvocationAnalytics', () => {
+  it('buffers until flushed, then writes the batch once', async () => {
+    const { service, batches } = recordingService()
+    const analytics = createInvocationAnalytics(service, makeWire())
 
-  it('accepts the batch and drops it when nothing is collecting', async () => {
-    const accepted = await recordAnalyticsEvents(
-      services,
-      [{ name: 'page_viewed', props: { path: '/' } }],
-      anonymous
+    await analytics.record({ name: 'page_viewed', path: '/todos' })
+    await analytics.record({ name: 'todo_created', priority: 'low' })
+    assert.equal(batches.length, 0)
+
+    await analytics.flush()
+    assert.equal(batches.length, 1)
+    assert.deepEqual(
+      batches[0]!.map((event) => event.name),
+      ['page_viewed', 'todo_created']
     )
-    assert.equal(accepted, 1)
   })
 
-  it('forwards the batch and the identity to a registered sink', async () => {
-    const seen: Array<[AnalyticsEventInput[], AnalyticsIdentity]> = []
-    setAnalyticsSink(async (_s, events, identity) => {
-      seen.push([events, identity])
-    })
-
-    const accepted = await recordAnalyticsEvents(
-      services,
-      [{ name: 'signed_up', props: {} }],
-      { userId: 'u1' }
-    )
-
-    assert.equal(accepted, 1)
-    assert.equal(seen.length, 1)
-    assert.deepEqual(seen[0]![1], { userId: 'u1' })
-  })
-
-  // A sink that drains the array it was handed (a queue push, say) must not
-  // turn the caller's submitted count into zero.
-  it('reports the submitted count even if the sink drains the batch', async () => {
-    setAnalyticsSink(async (_s, events) => {
-      events.length = 0
-    })
-
-    const accepted = await recordAnalyticsEvents(
-      services,
-      [
-        { name: 'page_viewed', props: { path: '/' } },
-        { name: 'signed_up', props: {} },
-      ],
-      anonymous
+  it('stamps identity, trace and wire fields from the invocation', async () => {
+    const { service, batches } = recordingService()
+    const analytics = createInvocationAnalytics(
+      service,
+      makeWire({ userId: 'user-1', orgId: 'org-1' } as CoreUserSession)
     )
 
-    assert.equal(accepted, 2)
-  })
+    await analytics.record({ name: 'checkout_completed', amount: 12 })
+    await analytics.close()
 
-  it('does not call the sink for an empty batch', async () => {
-    let calls = 0
-    setAnalyticsSink(async () => {
-      calls++
+    const event = batches[0]![0]!
+    assert.deepEqual(event.userIdentity, {
+      userId: 'user-1',
+      orgId: 'org-1',
+      pikkuUserId: 'pikku-1',
     })
-    assert.equal(await recordAnalyticsEvents(services, [], anonymous), 0)
-    assert.equal(calls, 0)
+    assert.equal(event.traceId, 'trace-1')
+    assert.equal(event.functionId, 'completeCheckout')
+    assert.equal(event.wireType, 'http')
+    assert.deepEqual(event.props, { amount: 12 })
   })
 
-  it('lets a later registration replace the sink', async () => {
-    setAnalyticsSink(async () => {})
-    const second = async () => {}
-    setAnalyticsSink(second)
-    assert.equal(getAnalyticsSink(), second)
+  it('records an unauthenticated caller as nobody', async () => {
+    const { service, batches } = recordingService()
+    const analytics = createInvocationAnalytics(service, makeWire())
+
+    await analytics.record({ name: 'page_viewed', path: '/' })
+    await analytics.close()
+
+    assert.equal(batches[0]![0]!.userIdentity.userId, null)
+  })
+
+  it('marks a relayed event as client-sourced and keeps its clock', async () => {
+    const { service, batches } = recordingService()
+    const analytics = createInvocationAnalytics(service, makeWire())
+
+    await analytics.record({ name: 'page_viewed', path: '/' }, { at: 1700 })
+    await analytics.close()
+
+    assert.equal(batches[0]![0]!.source, 'client')
+    assert.equal(batches[0]![0]!.at, 1700)
+  })
+
+  it('marks an event a function recorded as server-sourced', async () => {
+    const { service, batches } = recordingService()
+    const analytics = createInvocationAnalytics(service, makeWire())
+
+    await analytics.record({ name: 'checkout_completed', amount: 1 })
+    await analytics.close()
+
+    assert.equal(batches[0]![0]!.source, 'server')
+    assert.equal('at' in batches[0]![0]!, false)
+  })
+
+  it('falls back to record() when the service takes no batch', async () => {
+    const seen: AnalyticsRecord[] = []
+    const analytics = createInvocationAnalytics(
+      {
+        async record(event) {
+          seen.push(event)
+        },
+      },
+      makeWire()
+    )
+
+    await analytics.record({ name: 'a' })
+    await analytics.record({ name: 'b' })
+    await analytics.close()
+
+    assert.deepEqual(
+      seen.map((event) => event.name),
+      ['a', 'b']
+    )
+  })
+
+  it('warns rather than throws when the destination fails', async () => {
+    const warnings: unknown[] = []
+    const analytics = createInvocationAnalytics(
+      {
+        async record() {
+          throw new Error('destination down')
+        },
+      },
+      makeWire(),
+      { warn: (message: any) => warnings.push(message) } as any
+    )
+
+    await analytics.record({ name: 'page_viewed' })
+    await analytics.close()
+
+    assert.equal(warnings.length, 1)
+  })
+
+  it('flushes nothing when nothing was recorded', async () => {
+    const { service, batches } = recordingService()
+    const analytics = createInvocationAnalytics(service, makeWire())
+
+    await analytics.close()
+
+    assert.equal(batches.length, 0)
   })
 })

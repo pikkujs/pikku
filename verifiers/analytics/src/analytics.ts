@@ -1,26 +1,21 @@
 import { z } from 'zod'
-import { pikkuAnalytics } from '@pikku/core/analytics'
+import { defineAnalyticsEvents } from '@pikku/core/analytics'
 
 /**
- * The one declaration a project makes. Everything else about the ingest is
+ * The one thing a project declares. Everything else about the ingest is
  * generated from it, which is the whole point of the verifier: nothing here
- * wires a route.
+ * wires a route, and nothing here says where events go.
  *
- * No sink: the tests register their own to read what the wire accepted, and a
- * declaration without one still has to produce a working, validating endpoint.
+ * The tests install their own `analyticsService` to read what the wire
+ * accepted; a project that installs none still has to get a working,
+ * validating endpoint.
  */
-export const analytics = pikkuAnalytics({
-  events: z.discriminatedUnion('name', [
-    z.object({
-      name: z.literal('page_viewed'),
-      path: z.string().max(512),
-    }),
-    z.object({
-      name: z.literal('checkout_completed'),
-      amount: z.number(),
-      currency: z.string().length(3),
-    }),
-  ]),
+export const analyticsEvents = defineAnalyticsEvents({
+  page_viewed: z.object({
+    path: z.string().max(512),
+  }),
+  checkout_completed: z.object({
+    amount: z.number(),
+    currency: z.string().length(3),
+  }),
 })
-
-export type AnalyticsEvent = z.infer<(typeof analytics)['events']>
