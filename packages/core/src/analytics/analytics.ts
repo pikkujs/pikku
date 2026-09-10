@@ -1,7 +1,4 @@
-import type {
-  CoreUserSession,
-  PikkuWire,
-} from '../types/core.types.js'
+import type { CoreUserSession, PikkuWire } from '../types/core.types.js'
 import type { Logger } from '../services/logger.js'
 import type {
   AnalyticsClientContext,

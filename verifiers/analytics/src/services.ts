@@ -6,10 +6,7 @@ import {
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
-import type {
-  AnalyticsRecord,
-  AnalyticsService,
-} from '@pikku/core/analytics'
+import type { AnalyticsRecord, AnalyticsService } from '@pikku/core/analytics'
 
 /**
  * What the wire handed on, in the order the invocation flushed it.
