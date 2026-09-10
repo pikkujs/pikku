@@ -76,7 +76,9 @@ describe('addAnalytics', () => {
   test('collects declarations from several modules', async () => {
     const { state, errors } = await inspectSources({
       'analytics.ts': declaration('appEvents', ['page_viewed']),
-      'billing-analytics.ts': declaration('billingEvents', ['checkout_completed']),
+      'billing-analytics.ts': declaration('billingEvents', [
+        'checkout_completed',
+      ]),
     })
 
     assert.deepEqual(errors, [])

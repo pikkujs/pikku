@@ -63,7 +63,8 @@ export const addAnalytics = (
 
   const declarations = (state.analytics ??= [])
   const existing = declarations.find(
-    (declaration) => declaration.file === file && declaration.variable === name.text
+    (declaration) =>
+      declaration.file === file && declaration.variable === name.text
   )
   if (existing) {
     existing.events = events

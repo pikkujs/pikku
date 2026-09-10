@@ -58,10 +58,7 @@ export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
       getLeafImportPath(config.analyticsFile!, name, config)
     const declarations: AnalyticsDeclaration[] = analytics.map(
       (declaration) => ({
-        specifier: analyticsSpecifier(
-          config.analyticsFile!,
-          declaration.file
-        ),
+        specifier: analyticsSpecifier(config.analyticsFile!, declaration.file),
         variable: declaration.variable,
         events: declaration.events,
       })

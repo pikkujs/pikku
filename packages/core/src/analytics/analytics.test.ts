@@ -2,7 +2,10 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { CoreUserSession, PikkuWire } from '../types/core.types.js'
 import type { AnalyticsRecord, AnalyticsService } from './analytics.types.js'
-import { createInvocationAnalytics, flattenAnalyticsEvent } from './analytics.js'
+import {
+  createInvocationAnalytics,
+  flattenAnalyticsEvent,
+} from './analytics.js'
 
 const makeWire = (session?: CoreUserSession) =>
   ({
