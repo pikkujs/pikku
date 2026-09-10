@@ -284,6 +284,20 @@ pikku knowledge plan defer <milestone> <item> -r "<why>"
 
 `progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short, or while anything already built contradicts the plan. Unbuilt work in a later pass is reported, not blocked; a function that shipped wide open against a planned permission rule blocks from any pass, because that is a hole rather than a backlog. Writing a plan is its own seat: read `pikku-architect`. Building against one is `pikku-build`.
 
+### A finished milestone is a tombstone
+
+**Once a milestone reaches `built`, its note and its plan are closed. Do not edit either.** Not to correct the wording, not to fold in what the build actually turned out to need, not to add the item everyone agrees should have been there. A finished milestone is the record of what was agreed and what was measured against it, and a record that can be revised afterwards measures nothing.
+
+This is the rule the shape of the thing already implies. `progress` reconciles a plan against generated meta and fails when what shipped contradicts it — a check with no force at all if the losing side of the contradiction may simply be rewritten. `attempts:` brakes a note nothing can satisfy, and refunds that budget when the note's content really changes; a `built` note that keeps changing is that brake removed. Both only work while the plan stays still.
+
+So when a `built` milestone turns out to be wrong or incomplete, **the answer is always a new note, never an edit to the old one**:
+
+- It needed more than it said → a new milestone, which may name the old one.
+- It was built differently than planned → that is what `progress` is for. Reconcile forward, or record a decision saying why the plan was not the right shape.
+- It was simply wrong → a decision note that supersedes it. The wrong milestone stays where it is; a base whose history is edited cannot answer *why* anything is the way it is, which is most of what a base is for.
+
+The exception, and it is narrow: bookkeeping the loop owns. `statusAt:` and `attempts:` are written by whatever moved the note, at any status, and are bookkeeping rather than content. Nothing else about a `built` note moves again.
+
 ## Profiles built on this one
 
 OKF permits frontmatter fields a reader does not know, and the parser ignores them rather than failing. That is the extension point: a tool layered on Pikku can add its own sections and fields on top of everything above without forking the format.
