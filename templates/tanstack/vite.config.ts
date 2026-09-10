@@ -12,7 +12,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 const PIKKU_SERVER = 'http://localhost:4002'
 
 /** Paths that belong to pikku rather than to the client-side router. */
-const API_PATHS = ['/todos', '/_pikku']
+const API_PATHS = ['/todos', '/analytics', '/_pikku']
 
 const generated = fileURLToPath(
   new URL('../functions/.pikku/', import.meta.url)

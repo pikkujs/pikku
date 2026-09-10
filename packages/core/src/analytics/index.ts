@@ -9,3 +9,4 @@ export {
   recordAnalyticsEvents,
   setAnalyticsSink,
 } from './analytics.js'
+export { loggerAnalyticsSink } from './logger-analytics-sink.js'

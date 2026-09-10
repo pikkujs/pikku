@@ -1,4 +1,4 @@
-import type { CoreSingletonServices } from '../types/core.types.js'
+import type { CoreSecretlessSingletonServices } from '../types/core.types.js'
 import type {
   AnalyticsEventInput,
   AnalyticsIdentity,
@@ -46,7 +46,7 @@ export const flattenAnalyticsEvent = (
  * accepted, for the same reason: the caller has nothing useful to do about it.
  */
 export const recordAnalyticsEvents = async (
-  services: CoreSingletonServices,
+  services: CoreSecretlessSingletonServices,
   events: AnalyticsEventInput[],
   identity: AnalyticsIdentity
 ): Promise<number> => {

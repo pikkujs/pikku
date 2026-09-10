@@ -1,4 +1,4 @@
-import type { CoreSingletonServices } from '../types/core.types.js'
+import type { CoreSecretlessSingletonServices } from '../types/core.types.js'
 
 /**
  * One product-analytics event, already flattened for a sink.
@@ -38,7 +38,7 @@ export interface AnalyticsIdentity {
  * gets a working, typed endpoint rather than a 500.
  */
 export type AnalyticsSink = (
-  services: CoreSingletonServices,
+  services: CoreSecretlessSingletonServices,
   events: AnalyticsEventInput[],
   identity: AnalyticsIdentity
 ) => Promise<void>
