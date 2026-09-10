@@ -2,18 +2,9 @@ import * as ts from 'typescript'
 import type { InspectorLogger, InspectorState } from '../types.js'
 
 /**
- * Record every `defineAnalyticsEvents` declaration in the project.
- *
- * Where it is and which names it declares, not what those names validate: the
- * CLI generates an ingest that imports the declaration and reads the schemas
- * off it, so they stay values the project owns rather than something
- * re-derived here. The names are read because the generator has to build the
- * union, and it can only do that if it knows the keys.
- *
- * A project may declare in as many modules as suits it — a feature declares its
- * own events beside its own functions and the generator unions them. Declaring
- * the same event name twice is an error rather than a merge: one of the two
- * schemas would silently lose.
+ * Record where each `defineAnalyticsEvents` declaration is and which names it
+ * declares — not what those names validate, since the generated ingest imports
+ * the declaration and reads the schemas off it.
  */
 export const addAnalytics = (
   logger: InspectorLogger,

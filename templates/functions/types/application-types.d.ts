@@ -46,12 +46,8 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   agentRunState?: AgentRunStateService
   kysely?: Kysely<KyselyPikkuDB>
   auth: () => Promise<Awaited<ReturnType<typeof auth>>>
-  /**
-   * Narrowed to this app's declared events, so `record()` takes a name the
-   * project declared and nothing else. The runner installs the buffer; wiring
-   * `analyticsService` is what decides where the events go.
-   */
-  analyticsLog?: AnalyticsLog<AnalyticsEvent>
+  /** Narrowed to this app's declared events. */
+  analytics?: AnalyticsLog<AnalyticsEvent>
 }
 
 export interface Services extends CoreServices<SingletonServices> {}
