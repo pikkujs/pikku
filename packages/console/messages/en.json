@@ -1142,5 +1142,6 @@
   "help_functions_do_select": "[Open one to see its inputs, outputs and wirings](#list)",
   "help_functions_do_internals": "[Show pikku's own internal functions](#internals)",
   "scopes_granted_via_role": "via {roles}",
-  "scopes_tree_hint": "Held scopes are ticked. A scope a role carries is ticked and locked — change it on the role."
+  "scopes_tree_hint": "Held scopes are ticked. A scope a role carries is ticked and locked — change it on the role.",
+  "workflow_controls_clear_run": "Back to workflow"
 }

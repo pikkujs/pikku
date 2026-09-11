@@ -11,6 +11,7 @@ import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { ScenarioDocument } from '../scenarios/ScenarioDocument'
 import { WorkflowGraphView } from '../project/WorkflowGraphView'
 import { WorkflowTimelineDrawer } from '../project/WorkflowTimelineDrawer'
+import { WorkflowControls } from './WorkflowControls'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 /**
@@ -65,6 +66,7 @@ export const WorkflowGraphPanel: React.FC = () => {
         flexDirection: 'column',
       }}
     >
+      <WorkflowControls />
       {runContext?.isVersionMismatch && (
         <Alert
           icon={<History size={16} />}

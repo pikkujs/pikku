@@ -159,7 +159,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   )
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" data-testid="workflow-new-run-form">
       {isLoading ? (
         <Loader size="sm" />
       ) : effectiveSchema ? (

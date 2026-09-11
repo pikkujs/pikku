@@ -14,6 +14,7 @@ import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
+import { PaneRevealProvider } from '../../context/PaneRevealContext'
 import { ConsoleListPanel } from '../shell/ConsoleListPanel'
 import { PageOptionsPortal } from '../shell/PageOptionsPortal'
 import { PaneCollapseProvider } from '../../context/PaneCollapseContext'
@@ -149,167 +150,174 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
       : classes.listSurfaceCard
 
   return (
-    <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
-      {header}
-      <Box
-        style={{
-          display: 'flex',
-          flex: 1,
-          minHeight: 0,
-          gap: 'var(--mantine-spacing-md)',
-          padding: 'var(--console-body-gutter)',
-        }}
-      >
-        {listInSheet && (
-          <PageOptionsPortal label={listLabel ?? m.pane_list()}>
-            <Box
-              className={classes.flexColumn}
-              style={{ flex: 1, minHeight: 0, width: '100%' }}
-              data-testid="pane-list-sheet"
-            >
-              {listBody}
-            </Box>
-          </PageOptionsPortal>
-        )}
+    // Provided for the whole layout, not just the list: the middle pane's own
+    // controls put their result in the details pane too, and an action whose
+    // result lands there must be able to re-open it.
+    <PaneRevealProvider reveal={() => setRightCollapsed(false)}>
+      <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
+        {header}
+        <Box
+          style={{
+            display: 'flex',
+            flex: 1,
+            minHeight: 0,
+            gap: 'var(--mantine-spacing-md)',
+            padding: 'var(--console-body-gutter)',
+          }}
+        >
+          {listInSheet && (
+            <PageOptionsPortal label={listLabel ?? m.pane_list()}>
+              <Box
+                className={classes.flexColumn}
+                style={{ flex: 1, minHeight: 0, width: '100%' }}
+                data-testid="pane-list-sheet"
+              >
+                {listBody}
+              </Box>
+            </PageOptionsPortal>
+          )}
 
-        {hasLeft &&
-          !listInSheet &&
-          (listAsPanel ? (
-            <ConsoleListPanel
-              width={(showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH) + CARD_GUTTERS}
-              testId="console-list-panel"
-            >
-              {listBody}
-            </ConsoleListPanel>
-          ) : (
+          {hasLeft &&
+            !listInSheet &&
+            (listAsPanel ? (
+              <ConsoleListPanel
+                width={(showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH) + CARD_GUTTERS}
+                testId="console-list-panel"
+              >
+                {listBody}
+              </ConsoleListPanel>
+            ) : (
+              <Box
+                className={classes.paneCollapseTransition}
+                style={{
+                  width: showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH,
+                  minWidth: showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH,
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                }}
+              >
+                {showLeft ? (
+                  <Box
+                    className={classes.listSurfaceCard}
+                    style={{ height: '100%' }}
+                  >
+                    {listBody}
+                  </Box>
+                ) : (
+                  listBody
+                )}
+              </Box>
+            ))}
+
+          <Box
+            className={mainSurface}
+            style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
+          >
+            {showPaneHeader && (
+              <Box
+                px={8}
+                style={{
+                  height: 42,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  borderBottom: '1px solid var(--app-border)',
+                }}
+              >
+                <Box
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  {lead}
+                  {filters}
+                </Box>
+              </Box>
+            )}
+            <Box style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              {children}
+            </Box>
+          </Box>
+
+          {!ownsChrome && !hidePanel && (
+            <ConsoleDetailPanel
+              emptyMessage={emptyPanelMessage}
+              workflowGraph={false}
+            />
+          )}
+
+          {hasRight && (
             <Box
               className={classes.paneCollapseTransition}
               style={{
-                width: showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH,
-                minWidth: showLeft ? LIST_WIDTH : LIST_RAIL_WIDTH,
+                width: showRight ? 'min(520px, 42vw)' : 40,
+                minWidth: showRight ? undefined : 40,
                 flexShrink: 0,
                 overflow: 'hidden',
               }}
             >
-              {showLeft ? (
+              {showRight ? (
                 <Box
                   className={classes.listSurfaceCard}
-                  style={{ height: '100%' }}
+                  style={{
+                    height: '100%',
+                    width: 'min(520px, 42vw)',
+                    position: 'relative',
+                  }}
                 >
-                  {listBody}
-                </Box>
-              ) : (
-                listBody
-              )}
-            </Box>
-          ))}
-
-        <Box
-          className={mainSurface}
-          style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
-        >
-          {showPaneHeader && (
-            <Box
-              px={8}
-              style={{
-                height: 42,
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                borderBottom: '1px solid var(--app-border)',
-              }}
-            >
-              <Box
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                {lead}
-                {filters}
-              </Box>
-            </Box>
-          )}
-          <Box style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            {children}
-          </Box>
-        </Box>
-
-        {!ownsChrome && !hidePanel && (
-          <ConsoleDetailPanel
-            emptyMessage={emptyPanelMessage}
-            workflowGraph={false}
-          />
-        )}
-
-        {hasRight && (
-          <Box
-            className={classes.paneCollapseTransition}
-            style={{
-              width: showRight ? 'min(520px, 42vw)' : 40,
-              minWidth: showRight ? undefined : 40,
-              flexShrink: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {showRight ? (
-              <Box
-                className={classes.listSurfaceCard}
-                style={{
-                  height: '100%',
-                  width: 'min(520px, 42vw)',
-                  position: 'relative',
-                }}
-              >
-                <PanelContainer
-                  emptyMessage={emptyPanelMessage}
-                  workflowGraph={false}
-                  hideClose
-                  hideRootTitle={!!lead}
-                />
-                {/* Overlaid rather than given a header row of its own — with the
+                  <PanelContainer
+                    emptyMessage={emptyPanelMessage}
+                    workflowGraph={false}
+                    hideClose
+                    hideRootTitle={!!lead}
+                  />
+                  {/* Overlaid rather than given a header row of its own — with the
                     root title suppressed that row would be empty but for this
                     icon, pushing the panel down a line. The offset lines it up
                     with the panel's own title row and its actions. */}
-                <Tooltip label={m.pane_hide_details()}>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size="sm"
-                    aria-label={m.pane_hide_details()}
-                    onClick={() => setRightCollapsed(true)}
-                    style={{
-                      position: 'absolute',
-                      top: 20,
-                      right: 10,
-                      zIndex: 2,
-                    }}
+                  <Tooltip label={m.pane_hide_details()}>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size="sm"
+                      aria-label={m.pane_hide_details()}
+                      data-testid="pane-hide-details"
+                      onClick={() => setRightCollapsed(true)}
+                      style={{
+                        position: 'absolute',
+                        top: 20,
+                        right: 10,
+                        zIndex: 2,
+                      }}
+                    >
+                      <PanelRightClose size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Box>
+              ) : (
+                <Tooltip label={m.pane_show_details()} position="left">
+                  <UnstyledButton
+                    className={classes.paneStub}
+                    aria-label={m.pane_show_details()}
+                    data-testid="pane-show-details"
+                    onClick={() => setRightCollapsed(false)}
                   >
-                    <PanelRightClose size={16} />
-                  </ActionIcon>
+                    <PanelRightOpen size={16} />
+                    <span className={classes.paneStubLabel}>
+                      {detailLabel ?? m.pane_details()}
+                    </span>
+                  </UnstyledButton>
                 </Tooltip>
-              </Box>
-            ) : (
-              <Tooltip label={m.pane_show_details()} position="left">
-                <UnstyledButton
-                  className={classes.paneStub}
-                  aria-label={m.pane_show_details()}
-                  onClick={() => setRightCollapsed(false)}
-                >
-                  <PanelRightOpen size={16} />
-                  <span className={classes.paneStubLabel}>
-                    {detailLabel ?? m.pane_details()}
-                  </span>
-                </UnstyledButton>
-              </Tooltip>
-            )}
-          </Box>
-        )}
+              )}
+            </Box>
+          )}
+        </Box>
       </Box>
-    </Box>
+    </PaneRevealProvider>
   )
 }

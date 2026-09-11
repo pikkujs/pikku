@@ -1,10 +1,11 @@
 /**
- * The console APIs page: the MCP and Gateways tabs.
+ * The console wires pages: MCP and Gateways.
  *
- * Both were standalone pages when the gherkin was written and are now tabs on
- * one page, selected by a query param. Both list their records in a table keyed
- * on the record's own name, which is project data rather than console copy — so
- * the assertions here are stable without the page carrying test ids.
+ * Both were standalone pages when the gherkin was written, became tabs on one
+ * APIs page selected by a query param, and are standalone pages again under
+ * `/console/wires/*`. Both list their records in a table keyed on the record's
+ * own name, which is project data rather than console copy — so the assertions
+ * here are stable without the page carrying test ids.
  *
  * One assertion did not survive: the gherkin expected the console to flag an
  * MCP tool that declares no description. The console renders no such warning
@@ -15,12 +16,12 @@
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
-const MCP_TAB = '/console/apis?tab=mcp'
-const GATEWAYS_TAB = '/console/apis?tab=gateways'
+const MCP_PAGE = '/console/wires/mcp'
+const GATEWAYS_PAGE = '/console/wires/gateway'
 
 export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
   title: 'MCP tools are listed in the console',
-  description: 'An admin opens the MCP tab and finds the project’s tools',
+  description: 'An admin opens the MCP page and finds the project’s tools',
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -30,9 +31,9 @@ export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
     }
 
     await scenario.given(
-      'opens the MCP tab',
+      'opens the MCP page',
       'opensConsolePage',
-      { path: MCP_TAB, waitFor: { testId: 'data-table' } },
+      { path: MCP_PAGE, waitFor: { testId: 'data-table' } },
       { actor: actors.admin }
     )
 
@@ -52,7 +53,7 @@ export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
 
 export const gatewayMetadataScenario = pikkuScenario<void, { listed: true }>({
   title: 'Gateway metadata is visible in the console',
-  description: 'An admin opens the Gateways tab and finds the gateway’s route',
+  description: 'An admin opens the Gateways page and finds the gateway’s route',
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -62,9 +63,9 @@ export const gatewayMetadataScenario = pikkuScenario<void, { listed: true }>({
     }
 
     await scenario.given(
-      'opens the Gateways tab',
+      'opens the Gateways page',
       'opensConsolePage',
-      { path: GATEWAYS_TAB, waitFor: { testId: 'data-table' } },
+      { path: GATEWAYS_PAGE, waitFor: { testId: 'data-table' } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -79,7 +80,7 @@ export const gatewayMetadataScenario = pikkuScenario<void, { listed: true }>({
 })
 
 export const apisConsoleFeature = pikkuFeature({
-  name: 'APIs Console Page',
+  name: 'Wires Console Pages',
   description: 'The console lists the project’s MCP tools and gateways',
   tags: ['apis-console', 'console'],
   scenarios: [mcpToolsListedScenario, gatewayMetadataScenario],
