@@ -9,6 +9,11 @@ export type GroupingStrategy = 'function' | 'single' | 'services'
 export type { GroupingRule } from '@pikku/deploy'
 
 export interface GroupingConfig {
+  /**
+   * Defaults to `'services'`: one unit per distinct service combination. The
+   * alternatives are `'function'` (one unit per function — the smallest bundles
+   * and the most of them) and `'single'` (everything in one).
+   */
   strategy?: GroupingStrategy
   rules?: GroupingRule[]
 }
@@ -47,6 +52,13 @@ export interface UnitResolver {
 }
 
 const SINGLE_UNIT_NAME = 'app'
+
+/**
+ * One unit per distinct service combination. `'function'` gives a deployment
+ * as many units as it has functions, which is a cold start and a deploy step
+ * each for bundles that mostly build the same services.
+ */
+const DEFAULT_STRATEGY: GroupingStrategy = 'services'
 
 /**
  * Services every unit is given regardless of what it holds, so they say nothing
@@ -144,7 +156,7 @@ export const createUnitResolver = (
   config: GroupingConfig | undefined,
   input: UnitResolverInput
 ): UnitResolver => {
-  const strategy = config?.strategy ?? 'function'
+  const strategy = config?.strategy ?? DEFAULT_STRATEGY
   const rules = config?.rules ?? []
 
   if (config) {
