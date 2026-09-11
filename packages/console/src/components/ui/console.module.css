@@ -101,7 +101,7 @@
 /* ── Grid header (column headings row) ── */
 
 .gridHeader {
-  padding: 7px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--app-border);
   background: var(--app-surface);
   flex-shrink: 0;
@@ -109,8 +109,7 @@
 }
 
 .gridHeaderLabel {
-  letter-spacing: 0.1em;
-  font-size: 9px;
+  letter-spacing: normal;
 }
 
 /* ── List item (selectable row) ── */
@@ -911,13 +910,13 @@
 }
 
 .tableHead th {
-  height: 34px;
+  height: 40px;
   padding-top: 0;
   padding-bottom: 0;
-  font-size: max(11px, var(--mantine-font-size-xs));
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-family: var(--mantine-font-family);
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
+  letter-spacing: normal;
   color: var(--app-text-dim);
   white-space: nowrap;
   user-select: none;
