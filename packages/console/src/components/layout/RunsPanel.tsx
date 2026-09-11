@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import {
   Stack,
   Text,
@@ -18,6 +18,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Check, PanelLeftClose, Plus, X } from 'lucide-react'
 import { usePaneCollapse } from '../../context/PaneCollapseContext'
+import { usePaneReveal } from '../../context/PaneRevealContext'
 import {
   usePageAction,
   usePageOptionsDismiss,
@@ -190,6 +191,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
 }) => {
   const [statusFilter, setStatusFilter] = useState('all')
   const collapsePane = usePaneCollapse()
+  const revealDetails = usePaneReveal()
   const phone = usePhone()
   const dismiss = usePageOptionsDismiss()
   useLocale()
@@ -198,12 +200,17 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
   // pinned at the top as the sheet's primary action rather than scrolling away
   // above the runs. Picking either puts the sheet away: what a run opens, and
   // what a new run opens, are both underneath it.
+  const handleNew = useCallback(() => {
+    revealDetails?.()
+    onNewClick?.()
+  }, [revealDetails, onNewClick])
+
   usePageAction(
     phone && onNewClick
       ? {
           label: newButtonLabel ?? m.runs_panel_new(),
           icon: <Plus size={16} />,
-          onSelect: onNewClick,
+          onSelect: handleNew,
         }
       : null
   )
@@ -276,7 +283,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
                 py="sm"
                 px="sm"
                 style={{ flex: 1, minWidth: 0 }}
-                onClick={onNewClick}
+                onClick={handleNew}
                 data-testid="runs-panel-new"
               >
                 <Group gap="xs">
@@ -305,6 +312,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
                 run={run}
                 selected={run.id === selectedId}
                 onSelect={() => {
+                  revealDetails?.()
                   onSelect(run.id)
                   dismiss()
                 }}

@@ -14,6 +14,7 @@ import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
+import { PaneRevealProvider } from '../../context/PaneRevealContext'
 import { ConsoleListPanel } from '../shell/ConsoleListPanel'
 import { PageOptionsPortal } from '../shell/PageOptionsPortal'
 import { PaneCollapseProvider } from '../../context/PaneCollapseContext'
@@ -119,7 +120,9 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
     // The panel renders the collapse control itself, in a row it already has —
     // see PaneCollapseContext.
     <PaneCollapseProvider collapse={() => setLeftCollapsed(true)}>
-      {runsPanel}
+      <PaneRevealProvider reveal={() => setRightCollapsed(false)}>
+        {runsPanel}
+      </PaneRevealProvider>
     </PaneCollapseProvider>
   ) : (
     <Tooltip label={m.pane_show_list()} position="right">
