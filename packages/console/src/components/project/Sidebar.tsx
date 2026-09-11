@@ -330,12 +330,16 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/addons',
           group: { id: 'connections', title: m.nav_group_connections() },
         },
+        {
+          label: m.nav_oauth(),
+          href: '/auth-providers',
+          icon: Lock,
+          matchPrefix: '/auth-providers',
+          group: { id: 'connections', title: m.nav_group_connections() },
+        },
       ],
     },
     {
-      // OAuth is under "Where it runs" rather than with People because it
-      // declares how sign-in is configured — it reads secrets. Everything under
-      // People is live state.
       id: 'build',
       title: m.nav_build(),
       icon: Braces,
@@ -417,13 +421,6 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/surface',
           icon: DoorOpen,
           matchPrefix: '/surface',
-          group: { id: 'runs', title: m.nav_group_where_it_runs() },
-        },
-        {
-          label: m.nav_oauth(),
-          href: '/auth-providers',
-          icon: Lock,
-          matchPrefix: '/auth-providers',
           group: { id: 'runs', title: m.nav_group_where_it_runs() },
         },
         {

@@ -55,6 +55,7 @@ import {
   consoleTitle,
 } from '../../lib/branding'
 import { NavDock } from './NavDock'
+import { isSep } from './model'
 import type { DockEntry, DockTile, FlyoutRow, FlyoutSection } from './model'
 
 /**
@@ -206,7 +207,10 @@ export function ConsoleNavDock({
               menu: { label: section.title, sections: bandsOf(section) },
             },
           ]
-        }),
+        })
+        /* The dock already rules a line where the pinned zone ends, so the first
+           section's own break would draw a second one right of Overview. */
+        .filter((entry, i) => !(i === 0 && isSep(entry))),
     [sections, firstGroup, tileOf, rowOf, bandsOf]
   )
 
