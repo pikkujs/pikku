@@ -32,13 +32,13 @@ const TYPE_CONFIG: Record<
 > = {
   function: { icon: FunctionSquare, color: 'blue', href: '/functions' },
   workflow: { icon: GitBranch, color: 'violet', href: '/workflow' },
-  http: { icon: Globe, color: 'green', href: '/apis?tab=http' },
-  channel: { icon: Radio, color: 'cyan', href: '/apis?tab=channels' },
-  mcp: { icon: Cpu, color: 'orange', href: '/apis?tab=mcp' },
-  cli: { icon: Terminal, color: 'teal', href: '/apis?tab=cli' },
-  gateway: { icon: Network, color: 'teal', href: '/apis?tab=gateways' },
-  scheduler: { icon: Clock, color: 'yellow', href: '/jobs?tab=schedulers' },
-  queue: { icon: ListOrdered, color: 'pink', href: '/jobs?tab=queues' },
+  http: { icon: Globe, color: 'green', href: '/wires/http' },
+  channel: { icon: Radio, color: 'cyan', href: '/wires/channel' },
+  mcp: { icon: Cpu, color: 'orange', href: '/wires/mcp' },
+  cli: { icon: Terminal, color: 'teal', href: '/wires/cli' },
+  gateway: { icon: Network, color: 'teal', href: '/wires/gateway' },
+  scheduler: { icon: Clock, color: 'yellow', href: '/async/scheduler' },
+  queue: { icon: ListOrdered, color: 'pink', href: '/async/queue' },
   agent: { icon: Bot, color: 'grape', href: '/agents' },
 }
 
@@ -108,7 +108,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
         label,
         description: `HTTP → ${route.pikkuFuncId || ''}`,
         leftSection: <Globe size={16} />,
-        onClick: () => navigate('/apis?tab=http'),
+        onClick: () => navigate('/wires/http'),
       })
     })
 
@@ -119,7 +119,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           label: channelName,
           description: 'Channel',
           leftSection: <Radio size={16} />,
-          onClick: () => navigate('/apis?tab=channels'),
+          onClick: () => navigate('/wires/channel'),
         })
       }
     }
@@ -130,7 +130,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
         label: item.name || item.wireId,
         description: `MCP ${item.method || ''}`,
         leftSection: <Cpu size={16} />,
-        onClick: () => navigate('/apis?tab=mcp'),
+        onClick: () => navigate('/wires/mcp'),
       })
     })
 
@@ -140,7 +140,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
         label: gateway.name,
         description: `Gateway ${gateway.type || ''}${gateway.platform ? ` (${gateway.platform})` : ''}`,
         leftSection: <Network size={16} />,
-        onClick: () => navigate('/apis?tab=gateways'),
+        onClick: () => navigate('/wires/gateway'),
       })
     })
 
@@ -155,7 +155,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
               label: `${program.wireId} ${fullPath}`,
               description: `CLI → ${cmdData.pikkuFuncId}`,
               leftSection: <Terminal size={16} />,
-              onClick: () => navigate('/apis?tab=cli'),
+              onClick: () => navigate('/wires/cli'),
             })
           }
           if (cmdData.subcommands) walkCommands(cmdData.subcommands, fullPath)
@@ -173,7 +173,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           label: taskName,
           description: `Scheduler${taskData.schedule ? ` (${taskData.schedule})` : ''}`,
           leftSection: <Clock size={16} />,
-          onClick: () => navigate('/jobs?tab=schedulers'),
+          onClick: () => navigate('/async/scheduler'),
         })
       }
     }
@@ -185,7 +185,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           label: workerName,
           description: 'Queue Worker',
           leftSection: <ListOrdered size={16} />,
-          onClick: () => navigate('/jobs?tab=queues'),
+          onClick: () => navigate('/async/queue'),
         })
       }
     }

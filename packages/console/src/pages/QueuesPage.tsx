@@ -7,7 +7,12 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { QueuesListPanel } from '../components/queues/QueuesListPanel'
 import { useQueueItems } from '../hooks/useQueueItems'
 
-export const QueuesPage: React.FC = () => {
+export type QueuesPageProps = {
+  /** Shown in place of the empty list — fabric hands each wire kind its own. */
+  emptyHero?: React.ReactNode
+}
+
+export const QueuesPage: React.FC<QueuesPageProps> = ({ emptyHero }) => {
   const { items, loading } = useQueueItems()
   useLocale()
 
@@ -24,7 +29,7 @@ export const QueuesPage: React.FC = () => {
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.queues_select_item()}
       >
-        <QueuesListPanel />
+        <QueuesListPanel emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

@@ -7,7 +7,12 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { HttpListPanel } from '../components/http/HttpListPanel'
 import { useHttpItems } from '../hooks/useHttpItems'
 
-export const HttpPage: React.FC = () => {
+export type HttpPageProps = {
+  /** Shown in place of the empty list — fabric hands each wire kind its own. */
+  emptyHero?: React.ReactNode
+}
+
+export const HttpPage: React.FC<HttpPageProps> = ({ emptyHero }) => {
   const { items: routes, loading } = useHttpItems()
   useLocale()
 
@@ -24,7 +29,7 @@ export const HttpPage: React.FC = () => {
         hidePanel={!loading && routes.length === 0}
         emptyPanelMessage={m.http_select_route()}
       >
-        <HttpListPanel />
+        <HttpListPanel emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

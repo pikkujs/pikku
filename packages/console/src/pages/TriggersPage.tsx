@@ -7,7 +7,12 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { TriggersListPanel } from '../components/triggers/TriggersListPanel'
 import { useTriggerItems } from '../hooks/useTriggerItems'
 
-export const TriggersPage: React.FC = () => {
+export type TriggersPageProps = {
+  /** Shown in place of the empty list — fabric hands each wire kind its own. */
+  emptyHero?: React.ReactNode
+}
+
+export const TriggersPage: React.FC<TriggersPageProps> = ({ emptyHero }) => {
   const { items: pairs, loading } = useTriggerItems()
   useLocale()
 
@@ -24,7 +29,7 @@ export const TriggersPage: React.FC = () => {
         hidePanel={!loading && pairs.length === 0}
         emptyPanelMessage={m.triggers_select_item()}
       >
-        <TriggersListPanel />
+        <TriggersListPanel emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

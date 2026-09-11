@@ -54,6 +54,12 @@ import {
   FlaskConical,
   Activity,
   Braces,
+  Radio,
+  Plug,
+  Terminal,
+  Network,
+  ListOrdered,
+  Zap,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
@@ -172,14 +178,17 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/audit',
           icon: ScrollText,
           matchPrefix: '/audit',
-          group: { id: 'access', title: m.nav_group_what_they_may_do() },
+          group: { id: 'done', title: m.nav_group_what_they_have_done() },
         },
         {
+          // A credential is an account somebody linked, not a permission
+          // somebody was granted — it sits with the people it belongs to,
+          // under the same name Operate gives the project's own links.
           label: m.nav_credentials(),
           href: '/credentials',
           icon: KeyRound,
           matchPrefix: '/credentials',
-          group: { id: 'access', title: m.nav_group_what_they_may_do() },
+          group: { id: 'connections', title: m.nav_group_connections() },
         },
       ],
     },
@@ -332,25 +341,69 @@ export function useDefaultNavSections(): NavSection[] {
       icon: Braces,
       items: [
         {
+          // A function is what the wires point at, not a wire — it is the
+          // source the rest of this section arranges.
           label: m.nav_functions(),
           href: '/functions',
           icon: FunctionSquare,
           matchPrefix: '/functions',
-          group: { id: 'wiring', title: m.nav_group_wiring() },
+          group: { id: 'source', title: m.nav_group_source() },
         },
         {
-          label: m.nav_apis(),
-          href: '/apis',
+          label: m.nav_http(),
+          href: '/wires/http',
           icon: Globe,
-          matchPrefix: '/apis',
+          matchPrefix: '/wires/http',
           group: { id: 'wiring', title: m.nav_group_wiring() },
         },
         {
-          label: m.nav_jobs(),
-          href: '/jobs',
-          icon: Clock,
-          matchPrefix: '/jobs',
+          label: m.nav_channels(),
+          href: '/wires/channel',
+          icon: Radio,
+          matchPrefix: '/wires/channel',
           group: { id: 'wiring', title: m.nav_group_wiring() },
+        },
+        {
+          label: m.nav_mcp(),
+          href: '/wires/mcp',
+          icon: Plug,
+          matchPrefix: '/wires/mcp',
+          group: { id: 'wiring', title: m.nav_group_wiring() },
+        },
+        {
+          label: m.nav_cli(),
+          href: '/wires/cli',
+          icon: Terminal,
+          matchPrefix: '/wires/cli',
+          group: { id: 'wiring', title: m.nav_group_wiring() },
+        },
+        {
+          label: m.nav_gateways(),
+          href: '/wires/gateway',
+          icon: Network,
+          matchPrefix: '/wires/gateway',
+          group: { id: 'wiring', title: m.nav_group_wiring() },
+        },
+        {
+          label: m.nav_schedulers(),
+          href: '/async/scheduler',
+          icon: Clock,
+          matchPrefix: '/async/scheduler',
+          group: { id: 'async', title: m.nav_group_async() },
+        },
+        {
+          label: m.nav_queues(),
+          href: '/async/queue',
+          icon: ListOrdered,
+          matchPrefix: '/async/queue',
+          group: { id: 'async', title: m.nav_group_async() },
+        },
+        {
+          label: m.nav_triggers(),
+          href: '/async/trigger',
+          icon: Zap,
+          matchPrefix: '/async/trigger',
+          group: { id: 'async', title: m.nav_group_async() },
         },
         {
           label: m.nav_runtime(),

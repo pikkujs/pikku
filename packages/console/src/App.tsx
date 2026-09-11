@@ -8,8 +8,14 @@ import { AddonGate } from './components/console/AddonGate'
 import { OverviewPage } from './pages/OverviewPage'
 import { FunctionsPage } from './pages/FunctionsPage'
 import { WorkflowsPage } from './pages/WorkflowPage'
-import { ApisPage } from './pages/ApisPage'
-import { JobsPage } from './pages/JobsPage'
+import { HttpPage } from './pages/HttpPage'
+import { ChannelsPage } from './pages/ChannelsPage'
+import { McpPage } from './pages/McpPage'
+import { CliPage } from './pages/CliPage'
+import { GatewaysPage } from './pages/GatewaysPage'
+import { SchedulersPage } from './pages/SchedulersPage'
+import { QueuesPage } from './pages/QueuesPage'
+import { TriggersPage } from './pages/TriggersPage'
 import { RuntimePage } from './pages/RuntimePage'
 import { EmailsPage } from './pages/EmailsPage'
 import { WebhooksPage } from './pages/WebhooksPage'
@@ -77,8 +83,14 @@ export const App: React.FC = () => {
           <Route path="/knowledge" element={<KnowledgePage />} />
           <Route path="/surface" element={<ProjectSurfacePage />} />
           <Route path="/database" element={<DatabasePage />} />
-          <Route path="/apis" element={<ApisPage />} />
-          <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/wires/http" element={<HttpPage />} />
+          <Route path="/wires/channel" element={<ChannelsPage />} />
+          <Route path="/wires/mcp" element={<McpPage />} />
+          <Route path="/wires/cli" element={<CliPage />} />
+          <Route path="/wires/gateway" element={<GatewaysPage />} />
+          <Route path="/async/scheduler" element={<SchedulersPage />} />
+          <Route path="/async/queue" element={<QueuesPage />} />
+          <Route path="/async/trigger" element={<TriggersPage />} />
           <Route path="/runtime" element={<RuntimePage />} />
           <Route path="/emails" element={<EmailsPage />} />
           <Route path="/webhooks" element={<WebhooksPage />} />

@@ -53,7 +53,7 @@ describe('panel url fragments', () => {
   test('cross-page links carry the type', () => {
     assert.equal(
       panelHref('channel', 'events'),
-      '/apis?tab=channels#channel:events'
+      '/wires/channel#channel:events'
     )
     assert.equal(panelHref('workflowStep', 'step-1'), null)
   })

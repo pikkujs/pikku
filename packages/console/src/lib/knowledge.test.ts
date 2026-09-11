@@ -401,7 +401,7 @@ describe('resource URIs', () => {
   test('an id that is not URL-safe survives the trip', () => {
     assert.equal(
       resourceHref('http:/entries/:id'),
-      '/apis?tab=http&search=%2Fentries%2F%3Aid'
+      '/wires/http&search=%2Fentries%2F%3Aid'
     )
   })
 
