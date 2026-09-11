@@ -373,7 +373,20 @@ export function NavDock({
       >
         {identity && (
           <>
-            {renderTile(identity, 'id')}
+            {identity.menu || identity.onSelect ? (
+              renderTile(identity, 'id')
+            ) : (
+              /* Nothing behind the mark: it says which product this is, and the
+                 zones beside it already ARE the navigation, so a tile that opens
+                 a copy of them is a second door to the same room. */
+              <span
+                className={classes.brandPlate}
+                role="img"
+                aria-label={identity.label}
+              >
+                <span className={classes.mark}>{brand}</span>
+              </span>
+            )}
             <Sep vertical={vertical} />
           </>
         )}

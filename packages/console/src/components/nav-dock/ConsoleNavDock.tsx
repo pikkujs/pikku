@@ -55,13 +55,7 @@ import {
   consoleTitle,
 } from '../../lib/branding'
 import { NavDock } from './NavDock'
-import type {
-  DockEntry,
-  DockMenu,
-  DockTile,
-  FlyoutRow,
-  FlyoutSection,
-} from './model'
+import type { DockEntry, DockTile, FlyoutRow } from './model'
 
 /**
  * The console's navigation dock: {@link NavDock} fed from the same nav model the
@@ -74,8 +68,9 @@ import type {
  * it is on with `zone`, and the sections are the single source both this and the
  * rail read, so the two can never disagree about what the console contains.
  *
- * The identity tile carries the whole nav map, so nothing is more than two
- * clicks away and the full list is reachable even condensed.
+ * The identity tile is a mark and nothing more. It used to carry the whole nav
+ * map, which put a copy of the dock behind the first thing on the dock; the
+ * zones already hold every destination, and Go to… (⌘K) reaches the rest.
  */
 /** An untitled section has no label to hang a group off, so it stays on the row. */
 const zoneOf = (s: NavSection): 'row' | 'group' =>
@@ -383,43 +378,6 @@ export function ConsoleNavDock({
     [account]
   )
 
-  /* The flyout's head answers "where am I" in full, which the one-glyph tile
-     cannot: the console's name, the path that produced the page you are on, and
-     — below it — every section there is. */
-  const identityMenu = useMemo<DockMenu>(() => {
-    const label = asI18n(consoleTitle)
-    const navSections: FlyoutSection[] = sections
-      .filter((s) => s.items.length > 0)
-      .map((s, i) => ({
-        key: s.id ?? `section-${i}`,
-        title: s.title || undefined,
-        rows: s.items.map(rowOf),
-      }))
-    return {
-      label,
-      head: {
-        mark: consoleTitle.slice(0, 2).toUpperCase(),
-        title: label,
-        sub: asI18n(pathname),
-      },
-      sections: [
-        ...navSections,
-        {
-          key: 'browse',
-          rows: [
-            {
-              key: 'browse-all',
-              Icon: Search,
-              label: m.nav_dock_go_to(),
-              hint: '⌘K',
-              onSelect: () => spotlight.open(),
-            },
-          ],
-        },
-      ],
-    }
-  }, [sections, rowOf, pathname])
-
   const isActive = useCallback(
     (t: Pick<DockTile, 'match'>) =>
       !!t.match?.some((prefix) => pathname.includes(prefix)),
@@ -433,7 +391,6 @@ export function ConsoleNavDock({
           id: 'console',
           label: asI18n(consoleTitle),
           render: 'switcher',
-          menu: identityMenu,
         }}
         brand={
           <img

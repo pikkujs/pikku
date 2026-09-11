@@ -393,6 +393,18 @@
 
 /* Identity grammar: a filled plate with no stroke, so the switcher never reads
    as one more navigation item. */
+/* The identity mark when it is only a mark: the tile's box so the row's rhythm
+   is unbroken, with none of the tile's hover, press or pointer affordances —
+   nothing here is clickable. */
+.brandPlate {
+  flex: 0 0 auto;
+  width: var(--pf-tile);
+  height: var(--pf-tile);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .mark {
   width: calc(var(--pf-tile) * 0.5);
   height: calc(var(--pf-tile) * 0.5);
