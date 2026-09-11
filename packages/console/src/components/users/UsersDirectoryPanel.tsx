@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Text, Button, Alert, Group, Avatar, Box } from '@pikku/mantine/core'
-import { AlertTriangle, UserCog, ShieldCheck } from 'lucide-react'
+import { Text, Alert, Group, Avatar, Box } from '@pikku/mantine/core'
+import { AlertTriangle, UserCog } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
@@ -24,8 +24,9 @@ export interface UsersDirectoryPanelProps {
 }
 
 /**
- * The user directory table together with the panels its rows open — roles,
- * ban/unban and the rest of the per-user actions, plus the create panel.
+ * The user directory table together with the panels its rows open — clicking a
+ * row opens that user's roles and scopes, and the row's own menu opens ban/unban
+ * and the rest of the per-user actions. The create panel lives here too.
  *
  * Fetches its own list through the ambient auth client, so a host can mount it
  * on its own and only has to supply a header if it wants search or create.
@@ -63,6 +64,7 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
             'data-testid': 'user-row',
             'data-user-id': u.id,
           })}
+          onRowClick={(u) => setRolesFor({ id: u.id, label: u.email ?? u.id })}
           loading={usersQuery.isLoading}
           externalSearch={search}
           emptyTitle={m.users_empty()}
@@ -115,18 +117,14 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
               header: '',
               align: 'right',
               render: (u) => (
-                <Group gap={6} justify="flex-end" wrap="nowrap">
-                  <Button
-                    size="compact-sm"
-                    variant="subtle"
-                    leftSection={<ShieldCheck size={14} />}
-                    onClick={() =>
-                      setRolesFor({ id: u.id, label: u.email ?? u.id })
-                    }
-                    data-testid="user-roles"
-                  >
-                    {m.users_roles_action()}
-                  </Button>
+                // The menu sits inside a row that opens the roles panel, so its
+                // own clicks must not also count as a click on the row.
+                <Group
+                  gap={6}
+                  justify="flex-end"
+                  wrap="nowrap"
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <UserActionsMenu
                     user={u}
                     onAction={(action) => setActionFor({ action, user: u })}

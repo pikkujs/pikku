@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Group, Stack, Text } from '@pikku/mantine/core'
 import { Gauge } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
+import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 import { useScorers } from '../hooks/useAgentRuns'
@@ -27,13 +28,14 @@ interface ScorerItem {
  */
 export const ScorersPage: React.FC = () => {
   useLocale()
+  const [search, setSearch] = useState('')
   const { data, isLoading } = useScorers()
   const scorers = (data as ScorerItem[] | undefined) ?? []
 
   const columns = [
     {
       key: 'name',
-      header: 'Scorer',
+      header: m.scorers_column_scorer(),
       render: (item: ScorerItem) => (
         <Stack gap={2}>
           <Text fw={500}>{asI18n(item.name)}</Text>
@@ -45,7 +47,7 @@ export const ScorersPage: React.FC = () => {
     },
     {
       key: 'lane',
-      header: 'Lane',
+      header: m.scorers_column_lane(),
       render: (item: ScorerItem) => (
         <PikkuBadge
           type="dynamic"
@@ -58,7 +60,7 @@ export const ScorersPage: React.FC = () => {
     },
     {
       key: 'sampling',
-      header: 'Sampling',
+      header: m.scorers_column_sampling(),
       align: 'right' as const,
       render: (item: ScorerItem) => (
         <Text
@@ -80,7 +82,7 @@ export const ScorersPage: React.FC = () => {
     },
     {
       key: 'agents',
-      header: 'Agents',
+      header: m.scorers_column_agents(),
       align: 'right' as const,
       render: (item: ScorerItem) =>
         item.agents.length === 0 ? (
@@ -104,22 +106,39 @@ export const ScorersPage: React.FC = () => {
 
   return (
     <ConsoleSurface>
-      <TableListPage
-        title="Scorers"
-        icon={Gauge}
-        docsHref="https://pikku.dev/docs/wiring/agents"
-        data={scorers}
-        columns={columns}
-        getKey={(item) => item.name}
-        searchPlaceholder={m.scorers_search_placeholder()}
-        searchFilter={(item, query) =>
-          item.name.toLowerCase().includes(query.toLowerCase()) ||
-          item.description.toLowerCase().includes(query.toLowerCase())
+      <PageContainer
+        noPadding
+        header={
+          <ListPageHeader
+            title={m.scorers_title()}
+            description={m.scorers_description()}
+            docsHref="https://pikku.dev/docs/wiring/agents"
+            search={{
+              placeholder: m.scorers_search_placeholder(),
+              value: search,
+              onChange: setSearch,
+              width: 240,
+            }}
+          />
         }
-        emptyTitle={m.scorers_empty_title()}
-        emptyDescription={m.scorers_empty_description()}
-        loading={isLoading}
-      />
+      >
+        <TableListPage
+          title="Scorers"
+          icon={Gauge}
+          docsHref="https://pikku.dev/docs/wiring/agents"
+          data={scorers}
+          columns={columns}
+          getKey={(item) => item.name}
+          externalSearch={search}
+          searchFilter={(item, query) =>
+            item.name.toLowerCase().includes(query.toLowerCase()) ||
+            item.description.toLowerCase().includes(query.toLowerCase())
+          }
+          emptyTitle={m.scorers_empty_title()}
+          emptyDescription={m.scorers_empty_description()}
+          loading={isLoading}
+        />
+      </PageContainer>
     </ConsoleSurface>
   )
 }

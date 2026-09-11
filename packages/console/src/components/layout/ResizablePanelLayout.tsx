@@ -18,6 +18,11 @@ const CARD_GUTTERS = 16
 
 interface ResizablePanelLayoutProps {
   children: React.ReactNode
+  /** The body IS the card's content — a table that runs to the card's own
+   *  edges, rather than content that needs the page gutter. Off by default:
+   *  a body of cards, a graph or a form still wants the gutter, and without
+   *  it they butt against the card's border. */
+  flushBody?: boolean
   header?: React.ReactNode
   leftDrawer?: React.ReactNode
   leftDrawerWidth?: number
@@ -45,6 +50,7 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   sidePanelLabel,
   emptyPanelMessage,
   hidePanel = false,
+  flushBody = false,
 }) => {
   const { panels } = usePanelContext()
   // Under a host's chrome the selection opens in the end-edge panel instead of
@@ -67,16 +73,12 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
       {/* header renders as a full-bleed bar; the panel area below stays padded */}
       {header}
       <Box
-        className={classes.flexColumn}
+        className={`${classes.flexColumn} ${flushBody ? classes.flushBody : ''}`}
         style={{
           flex: 1,
           minHeight: 0,
-          gap: 'var(--mantine-spacing-md)',
-          // The body is padded in both chrome modes — an embedding host's page
-          // card is a bare card whose content supplies its own gutter (it cannot
-          // pad the card itself without insetting the full-bleed header band
-          // above). How much is the chrome's call, not this layout's.
-          padding: 'var(--console-body-gutter)',
+          gap: flushBody ? 0 : 'var(--mantine-spacing-md)',
+          padding: flushBody ? 0 : 'var(--console-body-gutter)',
         }}
       >
         <Box style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -113,11 +115,14 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
               </ConsoleListPanel>
             ) : (
               <Box
+                className={flushBody ? classes.paneDockEnd : undefined}
                 style={{
                   width: leftDrawerWidth,
                   flexShrink: 0,
                   overflow: 'hidden',
-                  marginRight: 'var(--mantine-spacing-md)',
+                  marginRight: flushBody
+                    ? undefined
+                    : 'var(--mantine-spacing-md)',
                 }}
               >
                 {leftDrawer}
@@ -133,13 +138,15 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
             !sideInSheet &&
             (ownsChrome || phone ? (
               <Box
-                className={classes.listSurfaceCard}
+                className={`${classes.listSurfaceCard} ${flushBody ? classes.paneDock : ''}`}
                 style={{
                   width: sidePanelWidth,
                   flexShrink: 0,
                   display: 'flex',
                   flexDirection: 'column',
-                  marginLeft: 'var(--mantine-spacing-md)',
+                  marginLeft: flushBody
+                    ? undefined
+                    : 'var(--mantine-spacing-md)',
                 }}
               >
                 {sidePanel}
@@ -160,14 +167,15 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
             <Box
               style={{
                 width: rightOpen ? PANEL_WIDTH : 0,
-                marginLeft: rightOpen ? 'var(--mantine-spacing-md)' : 0,
+                marginLeft:
+                  rightOpen && !flushBody ? 'var(--mantine-spacing-md)' : 0,
                 flexShrink: 0,
                 overflow: 'hidden',
                 transition: 'width 180ms ease, margin-left 180ms ease',
               }}
             >
               <Box
-                className={classes.listSurfaceCard}
+                className={`${classes.listSurfaceCard} ${flushBody ? classes.paneDock : ''}`}
                 style={{ width: PANEL_WIDTH, height: '100%' }}
               >
                 <PanelContainer emptyMessage={emptyPanelMessage} />

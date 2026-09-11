@@ -14,6 +14,7 @@ export const MiddlewarePage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.middleware_title()}

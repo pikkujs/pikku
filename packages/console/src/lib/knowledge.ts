@@ -261,13 +261,13 @@ export const resourceHref = (uri: string): string | null => {
     case 'workflow':
       return `/workflow?search=${search}`
     case 'http':
-      return `/apis?tab=http&search=${search}`
+      return `/wires/http&search=${search}`
     case 'channel':
-      return `/apis?tab=channels&search=${search}`
+      return `/wires/channel&search=${search}`
     case 'queue':
-      return `/jobs?tab=queues&search=${search}`
+      return `/async/queue&search=${search}`
     case 'cron':
-      return `/jobs?tab=schedulers&search=${search}`
+      return `/async/scheduler&search=${search}`
     case 'scope':
       return `/scopes?search=${search}`
     // Both screens select from their own tree rather than from a query, so the

@@ -245,7 +245,7 @@ export const FunctionsListPanel: React.FC<FunctionsListPanelProps> = ({
         : []),
       ...extraColumns.map((col) => ({
         key: col.label,
-        header: col.label.toUpperCase(),
+        header: col.label,
         width: col.width,
         align: col.align,
         render: (func: any) =>

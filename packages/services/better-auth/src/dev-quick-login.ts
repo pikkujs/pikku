@@ -1,7 +1,7 @@
 import type { Logger } from '@pikku/core/services'
 import type { ScopeService } from '@pikku/core/services'
 import type { BetterAuthInstance } from './define-auth.js'
-import { ADMIN_SCOPE_ROOT } from './auth-scopes.js'
+import { ADMIN_SCOPE_ROOT, CONSOLE_SCOPE_ROOT } from './auth-scopes.js'
 
 export const DEV_QUICK_LOGIN_USER = {
   name: 'Dev Admin',
@@ -10,6 +10,17 @@ export const DEV_QUICK_LOGIN_USER = {
 }
 
 export const DEV_QUICK_LOGIN_SUBPATH = '/dev/quick-login'
+
+/**
+ * What the dev admin is granted. Both roots, because they are separate trees:
+ * `admin` carries the application's own capabilities, `pikku:console` is what
+ * the console's front door checks, and quick login exists to land a developer
+ * inside the console with nothing else to configure.
+ */
+const DEV_QUICK_LOGIN_SCOPE_ROOTS = [
+  ADMIN_SCOPE_ROOT,
+  CONSOLE_SCOPE_ROOT,
+] as const
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 
@@ -77,11 +88,13 @@ export const isDevQuickLoginRequest = (
 }
 
 /**
- * Signs the dev user up (idempotently) and grants it the `admin` scope, which
- * covers every `admin:*` capability the framework gates on.
+ * Signs the dev user up (idempotently) and grants it the roots in
+ * {@link DEV_QUICK_LOGIN_SCOPE_ROOTS}, which between them cover every `admin:*`
+ * capability the framework gates on and every `pikku:console:*` one the console
+ * does.
  *
- * The grant needs the `admin` scope to be declared and synced — an app that has
- * not declared it gets a warning rather than a failed login, because quick
+ * The grants need those scopes to be declared and synced — an app that has not
+ * declared them gets a warning rather than a failed login, because quick
  * login's job is to get a session, and a scopeless dev user is still useful.
  */
 const ensureDevAdmin = async (
@@ -95,7 +108,7 @@ const ensureDevAdmin = async (
   } catch {}
   if (!scopeService) {
     logger?.warn?.(
-      `dev quick login: no ScopeService registered, so ${email} holds no admin scope`
+      `dev quick login: no ScopeService registered, so ${email} holds no admin or console scope`
     )
     return
   }
@@ -106,12 +119,14 @@ const ensureDevAdmin = async (
       return
     }
     const held = await scopeService.listUserScopes(found.user.id)
-    if (!held.includes(ADMIN_SCOPE_ROOT)) {
-      await scopeService.addScopeToUser(found.user.id, ADMIN_SCOPE_ROOT)
+    for (const root of DEV_QUICK_LOGIN_SCOPE_ROOTS) {
+      if (!held.includes(root)) {
+        await scopeService.addScopeToUser(found.user.id, root)
+      }
     }
   } catch (error) {
     logger?.warn?.(
-      `dev quick login: could not grant '${ADMIN_SCOPE_ROOT}' to ${email}: ${error}`
+      `dev quick login: could not grant '${DEV_QUICK_LOGIN_SCOPE_ROOTS.join("', '")}' to ${email}: ${error}`
     )
   }
 }

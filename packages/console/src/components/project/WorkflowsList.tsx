@@ -73,7 +73,7 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
     ...COLUMNS,
     ...extraColumns.map((col) => ({
       key: col.label,
-      header: col.label.toUpperCase(),
+      header: col.label,
       width: col.width,
       render: (w: Workflow) => col.render(w.name),
     })),

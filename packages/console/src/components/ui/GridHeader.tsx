@@ -24,11 +24,9 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
     {columns.map((col, i) => (
       <Text
         key={i}
-        size="sm"
-        fw={600}
-        ff="monospace"
+        size="xs"
+        fw={500}
         c="var(--app-text-dim)"
-        tt="uppercase"
         className={classes.gridHeaderLabel}
         ta={col.align}
       >

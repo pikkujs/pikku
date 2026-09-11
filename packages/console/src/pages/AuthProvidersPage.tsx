@@ -21,6 +21,7 @@ export const AuthProvidersPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.auth_providers_title()}

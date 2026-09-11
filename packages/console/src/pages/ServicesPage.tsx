@@ -12,6 +12,7 @@ export const ServicesPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.services_title()}

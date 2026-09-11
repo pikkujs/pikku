@@ -4,8 +4,8 @@ import type { PanelType } from '../context/PanelContext'
  * How a selected row is written into the URL fragment, and read back out.
  *
  * A surface showing one kind of thing writes the bare id — `/functions#myFunc`,
- * `/apis?tab=channels#events`. A surface showing several writes the type too —
- * `/jobs?tab=triggers#trigger:orderPlaced` — because the id alone would not say
+ * `/wires/channel#events`. A surface showing several writes the type too —
+ * `/async/trigger#trigger:orderPlaced` — because the id alone would not say
  * which list owns it. Writer and reader apply the same rule (see
  * `panelHashIsBare`), so a fragment always round-trips.
  */
@@ -46,15 +46,15 @@ const SLUG_TO_TYPE = new Map<string, PanelType>(
  */
 const PANEL_URL_PATHS: Partial<Record<PanelType, string>> = {
   function: '/functions',
-  http: '/apis?tab=http',
-  channel: '/apis?tab=channels',
-  mcp: '/apis?tab=mcp',
-  cli: '/apis?tab=cli',
-  gateway: '/apis?tab=gateways',
-  scheduler: '/jobs?tab=schedulers',
-  queue: '/jobs?tab=queues',
-  trigger: '/jobs?tab=triggers',
-  triggerSource: '/jobs?tab=triggers',
+  http: '/wires/http',
+  channel: '/wires/channel',
+  mcp: '/wires/mcp',
+  cli: '/wires/cli',
+  gateway: '/wires/gateway',
+  scheduler: '/async/scheduler',
+  queue: '/async/queue',
+  trigger: '/async/trigger',
+  triggerSource: '/async/trigger',
   middleware: '/runtime?tab=middleware',
   permission: '/runtime?tab=permissions',
   workflow: '/workflow',

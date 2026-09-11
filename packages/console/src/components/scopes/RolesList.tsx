@@ -9,7 +9,7 @@ import { m } from '@/i18n/messages'
 
 const DOCS_HREF = 'https://pikku.dev/docs/authentication/scopes'
 
-type RolesTabProps = {
+type RolesListProps = {
   search: string
   editing: EditableRole | null
   panelOpen: boolean
@@ -20,9 +20,9 @@ type RolesTabProps = {
 /**
  * The Roles surface: a list of admin-composed roles, each editable in a drawer
  * that composes it from the declared scope vocabulary. Search and the create
- * action live in the page header, so both are passed in from ScopesPage.
+ * action live in the page header, so both are passed in from RolesPage.
  */
-export const RolesTab: React.FC<RolesTabProps> = ({
+export const RolesList: React.FC<RolesListProps> = ({
   search,
   editing,
   panelOpen,

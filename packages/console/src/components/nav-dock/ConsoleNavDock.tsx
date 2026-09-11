@@ -55,13 +55,8 @@ import {
   consoleTitle,
 } from '../../lib/branding'
 import { NavDock } from './NavDock'
-import type {
-  DockEntry,
-  DockMenu,
-  DockTile,
-  FlyoutRow,
-  FlyoutSection,
-} from './model'
+import { isSep } from './model'
+import type { DockEntry, DockTile, FlyoutRow, FlyoutSection } from './model'
 
 /**
  * The console's navigation dock: {@link NavDock} fed from the same nav model the
@@ -74,8 +69,9 @@ import type {
  * it is on with `zone`, and the sections are the single source both this and the
  * rail read, so the two can never disagree about what the console contains.
  *
- * The identity tile carries the whole nav map, so nothing is more than two
- * clicks away and the full list is reachable even condensed.
+ * The identity tile is a mark and nothing more. It used to carry the whole nav
+ * map, which put a copy of the dock behind the first thing on the dock; the
+ * zones already hold every destination, and Go to… (⌘K) reaches the rest.
  */
 /** An untitled section has no label to hang a group off, so it stays on the row. */
 const zoneOf = (s: NavSection): 'row' | 'group' =>
@@ -150,30 +146,72 @@ export function ConsoleNavDock({
     [navigate]
   )
 
+  /* A section's flyout, cut into the titled bands its items declare — one band
+     per run of items sharing a group, in the order they are written. A section
+     whose items declare none opens as the single untitled list it always was. */
+  const bandsOf = useCallback(
+    (section: NavSection): FlyoutSection[] => {
+      const bands: FlyoutSection[] = []
+      for (const item of section.items) {
+        const last = bands[bands.length - 1]
+        if (last && last.key === (item.group?.id ?? 'main')) {
+          last.rows.push(rowOf(item))
+          continue
+        }
+        bands.push({
+          key: item.group?.id ?? 'main',
+          title: item.group?.title,
+          rows: [rowOf(item)],
+        })
+      }
+      return bands
+    },
+    [rowOf]
+  )
+
+  /* Where the row stops being the row. Everything declared before the first
+     group is what the dock always shows; from there on the sections keep their
+     written order, so a row section standing between two groups — Workflows,
+     the way fabric stands it between Testing and Operate — lands there rather
+     than being swept to the front. */
+  const firstGroup = sections.findIndex((s) => zoneOf(s) === 'group')
+
   const pinned = useMemo<DockEntry[]>(
     () =>
-      sections
-        .filter((s) => zoneOf(s) === 'row')
-        .flatMap((s) => s.items.map(tileOf)),
-    [sections, tileOf]
+      (firstGroup < 0 ? sections : sections.slice(0, firstGroup)).flatMap((s) =>
+        s.items.map(tileOf)
+      ),
+    [sections, firstGroup, tileOf]
   )
 
   const contextual = useMemo<DockEntry[]>(
     () =>
-      sections
-        .filter((s) => zoneOf(s) === 'group' && s.items.length > 0)
-        .map((section): DockEntry => {
-          const rows = section.items.map(rowOf)
-          return {
-            id: section.id ?? section.title,
-            label: section.title,
-            Icon: section.icon ?? section.items[0]?.icon,
-            isGroup: true,
-            match: rows.flatMap((r) => r.match ?? []),
-            menu: { label: section.title, sections: [{ key: 'main', rows }] },
+      (firstGroup < 0 ? [] : sections.slice(firstGroup))
+        .filter((s) => s.items.length > 0)
+        .flatMap((section): DockEntry[] => {
+          const sep: DockEntry[] = section.separatorBefore
+            ? [{ sep: true, key: `sep-${section.id ?? section.title}` }]
+            : []
+          if (zoneOf(section) === 'row') {
+            return [...sep, ...section.items.map(tileOf)]
           }
-        }),
-    [sections, rowOf]
+          const rows = section.items.map(rowOf)
+          return [
+            ...sep,
+            {
+              id: section.id ?? section.title,
+              label: section.title,
+              Icon: section.icon ?? section.items[0]?.icon,
+              isGroup: true,
+              match: rows.flatMap((r) => r.match ?? []),
+              menu: { label: section.title, sections: bandsOf(section) },
+            },
+          ]
+        })
+        /* The dock already rules a line where the pinned zone ends, so the first
+           section's own break would draw a second one right of Overview. */
+        .filter((entry, i) => !(i === 0 && isSep(entry))),
+    [sections, firstGroup, tileOf, rowOf, bandsOf]
   )
 
   /* Everything about you or your session, behind one tile: the appearance you
@@ -383,43 +421,6 @@ export function ConsoleNavDock({
     [account]
   )
 
-  /* The flyout's head answers "where am I" in full, which the one-glyph tile
-     cannot: the console's name, the path that produced the page you are on, and
-     — below it — every section there is. */
-  const identityMenu = useMemo<DockMenu>(() => {
-    const label = asI18n(consoleTitle)
-    const navSections: FlyoutSection[] = sections
-      .filter((s) => s.items.length > 0)
-      .map((s, i) => ({
-        key: s.id ?? `section-${i}`,
-        title: s.title || undefined,
-        rows: s.items.map(rowOf),
-      }))
-    return {
-      label,
-      head: {
-        mark: consoleTitle.slice(0, 2).toUpperCase(),
-        title: label,
-        sub: asI18n(pathname),
-      },
-      sections: [
-        ...navSections,
-        {
-          key: 'browse',
-          rows: [
-            {
-              key: 'browse-all',
-              Icon: Search,
-              label: m.nav_dock_go_to(),
-              hint: '⌘K',
-              onSelect: () => spotlight.open(),
-            },
-          ],
-        },
-      ],
-    }
-  }, [sections, rowOf, pathname])
-
   const isActive = useCallback(
     (t: Pick<DockTile, 'match'>) =>
       !!t.match?.some((prefix) => pathname.includes(prefix)),
@@ -433,7 +434,6 @@ export function ConsoleNavDock({
           id: 'console',
           label: asI18n(consoleTitle),
           render: 'switcher',
-          menu: identityMenu,
         }}
         brand={
           <img

@@ -7,6 +7,9 @@ import {
   toggleScope,
   diffScopeSelection,
   toScopeTreeRows,
+  scopeProvenance,
+  isScopeHeld,
+  isScopeLockedByProvenance,
 } from './scope-tree.js'
 
 const SCOPES = [
@@ -149,5 +152,50 @@ describe('diffScopeSelection', () => {
       added: ['admin'],
       removed: ['admin:invoices'],
     })
+  })
+})
+
+describe('scopeProvenance', () => {
+  const PLATFORM_ADMIN = {
+    name: 'platform-admin',
+    scopes: ['admin:users:list', 'admin:audit:read'],
+  }
+  const REPORTER = { name: 'reporter', scopes: ['reports'] }
+
+  test('a scope a held role carries is held, locked, and names the role', () => {
+    const p = scopeProvenance('admin:audit:read', [], [PLATFORM_ADMIN])
+    assert.deepEqual(p.roles, ['platform-admin'])
+    assert.equal(isScopeHeld(p), true)
+    assert.equal(isScopeLockedByProvenance(p), true)
+  })
+
+  test('a role granting a parent carries every scope beneath it', () => {
+    const p = scopeProvenance('reports:read', [], [REPORTER])
+    assert.deepEqual(p.roles, ['reporter'])
+    assert.equal(isScopeHeld(p), true)
+  })
+
+  test('a direct grant stays toggleable even when a role also carries it', () => {
+    const p = scopeProvenance(
+      'admin:audit:read',
+      ['admin:audit:read'],
+      [PLATFORM_ADMIN]
+    )
+    assert.equal(p.direct, true)
+    assert.equal(isScopeLockedByProvenance(p), false)
+  })
+
+  test('a directly granted ancestor locks the row it covers', () => {
+    const p = scopeProvenance('admin:users:list', ['admin'], [])
+    assert.equal(p.ancestor, 'admin')
+    assert.equal(isScopeHeld(p), true)
+    assert.equal(isScopeLockedByProvenance(p), true)
+  })
+
+  test('a scope no role and no grant reaches is not held', () => {
+    const p = scopeProvenance('reports:read', [], [PLATFORM_ADMIN])
+    assert.deepEqual(p.roles, [])
+    assert.equal(isScopeHeld(p), false)
+    assert.equal(isScopeLockedByProvenance(p), false)
   })
 })
