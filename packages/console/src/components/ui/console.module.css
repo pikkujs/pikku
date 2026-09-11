@@ -900,11 +900,11 @@
 }
 
 /* ── Data grid header ──
-   The column strip is metadata, not a title bar: one 11px uppercase label,
-   the same idiom the console uses for every other field name, quiet enough
-   that the first row rather than the header is where the eye lands. Every
-   table in the console wears this, so a column head never has to be dressed
-   at the call site. */
+   The column strip is metadata, not a title bar: one small sentence-case label
+   in the UI face, the same idiom the console uses for every other field name,
+   quiet enough that the first row rather than the header is where the eye
+   lands. Every table in the console wears this, so a column head never has to
+   be dressed at the call site. */
 .tableHead {
   background: transparent;
 }
@@ -939,6 +939,11 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  /* Also sized for a BLOCK parent. Flex sizing alone left the surface at full
+     content height wherever a page wrapped it in a plain `height: 100%` box,
+     which moved the scroll to an ancestor and stranded the sticky column head
+     on a box that never scrolls. */
+  height: 100%;
   overflow: hidden;
 }
 
@@ -952,7 +957,34 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
+}
+
+/* ── Full-bleed pane body ──
+   A list screen's page card is already a card: bordered, rounded, sitting on
+   the app canvas. Insetting the list inside it by the page gutter and giving
+   it a second border drew a card in a card with a moat between them, and the
+   table — the thing the screen is for — got the smallest box on the screen.
+   Here the body IS the card's content, so the gutter goes and the surfaces
+   inside surrender their own chrome to the card that already has it. */
+.flushBody {
+  padding: 0;
+}
+
+.flushBody .listSurfaceCard {
+  border-width: 0;
+  border-radius: 0;
+}
+
+/* Side by side the panes still have to read as separate panes. With no gutter
+   left to separate them, the seam does it. */
+.paneDock {
+  border-left: 1px solid var(--app-border);
+}
+
+.paneDockEnd {
+  border-right: 1px solid var(--app-border);
 }
 
 /* ── Badge variants ── */

@@ -15,6 +15,7 @@ export const ScopesPage: React.FC = () => {
 
   return (
     <PageContainer
+      noPadding
       header={
         <ListPageHeader
           title={m.scopes_page_title()}

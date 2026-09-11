@@ -16,6 +16,7 @@ import { usePageGate } from '../../context/PageGateContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { usePhone } from '../../lib/breakpoints'
 import styles from '../shell/PageCard.module.css'
+import classes from '../ui/console.module.css'
 
 interface ListPageHeaderProps<T extends string = string> {
   title: I18nNode
@@ -68,6 +69,10 @@ export function ListPageHeader<T extends string = string>({
 
 interface PageContainerProps extends ComponentProps<typeof Container> {
   fullWidth?: boolean
+  /** The body IS the card's content — a list that runs to the card's own edges,
+   *  rather than content that needs the page gutter. Drops the gutter and the
+   *  chrome of the list surface inside, which would otherwise draw a second
+   *  bordered card inside the page card. */
   noPadding?: boolean
   header?: ReactNode
   contentGap?: ComponentProps<typeof Stack>['gap']
@@ -118,6 +123,7 @@ export function PageContainer({
   const cards = hasHeader && !hosted
   const bodyContainer = (
     <Container
+      className={noPadding ? classes.flushBody : undefined}
       size={hasHeader || fullWidth || cards ? undefined : 'lg'}
       fluid={hasHeader || fullWidth || cards}
       // The theme gives every Container `px: 'xl'` as a default prop, and a

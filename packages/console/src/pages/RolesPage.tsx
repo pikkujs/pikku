@@ -20,6 +20,7 @@ export const RolesPage: React.FC = () => {
 
   return (
     <PageContainer
+      noPadding
       header={
         <ListPageHeader
           title={m.roles_page_title()}

@@ -15,6 +15,7 @@ export const AdminUsersPage: React.FC = () => {
 
   return (
     <PageContainer
+      noPadding
       header={
         <ListPageHeader
           title={m.users_title()}
