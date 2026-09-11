@@ -120,6 +120,18 @@ export function useDefaultNavSections(): NavSection[] {
           matchPrefix: '/overview',
         },
         {
+          label: m.nav_surface(),
+          href: '/surface',
+          icon: DoorOpen,
+          matchPrefix: '/surface',
+        },
+        {
+          label: m.nav_knowledge(),
+          href: '/knowledge',
+          icon: BookOpen,
+          matchPrefix: '/knowledge',
+        },
+        {
           label: m.nav_functions(),
           href: '/functions',
           icon: FunctionSquare,
@@ -154,18 +166,6 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/emails',
           icon: Mail,
           matchPrefix: '/emails',
-        },
-        {
-          label: m.nav_knowledge(),
-          href: '/knowledge',
-          icon: BookOpen,
-          matchPrefix: '/knowledge',
-        },
-        {
-          label: m.nav_surface(),
-          href: '/surface',
-          icon: DoorOpen,
-          matchPrefix: '/surface',
         },
       ],
     },
