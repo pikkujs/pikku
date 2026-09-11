@@ -14,6 +14,7 @@ export const PermissionsPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.permissions_title()}

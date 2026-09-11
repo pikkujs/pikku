@@ -14,6 +14,7 @@ export const McpPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.mcp_title()}

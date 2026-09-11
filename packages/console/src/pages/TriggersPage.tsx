@@ -14,6 +14,7 @@ export const TriggersPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.triggers_title()}

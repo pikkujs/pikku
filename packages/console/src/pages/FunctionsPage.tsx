@@ -43,6 +43,7 @@ export const FunctionsPage: React.FC<{
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.functions_title()}

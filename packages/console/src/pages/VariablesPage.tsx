@@ -17,6 +17,7 @@ export const VariablesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.variables_title()}

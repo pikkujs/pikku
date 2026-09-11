@@ -12,6 +12,7 @@ export const WebhooksPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={asI18n('Webhooks')}

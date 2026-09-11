@@ -14,6 +14,7 @@ export const HttpPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.http_title()}

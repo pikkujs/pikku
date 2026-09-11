@@ -14,6 +14,7 @@ export const SchedulersPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
+        flushBody
         header={
           <ListPageHeader
             title={m.schedulers_title()}
