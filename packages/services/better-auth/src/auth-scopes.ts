@@ -16,6 +16,15 @@ import type { CoreServices } from '@pikku/core/types'
 /** The umbrella grant: holding it satisfies every scope beneath it. */
 export const ADMIN_SCOPE_ROOT = 'admin'
 
+/**
+ * The console's own root, declared by `@pikku/addon-console`.
+ *
+ * A separate tree from `admin` on purpose: administering the application and
+ * being allowed to open the console are different questions, so holding one
+ * never implies the other. Anything that wants both has to grant both.
+ */
+export const CONSOLE_SCOPE_ROOT = 'pikku:console'
+
 export const ADMIN_SCOPES = {
   /** Act as another user via the impersonation header. */
   impersonate: 'admin:impersonate',

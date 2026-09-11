@@ -183,7 +183,7 @@ describe('dev quick login', () => {
     assert.equal(calls.handler.length, 0)
   })
 
-  test('POST creates the dev admin, grants the admin scope and signs in', async () => {
+  test('POST creates the dev admin, grants both roots and signs in', async () => {
     process.env[FLAG] = 'true'
     const { auth, calls } = createFakeAuth({})
     const { granted, scopeService } = createFakeScopeService()
@@ -191,7 +191,14 @@ describe('dev quick login', () => {
     assert.equal(response.status, 200)
     assert.equal(calls.signUp.length, 1)
     assert.equal(calls.signUp[0].body.email, DEV_QUICK_LOGIN_USER.email)
-    assert.deepEqual(granted, [{ userId: 'u_dev', scope: 'admin' }])
+    assert.deepEqual(
+      granted,
+      [
+        { userId: 'u_dev', scope: 'admin' },
+        { userId: 'u_dev', scope: 'pikku:console' },
+      ],
+      'the console gate checks pikku:console, which admin does not cover'
+    )
     assert.equal(calls.signIn.length, 1)
     assert.equal(calls.signIn[0].body.email, DEV_QUICK_LOGIN_USER.email)
     assert.equal(calls.signIn[0].asResponse, true)
@@ -210,7 +217,10 @@ describe('dev quick login', () => {
       },
       signUpError: new Error('user already exists'),
     })
-    const { granted, scopeService } = createFakeScopeService(['admin'])
+    const { granted, scopeService } = createFakeScopeService([
+      'admin',
+      'pikku:console',
+    ])
     const response = await run({ method: 'POST', auth, scopeService })
     assert.equal(response.status, 200)
     assert.equal(calls.signIn.length, 1)
@@ -252,7 +262,7 @@ describe('dev quick login', () => {
     })
     assert.equal(response.status, 404, 'must fall through to better-auth')
     assert.equal(calls.signIn.length, 0, 'must not mint a dev-admin session')
-    assert.deepEqual(granted, [], 'must not grant the admin scope')
+    assert.deepEqual(granted, [], 'must not grant the dev-admin scopes')
   })
 
   test('a proxied request (X-Forwarded-For present) is refused even with a loopback Host', async () => {
