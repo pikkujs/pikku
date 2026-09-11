@@ -47,12 +47,13 @@ import {
   UsersRound,
   ScrollText,
   Webhook,
-  SlidersHorizontal,
   Lock,
   Sparkles,
   Target,
-  Network,
   DoorOpen,
+  FlaskConical,
+  Activity,
+  Braces,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
@@ -76,6 +77,14 @@ export interface NavItem {
   href: string
   icon: React.ComponentType<{ size?: number; color?: string }>
   matchPrefix: string
+  /**
+   * The titled band this item sits in inside its section's flyout — the same
+   * taxonomy Fabric's dock uses, so the two consoles name the same shelf the
+   * same way. Items carrying one group must be adjacent; the dock closes a band
+   * as soon as the group id changes. A section whose items declare none opens
+   * as one untitled list.
+   */
+  group?: { id: string; title: I18nString }
 }
 
 export interface NavSection {
@@ -170,6 +179,55 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
+      // Fabric's taxonomy, name for name: a console and a fabric project are
+      // the same product seen from different distances, so a shelf called
+      // "Configuration" holds the same things in both. Every band title below
+      // is one of Fabric's `nav_group_*` labels.
+      //
+      // What is already a tile on the row is not repeated in a flyout, which is
+      // why AI has no "Doing the work" and Testing no "What is tested" here.
+      id: 'people',
+      title: m.nav_people(),
+      icon: Users,
+      items: [
+        {
+          label: m.nav_users(),
+          href: '/users',
+          icon: Users,
+          matchPrefix: '/users',
+          group: { id: 'members', title: m.nav_group_who_is_in_it() },
+        },
+        {
+          label: m.nav_roles(),
+          href: '/roles',
+          icon: UsersRound,
+          matchPrefix: '/roles',
+          group: { id: 'access', title: m.nav_group_what_they_may_do() },
+        },
+        {
+          label: m.nav_scopes(),
+          href: '/scopes',
+          icon: Shield,
+          matchPrefix: '/scopes',
+          group: { id: 'access', title: m.nav_group_what_they_may_do() },
+        },
+        {
+          label: m.nav_audit(),
+          href: '/audit',
+          icon: ScrollText,
+          matchPrefix: '/audit',
+          group: { id: 'access', title: m.nav_group_what_they_may_do() },
+        },
+        {
+          label: m.nav_credentials(),
+          href: '/credentials',
+          icon: KeyRound,
+          matchPrefix: '/credentials',
+          group: { id: 'access', title: m.nav_group_what_they_may_do() },
+        },
+      ],
+    },
+    {
       id: 'ai',
       title: m.nav_ai(),
       icon: Sparkles,
@@ -179,135 +237,118 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/scorers',
           icon: Target,
           matchPrefix: '/scorers',
+          group: { id: 'checking', title: m.nav_group_checking_the_work() },
         },
         {
           label: m.nav_virtual_users(),
           href: '/virtual-users',
           icon: UserSearch,
           matchPrefix: '/virtual-users',
+          group: { id: 'checking', title: m.nav_group_checking_the_work() },
         },
       ],
     },
     {
-      // How the outside reaches a function, and what a wiring composes from.
-      id: 'wiring',
-      title: m.nav_wiring(),
-      icon: Network,
+      // Declared people and real ones sit apart the way Fabric sits them: a
+      // persona is who the product is tested as, so it belongs with the tests
+      // rather than with the users who actually turned up.
+      id: 'testing',
+      title: m.nav_testing(),
+      icon: FlaskConical,
       items: [
         {
-          label: m.nav_apis(),
-          href: '/apis',
-          icon: Globe,
-          matchPrefix: '/apis',
-        },
-        {
-          label: m.nav_jobs(),
-          href: '/jobs',
-          icon: Clock,
-          matchPrefix: '/jobs',
-        },
-        {
-          label: m.nav_runtime(),
-          href: '/runtime',
-          icon: Server,
-          matchPrefix: '/runtime',
-        },
-        {
-          label: m.nav_webhooks(),
-          href: '/webhooks',
-          icon: Webhook,
-          matchPrefix: '/webhooks',
+          label: m.nav_personas(),
+          href: '/personas',
+          icon: UserRound,
+          matchPrefix: '/personas',
+          group: { id: 'who', title: m.nav_group_who_tests_it() },
         },
       ],
     },
     {
-      // OAuth is here rather than with Access because it declares how sign-in is
-      // configured — it reads secrets. Everything under Access is live state.
-      id: 'project',
-      title: m.nav_project(),
-      icon: SlidersHorizontal,
+      id: 'operate',
+      title: m.nav_operate(),
+      icon: Activity,
       items: [
-        {
-          label: m.nav_secrets(),
-          href: '/secrets',
-          icon: KeyRound,
-          matchPrefix: '/secrets',
-        },
         {
           label: m.nav_env_vars(),
           href: '/variables',
           icon: Variable,
           matchPrefix: '/variables',
+          group: { id: 'configuration', title: m.nav_group_configuration() },
         },
         {
-          label: m.nav_oauth(),
-          href: '/auth-providers',
-          icon: Lock,
-          matchPrefix: '/auth-providers',
+          label: m.nav_secrets(),
+          href: '/secrets',
+          icon: KeyRound,
+          matchPrefix: '/secrets',
+          group: { id: 'configuration', title: m.nav_group_configuration() },
         },
         {
           label: m.nav_security(),
           href: '/security',
           icon: ShieldCheck,
           matchPrefix: '/security',
+          group: { id: 'configuration', title: m.nav_group_configuration() },
+        },
+        {
+          label: m.nav_webhooks(),
+          href: '/webhooks',
+          icon: Webhook,
+          matchPrefix: '/webhooks',
+          group: { id: 'connections', title: m.nav_group_connections() },
         },
         {
           label: m.nav_addons(),
           href: '/addons',
           icon: Package,
           matchPrefix: '/addons',
+          group: { id: 'connections', title: m.nav_group_connections() },
+        },
+      ],
+    },
+    {
+      // OAuth is under "Where it runs" rather than with Access because it
+      // declares how sign-in is configured — it reads secrets. Everything under
+      // People is live state.
+      id: 'build',
+      title: m.nav_build(),
+      icon: Braces,
+      items: [
+        {
+          label: m.nav_apis(),
+          href: '/apis',
+          icon: Globe,
+          matchPrefix: '/apis',
+          group: { id: 'wiring', title: m.nav_group_wiring() },
+        },
+        {
+          label: m.nav_jobs(),
+          href: '/jobs',
+          icon: Clock,
+          matchPrefix: '/jobs',
+          group: { id: 'wiring', title: m.nav_group_wiring() },
+        },
+        {
+          label: m.nav_runtime(),
+          href: '/runtime',
+          icon: Server,
+          matchPrefix: '/runtime',
+          group: { id: 'runs', title: m.nav_group_where_it_runs() },
+        },
+        {
+          label: m.nav_oauth(),
+          href: '/auth-providers',
+          icon: Lock,
+          matchPrefix: '/auth-providers',
+          group: { id: 'runs', title: m.nav_group_where_it_runs() },
         },
         {
           label: m.nav_changes(),
           href: '/changes',
           icon: GitCompare,
           matchPrefix: '/changes',
-        },
-      ],
-    },
-    {
-      // Declared people and real ones sit together: a persona is who the
-      // product is for, a user is who turned up. Reading either without the
-      // other is what let the two drift in the first place.
-      id: 'access',
-      title: m.nav_access(),
-      icon: Users,
-      items: [
-        {
-          label: m.nav_users(),
-          href: '/users',
-          icon: Users,
-          matchPrefix: '/users',
-        },
-        {
-          label: m.nav_personas(),
-          href: '/personas',
-          icon: UserRound,
-          matchPrefix: '/personas',
-        },
-        {
-          label: m.nav_roles(),
-          href: '/roles',
-          icon: UsersRound,
-          matchPrefix: '/roles',
-        },
-        {
-          label: m.nav_scopes(),
-          href: '/scopes',
-          icon: Shield,
-          matchPrefix: '/scopes',
-        },
-        {
-          label: m.nav_credentials(),
-          href: '/credentials',
-          icon: KeyRound,
-          matchPrefix: '/credentials',
-        },
-        {
-          label: m.nav_audit(),
-          href: '/audit',
-          icon: ScrollText,
-          matchPrefix: '/audit',
+          group: { id: 'shipping', title: m.nav_group_shipping() },
         },
       ],
     },

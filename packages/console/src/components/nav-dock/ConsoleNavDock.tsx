@@ -55,7 +55,7 @@ import {
   consoleTitle,
 } from '../../lib/branding'
 import { NavDock } from './NavDock'
-import type { DockEntry, DockTile, FlyoutRow } from './model'
+import type { DockEntry, DockTile, FlyoutRow, FlyoutSection } from './model'
 
 /**
  * The console's navigation dock: {@link NavDock} fed from the same nav model the
@@ -145,6 +145,29 @@ export function ConsoleNavDock({
     [navigate]
   )
 
+  /* A section's flyout, cut into the titled bands its items declare — one band
+     per run of items sharing a group, in the order they are written. A section
+     whose items declare none opens as the single untitled list it always was. */
+  const bandsOf = useCallback(
+    (section: NavSection): FlyoutSection[] => {
+      const bands: FlyoutSection[] = []
+      for (const item of section.items) {
+        const last = bands[bands.length - 1]
+        if (last && last.key === (item.group?.id ?? 'main')) {
+          last.rows.push(rowOf(item))
+          continue
+        }
+        bands.push({
+          key: item.group?.id ?? 'main',
+          title: item.group?.title,
+          rows: [rowOf(item)],
+        })
+      }
+      return bands
+    },
+    [rowOf]
+  )
+
   const pinned = useMemo<DockEntry[]>(
     () =>
       sections
@@ -165,10 +188,10 @@ export function ConsoleNavDock({
             Icon: section.icon ?? section.items[0]?.icon,
             isGroup: true,
             match: rows.flatMap((r) => r.match ?? []),
-            menu: { label: section.title, sections: [{ key: 'main', rows }] },
+            menu: { label: section.title, sections: bandsOf(section) },
           }
         }),
-    [sections, rowOf]
+    [sections, rowOf, bandsOf]
   )
 
   /* Everything about you or your session, behind one tile: the appearance you
