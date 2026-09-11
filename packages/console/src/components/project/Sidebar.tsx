@@ -48,9 +48,9 @@ import {
   ScrollText,
   Webhook,
   Lock,
-  Sparkles,
   Target,
   DoorOpen,
+  Boxes,
   FlaskConical,
   Activity,
   Braces,
@@ -109,6 +109,10 @@ export interface NavSection {
    * otherwise.
    */
   zone?: 'row' | 'group'
+  /** Opens a new band on the dock: a separator is drawn before this section.
+   *  Fabric breaks its row into who/what, building/checking, and running — the
+   *  breaks are part of the taxonomy, not decoration. */
+  separatorBefore?: boolean
   items: NavItem[]
 }
 
@@ -117,6 +121,12 @@ export interface NavSection {
 export function useDefaultNavSections(): NavSection[] {
   useLocale()
   return [
+    /* Fabric's stage dock, section for section, minus what an OSS console does
+       not have: the console IS a subset of a fabric project seen from closer
+       in, so the same thing must live on the same shelf under the same name.
+       Overview stands where fabric puts Health, Workflows stays a tile of its
+       own between Testing and Operate, and every other destination collapses
+       into the group fabric collapses it into. */
     {
       id: 'main',
       title: asI18n(''),
@@ -128,67 +138,13 @@ export function useDefaultNavSections(): NavSection[] {
           icon: Gauge,
           matchPrefix: '/overview',
         },
-        {
-          label: m.nav_surface(),
-          href: '/surface',
-          icon: DoorOpen,
-          matchPrefix: '/surface',
-        },
-        {
-          label: m.nav_knowledge(),
-          href: '/knowledge',
-          icon: BookOpen,
-          matchPrefix: '/knowledge',
-        },
-        {
-          label: m.nav_functions(),
-          href: '/functions',
-          icon: FunctionSquare,
-          matchPrefix: '/functions',
-        },
-        {
-          label: m.nav_workflows(),
-          href: '/workflow',
-          icon: GitBranch,
-          matchPrefix: '/workflow',
-        },
-        {
-          label: m.nav_agents(),
-          href: '/agents',
-          icon: Bot,
-          matchPrefix: '/agents',
-        },
-        {
-          label: m.nav_scenarios(),
-          href: '/scenarios',
-          icon: Route,
-          matchPrefix: '/scenarios',
-        },
-        {
-          label: m.nav_database(),
-          href: '/database',
-          icon: Database,
-          matchPrefix: '/database',
-        },
-        {
-          label: m.nav_emails(),
-          href: '/emails',
-          icon: Mail,
-          matchPrefix: '/emails',
-        },
       ],
     },
     {
-      // Fabric's taxonomy, name for name: a console and a fabric project are
-      // the same product seen from different distances, so a shelf called
-      // "Configuration" holds the same things in both. Every band title below
-      // is one of Fabric's `nav_group_*` labels.
-      //
-      // What is already a tile on the row is not repeated in a flyout, which is
-      // why AI has no "Doing the work" and Testing no "What is tested" here.
       id: 'people',
       title: m.nav_people(),
       icon: Users,
+      separatorBefore: true,
       items: [
         {
           label: m.nav_users(),
@@ -228,10 +184,46 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
+      id: 'content',
+      title: m.nav_content(),
+      icon: Boxes,
+      items: [
+        {
+          label: m.nav_database(),
+          href: '/database',
+          icon: Database,
+          matchPrefix: '/database',
+          group: { id: 'data', title: m.nav_group_data() },
+        },
+        {
+          label: m.nav_knowledge(),
+          href: '/knowledge',
+          icon: BookOpen,
+          matchPrefix: '/knowledge',
+          group: { id: 'data', title: m.nav_group_data() },
+        },
+        {
+          label: m.nav_emails(),
+          href: '/emails',
+          icon: Mail,
+          matchPrefix: '/emails',
+          group: { id: 'copy', title: m.nav_group_copy() },
+        },
+      ],
+    },
+    {
       id: 'ai',
       title: m.nav_ai(),
-      icon: Sparkles,
+      icon: Bot,
+      separatorBefore: true,
       items: [
+        {
+          label: m.nav_agents(),
+          href: '/agents',
+          icon: Bot,
+          matchPrefix: '/agents',
+          group: { id: 'doing', title: m.nav_group_doing_the_work() },
+        },
         {
           label: m.nav_scorers(),
           href: '/scorers',
@@ -249,13 +241,20 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
-      // Declared people and real ones sit apart the way Fabric sits them: a
+      // Declared people and real ones sit apart the way fabric sits them: a
       // persona is who the product is tested as, so it belongs with the tests
       // rather than with the users who actually turned up.
       id: 'testing',
       title: m.nav_testing(),
       icon: FlaskConical,
       items: [
+        {
+          label: m.nav_scenarios(),
+          href: '/scenarios',
+          icon: Route,
+          matchPrefix: '/scenarios',
+          group: { id: 'what', title: m.nav_group_what_is_tested() },
+        },
         {
           label: m.nav_personas(),
           href: '/personas',
@@ -266,9 +265,26 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
+      // A tile of its own, exactly as in fabric: a workflow is neither what the
+      // product is made of nor how it is run, and burying it in either loses
+      // the one screen people come back to hourly.
+      id: 'workflows',
+      title: asI18n(''),
+      zone: 'row',
+      items: [
+        {
+          label: m.nav_workflows(),
+          href: '/workflow',
+          icon: GitBranch,
+          matchPrefix: '/workflow',
+        },
+      ],
+    },
+    {
       id: 'operate',
       title: m.nav_operate(),
       icon: Activity,
+      separatorBefore: true,
       items: [
         {
           label: m.nav_env_vars(),
@@ -308,13 +324,20 @@ export function useDefaultNavSections(): NavSection[] {
       ],
     },
     {
-      // OAuth is under "Where it runs" rather than with Access because it
+      // OAuth is under "Where it runs" rather than with People because it
       // declares how sign-in is configured — it reads secrets. Everything under
       // People is live state.
       id: 'build',
       title: m.nav_build(),
       icon: Braces,
       items: [
+        {
+          label: m.nav_functions(),
+          href: '/functions',
+          icon: FunctionSquare,
+          matchPrefix: '/functions',
+          group: { id: 'wiring', title: m.nav_group_wiring() },
+        },
         {
           label: m.nav_apis(),
           href: '/apis',
@@ -334,6 +357,13 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/runtime',
           icon: Server,
           matchPrefix: '/runtime',
+          group: { id: 'runs', title: m.nav_group_where_it_runs() },
+        },
+        {
+          label: m.nav_surface(),
+          href: '/surface',
+          icon: DoorOpen,
+          matchPrefix: '/surface',
           group: { id: 'runs', title: m.nav_group_where_it_runs() },
         },
         {

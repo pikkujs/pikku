@@ -168,30 +168,46 @@ export function ConsoleNavDock({
     [rowOf]
   )
 
+  /* Where the row stops being the row. Everything declared before the first
+     group is what the dock always shows; from there on the sections keep their
+     written order, so a row section standing between two groups — Workflows,
+     the way fabric stands it between Testing and Operate — lands there rather
+     than being swept to the front. */
+  const firstGroup = sections.findIndex((s) => zoneOf(s) === 'group')
+
   const pinned = useMemo<DockEntry[]>(
     () =>
-      sections
-        .filter((s) => zoneOf(s) === 'row')
-        .flatMap((s) => s.items.map(tileOf)),
-    [sections, tileOf]
+      (firstGroup < 0 ? sections : sections.slice(0, firstGroup)).flatMap((s) =>
+        s.items.map(tileOf)
+      ),
+    [sections, firstGroup, tileOf]
   )
 
   const contextual = useMemo<DockEntry[]>(
     () =>
-      sections
-        .filter((s) => zoneOf(s) === 'group' && s.items.length > 0)
-        .map((section): DockEntry => {
-          const rows = section.items.map(rowOf)
-          return {
-            id: section.id ?? section.title,
-            label: section.title,
-            Icon: section.icon ?? section.items[0]?.icon,
-            isGroup: true,
-            match: rows.flatMap((r) => r.match ?? []),
-            menu: { label: section.title, sections: bandsOf(section) },
+      (firstGroup < 0 ? [] : sections.slice(firstGroup))
+        .filter((s) => s.items.length > 0)
+        .flatMap((section): DockEntry[] => {
+          const sep: DockEntry[] = section.separatorBefore
+            ? [{ sep: true, key: `sep-${section.id ?? section.title}` }]
+            : []
+          if (zoneOf(section) === 'row') {
+            return [...sep, ...section.items.map(tileOf)]
           }
+          const rows = section.items.map(rowOf)
+          return [
+            ...sep,
+            {
+              id: section.id ?? section.title,
+              label: section.title,
+              Icon: section.icon ?? section.items[0]?.icon,
+              isGroup: true,
+              match: rows.flatMap((r) => r.match ?? []),
+              menu: { label: section.title, sections: bandsOf(section) },
+            },
+          ]
         }),
-    [sections, rowOf, bandsOf]
+    [sections, firstGroup, tileOf, rowOf, bandsOf]
   )
 
   /* Everything about you or your session, behind one tile: the appearance you
