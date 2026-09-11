@@ -7,7 +7,7 @@ import type {
 import type { EmailService } from '../services/email.service.js'
 import type { SMSService } from '../services/sms.service.js'
 import type { PaymentService } from '../services/payment.service.js'
-import type { AnalyticsService } from '../services/analytics.service.js'
+import type { TrackerService } from '../services/tracker.service.js'
 import type { StorageService } from '../services/storage.service.js'
 import type { NotificationService } from '../services/notification.service.js'
 import type { UserContextService } from '../services/user-context.service.js'
@@ -19,7 +19,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   email: EmailService
   sms: SMSService
   payment: PaymentService
-  analytics: AnalyticsService
+  tracker: TrackerService
   storage: StorageService
   notification: NotificationService
 }

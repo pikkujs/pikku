@@ -549,5 +549,11 @@
     "pikkuDevReloader",
     "reconcileAddonRegistry",
     "reloadGeneratedMeta"
+  ],
+  "./analytics": [
+    "LoggerAnalyticsService",
+    "createInvocationAnalytics",
+    "defineAnalyticsEvents",
+    "flattenAnalyticsEvent"
   ]
 }

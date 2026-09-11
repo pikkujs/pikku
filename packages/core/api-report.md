@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2894 observable things**: 923 exported names, plus
-1971 members on the classes and interfaces among them, reachable
-through 53 entry points.
+**2932 observable things**: 935 exported names, plus
+1997 members on the classes and interfaces among them, reachable
+through 54 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -20,7 +20,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
-| `./types` | 23 | 20 | 73 |
+| `./types` | 23 | 20 | 75 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
@@ -29,6 +29,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
+| `./analytics` | 12 | 12 | 24 |
 | `./classification` | 22 | 22 | 14 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
@@ -218,6 +219,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   virtualUserScheduleStore?: VirtualUserScheduleStore
   coverageService?: CoverageService
   audit?: AuditService
+  analyticsService?: AnalyticsService
+  analytics?: AnalyticsLog
   auditLog?: AuditLog
   sessionStore?: SessionStore
   scopeService?: ScopeService
@@ -3607,6 +3610,54 @@ export interface ScorerOutput {
   metadata?: Record<string, unknown>
 }
 wireAgentScorerQueueWorkers: () => void
+```
+
+## ./analytics
+
+```ts
+export interface AnalyticsClientContext {
+  at?: number
+}
+export type AnalyticsEventBase = { name: string } & Record<string, unknown>
+export type AnalyticsEventDefinitions = Record<string, StandardSchemaV1>
+export interface AnalyticsEventInput {
+  name: string
+  props?: Record<string, unknown>
+  at?: number
+}
+export interface AnalyticsIdentity {
+  userId: string | null
+  orgId?: string
+  pikkuUserId?: string
+}
+export interface AnalyticsLog< Events extends AnalyticsEventBase = AnalyticsEventBase, > {
+  record(event: Events, client?: AnalyticsClientContext): Promise<void>
+  flush(): Promise<void>
+  close(): Promise<void>
+}
+export interface AnalyticsRecord {
+  name: string
+  props?: Record<string, unknown>
+  occurredAt: string
+  at?: number
+  userIdentity: AnalyticsIdentity
+  traceId?: string
+  functionId?: string
+  wireType?: PikkuWiringTypes
+  source: 'server' | 'client'
+}
+export interface AnalyticsService {
+  record(event: AnalyticsRecord): Promise<void>
+  write?(batch: AnalyticsRecord[]): Promise<void>
+}
+createInvocationAnalytics: (service: AnalyticsService, wire: PikkuWire<any, any, any, CoreUserSession>, logger?: Logger | undefined) => AnalyticsLog<AnalyticsEventBase>
+defineAnalyticsEvents: <const Events extends AnalyticsEventDefinitions>(events: Events) => Events
+flattenAnalyticsEvent: (event: AnalyticsEventBase, at?: number | undefined) => AnalyticsEventInput
+export class LoggerAnalyticsService implements AnalyticsService {
+  constructor(private readonly logger: Logger)
+  async record(event: AnalyticsRecord): Promise<void>
+  async write(batch: AnalyticsRecord[]): Promise<void>
+}
 ```
 
 ## ./gateway

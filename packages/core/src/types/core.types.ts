@@ -58,6 +58,10 @@ import type {
   AuditLog,
   AuditService,
 } from '../services/audit-service.js'
+import type {
+  AnalyticsLog,
+  AnalyticsService,
+} from '../analytics/analytics.types.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -183,6 +187,13 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */
   coverageService?: CoverageService
   audit?: AuditService
+  /** Where product-analytics events go; unset means the logger. */
+  analyticsService?: AnalyticsService
+  /**
+   * Request-scoped buffer writing into `analyticsService`. Narrow it to the
+   * app's own event union in `SingletonServices` to type `record()`.
+   */
+  analytics?: AnalyticsLog
   /**
    * Request-scoped audit buffer that writes into `audit` (the durable sink).
    * Returned as a wire service so the runner flushes it via `close()` when the

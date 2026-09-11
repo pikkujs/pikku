@@ -92,6 +92,9 @@ export interface PikkuCLICoreOutputFiles {
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string
   publicRpcSchemasFile?: string
+  // Product-analytics ingest (derived from scaffold.pikkuDir when scaffold.analytics is enabled).
+  // Optional: left undefined when scaffold.analytics is not enabled, so consumers must guard.
+  analyticsFile?: string
   publicAgentFile: string
   publicAgentSchemasFile?: string
   consoleFunctionsFile: string
@@ -605,6 +608,15 @@ export type PikkuCLIInput = {
     /** Wire the pikku addon-graph package so pikkuWorkflowGraph can reference its native transforms like graph:editFields. */
     graph?: boolean
     rpc?: PikkuScaffoldFeature
+    /**
+     * A typed `POST /analytics` ingest, validated against the events the app
+     * declares with `defineAnalyticsEvents`. Generates the wire and its schemas
+     * only — where events go is the `AnalyticsService` on singleton services,
+     * which defaults to logging them. No middleware is emitted: an origin lock
+     * suits a browser-only app and breaks a native one, so it stays the
+     * project's call.
+     */
+    analytics?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
     scenarios?: PikkuScaffoldFeature
     /**
