@@ -44,6 +44,7 @@ import {
   UserCog,
   ShieldCheck,
   Shield,
+  UsersRound,
   ScrollText,
   Webhook,
   SlidersHorizontal,
@@ -283,6 +284,12 @@ export function useDefaultNavSections(): NavSection[] {
           href: '/personas',
           icon: UserRound,
           matchPrefix: '/personas',
+        },
+        {
+          label: m.nav_roles(),
+          href: '/roles',
+          icon: UsersRound,
+          matchPrefix: '/roles',
         },
         {
           label: m.nav_scopes(),

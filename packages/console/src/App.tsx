@@ -22,6 +22,7 @@ import { PackagesPage } from './pages/PackagesPage'
 import { CredentialsPage } from './pages/CredentialsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { ScopesPage } from './pages/ScopesPage'
+import { RolesPage } from './pages/RolesPage'
 import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { ScenariosPage } from './pages/ScenariosPage'
@@ -97,6 +98,7 @@ export const App: React.FC = () => {
         >
           <Route path="/credentials" element={<CredentialsPage />} />
           <Route path="/users" element={<AdminUsersPage />} />
+          <Route path="/roles" element={<RolesPage />} />
           <Route path="/scopes" element={<ScopesPage />} />
           <Route path="/audit" element={<AuditPage />} />
         </Route>

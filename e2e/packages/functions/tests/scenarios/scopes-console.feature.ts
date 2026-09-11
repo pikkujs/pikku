@@ -1,5 +1,9 @@
 /**
- * The console's Scopes page, and the roles drawer on the Users page.
+ * The console's Roles and Scopes pages, and the roles drawer on the Users page.
+ *
+ * Roles and the declared vocabulary are two top-level screens: `/console/roles`
+ * composes roles out of the vocabulary, `/console/scopes` lists the vocabulary
+ * itself, read-only.
  *
  * Everything here reads and writes through the addon-console scope RPCs, which
  * are themselves gated on `admin:scopes:*` — the admin actor holds them via the
@@ -16,8 +20,10 @@
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
+const ROLES_PAGE = '/console/roles'
 const SCOPES_PAGE = '/console/scopes'
 const ROLES_READY = { testId: 'role-row' }
+const SCOPES_READY = { testId: 'scope-row' }
 
 const roleRow = (name: string) => ({
   testId: 'role-row',
@@ -33,9 +39,9 @@ export const scopesVocabularyVisibleScenario = pikkuScenario<
   void,
   { visible: true }
 >({
-  title: 'The declared vocabulary and seeded roles are visible',
+  title: 'Roles and the declared vocabulary are separate screens',
   description:
-    'The scopes page lists the roles composed by an admin and the scope vocabulary declared in code',
+    'Roles composed by an admin live on their own page, and the vocabulary declared in code on another',
   tags: ['scenario', 'scopes-console', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -45,9 +51,9 @@ export const scopesVocabularyVisibleScenario = pikkuScenario<
     }
 
     await scenario.given(
-      'opens the scopes page',
+      'opens the roles page',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: ROLES_READY },
+      { path: ROLES_PAGE, waitFor: ROLES_READY },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -64,9 +70,15 @@ export const scopesVocabularyVisibleScenario = pikkuScenario<
     )
 
     await scenario.when(
-      'views the scope vocabulary',
-      'selectsSegment',
-      { value: 'scopes' },
+      'opens the scopes page',
+      'opensConsolePage',
+      { path: SCOPES_PAGE, waitFor: SCOPES_READY },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'no longer sees the roles list',
+      'doesNotSeeTestId',
+      { testId: 'role-row' },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -99,9 +111,9 @@ export const scopesCreateRoleScenario = pikkuScenario<void, { created: true }>({
     }
 
     await scenario.given(
-      'opens the scopes page',
+      'opens the roles page',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: ROLES_READY },
+      { path: ROLES_PAGE, waitFor: ROLES_READY },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -173,9 +185,9 @@ export const scopesParentLocksChildrenScenario = pikkuScenario<
     }
 
     await scenario.given(
-      'opens the scopes page',
+      'opens the roles page',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: ROLES_READY },
+      { path: ROLES_PAGE, waitFor: ROLES_READY },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -222,9 +234,9 @@ export const scopesNameRequiredScenario = pikkuScenario<
     }
 
     await scenario.given(
-      'opens the scopes page',
+      'opens the roles page',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: ROLES_READY },
+      { path: ROLES_PAGE, waitFor: ROLES_READY },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -276,9 +288,9 @@ export const scopesRoleKeyboardScenario = pikkuScenario<void, { opened: true }>(
       }
 
       await scenario.given(
-        'opens the scopes page',
+        'opens the roles page',
         'opensConsolePage',
-        { path: SCOPES_PAGE, waitFor: ROLES_READY },
+        { path: ROLES_PAGE, waitFor: ROLES_READY },
         { actor: actors.admin }
       )
       await scenario.when(
@@ -304,9 +316,9 @@ export const scopesHeaderSearchScenario = pikkuScenario<
   { filtered: true }
 >({
   title:
-    'Roles are filtered from the page-header search, which clears on tab switch',
+    'Roles are filtered from the page-header search, which clears on navigation',
   description:
-    'Search and the create action live in the shared page header, and the query never leaks across tabs',
+    'Search and the create action live in the shared page header, and the query never survives leaving the page',
   tags: ['scenario', 'scopes-console', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -316,9 +328,9 @@ export const scopesHeaderSearchScenario = pikkuScenario<
     }
 
     await scenario.given(
-      'opens the scopes page',
+      'opens the roles page',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: ROLES_READY },
+      { path: ROLES_PAGE, waitFor: ROLES_READY },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -355,14 +367,14 @@ export const scopesHeaderSearchScenario = pikkuScenario<
 
     await scenario.when(
       'views the scope vocabulary',
-      'selectsSegment',
-      { value: 'scopes' },
+      'opensConsolePage',
+      { path: SCOPES_PAGE, waitFor: SCOPES_READY },
       { actor: actors.admin }
     )
     await scenario.when(
-      'returns to the roles tab',
-      'selectsSegment',
-      { value: 'roles' },
+      'returns to the roles page',
+      'opensConsolePage',
+      { path: ROLES_PAGE, waitFor: ROLES_READY },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -400,13 +412,7 @@ export const scopesVocabularyReadOnlyScenario = pikkuScenario<
     await scenario.given(
       'opens the scopes page',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: ROLES_READY },
-      { actor: actors.admin }
-    )
-    await scenario.when(
-      'views the scope vocabulary',
-      'selectsSegment',
-      { value: 'scopes' },
+      { path: SCOPES_PAGE, waitFor: SCOPES_READY },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -583,8 +589,7 @@ export const scopesForbiddenIsNotAnOutageScenario = pikkuScenario<
   void,
   { refused: true }
 >({
-  title:
-    'A console admin without admin:scopes:read sees a permission message',
+  title: 'A console admin without admin:scopes:read sees a permission message',
   description:
     'A caller who passes the console gate but holds no scope role is told so, not shown an outage',
   tags: ['scenario', 'scopes-console', 'console'],
@@ -596,9 +601,9 @@ export const scopesForbiddenIsNotAnOutageScenario = pikkuScenario<
     }
 
     await scenario.given(
-      'opens the scopes page as staff',
+      'opens the roles page as staff',
       'opensConsolePage',
-      { path: SCOPES_PAGE, waitFor: { testId: 'roles-forbidden' } },
+      { path: ROLES_PAGE, waitFor: { testId: 'roles-forbidden' } },
       { actor: actors.staff }
     )
     await scenario.then(

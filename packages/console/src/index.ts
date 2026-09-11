@@ -330,6 +330,7 @@ export { CredentialsPage } from './pages/CredentialsPage'
 export { AuditPage } from './pages/AuditPage'
 export { SecurityPage } from './pages/SecurityPage'
 export { ScopesPage } from './pages/ScopesPage'
+export { RolesPage } from './pages/RolesPage'
 export { SecurityAuditView } from './components/security/SecurityAuditView'
 export type {
   SecurityAuditViewProps,

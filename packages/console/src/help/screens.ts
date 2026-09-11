@@ -74,6 +74,7 @@ export const HELP_PENDING: readonly string[] = [
   '/security',
   '/credentials',
   '/users',
+  '/roles',
   '/scopes',
   '/audit',
   '/auth-providers',

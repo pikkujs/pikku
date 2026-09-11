@@ -20,10 +20,7 @@ export const opensUserRolesDrawer = pikkuScenarioStep<
       .first()
       .waitFor({ state: 'visible' })
     await browser
-      .locate({
-        testId: 'user-roles',
-        within: { testId: 'user-row', containing: email },
-      })
+      .locate({ testId: 'user-row', containing: email })
       .first()
       .click()
     await browser
