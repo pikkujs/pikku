@@ -286,6 +286,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                       color="gray"
                       size="sm"
                       aria-label={m.pane_hide_details()}
+                      data-testid="pane-hide-details"
                       onClick={() => setRightCollapsed(true)}
                       style={{
                         position: 'absolute',
@@ -303,6 +304,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                   <UnstyledButton
                     className={classes.paneStub}
                     aria-label={m.pane_show_details()}
+                    data-testid="pane-show-details"
                     onClick={() => setRightCollapsed(false)}
                   >
                     <PanelRightOpen size={16} />
