@@ -50,6 +50,49 @@ export const isScopeLockedByAncestor = (
   id: string
 ): boolean => selected.some((s) => s !== id && isAncestorOf(s, id))
 
+/** A role the user holds, and the scopes it carries. */
+export type HeldRole = { name: string; scopes: string[] }
+
+/** Every route by which a user ends up holding a scope. */
+export type ScopeProvenance = {
+  /** Granted straight onto the user, so this row's checkbox is what toggles it. */
+  direct: boolean
+  /** A directly-granted strict ancestor that already covers it, if any. */
+  ancestor?: string
+  /** The roles the user holds that carry it, exactly or through an ancestor. */
+  roles: string[]
+}
+
+/**
+ * Where a user's hold on one scope comes from. A scope reached only through a
+ * role or an ancestor is still held — the session carries it — but it cannot be
+ * revoked on its own row, which is why the two are reported separately rather
+ * than flattened into a single boolean.
+ */
+export const scopeProvenance = (
+  id: string,
+  directScopes: string[],
+  heldRoles: HeldRole[]
+): ScopeProvenance => ({
+  direct: directScopes.includes(id),
+  ancestor: directScopes.find((s) => s !== id && isAncestorOf(s, id)),
+  roles: heldRoles
+    .filter((role) => role.scopes.some((s) => s === id || isAncestorOf(s, id)))
+    .map((role) => role.name),
+})
+
+/** Whether the user holds the scope at all, by any route. */
+export const isScopeHeld = (p: ScopeProvenance): boolean =>
+  p.direct || p.ancestor !== undefined || p.roles.length > 0
+
+/**
+ * Whether the hold comes from somewhere other than this row's own grant, so the
+ * checkbox is locked — it is revoked by editing the role or the ancestor that
+ * carries it, never here.
+ */
+export const isScopeLockedByProvenance = (p: ScopeProvenance): boolean =>
+  !p.direct && (p.ancestor !== undefined || p.roles.length > 0)
+
 /**
  * Toggles a row, returning the next selection. Granting a scope drops any
  * descendant it now subsumes (they become redundant); ungranting removes just

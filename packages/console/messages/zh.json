@@ -786,7 +786,6 @@
   "scopes_revoke_role": "移除 {role}",
   "scopes_grant_failed": "无法更新该用户的访问权限",
   "scopes_direct_scopes": "直接权限范围",
-  "scopes_direct_scopes_hint": "在任何角色之外，直接授予该用户。",
   "scopes_resolved_scopes": "解析出的权限范围",
   "scopes_no_resolved": "没有权限范围——这些角色目前不授予任何东西。",
   "scopes_user_roles_load_error": "无法加载该用户的角色。",

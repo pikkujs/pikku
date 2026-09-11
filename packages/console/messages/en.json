@@ -859,8 +859,7 @@
   "scopes_add_role": "Add role",
   "scopes_revoke_role": "Remove {role}",
   "scopes_grant_failed": "Couldn't update this user's access",
-  "scopes_direct_scopes": "Direct scopes",
-  "scopes_direct_scopes_hint": "Granted to this user directly, outside of any role.",
+  "scopes_direct_scopes": "Scopes",
   "scopes_resolved_scopes": "Resolved scopes",
   "scopes_no_resolved": "No scopes — these roles grant nothing yet.",
   "scopes_user_roles_load_error": "Couldn't load this user's roles.",
@@ -1141,5 +1140,7 @@
   "help_functions_examples": "Examples: createBooking, sendWelcomeEmail, listInvoices.",
   "help_functions_do_search": "[Find a function by name](#search)",
   "help_functions_do_select": "[Open one to see its inputs, outputs and wirings](#list)",
-  "help_functions_do_internals": "[Show pikku's own internal functions](#internals)"
+  "help_functions_do_internals": "[Show pikku's own internal functions](#internals)",
+  "scopes_granted_via_role": "via {roles}",
+  "scopes_tree_hint": "Held scopes are ticked. A scope a role carries is ticked and locked — change it on the role."
 }

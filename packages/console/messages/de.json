@@ -786,7 +786,6 @@
   "scopes_revoke_role": "{role} entfernen",
   "scopes_grant_failed": "Der Zugriff dieses Benutzers konnte nicht aktualisiert werden",
   "scopes_direct_scopes": "Direkte Scopes",
-  "scopes_direct_scopes_hint": "Diesem Benutzer direkt gewährt, außerhalb jeder Rolle.",
   "scopes_resolved_scopes": "Aufgelöste Scopes",
   "scopes_no_resolved": "Keine Scopes — diese Rollen gewähren noch nichts.",
   "scopes_user_roles_load_error": "Die Rollen dieses Benutzers konnten nicht geladen werden.",

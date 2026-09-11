@@ -54,6 +54,9 @@ export const UserRolesPanel: React.FC<UserRolesPanelProps> = ({
   const removeScope = useRemoveScopeFromUser()
 
   const held = userRolesQuery.data?.roles ?? []
+  const heldRoles = (allRolesQuery.data?.roles ?? [])
+    .filter((role) => held.includes(role.name))
+    .map((role) => ({ name: role.name, scopes: role.scopes }))
   const scopes = userRolesQuery.data?.scopes ?? []
   const directScopes = userRolesQuery.data?.directScopes ?? []
   const declaredScopes = declaredQuery.data?.scopes ?? []
@@ -90,73 +93,70 @@ export const UserRolesPanel: React.FC<UserRolesPanelProps> = ({
               {asI18n(mutationError.message)}
             </Alert>
           )}
-          <Text size="sm" fw={500}>
-            {m.scopes_roles_title()}
-          </Text>
-          {held.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              {m.scopes_user_no_roles()}
-            </Text>
-          ) : (
-            <Group gap={8}>
-              {held.map((role) => (
-                <Badge
-                  key={role}
-                  variant="light"
-                  size="lg"
-                  data-testid="held-role"
-                  data-role-name={role}
-                  rightSection={
-                    <CloseButton
-                      size="xs"
-                      aria-label={m.scopes_revoke_role({ role })}
-                      disabled={!userId}
-                      data-testid="revoke-role"
-                      data-role-name={role}
-                      onClick={() => {
-                        if (userId) {
-                          removeRole.mutate({ userId, role })
-                        }
-                      }}
-                    />
-                  }
-                >
-                  {asI18n(role)}
-                </Badge>
-              ))}
-            </Group>
-          )}
-
-          <Menu position="bottom-start" disabled={available.length === 0}>
-            <Menu.Target>
-              <Button
-                variant="light"
-                size="sm"
-                leftSection={<Plus size={14} />}
-                disabled={available.length === 0}
-                w="fit-content"
-                data-testid="add-role"
+          <Divider label={m.scopes_roles_title()} labelPosition="left" />
+          <Group gap={6} align="center">
+            {held.length === 0 && (
+              <Text size="sm" c="dimmed">
+                {m.scopes_user_no_roles()}
+              </Text>
+            )}
+            {held.map((role) => (
+              <Badge
+                key={role}
+                variant="default"
+                size="md"
+                tt="none"
+                fw={500}
+                data-testid="held-role"
+                data-role-name={role}
+                rightSection={
+                  <CloseButton
+                    size="xs"
+                    aria-label={m.scopes_revoke_role({ role })}
+                    disabled={!userId}
+                    data-testid="revoke-role"
+                    data-role-name={role}
+                    onClick={() => {
+                      if (userId) {
+                        removeRole.mutate({ userId, role })
+                      }
+                    }}
+                  />
+                }
               >
-                {m.scopes_add_role()}
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              {available.map((role) => (
-                <Menu.Item
-                  key={role}
-                  onClick={() => userId && addRole.mutate({ userId, role })}
-                  data-testid="add-role-option"
-                  data-role-name={role}
+                {asI18n(role)}
+              </Badge>
+            ))}
+            <Menu position="bottom-start" disabled={available.length === 0}>
+              <Menu.Target>
+                <Button
+                  variant="subtle"
+                  size="compact-sm"
+                  leftSection={<Plus size={14} />}
+                  disabled={available.length === 0}
+                  data-testid="add-role"
                 >
-                  {asI18n(role)}
-                </Menu.Item>
-              ))}
-            </Menu.Dropdown>
-          </Menu>
+                  {m.scopes_add_role()}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {available.map((role) => (
+                  <Menu.Item
+                    key={role}
+                    onClick={() => userId && addRole.mutate({ userId, role })}
+                    data-testid="add-role-option"
+                    data-role-name={role}
+                  >
+                    {asI18n(role)}
+                  </Menu.Item>
+                ))}
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
 
           <Divider label={m.scopes_direct_scopes()} labelPosition="left" />
           <Text size="xs" c="dimmed">
-            {m.scopes_direct_scopes_hint()}
+            {m.scopes_tree_hint()}
           </Text>
           <Box mah={360} style={{ overflowY: 'auto' }}>
             <ScopeTreeSelector
@@ -164,6 +164,7 @@ export const UserRolesPanel: React.FC<UserRolesPanelProps> = ({
               selected={directScopes}
               onChange={applyDirectScopes}
               disabled={!userId}
+              heldRoles={heldRoles}
             />
           </Box>
 
@@ -173,23 +174,25 @@ export const UserRolesPanel: React.FC<UserRolesPanelProps> = ({
               {m.scopes_no_resolved()}
             </Text>
           ) : (
-            <Box>
-              <Group gap={6}>
-                {scopes.map((scope) => (
-                  <Badge
-                    key={scope}
-                    variant="outline"
-                    color="gray"
-                    size="sm"
-                    styles={{ label: { fontFamily: 'monospace' } }}
-                    data-testid="resolved-scope"
-                    data-scope-id={scope}
-                  >
-                    {asI18n(scope)}
-                  </Badge>
-                ))}
-              </Group>
-            </Box>
+            <Group gap={6}>
+              {scopes.map((scope) => (
+                <Badge
+                  key={scope}
+                  variant="default"
+                  size="sm"
+                  tt="none"
+                  styles={{
+                    label: {
+                      fontFamily: 'var(--mantine-font-family-monospace)',
+                    },
+                  }}
+                  data-testid="resolved-scope"
+                  data-scope-id={scope}
+                >
+                  {asI18n(scope)}
+                </Badge>
+              ))}
+            </Group>
           )}
         </Stack>
       )}

@@ -786,7 +786,6 @@
   "scopes_revoke_role": "إزالة {role}",
   "scopes_grant_failed": "تعذّر تحديث صلاحيات هذا المستخدم",
   "scopes_direct_scopes": "نطاقات مباشرة",
-  "scopes_direct_scopes_hint": "ممنوحة لهذا المستخدم مباشرة، خارج أي دور.",
   "scopes_resolved_scopes": "النطاقات المحلولة",
   "scopes_no_resolved": "لا نطاقات — هذه الأدوار لا تمنح شيئًا بعد.",
   "scopes_user_roles_load_error": "تعذّر تحميل أدوار هذا المستخدم.",
