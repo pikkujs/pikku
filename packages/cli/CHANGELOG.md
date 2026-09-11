@@ -1,3 +1,47 @@
+## 0.12.147
+
+### Patch Changes
+
+- ba267f8: Only require `agentRunService` in deployment units that hold an agent
+
+  `scaffold.agent` is a project-wide config flag, so forcing `agentRunService`
+  into `requiredSingletonServices` whenever it was set marked the service required
+  in every unit — including units with no agent at all, whose sibling
+  `agentStorage` / `agentRunState` / `agentRunner` flags were correctly `false`.
+  The force now also requires the (filtered) inspector state to carry an agent.
+
+- 2ce5e4b: Add `deploy.grouping.strategy: 'services'` — one deployment unit per distinct
+  set of singleton services.
+
+  One unit per function is a lot of units, and `'single'` is the only alternative,
+  which is too coarse: it puts the AI SDKs in with everything. `'services'` keys a
+  function on the singleton services its body destructures, minus the ones every
+  unit builds regardless, and names the unit for that set (`svc-todo-store`,
+  `svc-base`). On `templates/functions` it turns 44 units into 10.
+
+  The deploy target is part of the key, so a `server` unit is named `-server` and
+  never merges with its serverless twin — a function can declare `deploy: 'server'`
+  itself while carrying exactly the services a serverless one does, and keying on
+  services alone made that plan fail the mixed-target refusal.
+
+  Units named this way record their key as `servicesKey` in the deployment
+  manifest. The existing `services` list is keyed by capability and cannot tell
+  `workflowService` from `workflowRunService`.
+
+- afe12bb: A fabric refusal reads as an instruction, not a crash. `pikku fabric deploy apply` and `pikku fabric logs` raised their preconditions — a branch out of sync with its remote, a detached HEAD, a dirty tree at link time, a missing `--branch`, a non-interactive deploy without `--auto-approve` — as plain `Error`s, so the CLI printed ten frames of `@pikku/core` function-runner and cli-runner internals in front of the one sentence that says what to do about it.
+
+  They now throw `FabricPreconditionError`, a `PikkuError` — the marker the CLI already uses to decide that a message is the whole output (`PikkuTypecheckFailedError`, `PikkuDeployBuildFailedError` and the persona commands do the same). The message and the non-zero exit are unchanged, and `--verbose` / `PIKKU_DEBUG` still shows the stack.
+
+- 5c236ee: A deployment unit records why it is where it is. `DeploymentUnit` gains `groupedBy` — the `deploy.grouping` rule that put its functions together — and `targetForcedBy` — the `serverlessIncompatible` services that crossed it to `target: 'server'`. Both are absent for the fallback and for a target that was chosen rather than forced, so anything reading a manifest can tell a deliberate `server` unit from a crossed one. `resolveDeployTarget` now shares `incompatibleServicesFor` with the analyzer, so resolving a target and explaining it cannot drift.
+- Updated dependencies [828b5b5]
+- Updated dependencies [2ce5e4b]
+- Updated dependencies [828b5b5]
+- Updated dependencies [5c236ee]
+  - @pikku/skills@0.12.32
+  - @pikku/deploy@0.12.10
+  - @pikku/better-auth@0.12.41
+  - @pikku/inspector@0.12.77
+
 ## 0.12.146
 
 ### Patch Changes

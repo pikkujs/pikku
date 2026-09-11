@@ -7,7 +7,7 @@
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-stripe": "^0.1.8",
     "@pikku/ai-vercel": "workspace:*",
-    "@pikku/better-auth": "^0.12.40",
+    "@pikku/better-auth": "^0.12.41",
     "@pikku/cloudflare": "workspace:*",
     "@pikku/core": "^0.12.108",
     "@pikku/fetch": "^0.12.11",
@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
-    "@pikku/cli": "^0.12.146",
+    "@pikku/cli": "^0.12.147",
     "@pikku/deploy-standalone": "workspace:*",
     "@pikku/playwright": "workspace:*",
     "@playwright/test": "^1.50.0",

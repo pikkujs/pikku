@@ -24,7 +24,7 @@
     "@pikku/websocket": "^0.12.5"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.146",
+    "@pikku/cli": "^0.12.147",
     "@standard-schema/spec": "^1.1.0",
     "@types/node": "^24",
     "tsx": "^4.23.12",
