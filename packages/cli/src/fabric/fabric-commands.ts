@@ -62,6 +62,30 @@ import { FabricDomainsAdd } from './functions/domains-add.function.js'
 import { FabricDomainsRemove } from './functions/domains-remove.function.js'
 import { FabricLLMKey, renderLLMKey } from './functions/llm-key.function.js'
 import {
+  FabricChangesList,
+  renderChangesList,
+} from './functions/changes-list.function.js'
+import {
+  FabricChangesShow,
+  renderChangesShow,
+} from './functions/changes-show.function.js'
+import {
+  FabricChangesClaim,
+  renderChangesClaim,
+} from './functions/changes-claim.function.js'
+import {
+  FabricChangesAsk,
+  renderChangesAsk,
+} from './functions/changes-ask.function.js'
+import {
+  FabricChangesShot,
+  renderChangesShot,
+} from './functions/changes-shot.function.js'
+import {
+  FabricChangesDone,
+  renderChangesDone,
+} from './functions/changes-done.function.js'
+import {
   FabricValidate,
   renderValidate,
 } from './functions/validate.function.js'
@@ -524,6 +548,149 @@ export const fabricCommands = defineCLICommands({
         func: FabricDomainsRemove,
         description: 'Remove a custom domain from the production stage',
         options: {
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+    },
+  },
+  changes: {
+    description:
+      'The todo list filed from inside a deployed stage: read what is open, claim a batch, ask what you need to know, and tick items off',
+    subcommands: {
+      list: pikkuCLICommand({
+        func: FabricChangesList,
+        render: renderChangesList,
+        description:
+          'Open changes for a project, grouped the way they will be worked',
+        options: {
+          projectId: {
+            description: 'Project to read (defaults to the linked checkout)',
+            short: 'p',
+          },
+          stageId: { description: 'Only changes filed on this stage' },
+          route: {
+            description: 'Only changes filed on this route, e.g. /checkout',
+          },
+          groupId: { description: 'Only changes in this group' },
+          pickupOnly: {
+            description:
+              'Skip items still held for the person who just filed them',
+            default: false,
+          },
+          includeDone: {
+            description: 'Also return done and dismissed items',
+            default: false,
+          },
+          limit: {
+            description: 'How many to return (default 50, max 200)',
+            type: 'number',
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      show: pikkuCLICommand({
+        func: FabricChangesShow,
+        render: renderChangesShow,
+        description:
+          'One change with its thread, its circled elements and the build it was filed against',
+        options: {
+          changeId: {
+            description: 'The change to read, from `pikku fabric changes list`',
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      claim: pikkuCLICommand({
+        func: FabricChangesClaim,
+        render: renderChangesClaim,
+        description:
+          'Take a batch of items as one job under a lease. Naming items without a group creates the group',
+        options: {
+          projectId: {
+            description: 'Project the items belong to',
+            short: 'p',
+          },
+          groupId: {
+            description: 'Claim an existing group instead of forming one',
+          },
+          changeIds: {
+            description: 'The items to take, comma-separated or repeated',
+            type: 'string[]',
+          },
+          title: { description: 'What to call the group being formed' },
+          claimedBy: {
+            description:
+              'Who is taking it — shown in the panel while the lease is held',
+          },
+          leaseMinutes: {
+            description:
+              'How long to hold it before it returns to the queue (default 30)',
+            type: 'number',
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      ask: pikkuCLICommand({
+        func: FabricChangesAsk,
+        render: renderChangesAsk,
+        description:
+          'Ask the person who filed an item what you need to know. The question is parked, not blocking',
+        options: {
+          changeId: { description: 'The item the question is about' },
+          question: {
+            description:
+              'One decision, in the filer’s vocabulary, with the options named',
+            short: 'q',
+          },
+          authorName: { description: 'Who is asking, e.g. claude-code' },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      shot: pikkuCLICommand({
+        func: FabricChangesShot,
+        render: renderChangesShot,
+        description:
+          'Attach a rendered option to an item’s thread. The panel turns a set of them into a pick-one',
+        options: {
+          changeId: { description: 'The item the options belong to' },
+          label: {
+            description:
+              'What to call this variant in the picker, e.g. “Grouped totals”',
+          },
+          image: { description: 'Path to the image file to attach' },
+          imageBase64: {
+            description: 'The image itself, base64, instead of --image',
+          },
+          contentType: {
+            description:
+              'image/png, image/jpeg or image/webp (inferred from --image)',
+          },
+          kind: {
+            description:
+              'option (a variant to choose between) or evidence (something to look at)',
+            default: 'option',
+          },
+          authorName: { description: 'Who rendered it, e.g. claude-code' },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      done: pikkuCLICommand({
+        func: FabricChangesDone,
+        render: renderChangesDone,
+        description:
+          'Tick an item off, recording the branch and commit that closed it so the panel can strike it through',
+        options: {
+          changeId: { description: 'The item that is done' },
+          branch: {
+            description: 'Branch the fix landed on (defaults to this checkout)',
+          },
+          headCommit: {
+            description: 'Commit that closed it (defaults to this checkout)',
+          },
+          note: {
+            description: 'What was done, for whoever reads the thread later',
+          },
+          authorName: { description: 'Who did it, e.g. claude-code' },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
