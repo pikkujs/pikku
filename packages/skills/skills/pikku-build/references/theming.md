@@ -53,6 +53,108 @@ Then **write the direction into `knowledge/decisions/design/`** — the words th
 user gave you, what you chose, and what it rules out. The JSON records what the
 theme is; only the note records why.
 
+## The colours the theme has no field for
+
+`brand` is the product's accent. It is not the only colour a screen needs, and
+the missing ones are why "don't hardcode colours per component" gets broken by
+the same agent that wrote it down.
+
+A screen has to say *covered* and *still open*, *fine* and *needs attention* —
+and those are not the accent. Using the accent for them is worse than a stray
+hex: the brand colour stops meaning "this product" and starts meaning "good", so
+it means nothing. But there is no `brand.covered` field, so the value lands
+inline as `#3f7d5c`, once per component, slightly different each time.
+
+Give them a home. A small stylesheet of custom properties, imported once beside
+the Mantine styles, is enough:
+
+```css
+:root:root:root {
+  --app-covered: #3f7d5c;  --app-covered-bg: #e6f1ea;
+  --app-open:    #a8701a;  --app-open-bg:    #fbeedb;
+  --app-sunk:    #fdf7f4;   /* a recessed surface, for forms and asides */
+  --app-hairline: #ecdfd9;  /* NOT var(--mantine-color-gray-2) — see below */
+}
+:root:root[data-mantine-color-scheme='dark'] {
+  --app-covered: #7fc09a;  --app-covered-bg: #1e2f26;
+  --app-open:    #e0ab5c;  --app-open-bg:    #33271a;
+  --app-sunk:    #241b18;
+  --app-hairline: #392b26;
+}
+```
+
+Those values are one app's warm direction, not a palette to copy — derive your
+own from yours.
+
+## Choose the neutrals; do not inherit them
+
+The two details in that snippet that look like typos are the two things most
+likely to make your app look like every other app.
+
+**The hairline is a literal, not `var(--mantine-color-gray-2)`.** Mantine's grey
+ramp is blue-biased — `#f8f9fa`, `#dee2e6`, `#868e96` are all cool — and it is
+what draws card borders, dividers, the shell's edges and every disabled control.
+The theme JSON has `brand` and `structure` and **no neutral field at all**, so
+unless you choose otherwise, every app built from this skill runs its accent on
+somebody else's greys.
+
+If the accent is not itself blue, that mismatch lands on every screen at once:
+warm content ruled off in cold lines, off everywhere and wrong nowhere in
+particular, which is the hardest kind of wrong to find. It survives a careful
+critique because no single screen is broken.
+
+So bias the whole ramp toward the accent — not just the tokens with obvious
+names. Keep Mantine's lightness steps so contrast behaviour and every component
+that picks a step by number are unchanged; move only the hue:
+
+```css
+:root:root:root {
+  --mantine-color-body: #fdfaf8;
+  --mantine-color-text: #2a1f1b;
+  --mantine-color-gray-0: #faf7f5;  --mantine-color-gray-5: #b8a49d;
+  --mantine-color-gray-1: #f5efec;  --mantine-color-gray-6: #93807a;
+  --mantine-color-gray-2: #efe6e2;  --mantine-color-gray-7: #574a45;
+  --mantine-color-gray-3: #e6dad5;  --mantine-color-gray-8: #3d332f;
+  --mantine-color-gray-4: #d8c8c2;  --mantine-color-gray-9: #2a1f1b;
+  --mantine-color-default-border: #ecdfd9;
+  --mantine-color-dimmed: #7a625c;      /* keep AA: ~5.4:1 on the body above */
+  --mantine-color-placeholder: #826a64; /* ~4.8:1 */
+}
+```
+
+Check the two text tokens against your own ground rather than copying these —
+`dimmed` is the most-used text colour in the app and the easiest to drop below
+4.5:1 while making it prettier.
+
+**The selector is tripled on purpose.** Mantine's `cssVariablesResolver` injects
+its own `:root` block into `<head>` at runtime, which lands *after* your
+stylesheet and wins on source order at equal specificity. A plain `:root` here is
+silently reverted: the file reads correct, the app renders Mantine's defaults,
+and nothing errors. Repeating the pseudo-class raises specificity without adding
+an element to the selector.
+
+This one costs a whole pass if you meet it without knowing: you diagnose the
+colours correctly, write the right values, reload, and see no change — so you
+assume the diagnosis was wrong. **The only thing that catches it is looking at a
+screenshot and disbelieving the CSS.**
+
+Name them for what they *mean* in this product, never for the colour — `covered`,
+not `green`. The name is the whole value: it survives a change of palette, and it
+is the thing that makes the second use agree with the first. Define both colour
+schemes at once; a token defined only in light is the classic unreadable-in-dark
+bug, and Mantine will happily render it.
+
+The same file is where a couple of other things belong that the theme JSON has no
+field for and every screen otherwise re-invents: the hairline that separates rows
+in a list, the recessed surface a form sits on so it does not carry the same
+weight as the content it adds to, and the one animation the product is allowed
+(behind `prefers-reduced-motion`). Two or three rules, not a framework.
+
+If the app ships template screens you did not write — the error and not-found
+pages usually — read them before you call the palette done. They arrive with the
+scaffold's colours hardcoded, and a stock blue accent on an app whose direction
+says warm is the single loudest contradiction in the build.
+
 **Set the theme once, don't hardcode colours per component.** A screen full of
 inline `color="blue"` and one-off hex values is why apps look templated. Change
 the theme, not the components — and keep it theme-aware for light and dark.

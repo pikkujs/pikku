@@ -61,6 +61,12 @@ in one message. Then stop; do not interview the user.
   Neutral (fine for an internal tool, but say so out loud); a direction in words;
   a reference (brand guide, screenshots, a site whose register they want); or
   their own design agent/prompt, whose output you take as the direction.
+- **Do they want to see the screens before you build them?** Offer it here, in
+  this same round, as a question and not a gate: one HTML page mocking the main
+  screens, a few minutes, far cheaper to change than built screens. If they say
+  yes, `references/design.md` owns what to make and what it then binds — the
+  approved page becomes source of truth for the screens, and the theme is written
+  before it so what they approve is what ships. If they say no, build.
 - **What language should the app speak, and what language does the team work
   in?** Two answers, not one — see §1a, which is where they go. Ask only if the
   request is not obviously English; a brief written in English about an English
@@ -332,6 +338,10 @@ What a milestone is:
   persona. If you cannot write the gherkin, you cannot build it yet — that is a
   `questions/` note, not a milestone.
 
+If §1's screen mock was made and approved, the milestones are read off it: every
+screen on that page belongs to some milestone, and a screen no milestone builds
+is a hole in this plan. Say which milestone covers which screen.
+
 How to order them:
 
 1. **The spine first.** The one object everything else hangs off, and the screen
@@ -415,16 +425,27 @@ over, and an uncovered function is a half-milestone whether or not the note says
 5. **UI.** Pages in `<app>/src/pages/`, one route file each in `<app>/src/routes/`,
    calling functions through the generated `usePikkuQuery` / `usePikkuMutation`
    hooks from `@project/functions-sdk/pikku/api.gen`. One component per `.tsx`
-   file. Compose the kit from `@/components/<Name>` rather than hand-rolling.
-   Register the screen in `useNavItems()` — that one file feeds both the desktop
-   sidebar and the phone navigation.
+   file. Compose the kit from `@/components/<Name>` rather than hand-rolling
+   controls — and **add to that kit**: the component that draws the thing this
+   product is actually about, and the furniture you would otherwise copy-paste
+   into eight pages. The kit is where you start, not where you stop; an app whose
+   every screen is `Card` + `Stack` + `Text` composed the inventory rather than a
+   design. Register the screen in `useNavItems()` — that one file feeds both the
+   desktop sidebar and the phone navigation.
    **Read `references/design.md` before you write the first screen.** You commit
    to a design direction there and are then accountable to it — it hands you no
    layouts, because the design is yours to make. Screenshot each screen at 390
    and 1440 with the seed in place at the END of every milestone, and look at the
    images — not once at §8, where the only affordable fix is a repaint of eight
    screens.
-6. **Scenario** (§7), then `status: built`.
+6. **Scenario** (§7).
+7. **Look at it.** Screenshot every screen this milestone touched, at both
+   widths, with the seed in place, and look at the images. This is a gate, the
+   same as the scenario: a milestone whose screens nobody has seen is not built,
+   it is unproven at the one layer scenarios cannot reach. `references/design.md`
+   carries how to take the shot when no browser tool is wired up, and what to
+   look for. Then `status: built`, and say in the note what you looked at and
+   what it made you change.
 
 Rules that are not optional:
 

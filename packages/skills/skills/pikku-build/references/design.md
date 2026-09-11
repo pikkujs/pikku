@@ -30,6 +30,117 @@ and so is the commitment.
 Be ambitious with it. A direction that could describe any SaaS app has not been
 chosen — it has been defaulted to in words instead of in components.
 
+### The looks you will default to
+
+Being ambitious is easier against a list of specific things to not be. Generated
+interfaces cluster hard, and these are the attractors — not because any is ugly,
+but because arriving at one *by default* means no choice was made:
+
+- **Stock Mantine.** The strongest pull, and the hardest to see: a component
+  library's untouched defaults do not look broken, they look finished. Blue
+  accent, `#dee2e6` borders, `md` radius on everything, `Card` + `Stack` + `Text`
+  down every page. An app can be entirely this and never trip a critique, because
+  nothing on any screen is *wrong*.
+- Warm cream ground with a serif display face and a terracotta accent.
+- Near-black with one acid-green or vermilion pop.
+- A purple-to-blue gradient header on white.
+- Inter, or Space Grotesk, as the "safe" typeface.
+- Emoji as section markers; everything centre-aligned; one radius and one shadow
+  stamped on every block, which flattens hierarchy instead of creating it.
+
+If the user asks for one of these, build it — their words win. What is not
+allowed is landing on one because it was nearest to hand.
+
+## Offer to draw the screens before you build them
+
+Before the first milestone, **ask** whether they want to see the screens first.
+One question, in §1's round, not a gate of its own:
+
+> Want me to mock the main screens as a page you can look at before I build
+> anything? It takes a few minutes and it is much cheaper to change a picture
+> than a built screen.
+
+If they decline, build; the direction in words is enough to be accountable to.
+If they accept, this is the cheapest decision in the project — a picture of eight
+screens costs a fraction of eight built screens, and it is the only point where
+"that is not what I meant" is free.
+
+**Author the theme first, then draw the mock from it.** This order is the whole
+point. A beautiful page in hand-rolled CSS sets a bar Mantine then misses, and
+what the user approved is not what ships — they signed off on a picture and
+received an approximation of it. So write `themes/<name>.json` first
+(`references/theming.md`), and let the mock take its every value from that file:
+the palette, `structure.radius`, the spacing scale, the fonts, the component
+`defaultProps`. Approving the mock then approves the theme, and the built screens
+inherit it rather than chase it.
+
+**The mock has two halves, and only one of them is Mantine's.** This is the same
+split the built screen lives under, applied a step earlier so the two agree by
+construction. The PAGE — the shell, the regions, the columns, the rhythm, the
+material behind the content, what overlaps what — is plain HTML and your own
+CSS, arranged however the layout decision demands; that half is free, and it is
+where the design actually happens. The COMPONENTS — anything a person would
+point at and call a control, and that the app will adopt as itself: buttons,
+inputs, selects, tables, badges, menus, modals — are drawn as *Mantine's*, at the
+metrics Mantine actually uses: its control heights, its input shapes, its table
+and menu behaviour. The test is the one the build will apply too: is this thing
+the SHAPE OF THE PAGE, or a COMPONENT someone would point at?
+
+Getting that second half wrong is what makes a mock a lie. A control the mock
+invents is a promise the app cannot keep, and a beautiful hand-rolled input sets
+a bar the real one misses on screen one. If the mock wants something Mantine
+does not do, that is a real finding, and finding it here is the point: change the
+theme so it does, or change the mock, and say which.
+
+**What to make.** One self-contained HTML page holding every screen the app
+needs — not a prototype, not a click-through. Static markup, real content from
+their domain (never lorem), the empty and error states beside the happy path,
+laid out so the whole app is legible by scrolling. Its CSS is custom properties
+on `:root` carrying the theme JSON's values, so a change to either is a change
+to one number in both. Mantine itself will not load here — it is a React library
+and a page like this has no bundler, and on hosts that sandbox the page (a Claude
+Artifact) external stylesheets are blocked outright — so do not try; the mock
+reproduces the theme's values by hand, which is why they have to be written down
+first. Whatever your host offers for showing a page is how you show it: an
+Artifact, a file they open, a preview server. The page is the deliverable; how it
+gets in front of them is not this file's business.
+
+Write it to `knowledge/decisions/design/screens.html` and treat it as **source of
+truth for the screens** once they approve it. That has consequences worth
+stating:
+
+- The milestones are read off it. A screen in the mock that no milestone builds
+  is a gap in the plan, not a spare drawing.
+- A screen the build turns out to need that the mock does not have means the
+  mock was wrong. Update it, and say you did. Do not let the app and the mock
+  drift and then quietly prefer the app.
+- The knowledge graph still owns the domain — objects, roles, rules. The mock
+  owns what the screens look like. When they disagree about a *fact*, knowledge
+  wins; when they disagree about a *layout*, the mock wins.
+
+**Building it is then a transcription, not a translation.** Because the theme
+already exists and the mock was drawn from it, the screen is Mantine components
+arranged the way the mock arranges them — the look arrives with the theme. Two
+rules keep it that way:
+
+- **Layout is yours to write; components are Mantine's.** The page shape — the
+  regions, the columns, the rhythm, what sits beside what — is ordinary markup
+  and your own CSS. Anything a person would point at and call a control comes
+  from Mantine: buttons, inputs, selects, tables, badges, menus. Those carry
+  focus rings, keyboard behaviour and i18n, and hand-rolling one throws all of
+  it away.
+- **A gap goes back to the theme, never into a component override.** If a screen
+  does not match the mock, the fix is a value in `themes/<name>.json`. A stack of
+  one-off `className`s and `!important` fighting Mantine's defaults looks like
+  progress on screen one and is unmaintainable by screen five, and the screens
+  drift apart because nothing central holds them together.
+
+**Checking the built screen against the mock** is a structural comparison, not a
+pixel one: the same regions in the same order, the same hierarchy, the same
+states present, the same tokens used. Do not chase pixel equality — Mantine's
+components have their own metrics and the mock was drawn without them. A built
+screen that reads as the same screen has passed.
+
 ## One screen, designed properly, before the rest exist
 
 Design the first real screen as if it were the only one, and take it further than
@@ -48,6 +159,23 @@ the thing that made it is always yes. Use evidence.
 - **Screenshot every screen and look at the image**, at ~390px and at ~1440px.
   Judging your own UI from source is guessing, and the failures that matter —
   proportion, hierarchy, a wall of identical boxes — are invisible in JSX.
+  **Sort out how you will take that screenshot before you need it**, because an
+  instruction with no working mechanism behind it is one that gets skipped, and
+  this is the one that gets skipped. If a browser-driving tool is wired up, use
+  it. If it is not — or it fails to connect, which happens — the fallback is
+  short enough to write once and keep:
+
+  ```sh
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    --headless=new --remote-debugging-port=9333 --user-data-dir=/tmp/gc-shots &
+  ```
+
+  Then drive it over CDP from a script: `Page.navigate`,
+  `Emulation.setDeviceMetricsOverride` for the two widths,
+  `Page.captureScreenshot`, write the PNG, and open it. Sign in the way a person
+  does — click the dev actor switcher on the login page — rather than reaching
+  for the secret the client uses; the UI path is shorter and it also proves the
+  login screen works. Keep the script; you will run it at every milestone.
 - **Run `impeccable`** (`npx impeccable install`, Node 22.18+) and feed it the
   screenshots. It is external, it does not flatter, and it scores execution
   against interaction heuristics. But it audits how well you executed the design
@@ -68,6 +196,77 @@ questions are fixed:
 5. Does it look like the direction you committed to — or like the components you
    had?
 6. Would you show it to the user without apologising for it?
+
+## The kit is a floor, not a ceiling
+
+The scaffold hands you a component kit, and the build instructions tell you to
+compose from it rather than hand-roll. Both are right, and together they have a
+failure mode worth naming: an app whose every screen is `Card` + `Stack` + `Text`
+because those were the pieces in the box. That is not a composed design, it is an
+inventory, and it produces the wall of identical boxes further down this file.
+
+**Composing from the kit means using its primitives, not being limited to its
+list.** A product has objects of its own, and the ones that carry its meaning are
+the ones no generic kit ships:
+
+- the thing the product is *about*, rendered as itself — a funding meter, a
+  streak, a seat map, a run's status over time. If a decision note says the
+  progress toward a goal is the primary object, then a component that draws that
+  progress has to exist, or the note is describing an app you did not build.
+- the repeated furniture that is currently copy-pasted — the page header, the
+  section label, the empty state, the recessed panel a form sits in. Eight inline
+  copies of a heading block will not agree with each other; they will disagree by
+  a few pixels each, and the screens will read as unrelated for reasons nobody
+  can point at.
+
+Both kinds are ordinary components built out of kit primitives and theme values.
+Adding them is not hand-rolling, and they are the difference between an app that
+uses a design system and an app that looks like one.
+
+The tell that you skipped this: your `components/` directory maps one-to-one onto
+your data model and contains nothing that names a *quality* of the product.
+
+## Design is a gate on the milestone, not a phase at the end
+
+The loop that actually runs is plan, build, prove, close. Design advice that
+lives outside that loop does not run — it gets read, agreed with, and skipped,
+because nothing blocks on it. Milestones close on green scenarios, and scenarios
+say nothing about how anything looks.
+
+So put it in the loop. **A milestone is not built until its screens have been
+looked at**, in the same sense that it is not built until its scenario passes:
+
+- Screenshot every screen the milestone touched, at both widths, with the seed
+  in place.
+- Look at the images. Not the JSX.
+- Fix what they show, in this milestone, while it is one screen and not eight.
+- Say in the milestone note what you looked at and what you changed.
+
+A milestone closed without that is closed on a claim, not on evidence. The cost
+of being honest about it now is minutes; the cost at §8 is a repaint of the whole
+app, and by then the wrong register has been inherited by every screen so the
+repaint is a rewrite.
+
+### The seed is part of the gate
+
+A screenshot is only evidence if the screen has something on it. Before the gate
+runs, the dev seed must populate what each screen *is for* — not one row, and not
+an empty state.
+
+This is a real and quiet failure: a list app whose seed has no list, a countdown
+whose seed has no dates, judged for weeks against its own empty state while the
+screen it was built for was never once looked at. The empty state is worth
+designing and is not what the milestone is about.
+
+Seed enough to be judged against: several rows, not three identical ones, and a
+deliberate spread of the cases the screen has to hold — a long title that wraps,
+a missing optional field, a picture and no picture, one item in each state the
+screen can show. Anything derived from *today* — a countdown, "3 days ago", an
+expiry — is seeded as an interval from `now`, never as a fixed date: fixed dates
+are correct on the afternoon they are written and meaningless a month later.
+
+Data left over from a scenario run is not a seed. If the screens are full of
+`Filter coffee grinder mttqdvsx`, you are designing against test debris.
 
 ## Facts, not taste
 
@@ -125,4 +324,15 @@ first one.
 - Every row carries the same buttons, and the buttons outweigh the content.
 - The palette's meaningful colours are also used decoratively, so they have
   stopped meaning anything.
+- A decision note describes something the screens do not do — the note says
+  progress is the primary object and no screen draws progress, or it says warm
+  and not clinical and the error page is still template blue.
+- The theme JSON is rich and the screens are bare. Tokens are the cheapest half
+  of design and the easiest to mistake for the whole of it: a considered palette
+  and a display font applied to a default layout is a well-dressed default.
+- Every border, divider and disabled control is a cool blue-grey while the
+  accent is not — the surest sign the neutrals were inherited rather than
+  chosen. See `references/theming.md`.
 - It looks like the last app you built.
+- It looks like Mantine. Not *built with* Mantine, which it is and should be —
+  but indistinguishable from a component gallery with the brand hue swapped in.
