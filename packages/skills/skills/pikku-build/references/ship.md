@@ -25,10 +25,11 @@ updated and deleted — the deletions are the reason to look.
 
 ### How many workers you get
 
-By default every function is its own deployment unit. That is the right default
-— maximum isolation — but on a large app it means a hundred workers whose
-bundles are mostly the same framework code repeated, and a build and an upload
-for each. `deploy.grouping` in `pikku.config.json` sets the shape:
+By default a unit holds every function that builds the same set of singleton
+services. One unit per function is available too, but on a large app it means a
+hundred workers whose bundles are mostly the same framework code repeated, and a
+build and an upload for each. `deploy.grouping` in `pikku.config.json` sets the
+shape:
 
 ```json
 "deploy": {
@@ -46,15 +47,17 @@ for each. `deploy.grouping` in `pikku.config.json` sets the shape:
 
 | strategy | fallback |
 | --- | --- |
-| `function` | one unit each (the default) |
-| `services` | one unit per distinct set of singleton services |
+| `services` | one unit per distinct set of singleton services (the default) |
+| `function` | one unit each |
 | `single` | one shared unit |
 
 Rules are ordered, first match wins, and match on `tags`, an `addon` namespace
 or `routes` globs. A rule always beats the strategy, so under `function` a rule
 merges and under `single` or `services` it carves out.
 
-`services` is the middle ground when `single` is too coarse. Functions are keyed
+`services` is the default because it is the middle ground: `single` is too
+coarse to reason about and `function` pays a cold start and a deploy step per
+function. Functions are keyed
 on the singleton services their bodies destructure, minus the ones every unit
 builds anyway (`config`, `logger`, `variables`, `schema`, `secrets`, and the
 per-request `rpc`/`mcp`/`channel`/`userSession`). Units are named for that set —
@@ -68,10 +71,18 @@ tripping the mixed-target refusal below: two functions can carry identical
 services and still run in different places, because a function may name
 `deploy: 'server'` itself without any service crossing it.
 
-Read the shape before adopting it. The win depends entirely on how varied the
-app's service use is: an app where nearly every function reaches the same
-database collapses to roughly `single` with a few carve-outs, which may or may
-not be what you want.
+Read the shape before trusting it. The partition depends entirely on how varied
+the app's service use is: an app where nearly every function reaches the same
+database collapses to roughly `single` with a few carve-outs. Run `pikku deploy
+plan` and look at the unit list; set `"strategy": "function"` if you want a unit
+per function back.
+
+Changing the strategy renames units, and a unit name is what a queue consumer, a
+scheduled task and a `dependsOn` point at. The manifest rewrites all three, but
+anything holding a unit name outside the manifest does not follow. Units dropped
+from the manifest are not deleted by OSS `deploy()` either (pikkujs/pikku#543) —
+fabric sweeps its dispatch namespace after each deploy, plain pikku leaves the
+old workers in place.
 
 `tags` matches the tags a function inherits from its wirings — `wireHTTP({ ...,
 tags: ['pdf'] })` — as well as any on the function itself, which is where almost

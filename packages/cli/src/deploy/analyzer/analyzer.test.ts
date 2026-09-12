@@ -1,7 +1,20 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyzeDeployment, toSafeKebab } from './analyzer.js'
+import {
+  analyzeDeployment as analyzeUnpinned,
+  toSafeKebab,
+} from './analyzer.js'
 import type { InspectorState } from '@pikku/inspector'
+
+/**
+ * These tests assert on unit names, and under the default `'services'` strategy
+ * a unit is named for the services its functions build rather than for the
+ * function itself. They are about what the analyzer puts IN a unit, not about
+ * how units are partitioned, so they pin the one-unit-per-function layout they
+ * were written against. Partitioning is covered in grouping.test.ts.
+ */
+const analyzeDeployment: typeof analyzeUnpinned = (state, options) =>
+  analyzeUnpinned(state, { grouping: { strategy: 'function' }, ...options })
 
 /**
  * Minimal InspectorState carrying a single AI agent whose registry key
@@ -835,7 +848,7 @@ describe('analyzeDeployment - a unit records why it is where it is', () => {
   const analyze = (state = stateWithRules()) =>
     analyzeDeployment(state, {
       serverlessIncompatible: ['pdfService'],
-      grouping: { rules: [pdfRule, consoleRule] },
+      grouping: { strategy: 'function', rules: [pdfRule, consoleRule] },
     })
 
   const unit = (name: string, state?: InspectorState) =>
@@ -885,7 +898,7 @@ describe('analyzeDeployment - a unit records why it is where it is', () => {
     }
     const merged = analyzeDeployment(state, {
       serverlessIncompatible: ['pdfService', 'ghostscript'],
-      grouping: { rules: [pdfRule, consoleRule] },
+      grouping: { strategy: 'function', rules: [pdfRule, consoleRule] },
     }).units.find((u) => u.name === 'pdf')
     assert.deepEqual(merged?.targetForcedBy, ['pdfService', 'ghostscript'])
   })

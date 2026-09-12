@@ -6,7 +6,13 @@
  */
 
 import { execSync } from 'child_process'
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+} from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
 
@@ -19,8 +25,27 @@ const DEPLOYMENT_MANIFEST_FILE = join(DEPLOY_DIR, 'deployment-manifest.json')
 const SERVER_UNIT_NAME = 'pikku-server-container'
 const UNITS_DIR = join(DEPLOY_DIR, 'units')
 const CONTAINER_DIR = join(DEPLOY_DIR, 'container')
+const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
+
+/**
+ * Every check below reads one unit's bundle and asserts what did NOT reach it,
+ * which only means anything while a unit holds a single function. The default
+ * grouping strategy puts every function that builds the same services in one
+ * unit, so this verifier pins one-per-function; how units are partitioned is
+ * verifiers/deploy-grouping's subject.
+ */
+const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
+const restoreConfig = () => writeFileSync(CONFIG_FILE, originalConfig)
+process.on('exit', restoreConfig)
+process.on('SIGINT', () => {
+  restoreConfig()
+  process.exit(130)
+})
 
 console.log('Setting up: running pikku codegen + deploy plan (serverless)...')
+const config = JSON.parse(originalConfig)
+config.deploy = { ...config.deploy, grouping: { strategy: 'function' } }
+writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2))
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
 execSync(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,

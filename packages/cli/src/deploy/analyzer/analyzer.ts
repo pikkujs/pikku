@@ -78,7 +78,7 @@ export interface AnalyzerOptions {
   /**
    * Sourced from `pikku.config.json` → `deploy.grouping`. Decides how many
    * deployment units the `role: 'function'` units collapse into. Omitted
-   * means one unit per function.
+   * means one unit per distinct service combination.
    */
   grouping?: GroupingConfig
 }
