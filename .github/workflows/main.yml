@@ -217,6 +217,7 @@ jobs:
             types,
             secrets,
             scopes,
+            feature-flags,
             workflows,
             variables,
             functions,

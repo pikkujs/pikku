@@ -324,13 +324,16 @@ export type CorePikkuSessionlessFunctionConfig<
   >,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  FeatureFlagName extends string = string,
 > = Omit<
   CorePikkuFunctionConfig<
     PikkuFunction,
     PikkuPermission,
     PikkuMiddleware,
     InputSchema,
-    OutputSchema
+    OutputSchema,
+    string,
+    FeatureFlagName
   >,
   'scopes'
 >

@@ -1,0 +1,24 @@
+{
+  "name": "@pikku/verifiers-feature-flags",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^24",
+    "tsx": "^4.23.12"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "pikku": "pikku",
+    "test": "pikku && tsc -b && ./test.sh"
+  }
+}

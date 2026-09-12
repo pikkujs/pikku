@@ -79,6 +79,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       typeof config.addon === 'object' ? config.addon?.categories : undefined,
       `import type { ScopeId } from '${getFileImportRelativePath(functionTypesFile, config.scopesFile, packageMappings)}'`,
       credentialsTypeImport,
+      `import type { FeatureFlagName } from '${getFileImportRelativePath(functionTypesFile, config.flagsFile, packageMappings)}'`,
       getFileImportRelativePath(
         functionTypesFile,
         middlewareTypesFile,

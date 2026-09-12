@@ -93,10 +93,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Bootstrap inspect', async () => {
         await getInspectorState(false, true, true)
       })
-      // Both before the function types: the function leaf imports ScopeId from
-      // the scopes codegen, so any later import of '#pikku/function' — the
-      // inspector reading a project's zod schemas, for one — fails until these
-      // two files exist.
+      // All before the function types: the function leaf imports ScopeId and
+      // FeatureFlagName from these, so any later import of '#pikku/function' —
+      // the inspector reading a project's zod schemas, for one — fails until
+      // they exist.
       await workflow.do(
         'Bootstrap scope definition types',
         'pikkuScopeDefinitionTypes',
