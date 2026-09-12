@@ -268,6 +268,12 @@ export interface PikkuCLICoreOutputFiles {
   // System roles metadata JSON
   rolesMetaJsonFile: string
 
+  // Feature flags (FeatureFlagName union + declared flag set)
+  flagsFile: string
+
+  // Feature flags metadata JSON
+  flagsMetaJsonFile: string
+
   // Personas (PersonaId union + typed definePersonas)
   personasFile: string
 

@@ -131,6 +131,11 @@ export type { VariableMeta } from './typed-variables-service.js'
 export type { MetaService } from './meta-service.js'
 export type { SessionStore } from './session-store.js'
 export type { ScopeService, Role } from './scope-service.js'
+export type {
+  FeatureFlagSource,
+  FeatureFlagStore,
+  FlagRow,
+} from './feature-flag-service.js'
 export type { IsSystemRole } from './system-role-guard.js'
 export { NoopAuditService, createInvocationAudit } from './audit-service.js'
 export type {

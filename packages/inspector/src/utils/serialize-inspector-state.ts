@@ -229,6 +229,10 @@ export interface SerializableInspectorState {
     definitions: InspectorState['systemRoles']['definitions']
     files: string[]
   }
+  featureFlags: {
+    definitions: InspectorState['featureFlags']['definitions']
+    files: string[]
+  }
   personas: {
     definitions: InspectorState['personas']['definitions']
     files: string[]
@@ -465,6 +469,10 @@ export function serializeInspectorState(
       definitions: state.systemRoles.definitions,
       files: Array.from(state.systemRoles.files),
     },
+    featureFlags: {
+      definitions: state.featureFlags.definitions,
+      files: Array.from(state.featureFlags.files),
+    },
     personas: {
       definitions: state.personas.definitions,
       files: Array.from(state.personas.files),
@@ -680,6 +688,10 @@ export function deserializeInspectorState(
     systemRoles: {
       definitions: data.systemRoles?.definitions || [],
       files: new Set(data.systemRoles?.files || []),
+    },
+    featureFlags: {
+      definitions: data.featureFlags?.definitions || [],
+      files: new Set(data.featureFlags?.files || []),
     },
     personas: {
       definitions: data.personas?.definitions || [],

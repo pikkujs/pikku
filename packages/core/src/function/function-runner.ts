@@ -31,6 +31,7 @@ import type { SessionService } from '../services/user-session-service.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
 import { MissingSessionError, ReadonlySessionError } from '../errors/errors.js'
 import { verifyScopes } from '../scopes.js'
+import { assertFeatureAvailable } from '../wirings/flag/assert-feature-available.js'
 import {
   PikkuCredentialWireService,
   createWireServicesCredentialWireProps,
@@ -369,6 +370,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
         : functionScopes,
       session
     )
+
+    const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
+    if (featureFlag) {
+      await assertFeatureAvailable(
+        featureFlag,
+        resolvedSingletonServices.featureFlags,
+        session
+      )
+    }
 
     let actualData = await data()
 

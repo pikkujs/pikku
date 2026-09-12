@@ -11,6 +11,8 @@ export { KyselySecretService } from './kysely-secret-service.js'
 export { KyselyCredentialService } from './kysely-credential-service.js'
 export { KyselySessionStore } from './kysely-session-store.js'
 export { KyselyScopeService } from './kysely-scope-service.js'
+export { KyselyFeatureFlagStore } from './kysely-feature-flag-store.js'
+export type { KyselyFeatureFlagStoreOptions } from './kysely-feature-flag-store.js'
 export { KyselyWebhookService } from './kysely-webhook-service.js'
 export {
   createAuditedKysely,

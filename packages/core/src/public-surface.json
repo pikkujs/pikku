@@ -350,6 +350,7 @@
     "BadRequestError",
     "ConflictError",
     "ExpectationFailedError",
+    "FeatureUnavailableError",
     "ForbiddenError",
     "GatewayTimeoutError",
     "GoneError",
@@ -448,6 +449,18 @@
     "stub",
     "verifyActorSecret",
     "withoutSecrets"
+  ],
+  "./flag": [
+    "CachedFlagSource",
+    "assertFeatureAvailable",
+    "bucketOf",
+    "compiledFallbackSnapshot",
+    "defineFeatureFlags",
+    "flattenFeatureFlagDefinitions",
+    "resolveFlag",
+    "resolveFlagForClient",
+    "subjectIdOf",
+    "validateAndBuildFeatureFlagDefinitionsMeta"
   ],
   "./services/local-meta": [
     "LocalMetaService"

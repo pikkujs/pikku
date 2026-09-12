@@ -32,6 +32,8 @@ export type FunctionRuntimeMeta = {
   outputSchemaName: string | null
   /** Scopes the session must hold to run this function. All are required (AND). */
   scopes?: string[]
+  /** The feature this function belongs to. Checked for availability only. */
+  featureFlag?: string
   expose?: boolean
   /**
    * A sessionless function's own `auth: true`. `sessionless` carries the

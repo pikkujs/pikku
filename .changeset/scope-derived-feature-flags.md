@@ -1,0 +1,44 @@
+---
+'@pikku/core': patch
+'@pikku/inspector': patch
+'@pikku/cli': patch
+'@pikku/kysely': patch
+'@pikku/posthog': patch
+'@pikku/unleash': patch
+---
+
+Feature flags, declared in source and resolved from two independent booleans.
+
+`defineFeatureFlags` declares a flag the way `defineScopes` declares a scope —
+the inspector collects it, the CLI emits a `FeatureFlagName` union, and a
+misspelled `featureFlag:` is a type error rather than a gate that silently fails
+open.
+
+A flag answers two questions that are not the same question. `capable` comes
+from the session's scopes and is per-user, advisory, and protects nothing — it
+hides UI. `available` comes from one global config snapshot, is caller-blind,
+and is the only half the runner enforces: `override(subject) ?? (enabled AND
+bucket)`, so "off for everyone except these three organizations" is one row, and
+a kill is one write rather than a fan-out. Authorization stays where it was, in
+the function's own `scopes:` — enforcing capability would make a flag a second
+authorization path OR-ing against them. An unavailable feature throws 503, not
+403, because the caller was allowed; the feature was not on.
+
+`featureFlag:` is deliberately available on sessionless functions too. It reads
+the config, not the session, so the kill switch reaches a cron task, a queue
+worker and a webhook — which is where it matters most, since nobody is watching
+a UI to notice the feature is off.
+
+Availability fails open through three layers: a fresh read, then the last good
+cached read, then the compiled declaration. The middle layer is load-bearing —
+dropping straight to the compiled fallback on a blip would switch on every flag
+that was deliberately dark.
+
+Backing stores split along what they can honestly do. `FeatureFlagSource` is
+read-only (`snapshot()`) and is what a third-party provider implements;
+`FeatureFlagStore` adds the write half and is for stores Pikku owns.
+`@pikku/kysely` ships the store, with declarations synced additively — a removed
+declaration is marked undeclared, never revoked, and a sync never re-enables a
+killed flag. `@pikku/posthog` and `@pikku/unleash` ship read-only sources over
+plain `fetch`; both vendor SDKs poll on a timer belonging to a long-lived
+process, which a serverless isolate cannot hold between requests.

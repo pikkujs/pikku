@@ -53,6 +53,7 @@ import type { MetaService } from '../services/meta-service.js'
 import type { CoverageService } from '../services/v8-coverage-service.js'
 import type { SessionStore } from '../services/session-store.js'
 import type { ScopeService } from '../services/scope-service.js'
+import type { FeatureFlagSource } from '../services/feature-flag-service.js'
 import type {
   AuditDurability,
   AuditLog,
@@ -207,6 +208,13 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
    * never by the function runner.
    */
   scopeService?: ScopeService
+  /**
+   * The global feature-flag config, read by the function runner to enforce a
+   * flag's availability. Inert when absent: a project that declares no flag
+   * carries nothing, and a `featureFlag:` with no source registered is a
+   * no-op rather than a closed door.
+   */
+  featureFlags?: FeatureFlagSource
   /**
    * Built once by the factory an auth package registers and injected by the
    * generated `pikkuServices` wrapper — service factories must not return it

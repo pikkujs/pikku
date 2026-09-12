@@ -1153,6 +1153,15 @@ const _getPikkuCLIConfig = async (
       result.rolesMetaJsonFile = join(scopesDir, 'pikku-roles-meta.gen.json')
     }
 
+    // Feature flags. Beside the scopes their `anyOf` names, for the same reason
+    // roles sit there: a flag is unreadable without them.
+    if (!result.flagsFile) {
+      result.flagsFile = join(scopesDir, 'pikku-flags.gen.ts')
+    }
+    if (!result.flagsMetaJsonFile) {
+      result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
+    }
+
     // Personas. Beside the roles they are checked against, for the same reason
     // roles sit beside their scopes.
     if (!result.personasFile) {

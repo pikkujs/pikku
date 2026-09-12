@@ -192,6 +192,7 @@ export type CorePikkuFunctionConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   Scope extends string = string,
+  FeatureFlagName extends string = string,
 > = {
   /** A human name for this function, shown wherever it is listed rather than called. */
   title?: string
@@ -275,6 +276,17 @@ export type CorePikkuFunctionConfig<
   auth?: boolean
   /** Scopes the session must hold. All are required, and checked before `permissions`, which OR together — a scope only narrows access. */
   scopes?: Scope[]
+  /**
+   * The feature this function belongs to. Singular: a function implements part
+   * of one feature, and needing two is a sign it does two things.
+   *
+   * Checked for AVAILABILITY only, never capability — if the runner enforced
+   * the capability half a flag would become a second authorization path with
+   * OR-ish semantics against `scopes:`. Authorization is always `scopes:`.
+   * Runs after `scopes:` so an unauthorized caller gets a 403 whether or not
+   * the feature is up, rather than learning that it exists and is off.
+   */
+  featureFlag?: FeatureFlagName
   /** Checks that run before the body. Grouped names OR together, so any one passing admits the caller; use `scopes` to require rather than offer. */
   permissions?: CorePermissionGroup<PikkuPermission>
   /** Wraps this function wherever it is called from, unlike wiring middleware which only wraps one route into it. */
@@ -296,6 +308,11 @@ export type CorePikkuFunctionConfig<
  * so an anonymous caller holds none and satisfies none — a sessionless function
  * with scopes rejects every caller it exists to serve. Gate it with
  * `permissions`, which receive the optional session and may pass anonymous.
+ *
+ * `featureFlag` is deliberately NOT omitted. It reads the config snapshot
+ * rather than the session, so it applies identically to a cron task, a queue
+ * worker and a webhook — which is where a kill switch matters most, since
+ * nobody is watching a UI to notice the feature is off.
  */
 export type CorePikkuSessionlessFunctionConfig<
   PikkuFunction extends CorePikkuFunctionSessionless<any, any, any, any, any>,

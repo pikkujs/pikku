@@ -251,6 +251,31 @@ export interface PikkuRolesTable {
   createdAt: Generated<Date>
 }
 
+/** A feature flag's operator state. What code declared lives beside it. */
+export interface PikkuFeatureFlagsTable {
+  name: string
+  description: string | null
+  /** The declared `anyOf` scope list as JSON, or null for a pure switch. */
+  anyOf: string | null
+  enabled: Generated<boolean>
+  rolloutPercent: number | null
+  /** False for a flag whose declaration has gone: switchable, but not offered. */
+  declared: Generated<boolean>
+  updatedBy: string | null
+  note: string | null
+  updatedAt: Generated<Date>
+}
+
+/** One subject's short-circuit, in either direction, over a flag's rollout. */
+export interface PikkuFeatureFlagOverridesTable {
+  flag: string
+  subjectId: string
+  subjectKind: string
+  enabled: boolean
+  grantedBy: string | null
+  grantedAt: Generated<Date>
+}
+
 export interface PikkuRoleScopesTable {
   role: string
   scope: string
@@ -404,6 +429,8 @@ export interface KyselyPikkuDB {
   pikkuRoleScopes: PikkuRoleScopesTable
   pikkuUserRole: PikkuUserRoleTable
   pikkuUserScope: PikkuUserScopeTable
+  pikkuFeatureFlags: PikkuFeatureFlagsTable
+  pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable
