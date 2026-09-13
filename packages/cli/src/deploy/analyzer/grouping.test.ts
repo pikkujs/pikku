@@ -113,8 +113,21 @@ const unitNames = (grouping?: GroupingConfig) =>
     .sort()
 
 describe('deploy.grouping - the default', () => {
-  test('no config leaves one unit per function', () => {
+  test('no config groups by service set', () => {
     assert.deepEqual(unitNames(), [
+      'addon-console',
+      'svc-base',
+      'svc-file-store-server',
+      'svc-kysely',
+    ])
+  })
+
+  test("strategy 'services' with no rules is the same thing", () => {
+    assert.deepEqual(unitNames({ strategy: 'services' }), unitNames())
+  })
+
+  test("strategy 'function' is still one unit per function", () => {
+    assert.deepEqual(unitNames({ strategy: 'function' }), [
       'addon-console',
       'admin-purge',
       'book-retreat',
@@ -124,14 +137,11 @@ describe('deploy.grouping - the default', () => {
       'send-email',
     ])
   })
-
-  test("strategy 'function' with no rules is the same thing", () => {
-    assert.deepEqual(unitNames({ strategy: 'function' }), unitNames())
-  })
 })
 
 describe('deploy.grouping - tag rules merge', () => {
   const grouping: GroupingConfig = {
+    strategy: 'function',
     rules: [{ unit: 'retreats', tags: ['retreats', 'bookings'] }],
   }
 
@@ -502,7 +512,7 @@ describe('deploy.grouping - tags written on a wiring', () => {
   })
 
   test('the wiring tag reaches the unit it lands on', () => {
-    const unit = wiringTagged()
+    const unit = wiringTagged({ strategy: 'function' })
       .units.filter((u) => u.role === 'function')
       .find((u) => u.name === 'handle-webhook')
     assert.deepEqual(unit?.tags, ['webhooks'])

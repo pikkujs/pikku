@@ -6,7 +6,13 @@
  */
 
 import { execSync, spawn } from 'child_process'
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+} from 'fs'
 import { createServer } from 'net'
 import { join } from 'path'
 import { createHash } from 'crypto'
@@ -32,6 +38,37 @@ const PIKKU_BIN = join(REPO_ROOT, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'standalone')
 const PLAN_RESULT_FILE = join(DEPLOY_DIR, 'plan-result.json')
 const DEPLOYMENT_MANIFEST_FILE = join(DEPLOY_DIR, 'deployment-manifest.json')
+
+const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
+
+/**
+ * Every check below names a unit after the function it holds, which only works
+ * while a unit holds a single function. The default grouping strategy puts
+ * every function that builds the same services in one unit, so this verifier
+ * pins one-per-function; how units are partitioned is verifiers/deploy-grouping's
+ * subject.
+ */
+const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
+const restoreConfig = () => writeFileSync(CONFIG_FILE, originalConfig)
+process.on('exit', restoreConfig)
+process.on('SIGINT', () => {
+  restoreConfig()
+  process.exit(130)
+})
+// A signalled exit never emits 'exit', so the restore has to be hung off each
+// signal by hand — a killed verifier that skipped it would leave the shared
+// template config pinned to 'function' and quietly change what every later
+// verifier builds.
+process.on('SIGTERM', () => {
+  restoreConfig()
+  process.exit(143)
+})
+const pinnedConfig = JSON.parse(originalConfig)
+pinnedConfig.deploy = {
+  ...pinnedConfig.deploy,
+  grouping: { strategy: 'function' },
+}
+writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
 console.log('Setting up: running pikku codegen + deploy plan (standalone)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })

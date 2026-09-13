@@ -118,8 +118,8 @@ try {
     timeout: 120_000,
   })
 
-  console.log('\nBaseline: no grouping block')
-  withGrouping(undefined)
+  console.log("\nBaseline: strategy 'function'")
+  withGrouping({ strategy: 'function' })
   const baseline = runPlan()
   assert(
     baseline.ok,
@@ -128,7 +128,7 @@ try {
   const baseUnits = functionUnits(baseline.manifest)
   const baseNames = new Set(baseUnits.map((u) => u.name))
 
-  check('the ungrouped build gives every function its own unit', () => {
+  check("strategy 'function' gives every function its own unit", () => {
     assert(
       baseUnits.every(
         (u) =>
@@ -140,11 +140,11 @@ try {
     )
   })
 
-  check('an ungrouped unit names no rule', () => {
+  check('a unit left to the strategy names no rule', () => {
     const named = baseUnits.filter((u) => u.groupedBy)
     assert(
       named.length === 0,
-      `${named.map((u) => u.name).join(', ')} claim a rule with no grouping block`
+      `${named.map((u) => u.name).join(', ')} claim a rule with no rules configured`
     )
   })
 
@@ -187,7 +187,10 @@ try {
   })
 
   console.log('\nGrouped: one unit for everything tagged todos')
-  withGrouping({ rules: [{ unit: 'todos', tags: ['todos'] }] })
+  withGrouping({
+    strategy: 'function',
+    rules: [{ unit: 'todos', tags: ['todos'] }],
+  })
   const grouped = runPlan()
   assert(
     grouped.ok,
@@ -333,6 +336,28 @@ try {
       stray.length === 0,
       `not named by service set: ${stray.map((u) => u.name).join(', ')}`
     )
+  })
+
+  check('omitting the grouping block gives the same plan', () => {
+    withGrouping(undefined)
+    const byDefault = runPlan()
+    assert(
+      byDefault.ok,
+      `default plan failed:\n${!byDefault.ok ? byDefault.output : ''}`
+    )
+    const defaultNames = functionUnits(byDefault.manifest)
+      .map((u) => u.name)
+      .sort()
+      .join(', ')
+    const svcNames = svcUnits
+      .map((u) => u.name)
+      .sort()
+      .join(', ')
+    assert(
+      defaultNames === svcNames,
+      `no grouping block is not the services strategy:\n  default:  ${defaultNames}\n  services: ${svcNames}`
+    )
+    withGrouping({ strategy: 'services' })
   })
 
   check('no function was lost or duplicated', () => {
