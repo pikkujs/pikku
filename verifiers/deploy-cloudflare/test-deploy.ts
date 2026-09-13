@@ -42,6 +42,14 @@ process.on('SIGINT', () => {
   restoreConfig()
   process.exit(130)
 })
+// A signalled exit never emits 'exit', so the restore has to be hung off each
+// signal by hand — a killed verifier that skipped it would leave the shared
+// template config pinned to 'function' and quietly change what every later
+// verifier builds.
+process.on('SIGTERM', () => {
+  restoreConfig()
+  process.exit(143)
+})
 const pinnedConfig = JSON.parse(originalConfig)
 pinnedConfig.deploy = {
   ...pinnedConfig.deploy,

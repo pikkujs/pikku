@@ -9,8 +9,9 @@ a unit holds every function that builds the same set of singleton services,
 rather than one unit per function. On `templates/functions` that is 10 units
 where it used to be 44.
 
-Set `"grouping": { "strategy": "function" }` in `pikku.config.json` to keep one
-unit per function.
+Set `"deploy": { "grouping": { "strategy": "function" } }` in
+`pikku.config.json` to keep one unit per function — the build pipeline reads
+`deploy.grouping`, so a top-level `grouping` block is not read.
 
 This renames units. The manifest rewrites `consumerUnit`, `unitName` and
 `dependsOn` to match, but anything holding a unit name outside the manifest does
