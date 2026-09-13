@@ -280,6 +280,9 @@ export type CorePikkuFunctionConfig<
    * The feature this function belongs to. Singular: a function implements part
    * of one feature, and needing two is a sign it does two things.
    *
+   * Resolved at runtime on every call, unlike `tags:` — a flag is
+   * meant to be flipped in a running system, so nothing here filters a build.
+   *
    * Checked for AVAILABILITY only, never capability — if the runner enforced
    * the capability half a flag would become a second authorization path with
    * OR-ish semantics against `scopes:`. Authorization is always `scopes:`.
