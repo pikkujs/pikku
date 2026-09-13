@@ -17,6 +17,8 @@ import type { WorkflowsMeta } from '../wirings/workflow/workflow.types.js'
 import type { FeaturesMeta } from '../wirings/workflow/scenario.types.js'
 import type { ResolvedPersona } from './personas-service.js'
 import type { SystemRoleDefinitionsMeta } from '../wirings/role/role.types.js'
+import type { FeatureFlagDefinitionsMeta } from '../wirings/flag/flag.types.js'
+import type { AnalyticsEventsMeta } from '../analytics/analytics.types.js'
 import type {
   TriggerMeta,
   TriggerSourceMeta,
@@ -183,6 +185,16 @@ export interface MetaService {
    * seed granted from rather than a second one.
    */
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  /**
+   * The flags declared with `defineFeatureFlags`, keyed by name.
+   *
+   * The declaration half only. What an operator set — the switch, the rollout,
+   * the overrides — lives in the flag store and is read through the admin
+   * surface, because it changes without a deploy and this does not.
+   */
+  getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
+  /** The events declared with `defineAnalyticsEvents`, keyed by name. */
+  getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
   getTriggerMeta(): Promise<TriggerMeta>
   getTriggerSourceMeta(): Promise<TriggerSourceMeta>
@@ -220,6 +232,8 @@ export class LocalMetaService implements MetaService {
   private workflowMetaCache: WorkflowsMeta | null = null
   private personasMetaCache: Record<string, ResolvedPersona> | null = null
   private systemRolesMetaCache: SystemRoleDefinitionsMeta | null = null
+  private featureFlagsMetaCache: FeatureFlagDefinitionsMeta | null = null
+  private analyticsMetaCache: AnalyticsEventsMeta | null = null
   private featuresMetaCache: FeaturesMeta | null = null
   private triggerMetaCache: TriggerMeta | null = null
   private triggerSourceMetaCache: TriggerSourceMeta | null = null
@@ -321,6 +335,8 @@ export class LocalMetaService implements MetaService {
     this.workflowMetaCache = null
     this.personasMetaCache = null
     this.systemRolesMetaCache = null
+    this.featureFlagsMetaCache = null
+    this.analyticsMetaCache = null
     this.featuresMetaCache = null
     this.triggerMetaCache = null
     this.triggerSourceMetaCache = null
@@ -510,6 +526,25 @@ export class LocalMetaService implements MetaService {
     const content = await this.readFile('scopes/pikku-roles-meta.gen.json')
     this.systemRolesMetaCache = content ? JSON.parse(content) : {}
     return this.systemRolesMetaCache!
+  }
+
+  async getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta> {
+    if (this.featureFlagsMetaCache) return this.featureFlagsMetaCache
+
+    // Beside the scopes their `anyOf` names, which is where codegen writes it.
+    const content = await this.readFile('scopes/pikku-flags-meta.gen.json')
+    this.featureFlagsMetaCache = content ? JSON.parse(content) : {}
+    return this.featureFlagsMetaCache!
+  }
+
+  async getAnalyticsMeta(): Promise<AnalyticsEventsMeta> {
+    if (this.analyticsMetaCache) return this.analyticsMetaCache
+
+    const content = await this.readFile(
+      'analytics/pikku-analytics-meta.gen.json'
+    )
+    this.analyticsMetaCache = content ? JSON.parse(content) : {}
+    return this.analyticsMetaCache!
   }
 
   async getFeaturesMeta(): Promise<FeaturesMeta> {

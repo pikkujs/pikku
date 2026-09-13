@@ -1,4 +1,8 @@
-import type { FeatureFlagStore, FlagRow } from '@pikku/core/services'
+import type {
+  FeatureFlagStore,
+  FlagOverrideRow,
+  FlagRow,
+} from '@pikku/core/services'
 import type {
   CachedFlagSourceOptions,
   DeclaredFlag,
@@ -152,6 +156,27 @@ export class KyselyFeatureFlagStore
       enabled: !!row.enabled,
       rolloutPercent: row.rolloutPercent ?? null,
       declared: !!row.declared,
+    }))
+  }
+
+  async listOverrides(key: string): Promise<FlagOverrideRow[]> {
+    const rows = await this.db
+      .selectFrom('pikkuFeatureFlagOverrides')
+      .selectAll()
+      .where('flag', '=', key)
+      .orderBy('subjectId')
+      .execute()
+
+    return rows.map((row) => ({
+      subjectId: row.subjectId,
+      subjectKind: row.subjectKind,
+      enabled: !!row.enabled,
+      grantedBy: row.grantedBy ?? undefined,
+      // ISO 8601 rather than the driver's date: the row crosses an RPC boundary
+      // to reach the console, and every driver spells a timestamp differently.
+      grantedAt: row.grantedAt
+        ? new Date(row.grantedAt).toISOString()
+        : undefined,
     }))
   }
 

@@ -134,6 +134,18 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-filled-hover': 'var(--app-primary-button-hover)',
     '--mantine-color-primary-filled': 'var(--app-accent-strong)',
     '--mantine-color-primary-filled-hover': 'var(--app-primary-button-hover)',
+    /* The third bypass channel, and the one the flags board found: Mantine's
+     * light variants. `<Alert color="orange">` renders #d9480f on #ffe8cc =
+     * 3.62:1 and `<Badge variant="light" color="teal">` 4.33:1 — both measured
+     * in the browser, both under AA, and neither reachable from an --app-* token
+     * because the component never asks for one. The warning pair is the reason
+     * the tier note below exists: warning in light mode is carried by the FILL,
+     * so point the fill at --app-surface-warning and the label at the amber TEXT
+     * tier rather than leaving Mantine to pick both. */
+    '--mantine-color-orange-light': 'var(--app-surface-warning)',
+    '--mantine-color-orange-light-color': 'var(--app-amber)',
+    '--mantine-color-teal-light': 'var(--app-surface-success)',
+    '--mantine-color-teal-light-color': 'var(--app-green)',
 
     /* Core neutrals — one cool axis (OKLCH hue 262, chroma 0.010). Page and panel
      * share the hue so layered surfaces read as one system; steps are >=2.4 L* so
@@ -280,6 +292,18 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--mantine-color-blue-filled-hover': 'var(--app-primary-button-hover)',
     '--mantine-color-primary-filled': 'var(--app-accent-strong)',
     '--mantine-color-primary-filled-hover': 'var(--app-primary-button-hover)',
+    /* The third bypass channel, and the one the flags board found: Mantine's
+     * light variants. `<Alert color="orange">` renders #d9480f on #ffe8cc =
+     * 3.62:1 and `<Badge variant="light" color="teal">` 4.33:1 — both measured
+     * in the browser, both under AA, and neither reachable from an --app-* token
+     * because the component never asks for one. The warning pair is the reason
+     * the tier note below exists: warning in light mode is carried by the FILL,
+     * so point the fill at --app-surface-warning and the label at the amber TEXT
+     * tier rather than leaving Mantine to pick both. */
+    '--mantine-color-orange-light': 'var(--app-surface-warning)',
+    '--mantine-color-orange-light-color': 'var(--app-amber)',
+    '--mantine-color-teal-light': 'var(--app-surface-success)',
+    '--mantine-color-teal-light-color': 'var(--app-green)',
 
     /* Core neutrals — same cool axis as dark (OKLCH hue 262), with chroma rising
      * as the surface darkens, the way tinted paper behaves.

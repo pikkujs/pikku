@@ -40,6 +40,8 @@ import { DatabasePage } from './pages/DatabasePage'
 import { AuthProvidersPage } from './pages/AuthProvidersPage'
 import { SecurityPage } from './pages/SecurityPage'
 import { AuditPage } from './pages/AuditPage'
+import { FlagsPage } from './pages/FlagsPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 
 export const App: React.FC = () => {
   return (
@@ -99,6 +101,7 @@ export const App: React.FC = () => {
           <Route path="/security" element={<SecurityPage />} />
           <Route path="/auth-providers" element={<AuthProvidersPage />} />
           <Route path="/addons" element={<PackagesPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
         </Route>
 
         <Route
@@ -113,6 +116,7 @@ export const App: React.FC = () => {
           <Route path="/roles" element={<RolesPage />} />
           <Route path="/scopes" element={<ScopesPage />} />
           <Route path="/audit" element={<AuditPage />} />
+          <Route path="/flags" element={<FlagsPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundTitle />} />

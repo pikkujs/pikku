@@ -4,6 +4,8 @@ import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type { FeaturesMeta } from '@pikku/core/scenario'
 import type { ResolvedPersona } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
+import type { FeatureFlagDefinitionsMeta } from '@pikku/core/flag'
+import type { AnalyticsEventsMeta } from '@pikku/core/analytics'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -241,6 +243,8 @@ export interface MetaCounts {
   emails: number
   secrets: number
   variables: number
+  featureFlags: number
+  analyticsEvents: number
 }
 
 export interface PikkuMetaState {
@@ -264,6 +268,16 @@ export interface PikkuMetaState {
    * confers.
    */
   systemRoles: SystemRoleDefinitionsMeta
+  /**
+   * The declared flags, keyed by name — the half a deploy decides.
+   *
+   * The operator half is deliberately not here: the switch, the rollout and the
+   * overrides change without a deploy, so serving them from a meta snapshot
+   * would show a console a state the running app left behind. The flags screen
+   * reads those from the admin surface instead.
+   */
+  featureFlags: FeatureFlagDefinitionsMeta
+  analyticsEvents: AnalyticsEventsMeta
   features: FeaturesMeta
   triggerMeta: Record<string, TriggerMeta>
   triggerSourceMeta: Record<string, TriggerSourceMeta>
@@ -305,6 +319,8 @@ export class WiringService {
       workflows,
       personas,
       systemRoles,
+      featureFlags,
+      analyticsEvents,
       features,
       triggerMeta,
       triggerSourceMeta,
@@ -328,6 +344,8 @@ export class WiringService {
       this.metaService.getWorkflowMeta(),
       this.metaService.getPersonasMeta(),
       this.metaService.getSystemRolesMeta(),
+      this.metaService.getFeatureFlagsMeta(),
+      this.metaService.getAnalyticsMeta(),
       this.metaService.getFeaturesMeta(),
       this.metaService.getTriggerMeta(),
       this.metaService.getTriggerSourceMeta(),
@@ -579,6 +597,8 @@ export class WiringService {
       emails: Object.keys(emailsMeta.templates ?? {}).length,
       secrets: Object.keys(secretsMeta).length,
       variables: Object.keys(variablesMeta).length,
+      featureFlags: Object.keys(featureFlags).length,
+      analyticsEvents: Object.keys(analyticsEvents).length,
     }
 
     return {
@@ -595,6 +615,8 @@ export class WiringService {
       workflows,
       personas,
       systemRoles,
+      featureFlags,
+      analyticsEvents,
       features,
       triggerMeta: triggerMeta as unknown as AllMeta['triggerMeta'],
       triggerSourceMeta:

@@ -72,6 +72,8 @@ const EMPTY_META: PikkuMetaState = {
   workflows: {},
   personas: {},
   systemRoles: {},
+  featureFlags: {},
+  analyticsEvents: {},
   features: {},
   triggerMeta: {},
   triggerSourceMeta: {},
@@ -106,6 +108,8 @@ const EMPTY_COUNTS: MetaCounts = {
   emails: 0,
   secrets: 0,
   variables: 0,
+  featureFlags: 0,
+  analyticsEvents: 0,
 }
 
 export const PikkuMetaProvider: React.FC<{
@@ -145,6 +149,8 @@ export const PikkuMetaProvider: React.FC<{
         systemRoles:
           (allMeta as { systemRoles?: SystemRoleDefinitionsMeta })
             .systemRoles ?? {},
+        featureFlags: allMeta.featureFlags ?? {},
+        analyticsEvents: allMeta.analyticsEvents ?? {},
         features: allMeta.features ?? {},
         triggerMeta: allMeta.triggerMeta,
         triggerSourceMeta: allMeta.triggerSourceMeta,

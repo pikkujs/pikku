@@ -135,6 +135,7 @@ export type {
   FeatureFlagSource,
   FeatureFlagStore,
   FlagRow,
+  FlagOverrideRow,
 } from './feature-flag-service.js'
 export type { IsSystemRole } from './system-role-guard.js'
 export { NoopAuditService, createInvocationAudit } from './audit-service.js'

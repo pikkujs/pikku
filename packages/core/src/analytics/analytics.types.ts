@@ -147,3 +147,28 @@ export interface AnalyticsLog<
   flush(): Promise<void>
   close(): Promise<void>
 }
+
+/**
+ * One declared event, as an administration surface sees it.
+ *
+ * Read off the declaration at build time rather than from a record: the catalog
+ * has to list an event nobody has fired yet, which is exactly the event someone
+ * is looking for when they open it.
+ */
+export interface AnalyticsEventMeta {
+  /** The event name a client emits, exactly as the declaration spells it. */
+  name: string
+  /** The module holding the `defineAnalyticsEvents` call that declares it. */
+  file: string
+  /** The name that module exports the declaration under. */
+  variable: string
+  /**
+   * The event's props, keyed by name, valued with the schema's own source text
+   * (`z.string()`). Absent where the shape is not an object literal the
+   * inspector can read — a shared const, a union, a non-zod vendor.
+   */
+  props?: Record<string, string>
+}
+
+/** Declared analytics events, keyed by event name. */
+export type AnalyticsEventsMeta = Record<string, AnalyticsEventMeta>

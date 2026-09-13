@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3005 observable things**: 974 exported names, plus
-2031 members on the classes and interfaces among them, reachable
+**3017 observable things**: 977 exported names, plus
+2040 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 159 | 127 | 434 |
+| `./services` | 160 | 128 | 435 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
@@ -25,8 +25,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 50 | 50 | 22 |
-| `./analytics` | 24 | 24 | 36 |
-| `./services/local-meta` | 22 | 2 | 38 |
+| `./analytics` | 26 | 26 | 40 |
+| `./services/local-meta` | 22 | 2 | 40 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
@@ -3637,9 +3637,16 @@ export interface AnalyticsEventInput {
   props?: Record<string, unknown>
   at?: number
 }
+export interface AnalyticsEventMeta {
+  name: string
+  file: string
+  variable: string
+  props?: Record<string, string>
+}
 export type AnalyticsEventPropsSchema = StandardSchemaV1 & {
   shape: Record<string, unknown>
 }
+export type AnalyticsEventsMeta = Record<string, AnalyticsEventMeta>
 export interface AnalyticsIdentity {
   userId: string | null
   orgId?: string
@@ -4623,6 +4630,7 @@ export interface FeatureFlagSource {
 export interface FeatureFlagStore extends FeatureFlagSource {
   syncFlags(flags: DeclaredFlag[]): Promise<void>
   listFlags(): Promise<FlagRow[]>
+  listOverrides(key: string): Promise<FlagOverrideRow[]>
   setEnabled(key: string, enabled: boolean, actor?: string, note?: string): Promise<void>
   setRollout(key: string, percent: number | null, actor?: string): Promise<void>
   setOverride(key: string, subject: FlagSubject, enabled: boolean, actor?: string): Promise<void>
@@ -4645,6 +4653,13 @@ export class FileScenarioRunStore implements ScenarioRunStore {
 export interface FileScenarioRunStoreOptions {
   dir: string
   keep?: number
+}
+export type FlagOverrideRow = {
+  subjectId: string
+  subjectKind: string
+  enabled: boolean
+  grantedBy?: string
+  grantedAt?: string
 }
 export type FlagRow = DeclaredFlag & {
   enabled: boolean
@@ -4858,6 +4873,8 @@ export interface MetaService {
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
+  getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
   getTriggerMeta(): Promise<TriggerMeta>
   getTriggerSourceMeta(): Promise<TriggerSourceMeta>
@@ -5463,6 +5480,8 @@ export class LocalMetaService implements MetaService {
   async getWorkflowMeta(): Promise<WorkflowsMeta>
   async getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   async getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  async getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
+  async getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   async getFeaturesMeta(): Promise<FeaturesMeta>
   async getTriggerMeta(): Promise<TriggerMeta>
   async getTriggerSourceMeta(): Promise<TriggerSourceMeta>
@@ -5502,6 +5521,8 @@ export interface MetaService {
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getPersonasMeta(): Promise<Record<string, ResolvedPersona>>
   getSystemRolesMeta(): Promise<SystemRoleDefinitionsMeta>
+  getFeatureFlagsMeta(): Promise<FeatureFlagDefinitionsMeta>
+  getAnalyticsMeta(): Promise<AnalyticsEventsMeta>
   getFeaturesMeta(): Promise<FeaturesMeta>
   getTriggerMeta(): Promise<TriggerMeta>
   getTriggerSourceMeta(): Promise<TriggerSourceMeta>

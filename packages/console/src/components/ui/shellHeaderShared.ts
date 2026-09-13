@@ -33,6 +33,10 @@ export interface ShellHeaderSearch {
   onChange: (value: string) => void
   /** Inline width in px (default 220). */
   width?: number
+  /** Stamps `data-help` on the input so help copy can point at it. The bar
+   *  renders the field inline or inside the collapsed drawer, so the attribute
+   *  rides both. */
+  helpAnchor?: string
 }
 
 export interface ShellHeaderAction {
@@ -42,6 +46,13 @@ export interface ShellHeaderAction {
   onClick?: () => void
   variant?: 'primary' | 'default' | 'subtle'
   disabled?: boolean
+  /** In flight. The bar collapses labels to icons to a menu item, so the
+   *  spinner rides the first two and the menu item falls back to disabled. */
+  loading?: boolean
+  /** Stamps `data-testid` on the rendered control. The bar renders every action
+   *  a second time off-screen to measure it, and the measuring copy is stamped
+   *  with nothing — two nodes carrying one testid break a strict locator. */
+  testId?: string
   tooltip?: I18nString
   /** Always render icon-only (with tooltip), never showing the label. */
   iconOnly?: boolean

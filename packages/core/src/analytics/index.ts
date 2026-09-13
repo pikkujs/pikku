@@ -1,6 +1,8 @@
 export type {
   AnalyticsClientContext,
   AnalyticsEventBase,
+  AnalyticsEventMeta,
+  AnalyticsEventsMeta,
   AnalyticsEventInput,
   AnalyticsIdentity,
   AnalyticsLog,
