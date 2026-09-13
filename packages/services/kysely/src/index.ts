@@ -54,6 +54,7 @@ export {
   channelSchema,
   credentialSchema,
   deploymentSchema,
+  flagSchema,
   scopeSchema,
   secretSchema,
   sessionSchema,

@@ -64,6 +64,18 @@ defineSystemRole({
     description: 'Read the audit trail',
     scopes: ['admin:audit:read'],
   },
+  /**
+   * Operate feature flags and nothing else.
+   *
+   * The same seam `audit-reader` draws, one tree over: `admin:flags:*` sits
+   * outside `platform-admin`, so `staff` is an administrator who can reach the
+   * console and still not switch a feature off.
+   */
+  'flag-operator': {
+    displayName: 'Flag operator',
+    description: 'Read and switch feature flags',
+    scopes: ['admin:flags:read', 'admin:flags:manage'],
+  },
   /** Read reports and nothing else — the positive case for a scope gate. */
   'report-viewer': {
     displayName: 'Report viewer',

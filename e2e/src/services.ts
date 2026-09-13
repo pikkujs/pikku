@@ -21,13 +21,22 @@ import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import {
+  KyselyFeatureFlagStore,
   KyselyScopeService,
   agentSchema,
   applyPikkuSchemas,
   auditSchema,
+  flagSchema,
   webhookSchema,
   workflowSchema,
 } from '@pikku/kysely'
+import {
+  anonymousAnalyticsIdentity,
+  composeAnalyticsIdentity,
+  cookieAnalyticsIdentity,
+  fanOutAnalytics,
+} from '@pikku/core/analytics'
+import { RecordingAnalyticsService } from './recording-analytics-service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '#pikku/services/pikku-meta-service.gen.js'
 
@@ -204,6 +213,40 @@ export const createSingletonServices = pikkuServices(
     })
     const scopeService = new KyselyScopeService(scopeDb)
 
+    // Flags share the scope database, and for the same reason scopes are
+    // there: an override is keyed on a user id, and a store that cannot see
+    // Better Auth's `user` table has nothing to key against. The tables are
+    // written here rather than by the store, whose `init()` only requires
+    // them — syncing the declarations waits for lifecycle.afterStart, beside
+    // syncScopes.
+    await applyPikkuSchemas(scopeDb, [flagSchema])
+    const featureFlags = new KyselyFeatureFlagStore(scopeDb)
+    await featureFlags.init()
+
+    // Two destinations rather than one, so the fan-out's `accepts` predicate
+    // is under test and not just the transport: everything reaches the first
+    // recorder and only a conversion reaches the second. `accepts` is the
+    // app's policy, which is why it is written here and not in a sink.
+    const analyticsRecorder = new RecordingAnalyticsService()
+    const analyticsConversions = new RecordingAnalyticsService()
+    const analyticsService = fanOutAnalytics([
+      { service: analyticsRecorder },
+      {
+        service: analyticsConversions,
+        accepts: (record) => record.name === 'report_viewed',
+      },
+    ])
+
+    // Ordered, not merged: the cookie resolver reads what the consent banner
+    // wrote, and the minting one is handed that answer. Storing an id on a
+    // device is the act consent governs, so a visitor who has not granted
+    // `analytics` is never given one — the gate is upstream of the write, not
+    // downstream of it.
+    const analyticsIdentity = composeAnalyticsIdentity(
+      cookieAnalyticsIdentity({ consent: { analytics: 'e2e_consent' } }),
+      anonymousAnalyticsIdentity({ requires: ['analytics'] })
+    )
+
     // Dedicated plugin-enabled Kysely for webhook delivery history. Reuses the
     // CamelCase/Serialize plugins the AI/workflow db uses (the auth db above is
     // deliberately plugin-free), kept separate so it works across DB_BACKEND.
@@ -306,6 +349,11 @@ export const createSingletonServices = pikkuServices(
       kysely,
       scopeDb,
       scopeService,
+      featureFlags,
+      analyticsService,
+      analyticsIdentity,
+      analyticsRecorder,
+      analyticsConversions,
       credentialService,
       jwt,
       schema,
