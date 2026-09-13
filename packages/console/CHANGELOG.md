@@ -1,3 +1,35 @@
+## 0.12.79
+
+### Patch Changes
+
+- 68e00bb: A run action now re-opens the details surface it renders into. The new-run button and run selection both put their result there, and it can be gone two different ways — collapsed, or closed outright — so the button flipped state with nothing on screen moving, with no error and no feedback.
+
+  Collapsed is the `ThreePaneLayout` case: the pane's state is remembered in `localStorage`, so once collapsed the button looked dead across reloads. The layout now hands its content a reveal, the mirror of the collapse control that pane already provides for itself.
+
+  Closed is the `ResizablePanelLayout` case, which the workflow screen uses: activating a panel id that is no longer open does nothing, so the on-screen run controls now open the workflow panel rather than merely activating it.
+
+  The workflow screen also grows its own run controls. Starting a run was only reachable through the details panel; the action now sits above the graph, with the selected run's id and status beside it.
+
+- 87cd27a: The console's phone breakpoint moves from `sm` to `md`, so a 900px viewport gets the tab bar and bottom sheets rather than a docked panel it has no room for.
+- 828b5b5: The dock row collapses into Fabric's groups: Overview and Workflows stay tiles of their own, and every other destination sits in the group Fabric puts it in — Agents under AI, Scenarios under Testing, Emails and Knowledge under Content, Functions and the SDK under Build.
+- 828b5b5: The dock's group menus use Fabric's nav taxonomy — People, AI, Testing, Operate, Build, with the same titled bands inside them (Configuration, Connections, Wiring, Where it runs, and the rest), so the same shelf is called the same thing in both consoles.
+- 828b5b5: The dock's identity tile is a mark rather than a button — its menu was a second copy of the dock standing in front of the dock.
+- 828b5b5: SDK and Knowledge sit next to Overview in the dock's main row.
+- e869222: `EmptyStatePlaceholder` carries a `data-testid="empty-state"`, so a test can assert a screen is empty without matching its prose.
+- 828b5b5: List screens run to the edge of their page card. The body gutter and the second bordered card inside it drew a card in a card with a moat between them; the table now fills the card, and its column header actually sticks while the rows scroll.
+- 1d6824f: A scenario ladder reads like gherkin: a step continuing its phase is labelled `And` instead of losing its keyword, and a step repeating the actor above it drops the repeated subject.
+- f5ca701: The nav dock's environment indicator colours the brand mark itself rather than ringing it, and production stops borrowing the error red.
+- 828b5b5: Quieter list headers. The column labels were uppercase, letter-spaced, semibold and inheriting the monospace stack, which read as a shouty band above the rows; they are now sentence-case sans at normal tracking in a slightly taller row.
+- 828b5b5: Roles and the declared scope vocabulary are two top-level screens rather than
+  two tabs of one page: roles are composed at `/roles`, the vocabulary is read at
+  `/scopes`. A user row in the directory now opens that user's roles and scopes
+  on click, so what someone holds is one click from the list rather than behind a
+  per-row button.
+- 828b5b5: The Scorers screen wears the same header as every other list screen: title, description and search in the ShellHeader band rather than a bare input strip inside the table, and its column labels come from the messages that were already written for them.
+- 828b5b5: Each wire kind is its own screen: the APIs and Jobs tabbed surfaces are replaced by /wires/{http,channel,mcp,cli,gateway} and /async/{scheduler,queue,trigger}, each exported as its own page. The dock's Build group lists them under Source, Wiring, Async, Where it runs and Shipping.
+- Updated dependencies [828b5b5]
+  - @pikku/better-auth@0.12.41
+
 ## 0.12.78
 
 ### Patch Changes

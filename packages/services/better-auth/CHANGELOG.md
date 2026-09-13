@@ -1,5 +1,11 @@
 # @pikku/better-auth
 
+## 0.12.41
+
+### Patch Changes
+
+- 828b5b5: Dev quick login now grants `pikku:console` alongside `admin`, so the dev admin can actually open the console. The two are separate scope trees, and the console's gate checks the one quick login was not granting.
+
 ## 0.12.40
 
 ### Patch Changes
