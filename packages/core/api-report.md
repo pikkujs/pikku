@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3007 observable things**: 974 exported names, plus
-2033 members on the classes and interfaces among them, reachable
+**3005 observable things**: 974 exported names, plus
+2031 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -25,7 +25,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 50 | 50 | 22 |
-| `./analytics` | 24 | 24 | 38 |
+| `./analytics` | 24 | 24 | 36 |
 | `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
@@ -3669,8 +3669,7 @@ export interface AnalyticsRecord {
   source: 'server' | 'client'
 }
 export interface AnalyticsService {
-  record(event: AnalyticsRecord): Promise<void>
-  write?(batch: AnalyticsRecord[]): Promise<void>
+  write(batch: AnalyticsRecord[]): Promise<void>
 }
 export interface AnalyticsSink {
   service: AnalyticsService
@@ -3694,7 +3693,6 @@ fanOutAnalytics: (sinks: readonly (AnalyticsService | AnalyticsSink)[]) => Analy
 flattenAnalyticsEvent: (event: AnalyticsEventBase, at?: number | undefined) => AnalyticsEventInput
 export class LoggerAnalyticsService implements AnalyticsService {
   constructor(private readonly logger: Logger)
-  async record(event: AnalyticsRecord): Promise<void>
   async write(batch: AnalyticsRecord[]): Promise<void>
 }
 mintCookie: (wire: AnyWire, name: string, options: MintCookieOptions, mint: () => string) => string | undefined

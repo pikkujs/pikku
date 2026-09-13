@@ -86,12 +86,15 @@ export interface AnalyticsRecord {
 
 /**
  * Where accepted events go. Pikku validates, identifies and batches them; it
- * does not store them. Implement `write` when the destination takes a batch in
- * one call.
+ * does not store them.
+ *
+ * One method, taking a batch, because a batch is what a destination is always
+ * handed: the invocation buffers and flushes once, and a lone event is a batch
+ * of one. A single-event method beside it would be a second path every sink had
+ * to implement and every caller had to choose between.
  */
 export interface AnalyticsService {
-  record(event: AnalyticsRecord): Promise<void>
-  write?(batch: AnalyticsRecord[]): Promise<void>
+  write(batch: AnalyticsRecord[]): Promise<void>
 }
 
 /**

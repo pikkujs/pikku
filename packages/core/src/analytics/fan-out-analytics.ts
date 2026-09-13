@@ -4,19 +4,6 @@ import type {
   AnalyticsSink,
 } from './analytics.types.js'
 
-const writeTo = async (
-  service: AnalyticsService,
-  batch: AnalyticsRecord[]
-): Promise<void> => {
-  if (service.write) {
-    await service.write(batch)
-    return
-  }
-  for (const record of batch) {
-    await service.record(record)
-  }
-}
-
 /**
  * One `AnalyticsService` over several destinations.
  *
@@ -38,10 +25,6 @@ export const fanOutAnalytics = (
   )
 
   return {
-    async record(event: AnalyticsRecord): Promise<void> {
-      await this.write!([event])
-    },
-
     async write(batch: AnalyticsRecord[]): Promise<void> {
       if (batch.length === 0) return
 
@@ -50,7 +33,7 @@ export const fanOutAnalytics = (
           const records = accepts ? batch.filter(accepts) : batch
           return records.length === 0
             ? Promise.resolve()
-            : writeTo(service, records)
+            : service.write(records)
         })
       )
 

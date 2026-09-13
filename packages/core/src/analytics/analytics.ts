@@ -41,13 +41,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
 
     const batch = this.buffer.splice(0, this.buffer.length)
     try {
-      if (this.service.write) {
-        await this.service.write(batch)
-        return
-      }
-      for (const event of batch) {
-        await this.service.record(event)
-      }
+      await this.service.write(batch)
     } catch (error) {
       const logger = this.wire.logger ?? this.logger
       logger?.warn?.('analytics flush failed', error)
