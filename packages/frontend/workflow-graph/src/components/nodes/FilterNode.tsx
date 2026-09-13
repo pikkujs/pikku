@@ -1,0 +1,72 @@
+import React from 'react'
+import type { Node } from '@xyflow/react'
+import type { GraphNodeProps } from '../../types'
+import { FlowNode } from './FlowNode'
+import { Filter } from 'lucide-react'
+import { useGraphActions } from '../../context/GraphHostContext'
+import { useGraphHighlight } from '../../context/GraphHostContext'
+
+interface FilterNodeData {
+  colorKey: string
+  sourceVar?: string
+  itemVar?: string
+  outputVar?: string
+  stepName?: string
+}
+
+type HighlightType = 'focused' | 'referenced' | null
+
+export const FilterNode: React.FC<GraphNodeProps<FilterNodeData>> = ({
+  data,
+  id,
+}) => {
+  const { openWorkflowStep } = useGraphActions()
+  const graphHighlight = useGraphHighlight()
+
+  const highlightType: HighlightType = React.useMemo(() => {
+    if (!graphHighlight) return null
+    if (graphHighlight.focusedNodeId === id) return 'focused'
+    if (graphHighlight.referencedNodeId === id) return 'referenced'
+    return null
+  }, [graphHighlight, id])
+
+  const handleClick = React.useCallback(() => {
+    openWorkflowStep(id, 'filter')
+  }, [id, openWorkflowStep])
+
+  return (
+    <FlowNode
+      icon={Filter}
+      colorKey={data.colorKey}
+      hasInput={true}
+      outputHandles={[{ id: 'default', label: '' }]}
+      size={80}
+      label="Filter"
+      subtitle={data.stepName}
+      onClick={handleClick}
+      showBorder={false}
+      highlightType={highlightType}
+      nodeId={id}
+    />
+  )
+}
+
+export const getFilterNodeConfig = (
+  id: string,
+  position: { x: number; y: number },
+  step: any
+): Node => {
+  return {
+    id,
+    type: 'filterNode',
+    position,
+    data: {
+      colorKey: 'workflow',
+      sourceVar: step.sourceVar,
+      itemVar: step.itemVar,
+      outputVar: step.outputVar,
+      stepName: step.stepName,
+      nodeType: 'flow',
+    },
+  }
+}

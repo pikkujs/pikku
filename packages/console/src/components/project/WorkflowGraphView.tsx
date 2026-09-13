@@ -1,10 +1,13 @@
-import React from 'react'
-import { ReactFlowProvider } from 'reactflow'
+import React, { useMemo } from 'react'
 import {
-  FlowDirectionContext,
+  WorkflowGraphView as BaseWorkflowGraphView,
   type FlowDirection,
-} from '../../context/FlowDirectionContext'
-import { WorkflowGraphFlow } from './WorkflowGraphFlow'
+  type WorkflowGraphHost,
+} from '@pikku/workflow-graph'
+import { usePanelContext } from '../../context/PanelContext'
+import { useWorkflowContextSafe } from '../../context/WorkflowContext'
+import { useWorkflowRunContextSafe } from '../../context/WorkflowRunContext'
+import { useFunctionsMeta } from '../../hooks/useWirings'
 
 export interface WorkflowGraphViewProps {
   workflow: any
@@ -14,16 +17,44 @@ export interface WorkflowGraphViewProps {
   onPaneClick?: () => void
 }
 
-/** Standalone workflow graph renderer: createWorkflowFlow → ELK layout → reactflow,
- *  with its own ReactFlowProvider so it can be embedded anywhere (full canvas
- *  page, side panel, …). Interactivity (node click → panels) comes from the
- *  surrounding Panel/Workflow contexts, which the host must provide. */
+/** Console binding for the standalone @pikku/workflow-graph renderer: hands it
+ *  the panels a node click opens, the highlighted node, and the selected run. */
 export const WorkflowGraphView: React.FC<WorkflowGraphViewProps> = (props) => {
-  return (
-    <FlowDirectionContext.Provider value={props.direction ?? 'RIGHT'}>
-      <ReactFlowProvider>
-        <WorkflowGraphFlow {...props} />
-      </ReactFlowProvider>
-    </FlowDirectionContext.Provider>
+  const { openFunction, openChannel, openWorkflowStep } = usePanelContext()
+  const workflowContext = useWorkflowContextSafe()
+  const runContext = useWorkflowRunContextSafe()
+  const { data: functionsMeta } = useFunctionsMeta()
+
+  const host: WorkflowGraphHost = useMemo(
+    () => ({
+      openFunction,
+      openChannel,
+      openWorkflowStep,
+      focusedNodeId: workflowContext?.focusedNodeId ?? null,
+      referencedNodeId: workflowContext?.referencedNodeId ?? null,
+      getFunctionMeta: (name: string) =>
+        functionsMeta?.find((f: any) => f.name === name) ?? null,
+      run: runContext
+        ? {
+            runId: runContext.selectedRunId,
+            stepStates: runContext.stepStates,
+            status: runContext.runData?.status,
+            wire: runContext.runData?.wire,
+          }
+        : null,
+    }),
+    [
+      openFunction,
+      openChannel,
+      openWorkflowStep,
+      workflowContext?.focusedNodeId,
+      workflowContext?.referencedNodeId,
+      functionsMeta,
+      runContext?.selectedRunId,
+      runContext?.stepStates,
+      runContext?.runData,
+    ]
   )
+
+  return <BaseWorkflowGraphView {...props} host={host} />
 }
