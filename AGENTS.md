@@ -208,6 +208,32 @@ reviewer decides whether that is acceptable, not the author.
 Roughly the order to do them in, because each one finds what the previous one
 missed.
 
+### The description has to hold the code
+
+**A PR body that describes the change without showing it is not finished.** The
+body is where a reviewer decides whether to read the diff at all, and prose
+alone cannot be checked against anything: "the discriminator is now
+authoritative" is a claim, while the three lines that make it so are the
+evidence.
+
+So every PR body carries the change as code:
+
+- The **load-bearing lines**, quoted from the branch and captioned with the
+  file they came from — the constant that flipped, the guard that was added,
+  the signature that changed. Not the whole file, and not a diff of it: the
+  part the sentence above it is about.
+- The **contract**, when one moved — the exported type, the config key with the
+  block it sits under, the generated output's new shape.
+- The **assertion that pins it**, when a claim is testable. A test that fails
+  before and passes after says more in four lines than a paragraph about
+  coverage does.
+
+A change with genuinely no code to show — a rename, a dependency bump, a
+revert — says so in a sentence. Everything else quotes itself.
+
+The same rule applies to replies on review comments: the fix is shown, not
+described, along with the commit it landed in.
+
 ## Git workflow
 
 Multiple agents work this checkout concurrently, so the worktree is routinely dirty with changes you did not make.
