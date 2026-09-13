@@ -15,6 +15,16 @@ export const serializeVariableDefinitionTypes = () => {
 }
 
 export const serializeAnalyticsDefinitionTypes = () => {
-  return `export { defineAnalyticsEvents } from '@pikku/core/analytics'
+  return `export { defineAnalyticsEvents, LoggerAnalyticsService, flattenAnalyticsEvent } from '@pikku/core/analytics'
+export type {
+  AnalyticsClientContext,
+  AnalyticsEventBase,
+  AnalyticsEventDefinitions,
+  AnalyticsEventPropsSchema,
+  AnalyticsIdentity,
+  AnalyticsLog,
+  AnalyticsRecord,
+  AnalyticsService,
+} from '@pikku/core/analytics'
 `
 }
