@@ -19,12 +19,12 @@ import {
 } from './services.js'
 import { RemoteFlagSource } from './remote-source.js'
 import '../.pikku/pikku-bootstrap.gen.js'
-import type { FeatureFlagName } from '../.pikku/scopes/pikku-flags.gen.js'
+import type { FeatureFlagName } from '#pikku/scopes'
 import {
   FEATURE_FLAGS,
   FEATURE_FLAGS_META,
   FEATURE_FLAGS_FALLBACK,
-} from '../.pikku/scopes/pikku-flags.gen.js'
+} from '#pikku/scopes'
 
 // ============================================================================
 // Compile-time assertions — an undeclared flag must not type-check
