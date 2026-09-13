@@ -6,6 +6,7 @@ export {
   bucketOf,
   resolveFlag,
   resolveFlagForClient,
+  resolveFlagsForClient,
   subjectIdOf,
 } from './resolve-flag.js'
 export {

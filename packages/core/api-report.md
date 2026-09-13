@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2978 observable things**: 962 exported names, plus
+**2979 observable things**: 963 exported names, plus
 2016 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
@@ -32,7 +32,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./analytics` | 13 | 13 | 24 |
 | `./classification` | 22 | 22 | 14 |
 | `./agent-scorer` | 18 | 18 | 12 |
-| `./flag` | 22 | 22 | 7 |
+| `./flag` | 23 | 23 | 7 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
@@ -5314,6 +5314,7 @@ flattenFeatureFlagDefinitions: (definitions: FeatureFlagDefinitions) => Declared
 export type ResolvedFlag = FlagState & { show: boolean }
 resolveFlag: (key: string, anyOf: readonly string[] | undefined, session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => FlagState
 resolveFlagForClient: (key: string, anyOf: readonly string[] | undefined, session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => ResolvedFlag
+resolveFlagsForClient: (declared: readonly DeclaredFlag[], session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => Record<string, boolean>
 subjectIdOf: (subject: FlagSubject | undefined) => string | undefined
 validateAndBuildFeatureFlagDefinitionsMeta: (definitions: FeatureFlagDefinitions) => FeatureFlagDefinitionsMeta
 ```

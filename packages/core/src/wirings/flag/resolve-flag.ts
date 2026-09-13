@@ -1,6 +1,7 @@
 import type { CoreUserSession } from '../../types/core.types.js'
 import { hasAnyScope } from '../../scopes.js'
 import type {
+  DeclaredFlag,
   FlagConfigSnapshot,
   FlagState,
   FlagSubject,
@@ -104,3 +105,29 @@ export const resolveFlagForClient = (
   const state = resolveFlag(key, anyOf, session, config, subject)
   return { ...state, show: state.available && state.capable }
 }
+
+/**
+ * Every declared flag resolved for one caller, as a client consumes them.
+ *
+ * A client asks once per session and reads the map synchronously after, rather
+ * than asking per flag: a flag is checked wherever a component renders, and a
+ * request from each would put the network in front of a paint. The snapshot is
+ * already in isolate memory, so this is a map over a cached object.
+ *
+ * Bare booleans, not `FlagState`. `show` is the collapse of the two halves, and
+ * sending them apart would tell a client which features exist but are dark —
+ * a roadmap nobody meant to publish.
+ */
+export const resolveFlagsForClient = (
+  declared: readonly DeclaredFlag[],
+  session: CoreUserSession | undefined,
+  config: FlagConfigSnapshot,
+  subject?: FlagSubject
+): Record<string, boolean> =>
+  Object.fromEntries(
+    declared.map((flag) => [
+      flag.name,
+      resolveFlagForClient(flag.name, flag.anyOf, session, config, subject)
+        .show,
+    ])
+  )

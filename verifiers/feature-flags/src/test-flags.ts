@@ -8,7 +8,12 @@
 import * as assert from 'node:assert'
 import { pikkuFunc, pikkuSessionlessFunc } from '#pikku/function'
 import { runPikkuFunc } from '@pikku/core/function'
-import { resolveFlag, resolveFlagForClient, bucketOf } from '@pikku/core/flag'
+import {
+  resolveFlag,
+  resolveFlagForClient,
+  resolveFlagsForClient,
+  bucketOf,
+} from '@pikku/core/flag'
 import { FeatureUnavailableError } from '@pikku/core/errors'
 import { MissingScopeError } from '#pikku/error'
 import {
@@ -222,6 +227,20 @@ assert.deepEqual(
   ),
   { available: true, capable: false, show: false },
   'an uncapable caller sees an available feature, and is shown nothing'
+)
+
+// What a client is actually handed: every declared flag as one map, resolved
+// against one snapshot. Bare booleans — a client that could tell `available`
+// from `capable` would be reading the roadmap.
+assert.deepEqual(
+  resolveFlagsForClient(FEATURE_FLAGS, reader, snapshot),
+  { sandboxes: true, nightlyReindex: true },
+  'one call resolves the whole declared set for a caller'
+)
+assert.deepEqual(
+  resolveFlagsForClient(FEATURE_FLAGS, { userId: 'u2', scopes: [] }, snapshot),
+  { sandboxes: false, nightlyReindex: true },
+  'an uncapable caller gets false, not an absent key'
 )
 
 // anyOf is OR, deliberately the opposite of `scopes:`.

@@ -459,6 +459,7 @@
     "flattenFeatureFlagDefinitions",
     "resolveFlag",
     "resolveFlagForClient",
+    "resolveFlagsForClient",
     "subjectIdOf",
     "validateAndBuildFeatureFlagDefinitionsMeta"
   ],

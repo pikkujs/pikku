@@ -4,6 +4,7 @@ import {
   bucketOf,
   resolveFlag,
   resolveFlagForClient,
+  resolveFlagsForClient,
   subjectIdOf,
 } from './resolve-flag.js'
 import type { FlagConfigSnapshot } from './flag.types.js'
@@ -213,5 +214,44 @@ describe('resolveFlagForClient', () => {
       ).show,
       true
     )
+  })
+})
+
+describe('resolveFlagsForClient', () => {
+  const declared = [
+    { name: 'sandboxes', anyOf: ['admin:sandboxes'] },
+    { name: 'nightlyReindex' },
+  ]
+
+  test('resolves every declared flag for one caller', () => {
+    const flags = resolveFlagsForClient(
+      declared,
+      session(['admin:sandboxes'], 'org-1'),
+      config({ enabled: true })
+    )
+
+    assert.deepEqual(flags, { sandboxes: true, nightlyReindex: true })
+  })
+
+  test('a flag the caller cannot hold is false, not absent', () => {
+    const flags = resolveFlagsForClient(
+      declared,
+      session([], 'org-1'),
+      config({ enabled: true })
+    )
+
+    // Absent would read as undeclared to a client, which resolves as available
+    // on the server. A caller who lacks the scope must see the flag off.
+    assert.deepEqual(flags, { sandboxes: false, nightlyReindex: true })
+  })
+
+  test('sends booleans only, never the two halves apart', () => {
+    const flags = resolveFlagsForClient(
+      declared,
+      session(['admin:sandboxes'], 'org-1'),
+      config()
+    )
+
+    assert.deepEqual(Object.values(flags), [false, true])
   })
 })
