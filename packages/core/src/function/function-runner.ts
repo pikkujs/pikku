@@ -452,7 +452,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
               resolvedSingletonServices.analyticsService ??
                 new LoggerAnalyticsService(resolvedSingletonServices.logger),
               invocationWire,
-              resolvedSingletonServices.logger
+              resolvedSingletonServices.logger,
+              resolvedSingletonServices.analyticsIdentity
             )
             return invocationAnalytics
           },

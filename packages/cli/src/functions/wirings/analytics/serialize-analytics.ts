@@ -92,6 +92,25 @@ import {
 export type { AnalyticsEvent } from './analytics.schemas.gen.js'
 
 /**
+ * Re-exported so an app reaches the whole analytics surface through one
+ * specifier. Where events go is wired next to where they are declared, and
+ * making that import '@pikku/core/analytics' while the event type comes from
+ * '#pikku/analytics' splits one concern across two names.
+ */
+export {
+  fanOutAnalytics,
+  cookieAnalyticsIdentity,
+  LoggerAnalyticsService,
+} from '@pikku/core/analytics'
+export type {
+  AnalyticsIdentity,
+  AnalyticsIdentityResolver,
+  AnalyticsRecord,
+  AnalyticsService,
+  AnalyticsSink,
+} from '@pikku/core/analytics'
+
+/**
  * Unauthenticated by necessity: anonymous visitors are most of what this
  * measures. Identity is stamped from the session and never read from the body,
  * so no caller can attribute events to someone else. Anonymous records nothing

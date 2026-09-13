@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2981 observable things**: 963 exported names, plus
-2018 members on the classes and interfaces among them, reachable
+**2993 observable things**: 968 exported names, plus
+2025 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -20,16 +20,16 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
-| `./types` | 23 | 20 | 76 |
+| `./types` | 23 | 20 | 77 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 50 | 50 | 22 |
+| `./analytics` | 18 | 18 | 30 |
 | `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
-| `./analytics` | 13 | 13 | 24 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -221,6 +221,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   coverageService?: CoverageService
   audit?: AuditService
   analyticsService?: AnalyticsService
+  analyticsIdentity?: AnalyticsIdentityResolver
   analytics?: AnalyticsLog
   auditLog?: AuditLog
   sessionStore?: SessionStore
@@ -3643,7 +3644,12 @@ export interface AnalyticsIdentity {
   userId: string | null
   orgId?: string
   pikkuUserId?: string
+  vendorIds?: Record<string, string>
+  consent?: Record<string, boolean>
 }
+export type AnalyticsIdentityResolver = (
+  wire: PikkuWire<any, any, any, CoreUserSession>
+) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent'> | undefined
 export interface AnalyticsLog< Events extends AnalyticsEventBase = AnalyticsEventBase, > {
   record(event: Events, client?: AnalyticsClientContext): Promise<void>
   flush(): Promise<void>
@@ -3664,8 +3670,18 @@ export interface AnalyticsService {
   record(event: AnalyticsRecord): Promise<void>
   write?(batch: AnalyticsRecord[]): Promise<void>
 }
-createInvocationAnalytics: (service: AnalyticsService, wire: PikkuWire<any, any, any, CoreUserSession>, logger?: Logger | undefined) => AnalyticsLog<AnalyticsEventBase>
+export interface AnalyticsSink {
+  service: AnalyticsService
+  accepts?: (record: AnalyticsRecord) => boolean
+}
+cookieAnalyticsIdentity: (options: CookieAnalyticsIdentityOptions) => AnalyticsIdentityResolver
+export interface CookieAnalyticsIdentityOptions {
+  vendorIds?: Record<string, string>
+  consent?: Record<string, string>
+}
+createInvocationAnalytics: (service: AnalyticsService, wire: PikkuWire<any, any, any, CoreUserSession>, logger?: Logger | undefined, resolveIdentity?: AnalyticsIdentityResolver | undefined) => AnalyticsLog<AnalyticsEventBase>
 defineAnalyticsEvents: <const Events extends AnalyticsEventDefinitions>(events: Events) => Events
+fanOutAnalytics: (sinks: readonly (AnalyticsService | AnalyticsSink)[]) => AnalyticsService
 flattenAnalyticsEvent: (event: AnalyticsEventBase, at?: number | undefined) => AnalyticsEventInput
 export class LoggerAnalyticsService implements AnalyticsService {
   constructor(private readonly logger: Logger)

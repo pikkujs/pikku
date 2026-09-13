@@ -4,6 +4,7 @@ import type {
   AnalyticsClientContext,
   AnalyticsEventBase,
   AnalyticsEventInput,
+  AnalyticsIdentityResolver,
   AnalyticsLog,
   AnalyticsRecord,
   AnalyticsService,
@@ -24,7 +25,8 @@ class InvocationAnalyticsLog implements AnalyticsLog {
   constructor(
     private readonly service: AnalyticsService,
     private readonly wire: PikkuWire<any, any, any, CoreUserSession>,
-    private readonly logger?: Logger
+    private readonly logger?: Logger,
+    private readonly resolveIdentity?: AnalyticsIdentityResolver
   ) {}
 
   async record(
@@ -62,6 +64,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
   ): AnalyticsRecord {
     const session = this.wire.session as CoreUserSession | undefined
     const { name, props } = flattenAnalyticsEvent(event)
+    const resolved = this.resolveIdentity?.(this.wire)
     return {
       name,
       props,
@@ -71,6 +74,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
         userId: session?.userId ?? null,
         orgId: session?.orgId,
         pikkuUserId: this.wire.pikkuUserId,
+        ...resolved,
       },
       traceId: this.wire.traceId,
       functionId: this.wire.functionId,
@@ -83,5 +87,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
 export const createInvocationAnalytics = (
   service: AnalyticsService,
   wire: PikkuWire<any, any, any, CoreUserSession>,
-  logger?: Logger
-): AnalyticsLog => new InvocationAnalyticsLog(service, wire, logger)
+  logger?: Logger,
+  resolveIdentity?: AnalyticsIdentityResolver
+): AnalyticsLog =>
+  new InvocationAnalyticsLog(service, wire, logger, resolveIdentity)

@@ -130,4 +130,16 @@ describe('analyticsSpecifier', () => {
       './telemetry.js'
     )
   })
+
+  test('the leaf carries the runtime, so one specifier serves analytics', () => {
+    const { functions } = serializeAnalytics(leaf, [declaration()])
+
+    assert.match(functions, /fanOutAnalytics/)
+    assert.match(functions, /cookieAnalyticsIdentity/)
+    assert.match(
+      functions,
+      /from '@pikku\/core\/analytics'/,
+      'the leaf re-exports core rather than redeclaring it'
+    )
+  })
 })

@@ -61,6 +61,7 @@ import type {
 } from '../services/audit-service.js'
 import type {
   AnalyticsLog,
+  AnalyticsIdentityResolver,
   AnalyticsService,
 } from '../analytics/analytics.types.js'
 
@@ -190,6 +191,13 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   audit?: AuditService
   /** Where product-analytics events go; unset means the logger. */
   analyticsService?: AnalyticsService
+  /**
+   * Resolves the browser-originated half of an event's identity — vendor ids
+   * and consent — from the wire. Unset means a sink sees only what the session
+   * carries, which is enough for a product-analytics tool and not enough for an
+   * ad platform.
+   */
+  analyticsIdentity?: AnalyticsIdentityResolver
   /**
    * Request-scoped buffer writing into `analyticsService`. Narrow it to the
    * app's own event union in `SingletonServices` to type `record()`.

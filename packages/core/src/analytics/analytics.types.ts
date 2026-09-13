@@ -1,4 +1,8 @@
-import type { PikkuWiringTypes } from '../types/core.types.js'
+import type {
+  CoreUserSession,
+  PikkuWire,
+  PikkuWiringTypes,
+} from '../types/core.types.js'
 
 export type AnalyticsEventBase = { name: string } & Record<string, unknown>
 
@@ -16,7 +20,40 @@ export interface AnalyticsIdentity {
   userId: string | null
   orgId?: string
   pikkuUserId?: string
+  /**
+   * Identifiers a destination keys on that pikku does not mint — GA4's
+   * `client_id`, Meta's `fbp` and `fbc`, a vendor's own device id. All of them
+   * originate in the browser, and a sink that cannot produce one does not
+   * degrade, it sends nothing usable.
+   *
+   * Resolved server-side from first-party cookies on the request, never read
+   * from the event body, on the same reasoning as the rest of this object: a
+   * crafted client call must not be able to attribute an event to someone else.
+   */
+  vendorIds?: Record<string, string>
+  /**
+   * What the visitor agreed to, keyed by purpose. A sink gated on a purpose
+   * absent here does not send.
+   *
+   * Open-ended rather than a fixed pair, because the purposes are the consent
+   * tool's vocabulary and jurisdictions do not agree on them. Undefined means
+   * the app wired no consent resolver, not that consent was refused — the gate
+   * belongs to the sink, which is where the app decides what absence means.
+   */
+  consent?: Record<string, boolean>
 }
+
+/**
+ * Resolves the half of the identity pikku cannot know, from the wire.
+ *
+ * A function rather than a cookie-name map because consent tools do not store
+ * one boolean per cookie — a single encoded blob is more common — and a map
+ * could only express the easy case. {@link cookieAnalyticsIdentity} covers that
+ * easy case.
+ */
+export type AnalyticsIdentityResolver = (
+  wire: PikkuWire<any, any, any, CoreUserSession>
+) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent'> | undefined
 
 export interface AnalyticsRecord {
   name: string
@@ -38,6 +75,19 @@ export interface AnalyticsRecord {
 export interface AnalyticsService {
   record(event: AnalyticsRecord): Promise<void>
   write?(batch: AnalyticsRecord[]): Promise<void>
+}
+
+/**
+ * One destination in a fan-out, with the events it is allowed to receive.
+ *
+ * `accepts` is the app's, not the sink's: which events a destination should get
+ * is policy — a product-analytics tool wants everything, an ad platform wants
+ * three conversions, and a consent gate reads the same way. What each event
+ * should look like once it gets there is the sink's, and lives in its mapper.
+ */
+export interface AnalyticsSink {
+  service: AnalyticsService
+  accepts?: (record: AnalyticsRecord) => boolean
 }
 
 /**
