@@ -23,6 +23,8 @@
     "embed": "node scripts/embed-examples.mjs",
     "tsc": "bun run embed && tsc && tsc -p tsconfig.type-tests.json",
     "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
+    "cli-report": "tsx scripts/output-probe/probe.ts && node scripts/output-probe/render-report.mjs",
+    "cli-report:full": "SPAWN=1 tsx scripts/output-probe/probe.ts && node scripts/output-probe/render-report.mjs",
     "build": "./build.sh",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "bun run build && npm test",
