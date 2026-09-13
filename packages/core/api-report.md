@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2993 observable things**: 968 exported names, plus
-2025 members on the classes and interfaces among them, reachable
+**3006 observable things**: 974 exported names, plus
+2032 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -25,7 +25,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 50 | 50 | 22 |
-| `./analytics` | 18 | 18 | 30 |
+| `./analytics` | 24 | 24 | 37 |
 | `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
@@ -3645,11 +3645,13 @@ export interface AnalyticsIdentity {
   orgId?: string
   pikkuUserId?: string
   vendorIds?: Record<string, string>
+  anonymousId?: string
   consent?: Record<string, boolean>
 }
 export type AnalyticsIdentityResolver = (
-  wire: PikkuWire<any, any, any, CoreUserSession>
-) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent'> | undefined
+  wire: PikkuWire<any, any, any, CoreUserSession>,
+  resolved?: Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'>
+) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'> | undefined
 export interface AnalyticsLog< Events extends AnalyticsEventBase = AnalyticsEventBase, > {
   record(event: Events, client?: AnalyticsClientContext): Promise<void>
   flush(): Promise<void>
@@ -3674,6 +3676,13 @@ export interface AnalyticsSink {
   service: AnalyticsService
   accepts?: (record: AnalyticsRecord) => boolean
 }
+anonymousAnalyticsIdentity: (options?: AnonymousAnalyticsIdentityOptions) => AnalyticsIdentityResolver
+export interface AnonymousAnalyticsIdentityOptions {
+  name?: string
+  requires?: string[]
+  cookie?: SerializeOptions
+}
+composeAnalyticsIdentity: (...resolvers: AnalyticsIdentityResolver[]) => AnalyticsIdentityResolver
 cookieAnalyticsIdentity: (options: CookieAnalyticsIdentityOptions) => AnalyticsIdentityResolver
 export interface CookieAnalyticsIdentityOptions {
   vendorIds?: Record<string, string>
@@ -3688,6 +3697,13 @@ export class LoggerAnalyticsService implements AnalyticsService {
   async record(event: AnalyticsRecord): Promise<void>
   async write(batch: AnalyticsRecord[]): Promise<void>
 }
+mintCookie: (wire: AnyWire, name: string, options: MintCookieOptions, mint: () => string) => string | undefined
+export interface MintCookieOptions {
+  cookie: SerializeOptions
+  requires?: string[]
+  consent?: Record<string, boolean>
+}
+randomDigits: (length: number) => string
 ```
 
 ## ./gateway

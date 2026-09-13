@@ -16,6 +16,17 @@ export interface CreateAnalyticsOptions {
   flushIntervalMs?: number
   /** Flush early rather than let a burst grow unbounded; ingests cap a batch at 50. */
   maxBuffer?: number
+  /**
+   * Whether events may be sent, checked at each flush.
+   *
+   * A function rather than a boolean because the client is constructed before
+   * anyone has answered the cookie banner: a value captured at startup would
+   * freeze the answer, so accepting mid-session would never take effect and
+   * withdrawing would never stop it. Buffered events are discarded rather than
+   * held, since a visitor who refused should not have a backlog waiting to be
+   * sent the moment they change their mind.
+   */
+  enabled?: () => boolean
 }
 
 export interface AnalyticsClient<TEvent extends NamedEvent> {
@@ -41,6 +52,7 @@ export function createAnalytics<TEvent extends NamedEvent>({
   endpoint,
   flushIntervalMs = 5_000,
   maxBuffer = 25,
+  enabled,
 }: CreateAnalyticsOptions): AnalyticsClient<TEvent> {
   let buffer: BufferedEvent[] = []
   let timer: ReturnType<typeof setInterval> | null = null
@@ -50,6 +62,10 @@ export function createAnalytics<TEvent extends NamedEvent>({
 
   const flush = (): void => {
     if (buffer.length === 0) return
+    if (enabled && !enabled()) {
+      buffer = []
+      return
+    }
     const events = buffer
     buffer = []
     const body = JSON.stringify({ events })

@@ -32,6 +32,17 @@ export interface AnalyticsIdentity {
    */
   vendorIds?: Record<string, string>
   /**
+   * A device-scoped id for a visitor with no session, minted by pikku rather
+   * than by a vendor.
+   *
+   * Distinct from `pikkuUserId`, which is derived from a session and is
+   * therefore absent for exactly the visitor this identifies. Without it a
+   * product-analytics sink has no honest option for anonymous traffic: keying
+   * on a shared literal collapses every visitor into one person, and dropping
+   * the event loses the whole pre-signup funnel.
+   */
+  anonymousId?: string
+  /**
    * What the visitor agreed to, keyed by purpose. A sink gated on a purpose
    * absent here does not send.
    *
@@ -52,8 +63,14 @@ export interface AnalyticsIdentity {
  * easy case.
  */
 export type AnalyticsIdentityResolver = (
-  wire: PikkuWire<any, any, any, CoreUserSession>
-) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent'> | undefined
+  wire: PikkuWire<any, any, any, CoreUserSession>,
+  /**
+   * What the resolvers before this one produced, when composed. A minter needs
+   * it: whether it may write a cookie at all depends on consent another
+   * resolver read, and ordering is the only thing that can express that.
+   */
+  resolved?: Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'>
+) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'> | undefined
 
 export interface AnalyticsRecord {
   name: string
