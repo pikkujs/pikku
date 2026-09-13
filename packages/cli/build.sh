@@ -28,13 +28,24 @@ rm -rf -- .pikku dist
 # Historical note, still relevant when choosing a version: 0.12.36 shipped a
 # `@pikku/better-auth: workspace:*` dependency that leaked verbatim to npm and
 # is uninstallable, so bootstrapping off `latest` can self-deadlock.
+#
+# Moved to the 2026-09-13 wave (cli 0.12.145 / core 0.12.107 / inspector 0.12.75)
+# because the 0.12.96 pin had drifted past what core still exports and took the
+# release path down with it: Publish failed at `error TS` on `@pikku/core/ai-agent`
+# (a subpath core never had), `CoreAIAgent` / `PikkuAIMiddlewareHooks` (renamed to
+# `CoreAgent` / `PikkuAgentMiddlewareHooks`), `WireAddonConfig` from `/rpc`,
+# `HttpPersonasConfig` from `/services`, and `PikkuScenarioWire` from `/workflow` —
+# then died at exit 127 because dist/bin/pikku.js was never written. 0.12.145
+# emits `@pikku/core/agent`, `/addon`, `/persona` and `/scenario` directly, so the
+# whole class goes away rather than growing another patch-loop rule. The rest of
+# the set moves with it, to exactly what cli 0.12.145 declares.
 echo "Bootstrapping with published @pikku/cli..."
-: "${PIKKU_CLI_VERSION:=0.12.96}"
-: "${PIKKU_INSPECTOR_VERSION:=0.12.52}"
-: "${PIKKU_BETTER_AUTH_VERSION:=0.12.20}"
+: "${PIKKU_CLI_VERSION:=0.12.145}"
+: "${PIKKU_INSPECTOR_VERSION:=0.12.75}"
+: "${PIKKU_BETTER_AUTH_VERSION:=0.12.39}"
 # core is a *peer* of both the CLI and the inspector, which is why it has to be
 # named here to exist at all once peer resolution is off.
-: "${PIKKU_CORE_VERSION:=0.12.79}"
+: "${PIKKU_CORE_VERSION:=0.12.107}"
 # @pikku/node-http-server is the third member of this family to need naming, and
 # it arrives the same way @pikku/kysely did: transitively, through the CLI's
 # `^0.12.7`, so it floats to the newest release while `overrides` holds core
@@ -44,7 +55,7 @@ echo "Bootstrapping with published @pikku/cli..."
 # server landed on the old core and every bootstrap died on a missing export, in
 # a package the pin never mentioned. main went red without a commit to blame:
 # its last green run had started twenty-one minutes before the wave.
-: "${PIKKU_NODE_HTTP_SERVER_VERSION:=0.12.8}"
+: "${PIKKU_NODE_HTTP_SERVER_VERSION:=0.12.14}"
 # @pikku/kysely is an ordinary *dependency* of the CLI, so unlike the peers above
 # it installs whether or not it is named — and left unnamed it floats on the
 # CLI's `^0.13.7`, which means the newest release wave, not the wave this pin
@@ -56,7 +67,7 @@ echo "Bootstrapping with published @pikku/cli..."
 #
 # So it is pinned like the rest: 0.13.10 peers on core ^0.12.77, which is why
 # core moved up with it. The whole set moves together or none of it does.
-: "${PIKKU_KYSELY_VERSION:=0.13.10}"
+: "${PIKKU_KYSELY_VERSION:=0.13.24}"
 # @pikku/schedule is the fourth to arrive this way, and it is worth naming what
 # these four have in common: a package the CLI reaches transitively, on a range,
 # that is free to land on a *later* release wave than the one this pin describes.
@@ -71,12 +82,12 @@ echo "Bootstrapping with published @pikku/cli..."
 #
 # Held at 0.12.4, which predates the move. The pin lifts when a published
 # schedule imports the subpath that replaced it, `@pikku/core/state`.
-: "${PIKKU_SCHEDULE_VERSION:=0.12.4}"
+: "${PIKKU_SCHEDULE_VERSION:=0.12.7}"
 # @pikku/ws is the fifth, and it failed the same way one wave later: 0.12.6 made
 # the same move, so an unpinned ws reproduces the missing-subpath error verbatim,
 # this time through pikku-ws-server.js. 0.12.5 predates the move and peers on
 # core ^0.12.73.
-: "${PIKKU_WS_VERSION:=0.12.5}"
+: "${PIKKU_WS_VERSION:=0.12.9}"
 # The other peer that has to be named: @pikku/better-auth peers on the upstream
 # `better-auth` library and imports it at module load, so without it the
 # bootstrap CLI dies on "Cannot find package 'better-auth'".
