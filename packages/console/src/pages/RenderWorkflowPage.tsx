@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react'
-import type { NodeTypes, EdgeTypes } from 'reactflow'
-import ReactFlow, {
+import {
+  ReactFlow,
   useNodesState,
   useEdgesState,
   MarkerType,
@@ -8,60 +8,24 @@ import ReactFlow, {
   BackgroundVariant,
   useReactFlow,
   ReactFlowProvider,
-} from 'reactflow'
+  type Node,
+  type Edge,
+} from '@xyflow/react'
 import { MantineProvider, Box } from '@pikku/mantine/core'
-import { createWorkflowFlow } from '../hooks/create-workflow-flow'
-import { useElkLayout } from '../hooks/useElkLayout'
-import { WiringNode } from '../components/project/nodes/WiringNode'
-import { FunctionNode } from '../components/project/nodes/FunctionNode'
-import { ChannelNode } from '../components/project/nodes/ChannelNode'
-import { DecisionNode } from '../components/project/nodes/DecisionNode'
-import { SleepNode } from '../components/project/nodes/SleepNode'
-import { InlineNode } from '../components/project/nodes/InlineNode'
-import { BranchNode } from '../components/project/nodes/BranchNode'
-import { FanoutNode } from '../components/project/nodes/FanoutNode'
-import { ReturnNode } from '../components/project/nodes/ReturnNode'
-import { CancelNode } from '../components/project/nodes/CancelNode'
-import { SwitchNode } from '../components/project/nodes/SwitchNode'
-import { ArrayPredicateNode } from '../components/project/nodes/ArrayPredicateNode'
-import { FilterNode } from '../components/project/nodes/FilterNode'
-import { ParallelNode } from '../components/project/nodes/ParallelNode'
-import { ChannelWiringNode } from '../components/project/nodes/ChannelWiringNode'
-import { SetNode } from '../components/project/nodes/SetNode'
-import { GenericNode } from '../components/project/nodes/GenericNode'
-import { ElkEdge } from '../components/project/edges/ElkEdge'
+import {
+  createWorkflowFlow,
+  useElkLayout,
+  nodeTypes,
+  edgeTypes,
+} from '@pikku/workflow-graph'
 import { PanelProvider } from '../context/PanelContext'
-import 'reactflow/dist/style.css'
+import '@xyflow/react/dist/style.css'
 
 declare global {
   interface Window {
     __PIKKU_RENDER_DATA__?: any
     __PIKKU_RENDER_READY__?: boolean
   }
-}
-
-const nodeTypes: NodeTypes = {
-  functionNode: FunctionNode,
-  wiringNode: WiringNode,
-  channelNode: ChannelNode,
-  decisionNode: DecisionNode,
-  sleepNode: SleepNode,
-  inlineNode: InlineNode,
-  genericNode: GenericNode,
-  branchNode: BranchNode,
-  fanoutNode: FanoutNode,
-  returnNode: ReturnNode,
-  cancelNode: CancelNode,
-  switchNode: SwitchNode,
-  arrayPredicateNode: ArrayPredicateNode,
-  filterNode: FilterNode,
-  parallelNode: ParallelNode,
-  channelWiringNode: ChannelWiringNode,
-  setNode: SetNode,
-}
-
-const edgeTypes: EdgeTypes = {
-  elk: ElkEdge,
 }
 
 const RenderFlow: React.FC<{ workflow: any }> = ({ workflow }) => {
@@ -73,8 +37,8 @@ const RenderFlow: React.FC<{ workflow: any }> = ({ workflow }) => {
 
   const layoutResult = useElkLayout(flowNodes, initialEdges)
 
-  const [nodes, setNodes] = useNodesState([])
-  const [edges, setEdges] = useEdgesState([])
+  const [nodes, setNodes] = useNodesState<Node>([])
+  const [edges, setEdges] = useEdgesState<Edge>([])
 
   useEffect(() => {
     if (layoutResult.nodes.length > 0) {
