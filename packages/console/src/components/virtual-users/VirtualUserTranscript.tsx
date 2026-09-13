@@ -67,7 +67,13 @@ export const VirtualUserTranscript: React.FC<{ runId: string }> = ({
             </Text>
           )}
           {step.findingKinds?.map((kind) => (
-            <Badge key={kind} size="xs" variant="light" color="orange" tt="none">
+            <Badge
+              key={kind}
+              size="xs"
+              variant="light"
+              color="orange"
+              tt="none"
+            >
               {asI18n(kind)}
             </Badge>
           ))}

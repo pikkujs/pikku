@@ -4,7 +4,7 @@ import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { CliTab } from '../components/tabs/CliTab'
+import { CliListPanel } from '../components/cli/CliListPanel'
 
 export const CliPage: React.FC = () => {
   const [search, setSearch] = useState('')
@@ -26,9 +26,9 @@ export const CliPage: React.FC = () => {
             }}
           />
         }
-        emptyPanelMessage={m.common_select_item()}
+        hidePanel
       >
-        <CliTab searchQuery={search} />
+        <CliListPanel searchQuery={search} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )
