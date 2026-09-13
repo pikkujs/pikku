@@ -25,6 +25,17 @@ export interface FeatureFlagSource {
    * to keep clear. See `compiledFallbackSnapshot`.
    */
   snapshot(): Promise<FlagConfigSnapshot>
+
+  /**
+   * The flags the running app declares, where the implementation was told.
+   *
+   * Optional because it is not on the request path: resolution reads the
+   * snapshot, and a declaration absent from it already fails open. It exists so
+   * an administration surface can report the drift a provider cannot fix for
+   * itself — a flag declared in code that nobody created in PostHog resolves as
+   * on for everyone, and that is worth seeing before production finds it.
+   */
+  declaredFlags?(): readonly DeclaredFlag[]
 }
 
 /** One flag as an administration surface sees it. */

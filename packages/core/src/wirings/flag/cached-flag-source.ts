@@ -17,7 +17,7 @@ export interface CachedFlagSourceOptions {
    * the fallback empty, which resolves every flag as available: a flag absent
    * from a snapshot fails open.
    */
-  declared?: DeclaredFlag[]
+  declared?: readonly DeclaredFlag[]
 }
 
 const DEFAULT_TTL_MS = 30_000
@@ -43,11 +43,13 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
   private cachedAt = 0
   private inflight: Promise<FlagConfigSnapshot> | undefined
   private fallback: FlagConfigSnapshot
+  private declared: readonly DeclaredFlag[]
   private readonly ttlMs: number
 
   constructor(options: CachedFlagSourceOptions = {}) {
     this.ttlMs = options.ttlMs ?? DEFAULT_TTL_MS
-    this.fallback = compiledFallbackSnapshot(options.declared ?? [])
+    this.declared = options.declared ?? []
+    this.fallback = compiledFallbackSnapshot(this.declared)
   }
 
   /** One read of the backing store. Never called concurrently with itself. */
@@ -55,7 +57,12 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
 
   /** Replaces the cold-start fallback, once the declared set is known. */
   protected setDeclared(declared: DeclaredFlag[]): void {
+    this.declared = declared
     this.fallback = compiledFallbackSnapshot(declared)
+  }
+
+  declaredFlags(): readonly DeclaredFlag[] {
+    return this.declared
   }
 
   /** Drops the cache, so the next read goes to the store. */

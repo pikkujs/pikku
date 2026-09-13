@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
 import { CachedFlagSource } from './cached-flag-source.js'
-import type { FlagConfigSnapshot } from './flag.types.js'
+import type { DeclaredFlag, FlagConfigSnapshot } from './flag.types.js'
 
 class TestSource extends CachedFlagSource {
   public reads = 0
@@ -20,6 +20,10 @@ class TestSource extends CachedFlagSource {
 
   public expire(): void {
     this.invalidate()
+  }
+
+  public declare(flags: DeclaredFlag[]): void {
+    this.setDeclared(flags)
   }
 }
 
@@ -69,5 +73,16 @@ describe('CachedFlagSource', () => {
     assert.deepEqual(snapshot, {
       sandboxes: { enabled: true, rolloutPercent: null, overrides: {} },
     })
+  })
+
+  test('reports the declared set, so drift can be seen', async () => {
+    const source = new TestSource({ declared: [{ name: 'sandboxes' }] })
+    assert.deepEqual(source.declaredFlags(), [{ name: 'sandboxes' }])
+
+    source.declare([{ name: 'sandboxes' }, { name: 'nightlyReindex' }])
+    assert.deepEqual(
+      source.declaredFlags().map((flag) => flag.name),
+      ['sandboxes', 'nightlyReindex']
+    )
   })
 })

@@ -1,28 +1,43 @@
 import { pikkuFunc } from '#pikku/addon/function'
-import type { FlagRow } from '@pikku/core/services'
 import { asFlagStore } from '../lib/flag-store.js'
+import {
+  flagRowsFromSource,
+  sortFlagRows,
+  type FlagListRow,
+} from '../lib/flag-rows.js'
 
 export const flagList = pikkuFunc<
   null,
-  { flags: FlagRow[]; writable: boolean }
+  { flags: FlagListRow[]; writable: boolean }
 >({
   title: 'List Feature Flags',
   description:
-    'Lists every feature flag in the store, with its rollout, overrides and whether it is still declared in code.',
+    'Lists every declared feature flag with its rollout, whether it is still declared in code, and whether the backing store holds a row for it.',
   expose: true,
   scopes: ['admin:flags:read'],
   func: async ({ featureFlags }) => {
     const store = asFlagStore(featureFlags)
-    if (!store) {
-      // A provider-backed source, or none wired at all. Reported rather than
-      // thrown: the tab renders what there is and disables its switches, which
-      // is the honest answer for flags whose operator surface is PostHog's.
+    if (store) {
+      const flags = await store.listFlags()
+      return {
+        flags: sortFlagRows(flags.map((flag) => ({ ...flag, backed: true }))),
+        writable: true,
+      }
+    }
+
+    if (!featureFlags) {
       return { flags: [], writable: false }
     }
-    const flags = await store.listFlags()
+
+    // A provider-backed source: read-only rather than throwing, because its own
+    // UI is the operator surface and a console of switches that 500 is worse
+    // than a tab that reads.
     return {
-      flags: flags.sort((a, b) => a.name.localeCompare(b.name)),
-      writable: true,
+      flags: flagRowsFromSource(
+        featureFlags.declaredFlags?.() ?? [],
+        await featureFlags.snapshot()
+      ),
+      writable: false,
     }
   },
 })

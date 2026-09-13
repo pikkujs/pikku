@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2979 observable things**: 963 exported names, plus
-2016 members on the classes and interfaces among them, reachable
+**2981 observable things**: 963 exported names, plus
+2018 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 159 | 127 | 433 |
+| `./services` | 159 | 127 | 434 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
@@ -31,8 +31,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./mcp` | 20 | 20 | 17 |
 | `./analytics` | 13 | 13 | 24 |
 | `./classification` | 22 | 22 | 14 |
+| `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
-| `./flag` | 23 | 23 | 7 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
@@ -4586,6 +4586,7 @@ export interface EmailTemplateMeta {
 }
 export interface FeatureFlagSource {
   snapshot(): Promise<FlagConfigSnapshot>
+  declaredFlags?(): readonly DeclaredFlag[]
 }
 export interface FeatureFlagStore extends FeatureFlagSource {
   syncFlags(flags: DeclaredFlag[]): Promise<void>
@@ -5266,14 +5267,15 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
   constructor(options: CachedFlagSourceOptions = {})
   protected abstract fetchSnapshot(): Promise<FlagConfigSnapshot>
   protected setDeclared(declared: DeclaredFlag[]): void
+  declaredFlags(): readonly DeclaredFlag[]
   protected invalidate(): void
   async snapshot(): Promise<FlagConfigSnapshot>
 }
 export interface CachedFlagSourceOptions {
   ttlMs?: number
-  declared?: DeclaredFlag[]
+  declared?: readonly DeclaredFlag[]
 }
-compiledFallbackSnapshot: (flags: DeclaredFlag[]) => FlagConfigSnapshot
+compiledFallbackSnapshot: (flags: readonly DeclaredFlag[]) => FlagConfigSnapshot
 export type CoreFeatureFlag = {
   description?: string
   anyOf?: string[]

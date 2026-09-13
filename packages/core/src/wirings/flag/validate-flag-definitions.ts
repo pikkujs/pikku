@@ -104,7 +104,7 @@ export function validateAndBuildFeatureFlagDefinitionsMeta(
  * query on the request path is how a slow store becomes a slow product.
  */
 export const compiledFallbackSnapshot = (
-  flags: DeclaredFlag[]
+  flags: readonly DeclaredFlag[]
 ): FlagConfigSnapshot =>
   Object.fromEntries(
     flags.map((flag) => [

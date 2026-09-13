@@ -57,7 +57,12 @@ The write half is the operator's, and lives in `@pikku/addon-admin` beside the
 scope RPCs, under a new `admin:flags` scope. `flagList` reports `writable:
 false` rather than failing when flags come from a provider, because a provider's
 own UI is its operator surface and a console full of buttons that 500 is worse
-than a read-only tab.
+than a read-only tab. It still lists the flags: a source may report its declared
+set through `declaredFlags()`, and each row carries `backed`, false where the
+provider has never heard of a declared flag. That row is the one worth seeing —
+an absent row fails open, so a dark launch nobody created in PostHog is already
+live for everyone, and a store pikku owns can reconcile that on deploy where a
+provider cannot.
 
 On the client, `createFeatureFlags` fetches that map once and `useFeatureFlag`
 reads it synchronously after, through the same provider the analytics client
