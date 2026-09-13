@@ -64,8 +64,7 @@
     "ts-json-schema-generator": "2.9.1-next.18",
     "tsx": "^4.23.12",
     "yaml": "^2.9.0",
-    "zod": "^4.4.3",
-    "zod-to-ts": "^2.1.0"
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.108",

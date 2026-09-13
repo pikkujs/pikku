@@ -6,9 +6,9 @@
  * contract has to describe one shape. Zod says so twice, in two different
  * places, and neither says it usefully on its own — `toJSONSchema` with
  * `unrepresentable: 'any'` quietly yields `{}`, a schema that accepts
- * everything, and `zodToTs` throws about TypeScript rather than about the
- * wiring. Finding it up front lets the diagnostic name the schema, the path,
- * and the call.
+ * everything, and `zodToTypeText` prints the input side of the pipe, which is
+ * not the shape the function receives. Finding it up front lets the diagnostic
+ * name the schema, the path, and the call.
  *
  * Zod 4 models `x.transform(fn)` as a `pipe` whose `out` is a `transform`, so
  * the walk looks for that node rather than for the method.

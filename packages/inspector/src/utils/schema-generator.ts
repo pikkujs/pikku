@@ -11,8 +11,8 @@ import { dirname, join, resolve } from 'path'
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
 import { register } from 'tsx/esm/api'
 import * as z from 'zod'
-import { zodToTs, createAuxiliaryTypeStore } from 'zod-to-ts'
 import { findZodTransform } from './find-zod-transform.js'
+import { zodToTypeText } from './zod-to-type-text.js'
 import type { FunctionsMeta } from '@pikku/core/services'
 import type { JSONValue } from '@pikku/core/utils'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -504,9 +504,6 @@ function processZodSchema(
   zodSchema: any,
   schemas: Record<string, JSONValue>,
   typesMap: TypesMap,
-  auxiliaryTypeStore: ReturnType<typeof createAuxiliaryTypeStore>,
-  printer: ts.Printer,
-  fakeSourceFile: ts.SourceFile,
   logger: InspectorLogger
 ): void {
   const transformPath = findZodTransform(zodSchema)
@@ -542,15 +539,7 @@ function processZodSchema(
     }
   }
 
-  const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
-
-  const typeText = printer.printNode(
-    ts.EmitHint.Unspecified,
-    tsType,
-    fakeSourceFile
-  )
-
-  typesMap.addCustomType(schemaName, typeText, [])
+  typesMap.addCustomType(schemaName, zodToTypeText(zodSchema), [])
   schemas[schemaName] = schema
   logger.debug(`• Generated schema from Zod: ${schemaName}`)
 }
@@ -562,15 +551,6 @@ async function generateZodSchemas(
 ): Promise<Record<string, JSONValue>> {
   const schemas: Record<string, JSONValue> = {}
   const errors: string[] = []
-  const auxiliaryTypeStore = createAuxiliaryTypeStore()
-  const printer = ts.createPrinter()
-  const fakeSourceFile = ts.createSourceFile(
-    'zod-types.ts',
-    '',
-    ts.ScriptTarget.ESNext,
-    false,
-    ts.ScriptKind.TS
-  )
 
   // Validate all schemas are zod (or unspecified vendor)
   for (const [schemaName, ref] of schemaLookup.entries()) {
@@ -618,16 +598,7 @@ async function generateZodSchemas(
         continue
       }
       try {
-        processZodSchema(
-          schemaName,
-          zodSchema,
-          schemas,
-          typesMap,
-          auxiliaryTypeStore,
-          printer,
-          fakeSourceFile,
-          logger
-        )
+        processZodSchema(schemaName, zodSchema, schemas, typesMap, logger)
       } catch (e) {
         errors.push(
           `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
@@ -657,16 +628,7 @@ async function generateZodSchemas(
           )
           continue
         }
-        processZodSchema(
-          schemaName,
-          zodSchema,
-          schemas,
-          typesMap,
-          auxiliaryTypeStore,
-          printer,
-          fakeSourceFile,
-          logger
-        )
+        processZodSchema(schemaName, zodSchema, schemas, typesMap, logger)
       } catch (e) {
         errors.push(
           `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
