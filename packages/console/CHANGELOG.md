@@ -1,3 +1,15 @@
+## 0.12.81
+
+### Patch Changes
+
+- 42a254a: Channels, CLI and gateways get list panels like the other five wire kinds, so every kind is a panel a host can mount on its own. The nav is now one model in `src/nav/sections.ts` that the dock, mobile sheet and spotlight all read.
+- Updated dependencies [1c9a55a]
+- Updated dependencies [1c9a55a]
+- Updated dependencies [1c9a55a]
+  - @pikku/core@0.12.110
+  - @pikku/react@0.12.12
+  - @pikku/better-auth@0.12.42
+
 ## 0.12.80
 
 ### Patch Changes

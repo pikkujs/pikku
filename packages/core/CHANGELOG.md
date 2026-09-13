@@ -1,3 +1,164 @@
+## 0.12.110
+
+### Patch Changes
+
+- 1c9a55a: Analytics can fan out to several destinations, and carry the identity an ad
+  platform needs.
+
+  `fanOutAnalytics` composes any number of destinations into one
+  `AnalyticsService`, so a single-destination app never meets it and a sink is the
+  same class whether it runs alone or beside three others. Destinations are
+  settled rather than awaited in sequence: `flush()` runs inside the invocation,
+  so a slow vendor must not add its latency to the request and a vendor that is
+  down must not cost the others their events.
+
+  Each destination takes an optional `accepts` predicate. Which events a
+  destination receives is the app's policy — a product-analytics tool wants
+  everything, an ad platform wants three conversions — while what an event should
+  look like once it arrives is the sink's, and belongs in its mapper rather than
+  in a central mapping table that would push vendor trivia into every app.
+
+  `AnalyticsIdentity` gains `vendorIds` and `consent`. GA4 keys on a `client_id`
+  from the `_ga` cookie and Meta on `fbp`/`fbc`; neither is derivable from a user
+  id, so a server-side sink without them does not degrade, it sends nothing
+  usable. Both are resolved server-side through an `analyticsIdentity` resolver on
+  singleton services, never read from the event body — the same rule the rest of
+  the identity already follows, so a crafted client call cannot attribute an event
+  to someone else. `cookieAnalyticsIdentity` covers the common first-party-cookie
+  case; a consent tool that packs every purpose into one encoded blob writes its
+  own resolver, which is why the resolver is a function.
+
+  A resolver returns nothing off a wire with no browser behind it, so a cron task
+  and a queue worker never invent a vendor id.
+
+  The analytics leaf re-exports the runtime, so an app reaches the whole surface
+  through `#pikku/analytics` — wiring where events go sits next to declaring them,
+  and splitting that across two specifiers splits one concern across two names.
+
+  Identity the browser owns is resolved server-side, and can now be created there
+  too. `cookieAnalyticsIdentity` reads GA4's `client_id` and Meta's `fbp`/`fbc`
+  off first-party cookies; `mintCookie` writes one that is not there yet, which is
+  what lets an app collect nothing on the page at all. Both formats are public and
+  server-side minting is documented by the vendors — it is the mechanism behind
+  server-side tagging, offered here as a wired resolver rather than a second
+  container to operate.
+
+  Minting is gated on consent, because writing the cookie is itself the act
+  consent governs — a minter that runs before the banner is answered has already
+  done the thing the send gate was meant to prevent. `composeAnalyticsIdentity`
+  exists to make that expressible: resolvers run in order and each sees what the
+  ones before it produced, so the reader that finds consent necessarily precedes
+  the minter that needs it. Every required purpose must be granted, not any.
+
+  `anonymousAnalyticsIdentity` fills the gap that made anonymous product analytics
+  dishonest. `pikkuUserId` is derived from a session and so is absent for exactly
+  the visitor it would need to identify, which left a sink choosing between
+  collapsing every anonymous visitor into one shared literal and dropping the
+  pre-signup funnel entirely. The id is `httpOnly` by default: no browser script
+  needs it, and a cookie scripts cannot touch is not subject to the seven-day cap
+  browsers place on script-set ones.
+
+  On the client, `createAnalytics` takes an `enabled` predicate checked at each
+  flush. A boolean would be captured before anyone had answered the banner, so
+  accepting mid-session would never start and withdrawing would never stop.
+  Refused events are discarded rather than held, so changing your mind does not
+  release a backlog.
+
+- 1c9a55a: Review fixes across the feature-flag and analytics primitives:
+
+  - An addon function's `featureFlag:` gate now reads the consuming application's
+    flag source rather than the package's own services, which never carry one.
+  - A flag named `__proto__`, `constructor` or `prototype` is rejected instead of
+    being silently dropped from the generated metadata.
+  - Two declarations of one flag with different descriptions are a hard error,
+    rather than the inspector's traversal order deciding what operators read.
+  - `subjectIdOf` falls through an empty organization id to the user, instead of
+    resolving to no subject and skipping every override and rollout bucket.
+  - `CachedFlagSource.invalidate()` retires the in-flight read, so a webhook that
+    lands mid-fetch is not answered by the pre-webhook snapshot for another TTL.
+  - The generated `/feature-flags` wire resolves against the compiled fallback
+    when no source is wired, so a scope-gated flag is not reported to a caller
+    who cannot hold it.
+  - `pruneFlags()` rechecks `declared = false` in the delete and reports only
+    what it removed, so a redeclaration between the two keeps its overrides.
+  - A destination's `accepts` throwing no longer costs every later sink its batch.
+  - The React analytics client drops events at collection time when analytics is
+    disabled, so a later consent grant cannot send what was gathered before it.
+  - The React flag client keeps its map when the wire answers a non-object.
+  - `KyselyAnalyticsService` mints event ids from `crypto` rather than a
+    timestamp with a short random tail.
+
+- 1c9a55a: Feature flags, declared in source and resolved from two independent booleans.
+
+  `defineFeatureFlags` declares a flag the way `defineScopes` declares a scope —
+  the inspector collects it, the CLI emits a `FeatureFlagName` union, and a
+  misspelled `featureFlag:` is a type error rather than a gate that silently fails
+  open.
+
+  A flag answers two questions that are not the same question. `capable` comes
+  from the session's scopes and is per-user, advisory, and protects nothing — it
+  hides UI. `available` comes from one global config snapshot, is caller-blind,
+  and is the only half the runner enforces: `override(subject) ?? (enabled AND
+bucket)`, so "off for everyone except these three organizations" is one row, and
+  a kill is one write rather than a fan-out. Authorization stays where it was, in
+  the function's own `scopes:` — enforcing capability would make a flag a second
+  authorization path OR-ing against them. An unavailable feature throws 503, not
+  403, because the caller was allowed; the feature was not on.
+
+  `featureFlag:` is deliberately available on sessionless functions too. It reads
+  the config, not the session, so the kill switch reaches a cron task, a queue
+  worker and a webhook — which is where it matters most, since nobody is watching
+  a UI to notice the feature is off.
+
+  Refresh is pull-on-demand, so the TTL is the kill-switch latency. Where that is
+  too long, `invalidate()` is public: a provider's change webhook lands on an HTTP
+  wiring, drops the cache, and the next request does the read. It deliberately
+  does not fetch — a burst of webhooks would be N round trips, and on a serverless
+  runtime the isolate that took the signal may be gone before anything reads the
+  result.
+
+  Availability fails open through three layers: a fresh read, then the last good
+  cached read, then the compiled declaration. The middle layer is load-bearing —
+  dropping straight to the compiled fallback on a blip would switch on every flag
+  that was deliberately dark.
+
+  Backing stores split along what they can honestly do. `FeatureFlagSource` is
+  read-only (`snapshot()`) and is what a third-party provider implements;
+  `FeatureFlagStore` adds the write half and is for stores Pikku owns.
+  `@pikku/kysely` ships the store, with declarations synced additively — a removed
+  declaration is marked undeclared, never revoked, and a sync never re-enables a
+  killed flag. Third-party providers implement the read-only half in the addons
+  repository, over plain `fetch` rather than a vendor SDK — those poll on a timer
+  belonging to a long-lived process, which a serverless isolate cannot hold
+  between requests.
+
+  A client asks for its flags once per session rather than per flag:
+  `scaffold.featureFlags` generates a `GET /feature-flags` returning every
+  declared flag resolved for the caller, keyed by this app's `FeatureFlagName`.
+  Generated into the app rather than shipped in an addon precisely for that union
+  — an addon never sees the host's, and could only answer
+  `Record<string, boolean>`. It returns `show` alone: sending `available` apart
+  from `capable` would tell every visitor which features exist but are dark.
+
+  The write half is the operator's, and lives in `@pikku/addon-admin` beside the
+  scope RPCs, under a new `admin:flags` scope. `flagList` reports `writable:
+false` rather than failing when flags come from a provider, because a provider's
+  own UI is its operator surface and a console full of buttons that 500 is worse
+  than a read-only tab. It still lists the flags: a source may report its declared
+  set through `declaredFlags()`, and each row carries `backed`, false where the
+  provider has never heard of a declared flag. That row is the one worth seeing —
+  an absent row fails open, so a dark launch nobody created in PostHog is already
+  live for everyone, and a store pikku owns can reconcile that on deploy where a
+  provider cannot.
+
+  On the client, `createFeatureFlags` fetches that map once and `useFeatureFlag`
+  reads it synchronously after, through the same provider the analytics client
+  hangs off. It takes a `bootstrap` map so a server-rendered page hydrates onto
+  the answer it already computed: without one there is a gap in which neither
+  default is right, since false hides a feature the user has and true flashes one
+  they do not. A failed refresh keeps the map already on screen rather than
+  relabelling every flag on a blip.
+
 ## 0.12.109
 
 ### Patch Changes

@@ -1,3 +1,103 @@
+## 0.12.80
+
+### Patch Changes
+
+- 1c9a55a: Give `pikku dev` and `pikku serve` a database-backed flag store and analytics sink.
+
+  Both followed `agentStorage` and friends everywhere except in being wired: with a
+  local database present, `dev` built one for agents, workflows and scopes and left
+  feature flags unregistered — which makes every gate resolve open — and analytics
+  on the logger fallback. Both are now built from the same `kysely`, and dropped
+  with a warning naming `pikku db generate` rather than failing the boot when the
+  tables are not there yet.
+
+  The inspector now counts a `featureFlag:` declaration as needing `featureFlags`
+  and a `defineAnalyticsEvents` declaration as needing `analyticsService`, the same
+  way a declared scope implies `scopeService`. Neither service is ever destructured
+  — the runner reaches both out of the singleton services — so without this the
+  declaration was invisible to service aggregation and `pikku db generate` wrote no
+  tables for either.
+
+- 52eb461: Prune a unit's addon wiring files alongside its addon declarations, so a
+  deployment unit no longer imports (and registers) addons whose functions the
+  unit filter dropped. `wireAddon` now records the app file that declared it, and
+  a file is dropped only when every addon it wires is dropped.
+- 1c9a55a: Feature flags, declared in source and resolved from two independent booleans.
+
+  `defineFeatureFlags` declares a flag the way `defineScopes` declares a scope —
+  the inspector collects it, the CLI emits a `FeatureFlagName` union, and a
+  misspelled `featureFlag:` is a type error rather than a gate that silently fails
+  open.
+
+  A flag answers two questions that are not the same question. `capable` comes
+  from the session's scopes and is per-user, advisory, and protects nothing — it
+  hides UI. `available` comes from one global config snapshot, is caller-blind,
+  and is the only half the runner enforces: `override(subject) ?? (enabled AND
+bucket)`, so "off for everyone except these three organizations" is one row, and
+  a kill is one write rather than a fan-out. Authorization stays where it was, in
+  the function's own `scopes:` — enforcing capability would make a flag a second
+  authorization path OR-ing against them. An unavailable feature throws 503, not
+  403, because the caller was allowed; the feature was not on.
+
+  `featureFlag:` is deliberately available on sessionless functions too. It reads
+  the config, not the session, so the kill switch reaches a cron task, a queue
+  worker and a webhook — which is where it matters most, since nobody is watching
+  a UI to notice the feature is off.
+
+  Refresh is pull-on-demand, so the TTL is the kill-switch latency. Where that is
+  too long, `invalidate()` is public: a provider's change webhook lands on an HTTP
+  wiring, drops the cache, and the next request does the read. It deliberately
+  does not fetch — a burst of webhooks would be N round trips, and on a serverless
+  runtime the isolate that took the signal may be gone before anything reads the
+  result.
+
+  Availability fails open through three layers: a fresh read, then the last good
+  cached read, then the compiled declaration. The middle layer is load-bearing —
+  dropping straight to the compiled fallback on a blip would switch on every flag
+  that was deliberately dark.
+
+  Backing stores split along what they can honestly do. `FeatureFlagSource` is
+  read-only (`snapshot()`) and is what a third-party provider implements;
+  `FeatureFlagStore` adds the write half and is for stores Pikku owns.
+  `@pikku/kysely` ships the store, with declarations synced additively — a removed
+  declaration is marked undeclared, never revoked, and a sync never re-enables a
+  killed flag. Third-party providers implement the read-only half in the addons
+  repository, over plain `fetch` rather than a vendor SDK — those poll on a timer
+  belonging to a long-lived process, which a serverless isolate cannot hold
+  between requests.
+
+  A client asks for its flags once per session rather than per flag:
+  `scaffold.featureFlags` generates a `GET /feature-flags` returning every
+  declared flag resolved for the caller, keyed by this app's `FeatureFlagName`.
+  Generated into the app rather than shipped in an addon precisely for that union
+  — an addon never sees the host's, and could only answer
+  `Record<string, boolean>`. It returns `show` alone: sending `available` apart
+  from `capable` would tell every visitor which features exist but are dark.
+
+  The write half is the operator's, and lives in `@pikku/addon-admin` beside the
+  scope RPCs, under a new `admin:flags` scope. `flagList` reports `writable:
+false` rather than failing when flags come from a provider, because a provider's
+  own UI is its operator surface and a console full of buttons that 500 is worse
+  than a read-only tab. It still lists the flags: a source may report its declared
+  set through `declaredFlags()`, and each row carries `backed`, false where the
+  provider has never heard of a declared flag. That row is the one worth seeing —
+  an absent row fails open, so a dark launch nobody created in PostHog is already
+  live for everyone, and a store pikku owns can reconcile that on deploy where a
+  provider cannot.
+
+  On the client, `createFeatureFlags` fetches that map once and `useFeatureFlag`
+  reads it synchronously after, through the same provider the analytics client
+  hangs off. It takes a `bootstrap` map so a server-rendered page hydrates onto
+  the answer it already computed: without one there is a gap in which neither
+  default is right, since false hides a feature the user has and true flashes one
+  they do not. A failed refresh keeps the map already on screen rather than
+  relabelling every flag on a blip.
+
+- Updated dependencies [1c9a55a]
+- Updated dependencies [1c9a55a]
+- Updated dependencies [1c9a55a]
+  - @pikku/core@0.12.110
+
 ## 0.12.79
 
 ### Patch Changes

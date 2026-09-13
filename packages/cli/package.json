@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.149",
+  "version": "0.12.150",
   "description": "Pikku CLI — code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
@@ -31,15 +31,15 @@
     "@jridgewell/trace-mapping": "^0.3.31",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
     "@pikku/ai-vercel": "^0.12.14",
-    "@pikku/better-auth": "^0.12.41",
+    "@pikku/better-auth": "^0.12.42",
     "@pikku/bun-server": "^0.12.11",
     "@pikku/code-edit": "^0.12.2",
     "@pikku/deploy": "^0.12.10",
     "@pikku/deploy-cloudflare": "^0.12.17",
     "@pikku/fetch": "^0.12.11",
-    "@pikku/inspector": "^0.12.79",
+    "@pikku/inspector": "^0.12.80",
     "@pikku/knowledge": "^0.12.13",
-    "@pikku/kysely": "^0.13.25",
+    "@pikku/kysely": "^0.13.26",
     "@pikku/migrator-sql": "^0.12.5",
     "@pikku/n8n-import": "^0.0.8",
     "@pikku/node-http-server": "^0.12.15",
@@ -68,14 +68,14 @@
     "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.109",
+    "@pikku/core": "^0.12.110",
     "@pikku/playwright": "^0.12.82",
     "@pikku/ws": "^0.12.10",
     "better-auth": "^1.6.0",
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.109",
+    "@pikku/core": "^0.12.110",
     "@pikku/playwright": "^0.12.82",
     "@pikku/ws": "^0.12.10",
     "@playwright/test": "^1.50.0",
