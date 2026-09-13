@@ -68,6 +68,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Secrets a function can use without ever holding, declared here and resolved by the secrets service at runtime.',
   },
+  analytics: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      'The events a project can measure, declared by name so the generated ingest knows what to accept. Where they go is an AnalyticsService on singleton services; what a function records into is the analytics service on the invocation.',
+  },
   credentials: {
     step: 'enhance it',
     skill: null,

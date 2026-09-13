@@ -1,6 +1,7 @@
 import assert from 'assert'
 import { describe, test } from 'node:test'
 import { listSkillFiles, listSkillNames, readSkillFile } from '@pikku/skills'
+import { leafEntries } from '../wirings/functions/pikku-command-leaf-indexes.js'
 import { LEAF_EDITORIAL } from './surface-editorial.js'
 
 const installGroupsOf = async (name: string): Promise<string[]> => {
@@ -33,10 +34,21 @@ describe('the door to skill routing table', () => {
         if (!skill) continue
         const groups = await installGroupsOf(skill)
         if (!groups.includes('core')) {
-          orphans.push(`${door} -> ${skill} (${groups.join(', ') || 'no group'})`)
+          orphans.push(
+            `${door} -> ${skill} (${groups.join(', ') || 'no group'})`
+          )
         }
       }
     }
     assert.deepEqual(orphans, [])
+  })
+})
+
+describe('the editorial covers every leaf', () => {
+  test('a leaf the CLI generates has an entry', () => {
+    const missing = leafEntries
+      .map(([leaf]) => leaf)
+      .filter((leaf) => !(leaf in LEAF_EDITORIAL))
+    assert.deepEqual(missing, [])
   })
 })
