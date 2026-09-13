@@ -9,11 +9,21 @@ Product analytics moves into core behind a `scaffold.analytics` generator.
 An app declares what it measures, and nothing else:
 
 ```ts
+import { defineAnalyticsEvents } from '#pikku/analytics'
+
 export const analyticsEvents = defineAnalyticsEvents({
   page_viewed: z.object({ path: z.string() }),
   todo_created: z.object({ priority: z.enum(['low', 'medium', 'high']) }),
 })
 ```
+
+The definer reaches an app through the generated `#pikku/analytics` leaf, the
+way `defineFeatureFlags` reaches it through `#pikku/scopes` — an app declares
+what it measures without importing out of core. The leaf is written on every
+run, whatever `scaffold.analytics` says: the declaration is how a project names
+what it measures, and the scaffold only decides whether an ingest wire is
+generated for it. Its path is `analyticsTypesFile`, defaulting to
+`<outDir>/analytics/pikku-analytics-types.gen.ts`.
 
 The name is the key, so it is never repeated as a `z.literal` inside the
 schema. Declare in as many modules as suits the project — a feature declares

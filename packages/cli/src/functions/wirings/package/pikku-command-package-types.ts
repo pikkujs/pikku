@@ -2,6 +2,7 @@ import { pikkuVoidFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
+  serializeAnalyticsDefinitionTypes,
   serializeScopeDefinitionTypes,
   serializeSecretDefinitionTypes,
   serializeVariableDefinitionTypes,
@@ -45,6 +46,20 @@ export const pikkuVariableDefinitionTypes = pikkuVoidFunc({
     logCommandInfoAndTime({
       commandStart: 'Creating Variable definition types',
       commandEnd: 'Created Variable definition types',
+    }),
+  ],
+})
+
+export const pikkuAnalyticsDefinitionTypes = pikkuVoidFunc({
+  func: async ({ logger, config }) => {
+    const { analyticsTypesFile } = config
+    const content = serializeAnalyticsDefinitionTypes()
+    await writeFileInDir(logger, analyticsTypesFile, content)
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Creating Analytics definition types',
+      commandEnd: 'Created Analytics definition types',
     }),
   ],
 })

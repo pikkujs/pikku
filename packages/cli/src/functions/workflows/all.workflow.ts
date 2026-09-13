@@ -201,6 +201,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       ),
       workflow.do('Scope definition types', 'pikkuScopeDefinitionTypes', null),
       workflow.do(
+        'Analytics definition types',
+        'pikkuAnalyticsDefinitionTypes',
+        null
+      ),
+      workflow.do(
         'Variable definition types',
         'pikkuVariableDefinitionTypes',
         null

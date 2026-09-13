@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineAnalyticsEvents } from '@pikku/core/analytics'
+import { defineAnalyticsEvents } from '#pikku/analytics'
 
 /** The one thing a project declares; the whole ingest is generated from it. */
 export const analyticsEvents = defineAnalyticsEvents({

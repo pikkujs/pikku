@@ -13,3 +13,8 @@ export const serializeVariableDefinitionTypes = () => {
   return `export { defineVariable } from '@pikku/core/variable'
 `
 }
+
+export const serializeAnalyticsDefinitionTypes = () => {
+  return `export { defineAnalyticsEvents } from '@pikku/core/analytics'
+`
+}

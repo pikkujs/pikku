@@ -173,6 +173,20 @@ describe('addAnalytics', () => {
   // The mirror of the alias case: matching on the callee's text alone misses a
   // renamed import, and matching on the resolved symbol's name alone claims a
   // local helper that merely shares the name.
+  // What a project actually writes: the definer is re-exported through the
+  // generated leaf, so the specifier the inspector meets is `#pikku/analytics`
+  // and not core's own path.
+  test('finds the declaration through the generated leaf', async () => {
+    const { state } = await inspectSources({
+      'analytics.ts':
+        "import { defineAnalyticsEvents } from '#pikku/analytics'\n" +
+        'export const analyticsEvents = defineAnalyticsEvents({ page_viewed: {} as never })\n',
+    })
+
+    assert.equal(state.analytics?.[0]?.variable, 'analyticsEvents')
+    assert.deepEqual(state.analytics?.[0]?.events, ['page_viewed'])
+  })
+
   test('leaves a same-named local helper alone', async () => {
     const { state } = await inspectSources({
       'analytics.ts':

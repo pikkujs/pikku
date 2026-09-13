@@ -1121,6 +1121,17 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Analytics definer leaf. Written whatever `scaffold.analytics` says: the
+    // declaration is how a project names what it measures, and the scaffold
+    // only decides whether an ingest wire is generated for it.
+    if (!result.analyticsTypesFile) {
+      result.analyticsTypesFile = join(
+        result.outDir,
+        'analytics',
+        'pikku-analytics-types.gen.ts'
+      )
+    }
+
     // Scopes (ScopeId union + declared scope set)
     const scopesDir = join(result.outDir, 'scopes')
     if (!result.scopeTypesFile) {

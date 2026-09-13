@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineAnalyticsEvents } from '@pikku/core/analytics'
+import { defineAnalyticsEvents } from '#pikku/analytics'
 
 /**
  * What this app can measure — add a key when you add an event. This is the

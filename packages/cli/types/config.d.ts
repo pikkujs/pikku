@@ -251,6 +251,11 @@ export interface PikkuCLICoreOutputFiles {
   // Scopes
   scopeTypesFile: string
 
+  // Analytics — the leaf `#pikku/analytics` re-exports `defineAnalyticsEvents`
+  // from, so a project declares its events the way it declares scopes and
+  // secrets rather than importing out of core.
+  analyticsTypesFile: string
+
   // Scopes (ScopeId union + declared scope set)
   scopesFile: string
 
