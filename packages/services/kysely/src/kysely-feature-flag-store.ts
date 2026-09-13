@@ -251,16 +251,24 @@ export class KyselyFeatureFlagStore
     return rows.map((row) => row.name)
   }
 
+  /**
+   * Deletes what is still undeclared, and reports only what it deleted.
+   *
+   * The `declared = false` predicate is repeated on the delete rather than
+   * carried over from the read: a deploy running `syncFlags` between the two
+   * would redeclare a flag, and deleting on the earlier answer would take a
+   * live flag and cascade away every override an operator had set on it.
+   */
   async pruneFlags(): Promise<string[]> {
-    const stale = await this.findStaleFlags()
-    if (stale.length === 0) {
+    const deleted = await this.db
+      .deleteFrom('pikkuFeatureFlags')
+      .where('declared', '=', false)
+      .returning('name')
+      .execute()
+    if (deleted.length === 0) {
       return []
     }
-    await this.db
-      .deleteFrom('pikkuFeatureFlags')
-      .where('name', 'in', stale)
-      .execute()
     this.invalidate()
-    return stale
+    return deleted.map((row) => row.name).sort()
   }
 }

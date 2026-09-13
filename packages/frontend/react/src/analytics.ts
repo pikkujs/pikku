@@ -100,6 +100,10 @@ export function createAnalytics<TEvent extends NamedEvent>({
 
   const push = (event: NamedEvent): void => {
     if (typeof window === 'undefined') return
+    // Checked here and not only at flush: consent can be granted between the
+    // two, and a buffer filled while analytics was off would then be sent as
+    // if it had been collected after the yes.
+    if (enabled && !enabled()) return
     start()
     buffer.push({ at: Date.now(), event })
     if (buffer.length >= maxBuffer) flush()
@@ -121,7 +125,11 @@ export function createAnalytics<TEvent extends NamedEvent>({
         if (!el || !name) return
 
         const meta: Record<string, unknown> = {}
-        for (let node: HTMLElement | null = el; node; node = node.parentElement) {
+        for (
+          let node: HTMLElement | null = el;
+          node;
+          node = node.parentElement
+        ) {
           const raw = node.dataset?.analyticsMeta
           if (!raw) continue
           try {

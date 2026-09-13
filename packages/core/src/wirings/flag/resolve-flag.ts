@@ -35,8 +35,9 @@ export const bucketOf = (flag: string, subject: string): number => {
 export const subjectIdOf = (
   subject: FlagSubject | undefined
 ): string | undefined => {
-  const id = subject?.organizationId ?? subject?.userId
-  return id === undefined || id === '' ? undefined : id
+  const usable = (id: string | undefined): string | undefined =>
+    id === undefined || id === '' ? undefined : id
+  return usable(subject?.organizationId) ?? usable(subject?.userId)
 }
 
 /**

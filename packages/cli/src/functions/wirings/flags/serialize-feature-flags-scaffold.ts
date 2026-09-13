@@ -19,7 +19,11 @@ export const serializeFeatureFlagsScaffold = (
  */
 import { pikkuSessionlessFunc } from '${leaf('function')}'
 import { wireHTTP } from '${leaf('http')}'
-import { FEATURE_FLAGS, type FeatureFlagName } from '${leaf('scopes')}'
+import {
+  FEATURE_FLAGS,
+  FEATURE_FLAGS_FALLBACK,
+  type FeatureFlagName,
+} from '${leaf('scopes')}'
 import { resolveFlagsForClient } from '@pikku/core/flag'
 
 /**
@@ -46,15 +50,14 @@ export const featureFlagsForCaller = pikkuSessionlessFunc<
   tags: ['feature-flags'],
   description: 'Resolves every declared feature flag for the calling session.',
   func: async ({ featureFlags }, _data, { session }) => {
-    if (!featureFlags) {
-      // No source wired is the same no-op the runner makes of it: a project
-      // that has not chosen a store yet should not have its clients start
-      // hiding every flagged feature.
-      return Object.fromEntries(
-        FEATURE_FLAGS.map((flag) => [flag.name, true])
-      ) as Record<FeatureFlagName, boolean>
-    }
-    const snapshot = await featureFlags.snapshot()
+    // No source wired resolves against the compiled declaration, the same
+    // fallback a source uses on a cold start. Availability fails open, so a
+    // project that has not chosen a store yet does not have its clients start
+    // hiding every flagged feature — but \`anyOf\` is still read off the
+    // session, so a scoped flag is not handed to a caller who cannot hold it.
+    const snapshot = featureFlags
+      ? await featureFlags.snapshot()
+      : FEATURE_FLAGS_FALLBACK
     return resolveFlagsForClient(
       FEATURE_FLAGS,
       session,

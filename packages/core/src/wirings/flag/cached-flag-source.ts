@@ -42,6 +42,14 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
   private cached: FlagConfigSnapshot | undefined
   private cachedAt = 0
   private inflight: Promise<FlagConfigSnapshot> | undefined
+  /**
+   * Bumped by every `invalidate()`. A read that started before the signal
+   * arrived carries the generation it started in, and stores nothing if that
+   * generation is no longer current — otherwise a webhook that landed
+   * mid-fetch would be answered by the pre-webhook snapshot, stamped fresh,
+   * and the kill switch would sit stale for another whole TTL.
+   */
+  private generation = 0
   private fallback: FlagConfigSnapshot
   private declared: readonly DeclaredFlag[]
   private readonly ttlMs: number
@@ -81,6 +89,8 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
    */
   invalidate(): void {
     this.cachedAt = 0
+    this.generation++
+    this.inflight = undefined
   }
 
   async snapshot(): Promise<FlagConfigSnapshot> {
@@ -88,15 +98,23 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
       return this.cached
     }
     if (!this.inflight) {
-      this.inflight = this.fetchSnapshot()
-        .then((snapshot) => {
+      const generation = this.generation
+      const read = this.fetchSnapshot().then((snapshot) => {
+        if (generation === this.generation) {
           this.cached = snapshot
           this.cachedAt = Date.now()
-          return snapshot
-        })
-        .finally(() => {
+          if (this.inflight === read) {
+            this.inflight = undefined
+          }
+        }
+        return snapshot
+      })
+      read.catch(() => {
+        if (this.inflight === read) {
           this.inflight = undefined
-        })
+        }
+      })
+      this.inflight = read
     }
     try {
       return await this.inflight

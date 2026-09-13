@@ -48,6 +48,35 @@ describe('validateAndBuildFeatureFlagDefinitionsMeta', () => {
     assert.equal(meta['sandboxes']?.sourceFile, 'one.ts')
   })
 
+  test('rejects a name every object already carries', () => {
+    for (const name of ['__proto__', 'constructor', 'prototype']) {
+      assert.throws(
+        () => validateAndBuildFeatureFlagDefinitionsMeta([{ name }]),
+        /every object already carries/,
+        `'${name}' was accepted`
+      )
+    }
+  })
+
+  test('rejects a redeclaration that describes the flag differently', () => {
+    assert.throws(
+      () =>
+        validateAndBuildFeatureFlagDefinitionsMeta([
+          {
+            name: 'sandboxes',
+            description: 'Ephemeral previews',
+            sourceFile: 'one.ts',
+          },
+          {
+            name: 'sandboxes',
+            description: 'Something else',
+            sourceFile: 'two.ts',
+          },
+        ]),
+      /different descriptions[\s\S]*one\.ts[\s\S]*two\.ts/
+    )
+  })
+
   test('rejects a conflicting redeclaration, naming both files', () => {
     assert.throws(
       () =>

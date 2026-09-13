@@ -6,10 +6,24 @@ import { analyticsSchema } from './schema/analytics.schema.js'
 const jsonOrNull = (value: unknown): string | null =>
   value != null ? JSON.stringify(value) : null
 
-// No global `crypto` is guaranteed across every runtime, and `eventId` is the
-// primary key — a collision is dropped by ON CONFLICT DO NOTHING.
-const fallbackId = (): string =>
-  `ana_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+/**
+ * The primary key. `AnalyticsRecord` carries no id, so every row is given one
+ * here, and a whole batch is minted inside one millisecond — a timestamp with
+ * a short random tail would collide and `doNothing()` would drop the loser
+ * without a word. `randomUUID` where the runtime has it, a 128-bit random hex
+ * where it does not.
+ */
+const eventId = (): string => {
+  const c: Crypto | undefined = globalThis.crypto
+  if (typeof c?.randomUUID === 'function') {
+    return `ana_${c.randomUUID()}`
+  }
+  if (typeof c?.getRandomValues === 'function') {
+    const bytes = c.getRandomValues(new Uint8Array(16))
+    return `ana_${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`
+  }
+  return `ana_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+}
 
 /**
  * A durable {@link AnalyticsService} that appends events to a table pikku owns.
@@ -46,7 +60,7 @@ export class KyselyAnalyticsService implements AnalyticsService {
   async write(batch: AnalyticsRecord[]): Promise<void> {
     if (!batch.length) return
     const rows = batch.map((record) => ({
-      eventId: fallbackId(),
+      eventId: eventId(),
       name: record.name,
       occurredAt: record.occurredAt ?? new Date().toISOString(),
       source: record.source ?? 'server',

@@ -39,6 +39,15 @@ describe('subjectIdOf', () => {
   test('reads an empty string as no subject', () => {
     assert.equal(subjectIdOf({ organizationId: '' }), undefined)
   })
+
+  test('falls through an empty organization to the user', () => {
+    // An empty string is what a form or an env var hands over. Taking it would
+    // drop the user's own override and skip rollout bucketing entirely.
+    assert.equal(
+      subjectIdOf({ organizationId: '', userId: 'user-1' }),
+      'user-1'
+    )
+  })
 })
 
 describe('bucketOf', () => {

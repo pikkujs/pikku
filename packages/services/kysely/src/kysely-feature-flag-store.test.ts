@@ -149,4 +149,17 @@ describe('KyselyFeatureFlagStore — prune', () => {
     assert.deepEqual(await store.pruneFlags(), [])
     assert.equal((await store.listFlags()).length, 2)
   })
+
+  test('spares a flag redeclared after it was found stale', async () => {
+    // The deploy that brings the flag back lands between reading the stale set
+    // and deleting it. Deleting on the earlier answer would take a live flag
+    // and cascade away every override an operator had set on it.
+    await store.syncFlags([FLAGS[0]!])
+    const stale = await store.findStaleFlags()
+    assert.deepEqual(stale, ['newBilling'])
+
+    await store.syncFlags(FLAGS)
+    assert.deepEqual(await store.pruneFlags(), [])
+    assert.equal((await store.listFlags()).length, 2)
+  })
 })

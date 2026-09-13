@@ -6,16 +6,34 @@ import type { DeclaredFlag, FlagConfigSnapshot } from './flag.types.js'
 class TestSource extends CachedFlagSource {
   public reads = 0
   public fail = false
+  public hold = false
+  private gate: (() => void) | undefined
   public value: FlagConfigSnapshot = {
     sandboxes: { enabled: true, rolloutPercent: null, overrides: {} },
   }
 
   protected async fetchSnapshot(): Promise<FlagConfigSnapshot> {
     this.reads++
+    if (this.hold) {
+      const value = this.value
+      await new Promise<void>((resolve) => {
+        this.gate = resolve
+      })
+      if (this.fail) {
+        throw new Error('store is down')
+      }
+      return value
+    }
     if (this.fail) {
       throw new Error('store is down')
     }
     return this.value
+  }
+
+  /** Lets a held read finish, answering the store as it was when it started. */
+  public release(): void {
+    this.gate?.()
+    this.gate = undefined
   }
 
   public declare(flags: DeclaredFlag[]): void {
@@ -69,6 +87,27 @@ describe('CachedFlagSource', () => {
     assert.deepEqual(snapshot, {
       sandboxes: { enabled: true, rolloutPercent: null, overrides: {} },
     })
+  })
+
+  test('does not let a read started before an invalidate answer for it', async () => {
+    // The webhook lands mid-fetch. The in-flight read is answering the store
+    // as it was before the change, so caching it would stamp the pre-webhook
+    // snapshot fresh and sit on the kill switch for another whole TTL.
+    const source = new TestSource({ ttlMs: 60_000 })
+    source.hold = true
+    const first = source.snapshot()
+
+    source.value = {
+      sandboxes: { enabled: false, rolloutPercent: null, overrides: {} },
+    }
+    source.invalidate()
+    source.release()
+    await first
+
+    source.hold = false
+    const second = await source.snapshot()
+    assert.equal(second['sandboxes']?.enabled, false)
+    assert.equal(source.reads, 2)
   })
 
   test('reports the declared set, so drift can be seen', async () => {

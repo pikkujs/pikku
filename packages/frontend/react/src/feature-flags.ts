@@ -73,7 +73,13 @@ export function createFeatureFlags<Name extends string>({
       try {
         const response = await fetch(url(), { credentials: 'include' })
         if (!response.ok) return
-        flags = (await response.json()) as Partial<Record<Name, boolean>>
+        const body: unknown = await response.json()
+        // A null or non-object body would leave `has` reading a property off
+        // nothing. Keep what is on screen, exactly as a failed request does.
+        if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+          return
+        }
+        flags = body as Partial<Record<Name, boolean>>
       } catch {
         // Keep whatever is already on screen. A blip must not relabel every
         // flag mid-session, which is what replacing the map with {} would do.

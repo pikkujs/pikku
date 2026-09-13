@@ -160,3 +160,19 @@ test('resolves the endpoint lazily when it is a getter', async () => {
     }
   )
 })
+
+test('keeps the map it has when the wire answers something that is not one', () =>
+  withFetch(
+    () => Promise.resolve({ ok: true, json: async () => null } as Response),
+    async () => {
+      // `null` passes an `ok` check and a cast, and the next `has` would read
+      // a property off nothing. A malformed answer is a failed answer.
+      const flags = createFeatureFlags<'sandboxes'>({
+        endpoint: '/feature-flags',
+        bootstrap: { sandboxes: true },
+      })
+      await flags.refresh()
+
+      assert.equal(flags.has('sandboxes'), true)
+    }
+  ))

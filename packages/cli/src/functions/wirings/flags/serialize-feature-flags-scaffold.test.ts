@@ -23,11 +23,19 @@ describe('serializeFeatureFlagsScaffold', () => {
 
   test('types the response with the generated union', () => {
     const source = serializeFeatureFlagsScaffold(leaf)
-    assert.match(
-      source,
-      /import \{ FEATURE_FLAGS, type FeatureFlagName \} from '#pikku\/scopes'/
-    )
+    assert.match(source, /from '#pikku\/scopes'/)
+    assert.match(source, /FEATURE_FLAGS,/)
+    assert.match(source, /type FeatureFlagName,/)
     assert.match(source, /Record<FeatureFlagName, boolean>/)
+  })
+
+  test('resolves against the compiled fallback when no source is wired', () => {
+    // Returning a bare `true` for everything here would hand a scope-gated
+    // flag to a caller who cannot hold it — the fallback fails open on the
+    // switch, but `anyOf` is still read off the session.
+    const source = serializeFeatureFlagsScaffold(leaf)
+    assert.match(source, /: FEATURE_FLAGS_FALLBACK/)
+    assert.doesNotMatch(source, /\[flag\.name, true\]/)
   })
 
   test('reads the session off the wire, never off the body', () => {

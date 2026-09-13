@@ -3,7 +3,7 @@ import type { CoreFeatureFlags } from './flag.types.js'
 /**
  * No-op function for declaring feature flags.
  * This exists purely for TypeScript type checking and will be tree-shaken.
- * The CLI extracts metadata via AST parsing and generates a `FeatureFlagId`
+ * The CLI extracts metadata via AST parsing and generates a `FeatureFlagName`
  * union, so `flags.calList` is a compile error rather than a silent `false`.
  *
  * That typing is load-bearing rather than a convenience: flags fail closed, so

@@ -32,7 +32,6 @@ describe('fanOutAnalytics', () => {
     assert.equal(b.seen.length, 1)
   })
 
-
   test('keeps the batch whole for a destination that takes one', async () => {
     const sink = new Collector()
     await fanOutAnalytics([sink]).write([record('a'), record('b')])
@@ -63,6 +62,29 @@ describe('fanOutAnalytics', () => {
     ])
 
     assert.equal(sink.batches, 0, 'no destination is called with nothing')
+  })
+
+  test("a destination's own filter throwing does not cost the others", async () => {
+    // `accepts` is app code, and thrown synchronously it would escape the map
+    // before `allSettled` was ever reached — taking every destination after it
+    // in the list with it.
+    const healthy = new Collector()
+
+    await assert.rejects(
+      () =>
+        fanOutAnalytics([
+          {
+            service: new Collector(),
+            accepts: () => {
+              throw new Error('a filter with a bug in it')
+            },
+          },
+          healthy,
+        ]).write([record('signedUp')]),
+      (error: Error) => error instanceof AggregateError
+    )
+
+    assert.equal(healthy.seen.length, 1)
   })
 
   test('one destination down does not cost the others their events', async () => {

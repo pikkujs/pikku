@@ -55,12 +55,15 @@ const stubBrowser = ({
 
   stub('window', { addEventListener })
   stub('document', { addEventListener, visibilityState: 'visible' })
-  stub('Blob', class {
-    parts: string[]
-    constructor(parts: string[]) {
-      this.parts = parts
+  stub(
+    'Blob',
+    class {
+      parts: string[]
+      constructor(parts: string[]) {
+        this.parts = parts
+      }
     }
-  })
+  )
   stub('navigator', {
     sendBeacon: (url: string, blob: { parts: string[] }) => {
       if (!beaconAccepts) return false
@@ -154,6 +157,24 @@ test('reads consent at each flush, and discards what it may not send', () => {
   assert.deepEqual(bodyOf(browser.sent[0]!), [
     { name: 'viewed', path: '/pricing' },
   ])
+})
+
+test('never sends what was collected before consent, even once granted', () => {
+  // The gap the flush-time check alone leaves open: nothing flushes between
+  // the click and the yes, so a buffer filled while analytics was off would
+  // go out on the next timer tick as if it had been collected after.
+  const browser = stubBrowser()
+  let granted = false
+  const analytics = createAnalytics<Event>({
+    endpoint: '/analytics',
+    enabled: () => granted,
+  })
+
+  analytics.event('viewed', { path: '/' })
+  granted = true
+  browser.tick()
+
+  assert.equal(browser.sent.length, 0)
 })
 
 test('a burst is sent early rather than growing unbounded', () => {

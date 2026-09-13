@@ -373,9 +373,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
     if (featureFlag) {
+      // The host's source, not the package's: a `featureFlag:` on an addon
+      // function names a flag the consuming application declared and its
+      // operators switch. A package factory builds its own services and has no
+      // reason to carry one, and reading that would leave every addon gate
+      // open.
       await assertFeatureAvailable(
         featureFlag,
-        resolvedSingletonServices.featureFlags,
+        singletonServices.featureFlags ??
+          resolvedSingletonServices.featureFlags,
         session
       )
     }

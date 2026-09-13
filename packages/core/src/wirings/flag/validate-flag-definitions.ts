@@ -7,9 +7,23 @@ import type {
 
 const SEPARATOR = ':'
 
+/**
+ * Names that already exist on every object literal. Declaring one makes the
+ * meta lookup below find `Object.prototype`'s member, treat the flag as
+ * already declared, and drop it — a flag that validated but never reached the
+ * snapshot, which is the one failure a typed flag key exists to prevent.
+ */
+const INHERITED_NAMES = new Set(['__proto__', 'constructor', 'prototype'])
+
 const assertFlagName = (name: string): void => {
   if (name.length === 0) {
     throw new Error('A feature flag is declared with an empty name.')
+  }
+  if (INHERITED_NAMES.has(name)) {
+    throw new Error(
+      `Feature flag '${name}' is named after a property every object already ` +
+        `carries, so it cannot be told apart from one. Pick another name.`
+    )
   }
   if (name.includes(SEPARATOR)) {
     throw new Error(
@@ -80,6 +94,18 @@ export function validateAndBuildFeatureFlagDefinitionsMeta(
             `  First declaration: ${existing.sourceFile ?? 'unknown'}\n` +
             `  Second declaration: ${def.sourceFile ?? 'unknown'}\n` +
             `Flags sharing a name must name the same scopes.`
+        )
+      }
+      // The description is what an operator reads beside the switch, and the
+      // winner here is whichever file the inspector walked first. Two
+      // descriptions for one flag is a disagreement about what the switch
+      // does, and source order is not the thing that should settle it.
+      if (existing.description !== def.description) {
+        throw new Error(
+          `Feature flag '${def.name}' is declared with different descriptions.\n` +
+            `  First declaration: ${existing.sourceFile ?? 'unknown'}\n` +
+            `  Second declaration: ${def.sourceFile ?? 'unknown'}\n` +
+            `Flags sharing a name must describe the same thing.`
         )
       }
       continue

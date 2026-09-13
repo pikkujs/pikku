@@ -29,11 +29,13 @@ export const fanOutAnalytics = (
       if (batch.length === 0) return
 
       const results = await Promise.allSettled(
-        resolved.map(({ service, accepts }) => {
+        // `accepts` is app code and runs inside this map. Thrown
+        // synchronously it would escape before `allSettled` was ever called,
+        // and every destination after it in the list would lose the batch.
+        resolved.map(async ({ service, accepts }) => {
           const records = accepts ? batch.filter(accepts) : batch
-          return records.length === 0
-            ? Promise.resolve()
-            : service.write(records)
+          if (records.length === 0) return
+          await service.write(records)
         })
       )
 
