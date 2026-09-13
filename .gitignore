@@ -155,6 +155,7 @@ packages/cli/release/
 verifiers/addon-registry/consumer/addons/
 verifiers/addon-registry/consumer/pikku-addons.json
 .pikku-shake/
+.pikku-cli-report/
 
 # db-schema verifier: the consumer's migrations and database are the output
 # under test — run.mjs deletes and regenerates them, so committing them would
