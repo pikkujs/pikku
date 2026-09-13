@@ -52,6 +52,24 @@ const extractForwardedServices = (
   const body = functionNode.body
   if (!ts.isBlock(body)) return forwarded
 
+  /**
+   * A nested callback is free to name its own parameter `services` too. Its
+   * destructuring belongs to that parameter, not the factory's, so descending
+   * into it would put a service on the addon's contract the factory never
+   * asked the parent for.
+   */
+  const shadowsParam = (node: ts.Node): boolean => {
+    if (!ts.isFunctionLike(node)) return false
+    return node.parameters.some((parameter) => bindsName(parameter.name))
+  }
+
+  const bindsName = (name: ts.BindingName): boolean => {
+    if (ts.isIdentifier(name)) return name.text === paramName
+    return name.elements.some(
+      (element) => !ts.isOmittedExpression(element) && bindsName(element.name)
+    )
+  }
+
   const visit = (node: ts.Node) => {
     if (
       ts.isVariableDeclaration(node) &&
@@ -61,7 +79,9 @@ const extractForwardedServices = (
       node.initializer.text === paramName
     ) {
       collectBinding(node.name)
+      return
     }
+    if (shadowsParam(node)) return
     ts.forEachChild(node, visit)
   }
   ts.forEachChild(body, visit)

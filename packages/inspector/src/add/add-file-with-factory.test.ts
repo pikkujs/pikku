@@ -205,13 +205,41 @@ describe('pikkuAddonWireServices — what an addon builds per wire', () => {
       'analytics',
       'reporting',
     ])
-    assert.ok(
-      state.addonRequiredParentServices.includes('kysely'),
-      'kysely comes off the parent bag and is genuinely owed'
+    assert.deepEqual(
+      state.addonRequiredParentServices.sort(),
+      ['kysely', 'secrets', 'variables'],
+      'the contract is exactly what both factories destructure off the parent ' +
+        "bag — dropping the wire factory's variables would still leave kysely"
     )
     assert.ok(
       !state.addonRequiredParentServices.includes('reporting'),
       'the wire factory builds reporting, so it is not owed'
+    )
+  })
+
+  test('a nested callback that shadows the services parameter owes nothing', async () => {
+    const { state } = await inspectSource(
+      'pikku-addon-shadowed-param-',
+      [
+        "import { pikkuAddonServices } from '#pikku/addon/setup'",
+        'export const createSingletonServices = pikkuAddonServices(',
+        '  async (_config, services) => {',
+        '    const { kysely } = services',
+        '    const handlers = rows.map((services) => {',
+        '      const { stripe } = services',
+        '      return stripe',
+        '    })',
+        '    return { analytics: makeAnalytics(kysely, handlers) }',
+        '  }',
+        ')',
+      ].join('\n')
+    )
+
+    assert.deepEqual(
+      state.addonRequiredParentServices.sort(),
+      ['kysely'],
+      "stripe is destructured off the callback's own parameter, so the " +
+        'consumer of this addon is not the one who owes it'
     )
   })
 })
