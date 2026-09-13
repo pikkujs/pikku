@@ -208,6 +208,47 @@ reviewer decides whether that is acceptable, not the author.
 Roughly the order to do them in, because each one finds what the previous one
 missed.
 
+### The description has to hold the code
+
+**A PR body that describes the change without showing it is not finished.** The
+body is where a reviewer decides whether to read the diff at all, and prose
+alone cannot be checked against anything: "the discriminator is now
+authoritative" is a claim, while the three lines that make it so are the
+evidence.
+
+The body is written from the outside in. What a reader needs first is what
+_they_ now see differently, not how it was built.
+
+1. **What moved on the public surface**, quoted from the `api-report.md` diff —
+   the new entry point and its row, the exported type that changed shape, the
+   field added to an interface everyone implements. `packages/core/api-report.md`
+   is generated (`bun run --filter @pikku/core api-report`) and is the one
+   artifact that states the compatibility promise, so its diff is the honest
+   summary of what this PR did to it. A PR that moves the counts and does not
+   say so is hiding its own blast radius.
+2. **The interfaces and types a caller touches** — what an app now declares,
+   implements or imports, in full rather than described. A signature is not a
+   detail: it is the whole of what a user of this package can rely on.
+3. **Then the internals**, and only as much as the claims above need — the
+   constant that flipped, the guard that was added, the resolution that changed.
+   Quoted from the branch and captioned with the file it came from. Not the
+   whole file, and not a diff of it: the part the sentence above it is about.
+4. **The assertion that pins it**, when a claim is testable. A test that fails
+   before and passes after says more in four lines than a paragraph about
+   coverage does.
+
+Most of the body should be readable by someone who will never open the package.
+Internals earn their space by explaining a surface change or a refusal, not by
+being the interesting part of the work.
+
+A change with genuinely no public surface — an internal fix, a generator's
+output that no one imports — says so in a sentence and goes straight to (3);
+`api-report.md` not moving is itself worth stating. A change with no code at all
+— a rename, a dependency bump, a revert — says that instead.
+
+The same rule applies to replies on review comments: the fix is shown, not
+described, along with the commit it landed in.
+
 ## Git workflow
 
 Multiple agents work this checkout concurrently, so the worktree is routinely dirty with changes you did not make.
