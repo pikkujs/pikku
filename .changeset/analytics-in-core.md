@@ -23,7 +23,11 @@ what it measures without importing out of core. The leaf is written on every
 run, whatever `scaffold.analytics` says: the declaration is how a project names
 what it measures, and the scaffold only decides whether an ingest wire is
 generated for it. Its path is `analyticsTypesFile`, defaulting to
-`<outDir>/analytics/pikku-analytics-types.gen.ts`.
+`<outDir>/analytics/pikku-analytics-types.gen.ts`. It carries the sink surface
+as well as the definer — `AnalyticsService`, `AnalyticsRecord`,
+`AnalyticsIdentity`, `AnalyticsClientContext`, `AnalyticsLog`,
+`LoggerAnalyticsService` — because writing the destination events go to is the
+other half of the same job, and both halves should come through one door.
 
 The name is the key, so it is never repeated as a `z.literal` inside the
 schema. Declare in as many modules as suits the project — a feature declares
