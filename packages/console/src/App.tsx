@@ -7,8 +7,14 @@ import { NotFoundTitle } from './components/NotFoundTitle'
 import { OverviewPage } from './pages/OverviewPage'
 import { FunctionsPage } from './pages/FunctionsPage'
 import { WorkflowsPage } from './pages/WorkflowPage'
-import { ApisPage } from './pages/ApisPage'
-import { JobsPage } from './pages/JobsPage'
+import { HttpPage } from './pages/HttpPage'
+import { ChannelsPage } from './pages/ChannelsPage'
+import { McpPage } from './pages/McpPage'
+import { CliPage } from './pages/CliPage'
+import { GatewaysPage } from './pages/GatewaysPage'
+import { SchedulersPage } from './pages/SchedulersPage'
+import { QueuesPage } from './pages/QueuesPage'
+import { TriggersPage } from './pages/TriggersPage'
 import { RuntimePage } from './pages/RuntimePage'
 import { EmailsPage } from './pages/EmailsPage'
 import { WebhooksPage } from './pages/WebhooksPage'
@@ -61,15 +67,20 @@ export const App: React.FC = () => {
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/surface" element={<ProjectSurfacePage />} />
         <Route path="/database" element={<DatabasePage />} />
-        <Route path="/apis" element={<ApisPage />} />
-        <Route path="/jobs" element={<JobsPage />} />
+        <Route path="/http" element={<HttpPage />} />
+        <Route path="/channels" element={<ChannelsPage />} />
+        <Route path="/mcp" element={<McpPage />} />
+        <Route path="/cli" element={<CliPage />} />
+        <Route path="/gateways" element={<GatewaysPage />} />
+        <Route path="/schedulers" element={<SchedulersPage />} />
+        <Route path="/queues" element={<QueuesPage />} />
+        <Route path="/triggers" element={<TriggersPage />} />
         <Route path="/runtime" element={<RuntimePage />} />
         <Route path="/emails" element={<EmailsPage />} />
         <Route path="/webhooks" element={<WebhooksPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/variables" element={<VariablesPage />} />
         <Route path="/security" element={<SecurityPage />} />
-        <Route path="/config" element={<Navigate to="/secrets" replace />} />
         <Route path="/credentials" element={<CredentialsPage />} />
         <Route path="/users" element={<AdminUsersPage />} />
         <Route path="/scopes" element={<ScopesPage />} />

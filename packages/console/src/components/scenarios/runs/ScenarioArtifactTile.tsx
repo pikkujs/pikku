@@ -50,7 +50,11 @@ export const ScenarioArtifactTile: React.FC<ScenarioArtifactTileProps> = ({
           </Center>
         )}
         {url && artifact.kind === 'video' && (
-          <video src={url} controls style={{ width: '100%', display: 'block' }} />
+          <video
+            src={url}
+            controls
+            style={{ width: '100%', display: 'block' }}
+          />
         )}
         {url && artifact.kind !== 'video' && (
           <img

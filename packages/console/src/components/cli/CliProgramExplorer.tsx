@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Box,
   Text,
@@ -9,31 +9,27 @@ import {
   ActionIcon,
   Tooltip,
 } from '@pikku/mantine/core'
-import { ChevronDown, ChevronRight, Copy, Check, Terminal } from 'lucide-react'
-import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
+import { ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
 import type { CLIMeta } from '@pikku/core/cli'
-import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { ConsoleSurface } from '../console/ConsoleSurface'
-import { CliHelpText } from '../cli/CliHelpText'
+import { CliHelpText } from './CliHelpText'
 import classes from '../ui/console.module.css'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-const countCommands = (commands: Record<string, any>): number => {
-  let count = 0
-  for (const cmd of Object.values(commands)) {
-    if (cmd.pikkuFuncId) count++
-    if (cmd.subcommands) count += countCommands(cmd.subcommands)
-  }
-  return count
-}
-
-const CliPageInner: React.FC<{
+export interface CliProgramExplorerProps {
   programs: any[]
   cliRenderers: Record<string, any>
   searchQuery: string
-}> = ({ programs, cliRenderers, searchQuery }) => {
+}
+
+/** The program/command tree beside the rendered `--help` output for whatever it
+ *  has selected. */
+export const CliProgramExplorer: React.FC<CliProgramExplorerProps> = ({
+  programs,
+  cliRenderers,
+  searchQuery,
+}) => {
   useLocale()
   const [activeProgramId, setActiveProgramId] = useState<string>(
     programs[0]?.wireId || ''
@@ -94,8 +90,6 @@ const CliPageInner: React.FC<{
     commandPath.length > 0
       ? `$ ${activeProgramId} ${commandPath.join(' ')} --help`
       : `$ ${activeProgramId} --help`
-
-  const programCount = programs.length
 
   return (
     <Box className={classes.flexRow}>
@@ -286,36 +280,5 @@ const CliPageInner: React.FC<{
         </Box>
       </Box>
     </Box>
-  )
-}
-
-type CliTabContentProps = { searchQuery: string }
-
-export const CliTabContent: React.FC<CliTabContentProps> = ({
-  searchQuery,
-}) => {
-  const { meta } = usePikkuMeta()
-  useLocale()
-  const programs = meta.cliMeta || []
-
-  if (programs.length === 0) {
-    return (
-      <EmptyStatePlaceholder
-        icon={Terminal}
-        title={m.cli_empty_title()}
-        description={m.cli_empty_description()}
-        docsHref="https://pikku.dev/docs/core-features/cli"
-      />
-    )
-  }
-
-  return (
-    <ConsoleSurface>
-      <CliPageInner
-        programs={programs}
-        cliRenderers={meta.cliRenderers || {}}
-        searchQuery={searchQuery}
-      />
-    </ConsoleSurface>
   )
 }

@@ -7,7 +7,11 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { McpListPanel } from '../components/mcp/McpListPanel'
 import { useMcpItems } from '../hooks/useMcpItems'
 
-export const McpPage: React.FC = () => {
+export type McpPageProps = {
+  emptyHero?: React.ReactNode
+}
+
+export const McpPage: React.FC<McpPageProps> = ({ emptyHero }) => {
   const { items, loading } = useMcpItems()
   useLocale()
 
@@ -23,7 +27,7 @@ export const McpPage: React.FC = () => {
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.mcp_select_entry()}
       >
-        <McpListPanel />
+        <McpListPanel emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

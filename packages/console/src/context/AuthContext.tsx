@@ -251,7 +251,7 @@ export const useAuth = (): AuthContextValue => {
 
 /**
  * Returns null when there is no AuthProvider — for shared primitives (e.g. the
- * Sidebar) that render in hosts (Fabric) which do not mount console auth.
+ * nav dock) that render in hosts (Fabric) which do not mount console auth.
  */
 export const useOptionalAuth = (): AuthContextValue | null =>
   useContext(AuthContext)

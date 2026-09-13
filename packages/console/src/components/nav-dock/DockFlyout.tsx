@@ -133,7 +133,9 @@ function Row({
         data-testid={`flyout-slider-${row.key}`}
       >
         <div className={classes.fiSliderHead}>
-          <Body row={{ ...row, hint: format ? format(value) : String(value) }} />
+          <Body
+            row={{ ...row, hint: format ? format(value) : String(value) }}
+          />
         </div>
         <Slider
           value={value}

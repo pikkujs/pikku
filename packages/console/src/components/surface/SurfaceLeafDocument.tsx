@@ -50,7 +50,9 @@ export const SurfaceLeafDocument: React.FC<SurfaceLeafDocumentProps> = ({
       <Box
         px="md"
         py="sm"
-        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+        style={{
+          borderBottom: '1px solid var(--mantine-color-default-border)',
+        }}
       >
         <Stack gap={6}>
           <Text fw={600} ff="monospace" size="sm">

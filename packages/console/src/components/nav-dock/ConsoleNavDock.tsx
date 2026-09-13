@@ -45,10 +45,11 @@ import { useOptionalAuth } from '../../context/AuthContext'
 import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import {
+  navItems,
   useDefaultNavSections,
   type NavItem,
   type NavSection,
-} from '../project/Sidebar'
+} from '../../nav/sections'
 import {
   consoleLogoInvert,
   consoleLogoSrc,
@@ -154,23 +155,35 @@ export function ConsoleNavDock({
     () =>
       sections
         .filter((s) => zoneOf(s) === 'row')
-        .flatMap((s) => s.items.map(tileOf)),
+        .flatMap((s) => navItems(s).map(tileOf)),
     [sections, tileOf]
   )
 
+  /* Each group becomes one titled run inside the tile's flyout, so a long menu
+     is read by its questions rather than down its rows. A group with no title
+     still renders — untitled, as one unlabelled run. */
   const contextual = useMemo<DockEntry[]>(
     () =>
       sections
-        .filter((s) => zoneOf(s) === 'group' && s.items.length > 0)
+        .filter((s) => zoneOf(s) === 'group' && navItems(s).length > 0)
         .map((section): DockEntry => {
-          const rows = section.items.map(rowOf)
+          const label = section.title ?? asI18n(section.id)
+          const menuSections: FlyoutSection[] = section.groups
+            .filter((group) => group.items.length > 0)
+            .map((group) => ({
+              key: group.id,
+              title: group.title,
+              rows: group.items.map(rowOf),
+            }))
           return {
-            id: section.id ?? section.title,
-            label: section.title,
-            Icon: section.icon ?? section.items[0]?.icon,
+            id: section.id,
+            label,
+            Icon: section.icon ?? navItems(section)[0]?.icon,
             isGroup: true,
-            match: rows.flatMap((r) => r.match ?? []),
-            menu: { label: section.title, sections: [{ key: 'main', rows }] },
+            match: menuSections.flatMap((s) =>
+              s.rows.flatMap((r) => r.match ?? [])
+            ),
+            menu: { label, sections: menuSections },
           }
         }),
     [sections, rowOf]
@@ -388,12 +401,16 @@ export function ConsoleNavDock({
      — below it — every section there is. */
   const identityMenu = useMemo<DockMenu>(() => {
     const label = asI18n(consoleTitle)
+    /* Flattened past the group questions on purpose: this menu's job is that
+       every screen is reachable in two clicks, and a question you have to open
+       to see past is a third. The questions do their work on the tile flyouts,
+       which is where the list is long enough to need them. */
     const navSections: FlyoutSection[] = sections
-      .filter((s) => s.items.length > 0)
-      .map((s, i) => ({
-        key: s.id ?? `section-${i}`,
-        title: s.title || undefined,
-        rows: s.items.map(rowOf),
+      .filter((s) => navItems(s).length > 0)
+      .map((s) => ({
+        key: s.id,
+        title: s.title,
+        rows: navItems(s).map(rowOf),
       }))
     return {
       label,

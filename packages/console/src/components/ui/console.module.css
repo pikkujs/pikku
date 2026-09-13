@@ -178,36 +178,6 @@
   padding: 12px 0 6px;
 }
 
-/* Sidebar accordion section header — a full-width row (like the Fabric rail's
-   group headers) so the whole strip is the hit target, with a subtle hover. */
-.navSectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 30px;
-  padding: 0 10px;
-  margin: 2px 6px;
-  width: calc(100% - 12px);
-  border-radius: 6px;
-  color: var(--app-text-dim, var(--mantine-color-dimmed));
-  transition: background 120ms ease;
-}
-
-.navSectionHeader:hover {
-  background: var(--app-surface-interactive, rgba(128, 128, 128, 0.1));
-}
-
-/* The section holding the current page — carries the "you are here" signal at
-   parent level, so it reads even while another section is expanded. */
-.navSectionHeader[data-active] {
-  color: var(--app-accent, var(--mantine-primary-color-filled));
-}
-
-.navSectionHeader:focus-visible {
-  outline: 2px solid var(--app-accent, var(--mantine-primary-color-filled));
-  outline-offset: -2px;
-}
-
 /* ── Collapsible pane rail ── */
 
 /* Width/opacity transition for the collapsing side panes. Kept in a class (not
@@ -217,11 +187,6 @@
     width 180ms ease,
     min-width 180ms ease,
     opacity 180ms ease;
-}
-
-/* Sidebar rail width animation — in a class so reduced-motion can disable it. */
-.railCollapseTransition {
-  transition: width 200ms ease;
 }
 
 /* Slim rail shown in place of a collapsed pane: an always-visible affordance
@@ -869,9 +834,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .paneCollapseTransition,
-  .railCollapseTransition,
   .paneStub,
-  .navSectionHeader,
   .knowledgeRow,
   .detailDrawerPane,
   .listItem {

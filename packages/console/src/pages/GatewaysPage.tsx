@@ -4,15 +4,15 @@ import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { SchedulersListPanel } from '../components/schedulers/SchedulersListPanel'
-import { useSchedulerItems } from '../hooks/useSchedulerItems'
+import { GatewaysListPanel } from '../components/gateways/GatewaysListPanel'
+import { useGatewayItems } from '../hooks/useGatewayItems'
 
-export type SchedulersPageProps = {
+export type GatewaysPageProps = {
   emptyHero?: React.ReactNode
 }
 
-export const SchedulersPage: React.FC<SchedulersPageProps> = ({ emptyHero }) => {
-  const { items, loading } = useSchedulerItems()
+export const GatewaysPage: React.FC<GatewaysPageProps> = ({ emptyHero }) => {
+  const { items, loading } = useGatewayItems()
   useLocale()
 
   return (
@@ -20,14 +20,14 @@ export const SchedulersPage: React.FC<SchedulersPageProps> = ({ emptyHero }) => 
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={m.schedulers_title()}
-            description={m.schedulers_description()}
+            title={m.gateways_title()}
+            description={m.gateways_description()}
           />
         }
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={m.schedulers_select_item()}
+        emptyPanelMessage={m.gateways_select_item()}
       >
-        <SchedulersListPanel emptyHero={emptyHero} />
+        <GatewaysListPanel emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

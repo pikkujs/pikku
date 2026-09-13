@@ -117,8 +117,7 @@ export function useDeleteRole() {
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (name: string) =>
-      rpc.invoke('admin:scopeDeleteRole', { name }),
+    mutationFn: (name: string) => rpc.invoke('admin:scopeDeleteRole', { name }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
   })
 }

@@ -8,16 +8,16 @@ import { wiringTypeColor } from '../../ui/badge-defs'
 import classes from '../../ui/console.module.css'
 
 const TYPE_HREF: Record<string, string> = {
-  http: '/apis?tab=http',
-  channel: '/apis?tab=channels',
-  mcp: '/apis?tab=mcp',
-  gateway: '/apis?tab=gateways',
-  cli: '/apis?tab=cli',
-  rpc: '/apis?tab=http',
-  scheduler: '/jobs?tab=schedulers',
-  queue: '/jobs?tab=queues',
-  trigger: '/jobs?tab=triggers',
-  triggerSource: '/jobs?tab=triggers',
+  http: '/http',
+  channel: '/channels',
+  mcp: '/mcp',
+  gateway: '/gateways',
+  cli: '/cli',
+  rpc: '/http',
+  scheduler: '/schedulers',
+  queue: '/queues',
+  trigger: '/triggers',
+  triggerSource: '/triggers',
 }
 
 export const FunctionCrossLinks: React.FC<{

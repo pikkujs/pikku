@@ -139,26 +139,15 @@ export {
   usePageAction,
 } from './context/PageOptionsProvider'
 export type { PageAction } from './context/PageOptionsProvider'
-export {
-  SidebarModeProvider,
-  useSidebarMode,
-} from './context/SidebarModeProvider'
-export type { SidebarMode } from './context/SidebarModeProvider'
+// The nav model — one declaration of what the console contains, read by the
+// dock, the phone's nav sheet and the command palette alike.
+export { navItems, useDefaultNavSections } from './nav/sections'
+export type { NavIcon, NavItem, NavGroup, NavSection } from './nav/sections'
 
-// Sidebar — superseded by the dock on a pointer, and still the phone's nav
-// sheet, which a row of hover-raised tiles cannot be.
-export {
-  Sidebar,
-  useDefaultNavSections,
-  SIDEBAR_COLLAPSED_WIDTH,
-  SIDEBAR_EXPANDED_WIDTH,
-} from './components/project/Sidebar'
-export type {
-  NavItem,
-  NavSection,
-  SidebarProps,
-  SidebarBranding,
-} from './components/project/Sidebar'
+// The phone's nav sheet: the dock is a pointer surface, so a touch viewport
+// gets the same model as a list instead.
+export { NavList } from './components/nav/NavList'
+export type { NavListProps } from './components/nav/NavList'
 
 // Search
 export { SpotlightSearch, spotlight } from './components/search/SpotlightSearch'
@@ -251,8 +240,22 @@ export { FunctionsPage } from './pages/FunctionsPage'
 export type { FunctionExtraColumn } from './pages/FunctionsPage'
 export { WorkflowsPage } from './pages/WorkflowPage'
 export type { WorkflowExtraColumn } from './components/project/WorkflowsList'
-export { ApisPage } from './pages/ApisPage'
-export { JobsPage } from './pages/JobsPage'
+export { HttpPage } from './pages/HttpPage'
+export type { HttpPageProps } from './pages/HttpPage'
+export { ChannelsPage } from './pages/ChannelsPage'
+export type { ChannelsPageProps } from './pages/ChannelsPage'
+export { McpPage } from './pages/McpPage'
+export type { McpPageProps } from './pages/McpPage'
+export { GatewaysPage } from './pages/GatewaysPage'
+export type { GatewaysPageProps } from './pages/GatewaysPage'
+export { CliPage } from './pages/CliPage'
+export type { CliPageProps } from './pages/CliPage'
+export { QueuesPage } from './pages/QueuesPage'
+export type { QueuesPageProps } from './pages/QueuesPage'
+export { SchedulersPage } from './pages/SchedulersPage'
+export type { SchedulersPageProps } from './pages/SchedulersPage'
+export { TriggersPage } from './pages/TriggersPage'
+export type { TriggersPageProps } from './pages/TriggersPage'
 export { RuntimePage } from './pages/RuntimePage'
 export { ConfigPage } from './pages/ConfigPage'
 export { DatabasePage } from './pages/DatabasePage'
@@ -493,6 +496,12 @@ export type {
 // can be mounted on its own — no page, no prop drilling.
 export { HttpListPanel } from './components/http/HttpListPanel'
 export type { HttpListPanelProps } from './components/http/HttpListPanel'
+export { ChannelsListPanel } from './components/channel/ChannelsListPanel'
+export type { ChannelsListPanelProps } from './components/channel/ChannelsListPanel'
+export { CliListPanel } from './components/cli/CliListPanel'
+export type { CliListPanelProps } from './components/cli/CliListPanel'
+export { GatewaysListPanel } from './components/gateways/GatewaysListPanel'
+export type { GatewaysListPanelProps } from './components/gateways/GatewaysListPanel'
 export { McpListPanel } from './components/mcp/McpListPanel'
 export type { McpListPanelProps } from './components/mcp/McpListPanel'
 export { QueuesListPanel } from './components/queues/QueuesListPanel'

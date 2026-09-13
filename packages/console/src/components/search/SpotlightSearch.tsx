@@ -20,7 +20,11 @@ import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
 import { useOptionalImpersonation } from '../../context/ImpersonationContext'
-import { useDefaultNavSections, type NavSection } from '../project/Sidebar'
+import {
+  navItems,
+  useDefaultNavSections,
+  type NavSection,
+} from '../../nav/sections'
 
 export interface SpotlightSearchProps {
   sections?: NavSection[]
@@ -32,13 +36,13 @@ const TYPE_CONFIG: Record<
 > = {
   function: { icon: FunctionSquare, color: 'blue', href: '/functions' },
   workflow: { icon: GitBranch, color: 'violet', href: '/workflow' },
-  http: { icon: Globe, color: 'green', href: '/apis?tab=http' },
-  channel: { icon: Radio, color: 'cyan', href: '/apis?tab=channels' },
-  mcp: { icon: Cpu, color: 'orange', href: '/apis?tab=mcp' },
-  cli: { icon: Terminal, color: 'teal', href: '/apis?tab=cli' },
-  gateway: { icon: Network, color: 'teal', href: '/apis?tab=gateways' },
-  scheduler: { icon: Clock, color: 'yellow', href: '/jobs?tab=schedulers' },
-  queue: { icon: ListOrdered, color: 'pink', href: '/jobs?tab=queues' },
+  http: { icon: Globe, color: 'green', href: '/http' },
+  channel: { icon: Radio, color: 'cyan', href: '/channels' },
+  mcp: { icon: Cpu, color: 'orange', href: '/mcp' },
+  cli: { icon: Terminal, color: 'teal', href: '/cli' },
+  gateway: { icon: Network, color: 'teal', href: '/gateways' },
+  scheduler: { icon: Clock, color: 'yellow', href: '/schedulers' },
+  queue: { icon: ListOrdered, color: 'pink', href: '/queues' },
   agent: { icon: Bot, color: 'grape', href: '/agents' },
 }
 
@@ -58,7 +62,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
     const items: SpotlightActionData[] = []
 
     sections.forEach((section) => {
-      section.items.forEach((item) => {
+      navItems(section).forEach((item) => {
         items.push({
           id: `nav-${item.href}`,
           label: item.label,
@@ -108,7 +112,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
         label,
         description: `HTTP → ${route.pikkuFuncId || ''}`,
         leftSection: <Globe size={16} />,
-        onClick: () => navigate('/apis?tab=http'),
+        onClick: () => navigate('/http'),
       })
     })
 
@@ -119,7 +123,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           label: channelName,
           description: 'Channel',
           leftSection: <Radio size={16} />,
-          onClick: () => navigate('/apis?tab=channels'),
+          onClick: () => navigate('/channels'),
         })
       }
     }
@@ -130,7 +134,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
         label: item.name || item.wireId,
         description: `MCP ${item.method || ''}`,
         leftSection: <Cpu size={16} />,
-        onClick: () => navigate('/apis?tab=mcp'),
+        onClick: () => navigate('/mcp'),
       })
     })
 
@@ -140,7 +144,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
         label: gateway.name,
         description: `Gateway ${gateway.type || ''}${gateway.platform ? ` (${gateway.platform})` : ''}`,
         leftSection: <Network size={16} />,
-        onClick: () => navigate('/apis?tab=gateways'),
+        onClick: () => navigate('/gateways'),
       })
     })
 
@@ -155,7 +159,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
               label: `${program.wireId} ${fullPath}`,
               description: `CLI → ${cmdData.pikkuFuncId}`,
               leftSection: <Terminal size={16} />,
-              onClick: () => navigate('/apis?tab=cli'),
+              onClick: () => navigate('/cli'),
             })
           }
           if (cmdData.subcommands) walkCommands(cmdData.subcommands, fullPath)
@@ -173,7 +177,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           label: taskName,
           description: `Scheduler${taskData.schedule ? ` (${taskData.schedule})` : ''}`,
           leftSection: <Clock size={16} />,
-          onClick: () => navigate('/jobs?tab=schedulers'),
+          onClick: () => navigate('/schedulers'),
         })
       }
     }
@@ -185,7 +189,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
           label: workerName,
           description: 'Queue Worker',
           leftSection: <ListOrdered size={16} />,
-          onClick: () => navigate('/jobs?tab=queues'),
+          onClick: () => navigate('/queues'),
         })
       }
     }
