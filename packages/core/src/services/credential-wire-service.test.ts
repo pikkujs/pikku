@@ -290,6 +290,36 @@ describe('PikkuCredentialWireService type-driven resolution', () => {
     })
   })
 
+  test('should not let a user value stand in for a singleton credential', async () => {
+    const split = (
+      deployment: Record<string, unknown>,
+      user: Record<string, unknown>
+    ): CredentialService => ({
+      get: async (name: string, userId?: string) =>
+        (userId ? user[name] : deployment[name]) ?? null,
+      set: async () => {},
+      delete: async () => {},
+      has: async (name: string) => name in deployment || name in user,
+      getAll: async () => user,
+    })
+
+    const service = new PikkuCredentialWireService(
+      split(
+        { gmailOAuth: { accessToken: 'deployment' } },
+        { gmailOAuth: { accessToken: 'user' } }
+      ),
+      { session: { userId: 'user-1' } as any },
+      undefined,
+      { resolutions: { gmailOAuth: { mode: 'singleton' } } }
+    )
+
+    assert.deepStrictEqual(
+      await service.get('gmailOAuth'),
+      { accessToken: 'deployment' },
+      'a value in the user store must not shadow the slot the deployment owns'
+    )
+  })
+
   test('should keep a manually set credential over a singleton load', async () => {
     const service = new PikkuCredentialWireService(
       platformOnly({ gmailOAuth: { accessToken: 'team' } }),

@@ -101,6 +101,7 @@ export class PikkuCredentialWireService {
         this.wire.pikkuUserId = userId
         const allCreds = await this.credentialService.getAll(userId)
         for (const [name, value] of Object.entries(allCreds)) {
+          if (this.isSingleton(name)) continue
           if (!(name in this.credentials)) {
             this.credentials[name] = value
           }
@@ -110,6 +111,17 @@ export class PikkuCredentialWireService {
     } finally {
       this.loaded = true
     }
+  }
+
+  /**
+   * The other half of resolving by type. A user's own store can hold a value
+   * under a name the wiring made `singleton` — from an earlier wiring, or a
+   * connect flow that has since been rewired — and importing it would put the
+   * user in charge of a slot the deployment owns. What `set` wrote is left
+   * alone: that is the deployment's own path, not the user's.
+   */
+  private isSingleton(name: string): boolean {
+    return this.resolution?.resolutions[name]?.mode === 'singleton'
   }
 
   /**
