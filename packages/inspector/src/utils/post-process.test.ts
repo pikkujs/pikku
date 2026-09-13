@@ -509,6 +509,83 @@ describe('override validation resolves the override target (value), not the logi
     assert.equal(criticals.length, 1)
     assert.match(criticals[0]!.message, /ghost_cred/)
   })
+
+  test('validateCredentialOverrides accepts a mode-only override on a declared credential', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('credentials', ['marketing_cred'], {
+      credentialOverrides: { marketing_cred: { mode: 'wire' } },
+    })
+    validateCredentialOverrides(logger, state)
+    assert.deepEqual(criticals, [])
+  })
+
+  test('validateCredentialOverrides flags a mode-only override on an undeclared credential', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = makeGrantState('credentials', ['marketing_cred'], {
+      credentialOverrides: { ghost_cred: { mode: 'wire' } },
+    })
+    validateCredentialOverrides(logger, state)
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!.message, /ghost_cred/)
+  })
+})
+
+describe('validateCredentialOverrides — one credential holds one mode', () => {
+  const makeTwoAddonState = (
+    first: Record<string, CredentialOverrideMeta>,
+    second: Record<string, CredentialOverrideMeta>
+  ): Omit<InspectorState, 'typesLookup'> =>
+    ({
+      rpc: {
+        wireAddonDeclarations: new Map([
+          ['gmail', { package: '@addon/gmail', credentialOverrides: first }],
+          ['drive', { package: '@addon/drive', credentialOverrides: second }],
+        ]),
+      },
+      secrets: { definitions: [] },
+      credentials: { definitions: [{ name: 'SHARED' }] },
+      variables: { definitions: [] },
+    }) as unknown as Omit<InspectorState, 'typesLookup'>
+
+  test('flags two addons that wire one name to opposite modes', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateCredentialOverrides(
+      logger,
+      makeTwoAddonState(
+        { gmailOAuth: { name: 'SHARED', mode: 'singleton' } },
+        { driveOAuth: { name: 'SHARED', mode: 'wire' } }
+      )
+    )
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!.message, /SHARED/)
+    assert.match(criticals[0]!.message, /singleton/)
+    assert.match(criticals[0]!.message, /wire/)
+  })
+
+  test('flags the collision whichever addon declares it first', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateCredentialOverrides(
+      logger,
+      makeTwoAddonState(
+        { gmailOAuth: { name: 'SHARED', mode: 'wire' } },
+        { driveOAuth: { name: 'SHARED', mode: 'singleton' } }
+      )
+    )
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!.message, /SHARED/)
+  })
+
+  test('accepts two addons that agree on the mode', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateCredentialOverrides(
+      logger,
+      makeTwoAddonState(
+        { gmailOAuth: { name: 'SHARED', mode: 'wire' } },
+        { driveOAuth: { name: 'SHARED', mode: 'wire' } }
+      )
+    )
+    assert.deepEqual(criticals, [])
+  })
 })
 
 const makeRemoteState = (
