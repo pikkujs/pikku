@@ -22,6 +22,8 @@ import {
   KyselyAgentStorageService,
   KyselyAgentRunStateService,
   KyselyAgentRunService,
+  KyselyAnalyticsService,
+  KyselyFeatureFlagStore,
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
@@ -39,6 +41,7 @@ import {
   type ResolvedDb,
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
+import { initOrWarn } from './init-or-warn.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
@@ -300,6 +303,31 @@ export const dev = pikkuSessionlessFunc<
       await agentRunState.init()
     }
 
+    // Flags and analytics get the same local database the rest of the services
+    // do, so a flag an operator flips in the console survives a restart and a
+    // declared event lands somewhere a query can reach.
+    //
+    // Dropped with a warning rather than thrown on, unlike the agent services
+    // above: both tables are generated from a declaration the project may have
+    // added since it last migrated, and neither absence is worse than what a
+    // project has today — an unregistered flag source resolves every gate open,
+    // and analytics without a service falls back to the logger. Failing the
+    // boot instead would turn adding one `featureFlag:` into a dead dev server.
+    const featureFlags = kysely
+      ? await initOrWarn(
+          new KyselyFeatureFlagStore(kysely as any),
+          'featureFlags',
+          logger
+        )
+      : undefined
+    const analyticsService = kysely
+      ? await initOrWarn(
+          new KyselyAnalyticsService(kysely as any),
+          'analyticsService',
+          logger
+        )
+      : undefined
+
     // InMemoryWorkflowService implements both the workflowService and
     // workflowRunService surfaces (listRuns/getRun live on it). Expose the
     // single instance under both names so addons like @pikku/addon-console
@@ -343,6 +371,8 @@ export const dev = pikkuSessionlessFunc<
       agentStorage,
       agentRunState,
       agentRunService,
+      ...(featureFlags ? { featureFlags } : {}),
+      ...(analyticsService ? { analyticsService } : {}),
       eventHub,
       ...(kysely ? { kysely } : {}),
       content: localContent,

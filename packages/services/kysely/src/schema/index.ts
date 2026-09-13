@@ -7,6 +7,7 @@ import {
   type SchemaRequirement,
 } from './pikku-schema.types.js'
 import { agentSchema } from './agent.schema.js'
+import { analyticsSchema } from './analytics.schema.js'
 import { auditSchema } from './audit.schema.js'
 import { channelSchema } from './channel.schema.js'
 import { credentialSchema } from './credential.schema.js'
@@ -61,11 +62,13 @@ export const pikkuSchemas: PikkuSchema[] = [
   scopeSchema,
   flagSchema,
   auditSchema,
+  analyticsSchema,
   virtualUserSchema,
   virtualUserScheduleSchema,
 ]
 
 export { agentSchema } from './agent.schema.js'
+export { analyticsSchema } from './analytics.schema.js'
 export { auditSchema } from './audit.schema.js'
 export { channelSchema } from './channel.schema.js'
 export { credentialSchema } from './credential.schema.js'

@@ -19,6 +19,7 @@ export {
   type CreateAuditedKyselyOptions,
 } from './create-audited-kysely.js'
 export { KyselyAuditService } from './kysely-audit-service.js'
+export { KyselyAnalyticsService } from './kysely-analytics-service.js'
 export { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'
 export { KyselyVirtualUserScheduleStore } from './kysely-virtual-user-schedule-store.js'
 
@@ -50,6 +51,7 @@ export {
 } from './classification-crypto.js'
 export {
   agentSchema,
+  analyticsSchema,
   auditSchema,
   channelSchema,
   credentialSchema,

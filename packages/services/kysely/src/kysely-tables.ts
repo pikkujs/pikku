@@ -378,6 +378,26 @@ export interface AuditTable {
   data: string | null
 }
 
+/** One analytics event, as {@link KyselyAnalyticsService} appended it. */
+export interface PikkuAnalyticsEventsTable {
+  eventId: string
+  name: string
+  /** ISO 8601, because string ordering is chronological ordering. */
+  occurredAt: string
+  source: string
+  functionId: string | null
+  wireType: string | null
+  traceId: string | null
+  userId: string | null
+  orgId: string | null
+  pikkuUserId: string | null
+  /** The device id for a visitor with no session yet. */
+  anonymousId: string | null
+  vendorIds: string | null
+  consent: string | null
+  props: string | null
+}
+
 /**
  * One turn of a run's transcript.
  *
@@ -458,4 +478,5 @@ export interface KyselyPikkuDB {
   virtualUserRunStep: VirtualUserRunStepTable
   virtualUserSchedule: VirtualUserScheduleTable
   audit: AuditTable
+  pikkuAnalyticsEvents: PikkuAnalyticsEventsTable
 }
