@@ -33,7 +33,7 @@ export const serializeAnalytics = (
     .flatMap((declaration, index) =>
       declaration.events.map(
         (event) =>
-          `  z\n    .object({ name: z.literal('${event}') })\n    .extend(${alias(index)}['${event}'].shape),`
+          `  z\n    .object(${alias(index)}['${event}'].shape)\n    .extend({ name: z.literal('${event}') }),`
       )
     )
     .join('\n')
@@ -45,7 +45,11 @@ export const serializeAnalytics = (
 import { z } from 'zod'
 ${imports}
 
-/** The name is the declaration's key, reattached here as the discriminator. */
+/**
+ * The name is the declaration's key, reattached here as the discriminator —
+ * last, so a declaration that happens to carry a 'name' prop of its own
+ * cannot overwrite the literal the union discriminates on.
+ */
 export const AnalyticsEventSchema = z.discriminatedUnion('name', [
 ${members}
 ])

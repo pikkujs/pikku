@@ -113,6 +113,30 @@ describe('pikkuAnalytics', () => {
     assert.match(schemas, /events0\['page_viewed'\]\.shape/)
   })
 
+  // `.extend` overwrites, so whichever side goes last wins. An app's own
+  // `name` prop taking the discriminator's place leaves `z.discriminatedUnion`
+  // with a non-literal key, which throws the moment the module is imported.
+  test('attaches the event name last, so a declared prop cannot take it', async () => {
+    const root = await project()
+    const cfg = config(root)
+
+    await run({
+      logger,
+      config: cfg,
+      variables: variables(),
+      getInspectorState: getInspectorState(declared(root)),
+    })
+
+    const schemas = await readFile(
+      analyticsSchemasFile(cfg.analyticsFile)!,
+      'utf8'
+    )
+    assert.match(
+      schemas,
+      /z\s+\.object\(events0\['page_viewed'\]\.shape\)\s+\.extend\(\{ name: z\.literal\('page_viewed'\) \}\)/
+    )
+  })
+
   // Deploy plan runs codegen once per unit with outDir redirected, so writing
   // scaffold source then would rewrite the developer's tree to import out of
   // .deploy/. Every scaffold generator has to decline.

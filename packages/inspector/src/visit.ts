@@ -101,7 +101,7 @@ export const visitSetup = (
     'ServerLifecycle'
   )
 
-  addAnalytics(logger, node, state)
+  addAnalytics(logger, node, checker, state)
   addRPCInvocations(node, state, logger)
   addWireAddon(node, state, logger)
   addWireRemoteAddon(node, state, logger)

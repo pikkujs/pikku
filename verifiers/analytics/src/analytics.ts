@@ -10,4 +10,13 @@ export const analyticsEvents = defineAnalyticsEvents({
     amount: z.number(),
     currency: z.string().length(3),
   }),
+  /**
+   * `name` is the discriminator the generated union is built on, so a props
+   * schema that declares one of its own must not be able to displace it — the
+   * union would have a non-literal key and throw on import.
+   */
+  profile_renamed: z.object({
+    name: z.string().max(120),
+    by: z.string(),
+  }),
 })

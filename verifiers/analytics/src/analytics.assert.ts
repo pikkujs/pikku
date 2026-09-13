@@ -94,6 +94,25 @@ describe('the generated analytics ingest', () => {
     assert.equal(recorded()[0]!.userIdentity.userId, null)
   })
 
+  // The event name is attached after the declared props, so a declared 'name'
+  // cannot take the discriminator's place. When it does, the branch accepts any
+  // string there and the union stops discriminating on the name at all.
+  test('keeps the event name when the props declare one of their own', async () => {
+    const accepted = await post({
+      events: [{ event: { name: 'profile_renamed', by: 'yasser' } }],
+    })
+
+    assert.equal(accepted.status, 200)
+    assert.equal(recorded()[0]!.name, 'profile_renamed')
+    assert.deepEqual(recorded()[0]!.props, { by: 'yasser' })
+
+    const refused = await post({
+      events: [{ event: { name: 'not_declared', by: 'yasser' } }],
+    })
+
+    assert.equal(refused.status, 422)
+  })
+
   test('rejects an event the union does not declare', async () => {
     const response = await post({
       events: [{ event: { name: 'not_declared' } }],

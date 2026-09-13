@@ -49,3 +49,10 @@ the fetch client, an endpoint that 404s.
 
 No middleware is emitted with the wire: an origin lock rejects every native
 client and is forgeable anyway, so guarding the route is the project's call.
+
+`name` belongs to the event, not to its props. The generated union rebuilds
+each member from the declared schema's shape and attaches the literal name
+last, so a declaration that happens to carry a `name` prop of its own cannot
+displace the discriminator the union is built on. Props schemas are typed to
+require that shape, so a schema that has none — a union, a primitive — is
+refused at the declaration rather than in generated code.

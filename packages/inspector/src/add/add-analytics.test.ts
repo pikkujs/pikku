@@ -111,6 +111,65 @@ describe('addAnalytics', () => {
     assert.match(errors[0]!, /object literal/)
   })
 
+  // The import is the project's to name, and a harness or a codemod renaming
+  // it is not a reason to stop finding the declaration.
+  test('finds the call through an aliased import', async () => {
+    const { state, errors } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents as declare } from '@pikku/core/analytics'\n` +
+        `export const analyticsEvents = declare({ page_viewed: {} as never })\n`,
+    })
+
+    assert.deepEqual(errors, [])
+    assert.deepEqual(
+      state.analytics?.map((declaration) => declaration.events),
+      [['page_viewed']]
+    )
+  })
+
+  // `{ page_viewed }` is the same declaration as `{ page_viewed: page_viewed }`,
+  // and dropping it emitted an ingest missing the event.
+  test('collects an event written in shorthand', async () => {
+    const { state, errors } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `const page_viewed = {} as never\n` +
+        `export const analyticsEvents = defineAnalyticsEvents({ page_viewed, todo_created: {} as never })\n`,
+    })
+
+    assert.deepEqual(errors, [])
+    assert.deepEqual(
+      state.analytics?.map((declaration) => declaration.events),
+      [['page_viewed', 'todo_created']]
+    )
+  })
+
+  // The generated ingest imports the declaration by name, so recording one the
+  // module keeps to itself emits a module that cannot compile.
+  test('refuses a declaration the module does not export', async () => {
+    const { state, errors } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `const analyticsEvents = defineAnalyticsEvents({ page_viewed: {} as never })\n` +
+        `export const used = () => analyticsEvents\n`,
+    })
+
+    assert.equal(state.analytics, undefined)
+    assert.match(errors[0]!, /does not export/)
+  })
+
+  // `export { analyticsEvents as usage }` is the name the import has to say.
+  test('records the name the module exports it under', async () => {
+    const { state } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `const analyticsEvents = defineAnalyticsEvents({ page_viewed: {} as never })\n` +
+        `export { analyticsEvents as usage }\n`,
+    })
+
+    assert.equal(state.analytics?.[0]!.variable, 'usage')
+  })
+
   test('refuses a declaration with no events', async () => {
     const { errors, state } = await inspectSources({
       'analytics.ts':

@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2932 observable things**: 935 exported names, plus
+**2933 observable things**: 936 exported names, plus
 1997 members on the classes and interfaces among them, reachable
 through 54 entry points.
 
@@ -29,7 +29,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
-| `./analytics` | 12 | 12 | 24 |
+| `./analytics` | 13 | 13 | 24 |
 | `./classification` | 22 | 22 | 14 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
@@ -3619,11 +3619,17 @@ export interface AnalyticsClientContext {
   at?: number
 }
 export type AnalyticsEventBase = { name: string } & Record<string, unknown>
-export type AnalyticsEventDefinitions = Record<string, StandardSchemaV1>
+export type AnalyticsEventDefinitions = Record<
+  string,
+  AnalyticsEventPropsSchema
+>
 export interface AnalyticsEventInput {
   name: string
   props?: Record<string, unknown>
   at?: number
+}
+export type AnalyticsEventPropsSchema = StandardSchemaV1 & {
+  shape: Record<string, unknown>
 }
 export interface AnalyticsIdentity {
   userId: string | null
