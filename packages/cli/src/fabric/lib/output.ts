@@ -22,7 +22,7 @@ const cell = (c: Cell): string =>
  */
 export const safe = (s: string): string =>
   // eslint-disable-next-line no-control-regex
-  s.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '')
+  s.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '')
 
 /** Dim, secondary text (hints, empty-state lines, labels). */
 export const dim = (s: string): string => chalk.dim(s)
