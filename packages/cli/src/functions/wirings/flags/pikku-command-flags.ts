@@ -19,15 +19,19 @@ export const pikkuFlags = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     const bootstrap = data?.bootstrap ?? false
     const state = await getInspectorState(false, bootstrap, bootstrap)
 
-    const content = serializeFlagsTypes({
-      definitions: state.featureFlags.definitions,
-    })
+    // Validate before writing anything, and emit the union from the same
+    // validated set the sidecar is built from. Two derivations of one
+    // vocabulary can disagree, and a conflicting redeclaration used to throw
+    // only after the .ts had already been written — leaving a union describing
+    // a set the sidecar never got.
+    const meta = validateAndBuildFeatureFlagDefinitionsMeta(
+      state.featureFlags.definitions
+    )
+
+    const content = serializeFlagsTypes({ definitions: Object.values(meta) })
     await writeFileInDir(logger, flagsFile, content)
 
     if (flagsMetaJsonFile) {
-      const meta = validateAndBuildFeatureFlagDefinitionsMeta(
-        state.featureFlags.definitions
-      )
       await writeFileInDir(
         logger,
         flagsMetaJsonFile,

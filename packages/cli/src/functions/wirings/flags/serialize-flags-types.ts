@@ -51,9 +51,18 @@ export const FEATURE_FLAGS: DeclaredFlag[] = flattenFeatureFlagDefinitions(
   Object.values(definitions as FeatureFlagDefinitionsMeta)
 )
 
-/** Declared flags, keyed by name. Rendered by the console beside each switch. */
-export const FEATURE_FLAGS_META: Record<string, DeclaredFlag> =
-  Object.fromEntries(FEATURE_FLAGS.map((flag) => [flag.name, flag]))
+/**
+ * Declared flags, keyed by name. Rendered by the console beside each switch.
+ *
+ * Keyed by \`FeatureFlagName\` so a misspelled lookup is a type error, which is
+ * the whole point of generating the union. The assertion is what
+ * \`Object.fromEntries\` costs — it returns an index signature — and it is
+ * sound here because both this object and the union are built from
+ * \`FEATURE_FLAGS\`, so every key of the union is present.
+ */
+export const FEATURE_FLAGS_META = Object.fromEntries(
+  FEATURE_FLAGS.map((flag) => [flag.name, flag])
+) as Record<FeatureFlagName, DeclaredFlag>
 
 /**
  * What a flag source falls back to when its backing store cannot be read: every
