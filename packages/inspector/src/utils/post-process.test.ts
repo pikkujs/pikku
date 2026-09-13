@@ -98,6 +98,8 @@ function makeState(
     authServices?: string[]
     graphMeta?: Record<string, any>
     scopeDefinitions?: any[]
+    flagDefinitions?: any[]
+    analytics?: any[]
   } = {}
 ): Omit<InspectorState, 'typesLookup'> {
   return {
@@ -133,6 +135,8 @@ function makeState(
     wireServicesMeta: new Map(),
     rpc: { internalMeta: {}, exposedMeta: {} },
     scopes: { definitions: overrides.scopeDefinitions ?? [] },
+    featureFlags: { definitions: overrides.flagDefinitions ?? [] },
+    ...(overrides.analytics ? { analytics: overrides.analytics } : {}),
     addonFunctions: overrides.addonFunctions ?? {},
     addonRequiredParentServices: overrides.addonRequiredParentServices ?? [],
     auth: overrides.authServices
@@ -1090,5 +1094,37 @@ describe('proseOpensWithActor', () => {
       proseOpensWithActor('samantha creates the client', 'sam'),
       false
     )
+  })
+})
+
+describe('aggregateRequiredServices — flags and analytics imply their services', () => {
+  // Neither is ever destructured: `assertFeatureAvailable` reaches the flag
+  // source out of the singleton services, and a function is handed the
+  // request-scoped `analytics` buffer rather than the service it flushes into.
+  // So for both, the declaration is the only signal — and without it
+  // `pikku db generate` leaves a project that declares flags with no tables to
+  // store them in, and every gate resolves open.
+  test('a declared flag requires featureFlags', () => {
+    const state = makeState({ flagDefinitions: [{ name: 'quarterlyReports' }] })
+    aggregateRequiredServices(state)
+    assert.ok(state.serviceAggregation.requiredServices.has('featureFlags'))
+  })
+
+  test('declared events require analyticsService', () => {
+    const state = makeState({
+      analytics: [
+        { file: 'events.ts', variable: 'events', events: ['signup'] },
+      ],
+    })
+    aggregateRequiredServices(state)
+    assert.ok(state.serviceAggregation.requiredServices.has('analyticsService'))
+  })
+
+  test('a project that declares neither gets neither', () => {
+    const state = makeState()
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('featureFlags'))
+    assert.ok(!required.has('analyticsService'))
   })
 })

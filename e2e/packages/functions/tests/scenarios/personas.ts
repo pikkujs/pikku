@@ -90,7 +90,12 @@ definePersonas({
     personality:
       'Careful operator who edits code through the console and always restores it',
     account: {},
-    roles: ['platform-admin', 'console-admin', 'audit-reader'],
+    roles: [
+      'platform-admin',
+      'console-admin',
+      'audit-reader',
+      'flag-operator',
+    ],
     goals: [
       'Keep the console doing what it says it does, and change nothing I cannot undo',
     ],

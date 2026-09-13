@@ -4,6 +4,8 @@ export {
   usePikkuAgent,
   usePikkuRPC,
   usePikkuAnalytics,
+  usePikkuFeatureFlags,
+  useFeatureFlag,
   usePikkuRealtime,
   usePikkuWorkflow,
 } from './pikku-provider.js'
@@ -45,6 +47,15 @@ export type {
 // The app owns the union and the endpoint; this package owns the transport.
 export { createAnalytics } from './analytics.js'
 export type { AnalyticsClient, CreateAnalyticsOptions } from './analytics.js'
+
+// The caller's feature flags, fetched once per session and read from memory.
+// The app owns the union and the endpoint; this package owns the transport and
+// the subscription. Advisory only — the runner re-checks availability itself.
+export { createFeatureFlags } from './feature-flags.js'
+export type {
+  FeatureFlagClient,
+  CreateFeatureFlagsOptions,
+} from './feature-flags.js'
 
 // Take or choose a photo, downscaled and base64-encoded in the browser before it
 // costs anything to send. The hidden input is created on demand rather than

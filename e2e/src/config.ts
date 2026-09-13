@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { LogLevel } from '@pikku/core/services'
 
 import { pikkuConfig } from '#pikku/setup'
@@ -11,4 +12,15 @@ export const createConfig = pikkuConfig(async () => ({
   // allowlisted. Allowing only loopback keeps the guard doing its job for
   // every other destination.
   webhook: { allowedHosts: ['localhost', '127.0.0.1'] },
+  // The browser scenarios need a frontend to drive, and this is the only one
+  // in the repository that uses `@pikku/react` rather than the console's own
+  // providers. Served beside the console rather than on its own port, so the
+  // cookies the analytics identity resolver writes are same-origin.
+  staticMounts: [
+    {
+      urlPrefix: '/app',
+      directory: fileURLToPath(new URL('../packages/web/dist', import.meta.url)),
+      spaFallback: true,
+    },
+  ],
 }))

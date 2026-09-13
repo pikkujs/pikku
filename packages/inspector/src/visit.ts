@@ -29,6 +29,7 @@ import { addSecret } from './add/add-secret.js'
 import { addCredential } from './add/add-credential.js'
 import { addScope } from './add/add-scope.js'
 import { addSystemRole } from './add/add-system-role.js'
+import { addFeatureFlag } from './add/add-feature-flag.js'
 import { addPersonas } from './add/add-personas.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
@@ -158,6 +159,7 @@ export const visitRoutes = (
   addCredential(logger, node, checker, state, nextOptions)
   addScope(logger, node, checker, state, nextOptions)
   addSystemRole(logger, node, checker, state, nextOptions)
+  addFeatureFlag(logger, node, checker, state, nextOptions)
   addPersonas(logger, node, checker, state, nextOptions)
   addVariable(logger, node, checker, state, nextOptions)
 

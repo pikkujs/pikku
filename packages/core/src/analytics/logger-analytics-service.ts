@@ -11,18 +11,14 @@ import type { AnalyticsRecord, AnalyticsService } from './analytics.types.js'
 export class LoggerAnalyticsService implements AnalyticsService {
   constructor(private readonly logger: Logger) {}
 
-  async record(event: AnalyticsRecord): Promise<void> {
-    this.logger.debug(`analytics: ${event.name}`, {
-      ...event.props,
-      userId: event.userIdentity.userId,
-      source: event.source,
-      ...(event.at === undefined ? {} : { at: event.at }),
-    })
-  }
-
   async write(batch: AnalyticsRecord[]): Promise<void> {
     for (const event of batch) {
-      await this.record(event)
+      this.logger.debug(`analytics: ${event.name}`, {
+        ...event.props,
+        userId: event.userIdentity.userId,
+        source: event.source,
+        ...(event.at === undefined ? {} : { at: event.at }),
+      })
     }
   }
 }

@@ -2,6 +2,7 @@ import { applyPikkuSchemas, scopeSchema } from '@pikku/kysely'
 import type { SingletonServices } from './application-types.js'
 import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'
+import { FEATURE_FLAGS } from '#pikku/scopes/pikku-flags.gen.js'
 import { SYSTEM_ROLES } from '#pikku/scopes/pikku-roles.gen.js'
 import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
 
@@ -13,6 +14,8 @@ export const REPORT_VIEWER_ROLE = 'report-viewer'
 export const PLATFORM_ADMIN_ROLE = 'platform-admin'
 /** Role granting `admin:audit:read`, used by the audit console suite. */
 export const AUDIT_READER_ROLE = 'audit-reader'
+/** Role granting `admin:flags:*`, used by the feature-flag suite. */
+export const FLAG_OPERATOR_ROLE = 'flag-operator'
 
 const userIdByEmail = async (
   services: SingletonServices,
@@ -72,11 +75,23 @@ const userIdByEmail = async (
  * Runs after Better Auth has created the `user` table (lifecycle.afterStart).
  */
 export const seedScopes = async (services: SingletonServices) => {
-  const { scopeDb, scopeService } = services
+  const { scopeDb, scopeService, featureFlags } = services
   await applyPikkuSchemas(scopeDb, [scopeSchema])
   await scopeService.init()
   await scopeService.syncScopes(SCOPES)
   await scopeService.syncSystemRoles(SYSTEM_ROLES)
+
+  // Additive on the same terms as the two syncs above, and run beside them for
+  // the same reason: the declared vocabulary is registered once the store's
+  // tables exist, and nothing an operator set is touched.
+  await featureFlags.syncFlags(FEATURE_FLAGS)
+
+  // A synced flag starts off, so a feature ships dark. Two of the three are
+  // switched on here to give the suite a working feature to contrast against;
+  // `darkLaunch` is left as the declaration created it, which is the state an
+  // operator has to act on for anything to happen.
+  await featureFlags.setEnabled('quarterlyReports', true, 'seed')
+  await featureFlags.setEnabled('bulkExport', true, 'seed')
 
   const adminId = await userIdByEmail(services, ADMIN_USER.email)
   const guestId = await userIdByEmail(services, GUEST_USER.email)
@@ -85,6 +100,7 @@ export const seedScopes = async (services: SingletonServices) => {
   await scopeService.addUserToRole(guestId, REPORT_VIEWER_ROLE)
   await scopeService.addUserToRole(adminId, PLATFORM_ADMIN_ROLE)
   await scopeService.addUserToRole(adminId, AUDIT_READER_ROLE)
+  await scopeService.addUserToRole(adminId, FLAG_OPERATOR_ROLE)
   await scopeService.addUserToRole(staffId, PLATFORM_ADMIN_ROLE)
 
   const granted: string[] = []

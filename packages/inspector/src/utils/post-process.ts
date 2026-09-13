@@ -337,6 +337,23 @@ export function aggregateRequiredServices(
     requiredServices.add('scopeService')
   }
 
+  // Declared feature flags need featureFlags for the same reason, from the
+  // other side: `assertFeatureAvailable` reads the source out of the singleton
+  // services itself, so a `featureFlag:` on a wiring is the only thing that
+  // ever says the project has flags. Without this the flag tables are left out
+  // of the generated migration and every gate silently resolves open.
+  if ((state.featureFlags?.definitions?.length ?? 0) > 0) {
+    requiredServices.add('featureFlags')
+  }
+
+  // A `defineAnalyticsEvents` declaration means events are emitted, and the
+  // invocation buffer flushes into `analyticsService`. Nothing destructures
+  // that either — functions are handed the request-scoped `analytics` — so the
+  // declaration is again the only signal.
+  if ((state.analytics?.length ?? 0) > 0) {
+    requiredServices.add('analyticsService')
+  }
+
   // 7. Services that consumed addons need from the parent project.
   const addonFnServices = new Map<string, string[] | undefined>()
   for (const [namespace, fns] of Object.entries(state.addonFunctions ?? {})) {

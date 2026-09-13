@@ -184,6 +184,21 @@
         "zod": "^4",
       },
     },
+    "e2e/packages/web": {
+      "name": "@pikku/e2e-web",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pikku/react": "*",
+        "react": "^19",
+        "react-dom": "^19",
+      },
+      "devDependencies": {
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "@vitejs/plugin-react": "^6",
+        "vite": "^8.2.1",
+      },
+    },
     "examples/online-shop": {
       "name": "@pikku/example-online-shop",
       "dependencies": {
@@ -2022,6 +2037,19 @@
         "tsx": "^4",
       },
     },
+    "verifiers/feature-flags": {
+      "name": "@pikku/verifiers-feature-flags",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^24",
+        "tsx": "^4.23.12",
+      },
+    },
     "verifiers/fullstack": {
       "name": "@pikku/verifiers-fullstack",
       "dependencies": {
@@ -3160,6 +3188,8 @@
 
     "@pikku/e2e-functions": ["@pikku/e2e-functions@workspace:e2e/packages/functions"],
 
+    "@pikku/e2e-web": ["@pikku/e2e-web@workspace:e2e/packages/web"],
+
     "@pikku/example-online-shop": ["@pikku/example-online-shop@workspace:examples/online-shop"],
 
     "@pikku/express": ["@pikku/express@workspace:packages/runtimes/express-server"],
@@ -3327,6 +3357,8 @@
     "@pikku/verifiers-deploy-standalone": ["@pikku/verifiers-deploy-standalone@workspace:verifiers/deploy-standalone"],
 
     "@pikku/verifiers-dev-bun": ["@pikku/verifiers-dev-bun@workspace:verifiers/dev-bun"],
+
+    "@pikku/verifiers-feature-flags": ["@pikku/verifiers-feature-flags@workspace:verifiers/feature-flags"],
 
     "@pikku/verifiers-fullstack": ["@pikku/verifiers-fullstack@workspace:verifiers/fullstack"],
 
@@ -6168,6 +6200,8 @@
 
     "@pikku/verifiers-dev-bun/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/verifiers-feature-flags/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-fullstack/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-functions/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -6753,6 +6787,8 @@
     "@pikku/verifiers-deploy-standalone/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-dev-bun/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-feature-flags/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-fullstack/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 

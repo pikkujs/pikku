@@ -95,6 +95,10 @@ export interface PikkuCLICoreOutputFiles {
   // Product-analytics ingest (derived from scaffold.pikkuDir when scaffold.analytics is enabled).
   // Optional: left undefined when scaffold.analytics is not enabled, so consumers must guard.
   analyticsFile?: string
+  // The read wire a client asks for its own flags on (derived from
+  // scaffold.pikkuDir when scaffold.featureFlags is enabled).
+  // Optional: left undefined when the feature is off, so consumers must guard.
+  featureFlagsFile?: string
   publicAgentFile: string
   publicAgentSchemasFile?: string
   consoleFunctionsFile: string
@@ -267,6 +271,12 @@ export interface PikkuCLICoreOutputFiles {
 
   // System roles metadata JSON
   rolesMetaJsonFile: string
+
+  // Feature flags (FeatureFlagName union + declared flag set)
+  flagsFile: string
+
+  // Feature flags metadata JSON
+  flagsMetaJsonFile: string
 
   // Personas (PersonaId union + typed definePersonas)
   personasFile: string
@@ -622,6 +632,16 @@ export type PikkuCLIInput = {
      * project's call.
      */
     analytics?: PikkuScaffoldFeature
+    /**
+     * A `GET /feature-flags` returning every declared flag resolved for the
+     * caller, typed by this app's `FeatureFlagName`. Generated into the app
+     * rather than shipped in an addon precisely for that union: an addon never
+     * sees the host's, and could only answer `Record<string, boolean>`.
+     *
+     * The read half only. Switching a flag is an operator action and lives on
+     * the `FeatureFlagStore` behind the admin addon.
+     */
+    featureFlags?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
     scenarios?: PikkuScaffoldFeature
     /**

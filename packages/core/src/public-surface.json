@@ -350,6 +350,7 @@
     "BadRequestError",
     "ConflictError",
     "ExpectationFailedError",
+    "FeatureUnavailableError",
     "ForbiddenError",
     "GatewayTimeoutError",
     "GoneError",
@@ -448,6 +449,19 @@
     "stub",
     "verifyActorSecret",
     "withoutSecrets"
+  ],
+  "./flag": [
+    "CachedFlagSource",
+    "assertFeatureAvailable",
+    "bucketOf",
+    "compiledFallbackSnapshot",
+    "defineFeatureFlags",
+    "flattenFeatureFlagDefinitions",
+    "resolveFlag",
+    "resolveFlagForClient",
+    "resolveFlagsForClient",
+    "subjectIdOf",
+    "validateAndBuildFeatureFlagDefinitionsMeta"
   ],
   "./services/local-meta": [
     "LocalMetaService"
@@ -552,8 +566,14 @@
   ],
   "./analytics": [
     "LoggerAnalyticsService",
+    "anonymousAnalyticsIdentity",
+    "composeAnalyticsIdentity",
+    "cookieAnalyticsIdentity",
     "createInvocationAnalytics",
     "defineAnalyticsEvents",
-    "flattenAnalyticsEvent"
+    "fanOutAnalytics",
+    "flattenAnalyticsEvent",
+    "mintCookie",
+    "randomDigits"
   ]
 }

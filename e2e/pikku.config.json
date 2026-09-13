@@ -42,7 +42,9 @@
     "scenarios": true,
     "agent": true,
     "workflow": true,
-    "webhook": true
+    "webhook": true,
+    "analytics": true,
+    "featureFlags": true
   },
   "emailTemplatesDir": "emails",
   "environments": {

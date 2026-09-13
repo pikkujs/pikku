@@ -92,10 +92,34 @@ import {
 export type { AnalyticsEvent } from './analytics.schemas.gen.js'
 
 /**
+ * Re-exported so an app reaches the whole analytics surface through one
+ * specifier. Where events go is wired next to where they are declared, and
+ * making that import '@pikku/core/analytics' while the event type comes from
+ * '#pikku/analytics' splits one concern across two names.
+ */
+export {
+  fanOutAnalytics,
+  cookieAnalyticsIdentity,
+  composeAnalyticsIdentity,
+  anonymousAnalyticsIdentity,
+  mintCookie,
+  randomDigits,
+  LoggerAnalyticsService,
+} from '@pikku/core/analytics'
+export type {
+  AnalyticsIdentity,
+  AnalyticsIdentityResolver,
+  AnalyticsRecord,
+  AnalyticsService,
+  AnalyticsSink,
+} from '@pikku/core/analytics'
+
+/**
  * Unauthenticated by necessity: anonymous visitors are most of what this
  * measures. Identity is stamped from the session and never read from the body,
- * so no caller can attribute events to someone else. Anonymous records nothing
- * — no visitor id, no device storage.
+ * so no caller can attribute events to someone else. An anonymous visitor is
+ * identified only where the app wired a resolver that mints one — nothing here
+ * stores anything on a device by itself.
  */
 export const analyticsIngest = pikkuSessionlessFunc({
   auth: false,

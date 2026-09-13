@@ -20,6 +20,7 @@ import {
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuAnalytics'
+  | 'pikkuFeatureFlagsScaffold'
   | 'pikkuConsoleFunctions'
   | 'pikkuVirtualUserFunctions'
   | 'pikkuPublicAgent'
@@ -39,6 +40,11 @@ const scaffoldFiles = (
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.analytics && config.analyticsFile)
     files.push({ file: config.analyticsFile, generator: 'pikkuAnalytics' })
+  if (config.scaffold?.featureFlags && config.featureFlagsFile)
+    files.push({
+      file: config.featureFlagsFile,
+      generator: 'pikkuFeatureFlagsScaffold',
+    })
   if (config.scaffold?.console && config.consoleFunctionsFile)
     files.push({
       file: config.consoleFunctionsFile,
@@ -93,10 +99,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Bootstrap inspect', async () => {
         await getInspectorState(false, true, true)
       })
-      // Both before the function types: the function leaf imports ScopeId from
-      // the scopes codegen, so any later import of '#pikku/function' — the
-      // inspector reading a project's zod schemas, for one — fails until these
-      // two files exist.
+      // All before the function types: the function leaf imports ScopeId and
+      // FeatureFlagName from these, so any later import of '#pikku/function' —
+      // the inspector reading a project's zod schemas, for one — fails until
+      // they exist.
       await workflow.do(
         'Bootstrap scope definition types',
         'pikkuScopeDefinitionTypes',
@@ -105,6 +111,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Bootstrap error types', 'pikkuErrorTypes', null)
       await workflow.do('Bootstrap scopes', 'pikkuScopes', { bootstrap: true })
       await workflow.do('Bootstrap roles', 'pikkuRoles', { bootstrap: true })
+      await workflow.do('Bootstrap flags', 'pikkuFlags', { bootstrap: true })
       await workflow.do('Bootstrap personas', 'pikkuPersonas', {
         bootstrap: true,
       })
@@ -295,6 +302,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
+      workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
@@ -305,6 +313,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Credentials', 'pikkuCredentials', null),
       workflow.do('Scopes', 'pikkuScopes', {}),
       workflow.do('Roles', 'pikkuRoles', {}),
+      workflow.do('Flags', 'pikkuFlags', {}),
       workflow.do('Personas', 'pikkuPersonas', {}),
       workflow.do('Variables', 'pikkuVariables', null),
       workflow.do('Addon types', 'pikkuAddonTypes', null),

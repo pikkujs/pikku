@@ -107,6 +107,29 @@ addError(MissingScopeError, {
   message: 'The session does not hold a scope required by this function.',
 })
 
+export class FeatureUnavailableError extends PikkuError {
+  public payload: {
+    error: 'feature_unavailable'
+    feature: string
+  }
+
+  constructor(feature: string) {
+    super(`Feature is currently unavailable: ${feature}`)
+    this.payload = {
+      error: 'feature_unavailable',
+      feature,
+    }
+  }
+}
+
+// 503 and not 403: a killed feature is a server-side, temporary, not-your-fault
+// condition, and it should be retryable and monitorable as one. A 403 here
+// would page the wrong team and tell the caller to fix something they cannot.
+addError(FeatureUnavailableError, {
+  status: 503,
+  message: 'This feature is switched off.',
+})
+
 export class ReadonlySessionError extends PikkuError {}
 addError(ReadonlySessionError, {
   status: 403,

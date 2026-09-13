@@ -1,6 +1,12 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react'
 import type { CorePikkuFetch } from '@pikku/fetch'
 import type { AnalyticsClient } from './analytics.js'
+import type { FeatureFlagClient } from './feature-flags.js'
 
 export type PikkuInstance<
   Fetch extends CorePikkuFetch = CorePikkuFetch,
@@ -13,6 +19,8 @@ export type PikkuInstance<
   realtime?: Realtime
   /** Optional — a `createAnalytics` client, so components reach it through the provider. */
   analytics?: AnalyticsClient<any>
+  /** Optional — a `createFeatureFlags` client, so components reach it through the provider. */
+  featureFlags?: FeatureFlagClient<any>
 }
 
 const PikkuContext = createContext<PikkuInstance | null>(null)
@@ -127,4 +135,42 @@ export const usePikkuRealtime = <Realtime = any,>(): Realtime => {
     )
   }
   return context.realtime as Realtime
+}
+
+export const usePikkuFeatureFlags = <
+  Name extends string = string,
+>(): FeatureFlagClient<Name> => {
+  const context = useContext(PikkuContext)
+  if (!context) {
+    throw new Error('usePikkuFeatureFlags must be used within PikkuProvider')
+  }
+  if (!context.featureFlags) {
+    throw new Error(
+      'usePikkuFeatureFlags needs a feature flag client on the Pikku instance'
+    )
+  }
+  return context.featureFlags as FeatureFlagClient<Name>
+}
+
+/**
+ * Whether to render one feature, re-rendering when the map arrives or changes.
+ *
+ * `useSyncExternalStore` rather than state and an effect: the client is shared
+ * by every component that asks, and this is what keeps them from tearing — half
+ * the tree on the bootstrapped map and half on the fetched one.
+ *
+ * Advisory. It answers what to show, never what is allowed; the server
+ * re-checks availability on the call itself.
+ */
+export const useFeatureFlag = <Name extends string = string>(
+  name: Name
+): boolean => {
+  const flags = usePikkuFeatureFlags<Name>()
+  return useSyncExternalStore(
+    flags.subscribe,
+    () => flags.has(name),
+    // The server render is the bootstrapped value, which is the whole point of
+    // bootstrapping: hydrate onto the same answer rather than flipping on mount.
+    () => flags.has(name)
+  )
 }

@@ -31,6 +31,7 @@ import type { SessionService } from '../services/user-session-service.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
 import { MissingSessionError, ReadonlySessionError } from '../errors/errors.js'
 import { verifyScopes } from '../scopes.js'
+import { assertFeatureAvailable } from '../wirings/flag/assert-feature-available.js'
 import {
   PikkuCredentialWireService,
   createWireServicesCredentialWireProps,
@@ -370,6 +371,21 @@ export const runPikkuFunc = async <In = any, Out = any>(
       session
     )
 
+    const featureFlag = funcConfig.featureFlag ?? funcMeta.featureFlag
+    if (featureFlag) {
+      // The host's source, not the package's: a `featureFlag:` on an addon
+      // function names a flag the consuming application declared and its
+      // operators switch. A package factory builds its own services and has no
+      // reason to carry one, and reading that would leave every addon gate
+      // open.
+      await assertFeatureAvailable(
+        featureFlag,
+        singletonServices.featureFlags ??
+          resolvedSingletonServices.featureFlags,
+        session
+      )
+    }
+
     let actualData = await data()
 
     const inputSchemaName = funcMeta.inputSchemaName
@@ -442,7 +458,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
               resolvedSingletonServices.analyticsService ??
                 new LoggerAnalyticsService(resolvedSingletonServices.logger),
               invocationWire,
-              resolvedSingletonServices.logger
+              resolvedSingletonServices.logger,
+              resolvedSingletonServices.analyticsIdentity
             )
             return invocationAnalytics
           },

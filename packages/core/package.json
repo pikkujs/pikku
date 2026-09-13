@@ -66,6 +66,7 @@
     "./oauth2": "./dist/wirings/oauth2/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
+    "./flag": "./dist/wirings/flag/index.js",
     "./services/local-meta": "./dist/services/meta-service.js",
     "./services/v8-coverage": "./dist/services/v8-coverage-service.js",
     "./services/istanbul-coverage": "./dist/services/istanbul-coverage-service.js",

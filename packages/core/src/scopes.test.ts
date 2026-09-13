@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import * as assert from 'node:assert'
-import { hasScopes, verifyScopes } from './scopes.js'
+import { hasAnyScope, hasScopes, verifyScopes } from './scopes.js'
 import { MissingScopeError } from './errors/errors.js'
 import type { CoreUserSession } from './types/core.types.js'
 
@@ -199,5 +199,35 @@ describe('hasScopes', () => {
 
   test('accepts a Set of held grants', () => {
     assert.equal(hasScopes(['admin:impersonate'], new Set(['admin'])), true)
+  })
+})
+
+describe('hasAnyScope', () => {
+  test('passes when the session holds one of several', () => {
+    assert.equal(
+      hasAnyScope(['invoices:create', 'invoices:read'], ['invoices:read']),
+      true
+    )
+  })
+
+  test('fails when the session holds none', () => {
+    assert.equal(hasAnyScope(['invoices:create'], ['orders:read']), false)
+  })
+
+  test('an empty candidate list satisfies nobody', () => {
+    assert.equal(hasAnyScope([], ['invoices:create']), false)
+  })
+
+  test('no candidates satisfies nobody — the opposite of hasScopes', () => {
+    assert.equal(hasAnyScope(undefined, ['invoices:create']), false)
+    assert.equal(hasScopes(undefined, ['invoices:create']), true)
+  })
+
+  test('a held wildcard satisfies a descendant candidate', () => {
+    assert.equal(hasAnyScope(['invoices:create'], ['invoices:*']), true)
+  })
+
+  test('no held scopes fails', () => {
+    assert.equal(hasAnyScope(['invoices:create'], undefined), false)
   })
 })

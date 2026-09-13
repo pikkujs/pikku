@@ -212,7 +212,10 @@ export const codeEditorConsoleScenario = pikkuScenario<
     await scenario.given(
       'opens the agents page',
       'opensConsolePage',
-      { path: '/console/agents' },
+      {
+        path: '/console/agents',
+        waitFor: { testId: 'entity-card-todoReadAgent' },
+      },
       { actor: actors.admin, description: 'opens the agents page' }
     )
     await scenario.when(

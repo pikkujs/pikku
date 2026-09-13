@@ -5,32 +5,33 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2933 observable things**: 936 exported names, plus
-1997 members on the classes and interfaces among them, reachable
-through 54 entry points.
+**3005 observable things**: 974 exported names, plus
+2031 members on the classes and interfaces among them, reachable
+through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 156 | 124 | 424 |
+| `./services` | 159 | 127 | 434 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
-| `./types` | 23 | 20 | 75 |
+| `./types` | 23 | 20 | 77 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
-| `./errors` | 49 | 49 | 20 |
+| `./errors` | 50 | 50 | 22 |
+| `./analytics` | 24 | 24 | 36 |
 | `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./mcp` | 20 | 20 | 17 |
-| `./analytics` | 13 | 13 | 24 |
 | `./classification` | 22 | 22 | 14 |
+| `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./middleware` | 27 | 25 | 0 |
@@ -220,10 +221,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   coverageService?: CoverageService
   audit?: AuditService
   analyticsService?: AnalyticsService
+  analyticsIdentity?: AnalyticsIdentityResolver
   analytics?: AnalyticsLog
   auditLog?: AuditLog
   sessionStore?: SessionStore
   scopeService?: ScopeService
+  featureFlags?: FeatureFlagSource
   auth?: () => Promise<AuthInstance>
 }
 export interface CoreUserSession {
@@ -551,6 +554,7 @@ export type CorePikkuFunctionConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   Scope extends string = string,
+  FeatureFlagName extends string = string,
 > = {
   title?: string
   description?: string
@@ -581,6 +585,7 @@ export type CorePikkuFunctionConfig<
   skip?: string
   auth?: boolean
   scopes?: Scope[]
+  featureFlag?: FeatureFlagName
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
   input?: InputSchema
@@ -638,13 +643,16 @@ export type CorePikkuSessionlessFunctionConfig<
   >,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  FeatureFlagName extends string = string,
 > = Omit<
   CorePikkuFunctionConfig<
     PikkuFunction,
     PikkuPermission,
     PikkuMiddleware,
     InputSchema,
-    OutputSchema
+    OutputSchema,
+    string,
+    FeatureFlagName
   >,
   'scopes'
 >
@@ -675,6 +683,7 @@ export type FunctionRuntimeMeta = {
   inputSchemaName: string | null
   outputSchemaName: string | null
   scopes?: string[]
+  featureFlag?: string
   expose?: boolean
   auth?: boolean
   permissionsInBody?: boolean
@@ -3635,7 +3644,15 @@ export interface AnalyticsIdentity {
   userId: string | null
   orgId?: string
   pikkuUserId?: string
+  vendorIds?: Record<string, string>
+  anonymousId?: string
+  consent?: Record<string, boolean>
 }
+export type AnalyticsIdentityResolver = (
+  wire: PikkuWire<any, any, any, CoreUserSession>,
+  resolved?: Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'>
+) =>
+  Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'> | undefined
 export interface AnalyticsLog< Events extends AnalyticsEventBase = AnalyticsEventBase, > {
   record(event: Events, client?: AnalyticsClientContext): Promise<void>
   flush(): Promise<void>
@@ -3653,17 +3670,40 @@ export interface AnalyticsRecord {
   source: 'server' | 'client'
 }
 export interface AnalyticsService {
-  record(event: AnalyticsRecord): Promise<void>
-  write?(batch: AnalyticsRecord[]): Promise<void>
+  write(batch: AnalyticsRecord[]): Promise<void>
 }
-createInvocationAnalytics: (service: AnalyticsService, wire: PikkuWire<any, any, any, CoreUserSession>, logger?: Logger | undefined) => AnalyticsLog<AnalyticsEventBase>
+export interface AnalyticsSink {
+  service: AnalyticsService
+  accepts?: (record: AnalyticsRecord) => boolean
+}
+anonymousAnalyticsIdentity: (options?: AnonymousAnalyticsIdentityOptions) => AnalyticsIdentityResolver
+export interface AnonymousAnalyticsIdentityOptions {
+  name?: string
+  requires?: string[]
+  cookie?: SerializeOptions
+}
+composeAnalyticsIdentity: (...resolvers: AnalyticsIdentityResolver[]) => AnalyticsIdentityResolver
+cookieAnalyticsIdentity: (options: CookieAnalyticsIdentityOptions) => AnalyticsIdentityResolver
+export interface CookieAnalyticsIdentityOptions {
+  vendorIds?: Record<string, string>
+  consent?: Record<string, string>
+}
+createInvocationAnalytics: (service: AnalyticsService, wire: PikkuWire<any, any, any, CoreUserSession>, logger?: Logger | undefined, resolveIdentity?: AnalyticsIdentityResolver | undefined) => AnalyticsLog<AnalyticsEventBase>
 defineAnalyticsEvents: <const Events extends AnalyticsEventDefinitions>(events: Events) => Events
+fanOutAnalytics: (sinks: readonly (AnalyticsService | AnalyticsSink)[]) => AnalyticsService
 flattenAnalyticsEvent: (event: AnalyticsEventBase, at?: number | undefined) => AnalyticsEventInput
 export class LoggerAnalyticsService implements AnalyticsService {
   constructor(private readonly logger: Logger)
-  async record(event: AnalyticsRecord): Promise<void>
   async write(batch: AnalyticsRecord[]): Promise<void>
 }
+mintCookie: (wire: AnyWire, name: string, options: MintCookieOptions, mint: () => string) => string | undefined
+export interface MintCookieOptions {
+  cookie: SerializeOptions
+  requires?: string[]
+  consent?: Record<string, boolean>
+  overwrite?: boolean
+}
+randomDigits: (length: number) => string
 ```
 
 ## ./gateway
@@ -4209,6 +4249,10 @@ export interface ErrorDetails {
   mcpCode?: number
 }
 export class ExpectationFailedError extends PikkuError {}
+export class FeatureUnavailableError extends PikkuError {
+  public payload: { error: 'feature_unavailable'; feature: string }
+  constructor(feature: string)
+}
 export class ForbiddenError extends PikkuError {}
 export class GatewayTimeoutError extends PikkuError {}
 export class GoneError extends PikkuError {}
@@ -4572,6 +4616,20 @@ export interface EmailTemplateMeta {
   hasText: boolean
   locales: Record<string, EmailTemplateLocaleMeta>
 }
+export interface FeatureFlagSource {
+  snapshot(): Promise<FlagConfigSnapshot>
+  declaredFlags?(): readonly DeclaredFlag[]
+}
+export interface FeatureFlagStore extends FeatureFlagSource {
+  syncFlags(flags: DeclaredFlag[]): Promise<void>
+  listFlags(): Promise<FlagRow[]>
+  setEnabled(key: string, enabled: boolean, actor?: string, note?: string): Promise<void>
+  setRollout(key: string, percent: number | null, actor?: string): Promise<void>
+  setOverride(key: string, subject: FlagSubject, enabled: boolean, actor?: string): Promise<void>
+  clearOverride(key: string, subject: FlagSubject): Promise<void>
+  findStaleFlags(): Promise<string[]>
+  pruneFlags(): Promise<string[]>
+}
 export class FileScenarioRunStore implements ScenarioRunStore {
   constructor(private readonly options: FileScenarioRunStoreOptions)
   async start(record: ScenarioRunRecord): Promise<void>
@@ -4587,6 +4645,11 @@ export class FileScenarioRunStore implements ScenarioRunStore {
 export interface FileScenarioRunStoreOptions {
   dir: string
   keep?: number
+}
+export type FlagRow = DeclaredFlag & {
+  enabled: boolean
+  rolloutPercent: number | null
+  declared: boolean
 }
 export interface FunctionCoverageEntry {
   name: string
@@ -5225,6 +5288,69 @@ withoutSecrets: <T extends object>(services: T, context: string) => SecretlessSe
 export interface WriteFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
   stream: ReadableStream | NodeJS.ReadableStream
 }
+```
+
+## ./flag
+
+```ts
+assertFeatureAvailable: (key: string, featureFlags: FeatureFlagSource | undefined, session: CoreUserSession | undefined, subject?: FlagSubject | undefined) => Promise<void>
+bucketOf: (flag: string, subject: string) => number
+export abstract class CachedFlagSource implements FeatureFlagSource {
+  constructor(options: CachedFlagSourceOptions = {})
+  protected abstract fetchSnapshot(): Promise<FlagConfigSnapshot>
+  protected setDeclared(declared: DeclaredFlag[]): void
+  declaredFlags(): readonly DeclaredFlag[]
+  invalidate(): void
+  async snapshot(): Promise<FlagConfigSnapshot>
+}
+export interface CachedFlagSourceOptions {
+  ttlMs?: number
+  declared?: readonly DeclaredFlag[]
+}
+compiledFallbackSnapshot: (flags: readonly DeclaredFlag[]) => FlagConfigSnapshot
+export type CoreFeatureFlag = {
+  description?: string
+  anyOf?: string[]
+}
+export type CoreFeatureFlags = Record<string, CoreFeatureFlag>
+export type DeclaredFlag = {
+  name: string
+  description?: string
+  anyOf?: string[]
+}
+defineFeatureFlags: (_config: CoreFeatureFlags) => void
+export type FeatureFlagDefinitionMeta = {
+  name: string
+  description?: string
+  anyOf?: string[]
+  sourceFile?: string
+}
+export type FeatureFlagDefinitions = FeatureFlagDefinitionMeta[]
+export type FeatureFlagDefinitionsMeta = Record<
+  string,
+  FeatureFlagDefinitionMeta
+>
+export type FlagConfig = {
+  enabled: boolean
+  rolloutPercent: number | null
+  overrides: Record<string, boolean>
+}
+export type FlagConfigSnapshot = Record<string, FlagConfig>
+export type FlagState = {
+  available: boolean
+  capable: boolean
+}
+export type FlagSubject = {
+  organizationId?: string
+  userId?: string
+}
+flattenFeatureFlagDefinitions: (definitions: FeatureFlagDefinitions) => DeclaredFlag[]
+export type ResolvedFlag = FlagState & { show: boolean }
+resolveFlag: (key: string, anyOf: readonly string[] | undefined, session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => FlagState
+resolveFlagForClient: (key: string, anyOf: readonly string[] | undefined, session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => ResolvedFlag
+resolveFlagsForClient: (declared: readonly DeclaredFlag[], session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => Record<string, boolean>
+subjectIdOf: (subject: FlagSubject | undefined) => string | undefined
+validateAndBuildFeatureFlagDefinitionsMeta: (definitions: FeatureFlagDefinitions) => FeatureFlagDefinitionsMeta
 ```
 
 ## ./services/local-meta

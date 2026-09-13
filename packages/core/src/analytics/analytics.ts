@@ -4,6 +4,7 @@ import type {
   AnalyticsClientContext,
   AnalyticsEventBase,
   AnalyticsEventInput,
+  AnalyticsIdentityResolver,
   AnalyticsLog,
   AnalyticsRecord,
   AnalyticsService,
@@ -24,7 +25,8 @@ class InvocationAnalyticsLog implements AnalyticsLog {
   constructor(
     private readonly service: AnalyticsService,
     private readonly wire: PikkuWire<any, any, any, CoreUserSession>,
-    private readonly logger?: Logger
+    private readonly logger?: Logger,
+    private readonly resolveIdentity?: AnalyticsIdentityResolver
   ) {}
 
   async record(
@@ -39,13 +41,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
 
     const batch = this.buffer.splice(0, this.buffer.length)
     try {
-      if (this.service.write) {
-        await this.service.write(batch)
-        return
-      }
-      for (const event of batch) {
-        await this.service.record(event)
-      }
+      await this.service.write(batch)
     } catch (error) {
       const logger = this.wire.logger ?? this.logger
       logger?.warn?.('analytics flush failed', error)
@@ -62,6 +58,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
   ): AnalyticsRecord {
     const session = this.wire.session as CoreUserSession | undefined
     const { name, props } = flattenAnalyticsEvent(event)
+    const resolved = this.resolveIdentity?.(this.wire)
     return {
       name,
       props,
@@ -71,6 +68,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
         userId: session?.userId ?? null,
         orgId: session?.orgId,
         pikkuUserId: this.wire.pikkuUserId,
+        ...resolved,
       },
       traceId: this.wire.traceId,
       functionId: this.wire.functionId,
@@ -83,5 +81,7 @@ class InvocationAnalyticsLog implements AnalyticsLog {
 export const createInvocationAnalytics = (
   service: AnalyticsService,
   wire: PikkuWire<any, any, any, CoreUserSession>,
-  logger?: Logger
-): AnalyticsLog => new InvocationAnalyticsLog(service, wire, logger)
+  logger?: Logger,
+  resolveIdentity?: AnalyticsIdentityResolver
+): AnalyticsLog =>
+  new InvocationAnalyticsLog(service, wire, logger, resolveIdentity)

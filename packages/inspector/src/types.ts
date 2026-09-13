@@ -22,6 +22,7 @@ import type { SecretDefinitions } from '@pikku/core/secret'
 import type { CredentialDefinitions } from '@pikku/core/credential'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { SystemRoleDefinitions } from '@pikku/core/role'
+import type { FeatureFlagDefinitions } from '@pikku/core/flag'
 import type { PersonaDefinitions } from '@pikku/core/persona'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
@@ -720,6 +721,10 @@ export interface InspectorState {
   }
   systemRoles: {
     definitions: SystemRoleDefinitions
+    files: Set<string>
+  }
+  featureFlags: {
+    definitions: FeatureFlagDefinitions
     files: Set<string>
   }
   personas: {

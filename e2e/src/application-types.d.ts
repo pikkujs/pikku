@@ -6,7 +6,12 @@ import type {
 } from '@pikku/core/types'
 import type { LogLevel } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
-import type { KyselyPikkuDB, KyselyScopeService } from '@pikku/kysely'
+import type {
+  KyselyFeatureFlagStore,
+  KyselyPikkuDB,
+  KyselyScopeService,
+} from '@pikku/kysely'
+import type { RecordingAnalyticsService } from './recording-analytics-service.js'
 
 export interface UserSession extends CoreUserSession {}
 
@@ -26,6 +31,15 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
    */
   scopeDb: Kysely<KyselyPikkuDB>
   scopeService: KyselyScopeService
+  /**
+   * Narrowed from the core slot's read-only `FeatureFlagSource`: the suite
+   * drives the operator half directly as well as through the admin RPCs.
+   */
+  featureFlags: KyselyFeatureFlagStore
+  /** Every event the app emitted, in order. */
+  analyticsRecorder: RecordingAnalyticsService
+  /** Only the events the fan-out's `accepts` predicate let through. */
+  analyticsConversions: RecordingAnalyticsService
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

@@ -19,9 +19,6 @@ const makeWire = (session?: CoreUserSession) =>
 const recordingService = () => {
   const batches: AnalyticsRecord[][] = []
   const service: AnalyticsService = {
-    async record(event) {
-      batches.push([event])
-    },
     async write(batch) {
       batches.push(batch)
     },
@@ -123,32 +120,11 @@ describe('createInvocationAnalytics', () => {
     assert.equal('at' in batches[0]![0]!, false)
   })
 
-  it('falls back to record() when the service takes no batch', async () => {
-    const seen: AnalyticsRecord[] = []
-    const analytics = createInvocationAnalytics(
-      {
-        async record(event) {
-          seen.push(event)
-        },
-      },
-      makeWire()
-    )
-
-    await analytics.record({ name: 'a' })
-    await analytics.record({ name: 'b' })
-    await analytics.close()
-
-    assert.deepEqual(
-      seen.map((event) => event.name),
-      ['a', 'b']
-    )
-  })
-
   it('warns rather than throws when the destination fails', async () => {
     const warnings: unknown[] = []
     const analytics = createInvocationAnalytics(
       {
-        async record() {
+        async write() {
           throw new Error('destination down')
         },
       },

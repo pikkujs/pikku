@@ -52,6 +52,27 @@ export const hasScopes = (
 ): boolean => firstUnsatisfied(required, held) === null
 
 /**
+ * True when `held` satisfies AT LEAST ONE of `candidates`, with the same
+ * parent/wildcard rules as {@link hasScopes}.
+ *
+ * The OR counterpart to {@link hasScopes}, for a feature flag's `anyOf`: a flag
+ * usually reveals one entry point several roles can reach, so requiring all of
+ * them would hide it from everyone who can actually use it. Fails closed — an
+ * empty or absent `candidates` is satisfied by nothing, because "any of
+ * nothing" has no member that could hold.
+ */
+export const hasAnyScope = (
+  candidates: readonly string[] | undefined,
+  held: Iterable<string> | undefined
+): boolean => {
+  if (!candidates || candidates.length === 0) {
+    return false
+  }
+  const grants = new Set(held ?? [])
+  return candidates.some((scope) => holds(grants, scope))
+}
+
+/**
  * Throws {@link MissingScopeError} naming the first scope the session does not
  * hold. Fails closed: no session, or a session without `scopes`, satisfies
  * nothing.

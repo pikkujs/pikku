@@ -9,6 +9,8 @@ export const bootstrap = pikkuVoidFunc({
     await rpc.invoke('pikkuScopes', { bootstrap: true })
     // Before function types too: personas import SystemRoleName.
     await rpc.invoke('pikkuRoles', { bootstrap: true })
+    // And before them too: they import FeatureFlagName from the flags codegen.
+    await rpc.invoke('pikkuFlags', { bootstrap: true })
     await rpc.invoke('pikkuPersonas', { bootstrap: true })
     await rpc.invoke('pikkuFunctionTypesSplit', { bootstrap: true })
     // Stub auth.types.ts (if better-auth is used) so the pikkuBetterAuth

@@ -549,6 +549,7 @@ const _getPikkuCLIConfig = async (
     const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
       rpc: 'publicRpcFile',
       analytics: 'analyticsFile',
+      featureFlags: 'featureFlagsFile',
       agent: 'publicAgentFile',
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
@@ -633,6 +634,13 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'analytics',
         'analytics.gen.ts'
+      )
+    }
+    if (result.scaffold?.featureFlags && !result.featureFlagsFile) {
+      result.featureFlagsFile = join(
+        resolvedScaffoldDir,
+        'feature-flags',
+        'feature-flags.gen.ts'
       )
     }
     if (result.scaffold?.rpc && !result.publicRpcFile) {
@@ -1151,6 +1159,15 @@ const _getPikkuCLIConfig = async (
     }
     if (!result.rolesMetaJsonFile) {
       result.rolesMetaJsonFile = join(scopesDir, 'pikku-roles-meta.gen.json')
+    }
+
+    // Feature flags. Beside the scopes their `anyOf` names, for the same reason
+    // roles sit there: a flag is unreadable without them.
+    if (!result.flagsFile) {
+      result.flagsFile = join(scopesDir, 'pikku-flags.gen.ts')
+    }
+    if (!result.flagsMetaJsonFile) {
+      result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
     // Personas. Beside the roles they are checked against, for the same reason

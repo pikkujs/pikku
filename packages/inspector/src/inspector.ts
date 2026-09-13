@@ -207,6 +207,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       definitions: [],
       files: new Set(),
     },
+    featureFlags: {
+      definitions: [],
+      files: new Set(),
+    },
     personas: {
       definitions: [],
       files: new Set(),

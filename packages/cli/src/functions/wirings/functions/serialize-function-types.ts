@@ -19,6 +19,7 @@ export const serializeFunctionTypes = (
   nodeCategories?: string[],
   scopesTypeImport?: string,
   credentialsTypeImport?: string,
+  flagsTypeImport?: string,
   middlewareTypesImportPath = '../middleware/pikku-middleware-types.gen.js',
   { addon = false }: { addon?: boolean } = {}
 ) => {
@@ -37,6 +38,9 @@ import type { TypedScenario, TypedPersonas } from '../scenarios/pikku-scenario-t
   // callable with an explicit type argument.
   const credentialsImport =
     credentialsTypeImport || `type CredentialsMap = Record<string, unknown>`
+  // Same fallback again: without a flags codegen `featureFlag` stays a plain
+  // string, which is what a project that declares no flag wants anyway.
+  const flagsImport = flagsTypeImport || `type FeatureFlagName = string`
 
   return `/**
  * Core function types for all wirings
@@ -56,6 +60,7 @@ import type { PikkuMiddleware } from '${middlewareTypesImportPath}'
 import type { PikkuPermission } from '${authTypesImportPath}'
 ${scopesImport}
 ${credentialsImport}
+${flagsImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import {
   CorePikkuFunction,
@@ -217,7 +222,7 @@ export type PikkuFunctionConfig<
   PikkuFunc extends PikkuFunction<In, Out, RequiredWires, any> | PikkuFunctionSessionless<In, Out, RequiredWires, any, any> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = Omit<CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId>, 'node'> & {
+> = Omit<CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, ScopeId, FeatureFlagName>, 'node'> & {
   node?: NodeConfig
 }
 
@@ -232,7 +237,7 @@ type PikkuFunctionSessionlessConfig<
   PikkuFunc extends PikkuFunctionSessionless<In, Out, RequiredWires, any> = PikkuFunctionSessionless<In, Out, RequiredWires>,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
-> = Omit<CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>, 'node'> & {
+> = Omit<CorePikkuSessionlessFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema, FeatureFlagName>, 'node'> & {
   node?: NodeConfig
 }
 
@@ -262,7 +267,8 @@ type PikkuFunctionConfigWithSchema<
     PikkuMiddleware,
     undefined,
     undefined,
-    ScopeId
+    ScopeId,
+    FeatureFlagName
   >,
   'func' | 'input' | 'output' | 'permissions' | 'approvalDescription' | 'node'
 > & {

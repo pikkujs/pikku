@@ -251,6 +251,31 @@ export interface PikkuRolesTable {
   createdAt: Generated<Date>
 }
 
+/** A feature flag's operator state. What code declared lives beside it. */
+export interface PikkuFeatureFlagsTable {
+  name: string
+  description: string | null
+  /** The declared `anyOf` scope list as JSON, or null for a pure switch. */
+  anyOf: string | null
+  enabled: Generated<boolean>
+  rolloutPercent: number | null
+  /** False for a flag whose declaration has gone: switchable, but not offered. */
+  declared: Generated<boolean>
+  updatedBy: string | null
+  note: string | null
+  updatedAt: Generated<Date>
+}
+
+/** One subject's short-circuit, in either direction, over a flag's rollout. */
+export interface PikkuFeatureFlagOverridesTable {
+  flag: string
+  subjectId: string
+  subjectKind: string
+  enabled: boolean
+  grantedBy: string | null
+  grantedAt: Generated<Date>
+}
+
 export interface PikkuRoleScopesTable {
   role: string
   scope: string
@@ -353,6 +378,26 @@ export interface AuditTable {
   data: string | null
 }
 
+/** One analytics event, as {@link KyselyAnalyticsService} appended it. */
+export interface PikkuAnalyticsEventsTable {
+  eventId: string
+  name: string
+  /** ISO 8601, because string ordering is chronological ordering. */
+  occurredAt: string
+  source: string
+  functionId: string | null
+  wireType: string | null
+  traceId: string | null
+  userId: string | null
+  orgId: string | null
+  pikkuUserId: string | null
+  /** The device id for a visitor with no session yet. */
+  anonymousId: string | null
+  vendorIds: string | null
+  consent: string | null
+  props: string | null
+}
+
 /**
  * One turn of a run's transcript.
  *
@@ -404,6 +449,8 @@ export interface KyselyPikkuDB {
   pikkuRoleScopes: PikkuRoleScopesTable
   pikkuUserRole: PikkuUserRoleTable
   pikkuUserScope: PikkuUserScopeTable
+  pikkuFeatureFlags: PikkuFeatureFlagsTable
+  pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable
@@ -431,4 +478,5 @@ export interface KyselyPikkuDB {
   virtualUserRunStep: VirtualUserRunStepTable
   virtualUserSchedule: VirtualUserScheduleTable
   audit: AuditTable
+  pikkuAnalyticsEvents: PikkuAnalyticsEventsTable
 }
