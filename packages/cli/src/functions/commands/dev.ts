@@ -370,6 +370,15 @@ export const dev = pikkuSessionlessFunc<
 
     const consoleMount = await resolveConsoleMount()
 
+    // Appended, not assigned: an app's own config may already declare mounts
+    // for its frontend, and dev is where that frontend is meant to be served.
+    // Replacing them meant the console being present silently unmounted the
+    // app, which is the one combination every project has.
+    const staticMounts = [
+      ...(userConfig.staticMounts ?? []),
+      ...(consoleMount ? [consoleMount] : []),
+    ]
+
     /**
      * Hand the server the generated MCP manifest so it actually serves MCP.
      *
@@ -415,7 +424,7 @@ export const dev = pikkuSessionlessFunc<
         hostname: bindHostname,
         port: resolvedPort,
         content: localContentConfig,
-        ...(consoleMount ? { staticMounts: [consoleMount] } : {}),
+        ...(staticMounts.length > 0 ? { staticMounts } : {}),
       },
       logger,
       { contentSigningJWT, mcpJson }
