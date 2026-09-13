@@ -1,19 +1,13 @@
 import { readFile } from 'node:fs/promises'
-import { extname } from 'node:path'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { changesContext } from '../lib/changes.js'
-import { dim } from '../lib/output.js'
+import {
+  changesContext,
+  imageContentType,
+  type ImageContentType,
+} from '../lib/changes.js'
+import { dim, safe } from '../lib/output.js'
 import type { AttachChangeShotOutput } from '../sdk/rpc-map.gen.d.js'
-
-const CONTENT_TYPES = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-} as const
-
-type ContentType = (typeof CONTENT_TYPES)[keyof typeof CONTENT_TYPES]
 
 export const FabricChangesShotInput = z.object({
   apiUrl: z.string().optional(),
@@ -44,12 +38,11 @@ export const FabricChangesShot = pikkuSessionlessFunc({
     if (!input.image && !input.imageBase64)
       throw new Error('Pass --image <path> or --image-base64 <data>.')
 
-    let contentType: ContentType | undefined = input.contentType
+    let contentType: ImageContentType | undefined = input.contentType
     let imageBase64 = input.imageBase64
 
     if (input.image) {
-      const extension = extname(input.image).toLowerCase()
-      const inferred = CONTENT_TYPES[extension as keyof typeof CONTENT_TYPES]
+      const inferred = imageContentType(input.image)
       if (!inferred && !contentType)
         throw new Error(
           `Cannot tell the image type from “${input.image}” — pass --content-type.`
@@ -76,7 +69,7 @@ export const renderChangesShot = (
 ): void => {
   const count = message.attachments.length
   console.log(
-    `Attached — the item now offers ${count} option${count === 1 ? '' : 's'} in the panel.`
+    `Attached — the item now has ${count} attachment${count === 1 ? '' : 's'} in the panel.`
   )
-  console.log(dim(`key ${key}`))
+  console.log(dim(`key ${safe(key)}`))
 }

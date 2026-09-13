@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { age, changesContext, requireProjectId } from '../lib/changes.js'
-import { dim, statusColor } from '../lib/output.js'
+import {
+  age,
+  changesContext,
+  remaining,
+  requireProjectId,
+} from '../lib/changes.js'
+import { dim, safe, statusColor } from '../lib/output.js'
 import type { ListChangesOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesListInput = z.object({
@@ -48,17 +53,18 @@ const line = (change: Change): void => {
   const flags = [
     statusColor(change.status),
     change.held ? dim('held') : null,
-    change.route,
+    change.route ? safe(change.route) : null,
   ]
     .filter(Boolean)
     .join('  ')
-  console.log(`  #${change.shortId}  ${change.title}`)
+  console.log(`  #${safe(change.shortId)}  ${safe(change.title)}`)
   console.log(
-    `      ${flags}  ${age(change.createdAt)} ago  ${dim(change.changeId)}`
+    `      ${flags}  ${age(change.createdAt)} ago  ${dim(safe(change.changeId))}`
   )
   const named = (change.capture?.elements ?? [])
     .map((element) => element.testId ?? element.sourceAnchor ?? element.cssPath)
-    .filter(Boolean)
+    .filter((name): name is string => !!name)
+    .map(safe)
   if (named.length) console.log(dim(`      circled: ${named.join(', ')}`))
 }
 
@@ -85,10 +91,12 @@ export const renderChangesList = (
     if (!members.length) continue
     const lease =
       group.claimedBy && group.claimExpiresAt
-        ? `claimed by ${group.claimedBy}, ${age(group.claimExpiresAt)} left`
+        ? `claimed by ${safe(group.claimedBy)}, ${remaining(group.claimExpiresAt)} left`
         : 'unclaimed'
     console.log('')
-    console.log(`${group.title}  ${dim(`(${lease})  ${group.groupId}`)}`)
+    console.log(
+      `${safe(group.title)}  ${dim(`(${lease})  ${safe(group.groupId)}`)}`
+    )
     members.forEach(line)
   }
 

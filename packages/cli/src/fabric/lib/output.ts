@@ -13,6 +13,17 @@ type Cell = string | number | null | undefined
 const cell = (c: Cell): string =>
   c === null || c === undefined ? '' : String(c)
 
+/**
+ * Text that came back over the wire — a change title, a thread body, an
+ * attachment label — was typed by whoever filed it and is about to be printed
+ * to a terminal. Escape sequences in it would move the cursor, repaint the
+ * screen or set the window title, so every remote string passes through here on
+ * the way to `console.log`. Newlines and tabs survive; bodies are multi-line.
+ */
+export const safe = (s: string): string =>
+  // eslint-disable-next-line no-control-regex
+  s.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '')
+
 /** Dim, secondary text (hints, empty-state lines, labels). */
 export const dim = (s: string): string => chalk.dim(s)
 
@@ -30,10 +41,11 @@ const BAD =
 
 /** Colour a status token by its meaning (falls back to dim). */
 export function statusColor(status: string): string {
-  if (GOOD.test(status)) return added(status)
-  if (BUSY.test(status)) return changed(status)
-  if (BAD.test(status)) return removed(status)
-  return dim(status)
+  const token = safe(status)
+  if (GOOD.test(token)) return added(token)
+  if (BUSY.test(token)) return changed(token)
+  if (BAD.test(token)) return removed(token)
+  return dim(token)
 }
 
 // Strip ANSI so coloured cells still measure/align correctly.

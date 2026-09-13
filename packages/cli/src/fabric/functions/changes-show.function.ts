@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { age, changesContext } from '../lib/changes.js'
-import { dim, keyValue, statusColor } from '../lib/output.js'
+import { dim, keyValue, safe, statusColor } from '../lib/output.js'
 import type { GetChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesShowInput = z.object({
@@ -36,42 +36,43 @@ export const renderChangesShow = (
     stageUrl,
   }: { change: Change; thread: Message[]; stageUrl: string | null }
 ): void => {
-  console.log(`#${change.shortId}  ${change.title}`)
+  console.log(`#${safe(change.shortId)}  ${safe(change.title)}`)
   console.log(
-    `${statusColor(change.status)}${change.held ? dim(' (held)') : ''}  ${dim(change.changeId)}`
+    `${statusColor(change.status)}${change.held ? dim(' (held)') : ''}  ${dim(safe(change.changeId))}`
   )
   if (change.body) {
     console.log('')
-    console.log(change.body)
+    console.log(safe(change.body))
   }
 
   const rows: [string, string][] = []
   if (change.route)
     rows.push([
       'route',
-      `${change.route}${stageUrl ? dim(`  (${stageUrl})`) : ''}`,
+      `${safe(change.route)}${stageUrl ? dim(`  (${safe(stageUrl)})`) : ''}`,
     ])
-  if (change.gitSha) rows.push(['filed at', change.gitSha])
+  if (change.gitSha) rows.push(['filed at', safe(change.gitSha)])
   if (change.viewport)
     rows.push([
       'viewport',
       `${change.viewport.width}×${change.viewport.height}`,
     ])
-  if (change.screenshotUrl) rows.push(['screenshot', change.screenshotUrl])
+  if (change.screenshotUrl)
+    rows.push(['screenshot', safe(change.screenshotUrl)])
 
   let anchored = false
   for (const element of change.capture?.elements ?? []) {
-    const asOf = change.gitSha ? ` as of ${change.gitSha}` : ''
+    const asOf = change.gitSha ? ` as of ${safe(change.gitSha)}` : ''
     const addresses = [
-      element.sourceAnchor ? `${element.sourceAnchor}${asOf}` : null,
-      element.testId ? `testid ${element.testId}` : null,
-      element.cssPath,
+      element.sourceAnchor ? `${safe(element.sourceAnchor)}${asOf}` : null,
+      element.testId ? `testid ${safe(element.testId)}` : null,
+      element.cssPath ? safe(element.cssPath) : null,
     ].filter((address): address is string => !!address)
     if (!addresses.length) continue
     anchored ||= !!element.sourceAnchor
     rows.push([
       'circled',
-      `${addresses[0]}${element.text ? dim(`  “${element.text}”`) : ''}`,
+      `${addresses[0]}${element.text ? dim(`  “${safe(element.text)}”`) : ''}`,
     ])
     for (const fallback of addresses.slice(1)) rows.push(['', dim(fallback)])
   }
@@ -82,7 +83,7 @@ export const renderChangesShow = (
   if (anchored && change.gitSha) {
     console.log(
       dim(
-        `The anchored line is where it was at ${change.gitSha} — find today's equivalent.`
+        `The anchored line is where it was at ${safe(change.gitSha)} — find today's equivalent.`
       )
     )
   }
@@ -90,14 +91,15 @@ export const renderChangesShow = (
   for (const message of thread) {
     console.log('')
     console.log(
-      `${message.authorName ?? message.authorKind} ${dim(`· ${age(message.createdAt)} ago`)}`
+      `${safe(message.authorName ?? message.authorKind)} ${dim(`· ${age(message.createdAt)} ago`)}`
     )
-    console.log(`  ${message.body}`)
+    console.log(`  ${safe(message.body)}`)
     for (const attachment of message.attachments) {
       console.log(
-        `  ${dim(`[${attachment.kind}]`)} ${attachment.label}${attachment.url ? dim(`  ${attachment.url}`) : ''}`
+        `  ${dim(`[${safe(attachment.kind)}]`)} ${safe(attachment.label)}${attachment.url ? dim(`  ${safe(attachment.url)}`) : ''}`
       )
     }
-    if (message.chosenOption) console.log(`  picked: ${message.chosenOption}`)
+    if (message.chosenOption)
+      console.log(`  picked: ${safe(message.chosenOption)}`)
   }
 }

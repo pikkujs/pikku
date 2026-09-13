@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext, idList, requireProjectId } from '../lib/changes.js'
-import { dim } from '../lib/output.js'
+import { dim, safe } from '../lib/output.js'
 import type { ClaimChangesOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesClaimInput = z.object({
@@ -43,8 +43,8 @@ export const renderChangesClaim = (
   _s: unknown,
   { group, changes }: ClaimChangesOutput
 ): void => {
-  console.log(`Claimed ${changes.length} item(s) as “${group.title}”`)
-  console.log(dim(`group ${group.groupId}`))
+  console.log(`Claimed ${changes.length} item(s) as “${safe(group.title)}”`)
+  console.log(dim(`group ${safe(group.groupId)}`))
   if (group.claimExpiresAt) {
     console.log(
       dim(`lease until ${new Date(group.claimExpiresAt).toISOString()}`)
@@ -52,7 +52,7 @@ export const renderChangesClaim = (
   }
   for (const change of changes) {
     console.log(
-      `  #${change.shortId}  ${change.title}  ${dim(change.changeId)}`
+      `  #${safe(change.shortId)}  ${safe(change.title)}  ${dim(safe(change.changeId))}`
     )
   }
 }
