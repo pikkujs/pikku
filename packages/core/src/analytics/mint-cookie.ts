@@ -15,6 +15,14 @@ export interface MintCookieOptions {
    */
   requires?: string[]
   consent?: Record<string, boolean>
+  /**
+   * Replace the cookie already on the device rather than returning it.
+   *
+   * For the case where the request itself carries something newer than what is
+   * stored — Meta's `_fbc` derives from the `fbclid` on the current URL, and
+   * keeping an older click would attribute the conversion to the wrong ad.
+   */
+  overwrite?: boolean
 }
 
 const permitted = (
@@ -49,7 +57,9 @@ export const mintCookie = (
   options: MintCookieOptions,
   mint: () => string
 ): string | undefined => {
-  const existing = wire.http?.request?.cookie(name)
+  const existing = options.overwrite
+    ? null
+    : wire.http?.request?.cookie(name)
   if (existing) return existing
 
   const cache = minted.get(wire) ?? new Map<string, string>()

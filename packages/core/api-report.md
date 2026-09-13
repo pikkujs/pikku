@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3006 observable things**: 974 exported names, plus
-2032 members on the classes and interfaces among them, reachable
+**3007 observable things**: 974 exported names, plus
+2033 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -25,7 +25,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
 | `./errors` | 50 | 50 | 22 |
-| `./analytics` | 24 | 24 | 37 |
+| `./analytics` | 24 | 24 | 38 |
 | `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
@@ -3702,6 +3702,7 @@ export interface MintCookieOptions {
   cookie: SerializeOptions
   requires?: string[]
   consent?: Record<string, boolean>
+  overwrite?: boolean
 }
 randomDigits: (length: number) => string
 ```

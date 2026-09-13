@@ -99,6 +99,20 @@ describe('mintCookie', () => {
     )
   })
 
+  test('replaces a stored value when the request carries a newer one', () => {
+    const { wire, written } = wireWith({ _fbc: 'fb.1.old.click' })
+
+    const value = mintCookie(
+      wire,
+      '_fbc',
+      { cookie, overwrite: true },
+      () => 'fb.1.new.click'
+    )
+
+    assert.equal(value, 'fb.1.new.click')
+    assert.deepEqual(written, [{ name: '_fbc', value: 'fb.1.new.click' }])
+  })
+
   test('reads an existing cookie even where consent is absent', () => {
     const { wire } = wireWith({ _fbp: 'already' })
 
