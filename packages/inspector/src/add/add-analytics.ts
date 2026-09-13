@@ -26,10 +26,11 @@ const callsDefineAnalyticsEvents = (
       DEFINE_ANALYTICS_EVENTS
     )
   }
-  const resolved =
-    symbol.flags & ts.SymbolFlags.Alias
-      ? (checker.getAliasedSymbol(symbol) ?? symbol)
-      : symbol
+  // Only an import can be pikku's. A file's own helper of the same name
+  // resolves to a symbol whose `.name` matches, so resolving without this
+  // claims it — the mirror of what matching on the callee's text misses.
+  if (!(symbol.flags & ts.SymbolFlags.Alias)) return false
+  const resolved = checker.getAliasedSymbol(symbol) ?? symbol
   return resolved.name === DEFINE_ANALYTICS_EVENTS
 }
 

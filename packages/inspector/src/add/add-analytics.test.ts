@@ -170,6 +170,19 @@ describe('addAnalytics', () => {
     assert.equal(state.analytics?.[0]!.variable, 'usage')
   })
 
+  // The mirror of the alias case: matching on the callee's text alone misses a
+  // renamed import, and matching on the resolved symbol's name alone claims a
+  // local helper that merely shares the name.
+  test('leaves a same-named local helper alone', async () => {
+    const { state } = await inspectSources({
+      'analytics.ts':
+        'const defineAnalyticsEvents = (events: Record<string, unknown>) => events\n' +
+        'export const analyticsEvents = defineAnalyticsEvents({ page_viewed: {} })\n',
+    })
+
+    assert.equal(state.analytics, undefined)
+  })
+
   test('refuses a declaration with no events', async () => {
     const { errors, state } = await inspectSources({
       'analytics.ts':
