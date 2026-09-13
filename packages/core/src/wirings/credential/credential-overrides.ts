@@ -48,6 +48,9 @@ export const buildCredentialResolutions = (
     ...Object.keys(overrides ?? {}),
   ])
 
+  /** Which declaration put each resolution there, for the collision message. */
+  const claimedBy: Record<string, string> = {}
+
   for (const name of names) {
     const override = overrides?.[name]
     const resolved =
@@ -56,8 +59,22 @@ export const buildCredentialResolutions = (
     const mode =
       (typeof override === 'object' ? override.mode : undefined) ??
       declared?.[name]?.type
-    resolutions[resolved] =
+    const resolution: CredentialResolution =
       mode === 'singleton' ? { mode: 'singleton' } : { mode: 'wire' }
+
+    const existing = resolutions[resolved]
+    if (existing && existing.mode !== resolution.mode) {
+      throw new Error(
+        `Credentials '${claimedBy[resolved]}' and '${name}' both resolve to '${resolved}' ` +
+          `but disagree on how it is read: '${existing.mode}' and '${resolution.mode}'. ` +
+          `Only one mode can win, so the loser would silently read the other's ` +
+          `value — a per-user credential served from the deployment's own account, ` +
+          `or the reverse. Give them separate names, or wire both to the same mode.`
+      )
+    }
+
+    resolutions[resolved] = resolution
+    claimedBy[resolved] = name
   }
 
   return resolutions

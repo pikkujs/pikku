@@ -63,4 +63,34 @@ describe('buildCredentialResolutions', () => {
     })
     assert.deepEqual(resolutions.STRIPE_LIVE, { mode: 'wire' })
   })
+
+  test('refuses two credentials that collapse onto one name with opposite modes', () => {
+    assert.throws(
+      () =>
+        buildCredentialResolutions(declared, {
+          gmailOAuth: { name: 'SHARED', mode: 'singleton' },
+          slack: { name: 'SHARED', mode: 'wire' },
+        }),
+      /both resolve to 'SHARED'/
+    )
+  })
+
+  test('refuses the collision whichever declaration comes first', () => {
+    assert.throws(
+      () =>
+        buildCredentialResolutions(declared, {
+          slack: { name: 'SHARED', mode: 'wire' },
+          gmailOAuth: { name: 'SHARED', mode: 'singleton' },
+        }),
+      /both resolve to 'SHARED'/
+    )
+  })
+
+  test('allows a collision when both declarations agree on the mode', () => {
+    const resolutions = buildCredentialResolutions(declared, {
+      gmailOAuth: { name: 'SHARED', mode: 'wire' },
+      slack: { name: 'SHARED', mode: 'wire' },
+    })
+    assert.deepEqual(resolutions.SHARED, { mode: 'wire' })
+  })
 })
