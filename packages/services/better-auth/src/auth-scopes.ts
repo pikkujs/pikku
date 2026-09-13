@@ -107,6 +107,19 @@ export const ADMIN_SCOPE_TREE = {
           },
         },
       },
+      flags: {
+        description: 'Feature flags',
+        scopes: {
+          read: {
+            description:
+              'View declared feature flags, their rollout and their overrides',
+          },
+          manage: {
+            description:
+              'Switch a feature flag, set its rollout, and override it for one subject',
+          },
+        },
+      },
       audit: {
         description: 'The audit trail',
         scopes: {

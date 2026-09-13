@@ -3,6 +3,8 @@
 '@pikku/inspector': patch
 '@pikku/cli': patch
 '@pikku/kysely': patch
+'@pikku/addon-admin': patch
+'@pikku/better-auth': patch
 ---
 
 Feature flags, declared in source and resolved from two independent booleans.
@@ -41,3 +43,17 @@ killed flag. Third-party providers implement the read-only half in the addons
 repository, over plain `fetch` rather than a vendor SDK — those poll on a timer
 belonging to a long-lived process, which a serverless isolate cannot hold
 between requests.
+
+A client asks for its flags once per session rather than per flag:
+`scaffold.featureFlags` generates a `GET /feature-flags` returning every
+declared flag resolved for the caller, keyed by this app's `FeatureFlagName`.
+Generated into the app rather than shipped in an addon precisely for that union
+— an addon never sees the host's, and could only answer
+`Record<string, boolean>`. It returns `show` alone: sending `available` apart
+from `capable` would tell every visitor which features exist but are dark.
+
+The write half is the operator's, and lives in `@pikku/addon-admin` beside the
+scope RPCs, under a new `admin:flags` scope. `flagList` reports `writable:
+false` rather than failing when flags come from a provider, because a provider's
+own UI is its operator surface and a console full of buttons that 500 is worse
+than a read-only tab.

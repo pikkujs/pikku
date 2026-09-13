@@ -10,10 +10,14 @@ import { pikkuAddonServices } from '#pikku/addon/setup'
  * whose meta, code and knowledge services need a disk.
  */
 export const createSingletonServices = pikkuAddonServices(
-  async (_config, { scopeService, credentialService, audit, auth }) => ({
+  async (
+    _config,
+    { scopeService, credentialService, audit, auth, featureFlags }
+  ) => ({
     scopeService,
     credentialService,
     audit,
     auth,
+    featureFlags,
   })
 )
