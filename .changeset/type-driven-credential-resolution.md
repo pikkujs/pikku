@@ -30,11 +30,17 @@ A credential is never read from the secret vault. The wire credential service no
 
 Modes are resolved at generation time into the credentials meta, so the console's connect flow reflects the wiring rather than the addon's default.
 
+Two credentials that resolve to one name are rejected unless they agree on the mode. Generation writes a single metadata entry per name, so a `wire` credential aliased onto a `singleton` one used to take whichever wiring was read last — a per-user credential served from the deployment's own account, or a deployment credential handed out per user. The inspector reports the collision against both wirings by name, and `buildCredentialResolutions` refuses it at runtime too.
+
+A mode-only override is checked against the credential it names. `{ mode: 'wire' }` renames nothing, so nothing was validated: an override naming a credential that does not exist was dropped in silence and the credential kept the mode its author declared.
+
+A credential the wiring resolves as `singleton` is no longer read out of the user's own store. Per-user values are imported first and a name already present is left alone, so a value stored under a singleton's name — from an earlier wiring, or a connect flow since rewired — decided what the deployment's own slot resolved to. It is now skipped by mode, the same way a `wire` credential is kept away from the deployment's value.
+
 The project's own credentials are registered into pikku state from the generated credentials file, so `wire.getCredential` resolves an app-level singleton the same way it resolves an addon's.
 
 `pikku new addon` no longer requires a `pikku.config.json` in the working directory. Scaffolding an addon is something you do before a project config exists, so the command now reads one when it is there and falls back to the working directory when it is not.
 
-An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all.
+An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all. A nested callback that names its own parameter after the factory's is no longer read as the factory's own: what it destructured went onto the addon's contract, so a consumer was asked for a service the addon never wanted from them.
 
 An OAuth2 credential now implies its app secret, so nobody hand-writes one. The client id and secret an OAuth app needs is the same shape every time — `OAuth2AppCredential`, which is what the runtime already reads it as — so the inspector registers a secret for each credential's `appCredentialSecretId`. A hand-written `defineSecret` covering that id still wins, so an author who wants their own description or `docsUrl` keeps it. The derived secret is optional, matching what every hand-written declaration chose: an addon that also authenticates by API key must still deploy without an OAuth app configured.
 
