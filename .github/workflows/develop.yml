@@ -469,7 +469,13 @@ jobs:
             workflows-pg-boss,
             remote-rpc-pg,
             remote-rpc-redis,
-            ai-postgres,
+            # ai-postgres is disabled: it drives a live agent turn, and the
+            # OPENAI_API_KEY it runs against has no credits left, so both the
+            # yarn and bun jobs burn five minutes retrying and fail on `You have
+            # no credits remaining.` on every push to every branch. Disabled in
+            # `main.yml` too, for the other dead key. Re-enable in both once one
+            # of them is funded.
+            # ai-postgres,
             bun,
           ]
         package-manager: [yarn, bun]

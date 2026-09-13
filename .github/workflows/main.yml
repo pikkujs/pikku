@@ -409,7 +409,9 @@ jobs:
             remote-rpc-redis,
             # ai-postgres is disabled: the OPENROUTER_API_KEY secret it runs its
             # live agent turn against has expired, so every run retries 31 times
-            # and fails on `API key expired.`. Re-enable once the secret is rotated.
+            # and fails on `API key expired.`. Disabled in `develop.yml` too,
+            # where the OPENAI_API_KEY it used instead is out of credits.
+            # Re-enable in both once one of them is funded.
             # ai-postgres,
           ]
         package-manager: [yarn]
