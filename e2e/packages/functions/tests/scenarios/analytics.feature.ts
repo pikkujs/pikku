@@ -14,7 +14,7 @@
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 import type { z } from 'zod'
-import { analyticsEvents } from '../../src/analytics-events.js'
+import type { analyticsEvents } from '../../src/analytics-events.js'
 
 /**
  * The union the app declares, rebuilt from the declaration itself. The beacon

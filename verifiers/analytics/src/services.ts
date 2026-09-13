@@ -12,9 +12,6 @@ import type { AnalyticsRecord, AnalyticsService } from '#pikku/analytics'
 export const collectedAnalytics: AnalyticsRecord[][] = []
 
 const collectingAnalyticsService: AnalyticsService = {
-  async record(event) {
-    collectedAnalytics.push([event])
-  },
   async write(batch) {
     collectedAnalytics.push(batch)
   },
