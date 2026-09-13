@@ -13,6 +13,32 @@ type Cell = string | number | null | undefined
 const cell = (c: Cell): string =>
   c === null || c === undefined ? '' : String(c)
 
+/**
+ * Text that came back over the wire — a change title, an id, a route, an
+ * attachment label — was typed by whoever filed it and is about to be printed
+ * to a terminal. Escape sequences in it would move the cursor, repaint the
+ * screen or set the window title, so every remote string passes through here on
+ * the way to `console.log`.
+ *
+ * This is the inline one, and it takes the line endings with it: a title
+ * printed as one field of one row can otherwise carry a newline and forge a
+ * whole further line of output — a second change, a different status — that
+ * nothing in the response ever said. Multi-line text goes through `safeBlock`.
+ */
+export const safe = (s: string): string =>
+  // eslint-disable-next-line no-control-regex
+  s.replace(/[\x00-\x1f\x7f-\x9f]/g, '')
+
+/**
+ * The same, for the two places a remote string is genuinely a block of prose —
+ * a change body and a thread message. Newlines and tabs survive there because
+ * the text was written with them; a lone carriage return does not, since it
+ * rewrites the line already printed rather than starting a new one.
+ */
+export const safeBlock = (s: string): string =>
+  // eslint-disable-next-line no-control-regex
+  s.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '')
+
 /** Dim, secondary text (hints, empty-state lines, labels). */
 export const dim = (s: string): string => chalk.dim(s)
 
@@ -30,10 +56,11 @@ const BAD =
 
 /** Colour a status token by its meaning (falls back to dim). */
 export function statusColor(status: string): string {
-  if (GOOD.test(status)) return added(status)
-  if (BUSY.test(status)) return changed(status)
-  if (BAD.test(status)) return removed(status)
-  return dim(status)
+  const token = safe(status)
+  if (GOOD.test(token)) return added(token)
+  if (BUSY.test(token)) return changed(token)
+  if (BAD.test(token)) return removed(token)
+  return dim(token)
 }
 
 // Strip ANSI so coloured cells still measure/align correctly.
