@@ -1,6 +1,6 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.79",
+  "version": "0.12.80",
   "description": "Pikku Console \u2014 the web UI for inspecting and running Pikku projects",
   "type": "module",
   "main": "./src/index.ts",
@@ -52,7 +52,7 @@
     "@pikku/fetch": "^0.12.11",
     "@pikku/mantine": "^0.12.13",
     "@pikku/react": "^0.12.11",
-    "@pikku/workflow-graph": "^0.12.0",
+    "@pikku/workflow-graph": "^0.12.1",
     "@rjsf/core": "^6.8.0",
     "@rjsf/mantine": "^6.8.0",
     "@rjsf/utils": "^6.8.0",
