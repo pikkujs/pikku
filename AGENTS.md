@@ -67,8 +67,9 @@ Individual packages carry their own runner: `./run-tests.sh` from inside the pac
 
 Type checking runs on **TypeScript 7**, which is roughly three times faster
 (`bun run tsc` across the monorepo: 192s → 65s). TypeScript 6 stays installed
-because 7 ships no compiler API — its `.` export is only a version stub, and
-the replacement lives behind `./unstable/*` pending the 7.1 API.
+because the packages that call a compiler API still call 6's: 7's `.` export is
+only a version stub, and its API lives behind `./unstable/*` — a different
+shape, not a missing one.
 
 The root installs both, following the arrangement TypeScript ships for exactly
 this case:
@@ -98,14 +99,37 @@ this reason. `code-edit` is the exception, and deliberately so — the console
 imports it lazily and degrades to a null service, because it is the one package
 a self-contained bundle can ship without.
 
-**Why none of this can move to 7 yet.** 7.0.2 does ship an AST surface at
+**What moving to 7's API would mean.** 7.0.2 ships the AST at
 `typescript/unstable/ast` — 409 exports, all 347 `is*` predicates,
-`SyntaxKind`, a factory, a visitor, a scanner — so the _walking_ code would
-port almost unchanged. What is missing is the entry point: there is no
-`createSourceFile` and no `forEachChild`, so nothing can turn a string into a
-tree. The only route to a `SourceFile` is `API` → `Snapshot` → `Project` →
-`Program.getSourceFile()`, which needs a whole project loaded. Re-check this
-when 7.1 lands its stable API.
+`SyntaxKind`, a factory, a visitor, a scanner — and a checker at
+`typescript/unstable/sync` (and `/async`), which runs `tsgo` as a server over
+STDIO. Everything `collectSurface` asks of the 6 checker has a counterpart
+there: `getExportsOfModule`, `getAliasedSymbol`, `getPropertiesOfType`,
+`typeToString`, `getSignaturesOfType`, `getTypeOfSymbolAtLocation`. Documentation
+and tags arrive rendered, so `displayPartsToString` disappears. The prototype in
+`packages/inspector/src/surface/collect-surface-ts7.ts` reproduces the 1,031
+symbols `@pikku/core` publishes, one for one, about 1.4× faster end to end,
+server spawn included; the only differences left are cosmetic — quote style,
+union member ordering, `{@link X}` resolved rather than left literal.
+
+Four things change shape in the port, and they are what a real PR has to carry:
+
+- A program is a **project**, opened by a tsconfig rather than built from a
+  root-file list. Ad-hoc `createProgram` options go into a synthetic tsconfig
+  the client-side filesystem serves and the disk never sees.
+- `createVirtualFileSystem` is **fully** virtual: it answers "no" for every path
+  it was not handed, hiding the real tree. An overlay returns `undefined`
+  instead, and has to be written by hand.
+- A declaration is a `NodeHandle`, not a node; `.resolve(project)` fetches its
+  source file across the wire the first time and walks locally after that.
+- There is still no `createSourceFile` that parses a string. A file held only in
+  the virtual filesystem and listed in the project reaches
+  `Program.getSourceFile()` with real statements, which is the route
+  `collectErrorStatuses` would take to its emitted `.js` siblings.
+
+Two caveats. `TypeFormatFlags` is not exported (`typeToString` takes a bare
+`number`), and the sync client reads `stdout._handle.fd`, a node internal bun
+does not provide — so anything using it runs under node, not `bun run`.
 
 Compiling _with_ 7 is safe for every package, including the ones that import
 the 6 API — only module resolution of `typescript` has to stay on 6. Emit was

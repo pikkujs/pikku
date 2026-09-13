@@ -708,13 +708,31 @@ const collectErrorStatuses = (program: ts.Program): Map<string, number> => {
   return statuses
 }
 
-export const collectSurface = async (
+export type DiscoveredEntry = {
+  subpath: string
+  specifier: string
+  entryFile: string
+}
+
+export type DiscoveredEntrypoints = {
+  root: string
+  paths: ts.CompilerOptions
+  entries: DiscoveredEntry[]
+}
+
+/**
+ * The entry points a package publishes, resolved back to the sources they are
+ * compiled from. Reading the surface of those entry points needs a compiler;
+ * finding them does not, which is why this half stands on its own.
+ */
+export const discoverEntrypoints = async (
   packageDir: string,
-  { importsSubpath, subpaths, snippets }: CollectSurfaceOptions = {}
-): Promise<SurfaceEntrypoint[]> => {
+  { importsSubpath, subpaths }: CollectSurfaceOptions = {}
+): Promise<DiscoveredEntrypoints> => {
   const root = resolve(packageDir)
+  const empty = { root, paths: {}, entries: [] }
   const packageJson = await readJson<PackageJson>(join(root, 'package.json'))
-  if (!packageJson) return []
+  if (!packageJson) return empty
 
   const declaredMap = importsSubpath
     ? packageJson.imports?.[importsSubpath] !== undefined
@@ -723,7 +741,7 @@ export const collectSurface = async (
     : packageJson.exports
       ? subpathMap(packageJson.exports)
       : {}
-  if (Object.keys(declaredMap).length === 0) return []
+  if (Object.keys(declaredMap).length === 0) return empty
 
   const { outDir, paths } = await readCompilerOptions(root)
   const packageName = packageJson.name ?? ''
@@ -762,6 +780,15 @@ export const collectSurface = async (
     }
   }
 
+  return { root, paths, entries }
+}
+
+export const collectSurface = async (
+  packageDir: string,
+  options: CollectSurfaceOptions = {}
+): Promise<SurfaceEntrypoint[]> => {
+  const { snippets } = options
+  const { root, paths, entries } = await discoverEntrypoints(packageDir, options)
   if (entries.length === 0) return []
 
   const program = ts.createProgram(
