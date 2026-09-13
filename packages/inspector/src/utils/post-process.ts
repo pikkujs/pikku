@@ -492,18 +492,52 @@ export function validateCredentialOverrides(
   ): string | undefined =>
     typeof override === 'string' ? override : override.name
 
+  const overrideMode = (
+    override: CredentialOverrideMeta
+  ): 'singleton' | 'wire' | undefined =>
+    typeof override === 'string' ? undefined : override.mode
+
+  /**
+   * Which declaration set each resolved name's mode. Credential generation
+   * writes one shared metadata entry per name, so two declarations that map
+   * onto one name with opposite modes leave whichever ran last in the file the
+   * console reads — and the other addon silently gets the wrong resolution.
+   */
+  const modeClaims = new Map<
+    string,
+    { mode: 'singleton' | 'wire'; namespace: string; logicalName: string }
+  >()
+
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     for (const [logicalName, override] of Object.entries(
       addonDecl.credentialOverrides ?? {}
     )) {
-      const resolvedName = renameTarget(override)
-      if (resolvedName && !credentialNames.has(resolvedName)) {
+      // A mode-only override still names a credential — the addon's own. It
+      // has to exist, or generation resolves nothing and the credential keeps
+      // its default mode with no sign that the wiring asked for another.
+      const renamed = renameTarget(override)
+      const resolvedName = renamed ?? logicalName
+      if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
+        const target = renamed
+          ? `'${logicalName}' -> '${resolvedName}'`
+          : `'${logicalName}'`
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+          `Credential override ${target} in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
         )
       }
+
+      const mode = overrideMode(override)
+      if (!mode) continue
+      const claim = modeClaims.get(resolvedName)
+      if (claim && claim.mode !== mode) {
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Credential '${resolvedName}' is wired '${claim.mode}' by '${claim.logicalName}' in addon '${claim.namespace}' and '${mode}' by '${logicalName}' in addon '${namespace}'. One credential holds one mode, so the second wiring would silently take the first's resolution. Give them separate names, or wire both the same way.`
+        )
+      }
+      modeClaims.set(resolvedName, { mode, namespace, logicalName })
     }
 
     for (const logicalName of addonDecl.credentialGrants ?? []) {
