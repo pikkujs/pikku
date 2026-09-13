@@ -2,7 +2,8 @@
 
 Verifies per-unit deploy codegen against `@pikku/templates-function-addon`:
 
-- a unit that never touches the addon does not import its bootstrap
+- a unit that never touches the addon imports neither its bootstrap nor the
+  app file whose `wireAddon` call declared it
 - a unit using an addon function imports the bootstrap, and its
   `requiredSingletonServices` flags only the parent services that function's
   meta declares — not the addon's full `requiredParentServices`

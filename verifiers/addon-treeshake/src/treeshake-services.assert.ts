@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path'
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)))
 const ADDON_BOOTSTRAP_IMPORT =
   '@pikku/templates-function-addon/.pikku/pikku-bootstrap.gen.js'
+const WIRE_ADDON_FILE_IMPORT = 'src/function/treeshake.wiring.js'
 
 interface Scenario {
   name: string
@@ -108,6 +109,11 @@ for (const scenario of scenarios) {
     scenario.name,
     `addon bootstrap ${scenario.addonImported ? 'imported' : 'NOT imported'} (${scenario.why})`,
     bootstrap.includes(ADDON_BOOTSTRAP_IMPORT) === scenario.addonImported
+  )
+  check(
+    scenario.name,
+    `wireAddon file ${scenario.addonImported ? 'imported' : 'NOT imported'}`,
+    bootstrap.includes(WIRE_ADDON_FILE_IMPORT) === scenario.addonImported
   )
   check(
     scenario.name,
