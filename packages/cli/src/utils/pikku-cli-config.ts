@@ -549,6 +549,7 @@ const _getPikkuCLIConfig = async (
     const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
       rpc: 'publicRpcFile',
       analytics: 'analyticsFile',
+      featureFlags: 'featureFlagsFile',
       agent: 'publicAgentFile',
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
@@ -633,6 +634,13 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'analytics',
         'analytics.gen.ts'
+      )
+    }
+    if (result.scaffold?.featureFlags && !result.featureFlagsFile) {
+      result.featureFlagsFile = join(
+        resolvedScaffoldDir,
+        'feature-flags',
+        'feature-flags.gen.ts'
       )
     }
     if (result.scaffold?.rpc && !result.publicRpcFile) {

@@ -20,6 +20,7 @@ import {
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuAnalytics'
+  | 'pikkuFeatureFlagsScaffold'
   | 'pikkuConsoleFunctions'
   | 'pikkuVirtualUserFunctions'
   | 'pikkuPublicAgent'
@@ -39,6 +40,11 @@ const scaffoldFiles = (
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.analytics && config.analyticsFile)
     files.push({ file: config.analyticsFile, generator: 'pikkuAnalytics' })
+  if (config.scaffold?.featureFlags && config.featureFlagsFile)
+    files.push({
+      file: config.featureFlagsFile,
+      generator: 'pikkuFeatureFlagsScaffold',
+    })
   if (config.scaffold?.console && config.consoleFunctionsFile)
     files.push({
       file: config.consoleFunctionsFile,
@@ -296,6 +302,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Graph wirings', 'pikkuGraphWirings', null),
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
+      workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
