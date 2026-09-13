@@ -28,5 +28,10 @@ echo ""
 echo "=== Testing allowedHosts reaches the generated meta ==="
 npx tsx src/test-secret-allowed-hosts.ts
 
+# Test 6: the credentials file reaches the bootstrap
+echo ""
+echo "=== Testing the credentials file is bootstrapped ==="
+npx tsx src/test-credentials-bootstrap.ts
+
 echo ""
 echo "=== All tests passed ==="
