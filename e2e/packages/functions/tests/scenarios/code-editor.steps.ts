@@ -5,7 +5,11 @@
  * effect goes through the step's actor, so the RPC calls and the browser
  * session are the same signed-in identity.
  */
-import { pikkuScenarioStep, type TestIdSelector, type TypedPersonas } from '#pikku/scenario'
+import {
+  pikkuScenarioStep,
+  type TestIdSelector,
+  type TypedPersonas,
+} from '#pikku/scenario'
 import { describeValue } from './support.js'
 import type {} from '@pikku/playwright'
 
@@ -250,17 +254,10 @@ export const clicksAgentCard = pikkuScenarioStep<
   name: 'clicksAgentCard',
   description: 'opens an agent in the console',
   browser: async (_services, { agentKey }, { browser }) => {
-    const badge = browser.page
-      .locator('[data-agent-id]', { hasText: agentKey })
+    await browser
+      .locate({ testId: `entity-card-${agentKey}` })
       .first()
-    if (await badge.isVisible().catch(() => false)) {
-      await badge.click()
-    } else {
-      await browser.page
-        .getByText(agentKey, { exact: false })
-        .first()
-        .click({ timeout: 15_000 })
-    }
+      .click({ timeout: CONSOLE_PAGE_READY_TIMEOUT })
     return { clicked: agentKey }
   },
 })

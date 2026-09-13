@@ -4,6 +4,14 @@ import type {
   PikkuWiringTypes,
 } from '../types/core.types.js'
 
+/**
+ * The constraint a project's declared event union is checked against.
+ *
+ * Only `name` is fixed, because the name is the whole of what pikku itself
+ * reads — everything else on an event belongs to the app and to the sinks it
+ * wires, and narrowing it here would make the generic useless for anyone whose
+ * events carry more than a fixed set of props.
+ */
 export type AnalyticsEventBase = { name: string } & Record<string, unknown>
 
 export interface AnalyticsEventInput {
@@ -70,8 +78,17 @@ export type AnalyticsIdentityResolver = (
    * resolver read, and ordering is the only thing that can express that.
    */
   resolved?: Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'>
-) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'> | undefined
+) =>
+  Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'> | undefined
 
+/**
+ * What an event becomes once pikku has accepted it, and the only shape an
+ * {@link AnalyticsService} is ever handed.
+ *
+ * Distinct from {@link AnalyticsEventInput}, which is what a caller submits:
+ * the identity, the trace and the origin are stamped server-side on the way
+ * through, so a sink never has to trust — or re-derive — any of them.
+ */
 export interface AnalyticsRecord {
   name: string
   props?: Record<string, unknown>

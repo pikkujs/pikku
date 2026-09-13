@@ -3651,7 +3651,8 @@ export interface AnalyticsIdentity {
 export type AnalyticsIdentityResolver = (
   wire: PikkuWire<any, any, any, CoreUserSession>,
   resolved?: Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'>
-) => Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'> | undefined
+) =>
+  Pick<AnalyticsIdentity, 'vendorIds' | 'consent' | 'anonymousId'> | undefined
 export interface AnalyticsLog< Events extends AnalyticsEventBase = AnalyticsEventBase, > {
   record(event: Events, client?: AnalyticsClientContext): Promise<void>
   flush(): Promise<void>
