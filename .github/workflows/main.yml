@@ -208,6 +208,7 @@ jobs:
         verifier: [
             addon,
             addon-treeshake,
+            analytics,
             # binary,
             classification,
             gateway,

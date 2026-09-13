@@ -9,7 +9,7 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 - **email** - Used by `sendEmail` function, `canSendEmail` permission, `hasEmailQuota` permission factory, `createWireServices`
 - **sms** - Used by `sendSMS` function
 - **payment** - Used by `processPayment` function, `canProcessPayment` permission
-- **analytics** - Used by `processPayment` function, `trackAnalytics` middleware
+- **tracker** - Used by `processPayment` function, `trackAnalytics` middleware
 - **storage** - Used by `saveData` function, `rateLimiter` middleware factory
 - **logger** - Used by `logRequest` middleware, `createWireServices`
 
@@ -17,13 +17,13 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 - `sendEmail` - Uses: email
 - `sendSMS` - Uses: sms
-- `processPayment` - Uses: payment, analytics
+- `processPayment` - Uses: payment, tracker
 - `saveData` - Uses: storage
 
 ### Middleware
 
 - `logRequest` - Uses: logger
-- `trackAnalytics` - Uses: analytics
+- `trackAnalytics` - Uses: tracker
 - `rateLimiter(limit)` - Factory - Uses: storage
 
 ### Permissions
@@ -38,12 +38,12 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### HTTP Wirings
 
-| Route                         | Tags                 | Function                            | Middleware                                                             | Permissions                                 | Total Services                             |
-| ----------------------------- | -------------------- | ----------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------ |
-| POST /api/notifications/email | notifications, email | sendEmail (email)                   | logRequest (logger)                                                    | canSendEmail (email), hasEmailQuota (email) | email, logger                              |
-| POST /api/notifications/sms   | notifications, sms   | sendSMS (sms)                       | logRequest (logger)                                                    | -                                           | email, logger, sms                         |
-| POST /api/payments/charge     | payments             | processPayment (payment, analytics) | logRequest (logger), trackAnalytics (analytics), rateLimiter (storage) | canProcessPayment (payment)                 | analytics, email, logger, payment, storage |
-| POST /api/storage/save        | storage              | saveData (storage)                  | -                                                                      | -                                           | email, logger, storage                     |
+| Route                         | Tags                 | Function                          | Middleware                                                           | Permissions                                 | Total Services                           |
+| ----------------------------- | -------------------- | --------------------------------- | -------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------- |
+| POST /api/notifications/email | notifications, email | sendEmail (email)                 | logRequest (logger)                                                  | canSendEmail (email), hasEmailQuota (email) | email, logger                            |
+| POST /api/notifications/sms   | notifications, sms   | sendSMS (sms)                     | logRequest (logger)                                                  | -                                           | email, logger, sms                       |
+| POST /api/payments/charge     | payments             | processPayment (payment, tracker) | logRequest (logger), trackAnalytics (tracker), rateLimiter (storage) | canProcessPayment (payment)                 | email, logger, payment, storage, tracker |
+| POST /api/storage/save        | storage              | saveData (storage)                | -                                                                    | -                                           | email, logger, storage                   |
 
 **Note**: `email` and `logger` are always included because `createWireServices` destructures them.
 
@@ -51,82 +51,82 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### Baseline
 
-| Filter   | Expected Services                               | Rationale                                                   |
-| -------- | ----------------------------------------------- | ----------------------------------------------------------- |
-| `(none)` | analytics, email, logger, payment, sms, storage | All services should be included when no filters are applied |
+| Filter   | Expected Services                             | Rationale                                                   |
+| -------- | --------------------------------------------- | ----------------------------------------------------------- |
+| `(none)` | email, logger, payment, sms, storage, tracker | All services should be included when no filters are applied |
 
 ### Single Tag Filters
 
-| Filter                 | Expected Services                          | Rationale                                                                                                      |
-| ---------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `--tags=notifications` | email, logger, sms                         | Email, sms, logger (middleware), and wire services should be included                                          |
-| `--tags=email`         | email, logger                              | Email (function + permissions), logger (middleware), and wire services                                         |
-| `--tags=sms`           | email, logger, sms                         | SMS (function), logger (middleware), and wire services (email, logger)                                         |
-| `--tags=payments`      | analytics, email, logger, payment, storage | Payment route uses payment + analytics (function + middleware) + logger + storage (middleware) + wire services |
-| `--tags=storage`       | email, logger, storage                     | Storage (function) and wire services (email, logger)                                                           |
+| Filter                 | Expected Services                        | Rationale                                                                                                    |
+| ---------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `--tags=notifications` | email, logger, sms                       | Email, sms, logger (middleware), and wire services should be included                                        |
+| `--tags=email`         | email, logger                            | Email (function + permissions), logger (middleware), and wire services                                       |
+| `--tags=sms`           | email, logger, sms                       | SMS (function), logger (middleware), and wire services (email, logger)                                       |
+| `--tags=payments`      | email, logger, payment, storage, tracker | Payment route uses payment + tracker (function + middleware) + logger + storage (middleware) + wire services |
+| `--tags=storage`       | email, logger, storage                   | Storage (function) and wire services (email, logger)                                                         |
 
 ### Multiple Tag Filters (OR logic)
 
-| Filter                          | Expected Services                               | Rationale                                               |
-| ------------------------------- | ----------------------------------------------- | ------------------------------------------------------- |
-| `--tags=notifications,payments` | analytics, email, logger, payment, sms, storage | All notification routes + payment route + wire services |
-| `--tags=email,sms`              | email, logger, sms                              | Both email and SMS routes + wire services               |
-| `--tags=notifications,storage`  | email, logger, sms, storage                     | All notification + storage routes + wire services       |
+| Filter                          | Expected Services                             | Rationale                                               |
+| ------------------------------- | --------------------------------------------- | ------------------------------------------------------- |
+| `--tags=notifications,payments` | email, logger, payment, sms, storage, tracker | All notification routes + payment route + wire services |
+| `--tags=email,sms`              | email, logger, sms                            | Both email and SMS routes + wire services               |
+| `--tags=notifications,storage`  | email, logger, sms, storage                   | All notification + storage routes + wire services       |
 
 ### Wire Filters
 
-| Filter         | Expected Services                               | Rationale                                             |
-| -------------- | ----------------------------------------------- | ----------------------------------------------------- |
-| `--wires=http` | analytics, email, logger, payment, sms, storage | Only direct HTTP wirings are selected + wire services |
+| Filter         | Expected Services                             | Rationale                                             |
+| -------------- | --------------------------------------------- | ----------------------------------------------------- |
+| `--wires=http` | email, logger, payment, sms, storage, tracker | Only direct HTTP wirings are selected + wire services |
 
 ### HTTP Method Filters
 
-| Filter               | Expected Services                               | Rationale                                                             |
-| -------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| `--httpMethods=POST` | analytics, email, logger, payment, sms, storage | All services should be included (all routes are POST) + wire services |
-| `--httpMethods=GET`  | email, logger                                   | No GET routes exist, only wire services                               |
+| Filter               | Expected Services                             | Rationale                                                             |
+| -------------------- | --------------------------------------------- | --------------------------------------------------------------------- |
+| `--httpMethods=POST` | email, logger, payment, sms, storage, tracker | All services should be included (all routes are POST) + wire services |
+| `--httpMethods=GET`  | email, logger                                 | No GET routes exist, only wire services                               |
 
 ### HTTP Route Filters
 
-| Filter                              | Expected Services                          | Rationale                                |
-| ----------------------------------- | ------------------------------------------ | ---------------------------------------- |
-| `--httpRoutes=/api/notifications/*` | email, logger, sms                         | Only notification routes + wire services |
-| `--httpRoutes=/api/payments/*`      | analytics, email, logger, payment, storage | Only payment routes + wire services      |
-| `--httpRoutes=/api/storage/*`       | email, logger, storage                     | Only storage routes + wire services      |
+| Filter                              | Expected Services                        | Rationale                                |
+| ----------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| `--httpRoutes=/api/notifications/*` | email, logger, sms                       | Only notification routes + wire services |
+| `--httpRoutes=/api/payments/*`      | email, logger, payment, storage, tracker | Only payment routes + wire services      |
+| `--httpRoutes=/api/storage/*`       | email, logger, storage                   | Only storage routes + wire services      |
 
 ### Directory Filters
 
-| Filter                          | Expected Services                               | Rationale                                                                          |
-| ------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `--directories=src/functions`   | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are in src/functions) + wire services |
-| `--directories=src/nonexistent` | email, logger                                   | No wirings in nonexistent directory, only wire services                            |
+| Filter                          | Expected Services                             | Rationale                                                                          |
+| ------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `--directories=src/functions`   | email, logger, payment, sms, storage, tracker | All services should be included (all wirings are in src/functions) + wire services |
+| `--directories=src/nonexistent` | email, logger                                 | No wirings in nonexistent directory, only wire services                            |
 
 ### Combination Filters
 
-| Filter                                    | Expected Services                          | Rationale                                         |
-| ----------------------------------------- | ------------------------------------------ | ------------------------------------------------- |
-| `--tags=notifications --httpMethods=POST` | email, logger, sms                         | Notification routes that are POST + wire services |
-| `--tags=payments --wires=http`            | analytics, email, logger, payment, storage | Payment HTTP routes + wire services               |
+| Filter                                    | Expected Services                        | Rationale                                         |
+| ----------------------------------------- | ---------------------------------------- | ------------------------------------------------- |
+| `--tags=notifications --httpMethods=POST` | email, logger, sms                       | Notification routes that are POST + wire services |
+| `--tags=payments --wires=http`            | email, logger, payment, storage, tracker | Payment HTTP routes + wire services               |
 
 ### Wildcard Name Filters
 
-| Filter             | Expected Services                          | Rationale                                                                 |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------- |
-| `--names=send*`    | email, logger, sms                         | Routes using sendEmail and sendSMS functions + middleware + wire services |
-| `--names=process*` | analytics, email, logger, payment, storage | Routes using processPayment function + middleware + wire services         |
-| `--names=*Payment` | analytics, email, logger, payment, storage | Routes using functions ending with "Payment" + middleware + wire services |
-| `--names=saveData` | email, logger, storage                     | Routes using saveData function + wire services                            |
+| Filter             | Expected Services                        | Rationale                                                                 |
+| ------------------ | ---------------------------------------- | ------------------------------------------------------------------------- |
+| `--names=send*`    | email, logger, sms                       | Routes using sendEmail and sendSMS functions + middleware + wire services |
+| `--names=process*` | email, logger, payment, storage, tracker | Routes using processPayment function + middleware + wire services         |
+| `--names=*Payment` | email, logger, payment, storage, tracker | Routes using functions ending with "Payment" + middleware + wire services |
+| `--names=saveData` | email, logger, storage                   | Routes using saveData function + wire services                            |
 
 ## Expected Service Counts by Filter
 
-| Scenario                    | Service Count | Services                                        |
-| --------------------------- | ------------- | ----------------------------------------------- |
-| Baseline (no filters)       | 6             | analytics, email, logger, payment, sms, storage |
-| Tag: payments               | 5             | analytics, email, logger, payment, storage      |
-| Tags: notifications,storage | 4             | email, logger, sms, storage                     |
-| Tag: notifications          | 3             | email, logger, sms                              |
-| Tag: storage                | 3             | email, logger, storage                          |
-| Tag: email                  | 2             | email, logger                                   |
+| Scenario                    | Service Count | Services                                      |
+| --------------------------- | ------------- | --------------------------------------------- |
+| Baseline (no filters)       | 6             | email, logger, payment, sms, storage, tracker |
+| Tag: payments               | 5             | email, logger, payment, storage, tracker      |
+| Tags: notifications,storage | 4             | email, logger, sms, storage                   |
+| Tag: notifications          | 3             | email, logger, sms                            |
+| Tag: storage                | 3             | email, logger, storage                        |
+| Tag: email                  | 2             | email, logger                                 |
 
 ## Running Tests
 

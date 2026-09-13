@@ -408,6 +408,16 @@ describe('runPikkuFunc - Integration Tests', () => {
     ])
   })
 
+  /**
+   * The runner installs `analytics` on every invocation, so a services
+   * assertion is about everything else. Its presence is asserted once, on its
+   * own.
+   */
+  const withoutAnalytics = (services: any) => {
+    const { analytics: _analytics, ...rest } = services
+    return rest
+  }
+
   test('should pass correct parameters to function', async () => {
     let receivedServices: any
     let receivedData: any
@@ -431,7 +441,8 @@ describe('runPikkuFunc - Integration Tests', () => {
       wire: { rpc: {} },
     })
 
-    assert.deepEqual(receivedServices, mockServices)
+    assert.deepEqual(withoutAnalytics(receivedServices), mockServices)
+    assert.ok(receivedServices.analytics, 'every invocation can record')
     assert.equal(receivedData, testData)
     assert.ok(receivedWire.rpc)
     assert.equal(receivedWire.session, undefined)
@@ -467,7 +478,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
 
     assert.equal(result, 'success')
-    assert.deepEqual(servicesProvided, {
+    assert.deepEqual(withoutAnalytics(servicesProvided), {
       ...mockSingletonServices,
       ...wireServices,
     })
@@ -921,7 +932,7 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     assert.equal(callerCreateWireServicesUsed, false)
     assert.equal(addonCreateWireServicesUsed, true)
-    assert.deepEqual(receivedServices, {
+    assert.deepEqual(withoutAnalytics(receivedServices), {
       logger: mockSingletonServices.logger,
       addonWire: true,
     })

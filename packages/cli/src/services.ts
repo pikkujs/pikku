@@ -332,6 +332,11 @@ export const createSingletonServices: CreateSingletonServices<
         config.workflowRoutesFile,
         config.publicRpcFile,
         config.publicAgentFile,
+        // The analytics ingest is generated into the scaffold dir and nothing
+        // imports it — it is a wiring, not a module anyone calls — so without
+        // this the route is written and never registered: no HTTP wiring, no
+        // entry in the fetch client, an endpoint that 404s.
+        config.analyticsFile,
         // The auth scaffold (catch-all routes + session middleware) and its
         // sibling secrets file (defineSecret per provider) are generated into the
         // scaffold dir, which may live outside srcDirectories (e.g. a project's

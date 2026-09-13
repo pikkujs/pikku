@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test'
 import * as assert from 'assert'
 import {
+  serializeAnalyticsDefinitionTypes,
   serializeScopeDefinitionTypes,
   serializeSecretDefinitionTypes,
   serializeVariableDefinitionTypes,
@@ -33,5 +34,34 @@ describe('definition types', () => {
       scopes,
       /export \{ defineSystemRole \} from '@pikku\/core\/role'/
     )
+  })
+
+  test('the analytics leaf carries defineAnalyticsEvents', () => {
+    assert.match(
+      serializeAnalyticsDefinitionTypes(),
+      /export \{ defineAnalyticsEvents,/
+    )
+  })
+
+  /**
+   * Declaring events is half of what a project does with analytics; the other
+   * half is writing the sink they go to, which means naming `AnalyticsService`
+   * and the record it is handed. Both halves come through the same door.
+   */
+  test('the analytics leaf carries the sink surface', () => {
+    const analytics = serializeAnalyticsDefinitionTypes()
+    for (const name of [
+      'AnalyticsService',
+      'AnalyticsRecord',
+      'AnalyticsIdentity',
+      'AnalyticsClientContext',
+      'AnalyticsLog',
+      'LoggerAnalyticsService',
+    ]) {
+      assert.ok(
+        analytics.includes(name),
+        `${name} is not reachable through #pikku/analytics`
+      )
+    }
   })
 })

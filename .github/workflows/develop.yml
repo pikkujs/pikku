@@ -197,6 +197,7 @@ jobs:
           [
             addon,
             addon-treeshake,
+            analytics,
             classification,
             gateway,
             middleware-and-permissions,

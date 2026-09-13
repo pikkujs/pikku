@@ -38,6 +38,7 @@ export const leafEntries = [
   ['secrets', ['secretTypesFile', 'secretsFile']],
   ['credentials', ['credentialsFile']],
   ['scopes', ['scopeTypesFile']],
+  ['analytics', ['analyticsTypesFile']],
   ['variables', ['variableTypesFile', 'variablesFile']],
   ['auth', ['authGuardsFile', 'authTypesFile']],
 ] as const

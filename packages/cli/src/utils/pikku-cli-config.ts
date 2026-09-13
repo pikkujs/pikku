@@ -548,6 +548,7 @@ const _getPikkuCLIConfig = async (
     // setting it here wins and the pikkuDir-derived default is skipped.
     const SCAFFOLD_OUTPUT_FIELDS: Record<string, string> = {
       rpc: 'publicRpcFile',
+      analytics: 'analyticsFile',
       agent: 'publicAgentFile',
       console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
@@ -625,6 +626,13 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'workflow',
         'workflow-routes.schemas.gen.ts'
+      )
+    }
+    if (result.scaffold?.analytics && !result.analyticsFile) {
+      result.analyticsFile = join(
+        resolvedScaffoldDir,
+        'analytics',
+        'analytics.gen.ts'
       )
     }
     if (result.scaffold?.rpc && !result.publicRpcFile) {
@@ -1110,6 +1118,17 @@ const _getPikkuCLIConfig = async (
       result.credentialsMetaJsonFile = join(
         credentialsDir,
         'pikku-credentials-meta.gen.json'
+      )
+    }
+
+    // Analytics definer leaf. Written whatever `scaffold.analytics` says: the
+    // declaration is how a project names what it measures, and the scaffold
+    // only decides whether an ingest wire is generated for it.
+    if (!result.analyticsTypesFile) {
+      result.analyticsTypesFile = join(
+        result.outDir,
+        'analytics',
+        'pikku-analytics-types.gen.ts'
       )
     }
 

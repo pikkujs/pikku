@@ -4,8 +4,8 @@ export const logRequest = pikkuMiddleware(async ({ logger }) => {
   logger.info('Request logged')
 })
 
-export const trackAnalytics = pikkuMiddleware(async ({ analytics }) => {
-  await analytics.track('request_received', {})
+export const trackAnalytics = pikkuMiddleware(async ({ tracker }) => {
+  await tracker.track('request_received', {})
 })
 
 export const rateLimiter = pikkuMiddlewareFactory(

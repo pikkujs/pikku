@@ -9,7 +9,7 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 - **email** - Used by `sendEmail` function, `canSendEmail` permission, `hasEmailQuota` permission factory, `createWireServices`
 - **sms** - Used by `sendSMS` function
 - **payment** - Used by `processPayment` function, `canProcessPayment` permission
-- **analytics** - Used by `processPayment` function, `trackAnalytics` middleware
+- **tracker** - Used by `processPayment` function, `trackAnalytics` middleware
 - **storage** - Used by `saveData` function, `rateLimiter` middleware factory
 - **logger** - Used by `logRequest` middleware, `createWireServices`
 
@@ -17,13 +17,13 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 - `sendEmail` - Uses: email
 - `sendSMS` - Uses: sms
-- `processPayment` - Uses: payment, analytics
+- `processPayment` - Uses: payment, tracker
 - `saveData` - Uses: storage
 
 ### Middleware
 
 - `logRequest` - Uses: logger
-- `trackAnalytics` - Uses: analytics
+- `trackAnalytics` - Uses: tracker
 - `rateLimiter(limit)` - Factory - Uses: storage
 
 ### Permissions
@@ -38,12 +38,12 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### HTTP Wirings
 
-| Route                         | Tags                 | Function                            | Middleware                                                             | Permissions                                 | Total Services                             |
-| ----------------------------- | -------------------- | ----------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------ |
-| POST /api/notifications/email | notifications, email | sendEmail (email)                   | logRequest (logger)                                                    | canSendEmail (email), hasEmailQuota (email) | email, logger                              |
-| POST /api/notifications/sms   | notifications, sms   | sendSMS (sms)                       | logRequest (logger)                                                    | -                                           | email, logger, sms                         |
-| POST /api/payments/charge     | payments             | processPayment (payment, analytics) | logRequest (logger), trackAnalytics (analytics), rateLimiter (storage) | canProcessPayment (payment)                 | analytics, email, logger, payment, storage |
-| POST /api/storage/save        | storage              | saveData (storage)                  | -                                                                      | -                                           | email, logger, storage                     |
+| Route                         | Tags                 | Function                          | Middleware                                                           | Permissions                                 | Total Services                           |
+| ----------------------------- | -------------------- | --------------------------------- | -------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------- |
+| POST /api/notifications/email | notifications, email | sendEmail (email)                 | logRequest (logger)                                                  | canSendEmail (email), hasEmailQuota (email) | email, logger                            |
+| POST /api/notifications/sms   | notifications, sms   | sendSMS (sms)                     | logRequest (logger)                                                  | -                                           | email, logger, sms                       |
+| POST /api/payments/charge     | payments             | processPayment (payment, tracker) | logRequest (logger), trackAnalytics (tracker), rateLimiter (storage) | canProcessPayment (payment)                 | tracker, email, logger, payment, storage |
+| POST /api/storage/save        | storage              | saveData (storage)                | -                                                                    | -                                           | email, logger, storage                   |
 
 **Note**: `email` and `logger` are always included because `createWireServices` destructures them.
 

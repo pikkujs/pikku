@@ -49,7 +49,7 @@ export const createTodo = pikkuSessionlessFunc({
   input: CreateTodoWithUserInputSchema,
   output: CreateTodoOutputSchema,
   func: async (
-    { logger, eventHub, todoStore },
+    { logger, eventHub, todoStore, analytics },
     { userId, title, description, priority, dueDate, tags }
   ) => {
     const uid = userId || 'user1'
@@ -66,6 +66,11 @@ export const createTodo = pikkuSessionlessFunc({
     if (eventHub) {
       await eventHub.publish('todo-created', null, { todo })
     }
+
+    await analytics?.record({
+      name: 'todo_created',
+      priority: todo.priority,
+    })
 
     return { todo }
   },

@@ -26,9 +26,9 @@ export const processPayment = pikkuFunc<
   { transactionId: string }
 >({
   permissions: { canProcessPayment },
-  func: async ({ payment, analytics, userPreferences }, data) => {
+  func: async ({ payment, tracker, userPreferences }, data) => {
     const transactionId = await payment.charge(data.amount, data.currency)
-    await analytics.track('payment_processed', {
+    await tracker.track('payment_processed', {
       amount: data.amount,
       currency: data.currency,
     })
