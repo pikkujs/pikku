@@ -434,10 +434,9 @@ over, and an uncovered function is a half-milestone whether or not the note says
    desktop sidebar and the phone navigation.
    **Read `references/design.md` before you write the first screen.** You commit
    to a design direction there and are then accountable to it — it hands you no
-   layouts, because the design is yours to make. Screenshot each screen at 390
-   and 1440 with the seed in place at the END of every milestone, and look at the
-   images — not once at §8, where the only affordable fix is a repaint of eight
-   screens.
+   layouts, because the design is yours to make. What you build here is then
+   judged at step 7, at the end of this milestone rather than once at §8, where
+   the only affordable fix is a repaint of eight screens.
 6. **Scenario** (§7).
 7. **Look at it.** Screenshot every screen this milestone touched, at both
    widths, with the seed in place, and look at the images. This is a gate, the

@@ -166,9 +166,17 @@ the thing that made it is always yes. Use evidence.
   short enough to write once and keep:
 
   ```sh
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-    --headless=new --remote-debugging-port=9333 --user-data-dir=/tmp/gc-shots &
+  CHROME=$(command -v google-chrome || command -v chromium || \
+    command -v chromium-browser || \
+    echo "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+  "$CHROME" --headless=new --no-sandbox \
+    --remote-debugging-port=9333 --user-data-dir=/tmp/gc-shots &
   ```
+
+  Resolve the binary rather than hardcoding the macOS path: the same gate has to
+  work on a Linux box and in CI, and a fallback that only starts on one host is
+  a gate that gets skipped everywhere else. If the host already exposes a CDP
+  endpoint, point the script at that instead and start nothing.
 
   Then drive it over CDP from a script: `Page.navigate`,
   `Emulation.setDeviceMetricsOverride` for the two widths,

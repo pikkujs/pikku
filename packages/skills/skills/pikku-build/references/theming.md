@@ -108,23 +108,43 @@ names. Keep Mantine's lightness steps so contrast behaviour and every component
 that picks a step by number are unchanged; move only the hue:
 
 ```css
+/* The ramps: hue only. Mantine picks a step by number in either scheme, so
+   these are scheme-independent and belong in the unscoped block. */
 :root:root:root {
-  --mantine-color-body: #fdfaf8;
-  --mantine-color-text: #2a1f1b;
   --mantine-color-gray-0: #faf7f5;  --mantine-color-gray-5: #b8a49d;
   --mantine-color-gray-1: #f5efec;  --mantine-color-gray-6: #93807a;
   --mantine-color-gray-2: #efe6e2;  --mantine-color-gray-7: #574a45;
   --mantine-color-gray-3: #e6dad5;  --mantine-color-gray-8: #3d332f;
   --mantine-color-gray-4: #d8c8c2;  --mantine-color-gray-9: #2a1f1b;
+  --mantine-color-dark-0: #f3e9e4;  --mantine-color-dark-5: #4a3a34;
+  --mantine-color-dark-1: #cdbdb6;  --mantine-color-dark-6: #392b26;
+  --mantine-color-dark-2: #a8938c;  --mantine-color-dark-7: #241b18;
+  --mantine-color-dark-3: #7a655e;  --mantine-color-dark-8: #1b1512;
+  --mantine-color-dark-4: #5c4a44;  --mantine-color-dark-9: #120d0b;
+}
+
+/* Ground, text and border are a different colour in each scheme, so each one
+   is set in the scheme it belongs to. A scheme-dependent token left in the
+   block above is the classic unreadable-in-dark bug. */
+:root:root:root[data-mantine-color-scheme='light'] {
+  --mantine-color-body: #fdfaf8;
+  --mantine-color-text: #2a1f1b;
   --mantine-color-default-border: #ecdfd9;
   --mantine-color-dimmed: #7a625c;      /* keep AA: ~5.4:1 on the body above */
   --mantine-color-placeholder: #826a64; /* ~4.8:1 */
 }
+:root:root:root[data-mantine-color-scheme='dark'] {
+  --mantine-color-body: #1b1512;
+  --mantine-color-text: #f3e9e4;
+  --mantine-color-default-border: #392b26;
+  --mantine-color-dimmed: #a8938c;      /* ~5.6:1 on the body above */
+  --mantine-color-placeholder: #8c7a74; /* ~4.7:1 */
+}
 ```
 
-Check the two text tokens against your own ground rather than copying these —
+Check the four text tokens against your own grounds rather than copying these —
 `dimmed` is the most-used text colour in the app and the easiest to drop below
-4.5:1 while making it prettier.
+4.5:1 while making it prettier, and it has to clear the bar on *both* grounds.
 
 **The selector is tripled on purpose.** Mantine's `cssVariablesResolver` injects
 its own `:root` block into `<head>` at runtime, which lands *after* your
