@@ -1,3 +1,12 @@
+## 0.12.80
+
+### Patch Changes
+
+- e99c700: Extract the workflow graph renderer into a standalone `@pikku/workflow-graph` package
+- Updated dependencies [e99c700]
+- Updated dependencies [d067ac9]
+  - @pikku/workflow-graph@0.12.1
+
 ## 0.12.79
 
 ### Patch Changes

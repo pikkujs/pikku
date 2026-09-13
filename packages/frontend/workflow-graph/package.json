@@ -1,6 +1,6 @@
 {
   "name": "@pikku/workflow-graph",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Render a Pikku workflow as an interactive graph",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
