@@ -5,6 +5,7 @@
 '@pikku/kysely': patch
 '@pikku/addon-admin': patch
 '@pikku/better-auth': patch
+'@pikku/react': patch
 ---
 
 Feature flags, declared in source and resolved from two independent booleans.
@@ -57,3 +58,11 @@ scope RPCs, under a new `admin:flags` scope. `flagList` reports `writable:
 false` rather than failing when flags come from a provider, because a provider's
 own UI is its operator surface and a console full of buttons that 500 is worse
 than a read-only tab.
+
+On the client, `createFeatureFlags` fetches that map once and `useFeatureFlag`
+reads it synchronously after, through the same provider the analytics client
+hangs off. It takes a `bootstrap` map so a server-rendered page hydrates onto
+the answer it already computed: without one there is a gap in which neither
+default is right, since false hides a feature the user has and true flashes one
+they do not. A failed refresh keeps the map already on screen rather than
+relabelling every flag on a blip.
