@@ -45,18 +45,24 @@ import { useOptionalAuth } from '../../context/AuthContext'
 import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import {
+  navItems,
   useDefaultNavSections,
   type NavItem,
   type NavSection,
-} from '../project/Sidebar'
+} from '../../nav/sections'
 import {
   consoleLogoInvert,
   consoleLogoSrc,
   consoleTitle,
 } from '../../lib/branding'
 import { NavDock } from './NavDock'
-import { isSep } from './model'
-import type { DockEntry, DockTile, FlyoutRow, FlyoutSection } from './model'
+import type {
+  DockEntry,
+  DockMenu,
+  DockTile,
+  FlyoutRow,
+  FlyoutSection,
+} from './model'
 
 /**
  * The console's navigation dock: {@link NavDock} fed from the same nav model the
@@ -69,9 +75,8 @@ import type { DockEntry, DockTile, FlyoutRow, FlyoutSection } from './model'
  * it is on with `zone`, and the sections are the single source both this and the
  * rail read, so the two can never disagree about what the console contains.
  *
- * The identity tile is a mark and nothing more. It used to carry the whole nav
- * map, which put a copy of the dock behind the first thing on the dock; the
- * zones already hold every destination, and Go to… (⌘K) reaches the rest.
+ * The identity tile carries the whole nav map, so nothing is more than two
+ * clicks away and the full list is reachable even condensed.
  */
 /** An untitled section has no label to hang a group off, so it stays on the row. */
 const zoneOf = (s: NavSection): 'row' | 'group' =>
@@ -146,72 +151,42 @@ export function ConsoleNavDock({
     [navigate]
   )
 
-  /* A section's flyout, cut into the titled bands its items declare — one band
-     per run of items sharing a group, in the order they are written. A section
-     whose items declare none opens as the single untitled list it always was. */
-  const bandsOf = useCallback(
-    (section: NavSection): FlyoutSection[] => {
-      const bands: FlyoutSection[] = []
-      for (const item of section.items) {
-        const last = bands[bands.length - 1]
-        if (last && last.key === (item.group?.id ?? 'main')) {
-          last.rows.push(rowOf(item))
-          continue
-        }
-        bands.push({
-          key: item.group?.id ?? 'main',
-          title: item.group?.title,
-          rows: [rowOf(item)],
-        })
-      }
-      return bands
-    },
-    [rowOf]
-  )
-
-  /* Where the row stops being the row. Everything declared before the first
-     group is what the dock always shows; from there on the sections keep their
-     written order, so a row section standing between two groups — Workflows,
-     the way fabric stands it between Testing and Operate — lands there rather
-     than being swept to the front. */
-  const firstGroup = sections.findIndex((s) => zoneOf(s) === 'group')
-
   const pinned = useMemo<DockEntry[]>(
     () =>
-      (firstGroup < 0 ? sections : sections.slice(0, firstGroup)).flatMap((s) =>
-        s.items.map(tileOf)
-      ),
-    [sections, firstGroup, tileOf]
+      sections
+        .filter((s) => zoneOf(s) === 'row')
+        .flatMap((s) => navItems(s).map(tileOf)),
+    [sections, tileOf]
   )
 
+  /* Each group becomes one titled run inside the tile's flyout, so a long menu
+     is read by its questions rather than down its rows. A group with no title
+     still renders — untitled, as one unlabelled run. */
   const contextual = useMemo<DockEntry[]>(
     () =>
-      (firstGroup < 0 ? [] : sections.slice(firstGroup))
-        .filter((s) => s.items.length > 0)
-        .flatMap((section): DockEntry[] => {
-          const sep: DockEntry[] = section.separatorBefore
-            ? [{ sep: true, key: `sep-${section.id ?? section.title}` }]
-            : []
-          if (zoneOf(section) === 'row') {
-            return [...sep, ...section.items.map(tileOf)]
+      sections
+        .filter((s) => zoneOf(s) === 'group' && navItems(s).length > 0)
+        .map((section): DockEntry => {
+          const label = section.title ?? asI18n(section.id)
+          const menuSections: FlyoutSection[] = section.groups
+            .filter((group) => group.items.length > 0)
+            .map((group) => ({
+              key: group.id,
+              title: group.title,
+              rows: group.items.map(rowOf),
+            }))
+          return {
+            id: section.id,
+            label,
+            Icon: section.icon ?? navItems(section)[0]?.icon,
+            isGroup: true,
+            match: menuSections.flatMap((s) =>
+              s.rows.flatMap((r) => r.match ?? [])
+            ),
+            menu: { label, sections: menuSections },
           }
-          const rows = section.items.map(rowOf)
-          return [
-            ...sep,
-            {
-              id: section.id ?? section.title,
-              label: section.title,
-              Icon: section.icon ?? section.items[0]?.icon,
-              isGroup: true,
-              match: rows.flatMap((r) => r.match ?? []),
-              menu: { label: section.title, sections: bandsOf(section) },
-            },
-          ]
-        })
-        /* The dock already rules a line where the pinned zone ends, so the first
-           section's own break would draw a second one right of Overview. */
-        .filter((entry, i) => !(i === 0 && isSep(entry))),
-    [sections, firstGroup, tileOf, rowOf, bandsOf]
+        }),
+    [sections, rowOf]
   )
 
   /* Everything about you or your session, behind one tile: the appearance you
@@ -421,6 +396,47 @@ export function ConsoleNavDock({
     [account]
   )
 
+  /* The flyout's head answers "where am I" in full, which the one-glyph tile
+     cannot: the console's name, the path that produced the page you are on, and
+     — below it — every section there is. */
+  const identityMenu = useMemo<DockMenu>(() => {
+    const label = asI18n(consoleTitle)
+    /* Flattened past the group questions on purpose: this menu's job is that
+       every screen is reachable in two clicks, and a question you have to open
+       to see past is a third. The questions do their work on the tile flyouts,
+       which is where the list is long enough to need them. */
+    const navSections: FlyoutSection[] = sections
+      .filter((s) => navItems(s).length > 0)
+      .map((s) => ({
+        key: s.id,
+        title: s.title,
+        rows: navItems(s).map(rowOf),
+      }))
+    return {
+      label,
+      head: {
+        mark: consoleTitle.slice(0, 2).toUpperCase(),
+        title: label,
+        sub: asI18n(pathname),
+      },
+      sections: [
+        ...navSections,
+        {
+          key: 'browse',
+          rows: [
+            {
+              key: 'browse-all',
+              Icon: Search,
+              label: m.nav_dock_go_to(),
+              hint: '⌘K',
+              onSelect: () => spotlight.open(),
+            },
+          ],
+        },
+      ],
+    }
+  }, [sections, rowOf, pathname])
+
   const isActive = useCallback(
     (t: Pick<DockTile, 'match'>) =>
       !!t.match?.some((prefix) => pathname.includes(prefix)),
@@ -434,6 +450,7 @@ export function ConsoleNavDock({
           id: 'console',
           label: asI18n(consoleTitle),
           render: 'switcher',
+          menu: identityMenu,
         }}
         brand={
           <img

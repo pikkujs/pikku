@@ -20,7 +20,11 @@ import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
 import { useOptionalImpersonation } from '../../context/ImpersonationContext'
-import { useDefaultNavSections, type NavSection } from '../project/Sidebar'
+import {
+  useDefaultNavSections,
+  navItems,
+  type NavSection,
+} from '../../nav/sections'
 
 export interface SpotlightSearchProps {
   sections?: NavSection[]
@@ -58,7 +62,7 @@ export const SpotlightSearch: React.FC<SpotlightSearchProps> = ({
     const items: SpotlightActionData[] = []
 
     sections.forEach((section) => {
-      section.items.forEach((item) => {
+      navItems(section).forEach((item) => {
         items.push({
           id: `nav-${item.href}`,
           label: item.label,

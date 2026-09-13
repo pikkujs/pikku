@@ -1,31 +1,32 @@
 import React, { useMemo } from 'react'
 import { Group, Text } from '@pikku/mantine/core'
 import { Network } from 'lucide-react'
-import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePanelUrl } from '../../hooks/usePanelUrl'
+import { useGatewayItems } from '../../hooks/useGatewayItems'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-type GatewaysTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
+export interface GatewaysListPanelProps {
+  /** Filters the rows from outside; omit to use the panel's own search input. */
+  externalSearch?: string
+  emptyHero?: React.ReactNode
+}
 
-export const GatewaysTab: React.FC<GatewaysTabProps> = ({
-  searchQuery,
+/**
+ * Every enabled gateway in the project as selectable rows. Mount anywhere under
+ * a `ConsoleSurface` — it reads its own meta and opens the gateway inspector.
+ */
+export const GatewaysListPanel: React.FC<GatewaysListPanelProps> = ({
+  externalSearch,
   emptyHero,
 }) => {
-  const { meta } = usePikkuMeta()
   const { openGateway } = usePanelContext()
   useLocale()
-
-  const gateways = useMemo(() => {
-    if (!meta.gatewayMeta) return []
-    return [...meta.gatewayMeta]
-      .filter((gateway: any) => gateway.enabled !== false)
-      .sort((a: any, b: any) => a.name.localeCompare(b.name))
-  }, [meta.gatewayMeta])
+  const { items: gateways, loading } = useGatewayItems()
 
   usePanelUrl({
     type: 'gateway',
@@ -99,6 +100,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
       getKey={(gateway) => gateway.name}
       onRowClick={(gateway) => openGateway(gateway.name, gateway)}
       searchPlaceholder={m.gateways_search_placeholder()}
+      externalSearch={externalSearch}
       searchFilter={(gateway, q) =>
         gateway.name?.toLowerCase().includes(q) ||
         gateway.pikkuFuncId?.toLowerCase().includes(q) ||
@@ -111,7 +113,7 @@ export const GatewaysTab: React.FC<GatewaysTabProps> = ({
       }
       emptyMessage={m.gateways_empty_message()}
       emptyHero={emptyHero}
-      externalSearch={searchQuery}
+      loading={loading}
     />
   )
 }

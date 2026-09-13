@@ -4,7 +4,8 @@ import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { GatewaysTab } from '../components/tabs/GatewaysTab'
+import { GatewaysListPanel } from '../components/gateways/GatewaysListPanel'
+import { useGatewayItems } from '../hooks/useGatewayItems'
 
 export type GatewaysPageProps = {
   /** Shown in place of the empty list — fabric hands each wire kind its own. */
@@ -13,6 +14,7 @@ export type GatewaysPageProps = {
 
 export const GatewaysPage: React.FC<GatewaysPageProps> = ({ emptyHero }) => {
   const [search, setSearch] = useState('')
+  const { items, loading } = useGatewayItems()
   useLocale()
 
   return (
@@ -32,9 +34,10 @@ export const GatewaysPage: React.FC<GatewaysPageProps> = ({ emptyHero }) => {
             }}
           />
         }
-        emptyPanelMessage={m.common_select_item()}
+        hidePanel={!loading && items.length === 0}
+        emptyPanelMessage={m.gateways_select_item()}
       >
-        <GatewaysTab searchQuery={search} emptyHero={emptyHero} />
+        <GatewaysListPanel externalSearch={search} emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

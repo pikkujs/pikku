@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Box, Button, Center, Loader } from '@pikku/mantine/core'
 import { useLocation } from '../../router'
-import { Sidebar, type SidebarProps } from '../project/Sidebar'
+import { NavList, type NavListProps } from '../nav/NavList'
 import { PikkuMetaProvider, usePikkuMeta } from '../../context/PikkuMetaContext'
 import {
   PageOptionsProvider,
   usePageOptions,
 } from '../../context/PageOptionsProvider'
-import { SidebarModeProvider } from '../../context/SidebarModeProvider'
 import { SpotlightSearch } from '../search/SpotlightSearch'
 import { ConnectionScreen } from './ConnectionScreen'
 import { ContentArea } from '../shell/ContentArea'
@@ -19,13 +18,12 @@ import { usePhone } from '../../lib/breakpoints'
 
 export interface AppLayoutProps {
   children: React.ReactNode
-  /** The nav model. Only `sections` reaches the dock — the rail's branding and
-   *  footer slots have no equivalent on a row of tiles, and reach the phone's
-   *  nav sheet, which is still the rail. */
-  sidebar?: SidebarProps
+  /** The nav model, shared by the dock, the phone's nav sheet and the command
+   *  palette, so no two of them can disagree about what the console contains. */
+  nav?: NavListProps
 }
 
-const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
+const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, nav }) => {
   const { initialLoading, error } = usePikkuMeta()
   const { pathname } = useLocation()
   const phone = usePhone()
@@ -69,11 +67,9 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
   if (phone) {
     return (
       <>
-        <SpotlightSearch sections={sidebar?.sections} />
+        <SpotlightSearch sections={nav?.sections} />
         <MobileSheet opened={navOpen} onClose={() => setNavOpen(false)}>
-          <SidebarModeProvider mode="sheet">
-            <Sidebar {...sidebar} />
-          </SidebarModeProvider>
+          <NavList {...nav} />
         </MobileSheet>
         {/* Always mounted so the portal host exists before the sheet is ever
             opened — a page that registers its rail must be able to render into
@@ -145,8 +141,8 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
 
   return (
     <>
-      <SpotlightSearch sections={sidebar?.sections} />
-      <ConsoleNavDock sections={sidebar?.sections} />
+      <SpotlightSearch sections={nav?.sections} />
+      <ConsoleNavDock sections={nav?.sections} />
       {/* Floating, the dock reserves nothing and the content starts at the
           window edge — it is over the card gutter that is already there. Held
           open it is furniture, so it publishes the edge it took and the screen
@@ -171,11 +167,11 @@ const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
   )
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, nav }) => {
   return (
     <PikkuMetaProvider>
       <PageOptionsProvider>
-        <AppLayoutInner sidebar={sidebar}>{children}</AppLayoutInner>
+        <AppLayoutInner nav={nav}>{children}</AppLayoutInner>
       </PageOptionsProvider>
     </PikkuMetaProvider>
   )

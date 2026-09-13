@@ -21,7 +21,9 @@ type ScenarioRunStepsProps = {
  * time, not the ones in the source today. A scenario is code and code moves, so
  * re-deriving the prose from the current suite would quietly rewrite history.
  */
-export const ScenarioRunSteps: React.FC<ScenarioRunStepsProps> = ({ steps }) => {
+export const ScenarioRunSteps: React.FC<ScenarioRunStepsProps> = ({
+  steps,
+}) => {
   if (steps.length === 0) {
     return (
       <Text size="sm" c="dimmed">
@@ -49,7 +51,12 @@ export const ScenarioRunSteps: React.FC<ScenarioRunStepsProps> = ({ steps }) => 
               {asI18n(step.sentence)}
             </Text>
             {step.durationMs !== undefined && (
-              <Text size="xs" c="dimmed" ff="monospace" style={{ paddingTop: 3 }}>
+              <Text
+                size="xs"
+                c="dimmed"
+                ff="monospace"
+                style={{ paddingTop: 3 }}
+              >
                 {asI18n(runDuration(step.durationMs))}
               </Text>
             )}

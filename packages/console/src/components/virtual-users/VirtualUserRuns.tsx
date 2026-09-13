@@ -1,5 +1,13 @@
 import React from 'react'
-import { Badge, Box, Button, Group, Stack, Text, UnstyledButton } from '@pikku/mantine/core'
+import {
+  Badge,
+  Box,
+  Button,
+  Group,
+  Stack,
+  Text,
+  UnstyledButton,
+} from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import {

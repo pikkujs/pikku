@@ -4,7 +4,7 @@ import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { ChannelsTab } from '../components/tabs/ChannelsTab'
+import { ChannelsListPanel } from '../components/channel/ChannelsListPanel'
 
 export type ChannelsPageProps = {
   /** Shown in place of the empty list — fabric hands each wire kind its own. */
@@ -31,9 +31,9 @@ export const ChannelsPage: React.FC<ChannelsPageProps> = ({ emptyHero }) => {
             }}
           />
         }
-        emptyPanelMessage={m.common_select_item()}
+        hidePanel
       >
-        <ChannelsTab searchQuery={search} emptyHero={emptyHero} />
+        <ChannelsListPanel searchQuery={search} emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )
