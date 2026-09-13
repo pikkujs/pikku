@@ -26,9 +26,9 @@
   },
   "peerDependencies": {
     "@mantine/core": "^9.2.1",
-    "@pikku/core": "^0.12.108",
-    "@pikku/mantine": "^0.12.13",
-    "@pikku/react": "^0.12.11",
+    "@pikku/core": "^0.12.106",
+    "@pikku/mantine": "^0.12.12",
+    "@pikku/react": "^0.12.10",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
   },
