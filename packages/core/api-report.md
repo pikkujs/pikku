@@ -5,26 +5,26 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**2933 observable things**: 936 exported names, plus
-1997 members on the classes and interfaces among them, reachable
-through 54 entry points.
+**2978 observable things**: 962 exported names, plus
+2016 members on the classes and interfaces among them, reachable
+through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 156 | 124 | 424 |
+| `./services` | 159 | 127 | 433 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
-| `./types` | 23 | 20 | 75 |
+| `./types` | 23 | 20 | 76 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 25 | 25 | 49 |
-| `./errors` | 49 | 49 | 20 |
+| `./errors` | 50 | 50 | 22 |
 | `./services/local-meta` | 22 | 2 | 38 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
@@ -32,6 +32,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./analytics` | 13 | 13 | 24 |
 | `./classification` | 22 | 22 | 14 |
 | `./agent-scorer` | 18 | 18 | 12 |
+| `./flag` | 22 | 22 | 7 |
 | `./actor-flow` | 6 | 6 | 22 |
 | `./middleware` | 27 | 25 | 0 |
 | `./gateway` | 11 | 11 | 14 |
@@ -224,6 +225,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   auditLog?: AuditLog
   sessionStore?: SessionStore
   scopeService?: ScopeService
+  featureFlags?: FeatureFlagSource
   auth?: () => Promise<AuthInstance>
 }
 export interface CoreUserSession {
@@ -551,6 +553,7 @@ export type CorePikkuFunctionConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   Scope extends string = string,
+  FeatureFlagName extends string = string,
 > = {
   title?: string
   description?: string
@@ -581,6 +584,7 @@ export type CorePikkuFunctionConfig<
   skip?: string
   auth?: boolean
   scopes?: Scope[]
+  featureFlag?: FeatureFlagName
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
   input?: InputSchema
@@ -638,13 +642,16 @@ export type CorePikkuSessionlessFunctionConfig<
   >,
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
+  FeatureFlagName extends string = string,
 > = Omit<
   CorePikkuFunctionConfig<
     PikkuFunction,
     PikkuPermission,
     PikkuMiddleware,
     InputSchema,
-    OutputSchema
+    OutputSchema,
+    string,
+    FeatureFlagName
   >,
   'scopes'
 >
@@ -675,6 +682,7 @@ export type FunctionRuntimeMeta = {
   inputSchemaName: string | null
   outputSchemaName: string | null
   scopes?: string[]
+  featureFlag?: string
   expose?: boolean
   auth?: boolean
   permissionsInBody?: boolean
@@ -4209,6 +4217,10 @@ export interface ErrorDetails {
   mcpCode?: number
 }
 export class ExpectationFailedError extends PikkuError {}
+export class FeatureUnavailableError extends PikkuError {
+  public payload: { error: 'feature_unavailable'; feature: string }
+  constructor(feature: string)
+}
 export class ForbiddenError extends PikkuError {}
 export class GatewayTimeoutError extends PikkuError {}
 export class GoneError extends PikkuError {}
@@ -4572,6 +4584,19 @@ export interface EmailTemplateMeta {
   hasText: boolean
   locales: Record<string, EmailTemplateLocaleMeta>
 }
+export interface FeatureFlagSource {
+  snapshot(): Promise<FlagConfigSnapshot>
+}
+export interface FeatureFlagStore extends FeatureFlagSource {
+  syncFlags(flags: DeclaredFlag[]): Promise<void>
+  listFlags(): Promise<FlagRow[]>
+  setEnabled(key: string, enabled: boolean, actor?: string, note?: string): Promise<void>
+  setRollout(key: string, percent: number | null, actor?: string): Promise<void>
+  setOverride(key: string, subject: FlagSubject, enabled: boolean, actor?: string): Promise<void>
+  clearOverride(key: string, subject: FlagSubject): Promise<void>
+  findStaleFlags(): Promise<string[]>
+  pruneFlags(): Promise<string[]>
+}
 export class FileScenarioRunStore implements ScenarioRunStore {
   constructor(private readonly options: FileScenarioRunStoreOptions)
   async start(record: ScenarioRunRecord): Promise<void>
@@ -4587,6 +4612,11 @@ export class FileScenarioRunStore implements ScenarioRunStore {
 export interface FileScenarioRunStoreOptions {
   dir: string
   keep?: number
+}
+export type FlagRow = DeclaredFlag & {
+  enabled: boolean
+  rolloutPercent: number | null
+  declared: boolean
 }
 export interface FunctionCoverageEntry {
   name: string
@@ -5225,6 +5255,67 @@ withoutSecrets: <T extends object>(services: T, context: string) => SecretlessSe
 export interface WriteFileArgs< TBucket extends string = string, > extends BucketKeyArgs<TBucket> {
   stream: ReadableStream | NodeJS.ReadableStream
 }
+```
+
+## ./flag
+
+```ts
+assertFeatureAvailable: (key: string, featureFlags: FeatureFlagSource | undefined, session: CoreUserSession | undefined, subject?: FlagSubject | undefined) => Promise<void>
+bucketOf: (flag: string, subject: string) => number
+export abstract class CachedFlagSource implements FeatureFlagSource {
+  constructor(options: CachedFlagSourceOptions = {})
+  protected abstract fetchSnapshot(): Promise<FlagConfigSnapshot>
+  protected setDeclared(declared: DeclaredFlag[]): void
+  protected invalidate(): void
+  async snapshot(): Promise<FlagConfigSnapshot>
+}
+export interface CachedFlagSourceOptions {
+  ttlMs?: number
+  declared?: DeclaredFlag[]
+}
+compiledFallbackSnapshot: (flags: DeclaredFlag[]) => FlagConfigSnapshot
+export type CoreFeatureFlag = {
+  description?: string
+  anyOf?: string[]
+}
+export type CoreFeatureFlags = Record<string, CoreFeatureFlag>
+export type DeclaredFlag = {
+  name: string
+  description?: string
+  anyOf?: string[]
+}
+defineFeatureFlags: (_config: CoreFeatureFlags) => void
+export type FeatureFlagDefinitionMeta = {
+  name: string
+  description?: string
+  anyOf?: string[]
+  sourceFile?: string
+}
+export type FeatureFlagDefinitions = FeatureFlagDefinitionMeta[]
+export type FeatureFlagDefinitionsMeta = Record<
+  string,
+  FeatureFlagDefinitionMeta
+>
+export type FlagConfig = {
+  enabled: boolean
+  rolloutPercent: number | null
+  overrides: Record<string, boolean>
+}
+export type FlagConfigSnapshot = Record<string, FlagConfig>
+export type FlagState = {
+  available: boolean
+  capable: boolean
+}
+export type FlagSubject = {
+  organizationId?: string
+  userId?: string
+}
+flattenFeatureFlagDefinitions: (definitions: FeatureFlagDefinitions) => DeclaredFlag[]
+export type ResolvedFlag = FlagState & { show: boolean }
+resolveFlag: (key: string, anyOf: readonly string[] | undefined, session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => FlagState
+resolveFlagForClient: (key: string, anyOf: readonly string[] | undefined, session: CoreUserSession | undefined, config: FlagConfigSnapshot, subject?: FlagSubject | undefined) => ResolvedFlag
+subjectIdOf: (subject: FlagSubject | undefined) => string | undefined
+validateAndBuildFeatureFlagDefinitionsMeta: (definitions: FeatureFlagDefinitions) => FeatureFlagDefinitionsMeta
 ```
 
 ## ./services/local-meta
