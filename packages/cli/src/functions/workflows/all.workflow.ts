@@ -319,16 +319,33 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // Re-inspect above — are reflected in pikku-secrets-meta.gen.json. Without
     // this the declaration only lands on a second `pikku` run, and a cold
     // project deploys without ever being asked for the value.
+    //
+    // Middleware is in the same boat and fails far louder: pikkuAuth writes
+    // auth-middleware.gen.ts, whose top-level addGlobalMiddleware registers the
+    // better-auth session bridge. The Middleware pass above ran before that file
+    // existed, so pikku-middleware.gen.ts — the only thing that side-effect
+    // imports it — leaves it out, and a first-ever build ships with NO session
+    // middleware at all: every session-requiring function answers
+    // 'Authentication required' however the caller authenticated. It corrects
+    // itself on the next run, which is why it only ever bites a clean checkout
+    // (a CI deploy that wipes generated scaffolds, most of all).
     const stateAfterScaffold = await getInspectorState()
     if (
       stateAfterScaffold.auth.definition ||
       stateAfterScaffold.personas.definitions.length > 0
     ) {
-      await Promise.all([
+      const [, , , middlewareAfterScaffold] = await Promise.all([
         workflow.do('Secrets (post-scaffold)', 'pikkuSecrets', null),
         workflow.do('Credentials (post-scaffold)', 'pikkuCredentials', null),
         workflow.do('Variables (post-scaffold)', 'pikkuVariables', null),
+        workflow.do('Middleware (post-scaffold)', 'pikkuMiddleware', null),
       ])
+      if (
+        middlewareAfterScaffold &&
+        !allImports.includes(config.middlewareFile)
+      ) {
+        allImports.push(config.middlewareFile)
+      }
     }
 
     const schemas = await workflow.do('Schemas', 'pikkuSchemas', null)
