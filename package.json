@@ -48,7 +48,7 @@
     "check:ws-max-payload": "node scripts/check-ws-max-payload.mjs",
     "check:bun-artifacts": "node scripts/clean-bun-build-artifacts.mjs --check",
     "clean:bun-artifacts": "node scripts/clean-bun-build-artifacts.mjs",
-    "release": "bun run check:licenses && bun run check:workspace-protocol && bun run check:no-publish-rebuild && bun run check:readme-imports && bun run check:peer-deps && bun run check:ws-max-payload && bun run build:packages && bun run pikku && bun run build:addons && bun run build:console && npx changeset publish",
+    "release": "bun run check:licenses && bun run check:workspace-protocol && bun run check:no-publish-rebuild && bun run check:readme-imports && bun run check:peer-deps && bun run check:ws-max-payload && bun run build:packages && bun install --frozen-lockfile && bun run pikku && bun run build:addons && bun run build:console && npx changeset publish",
     "ncu": "bun run --filter '*' ncu",
     "ncu:pikku": "bun run --filter '*' ncu -f '/@pikku/.*/'",
     "test:verifiers": "bun run --filter './verifiers/**' --filter '!@pikku/verifiers-deploy-azure' --sequential test",
