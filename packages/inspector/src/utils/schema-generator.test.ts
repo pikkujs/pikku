@@ -8,6 +8,12 @@ import { fileURLToPath } from 'url'
 import { getInitialInspectorState } from '../inspector.js'
 import { generateAllSchemas, schemaRuntimeFile } from './schema-generator.js'
 
+// Coverage instrumentation keeps its own per-line counters alive for the life of
+// the run, so a heap-delta measurement cannot discriminate a retained program
+// from accumulated counters while it is on. run-tests.sh exports this marker in
+// --coverage mode (the flag itself is not visible to the isolated test child).
+const UNDER_COVERAGE = process.env.PIKKU_TEST_COVERAGE === '1'
+
 const debugLines: string[] = []
 const logger = {
   debug(message: string) {
@@ -103,6 +109,8 @@ describe('generateAllSchemas', () => {
 
     collect()
     const retainedMB = (process.memoryUsage().heapUsed - before) / 1024 / 1024
+
+    if (UNDER_COVERAGE) return
 
     // A retained program (with its SourceFiles and TypeChecker) measures tens of
     // MB even for this one-file fixture; the schemas themselves are a few KB.
