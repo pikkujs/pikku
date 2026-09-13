@@ -30,6 +30,13 @@ the config, not the session, so the kill switch reaches a cron task, a queue
 worker and a webhook — which is where it matters most, since nobody is watching
 a UI to notice the feature is off.
 
+Refresh is pull-on-demand, so the TTL is the kill-switch latency. Where that is
+too long, `invalidate()` is public: a provider's change webhook lands on an HTTP
+wiring, drops the cache, and the next request does the read. It deliberately
+does not fetch — a burst of webhooks would be N round trips, and on a serverless
+runtime the isolate that took the signal may be gone before anything reads the
+result.
+
 Availability fails open through three layers: a fresh read, then the last good
 cached read, then the compiled declaration. The middle layer is load-bearing —
 dropping straight to the compiled fallback on a blip would switch on every flag

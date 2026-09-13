@@ -5268,7 +5268,7 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
   protected abstract fetchSnapshot(): Promise<FlagConfigSnapshot>
   protected setDeclared(declared: DeclaredFlag[]): void
   declaredFlags(): readonly DeclaredFlag[]
-  protected invalidate(): void
+  invalidate(): void
   async snapshot(): Promise<FlagConfigSnapshot>
 }
 export interface CachedFlagSourceOptions {

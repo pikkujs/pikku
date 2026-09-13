@@ -18,10 +18,6 @@ class TestSource extends CachedFlagSource {
     return this.value
   }
 
-  public expire(): void {
-    this.invalidate()
-  }
-
   public declare(flags: DeclaredFlag[]): void {
     this.setDeclared(flags)
   }
@@ -44,7 +40,7 @@ describe('CachedFlagSource', () => {
   test('re-reads once invalidated', async () => {
     const source = new TestSource({ ttlMs: 60_000 })
     await source.snapshot()
-    source.expire()
+    source.invalidate()
     await source.snapshot()
     assert.equal(source.reads, 2)
   })
@@ -56,7 +52,7 @@ describe('CachedFlagSource', () => {
       sandboxes: { enabled: false, rolloutPercent: null, overrides: {} },
     }
     source.fail = true
-    source.expire()
+    source.invalidate()
 
     const snapshot = await source.snapshot()
     assert.equal(snapshot['sandboxes']?.enabled, true)

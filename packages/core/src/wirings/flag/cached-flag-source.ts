@@ -65,8 +65,21 @@ export abstract class CachedFlagSource implements FeatureFlagSource {
     return this.declared
   }
 
-  /** Drops the cache, so the next read goes to the store. */
-  protected invalidate(): void {
+  /**
+   * Drops the cache, so the next read goes to the store.
+   *
+   * Public because the signal usually arrives from outside: PostHog and Unleash
+   * both emit a webhook on a flag change, and an HTTP wiring that receives one
+   * calls this to cut the kill-switch latency from the TTL to delivery time. A
+   * LaunchDarkly stream is the same call from a held-open connection rather
+   * than a request.
+   *
+   * It does not fetch. An eager refetch makes a burst of webhooks N round
+   * trips, and on a serverless runtime the isolate that received the signal may
+   * be gone before anything reads the result. The request that next notices the
+   * cache is empty pays for the read, and it is the one that needs it.
+   */
+  invalidate(): void {
     this.cachedAt = 0
   }
 
