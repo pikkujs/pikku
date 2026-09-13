@@ -3,8 +3,6 @@
 '@pikku/inspector': patch
 '@pikku/cli': patch
 '@pikku/kysely': patch
-'@pikku/posthog': patch
-'@pikku/unleash': patch
 ---
 
 Feature flags, declared in source and resolved from two independent booleans.
@@ -39,6 +37,7 @@ read-only (`snapshot()`) and is what a third-party provider implements;
 `FeatureFlagStore` adds the write half and is for stores Pikku owns.
 `@pikku/kysely` ships the store, with declarations synced additively — a removed
 declaration is marked undeclared, never revoked, and a sync never re-enables a
-killed flag. `@pikku/posthog` and `@pikku/unleash` ship read-only sources over
-plain `fetch`; both vendor SDKs poll on a timer belonging to a long-lived
-process, which a serverless isolate cannot hold between requests.
+killed flag. Third-party providers implement the read-only half in the addons
+repository, over plain `fetch` rather than a vendor SDK — those poll on a timer
+belonging to a long-lived process, which a serverless isolate cannot hold
+between requests.

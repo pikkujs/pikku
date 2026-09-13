@@ -17,6 +17,7 @@ import {
   createWireServices,
   featureFlags,
 } from './services.js'
+import { RemoteFlagSource } from './remote-source.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 import type { FeatureFlagName } from '../.pikku/scopes/pikku-flags.gen.js'
 import {
@@ -329,8 +330,77 @@ assert.equal(
   'pruning removes the row and its overrides'
 )
 
+// ============================================================================
+// A read-only source — what a third-party provider implements
+// ============================================================================
+
+const remote = new RemoteFlagSource({ ttlMs: 0, declared: FEATURE_FLAGS })
+const remoteServices = { ...singletonServices, featureFlags: remote }
+
+const invokeRemote = (
+  name: string,
+  session?: { userId: string; scopes?: string[]; orgId?: string }
+) =>
+  runPikkuFunc('rpc', name, name, {
+    singletonServices: remoteServices,
+    createWireServices,
+    data: () => undefined,
+    wire: { session },
+  } as any)
+
+// The gate reads `snapshot()` and nothing else, so a source with no write half
+// drives it exactly as a store does.
+remote.served = {
+  sandboxes: { enabled: false, rolloutPercent: null, overrides: {} },
+}
+await assert.rejects(
+  () => invokeRemote('openSandbox', reader),
+  FeatureUnavailableError,
+  'a read-only source must be able to close a flag'
+)
+
+remote.served = {
+  sandboxes: { enabled: true, rolloutPercent: null, overrides: {} },
+}
+assert.equal(await invokeRemote('openSandbox', reader), 'sandbox')
+
+// The middle layer. A provider that starts failing must leave the last good
+// read standing — dropping to the compiled fallback would switch a deliberately
+// dark flag on at the worst possible moment, when nobody can reach the console
+// to switch it back off.
+remote.served = {
+  sandboxes: { enabled: false, rolloutPercent: null, overrides: {} },
+}
+await assert.rejects(
+  () => invokeRemote('openSandbox', reader),
+  FeatureUnavailableError
+)
+remote.failing = true
+await assert.rejects(
+  () => invokeRemote('openSandbox', reader),
+  FeatureUnavailableError,
+  'an unreachable provider must serve the last good read, not the compiled fallback'
+)
+
+// Only a cold start with no read to fall back on reaches the compiled
+// declaration, where every flag is on: there is nothing better to say, and
+// taking the product down is worse than shipping it.
+const coldRemote = new RemoteFlagSource({ ttlMs: 0, declared: FEATURE_FLAGS })
+coldRemote.failing = true
+assert.equal(
+  await runPikkuFunc('rpc', 'openSandbox', 'openSandbox', {
+    singletonServices: { ...singletonServices, featureFlags: coldRemote },
+    createWireServices,
+    data: () => undefined,
+    wire: { session: reader },
+  } as any),
+  'sandbox',
+  'a cold start that never managed a read must fail open'
+)
+
 console.log('✓ flags: codegen, compile-time narrowing, and the runner gate')
 console.log(
   '✓ flags: availability vs capability, overrides and rollout buckets'
 )
 console.log('✓ flags: dark-launch defaults, additive syncs and pruning')
+console.log('✓ flags: a read-only source, and the three fail-open layers')

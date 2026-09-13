@@ -1208,13 +1208,6 @@
         "pino": "^9.5.0",
       },
     },
-    "packages/services/posthog": {
-      "name": "@pikku/posthog",
-      "version": "0.0.1",
-      "peerDependencies": {
-        "@pikku/core": "^0.12.108",
-      },
-    },
     "packages/services/queue-bullmq": {
       "name": "@pikku/queue-bullmq",
       "version": "0.12.8",
@@ -1279,13 +1272,6 @@
       "dependencies": {
         "@cfworker/json-schema": "^4.1.1",
       },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.108",
-      },
-    },
-    "packages/services/unleash": {
-      "name": "@pikku/unleash",
-      "version": "0.0.1",
       "peerDependencies": {
         "@pikku/core": "^0.12.108",
       },
@@ -3245,8 +3231,6 @@
 
     "@pikku/playwright": ["@pikku/playwright@workspace:packages/playwright"],
 
-    "@pikku/posthog": ["@pikku/posthog@workspace:packages/services/posthog"],
-
     "@pikku/queue-bullmq": ["@pikku/queue-bullmq@workspace:packages/services/queue-bullmq"],
 
     "@pikku/queue-nats": ["@pikku/queue-nats@workspace:packages/services/queue-nats"],
@@ -3314,8 +3298,6 @@
     "@pikku/templates-workflows-pg-boss": ["@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"],
 
     "@pikku/templates-ws-server": ["@pikku/templates-ws-server@workspace:templates/ws"],
-
-    "@pikku/unleash": ["@pikku/unleash@workspace:packages/services/unleash"],
 
     "@pikku/uws": ["@pikku/uws@workspace:packages/runtimes/uws-server"],
 
