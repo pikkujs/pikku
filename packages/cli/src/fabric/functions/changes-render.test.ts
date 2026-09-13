@@ -151,6 +151,22 @@ describe('changes list', () => {
     assert.ok(!out.includes('\x1b]0;'))
   })
 
+  // A title is printed as one field of one line, so a newline in it would end
+  // that line and start another the response never contained.
+  test('a title cannot forge a second row', () => {
+    const out = printed(() =>
+      renderChangesList(null, {
+        changes: [change({ title: 'Grouped totals\n  #99  Ship it' })],
+        groups: [],
+      } as never)
+    )
+    assert.strictEqual(
+      out.split('\n').filter((line) => line.includes('Ship it')).length,
+      1
+    )
+    assert.ok(out.includes('Grouped totals  #99  Ship it'))
+  })
+
   test('says so plainly when there is nothing open', () => {
     const out = printed(() =>
       renderChangesList(null, { changes: [], groups: [] } as never)

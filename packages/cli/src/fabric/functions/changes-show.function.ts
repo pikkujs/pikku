@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { age, changesContext } from '../lib/changes.js'
-import { dim, keyValue, safe, statusColor } from '../lib/output.js'
+import { dim, keyValue, safe, safeBlock, statusColor } from '../lib/output.js'
 import type { GetChangeOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesShowInput = z.object({
@@ -42,7 +42,7 @@ export const renderChangesShow = (
   )
   if (change.body) {
     console.log('')
-    console.log(safe(change.body))
+    console.log(safeBlock(change.body))
   }
 
   const rows: [string, string][] = []
@@ -93,7 +93,7 @@ export const renderChangesShow = (
     console.log(
       `${safe(message.authorName ?? message.authorKind)} ${dim(`· ${age(message.createdAt)} ago`)}`
     )
-    console.log(`  ${safe(message.body)}`)
+    console.log(`  ${safeBlock(message.body)}`)
     for (const attachment of message.attachments) {
       console.log(
         `  ${dim(`[${safe(attachment.kind)}]`)} ${safe(attachment.label)}${attachment.url ? dim(`  ${safe(attachment.url)}`) : ''}`

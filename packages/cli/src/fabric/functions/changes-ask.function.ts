@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { changesContext } from '../lib/changes.js'
-import { dim, safe } from '../lib/output.js'
+import { dim, safeBlock } from '../lib/output.js'
 import type { AskChangeQuestionOutput } from '../sdk/rpc-map.gen.d.js'
 
 export const FabricChangesAskInput = z.object({
@@ -34,5 +34,5 @@ export const renderChangesAsk = (
   { message }: AskChangeQuestionOutput
 ): void => {
   console.log('Asked — the item now shows as needing an answer in the panel.')
-  console.log(dim(`  ${safe(message.body)}`))
+  console.log(dim(`  ${safeBlock(message.body)}`))
 }
