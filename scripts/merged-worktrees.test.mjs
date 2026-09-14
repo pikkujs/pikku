@@ -14,6 +14,11 @@ worktree /repo/wt-feature
 HEAD def456
 branch refs/heads/feat/thing
 
+worktree /repo/wt-busy
+HEAD 555555
+branch refs/heads/feat/busy
+locked claude session 1702 (pid 78129)
+
 worktree /tmp/scratch
 HEAD 789abc
 detached
@@ -37,14 +42,15 @@ const worktree = (branch = 'feat/thing') => ({
 test('parses the worktree list, marking the first as the main checkout', () => {
   const parsed = parseWorktrees(PORCELAIN)
 
-  assert.equal(parsed.length, 3)
+  assert.equal(parsed.length, 4)
   assert.equal(parsed[0].isMain, true)
   assert.equal(parsed[0].branch, 'main')
   assert.equal(parsed[1].isMain, false)
   assert.equal(parsed[1].branch, 'feat/thing')
   assert.equal(parsed[1].path, '/repo/wt-feature')
-  assert.equal(parsed[2].detached, true)
-  assert.equal(parsed[2].branch, undefined)
+  assert.equal(parsed[2].locked, 'claude session 1702 (pid 78129)')
+  assert.equal(parsed[3].detached, true)
+  assert.equal(parsed[3].branch, undefined)
 })
 
 test('a squash-merged branch is deletable though its commits are not in main', () => {
@@ -157,4 +163,17 @@ test('the main checkout and a detached worktree are never candidates', () => {
     classifyWorktree({ path: '/tmp/scratch', detached: true }, all).verdict,
     'skip'
   )
+})
+
+test('a locked worktree is left to the session that locked it', () => {
+  // Found by running this against a real checkout: another live session held a
+  // lock, and `worktree remove` refuses it. Merged or not, the answer is the
+  // same, and the only override git offers is `remove -f -f`.
+  const verdict = classifyWorktree(
+    { ...worktree(), locked: 'claude session 1702 (pid 78129)' },
+    probes({ isAncestor: () => true })
+  )
+
+  assert.equal(verdict.verdict, 'skip')
+  assert.match(verdict.reason, /locked — claude session 1702/)
 })
