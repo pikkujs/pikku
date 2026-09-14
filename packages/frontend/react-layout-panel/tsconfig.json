@@ -4,6 +4,7 @@
     "rootDir": "./src",
     "module": "Node18",
     "outDir": "dist/esm",
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo",
     "target": "esnext",
     "declaration": true,
     "jsx": "react-jsx",

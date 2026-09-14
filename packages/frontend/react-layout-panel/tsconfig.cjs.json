@@ -5,6 +5,7 @@
     "ignoreDeprecations": "6.0",
     "module": "commonjs",
     "outDir": "dist/cjs",
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.cjs.tsbuildinfo",
     "target": "es2015",
     "moduleResolution": "node"
   },
