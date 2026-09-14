@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 Add `pikku fabric changes file`, so an item decided outside the panel — in a call, a
