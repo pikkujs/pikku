@@ -3,10 +3,12 @@ import { test } from 'node:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Panel } from './Panel.js'
-import { Shell, ShellRow, Stage } from './Shell.js'
+import { Shell } from './Shell.js'
+import { ShellRow } from './ShellRow.js'
+import { Stage } from './Stage.js'
+import { Sheet } from './Sheet.js'
 import {
   MOBILE_QUERY,
-  Sheet,
   TabBar,
   mediaQueryMatches,
   shouldFollowLinkInRouter,
@@ -75,10 +77,27 @@ test('a collapsed panel takes its rail name from the title, or an explicit label
   assert.match(explicit, /aria-label="Muscle map"/)
 })
 
+test('an expanded panel names its collapse control the same way', () => {
+  const fromTitle = renderToStaticMarkup(
+    <Panel title="Muscles" onCollapse={() => {}}>
+      body
+    </Panel>
+  )
+  assert.match(fromTitle, /pk-panel-collapse/)
+  assert.match(fromTitle, /aria-label="Muscles"/)
+
+  const explicit = renderToStaticMarkup(
+    <Panel title={<span>Muscles</span>} railLabel="Muscle map" onCollapse={() => {}}>
+      body
+    </Panel>
+  )
+  assert.match(explicit, /aria-label="Muscle map"/)
+})
+
 test('the sheet renders nothing when closed and a dialog when open', () => {
   assert.equal(
     renderToStaticMarkup(
-      <Sheet opened={false} onClose={() => {}}>
+      <Sheet opened={false} onClose={() => {}} label="Details">
         body
       </Sheet>
     ),
@@ -90,12 +109,13 @@ test('the sheet renders nothing when closed and a dialog when open', () => {
     </Sheet>
   )
   assert.match(html, /role="dialog"/)
+  assert.match(html, /aria-label="Details"/)
   assert.match(html, /body/)
 })
 
 test('a filling sheet takes the full height', () => {
   const html = renderToStaticMarkup(
-    <Sheet opened fill onClose={() => {}}>
+    <Sheet opened fill onClose={() => {}} label="Details">
       body
     </Sheet>
   )

@@ -110,11 +110,7 @@ export function shouldFollowLinkInRouter(event: {
   )
 }
 
-/**
- * The phone's navigation. Five tabs is the ceiling — below that the labels stop being
- * legible on a 320px screen, and a tab whose label is elided is a mystery button.
- */
-export const TabBar: FC<{
+export interface TabBarProps {
   tabs: ShellTab[]
   /**
    * Names the landmark. A page with more than one `<nav>` in it gives a screen-reader
@@ -124,7 +120,13 @@ export const TabBar: FC<{
    */
   label?: string
   testId?: string
-}> = ({ tabs, label, testId }) => (
+}
+
+/**
+ * The phone's navigation. Five tabs is the ceiling — below that the labels stop being
+ * legible on a 320px screen, and a tab whose label is elided is a mystery button.
+ */
+export const TabBar: FC<TabBarProps> = ({ tabs, label, testId }) => (
   <nav className="pk-tabbar" aria-label={label} data-testid={testId}>
     {tabs.map((tab) => {
       const className = ['pk-tab', tab.active ? 'pk-tab--active' : ''].filter(Boolean).join(' ')
@@ -182,38 +184,3 @@ export const TabBar: FC<{
     })}
   </nav>
 )
-
-/**
- * A bottom sheet that stops short of whatever raised it.
- *
- * It deliberately does not cover that control, so tapping it again puts the sheet away
- * and the gesture is symmetric. The edge it stops at is `--shell-sheet-foot`, which is
- * the tab bar unless an ancestor says otherwise — a page whose own controls float above
- * the bar raises the token by their height and keeps the behaviour.
- */
-export const Sheet: FC<{
-  opened: boolean
-  onClose: () => void
-  /** Take the whole height rather than sizing to content — for a long list. */
-  fill?: boolean
-  label?: string
-  testId?: string
-  children: ReactNode
-}> = ({ opened, onClose, fill, label, testId, children }) => {
-  if (!opened) return null
-  return (
-    <>
-      <button type="button" className="pk-sheet-scrim" aria-label={label} onClick={onClose} />
-      <div
-        className={['pk-sheet', fill ? 'pk-sheet--fill' : ''].filter(Boolean).join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-        data-testid={testId}
-      >
-        <div className="pk-sheet-grip" aria-hidden />
-        <div className="pk-sheet-body">{children}</div>
-      </div>
-    </>
-  )
-}

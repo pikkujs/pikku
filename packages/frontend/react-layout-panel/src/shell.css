@@ -49,6 +49,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* The safe-area padding is part of the viewport height, not added to it. */
+  box-sizing: border-box;
   /* The shell IS the scroll boundary. Anything that wants to scroll does it inside. */
   overflow: hidden;
   padding-top: var(--shell-safe-top);
@@ -226,6 +228,8 @@
   z-index: 300;
   display: flex;
   align-items: stretch;
+  /* The foot token already includes the safe-area inset the padding repeats. */
+  box-sizing: border-box;
   height: var(--shell-tabbar-foot);
   padding-bottom: var(--shell-safe-bottom);
   padding-inline: var(--shell-safe-left) var(--shell-safe-right);

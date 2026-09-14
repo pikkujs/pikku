@@ -2,6 +2,37 @@ import type { CSSProperties, FC, ReactNode } from 'react'
 
 export type PanelSide = 'start' | 'end'
 
+interface PanelBaseProps {
+  /** Which edge it is docked to — decides the border and the rail's side. */
+  side?: PanelSide
+  width?: number
+  /** Omit `onCollapse` for a panel that cannot be collapsed. */
+  collapsed?: boolean
+  onCollapse?: (collapsed: boolean) => void
+  /** Controls in the header, to the right of the title. */
+  actions?: ReactNode
+  footer?: ReactNode
+  className?: string
+  style?: CSSProperties
+  bodyStyle?: CSSProperties
+  testId?: string
+  children: ReactNode
+}
+
+/**
+ * The rail's vertical label, and the accessible name of both collapse controls —
+ * which are glyphs, and would otherwise be two unnamed buttons to a screen reader.
+ *
+ * A string `title` supplies that name itself; any other title cannot, so the label
+ * is required alongside a non-string `title` rather than leaving the controls
+ * unnamed.
+ */
+export type PanelProps = PanelBaseProps &
+  (
+    | { title: string; railLabel?: string }
+    | { title: ReactNode; railLabel: string }
+  )
+
 /**
  * A docked column: a header that stays, a body that scrolls, an optional footer that
  * stays. Collapses to a labelled rail.
@@ -14,29 +45,7 @@ export type PanelSide = 'start' | 'end'
  * leaves an unexplained gutter and no way back, so the rail keeps the panel's name in
  * vertical type and is itself the button that reopens it.
  */
-export const Panel: FC<{
-  title: ReactNode
-  /** Which edge it is docked to — decides the border and the rail's side. */
-  side?: PanelSide
-  width?: number
-  /** Omit `onCollapse` for a panel that cannot be collapsed. */
-  collapsed?: boolean
-  onCollapse?: (collapsed: boolean) => void
-  /**
-   * The rail's vertical label, and the accessible name of both collapse controls —
-   * which are glyphs, and would otherwise be two unnamed buttons to a screen reader.
-   * Falls back to `title` when that is a plain string.
-   */
-  railLabel?: string
-  /** Controls in the header, to the right of the title. */
-  actions?: ReactNode
-  footer?: ReactNode
-  className?: string
-  style?: CSSProperties
-  bodyStyle?: CSSProperties
-  testId?: string
-  children: ReactNode
-}> = ({
+export const Panel: FC<PanelProps> = ({
   title,
   side = 'start',
   width = 280,

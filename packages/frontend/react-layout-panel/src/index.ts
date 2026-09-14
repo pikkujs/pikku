@@ -16,13 +16,16 @@
  * Import `@pikku/react-layout-panel/shell.css` once; its `--shell-*` tokens read from
  * Mantine's `--mantine-*` variables when they exist and fall back when they do not.
  */
-export { Shell, ShellRow, Stage } from './Shell.js'
-export { Panel, type PanelSide } from './Panel.js'
+export { Shell, type ShellProps } from './Shell.js'
+export { ShellRow, type ShellRowProps } from './ShellRow.js'
+export { Stage, type StageProps } from './Stage.js'
+export { Panel, type PanelProps, type PanelSide } from './Panel.js'
+export { Sheet, type SheetProps } from './Sheet.js'
 export {
   TabBar,
-  Sheet,
+  type TabBarProps,
+  type ShellTab,
   usePhone,
   useMediaQuery,
   MOBILE_QUERY,
-  type ShellTab,
 } from './mobile.js'
