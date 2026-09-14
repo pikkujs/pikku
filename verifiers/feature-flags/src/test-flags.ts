@@ -202,8 +202,26 @@ await assert.rejects(
   FeatureUnavailableError,
   'an override must be able to exclude as well as admit'
 )
+// An administration surface reads the overrides back with the subject's kind,
+// which resolution drops.
+const [listed] = await featureFlags.listOverrides('sandboxes')
+assert.deepEqual(
+  {
+    subjectId: listed?.subjectId,
+    subjectKind: listed?.subjectKind,
+    enabled: listed?.enabled,
+  },
+  { subjectId: 'acme', subjectKind: 'organization', enabled: false },
+  'listOverrides reports the subject, its kind and its direction'
+)
+
 await featureFlags.clearOverride('sandboxes', { organizationId: 'acme' })
 assert.equal(await invoke('openSandbox', reader), 'sandbox')
+assert.deepEqual(
+  await featureFlags.listOverrides('sandboxes'),
+  [],
+  'a cleared override is gone from the list'
+)
 
 // ============================================================================
 // Resolution — the two booleans, and the bucket

@@ -4,7 +4,11 @@ import type {
   FlagConfigSnapshot,
   FlagSubject,
 } from '@pikku/core/flag'
-import type { FeatureFlagStore, FlagRow } from '@pikku/core/services'
+import type {
+  FeatureFlagStore,
+  FlagOverrideRow,
+  FlagRow,
+} from '@pikku/core/services'
 import { subjectIdOf } from '@pikku/core/flag'
 
 /**
@@ -22,7 +26,7 @@ export class InMemoryFeatureFlagStore
   implements FeatureFlagStore
 {
   private rows = new Map<string, FlagRow>()
-  private overrides = new Map<string, Record<string, boolean>>()
+  private overrides = new Map<string, Map<string, FlagOverrideRow>>()
 
   protected async fetchSnapshot(): Promise<FlagConfigSnapshot> {
     const snapshot: FlagConfigSnapshot = {}
@@ -30,7 +34,12 @@ export class InMemoryFeatureFlagStore
       snapshot[name] = {
         enabled: row.enabled,
         rolloutPercent: row.rolloutPercent,
-        overrides: { ...(this.overrides.get(name) ?? {}) },
+        overrides: Object.fromEntries(
+          [...(this.overrides.get(name)?.values() ?? [])].map((override) => [
+            override.subjectId,
+            override.enabled,
+          ])
+        ),
       }
     }
     return snapshot
@@ -63,6 +72,12 @@ export class InMemoryFeatureFlagStore
     return [...this.rows.values()]
   }
 
+  async listOverrides(key: string) {
+    return [...(this.overrides.get(key)?.values() ?? [])].sort((a, b) =>
+      a.subjectId.localeCompare(b.subjectId)
+    )
+  }
+
   async setEnabled(key: string, enabled: boolean) {
     const row = this.rows.get(key)
     if (row) {
@@ -82,20 +97,28 @@ export class InMemoryFeatureFlagStore
     this.invalidate()
   }
 
-  async setOverride(key: string, subject: FlagSubject, enabled: boolean) {
+  async setOverride(
+    key: string,
+    subject: FlagSubject,
+    enabled: boolean,
+    actor?: string
+  ) {
     const id = this.requireSubject(subject)
-    this.overrides.set(key, {
-      ...(this.overrides.get(key) ?? {}),
-      [id]: enabled,
+    const held = this.overrides.get(key) ?? new Map<string, FlagOverrideRow>()
+    held.set(id, {
+      subjectId: id,
+      subjectKind: subject.organizationId ? 'organization' : 'user',
+      enabled,
+      grantedBy: actor,
+      grantedAt: new Date().toISOString(),
     })
+    this.overrides.set(key, held)
     this.invalidate()
   }
 
   async clearOverride(key: string, subject: FlagSubject) {
     const id = this.requireSubject(subject)
-    const held = { ...(this.overrides.get(key) ?? {}) }
-    delete held[id]
-    this.overrides.set(key, held)
+    this.overrides.get(key)?.delete(id)
     this.invalidate()
   }
 
