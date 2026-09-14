@@ -432,6 +432,7 @@
         "@pikku/fetch": "^0.12.11",
         "@pikku/mantine": "^0.12.14",
         "@pikku/react": "^0.12.12",
+        "@pikku/react-layout-panel": "^0.1.0",
         "@pikku/workflow-graph": "^0.12.1",
         "@rjsf/core": "^6.8.0",
         "@rjsf/mantine": "^6.8.0",
@@ -602,6 +603,29 @@
         "react": "^18 || ^19",
         "react-dom": "^18 || ^19",
       },
+    },
+    "packages/frontend/react-layout-panel": {
+      "name": "@pikku/react-layout-panel",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@mantine/hooks": "^9.5.1",
+        "@pikku/mantine": "workspace:^",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "react": "^19",
+        "react-dom": "^19",
+        "tsx": "^4.23.12",
+      },
+      "peerDependencies": {
+        "@mantine/hooks": "^9.2.1",
+        "@pikku/mantine": "^0.12.13",
+        "react": "^18 || ^19",
+        "react-dom": "^18 || ^19",
+      },
+      "optionalPeers": [
+        "@mantine/hooks",
+        "@pikku/mantine",
+      ],
     },
     "packages/frontend/workflow-graph": {
       "name": "@pikku/workflow-graph",
@@ -3256,6 +3280,8 @@
     "@pikku/queue-pg-boss": ["@pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss"],
 
     "@pikku/react": ["@pikku/react@workspace:packages/frontend/react"],
+
+    "@pikku/react-layout-panel": ["@pikku/react-layout-panel@workspace:packages/frontend/react-layout-panel"],
 
     "@pikku/redis": ["@pikku/redis@workspace:packages/services/redis"],
 

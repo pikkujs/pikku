@@ -1,0 +1,54 @@
+{
+  "name": "@pikku/react-layout-panel",
+  "version": "0.1.0",
+  "description": "Viewport-bound React layout primitives — a shell, scrollable panels, a stage, the phone's tab bar and sheet, and a nav dock",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "module": "dist/esm/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "default": "./dist/esm/index.js"
+    },
+    "./dock": {
+      "types": "./dist/esm/dock/index.d.ts",
+      "default": "./dist/esm/dock/index.js"
+    },
+    "./shell.css": "./dist/shell.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "test": "tsx --test src/*.test.tsx src/dock/*.test.tsx",
+    "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
+    "build:css": "cp src/shell.css dist/shell.css && cp src/dock/NavDock.module.css dist/esm/dock/",
+    "build": "bun run build:esm && bun run build:css",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "@mantine/hooks": "^9.2.1",
+    "@pikku/mantine": "^0.12.13",
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "peerDependenciesMeta": {
+    "@mantine/hooks": {
+      "optional": true
+    },
+    "@pikku/mantine": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@mantine/hooks": "^9.5.1",
+    "@pikku/mantine": "workspace:^",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "^19",
+    "react-dom": "^19",
+    "tsx": "^4.23.12"
+  }
+}

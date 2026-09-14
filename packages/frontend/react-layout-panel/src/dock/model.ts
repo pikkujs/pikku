@@ -1,21 +1,23 @@
-import type React from 'react'
-import type { I18nString } from '@pikku/react'
+import type { ComponentType } from 'react'
 
 /**
  * The dock's vocabulary — the shapes the renderer draws, with no opinion about
  * where the entries come from.
  *
- * A console builds its own zones (see `ConsoleNavDock`) and an embedding app
- * builds different ones from its own routes and data; both hand the same shapes
- * to {@link NavDock}. Keeping the model here is what lets the two look identical
- * without sharing a router, a query client, or a navigation scheme.
+ * A console builds its own zones (see `ConsoleNavDock` in `@pikku/console`) and an
+ * embedding app builds different ones from its own routes and data; both hand the
+ * same shapes to {@link NavDock}. Keeping the model here is what lets the two look
+ * identical without sharing a router, a query client, or a navigation scheme.
+ *
+ * Labels are plain strings, not nodes: every one of them is also an `aria-label`,
+ * and a screen reader cannot read a React element.
  */
 
 /** Never inferred from a name — `preview/142` and a stage someone called
  *  `prod-2` would both guess wrong. It comes off the thing's declared type. */
 export type DockEnv = 'prod' | 'staging' | 'preview'
 
-export type IconComponent = React.ComponentType<{
+export type IconComponent = ComponentType<{
   size?: number
   className?: string
   strokeWidth?: number
@@ -30,8 +32,8 @@ export interface DockBadge {
 export interface FlyoutRow {
   key: string
   Icon: IconComponent
-  label: I18nString
-  meta?: I18nString
+  label: string
+  meta?: string
   tone?: 'error' | 'warn'
   status?: 'ok' | 'warn' | 'error' | 'busy'
   env?: DockEnv
@@ -70,21 +72,21 @@ export interface FlyoutRow {
 
 export interface FlyoutSection {
   key: string
-  title?: I18nString
+  title?: string
   rows: FlyoutRow[]
   /** Shown instead of the rows when the section is genuinely empty. */
-  empty?: I18nString
+  empty?: string
 }
 
 export interface DockMenu {
-  label: I18nString
-  head?: { mark: string; title: I18nString; sub: I18nString; chip?: I18nString }
+  label: string
+  head?: { mark: string; title: string; sub: string; chip?: string }
   sections: FlyoutSection[]
 }
 
 export interface DockTile {
   id: string
-  label: I18nString
+  label: string
   Icon?: IconComponent
   /** The tile draws its own thing instead of a glyph (identity mark, avatar). */
   render?: 'switcher' | 'account'
