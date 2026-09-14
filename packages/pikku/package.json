@@ -1,6 +1,11 @@
 {
   "name": "pikku",
   "version": "0.12.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/pikku"
+  },
   "description": "Pikku meta-package — core plus sensible default services (jose, ajv)",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
