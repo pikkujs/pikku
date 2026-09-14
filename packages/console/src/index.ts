@@ -31,6 +31,7 @@ export type { ConsoleAuthClient } from './lib/auth-client'
 
 // Users — presentation-only table shared by AdminUsersPage and external hosts
 // (e.g. Fabric's server-brokered stage Users tab).
+export { AdminUsersPage } from './pages/AdminUsersPage'
 export { UsersTable } from './components/users/UsersTable'
 export type {
   UsersTableUser,
@@ -270,6 +271,8 @@ export { AgentPlaygroundPage } from './pages/AgentPlaygroundPage'
 export { ScorersPage } from './pages/ScorersPage'
 export { PackagesPage } from './pages/PackagesPage'
 export { ChangesPage } from './pages/ChangesPage'
+export { AnalyticsPage } from './pages/AnalyticsPage'
+export { FlagsPage } from './pages/FlagsPage'
 export { ScenariosPage } from './pages/ScenariosPage'
 export type { ScenariosPageProps } from './pages/ScenariosPage'
 export { VirtualUsersPage } from './pages/VirtualUsersPage'
