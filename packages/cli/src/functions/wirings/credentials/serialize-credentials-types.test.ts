@@ -54,4 +54,31 @@ describe('serializeCredentialsTypes', () => {
     assert.match(source, /export type CredentialsMap = \{/)
     assert.doesNotMatch(source, /export interface CredentialsMap/)
   })
+
+  /**
+   * An addon registers its credential meta from its package file. A project
+   * has no package file, so without this its own credentials are absent from
+   * pikku state and `wire.getCredential` cannot tell a singleton from a wire
+   * credential for anything the project declared itself.
+   */
+  test('registers the project meta into pikku state', () => {
+    const source = serializeCredentialsTypes({
+      definitions: credential('Stripe'),
+      schemaLookup: new Map(),
+      credentialsFile: '/project/.pikku/credentials/pikku-credentials.gen.ts',
+      packageMappings: {},
+      registerAppMeta: true,
+    })
+
+    assert.match(source, /import \{ pikkuState \} from '@pikku\/core\/state'/)
+    assert.match(
+      source,
+      /pikkuState\(null, 'package', 'credentialsMeta', CREDENTIALS_META\)/
+    )
+    assert.deepEqual(parseErrors(source), [])
+  })
+
+  test('an addon file registers nothing, its package file already does', () => {
+    assert.doesNotMatch(serialize(credential('Stripe')), /pikkuState/)
+  })
 })

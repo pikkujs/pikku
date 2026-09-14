@@ -1,3 +1,4 @@
+import type { CredentialOverrideMeta } from '../types.js'
 import type {
   InspectorState,
   InspectorLogger,
@@ -17,6 +18,7 @@ import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
 import { findSecretAliasServices } from './secret-alias-services.js'
+import { deriveOAuth2AppSecrets } from '@pikku/core/secret'
 import { resolveCoreType } from './resolve-core-type.js'
 import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
@@ -484,22 +486,64 @@ export function validateCredentialOverrides(
     state.credentials?.definitions.map((d) => d.name) ?? []
   )
 
+  /** Only a rename has a target to check; a mode-only override renames nothing. */
+  const renameTarget = (
+    override: CredentialOverrideMeta
+  ): string | undefined =>
+    typeof override === 'string' ? override : override.name
+
+  const overrideMode = (
+    override: CredentialOverrideMeta
+  ): 'singleton' | 'wire' | undefined =>
+    typeof override === 'string' ? undefined : override.mode
+
+  /**
+   * Which declaration set each resolved name's mode. Credential generation
+   * writes one shared metadata entry per name, so two declarations that map
+   * onto one name with opposite modes leave whichever ran last in the file the
+   * console reads — and the other addon silently gets the wrong resolution.
+   */
+  const modeClaims = new Map<
+    string,
+    { mode: 'singleton' | 'wire'; namespace: string; logicalName: string }
+  >()
+
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    for (const [logicalName, resolvedName] of Object.entries(
+    for (const [logicalName, override] of Object.entries(
       addonDecl.credentialOverrides ?? {}
     )) {
+      // A mode-only override still names a credential — the addon's own. It
+      // has to exist, or generation resolves nothing and the credential keeps
+      // its default mode with no sign that the wiring asked for another.
+      const renamed = renameTarget(override)
+      const resolvedName = renamed ?? logicalName
       if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
+        const target = renamed
+          ? `'${logicalName}' -> '${resolvedName}'`
+          : `'${logicalName}'`
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+          `Credential override ${target} in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
         )
       }
+
+      const mode = overrideMode(override)
+      if (!mode) continue
+      const claim = modeClaims.get(resolvedName)
+      if (claim && claim.mode !== mode) {
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Credential '${resolvedName}' is wired '${claim.mode}' by '${claim.logicalName}' in addon '${claim.namespace}' and '${mode}' by '${logicalName}' in addon '${namespace}'. One credential holds one mode, so the second wiring would silently take the first's resolution. Give them separate names, or wire both the same way.`
+        )
+      }
+      modeClaims.set(resolvedName, { mode, namespace, logicalName })
     }
 
     for (const logicalName of addonDecl.credentialGrants ?? []) {
+      const override = addonDecl.credentialOverrides?.[logicalName]
       const resolvedName =
-        addonDecl.credentialOverrides?.[logicalName] ?? logicalName
+        (override ? renameTarget(override) : undefined) ?? logicalName
       if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
         logger.critical(
@@ -1274,6 +1318,21 @@ export function validateNoSecretAliasServices(
  * at first request rather than at deploy; a non-literal key is a read the
  * manifest cannot cover, so a per-unit scope cannot be narrowed around it.
  */
+/**
+ * Registers the app secrets the project's OAuth2 credentials imply, so a
+ * deployment is asked for the client id and secret every connect flow needs
+ * without an author restating a shape the runtime already fixes.
+ */
+export function registerDerivedOAuth2AppSecrets(
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const derived = deriveOAuth2AppSecrets(
+    state.credentials?.definitions ?? [],
+    state.secrets.definitions
+  )
+  state.secrets.definitions.push(...derived)
+}
+
 export function validateSecretUsage(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>

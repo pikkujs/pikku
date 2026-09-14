@@ -17,6 +17,8 @@ export interface CredentialStatus {
   name: string
   displayName: string
   isConfigured: boolean
+  /** Declared `optional: true`, so absence is a supported state rather than a misconfiguration. */
+  optional?: boolean
   oauth2?: { tokenSecretId: string }
 }
 
@@ -118,6 +120,7 @@ export class TypedSecretService<
         name: meta.name,
         displayName: meta.displayName,
         isConfigured: await this.secrets.hasSecret(secretId),
+        optional: meta.optional,
         oauth2: meta.oauth2,
       })
     }
@@ -125,8 +128,17 @@ export class TypedSecretService<
     return results
   }
 
+  /**
+   * The secrets a deployment still has to supply.
+   *
+   * An optional one is absent from this list however it is stored: `optional`
+   * already declares that absence is supported, which is why `getSecret`
+   * resolves `undefined` for it rather than throwing. Reporting it as missing
+   * contradicts that, and buries the required secrets someone actually has to
+   * go and configure. `getAllStatus` still reports it, flagged.
+   */
   async getMissing(): Promise<CredentialStatus[]> {
     const all = await this.getAllStatus()
-    return all.filter((c) => !c.isConfigured)
+    return all.filter((c) => !c.isConfigured && !c.optional)
   }
 }

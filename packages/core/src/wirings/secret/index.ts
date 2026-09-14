@@ -7,3 +7,4 @@ export type {
   SecretDefinitions,
 } from './secret.types.js'
 export { validateAndBuildSecretDefinitionsMeta } from './validate-secret-definitions.js'
+export { deriveOAuth2AppSecrets } from './derive-oauth2-app-secrets.js'
