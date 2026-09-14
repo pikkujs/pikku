@@ -21,13 +21,15 @@ import type { AgentRunnerService } from '@pikku/core/services'
  * configured (agents stay disabled, with the clear downstream error) or when
  * the SDK packages cannot be loaded from either place.
  *
- * Audio does not work here: `@ai-sdk/openai-compatible` exposes only
- * language/embedding/image models, so a voice agent under `pikku dev` throws
- * `Provider does not support transcription models`. Fixing that means the full
- * `@ai-sdk/openai` provider, which assumes OpenAI's own request specifics — a
- * bad default for a path whose entire purpose is fronting arbitrary gateways.
- * If it becomes worth it, delegate just `transcription`/`speech` to the full
- * provider and leave everything else on this one.
+ * Audio comes from a second provider. `@ai-sdk/openai-compatible` exposes only
+ * language/embedding/image models, so `transcription`/`speech` are delegated to
+ * the full `@ai-sdk/openai` provider pointed at the same base URL, and nothing
+ * else is: that provider assumes OpenAI's own request specifics, which is a bad
+ * default for a path whose whole purpose is fronting arbitrary gateways. Its
+ * `/v1/audio/*` shape, on the other hand, is what a gateway implements if it
+ * carries audio at all — routing OpenAI-compatible chat is no promise that it
+ * does. When it cannot be resolved, or the gateway has no audio endpoints
+ * behind it, audio is unavailable and the rest still works.
  */
 export async function createDevAgentRunner({
   logger,
@@ -130,10 +132,14 @@ export async function createDevAgentRunner({
 
   let VercelAgentRunner: any
   let createOpenAICompatible: any
+  // Which of the two copies `loadPair` settled on. The audio provider has to
+  // come from the same one, for the reason PAIR exists at all.
+  let pairFromProject = false
   try {
     const [runnerModule, providerModule, resolved] = await loadPair()
     ;({ VercelAgentRunner } = runnerModule)
     ;({ createOpenAICompatible } = providerModule)
+    pairFromProject = resolved !== undefined
 
     const [runnerSpec, providerSpec] = (resolved ?? []).map(providerSpecVersion)
     if (
@@ -155,6 +161,37 @@ export async function createDevAgentRunner({
     return undefined
   }
 
+  // Optional, and resolved from whichever copy the pair came from — NOT
+  // "project first, then ours". Mixing the two is the same failure PAIR
+  // guards against: an audio model built against one `@ai-sdk/provider` handed
+  // to a runner built against another is refused at the first transcribe or
+  // speak call, by an error naming the model rather than the two packages that
+  // disagree. When the pair fell back to the CLI's copies, so does this; when
+  // the project's own were used and it has no `@ai-sdk/openai` of its own,
+  // audio stays off rather than borrowing ours.
+  let createOpenAIProvider: any
+  const audioFrom = pairFromProject
+    ? resolveFromProject('@ai-sdk/openai')
+    : '@ai-sdk/openai'
+  if (!audioFrom) {
+    logger.debug(
+      `pikku dev: @ai-sdk/openai could not be resolved from ${join(
+        projectRoot,
+        'package.json'
+      )}, alongside the AI SDK copies in use, so speech-to-text and text-to-speech are unavailable`
+    )
+  } else {
+    try {
+      ;({ createOpenAI: createOpenAIProvider } = await import(audioFrom))
+    } catch (error) {
+      logger.debug(
+        `pikku dev: @ai-sdk/openai could not be loaded, so speech-to-text and text-to-speech are unavailable: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    }
+  }
+
   // One provider under '*', so every prefix a model might name resolves to the
   // proxy — including ones nobody thought to list. This was a hardcoded array
   // of seven names, which silently excluded everything else.
@@ -167,15 +204,33 @@ export async function createDevAgentRunner({
   // fronting this URL that is worth calling speaks `json_schema`; the ones that
   // do not now fail loudly on the first schema'd call, which is the outcome we
   // want over silently ignoring the schema.
-  const buildProviders = (key: string): Record<string, unknown> => ({
-    '*': createOpenAICompatible({
+  // Attached onto the compatible provider rather than replacing it with a plain
+  // object of named methods: the provider is callable, and `getModel` takes a
+  // callable's fast path for language models, so every other kind keeps
+  // resolving exactly as it did.
+  const buildProviders = (key: string): Record<string, unknown> => {
+    const provider = createOpenAICompatible({
       name: 'pikku-dev',
       baseURL,
       apiKey: key,
       supportsStructuredOutputs: true,
-    }),
-  })
+    })
+    if (createOpenAIProvider) {
+      const audio = createOpenAIProvider({
+        name: 'pikku-dev-audio',
+        baseURL,
+        apiKey: key,
+      })
+      provider.transcription = (modelId: string) => audio.transcription(modelId)
+      provider.speech = (modelId: string) => audio.speech(modelId)
+    }
+    return { '*': provider }
+  }
 
-  logger.info(`pikku dev: AI agent runner wired to ${baseURL}`)
+  logger.info(
+    `pikku dev: AI agent runner wired to ${baseURL}${
+      createOpenAIProvider ? '' : ' (no audio — @ai-sdk/openai not resolvable)'
+    }`
+  )
   return new VercelAgentRunner(buildProviders(apiKey), buildProviders)
 }
