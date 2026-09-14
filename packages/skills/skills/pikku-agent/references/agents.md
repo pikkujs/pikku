@@ -100,6 +100,13 @@ await rpc.agent.resume(runId, { toolCallId, approved })
 await rpc.agent.interrupt(runId, 'user' | 'speech' | 'timeout')
 ```
 
+`rpc.agent` is built from a factory that `@pikku/core/agent` registers when it
+is imported, so the agent runtime lands only in a deployment unit that actually
+holds an agent. A unit that declares one imports it through its own agent file
+and needs nothing extra; a unit that reaches `rpc.agent` while holding no agent
+throws `Agent runtime not available` rather than silently paying ~52 KB for a
+runtime it never uses.
+
 `context` is a string injected into the system prompt for this request only —
 use it for upfront state (current org, project, deployment) so the agent stops
 asking the user for identifiers it could have been handed.
