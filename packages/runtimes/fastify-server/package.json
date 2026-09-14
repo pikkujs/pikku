@@ -1,6 +1,11 @@
 {
   "name": "@pikku/fastify",
   "version": "0.12.10",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/fastify-server"
+  },
   "description": "Fastify server for Pikku, wrapping @pikku/fastify-plugin",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

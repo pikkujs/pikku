@@ -1,6 +1,11 @@
 {
   "name": "@pikku/react",
   "version": "0.12.12",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/frontend/react"
+  },
   "description": "React bindings for Pikku — provider and hooks for fetch, RPC, agents, workflows and realtime",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

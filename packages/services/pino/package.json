@@ -1,6 +1,11 @@
 {
   "name": "@pikku/pino",
   "version": "0.12.5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/pino"
+  },
   "description": "Pino logger for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

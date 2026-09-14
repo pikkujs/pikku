@@ -1,6 +1,11 @@
 {
   "name": "@pikku/playwright",
   "version": "0.12.82",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/playwright"
+  },
   "description": "Playwright browser driver for Pikku scenario steps",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

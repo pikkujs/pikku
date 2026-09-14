@@ -1,6 +1,11 @@
 {
   "name": "@pikku/fastify-plugin",
   "version": "0.12.9",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/fastify-plugin"
+  },
   "description": "Fastify plugin for Pikku — mount Pikku wirings on an existing Fastify app",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

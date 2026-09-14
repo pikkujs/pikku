@@ -1,6 +1,11 @@
 {
   "name": "@pikku/queue-nats",
   "version": "0.12.2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/queue-nats"
+  },
   "description": "NATS JetStream queue, worker and scheduler services for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

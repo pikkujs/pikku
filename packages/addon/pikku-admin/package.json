@@ -1,6 +1,11 @@
 {
   "name": "@pikku/addon-admin",
   "version": "0.12.5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/addon/pikku-admin"
+  },
   "description": "Admin addon for Pikku — the user directory, roles and scopes, credentials and the audit trail, as ordinary RPCs",
   "type": "module",
   "imports": {

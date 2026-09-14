@@ -1,6 +1,11 @@
 {
   "name": "@pikku/migrator-sql",
   "version": "0.12.5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/migrator-sql"
+  },
   "description": "The SQL migration applier shared by the Pikku CLI and the standalone runtime",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

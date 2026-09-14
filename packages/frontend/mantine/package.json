@@ -1,6 +1,11 @@
 {
   "name": "@pikku/mantine",
   "version": "0.12.13",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/frontend/mantine"
+  },
   "description": "Mantine components with i18n-tightened types for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

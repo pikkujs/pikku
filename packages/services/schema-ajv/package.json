@@ -1,6 +1,11 @@
 {
   "name": "@pikku/schema-ajv",
   "version": "0.12.7",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/schema-ajv"
+  },
   "description": "JSON schema validation for Pikku, backed by Ajv",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

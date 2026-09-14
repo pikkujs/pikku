@@ -1,6 +1,11 @@
 {
   "name": "@pikku/ai-vercel",
   "version": "0.12.14",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/ai-vercel"
+  },
   "description": "Vercel AI SDK agent runner for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

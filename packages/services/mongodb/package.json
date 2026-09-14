@@ -1,6 +1,11 @@
 {
   "name": "@pikku/mongodb",
   "version": "0.12.22",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/mongodb"
+  },
   "description": "MongoDB services for Pikku — workflow state, agent runs, secrets and channel stores",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

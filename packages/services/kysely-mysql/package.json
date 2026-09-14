@@ -1,6 +1,11 @@
 {
   "name": "@pikku/kysely-mysql",
   "version": "0.12.27",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/kysely-mysql"
+  },
   "description": "MySQL dialect services for Pikku, backed by Kysely",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

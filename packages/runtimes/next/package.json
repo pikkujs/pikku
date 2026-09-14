@@ -1,6 +1,11 @@
 {
   "name": "@pikku/next",
   "version": "0.12.11",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/next"
+  },
   "description": "Next.js runtime for Pikku — SSR, route handlers, server actions and Better Auth integration",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

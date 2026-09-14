@@ -1,6 +1,11 @@
 {
   "name": "@pikku/gateway-slack",
   "version": "0.12.8",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/gateways/slack"
+  },
   "description": "Slack gateway for Pikku — Events API bridge, OAuth, slash commands and message formatting",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

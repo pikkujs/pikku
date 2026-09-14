@@ -1,6 +1,11 @@
 {
   "name": "create-pikku",
   "version": "0.12.8",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/create"
+  },
   "description": "Scaffold a new Pikku project",
   "main": "dist/index.js",
   "bin": "dist/index.js",

@@ -1,6 +1,11 @@
 {
   "name": "@pikku/openapi-parser",
   "version": "0.12.21",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/openapi-parser"
+  },
   "description": "OpenAPI spec parser and code generator for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

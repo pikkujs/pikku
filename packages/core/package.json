@@ -1,6 +1,11 @@
 {
   "name": "@pikku/core",
   "version": "0.12.110",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/core"
+  },
   "description": "The Pikku runtime — functions, wirings, services, middleware and types",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

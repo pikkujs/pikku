@@ -1,6 +1,11 @@
 {
   "name": "@pikku/modelcontextprotocol",
   "version": "0.12.11",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/modelcontextprotocol"
+  },
   "description": "A Pikku MCP server runtime using the official MCP SDK",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

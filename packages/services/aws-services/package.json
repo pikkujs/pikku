@@ -1,6 +1,11 @@
 {
   "name": "@pikku/aws-services",
   "version": "0.12.13",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/aws-services"
+  },
   "description": "AWS services for Pikku — S3 content, Secrets Manager and SQS queues",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

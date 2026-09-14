@@ -1,6 +1,11 @@
 {
   "name": "@pikku/express",
   "version": "0.12.15",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/express-server"
+  },
   "description": "Express server for Pikku, with CORS, cookie and body parsing wired up",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

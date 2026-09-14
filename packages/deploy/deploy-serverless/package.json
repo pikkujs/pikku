@@ -1,6 +1,11 @@
 {
   "name": "@pikku/deploy-serverless",
   "version": "0.12.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/deploy/deploy-serverless"
+  },
   "description": "Serverless Framework deploy adapter for Pikku — generates serverless.yml and Lambda entry points",
   "type": "module",
   "main": "dist/index.js",

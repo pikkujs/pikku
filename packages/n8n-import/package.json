@@ -1,6 +1,11 @@
 {
   "name": "@pikku/n8n-import",
   "version": "0.0.8",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/n8n-import"
+  },
   "description": "n8n workflow importer for Pikku — converts n8n exports into Pikku workflow graphs, agents and stub functions",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

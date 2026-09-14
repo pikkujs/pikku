@@ -1,6 +1,11 @@
 {
   "name": "@pikku/bun-server",
   "version": "0.12.11",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/bun-server"
+  },
   "description": "Pikku server adapter for Bun (Bun.serve)",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

@@ -1,6 +1,11 @@
 {
   "name": "@pikku/ws",
   "version": "0.12.10",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/ws"
+  },
   "description": "WebSocket server for Pikku, built on ws",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

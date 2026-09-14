@@ -1,6 +1,11 @@
 {
   "name": "@pikku/ai-voice",
   "version": "0.12.5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/ai-voice"
+  },
   "description": "DEPRECATED: use @pikku/core/agent with an agentRunner such as @pikku/ai-vercel",
   "deprecated": "voiceInput and voiceOutput moved to @pikku/core/agent, and the speech/transcription service interfaces live in @pikku/core.",
   "author": "yasser.fadl@gmail.com",

@@ -1,6 +1,11 @@
 {
   "name": "@pikku/knowledge",
   "version": "0.12.13",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/knowledge"
+  },
   "description": "The Open Knowledge Format app-project profile — read, validate and index a project's knowledge/ notes",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

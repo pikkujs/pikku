@@ -1,6 +1,11 @@
 {
   "name": "@pikku/lambda",
   "version": "0.12.11",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/aws-lambda"
+  },
   "description": "AWS Lambda runtime for Pikku — HTTP, WebSocket, SQS queue and scheduled handlers",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

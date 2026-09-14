@@ -1,6 +1,11 @@
 {
   "name": "@pikku/kysely-node-sqlite",
   "version": "0.12.8",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/kysely-node-sqlite"
+  },
   "description": "Kysely driver for Pikku backed by the built-in node:sqlite module",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

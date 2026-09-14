@@ -1,6 +1,11 @@
 {
   "name": "@pikku/kysely",
   "version": "0.13.26",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/kysely"
+  },
   "description": "Kysely-backed Pikku services — workflow state, secrets, sessions, scopes and audit",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

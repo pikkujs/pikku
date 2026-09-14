@@ -1,6 +1,11 @@
 {
   "name": "@pikku/azure-functions",
   "version": "0.12.9",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/runtimes/azure-functions"
+  },
   "description": "Azure Functions runtime for Pikku — HTTP, timer and storage-queue handlers",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

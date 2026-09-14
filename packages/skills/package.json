@@ -1,6 +1,11 @@
 {
   "name": "@pikku/skills",
   "version": "0.12.32",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/skills"
+  },
   "description": "The Pikku agent skills — the instruction set coding agents read to build, wire and deploy Pikku projects",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

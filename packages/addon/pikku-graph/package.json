@@ -1,6 +1,11 @@
 {
   "name": "@pikku/addon-graph",
   "version": "0.12.15",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/addon/pikku-graph"
+  },
   "description": "Graph addon for Pikku — built-in graph:* primitives for workflow graphs",
   "type": "module",
   "imports": {

@@ -1,6 +1,11 @@
 {
   "name": "@pikku/kysely-bun-sqlite",
   "version": "0.12.9",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/services/kysely-bun-sqlite"
+  },
   "description": "Kysely driver for Pikku backed by the built-in bun:sqlite module",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
