@@ -5,11 +5,11 @@ import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { UsersDirectoryPanel } from '../components/users/UsersDirectoryPanel'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { useAuth } from '../context/AuthContext'
+import { useUserAdmin } from '../context/UserAdminContext'
 
 export const AdminUsersPage: React.FC = () => {
   useLocale()
-  const { can } = useAuth()
+  const { can } = useUserAdmin()
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
 
