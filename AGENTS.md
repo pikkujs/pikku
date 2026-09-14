@@ -257,6 +257,23 @@ Multiple agents work this checkout concurrently, so the worktree is routinely di
 - **`git add` the specific files you changed.** `git add -A` / `git add .` stages other agents' work.
 - Confirm HEAD is your commit before amending, and leave shared `main` un-force-pushed.
 
+### Pruning worktrees
+
+`bun run worktrees` reports which worktrees hold work that is already in
+`main`, and `--delete` removes the ones it can prove are safe. Use it instead of
+reading `git worktree list` by eye.
+
+Do not reach for `git branch --merged` here: every PR is squash-merged, so a
+merged branch's commits never become ancestors of `main` and the answer is
+wrong in both directions — merged branches look unmerged, and a branch rebased
+after its merge looks like it carries all its commits as unique work. What the
+script checks instead is that the PR's _merge commit_ is an ancestor of
+`origin/main`, which no rebase or force-push can make lie.
+
+Being merged is only half of it. Worktrees are shared, so the script refuses to
+delete one whose tree is dirty or whose commits are on no remote ref, and
+reports it for you to look at — that is how #1700 was found.
+
 ## Code style
 
 ### Comments

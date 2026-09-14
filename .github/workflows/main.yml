@@ -41,6 +41,8 @@ jobs:
         run: node scripts/check-no-publish-time-cli-rebuild.mjs
       - name: Test the semver range helpers
         run: node --test scripts/semver-ranges.test.mjs
+      - name: Test the merged-worktree reporter
+        run: node --test scripts/merged-worktrees.test.mjs
       - name: Check peer dependency ranges agree across the monorepo
         run: node scripts/check-peer-dependency-consistency.mjs
 
