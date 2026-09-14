@@ -41,6 +41,10 @@ export default defineConfig({
         '../frontend/mantine/src/core/index.ts'
       ),
       '@pikku/react': path.resolve(__dirname, '../frontend/react/src/index.ts'),
+      '@pikku/react-layout-panel/dock': path.resolve(
+        __dirname,
+        '../frontend/react-layout-panel/src/dock/index.ts'
+      ),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
   },

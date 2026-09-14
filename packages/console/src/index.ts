@@ -93,37 +93,32 @@ export {
 } from './components/shell/ConsoleScreen'
 export { ConsoleDetailPanel } from './components/shell/ConsoleDetailPanel'
 
-// Nav dock — the console's navigation. `NavDock` is presentational: it draws the
-// zones it is handed, so an embedding app builds its own model from its routes
-// and gets the same row. `ConsoleNavDock` is the console's own model.
-export { NavDock } from './components/nav-dock/NavDock'
-export type { NavDockProps } from './components/nav-dock/NavDock'
+// Nav dock — the console's navigation. The presentational dock and its model
+// live in `@pikku/react-layout-panel/dock` so an embedding app can draw the same
+// row from its own routes; it is re-exported here to keep `@pikku/console`'s own
+// surface unchanged. `ConsoleNavDock` is the console's own model.
 export { ConsoleNavDock } from './components/nav-dock/ConsoleNavDock'
-export { DockFlyout } from './components/nav-dock/DockFlyout'
-// The dock's own preferences, so an embedding app can offer the menu that moves
-// it from ITS account tile — the console's lives inside `ConsoleNavDock`, which
-// such an app replaces wholesale. Without this the app's only way to reach them
-// is to restate the storage keys and hope they never change.
 export {
   DOCK_SCALE_MAX,
   DOCK_SCALE_MIN,
   DOCK_SCALE_STEP,
   DOCK_SIDES,
+  DockFlyout,
+  isSep,
   isVerticalDock,
+  NavDock,
   useDockPrefs,
-} from './components/nav-dock/useDockPrefs'
-export type { DockSide } from './components/nav-dock/useDockPrefs'
-export { isSep } from './components/nav-dock/model'
-export type {
-  DockBadge,
-  DockEntry,
-  DockEnv,
-  DockMenu,
-  DockTile,
-  FlyoutRow,
-  FlyoutSection,
-  IconComponent,
-} from './components/nav-dock/model'
+  type DockBadge,
+  type DockEntry,
+  type DockEnv,
+  type DockMenu,
+  type DockSide,
+  type DockTile,
+  type FlyoutRow,
+  type FlyoutSection,
+  type IconComponent,
+  type NavDockProps,
+} from '@pikku/react-layout-panel/dock'
 
 // Phone — one gesture for every surface the bottom bar opens. Below the phone
 // breakpoint a second column cannot exist, so a side panel becomes a MobileSheet

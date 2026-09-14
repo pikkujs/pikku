@@ -1,6 +1,5 @@
 import { Menu, Slider } from '@pikku/mantine/core'
-import { m } from '@/i18n/messages'
-import type { DockMenu, DockTile, FlyoutRow } from './model'
+import type { DockMenu, DockTile, FlyoutRow } from './model.js'
 import classes from './NavDock.module.css'
 
 /**
@@ -19,10 +18,13 @@ export function DockFlyout({
   menu,
   isActiveRow,
   onClose,
+  emptyLabel,
 }: {
   menu: DockMenu
   isActiveRow: (t: Pick<DockTile, 'match'>) => boolean
   onClose: () => void
+  /** Shown for a section that has no rows. */
+  emptyLabel: string
 }) {
   /* A menu holding a submenu cannot also be the thing that scrolls: `overflow`
      of any kind makes it a clipping boundary, and floating-ui then shifts the
@@ -53,7 +55,7 @@ export function DockFlyout({
           ) : null}
           {section.rows.length === 0 ? (
             <div className={classes.fiEmpty}>
-              {section.empty ?? m.nav_dock_empty()}
+              {section.empty ?? emptyLabel}
             </div>
           ) : (
             section.rows.map((row) => (

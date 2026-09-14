@@ -18,7 +18,11 @@
       "@/*": ["./src/*"],
       "@pikku/assistant-ui": ["../assistant-ui/src/index.ts"],
       "@pikku/mantine/core": ["../frontend/mantine/src/core/index.ts"],
-      "@pikku/react": ["../frontend/react/src/index.ts"]
+      "@pikku/react": ["../frontend/react/src/index.ts"],
+      "@pikku/react-layout-panel": ["../frontend/react-layout-panel/src/index.ts"],
+      "@pikku/react-layout-panel/dock": [
+        "../frontend/react-layout-panel/src/dock/index.ts"
+      ]
     },
     "typeRoots": ["./node_modules/@types", "./types"],
     "target": "ES2017"

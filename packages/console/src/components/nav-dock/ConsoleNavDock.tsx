@@ -36,9 +36,15 @@ import {
   DOCK_SCALE_MIN,
   DOCK_SCALE_STEP,
   DOCK_SIDES,
+  NavDock,
   useDockPrefs,
+  type DockEntry,
+  type DockMenu,
   type DockSide,
-} from './useDockPrefs'
+  type DockTile,
+  type FlyoutRow,
+  type FlyoutSection,
+} from '@pikku/react-layout-panel/dock'
 import { useLocation, useNavigate } from '../../router'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { useOptionalAuth } from '../../context/AuthContext'
@@ -55,14 +61,6 @@ import {
   consoleLogoSrc,
   consoleTitle,
 } from '../../lib/branding'
-import { NavDock } from './NavDock'
-import type {
-  DockEntry,
-  DockMenu,
-  DockTile,
-  FlyoutRow,
-  FlyoutSection,
-} from './model'
 
 /**
  * The console's navigation dock: {@link NavDock} fed from the same nav model the
@@ -467,6 +465,13 @@ export function ConsoleNavDock({
         contextual={contextual}
         utility={utility}
         isActive={isActive}
+        labels={{
+          nav: m.common_nav(),
+          show: m.nav_dock_show(),
+          unpin: m.nav_dock_unpin(),
+          sections: m.nav_dock_sections(),
+          empty: m.nav_dock_empty(),
+        }}
       />
       {canImpersonate && (
         <ImpersonateDrawer

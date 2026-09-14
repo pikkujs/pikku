@@ -4,20 +4,19 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
+  type KeyboardEvent,
   type ReactNode,
 } from 'react'
 import { Menu, Tooltip } from '@pikku/mantine/core'
-import { asI18n } from '@pikku/react'
-import { Ellipsis } from 'lucide-react'
-import { m } from '@/i18n/messages'
-import { DockFlyout } from './DockFlyout'
+import { DockFlyout } from './DockFlyout.js'
 import {
   isSep,
   type DockEntry,
   type DockTile,
   type IconComponent,
-} from './model'
-import { isVerticalDock, useDockPrefs, type DockSide } from './useDockPrefs'
+} from './model.js'
+import { isVerticalDock, useDockPrefs, type DockSide } from './useDockPrefs.js'
 import classes from './NavDock.module.css'
 
 /* The size band the row lives in. 34px is the floor, not 40: it clears WCAG
@@ -38,6 +37,22 @@ const AWAY = {
   right: { menu: 'left-start', tooltip: 'left', key: 'ArrowLeft' },
 } as const
 
+/** Three dots, drawn inline so the dock carries no icon dependency. */
+const EllipsisIcon: IconComponent = ({ size = 24, className }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    className={className}
+    fill="currentColor"
+    aria-hidden
+  >
+    <circle cx="5" cy="12" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="19" cy="12" r="2" />
+  </svg>
+)
+
 /* Hands back every edge the dock has taken. Module scope on purpose: an effect
    that only has to run on unmount must not be keyed on a callback that changes
    whenever the dock moves. */
@@ -47,7 +62,27 @@ function releaseEdges() {
   }
 }
 
+/**
+ * The strings the dock says in its own chrome. Props rather than catalog keys
+ * because this package carries no i18n — the app's own `m()` output passes
+ * straight through.
+ */
+export interface DockLabels {
+  /** Names the toolbar landmark. */
+  nav: string
+  /** The trigger's label while the dock is hidden. */
+  show: string
+  /** The trigger's label while the dock is pinned open. */
+  unpin: string
+  /** Label of the condensed contextual tile. */
+  sections: string
+  /** Shown in a flyout section with no rows. */
+  empty: string
+}
+
 export interface NavDockProps {
+  /** The strings the dock says in its own chrome. */
+  labels: DockLabels
   /** The tile that never moves, in position 0. Its menu is the one that answers
    *  "where am I, and what else is there". */
   identity?: DockTile
@@ -103,7 +138,8 @@ export function NavDock({
   utility = [],
   accountSlot,
   isActive = () => false,
-  condensedIcon = Ellipsis,
+  condensedIcon = EllipsisIcon,
+  labels,
 }: NavDockProps) {
   /* ---------------- reveal ---------------- */
 
@@ -241,11 +277,11 @@ export function NavDock({
     ? [
         {
           id: 'sections',
-          label: m.nav_dock_sections(),
+          label: labels.sections,
           Icon: condensedIcon,
           isGroup: true,
           menu: {
-            label: m.nav_dock_sections(),
+            label: labels.sections,
             sections: [
               {
                 key: 'leaves',
@@ -277,7 +313,7 @@ export function NavDock({
 
   /* ---------------- roving focus ---------------- */
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const el = dockRef.current
     if (!el) return
     const tiles = [
@@ -308,6 +344,7 @@ export function NavDock({
       menuOpen={menuOpenId === t.id}
       onMenuChange={(v) => setMenuOpenId(v ? t.id : null)}
       isActiveRow={isActive}
+      emptyLabel={labels.empty}
     />
   )
 
@@ -334,7 +371,7 @@ export function NavDock({
       <button
         type="button"
         className={classes.dockTrigger}
-        aria-label={alwaysVisible ? m.nav_dock_unpin() : m.nav_dock_show()}
+        aria-label={alwaysVisible ? labels.unpin : labels.show}
         aria-expanded={open}
         aria-controls="nav-dock-row"
         data-testid="nav-dock-trigger"
@@ -349,7 +386,7 @@ export function NavDock({
         ref={dockRef}
         role="toolbar"
         aria-orientation={vertical ? 'vertical' : 'horizontal'}
-        aria-label={m.common_nav()}
+        aria-label={labels.nav}
         className={classes.dock}
         data-overflow={String(overflow)}
         /* A dock at opacity 0 is still focusable and still read aloud. `inert`
@@ -435,6 +472,7 @@ function DockTileButton({
   menuOpen,
   onMenuChange,
   isActiveRow,
+  emptyLabel,
 }: {
   tile: DockTile
   zone: 'pinned' | 'ctx' | 'util' | 'id'
@@ -444,6 +482,7 @@ function DockTileButton({
   menuOpen: boolean
   onMenuChange: (open: boolean) => void
   isActiveRow: (t: Pick<DockTile, 'match'>) => boolean
+  emptyLabel: string
 }) {
   const press = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longFired = useRef(false)
@@ -530,7 +569,7 @@ function DockTileButton({
                   : tile.badge.tone === 'warn'
                     ? 'var(--pf-status-warn)'
                     : 'var(--app-accent)',
-            } as React.CSSProperties
+            } as CSSProperties
           }
         >
           {tile.badge.text}
@@ -547,7 +586,7 @@ function DockTileButton({
         <span className={classes.dockTip}>
           {tile.label}
           {tile.shortcut && (
-            <span className={classes.tipKey}>{asI18n(tile.shortcut)}</span>
+            <span className={classes.tipKey}>{tile.shortcut}</span>
           )}
         </span>
       }
@@ -579,6 +618,7 @@ function DockTileButton({
         menu={tile.menu!}
         isActiveRow={isActiveRow}
         onClose={() => onMenuChange(false)}
+        emptyLabel={emptyLabel}
       />
     </Menu>
   )

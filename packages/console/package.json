@@ -57,6 +57,7 @@
     "@pikku/fetch": "^0.12.11",
     "@pikku/mantine": "^0.12.14",
     "@pikku/react": "^0.12.12",
+    "@pikku/react-layout-panel": "^0.1.0",
     "@pikku/workflow-graph": "^0.12.1",
     "@rjsf/core": "^6.8.0",
     "@rjsf/mantine": "^6.8.0",
