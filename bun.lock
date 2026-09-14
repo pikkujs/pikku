@@ -603,6 +603,21 @@
         "react-dom": "^18 || ^19",
       },
     },
+    "packages/frontend/react-layout-panel": {
+      "name": "@pikku/react-layout-panel",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "react": "^19",
+        "react-dom": "^19",
+        "tsx": "^4.23.12",
+      },
+      "peerDependencies": {
+        "react": "^18 || ^19",
+        "react-dom": "^18 || ^19",
+      },
+    },
     "packages/frontend/workflow-graph": {
       "name": "@pikku/workflow-graph",
       "version": "0.12.1",
@@ -3256,6 +3271,8 @@
     "@pikku/queue-pg-boss": ["@pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss"],
 
     "@pikku/react": ["@pikku/react@workspace:packages/frontend/react"],
+
+    "@pikku/react-layout-panel": ["@pikku/react-layout-panel@workspace:packages/frontend/react-layout-panel"],
 
     "@pikku/redis": ["@pikku/redis@workspace:packages/services/redis"],
 

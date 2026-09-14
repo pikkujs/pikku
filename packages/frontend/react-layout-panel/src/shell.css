@@ -1,0 +1,341 @@
+/**
+ * The geometry the shell is built out of. A plain stylesheet rather than a CSS module,
+ * because these are a contract an application overrides — a hashed class name is
+ * exactly what you do not want on `--shell-tabbar-height`.
+ *
+ * `env()` resolves to zero unless the document opts in:
+ *   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+ */
+:root {
+  --shell-safe-top: env(safe-area-inset-top, 0px);
+  --shell-safe-right: env(safe-area-inset-right, 0px);
+  --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --shell-safe-left: env(safe-area-inset-left, 0px);
+
+  --shell-tabbar-height: 56px;
+  --shell-tabbar-foot: calc(var(--shell-tabbar-height) + var(--shell-safe-bottom));
+  /* Where a sheet's bottom edge lands. The tab bar by default, because that is what
+     usually raised it — but an application whose controls sit somewhere else can raise
+     this on any ancestor of the sheet and keep the symmetry described below. */
+  --shell-sheet-foot: var(--shell-tabbar-foot);
+
+  --shell-rail-width: 34px;
+  --shell-header-height: 44px;
+
+  --shell-border: var(--mantine-color-default-border, rgba(0, 0, 0, 0.12));
+  --shell-surface: var(--mantine-color-body, #fff);
+  --shell-raised: var(--mantine-color-default-hover, rgba(0, 0, 0, 0.03));
+  --shell-text: var(--mantine-color-text, #222);
+  --shell-text-dim: var(--mantine-color-dimmed, #777);
+  --shell-accent: var(--mantine-primary-color-filled, #c2410c);
+  --shell-radius: 10px;
+  /* The seam between two floating surfaces, and between a surface and the window.
+     One number, so the panels, the stage and the nav dock all rest on the same
+     grid — a card layout where the gutters disagree reads as a mistake. */
+  --shell-gutter: 8px;
+}
+
+/* ---------------------------------------------------------------- root --- */
+
+/**
+ * `100dvh`, not `100vh`. `100vh` is the TALLEST the viewport ever gets, so on iOS
+ * Safari a shell sized to it puts its own footer permanently under the address bar.
+ * The `100vh` line below it is the fallback for browsers without dvh, where being
+ * slightly too tall beats being unsized.
+ */
+.pk-shell {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* The shell IS the scroll boundary. Anything that wants to scroll does it inside. */
+  overflow: hidden;
+  padding-top: var(--shell-safe-top);
+  padding-inline: var(--shell-safe-left) var(--shell-safe-right);
+}
+
+.pk-shell--phone {
+  /* The bar is `position: fixed`, so the shell reserves its height rather than
+     subtracting it in a calc() that every descendant would have to know about. */
+  padding-bottom: var(--shell-tabbar-foot);
+}
+
+/**
+ * `min-height: 0` on every intermediate link is the whole trick. A flex item's default
+ * `min-height: auto` refuses to shrink below its content, so ONE missing declaration
+ * anywhere in the chain lets a long list push the shell past the viewport and take the
+ * page scrollbar back — which is how a canvas beside a 337-row legend ends up 11504px
+ * tall and invisible.
+ */
+/*
+ * The gutter is both the seam between the cards and the row's own margin, so the
+ * radius on the outer corners is not clipped by the window. It is the card gutter,
+ * not page padding: the row still fills the shell.
+ */
+.pk-shell-row {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  gap: var(--shell-gutter);
+  padding: var(--shell-gutter);
+}
+
+/**
+ * The stage is a card like the panels are, and for the same reason: a bordered
+ * column beside an unbordered void reads as chrome with a hole in it, whereas two
+ * surfaces on a shared ground read as two surfaces. `overflow: hidden` is what
+ * makes the radius real — a WebGL canvas pinned to `inset: 0` has square corners
+ * and would otherwise poke through all four of them.
+ */
+.pk-shell-stage {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: var(--shell-surface);
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------- panel --- */
+
+/**
+ * A panel is a card on the shell's ground, not a column partitioned off the page
+ * by one border. The difference matters at this size: three bordered columns
+ * filling the window is a frameset, and the thing in the middle stops looking
+ * like the subject and starts looking like the gap between the lists.
+ */
+.pk-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 0;
+  background: var(--shell-surface);
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  overflow: hidden;
+}
+
+.pk-panel-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--shell-header-height);
+  padding-inline: 14px;
+  border-bottom: 1px solid var(--shell-border);
+  background: var(--shell-raised);
+}
+
+.pk-panel-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--shell-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/** The one scroller. Everything above and below it is `flex-shrink: 0`. */
+.pk-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pk-panel-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--shell-border);
+  padding: 10px 14px;
+  background: var(--shell-surface);
+}
+
+/* ---------------------------------------------------------------- rail --- */
+
+.pk-rail {
+  flex-shrink: 0;
+  width: var(--shell-rail-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-block: 10px;
+  background: var(--shell-raised);
+  border: 0;
+  cursor: pointer;
+  color: var(--shell-text-dim);
+  font: inherit;
+}
+
+.pk-rail:hover { color: var(--shell-text); }
+
+/* A collapsed panel is still one of the cards — it is the same object, narrowed
+   to its name, and a rail that dropped the card would read as the panel having
+   been replaced by a strip of chrome rather than folded up. */
+.pk-rail {
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+}
+
+/** A collapsed panel that says nothing is an unexplained gutter, so it wears its name. */
+.pk-rail-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pk-panel-collapse {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--shell-text-dim);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.pk-panel-collapse:hover { background: var(--shell-border); color: var(--shell-text); }
+
+/* ------------------------------------------------------------- tab bar --- */
+
+.pk-tabbar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 300;
+  display: flex;
+  align-items: stretch;
+  height: var(--shell-tabbar-foot);
+  padding-bottom: var(--shell-safe-bottom);
+  padding-inline: var(--shell-safe-left) var(--shell-safe-right);
+  background: var(--shell-surface);
+  border-top: 1px solid var(--shell-border);
+}
+
+.pk-tab {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--shell-text-dim);
+  transition: color 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pk-tab--active { color: var(--shell-accent); }
+
+.pk-tab-label {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- sheet --- */
+
+.pk-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  bottom: var(--shell-sheet-foot);
+  z-index: 290;
+  background: rgba(0, 0, 0, 0.4);
+  border: 0;
+  padding: 0;
+  animation: pk-fade-in 140ms ease;
+}
+
+/**
+ * Stops at `--shell-sheet-foot` rather than covering it, so whatever raised the sheet is
+ * still on screen to dismiss it — the gesture is symmetric, and the controls at the
+ * bottom of the screen never become dead pixels under a scrim. That defaults to the tab
+ * bar; a page whose controls sit higher up raises the token instead of losing the
+ * gesture.
+ */
+.pk-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: var(--shell-sheet-foot);
+  z-index: 295;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--shell-sheet-foot) - 56px);
+  background: var(--shell-surface);
+  border-top: 1px solid var(--shell-border);
+  border-start-start-radius: 14px;
+  border-start-end-radius: 14px;
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.14);
+  animation: pk-sheet-up 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pk-sheet--fill { height: calc(100dvh - var(--shell-sheet-foot) - 24px); }
+
+.pk-sheet-grip {
+  flex-shrink: 0;
+  align-self: center;
+  width: 34px;
+  height: 4px;
+  margin-block: 8px 2px;
+  border-radius: 2px;
+  background: var(--shell-border);
+}
+
+.pk-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@keyframes pk-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pk-sheet-up { from { transform: translateY(12%); opacity: 0 } to { transform: none; opacity: 1 } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-sheet, .pk-sheet-scrim { animation: none; }
+  .pk-tab { transition: none; }
+}
+
+/* ----------------------------------------------------- mantine appshell --- */
+
+/**
+ * For an application whose shell is Mantine's `<AppShell>`: its `Main` ships
+ * `min-height: 100vh`, which is a floor rather than a height, so nothing inside it can
+ * size itself as a fraction of the viewport. This makes it definite without taking
+ * scrolling away from the pages that want it.
+ */
+.pk-shell-main {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow-y: auto;
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@pikku/react-layout-panel",
+  "version": "0.1.0",
+  "description": "Viewport-bound React layout primitives — a shell, scrollable panels, a stage, and the phone's tab bar and sheet",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./shell.css": "./dist/shell.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "test": "tsx --test src/*.test.tsx",
+    "build:esm": "tsc -b && echo '{\"type\": \"module\"}' > dist/esm/package.json",
+    "build:cjs": "tsc6 -b tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > dist/cjs/package.json",
+    "build:css": "cp src/shell.css dist/shell.css",
+    "build": "bun run build:esm && bun run build:cjs && bun run build:css",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "^19",
+    "react-dom": "^19",
+    "tsx": "^4.23.12"
+  }
+}
