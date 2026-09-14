@@ -62,6 +62,7 @@
     "test:coverage": "bun run --filter '*' --sequential test:coverage",
     "lint": "oxlint",
     "prettier": "npx --yes prettier . --write --log-level warn",
+    "worktrees": "node scripts/merged-worktrees.mjs",
     "changeset": "npx changeset",
     "pikku:functions": "cd templates/functions && bun run pikku",
     "pikku:functions:addon": "cd templates/function-addon && bun run pikku",
