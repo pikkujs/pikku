@@ -1,6 +1,11 @@
 {
   "name": "@pikku/react-layout-panel",
   "version": "0.1.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pikkujs/pikku.git",
+    "directory": "packages/frontend/react-layout-panel"
+  },
   "description": "Viewport-bound React layout primitives — a shell, scrollable panels, a stage, the phone's tab bar and sheet, and a nav dock",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
