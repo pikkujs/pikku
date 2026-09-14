@@ -30,6 +30,8 @@ jobs:
         run: node scripts/check-no-workspace-protocol.mjs
       - name: Check no publish-time CLI rebuild
         run: node scripts/check-no-publish-time-cli-rebuild.mjs
+      - name: Check every publishable package declares its repository
+        run: node scripts/check-repository-field.mjs
       - name: Test the semver range helpers
         run: node --test scripts/semver-ranges.test.mjs
       - name: Test the merged-worktree reporter
