@@ -176,6 +176,10 @@ export const addAnalytics = (
     return
   }
 
+  // A declaration whose shapes the inspector could not read carries no props,
+  // which the meta says by leaving the field off rather than by an empty object.
+  const readProps = Object.keys(props).length > 0 ? props : undefined
+
   const declarations = (state.analytics ??= [])
   const existing = declarations.find(
     (declaration) =>
@@ -183,7 +187,8 @@ export const addAnalytics = (
   )
   if (existing) {
     existing.events = events
-    existing.props = props
+    if (readProps) existing.props = readProps
+    else delete existing.props
     return
   }
 
@@ -199,5 +204,9 @@ export const addAnalytics = (
     }
   }
 
-  declarations.push({ file, variable, events, props })
+  declarations.push(
+    readProps
+      ? { file, variable, events, props: readProps }
+      : { file, variable, events }
+  )
 }
