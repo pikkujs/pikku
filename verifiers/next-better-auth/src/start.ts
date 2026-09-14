@@ -56,6 +56,24 @@ function waitForExit(child: ChildProcess): Promise<void> {
   return new Promise((resolve) => child.once('exit', () => resolve()))
 }
 
+/**
+ * Signal the child and everything it started.
+ *
+ * `npx` forks rather than execs, so signalling the returned child reaches the
+ * wrapper and leaves `next-server` holding the pipes that keep this process
+ * alive — the verifier prints "passed" and node then never exits, so the job is
+ * killed at its ten-minute cap. `detached: true` puts the whole tree in its own
+ * process group, and the group is what gets signalled; SIGKILL sits behind a
+ * grace period so a server that ignores SIGTERM cannot hang the run either.
+ */
+function signalTree(child: ChildProcess, name: NodeJS.Signals): void {
+  try {
+    process.kill(-child.pid!, name)
+  } catch {
+    child.kill(name)
+  }
+}
+
 async function main(): Promise<void> {
   rmSync(DB_FILE, { force: true })
 
@@ -65,6 +83,7 @@ async function main(): Promise<void> {
     {
       cwd: process.cwd(),
       stdio: 'pipe',
+      detached: true,
       env: { ...process.env, BETTER_AUTH_DB_FILE: DB_FILE },
     }
   )
@@ -120,12 +139,12 @@ async function main(): Promise<void> {
   } finally {
     if (child.exitCode === null && child.signalCode === null) {
       const exited = waitForExit(child)
-      child.kill('SIGTERM')
+      signalTree(child, 'SIGTERM')
       await Promise.race([
         exited,
         new Promise<void>((resolve) => {
           setTimeout(() => {
-            child.kill('SIGKILL')
+            signalTree(child, 'SIGKILL')
             resolve()
           }, 5_000)
         }),
