@@ -1,3 +1,9 @@
+## 0.12.84
+
+### Patch Changes
+
+- 4df8aae: Read the create-user scope gate from UserAdminContext so AdminUsersPage mounts without an AuthProvider
+
 ## 0.12.83
 
 ### Patch Changes
