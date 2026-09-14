@@ -49,6 +49,7 @@ const { FabricChangesAsk, FabricChangesAskInput } =
   await import('./changes-ask.function.js')
 const { FabricChangesDone } = await import('./changes-done.function.js')
 const { FabricChangesShot } = await import('./changes-shot.function.js')
+const { FabricChangesFile } = await import('./changes-file.function.js')
 
 const sent = async (run: () => Promise<unknown>) => {
   invoked.length = 0
@@ -171,6 +172,54 @@ describe('changes done', () => {
     } finally {
       git = { repo: true, branch: 'fix/1677-changes', sha: 'abc1234def5678' }
     }
+  })
+})
+
+describe('changes file', () => {
+  test('sends the named stage and drops what was not given', async () => {
+    const { name, data } = await sent(() =>
+      FabricChangesFile.func(
+        {} as any,
+        {
+          stageId: 'stage_1',
+          title: 'Drop the days-free figure',
+          route: '/availability',
+        } as any
+      )
+    )
+    assert.strictEqual(name, 'createChange')
+    assert.strictEqual(data.stageId, 'stage_1')
+    assert.strictEqual(data.route, '/availability')
+    assert.strictEqual(data.body, undefined)
+  })
+
+  test('reads the body from a file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-file-'))
+    const path = join(dir, 'body.md')
+    await writeFile(path, '  one\n\ntwo  \n')
+    const { data } = await sent(() =>
+      FabricChangesFile.func(
+        {} as any,
+        { stageId: 'stage_1', title: 'Two paragraphs', bodyFile: path } as any
+      )
+    )
+    assert.strictEqual(data.body, 'one\n\ntwo')
+  })
+
+  test('refuses both body flags at once', async () => {
+    await assert.rejects(
+      () =>
+        FabricChangesFile.func(
+          {} as any,
+          {
+            stageId: 'stage_1',
+            title: 'Ambiguous',
+            body: 'inline',
+            bodyFile: '/tmp/nope.md',
+          } as any
+        ) as Promise<unknown>,
+      /not both/
+    )
   })
 })
 

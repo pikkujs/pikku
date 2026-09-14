@@ -70,6 +70,10 @@ import {
   renderChangesShow,
 } from './functions/changes-show.function.js'
 import {
+  FabricChangesFile,
+  renderChangesFile,
+} from './functions/changes-file.function.js'
+import {
   FabricChangesClaim,
   renderChangesClaim,
 } from './functions/changes-claim.function.js'
@@ -555,7 +559,7 @@ export const fabricCommands = defineCLICommands({
   },
   changes: {
     description:
-      'The todo list filed from inside a deployed stage: read what is open, claim a batch, ask what you need to know, and tick items off',
+      'The todo list filed from inside a deployed stage: read what is open, file what was decided elsewhere, claim a batch, ask what you need to know, and tick items off',
     subcommands: {
       list: pikkuCLICommand({
         func: FabricChangesList,
@@ -597,6 +601,39 @@ export const fabricCommands = defineCLICommands({
           changeId: {
             description: 'The change to read, from `pikku fabric changes list`',
           },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      file: pikkuCLICommand({
+        func: FabricChangesFile,
+        render: renderChangesFile,
+        description:
+          'File an item from outside the panel — the words, without the screenshot the panel would have attached',
+        options: {
+          projectId: {
+            description:
+              'Project to file against (defaults to the linked checkout)',
+            short: 'p',
+          },
+          stageId: {
+            description: 'Stage to file against (defaults to the only stage)',
+          },
+          branch: {
+            description: 'Resolve the stage from this branch instead',
+          },
+          title: {
+            description: 'The requirement, in one line',
+            short: 't',
+          },
+          body: { description: 'The detail, if a line is not enough' },
+          bodyFile: {
+            description:
+              'Read the body from a file — use this when it has newlines',
+          },
+          route: {
+            description: 'The route it is about, e.g. /admin/rota',
+          },
+          locale: { description: 'Locale it was seen in, e.g. de' },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
