@@ -411,7 +411,7 @@
     },
     "packages/console": {
       "name": "@pikku/console",
-      "version": "0.12.83",
+      "version": "0.12.84",
       "dependencies": {
         "@assistant-ui/react": "^0.15.14",
         "@codemirror/lang-html": "^6.4.12",
