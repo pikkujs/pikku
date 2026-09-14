@@ -182,6 +182,15 @@ callback, a public URL another system posts to), a queue job, a channel, a sched
 workflow entry point. Those last two are not alternate URLs — they are what the milestone IS, and a
 plan that omits them ships a `status` column nothing advances or a job nobody runs.
 
+A wire is also a constraint on the function's SHAPE, not only an address for it. `wireScheduler`
+takes a function of `void` to `void` — the clock passes nothing and reads nothing back — so a
+function that answers with a report cannot be the one on the clock. One plan here put
+`wire: scheduler` on a nightly collector whose output was the counts a member of staff needed to
+see, and the build had to split it in two: a void shell for the clock, and the exposed collector it
+calls. That was the right answer, but it was a design decision made mid-build because the plan had
+not asked what the wire would accept. Before you write a wire, name what that wire hands the
+function and what it does with the answer; where the two disagree, plan BOTH halves.
+
 `permission` is a SENTENCE, not a role name — "only the person who wrote it can edit it". The roles
 are the engineer's choice; the rule is the part that has to survive being implemented, in the
 function's `permissions` field and never in its body. `null` means open to anyone signed in, and
@@ -241,20 +250,28 @@ cover it — so a role × resource cross product there costs the milestone nothi
 
 ## What makes a plan wrong
 
-`plan set` catches the mechanical failures. These are the ones it cannot:
+`plan set` catches the mechanical failures — a missing slot, a bad hash, a pass 1 with no `ui` item.
+Read your draft back against these six questions, which it cannot ask. Each has cost a real
+milestone; **[references/plan-defects.md](references/plan-defects.md)** carries the case behind every
+one, and is worth opening for any question you cannot answer with a flat yes.
 
-- **A plan for a different milestone.** The note is about `entries`; the plan builds `projects`.
-  Every entity the note names must appear in a function or a table.
-- **A pass 1 that is a layer, not a slice.** "Pass 1: the data model. Pass 2: the API. Pass 3: the
-  screens." That is three passes of nothing working.
-- **Scenarios that assert the code ran rather than that the person got what they came for.** A
-  scenario proving `saveEntry` returns 200 proves the wire. The one worth planning is the one where
-  a person writes something, comes back, and it is still there. A browser scenario that opens a page
-  and asserts it is still on it proves the route loads and nothing else —
-  `pikku knowledge plan progress` names it as a problem and refuses the milestone.
-- **A permission rule invented here.** If the notes do not say who may do a thing, the answer is
-  `null` with the reason, not a rule you made up. A rule the user never agreed to is one they find
-  out about by being locked out of their own app.
+1. **Is this a plan for THIS note?** Every entity the note names appears in a function or a table.
+2. **Does pass 1 slice, and does the model fit inside it?** Not "pass 1: the data model, pass 2: the
+   API" — and `model` holds only the tables pass 1 or 2 actually migrates, because the model slot has
+   no passes and a later table is a PROBLEM from the first day.
+3. **Can each scenario actually be performed?** Name the persona; assert what the person got rather
+   than that the code ran; write totals as deltas against a database nobody resets; check that every
+   input the prose describes is a field somebody planned.
+4. **Does something produce every state and field the plan reads?** For each clause of a description,
+   each screen the opening paragraph names, each field you filter or badge on, and each state a
+   scenario waits in — name the function that gets the world there. A producer you are reusing is
+   checked against code that already exists; a producer this milestone is adding is checked against
+   the plan that adds it. What is never allowed is a state with no named producer at all.
+5. **Can two sentences in the plan both be true?** Write a state machine out once as a table in
+   `model`, name who sets and reads every clock in it, and say whether saving a child collection
+   REPLACES it or ADDS to it.
+6. **Did you invent anything?** If the notes do not say who may do a thing, that is `null` with a
+   reason, not a rule you made up.
 
 ---
 
