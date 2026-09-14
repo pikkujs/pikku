@@ -26,6 +26,19 @@ export const flagsAvailableFeatureIsReachableScenario = pikkuScenario<
   description: 'Both halves true is the only combination that admits anyone',
   tags: ['scenario', 'feature-flags'],
   func: async (_services, _data, { scenario, actors }) => {
+    // The seed leaves the flag on and unrestricted, but the console suite puts
+    // a rollout bucket on it to fill the board's rolling lane. A bucket left
+    // behind by a scenario that failed part-way would admit this guest only by
+    // luck, so the one thing this asserts is the one thing it sets.
+    await scenario.given(
+      'the report is open to everyone, not a bucket',
+      'invokesRpcRaw',
+      {
+        rpcName: 'admin:flagSetRollout',
+        data: { name: 'quarterlyReports', percent: null },
+      },
+      { actor: actors.admin }
+    )
     const call = await scenario.when(
       'the guest opens the quarterly report',
       'invokesRpcRaw',

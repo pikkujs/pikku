@@ -32,6 +32,17 @@ export type FlagAttentionReason =
    *  it, and nothing resolves it in the meantime. */
   | 'undeclared'
 
+/**
+ * Whether the flag's rollout admits every subject.
+ *
+ * `null` is no limit at all and `100` is a limit that excludes nobody: the two
+ * are different rows in the store and the same thing to a user, so the lane a
+ * flag sits in and the confirmation the panel asks for both read them alike.
+ */
+export const admitsEveryone = (
+  flag: Pick<FlagBoardRow, 'rolloutPercent'>
+): boolean => flag.rolloutPercent === null || flag.rolloutPercent >= 100
+
 export const flagAttentionReason = (
   flag: FlagBoardRow
 ): FlagAttentionReason | null => {
@@ -51,10 +62,7 @@ export const flagAttentionReason = (
 export const flagLaneOf = (flag: FlagBoardRow): FlagLaneId => {
   if (flagAttentionReason(flag)) return 'attention'
   if (!flag.enabled) return 'dark'
-  if (flag.rolloutPercent !== null && flag.rolloutPercent < 100) {
-    return 'rolling'
-  }
-  return 'live'
+  return admitsEveryone(flag) ? 'live' : 'rolling'
 }
 
 export type FlagLanes = Record<FlagLaneId, FlagBoardRow[]>

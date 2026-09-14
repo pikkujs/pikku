@@ -56,7 +56,7 @@ export const AnalyticsEventPanel: React.FC<AnalyticsEventPanelProps> = ({
                     data-prop-name={name}
                   >
                     <Text size="sm">{asI18n(name)}</Text>
-                    <Code>{schema}</Code>
+                    <Code>{asI18n(schema)}</Code>
                   </Group>
                 ))}
               </Stack>
@@ -70,7 +70,9 @@ export const AnalyticsEventPanel: React.FC<AnalyticsEventPanelProps> = ({
             <Code
               block
               style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
-            >{`${event.variable}\n${event.file}`}</Code>
+            >
+              {asI18n(`${event.variable}\n${event.file}`)}
+            </Code>
           </Stack>
         </Stack>
       )}

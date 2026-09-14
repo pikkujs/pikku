@@ -110,7 +110,7 @@ const readEventShape = (
     if (propName === undefined) continue
     props[propName] = property.initializer.getText().replace(/\s+/g, ' ')
   }
-  return Object.keys(props).length > 0 ? props : undefined
+  return props
 }
 
 /**

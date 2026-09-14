@@ -25,7 +25,11 @@ import {
   useSetFlagRollout,
   type FlagSubject,
 } from '../../hooks/useFeatureFlags'
-import { flagAttentionReason, type FlagBoardRow } from './flag-lanes'
+import {
+  admitsEveryone,
+  flagAttentionReason,
+  type FlagBoardRow,
+} from './flag-lanes'
 
 type FlagDetailPanelProps = {
   flag: FlagBoardRow | null
@@ -100,7 +104,7 @@ export const FlagDetailPanel: React.FC<FlagDetailPanelProps> = ({
 
   const toggle = (next: boolean) => {
     if (!flag) return
-    if (next && flag.rolloutPercent === null) {
+    if (next && admitsEveryone(flag)) {
       setConfirmingLive(true)
       return
     }

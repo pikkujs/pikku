@@ -5,7 +5,11 @@ import { RefreshCw, Trash2 } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { FlagBoard } from '../components/flags/FlagBoard'
 import type { FlagBoardRow } from '../components/flags/flag-lanes'
-import { usePruneFlags, useSyncFlags } from '../hooks/useFeatureFlags'
+import {
+  useFeatureFlags,
+  usePruneFlags,
+  useSyncFlags,
+} from '../hooks/useFeatureFlags'
 import { useSearchParams } from '../router'
 import { useLocale } from '@/i18n/config'
 import { m } from '@/i18n/messages'
@@ -20,6 +24,9 @@ export const FlagsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedName = searchParams.get('flag')
 
+  // The same query the board reads, so the header and the panel agree about
+  // whether this source can be written to at all.
+  const writable = useFeatureFlags().data?.writable ?? false
   const syncFlags = useSyncFlags()
   const pruneFlags = usePruneFlags()
 
@@ -42,6 +49,8 @@ export const FlagsPage: React.FC = () => {
               label: m.flags_sync(),
               icon: <RefreshCw size={14} />,
               loading: syncFlags.isPending,
+              disabled: !writable,
+              tooltip: writable ? undefined : m.flags_read_only_body(),
               onClick: () => syncFlags.mutate(),
               helpAnchor: 'flags-sync',
               testId: 'flags-sync',
@@ -51,6 +60,8 @@ export const FlagsPage: React.FC = () => {
               label: m.flags_prune(),
               icon: <Trash2 size={14} />,
               loading: pruneFlags.isPending,
+              disabled: !writable,
+              tooltip: writable ? undefined : m.flags_read_only_body(),
               onClick: () => pruneFlags.mutate(),
               helpAnchor: 'flags-prune',
               testId: 'flags-prune',

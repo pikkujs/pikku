@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   FLAG_LANE_ORDER,
+  admitsEveryone,
   flagAttentionReason,
   flagLaneOf,
   groupFlagsByLane,
@@ -32,6 +33,15 @@ test('a rollout at 100 is live, not rolling out', () => {
 
 test('an unconstrained enabled flag is live', () => {
   assert.equal(flagLaneOf(flag()), 'live')
+})
+
+// The panel confirms before a flag goes live for everybody, and it asks this
+// rather than reading `rolloutPercent` itself.
+test('no rollout and a rollout of 100 both admit everyone', () => {
+  assert.equal(admitsEveryone(flag()), true)
+  assert.equal(admitsEveryone(flag({ rolloutPercent: 100 })), true)
+  assert.equal(admitsEveryone(flag({ rolloutPercent: 99 })), false)
+  assert.equal(admitsEveryone(flag({ rolloutPercent: 0 })), false)
 })
 
 test('a dark flag with no store row needs attention, not dark', () => {

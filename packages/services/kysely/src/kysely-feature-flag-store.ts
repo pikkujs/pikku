@@ -241,12 +241,17 @@ export class KyselyFeatureFlagStore
         subjectKind: subject.organizationId ? 'organization' : 'user',
         enabled,
         grantedBy: actor ?? null,
+        grantedAt: new Date(),
       })
       .onConflict((oc) =>
         oc.columns(['flag', 'subjectId']).doUpdateSet((eb) => ({
           enabled: eb.ref('excluded.enabled'),
           subjectKind: eb.ref('excluded.subjectKind'),
           grantedBy: eb.ref('excluded.grantedBy'),
+          // The column defaults on insert only, and the panel reads this as
+          // when the pin was last granted — not when the subject was first
+          // pinned to something else.
+          grantedAt: eb.ref('excluded.grantedAt'),
         }))
       )
       .execute()
