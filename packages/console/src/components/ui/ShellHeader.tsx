@@ -222,6 +222,7 @@ export const ShellHeader = <T extends string = string>({
   const renderSearchField = (measurement: boolean) =>
     search ? (
       <TextInput
+        data-help={measurement ? undefined : search.helpAnchor}
         placeholder={measurement ? undefined : search.placeholder}
         leftSection={<Search size={14} />}
         value={measurement ? undefined : search.value}
@@ -378,6 +379,7 @@ export const ShellHeader = <T extends string = string>({
             ))}
             {search && !searchInline && (
               <TextInput
+                data-help={search.helpAnchor}
                 placeholder={search.placeholder}
                 leftSection={<Search size={14} />}
                 value={search.value}
@@ -451,17 +453,17 @@ export const ShellHeader = <T extends string = string>({
         {actions.length > 0 &&
           measureNode(
             'actLabel',
-            <ActionCluster actions={actions} mode="label" />
+            <ActionCluster actions={actions} mode="label" measurement />
           )}
         {actions.length > 0 &&
           measureNode(
             'actIcon',
-            <ActionCluster actions={actions} mode="icon" />
+            <ActionCluster actions={actions} mode="icon" measurement />
           )}
         {actions.length > 0 &&
           measureNode(
             'actCompact',
-            <ActionCluster actions={actions} mode="compact" />
+            <ActionCluster actions={actions} mode="compact" measurement />
           )}
         {actionsNode != null && measureNode('actNode', actionsNode)}
         {(filters.length > 0 || search || selection) &&

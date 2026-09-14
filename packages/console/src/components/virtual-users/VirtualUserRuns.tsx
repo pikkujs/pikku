@@ -16,6 +16,7 @@ import {
 } from '../../hooks/useVirtualUserRuns'
 import { VirtualUserTranscript } from './VirtualUserTranscript'
 import styles from './virtual-users.module.css'
+import { appColorVars } from '@pikku/mantine/theme'
 
 type RunRow = {
   runId: string
@@ -144,7 +145,11 @@ export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
                   </Text>
                 )}
                 {run.findings.map((finding, at) => (
-                  <Text key={at} size="xs" c="orange">
+                  <Text
+                    key={at}
+                    size="xs"
+                    style={{ color: appColorVars.amber }}
+                  >
                     {m.virtual_users_runs_finding({
                       kind: finding.kind,
                       step: finding.step,

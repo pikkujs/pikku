@@ -260,6 +260,10 @@ export interface PikkuCLICoreOutputFiles {
   // secrets rather than importing out of core.
   analyticsTypesFile: string
 
+  // The declared events, keyed by name, for an administration surface to read.
+  // Written whenever a project declares any, whatever the scaffold says.
+  analyticsMetaJsonFile: string
+
   // Scopes (ScopeId union + declared scope set)
   scopesFile: string
 

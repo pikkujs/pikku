@@ -4,6 +4,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import {
   Activity,
+  BarChart3,
   Bot,
   BookOpen,
   Boxes,
@@ -30,6 +31,7 @@ import {
   Sparkles,
   Target,
   Terminal,
+  ToggleLeft,
   Cpu,
   Gauge,
   Network,
@@ -233,6 +235,14 @@ export function consoleNavSections(): NavSection[] {
           items: [
             item(m.nav_webhooks(), '/webhooks', Webhook),
             item(m.nav_addons(), '/addons', Package),
+          ],
+        },
+        {
+          id: 'rollout',
+          title: m.nav_group_what_is_switched_on(),
+          items: [
+            item(m.nav_flags(), '/flags', ToggleLeft),
+            item(m.nav_analytics(), '/analytics', BarChart3),
           ],
         },
         {

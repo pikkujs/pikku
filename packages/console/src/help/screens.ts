@@ -30,6 +30,29 @@ export const HELP_SCREENS: Record<string, HelpScreen> = {
     ],
     docsHref: 'https://pikku.dev/docs/core-features/functions',
   },
+  '/flags': {
+    title: m.help_flags_title,
+    what: m.help_flags_what,
+    behaviour: m.help_flags_behaviour,
+    surprise: m.help_flags_surprise,
+    examples: m.help_flags_examples,
+    whatYouCanDo: [
+      m.help_flags_do_open,
+      m.help_flags_do_override,
+      m.help_flags_do_sync,
+      m.help_flags_do_prune,
+    ],
+    docsHref: 'https://pikku.dev/docs/console/features#feature-flags',
+  },
+  '/analytics': {
+    title: m.help_analytics_title,
+    what: m.help_analytics_what,
+    behaviour: m.help_analytics_behaviour,
+    surprise: m.help_analytics_surprise,
+    examples: m.help_analytics_examples,
+    whatYouCanDo: [m.help_analytics_do_open, m.help_analytics_do_search],
+    docsHref: 'https://pikku.dev/docs/console/features#analytics-events',
+  },
 }
 
 /**

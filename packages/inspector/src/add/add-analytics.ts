@@ -61,9 +61,63 @@ const exportedName = (
 }
 
 /**
- * Record where each `defineAnalyticsEvents` declaration is and which names it
- * declares — not what those names validate, since the generated ingest imports
- * the declaration and reads the schemas off it.
+ * The `z.object({ ... })` an event's schema is built from, wherever it sits in
+ * a chain — `z.object({}).strict()` and `z.object({}).describe('…')` are both
+ * ordinary things to write, and the shape is on the innermost call either way.
+ */
+const findObjectShape = (
+  expression: ts.Expression
+): ts.ObjectLiteralExpression | undefined => {
+  let current: ts.Expression | undefined = expression
+  while (current && ts.isCallExpression(current)) {
+    const callee = current.expression
+    if (
+      ts.isPropertyAccessExpression(callee) &&
+      callee.name.text === 'object'
+    ) {
+      const [shape] = current.arguments
+      if (shape && ts.isObjectLiteralExpression(shape)) return shape
+    }
+    current = ts.isPropertyAccessExpression(callee)
+      ? callee.expression
+      : undefined
+  }
+  return undefined
+}
+
+/**
+ * An event's props, as source text rather than a resolved type — `z.string()`
+ * is what the declaration says and what a reader recognises, and resolving it
+ * would mean type-checking a third-party generic to render one table cell.
+ *
+ * Absent for a schema pikku cannot read the shape off (a shared const, a union,
+ * a vendor that is not zod). The catalog renders nothing rather than guessing.
+ */
+const readEventShape = (
+  initializer: ts.Expression
+): Record<string, string> | undefined => {
+  const shape = findObjectShape(initializer)
+  if (!shape) return undefined
+  const props: Record<string, string> = {}
+  for (const property of shape.properties) {
+    if (!ts.isPropertyAssignment(property)) continue
+    const key = property.name
+    const propName = ts.isIdentifier(key)
+      ? key.text
+      : ts.isStringLiteral(key)
+        ? key.text
+        : undefined
+    if (propName === undefined) continue
+    props[propName] = property.initializer.getText().replace(/\s+/g, ' ')
+  }
+  return props
+}
+
+/**
+ * Record where each `defineAnalyticsEvents` declaration is, which names it
+ * declares, and the shape each name validates — the names drive the generated
+ * ingest, which reads the schemas off the declaration itself; the shapes are
+ * read here only so the console can show what an event carries.
  */
 export const addAnalytics = (
   logger: InspectorLogger,
@@ -87,6 +141,7 @@ export const addAnalytics = (
   }
 
   const events: string[] = []
+  const props: Record<string, Record<string, string>> = {}
   for (const property of argument.properties) {
     // `{ page_viewed }` names the event in the shorthand's own identifier.
     if (ts.isShorthandPropertyAssignment(property)) {
@@ -102,6 +157,8 @@ export const addAnalytics = (
         : undefined
     if (eventName === undefined) continue
     events.push(eventName)
+    const shape = readEventShape(property.initializer)
+    if (shape) props[eventName] = shape
   }
 
   if (events.length === 0) {
@@ -119,6 +176,10 @@ export const addAnalytics = (
     return
   }
 
+  // A declaration whose shapes the inspector could not read carries no props,
+  // which the meta says by leaving the field off rather than by an empty object.
+  const readProps = Object.keys(props).length > 0 ? props : undefined
+
   const declarations = (state.analytics ??= [])
   const existing = declarations.find(
     (declaration) =>
@@ -126,6 +187,8 @@ export const addAnalytics = (
   )
   if (existing) {
     existing.events = events
+    if (readProps) existing.props = readProps
+    else delete existing.props
     return
   }
 
@@ -141,5 +204,9 @@ export const addAnalytics = (
     }
   }
 
-  declarations.push({ file, variable, events })
+  declarations.push(
+    readProps
+      ? { file, variable, events, props: readProps }
+      : { file, variable, events }
+  )
 }

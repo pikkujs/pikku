@@ -554,7 +554,15 @@ export interface InspectorState {
    * The project's `defineAnalyticsEvents` declarations, in visit order. Absent
    * when nothing declares any.
    */
-  analytics?: Array<{ file: string; variable: string; events: string[] }>
+  analytics?: Array<{
+    file: string
+    variable: string
+    events: string[]
+    /** Each event's props as declared, keyed by event name then prop name, with
+     *  the schema's own source text as the value. Absent for a shape the
+     *  inspector cannot read off the declaration. */
+    props?: Record<string, Record<string, string>>
+  }>
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType

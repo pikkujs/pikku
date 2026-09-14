@@ -11,6 +11,7 @@ import {
   type DeclaredScope,
   type HeldRole,
 } from './scope-tree'
+import { appColorVars } from '@pikku/mantine/theme'
 
 type ScopeTreeSelectorProps = {
   scopes: DeclaredScope[]
@@ -101,7 +102,10 @@ export const ScopeTreeSelector: React.FC<ScopeTreeSelectorProps> = ({
                     </Text>
                   )}
                   {!row.declared && (
-                    <Text size="xs" c="orange" style={{ flexShrink: 0 }}>
+                    <Text
+                      size="xs"
+                      style={{ flexShrink: 0, color: appColorVars.amber }}
+                    >
                       {m.scopes_state_stale()}
                     </Text>
                   )}

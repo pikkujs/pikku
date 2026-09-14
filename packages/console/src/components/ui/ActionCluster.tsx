@@ -9,7 +9,11 @@ import {
   type ShellHeaderAction,
 } from './shellHeaderShared'
 
-function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
+function actionButton(
+  a: ShellHeaderAction,
+  mode: ActMode,
+  measurement: boolean
+): ReactNode {
   const variant =
     a.variant === 'primary'
       ? 'filled'
@@ -26,7 +30,9 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
         leftSection={a.icon}
         onClick={a.onClick}
         disabled={a.disabled}
-        data-help={a.helpAnchor}
+        loading={a.loading}
+        data-help={measurement ? undefined : a.helpAnchor}
+        data-testid={measurement ? undefined : a.testId}
         styles={{
           root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H },
         }}
@@ -49,7 +55,9 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
         size={CONTROL_H}
         onClick={a.onClick}
         disabled={a.disabled}
-        data-help={a.helpAnchor}
+        loading={a.loading}
+        data-help={measurement ? undefined : a.helpAnchor}
+        data-testid={measurement ? undefined : a.testId}
         aria-label={a.label}
       >
         {a.icon}
@@ -61,15 +69,19 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
 type ActionClusterProps = {
   actions: ShellHeaderAction[]
   mode: ActMode
+  /** This copy exists only to be measured off-screen: it renders the same
+   *  controls at the same width, carrying none of their identity. */
+  measurement?: boolean
 }
 
 export const ActionCluster: React.FC<ActionClusterProps> = ({
   actions,
   mode,
+  measurement = false,
 }) => {
   useLocale()
   if (mode !== 'compact') {
-    return <>{actions.map((a) => actionButton(a, mode))}</>
+    return <>{actions.map((a) => actionButton(a, mode, measurement))}</>
   }
   // compact: primaries (and icon-only actions) stay as icons, the rest collapse
   // into a kebab menu.
@@ -77,7 +89,7 @@ export const ActionCluster: React.FC<ActionClusterProps> = ({
   const rest = actions.filter((a) => a.variant !== 'primary' && !a.iconOnly)
   return (
     <>
-      {primary.map((a) => actionButton(a, 'icon'))}
+      {primary.map((a) => actionButton(a, 'icon', measurement))}
       {rest.length > 0 && (
         <Menu position="bottom-end" withinPortal shadow="md">
           <Menu.Target>
@@ -95,8 +107,9 @@ export const ActionCluster: React.FC<ActionClusterProps> = ({
                 key={a.key}
                 leftSection={a.icon}
                 onClick={a.onClick}
-                disabled={a.disabled}
-                data-help={a.helpAnchor}
+                disabled={a.disabled || a.loading}
+                data-help={measurement ? undefined : a.helpAnchor}
+                data-testid={measurement ? undefined : a.testId}
               >
                 {a.label}
               </Menu.Item>

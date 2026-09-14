@@ -17,6 +17,7 @@ import type { VirtualUserDoc } from './virtual-user-model'
 import { VirtualUserRuns } from './VirtualUserRuns'
 import { VirtualUserSchedule } from './VirtualUserSchedule'
 import styles from './virtual-users.module.css'
+import { appColorVars } from '@pikku/mantine/theme'
 
 /** One line saying what this disposition is, in a person's terms. */
 const DISPOSITION_BLURB: Record<VirtualUserDisposition, () => unknown> = {
@@ -339,7 +340,11 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
 
         <Section title={m.virtual_users_wants()} testId="virtual-user-wants">
           {!hasSomethingToWant && (
-            <Text size="sm" c="orange" data-testid="virtual-user-no-wants">
+            <Text
+              size="sm"
+              style={{ color: appColorVars.amber }}
+              data-testid="virtual-user-no-wants"
+            >
               {m.virtual_users_nothing_to_want({ actor: user.persona.key })}
             </Text>
           )}

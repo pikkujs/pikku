@@ -5,6 +5,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import {
+  buildAnalyticsEventsMeta,
   serializeAnalytics,
   type AnalyticsDeclaration,
 } from './serialize-analytics.js'
@@ -37,11 +38,21 @@ export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
       return false
     }
 
+    const { analytics } = await getInspectorState()
+
+    // Before the scaffold gate: a project that declares events without wiring
+    // the ingest still measures things, and the console still has to list them.
+    if (config.analyticsMetaJsonFile) {
+      await writeFileInDir(
+        logger,
+        config.analyticsMetaJsonFile,
+        JSON.stringify(buildAnalyticsEventsMeta(analytics ?? []), null, 2)
+      )
+    }
+
     if (!config.scaffold?.analytics || !config.analyticsFile) {
       return false
     }
-
-    const { analytics } = await getInspectorState()
 
     // Refuse rather than emit an ingest that imports a declaration which is not
     // there: the generated wire would fail to typecheck, pointing at generated

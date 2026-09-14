@@ -31,6 +31,7 @@ interface ListPageHeaderProps<T extends string = string> {
   // non-collapsing `actionsNode` escape hatch and overflow when narrow).
   search?: ShellHeaderSearch
   selection?: ShellHeaderSelection<T>
+  actions?: ShellHeaderAction[]
 }
 
 // Renders the shared ShellHeader bar: title (first to collapse) + description as
@@ -40,6 +41,7 @@ export function ListPageHeader<T extends string = string>({
   title,
   description,
   docsHref,
+  actions,
   lead,
   filters,
   view,
@@ -62,6 +64,7 @@ export function ListPageHeader<T extends string = string>({
       count={description}
       search={search}
       selection={selection}
+      actions={actions}
       actionsNode={right}
     />
   )

@@ -51,6 +51,26 @@ export type FlagRow = DeclaredFlag & {
 }
 
 /**
+ * One override, as an administration surface sees it.
+ *
+ * Carries the subject's kind, which resolution does not: by the time a flag is
+ * resolved the organization and the user are one opaque string, and only a
+ * screen rendering the row needs to say which it was.
+ */
+export type FlagOverrideRow = {
+  /** The organization or user this override pins, as an opaque id. */
+  subjectId: string
+  /** Which of the two `subjectId` is — `organization` or `user`. */
+  subjectKind: string
+  /** Whether the subject is pinned on or pinned off, past the rollout either way. */
+  enabled: boolean
+  /** The user who wrote the override, where the store recorded one. */
+  grantedBy?: string
+  /** When it was written, as an ISO-8601 instant, where the store recorded one. */
+  grantedAt?: string
+}
+
+/**
  * The write half: the declaration lifecycle plus the operator controls.
  *
  * Implemented by a store pikku owns. Absent when flags come from a provider,
@@ -70,6 +90,15 @@ export interface FeatureFlagStore extends FeatureFlagSource {
   syncFlags(flags: DeclaredFlag[]): Promise<void>
 
   listFlags(): Promise<FlagRow[]>
+
+  /**
+   * One flag's overrides, in full.
+   *
+   * Not folded into {@link listFlags}: the overrides are unbounded per flag
+   * while the list is one row each, and a screen that reads every override of
+   * every flag to render a board would grow with the wrong number.
+   */
+  listOverrides(key: string): Promise<FlagOverrideRow[]>
 
   setEnabled(
     key: string,

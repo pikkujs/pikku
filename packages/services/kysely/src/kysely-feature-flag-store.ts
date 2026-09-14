@@ -1,4 +1,8 @@
-import type { FeatureFlagStore, FlagRow } from '@pikku/core/services'
+import type {
+  FeatureFlagStore,
+  FlagOverrideRow,
+  FlagRow,
+} from '@pikku/core/services'
 import type {
   CachedFlagSourceOptions,
   DeclaredFlag,
@@ -155,6 +159,27 @@ export class KyselyFeatureFlagStore
     }))
   }
 
+  async listOverrides(key: string): Promise<FlagOverrideRow[]> {
+    const rows = await this.db
+      .selectFrom('pikkuFeatureFlagOverrides')
+      .selectAll()
+      .where('flag', '=', key)
+      .orderBy('subjectId')
+      .execute()
+
+    return rows.map((row) => ({
+      subjectId: row.subjectId,
+      subjectKind: row.subjectKind,
+      enabled: !!row.enabled,
+      grantedBy: row.grantedBy ?? undefined,
+      // ISO 8601 rather than the driver's date: the row crosses an RPC boundary
+      // to reach the console, and every driver spells a timestamp differently.
+      grantedAt: row.grantedAt
+        ? new Date(row.grantedAt).toISOString()
+        : undefined,
+    }))
+  }
+
   async setEnabled(
     key: string,
     enabled: boolean,
@@ -216,12 +241,17 @@ export class KyselyFeatureFlagStore
         subjectKind: subject.organizationId ? 'organization' : 'user',
         enabled,
         grantedBy: actor ?? null,
+        grantedAt: new Date(),
       })
       .onConflict((oc) =>
         oc.columns(['flag', 'subjectId']).doUpdateSet((eb) => ({
           enabled: eb.ref('excluded.enabled'),
           subjectKind: eb.ref('excluded.subjectKind'),
           grantedBy: eb.ref('excluded.grantedBy'),
+          // The column defaults on insert only, and the panel reads this as
+          // when the pin was last granted — not when the subject was first
+          // pinned to something else.
+          grantedAt: eb.ref('excluded.grantedAt'),
         }))
       )
       .execute()

@@ -197,6 +197,66 @@ describe('addAnalytics', () => {
     assert.equal(state.analytics, undefined)
   })
 
+  // The console shows what an event carries, so the shape is read as the source
+  // text the declaration actually spells rather than as a resolved type.
+  test('reads each prop as the schema source it was written as', async () => {
+    const { state } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `import { z } from 'zod'\n` +
+        `export const usage = defineAnalyticsEvents({\n` +
+        `  page_viewed: z.object({ path: z.string(), ms: z.number().optional() }),\n` +
+        `})\n`,
+    })
+
+    assert.deepEqual(state.analytics?.[0]?.props, {
+      page_viewed: { path: 'z.string()', ms: 'z.number().optional()' },
+    })
+  })
+
+  // `z.object({}).strict()` and `z.object({}).describe(...)` are ordinary
+  // things to write, and the shape sits on the innermost call either way.
+  test('finds the shape under a chained refinement', async () => {
+    const { state } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `import { z } from 'zod'\n` +
+        `export const usage = defineAnalyticsEvents({\n` +
+        `  page_viewed: z.object({ path: z.string() }).strict(),\n` +
+        `})\n`,
+    })
+
+    assert.deepEqual(state.analytics?.[0]?.props, {
+      page_viewed: { path: 'z.string()' },
+    })
+  })
+
+  // An event that declares no props and an event whose schema the inspector
+  // cannot read are different answers: `{}` says nothing is carried, and the
+  // absent key says pikku does not know.
+  test('separates an empty shape from a shape it cannot read', async () => {
+    const { state } = await inspectSources({
+      'analytics.ts':
+        `import { defineAnalyticsEvents } from '@pikku/core/analytics'\n` +
+        `import { z } from 'zod'\n` +
+        `const shared = z.object({ path: z.string() })\n` +
+        `export const usage = defineAnalyticsEvents({\n` +
+        `  page_viewed: z.object({}),\n` +
+        `  todo_created: shared,\n` +
+        `})\n`,
+    })
+
+    assert.deepEqual(state.analytics?.[0]?.props, { page_viewed: {} })
+  })
+
+  test('omits props entirely when no event declares a readable shape', async () => {
+    const { state } = await inspectSources({
+      'analytics.ts': declaration('usage', ['page_viewed']),
+    })
+
+    assert.equal('props' in state.analytics![0]!, false)
+  })
+
   test('refuses a declaration with no events', async () => {
     const { errors, state } = await inspectSources({
       'analytics.ts':

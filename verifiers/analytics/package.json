@@ -20,6 +20,6 @@
   "scripts": {
     "tsc": "tsc --noEmit",
     "pikku": "pikku",
-    "test": "pikku && tsc --noEmit && node --import tsx --test src/analytics.assert.ts"
+    "test": "pikku && tsc --noEmit && node --import tsx --test src/analytics.assert.ts src/analytics-meta.assert.ts"
   }
 }

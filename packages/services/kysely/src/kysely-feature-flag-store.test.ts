@@ -125,6 +125,32 @@ describe('KyselyFeatureFlagStore — snapshot', () => {
     assert.deepEqual((await store.snapshot())['sandboxes']?.overrides, {})
   })
 
+  // The panel reads this as when the pin was granted, so re-pinning the same
+  // subject has to move it — the column's default fires on insert only.
+  test('re-granting an override refreshes when it was granted', async () => {
+    await store.setOverride('sandboxes', { organizationId: 'org-1' }, true, 'a')
+    const backdated = new Date('2020-01-01T00:00:00.000Z')
+    await db
+      .updateTable('pikkuFeatureFlagOverrides')
+      .set({ grantedAt: backdated })
+      .where('subjectId', '=', 'org-1')
+      .execute()
+
+    await store.setOverride(
+      'sandboxes',
+      { organizationId: 'org-1' },
+      false,
+      'b'
+    )
+
+    const [override] = await store.listOverrides('sandboxes')
+    assert.equal(override?.grantedBy, 'b')
+    assert.ok(
+      new Date(override!.grantedAt!).getTime() > backdated.getTime(),
+      `expected a refreshed timestamp, got ${override?.grantedAt}`
+    )
+  })
+
   test('an override needs a subject to be about', async () => {
     await assert.rejects(() => store.setOverride('sandboxes', {}, true))
   })

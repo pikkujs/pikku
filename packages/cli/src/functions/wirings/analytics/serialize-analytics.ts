@@ -1,6 +1,40 @@
+import type { AnalyticsEventsMeta } from '@pikku/core/analytics'
+
 export interface AnalyticsGenOutput {
   schemas: string
   functions: string
+}
+
+/** One `defineAnalyticsEvents` declaration, as the inspector found it. */
+export interface AnalyticsDeclarationMeta {
+  file: string
+  variable: string
+  events: string[]
+  props?: Record<string, Record<string, string>>
+}
+
+/**
+ * The declarations flattened to one entry per event, which is how every reader
+ * wants them: an event name belongs to exactly one declaration — the inspector
+ * refuses a second — so keying by name loses nothing and spares each caller the
+ * walk.
+ */
+export const buildAnalyticsEventsMeta = (
+  declarations: readonly AnalyticsDeclarationMeta[]
+): AnalyticsEventsMeta => {
+  const meta: AnalyticsEventsMeta = {}
+  for (const declaration of declarations) {
+    for (const name of declaration.events) {
+      const props = declaration.props?.[name]
+      meta[name] = {
+        name,
+        file: declaration.file,
+        variable: declaration.variable,
+        ...(props ? { props } : {}),
+      }
+    }
+  }
+  return meta
 }
 
 export interface AnalyticsDeclaration {
