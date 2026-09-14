@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3017 observable things**: 977 exported names, plus
-2040 members on the classes and interfaces among them, reachable
+**3025 observable things**: 981 exported names, plus
+2044 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,10 +14,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 160 | 128 | 435 |
+| `./services` | 160 | 128 | 436 |
 | `./virtual-user` | 66 | 66 | 212 |
+| `./workflow` | 88 | 39 | 142 |
 | `./scenario` | 45 | 45 | 134 |
-| `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
 | `./types` | 23 | 20 | 77 |
@@ -1031,6 +1031,7 @@ export type CoreWorkflow<
   tags?: string[]
 }
 createGraph: <RPCMap extends Record<string, RPCHandler>>() => <const FuncMap extends Record<string, keyof RPCMap & string>>(funcMap: FuncMap, nodesOrBuilder?: GraphNodeConfigMap<FuncMap, RPCMap> | ((nodes: FuncMap) => GraphNodeConfigMap<FuncMap, RPCMap>) | undefined) => Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>
+DEFAULT_STEP_LEASE_MS: 60000
 DEFAULT_STEP_RETRIES: 5
 deriveInvocationId: (runId: string, stepName: string) => string
 export interface FanoutStepMeta {
@@ -1078,7 +1079,9 @@ export type InputSource =
   | { from: 'literal'; value: unknown }
   | { from: 'template'; parts: string[]; expressions: InputSource[] }
 isRef: (value: unknown) => value is RefValue
+isStepLeaseLive: (leaseExpiresAt: Date | null | undefined, now?: number) => boolean
 export type ItemFn = (path?: string) => RefValue
+leaseAttemptsExhausted: (stepState: StepState) => boolean
 export type OutputBinding =
   | { from: 'outputVar'; name: string; path?: string }
   | { from: 'stateVar'; name: string; path?: string }
@@ -1140,6 +1143,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   abstract getStepState(runId: string, stepName: string): Promise<StepState>
   public async setStepRunning(stepId: string): Promise<void>
   protected abstract setStepRunningImpl(stepId: string): Promise<void>
+  public async refreshStepLease(_stepId: string, _expiresAt: Date | null): Promise<void>
   public async setStepScheduled(stepId: string): Promise<void>
   protected abstract setStepScheduledImpl(stepId: string): Promise<void>
   public async setStepResult(stepId: string, result: any): Promise<void>
@@ -1187,7 +1191,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async runWorkflowJob(runId: string, rpcService: PikkuRPC): Promise<void>
   protected async onChildWorkflowFailed(childRun: WorkflowRun, error: Error): Promise<void>
   public async executeWorkflowStep(runId: string, stepName: string, rpcName: string, data: any, rpcService: PikkuRPC): Promise<void>
-  protected async claimStepForExecution(runId: string, stepName: string, rpcName: string): Promise<StepState | null>
+  protected async claimStepForExecution(runId: string, stepName: string, rpcName: string, leaseExpiresAt: Date): Promise<StepState | null>
   public async orchestrateWorkflow(runId: string, rpcService: PikkuRPC): Promise<void>
   protected async inlineStep(runId: string, logicalStepName: string, fn: Function, stepOptions?: WorkflowStepOptions, data: any = null, rpcName: string | null = null): Promise<any>
   public async approveStep(runId: string, reason: string, decision: unknown, session?: CoreUserSession): Promise<void>
@@ -1267,6 +1271,7 @@ export interface StepState {
   createdAt: Date
   updatedAt: Date
   childRunId?: string
+  leaseExpiresAt?: Date
   runningAt?: Date
   scheduledAt?: Date
   succeededAt?: Date
@@ -1475,6 +1480,9 @@ export interface WorkflowStatusStreamParams {
 }
 export class WorkflowStepFunctionMismatchError extends PikkuError {
   constructor(public readonly runId: string, public readonly stepName: string)
+}
+export class WorkflowStepLeaseExpiredError extends PikkuError {
+  constructor(public readonly runId: string, public readonly stepName: string, public readonly attemptCount: number)
 }
 export type WorkflowStepMeta =
   | RpcStepMeta
@@ -1938,6 +1946,7 @@ export interface StepState {
   createdAt: Date
   updatedAt: Date
   childRunId?: string
+  leaseExpiresAt?: Date
   runningAt?: Date
   scheduledAt?: Date
   succeededAt?: Date
@@ -4757,6 +4766,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService implements Wor
   protected async insertStepStateImpl(runId: string, stepName: string, rpcName: string | null, data: any, stepOptions?: WorkflowStepOptions, fromStepName?: string): Promise<StepState>
   async getStepState(runId: string, stepName: string): Promise<StepState>
   protected async setStepRunningImpl(stepId: string): Promise<void>
+  public override async refreshStepLease(stepId: string, expiresAt: Date | null): Promise<void>
   protected async setStepScheduledImpl(stepId: string): Promise<void>
   protected async setStepResultImpl(stepId: string, result: any): Promise<void>
   protected async setStepErrorImpl(stepId: string, error: Error): Promise<void>
