@@ -1,3 +1,9 @@
+## 0.12.83
+
+### Patch Changes
+
+- 4ca83c4: Export AnalyticsPage, FlagsPage and AdminUsersPage so a host console can mount them
+
 ## 0.12.82
 
 ### Patch Changes
