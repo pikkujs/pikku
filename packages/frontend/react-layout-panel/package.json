@@ -1,6 +1,6 @@
 {
   "name": "@pikku/react-layout-panel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Viewport-bound React layout primitives — a shell, scrollable panels, a stage, the phone's tab bar and sheet, and a nav dock",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",

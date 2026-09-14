@@ -1,5 +1,56 @@
 # @pikku/skills
 
+## 0.12.33
+
+### Patch Changes
+
+- c7ea0a3: Name the neutrals, the attractors, and what the seed has to show.
+
+  Three gaps found by building an app through this skill and then holding it
+  against the design it was meant to be.
+
+  The neutrals are never chosen. The theme JSON carries `brand` and `structure`
+  and no neutral field, so every app runs its accent on Mantine's grey ramp, which
+  is blue-biased. If the accent is not itself blue the mismatch lands on every
+  screen at once — warm content ruled off in cold lines — and it survives a
+  critique because no single screen is broken. `theming.md` now says to bias the
+  whole ramp, keeping Mantine's lightness steps so contrast behaviour is
+  unchanged. That file's own example was part of the problem: it set the hairline
+  to `var(--mantine-color-gray-2)`, the exact cool grey the new section warns
+  about.
+
+  Mantine's `cssVariablesResolver` injects its own `:root` block at runtime, after
+  the app's stylesheet, and wins on source order. A plain `:root` override is
+  silently reverted: the file reads correct, the app renders the defaults, nothing
+  errors. Documented, with the tripled selector that beats it.
+
+  "Be ambitious" is encouragement, not a constraint, so `design.md` names the
+  attractors instead — stock Mantine first, since untouched defaults do not look
+  broken, they look finished, and an app can be entirely default without tripping
+  a single symptom.
+
+  And the gate needs something to look at: a screenshot is only evidence if the
+  screen has data on it, and anything derived from today is seeded as an interval
+  from `now` rather than a fixed date that decays.
+
+- c7ea0a3: Make design something the build loop runs, not something it agrees with.
+
+  The design guidance was sound and got skipped, for three structural reasons that are now fixed.
+
+  `references/app.md` gains a seventh step in the milestone loop: screenshot the screens this milestone touched and look at the images, as a gate alongside the scenario. Milestones closed on green scenarios, and scenarios say nothing about how anything looks, so the one instruction that mattered lived outside the only loop that runs.
+
+  `references/design.md` carries a working way to take that screenshot — headless Chrome over CDP, signing in through the dev actor switcher — because an instruction with no mechanism behind it is one that gets skipped. It also says the component kit is a floor and not a ceiling: an app has to grow the component that draws the thing it is actually about, and the furniture eight pages would otherwise copy-paste, or every screen comes out as `Card` + `Stack` + `Text`.
+
+  `references/theming.md` gives the colours `brand` has no field for a home — `covered`, `open`, a recessed surface, a hairline — as named custom properties in both colour schemes. Without one, "don't hardcode colours per component" is broken by the agent that just wrote it down, because the value has nowhere else to go.
+
+- c7ea0a3: Offer to mock the screens before building them
+
+  `pikku-build` now asks, in §1's single question round, whether the user wants
+  the main screens drawn as one self-contained HTML page before any milestone is
+  built. The theme is authored first and the mock drawn from its values, so
+  approving the mock approves what actually ships; the page then becomes source of
+  truth for the screens and the milestones are read off it.
+
 ## 0.12.32
 
 ### Patch Changes

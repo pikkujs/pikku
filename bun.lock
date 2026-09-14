@@ -606,7 +606,7 @@
     },
     "packages/frontend/react-layout-panel": {
       "name": "@pikku/react-layout-panel",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "@mantine/hooks": "^9.5.1",
         "@pikku/mantine": "workspace:^",
@@ -1318,7 +1318,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.32",
+      "version": "0.12.33",
       "devDependencies": {
         "@types/node": "^24.13.3",
         "yaml": "^2.9.0",
