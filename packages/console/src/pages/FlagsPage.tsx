@@ -83,6 +83,7 @@ export const FlagsPage: React.FC = () => {
             color={syncError ? 'red' : 'teal'}
             m="md"
             mb={0}
+            styles={{ message: { overflowWrap: 'anywhere' } }}
             withCloseButton
             onClose={() => syncFlags.reset()}
             title={syncError ? m.flags_sync_error() : undefined}
@@ -105,6 +106,7 @@ export const FlagsPage: React.FC = () => {
             color={pruneError ? 'red' : 'teal'}
             m="md"
             mb={0}
+            styles={{ message: { overflowWrap: 'anywhere' } }}
             withCloseButton
             onClose={() => pruneFlags.reset()}
             title={pruneError ? m.flags_prune_error() : undefined}
