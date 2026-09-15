@@ -1,3 +1,9 @@
+## 0.12.153
+
+### Patch Changes
+
+- 49c9bf5: fabric validate: flag local SQL migrations that differ from the copy a stage already applied
+
 ## 0.12.152
 
 ### Patch Changes

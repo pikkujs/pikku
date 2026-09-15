@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.152",
+  "version": "0.12.153",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
