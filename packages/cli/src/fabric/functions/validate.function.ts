@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { readFile, readdir } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
@@ -14,6 +15,8 @@ import {
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
 import { isGitRepo, isTracked } from '../lib/git.js'
+import { resolveApiContext } from '../lib/config.js'
+import { getFabricRPC } from '../lib/http.js'
 import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
 import { blankScenarioMeta } from '../lib/blank-scenario-meta.js'
 
@@ -229,6 +232,131 @@ const POSTGRES_SQL_PATTERNS: Array<{ re: RegExp; label: string }> = [
   { re: /\bTSVECTOR\b/i, label: 'TSVECTOR' },
   { re: /\bARRAY\s*\[/i, label: 'ARRAY[…]' },
 ]
+
+/** One stage's record of what it has applied, as the control plane holds it. */
+export interface StageLedger {
+  stageId: string
+  branch: string
+  migrations: Array<{ name: string; hash: string | null; appliedAt: string }>
+}
+
+/** Same digest the stage migrator records: sha256 of the file's bytes as UTF-8. */
+export function hashMigration(sql: string): string {
+  return createHash('sha256').update(sql, 'utf-8').digest('hex')
+}
+
+const slug = (s: string): string => s.replace(/[^a-z0-9]/gi, '-')
+
+/**
+ * Compares what each stage applied against the files in the repo now. Split
+ * out from the RPC call so the comparison is testable without a session.
+ *
+ * A row whose `hash` is null was applied before the stage migrator recorded
+ * hashes; the file it named is unrecoverable, so it is reported as unverified
+ * rather than as clean.
+ */
+export function migrationDriftFindings(
+  migrationsDir: string,
+  local: Map<string, string>,
+  stages: StageLedger[]
+): Finding[] {
+  const findings: Finding[] = []
+  let unverifiable = 0
+
+  for (const stage of stages) {
+    for (const applied of stage.migrations) {
+      const localHash = local.get(applied.name)
+      if (localHash === undefined) {
+        findings.push({
+          id: `migration-applied-file-missing-${slug(stage.branch)}-${slug(applied.name)}`,
+          severity: 'error',
+          message: `${applied.name} was applied to the "${stage.branch}" stage but no longer exists locally`,
+          path: join(migrationsDir, applied.name),
+          fixHint:
+            'Restore the file under its original name. Deleting or renaming an applied migration does not undo it — the stage keeps the schema that file produced, and a fresh database will never reach that shape.',
+        })
+        continue
+      }
+      if (applied.hash === null) {
+        unverifiable++
+        continue
+      }
+      if (applied.hash !== localHash) {
+        findings.push({
+          id: `migration-drift-${slug(stage.branch)}-${slug(applied.name)}`,
+          severity: 'error',
+          message: `${applied.name} differs from the copy applied to the "${stage.branch}" stage (applied ${applied.hash.slice(0, 12)}, local ${localHash.slice(0, 12)})`,
+          path: join(migrationsDir, applied.name),
+          fixHint: [
+            'Revert the file to what was applied and put the change in a NEW',
+            'numbered migration. A migration is recorded by filename and never',
+            're-runs, so this edit will never reach that stage — the next',
+            'migration that depends on it fails there instead.',
+          ].join('\n'),
+        })
+      }
+    }
+  }
+
+  if (unverifiable > 0) {
+    findings.push({
+      id: 'migration-drift-partially-unverifiable',
+      severity: 'info',
+      message: `${unverifiable} applied migration${unverifiable === 1 ? '' : 's'} predate hash recording and cannot be compared`,
+      path: migrationsDir,
+      fixHint:
+        'Nothing to do — rows written before the stage migrator recorded hashes carry none. Each deploy records hashes for what it applies.',
+    })
+  }
+
+  return findings
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Silent when the project is unlinked or logged out — both already have their
+ * own findings — and degrades to an info when the API cannot be reached, so an
+ * offline developer still gets the rest of validate.
+ */
+async function checkMigrationDrift(
+  root: string,
+  migrationsDir: string
+): Promise<Finding[]> {
+  if (!existsSync(migrationsDir)) return []
+  const ctx = await resolveApiContext({ startDir: root }).catch(() => null)
+  if (!ctx?.token || !ctx.projectId || !UUID.test(ctx.projectId)) return []
+
+  let stages: StageLedger[]
+  try {
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const res = await rpc.invoke('listStageMigrationLedger', {
+      projectId: ctx.projectId,
+    })
+    stages = res.stages
+  } catch (err) {
+    return [
+      {
+        id: 'migration-drift-unchecked',
+        severity: 'info',
+        message: `could not read the deployed migration ledger (${err instanceof Error ? err.message : String(err)}) — local migrations were not compared against any stage`,
+        path: migrationsDir,
+        fixHint:
+          'Run `pikku fabric login` if the session expired. Offline this check is skipped, and the deploy plan catches drift instead.',
+      },
+    ]
+  }
+
+  const local = new Map<string, string>()
+  for (const file of (await readdir(migrationsDir)).filter((f) =>
+    f.endsWith('.sql')
+  )) {
+    const sql = await readTextSafe(join(migrationsDir, file))
+    if (sql !== null) local.set(file, hashMigration(sql))
+  }
+
+  return migrationDriftFindings(migrationsDir, local, stages)
+}
 
 export async function runValidate(
   startDir = process.cwd(),
@@ -1128,6 +1256,23 @@ export async function runValidate(
         // readdir failure — skip
       }
     }
+
+    // ── migrations already applied to a stage must not be edited ─────────
+    // A stage records a migration by filename and never runs it again, so an
+    // edit to an applied file silently never reaches that schema: the stage
+    // keeps the shape the original file produced while the repo, local dev
+    // and CI all agree on the new one. CI cannot catch it — it migrates a
+    // throwaway empty database, where every file is pending — and the deploy
+    // risk gate only reads the SQL text, never the stage. It surfaces as the
+    // NEXT migration failing on a column that exists everywhere but there.
+    //
+    // The comparison is against the control plane's record of what each stage
+    // applied (hash included since @pikkufabric 2026-09), not against the
+    // stage database, which may be asleep and cannot be woken just to answer
+    // a local lint. Every stage of the project is checked, not just the one
+    // you are about to push: the case this is for is merging a branch that
+    // edited a migration another stage already ran.
+    findings.push(...(await checkMigrationDrift(root, migrationsDir)))
 
     // ── the coercion map has to reach a Kysely instance ──────────────────
     // `pikku db migrate` generates a CoercionMap from the `kind` entries in

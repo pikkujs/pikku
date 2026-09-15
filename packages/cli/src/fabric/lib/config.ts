@@ -161,9 +161,9 @@ export interface ResolvedApiContext {
  * Token comes from ~/.fabric/auth.json keyed by the resolved api-url.
  */
 export async function resolveApiContext(
-  opts: { apiUrlOverride?: string } = {}
+  opts: { apiUrlOverride?: string; startDir?: string } = {}
 ): Promise<ResolvedApiContext> {
-  const projectFile = await findProjectConfig()
+  const projectFile = await findProjectConfig(opts.startDir)
   const apiUrl =
     opts.apiUrlOverride ??
     projectFile?.config.apiUrl ??
