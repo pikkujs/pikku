@@ -66,11 +66,13 @@ while still planning. Those failures look alarming and are nothing but this.
   lives in `messages/*.json`.
 - **`pikku all` is the gate.** Run it after touching functions, wirings or
   schemas, and treat its criticals as real.
-- **A milestone is planned by a different seat than the one that builds it.**
+- **A milestone is planned before it is built, and the plan then stays fixed.**
   The plan — tables, functions, wires, roles, scopes, screens, scenarios, in
-  passes — is written through `pikku knowledge plan set` by `pikku-architect`,
-  and `pikku knowledge plan progress` measures the build against it from the
-  generated meta. A builder who writes its own plan is grading itself.
+  passes — is written through `pikku knowledge plan set` (how: `pikku-architect`)
+  in its own turn before any of that milestone's code exists, and
+  `pikku knowledge plan progress` measures the build against it from the
+  generated meta. You plan it and you build it; what you never do is edit the
+  plan afterwards to match what you built — that is grading yourself.
 
 ## What NOT to do
 

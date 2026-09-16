@@ -266,7 +266,7 @@ Two things about the output matter if you are driving it:
   `options` is empty when the answer is free text, and an empty list means offer free
   text — never invent choices to fill it.
 
-`hold` means a profile's own gate is holding the milestone and no seat this loop knows
+`hold` means a profile's own gate is holding the milestone and nothing this loop knows
 about can clear it. It names the hold and the notes it is about; what to do then
 belongs to that profile, not here.
 
@@ -282,7 +282,7 @@ pikku knowledge plan progress <milestone>          # what it still owes, read fr
 pikku knowledge plan defer <milestone> <item> -r "<why>"
 ```
 
-`progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short, or while anything already built contradicts the plan. Unbuilt work in a later pass is reported, not blocked; a function that shipped wide open against a planned permission rule blocks from any pass, because that is a hole rather than a backlog. Writing a plan is its own seat: read `pikku-architect`. Building against one is `pikku-build`.
+`progress` reconciles the plan against pikku's generated meta — set membership, never anyone's status — and exits non-zero while the first pass is short, or while anything already built contradicts the plan. Unbuilt work in a later pass is reported, not blocked; a function that shipped wide open against a planned permission rule blocks from any pass, because that is a hole rather than a backlog. How a plan is written is `pikku-architect`; building against one, and the order plan-then-build, is `pikku-build`.
 
 ### A finished milestone is a tombstone
 

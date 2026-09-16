@@ -369,10 +369,10 @@ scenarios, split into passes. It is JSON, it lives beside the note, and
 `pikku knowledge plan progress` measures the finished build against it.
 
 **Read `pikku-architect` and follow it.** The plan is the denominator the
-completion check divides by, so a builder who writes their own plan can build a
-fraction, plan only that fraction, and certify itself complete. Fabric answers
-that by giving the plan its own seat; here the defence is the ORDER, and it only
-holds if you keep it: the plan is written against the note in its own turn,
+completion check divides by, so a builder who plans after seeing their own work
+can build a fraction, plan only that fraction, and certify itself complete. The
+defence is the ORDER, and it only holds if you keep it: the plan is written
+against the note in its own turn,
 before any of the code it measures exists, and is never edited afterwards to
 match what you ended up building. An item that will not land is deferred with
 its reason — `plan defer` — not quietly rewritten. Write it before you open a
@@ -550,8 +550,9 @@ Three things it says, and what each one asks of you:
   visible, never blocking.
 
 **Do not set the note to `built` while this exits non-zero**, and do not edit the
-plan to match what you built — `plan set` is the architect's seat, and a builder
-rewriting its own denominator is exactly what the split exists to stop.
+plan to match what you built — the plan was written before the code on purpose,
+and rewriting your own denominator afterwards is exactly what that order exists
+to stop.
 
 ## 7. Prove it — scenarios
 

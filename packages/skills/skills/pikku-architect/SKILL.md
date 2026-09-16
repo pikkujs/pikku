@@ -3,9 +3,9 @@ name: pikku-architect
 description: >-
   Use to turn one settled milestone note into the technical plan the build is measured against —
   the tables, functions, wires, roles, scopes, screens and scenarios it owes, split into passes and
-  written through `pikku knowledge plan set`. This is a SEPARATE SEAT from the build: the plan is
-  the denominator `pikku knowledge plan progress` divides by, so whoever writes it must not be the
-  one grading themselves against it. TRIGGER when: a milestone note is settled and the next step is
+  written through `pikku knowledge plan set`. The plan is the denominator
+  `pikku knowledge plan progress` divides by, so it is written BEFORE any of the milestone's code
+  exists and never edited afterwards to match what got built. TRIGGER when: a milestone note is settled and the next step is
   planning it, the user asks to plan or architect a milestone, `pikku knowledge plan progress` says
   a milestone has no plan, or pikku-build's App mode reaches a milestone with nothing planned. DO
   NOT TRIGGER when: the milestone notes themselves are still being written (use pikku-knowledge),
@@ -17,18 +17,19 @@ installGroups: [core]
 # Plan one milestone
 
 A milestone note says what the app must DO and how it must feel for the person using it. It
-deliberately does not say how. You are the seat that decides how, once, in writing, before anyone
-builds it.
+deliberately does not say how. This is where how gets decided, once, in writing, before any of
+it is built.
 
-**Why this is a separate seat.** The build agent used to write its own plan. That makes one party
-both author and examiner: it can build a fraction, plan only that fraction, and certify itself
-complete — and `pikku knowledge plan progress` then divides by a denominator the builder chose
-after seeing its own answer. A plan written here, against the note, by someone who is not going to
-build it, is the denominator the builder does not own.
+**Why the plan comes first and stays fixed.** A builder who plans after seeing its own work can
+build a fraction, plan only that fraction, and certify itself complete — `pikku knowledge plan
+progress` then divides by a denominator chosen after the answer. The defence is the ORDER: the plan
+is written against the note, in its own turn, before a single migration for it exists, and is never
+edited afterwards. An item that will not land is deferred with its reason through `plan defer`,
+not rewritten out of the plan. The same agent plans and then builds; nothing hands off.
 
-**One milestone, one plan, then stop.** Do not build in this session. Do not plan the next
-milestone "while you are here" — the notes after this one are still allowed to change, and a plan
-written against a note that later moves is worse than no plan.
+**One milestone, one plan, then build it.** Do not plan the next milestone "while you are here" —
+the notes after this one are still allowed to change, and a plan written against a note that later
+moves is worse than no plan.
 
 ---
 
@@ -260,6 +261,7 @@ cover it — so a role × resource cross product there costs the milestone nothi
 
 ## When you are done
 
-The accepted `plan set` is the end of the seat. Hand the milestone to `pikku-build`, which reads the
-plan with `plan show --for-build`, builds it, and closes the milestone only when
-`pikku knowledge plan progress` is clean. What you wrote is what it is measured against.
+The accepted `plan set` is the end of planning. Go straight on to the build in `pikku-build` §6:
+read the plan with `plan show --for-build`, build it, and close the milestone only when
+`pikku knowledge plan progress` is clean. What you wrote is what you are measured against, so do
+not touch it once the first migration is open.
