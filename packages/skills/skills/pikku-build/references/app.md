@@ -81,11 +81,11 @@ A brief saying "the entire UI is German" is about **one** of these. Getting this
 wrong has already shipped a project that can never add a second language, so
 settle all three explicitly before you write code.
 
-| Axis            | What it covers                                                                                                                       | Where it goes                                                                     |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                                    | Nowhere — **always English**, no setting, not negotiable                          |
-| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and persona descriptions        | `metaLocale` in `pikku.config.json`, default `en`                                     |
-| **Product UI**  | Every string the app shows a user                                                                                                    | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
+| Axis            | What it covers                                                                                                                 | Where it goes                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                              | Nowhere — **always English**, no setting, not negotiable                             |
+| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and persona descriptions | `metaLocale` in `pikku.config.json`, default `en`                                    |
+| **Product UI**  | Every string the app shows a user                                                                                              | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
 
 **Identifiers are English.** The product's market does not change this and
 neither does `metaLocale`. Identifiers are the surface the generated `#pikku/*`
@@ -218,7 +218,11 @@ defineSystemRole({
 })
 
 definePersonas({
-  visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
+  visitor: {
+    name: 'Visitor',
+    jobTitle: 'Synthetic health-check user',
+    account: {},
+  },
   amina: {
     name: 'Amina',
     jobTitle: 'Property owner',
@@ -229,7 +233,8 @@ definePersonas({
   bilal: {
     name: 'Bilal',
     jobTitle: 'Property owner',
-    personality: 'A second owner — exists so "you see yours, not theirs" is testable',
+    personality:
+      'A second owner — exists so "you see yours, not theirs" is testable',
     roles: ['owner'],
     account: {},
   },
@@ -396,8 +401,8 @@ no plan, and everything after the current milestone is still allowed to move.
 
 **Per milestone** — plan it (§5a), set its note to `status: dispatched`, do the
 six steps, close it out (§6a), set it to `built`. Do not start the next one
-until §6a passes, §7 is green for this one *and §7a shows its functions
-covered*. A stack of half-milestones cannot be reviewed and cannot be handed
+until §6a passes, §7 is green for this one _and §7a shows its functions
+covered_. A stack of half-milestones cannot be reviewed and cannot be handed
 over, and an uncovered function is a half-milestone whether or not the note says
 `built`.
 
@@ -416,7 +421,7 @@ over, and an uncovered function is a half-milestone whether or not the note says
    Do this generously and do it now: an empty app demos badly and critiques
    badly, and you cannot judge a screen's hierarchy, overflow, or truncation
    against zero rows. Seed rows each persona sees differently — with an ownership
-   rule that means seeding rows for the *second* owner too.
+   rule that means seeding rows for the _second_ owner too.
 3. **Functions.** One `pikkuFunc` per `*.function.ts`. Mark it `expose: true` and
    Pikku generates the typed RPC client and the React Query hooks the UI calls;
    you do NOT write an HTTP route for it. Add `wireHTTP` only for a real REST
@@ -443,8 +448,10 @@ over, and an uncovered function is a half-milestone whether or not the note says
    same as the scenario: a milestone whose screens nobody has seen is not built,
    it is unproven at the one layer scenarios cannot reach. `references/design.md`
    carries how to take the shot when no browser tool is wired up, and what to
-   look for. Then `status: built`, and say in the note what you looked at and
-   what it made you change.
+   look for. Then close it against its plan (§6a) — `pikku knowledge plan
+progress` has to exit zero before anything is `built` — and only then set
+   `status: built`, saying in the note what you looked at and what it made you
+   change.
 
 Rules that are not optional:
 
@@ -464,8 +471,8 @@ Rules that are not optional:
   ```typescript
   export const classifications = {
     payment: {
-      paid_at:  { kind: 'date' },                        // -> Date, not an ISO string
-      metadata: { kind: 'json', tsType: 'PaymentMeta' },  // -> parsed object, not unknown
+      paid_at: { kind: 'date' }, // -> Date, not an ISO string
+      metadata: { kind: 'json', tsType: 'PaymentMeta' }, // -> parsed object, not unknown
     },
   }
   ```
@@ -474,6 +481,7 @@ Rules that are not optional:
   `JSON` column with no entry types as `unknown` (the CLI warns PKU481). Add the
   annotation rather than casting around the generated type. Once the file carries
   manual fields, `db migrate` stops overwriting it.
+
 - A `z.date()` on a function's **input** arrives over RPC as an ISO string, not a
   `Date`. Normalise before calling date methods on it (`new Date(value)`), or it
   throws `.getTime is not a function` at runtime — schema validation accepts the
@@ -542,6 +550,7 @@ Three things it says, and what each one asks of you:
   milestone is two milestones — say so to the user rather than deferring again.
   What you may never do is drop the item silently: the plan is what the next
   person reads to know what this milestone was for.
+
 - **PROBLEMS** — something exists but does not do what was planned. A function
   planned as restricted whose meta says `auth: false`; a `cascade` no migration
   declares; a browser scenario that opens a page and asserts it is still on it.
@@ -567,26 +576,27 @@ import { pikkuScenario } from '#pikku/scenarios'
 
 export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   title: 'A tenant reports a fault and the owner sees it',
-  description: 'The report lands on the owning landlord’s queue, and nobody else’s',
+  description:
+    'The report lands on the owning landlord’s queue, and nobody else’s',
   tags: ['scenario', 'maintenance'],
   func: async (_services, _data, { scenario, actors }) => {
     const report = await scenario.do(
       'reports a broken boiler',
       'createMaintenanceReport',
       { summary: 'No hot water' },
-      { actor: actors.chidi },
+      { actor: actors.chidi }
     )
     await scenario.then(
       'appears on the owner’s queue',
       'reportShowsOnQueue',
       { id: report.id },
-      { actor: actors.amina },
+      { actor: actors.amina }
     )
     await scenario.then(
       'is invisible to the other owner',
       'reportIsNotVisible',
       { id: report.id },
-      { actor: actors.bilal },
+      { actor: actors.bilal }
     )
     return { id: report.id }
   },

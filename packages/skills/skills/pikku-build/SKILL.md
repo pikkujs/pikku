@@ -19,13 +19,13 @@ installGroups: [core]
 
 ## Which mode
 
-| The situation | Read |
-| --- | --- |
-| A template was just cloned or scaffolded, and the tree still looks like one | `references/post-clone.md` first, then come back |
-| A real product, meant to be picked up by someone else | `references/app.md` — the default |
-| A spike, a throwaway demo, an idea nobody has committed to | `references/quick.md` |
-| A showcase meant to exercise every Pikku surface | `references/platform.md`, which is a delta on top of `references/app.md` |
-| A feature added to an app that already has its knowledge base and milestones | `references/feature.md` |
+| The situation                                                                | Read                                                                     |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| A template was just cloned or scaffolded, and the tree still looks like one  | `references/post-clone.md` first, then come back                         |
+| A real product, meant to be picked up by someone else                        | `references/app.md` — the default                                        |
+| A spike, a throwaway demo, an idea nobody has committed to                   | `references/quick.md`                                                    |
+| A showcase meant to exercise every Pikku surface                             | `references/platform.md`, which is a delta on top of `references/app.md` |
+| A feature added to an app that already has its knowledge base and milestones | `references/feature.md`                                                  |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
 only an explicit signal of speed or throwaway-ness does. Platform is not "App
@@ -53,9 +53,10 @@ while still planning. Those failures look alarming and are nothing but this.
 
 ## What holds in every mode
 
-- **The branch and the diff are the contract.** There is no plan JSON. A
-  reviewer sees real, compiled, working code: apply is a merge, reject is a
-  `git branch -D`.
+- **The branch and the diff are the contract.** A reviewer sees real, compiled,
+  working code: apply is a merge, reject is a `git branch -D`. The milestone's
+  plan is your own denominator, measured by `pikku knowledge plan progress` —
+  never something a reviewer is handed instead of the code.
 - **Discover before editing.** `yarn pikku meta context --json` returns
   functions, wires, middleware, permissions, workflows, `capabilities` and
   `layout` in one call. Fall back to targeted `meta` commands only for a full
