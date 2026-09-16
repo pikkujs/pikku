@@ -264,7 +264,7 @@ describe('the refusal as a question', () => {
     )
     assert.deepEqual(
       question?.options.map((o) => o.label),
-      ['designing', 'proposed', 'dispatched', 'built']
+      ['proposed', 'dispatched', 'built']
     )
     assert.equal(
       question?.options.find((o) => o.label === 'dispatched')?.description,
@@ -313,6 +313,6 @@ describe('the refusal as a question', () => {
     const result = await runKnowledgeReconcile(cwd)
     assert.equal(result.kind, 'ask-user')
     assert.equal(result.note, path)
-    assert.equal(result.question?.options.length, 4)
+    assert.equal(result.question?.options.length, 3)
   })
 })

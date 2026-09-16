@@ -161,14 +161,6 @@ export async function nextAction(
   const building = milestones.find((note) => note.status === 'dispatched')
   if (building) return { kind: 'idle', why: `${building.path} is building` }
 
-  const sketching = milestones.find((note) => note.status === 'designing')
-  if (sketching) {
-    return {
-      kind: 'idle',
-      why: `${sketching.path} is waiting on somebody to pick a look`,
-    }
-  }
-
   const ready: MilestoneReadiness = await readyMilestone(cwd, {
     gate,
     profileScalars,
