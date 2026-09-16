@@ -78,6 +78,46 @@ describe('plan set', () => {
     }
   })
 
+  test('a second plan for the same milestone is refused', async () => {
+    const cwd = await project()
+    try {
+      const first = await runKnowledgePlanSet(cwd, {
+        milestone: '01-the-daily-entry',
+        file: await planFile(cwd, basePlan()),
+      })
+      assert.equal(first.ok, true)
+      const before = await readFile(join(cwd, first.path), 'utf8')
+      const second = await runKnowledgePlanSet(cwd, {
+        milestone: '01-the-daily-entry',
+        file: await planFile(cwd, basePlan()),
+      })
+      assert.equal(second.ok, false)
+      assert.equal(second.path, first.path)
+      assert.match(second.problems[0]!, /already holds this milestone's plan/)
+      assert.match(second.problems[0]!, /plan defer/)
+      assert.equal(await readFile(join(cwd, first.path), 'utf8'), before)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  test('an unreadable plan file can be replaced', async () => {
+    const cwd = await project()
+    try {
+      await writeFile(
+        join(cwd, 'knowledge/milestones/01-the-daily-entry.plan.json'),
+        '{ not json'
+      )
+      const result = await runKnowledgePlanSet(cwd, {
+        milestone: '01-the-daily-entry',
+        file: await planFile(cwd, basePlan()),
+      })
+      assert.equal(result.ok, true)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   test('the milestone can be named by path as well as by id', async () => {
     const cwd = await project()
     try {

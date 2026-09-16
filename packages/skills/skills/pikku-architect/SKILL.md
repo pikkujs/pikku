@@ -39,6 +39,11 @@ The plan reaches disk through `pikku knowledge plan set <milestone> <file>` and 
 validates first and names the field that is wrong if it refuses; a plan file written with an editor
 is a plan nothing checked, and the place that discovers that is a finished build.
 
+It is also written ONCE. `plan set` refuses a milestone that already has a plan: the plan is the
+order the build is measured against, and an order that can be rewritten measures nothing. The one
+way down from a written plan is `pikku knowledge plan defer <milestone> <item> --reason <why>`,
+which records what was left out and why.
+
 It is JSON rather than a note on purpose. Everything else under `knowledge/` is prose a human
 reads; this one is consumed field-by-field, and a markdown parser is one more place a misspelt
 heading silently passes. It cannot live INSIDE the milestone note either: that note is frozen once
