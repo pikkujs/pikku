@@ -14,7 +14,7 @@
 // ===== FILE: packages/functions/src/functions/synthesize-speech.function.ts =====
 import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
-import { defineVariable } from '@pikku/core/variable'
+import { defineVariable } from '#pikku/variables'
 
 //~ Text→speech WORKS OUT OF THE BOX on a Fabric sandbox — no addon, no API key, no
 //~ services.ts edit. The proxy routes `kokoro-82m` with `mode: audio_speech`, and the

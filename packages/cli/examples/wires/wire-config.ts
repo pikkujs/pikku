@@ -2,11 +2,11 @@
 //~ title: Typed config — defineVariable (non-secret) + defineSecret (sensitive)
 //~ when: The app needs a piece of real, app-specific config the brief calls for — a third-party API key, a configurable external URL/id. Do NOT invent config (there is NO ambient "app URL"); only wire what the brief actually needs.
 import { z } from 'zod'
-//~ defineVariable/defineSecret come straight from @pikku/core (stable subpaths) — not
-//~ from the generated '#pikku/*' leaves, which only re-export them AFTER one exists. Declaring a
+//~ defineVariable/defineSecret come from the generated '#pikku/variables' and
+//~ '#pikku/secrets' leaves, like every other door an app reaches for. Declaring a
 //~ wire makes its `name` a typed key on the injected variables/secrets service.
-import { defineVariable } from '@pikku/core/variable'
-import { defineSecret } from '@pikku/core/secret'
+import { defineVariable } from '#pikku/variables'
+import { defineSecret } from '#pikku/secrets'
 
 //~ Each wire lives in its OWN *.config.ts file (co-locating wirings makes pikku
 //~ SKIP them — "metadata not found"). `name` is the KEY you read by; `variableId`

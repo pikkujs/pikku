@@ -15,7 +15,7 @@
 import { z } from 'zod'
 import type { GatewayInboundMessage } from '@pikku/core/gateway'
 import { wireGateway } from '@pikku/core/gateway'
-import { defineSecret } from '@pikku/core/secret'
+import { defineSecret } from '#pikku/secrets'
 import { SlackGatewayAdapter, SlackGatewayHelper } from '@pikku/gateway-slack'
 import { pikkuSessionlessFunc } from '#pikku/function'
 

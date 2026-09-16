@@ -52,7 +52,7 @@
 //~ ⚠️ It HIDES, it does not protect: keep the `scopes: [...]` from STEP 3 on every
 //~ function whose control you hide. Hide AND gate — a hidden button with an ungated
 //~ RPC is an app that only LOOKS secure.
-import { defineScope } from '@pikku/core/scope'
+import { defineScope } from '#pikku/scopes'
 
 defineScope({
   admin: {

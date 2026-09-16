@@ -7,9 +7,9 @@
 import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
 //~ The model is CONFIG, not a hardcoded literal — wire it once so it is swappable per
-//~ stage without touching this function. defineVariable/defineSecret come straight from
-//~ @pikku/core (see the wire-config scaffold); keep this in its OWN *.config.ts file.
-import { defineVariable } from '@pikku/core/variable'
+//~ stage without touching this function. defineVariable/defineSecret come from the
+//~ generated leaves (see the wire-config scaffold); keep this in its OWN *.config.ts file.
+import { defineVariable } from '#pikku/variables'
 
 //~ Un-pinned model: pick the vision model via a variable, with a vision-capable default.
 //~ The value MUST be provider-prefixed AND a model your LiteLLM proxy actually routes

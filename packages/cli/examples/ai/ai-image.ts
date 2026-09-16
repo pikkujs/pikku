@@ -14,7 +14,7 @@
 // ===== FILE: packages/functions/src/functions/generate-image.function.ts =====
 import { z } from 'zod'
 import { pikkuFunc } from '#pikku/function'
-import { defineVariable } from '@pikku/core/variable'
+import { defineVariable } from '#pikku/variables'
 
 //~ ⚠️ READ THIS BEFORE COPYING — image generation is NOT free like vision/extract.
 //~ Text→image needs a DEDICATED image model, and `generateImage` is an OPTIONAL method
