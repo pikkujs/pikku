@@ -23,7 +23,7 @@
     "zod": "^4"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.152",
+    "@pikku/cli": "^0.12.153",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",

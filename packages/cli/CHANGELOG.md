@@ -1,3 +1,68 @@
+## 0.12.153
+
+### Patch Changes
+
+- 2f1ad31: `pikku dev` records the address it actually bound to, and `pikku scenario run` says so when a dev server is up somewhere other than the environment being targeted — a busy port previously surfaced only as a connection refused
+- bf7f333: Scenario suites can roll the local database back between run units, without the project exposing a reset of its own.
+
+  Set `scenarios.reset` in `pikku.config.json`:
+
+  ```json
+  {
+    "scenarios": {
+      "reset": { "enabled": true, "keep": ["user", "session", "account"] }
+    }
+  }
+  ```
+
+  The runner copies every table once, from the migrated and seeded database the
+  suite is pointed at, and replaces the rows from that copy before every scenario.
+  `keep` names the tables it leaves alone: an actor signs in once for the whole
+  run, so its session tables belong there, or every actor is signed out mid-suite.
+
+  A feature's `before` hook runs against the seed, and what it builds is then
+  captured as a second layer. Each of that feature's scenarios rolls back to the
+  seed _and_ the hook's fixtures, so the isolation is per scenario without the
+  hook running again or its work being thrown away. The layer is dropped when the
+  feature ends.
+
+  This is a copy-and-replace rather than a truncate-and-reseed because a project's
+  dev seed is plain `INSERT`s — replaying it over the tables `keep` held back is a
+  primary key conflict, not a reset. Foreign keys are suspended for the duration
+  (`PRAGMA foreign_keys` on sqlite, `session_replication_role` on Postgres), so a
+  kept table may be the parent of a replaced one; Postgres sequences are put back
+  with the rows, since restoring rows without them leaves the next insert claiming
+  an id that already exists.
+
+  The alternative it replaces is a project shipping its own `testReset` RPC and
+  gating it on an environment variable. That function is in the deploy bundle on
+  every stage, exposed and one console click from open, and the flag that arms it
+  is one wrong project id away from truncating a live database. Nothing here
+  reaches a bundle: it is the runner talking to a database file or server on this
+  machine. It is refused outright when the environment is marked `production`,
+  when `apiUrl` is not on this machine, and when `NODE_ENV=production`.
+
+- 2f1ad31: `pikku doc <name>` suggests the nearest real exports when the name does not exist — a guessed name like `PikkuScenarioWire` is a substring of nothing, so whole-string matching offered no suggestion in exactly the case one is worth having
+- 2f1ad31: Add the `field-service` example app and nine React hook recipes.
+
+  `online-shop` has no frontend, and `usePikkuQuery`/`usePikkuMutation` are generated per
+  project rather than exported from `@pikku/react` — so there was nowhere a hook example
+  could be typechecked. `examples/field-service` is that place: a multi-tenant dispatch
+  backend (scopes, a four-eyes quote approval workflow, a dispatch board channel, an agent,
+  three scenarios) plus an `apps/app` frontend whose components ARE the recipes. Both run in
+  the CI example matrix, so a hook that changes shape breaks the build instead of quietly
+  becoming wrong in the docs.
+
+- 2f1ad31: online-shop: presigned item photo uploads, a getFeatures RPC and an SSE order-preparation stream
+- 2f1ad31: `pikku examples` — 39 worked examples of the things that are easy to get wrong and hard to discover, read with `examples show` or written into the project with `examples add --entity <yours>` already renamed onto your own domain.
+- 49c9bf5: fabric validate: flag local SQL migrations that differ from the copy a stage already applied
+- Updated dependencies [2f1ad31]
+- Updated dependencies [2f1ad31]
+- Updated dependencies [2f1ad31]
+- Updated dependencies [2f1ad31]
+  - @pikku/knowledge@0.12.14
+  - @pikku/skills@0.12.34
+
 ## 0.12.152
 
 ### Patch Changes
