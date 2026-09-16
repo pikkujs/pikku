@@ -347,7 +347,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.152",
+      "version": "0.12.153",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -365,14 +365,14 @@
         "@pikku/deploy-cloudflare": "^0.12.17",
         "@pikku/fetch": "^0.12.11",
         "@pikku/inspector": "^0.12.81",
-        "@pikku/knowledge": "^0.12.13",
+        "@pikku/knowledge": "^0.12.14",
         "@pikku/kysely": "^0.13.27",
         "@pikku/migrator-sql": "^0.12.5",
         "@pikku/n8n-import": "^0.0.8",
         "@pikku/node-http-server": "^0.12.15",
         "@pikku/openapi-parser": "^0.12.21",
         "@pikku/schedule": "^0.12.8",
-        "@pikku/skills": "^0.12.32",
+        "@pikku/skills": "^0.12.34",
         "@pikku/websocket": "^0.12.5",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -719,7 +719,7 @@
     },
     "packages/knowledge": {
       "name": "@pikku/knowledge",
-      "version": "0.12.13",
+      "version": "0.12.14",
       "dependencies": {
         "zod": "^4.4.3",
       },
@@ -1351,7 +1351,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.33",
+      "version": "0.12.34",
       "devDependencies": {
         "@types/node": "^24.13.3",
         "yaml": "^2.9.0",
@@ -1596,7 +1596,7 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.152",
+        "@pikku/cli": "^0.12.153",
         "@pikku/core": "^0.12.111",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",

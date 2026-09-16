@@ -1,5 +1,13 @@
 # @pikku/knowledge
 
+## 0.12.14
+
+### Patch Changes
+
+- 2f1ad31: milestone statuses drop `designing` — a milestone is `proposed`, `dispatched` or `built`, and nothing holds a written milestone back from being dispatchable
+- 2f1ad31: `checkAgainstMilestone` compares a milestone's entities and personas against the plan by word rather than by spelling, so `entities: repair job` matches a `repairJob` function or a `repair_jobs` table instead of refusing the plan over the separator
+- 2f1ad31: knowledge plan set: refuse a milestone that already holds a readable plan. The plan is fixed once written; `plan defer` is the only way down.
+
 ## 0.12.13
 
 ### Patch Changes

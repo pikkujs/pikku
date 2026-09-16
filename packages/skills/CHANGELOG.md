@@ -1,5 +1,12 @@
 # @pikku/skills
 
+## 0.12.34
+
+### Patch Changes
+
+- 2f1ad31: pikku-build / pikku-architect: the plan is an order (plan, then build, never edit), not a separate seat — an unattended build no longer stops at the second milestone waiting for another agent to plan it
+- 2f1ad31: knowledge plan set: refuse a milestone that already holds a readable plan. The plan is fixed once written; `plan defer` is the only way down.
+
 ## 0.12.33
 
 ### Patch Changes
