@@ -19,13 +19,13 @@ installGroups: [core]
 
 ## Which mode
 
-| The situation | Read |
-| --- | --- |
-| A template was just cloned or scaffolded, and the tree still looks like one | `references/post-clone.md` first, then come back |
-| A real product, meant to be picked up by someone else | `references/app.md` — the default |
-| A spike, a throwaway demo, an idea nobody has committed to | `references/quick.md` |
-| A showcase meant to exercise every Pikku surface | `references/platform.md`, which is a delta on top of `references/app.md` |
-| A feature added to an app that already has its knowledge base and milestones | `references/feature.md` |
+| The situation                                                                | Read                                                                     |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| A template was just cloned or scaffolded, and the tree still looks like one  | `references/post-clone.md` first, then come back                         |
+| A real product, meant to be picked up by someone else                        | `references/app.md` — the default                                        |
+| A spike, a throwaway demo, an idea nobody has committed to                   | `references/quick.md`                                                    |
+| A showcase meant to exercise every Pikku surface                             | `references/platform.md`, which is a delta on top of `references/app.md` |
+| A feature added to an app that already has its knowledge base and milestones | `references/feature.md`                                                  |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
 only an explicit signal of speed or throwaway-ness does. Platform is not "App
@@ -53,9 +53,10 @@ while still planning. Those failures look alarming and are nothing but this.
 
 ## What holds in every mode
 
-- **The branch and the diff are the contract.** There is no plan JSON. A
-  reviewer sees real, compiled, working code: apply is a merge, reject is a
-  `git branch -D`.
+- **The branch and the diff are the contract.** A reviewer sees real, compiled,
+  working code: apply is a merge, reject is a `git branch -D`. The milestone's
+  plan is your own denominator, measured by `pikku knowledge plan progress` —
+  never something a reviewer is handed instead of the code.
 - **Discover before editing.** `yarn pikku meta context --json` returns
   functions, wires, middleware, permissions, workflows, `capabilities` and
   `layout` in one call. Fall back to targeted `meta` commands only for a full
@@ -66,11 +67,13 @@ while still planning. Those failures look alarming and are nothing but this.
   lives in `messages/*.json`.
 - **`pikku all` is the gate.** Run it after touching functions, wirings or
   schemas, and treat its criticals as real.
-- **A milestone is planned by a different seat than the one that builds it.**
+- **A milestone is planned before it is built, and the plan then stays fixed.**
   The plan — tables, functions, wires, roles, scopes, screens, scenarios, in
-  passes — is written through `pikku knowledge plan set` by `pikku-architect`,
-  and `pikku knowledge plan progress` measures the build against it from the
-  generated meta. A builder who writes its own plan is grading itself.
+  passes — is written through `pikku knowledge plan set` (how: `pikku-architect`)
+  in its own turn before any of that milestone's code exists, and
+  `pikku knowledge plan progress` measures the build against it from the
+  generated meta. You plan it and you build it; what you never do is edit the
+  plan afterwards to match what you built — that is grading yourself.
 
 ## What NOT to do
 

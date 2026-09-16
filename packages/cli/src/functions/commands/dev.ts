@@ -52,6 +52,7 @@ import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 import { serverReadyLine } from '../../server/server-ready.js'
+import { clearDevAddress, writeDevAddress } from './dev-address.js'
 import { createEphemeralContentSigningJWT } from '../../server/content-signing-jwt.js'
 import { enableDevActorSignIn } from '../../server/actor-sign-in.js'
 import { resolvePersonas } from '../../utils/resolve-personas.js'
@@ -525,6 +526,11 @@ export const dev = pikkuSessionlessFunc<
 
     logger.info(serverReadyLine(hostname, boundPort))
 
+    // Written from the bound port, so anything that has to find this server later
+    // reads where it actually is rather than where it was asked to be.
+    writeDevAddress(resolvedRuntimeDir, `http://${hostname}:${boundPort}`)
+    process.once('exit', () => clearDevAddress(resolvedRuntimeDir))
+
     let watcher: FSWatcher | undefined
 
     process.once('SIGINT', async () => {
@@ -536,6 +542,7 @@ export const dev = pikkuSessionlessFunc<
         await pikkuServer.stop()
         await lifecycle?.afterStop?.(resolvedServices)
       } finally {
+        clearDevAddress(resolvedRuntimeDir)
         process.exit(0)
       }
     })

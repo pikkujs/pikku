@@ -20,7 +20,8 @@
   "main": "dist/bin/pikku.js",
   "module": "dist/bin/pikku.js",
   "scripts": {
-    "tsc": "tsc && tsc -p tsconfig.type-tests.json",
+    "embed": "node scripts/embed-examples.mjs",
+    "tsc": "bun run embed && tsc && tsc -p tsconfig.type-tests.json",
     "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
     "build": "./build.sh",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",

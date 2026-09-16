@@ -98,13 +98,6 @@ describe('readyMilestone', () => {
     )
   })
 
-  test('a milestone being designed says the pick is missing, not the note', async () => {
-    milestone('01-the-daily-entry.md', { status: 'designing' })
-    const waiting = await refusal(cwd)
-    assert.match(waiting.reason, /`status: designing`/)
-    assert.equal(waiting.awaitingNote, undefined)
-  })
-
   test('refuses a first-person step and quotes the line that tripped it', async () => {
     milestone(
       '01-the-daily-entry.md',

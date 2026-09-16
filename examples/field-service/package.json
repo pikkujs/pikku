@@ -1,0 +1,49 @@
+{
+  "name": "@pikku/example-field-service",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^2.0.48",
+    "@pikku/addon-console": "workspace:*",
+    "@pikku/ai-vercel": "workspace:*",
+    "@pikku/better-auth": "^0.12.42",
+    "@pikku/core": "^0.12.111",
+    "@pikku/fetch": "^0.12.11",
+    "@pikku/kysely": "workspace:^",
+    "@pikku/react": "workspace:*",
+    "@pikku/schema-cfworker": "^0.12.7",
+    "@pikku/websocket": "^0.12.5",
+    "@standard-schema/spec": "^1.1.0",
+    "@tanstack/react-query": "^5.90.2",
+    "ai": "^6.0.0",
+    "better-auth": "^1.6.29",
+    "kysely": "^0.29.5",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.12.152",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3",
+    "vite": "^7.1.14"
+  },
+  "scripts": {
+    "build": "pikku all && pikku db migrate && tsc --noEmit && tsc --noEmit -p apps/app/tsconfig.json",
+    "tsc": "tsc --noEmit",
+    "pikku": "pikku all && pikku db migrate",
+    "test": "bun test test"
+  },
+  "imports": {
+    "#pikku/*.gen.js": "./.pikku/*.gen.ts",
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": [
+      "./.pikku/*/index.ts",
+      "./.pikku/*"
+    ]
+  }
+}

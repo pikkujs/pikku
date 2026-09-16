@@ -13,3 +13,10 @@ packages/n8n-import/fixtures-ai/
 # pads the summary tables to their widest cell, which turns one changed count into
 # a rewrite of all fifty rows — churn in the file the repo already fights over.
 packages/core/api-report.md
+
+# The worked-example corpus. Each recipe is several destination FILES concatenated into
+# one source file, split on `// ===== FILE: … =====` markers, so it is deliberately not a
+# valid module on its own — duplicate imports across sections are the normal shape, and one
+# recipe is a fragment prettier cannot even parse. Formatting them also rewrites the exact
+# text `pikku examples add` writes into a user's project.
+packages/cli/examples/

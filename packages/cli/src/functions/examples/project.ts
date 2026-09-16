@@ -1,0 +1,393 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { join, relative, isAbsolute } from 'node:path'
+
+/**
+ * The tables the generator has actually emitted zod for, or null when it has emitted
+ * none.
+ *
+ * Null and empty are different: no generated file means codegen has never run here, and
+ * every caller must skip the check rather than report the whole schema missing.
+ */
+export function generatedTables(outDir: string): string[] | null {
+  let generated: string
+  try {
+    generated = readFileSync(join(outDir, 'db', 'zod.gen.ts'), 'utf-8')
+  } catch {
+    return null
+  }
+  const tables: string[] = []
+  for (const match of generated.matchAll(/export const (\w+) =/g)) {
+    const name = match[1]!
+    if (
+      name.endsWith('Z') &&
+      !name.endsWith('InsertZ') &&
+      !name.endsWith('PatchZ')
+    ) {
+      tables.push(name.slice(0, -1))
+    }
+  }
+  return tables
+}
+
+/**
+ * The table this name most likely meant, by containment either way.
+ *
+ * `--entity changeover` against a `weeklyChangeover` table is the shape this is for.
+ * Containment only — a guess dressed up as certainty sends the caller off to rename
+ * working code, which costs more than saying nothing.
+ */
+export function nearestTable(wanted: string, tables: string[]): string | null {
+  const want = wanted.toLowerCase()
+  const hits = tables.filter((t) => {
+    const has = t.toLowerCase()
+    return has.includes(want) || want.includes(has)
+  })
+  return hits.length === 1 ? hits[0]! : null
+}
+
+/** Every `.ts`/`.tsx` under a directory, ignoring generated files and dependencies. */
+function sourceFiles(dir: string): string[] {
+  try {
+    return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+      .filter(
+        (f) =>
+          /\.tsx?$/.test(f) &&
+          !f.includes('node_modules') &&
+          !f.includes('.gen.')
+      )
+      .map((f) => join(dir, f))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * This project's persona cast, in declaration order.
+ *
+ * Read from the `definePersonas` call rather than from generated meta because a cast
+ * rewritten a moment ago has not been through codegen yet, and a recipe that substitutes
+ * an example's actor has to substitute the CURRENT one or it writes a scenario naming
+ * somebody who no longer exists.
+ */
+export function personaCast(srcDirectories: string[]): string[] {
+  for (const dir of srcDirectories) {
+    for (const file of sourceFiles(dir)) {
+      let body: string
+      try {
+        body = readFileSync(file, 'utf-8')
+      } catch {
+        continue
+      }
+      const call = /definePersonas\(\s*\{/.exec(body)
+      if (!call) continue
+      const open = call.index + call[0].length - 1
+      const block = balancedBlock(body, open)
+      if (!block) continue
+      const names: string[] = []
+      let depth = 0
+      for (const line of block.split('\n')) {
+        const trimmed = line.trim()
+        if (depth === 1) {
+          const key = /^['"]?([A-Za-z_$][\w$]*)['"]?\s*:/.exec(trimmed)
+          if (key) names.push(key[1]!)
+        }
+        for (const ch of line) {
+          if (ch === '{' || ch === '[' || ch === '(') depth++
+          else if (ch === '}' || ch === ']' || ch === ')') depth--
+        }
+      }
+      if (names.length > 0) return names
+    }
+  }
+  return []
+}
+
+function balancedBlock(source: string, open: number): string | null {
+  let depth = 0
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === '{') depth++
+    else if (source[i] === '}' && --depth === 0)
+      return source.slice(open, i + 1)
+  }
+  return null
+}
+
+/** Every RPC the generated function meta says is registered. */
+export function registeredRpcs(outDir: string): string[] {
+  try {
+    const meta = JSON.parse(
+      readFileSync(join(outDir, 'function', 'meta.gen.json'), 'utf-8')
+    ) as Record<string, unknown>
+    return Object.keys(meta)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * The frontend a recipe's `src/` files belong to.
+ *
+ * A project with no `apps/` directory writes them at the root, which is what a
+ * single-package project wants. An unknown slug returns null rather than falling back —
+ * a recipe aimed at an app that does not exist is a mistake worth refusing, not one
+ * worth silently redirecting into another app.
+ */
+export function resolveAppBase(
+  rootDir: string,
+  slug?: string
+): { slug: string; base: string } | null {
+  const appsDir = join(rootDir, 'apps')
+  let apps: string[] = []
+  try {
+    apps = readdirSync(appsDir, { withFileTypes: true })
+      .filter(
+        (e) =>
+          e.isDirectory() && existsSync(join(appsDir, e.name, 'package.json'))
+      )
+      .map((e) => e.name)
+      .sort()
+  } catch {
+    apps = []
+  }
+  if (apps.length === 0) return slug ? null : { slug: '.', base: '.' }
+  if (!slug) {
+    const primary = apps.includes('app') ? 'app' : apps[0]!
+    return { slug: primary, base: `apps/${primary}` }
+  }
+  return apps.includes(slug) ? { slug, base: `apps/${slug}` } : null
+}
+
+const GENERATED_MIGRATION_HEADER = /--\s*Generated by `pikku db generate`/
+
+/**
+ * Better Auth and runtime tables by name — the fallback for a schema written before
+ * `pikku db generate` stamped its own migrations with their provenance.
+ *
+ * Self-retiring: this only ever decides a table the header did not already claim. Do not
+ * extend it; a framework table's real answer is the provenance stamp, which moves with
+ * the project's own auth config where a static list cannot.
+ */
+const AUTH_INFRA_TABLES = new Set([
+  'user',
+  'session',
+  'account',
+  'verification',
+  'apikey',
+  'api_key',
+  'jwks',
+  'two_factor',
+  'passkey',
+  'organization',
+  'member',
+  'invitation',
+  'team',
+  'team_member',
+  'audit',
+  'audit_log',
+])
+
+const LOOKUP_LABEL_COLUMNS = new Set([
+  'id',
+  'name',
+  'label',
+  'title',
+  'description',
+  'code',
+  'color',
+  'icon',
+  'sort_order',
+  'created_at',
+  'updated_at',
+])
+
+interface ParsedTable {
+  name: string
+  columns: string[]
+  pkColumns: string[]
+  fkColumns: string[]
+}
+
+function stripSqlComments(sql: string): string {
+  return sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ')
+}
+
+function unquoteIdent(raw: string): string {
+  return raw.replace(/^["`[]|["`\]]$/g, '')
+}
+
+function splitTopLevel(body: string): string[] {
+  const items: string[] = []
+  let depth = 0
+  let current = ''
+  for (const ch of body) {
+    if (ch === '(') depth++
+    else if (ch === ')') depth--
+    if (ch === ',' && depth === 0) {
+      items.push(current)
+      current = ''
+      continue
+    }
+    current += ch
+  }
+  if (current.trim()) items.push(current)
+  return items
+}
+
+function balancedParens(sql: string, openParenIdx: number): string | null {
+  let depth = 0
+  for (let i = openParenIdx; i < sql.length; i++) {
+    if (sql[i] === '(') depth++
+    else if (sql[i] === ')' && --depth === 0)
+      return sql.slice(openParenIdx + 1, i)
+  }
+  return null
+}
+
+function parseCreateTables(sql: string): ParsedTable[] {
+  const clean = stripSqlComments(sql)
+  const tables: ParsedTable[] = []
+  const re = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([\w"`[\].]+)\s*\(/gi
+  for (const match of clean.matchAll(re)) {
+    const name = unquoteIdent(match[1]!.split('.').pop()!)
+    const body = balancedParens(clean, match.index! + match[0].length - 1)
+    if (body === null) continue
+    const columns: string[] = []
+    const pkColumns: string[] = []
+    const fkColumns: string[] = []
+    for (const raw of splitTopLevel(body)) {
+      const item = raw.trim()
+      if (!item) continue
+      const constraint =
+        /^(PRIMARY\s+KEY|FOREIGN\s+KEY|UNIQUE|CHECK|CONSTRAINT)\b/i.exec(item)
+      if (constraint) {
+        if (/^PRIMARY\s+KEY/i.test(item)) {
+          const cols = balancedParens(item, item.indexOf('('))
+          if (cols)
+            pkColumns.push(
+              ...cols.split(',').map((c) => unquoteIdent(c.trim()))
+            )
+        }
+        if (/^FOREIGN\s+KEY/i.test(item)) {
+          const cols = balancedParens(item, item.indexOf('('))
+          if (cols)
+            fkColumns.push(
+              ...cols.split(',').map((c) => unquoteIdent(c.trim()))
+            )
+        }
+        continue
+      }
+      const colName = unquoteIdent(item.split(/\s+/)[0]!)
+      columns.push(colName)
+      if (/PRIMARY\s+KEY/i.test(item)) pkColumns.push(colName)
+      if (/REFERENCES\s+/i.test(item)) fkColumns.push(colName)
+    }
+    tables.push({ name, columns, pkColumns, fkColumns })
+  }
+  return tables
+}
+
+/**
+ * The tables this project promised its users, from its own migrations.
+ *
+ * Excluded: anything a framework declared (the `pikku db generate` provenance stamp, or
+ * the auth names above), a pure junction table, and a lookup table other rows point at
+ * but nobody edits. What is left is the set a person is supposed to be able to create
+ * and edit, which is the denominator the `entity-write` precondition is measured against.
+ */
+export function requiredEntities(rootDir: string): string[] {
+  const engine = existsSync(join(rootDir, 'db', 'postgres'))
+    ? 'postgres'
+    : 'sqlite'
+  const dir = join(rootDir, 'db', engine)
+  if (!existsSync(dir)) return []
+  const byName = new Map<string, ParsedTable>()
+  const generated = new Set<string>()
+  for (const file of readdirSync(dir).sort()) {
+    if (!file.endsWith('.sql')) continue
+    let sql: string
+    try {
+      sql = readFileSync(join(dir, file), 'utf-8')
+    } catch {
+      continue
+    }
+    const isGenerated = GENERATED_MIGRATION_HEADER.test(sql)
+    for (const table of parseCreateTables(sql)) {
+      byName.set(table.name, table)
+      if (isGenerated) generated.add(table.name.toLowerCase())
+    }
+  }
+
+  const required: string[] = []
+  for (const table of byName.values()) {
+    const lower = table.name.toLowerCase()
+    if (AUTH_INFRA_TABLES.has(lower) || generated.has(lower)) continue
+    const nonKey = table.columns.filter(
+      (c) =>
+        !table.pkColumns.includes(c) && c !== 'created_at' && c !== 'updated_at'
+    )
+    const isJunction =
+      table.pkColumns.length >= 2 &&
+      table.fkColumns.length >= 2 &&
+      nonKey.length === 0
+    if (isJunction) continue
+    const isLookup =
+      table.fkColumns.length === 0 &&
+      table.columns.every((c) => LOOKUP_LABEL_COLUMNS.has(c.toLowerCase()))
+    if (isLookup) continue
+    required.push(table.name)
+  }
+  return required.sort()
+}
+
+/** SQL table names are snake_case; the generated Kysely interface is camelCase. */
+const normalizeTable = (name: string): string =>
+  name.toLowerCase().replace(/_/g, '')
+
+/** Tables with at least one `insertInto`/`updateTable` reachable from the app's source. */
+export function coveredEntities(srcDirectories: string[]): Set<string> {
+  const covered = new Set<string>()
+  const writeRe =
+    /\.(?:insertInto|updateTable)\(\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]/g
+  for (const dir of srcDirectories) {
+    for (const file of sourceFiles(dir)) {
+      let body: string
+      try {
+        body = readFileSync(file, 'utf-8')
+      } catch {
+        continue
+      }
+      for (const m of body.matchAll(writeRe)) covered.add(normalizeTable(m[1]!))
+    }
+  }
+  return covered
+}
+
+export interface EntityWriteCoverage {
+  required: string[]
+  uncovered: string[]
+}
+
+/**
+ * required − covered: the tables a person could never create or edit through this app,
+ * even though the schema promised them.
+ *
+ * Empty `required` (no schema yet) fails open — a project with nothing written has no
+ * pacing problem to have.
+ */
+export function entityWriteCoverage(
+  rootDir: string,
+  srcDirectories: string[]
+): EntityWriteCoverage {
+  const required = requiredEntities(rootDir)
+  if (required.length === 0) return { required: [], uncovered: [] }
+  const covered = coveredEntities(srcDirectories)
+  return {
+    required,
+    uncovered: required.filter((t) => !covered.has(normalizeTable(t))),
+  }
+}
+
+/** A path under the project, for printing. */
+export function projectRelative(rootDir: string, path: string): string {
+  return isAbsolute(path) ? relative(rootDir, path) : path
+}

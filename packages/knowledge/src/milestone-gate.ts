@@ -184,16 +184,6 @@ export async function readyMilestone(
     .sort((a, b) => a.path.localeCompare(b.path))
 
   if (proposed.length === 0) {
-    // A milestone waiting on a look is the commonest reason there is nothing to
-    // dispatch, and it is NOT the same problem as a missing note: the note is written,
-    // and saying "write one" sends the caller to duplicate the note it already has.
-    const designing = milestones.filter((note) => note.status === 'designing')
-    if (designing.length > 0) {
-      return {
-        ok: false,
-        reason: `Not dispatched: ${designing.map((n) => n.path).join(', ')} is \`status: designing\` — somebody is being shown looks for it and has not picked one. When they pick, record the choice on that note and move it to \`status: proposed\`. If they have said to build it as it stands, move it to \`proposed\` as it is.`,
-      }
-    }
     return {
       ok: false,
       awaitingNote: true,

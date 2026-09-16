@@ -128,6 +128,26 @@ test('a milestone entity no function or table mentions is flagged', () => {
   assert.match(problems[0]!, /reminder/)
 })
 
+test('an entity spelled with spaces matches an identifier spelled in camelCase', () => {
+  // A note says `entities: repair job` and the plan says `repairJob`. Refusing over the
+  // separator cost the first proof run two turns of editing a note that was already right.
+  const plan = basePlan()
+  assert.deepEqual(
+    checkAgainstMilestone(plan, { entities: 'create entry', path: 'x.md' }, []),
+    []
+  )
+})
+
+test('a hyphenated persona is driven by a scenario that spells it with a space', () => {
+  const plan = basePlan()
+  if (plan.scenarios.browser.kind === 'built')
+    plan.scenarios.browser.items[0]!.scenario = 'The front desk clerk books a slot'
+  assert.deepEqual(
+    checkAgainstMilestone(plan, { entities: 'entry', path: 'x.md' }, ['front-desk']),
+    []
+  )
+})
+
 test('a persona nobody drives through the UI is flagged', () => {
   const plan = basePlan()
   const problems = checkAgainstMilestone(
