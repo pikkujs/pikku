@@ -39,7 +39,8 @@ import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
-import { resolveEnvironment } from './environment.js'
+import { resolveEnvironment, isLocalUrl } from './environment.js'
+import type { ScenarioBaseline } from '../db/scenario-baseline.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 
 const isScenario = (wf: any) => wf?.scenario === true
@@ -454,6 +455,53 @@ export const scenarioRun = pikkuSessionlessFunc<
         : undefined
     )
 
+    // Captured once, from the migrated and seeded database the suite was
+    // pointed at, and replayed before every scenario below. The project's own
+    // code has no part in it: a scenario reset is the runner reaching into a
+    // local database, never an RPC the deployed bundle carries.
+    let databaseBaseline: ScenarioBaseline | undefined
+    if (config.scenarios?.reset?.enabled) {
+      if (env.production) {
+        throw new Error(
+          `scenarios.reset is on and '${environment}' is marked production. A reset replaces its rows with seed data; it will not run against one.`
+        )
+      }
+      if (!isLocalUrl(env.apiUrl)) {
+        throw new Error(
+          `scenarios.reset is on but '${environment}' targets ${env.apiUrl}. The reset works on the database directly, so it only runs against a server on this machine.`
+        )
+      }
+      // Imported here rather than at the top because the db stack statically
+      // pulls in kysely and better-auth, which a project running scenarios
+      // without this feature has no reason to have installed.
+      const { loadUserConfigForDb } = await import('./db-shared.js')
+      const { resolveDb } = await import('../db/local-db.js')
+      const { captureScenarioBaseline } =
+        await import('../db/scenario-baseline.js')
+      const userConfig = await loadUserConfigForDb({ config, logger })
+      const resolved =
+        userConfig &&
+        resolveDb(
+          userConfig,
+          config.rootDir,
+          config.outDir,
+          config.runtimeDir,
+          config.db
+        )
+      if (!resolved) {
+        throw new Error(
+          `scenarios.reset is on but no database is configured — set sqliteDb or postgresUrl in your createConfig.`
+        )
+      }
+      databaseBaseline = await captureScenarioBaseline(
+        resolved,
+        config.scenarios.reset
+      )
+      logger.info(
+        `scenario reset: captured ${databaseBaseline.tables.length} tables as the per-scenario baseline`
+      )
+    }
+
     const results: ScenarioResult[] = []
 
     // Opened before the first scenario and written to as each one finishes, so
@@ -461,381 +509,428 @@ export const scenarioRun = pikkuSessionlessFunc<
     // and the console can show a run while it is still going.
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
-    await runStore.start({
-      runId: captureRunId,
-      environment,
-      surface: runSurface,
-      status: 'running',
-      startedAt: startedAtIso,
-      results: [],
-      skipped,
-      hookFailures: [],
-    })
+    try {
+      await runStore.start({
+        runId: captureRunId,
+        environment,
+        surface: runSurface,
+        status: 'running',
+        startedAt: startedAtIso,
+        results: [],
+        skipped,
+        hookFailures: [],
+      })
 
-    /**
-     * The step ladder is read back off the recorded run, so it needs no live
-     * step events — it is the same data the console renders. Joining it to the
-     * declared prose happens here, where the inspector state is; laying it out
-     * is the formatter's job.
-     */
-    const readRunSteps = async (
-      service: InMemoryWorkflowService,
-      runId: string,
-      flowName: string
-    ) => {
-      const prose = collectScenarioStepProse(
-        state.workflows?.meta?.[flowName],
-        functionsMeta,
-        state.personas?.definitions ?? []
-      )
-      const steps = (await service.getRunSteps(runId)).map((step) => ({
-        stepName: step.stepName,
-        status: step.status,
-        durationMs: step.succeededAt
-          ? step.succeededAt.getTime() - step.createdAt.getTime()
-          : undefined,
-        error: step.error?.message,
-        stack: step.error?.stack,
-        expected: step.error?.expected,
-        input: step.data,
-        stepFunc: step.rpcName,
-      }))
-      return {
-        rows: scenarioStepRows(steps, prose),
-        failure: scenarioFailureFromSteps(steps, prose),
-      }
-    }
-
-    const coverageActor = coverage ? Object.values(actors)[0] : undefined
-    let coverageActive = Boolean(coverageActor)
-    if (coverage && !coverageActor) {
-      logger.warn(
-        '--coverage requires at least one configured actor — skipping coverage.'
-      )
-    }
-    const scenarioCoverage: Record<string, unknown> = {}
-    const invokeCoverage = async (rpcName: string): Promise<any> => {
-      if (!coverageActive || !coverageActor) return null
-      try {
-        return await coverageActor.invoke(rpcName, null)
-      } catch (e: any) {
-        coverageActive = false
-        logger.warn(
-          `Coverage disabled — '${rpcName}' failed against '${environment}': ${e?.message ?? e}. ` +
-            `Is the server running with --coverage and "scaffold.scenarios" enabled in pikku.config.json?`
+      /**
+       * The step ladder is read back off the recorded run, so it needs no live
+       * step events — it is the same data the console renders. Joining it to the
+       * declared prose happens here, where the inspector state is; laying it out
+       * is the formatter's job.
+       */
+      const readRunSteps = async (
+        service: InMemoryWorkflowService,
+        runId: string,
+        flowName: string
+      ) => {
+        const prose = collectScenarioStepProse(
+          state.workflows?.meta?.[flowName],
+          functionsMeta,
+          state.personas?.definitions ?? []
         )
-        return null
-      }
-    }
-
-    /**
-     * A feature hook is not a pikku function and not a run — the feature is a
-     * grouping, not something durable. It gets the same three arguments a
-     * scenario body gets, the CLI's own singletons included, and its result is
-     * discarded.
-     *
-     * Its context is *feature*-scoped — shared by that feature's `before` and
-     * `after`, and deliberately not the context the group's scenarios see:
-     * one bag across a group is the invisible coupling a Cucumber world had.
-     */
-    const singletonServices = pikkuState(null, 'package', 'singletonServices')
-    const runFeatureHook = async (
-      hook: NonNullable<ScenarioPlanGroup['before']>,
-      context: Record<string, unknown>
-    ) => {
-      await hook(singletonServices as any, undefined, {
-        actors,
-        scenario: { context },
-      } as any)
-    }
-
-    const hookFailures: string[] = []
-
-    /**
-     * What a result carries beyond its own outcome: which registration ran,
-     * which feature grouped it, and the tags it was selected by. Snapshotted
-     * into the record because a run read back next week is describing a suite
-     * whose source has moved on.
-     */
-    const identify = (
-      result: ScenarioResult,
-      scenarioName: string,
-      feature?: string
-    ): ScenarioResult => {
-      const tags = state.workflows?.meta?.[scenarioName]?.tags as
-        string[] | undefined
-      return {
-        ...result,
-        scenarioName,
-        ...(feature ? { feature } : {}),
-        ...(tags?.length ? { tags } : {}),
-      }
-    }
-
-    const runEntry = async (
-      label: string,
-      scenarioName: string,
-      data: unknown,
-      feature?: string
-    ) => {
-      const startedAt = Date.now()
-      // Before the scenario, not after it: the last scenario's window is left
-      // open for headed debugging, while this one still starts clean.
-      await browserLifecycle.reset()
-      // After the reset, which is what closes the previous scenario's context
-      // and finalises its video.
-      browserLifecycle.beginScenario(label)
-      if (coverageActive) {
-        const reset = await invokeCoverage('pikkuScenarioResetLiveCoverage')
-        if (reset && reset.enabled === false) {
-          coverageActive = false
-          logger.warn(
-            `Coverage disabled — '${environment}' is not collecting (start the server with --coverage).`
-          )
+        const steps = (await service.getRunSteps(runId)).map((step) => ({
+          stepName: step.stepName,
+          status: step.status,
+          durationMs: step.succeededAt
+            ? step.succeededAt.getTime() - step.createdAt.getTime()
+            : undefined,
+          error: step.error?.message,
+          stack: step.error?.stack,
+          expected: step.error?.expected,
+          input: step.data,
+          stepFunc: step.rpcName,
+        }))
+        return {
+          rows: scenarioStepRows(steps, prose),
+          failure: scenarioFailureFromSteps(steps, prose),
         }
       }
-      try {
-        await coverageActor?.invoke('pikkuScenarioResetStubs', null)
-      } catch {}
-      let runId: string | undefined
-      let runError: { stack?: string; expected?: boolean } | undefined
-      try {
-        // The id comes back through the callback rather than the return value
-        // because a failing scenario throws instead of returning — and a failed
-        // run is exactly the one whose steps are worth reading.
-        ;({ runId } = await workflowService.startWorkflow(
+
+      const coverageActor = coverage ? Object.values(actors)[0] : undefined
+      let coverageActive = Boolean(coverageActor)
+      if (coverage && !coverageActor) {
+        logger.warn(
+          '--coverage requires at least one configured actor — skipping coverage.'
+        )
+      }
+      const scenarioCoverage: Record<string, unknown> = {}
+      const invokeCoverage = async (rpcName: string): Promise<any> => {
+        if (!coverageActive || !coverageActor) return null
+        try {
+          return await coverageActor.invoke(rpcName, null)
+        } catch (e: any) {
+          coverageActive = false
+          logger.warn(
+            `Coverage disabled — '${rpcName}' failed against '${environment}': ${e?.message ?? e}. ` +
+              `Is the server running with --coverage and "scaffold.scenarios" enabled in pikku.config.json?`
+          )
+          return null
+        }
+      }
+
+      /**
+       * A feature hook is not a pikku function and not a run — the feature is a
+       * grouping, not something durable. It gets the same three arguments a
+       * scenario body gets, the CLI's own singletons included, and its result is
+       * discarded.
+       *
+       * Its context is *feature*-scoped — shared by that feature's `before` and
+       * `after`, and deliberately not the context the group's scenarios see:
+       * one bag across a group is the invisible coupling a Cucumber world had.
+       */
+      const singletonServices = pikkuState(null, 'package', 'singletonServices')
+      const runFeatureHook = async (
+        hook: NonNullable<ScenarioPlanGroup['before']>,
+        context: Record<string, unknown>
+      ) => {
+        await hook(singletonServices as any, undefined, {
+          actors,
+          scenario: { context },
+        } as any)
+      }
+
+      const hookFailures: string[] = []
+
+      /**
+       * What a result carries beyond its own outcome: which registration ran,
+       * which feature grouped it, and the tags it was selected by. Snapshotted
+       * into the record because a run read back next week is describing a suite
+       * whose source has moved on.
+       */
+      const identify = (
+        result: ScenarioResult,
+        scenarioName: string,
+        feature?: string
+      ): ScenarioResult => {
+        const tags = state.workflows?.meta?.[scenarioName]?.tags as
+          string[] | undefined
+        return {
+          ...result,
           scenarioName,
-          data,
-          { type: 'cli' },
-          guardRpc,
-          { actors, onRunCreated: (id) => (runId = id) }
-        ))
-        const run = await workflowService.getRun(runId)
-        if (run?.status === 'completed') {
-          results.push({
-            name: label,
-            status: 'passed',
-            durationMs: Date.now() - startedAt,
-            output: run.output,
-          })
-        } else {
-          runError = run?.error
+          ...(feature ? { feature } : {}),
+          ...(tags?.length ? { tags } : {}),
+        }
+      }
+
+      const runEntry = async (
+        label: string,
+        scenarioName: string,
+        data: unknown,
+        feature?: string
+      ) => {
+        const startedAt = Date.now()
+        if (databaseBaseline) {
+          try {
+            await databaseBaseline.restore()
+          } catch (e: any) {
+            const result = identify(
+              {
+                name: label,
+                status: 'failed',
+                durationMs: Date.now() - startedAt,
+                error: `database reset failed: ${e?.message ?? e}`,
+              },
+              scenarioName,
+              feature
+            )
+            results.push(result)
+            await runStore.recordScenario(captureRunId, result)
+            return
+          }
+        }
+        // Before the scenario, not after it: the last scenario's window is left
+        // open for headed debugging, while this one still starts clean.
+        await browserLifecycle.reset()
+        // After the reset, which is what closes the previous scenario's context
+        // and finalises its video.
+        browserLifecycle.beginScenario(label)
+        if (coverageActive) {
+          const reset = await invokeCoverage('pikkuScenarioResetLiveCoverage')
+          if (reset && reset.enabled === false) {
+            coverageActive = false
+            logger.warn(
+              `Coverage disabled — '${environment}' is not collecting (start the server with --coverage).`
+            )
+          }
+        }
+        try {
+          await coverageActor?.invoke('pikkuScenarioResetStubs', null)
+        } catch {}
+        let runId: string | undefined
+        let runError: { stack?: string; expected?: boolean } | undefined
+        try {
+          // The id comes back through the callback rather than the return value
+          // because a failing scenario throws instead of returning — and a failed
+          // run is exactly the one whose steps are worth reading.
+          ;({ runId } = await workflowService.startWorkflow(
+            scenarioName,
+            data,
+            { type: 'cli' },
+            guardRpc,
+            { actors, onRunCreated: (id) => (runId = id) }
+          ))
+          const run = await workflowService.getRun(runId)
+          if (run?.status === 'completed') {
+            results.push({
+              name: label,
+              status: 'passed',
+              durationMs: Date.now() - startedAt,
+              output: run.output,
+            })
+          } else {
+            runError = run?.error
+            results.push({
+              name: label,
+              status: 'failed',
+              durationMs: Date.now() - startedAt,
+              error: run?.error?.message ?? `status: ${run?.status}`,
+            })
+          }
+        } catch (e: any) {
+          runError = { stack: e?.stack }
           results.push({
             name: label,
             status: 'failed',
             durationMs: Date.now() - startedAt,
-            error: run?.error?.message ?? `status: ${run?.status}`,
+            error: e?.message ?? String(e),
           })
         }
-      } catch (e: any) {
-        runError = { stack: e?.stack }
-        results.push({
-          name: label,
-          status: 'failed',
-          durationMs: Date.now() - startedAt,
-          error: e?.message ?? String(e),
-        })
-      }
-      const result = results[results.length - 1]!
-      let stepFailure: ScenarioFailureDetail | undefined
-      if (runId) {
-        const read = await readRunSteps(workflowService, runId, scenarioName)
-        result.steps = read.rows
-        stepFailure = read.failure
-      }
-      if (result.status === 'failed') {
-        result.failure = {
-          // A scenario can also fail outside any step — a hook, or the start
-          // itself — and then the run's own error is all there is to report.
-          ...(stepFailure ?? {
-            message: result.error ?? 'unknown failure',
-            stack: runError?.stack,
-            expected: runError?.expected,
-          }),
-          browser: await browserLifecycle.captureFailure(label),
+        const result = results[results.length - 1]!
+        let stepFailure: ScenarioFailureDetail | undefined
+        if (runId) {
+          const read = await readRunSteps(workflowService, runId, scenarioName)
+          result.steps = read.rows
+          stepFailure = read.failure
         }
-      }
-      // Told here, acted on at the next scenario's reset — that is what closes
-      // these windows and finalises the video this outcome decides the fate of.
-      browserLifecycle.endScenario(result.status)
-      Object.assign(result, identify(result, scenarioName, feature))
-      await runStore.recordScenario(captureRunId, result)
-      if (coverageActive) {
-        const report = await invokeCoverage('pikkuScenarioTakeLiveCoverage')
-        if (report) {
-          scenarioCoverage[label] = report
-          const covered = report.functions?.filter(
-            (f: any) => f.status === 'covered' || f.status === 'partial'
-          )
-          logger.info(
-            `  coverage: ${covered?.length ?? 0}/${report.summary?.total ?? 0} functions exercised by '${label}'`
-          )
-        }
-      }
-    }
-
-    for (const group of groups) {
-      const groupName = group.featureName ?? group.featureId
-      const label = (entry: (typeof group.entries)[number]) => {
-        const data = entry.data ? ` ${JSON.stringify(entry.data)}` : ''
-        return groupName
-          ? `${groupName} › ${entry.scenarioName}${data}`
-          : entry.scenarioName
-      }
-
-      const featureContext: Record<string, unknown> = {}
-
-      let beforeError: any
-      if (group.before) {
-        try {
-          await runFeatureHook(group.before, featureContext)
-        } catch (e: any) {
-          beforeError = e
-        }
-      }
-
-      try {
-        if (beforeError) {
-          // Setup failed, so nothing in the group ran. Reporting them as failed
-          // rather than skipped is the honest reading: they did not pass.
-          for (const entry of group.entries) {
-            const result = identify(
-              {
-                name: label(entry),
-                status: 'failed',
-                durationMs: 0,
-                error: `feature '${groupName}' before hook failed: ${beforeError?.message ?? beforeError}`,
-              },
-              entry.scenarioName,
-              groupName
-            )
-            results.push(result)
-            await runStore.recordScenario(captureRunId, result)
+        if (result.status === 'failed') {
+          result.failure = {
+            // A scenario can also fail outside any step — a hook, or the start
+            // itself — and then the run's own error is all there is to report.
+            ...(stepFailure ?? {
+              message: result.error ?? 'unknown failure',
+              stack: runError?.stack,
+              expected: runError?.expected,
+            }),
+            browser: await browserLifecycle.captureFailure(label),
           }
-        } else {
-          for (const entry of group.entries) {
-            await runEntry(
-              label(entry),
-              entry.scenarioName,
-              entry.data,
-              groupName
+        }
+        // Told here, acted on at the next scenario's reset — that is what closes
+        // these windows and finalises the video this outcome decides the fate of.
+        browserLifecycle.endScenario(result.status)
+        Object.assign(result, identify(result, scenarioName, feature))
+        await runStore.recordScenario(captureRunId, result)
+        if (coverageActive) {
+          const report = await invokeCoverage('pikkuScenarioTakeLiveCoverage')
+          if (report) {
+            scenarioCoverage[label] = report
+            const covered = report.functions?.filter(
+              (f: any) => f.status === 'covered' || f.status === 'partial'
+            )
+            logger.info(
+              `  coverage: ${covered?.length ?? 0}/${report.summary?.total ?? 0} functions exercised by '${label}'`
             )
           }
         }
-      } finally {
-        if (group.after) {
+      }
+
+      for (const group of groups) {
+        const groupName = group.featureName ?? group.featureId
+        const label = (entry: (typeof group.entries)[number]) => {
+          const data = entry.data ? ` ${JSON.stringify(entry.data)}` : ''
+          return groupName
+            ? `${groupName} › ${entry.scenarioName}${data}`
+            : entry.scenarioName
+        }
+
+        const featureContext: Record<string, unknown> = {}
+
+        let beforeError: any
+        let beforeStage = 'before hook'
+        if (databaseBaseline && group.before) {
+          // The hook builds on the seed, never on the last feature's leftovers,
+          // and what it builds is then captured as the state each of this
+          // feature's scenarios is rolled back to.
           try {
-            await runFeatureHook(group.after, featureContext)
+            await databaseBaseline.restore()
           } catch (e: any) {
-            hookFailures.push(
-              `feature '${groupName}' after hook failed: ${e?.message ?? e}`
-            )
+            beforeStage = 'database reset'
+            beforeError = e
           }
         }
+        if (!beforeError && group.before) {
+          try {
+            await runFeatureHook(group.before, featureContext)
+            await databaseBaseline?.pushFeatureLayer()
+          } catch (e: any) {
+            beforeError = e
+          }
+        }
+
+        try {
+          if (beforeError) {
+            // Setup failed, so nothing in the group ran. Reporting them as failed
+            // rather than skipped is the honest reading: they did not pass.
+            for (const entry of group.entries) {
+              const result = identify(
+                {
+                  name: label(entry),
+                  status: 'failed',
+                  durationMs: 0,
+                  error: `${groupName ? `feature '${groupName}' ` : ''}${beforeStage} failed: ${beforeError?.message ?? beforeError}`,
+                },
+                entry.scenarioName,
+                groupName
+              )
+              results.push(result)
+              await runStore.recordScenario(captureRunId, result)
+            }
+          } else {
+            for (const entry of group.entries) {
+              await runEntry(
+                label(entry),
+                entry.scenarioName,
+                entry.data,
+                groupName
+              )
+            }
+          }
+        } finally {
+          if (group.after) {
+            try {
+              await runFeatureHook(group.after, featureContext)
+            } catch (e: any) {
+              hookFailures.push(
+                `feature '${groupName}' after hook failed: ${e?.message ?? e}`
+              )
+            }
+          }
+          await databaseBaseline?.popFeatureLayer()
+        }
       }
-    }
 
-    await browserLifecycle.close()
+      await browserLifecycle.close()
 
-    // Collected after the browser has closed, because a video is only finalised
-    // when its context is — and renamed again by the encode that close() runs.
-    // This is the first moment the answer is complete.
-    const artifacts = browserLifecycle.artifacts()
-    await runStore.attachArtifacts(captureRunId, artifacts)
+      // Collected after the browser has closed, because a video is only finalised
+      // when its context is — and renamed again by the encode that close() runs.
+      // This is the first moment the answer is complete.
+      const artifacts = browserLifecycle.artifacts()
+      await runStore.attachArtifacts(captureRunId, artifacts)
 
-    const failed = results.filter((r) => r.status === 'failed')
-    await runStore.finish(captureRunId, {
-      status:
-        failed.length > 0 || hookFailures.length > 0 ? 'failed' : 'passed',
-      finishedAt: new Date().toISOString(),
-      skipped,
-      hookFailures,
-    })
+      const failed = results.filter((r) => r.status === 'failed')
+      await runStore.finish(captureRunId, {
+        status:
+          failed.length > 0 || hookFailures.length > 0 ? 'failed' : 'passed',
+        finishedAt: new Date().toISOString(),
+        skipped,
+        hookFailures,
+      })
 
-    // A capture nobody can find is a capture nobody looks at, and looking at
-    // them is the entire point of the flags. Announced only when the run
-    // actually filed something: every run leaves a record behind, and most of
-    // them have no images or footage to go with it.
-    if (artifacts.length > 0) {
-      logger.info(`Captures → ${join(capture.dir, capture.runId)}`)
-    }
+      // A capture nobody can find is a capture nobody looks at, and looking at
+      // them is the entire point of the flags. Announced only when the run
+      // actually filed something: every run leaves a record behind, and most of
+      // them have no images or footage to go with it.
+      if (artifacts.length > 0) {
+        logger.info(`Captures → ${join(capture.dir, capture.runId)}`)
+      }
 
-    if (coverage && Object.keys(scenarioCoverage).length > 0) {
-      const coverageDir = join(
-        resolve(config.rootDir, config.outDir),
-        'coverage'
-      )
-      mkdirSync(coverageDir, { recursive: true })
-      const outFile = join(coverageDir, 'scenario-coverage.json')
-      writeFileSync(
-        outFile,
-        JSON.stringify(
-          {
-            generatedAt: new Date().toISOString(),
-            environment,
-            scenarios: scenarioCoverage,
-          },
-          null,
-          2
-        ) + '\n'
-      )
-      logger.info(`Scenario coverage → ${outFile}`)
-    }
+      if (coverage && Object.keys(scenarioCoverage).length > 0) {
+        const coverageDir = join(
+          resolve(config.rootDir, config.outDir),
+          'coverage'
+        )
+        mkdirSync(coverageDir, { recursive: true })
+        const outFile = join(coverageDir, 'scenario-coverage.json')
+        writeFileSync(
+          outFile,
+          JSON.stringify(
+            {
+              generatedAt: new Date().toISOString(),
+              environment,
+              scenarios: scenarioCoverage,
+            },
+            null,
+            2
+          ) + '\n'
+        )
+        logger.info(`Scenario coverage → ${outFile}`)
+      }
 
-    const report = { environment, results, skipped, hookFailures }
-    for (const { level, text } of formatScenarioReport(report, {
-      trace,
-      projectRoot: config.rootDir,
-    })) {
-      const write: (message: string) => void = logger[level].bind(logger)
-      write(text)
-    }
+      const report = { environment, results, skipped, hookFailures }
+      for (const { level, text } of formatScenarioReport(report, {
+        trace,
+        projectRoot: config.rootDir,
+      })) {
+        const write: (message: string) => void = logger[level].bind(logger)
+        write(text)
+      }
 
-    // How much of the run actually happened on the surface it targeted. Every
-    // step counts, so a step that fell back to the server lowers the ratio
-    // rather than needing a footnote. Assertions that fell back are named
-    // separately — those are sentences claiming an observation nobody made.
-    const surfaceCoverage = { onSurface: 0, total: 0 }
-    const unwitnessed = new Set<string>()
-    for (const name of scenarioNames) {
-      const scenario = scenarioSurfaceCoverage(
-        state.workflows?.meta?.[name],
-        functionsMeta,
-        runSurface
-      )
-      surfaceCoverage.onSurface += scenario.onSurface
-      surfaceCoverage.total += scenario.total
-      for (const step of scenario.unwitnessed) unwitnessed.add(step)
-    }
-    if (runSurface !== 'default' && surfaceCoverage.total > 0) {
-      const line = `${surfaceCoverage.onSurface}/${surfaceCoverage.total} steps ran on ${runSurface}`
-      if (unwitnessed.size === 0) {
-        logger.info(line)
-      } else {
-        const write: (message: string) => void =
-          logger[strict ? 'error' : 'warn'].bind(logger)
-        write(
-          `${line} — asserted server-side only: ${[...unwitnessed].join(', ')}`
+      // How much of the run actually happened on the surface it targeted. Every
+      // step counts, so a step that fell back to the server lowers the ratio
+      // rather than needing a footnote. Assertions that fell back are named
+      // separately — those are sentences claiming an observation nobody made.
+      const surfaceCoverage = { onSurface: 0, total: 0 }
+      const unwitnessed = new Set<string>()
+      for (const name of scenarioNames) {
+        const scenario = scenarioSurfaceCoverage(
+          state.workflows?.meta?.[name],
+          functionsMeta,
+          runSurface
+        )
+        surfaceCoverage.onSurface += scenario.onSurface
+        surfaceCoverage.total += scenario.total
+        for (const step of scenario.unwitnessed) unwitnessed.add(step)
+      }
+      if (runSurface !== 'default' && surfaceCoverage.total > 0) {
+        const line = `${surfaceCoverage.onSurface}/${surfaceCoverage.total} steps ran on ${runSurface}`
+        if (unwitnessed.size === 0) {
+          logger.info(line)
+        } else {
+          const write: (message: string) => void =
+            logger[strict ? 'error' : 'warn'].bind(logger)
+          write(
+            `${line} — asserted server-side only: ${[...unwitnessed].join(', ')}`
+          )
+        }
+      }
+
+      // Exiting 0 here makes "62 held back" and "62 passed" indistinguishable
+      // to CI, which is how a whole browser suite went unrun.
+      if (unrunnable.length > 0) {
+        logger.error(
+          `${unrunnable.length} scenario(s) could not run on '${runSurface}' — no binding for that surface and no default to fall back to. ` +
+            `Run them on the surface they are written for (--run browser), or hold them back explicitly with --exclude-tags.`
         )
       }
-    }
 
-    // Exiting 0 here makes "62 held back" and "62 passed" indistinguishable
-    // to CI, which is how a whole browser suite went unrun.
-    if (unrunnable.length > 0) {
-      logger.error(
-        `${unrunnable.length} scenario(s) could not run on '${runSurface}' — no binding for that surface and no default to fall back to. ` +
-          `Run them on the surface they are written for (--run browser), or hold them back explicitly with --exclude-tags.`
-      )
-    }
-
-    if (
-      failed.length > 0 ||
-      hookFailures.length > 0 ||
-      unrunnable.length > 0 ||
-      (strict && unwitnessed.size > 0)
-    ) {
-      process.exitCode = 1
+      if (
+        failed.length > 0 ||
+        hookFailures.length > 0 ||
+        unrunnable.length > 0 ||
+        (strict && unwitnessed.size > 0)
+      ) {
+        process.exitCode = 1
+      }
+    } finally {
+      if (databaseBaseline) {
+        // The copies are tables like any other, so a database left holding them
+        // reads as schema drift the next time anything introspects it.
+        try {
+          await databaseBaseline.drop()
+        } catch (e: any) {
+          logger.warn(
+            `scenario reset: could not drop the baseline copies: ${e?.message ?? e}`
+          )
+        }
+      }
     }
   },
 })
