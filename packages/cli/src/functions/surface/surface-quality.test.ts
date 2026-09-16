@@ -275,3 +275,24 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
     )
   })
 })
+
+describe('a guessed name', () => {
+  test('is answered with the nearest real exports', () => {
+    if (!doc) return
+    // `PikkuScenarioWire` is a real internal type and a plausible guess, and it is a
+    // substring of nothing — whole-string matching left the agent with "run `pikku doc`
+    // for the index" and it went and read `@pikku/core`'s dist instead.
+    assert.throws(
+      () => renderSurfaceDoc(doc, { target: 'PikkuScenarioWire' }),
+      (error: Error) => /Did you mean: .*Scenario/.test(error.message)
+    )
+  })
+
+  test('with nothing in common is sent to the index', () => {
+    if (!doc) return
+    assert.throws(
+      () => renderSurfaceDoc(doc, { target: 'qqqzzzwibble' }),
+      /Run 'pikku doc' for the index/
+    )
+  })
+})
