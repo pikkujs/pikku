@@ -7,6 +7,11 @@ echo "Starting Pikku CLI build process..."
 test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
 rm -rf -- .pikku dist
 
+# Collect the worked examples into src/examples.gen.ts before anything compiles.
+# The recipes are real files; the bundler only carries the JS import graph, so a
+# recipe read from disk ships to npm and not to the `bun --compile` binaries.
+node scripts/embed-examples.mjs
+
 # Bootstrap using the published CLI - generates all .pikku files.
 #
 # Pin the CLI *and* the inspector together. They share the inspector state

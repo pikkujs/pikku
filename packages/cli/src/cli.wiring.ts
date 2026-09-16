@@ -34,6 +34,14 @@ import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import {
+  examplesAdd,
+  examplesList,
+  examplesShow,
+  renderExamplesAdd,
+  renderExamplesList,
+  renderExamplesShow,
+} from './functions/commands/examples.js'
+import {
   knowledgeValidate,
   renderKnowledgeValidate,
 } from './functions/commands/knowledge-validate.js'
@@ -624,6 +632,62 @@ wireCLI({
                 'Actually delete. Without it, prune only reports the blast radius',
               short: 'y',
               default: false,
+            },
+          },
+        }),
+      },
+    },
+    examples: {
+      description:
+        'Worked examples of the things that are easy to get wrong and hard to discover — read one, or write it into this project already named for your own entity',
+      subcommands: {
+        list: pikkuCLICommand({
+          func: examplesList,
+          render: renderExamplesList,
+          description: 'List every example, with what each one is for',
+          options: {
+            group: {
+              description:
+                'Only the examples whose name starts with this, e.g. `scenario`',
+              short: 'g',
+            },
+          },
+        }),
+        show: pikkuCLICommand({
+          func: examplesShow,
+          render: renderExamplesShow,
+          description:
+            'Print one example, renamed onto your own entity, with everything the recipe says about itself',
+          options: {
+            name: {
+              description: 'Which example',
+              short: 'n',
+            },
+            entity: {
+              description:
+                "The domain symbol to rewrite the example's own onto",
+              short: 'e',
+            },
+          },
+        }),
+        add: pikkuCLICommand({
+          func: examplesAdd,
+          render: renderExamplesAdd,
+          description:
+            'Write one example into this project, or say what is in the way and write nothing',
+          options: {
+            name: {
+              description: 'Which example',
+              short: 'n',
+            },
+            entity: {
+              description: "The domain symbol to rename the example's own onto",
+              short: 'e',
+            },
+            app: {
+              description:
+                'Which frontend a screen belongs to, for a project with more than one',
+              short: 'a',
             },
           },
         }),
