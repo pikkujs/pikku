@@ -364,7 +364,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        example: [online-shop]
+        example: [online-shop, field-service]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
