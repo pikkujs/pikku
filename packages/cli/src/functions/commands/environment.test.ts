@@ -1,7 +1,11 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { resolveDevEnvironmentName, resolveEnvironment } from './environment.js'
+import {
+  isLocalUrl,
+  resolveDevEnvironmentName,
+  resolveEnvironment,
+} from './environment.js'
 
 const environments = {
   local: {
@@ -205,5 +209,33 @@ describe('resolveDevEnvironmentName', () => {
 
   test('no configured environments resolves to nothing rather than a guess', () => {
     assert.equal(resolveDevEnvironmentName({}), undefined)
+  })
+})
+
+describe('isLocalUrl', () => {
+  test('every loopback spelling is this machine', () => {
+    for (const url of [
+      'http://localhost:4077',
+      'http://127.0.0.1:4077/api',
+      'http://0.0.0.0:4077',
+      'https://[::1]:4077',
+    ]) {
+      assert.equal(isLocalUrl(url), true, url)
+    }
+  })
+
+  test('a remote host is not, however it is spelled', () => {
+    for (const url of [
+      'https://api.staging.test',
+      'https://localhost.example.com',
+      'http://10.0.0.5:4077',
+    ]) {
+      assert.equal(isLocalUrl(url), false, url)
+    }
+  })
+
+  test('something that is not a URL is not this machine either', () => {
+    assert.equal(isLocalUrl('/api'), false)
+    assert.equal(isLocalUrl(''), false)
   })
 })

@@ -227,7 +227,7 @@ function resolveAgainst(root: string, p: string): string {
   return isAbsolute(p) ? p : resolve(root, p)
 }
 
-interface PostgresQueryClient {
+export interface PostgresQueryClient {
   query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>
   connect?(): Promise<unknown>
   end(): Promise<void>
@@ -487,7 +487,7 @@ function pgliteAsClient(db: PGlite): PostgresQueryClient {
   }
 }
 
-async function withPostgresClient<T>(
+export async function withPostgresClient<T>(
   resolved: ResolvedPostgresDb,
   run: (client: PostgresQueryClient) => Promise<T>
 ): Promise<T> {
