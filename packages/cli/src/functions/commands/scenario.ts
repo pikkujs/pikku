@@ -40,6 +40,7 @@ import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
 import { resolveEnvironment } from './environment.js'
+import { readDevAddress } from './dev-address.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 
 const isScenario = (wf: any) => wf?.scenario === true
@@ -191,6 +192,21 @@ export const scenarioRun = pikkuSessionlessFunc<
       logger.info(
         `Overriding '${environment}': apiUrl ${env.apiUrl}${env.appUrl ? `, appUrl ${env.appUrl}` : ''}`
       )
+    }
+
+    // A dev server that could not take the port it was asked for is the ordinary
+    // way a run against a configured environment meets a connection refused, and
+    // nothing in the failure says so. Said here, once, with the flag that fixes it.
+    if (!apiUrl && !spawn) {
+      const running = readDevAddress(
+        config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
+      )
+      if (running && running.apiUrl !== env.apiUrl) {
+        logger.warn(
+          `A \`pikku dev\` is serving ${running.apiUrl}, but '${environment}' targets ${env.apiUrl}. ` +
+            `Run against the one that is up with --api-url ${running.apiUrl}, or let this command start its own with --spawn.`
+        )
+      }
     }
 
     if (spawn) {
