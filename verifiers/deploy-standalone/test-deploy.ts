@@ -40,6 +40,7 @@ const PLAN_RESULT_FILE = join(DEPLOY_DIR, 'plan-result.json')
 const DEPLOYMENT_MANIFEST_FILE = join(DEPLOY_DIR, 'deployment-manifest.json')
 
 const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
+const USER_CONFIG_FILE = join(FUNCTIONS_DIR, 'src', 'config.ts')
 
 /**
  * Every check below names a unit after the function it holds, which only works
@@ -49,7 +50,11 @@ const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
  * subject.
  */
 const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
-const restoreConfig = () => writeFileSync(CONFIG_FILE, originalConfig)
+const originalUserConfig = readFileSync(USER_CONFIG_FILE, 'utf-8')
+const restoreConfig = () => {
+  writeFileSync(CONFIG_FILE, originalConfig)
+  writeFileSync(USER_CONFIG_FILE, originalUserConfig)
+}
 process.on('exit', restoreConfig)
 process.on('SIGINT', () => {
   restoreConfig()
@@ -57,7 +62,8 @@ process.on('SIGINT', () => {
 })
 // A signalled exit never emits 'exit', so the restore has to be hung off each
 // signal by hand — a killed verifier that skipped it would leave the shared
-// template config pinned to 'function' and quietly change what every later
+// template config pinned to 'function', and `src/config.ts` holding the
+// database the phase below writes into it, quietly changing what every later
 // verifier builds.
 process.on('SIGTERM', () => {
   restoreConfig()
@@ -418,6 +424,61 @@ try {
     proc.kill('SIGTERM')
     await new Promise((resolve) => proc!.on('close', resolve))
   }
+}
+
+// ---------------------------------------------------------------------------
+// A database declared in createConfig, with no migrations directory.
+//
+// Every other pikku host resolves the database from `createConfig` first and
+// falls back to `db/<engine>`; the standalone build read only the directory, so
+// an app in this shape got a `kysely` under `pikku dev` and none in its
+// artifact — a clean build whose first act was to die in
+// `createSingletonServices`. Running the real plan is the point: the unit test
+// hands `loadUserConfigForDb` a plain config file, and this is the only place
+// that proves the deploy build can load the project's own `config.ts`.
+// ---------------------------------------------------------------------------
+
+writeFileSync(
+  USER_CONFIG_FILE,
+  originalUserConfig.replace(
+    '    awsRegion:',
+    "    sqliteDb: '.pikku-runtime/dev.db',\n    awsRegion:"
+  )
+)
+
+try {
+  execSync(
+    `node ${PIKKU_BIN} deploy plan --provider standalone --result-file .deploy/standalone/plan-result.json`,
+    { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 300_000 }
+  )
+
+  const dbEntry = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
+
+  await check('config-declared db: entry opens sqlite', () => {
+    if (!dbEntry.includes('@pikku/kysely-node-sqlite')) {
+      throw new Error('Entry imports no sqlite dialect')
+    }
+  })
+  await check(
+    'config-declared db: entry hands kysely to createSingletonServices',
+    () => {
+      const call = dbEntry.slice(
+        dbEntry.indexOf('createSingletonServices(config')
+      )
+      if (!/^[\s\S]*?\n {4}kysely,/.test(call)) {
+        throw new Error('createSingletonServices is called without kysely')
+      }
+    }
+  )
+} catch (e) {
+  failures++
+  results.push({
+    name: 'config-declared db: deploy plan',
+    passed: false,
+    error: (e as Error).message,
+  })
+} finally {
+  restoreConfig()
 }
 
 // --- Results ---
