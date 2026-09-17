@@ -1,3 +1,39 @@
+## 0.12.154
+
+### Patch Changes
+
+- b1d08fe: Set a busy timeout on the sqlite scenario baseline connection. The app under
+  test keeps its own connection to the file, and a rollback-journal database gives
+  a writer an exclusive lock, so a restore that overlapped one of the app's reads
+  failed the scenario outright with `database is locked`.
+- c354d17: Stop marking every bun and pnpm install as linked framework code in a finding
+- d10f5c2: Resolve a standalone build's database the way every other pikku host resolves it.
+
+  A standalone artifact opens its own database, and decided it had one by looking
+  for `db/sqlite` or `db/postgres` on disk. Every other host goes through
+  `loadUserConfigForDb`: `createConfig`'s `sqliteDb` / `postgresUrl` first, the
+  directory conventions only as the fallback. An app that declares its database in
+  config and keeps no migrations therefore got a `kysely` under `pikku dev` and
+  none in its artifact — a clean build, a plausible 94MB bundle, and a first run
+  that died on the line of `createSingletonServices` that reads it.
+
+  The build now asks the same question in the same order. Only the engine travels:
+  a configured SQLite path is a developer's local file and has no meaning on the
+  target host, which still names its own through `PIKKU_DATA_DIR`. Declaring both
+  dialects is refused by name, matching the existing refusal of two migration
+  directories, and a `createConfig` that cannot be loaded falls back to the
+  directories rather than failing a build — a project with no database at all must
+  still bundle.
+
+  Two JSDoc blocks that had drifted off their declarations are reattached:
+  `EntryGenerationContext['db']`, which was documenting `version`, and
+  `resolveStandaloneDb`, which was documenting `resolveProjectVersion`.
+
+- Updated dependencies [02eeffb]
+- Updated dependencies [d10f5c2]
+  - @pikku/core@0.12.112
+  - @pikku/deploy@0.12.11
+
 ## 0.12.153
 
 ### Patch Changes
