@@ -24,27 +24,53 @@ const scenarioCount = (count: number) =>
     : m.scenarios_scenario_count({ count })
 
 /**
- * How a feature is doing, at rail width: one bar, one segment per outcome, in
- * the order that decides what the eye lands on — a single red scenario in a
- * feature of forty is the thing worth seeing from here.
+ * How many scenarios a bar draws a cell each for.
+ *
+ * Past this the cells are thinner than the gaps between them at rail width and
+ * the bar reads as a dotted line rather than a count, so a larger feature goes
+ * back to one segment per outcome — the shape that still says something when
+ * there is no room left to count.
+ */
+const COUNTABLE = 48
+
+const Segment: React.FC<{
+  status: keyof ScenarioFeatureTally
+  grow: number
+}> = ({ status, grow }) => (
+  <Box
+    className={status === 'running' ? classes.statusPulse : undefined}
+    style={{
+      height: 3,
+      borderRadius: 2,
+      flexGrow: grow,
+      minWidth: 0,
+      background: SCENARIO_STATUS_COLOUR[status],
+    }}
+  />
+)
+
+/**
+ * How a feature is doing, at rail width: one cell per scenario, ordered by
+ * outcome so what the eye lands on is a single red scenario in a feature of
+ * forty. Cells rather than one block per outcome because a bar is also how many
+ * — a feature of fifteen passing scenarios and a feature of two both fill their
+ * width, and only the number of cells tells them apart.
  */
 const ResultBar: React.FC<{ tally: ScenarioFeatureTally }> = ({ tally }) => {
   const total = SEGMENTS.reduce((sum, key) => sum + tally[key], 0)
   if (total === 0) return null
+  const cells = SEGMENTS.flatMap((key) =>
+    Array.from({ length: tally[key] }, () => key)
+  )
   return (
     <Group gap={2} wrap="nowrap" data-testid="feature-result-bar">
-      {SEGMENTS.filter((key) => tally[key] > 0).map((key) => (
-        <Box
-          key={key}
-          className={key === 'running' ? classes.statusPulse : undefined}
-          style={{
-            height: 3,
-            borderRadius: 2,
-            flexGrow: tally[key],
-            background: SCENARIO_STATUS_COLOUR[key],
-          }}
-        />
-      ))}
+      {total <= COUNTABLE
+        ? cells.map((status, index) => (
+            <Segment key={index} status={status} grow={1} />
+          ))
+        : SEGMENTS.filter((key) => tally[key] > 0).map((key) => (
+            <Segment key={key} status={key} grow={tally[key]} />
+          ))}
     </Group>
   )
 }
