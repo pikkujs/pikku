@@ -87,7 +87,13 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
       Object.keys(mcpEndpoints.toolsMeta).length > 0 ||
       Object.keys(mcpEndpoints.resourcesMeta).length > 0 ||
       Object.keys(mcpEndpoints.promptsMeta).length > 0
-    if (mcpEndpoints.files.size === 0 || !hasMcpContent) {
+    // `files` holds the source files that call wireMCPTool/Resource/Prompt. An
+    // addon that contributes tools via `wireAddon({ mcp: [...] })` adds none, so
+    // gating on it skipped the wirings AND the meta for addon-only apps — the
+    // tools listed from mcp.gen.json but every call failed resolution, because
+    // toolsMeta (which carries pikkuFuncId) was never written. Content is what
+    // decides; the file set only decides whether there are imports to serialize.
+    if (!hasMcpContent) {
       return undefined
     }
 

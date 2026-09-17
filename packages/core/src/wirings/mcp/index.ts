@@ -12,6 +12,9 @@ export {
   getMCPToolsMeta,
   getMCPPromptsMeta,
   mcpTargetRequiresSession,
+  mcpEveryTargetRequiresSession,
+  mcpWireName,
+  mcpResolveWireName,
 } from './mcp-runner.js'
 export type {
   AssertMCPResourceURIParams,

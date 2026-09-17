@@ -347,6 +347,9 @@ export const mcpTargetRequiresSession = (
   type: 'tool' | 'resource' | 'prompt',
   name: string
 ): boolean => {
+  // The transport passes the name exactly as the client sent it, which is the
+  // wire spelling — see `mcpWireName`.
+  name = mcpResolveWireName(type, name)
   const meta =
     type === 'tool'
       ? pikkuState(null, 'mcp', 'toolsMeta')[name]
@@ -372,4 +375,76 @@ export const mcpTargetRequiresSession = (
     return false
   }
   return !funcMeta.sessionless || funcMeta.auth === true
+}
+
+/**
+ * Whether every registered MCP target needs a session — i.e. whether this
+ * server has nothing at all to offer an anonymous caller.
+ *
+ * A client decides at connection time whether a server speaks OAuth, and the
+ * only thing it can decide from is whether the handshake was challenged. A
+ * server that answers `initialize` with a `200` and then `401`s every single
+ * tool call has told the client "no sign-in needed" and then refused it
+ * everything — which is how a fully-gated server ends up detected as open.
+ *
+ * So the handshake is challenged too, but only when the answer here is yes.
+ * A server with even one open target genuinely is usable anonymously, and
+ * challenging its handshake would lock out clients that have no credentials
+ * to offer. An empty registry is not "all gated" — there is nothing to gate.
+ */
+export const mcpEveryTargetRequiresSession = (): boolean => {
+  const targets: Array<['tool' | 'resource' | 'prompt', string[]]> = [
+    ['tool', Object.keys(pikkuState(null, 'mcp', 'toolsMeta'))],
+    ['resource', Object.keys(pikkuState(null, 'mcp', 'resourcesMeta'))],
+    ['prompt', Object.keys(pikkuState(null, 'mcp', 'promptsMeta'))],
+  ]
+  let seen = 0
+  for (const [type, names] of targets) {
+    for (const name of names) {
+      seen++
+      if (!mcpTargetRequiresSession(type, name)) {
+        return false
+      }
+    }
+  }
+  return seen > 0
+}
+
+/**
+ * How a target's name is spelled on the wire.
+ *
+ * MCP clients constrain tool and prompt names to `[A-Za-z0-9_-]`. Pikku's
+ * namespace separator is `:`, so every target contributed by an addon —
+ * `bb2:getMe` and friends — is a name the client cannot accept, and clients
+ * drop them from the session rather than fail the connection. The names are
+ * therefore rewritten at the transport boundary and resolved back on the way
+ * in; the namespace itself is untouched, since it is what dispatch keys on.
+ */
+export const mcpWireName = (name: string): string =>
+  name.replace(/[^A-Za-z0-9_-]/g, '_')
+
+/**
+ * The registered name a client's wire name refers to.
+ *
+ * A name that is already registered is returned as-is: rewriting is lossy in
+ * principle (`a:b` and `a_b` collapse together), so an exact match always wins
+ * over a rewritten one, and a name matching nothing is handed back unchanged
+ * for the runner to report as `Method not found`.
+ */
+export const mcpResolveWireName = (
+  type: 'tool' | 'resource' | 'prompt',
+  wireName: string
+): string => {
+  const meta =
+    type === 'tool'
+      ? pikkuState(null, 'mcp', 'toolsMeta')
+      : type === 'resource'
+        ? pikkuState(null, 'mcp', 'resourcesMeta')
+        : pikkuState(null, 'mcp', 'promptsMeta')
+  if (meta[wireName]) {
+    return wireName
+  }
+  return (
+    Object.keys(meta).find((name) => mcpWireName(name) === wireName) ?? wireName
+  )
 }

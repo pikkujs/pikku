@@ -1,4 +1,7 @@
-import { mcpTargetRequiresSession } from '@pikku/core/mcp'
+import {
+  mcpEveryTargetRequiresSession,
+  mcpTargetRequiresSession,
+} from '@pikku/core/mcp'
 import {
   bearerAuthChallengeResponse,
   getOAuthProtectedResourceMetadataUrl,
@@ -38,9 +41,29 @@ const corsHeaders = {
     'Authorization, Content-Type, MCP-Protocol-Version',
 }
 
-/** The public URL of the MCP endpoint itself, as the caller reached it. */
-const resourceUrl = (request: Request, mcpPath: string): URL =>
-  new URL(mcpPath, new URL(request.url).origin)
+/**
+ * The public URL of the MCP endpoint itself, as the caller reached it.
+ *
+ * Behind a TLS-terminating reverse proxy the server sees a plaintext request, so
+ * `request.url` carries the internal `http://host:port` rather than the origin
+ * the client actually used. Advertising that in `resource` breaks discovery: a
+ * client that reached us over HTTPS is told the resource lives at an http:// URL
+ * and refuses to treat it as the same resource. `X-Forwarded-Proto` / `-Host`
+ * are what the proxy sets to describe the outside view, so prefer them and fall
+ * back to the request's own origin when the server is exposed directly.
+ */
+const resourceUrl = (request: Request, mcpPath: string): URL => {
+  const direct = new URL(request.url)
+  // A proxy chain sets a comma-separated list; the first entry is the client.
+  const proto =
+    request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() ||
+    direct.protocol.replace(':', '')
+  const host =
+    request.headers.get('x-forwarded-host')?.split(',')[0]?.trim() ||
+    request.headers.get('host') ||
+    direct.host
+  return new URL(mcpPath, `${proto}://${host}`)
+}
 
 /**
  * The URL to name in a `WWW-Authenticate` challenge, per RFC 9728.
@@ -188,7 +211,15 @@ export const requestNeedsCredentials = async (
 
   const messages = Array.isArray(body) ? body : [body]
   return messages.some((message) => {
-    const target = GATED_METHODS[(message as { method?: string })?.method ?? '']
+    const method = (message as { method?: string })?.method ?? ''
+    // The handshake is challenged too, but only on a server where every target
+    // is gated. That is the one case where answering it `200` misinforms the
+    // client: it concludes the server needs no sign-in, and then finds it can
+    // call nothing. See `mcpEveryTargetRequiresSession`.
+    if (method === 'initialize') {
+      return mcpEveryTargetRequiresSession()
+    }
+    const target = GATED_METHODS[method]
     if (!target) {
       return false
     }
