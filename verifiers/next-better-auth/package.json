@@ -12,7 +12,7 @@
     "@pikku/kysely": "workspace:*",
     "@pikku/next": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "better-auth": "^1.6.29",
+    "better-auth": "^1.7.5",
     "better-sqlite3": "^13.0.3",
     "kysely": "^0.29.5",
     "next": "15.5.23",

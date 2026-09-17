@@ -16,7 +16,7 @@
     "@pikku/better-auth": "workspace:*",
     "@pikku/voice-agents": "workspace:*",
     "ai": "^7.0.66",
-    "better-auth": "^1.6.29",
+    "better-auth": "^1.7.5",
     "zod": "*"
   },
   "peerDependencies": {

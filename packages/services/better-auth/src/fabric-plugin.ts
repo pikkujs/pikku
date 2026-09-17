@@ -400,14 +400,17 @@ export const pikkuFabric = (options: FabricPluginOptions): BetterAuthPlugin => {
             })
           }
           if (!user) {
-            user = (await ctx.context.internalAdapter.createUser({
-              email,
-              emailVerified: true,
-              name: name ?? 'Fabric',
-              fabric: true,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            })) as unknown as FabricUser | undefined
+            user = (await ctx.context.internalAdapter.createUser(
+              {
+                email,
+                emailVerified: true,
+                name: name ?? 'Fabric',
+                fabric: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+              { method: 'fabric' }
+            )) as unknown as FabricUser | undefined
             if (!user) {
               throw new APIError('INTERNAL_SERVER_ERROR', {
                 message: 'Failed to create fabric user',

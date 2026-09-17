@@ -11,7 +11,7 @@
     "@pikku/kysely": "workspace:^",
     "@pikku/schema-cfworker": "^0.12.7",
     "@pikku/templates-function-addon": "workspace:*",
-    "better-auth": "^1.6.29",
+    "better-auth": "^1.7.5",
     "eventsource": "^5.1.0",
     "kysely": "^0.29.5",
     "ws": "^8.21.3",

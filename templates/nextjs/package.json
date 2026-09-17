@@ -20,7 +20,7 @@
     "@pikku/fetch": "^0.12.11",
     "@pikku/jose": "^0.12.7",
     "@pikku/next": "^0.12.11",
-    "better-auth": "^1.6.29",
+    "better-auth": "^1.7.5",
     "next": "15.5.23",
     "react": "^19",
     "react-dom": "^19",
