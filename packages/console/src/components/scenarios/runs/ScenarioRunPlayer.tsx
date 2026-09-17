@@ -14,9 +14,10 @@ type ScenarioRunPlayerProps = {
 /**
  * The scenario's recording, seeked by whichever step is selected.
  *
- * One player per open scenario rather than one per artifact: the bytes are
- * fetched into memory to carry the console's Authorization header, so a run
- * that mounted every recording at once would pull the whole run down with it.
+ * A scenario that casts several apps records one video per actor, and they
+ * stack down the footage column captioned by actor. The bytes are fetched into
+ * memory to carry the console's Authorization header, so a run that mounted
+ * every scenario's recordings at once would pull the whole run down with it.
  */
 export const ScenarioRunPlayer: React.FC<ScenarioRunPlayerProps> = ({
   runId,
