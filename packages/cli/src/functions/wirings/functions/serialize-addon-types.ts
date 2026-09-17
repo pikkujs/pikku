@@ -10,13 +10,67 @@
  * `#pikku/addon/<leaf>` — a depth at which an application has nothing to match,
  * leaving the resolver to fall back to Node's per-package `imports`.
  */
-export const serializeAddonInstallTypes = () =>
-  `/**
+export const serializeAddonInstallTypes = (
+  addonFunctionNames: Record<string, string[]> = {}
+) => {
+  const packages = Object.entries(addonFunctionNames).filter(
+    ([, names]) => names.length > 0
+  )
+
+  // Nothing installed yet — the bootstrap run writes this before any addon's
+  // metadata has been read, and a project with no addons never gets more.
+  if (packages.length === 0) {
+    return `/**
  * Installing an addon into this application
  */
 
 export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'
 `
+  }
+
+  const entries = packages
+    .map(
+      ([pkg, names]) =>
+        `  ${JSON.stringify(pkg)}: ${names
+          .map((name) => JSON.stringify(name))
+          .join(' | ')}`
+    )
+    .join('\n')
+
+  return `/**
+ * Installing an addon into this application
+ */
+
+import { wireAddon as wireAddonCore } from '@pikku/core/addon'
+import type { WireAddonConfig } from '@pikku/core/addon'
+
+export { wireRemoteAddon } from '@pikku/core/addon'
+
+/**
+ * The functions each installed addon publishes. \`mcp\` names them.
+ */
+type AddonFunctions = {
+${entries}
+}
+
+type AddonFunctionName<Package extends string> =
+  Package extends keyof AddonFunctions ? AddonFunctions[Package] : string
+
+/**
+ * Installs an addon into this project: its functions, wirings and scopes become
+ * part of the app, under the namespace and options given here.
+ *
+ * \`mcp: true\` offers every function the addon itself declared as a tool; a list
+ * names the functions to offer, checked against the ones the addon publishes.
+ */
+export const wireAddon = <Package extends string>(
+  config: Omit<WireAddonConfig, 'package' | 'mcp'> & {
+    package: Package
+    mcp?: boolean | AddonFunctionName<Package>[]
+  }
+): void => wireAddonCore(config)
+`
+}
 
 export const serializeAddonTypes = (
   singletonServicesTypeImport: string,

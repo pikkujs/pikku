@@ -3,6 +3,7 @@ import { readFile, readdir } from 'fs/promises'
 import { createRequire } from 'module'
 import { join, dirname } from 'path'
 import type { InspectorState, InspectorLogger } from '../types.js'
+import { ErrorCode } from '../error-codes.js'
 import type {
   ExportedChannelContractsMeta,
   ExportedHTTPRouteConfigMeta,
@@ -218,19 +219,34 @@ export async function loadAddonFunctionsMeta(
       )
       registerAddonTypes(state, metaPath, meta)
 
-      // If wireAddon has mcp: true, expose addon functions with mcp: true as MCP tools
+      // `mcp: true` offers what the addon declared as tools; `mcp: [...]` names
+      // the functions to offer, whatever the addon declared — the consuming app
+      // decides which of the addon's functions a model gets to see.
       if (decl.mcp) {
+        const selected = Array.isArray(decl.mcp) ? new Set(decl.mcp) : null
         for (const [funcName, funcMeta] of Object.entries<any>(meta)) {
-          if (funcMeta.mcp) {
-            const toolName = `${namespace}:${funcName}`
-            state.mcpEndpoints.toolsMeta[toolName] = {
-              pikkuFuncId: `${namespace}:${funcName}`,
-              name: toolName,
-              description: funcMeta.description || funcMeta.title || funcName,
-              inputSchema: funcMeta.inputSchemaName ?? null,
-              outputSchema: funcMeta.outputSchemaName ?? null,
-              tags: funcMeta.tags,
-            }
+          if (selected ? !selected.has(funcName) : !funcMeta.mcp) {
+            continue
+          }
+          const toolName = `${namespace}:${funcName}`
+          state.mcpEndpoints.toolsMeta[toolName] = {
+            pikkuFuncId: `${namespace}:${funcName}`,
+            name: toolName,
+            description: funcMeta.description || funcMeta.title || funcName,
+            inputSchema: funcMeta.inputSchemaName ?? null,
+            outputSchema: funcMeta.outputSchemaName ?? null,
+            tags: funcMeta.tags,
+          }
+        }
+        // A name the addon does not publish is a tool the app believes it
+        // offers and never does, so it fails the build rather than silently
+        // offering one tool fewer than the list says.
+        for (const funcName of selected ?? []) {
+          if (!(funcName in meta)) {
+            logger.critical(
+              ErrorCode.ADDON_MCP_FUNCTION_NOT_FOUND,
+              `wireAddon('${namespace}') lists '${funcName}' under mcp, but ${decl.package} publishes no such function.`
+            )
           }
         }
       }

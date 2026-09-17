@@ -53,7 +53,6 @@ describe('addWireAddon', () => {
 
     assert.deepEqual(declarations.get('console'), {
       package: '@pikku/addon-console',
-      file: 'wiring.ts',
       rpcEndpoint: '/rpc',
       mcp: undefined,
       auth: true,
@@ -174,6 +173,32 @@ describe('addWireAddon', () => {
     `)
 
     assert.equal(declarations.get('console').scopes, undefined)
+  })
+
+  test('records the tool list an addon is offered to MCP under', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'todos', package: '@x/y', mcp: ['listTodos', 'getTodo'] })
+    `)
+
+    assert.deepEqual(declarations.get('todos').mcp, ['listTodos', 'getTodo'])
+  })
+
+  test('still records mcp: true, which offers what the addon declared', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'todos', package: '@x/y', mcp: true })
+    `)
+
+    assert.equal(declarations.get('todos').mcp, true)
+  })
+
+  test('drops an mcp list that is not statically knowable', () => {
+    // Read as a partial list it would look like a narrower tool menu than the
+    // one the app actually offers, which is the wrong way round to be wrong.
+    const declarations = inspect(`
+      wireAddon({ name: 'todos', package: '@x/y', mcp: [...TOOLS] })
+    `)
+
+    assert.equal(declarations.get('todos').mcp, undefined)
   })
 
   test('keeps an explicitly empty scopes array distinct from an absent one', () => {

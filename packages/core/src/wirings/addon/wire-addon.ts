@@ -10,8 +10,13 @@ export type WireAddonConfig = {
   rpcEndpoint?: string
   /** Requires a session for every function in the addon, whatever each one declares. Gates an addon whose functions are individually open. */
   auth?: boolean
-  /** Offers the addon's functions to MCP clients as tools, without wiring each one. */
-  mcp?: boolean
+  /**
+   * Offers the addon's functions to MCP clients as tools, without wiring each
+   * one. `true` offers every function the addon itself declared `mcp: true`; a
+   * list names the functions to offer, whether or not the addon declared them,
+   * and is typed against the addon's function names.
+   */
+  mcp?: boolean | string[]
   /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /** Required of every function in the addon, on top of the function's own. */

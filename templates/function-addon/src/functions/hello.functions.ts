@@ -7,6 +7,7 @@ export const hello = pikkuSessionlessFunc<
   { message: string; timestamp: number; noopCalls: number }
 >({
   description: 'Sends a friendly greeting message',
+  mcp: true,
   func: async ({ logger, noop }, data) => {
     const greeting = data.greeting || 'Hello'
     const message = `${greeting}, ${data.name}!`

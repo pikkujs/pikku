@@ -1,4 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
+import type { InspectorState } from '@pikku/inspector'
 import { rm } from 'fs/promises'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
@@ -11,6 +12,28 @@ import {
 
 type AddonTypesCommandInput = {
   bootstrap?: boolean
+}
+
+/**
+ * The functions each installed addon publishes, by package — what `mcp` on a
+ * `wireAddon` is typed against. A package wired twice contributes the same
+ * names under both namespaces, and a remote addon contributes none: its
+ * functions run on the host, and it is `wireRemoteAddon` that installs it.
+ */
+const addonFunctionNames = (
+  state: InspectorState
+): Record<string, string[]> => {
+  const names: Record<string, string[]> = {}
+  for (const [namespace, decl] of state.rpc.wireAddonDeclarations) {
+    if (decl.remote) {
+      continue
+    }
+    const meta = state.addonFunctions[namespace]
+    if (meta) {
+      names[decl.package] = Object.keys(meta)
+    }
+  }
+  return names
 }
 
 export const pikkuAddonTypes = pikkuSessionlessFunc<
@@ -36,15 +59,24 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<
       force: true,
     })
 
-    // An application installs addons; an addon package declares itself. Both
-    // halves are static, so the app half needs no inspector pass and is written
-    // on the bootstrap run as readily as on the full one.
+    const bootstrap = input?.bootstrap === true
+
+    // An application installs addons; an addon package declares itself. The app
+    // half is written on the bootstrap run too — `wireAddon` has to resolve
+    // before the inspector can read the calls that say which addons are
+    // installed — but only the full run knows what each addon publishes, so
+    // that is when `mcp` gets its names.
     if (!config.addon) {
-      await writeFileInDir(logger, addonTypesFile, serializeAddonInstallTypes())
+      await writeFileInDir(
+        logger,
+        addonTypesFile,
+        serializeAddonInstallTypes(
+          bootstrap ? {} : addonFunctionNames(await getInspectorState())
+        )
+      )
       return
     }
 
-    const bootstrap = input?.bootstrap === true
     if (bootstrap) {
       await writeFileInDir(logger, addonSetupTypesFile, 'export {}\n')
       return

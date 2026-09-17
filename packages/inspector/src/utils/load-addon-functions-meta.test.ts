@@ -155,3 +155,83 @@ describe('loadAddonFunctionsMeta — per-instance secret/variable overrides', ()
     )
   })
 })
+
+describe('loadAddonFunctionsMeta — which of an addon’s functions reach MCP', () => {
+  let rootDir: string
+
+  const FUNCTIONS = {
+    postMessage: { mcp: true, description: 'Post a message' },
+    listChannels: { mcp: true },
+    rotateToken: {},
+  }
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-mcp-'))
+    writeAddonFixture(rootDir)
+    writeFileSync(
+      join(
+        rootDir,
+        'node_modules',
+        ADDON,
+        '.pikku',
+        'function',
+        'pikku-functions-meta.gen.json'
+      ),
+      JSON.stringify(FUNCTIONS)
+    )
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const toolNames = async (
+    mcp: boolean | string[] | undefined,
+    log = logger
+  ) => {
+    const state = makeState(
+      rootDir,
+      new Map<string, any>([['slack', { package: ADDON, mcp }]])
+    )
+    await loadAddonFunctionsMeta(log, state)
+    return Object.keys(state.mcpEndpoints.toolsMeta).sort()
+  }
+
+  test('mcp: true offers every function the addon declared as a tool', async () => {
+    assert.deepEqual(await toolNames(true), [
+      'slack:listChannels',
+      'slack:postMessage',
+    ])
+  })
+
+  test('a list names the tools, including one the addon never declared', async () => {
+    // The addon says which of its functions are tool-shaped; the app installing
+    // it says which of them this deployment offers a model.
+    assert.deepEqual(await toolNames(['postMessage', 'rotateToken']), [
+      'slack:postMessage',
+      'slack:rotateToken',
+    ])
+  })
+
+  test('an empty list offers nothing, unlike an absent one', async () => {
+    assert.deepEqual(await toolNames([]), [])
+    assert.deepEqual(await toolNames(undefined), [])
+  })
+
+  test('a name the addon does not publish fails the build', async () => {
+    const criticals: string[] = []
+    const failing = {
+      ...logger,
+      critical: (code: string, message: string) => {
+        criticals.push(`${code}: ${message}`)
+      },
+    } as unknown as InspectorLogger
+
+    assert.deepEqual(await toolNames(['postMessage', 'postMesage'], failing), [
+      'slack:postMessage',
+    ])
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!, /PKU341/)
+    assert.match(criticals[0]!, /postMesage/)
+  })
+})

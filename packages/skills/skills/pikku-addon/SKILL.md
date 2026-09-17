@@ -47,7 +47,7 @@ wireAddon({
   package: string,                 // NPM package name (e.g. '@pikku/addon-todos')
   rpcEndpoint?: string,            // Optional remote RPC endpoint for distributed execution
   auth?: boolean,                  // Require a session for every function in the addon
-  mcp?: boolean,
+  mcp?: boolean | string[],        // true: every function the addon declared mcp: true; a list: the tools this app offers, typed against the addon's function names
   tags?: string[],                 // Tags applied to all addon functions
   scopes?: string[],               // Required of every function, on top of its own
   secretOverrides?: Record<string, string>,      // Remap secret names (and grant them)
@@ -323,11 +323,6 @@ wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 ```
 
 After registration, run `yarn pikku all` to generate types for the addon's functions.
-
-Give each addon its own wiring file. A deployment unit imports a `wireAddon`
-file only while at least one addon that file wires survives the unit's filter,
-so wiring two addons from one file means a unit needing either one registers
-both and bundles both packages' dependencies.
 
 If the addon ships tables, `pikku db generate` then writes one migration per
 addon — named after the package, carrying the addon's own SQL — after Better
