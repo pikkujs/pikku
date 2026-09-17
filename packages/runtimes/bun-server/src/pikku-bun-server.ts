@@ -1,5 +1,7 @@
 import type { Server as BunServer, ServerWebSocket } from 'bun'
 
+import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
+
 import type { CoreConfig } from '@pikku/core/types'
 import { stopSingletonServices } from '@pikku/core/utils'
 import type { JWTService, Logger } from '@pikku/core/services'
@@ -80,6 +82,13 @@ export type PikkuBunServerOptions = RunHTTPWiringOptions & {
    */
   mcpPath?: string
   /**
+   * What the MCP endpoint advertises to a client it has refused: the
+   * authorization servers that mint its tokens, the scopes it understands, and
+   * a name for the resource. Every field defaults from the request, so an app
+   * that is its own authorization server needs none of it.
+   */
+  mcpAuth?: MCPAuthOptions
+  /**
    * The JWT service `LocalContent` signs asset URLs with. Required to serve
    * `config.content`'s asset prefix: without it every signed read is refused,
    * since an unverifiable signature is no signature. Falls back to
@@ -127,6 +136,8 @@ export class PikkuBunServer {
   private readonly options: RunHTTPWiringOptions
   private readonly mcpJson?: PikkuBunServerOptions['mcpJson']
   private readonly mcpPath: string
+  private readonly mcpAuth?: MCPAuthOptions
+  private mcpOwnsPath?: (pathname: string) => boolean
   private mcpHandler?: (request: Request) => Promise<Response>
   private readonly localContent?: LocalContentRequestHandler
 
@@ -135,11 +146,18 @@ export class PikkuBunServer {
     private readonly logger: Logger,
     options: PikkuBunServerOptions = {}
   ) {
-    const { eventHub, mcpJson, mcpPath, contentSigningJWT, ...httpOptions } =
-      options
+    const {
+      eventHub,
+      mcpJson,
+      mcpPath,
+      mcpAuth,
+      contentSigningJWT,
+      ...httpOptions
+    } = options
     this.eventHub = eventHub ?? new BunEventHubService()
     this.mcpJson = mcpJson
     this.mcpPath = mcpPath ?? '/mcp'
+    this.mcpAuth = mcpAuth
     this.options = httpOptions
     this.localContent = config.content
       ? createLocalContentRequestHandler({
@@ -182,8 +200,12 @@ export class PikkuBunServer {
         this.logger
       )
       await mcpServer.init()
-      const { handler } = mcpServer.createFetchHandler({ path: this.mcpPath })
+      const { handler, ownsPath } = mcpServer.createFetchHandler({
+        path: this.mcpPath,
+        auth: this.mcpAuth,
+      })
       this.mcpHandler = handler
+      this.mcpOwnsPath = ownsPath
       this.logger.info(`pikku-bun-server: MCP mounted at ${this.mcpPath}`)
     } catch (err) {
       this.logger.warn(
@@ -193,7 +215,7 @@ export class PikkuBunServer {
   }
 
   public async start(): Promise<void> {
-    const { config, logger, options, eventHub, mcpHandler, mcpPath } = this
+    const { config, logger, options, eventHub, mcpHandler } = this
 
     this.server = Bun.serve<WsData>({
       port: config.port,
@@ -227,8 +249,10 @@ export class PikkuBunServer {
         }
 
         if (mcpHandler) {
+          // `ownsPath` rather than `mcpPath`, because the OAuth discovery
+          // document the challenge points at lives outside the endpoint.
           const pathname = new URL(req.url).pathname
-          if (pathname === mcpPath || pathname.startsWith(`${mcpPath}/`)) {
+          if (this.mcpOwnsPath?.(pathname)) {
             return await mcpHandler(req)
           }
         }

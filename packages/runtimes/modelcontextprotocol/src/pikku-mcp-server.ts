@@ -22,6 +22,14 @@ import {
 } from '@modelcontextprotocol/server'
 import { serveStdio } from '@modelcontextprotocol/server/stdio'
 
+import {
+  isMCPPath,
+  protectedResourceMetadataResponse,
+  requestNeedsCredentials,
+  unauthorizedResponse,
+  type MCPAuthOptions,
+} from './mcp-auth.js'
+
 import type { CoreConfig } from '@pikku/core/types'
 import { stopSingletonServices } from '@pikku/core/utils'
 import type { Logger } from '@pikku/core/services'
@@ -242,10 +250,15 @@ export class PikkuMCPServer {
    * same reason fetch is: each request brings its own credentials rather than
    * inheriting them from whoever opened a session id.
    */
-  public createHTTPRequestHandler(options?: { path?: string }): {
+  public createHTTPRequestHandler(options?: {
+    path?: string
+    auth?: MCPAuthOptions
+  }): {
     handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>
+    /** Which paths this handler answers, so a host routes the discovery document here too. */
+    ownsPath: (pathname: string) => boolean
   } {
-    const { handler: fetchHandler } = this.createFetchHandler(options)
+    const { handler: fetchHandler, ownsPath } = this.createFetchHandler(options)
     const processLogger = this.logger
 
     const handler = async (req: IncomingMessage, res: ServerResponse) => {
@@ -268,7 +281,7 @@ export class PikkuMCPServer {
       }
     }
 
-    return { handler }
+    return { handler, ownsPath }
   }
 
   /**
@@ -284,14 +297,26 @@ export class PikkuMCPServer {
    *
    * 2025-era clients keep working: `legacy` defaults to `'stateless'`, which
    * answers them from the same factory rather than refusing them.
+   *
+   * The endpoint is not gated as a whole, because pikku already knows tool by
+   * tool which calls need a session: a `pikkuSessionlessFunc` is public and
+   * anything declaring `auth: true` is not. A public tool is answered as it
+   * always was, and only a call the runner actually refused becomes a `401`
+   * with the challenge that sends a client to the authorization server.
    */
-  public createFetchHandler(options?: { path?: string }): {
+  public createFetchHandler(options?: {
+    path?: string
+    auth?: MCPAuthOptions
+  }): {
     handler: (
       request: Request,
       requestOptions?: { authInfo?: AuthInfo }
     ) => Promise<Response>
+    /** Which paths this handler answers, so a host routes the discovery document here too. */
+    ownsPath: (pathname: string) => boolean
   } {
     const mcpPath = options?.path ?? '/mcp'
+    const auth = options?.auth
     this.httpHandler ??= createMcpHandler(this.serverFactory, {
       onerror: (error) => this.logger.error('mcp handler error', error),
     })
@@ -300,13 +325,20 @@ export class PikkuMCPServer {
       request: Request,
       requestOptions?: { authInfo?: AuthInfo }
     ): Promise<Response> => {
+      const metadata = protectedResourceMetadataResponse(request, mcpPath, auth)
+      if (metadata) {
+        return metadata
+      }
       const url = new URL(request.url)
       if (url.pathname !== mcpPath) {
         return new Response(null, { status: 404 })
       }
+      if (await requestNeedsCredentials(request)) {
+        return unauthorizedResponse(request, mcpPath, auth)
+      }
       return mcpHandler.fetch(request, requestOptions)
     }
-    return { handler }
+    return { handler, ownsPath: (pathname) => isMCPPath(pathname, mcpPath) }
   }
 
   public async connectHTTP(options?: MCPHttpOptions): Promise<{

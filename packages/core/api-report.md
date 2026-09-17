@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3017 observable things**: 977 exported names, plus
+**3018 observable things**: 978 exported names, plus
 2040 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
@@ -27,9 +27,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./errors` | 50 | 50 | 22 |
 | `./analytics` | 26 | 26 | 40 |
 | `./services/local-meta` | 22 | 2 | 40 |
+| `./mcp` | 21 | 21 | 17 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
-| `./mcp` | 20 | 20 | 17 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -3135,6 +3135,7 @@ export type MCPResourceMeta = Record<
   }
 >
 export type MCPResourceResponse = MCPResourceMessage[]
+mcpTargetRequiresSession: (type: "resource" | "tool" | "prompt", name: string) => boolean
 export type MCPToolMeta = Record<
   string,
   Omit<CoreMCPTool, 'func' | 'middleware'> & {
