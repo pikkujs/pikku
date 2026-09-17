@@ -598,12 +598,11 @@ describe(
   }
 )
 
-// A GET with no `accept` header is refused by the MCP transport before it
-// considers sessions at all, so this marker holds whatever the session
-// configuration is. The normal pikku pipeline never emits it, which is what
-// makes it usable as proof that a path did — or did not — reach the handler.
-const MCP_HANDLER_MARKER =
-  'Not Acceptable: Client must accept text/event-stream'
+// A GET is refused by the MCP transport before it considers sessions at all,
+// so this marker holds whatever the session configuration is. The normal pikku
+// pipeline never emits a JSON-RPC envelope, which is what makes it usable as
+// proof that a path did — or did not — reach the handler.
+const MCP_HANDLER_MARKER = '"code":-32000,"message":"Method not allowed."'
 
 describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
   let server: PikkuNodeHTTPServer | undefined
@@ -674,10 +673,10 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     )
 
     const response = await getMcp(origin)
-    // A GET to /mcp without an `accept` header is handled by the MCP server,
-    // which refuses it as not acceptable — proving the request was routed to
-    // the mounted handler rather than the normal pikku pipeline.
-    assert.equal(response.status, 406)
+    // A GET to /mcp is handled by the MCP server, which refuses the method —
+    // proving the request was routed to the mounted handler rather than the
+    // normal pikku pipeline.
+    assert.equal(response.status, 405)
     assert.equal((await response.text()).includes(MCP_HANDLER_MARKER), true)
     assert.ok(
       infos.some((msg) => msg.includes('MCP mounted at /mcp')),
@@ -695,7 +694,7 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     const mounted = await fetch(`${origin}/api/mcp`, {
       headers: { connection: 'close' },
     })
-    assert.equal(mounted.status, 406)
+    assert.equal(mounted.status, 405)
     assert.equal((await mounted.text()).includes(MCP_HANDLER_MARKER), true)
     assert.ok(
       infos.some((msg) => msg.includes('MCP mounted at /api/mcp')),

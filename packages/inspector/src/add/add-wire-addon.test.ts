@@ -53,6 +53,9 @@ describe('addWireAddon', () => {
 
     assert.deepEqual(declarations.get('console'), {
       package: '@pikku/addon-console',
+      // The file the declaration was read from, which is what decides whether
+      // a tree-shaken build may drop this wiring file.
+      file: 'wiring.ts',
       rpcEndpoint: '/rpc',
       mcp: undefined,
       auth: true,
