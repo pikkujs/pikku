@@ -22,6 +22,7 @@ import type { SecretDefinitions } from '@pikku/core/secret'
 import type { CredentialDefinitions } from '@pikku/core/credential'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { SystemRoleDefinitions } from '@pikku/core/role'
+import type { FeatureFlagDefinitions } from '@pikku/core/flag'
 import type { PersonaDefinitions } from '@pikku/core/persona'
 import type { VariableDefinitions } from '@pikku/core/variable'
 import type { TypesMap } from './types-map.js'
@@ -549,6 +550,19 @@ export interface InspectorState {
   addonRequiredParentServices: string[] // services an addon needs from the parent (extracted from pikkuAddonServices 2nd param)
   addonCreatedServices: string[] // services an addon's own pikkuAddonServices factory builds itself
   addonServicesFactorySeen: boolean // this project declares a pikkuAddonServices factory, i.e. it is an addon
+  /**
+   * The project's `defineAnalyticsEvents` declarations, in visit order. Absent
+   * when nothing declares any.
+   */
+  analytics?: Array<{
+    file: string
+    variable: string
+    events: string[]
+    /** Each event's props as declared, keyed by event name then prop name, with
+     *  the schema's own source text as the value. Absent for a shape the
+     *  inspector cannot read off the declaration. */
+    props?: Record<string, Record<string, string>>
+  }>
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType
@@ -614,6 +628,8 @@ export interface InspectorState {
       string,
       {
         package: string
+        /** The app source file whose `wireAddon` call declared this instance. */
+        file?: string
         rpcEndpoint?: string
         /**
          * `true` offers every function the addon declared `mcp: true`; a list
@@ -718,6 +734,10 @@ export interface InspectorState {
   }
   systemRoles: {
     definitions: SystemRoleDefinitions
+    files: Set<string>
+  }
+  featureFlags: {
+    definitions: FeatureFlagDefinitions
     files: Set<string>
   }
   personas: {
