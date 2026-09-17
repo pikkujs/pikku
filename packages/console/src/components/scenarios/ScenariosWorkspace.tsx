@@ -1,38 +1,56 @@
 import React, { useState } from 'react'
-import { Group, TextInput, Center, Text } from '@pikku/mantine/core'
-import { Search } from 'lucide-react'
+import { Box, Center, Stack, Text } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { ListPageHeader } from '../layout/PageLayout'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { FeatureNavigator } from './FeatureNavigator'
 import { FeatureDocument } from './FeatureDocument'
-import { TagFilter } from './TagFilter'
 import { WorkflowProvider } from '../../context/WorkflowContext'
 import { usePanelContext } from '../../context/PanelContext'
+import type { ShellHeaderFilter } from '../ui/shellHeaderShared'
 import { useScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import type { ScenariosBrowse } from '../../hooks/useScenariosBrowse'
 import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
+import { useDeleteScenarioRun } from '../../hooks/useScenarioRuns'
+import {
+  AS_WRITTEN,
+  useScenarioLens,
+  type ScenarioLens,
+} from '../../hooks/useScenarioLens'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
-import { scenarioViewSelection, type ScenarioView } from './scenario-view'
+import { ScenarioRunBand } from './runs/ScenarioRunBand'
+import { runRelativeTime } from './runs/scenario-run-format'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface ScenariosWorkspaceProps {
   /** Browse state owned by the host (see `useScenariosBrowse`). Supplying it
    *  means the host mounts the feature rail itself, so this drops its own. */
   browse?: ScenariosBrowse
-  /** Renders the features/runs switch in the header when supplied. A host with
-   *  its own navigation omits it and routes to the runs surface itself. */
-  onViewChange?: (view: ScenarioView) => void
+  /** Run-lens state owned by the host, so its feature rail marks the same run. */
+  runLens?: ScenarioLens
+}
+
+const revealScenario = (name: string) => {
+  requestAnimationFrame(() => {
+    document
+      .querySelector(`[data-testid="scenario-section-${name}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
 }
 
 /**
- * The scenarios reading surface: a feature list, the selected feature rendered
- * as prose, and the step/persona details it opens. Lives below
- * `ConsoleSurface` because it reads the panel context that mounts there.
+ * The scenarios screen: the suite as the document, and a run as a lens over it.
+ *
+ * One surface rather than two, because the specification and its last result
+ * are the same subject — a reader asking "what does this feature promise" and
+ * one asking "did it hold" are looking at the same paragraph. Picking a run
+ * marks the scenarios it reached, opens what it failed on, and leaves the ones
+ * it never got to visibly untouched; picking none reads the suite as written.
  */
 export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   browse: hostBrowse,
-  onViewChange,
+  runLens: hostLens,
 }) => {
   const [stepWorkflow, setStepWorkflow] = useState<unknown>()
   const { personas } = useScenarioPersonaEntries()
@@ -50,37 +68,75 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
     setSelectedTags,
     searchQuery,
     setSearchQuery,
+    selectedId,
     setSelectedId,
     selected,
     loading,
   } = browse
 
-  /**
-   * A scenario is read where it is declared, so following one from a persona
-   * opens the feature it belongs to and scrolls its section into view rather
-   * than navigating to a page of its own.
-   */
-  const revealScenario = (name: string) => {
-    const owner = features.find((feature) =>
-      feature.scenarios.some((entry) => entry.scenario.name === name)
-    )
-    if (owner) setSelectedId(owner.id)
-    requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-testid="scenario-section-${name}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const ownLens = useScenarioLens()
+  const { runs: runList, runId, setRunId, run, lens } = hostLens ?? ownLens
+  const remove = useDeleteScenarioRun()
+
+  const headerFilters: ShellHeaderFilter[] = []
+  if (tags.length > 0) {
+    headerFilters.push({
+      key: 'tags',
+      label: m.scenarios_tags_lens(),
+      value: '',
+      multiple: true,
+      values: selectedTags,
+      emptyLabel: m.scenarios_all_tags(),
+      onChange: (tag) =>
+        setSelectedTags(
+          selectedTags.includes(tag)
+            ? selectedTags.filter((entry) => entry !== tag)
+            : [...selectedTags, tag]
+        ),
+      options: tags.map((tag) => ({ value: tag, label: asI18n(tag) })),
     })
   }
+  headerFilters.push({
+    key: 'run',
+    label: m.scenarios_run_lens(),
+    value: runId,
+    priority: 1,
+    onChange: setRunId,
+    options: [
+      { value: AS_WRITTEN, label: m.scenarios_run_as_written() },
+      ...runList.map((summary) => ({
+        value: summary.runId,
+        label: asI18n(
+          `${summary.environment} · ${summary.surface} · ${runRelativeTime(summary.startedAt)}`
+        ),
+      })),
+    ],
+  })
 
-  /** A persona opens in the panel, beside the feature that cast them. */
+  const showing = selected ? [selected] : features
+  const declared = features.reduce(
+    (sum, feature) => sum + feature.scenarios.length,
+    0
+  )
+
+  /**
+   * A persona opens in the panel, beside the feature that cast them. Following
+   * one of their scenarios reads it where it is declared, so the document
+   * switches to the owning feature rather than navigating anywhere.
+   */
   const showPersona = (key: string) => {
     const persona = personas.find((entry) => entry.key === key)
-    if (persona) {
-      openPersona(key, persona.name, {
-        persona,
-        onOpenScenario: revealScenario,
-      })
-    }
+    if (!persona) return
+    openPersona(key, persona.name, {
+      persona,
+      onOpenScenario: (name: string) => {
+        const owner = features.find((feature) =>
+          feature.scenarios.some((entry) => entry.scenario.name === name)
+        )
+        if (owner) setSelectedId(owner.id)
+        revealScenario(name)
+      },
+    })
   }
 
   return (
@@ -94,28 +150,12 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
             title={m.nav_scenarios()}
             description={m.scenarios_page_description()}
             docsHref="https://pikku.dev/docs/wiring/workflows"
-            selection={
-              onViewChange
-                ? scenarioViewSelection('features', onViewChange)
-                : undefined
-            }
-            filters={
-              <Group gap="sm" wrap="wrap">
-                <TextInput
-                  placeholder={m.scenarios_search_placeholder()}
-                  leftSection={<Search size={14} />}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  size="xs"
-                  style={{ width: 260 }}
-                />
-                <TagFilter
-                  tags={tags}
-                  selected={selectedTags}
-                  onChange={setSelectedTags}
-                />
-              </Group>
-            }
+            search={{
+              placeholder: m.scenarios_search_placeholder(),
+              value: searchQuery,
+              onChange: setSearchQuery,
+            }}
+            headerFilters={headerFilters}
           />
         }
         leftDrawerLabel={m.pane_features()}
@@ -123,7 +163,8 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
           loading || hostBrowse ? null : (
             <FeatureNavigator
               features={features}
-              selectedId={selected?.id}
+              selectedId={selectedId}
+              lens={lens}
               onSelect={(id) => {
                 setSelectedId(id)
                 dismiss()
@@ -136,25 +177,59 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
       >
         {loading ? (
           <ConsoleLoading />
-        ) : selected ? (
-          <FeatureDocument
-            feature={selected}
-            onOpenPersona={showPersona}
-            onSelectStep={(workflow, stepId, stepType, metadata) => {
-              setStepWorkflow(workflow)
-              openWorkflowStep(stepId, stepType, {
-                ...metadata,
-                stepType,
-                workflow,
-              })
-            }}
-          />
-        ) : (
+        ) : features.length === 0 ? (
           <Center p="xl">
             <Text size="sm" c="dimmed">
-              {m.scenarios_select_feature()}
+              {m.scenarios_no_features()}
             </Text>
           </Center>
+        ) : (
+          <Stack gap="lg">
+            {run && lens && (
+              <Box
+                px={32}
+                pt={24}
+                pb={12}
+                style={{
+                  maxWidth: 860,
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                  background: 'var(--mantine-color-body)',
+                }}
+              >
+                <ScenarioRunBand
+                  run={run}
+                  declared={declared}
+                  onOpenScenario={revealScenario}
+                  onDelete={() =>
+                    remove.mutate(run.runId, {
+                      onSuccess: () => setRunId(AS_WRITTEN),
+                    })
+                  }
+                  deleting={remove.isPending}
+                />
+              </Box>
+            )}
+            {showing.map((feature, index) => (
+              <FeatureDocument
+                key={feature.id}
+                feature={feature}
+                lens={lens}
+                inSuite={!selected}
+                topPad={!run && index === 0}
+                onOpenPersona={showPersona}
+                onSelectStep={(workflow, stepId, stepType, metadata) => {
+                  setStepWorkflow(workflow)
+                  openWorkflowStep(stepId, stepType, {
+                    ...metadata,
+                    stepType,
+                    workflow,
+                  })
+                }}
+              />
+            ))}
+          </Stack>
         )}
       </ResizablePanelLayout>
     </WorkflowProvider>

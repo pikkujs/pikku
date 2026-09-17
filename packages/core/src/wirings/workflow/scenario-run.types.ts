@@ -66,7 +66,12 @@ export interface ScenarioFailureDetail {
 
 export interface ScenarioResult {
   name: string
-  status: 'passed' | 'failed'
+  /**
+   * `running` is filed the moment the scenario starts and replaced when it
+   * ends, so a console watching a run in progress can tell the scenario on
+   * screen right now from the ones still waiting their turn.
+   */
+  status: 'passed' | 'failed' | 'running'
   durationMs: number
   output?: unknown
   error?: string
@@ -76,6 +81,11 @@ export interface ScenarioResult {
   scenarioName?: string
   /** The feature that grouped it, when one did. */
   feature?: string
+  /** The scenario's declared title, snapshotted so the record reads as prose. */
+  title?: string
+  description?: string
+  /** Who the scenario cast, in declaration order. */
+  actors?: string[]
   tags?: string[]
   /** Images and footage this scenario produced, filed under the run. */
   artifacts?: ScenarioArtifact[]
@@ -150,7 +160,11 @@ export interface ScenarioRunSummary {
 export interface ScenarioRunStore {
   /** Open a run. Called before the first scenario, with `status: 'running'`. */
   start(record: ScenarioRunRecord): Promise<void>
-  /** Append one finished scenario to an open run. */
+  /**
+   * File one scenario's state against an open run, replacing whatever was
+   * filed for that name before — a scenario is recorded twice, once as
+   * `running` and once with its outcome.
+   */
   recordScenario(runId: string, result: ScenarioResult): Promise<void>
   /**
    * File the run's artifacts against the scenarios that produced them.

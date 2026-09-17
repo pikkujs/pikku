@@ -627,13 +627,22 @@ export const scenarioRun = pikkuSessionlessFunc<
         scenarioName: string,
         feature?: string
       ): ScenarioResult => {
-        const tags = state.workflows?.meta?.[scenarioName]?.tags as
-          string[] | undefined
+        const meta = state.workflows?.meta?.[scenarioName] as
+          | {
+              tags?: string[]
+              title?: string
+              description?: string
+              actors?: string[]
+            }
+          | undefined
         return {
           ...result,
           scenarioName,
           ...(feature ? { feature } : {}),
-          ...(tags?.length ? { tags } : {}),
+          ...(meta?.title ? { title: meta.title } : {}),
+          ...(meta?.description ? { description: meta.description } : {}),
+          ...(meta?.actors?.length ? { actors: meta.actors } : {}),
+          ...(meta?.tags?.length ? { tags: meta.tags } : {}),
         }
       }
 
@@ -644,6 +653,14 @@ export const scenarioRun = pikkuSessionlessFunc<
         feature?: string
       ) => {
         const startedAt = Date.now()
+        await runStore.recordScenario(
+          captureRunId,
+          identify(
+            { name: label, status: 'running', durationMs: 0 },
+            scenarioName,
+            feature
+          )
+        )
         if (databaseBaseline) {
           try {
             await databaseBaseline.restore()
