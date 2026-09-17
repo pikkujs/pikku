@@ -82,51 +82,51 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
       }}
     >
       <Stack gap={10}>
-        <Group gap="sm" align="baseline" wrap="nowrap">
-          {run && (
-            <Box style={{ alignSelf: 'center' }}>
-              <ScenarioStatusMark status={run.status} />
-            </Box>
-          )}
-          <Text fw={600} size="md" style={{ flex: 1, minWidth: 0 }}>
-            {asI18n(scenario.title)}
-          </Text>
-          {run?.result && run.result.durationMs > 0 && (
-            <Text size="xs" c="dimmed" ff="monospace">
-              {asI18n(runDuration(run.result.durationMs))}
-            </Text>
-          )}
-          {!run && <ScenarioRunPill scenarioName={scenario.name} />}
-        </Group>
+        <Group align="flex-start" gap={28} wrap="wrap">
+          <Stack gap={10} style={{ flex: '1 1 420px', minWidth: 0 }}>
+            <Group gap="sm" align="baseline" wrap="nowrap">
+              {run && (
+                <Box style={{ alignSelf: 'center' }}>
+                  <ScenarioStatusMark status={run.status} />
+                </Box>
+              )}
+              <Text fw={600} size="md" style={{ flex: 1, minWidth: 0 }}>
+                {asI18n(scenario.title)}
+              </Text>
+              {run?.result && run.result.durationMs > 0 && (
+                <Text size="xs" c="dimmed" ff="monospace">
+                  {asI18n(runDuration(run.result.durationMs))}
+                </Text>
+              )}
+              {!run && <ScenarioRunPill scenarioName={scenario.name} />}
+            </Group>
 
-        {scenario.description && (
-          <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-            {asI18n(scenario.description)}
-          </Text>
-        )}
+            {scenario.description && (
+              <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
+                {asI18n(scenario.description)}
+              </Text>
+            )}
 
-        {scenario.tags.length > 0 && (
-          <Group gap={6}>
-            {scenario.tags.map((tag) => (
-              <Badge
-                key={tag}
-                size="xs"
-                variant="default"
-                radius="sm"
-                tt="none"
-              >
-                {asI18n(tag)}
-              </Badge>
-            ))}
-          </Group>
-        )}
+            {scenario.tags.length > 0 && (
+              <Group gap={6}>
+                {scenario.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    size="xs"
+                    variant="default"
+                    radius="sm"
+                    tt="none"
+                  >
+                    {asI18n(tag)}
+                  </Badge>
+                ))}
+              </Group>
+            )}
 
-        {scenario.skip && <SkipNotice reason={scenario.skip} />}
+            {scenario.skip && <SkipNotice reason={scenario.skip} />}
 
-        <ScenarioCast cast={cast} onOpenPersona={onOpenPersona} />
+            <ScenarioCast cast={cast} onOpenPersona={onOpenPersona} />
 
-        <Group align="flex-start" gap="lg" wrap="wrap">
-          <Stack gap={10} style={{ flex: '1 1 380px', minWidth: 0 }}>
             <ScenarioLadder
               steps={scenario.steps}
               actorNames={
@@ -146,16 +146,18 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
           </Stack>
 
           {run && (
-            <ScenarioFootage
-              runId={run.runId}
-              status={run.status}
-              artifacts={artifacts}
-              seekMs={
-                seekStep === undefined
-                  ? undefined
-                  : ladderOffset(scenario.steps, recorded, seekStep)
-              }
-            />
+            <Box style={{ flex: '0 0 280px', maxWidth: '100%' }}>
+              <ScenarioFootage
+                runId={run.runId}
+                status={run.status}
+                artifacts={artifacts}
+                seekMs={
+                  seekStep === undefined
+                    ? undefined
+                    : ladderOffset(scenario.steps, recorded, seekStep)
+                }
+              />
+            </Box>
           )}
         </Group>
 
