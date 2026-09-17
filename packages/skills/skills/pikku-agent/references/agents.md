@@ -35,7 +35,9 @@ pikkuAgent({
   temperature?: number,
   providerOptions?: {            // passed through untouched, keyed by provider
     openai?: { reasoningEffort?: 'minimal' | ... },
-  },
+  },                             // inline literals only — a computed value
+                                 // cannot be read into the generated metadata
+                                 // and is reported as PKU156
 
   // --- capabilities: all three take ref() handles, not imported values ---
   tools?: unknown[],             // ref('todos:addTodo'), ref('graph:sleep'), …

@@ -12,6 +12,10 @@ export const testAgent = pikkuAgent({
   model: 'test-provider/test-model',
   agentMiddleware: [testAgentMiddleware, secondAgentMiddleware],
   channelMiddleware: [wireChannelMiddleware],
+  providerOptions: {
+    openai: { reasoningEffort: 'low' },
+    anthropic: { thinking: { type: 'enabled', budgetTokens: 1024 } },
+  },
 })
 
 export const agentNoAgentMiddleware = pikkuAgent({
