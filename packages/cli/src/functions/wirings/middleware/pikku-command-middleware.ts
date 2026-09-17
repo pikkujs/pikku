@@ -17,12 +17,18 @@ export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
     const hasChannelMiddleware =
       state.channelMiddleware.tagMiddleware.size > 0 ||
       Object.keys(state.channelMiddleware.definitions).length > 0
+    // A project whose only middleware is `addGlobalMiddleware([...])` over
+    // middleware defined in a package (a session bridge, say) has no group and
+    // no local definition, and used to generate no middleware file at all — so
+    // the registration never ran.
+    const hasGlobalMiddleware = state.middleware.globalFiles.size > 0
 
     if (
       hasHTTPGroups ||
       hasTagGroups ||
       hasDefinitions ||
-      hasChannelMiddleware
+      hasChannelMiddleware ||
+      hasGlobalMiddleware
     ) {
       const metaData = state.middlewareGroupsMeta
 
