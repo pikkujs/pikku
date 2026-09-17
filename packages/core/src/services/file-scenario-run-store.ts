@@ -27,6 +27,7 @@ export const scenarioRunSummary = (
   runId: record.runId,
   environment: record.environment,
   surface: record.surface,
+  ...(record.version ? { version: record.version } : {}),
   status: record.status,
   startedAt: record.startedAt,
   finishedAt: record.finishedAt,
