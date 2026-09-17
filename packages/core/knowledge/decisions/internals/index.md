@@ -12,6 +12,7 @@ caller is entitled to assume.
 <!-- pikku:knowledge-index -->
 
 - [A non-streaming agent run registers with aiRunState on the same terms as a streaming one](a-non-streaming-agent-run-registers-with-airunstate-too.md) — Otherwise interruptAIAgent finds the run, passes the ownership check, then cannot stop it — and reports that as if the run were on another host
+- [With scenarios.reset on, the dev seed is the fixture every assertion is written against](a-reset-suite-makes-the-dev-seed-the-fixture.md) — The rollback restores the database as the suite found it, so seed rows are the shared baseline — which makes an absolute date in the seed a test that expires
 - [A resumed turn is as interruptible as the first one](a-resumed-agent-turn-is-as-interruptible-as-the-first.md) — It is the same person listening to the same voice, and after an approval it is where most of the reply actually gets spoken
 - [A scenario step's prose template is offered to a virtual user unfilled](a-scenario-step-template-is-offered-unfilled.md) — A reporter fills placeholders from a run that happened; there is no run yet, and the filled form would answer the question the user is there to answer
 - [A secret that fails to decrypt fails the whole read](a-secret-that-fails-to-decrypt-fails-the-whole-read.md) — getSecrets throws naming the key and its key_version rather than omitting the row, because a silent omission surfaces as an unrelated failure much later
