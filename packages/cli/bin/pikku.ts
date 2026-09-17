@@ -76,14 +76,21 @@ async function checkForUpdate(): Promise<void> {
  * `PIKKU_DEBUG` shows the stack either way. Nothing here strips frames — a
  * `TypeError` with no frames is a bug nobody can diagnose.
  */
-const reportFatal = (error: unknown): never => {
+const reportFatal = (error: unknown): void => {
   // The runner already printed this one and only threw it to carry the exit
   // code out; printing it again is the doubled error users kept reporting.
   if (error instanceof CLIError) process.exit(error.exitCode)
+  // stderr is asynchronous when it is a pipe, so `process.exit` on the next
+  // line can kill the process before the bytes leave — truncating the one
+  // diagnostic this function exists to print, exactly when it is redirected
+  // into a log. The exit runs from the write callback instead, with `exitCode`
+  // set first so a stream that is already gone (callback never fires) still
+  // ends the process with the right code once the loop drains.
+  process.exitCode = 1
   process.stderr.write(
-    `${formatCLIError(error, { verbose: wantsStackTrace(process.argv.slice(2)) })}\n`
+    `${formatCLIError(error, { verbose: wantsStackTrace(process.argv.slice(2)) })}\n`,
+    () => process.exit(1)
   )
-  process.exit(1)
 }
 
 /**

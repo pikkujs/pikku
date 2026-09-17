@@ -89,7 +89,7 @@ async function findConfigFile(): Promise<string> {
   const configFile = await findConfigFileOrNull()
   if (!configFile) {
     throw new PikkuCLIConfigError(
-      'No pikku.config.json found in this directory or any parent up to the repository root.\nRun this from inside a pikku project, or create one with `pikku init`.'
+      'No Pikku config file (pikku.config.ts, .js or .json) found in this directory or any parent up to the repository root.\nRun this from inside a pikku project, or create one with `pikku init`.'
     )
   }
   return configFile

@@ -21,7 +21,16 @@ export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
     // middleware defined in a package (a session bridge, say) has no group and
     // no local definition, and used to generate no middleware file at all — so
     // the registration never ran.
-    const hasGlobalMiddleware = state.middleware.globalFiles.size > 0
+    // `globalFiles` is the current record, but the serializer also still reads
+    // `global:*` out of `instances` so that a state serialized by an older
+    // inspector keeps working. This gate decides whether the serializer runs at
+    // all, so it has to accept exactly what the serializer accepts — otherwise
+    // an older state is dropped here and the file it needed is never written.
+    const hasGlobalMiddleware =
+      (state.middleware.globalFiles?.size ?? 0) > 0 ||
+      Object.keys(state.middleware.instances).some((id) =>
+        id.startsWith('global:')
+      )
 
     if (
       hasHTTPGroups ||

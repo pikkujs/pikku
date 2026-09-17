@@ -264,11 +264,15 @@ if (isDirectExecution) {
   // Whatever comes back is printed the way the rest of the CLI prints errors:
   // a deliberate error as its message, anything unexpected with its stack, and
   // either with a stack under --verbose / PIKKU_DEBUG.
-  const reportFatal = (error: unknown): never => {
+  const reportFatal = (error: unknown): void => {
+    // stderr is asynchronous when it is a pipe, so exiting on the next line can
+    // truncate the diagnostic. Exit from the write callback, with exitCode set
+    // first in case the stream is already gone and the callback never fires.
+    process.exitCode = 1
     process.stderr.write(
-      formatCLIError(error, { verbose: wantsStackTrace(process.argv.slice(2)) }) + '\\n'
+      formatCLIError(error, { verbose: wantsStackTrace(process.argv.slice(2)) }) + '\\n',
+      () => process.exit(1)
     )
-    process.exit(1)
   }
   process.on('uncaughtException', reportFatal)
   process.on('unhandledRejection', reportFatal)
