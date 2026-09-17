@@ -138,7 +138,6 @@ export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
                   section.scenario.name
                 ]
               }
-              scanning={inSuite}
               run={
                 lens
                   ? {
