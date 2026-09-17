@@ -20,3 +20,17 @@ export const runDuration = (ms?: number): string => {
   const seconds = Math.round((ms % 60000) / 1000)
   return `${minutes}m ${seconds}s`
 }
+
+/**
+ * Where each step starts inside its scenario's recording. Steps are recorded
+ * with a duration and no timestamp, so the offset is the sum of everything
+ * before it — which is also how the recording was laid down.
+ */
+export const stepOffsets = (steps: { durationMs?: number }[]): number[] => {
+  let elapsed = 0
+  return steps.map((step) => {
+    const offset = elapsed
+    elapsed += step.durationMs ?? 0
+    return offset
+  })
+}

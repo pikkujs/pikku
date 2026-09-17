@@ -98,6 +98,17 @@ export function usePageOptions(): PageOptionsContextValue {
 }
 
 /**
+ * The same context where a host might not have mounted the provider at all.
+ *
+ * A host that brings its own chrome (a console embedded in another product)
+ * renders our layouts without our AppLayout, so every phone-path surface has to
+ * survive its absence — the same reason usePageOptionsDismiss is a no-op there.
+ */
+export function useOptionalPageOptions(): PageOptionsContextValue | null {
+  return useContext(PageOptionsContext)
+}
+
+/**
  * Puts the sheet away. Call it from the surface's own select handler: on a phone
  * the thing the user just picked is UNDER the sheet they picked it in, so a sheet
  * that stays up hides the answer to the tap.

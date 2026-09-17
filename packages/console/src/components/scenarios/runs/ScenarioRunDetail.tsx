@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Alert,
   Button,
@@ -18,6 +18,7 @@ import {
 } from '../../../hooks/useScenarioRuns'
 import { ScenarioRunStatusBadge } from './ScenarioRunStatusBadge'
 import { ScenarioRunResult } from './ScenarioRunResult'
+import { ScenarioRunTimeline } from './ScenarioRunTimeline'
 import { runDuration, runRelativeTime } from './scenario-run-format'
 import { ConsoleLoading } from '../../ui/ConsoleLoading'
 
@@ -36,6 +37,7 @@ export const ScenarioRunDetail: React.FC<ScenarioRunDetailProps> = ({
 }) => {
   const { data: run, isLoading } = useScenarioRun(runId)
   const remove = useDeleteScenarioRun()
+  const [opened, setOpened] = useState<string>()
 
   if (isLoading) {
     return <ConsoleLoading />
@@ -50,6 +52,11 @@ export const ScenarioRunDetail: React.FC<ScenarioRunDetailProps> = ({
       </Center>
     )
   }
+
+  const firstFailure = run.results.find((result) => result.status === 'failed')
+  const openName = opened ?? firstFailure?.name
+  const toggle = (name: string) =>
+    setOpened(name === openName ? '' : name)
 
   const elapsed =
     run.finishedAt &&
@@ -102,13 +109,23 @@ export const ScenarioRunDetail: React.FC<ScenarioRunDetailProps> = ({
           </Alert>
         )}
 
-        {run.results.map((result) => (
-          <ScenarioRunResult
-            key={result.name}
-            runId={run.runId}
-            result={result}
-          />
-        ))}
+        <ScenarioRunTimeline
+          results={run.results}
+          openName={openName}
+          onOpen={toggle}
+        />
+
+        <Stack gap={6}>
+          {run.results.map((result) => (
+            <ScenarioRunResult
+              key={result.name}
+              runId={run.runId}
+              result={result}
+              open={result.name === openName}
+              onToggle={() => toggle(result.name)}
+            />
+          ))}
+        </Stack>
 
         {run.skipped.length > 0 && (
           <Stack gap={4}>
