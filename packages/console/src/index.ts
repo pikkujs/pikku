@@ -135,7 +135,10 @@ export {
   usePageOptionsDismiss,
   usePageAction,
 } from './context/PageOptionsProvider'
-export type { PageAction } from './context/PageOptionsProvider'
+export type {
+  PageAction,
+  PageOptionsContextValue,
+} from './context/PageOptionsProvider'
 export {
   SidebarModeProvider,
   useSidebarMode,
