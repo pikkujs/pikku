@@ -224,10 +224,19 @@ const fetchMwGreeting = async (name: string) => {
   return response.json()
 }
 
-const silentLogger = {
-  info: () => {},
+/** The reloaded scheduler task reports through the app's logger and nothing
+ *  else — `runScheduledTask` resolves to void — so the log is the only place a
+ *  reloaded implementation can be observed from. */
+const logged: string[] = []
+
+const capturingLogger = {
+  info: (message: any, ..._meta: unknown[]) => {
+    logged.push(String(message))
+  },
   warn: () => {},
-  error: () => {},
+  error: (message: any, ..._meta: unknown[]) => {
+    logged.push(String(message))
+  },
   debug: () => {},
   setLevel: () => {},
 }
@@ -239,7 +248,7 @@ const silentLogger = {
 const createReloader = () =>
   pikkuDevReloader({
     srcDirectories: [resolve('src')],
-    logger: silentLogger,
+    logger: capturingLogger,
   })
 
 // ---------------------------------------------------------------------------
@@ -248,7 +257,7 @@ const createReloader = () =>
 
 async function main(): Promise<void> {
   const config = await createConfig()
-  await createSingletonServices(config)
+  await createSingletonServices(config, { logger: capturingLogger } as any)
 
   console.log('\nHMR (Hot Module Reload) Verifier')
   console.log('================================')
@@ -397,8 +406,13 @@ export const myScheduledTask = pikkuSessionlessFunc<void, void>({
       )
       await wait(500)
 
-      // If it doesn't throw, the reloaded function ran successfully
+      logged.length = 0
       await runScheduledTask({ name: 'myScheduledTask' })
+      assertEqual(
+        logged.includes('RELOADED-SCHED'),
+        true,
+        'the reloaded task is the one the scheduler ran'
+      )
     } finally {
       reloader.close()
       await restoreScheduled()
@@ -442,7 +456,7 @@ export const myQueueWorker = pikkuSessionlessFunc<
       )
       await wait(500)
 
-      await runQueueJob({
+      const result = await runQueueJob({
         job: {
           id: 'test-2',
           queueName: 'myQueue',
@@ -450,6 +464,11 @@ export const myQueueWorker = pikkuSessionlessFunc<
           status: () => 'waiting' as const,
         },
       })
+      assertEqual(
+        result,
+        { processed: 'reloaded: world' },
+        'the reloaded worker is the one the queue ran'
+      )
     } finally {
       reloader.close()
       await restoreQueue()

@@ -82,6 +82,16 @@ const findTypeScriptSource = (
 const isProjectTypeScript = (path: string): boolean =>
   TYPESCRIPT_FILE.test(path) && !path.includes(`${sep}node_modules${sep}`)
 
+/** JSX is a syntax esbuild only parses when asked, so a `.tsx` helper handed to
+ *  the `ts` loader fails to compile and the file importing it keeps its old
+ *  code. */
+const loaderFor = (path: string): 'tsx' | 'ts' | 'jsx' | 'js' => {
+  if (path.endsWith('.tsx')) return 'tsx'
+  if (TYPESCRIPT_FILE.test(path)) return 'ts'
+  if (path.endsWith('.jsx')) return 'jsx'
+  return 'js'
+}
+
 /** One reload's view of the TypeScript modules it had to evaluate itself.
  *  Scoped to the reload rather than kept: a helper edited alongside the
  *  function that imports it has to be read from disk again, or the reload
@@ -97,7 +107,7 @@ const evaluateModule = (
 
   const source = readFileSync(absPath, 'utf-8')
   const { code } = transformSync!(source, {
-    loader: TYPESCRIPT_FILE.test(absPath) ? 'ts' : 'js',
+    loader: loaderFor(absPath),
     format: 'cjs',
     sourcefile: absPath,
   })

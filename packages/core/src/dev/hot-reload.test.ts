@@ -45,11 +45,17 @@ const ensureRecursiveWatchAvailable = async (
     watcher.close()
     return true
   } catch (error: any) {
-    // Every reason a host refuses a recursive watch is a reason these tests
-    // cannot run, and enumerating the codes only decided which hosts skipped
-    // quietly and which failed loudly for the same missing feature.
-    t.skip(`recursive fs.watch unavailable: ${error?.code ?? error?.message}`)
-    return false
+    // A host that does not implement recursive watching cannot run these tests;
+    // anything else — a descriptor limit, a bad path — is a failure worth
+    // seeing rather than a suite that quietly reports nothing.
+    if (
+      error?.code === 'ERR_FEATURE_UNAVAILABLE_ON_PLATFORM' ||
+      error?.code === 'ERR_INVALID_ARG_VALUE'
+    ) {
+      t.skip(`recursive fs.watch unavailable: ${error.code}`)
+      return false
+    }
+    throw error
   }
 }
 

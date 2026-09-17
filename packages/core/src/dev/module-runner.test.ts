@@ -124,6 +124,28 @@ describe('createModuleRunner', { concurrency: false }, () => {
     assert.equal(await ((result as any).exports.reader as any).func(), 'v1')
   })
 
+  test('compiles a .tsx dependency as JSX, not as plain TypeScript', async () => {
+    await writeFile(
+      join(tmpDir, 'Badge.tsx'),
+      `export const Badge = (): any => (<span>ok</span>)`
+    )
+
+    const runner = createModuleRunner()
+    const file = join(tmpDir, 'uses-badge.ts')
+    await writeFile(
+      file,
+      `import { Badge } from './Badge.js'
+       export const render = { func: async () => typeof Badge }`
+    )
+
+    const result = await runner.run(file)
+    assert.equal(result.ok, true, (result as any).error?.message)
+    assert.equal(
+      await ((result as any).exports.render as any).func(),
+      'function'
+    )
+  })
+
   test('re-reads a changed TypeScript dependency on the next run', async () => {
     await writeFile(
       join(tmpDir, 'ledger.ts'),
