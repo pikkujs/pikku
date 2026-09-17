@@ -247,6 +247,7 @@ export const ShellHeader = <T extends string = string>({
 
   const measureNode = (id: string, node: ReactNode) => (
     <div
+      key={id}
       ref={(el) => void (measRef.current[id] = el)}
       style={{ flex: '0 0 auto' }}
     >

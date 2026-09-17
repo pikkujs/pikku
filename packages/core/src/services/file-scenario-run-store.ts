@@ -117,7 +117,19 @@ export class FileScenarioRunStore implements ScenarioRunStore {
       if (!record) {
         return
       }
-      record.results.push(result)
+      const existing = record.results.findIndex(
+        (candidate) => candidate.name === result.name
+      )
+      if (existing === -1) {
+        record.results.push(result)
+      } else {
+        record.results[existing] = {
+          ...(record.results[existing]!.artifacts
+            ? { artifacts: record.results[existing]!.artifacts }
+            : {}),
+          ...result,
+        }
+      }
       await this.write(record)
     })
   }

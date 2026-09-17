@@ -1,11 +1,26 @@
-import React from 'react'
-import { Badge, Box, Group, Stack, Text } from '@pikku/mantine/core'
+import React, { useMemo, useState } from 'react'
+import { Anchor, Badge, Box, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import { ScenarioLadder } from './ScenarioLadder'
 import { ExamplesTable } from './ExamplesTable'
 import { SkipNotice } from './SkipNotice'
 import { ScenarioRunPill } from './ScenarioRunPill'
 import { ScenarioCast } from './ScenarioCast'
+import {
+  ScenarioStatusMark,
+  SCENARIO_STATUS_COLOUR,
+} from './ScenarioStatusMark'
+import {
+  alignLadderToRun,
+  ladderOffset,
+  type ScenarioLensStatus,
+} from './scenario-run-lens'
+import { ScenarioFailureReport } from './runs/ScenarioFailureReport'
+import { ScenarioRunPlayer } from './runs/ScenarioRunPlayer'
+import { ScenarioArtifactTile } from './runs/ScenarioArtifactTile'
+import { runDuration } from './runs/scenario-run-format'
+import type { ScenarioResult } from '@pikku/core/scenario'
 import type { ScenarioDoc } from './scenario-doc-model'
 import type { PersonaEntry } from '../personas/persona-types'
 
@@ -20,6 +35,18 @@ type ScenarioSectionProps = {
    * of here, so it is handed back up with every step selection.
    */
   workflow: unknown
+  /**
+   * The run being read, when one is selected. `undefined` means the suite is
+   * being read as written, and nothing is claimed about how it went.
+   */
+  run?: { runId: string; status: ScenarioLensStatus; result?: ScenarioResult }
+  /**
+   * True when the whole suite is on screen. Each recording is pulled into
+   * memory to carry the console's Authorization header, so a failing run read
+   * across every feature would fetch its whole artifact store at once — the
+   * footage waits until the reader narrows to one feature.
+   */
+  scanning?: boolean
   onOpenPersona?: (key: string) => void
   onSelectStep?: (
     workflow: unknown,
@@ -34,56 +61,148 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
   examples,
   cast,
   workflow,
+  run,
+  scanning,
   onOpenPersona,
   onSelectStep,
-}) => (
-  <Box
-    component="section"
-    data-testid={`scenario-section-${scenario.name}`}
-    style={{
-      borderLeft: '2px solid var(--mantine-color-default-border)',
-      paddingLeft: 20,
-      opacity: scenario.skip ? 0.6 : 1,
-    }}
-  >
-    <Stack gap={10}>
-      <Group gap="sm" align="baseline" wrap="nowrap">
-        <Text fw={600} size="md" style={{ flex: 1, minWidth: 0 }}>
-          {asI18n(scenario.title)}
-        </Text>
-        <ScenarioRunPill scenarioName={scenario.name} />
-      </Group>
+}) => {
+  const [seekStep, setSeekStep] = useState<string>()
+  const recorded = useMemo(
+    () =>
+      run?.result?.steps
+        ? alignLadderToRun(scenario.steps, run.result.steps)
+        : undefined,
+    [run?.result?.steps, scenario.steps]
+  )
+  const [revealed, setRevealed] = useState(false)
+  const artifacts = run?.result?.artifacts ?? []
+  const recording = artifacts.find((artifact) => artifact.kind === 'video')
+  const stills = artifacts.filter((artifact) => artifact.kind !== 'video')
+  const hasFootage = !!recording || stills.length > 0
+  const showFootage =
+    hasFootage && (revealed || (!scanning && run?.result?.status === 'failed'))
 
-      {scenario.description && (
-        <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
-          {asI18n(scenario.description)}
-        </Text>
-      )}
-
-      {scenario.tags.length > 0 && (
-        <Group gap={6}>
-          {scenario.tags.map((tag) => (
-            <Badge key={tag} size="xs" variant="default" radius="sm" tt="none">
-              {asI18n(tag)}
-            </Badge>
-          ))}
+  return (
+    <Box
+      component="section"
+      data-testid={`scenario-section-${scenario.name}`}
+      style={{
+        borderLeft: `${run ? 3 : 2}px solid ${
+          run
+            ? SCENARIO_STATUS_COLOUR[run.status]
+            : 'var(--mantine-color-default-border)'
+        }`,
+        paddingLeft: 20,
+        opacity: scenario.skip ? 0.6 : 1,
+      }}
+    >
+      <Stack gap={10}>
+        <Group gap="sm" align="baseline" wrap="nowrap">
+          {run && (
+            <Box style={{ alignSelf: 'center' }}>
+              <ScenarioStatusMark status={run.status} />
+            </Box>
+          )}
+          <Text fw={600} size="md" style={{ flex: 1, minWidth: 0 }}>
+            {asI18n(scenario.title)}
+          </Text>
+          {run?.result && run.result.durationMs > 0 && (
+            <Text size="xs" c="dimmed" ff="monospace">
+              {asI18n(runDuration(run.result.durationMs))}
+            </Text>
+          )}
+          {!run && <ScenarioRunPill scenarioName={scenario.name} />}
         </Group>
-      )}
 
-      {scenario.skip && <SkipNotice reason={scenario.skip} />}
+        {scenario.description && (
+          <Text size="sm" c="dimmed" style={{ maxWidth: '68ch' }}>
+            {asI18n(scenario.description)}
+          </Text>
+        )}
 
-      <ScenarioCast cast={cast} onOpenPersona={onOpenPersona} />
+        {scenario.tags.length > 0 && (
+          <Group gap={6}>
+            {scenario.tags.map((tag) => (
+              <Badge
+                key={tag}
+                size="xs"
+                variant="default"
+                radius="sm"
+                tt="none"
+              >
+                {asI18n(tag)}
+              </Badge>
+            ))}
+          </Group>
+        )}
 
-      <ScenarioLadder
-        steps={scenario.steps}
-        actorNames={new Map(cast.map((persona) => [persona.key, persona.name]))}
-        onOpenPersona={onOpenPersona}
-        onSelectStep={(stepId, stepType, metadata) =>
-          onSelectStep?.(workflow, stepId, stepType, metadata)
-        }
-      />
+        {scenario.skip && <SkipNotice reason={scenario.skip} />}
 
-      {examples.length > 0 && <ExamplesTable rows={examples} />}
-    </Stack>
-  </Box>
-)
+        <ScenarioCast cast={cast} onOpenPersona={onOpenPersona} />
+
+        <ScenarioLadder
+          steps={scenario.steps}
+          actorNames={
+            new Map(cast.map((persona) => [persona.key, persona.name]))
+          }
+          recorded={recorded}
+          onOpenPersona={onOpenPersona}
+          onSelectStep={(stepId, stepType, metadata) => {
+            setSeekStep(stepId)
+            onSelectStep?.(workflow, stepId, stepType, metadata)
+          }}
+        />
+
+        {run?.result?.status === 'failed' && (
+          <ScenarioFailureReport result={run.result} />
+        )}
+
+        {run && hasFootage && !showFootage && (
+          <Anchor
+            component="button"
+            type="button"
+            size="xs"
+            onClick={() => setRevealed(true)}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            {m.scenarios_show_footage()}
+          </Anchor>
+        )}
+
+        {run && showFootage && (
+          <Group align="flex-start" gap="md" wrap="wrap">
+            {recording && (
+              <Box
+                style={{
+                  flexBasis: 380,
+                  flexGrow: 1,
+                  minWidth: 0,
+                  maxWidth: 480,
+                }}
+              >
+                <ScenarioRunPlayer
+                  runId={run.runId}
+                  artifact={recording}
+                  seekMs={
+                    seekStep === undefined
+                      ? undefined
+                      : ladderOffset(scenario.steps, recorded, seekStep)
+                  }
+                />
+              </Box>
+            )}
+            {stills.map((artifact) => (
+              <ScenarioArtifactTile
+                key={artifact.path}
+                runId={run.runId}
+                artifact={artifact}
+              />
+            ))}
+          </Group>
+        )}
+
+        {examples.length > 0 && <ExamplesTable rows={examples} />}
+      </Stack>
+    </Box>
+  )
+}

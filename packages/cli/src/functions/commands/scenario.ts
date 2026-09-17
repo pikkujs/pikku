@@ -650,13 +650,25 @@ export const scenarioRun = pikkuSessionlessFunc<
       const identityOf = (
         scenarioName: string,
         group?: ScenarioPlanGroup
-      ): ScenarioRunIdentity => ({
-        scenarioName,
-        featureId: group?.featureId,
-        featureName: group?.featureName,
-        tags: state.workflows?.meta?.[scenarioName]?.tags as
-          string[] | undefined,
-      })
+      ): ScenarioRunIdentity => {
+        const meta = state.workflows?.meta?.[scenarioName] as
+          | {
+              tags?: string[]
+              title?: string
+              description?: string
+              actors?: string[]
+            }
+          | undefined
+        return {
+          scenarioName,
+          featureId: group?.featureId,
+          featureName: group?.featureName,
+          title: meta?.title,
+          description: meta?.description,
+          actors: meta?.actors,
+          tags: meta?.tags,
+        }
+      }
 
       const runEntry = async (
         label: string,
@@ -665,6 +677,13 @@ export const scenarioRun = pikkuSessionlessFunc<
         identity: ScenarioRunIdentity
       ) => {
         const startedAt = Date.now()
+        await runStore.recordScenario(
+          captureRunId,
+          identifyScenarioResult(
+            { name: label, status: 'running', durationMs: 0 },
+            identity
+          )
+        )
         if (databaseBaseline) {
           try {
             await databaseBaseline.restore()

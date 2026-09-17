@@ -8,6 +8,7 @@ import { runDuration } from './scenario-run-format'
 const SEGMENT_COLOUR = {
   passed: 'var(--mantine-color-green-6)',
   failed: 'var(--mantine-color-red-6)',
+  running: 'var(--mantine-primary-color-filled)',
   skipped: 'var(--mantine-color-dimmed)',
 }
 
@@ -27,7 +28,10 @@ export const ScenarioRunTimeline: React.FC<ScenarioRunTimelineProps> = ({
   openName,
   onOpen,
 }) => {
-  const total = results.reduce((sum, result) => sum + (result.durationMs ?? 0), 0)
+  const total = results.reduce(
+    (sum, result) => sum + (result.durationMs ?? 0),
+    0
+  )
   if (results.length === 0) return null
 
   return (
@@ -46,9 +50,7 @@ export const ScenarioRunTimeline: React.FC<ScenarioRunTimelineProps> = ({
         return (
           <Tooltip
             key={result.name}
-            label={asI18n(
-              `${result.name} · ${runDuration(result.durationMs)}`
-            )}
+            label={asI18n(`${result.name} · ${runDuration(result.durationMs)}`)}
             withArrow
           >
             <Box
