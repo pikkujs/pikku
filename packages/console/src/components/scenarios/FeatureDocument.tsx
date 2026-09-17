@@ -77,7 +77,7 @@ export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
     <Box
       data-testid={`feature-document-${feature.id}`}
       style={{
-        maxWidth: 860,
+        maxWidth: 1120,
         padding: inSuite ? `${topPad ? 24 : 0}px 32px 40px` : '28px 32px 64px',
       }}
     >

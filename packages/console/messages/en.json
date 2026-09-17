@@ -1260,5 +1260,7 @@
   "shell_header_filter_count": "{count} selected",
   "scenarios_tags_lens": "Tags",
   "scenarios_footage_recording": "Recording",
-  "scenarios_footage_pending": "Pending"
+  "scenarios_footage_pending": "Pending",
+  "scenarios_footage_play": "Play the recording",
+  "scenarios_footage_open_still": "Open the screenshot"
 }
