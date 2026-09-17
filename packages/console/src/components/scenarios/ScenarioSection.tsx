@@ -145,9 +145,10 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
             )}
           </Stack>
 
-          {run && artifacts.length > 0 && (
+          {run && (
             <ScenarioFootage
               runId={run.runId}
+              status={run.status}
               artifacts={artifacts}
               seekMs={
                 seekStep === undefined
