@@ -285,10 +285,12 @@
     "CLIError",
     "defineCLICommands",
     "executeCLI",
+    "formatCLIError",
     "generateCommandHelp",
     "parseCLIArguments",
     "pikkuCLIRender",
     "runCLICommand",
+    "wantsStackTrace",
     "wireCLI"
   ],
   "./cli/command-parser": [

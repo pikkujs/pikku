@@ -5,6 +5,7 @@ process.on('warning', (w) => {
   process.stderr.write(`${w.name}: ${w.message}\n`)
 })
 import { existsSync, readFileSync } from 'fs'
+import { CLIError, formatCLIError, wantsStackTrace } from '@pikku/core/cli'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname, join } from 'path'
 
@@ -67,6 +68,33 @@ async function checkForUpdate(): Promise<void> {
   }
 }
 
+/**
+ * The one place every failure ends up, however it got out.
+ *
+ * `formatCLIError` decides what is printed: an error raised deliberately shows
+ * its message alone, anything unexpected keeps its stack, and `--verbose` /
+ * `PIKKU_DEBUG` shows the stack either way. Nothing here strips frames — a
+ * `TypeError` with no frames is a bug nobody can diagnose.
+ */
+const reportFatal = (error: unknown): never => {
+  // The runner already printed this one and only threw it to carry the exit
+  // code out; printing it again is the doubled error users kept reporting.
+  if (error instanceof CLIError) process.exit(error.exitCode)
+  process.stderr.write(
+    `${formatCLIError(error, { verbose: wantsStackTrace(process.argv.slice(2)) })}\n`
+  )
+  process.exit(1)
+}
+
+/**
+ * Without these, anything thrown outside the await below — a listener, a
+ * floating promise in a watcher, a timer — reaches node's default handler and
+ * prints an unformatted dump. Installed before the CLI is imported so a failure
+ * during module evaluation is caught too.
+ */
+process.on('uncaughtException', reportFatal)
+process.on('unhandledRejection', reportFatal)
+
 // Use the generated Pikku CLI
 const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
 
@@ -79,8 +107,7 @@ if (existsSync(pikkuCliPath)) {
     await updateCheck
     process.exit(process.exitCode ?? 0)
   } catch (error: any) {
-    console.error('Failed to run Pikku CLI:', error.message)
-    process.exit(1)
+    reportFatal(error)
   }
 } else {
   console.error('Pikku CLI not found. Run build.sh first.')

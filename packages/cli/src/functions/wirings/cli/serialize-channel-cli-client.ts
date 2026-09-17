@@ -154,6 +154,7 @@ export function serializeChannelCLIClient(
 
   return `
 import { executeRawCLIViaChannel } from '@pikku/core/cli/channel'
+import { formatCLIError, wantsStackTrace } from '@pikku/core/cli'
 import type { CorePikkuCLIClientRender } from '@pikku/core/cli/channel'
 import type { Capabilities } from '@pikku/core/channel'
 import { CorePikkuWebsocket } from '@pikku/websocket'
@@ -260,12 +261,21 @@ if (isDirectExecution) {
     ws = new WebSocket(url)
   }
 
+  // Whatever comes back is printed the way the rest of the CLI prints errors:
+  // a deliberate error as its message, anything unexpected with its stack, and
+  // either with a stack under --verbose / PIKKU_DEBUG.
+  const reportFatal = (error: unknown): never => {
+    process.stderr.write(
+      formatCLIError(error, { verbose: wantsStackTrace(process.argv.slice(2)) }) + '\\n'
+    )
+    process.exit(1)
+  }
+  process.on('uncaughtException', reportFatal)
+  process.on('unhandledRejection', reportFatal)
+
   ${capitalizedName}CLIClient(ws, process.argv.slice(2))
     .then((exitCode) => process.exit(exitCode))
-    .catch(error => {
-      console.error('Fatal channel CLI error:', error)
-      process.exit(1)
-    })
+    .catch(reportFatal)
 }
 `
 }

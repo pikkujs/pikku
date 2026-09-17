@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { flushSpool } from '../lib/finding-spool.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricFindingsFlushInput = z.object({
   apiUrl: z.string().optional(),
@@ -25,7 +26,9 @@ export const FabricFindingsFlush = pikkuSessionlessFunc({
   func: async (_services, { apiUrl: apiUrlOverride }) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
 
     const result = await flushSpool({
       apiUrl: ctx.apiUrl,

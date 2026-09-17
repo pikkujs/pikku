@@ -3,6 +3,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { resolveStage } from '../lib/stage.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricSecretsRotateInput = z.object({
   branch: z.string().optional(),
@@ -21,9 +22,11 @@ export const FabricSecretsRotate = pikkuSessionlessFunc({
   func: async (_services, { branch: requested, force }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
     if (!ctx.projectId)
-      throw new Error(
+      throw new FabricPreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
@@ -41,7 +44,7 @@ export const FabricSecretsRotate = pikkuSessionlessFunc({
       // Not a confirmation for politeness — this is the one operation here
       // that destroys access to data. Fabric cannot read the sealed values, so
       // it cannot carry them over, and nobody can undo it afterwards.
-      throw new Error(
+      throw new FabricPreconditionError(
         `Rotating the sealing key on ${branch} makes every secret already set on it unreadable — fabric cannot re-seal values it cannot open, so each one must be set again after the next deploy. Re-run with --force if that is what you want.`
       )
     }

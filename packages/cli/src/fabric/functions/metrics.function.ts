@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricMetricsInput = z.object({
   branch: z.string(),
@@ -34,9 +35,11 @@ export const FabricMetrics = pikkuSessionlessFunc({
   func: async (_services, { branch, hours, function: functionName, json }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
     if (!ctx.projectId)
-      throw new Error(
+      throw new FabricPreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 

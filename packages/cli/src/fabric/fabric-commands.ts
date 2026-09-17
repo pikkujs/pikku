@@ -326,7 +326,10 @@ export const fabricCommands = defineCLICommands({
         description: 'Set a stage-scoped secret',
         options: {
           branch: { description: 'Target branch', short: 'b' },
-          value: { description: 'Secret value (prompted if omitted)' },
+          value: {
+            description:
+              'Secret value (prompted if omitted, or read from stdin when piped)',
+          },
           force: {
             description: 'Overwrite without confirmation',
             default: false,

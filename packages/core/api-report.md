@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3026 observable things**: 979 exported names, plus
+**3028 observable things**: 981 exported names, plus
 2047 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
@@ -27,8 +27,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./errors` | 50 | 50 | 22 |
 | `./analytics` | 26 | 26 | 40 |
 | `./services/local-meta` | 22 | 2 | 40 |
+| `./cli` | 16 | 14 | 26 |
 | `./mcp` | 21 | 21 | 17 |
-| `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
@@ -3866,10 +3866,12 @@ export type CorePikkuCLIRender<
 > = CorePikkuRender<Data, void, Services, Session>
 defineCLICommands: <T extends Record<string, CoreCLICommandConfig<any, any, any, any>>>(commands: T) => T
 executeCLI: ({ programName, args, createConfig, createSingletonServices, createWireServices, }: { programName: string; args?: string[] | undefined; createConfig?: CreateConfig<any, any> | undefined; createSingletonServices: CreateSingletonServices<any, any>; createWireServices?: CreateWireServices<any, any, any> | undefined; }) => Promise<void>
+formatCLIError: (error: unknown, { verbose }?: { verbose?: boolean | undefined; }) => string
 generateCommandHelp: (programName: string, allMeta: CLIMeta, commandPath?: string[]) => string
 parseCLIArguments: (args: string[], programName: string, allMeta: CLIMeta) => ParsedCommand
 pikkuCLIRender: <Data, Services extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Session extends CoreUserSession = CoreUserSession>(renderer: (services: Services, data: Data, session?: Session | undefined) => void | Promise<void>) => CorePikkuCLIRender<Data, Services, Session>
 runCLICommand: ({ program, commandPath, data, singletonServices, createWireServices, onOutput, session, transport, }: { program: string; commandPath: string[]; data: Record<string, any>; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<any>
+wantsStackTrace: (args: string[], env?: Record<string, string | undefined>) => boolean
 wireCLI: <Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, GlobalOptions, PikkuMiddleware extends CorePikkuMiddleware, GlobalOutput>(cli: CoreCLI<Commands, GlobalOptions, PikkuMiddleware, GlobalOutput>) => void
 ```
 

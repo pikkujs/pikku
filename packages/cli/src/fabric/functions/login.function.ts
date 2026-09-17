@@ -8,6 +8,7 @@ import {
 } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { deriveConsoleUrl } from '../lib/console-url.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricLoginInput = z.object({
   apiKey: z.string().optional(),
@@ -121,14 +122,14 @@ export const FabricLogin = pikkuSessionlessFunc({
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
       const result = await rpc.invoke('pollCliAuth', { code })
       if (result.status === 'expired') {
-        throw new Error(
+        throw new FabricPreconditionError(
           'Code expired before confirmation. Run `pikku fabric login` again.'
         )
       }
       // Distinct from expired: the user pressed Cancel, so stop immediately
       // rather than sitting here until the TTL runs out.
       if (result.status === 'rejected') {
-        throw new Error(
+        throw new FabricPreconditionError(
           'Sign-in was cancelled in the browser. Run `pikku fabric login` again to retry.'
         )
       }
@@ -140,6 +141,6 @@ export const FabricLogin = pikkuSessionlessFunc({
         return { ok: true, apiUrl }
       }
     }
-    throw new Error('Login timed out.')
+    throw new FabricPreconditionError('Login timed out.')
   },
 })
