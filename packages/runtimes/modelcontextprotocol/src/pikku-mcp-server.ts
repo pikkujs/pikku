@@ -7,26 +7,20 @@ import {
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import type {
-  ListResourceTemplatesResult,
-  ListResourcesResult,
-  ListPromptsResult,
-  ListToolsResult,
-} from '@modelcontextprotocol/sdk/types.js'
 import {
-  CallToolRequestSchema,
-  ListResourcesRequestSchema,
-  ListResourceTemplatesRequestSchema,
-  ListToolsRequestSchema,
-  ReadResourceRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-  McpError,
-} from '@modelcontextprotocol/sdk/types.js'
+  createMcpHandler,
+  ProtocolError,
+  Server,
+  type AuthInfo,
+  type ListResourceTemplatesResult,
+  type ListResourcesResult,
+  type ListPromptsResult,
+  type ListToolsResult,
+  type McpHttpHandler,
+  type McpRequestContext,
+  type Transport,
+} from '@modelcontextprotocol/server'
+import { serveStdio } from '@modelcontextprotocol/server/stdio'
 
 import type { CoreConfig } from '@pikku/core/types'
 import { stopSingletonServices } from '@pikku/core/utils'
@@ -115,6 +109,8 @@ export class PikkuMCPServer {
   private server!: Server
   private mcpEndpointRegistry: MCPEndpointRegistry
   private connected = false
+  private httpHandler?: McpHttpHandler
+  private stdioHandle?: { close: () => Promise<void> }
 
   constructor(
     private config: MCPServerConfig,
@@ -149,7 +145,15 @@ export class PikkuMCPServer {
 
   public async stop(): Promise<void> {
     await stopSingletonServices()
-    if (this.server) {
+    // The HTTP entry owns the per-request instances it built, so closing it is
+    // what tears those down; `this.server` is only set for the hand-wired
+    // transports (`connect`) and for stdio, where the instance is pinned.
+    if (this.httpHandler) {
+      await this.httpHandler.close()
+    }
+    if (this.stdioHandle) {
+      await this.stdioHandle.close()
+    } else if (this.server) {
       await this.server.close()
     }
   }
@@ -186,6 +190,26 @@ export class PikkuMCPServer {
     return server
   }
 
+  /**
+   * The per-serving-unit factory both v2 entries call — once per HTTP request
+   * under `createMcpHandler`, once per connection under `serveStdio`.
+   *
+   * `ctx.requestInfo` is the caller's own `Request`, handed over rather than
+   * reconstructed, which is what lets a tool see who is calling it. Unlike the
+   * transport, `PikkuFetchHTTPRequest` reads the body only on demand, so the
+   * two never compete for the single-use stream and no clone is needed — a
+   * tool's input comes from the JSON-RPC params, not the HTTP body.
+   */
+  private serverFactory = (ctx: McpRequestContext): Server => {
+    const server = this.createConfiguredServer(
+      ctx.requestInfo
+        ? { request: new PikkuFetchHTTPRequest(ctx.requestInfo) }
+        : undefined
+    )
+    this.server = server
+    return server
+  }
+
   public async connect(transport: Transport): Promise<void> {
     if (this.connected) {
       throw new Error('MCP server is already connected')
@@ -196,8 +220,16 @@ export class PikkuMCPServer {
   }
 
   public async connectStdio(): Promise<void> {
-    const transport = new StdioServerTransport()
-    await this.connect(transport)
+    if (this.connected) {
+      throw new Error('MCP server is already connected')
+    }
+    // `serveStdio` owns the transport and the era decision: it pins one
+    // instance from the factory for the connection's lifetime, so a 2025-era
+    // client and a 2026-era one are both served from the same registration.
+    this.stdioHandle = serveStdio(this.serverFactory, {
+      onerror: (error) => this.logger.error('mcp stdio error', error),
+    })
+    this.connected = true
   }
 
   /**
@@ -241,30 +273,38 @@ export class PikkuMCPServer {
 
   /**
    * The one MCP dispatch path, taking a `Request` and returning a `Response`
-   * via the SDK's WebStandard transport. It serves the web-standard runtimes
+   * via the SDK's `createMcpHandler` entry. It serves the web-standard runtimes
    * (bun, workers, deno) directly and node through `createHTTPRequestHandler`.
-   * Stateless: a fresh transport + configured server per request (the
-   * recommended web-standard pattern; no session map to leak across requests).
+   * Stateless: a fresh server per request, built by {@link serverFactory}, with
+   * no session map to leak across requests.
+   *
+   * `authInfo` is strictly pass-through — the entry never derives it from the
+   * request's own headers, so a caller that has verified a bearer token hands
+   * the claims in here and they reach handlers as `ctx.http.authInfo`.
+   *
+   * 2025-era clients keep working: `legacy` defaults to `'stateless'`, which
+   * answers them from the same factory rather than refusing them.
    */
   public createFetchHandler(options?: { path?: string }): {
-    handler: (request: Request) => Promise<Response>
+    handler: (
+      request: Request,
+      requestOptions?: { authInfo?: AuthInfo }
+    ) => Promise<Response>
   } {
     const mcpPath = options?.path ?? '/mcp'
-    const handler = async (request: Request): Promise<Response> => {
+    this.httpHandler ??= createMcpHandler(this.serverFactory, {
+      onerror: (error) => this.logger.error('mcp handler error', error),
+    })
+    const mcpHandler = this.httpHandler
+    const handler = async (
+      request: Request,
+      requestOptions?: { authInfo?: AuthInfo }
+    ): Promise<Response> => {
       const url = new URL(request.url)
       if (url.pathname !== mcpPath) {
         return new Response(null, { status: 404 })
       }
-      const transport = new WebStandardStreamableHTTPServerTransport()
-      // The MCP body is read by the transport, so the request is cloned before
-      // being wrapped: both would otherwise compete for the same single-use
-      // body stream. Only headers and cookies are wanted here — a tool's input
-      // comes from the JSON-RPC params, not the HTTP body.
-      const server = this.createConfiguredServer({
-        request: new PikkuFetchHTTPRequest(request.clone()),
-      })
-      await server.connect(transport)
-      return transport.handleRequest(request)
+      return mcpHandler.fetch(request, requestOptions)
     }
     return { handler }
   }
@@ -397,7 +437,7 @@ export class PikkuMCPServer {
   }
 
   private setupTools(server: Server, http?: PikkuHTTP): void {
-    server.setRequestHandler(ListToolsRequestSchema, async () => {
+    server.setRequestHandler('tools/list', async () => {
       const tools = Object.values(this.mcpEndpointRegistry.getTools())
       return {
         tools: tools.map((tool) => ({
@@ -412,7 +452,7 @@ export class PikkuMCPServer {
     const mcp = this.createMCPService(server)
 
     // Handler for calling tools
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler('tools/call', async (request) => {
       const { name, arguments: args } = request.params
       try {
         const result = await runMCPTool(
@@ -440,13 +480,13 @@ export class PikkuMCPServer {
             ],
           }
         }
-        throw new McpError(-32603, 'Internal error')
+        throw new ProtocolError(-32603, 'Internal error')
       }
     })
   }
 
   private setupResources(server: Server, http?: PikkuHTTP): void {
-    server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+    server.setRequestHandler('resources/templates/list', async () => {
       const resourceTemplates = Object.values(
         this.mcpEndpointRegistry.getResources()
       ).filter((resource) => resource.inputSchema)
@@ -461,7 +501,7 @@ export class PikkuMCPServer {
       } as ListResourceTemplatesResult
     })
 
-    server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    server.setRequestHandler('resources/list', async () => {
       const resources = Object.values(getMCPResourcesMeta()).filter(
         (resource) => !resource.inputSchema
       )
@@ -478,7 +518,7 @@ export class PikkuMCPServer {
 
     const mcp = this.createMCPService(server)
 
-    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    server.setRequestHandler('resources/read', async (request) => {
       const { uri } = request.params
       try {
         const { result: contents } = await runMCPResource(
@@ -500,7 +540,7 @@ export class PikkuMCPServer {
             level: 'error',
             data: `Error reading resource ${uri}: code ${code}: ${message}`,
           })
-          throw new McpError(code, message, data)
+          throw new ProtocolError(code, message, data)
         }
 
         server.sendLoggingMessage({
@@ -513,7 +553,7 @@ export class PikkuMCPServer {
   }
 
   private setupPrompts(server: Server, http?: PikkuHTTP): void {
-    server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    server.setRequestHandler('prompts/list', async () => {
       const promptsMeta = Object.values(getMCPPromptsMeta())
       return {
         prompts: promptsMeta.map((prompt) => ({
@@ -526,7 +566,7 @@ export class PikkuMCPServer {
 
     const mcp = this.createMCPService(server)
 
-    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    server.setRequestHandler('prompts/get', async (request) => {
       const { name, arguments: args } = request.params
       const promptMeta = getMCPPromptsMeta()[name]
 

@@ -27,7 +27,7 @@
     "@pikku/core": "^0.12.108"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.30.0"
+    "@modelcontextprotocol/server": "2.0.0"
   },
   "engines": {
     "node": ">=24"
@@ -38,5 +38,8 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     }
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0"
   }
 }
