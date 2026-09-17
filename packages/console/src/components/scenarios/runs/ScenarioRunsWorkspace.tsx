@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Center, Text } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { ListPageHeader } from '../../layout/PageLayout'
 import { ResizablePanelLayout } from '../../layout/ResizablePanelLayout'
 import { usePageOptionsDismiss } from '../../../context/PageOptionsProvider'
 import { useScenarioRuns } from '../../../hooks/useScenarioRuns'
+import { useSearchParams } from '../../../router'
 import { scenarioViewSelection, type ScenarioView } from '../scenario-view'
 import { ScenarioRunNavigator } from './ScenarioRunNavigator'
 import { ScenarioRunDetail } from './ScenarioRunDetail'
@@ -22,15 +23,21 @@ export const ScenarioRunsWorkspace: React.FC<ScenarioRunsWorkspaceProps> = ({
   onViewChange,
 }) => {
   const { data: runs, isLoading } = useScenarioRuns()
-  const [selectedId, setSelectedId] = useState<string>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const dismiss = usePageOptionsDismiss()
 
   const list = runs ?? []
-  // Landing on the newest run is what someone opening this screen came for;
-  // once they have picked one it stays picked, even as newer runs arrive.
-  useEffect(() => {
-    if (!selectedId && list.length > 0) setSelectedId(list[0]!.runId)
-  }, [selectedId, list])
+  // The picked run lives in the URL, so a failing run is a link you can send
+  // and a host can point straight at the run a build produced. Absent, this
+  // lands on the newest without writing anything.
+  const selectedId = searchParams.get('run') ?? list[0]?.runId
+  const selectRun = (runId?: string) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (runId) next.set('run', runId)
+      else next.delete('run')
+      return next
+    })
 
   return (
     <ResizablePanelLayout
@@ -53,7 +60,7 @@ export const ScenarioRunsWorkspace: React.FC<ScenarioRunsWorkspaceProps> = ({
           loading={isLoading}
           selectedId={selectedId}
           onSelect={(runId) => {
-            setSelectedId(runId)
+            selectRun(runId)
             dismiss()
           }}
         />
@@ -63,7 +70,7 @@ export const ScenarioRunsWorkspace: React.FC<ScenarioRunsWorkspaceProps> = ({
       {selectedId ? (
         <ScenarioRunDetail
           runId={selectedId}
-          onDeleted={() => setSelectedId(undefined)}
+          onDeleted={() => selectRun(undefined)}
         />
       ) : (
         <Center p="xl">
