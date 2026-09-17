@@ -14,7 +14,7 @@ import { defaultSession } from './default-session.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
-import { isSecretNotFound } from './secret-not-found.js'
+import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
 
 type CachedSession = { session: any; user: any }
 
@@ -70,8 +70,13 @@ export const betterAuthStatelessSession = (
 
   return pikkuMiddleware({
     priority,
-    func: async (services, { http, setSession, session }, next) => {
-      if (!http?.request || !setSession || session) {
+    func: async (services, { http, setSession, session, getSession }, next) => {
+      // `session` is a snapshot taken when the wire props were built, so it is
+      // still undefined for middleware that runs after one which authenticated.
+      // `getSession()` reads the live value — without it this middleware would
+      // re-run its cookie lookup over a request another middleware has already
+      // resolved, and overwrite that session with `undefined`-or-worse.
+      if (!http?.request || !setSession || session || getSession?.()) {
         return next()
       }
       const request = http.request
@@ -82,6 +87,13 @@ export const betterAuthStatelessSession = (
           await (services as any).secrets?.getSecret(secretId)
         )?.reveal()
       } catch (e: any) {
+        // A scoped namespace that was never granted this key is an expected
+        // shape, not a failure: an addon's wiring runs with its own scoped
+        // secrets and cannot read the host app's auth secret. Skip quietly so
+        // another middleware (a bearer-token one, say) can still authenticate.
+        if (isSecretForbidden(e)) {
+          return next()
+        }
         if (!isSecretNotFound(e)) throw e
         services.logger?.error(
           `betterAuthStatelessSession: secret '${secretId}' not found — session middleware skipped. Ensure ${secretId} is configured.`
