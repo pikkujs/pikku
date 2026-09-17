@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "@ai-sdk/openai-compatible": "^3.0.30",
+    "@modelcontextprotocol/client": "2.0.0",
     "@pikku/cli": "workspace:*",
     "@pikku/playwright": "workspace:*",
     "@pikku/ws": "workspace:*",
