@@ -54,9 +54,16 @@ export const ScenarioRunDetail: React.FC<ScenarioRunDetailProps> = ({
   }
 
   const firstFailure = run.results.find((result) => result.status === 'failed')
-  const openName = opened ?? firstFailure?.name
-  const toggle = (name: string) =>
-    setOpened(name === openName ? '' : name)
+  const openName = opened ?? firstFailure?.name ?? run.results[0]?.name
+  const toggle = (name: string) => setOpened(name === openName ? '' : name)
+
+  const features: { feature: string; results: typeof run.results }[] = []
+  for (const result of run.results) {
+    const feature = result.feature ?? ''
+    const last = features[features.length - 1]
+    if (last && last.feature === feature) last.results.push(result)
+    else features.push({ feature, results: [result] })
+  }
 
   const elapsed =
     run.finishedAt &&
@@ -65,8 +72,8 @@ export const ScenarioRunDetail: React.FC<ScenarioRunDetailProps> = ({
   return (
     <ScrollArea style={{ height: '100%' }} data-testid="scenario-run-detail">
       <Stack gap="md" p="md">
-        <Group justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap">
+        <Group justify="space-between" wrap="wrap" gap="xs">
+          <Group gap="sm" wrap="wrap">
             <ScenarioRunStatusBadge status={run.status} />
             <Text size="sm" fw={600}>
               {m.scenario_runs_header({
@@ -115,15 +122,24 @@ export const ScenarioRunDetail: React.FC<ScenarioRunDetailProps> = ({
           onOpen={toggle}
         />
 
-        <Stack gap={6}>
-          {run.results.map((result) => (
-            <ScenarioRunResult
-              key={result.name}
-              runId={run.runId}
-              result={result}
-              open={result.name === openName}
-              onToggle={() => toggle(result.name)}
-            />
+        <Stack gap="lg">
+          {features.map((group) => (
+            <Stack key={group.feature} gap={6}>
+              {group.feature && (
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+                  {asI18n(group.feature)}
+                </Text>
+              )}
+              {group.results.map((result) => (
+                <ScenarioRunResult
+                  key={result.name}
+                  runId={run.runId}
+                  result={result}
+                  open={result.name === openName}
+                  onToggle={() => toggle(result.name)}
+                />
+              ))}
+            </Stack>
           ))}
         </Stack>
 

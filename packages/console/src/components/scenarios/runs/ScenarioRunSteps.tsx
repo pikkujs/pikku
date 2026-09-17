@@ -6,7 +6,9 @@ import { m } from '@/i18n/messages'
 import type { ScenarioStepRow } from '@pikku/core/scenario'
 import { runDuration } from './scenario-run-format'
 
+/** A step carries the workflow vocabulary (`succeeded`), not the scenario's. */
 const STEP_ICON = {
+  succeeded: { Icon: Check, colour: 'var(--mantine-color-green-6)' },
   passed: { Icon: Check, colour: 'var(--mantine-color-green-6)' },
   failed: { Icon: X, colour: 'var(--mantine-color-red-6)' },
   skipped: { Icon: Minus, colour: 'var(--mantine-color-dimmed)' },
@@ -69,7 +71,13 @@ export const ScenarioRunSteps: React.FC<ScenarioRunStepsProps> = ({
             <Text
               size="sm"
               fw={active ? 600 : 400}
-              style={{ lineHeight: 1.6, flex: 1, textAlign: 'start' }}
+              style={{
+                lineHeight: 1.6,
+                flex: 1,
+                minWidth: 0,
+                overflowWrap: 'anywhere',
+                textAlign: 'start',
+              }}
             >
               {asI18n(step.sentence)}
             </Text>
@@ -78,7 +86,7 @@ export const ScenarioRunSteps: React.FC<ScenarioRunStepsProps> = ({
                 size="xs"
                 c="dimmed"
                 ff="monospace"
-                style={{ paddingTop: 5 }}
+                style={{ paddingTop: 5, flexShrink: 0 }}
               >
                 {asI18n(runDuration(step.durationMs))}
               </Text>
