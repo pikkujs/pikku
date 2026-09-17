@@ -85,6 +85,7 @@ export const deployPlan = pikkuSessionlessFunc<
       getEntryContext,
       frontend: config.frontend,
       outDir: config.outDir,
+      srcDirectories: config.srcDirectories,
       debugArtifacts: data?.debugArtifacts ?? false,
       logger,
       bundler,

@@ -22,6 +22,10 @@ import type { Bundler } from './bundler/bundler.interface.js'
 import type { BundleResult } from './bundler/types.js'
 import type { ProviderAdapter } from '@pikku/deploy'
 import {
+  loadUserConfigForDb,
+  type UserConfigShape,
+} from '../functions/commands/db-shared.js'
+import {
   generateServerEntrySource,
   SERVER_DOCKERFILE,
   SERVER_DOCKERIGNORE,
@@ -98,32 +102,6 @@ function findLockfile(projectDir: string): string | null {
 }
 
 /**
- * The database a standalone bundle has to open for itself.
- *
- * Every other provider deploys onto a host that supplies `kysely` — `pikku dev`
- * builds one, a Cloudflare deploy binds one — so `createSingletonServices` is
- * written expecting it. A standalone artifact has no host, and shipped one that
- * never got a connection at all: the app booted straight into whatever its
- * services factory does when the database is missing, which for the generated
- * templates is a throw.
- *
- * Engine comes from the migrations directory rather than the user config,
- * because that is the same signal `loadUserConfigForDb` falls back to and it
- * needs no module loading here. `db/sqlite` and `db/postgres` are the two
- * conventions the migrator already writes to, so a project declares its engine
- * by having written migrations for it.
- *
- * Both at once is refused rather than resolved. Picking one would be picking
- * which database the deployed app talks to on the strength of directory order,
- * and the failure — an app running happily against the wrong, fully valid
- * schema — is invisible until someone reads the data.
- *
- * The migrations are copied in beside the bundle under the same `db/<engine>/`
- * path they have in the project, which is also where Fabric's build container
- * stages them. Two producers writing the artifact cannot disagree about where
- * the SQL lives, and `bundle.js db migrate` finds it either way.
- */
-/**
  * The project's declared version, or nothing.
  *
  * Absent is a real answer — a project need not version itself — and is better
@@ -140,10 +118,75 @@ function resolveProjectVersion(projectDir: string): string | undefined {
   }
 }
 
-async function resolveStandaloneDb(
+/**
+ * The project's own database declaration, or nothing it could read.
+ *
+ * A config that throws, or names no `createConfig` at all, is reported as no
+ * declaration rather than as a build failure: it is only ever one of two
+ * signals here, and the directory conventions still answer for a project whose
+ * config needs an environment this build does not have.
+ */
+async function loadConfiguredDb(
+  projectDir: string,
+  srcDirectories: string[],
+  logger: BuildLogger
+): Promise<UserConfigShape | null> {
+  try {
+    return await loadUserConfigForDb({
+      config: { rootDir: projectDir, srcDirectories },
+      logger: {
+        error: (msg) => logger.debug(msg),
+        warn: (msg) => logger.debug(msg),
+      },
+    })
+  } catch (error: any) {
+    logger.debug(
+      `Could not read createConfig to resolve the deploy database: ${error?.message ?? error}`
+    )
+    return null
+  }
+}
+
+/**
+ * The database a standalone bundle has to open for itself.
+ *
+ * Every other provider deploys onto a host that supplies `kysely` — `pikku dev`
+ * builds one, a Cloudflare deploy binds one — so `createSingletonServices` is
+ * written expecting it. A standalone artifact has no host, and shipped one that
+ * never got a connection at all: the app booted straight into whatever its
+ * services factory does when the database is missing, which for the generated
+ * templates is a throw.
+ *
+ * Engine is resolved the way every other pikku host resolves it: `createConfig`
+ * first, through the same `loadUserConfigForDb` the db commands use, and the
+ * `db/sqlite` / `db/postgres` conventions only as the fallback. Reading the
+ * directory alone left an app that declares its database in config and keeps no
+ * migrations getting a connection under `pikku dev` and none in its artifact —
+ * the same crash, reached a different way. A config that cannot be loaded falls
+ * back to the directories rather than failing the build, because a project with
+ * no database at all must still bundle.
+ *
+ * Both at once is refused rather than resolved, whether the two arrive as two
+ * migration directories or as `sqliteDb` beside `postgresUrl`. Picking one would
+ * be picking which database the deployed app talks to on the strength of
+ * directory order, and the failure — an app running happily against the wrong,
+ * fully valid schema — is invisible until someone reads the data.
+ *
+ * Only the engine travels. A configured SQLite path is a developer's local file
+ * and has no meaning on the target host, which names its own through
+ * `PIKKU_DATA_DIR`.
+ *
+ * The migrations are copied in beside the bundle under the same `db/<engine>/`
+ * path they have in the project, which is also where Fabric's build container
+ * stages them. Two producers writing the artifact cannot disagree about where
+ * the SQL lives, and `bundle.js db migrate` finds it either way.
+ */
+export async function resolveStandaloneDb(
   projectDir: string,
   pikkuDir: string,
-  unitDir: string
+  unitDir: string,
+  srcDirectories: string[],
+  logger: BuildLogger
 ): Promise<
   { engine: 'sqlite' | 'postgres'; coercionImportPath?: string } | undefined
 > {
@@ -156,12 +199,33 @@ async function resolveStandaloneDb(
     )
   }
 
-  const engine = hasSqlite ? 'sqlite' : hasPostgres ? 'postgres' : undefined
+  const userConfig = await loadConfiguredDb(projectDir, srcDirectories, logger)
+
+  if (userConfig?.postgresUrl && userConfig?.sqliteDb) {
+    throw new Error(
+      'createConfig sets both postgresUrl and sqliteDb, so a standalone build cannot tell which database the app is meant to open. Configure exactly one database dialect.'
+    )
+  }
+
+  const engine = userConfig?.postgresUrl
+    ? 'postgres'
+    : userConfig?.sqliteDb
+      ? 'sqlite'
+      : hasSqlite
+        ? 'sqlite'
+        : hasPostgres
+          ? 'postgres'
+          : undefined
   if (!engine) return undefined
 
-  await cp(join(projectDir, 'db', engine), join(unitDir, 'db', engine), {
-    recursive: true,
-  })
+  // Absent for a database whose schema is created outside the migrator, which
+  // is a database to connect to rather than a reason to hand the app none.
+  const migrationsDir = join(projectDir, 'db', engine)
+  if (existsSync(migrationsDir)) {
+    await cp(migrationsDir, join(unitDir, 'db', engine), {
+      recursive: true,
+    })
+  }
 
   // Absent for an app that annotates no columns, which is a database with
   // nothing to coerce rather than a reason to hand the app no database.
@@ -224,6 +288,11 @@ export async function runBuildPipeline(options: {
   }
   deployDir?: string
   outDir?: string
+  /**
+   * The project's source roots, for finding the `createConfig` that declares
+   * which database a standalone artifact has to open.
+   */
+  srcDirectories?: string[]
   /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
   debugArtifacts?: boolean
   logger: BuildLogger
@@ -306,7 +375,13 @@ export async function runBuildPipeline(options: {
       ) as object),
       frontend: frontendMount,
       version: resolveProjectVersion(projectDir),
-      db: await resolveStandaloneDb(projectDir, pikkuDir, unitDir),
+      db: await resolveStandaloneDb(
+        projectDir,
+        pikkuDir,
+        unitDir,
+        options.srcDirectories ?? ['src'],
+        logger
+      ),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }
     const source = provider.generateEntrySource(ctx as never)
