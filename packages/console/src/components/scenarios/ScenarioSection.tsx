@@ -76,9 +76,9 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
   )
   const [revealed, setRevealed] = useState(false)
   const artifacts = run?.result?.artifacts ?? []
-  const recording = artifacts.find((artifact) => artifact.kind === 'video')
+  const recordings = artifacts.filter((artifact) => artifact.kind === 'video')
   const stills = artifacts.filter((artifact) => artifact.kind !== 'video')
-  const hasFootage = !!recording || stills.length > 0
+  const hasFootage = recordings.length > 0 || stills.length > 0
   const showFootage =
     hasFootage && (revealed || (!scanning && run?.result?.status === 'failed'))
 
@@ -140,66 +140,65 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
 
         <ScenarioCast cast={cast} onOpenPersona={onOpenPersona} />
 
-        <ScenarioLadder
-          steps={scenario.steps}
-          actorNames={
-            new Map(cast.map((persona) => [persona.key, persona.name]))
-          }
-          recorded={recorded}
-          onOpenPersona={onOpenPersona}
-          onSelectStep={(stepId, stepType, metadata) => {
-            setSeekStep(stepId)
-            onSelectStep?.(workflow, stepId, stepType, metadata)
-          }}
-        />
+        <Group align="flex-start" gap="lg" wrap="wrap">
+          <Stack gap={10} style={{ flex: '1 1 380px', minWidth: 0 }}>
+            <ScenarioLadder
+              steps={scenario.steps}
+              actorNames={
+                new Map(cast.map((persona) => [persona.key, persona.name]))
+              }
+              recorded={recorded}
+              onOpenPersona={onOpenPersona}
+              onSelectStep={(stepId, stepType, metadata) => {
+                setSeekStep(stepId)
+                onSelectStep?.(workflow, stepId, stepType, metadata)
+              }}
+            />
 
-        {run?.result?.status === 'failed' && (
-          <ScenarioFailureReport result={run.result} />
-        )}
+            {run?.result?.status === 'failed' && (
+              <ScenarioFailureReport result={run.result} />
+            )}
 
-        {run && hasFootage && !showFootage && (
-          <Anchor
-            component="button"
-            type="button"
-            size="xs"
-            onClick={() => setRevealed(true)}
-            style={{ alignSelf: 'flex-start' }}
-          >
-            {m.scenarios_show_footage()}
-          </Anchor>
-        )}
-
-        {run && showFootage && (
-          <Group align="flex-start" gap="md" wrap="wrap">
-            {recording && (
-              <Box
-                style={{
-                  flexBasis: 380,
-                  flexGrow: 1,
-                  minWidth: 0,
-                  maxWidth: 480,
-                }}
+            {run && hasFootage && !showFootage && (
+              <Anchor
+                component="button"
+                type="button"
+                size="xs"
+                onClick={() => setRevealed(true)}
+                style={{ alignSelf: 'flex-start' }}
               >
+                {m.scenarios_show_footage()}
+              </Anchor>
+            )}
+          </Stack>
+
+          {run && showFootage && (
+            <Stack
+              gap="sm"
+              style={{ flex: '0 1 340px', minWidth: 240, maxWidth: 380 }}
+            >
+              {recordings.map((artifact) => (
                 <ScenarioRunPlayer
+                  key={artifact.path}
                   runId={run.runId}
-                  artifact={recording}
+                  artifact={artifact}
                   seekMs={
                     seekStep === undefined
                       ? undefined
                       : ladderOffset(scenario.steps, recorded, seekStep)
                   }
                 />
-              </Box>
-            )}
-            {stills.map((artifact) => (
-              <ScenarioArtifactTile
-                key={artifact.path}
-                runId={run.runId}
-                artifact={artifact}
-              />
-            ))}
-          </Group>
-        )}
+              ))}
+              {stills.map((artifact) => (
+                <ScenarioArtifactTile
+                  key={artifact.path}
+                  runId={run.runId}
+                  artifact={artifact}
+                />
+              ))}
+            </Stack>
+          )}
+        </Group>
 
         {examples.length > 0 && <ExamplesTable rows={examples} />}
       </Stack>

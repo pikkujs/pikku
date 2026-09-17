@@ -2,7 +2,7 @@ import React from 'react'
 import { Anchor, Box, Group, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import { Check, Minus, X } from 'lucide-react'
+import { Check, Circle, Minus, X } from 'lucide-react'
 import classes from './scenarios.module.css'
 import { runDuration } from './runs/scenario-run-format'
 import type { ScenarioStepRow } from '@pikku/core/scenario'
@@ -14,6 +14,12 @@ const STEP_ICON = {
   passed: { Icon: Check, colour: 'var(--mantine-color-green-6)' },
   failed: { Icon: X, colour: 'var(--mantine-color-red-6)' },
   skipped: { Icon: Minus, colour: 'var(--mantine-color-dimmed)' },
+}
+
+/** The run is being read and this rung is not in it: it has not run. */
+const STEP_PENDING = {
+  Icon: Circle,
+  colour: 'var(--mantine-color-default-border)',
 }
 
 const PHASE_LABEL: Record<string, () => string> = {
@@ -60,7 +66,7 @@ export const LadderStep: React.FC<LadderStepProps> = ({
   const icon = recorded
     ? (STEP_ICON[recorded.status as keyof typeof STEP_ICON] ??
       STEP_ICON.skipped)
-    : undefined
+    : STEP_PENDING
 
   return (
     <Group
@@ -86,10 +92,20 @@ export const LadderStep: React.FC<LadderStepProps> = ({
       style={{ paddingLeft: 8 + step.depth * 24 }}
     >
       {marked && (
-        <Box style={{ width: 14, flexShrink: 0, paddingTop: 5 }}>
-          {icon && (
-            <icon.Icon size={13} strokeWidth={2.4} color={icon.colour} />
-          )}
+        <Box
+          style={{
+            width: 14,
+            flexShrink: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            paddingTop: icon === STEP_PENDING ? 7 : 5,
+          }}
+        >
+          <icon.Icon
+            size={icon === STEP_PENDING ? 9 : 13}
+            strokeWidth={2.4}
+            color={icon.colour}
+          />
         </Box>
       )}
       <Box style={{ width: 52, flexShrink: 0, textAlign: 'right' }}>
