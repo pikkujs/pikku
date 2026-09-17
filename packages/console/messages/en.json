@@ -1254,5 +1254,6 @@
   "scenarios_footage_recording": "Recording",
   "scenarios_footage_pending": "Pending",
   "scenarios_footage_play": "Play the recording",
-  "scenarios_footage_open_still": "Open the screenshot"
+  "scenarios_footage_open_still": "Open the screenshot",
+  "scenario_runs_version_dirty": "{commit} — with uncommitted changes"
 }

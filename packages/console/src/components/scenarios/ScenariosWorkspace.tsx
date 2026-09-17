@@ -20,7 +20,7 @@ import {
 } from '../../hooks/useScenarioLens'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
 import { ScenarioRunBand } from './runs/ScenarioRunBand'
-import { runRelativeTime } from './runs/scenario-run-format'
+import { runRelativeTime, runVersionLabel } from './runs/scenario-run-format'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface ScenariosWorkspaceProps {
@@ -107,7 +107,13 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
       ...runList.map((summary) => ({
         value: summary.runId,
         label: asI18n(
-          `${summary.environment} · ${summary.surface} · ${runRelativeTime(summary.startedAt)}`
+          [
+            `${summary.environment} · ${summary.surface}`,
+            runRelativeTime(summary.startedAt),
+            runVersionLabel(summary.version),
+          ]
+            .filter(Boolean)
+            .join(' · ')
         ),
       })),
     ],

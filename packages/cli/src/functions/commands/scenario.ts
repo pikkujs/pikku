@@ -38,6 +38,7 @@ import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
 import { buildScenarioPlan } from './scenario-plan.js'
+import { resolveScenarioRunVersion } from './scenario-version.js'
 import type { ScenarioPlanGroup } from './scenario-plan.js'
 import { resolveEnvironment, isLocalUrl } from './environment.js'
 import { readDevAddress } from './dev-address.js'
@@ -525,11 +526,13 @@ export const scenarioRun = pikkuSessionlessFunc<
     // and the console can show a run while it is still going.
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
+    const version = await resolveScenarioRunVersion(runStore, config.rootDir)
     try {
       await runStore.start({
         runId: captureRunId,
         environment,
         surface: runSurface,
+        version,
         status: 'running',
         startedAt: startedAtIso,
         results: [],

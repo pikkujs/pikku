@@ -6,7 +6,11 @@ import { m } from '@/i18n/messages'
 import type { ScenarioRunRecord } from '@pikku/core/scenario'
 import { ScenarioRunStatusBadge } from './ScenarioRunStatusBadge'
 import { ScenarioRunTimeline } from './ScenarioRunTimeline'
-import { runDuration, runRelativeTime } from './scenario-run-format'
+import {
+  runDuration,
+  runRelativeTime,
+  runVersionLabel,
+} from './scenario-run-format'
 
 type ScenarioRunBandProps = {
   run: ScenarioRunRecord
@@ -54,6 +58,23 @@ export const ScenarioRunBand: React.FC<ScenarioRunBandProps> = ({
                 : runRelativeTime(run.startedAt)
             )}
           </Text>
+          {run.version && (
+            <Text
+              size="xs"
+              c="dimmed"
+              ff="monospace"
+              data-testid="scenario-run-version"
+              title={asI18n(
+                run.version.dirty
+                  ? m.scenario_runs_version_dirty({
+                      commit: run.version.commit,
+                    })
+                  : run.version.commit
+              )}
+            >
+              {asI18n(runVersionLabel(run.version))}
+            </Text>
+          )}
           {run.status === 'running' && declared > 0 && (
             <Text size="xs" c="dimmed" ff="monospace">
               {m.scenarios_run_progress({ done: settled, total: declared })}

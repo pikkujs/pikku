@@ -346,4 +346,14 @@ describe('scenarioRunSummary', () => {
     assert.equal(summary.status, 'running')
     assert.equal(summary.passed, 1)
   })
+
+  test('carries the version through, so a listed run can be placed', async () => {
+    const store = new FileScenarioRunStore({ dir })
+    const version = { commit: 'a'.repeat(40), dirty: true, attempt: 2 }
+    await store.start(record({ version }))
+
+    const listed = await store.list()
+
+    assert.deepEqual(listed[0]?.version, version)
+  })
 })
