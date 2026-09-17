@@ -32,11 +32,9 @@ const ensureRecursiveWatchAvailable = async (
   t: TestContext,
   dir: string
 ): Promise<boolean> => {
-  if ('bun' in process.versions) {
-    t.skip('tsx esm dynamic reload not supported under bun')
-    return false
-  }
-
+  // fs.watch's recursive mode on darwin coalesces the rapid write/read cycles
+  // these tests depend on; the verifier under verifiers/hmr covers the same
+  // paths on CI's linux.
   if (process.platform === 'darwin') {
     t.skip('recursive fs.watch is unreliable on darwin')
     return false
@@ -47,8 +45,10 @@ const ensureRecursiveWatchAvailable = async (
     watcher.close()
     return true
   } catch (error: any) {
+    // A host that does not implement recursive watching cannot run these tests;
+    // anything else — a descriptor limit, a bad path — is a failure worth
+    // seeing rather than a suite that quietly reports nothing.
     if (
-      error?.code === 'EMFILE' ||
       error?.code === 'ERR_FEATURE_UNAVAILABLE_ON_PLATFORM' ||
       error?.code === 'ERR_INVALID_ARG_VALUE'
     ) {
@@ -80,9 +80,11 @@ const writeFunctionModule = async (
   filename: string,
   returnValue: string
 ) => {
-  const jsContent = `export const ${filename.replace('.ts', '')} = { func: async () => (${returnValue}) };\n`
-  await writeFile(join(dir, filename.replace('.ts', '.js')), jsContent)
-  await writeFile(join(dir, filename), `// ts trigger ${Date.now()}`)
+  const name = filename.replace('.ts', '')
+  await writeFile(
+    join(dir, filename),
+    `export const ${name} = { func: async (): Promise<any> => (${returnValue}) };\n`
+  )
 }
 
 describe('pikkuDevReloader', { concurrency: false }, () => {
@@ -126,7 +128,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     const funcBefore = pikkuState(null, 'function', 'functions').get('myFunc')!
@@ -152,6 +153,81 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     assert.ok(reloadLog, 'Should log hot-reload message')
   })
 
+  test('a leftover compiled .js never shadows the edited source', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
+    addFunction('staleFunc', {
+      func: async () => ({ version: 1 }),
+    })
+
+    await writeFunctionModule(tmpDir, 'staleFunc.ts', '{ version: 1 }')
+    // What a `tsc`, `pikku dist` or bundler run leaves behind. `pikku dev`
+    // never refreshes it, so reading it announces a reload and serves the
+    // implementation the developer just replaced.
+    await writeFile(
+      join(tmpDir, 'staleFunc.js'),
+      'export const staleFunc = { func: async () => ({ version: 1 }) };\n'
+    )
+
+    reloader = await pikkuDevReloader({
+      srcDirectories: [tmpDir],
+      logger: mockLogger,
+    })
+
+    await writeFunctionModule(tmpDir, 'staleFunc.ts', '{ version: 2 }')
+
+    await wait(300)
+
+    const func = pikkuState(null, 'function', 'functions').get('staleFunc')!
+    assert.deepEqual(await func.func({} as any, {}, {} as any), { version: 2 })
+  })
+
+  test('reloads a source whose sibling import only exists as TypeScript', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
+    addFunction('siblingFunc', {
+      func: async () => ({ greeting: 'v1' }),
+    })
+
+    await writeFile(
+      join(tmpDir, 'greeting.ts'),
+      `export const greeting = (): string => 'v1'\n`
+    )
+    await writeFile(
+      join(tmpDir, 'siblingFunc.ts'),
+      `import { greeting } from './greeting.js'
+       export const siblingFunc = { func: async () => ({ greeting: greeting() }) };\n`
+    )
+
+    reloader = await pikkuDevReloader({
+      srcDirectories: [tmpDir],
+      logger: mockLogger,
+    })
+
+    await writeFile(
+      join(tmpDir, 'greeting.ts'),
+      `export const greeting = (): string => 'v2'\n`
+    )
+    await writeFile(
+      join(tmpDir, 'siblingFunc.ts'),
+      `import { greeting } from './greeting.js'
+       export const siblingFunc = { func: async () => ({ greeting: greeting() }) };
+       // trigger ${Date.now()}\n`
+    )
+
+    await wait(300)
+
+    const failureLog = mockLogger
+      .getLogs()
+      .find((l) => l.message.includes('Failed to import'))
+    assert.equal(failureLog, undefined, failureLog?.message)
+
+    const func = pikkuState(null, 'function', 'functions').get('siblingFunc')!
+    assert.deepEqual(await func.func({} as any, {}, {} as any), {
+      greeting: 'v2',
+    })
+  })
+
   test('should register a brand-new function export', async (t) => {
     if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
 
@@ -162,7 +238,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     await writeFunctionModule(tmpDir, 'unknownFunc.ts', '{ name: "unknown" }')
@@ -184,30 +259,24 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     assert.ok(newLog, 'Should log the newly registered function')
   })
 
-  test('should keep old code when JS import fails', async (t) => {
+  test('should keep old code when the source fails to import', async (t) => {
     if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
 
     addFunction('badFunc', {
       func: async () => ({ working: true }),
     })
 
-    await writeFile(
-      join(tmpDir, 'badFunc.js'),
-      'export const badFunc = { func: async () => ({ working: true }) };\n'
-    )
-    await writeFile(join(tmpDir, 'badFunc.ts'), '// initial')
+    await writeFunctionModule(tmpDir, 'badFunc.ts', '{ working: true }')
 
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     await writeFile(
-      join(tmpDir, 'badFunc.js'),
-      'this is not valid javascript {{{'
+      join(tmpDir, 'badFunc.ts'),
+      'this is not valid typescript {{{'
     )
-    await writeFile(join(tmpDir, 'badFunc.ts'), `// trigger ${Date.now()}`)
 
     await wait(300)
 
@@ -226,7 +295,7 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
       failureLog!.message.includes('keeping old code'),
       'Should say the old code is still being served'
     )
-    assert.match(failureLog!.message, /badFunc\.js/)
+    assert.match(failureLog!.message, /badFunc\.ts/)
   })
 
   test('should name the top-level await limitation when a reload hits it', async (t) => {
@@ -237,7 +306,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     await writeFile(
@@ -269,7 +337,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     await writeFile(join(tmpDir, 'someFunc.test.ts'), '// test file change')
@@ -335,7 +402,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     await writeFunctionModule(tmpDir, 'httpFunc.ts', '{ value: "new" }')
@@ -386,19 +452,20 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     await runScheduledTask({ name: 'hotTask' })
     assert.equal(taskResult.ref, 'v1')
 
-    const jsV1 = `export const hotTask = { func: async () => { }, auth: false };\n`
-    await writeFile(join(tmpDir, 'hotTask.js'), jsV1)
-    await writeFile(join(tmpDir, 'hotTask.ts'), '// initial')
+    await writeFile(
+      join(tmpDir, 'hotTask.ts'),
+      `export const hotTask = { func: async () => {}, auth: false };\n`
+    )
 
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
-    const jsV2 = `export const hotTask = { func: async () => { return { reloaded: true }; }, auth: false };\n`
-    await writeFile(join(tmpDir, 'hotTask.js'), jsV2)
-    await writeFile(join(tmpDir, 'hotTask.ts'), `// trigger ${Date.now()}`)
+    await writeFile(
+      join(tmpDir, 'hotTask.ts'),
+      `export const hotTask = { func: async () => ({ reloaded: true }), auth: false };\n`
+    )
 
     await wait(300)
 
@@ -480,7 +547,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     for (let i = 1; i <= 5; i++) {
@@ -505,19 +571,14 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
       func: async () => ({ nested: false }),
     })
 
-    const jsContent = `export const subFunc = { func: async () => ({ nested: false }) };\n`
-    await writeFile(join(subDir, 'subFunc.js'), jsContent)
-    await writeFile(join(subDir, 'subFunc.ts'), '// initial')
+    await writeFunctionModule(subDir, 'subFunc.ts', '{ nested: false }')
 
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
-    const jsContentNew = `export const subFunc = { func: async () => ({ nested: true }) };\n`
-    await writeFile(join(subDir, 'subFunc.js'), jsContentNew)
-    await writeFile(join(subDir, 'subFunc.ts'), `// trigger ${Date.now()}`)
+    await writeFunctionModule(subDir, 'subFunc.ts', '{ nested: true }')
 
     await wait(300)
 
@@ -539,7 +600,6 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
       logger: mockLogger,
-      pikkuDir: tmpDir,
     })
 
     reloader.close()

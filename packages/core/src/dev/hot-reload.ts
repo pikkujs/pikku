@@ -1,5 +1,4 @@
 import { watch, type FSWatcher } from 'node:fs'
-import { stat } from 'node:fs/promises'
 import { basename, join, resolve, relative } from 'node:path'
 
 import { pikkuState } from '../pikku-state.js'
@@ -19,7 +18,6 @@ export { reloadGeneratedMeta, reconcileAddonRegistry } from './reload-meta.js'
 interface PikkuDevReloaderOptions {
   srcDirectories: string[]
   logger: Logger
-  pikkuDir?: string
 }
 
 const isFunctionConfig = (
@@ -31,28 +29,6 @@ const isFunctionConfig = (
     'func' in value &&
     typeof (value as { func?: unknown }).func === 'function'
   )
-}
-
-const findCompiledFile = async (
-  tsFile: string,
-  srcDir: string,
-  pikkuDir: string
-): Promise<string | null> => {
-  const rel = relative(srcDir, tsFile).replace(/\.ts$/, '.js')
-  const candidates = [
-    join(pikkuDir, 'dist', rel),
-    join(srcDir, rel),
-    tsFile.replace(/\.ts$/, '.js'),
-  ]
-  for (const candidate of candidates) {
-    try {
-      await stat(candidate)
-      return candidate
-    } catch {
-      // not found, try next
-    }
-  }
-  return null
 }
 
 const isWatchedTsFile = (filename: string): boolean => {
@@ -93,9 +69,8 @@ export interface PikkuDevReloaderHandle {
 export async function pikkuDevReloader(
   options: PikkuDevReloaderOptions
 ): Promise<PikkuDevReloaderHandle> {
-  const { srcDirectories, logger, pikkuDir = '.pikku' } = options
+  const { srcDirectories, logger } = options
   const absSrcDirs = srcDirectories.map((d) => resolve(d))
-  const absPikkuDir = resolve(pikkuDir)
   const watchers: FSWatcher[] = []
 
   const functionsMap = pikkuState(null, 'function', 'functions')
@@ -109,21 +84,15 @@ export async function pikkuDevReloader(
     const srcDir = absSrcDirs.find((d) => changedTsFile.startsWith(d))
     if (!srcDir) return
 
-    const compiledFile = await findCompiledFile(
-      changedTsFile,
-      srcDir,
-      absPikkuDir
-    )
-    const importPath = compiledFile ?? changedTsFile
-
-    const result = await moduleRunner.run(importPath)
+    // knowledge: decisions/internals/hot-reload-reads-the-changed-source-never-a-compiled-copy.md
+    const result = await moduleRunner.run(changedTsFile)
     if (!result.ok) {
       // Keeping the old code leaves the process disagreeing with the file on
       // disk, and the only symptom is stale output from a function that looks
       // correct in the editor — so the reason has to be printed here, where it
       // is still known, rather than left for the developer to reconstruct.
       logger.error(
-        `Failed to import: ${relative(process.cwd(), importPath)} (keeping old code)\n` +
+        `Failed to import: ${relative(process.cwd(), changedTsFile)} (keeping old code)\n` +
           reloadFailureReason(result.error)
       )
       return
