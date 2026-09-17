@@ -367,6 +367,47 @@ export const agentProtocolUnknownAgentIsRefusedScenario = pikkuScenario<
   },
 })
 
+/**
+ * A failure that never reaches the agent runtime still has to leave the stream
+ * in AG-UI, or the client renders a parser crash instead of the refusal.
+ */
+export const agentProtocolUnknownAgentStreamErrorsScenario = pikkuScenario<
+  void,
+  { events: 1 }
+>({
+  title: 'A refused stream ends as a single RUN_ERROR',
+  description: 'The refusal is announced in AG-UI, not in Pikku stream frames',
+  tags: ['scenario', 'agent-protocol'],
+  func: async (_services, _data, { scenario }) => {
+    const thread = await scenario.given('opens a thread', 'startsAgentThread')
+    const stream = await scenario.when(
+      'streams an agent that does not exist',
+      'streamsAgent',
+      {
+        agent: 'noSuchAgent',
+        script: 'text-only',
+        message: 'hello nobody',
+        threadId: thread.threadId,
+        resourceId: RESOURCE_ID,
+      }
+    )
+    await scenario.then('sees only the error event', 'expectsStreamEnvelope', {
+      types: stream.types,
+      startsWith: 'RUN_ERROR',
+      endsWith: 'RUN_ERROR',
+    })
+    await scenario.then(
+      'sees one error and nothing after it',
+      'expectsStreamEvents',
+      {
+        types: stream.types,
+        counts: { RUN_ERROR: 1 },
+      }
+    )
+    return { events: 1 }
+  },
+})
+
 export const agentProtocolFeature = pikkuFeature({
   name: 'AI agent run and stream protocol',
   description:
@@ -385,5 +426,6 @@ export const agentProtocolFeature = pikkuFeature({
     agentProtocolStreamStepEnvelopeScenario,
     agentProtocolReportsTokenUsageScenario,
     agentProtocolUnknownAgentIsRefusedScenario,
+    agentProtocolUnknownAgentStreamErrorsScenario,
   ],
 })
