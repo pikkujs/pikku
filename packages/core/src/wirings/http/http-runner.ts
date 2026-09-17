@@ -33,6 +33,7 @@ import { getErrorResponse } from '../../errors/error-handler.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { isProduction } from '../../env.js'
 import { pikkuState } from '../../pikku-state.js'
+import { streamErrorFrames } from './http-stream-protocol.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import type { BinaryData, PikkuChannel } from '../channel/channel.types.js'
@@ -315,13 +316,13 @@ const executeRoute = async (
       singletonServices.logger.error(e instanceof Error ? e.message : e)
       try {
         const errorResponse = getErrorResponse(e)
-        http?.response?.arrayBuffer(
-          JSON.stringify({
-            type: 'error',
-            errorText: errorResponse?.message ?? 'Internal server error',
-          })
-        )
-        http?.response?.arrayBuffer(JSON.stringify({ type: 'done' }))
+        const message = errorResponse?.message ?? 'Internal server error'
+        for (const frame of streamErrorFrames(
+          matchedRoute.route.streamProtocol,
+          message
+        )) {
+          http?.response?.arrayBuffer(JSON.stringify(frame))
+        }
       } catch {}
       channel?.close()
       return { result }

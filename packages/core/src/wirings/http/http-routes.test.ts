@@ -114,6 +114,27 @@ describe('wireHTTPRoutes', () => {
     assert.ok(routes.get('post')?.has('/todos'))
   })
 
+  test('should carry a streaming route\'s protocol onto the wiring', () => {
+    setupFunctionMeta([{ method: 'get', route: '/agent/stream' }])
+
+    wireHTTPRoutes({
+      routes: [
+        {
+          method: 'get',
+          route: '/agent/stream',
+          func: { func: mockFunc },
+          sse: true,
+          streamProtocol: 'agui',
+        },
+      ],
+    })
+
+    const route = pikkuState(null, 'http', 'routes')
+      .get('get')
+      ?.get('/agent/stream')
+    assert.strictEqual((route as any)?.streamProtocol, 'agui')
+  })
+
   test('should wire nested object routes', () => {
     setupFunctionMeta([
       { method: 'get', route: '/todos' },
