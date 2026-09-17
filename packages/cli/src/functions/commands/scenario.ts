@@ -50,6 +50,7 @@ import {
 } from './scenario-guide.js'
 import type { GuideFeature, GuideLock, GuidePage } from './scenario-guide.js'
 import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
+import { resolveScenarioRunVersion } from './scenario-version.js'
 import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
 import { resolveEnvironment, isLocalUrl } from './environment.js'
 import { readDevAddress } from './dev-address.js'
@@ -537,6 +538,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     // and the console can show a run while it is still going.
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
+    const version = await resolveScenarioRunVersion(runStore, config.rootDir)
     try {
       const selection: ScenarioRunSelection = {
         ...(split(flows) ? { flows: split(flows) } : {}),
@@ -549,6 +551,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         runId: captureRunId,
         environment,
         surface: runSurface,
+        version,
         status: 'running',
         ...(Object.keys(selection).length > 0 ? { selection } : {}),
         startedAt: startedAtIso,

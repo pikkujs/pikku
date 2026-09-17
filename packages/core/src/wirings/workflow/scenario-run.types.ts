@@ -177,6 +177,33 @@ export interface ScenarioRunSelection {
 }
 
 /**
+ * Which version of the suite a run ran against.
+ *
+ * A run is only comparable to another run of the same thing, and "the same
+ * thing" is the commit — two runs a day apart are not a flake and a fix if the
+ * suite moved between them. `attempt` counts the runs already filed against
+ * that commit, so a suite re-run until it passes reads as one version with
+ * several attempts rather than several unrelated runs.
+ *
+ * Absent when the project is not in a git repository, or has no commits yet:
+ * an unversioned run is still a run, and saying nothing is better than
+ * inventing a version for it.
+ */
+export interface ScenarioRunVersion {
+  /** The commit the working tree was at, in full. */
+  commit: string
+  /**
+   * The tree had uncommitted changes, so the commit does not describe what
+   * actually ran. Recorded rather than refused — running against a dirty tree
+   * is the normal way to work — but a reader comparing two attempts of the
+   * same commit needs to know one of them was not really that commit.
+   */
+  dirty?: boolean
+  /** Which run this is against that commit, counting from one. */
+  attempt: number
+}
+
+/**
  * A whole run, as it is stored and read back.
  *
  * `status` is `running` from the moment the run is created until it finishes,
@@ -191,6 +218,8 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   surface: string
   /** Absent on a run of the whole suite; see {@link ScenarioRunSelection}. */
   selection?: ScenarioRunSelection
+  /** The suite version this ran against, when the project has one. */
+  version?: ScenarioRunVersion
   startedAt: string
   finishedAt?: string
 }
@@ -200,6 +229,7 @@ export interface ScenarioRunSummary {
   runId: string
   environment: string
   surface: string
+  version?: ScenarioRunVersion
   status: ScenarioRunStatus
   startedAt: string
   finishedAt?: string
