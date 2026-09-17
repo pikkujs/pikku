@@ -1,6 +1,6 @@
 {
   "name": "@pikku/modelcontextprotocol",
-  "version": "0.12.11",
+  "version": "0.12.12",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -24,7 +24,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.108"
+    "@pikku/core": "^0.12.113"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0"

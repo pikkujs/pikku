@@ -1,3 +1,71 @@
+## 0.12.155
+
+### Patch Changes
+
+- c842054: A pikku command never ends in a node internals warning, and a secret can be set from a script.
+
+  `pikku fabric secrets set NAME` prompted for the value through readline in terminal mode. On a stdin that is not a tty that promise never settles at all, so the command printed `BETTER_AUTH_SECRET value:` and then node's "Detected unsettled top-level await", naming a line of `@pikku/cli`'s own bin — under bun it simply hung. The prompt now reads the first line of stdin when there is no tty, so `echo '<value>' | pikku fabric secrets set NAME` works, and refuses with the flag to reach for (`--value`) when stdin is closed or empty. `promptConfirm` gained the same backstop, so a caller that forgets its `isTTY` gate gets a refusal instead of a hang.
+
+  Alongside it, the places a raw stack could still reach a user:
+
+  - The `pikku` binary formats through `formatCLIError` instead of printing `error.message`, and installs `uncaughtException` / `unhandledRejection` handlers so nothing escaping a listener or a floating promise is dumped unformatted. A `CLIError` the runner already printed is no longer printed twice.
+  - The generated local and channel CLI bootstraps do the same, rather than `console.error('Fatal error:', error.message)` — which dropped the stack even when one was asked for.
+  - A missing `pikku.config.json` says where it looked and what to do, as a `PikkuCLIConfigError`, which is now a `PikkuError` along with `GitError` and every remaining plain `Error` raised by a `pikku fabric` command. A directory-wide test keeps it that way.
+  - `pikku dev`'s watcher and the MCP schema loader log their causes through the logger at debug level instead of `console.error(err)` over the top of the output.
+
+  Stacks are unchanged where they are the answer: an unexpected error still keeps its frames, and `--verbose` / `PIKKU_DEBUG` still prints the stack for a deliberate one. `formatCLIError` and `wantsStackTrace` are exported from `@pikku/core/cli` so every entrypoint that can be the last thing to catch an error prints it the same way.
+
+- dfd7019: better-auth moves to 1.7.5
+
+  The internal adapter renamed `findAccountByProviderId(accountId, providerId)` to
+  `findAccountByKey({ providerId, accountId })`, `createUser` now takes the
+  provisioning source as a second argument, and `generateState` takes its link
+  target by name rather than by position. The actor, fabric and delegated plugins
+  each name themselves as the provisioning method, so an app's `validateUserInfo`
+  hook can tell which one created a user.
+
+  `get-access-token` and `unlink-account` also changed their body to a strict
+  schema selecting the account by its own row id rather than by provider name, so
+  `BetterAuthCredentialService` resolves the row through the internal adapter
+  before asking for a token — which also means an unlinked provider is answered
+  without a round trip.
+
+- c842054: Middleware instance ids are now allocated per group across the whole inspection, not per source file, and a build that would drop a global middleware registration fails instead of shipping.
+
+  The per-group index restarted at 0 for every file, so the second file to register against a group minted ids the first already owned and overwrote its entries in `middleware.instances` — `instanceIds` listed one key twice while `count` correctly said two. For `addGlobalMiddleware` that was not cosmetic. Global middleware belongs to no wire group, so the instance map is the only record that its module must be imported, and per-unit deploy codegen emits its side-effect imports from that map. An app file registering a global middleware was erased by the generated auth scaffold registering its own, the app's module was never imported, its registration never ran — and because auth commonly lives in global middleware, a deployed unit answered every authenticated route with a 401 against a clean build log.
+
+  The inspector now also records each `addGlobalMiddleware` file in `middleware.globalFiles`, a plain set that no key collision can corrupt; codegen emits the side-effect imports from it, generates the middleware file when global middleware is a project's only middleware, and asserts against the text it emitted that every such file is imported — naming the files if not, rather than letting the unit deploy without its auth gate.
+
+- 9b978e7: A failed SSE stream reports the error in the protocol its client is parsing
+
+  An SSE route can now declare `streamProtocol: 'agui'`, and the generated agent
+  stream and resume routes do. A function that throws mid-stream then ends the
+  stream with a single AG-UI `RUN_ERROR` instead of Pikku's `error`/`done` frames,
+  which an AG-UI client could only surface as a Zod parse failure with the real
+  message nowhere in sight.
+
+- 1469e73: The app names which of an addon's functions reach MCP
+
+  `wireAddon`'s `mcp` takes a list as well as `true`. `true` still offers every
+  function the addon declared `mcp: true`; a list names the tools this deployment
+  offers, whether or not the addon declared them, and is typed against the
+  function names that addon publishes — a typo is a compile error rather than a
+  tool silently missing from the menu.
+
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [9b978e7]
+- Updated dependencies [1469e73]
+  - @pikku/core@0.12.113
+  - @pikku/better-auth@0.12.43
+  - @pikku/inspector@0.12.82
+  - @pikku/bun-server@0.12.12
+  - @pikku/node-http-server@0.12.16
+
 ## 0.12.154
 
 ### Patch Changes

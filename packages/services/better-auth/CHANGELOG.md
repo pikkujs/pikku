@@ -1,5 +1,49 @@
 # @pikku/better-auth
 
+## 0.12.43
+
+### Patch Changes
+
+- dfd7019: better-auth moves to 1.7.5
+
+  The internal adapter renamed `findAccountByProviderId(accountId, providerId)` to
+  `findAccountByKey({ providerId, accountId })`, `createUser` now takes the
+  provisioning source as a second argument, and `generateState` takes its link
+  target by name rather than by position. The actor, fabric and delegated plugins
+  each name themselves as the provisioning method, so an app's `validateUserInfo`
+  hook can tell which one created a user.
+
+  `get-access-token` and `unlink-account` also changed their body to a strict
+  schema selecting the account by its own row id rather than by provider name, so
+  `BetterAuthCredentialService` resolves the row through the internal adapter
+  before asking for a token — which also means an unlinked provider is answered
+  without a round trip.
+
+- dfd7019: An MCP tool reads the claims its host verified
+
+  `PikkuHTTP` gains an `authInfo` of the new `PikkuHTTPAuthInfo`: the token,
+  client and scopes a transport that already verified a bearer token hands on.
+  It is strictly pass-through — nothing in pikku derives it from a request's own
+  headers, because verifying a token is the host's job. A function could always
+  read the `Authorization` header itself; what this adds is what the raw header
+  cannot carry.
+
+  `PikkuMCPServer`'s server factory now carries the SDK's `authInfo` onto the
+  wire beside the request, so the `authInfo` a host passes to
+  `createFetchHandler` reaches the tool rather than stopping at the SDK.
+
+  `pikkuCredentialOAuth` also names itself when it provisions the platform user.
+  Every other pikku plugin passes a source to `internalAdapter.createUser`, and
+  better-auth refuses a `user.validateUserInfo` gate that is handed none — so an
+  app with that hook configured could not link a singleton credential at all.
+
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [9b978e7]
+- Updated dependencies [1469e73]
+  - @pikku/core@0.12.113
+
 ## 0.12.42
 
 ### Patch Changes
