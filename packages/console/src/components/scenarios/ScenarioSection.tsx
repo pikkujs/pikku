@@ -7,10 +7,7 @@ import { ExamplesTable } from './ExamplesTable'
 import { SkipNotice } from './SkipNotice'
 import { ScenarioRunPill } from './ScenarioRunPill'
 import { ScenarioCast } from './ScenarioCast'
-import {
-  ScenarioStatusMark,
-  SCENARIO_STATUS_COLOUR,
-} from './ScenarioStatusMark'
+import { ScenarioStatusMark } from './ScenarioStatusMark'
 import {
   alignLadderToRun,
   ladderOffset,
@@ -72,11 +69,7 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
       component="section"
       data-testid={`scenario-section-${scenario.name}`}
       style={{
-        borderLeft: `${run ? 3 : 2}px solid ${
-          run
-            ? SCENARIO_STATUS_COLOUR[run.status]
-            : 'var(--mantine-color-default-border)'
-        }`,
+        borderLeft: '2px solid var(--mantine-color-default-border)',
         paddingLeft: 20,
         opacity: scenario.skip ? 0.6 : 1,
       }}
