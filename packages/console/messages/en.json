@@ -1248,8 +1248,9 @@
   "analytics_props_none": "No props",
   "analytics_panel_props": "Props",
   "analytics_panel_source": "Declared in",
-  "scenarios_show_footage": "Show the recording",
   "shell_header_filter_any": "Any",
   "shell_header_filter_count": "{count} selected",
-  "scenarios_tags_lens": "Tags"
+  "scenarios_tags_lens": "Tags",
+  "scenarios_footage_recording": "Recording",
+  "scenarios_footage_pending": "Pending"
 }
