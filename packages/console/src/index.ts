@@ -131,6 +131,7 @@ export { PageOptionsPortal } from './components/shell/PageOptionsPortal'
 export {
   PageOptionsProvider,
   usePageOptions,
+  useOptionalPageOptions,
   usePageOptionsDismiss,
   usePageAction,
 } from './context/PageOptionsProvider'
