@@ -1,6 +1,6 @@
 {
   "name": "@pikku/node-http-server",
-  "version": "0.12.15",
+  "version": "0.12.16",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -23,8 +23,8 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.108",
-    "@pikku/modelcontextprotocol": "^0.12.11"
+    "@pikku/core": "^0.12.113",
+    "@pikku/modelcontextprotocol": "^0.12.12"
   },
   "peerDependenciesMeta": {
     "@pikku/modelcontextprotocol": {
@@ -32,8 +32,8 @@
     }
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.108",
-    "@pikku/modelcontextprotocol": "^0.12.11"
+    "@pikku/core": "^0.12.113",
+    "@pikku/modelcontextprotocol": "^0.12.12"
   },
   "engines": {
     "node": ">=24"

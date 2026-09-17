@@ -1,3 +1,73 @@
+## 0.12.12
+
+### Patch Changes
+
+- dfd7019: An MCP tool reads the claims its host verified
+
+  `PikkuHTTP` gains an `authInfo` of the new `PikkuHTTPAuthInfo`: the token,
+  client and scopes a transport that already verified a bearer token hands on.
+  It is strictly pass-through — nothing in pikku derives it from a request's own
+  headers, because verifying a token is the host's job. A function could always
+  read the `Authorization` header itself; what this adds is what the raw header
+  cannot carry.
+
+  `PikkuMCPServer`'s server factory now carries the SDK's `authInfo` onto the
+  wire beside the request, so the `authInfo` a host passes to
+  `createFetchHandler` reaches the tool rather than stopping at the SDK.
+
+  `pikkuCredentialOAuth` also names itself when it provisions the platform user.
+  Every other pikku plugin passes a source to `internalAdapter.createUser`, and
+  better-auth refuses a `user.validateUserInfo` gate that is handed none — so an
+  app with that hook configured could not link a singleton credential at all.
+
+- dfd7019: An MCP call that needs a session is refused with an OAuth challenge
+
+  A tool fronting a session-requiring function used to answer an unauthenticated
+  caller with `200` and `isError: true`, which a client reads as a tool that
+  broke rather than one it has not authenticated for — so OAuth discovery never
+  began. Such a call now gets `401` with a `WWW-Authenticate: Bearer` challenge
+  naming the resource metadata, and `/.well-known/oauth-protected-resource` is
+  served alongside the MCP endpoint.
+
+  The endpoint is not gated as a whole. `mcpTargetRequiresSession` reads the
+  declarations the runner already enforces — a `pikkuFunc` needs a session, a
+  `pikkuSessionlessFunc` needs one only where it says `auth: true` — so public
+  and private tools can share one server and only the private ones are
+  challenged.
+
+  `createFetchHandler` and `createHTTPRequestHandler` take an optional `auth`
+  describing what to advertise (`authorizationServers`, `scopesSupported`,
+  `resourceName`), surfaced on both servers as an `mcpAuth` option. Every field
+  defaults from the request, because a pikku app is usually its own
+  authorization server. Both handlers now also return `ownsPath`, because the
+  discovery document lives outside `mcpPath` and a host routing on the endpoint
+  alone would 404 the document its own challenge points at.
+
+- dfd7019: The MCP runtime moves to `@modelcontextprotocol/server` v2
+
+  v1's monolithic `@modelcontextprotocol/sdk` is replaced by the v2 server
+  package, and the hand-rolled per-request transport wiring by its
+  `createMcpHandler` entry. Request handlers are now registered by method name
+  (`'tools/call'`) rather than by schema object, and stdio is served through
+  `serveStdio`.
+
+  Both protocol eras are served from pikku's single tool registration: 2026-07-28
+  clients take the modern path, and everything older — including every v1 client
+  — is answered by the stateless legacy fallback.
+
+  `createFetchHandler`'s handler now takes an optional second argument carrying
+  verified `authInfo`, which reaches MCP request handlers as `ctx.http.authInfo`.
+  It is strictly pass-through: the entry never derives it from request headers.
+
+- dfd7019: Resolve the MCP server instance per log message, and restore the wireAddon
+  declaration's source file.
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [9b978e7]
+- Updated dependencies [1469e73]
+  - @pikku/core@0.12.113
+
 ## 0.12.11
 
 ### Patch Changes

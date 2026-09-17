@@ -1,6 +1,6 @@
 {
   "name": "@pikku/next",
-  "version": "0.12.11",
+  "version": "0.12.12",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -28,8 +28,8 @@
     "./pikku-session": "./dist/pikku-session.js"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.40",
-    "@pikku/core": "^0.12.108",
+    "@pikku/better-auth": "^0.12.43",
+    "@pikku/core": "^0.12.113",
     "better-auth": "^1.7.5",
     "next": "^15",
     "react-dom": "^18 || ^19"
@@ -40,8 +40,8 @@
     "path-to-regexp": "^8.4.2"
   },
   "devDependencies": {
-    "@pikku/better-auth": "^0.12.40",
-    "@pikku/core": "^0.12.108",
+    "@pikku/better-auth": "^0.12.43",
+    "@pikku/core": "^0.12.113",
     "@types/react": "^19",
     "better-auth": "^1.7.5",
     "next": "15.5.23",

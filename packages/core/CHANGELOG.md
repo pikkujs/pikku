@@ -1,3 +1,77 @@
+## 0.12.113
+
+### Patch Changes
+
+- c842054: A pikku command never ends in a node internals warning, and a secret can be set from a script.
+
+  `pikku fabric secrets set NAME` prompted for the value through readline in terminal mode. On a stdin that is not a tty that promise never settles at all, so the command printed `BETTER_AUTH_SECRET value:` and then node's "Detected unsettled top-level await", naming a line of `@pikku/cli`'s own bin — under bun it simply hung. The prompt now reads the first line of stdin when there is no tty, so `echo '<value>' | pikku fabric secrets set NAME` works, and refuses with the flag to reach for (`--value`) when stdin is closed or empty. `promptConfirm` gained the same backstop, so a caller that forgets its `isTTY` gate gets a refusal instead of a hang.
+
+  Alongside it, the places a raw stack could still reach a user:
+
+  - The `pikku` binary formats through `formatCLIError` instead of printing `error.message`, and installs `uncaughtException` / `unhandledRejection` handlers so nothing escaping a listener or a floating promise is dumped unformatted. A `CLIError` the runner already printed is no longer printed twice.
+  - The generated local and channel CLI bootstraps do the same, rather than `console.error('Fatal error:', error.message)` — which dropped the stack even when one was asked for.
+  - A missing `pikku.config.json` says where it looked and what to do, as a `PikkuCLIConfigError`, which is now a `PikkuError` along with `GitError` and every remaining plain `Error` raised by a `pikku fabric` command. A directory-wide test keeps it that way.
+  - `pikku dev`'s watcher and the MCP schema loader log their causes through the logger at debug level instead of `console.error(err)` over the top of the output.
+
+  Stacks are unchanged where they are the answer: an unexpected error still keeps its frames, and `--verbose` / `PIKKU_DEBUG` still prints the stack for a deliberate one. `formatCLIError` and `wantsStackTrace` are exported from `@pikku/core/cli` so every entrypoint that can be the last thing to catch an error prints it the same way.
+
+- dfd7019: An MCP tool reads the claims its host verified
+
+  `PikkuHTTP` gains an `authInfo` of the new `PikkuHTTPAuthInfo`: the token,
+  client and scopes a transport that already verified a bearer token hands on.
+  It is strictly pass-through — nothing in pikku derives it from a request's own
+  headers, because verifying a token is the host's job. A function could always
+  read the `Authorization` header itself; what this adds is what the raw header
+  cannot carry.
+
+  `PikkuMCPServer`'s server factory now carries the SDK's `authInfo` onto the
+  wire beside the request, so the `authInfo` a host passes to
+  `createFetchHandler` reaches the tool rather than stopping at the SDK.
+
+  `pikkuCredentialOAuth` also names itself when it provisions the platform user.
+  Every other pikku plugin passes a source to `internalAdapter.createUser`, and
+  better-auth refuses a `user.validateUserInfo` gate that is handed none — so an
+  app with that hook configured could not link a singleton credential at all.
+
+- dfd7019: An MCP call that needs a session is refused with an OAuth challenge
+
+  A tool fronting a session-requiring function used to answer an unauthenticated
+  caller with `200` and `isError: true`, which a client reads as a tool that
+  broke rather than one it has not authenticated for — so OAuth discovery never
+  began. Such a call now gets `401` with a `WWW-Authenticate: Bearer` challenge
+  naming the resource metadata, and `/.well-known/oauth-protected-resource` is
+  served alongside the MCP endpoint.
+
+  The endpoint is not gated as a whole. `mcpTargetRequiresSession` reads the
+  declarations the runner already enforces — a `pikkuFunc` needs a session, a
+  `pikkuSessionlessFunc` needs one only where it says `auth: true` — so public
+  and private tools can share one server and only the private ones are
+  challenged.
+
+  `createFetchHandler` and `createHTTPRequestHandler` take an optional `auth`
+  describing what to advertise (`authorizationServers`, `scopesSupported`,
+  `resourceName`), surfaced on both servers as an `mcpAuth` option. Every field
+  defaults from the request, because a pikku app is usually its own
+  authorization server. Both handlers now also return `ownsPath`, because the
+  discovery document lives outside `mcpPath` and a host routing on the endpoint
+  alone would 404 the document its own challenge points at.
+
+- 9b978e7: A failed SSE stream reports the error in the protocol its client is parsing
+
+  An SSE route can now declare `streamProtocol: 'agui'`, and the generated agent
+  stream and resume routes do. A function that throws mid-stream then ends the
+  stream with a single AG-UI `RUN_ERROR` instead of Pikku's `error`/`done` frames,
+  which an AG-UI client could only surface as a Zod parse failure with the real
+  message nowhere in sight.
+
+- 1469e73: The app names which of an addon's functions reach MCP
+
+  `wireAddon`'s `mcp` takes a list as well as `true`. `true` still offers every
+  function the addon declared `mcp: true`; a list names the tools this deployment
+  offers, whether or not the addon declared them, and is typed against the
+  function names that addon publishes — a typo is a compile error rather than a
+  tool silently missing from the menu.
+
 ## 0.12.112
 
 ### Patch Changes
