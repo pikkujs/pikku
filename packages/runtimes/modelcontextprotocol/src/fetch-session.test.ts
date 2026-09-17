@@ -45,7 +45,11 @@ const callTool = async (
   )
   const body = await response.text()
   const frame = body.split('\n').find((line) => line.startsWith('data:'))
-  return JSON.parse((frame ?? body).replace(/^data:\s*/, ''))
+  return {
+    status: response.status,
+    body,
+    message: JSON.parse((frame ?? body).replace(/^data:\s*/, '')),
+  }
 }
 
 describe('createFetchHandler carries the caller through to the tool', () => {
@@ -104,7 +108,7 @@ describe('createFetchHandler carries the caller through to the tool', () => {
     const authorized = await callTool(handler, 'whoami', {
       Authorization: 'Bearer token-abc',
     })
-    assert.deepEqual(authorized.result?.content, [
+    assert.deepEqual(authorized.message.result?.content, [
       { type: 'text', text: 'usr_1' },
     ])
 
@@ -114,10 +118,9 @@ describe('createFetchHandler carries the caller through to the tool', () => {
     // before, having never had a request to derive it from — and that the
     // per-request server does not leak the last caller's session to the next.
     const anonymous = await callTool(handler, 'whoami')
-    const refusal = JSON.stringify(anonymous.result?.content ?? anonymous)
-    assert.match(refusal, /Authentication required/)
+    assert.equal(anonymous.status, 401)
     assert.ok(
-      !refusal.includes('usr_1'),
+      !anonymous.body.includes('usr_1'),
       "an anonymous call must not see the previous caller's session"
     )
   })

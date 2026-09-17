@@ -10,7 +10,11 @@
  * not a workaround: it is also what proves the link is durable server-side
  * rather than living in one session.
  */
-import { createCookieJar, pikkuScenarioStep, requireScenarioEnv } from '#pikku/scenario'
+import {
+  createCookieJar,
+  pikkuScenarioStep,
+  requireScenarioEnv,
+} from '#pikku/scenario'
 import { createAuthClient } from 'better-auth/client'
 
 export interface LinkUser {
@@ -168,7 +172,16 @@ export const unlinksProvider = pikkuScenarioStep<
       requireScenarioEnv(scenarioStep).apiUrl,
       user
     )
-    const { error } = await client.unlinkAccount({ providerId })
+    const { data: accounts } = await client.listAccounts()
+    const account = (accounts ?? []).find(
+      (candidate) => candidate.providerId === providerId
+    )
+    if (!account) {
+      throw new Error(
+        `Unlinking ${providerId} failed: the user has no such account linked`
+      )
+    }
+    const { error } = await client.unlinkAccount({ accountId: account.id })
     if (error) {
       throw new Error(
         `Unlinking ${providerId} failed: ${JSON.stringify(error)}`

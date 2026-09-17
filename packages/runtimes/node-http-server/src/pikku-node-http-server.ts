@@ -14,6 +14,8 @@ import {
   timingSafeEqual,
 } from 'node:crypto'
 
+import type { MCPAuthOptions } from '@pikku/modelcontextprotocol'
+
 import type { CoreConfig } from '@pikku/core/types'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { installNodeHostResolver } from '@pikku/core/node-host-resolver'
@@ -109,6 +111,14 @@ export type PikkuNodeHTTPServerOptions = {
    */
   mcpPath?: string
   /**
+   * What the MCP endpoint tells an unauthenticated client about the token it
+   * wants: the authorization servers to advertise, the scopes it understands
+   * and a human-readable name. Every field defaults to something drawn from
+   * the request, so a server whose app is its own authorization server needs
+   * none of them.
+   */
+  mcpAuth?: MCPAuthOptions
+  /**
    * Mount the in-stack dispatch routes `POST /__pikku/queue-job` and
    * `POST /__pikku/scheduler-job` so a trusted dispatcher can deliver queue
    * jobs and scheduled tasks to a server (container) target that has no
@@ -193,6 +203,8 @@ export class PikkuNodeHTTPServer {
   private loggedMissingContentSigningJWT = false
   private shutdownGracePeriodMs: number
   private mcpPath: string
+  private mcpAuth?: MCPAuthOptions
+  private mcpOwnsPath?: (pathname: string) => boolean
   private mcpHandler?: (
     req: IncomingMessage,
     res: ServerResponse
@@ -215,6 +227,7 @@ export class PikkuNodeHTTPServer {
     this.shutdownGracePeriodMs =
       config.shutdownGracePeriodMs ?? HARDENING_DEFAULTS.shutdownGracePeriodMs
     this.mcpPath = options.mcpPath ?? '/mcp'
+    this.mcpAuth = options.mcpAuth
   }
 
   public async init(): Promise<void> {
@@ -253,10 +266,12 @@ export class PikkuNodeHTTPServer {
         this.logger
       )
       await mcpServer.init()
-      const { handler } = mcpServer.createHTTPRequestHandler({
+      const { handler, ownsPath } = mcpServer.createHTTPRequestHandler({
         path: this.mcpPath,
+        auth: this.mcpAuth,
       })
       this.mcpHandler = handler
+      this.mcpOwnsPath = ownsPath
       this.logger.info(`pikku-node-http-server: MCP mounted at ${this.mcpPath}`)
     } catch (err) {
       this.logger.warn(
@@ -265,17 +280,14 @@ export class PikkuNodeHTTPServer {
     }
   }
 
+  /**
+   * The handler decides, because the OAuth discovery document its own challenge
+   * points at lives outside `mcpPath` — RFC 9728 folds the resource's path into
+   * the well-known route rather than nesting it under the endpoint.
+   */
   private matchesMcpPath(url: string): boolean {
-    if (!url.startsWith(this.mcpPath)) {
-      return false
-    }
-    const boundary = url.charAt(this.mcpPath.length)
-    return (
-      boundary === '' ||
-      boundary === '/' ||
-      boundary === '?' ||
-      boundary === '#'
-    )
+    const pathname = url.split(/[?#]/, 1)[0] ?? url
+    return this.mcpOwnsPath?.(pathname) ?? false
   }
 
   /**

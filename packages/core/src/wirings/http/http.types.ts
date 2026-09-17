@@ -64,9 +64,34 @@ export type CoreHTTPFunction = HTTPRouteBaseConfig & {
   returnsJSON?: false
 }
 
+/**
+ * The claims a transport that already verified a bearer token hands on.
+ *
+ * Strictly pass-through: nothing in pikku derives this from a request's own
+ * headers, because verifying a token is the host's job, not the wire's. A
+ * function can always read the `Authorization` header itself — what this adds
+ * is what the raw header cannot carry, the scopes and client the token was
+ * actually issued for.
+ *
+ * Shaped to match the MCP SDK's `AuthInfo`, which is the one caller that
+ * populates it today.
+ */
+export interface PikkuHTTPAuthInfo {
+  token: string
+  clientId: string
+  scopes: string[]
+  /** Seconds since the epoch. */
+  expiresAt?: number
+  /** The RFC 8707 resource server this token is valid for. */
+  resource?: URL
+  extra?: Record<string, unknown>
+}
+
 export interface PikkuHTTP<In = unknown> {
   request?: PikkuHTTPRequest<In>
   response?: PikkuHTTPResponse
+  /** Verified token claims, when the transport was handed them. */
+  authInfo?: PikkuHTTPAuthInfo
 }
 
 export type PikkuQuery<T = Record<string, string | undefined>> = Record<

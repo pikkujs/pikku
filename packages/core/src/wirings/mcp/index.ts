@@ -11,6 +11,7 @@ export {
   getMCPResourcesMeta,
   getMCPToolsMeta,
   getMCPPromptsMeta,
+  mcpTargetRequiresSession,
 } from './mcp-runner.js'
 export type {
   AssertMCPResourceURIParams,

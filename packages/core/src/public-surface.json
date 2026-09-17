@@ -216,6 +216,7 @@
     "getMCPPromptsMeta",
     "getMCPResourcesMeta",
     "getMCPToolsMeta",
+    "mcpTargetRequiresSession",
     "runMCPPrompt",
     "runMCPResource",
     "runMCPTool",
@@ -262,6 +263,18 @@
     "pikkuAgentJudge",
     "pikkuAgentScorer",
     "wireAgentScorerQueueWorkers"
+  ],
+  "./analytics": [
+    "LoggerAnalyticsService",
+    "anonymousAnalyticsIdentity",
+    "composeAnalyticsIdentity",
+    "cookieAnalyticsIdentity",
+    "createInvocationAnalytics",
+    "defineAnalyticsEvents",
+    "fanOutAnalytics",
+    "flattenAnalyticsEvent",
+    "mintCookie",
+    "randomDigits"
   ],
   "./gateway": [
     "createListenerMessageHandler",
@@ -563,17 +576,5 @@
     "pikkuDevReloader",
     "reconcileAddonRegistry",
     "reloadGeneratedMeta"
-  ],
-  "./analytics": [
-    "LoggerAnalyticsService",
-    "anonymousAnalyticsIdentity",
-    "composeAnalyticsIdentity",
-    "cookieAnalyticsIdentity",
-    "createInvocationAnalytics",
-    "defineAnalyticsEvents",
-    "fanOutAnalytics",
-    "flattenAnalyticsEvent",
-    "mintCookie",
-    "randomDigits"
   ]
 }

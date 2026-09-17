@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3017 observable things**: 977 exported names, plus
-2040 members on the classes and interfaces among them, reachable
+**3026 observable things**: 979 exported names, plus
+2047 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -23,13 +23,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./types` | 23 | 20 | 77 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
-| `./http` | 25 | 25 | 49 |
+| `./http` | 26 | 26 | 56 |
 | `./errors` | 50 | 50 | 22 |
 | `./analytics` | 26 | 26 | 40 |
 | `./services/local-meta` | 22 | 2 | 40 |
+| `./mcp` | 21 | 21 | 17 |
 | `./cli` | 14 | 12 | 26 |
 | `./function` | 32 | 27 | 10 |
-| `./mcp` | 20 | 20 | 17 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -2632,6 +2632,15 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
 export interface PikkuHTTP<In = unknown> {
   request?: PikkuHTTPRequest<In>
   response?: PikkuHTTPResponse
+  authInfo?: PikkuHTTPAuthInfo
+}
+export interface PikkuHTTPAuthInfo {
+  token: string
+  clientId: string
+  scopes: string[]
+  expiresAt?: number
+  resource?: URL
+  extra?: Record<string, unknown>
 }
 export interface PikkuHTTPRequest<In = unknown> {
   method(): HTTPMethod
@@ -3135,6 +3144,7 @@ export type MCPResourceMeta = Record<
   }
 >
 export type MCPResourceResponse = MCPResourceMessage[]
+mcpTargetRequiresSession: (type: "resource" | "tool" | "prompt", name: string) => boolean
 export type MCPToolMeta = Record<
   string,
   Omit<CoreMCPTool, 'func' | 'middleware'> & {

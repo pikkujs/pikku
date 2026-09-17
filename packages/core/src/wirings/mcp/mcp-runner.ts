@@ -328,3 +328,48 @@ export const getMCPToolsMeta = () => {
 export const getMCPPromptsMeta = () => {
   return pikkuState(null, 'mcp', 'promptsMeta')
 }
+
+/**
+ * Whether a call to this MCP target would need a session to run.
+ *
+ * Read from the same declarations the runner enforces: a `pikkuFunc` always
+ * needs one, and a `pikkuSessionlessFunc` needs one only where it says
+ * `auth: true`. A transport asks this to answer an unauthenticated call with a
+ * `401` challenge instead of dispatching it — the status and the
+ * `WWW-Authenticate` header have to be chosen before the response starts, which
+ * is earlier than the refusal itself can be known.
+ *
+ * Unknown targets are treated as open: a name nobody registered is a
+ * `Method not found`, and answering it with a challenge would invite a client
+ * to authenticate its way towards a tool that does not exist.
+ */
+export const mcpTargetRequiresSession = (
+  type: 'tool' | 'resource' | 'prompt',
+  name: string
+): boolean => {
+  const meta =
+    type === 'tool'
+      ? pikkuState(null, 'mcp', 'toolsMeta')[name]
+      : type === 'resource'
+        ? pikkuState(null, 'mcp', 'resourcesMeta')[name]
+        : pikkuState(null, 'mcp', 'promptsMeta')[name]
+  if (!meta) {
+    return false
+  }
+
+  let funcName = meta.pikkuFuncId
+  let packageName: string | null = null
+  if (funcName.includes(':')) {
+    const resolved = resolveNamespace(funcName)
+    if (resolved) {
+      funcName = resolved.function
+      packageName = resolved.package
+    }
+  }
+
+  const funcMeta = pikkuState(packageName, 'function', 'meta')[funcName]
+  if (!funcMeta) {
+    return false
+  }
+  return !funcMeta.sessionless || funcMeta.auth === true
+}

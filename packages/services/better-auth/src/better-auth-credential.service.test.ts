@@ -49,10 +49,15 @@ const accountNotFound = () =>
     body: { code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' },
   })
 
+/** The account row id a declared token is linked through. */
+const accountIdFor = (providerId: string) => `acct-${providerId}`
+
 /**
- * Deliberately exposes ONLY getAccessToken: `listUserAccounts` is session-bound
- * and throws UNAUTHORIZED when called server-side with a userId, so a fake of it
- * could only ever lie. A token here means the account is linked.
+ * Deliberately exposes ONLY getAccessToken and the internal adapter:
+ * `listUserAccounts` is session-bound and throws UNAUTHORIZED when called
+ * server-side with a userId, so a fake of it could only ever lie. A token here
+ * means the account is linked, and `findAccounts` reports the row it is linked
+ * through — better-auth selects an account by row id, never by provider name.
  */
 const makeAuth = (options: {
   tokens?: Record<string, string>
@@ -65,7 +70,13 @@ const makeAuth = (options: {
   $context: Promise.resolve({
     internalAdapter: {
       findAccounts: async (userId: string) =>
-        (options.accounts ?? []).filter((a) => a.userId === userId),
+        options.accounts
+          ? options.accounts.filter((a) => a.userId === userId)
+          : Object.keys(options.tokens ?? {}).map((providerId) => ({
+              id: accountIdFor(providerId),
+              providerId,
+              userId,
+            })),
       deleteAccount: async (id: string) => options.onDeleteAccount?.(id),
     },
   }),
@@ -75,7 +86,9 @@ const makeAuth = (options: {
       if (options.throwOnGetAccessToken) {
         throw options.throwOnGetAccessToken
       }
-      const token = options.tokens?.[body.providerId]
+      const token = Object.entries(options.tokens ?? {}).find(
+        ([providerId]) => accountIdFor(providerId) === body.accountId
+      )?.[1]
       if (!token) {
         throw accountNotFound()
       }
@@ -103,7 +116,7 @@ describe('BetterAuthCredentialService', () => {
     assert.deepStrictEqual(fallback.calls, [], 'must not touch the fallback')
   })
 
-  test('passes providerId and userId through to better-auth', async () => {
+  test('passes the resolved account and userId through to better-auth', async () => {
     const seen: any[] = []
     const service = build(
       makeAuth({
@@ -113,7 +126,9 @@ describe('BetterAuthCredentialService', () => {
       new FakeFallback()
     )
     await service.get('youtube', 'user-9')
-    assert.deepStrictEqual(seen, [{ providerId: 'youtube', userId: 'user-9' }])
+    assert.deepStrictEqual(seen, [
+      { accountId: 'acct-youtube', userId: 'user-9' },
+    ])
   })
 
   test('an unlinked provider is null, not an error', async () => {
@@ -127,6 +142,7 @@ describe('BetterAuthCredentialService', () => {
   test('an error other than ACCOUNT_NOT_FOUND propagates', async () => {
     const service = build(
       makeAuth({
+        tokens: { 'google-docs': 'tok' },
         throwOnGetAccessToken: Object.assign(new Error('refresh failed'), {
           body: { code: 'PROVIDER_NOT_SUPPORTED' },
         }),
@@ -184,7 +200,7 @@ describe('BetterAuthCredentialService', () => {
       accessToken: 'platform-tok',
     })
     assert.deepStrictEqual(seen, [
-      { providerId: 'company-slack', userId: 'platform-user' },
+      { accountId: 'acct-company-slack', userId: 'platform-user' },
     ])
   })
 
