@@ -286,6 +286,7 @@ jobs:
             bun-server,
             webhooks,
             db-schema,
+            mcp-auth,
           ]
     steps:
       - uses: actions/checkout@v7
