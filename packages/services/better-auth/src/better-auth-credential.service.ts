@@ -84,6 +84,33 @@ export class BetterAuthCredentialService implements CredentialService {
   }
 
   /**
+   * The account row holding a provider's token for a user, or undefined when
+   * the provider is not linked.
+   *
+   * better-auth selects an account by its own row id — `get-access-token` and
+   * `unlink-account` both take an `accountId` under a strict body schema — so a
+   * provider name has to be resolved to a row first. The internal adapter is
+   * the only lookup that takes a userId: `listUserAccounts` reads the caller's
+   * session and throws UNAUTHORIZED server-side, which is no use for a platform
+   * credential or an admin acting on someone else's.
+   */
+  private async findAccount(
+    providerId: string,
+    userId: string
+  ): Promise<{ id: string } | undefined> {
+    const auth = await this.getAuth()
+    if (!auth.$context) {
+      throw new Error(
+        `Cannot resolve OAuth2 credential '${providerId}': the better-auth instance exposes no $context to read the account row with.`
+      )
+    }
+    const context = await auth.$context
+    return (await context.internalAdapter.findAccounts(userId)).find(
+      (candidate: { providerId: string }) => candidate.providerId === providerId
+    )
+  }
+
+  /**
    * Returns null when the user has not linked the provider — an unlinked
    * account is a normal state that callers handle (MissingCredentialError,
    * the connect card), not an error.
@@ -92,10 +119,16 @@ export class BetterAuthCredentialService implements CredentialService {
     providerId: string,
     userId: string
   ): Promise<{ accessToken: string } | null> {
+    const account = await this.findAccount(providerId, userId)
+    if (!account) {
+      return null
+    }
     const auth = await this.getAuth()
     let result: { accessToken?: string } | undefined
     try {
-      result = await auth.api.getAccessToken({ body: { providerId, userId } })
+      result = await auth.api.getAccessToken({
+        body: { accountId: account.id, userId },
+      })
     } catch (error) {
       // better-auth throws ACCOUNT_NOT_FOUND rather than returning empty. Only
       // that one means "not linked" — anything else (a failed refresh, a
@@ -131,32 +164,25 @@ export class BetterAuthCredentialService implements CredentialService {
   /**
    * Removes the account row holding the token.
    *
-   * Not `auth.api.unlinkAccount`: that endpoint acts on the *caller's session*
-   * (its body takes only a providerId), so it can revoke a credential only for
-   * whoever is currently signed in. Two legitimate server-side revocations have
-   * no session to act on — a platform credential, whose owner is a banned user
-   * that never signs in, and an admin revoking someone else's. Both are removed
-   * through the same internal adapter the link callback writes the row with.
+   * Not `auth.api.unlinkAccount`: that endpoint resolves the account against
+   * the *caller's session*, so it can revoke a credential only for whoever is
+   * currently signed in. Two legitimate server-side revocations have no session
+   * to act on — a platform credential, whose owner is a banned user that never
+   * signs in, and an admin revoking someone else's. Both are removed through
+   * the same internal adapter the link callback writes the row with.
    */
   private async unlinkAccount(
     providerId: string,
     userId: string
   ): Promise<void> {
-    const auth = await this.getAuth()
-    if (!auth.$context) {
-      throw new Error(
-        `Cannot delete OAuth2 credential '${providerId}': the better-auth instance exposes no $context to remove the account row with.`
-      )
-    }
-    const context = await auth.$context
-    const account = (await context.internalAdapter.findAccounts(userId)).find(
-      (candidate: { providerId: string }) => candidate.providerId === providerId
-    )
+    const account = await this.findAccount(providerId, userId)
     // Already unlinked — deleting a credential that isn't there is a no-op, not
     // an error, so a retried revoke stays safe.
     if (!account) {
       return
     }
+    const auth = await this.getAuth()
+    const context = await auth.$context
     await context.internalAdapter.deleteAccount(account.id)
   }
 
