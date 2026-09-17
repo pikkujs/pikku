@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Anchor, Badge, Box, Group, Stack, Text } from '@pikku/mantine/core'
+import { Badge, Box, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { ScenarioLadder } from './ScenarioLadder'
@@ -17,8 +17,7 @@ import {
   type ScenarioLensStatus,
 } from './scenario-run-lens'
 import { ScenarioFailureReport } from './runs/ScenarioFailureReport'
-import { ScenarioRunPlayer } from './runs/ScenarioRunPlayer'
-import { ScenarioArtifactTile } from './runs/ScenarioArtifactTile'
+import { ScenarioFootage } from './runs/ScenarioFootage'
 import { runDuration } from './runs/scenario-run-format'
 import type { ScenarioResult } from '@pikku/core/scenario'
 import type { ScenarioDoc } from './scenario-doc-model'
@@ -40,13 +39,6 @@ type ScenarioSectionProps = {
    * being read as written, and nothing is claimed about how it went.
    */
   run?: { runId: string; status: ScenarioLensStatus; result?: ScenarioResult }
-  /**
-   * True when the whole suite is on screen. Each recording is pulled into
-   * memory to carry the console's Authorization header, so a failing run read
-   * across every feature would fetch its whole artifact store at once — the
-   * footage waits until the reader narrows to one feature.
-   */
-  scanning?: boolean
   onOpenPersona?: (key: string) => void
   onSelectStep?: (
     workflow: unknown,
@@ -62,7 +54,6 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
   cast,
   workflow,
   run,
-  scanning,
   onOpenPersona,
   onSelectStep,
 }) => {
@@ -74,13 +65,7 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
         : undefined,
     [run?.result?.steps, scenario.steps]
   )
-  const [revealed, setRevealed] = useState(false)
   const artifacts = run?.result?.artifacts ?? []
-  const recordings = artifacts.filter((artifact) => artifact.kind === 'video')
-  const stills = artifacts.filter((artifact) => artifact.kind !== 'video')
-  const hasFootage = recordings.length > 0 || stills.length > 0
-  const showFootage =
-    hasFootage && (revealed || (!scanning && run?.result?.status === 'failed'))
 
   return (
     <Box
@@ -158,45 +143,18 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
             {run?.result?.status === 'failed' && (
               <ScenarioFailureReport result={run.result} />
             )}
-
-            {run && hasFootage && !showFootage && (
-              <Anchor
-                component="button"
-                type="button"
-                size="xs"
-                onClick={() => setRevealed(true)}
-                style={{ alignSelf: 'flex-start' }}
-              >
-                {m.scenarios_show_footage()}
-              </Anchor>
-            )}
           </Stack>
 
-          {run && showFootage && (
-            <Stack
-              gap="sm"
-              style={{ flex: '0 1 340px', minWidth: 240, maxWidth: 380 }}
-            >
-              {recordings.map((artifact) => (
-                <ScenarioRunPlayer
-                  key={artifact.path}
-                  runId={run.runId}
-                  artifact={artifact}
-                  seekMs={
-                    seekStep === undefined
-                      ? undefined
-                      : ladderOffset(scenario.steps, recorded, seekStep)
-                  }
-                />
-              ))}
-              {stills.map((artifact) => (
-                <ScenarioArtifactTile
-                  key={artifact.path}
-                  runId={run.runId}
-                  artifact={artifact}
-                />
-              ))}
-            </Stack>
+          {run && artifacts.length > 0 && (
+            <ScenarioFootage
+              runId={run.runId}
+              artifacts={artifacts}
+              seekMs={
+                seekStep === undefined
+                  ? undefined
+                  : ladderOffset(scenario.steps, recorded, seekStep)
+              }
+            />
           )}
         </Group>
 
