@@ -208,6 +208,16 @@ export interface InspectorMiddlewareState {
   definitions: Record<string, InspectorMiddlewareDefinition>
   instances: Record<string, InspectorMiddlewareInstance>
   tagMiddleware: Map<string, MiddlewareGroupMeta>
+  /**
+   * Every source file with a top-level `addGlobalMiddleware` call.
+   *
+   * Global middleware belongs to no wire group, so the only thing that makes it
+   * run in a generated bundle is a side-effect import of its source file. This
+   * set is the record codegen emits those imports from, and the one it checks
+   * itself against — a plain set of file names, so nothing can overwrite an
+   * entry the way a keyed map could.
+   */
+  globalFiles: Set<string>
 }
 
 export interface InspectorChannelMiddlewareState {

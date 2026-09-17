@@ -245,6 +245,7 @@ export interface SerializableInspectorState {
   middleware: {
     definitions: InspectorState['middleware']['definitions']
     instances: InspectorState['middleware']['instances']
+    globalFiles: string[]
     tagMiddleware: Array<
       [
         string,
@@ -485,6 +486,7 @@ export function serializeInspectorState(
     middleware: {
       definitions: state.middleware.definitions,
       instances: state.middleware.instances,
+      globalFiles: Array.from(state.middleware.globalFiles),
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
     },
     channelMiddleware: {
@@ -705,6 +707,7 @@ export function deserializeInspectorState(
     middleware: {
       definitions: data.middleware.definitions,
       instances: data.middleware.instances || {},
+      globalFiles: new Set(data.middleware.globalFiles || []),
       tagMiddleware: new Map(data.middleware.tagMiddleware),
     },
     channelMiddleware: {

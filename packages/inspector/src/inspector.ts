@@ -228,6 +228,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       definitions: {},
       instances: {},
       tagMiddleware: new Map(),
+      globalFiles: new Set(),
     },
     channelMiddleware: {
       definitions: {},

@@ -65,7 +65,9 @@ const generateArgumentsFromSchema = async (
     logger.warn(
       `Command MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`
     )
-    console.error(e)
+    // The warning above is the actionable half; the cause is detail, and detail
+    // belongs behind the verbosity control rather than on everyone's stderr.
+    logger.debug(e instanceof Error ? (e.stack ?? e.message) : String(e))
     return []
   }
 }

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 import {
   changesContext,
   imageContentType,
@@ -36,7 +37,9 @@ export const FabricChangesShot = pikkuSessionlessFunc({
   output: FabricChangesShotOutput,
   func: async (_services, input) => {
     if (!input.image && !input.imageBase64)
-      throw new Error('Pass --image <path> or --image-base64 <data>.')
+      throw new FabricPreconditionError(
+        'Pass --image <path> or --image-base64 <data>.'
+      )
 
     let contentType: ImageContentType | undefined = input.contentType
     let imageBase64 = input.imageBase64
@@ -44,7 +47,7 @@ export const FabricChangesShot = pikkuSessionlessFunc({
     if (input.image) {
       const inferred = imageContentType(input.image)
       if (!inferred && !contentType)
-        throw new Error(
+        throw new FabricPreconditionError(
           `Cannot tell the image type from “${input.image}” — pass --content-type.`
         )
       contentType ??= inferred

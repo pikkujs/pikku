@@ -23,6 +23,7 @@ import {
   hkdfSync,
   randomBytes,
 } from 'node:crypto'
+import { FabricPreconditionError } from './errors.js'
 
 /** Algorithm tag carried by every sealed value. Must match fabric's. */
 export const SEALED_BOX_ALGORITHM = 'sealed-x25519-v1'
@@ -106,7 +107,7 @@ function importPublicKey(publicKey: string) {
       format: 'der',
     })
   } catch (error) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `Not a valid X25519 public key (${error instanceof Error ? error.message : String(error)})`
     )
   }
@@ -114,7 +115,7 @@ function importPublicKey(publicKey: string) {
   // stage's worker cannot match — the failure would surface as an unopenable
   // secret much later, so refuse it at the point the type is still knowable.
   if (key.asymmetricKeyType !== 'x25519') {
-    throw new Error(
+    throw new FabricPreconditionError(
       `Stage sealing key is ${key.asymmetricKeyType}, expected x25519 — this CLI is too old for it, run \`npm i -g @pikku/cli\``
     )
   }

@@ -1,4 +1,5 @@
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
+import { FabricPreconditionError } from './errors.js'
 
 export interface ResolvedStage {
   stageId: string
@@ -34,7 +35,7 @@ export async function resolveStage(
     if (stages.length === 1 && only) {
       return { stageId: only.stageId, branch: only.branch }
     }
-    throw new Error(
+    throw new FabricPreconditionError(
       stages.length === 0
         ? 'No stages deployed for this project yet — run `pikku fabric deploy apply <branch>` first.'
         : `--branch is required — this project has ${stages.length} stages: ${known.join(', ')}`
@@ -43,7 +44,7 @@ export async function resolveStage(
 
   const stage = stages.find((s) => s.branch === branch)
   if (!stage) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `No stage for branch "${branch}".${known.length ? ` Existing: ${known.join(', ')}` : ''}`
     )
   }

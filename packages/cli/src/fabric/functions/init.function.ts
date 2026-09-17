@@ -7,6 +7,7 @@ import {
   writeProjectConfig,
 } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricInitInput = z.object({
   repo: z.string(),
@@ -40,11 +41,13 @@ export const FabricInit = pikkuSessionlessFunc({
   ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
 
     const existing = await findProjectConfig()
     if (existing && isLinkedProjectId(existing.config.projectId) && !force) {
-      throw new Error(
+      throw new FabricPreconditionError(
         `Already linked: ${existing.config.projectId} at ${existing.path}. Pass --force to replace.`
       )
     }

@@ -43,7 +43,7 @@ export function serializeLocalCLIBootstrap(
   )
 
   return `
-import { executeCLI, CLIError } from '@pikku/core/cli'
+import { executeCLI, CLIError, formatCLIError, wantsStackTrace } from '@pikku/core/cli'
 ${pikkuConfigFactory ? `import { ${pikkuConfigFactory.variable} as createConfig } from '${pikkuConfigPath}'` : ''}
 import { ${singletonServicesFactory.variable} as createSingletonServices } from '${singletonServicesPath}'
 ${wireServicesFactory ? `import { ${wireServicesFactory.variable} as createWireServices } from '${wireServicesPath}'` : ''}
@@ -73,10 +73,21 @@ export default ${capitalizedName}CLI
 ${DIRECT_EXECUTION_GUARD}
 
 if (isDirectExecution) {
-  ${capitalizedName}CLI(process.argv.slice(2)).catch(error => {
-    console.error('Fatal error:', error.message)
-    process.exit(1)
-  })
+  const reportFatal = (error: unknown): void => {
+    // executeCLI already printed a CLIError; it carries the exit code, not text.
+    if (error instanceof CLIError) process.exit(error.exitCode)
+    // stderr is asynchronous when it is a pipe, so exiting on the next line can
+    // truncate the diagnostic. Exit from the write callback, with exitCode set
+    // first in case the stream is already gone and the callback never fires.
+    process.exitCode = 1
+    process.stderr.write(
+      formatCLIError(error, { verbose: wantsStackTrace(process.argv.slice(2)) }) + '\\n',
+      () => process.exit(1)
+    )
+  }
+  process.on('uncaughtException', reportFatal)
+  process.on('unhandledRejection', reportFatal)
+  ${capitalizedName}CLI(process.argv.slice(2)).catch(reportFatal)
 }
 `
 }
