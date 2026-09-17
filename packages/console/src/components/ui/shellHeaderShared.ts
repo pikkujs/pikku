@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { asI18n, type I18nNode, type I18nString } from '@pikku/react'
+import { m } from '@/i18n/messages'
 import type { PikkuSwitchOption } from './PikkuSwitch'
 
 export interface ShellHeaderSelection<T extends string> {
@@ -25,6 +26,12 @@ export interface ShellHeaderFilter {
   icon?: ReactNode
   /** Higher priority stays inline longer when space runs out (default 0). */
   priority?: number
+  /** Several options at once. `values` holds the selection and `onChange` is
+   *  called with the one option that was clicked, to toggle. */
+  multiple?: boolean
+  values?: string[]
+  /** What the chip reads when `multiple` and nothing is selected. */
+  emptyLabel?: I18nString
 }
 
 export interface ShellHeaderSearch {
@@ -121,5 +128,16 @@ export function partitionFilters(
 // options — the raw filter value (an opaque value, hence asI18n, not English).
 export function filterDisplay(f: ShellHeaderFilter): I18nString {
   if (!f.options) return asI18n(f.value)
+  if (f.multiple) {
+    const picked = f.values ?? []
+    if (picked.length === 0) return f.emptyLabel ?? m.shell_header_filter_any()
+    if (picked.length === 1) {
+      return (
+        f.options.find((o) => o.value === picked[0])?.label ??
+        asI18n(picked[0]!)
+      )
+    }
+    return m.shell_header_filter_count({ count: picked.length })
+  }
   return f.options.find((o) => o.value === f.value)?.label ?? asI18n(f.value)
 }
