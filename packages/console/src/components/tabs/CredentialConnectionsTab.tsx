@@ -214,8 +214,17 @@ const ConnectionRowActions: React.FC<{
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
+      // better-auth selects the account by its own row id, so the provider
+      // name has to be resolved to a row before it can be unlinked.
+      const { data: accounts } = await auth!.client.listAccounts()
+      const account = (accounts ?? []).find(
+        (candidate) => candidate.providerId === credential.name
+      )
+      if (!account) {
+        throw new Error(m.credentials_disconnect_failed())
+      }
       const { error } = await auth!.client.unlinkAccount({
-        providerId: credential.name,
+        accountId: account.id,
       })
       if (error) {
         throw new Error(error.message ?? m.credentials_disconnect_failed())
