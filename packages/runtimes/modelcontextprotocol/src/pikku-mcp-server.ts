@@ -207,11 +207,22 @@ export class PikkuMCPServer {
    * transport, `PikkuFetchHTTPRequest` reads the body only on demand, so the
    * two never compete for the single-use stream and no clone is needed — a
    * tool's input comes from the JSON-RPC params, not the HTTP body.
+   *
+   * `ctx.authInfo` is whatever the host passed to the handler, carried on
+   * beside the request so a tool reads verified claims rather than re-parsing
+   * a header it could not have verified anyway. Either may be absent on its
+   * own: stdio has neither, and an HTTP caller that verified nothing has only
+   * the request.
    */
   private serverFactory = (ctx: McpRequestContext): Server => {
     const server = this.createConfiguredServer(
-      ctx.requestInfo
-        ? { request: new PikkuFetchHTTPRequest(ctx.requestInfo) }
+      ctx.requestInfo || ctx.authInfo
+        ? {
+            ...(ctx.requestInfo
+              ? { request: new PikkuFetchHTTPRequest(ctx.requestInfo) }
+              : {}),
+            ...(ctx.authInfo ? { authInfo: ctx.authInfo } : {}),
+          }
         : undefined
     )
     this.server = server

@@ -100,12 +100,15 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
     if (existing) {
       return PLATFORM_USER_ID
     }
-    await ctx.context.internalAdapter.createUser({
-      id: PLATFORM_USER_ID,
-      email: PLATFORM_USER_EMAIL,
-      name: 'Platform',
-      emailVerified: false,
-    })
+    await ctx.context.internalAdapter.createUser(
+      {
+        id: PLATFORM_USER_ID,
+        email: PLATFORM_USER_EMAIL,
+        name: 'Platform',
+        emailVerified: false,
+      },
+      { method: 'credential-oauth' }
+    )
     return PLATFORM_USER_ID
   }
 
