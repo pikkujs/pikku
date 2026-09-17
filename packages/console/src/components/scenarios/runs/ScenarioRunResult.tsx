@@ -18,6 +18,20 @@ import { ScenarioRunPlayer } from './ScenarioRunPlayer'
 import { ScenarioArtifactTile } from './ScenarioArtifactTile'
 import { runDuration, stepOffsets } from './scenario-run-format'
 
+const scenarioName = (result: ScenarioResult) =>
+  result.feature && result.name.startsWith(`${result.feature} › `)
+    ? result.name.slice(result.feature.length + 3)
+    : result.name
+
+/** A stack is hundreds of frames deep, and left loose it buries the run. */
+const FAILURE_SCROLL = {
+  maxHeight: 220,
+  overflow: 'auto',
+  maxWidth: '100%',
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'anywhere',
+} as const
+
 const RESULT_ICON = {
   passed: { Icon: Check, colour: 'var(--mantine-color-green-6)' },
   failed: { Icon: X, colour: 'var(--mantine-color-red-6)' },
@@ -78,20 +92,19 @@ export const ScenarioRunResult: React.FC<ScenarioRunResultProps> = ({
       >
         <Chevron size={14} color="var(--mantine-color-dimmed)" />
         <icon.Icon size={14} strokeWidth={2.4} color={icon.colour} />
-        <Text size="sm" fw={600} style={{ textAlign: 'start' }}>
-          {asI18n(result.name)}
+        <Text
+          size="sm"
+          fw={500}
+          lineClamp={2}
+          style={{
+            textAlign: 'start',
+            flex: 1,
+            minWidth: 0,
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {asI18n(scenarioName(result))}
         </Text>
-        {result.feature && (
-          <Text size="xs" c="dimmed" style={{ textAlign: 'start' }}>
-            {asI18n(result.feature)}
-          </Text>
-        )}
-        <Box style={{ flex: 1 }} />
-        {(result.tags ?? []).map((tag) => (
-          <Badge key={tag} variant="light" size="xs" radius="xl" tt="none">
-            {asI18n(tag)}
-          </Badge>
-        ))}
         <Text size="xs" c="dimmed" ff="monospace">
           {asI18n(runDuration(result.durationMs))}
         </Text>
@@ -100,13 +113,29 @@ export const ScenarioRunResult: React.FC<ScenarioRunResultProps> = ({
       {open && (
         <Group
           align="flex-start"
-          wrap="nowrap"
+          wrap="wrap"
           gap="md"
           p="md"
           pt={0}
           style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}
         >
-          <Stack gap="sm" pt="md" style={{ flex: 1, minWidth: 0 }}>
+          <Stack gap="sm" pt="md" style={{ flex: 1, minWidth: 240 }}>
+            {(result.tags ?? []).length > 0 && (
+              <Group gap={6}>
+                {(result.tags ?? []).map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="light"
+                    size="xs"
+                    radius="xl"
+                    tt="none"
+                  >
+                    {asI18n(tag)}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
             <ScenarioRunSteps
               steps={steps}
               activeIndex={activeStep}
@@ -120,13 +149,15 @@ export const ScenarioRunResult: React.FC<ScenarioRunResultProps> = ({
                     {asI18n(result.failure.sentence)}
                   </Text>
                 )}
-                <Code block color="red">
+                <Code block color="red" style={FAILURE_SCROLL}>
                   {result.failure?.message ??
                     result.error ??
                     m.scenario_runs_unknown_failure()}
                 </Code>
                 {result.failure?.stack && !result.failure.expected && (
-                  <Code block>{result.failure.stack}</Code>
+                  <Code block style={FAILURE_SCROLL}>
+                    {result.failure.stack}
+                  </Code>
                 )}
               </Stack>
             )}
@@ -145,7 +176,10 @@ export const ScenarioRunResult: React.FC<ScenarioRunResultProps> = ({
           </Stack>
 
           {recording && (
-            <Box pt="md" style={{ width: 380, flexShrink: 0 }}>
+            <Box
+              pt="md"
+              style={{ flexBasis: 380, flexGrow: 1, minWidth: 0, maxWidth: '100%' }}
+            >
               <ScenarioRunPlayer
                 runId={runId}
                 artifact={recording}
