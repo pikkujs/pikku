@@ -113,10 +113,17 @@ export const DECLARED_LENS: ScenarioRunLens = {
 /**
  * The declared ladder joined to what the run recorded, keyed by ladder step id.
  *
- * Matched on the sentence and scanned forwards rather than zipped by index: a
- * repeat header declares a rung the run never files, and a scenario that
- * stopped early files fewer rungs than it declares. Walking forwards keeps a
- * repeated sentence attached to the right occurrence of it.
+ * Joined by order rather than by text. A recorded rung carries the sentence as
+ * it was spoken — the phase keyword, the actor, and every placeholder resolved
+ * to the value it took — so `opens the booking` is filed as `Given admin opens
+ * /admin/bookings/b_yoga_2026_summer`, and nothing about the two strings lines
+ * up. Order is what the two sides do share: a run files its rungs as it walks
+ * the ladder, and stops where it failed, so a run that filed fewer rungs than
+ * were declared leaves the rest of the ladder unmatched, which is what a
+ * scenario that stopped early should look like.
+ *
+ * Repeat headers are skipped: a fan-out declares a rung the run never files as
+ * one of its own.
  */
 export const alignLadderToRun = (
   declared: ScenarioLadderStep[],
@@ -126,12 +133,10 @@ export const alignLadderToRun = (
   let cursor = 0
   for (const step of declared) {
     if (step.repeat) continue
-    const at = recorded.findIndex(
-      (row, index) => index >= cursor && row.sentence === step.sentence
-    )
-    if (at === -1) continue
-    aligned.set(step.id, recorded[at]!)
-    cursor = at + 1
+    const row = recorded[cursor]
+    if (!row) break
+    aligned.set(step.id, row)
+    cursor += 1
   }
   return aligned
 }
