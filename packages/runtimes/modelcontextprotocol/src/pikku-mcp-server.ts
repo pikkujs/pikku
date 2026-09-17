@@ -114,7 +114,7 @@ const writeWebResponse = async (
 }
 
 export class PikkuMCPServer {
-  private server!: Server
+  private server?: Server
   private mcpEndpointRegistry: MCPEndpointRegistry
   private connected = false
   private httpHandler?: McpHttpHandler
@@ -390,56 +390,63 @@ export class PikkuMCPServer {
     }
   }
 
+  /**
+   * A logger that forwards to the connected client as MCP logging notifications.
+   *
+   * The server instance is resolved per message rather than captured: under
+   * stdio the factory does not run until the client connects, which is after
+   * this logger is built, so a captured instance would be `undefined` and every
+   * log a `TypeError` — surfacing as a bare `-32603` from the first tool that
+   * logs. Anything logged before a client is connected falls back to the logger
+   * the server was constructed with, which is the only place it could go.
+   */
   public createMCPLogger(): Logger {
-    const server = this.server
+    const send = (
+      level: 'info' | 'warning' | 'error' | 'debug',
+      data: unknown
+    ): void => {
+      const server = this.server
+      if (!server) {
+        if (level === 'warning') this.logger.warn(data as any)
+        else if (level === 'error') this.logger.error(data as any)
+        else if (level === 'debug') this.logger.debug(data as any)
+        else this.logger.info(data as any)
+        return
+      }
+      server.sendLoggingMessage({ level, data })
+    }
+
+    const withMeta = (
+      messageOrObj: string | Record<string, any> | Error,
+      meta: any[]
+    ): unknown =>
+      typeof messageOrObj === 'string'
+        ? meta.length > 0
+          ? { message: messageOrObj, meta }
+          : messageOrObj
+        : messageOrObj
+
     const logger: Logger = {
       info: function (
         messageOrObj: string | Record<string, any>,
         ...meta: any[]
       ): void {
-        server.sendLoggingMessage({
-          level: 'info',
-          data:
-            typeof messageOrObj === 'string'
-              ? meta.length > 0
-                ? { message: messageOrObj, meta }
-                : messageOrObj
-              : messageOrObj,
-        })
+        send('info', withMeta(messageOrObj, meta))
       },
       warn: function (
         messageOrObj: string | Record<string, any>,
         ...meta: any[]
       ): void {
-        server.sendLoggingMessage({
-          level: 'warning',
-          data:
-            typeof messageOrObj === 'string'
-              ? meta.length > 0
-                ? { message: messageOrObj, meta }
-                : messageOrObj
-              : messageOrObj,
-        })
+        send('warning', withMeta(messageOrObj, meta))
       },
       error: function (
         messageOrObj: string | Record<string, any> | Error,
         ...meta: any[]
       ): void {
-        server.sendLoggingMessage({
-          level: 'error',
-          data:
-            typeof messageOrObj === 'string'
-              ? meta.length > 0
-                ? { message: messageOrObj, meta }
-                : messageOrObj
-              : messageOrObj,
-        })
+        send('error', withMeta(messageOrObj, meta))
       },
       debug: function (message: string, ...meta: any[]): void {
-        server.sendLoggingMessage({
-          level: 'debug',
-          data: meta.length > 0 ? { message, meta } : message,
-        })
+        send('debug', meta.length > 0 ? { message, meta } : message)
       },
       setLevel: function (_level: any): void {
         throw new Error('Function not implemented.')
