@@ -37,7 +37,14 @@ export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
       { actor: actors.admin }
     )
 
-    const tools = ['mcpToolWithDescription', 'mcpToolWithoutDescription']
+    // `todos:listTodos` is there because `wireAddon`'s `mcp` names it: the
+    // addon declares none of its functions a tool, so the app's list is what
+    // decides the menu.
+    const tools = [
+      'mcpToolWithDescription',
+      'mcpToolWithoutDescription',
+      'todos:listTodos',
+    ]
     for (const tool of tools) {
       await scenario.then(
         `sees ${tool}`,

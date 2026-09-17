@@ -107,6 +107,19 @@ if (overridden.basePath === '/custom') {
   passed = false
 }
 
+// `mcp: ['goodbye']` is the app choosing the tool menu: the addon declared
+// `hello` a tool and not `goodbye`, and neither declaration decides this.
+const mcpMeta = readMeta('../.pikku/mcp/mcp.gen.json')
+const toolNames = (mcpMeta?.tools ?? []).map((tool: any) => tool.name).sort()
+if (toolNames.length === 1 && toolNames[0] === 'ext:goodbye') {
+  console.log('✓ wireAddon mcp list offers exactly the tools it names')
+} else {
+  console.log(
+    `✗ wireAddon mcp list did not decide the tool menu — got: ${JSON.stringify(toolNames)}`
+  )
+  passed = false
+}
+
 console.log('\n───────────────────────────────────────')
 if (passed) {
   console.log('✓ All addon contract assertions passed!')
