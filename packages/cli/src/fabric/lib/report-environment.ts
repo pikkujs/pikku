@@ -1,16 +1,17 @@
-import { readFile, lstat, readdir } from 'node:fs/promises'
+import { readFile, lstat, readdir, realpath } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, sep } from 'node:path'
 
 /** One installed `@pikku/*` package as it actually resolves on disk. */
 export interface PikkuPackageVersion {
   name: string
   version: string
   /**
-   * Resolved through a symlink — a yarn workspace or a `yarn link`ed checkout
-   * rather than a published tarball. The framework is read-only during a build
-   * run, so a linked package is code that may already have been modified, and a
-   * finding describing it is describing something other than a release.
+   * Resolved to a checkout outside `node_modules` — a workspace or a linked
+   * working tree rather than a published tarball. The framework is read-only
+   * during a build run, so a linked package is code that may already have been
+   * modified, and a finding describing it is describing something other than a
+   * release.
    */
   linked: boolean
 }
@@ -55,6 +56,20 @@ export async function findPikkuScope(startDir: string): Promise<string | null> {
 }
 
 /**
+ * A symlink on its own proves nothing: bun and pnpm install every registry
+ * package as a link into a store that itself lives under `node_modules`, so
+ * reading the link alone marks a whole ordinary install as modified framework
+ * code. Only a target outside `node_modules` is a checkout someone can edit.
+ */
+async function resolvesToCheckout(packageDir: string): Promise<boolean> {
+  const stats = await lstat(packageDir).catch(() => null)
+  if (!stats?.isSymbolicLink()) return false
+  const target = await realpath(packageDir).catch(() => null)
+  if (!target) return false
+  return !`${target}${sep}`.includes(`${sep}node_modules${sep}`)
+}
+
+/**
  * Versions read off the installed tree rather than out of `package.json`. A
  * range like `^0.12.35` says nothing about what ran, and the version that ran
  * is the only one worth reporting.
@@ -77,11 +92,10 @@ export async function readPikkuPackages(
       continue
     }
     if (typeof version !== 'string') continue
-    const stats = await lstat(packageDir).catch(() => null)
     packages.push({
       name: `@pikku/${entry}`,
       version,
-      linked: stats?.isSymbolicLink() ?? false,
+      linked: await resolvesToCheckout(packageDir),
     })
   }
   return packages
