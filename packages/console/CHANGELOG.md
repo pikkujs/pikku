@@ -1,3 +1,12 @@
+## 0.12.85
+
+### Patch Changes
+
+- cc79238: Wrap long error messages in the feature-flag alerts, and inset them from the page edge
+- bd54f0d: Keep the selected scenario run in the URL (`?view=runs&run=<runId>`), so a run is a link you can send and a host console can point straight at the run a build produced.
+- Updated dependencies [02eeffb]
+  - @pikku/core@0.12.112
+
 ## 0.12.84
 
 ### Patch Changes
