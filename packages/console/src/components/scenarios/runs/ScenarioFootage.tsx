@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Center, Stack, Text } from '@pikku/mantine/core'
+import { Box, Center, SimpleGrid, Stack, Text } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import type { ScenarioArtifact } from '@pikku/core/scenario'
 import type { ScenarioLensStatus } from '../scenario-run-lens'
@@ -20,12 +20,13 @@ const WAITING_LABEL: Partial<Record<ScenarioLensStatus, () => string>> = {
 }
 
 /**
- * The column beside a scenario, holding whatever the run recorded of it.
+ * The rail beside a scenario, holding whatever the run recorded of it.
  *
- * Every artifact is fetched into memory to carry the console's Authorization
- * header, so a suite view that mounted all of them at once would pull the whole
- * artifact store. Nothing is fetched until the column is scrolled to, which is
- * what lets the footage sit here unasked rather than behind a link.
+ * It keeps its width whether or not there is anything in it, so the ladders
+ * down a feature all measure the same and the recordings line up rather than
+ * stepping in and out of the text. Nothing is fetched until the rail is
+ * scrolled to — every artifact is pulled into memory to carry the console's
+ * Authorization header, and a feature view mounts dozens of them.
  */
 export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
   runId,
@@ -33,41 +34,33 @@ export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
   artifacts,
   seekMs,
 }) => {
-  const column = useRef<HTMLDivElement>(null)
+  const rail = useRef<HTMLDivElement>(null)
   const [reached, setReached] = useState(false)
 
   useEffect(() => {
-    if (reached || !column.current) return
+    if (reached || !rail.current) return
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) setReached(true)
     })
-    observer.observe(column.current)
+    observer.observe(rail.current)
     return () => observer.disconnect()
   }, [reached])
 
   const waiting = WAITING_LABEL[status]
-  if (artifacts.length === 0 && !waiting) return null
-
   const recordings = artifacts.filter((artifact) => artifact.kind === 'video')
   const stills = artifacts.filter((artifact) => artifact.kind !== 'video')
 
   return (
-    <Stack
-      ref={column}
-      gap="sm"
-      data-testid="scenario-footage"
-      style={{ flex: '0 1 340px', minWidth: 240, maxWidth: 380 }}
-    >
+    <Stack ref={rail} gap={8} data-testid="scenario-footage">
       {artifacts.length === 0 && waiting && (
         <Box
           style={{
-            borderRadius: 8,
+            aspectRatio: '16 / 10',
+            borderRadius: 10,
             border: '1px dashed var(--mantine-color-default-border)',
-            background: 'var(--mantine-color-default)',
-            height: 160,
           }}
         >
-          <Center h={160}>
+          <Center h="100%">
             <Text size="xs" c="dimmed">
               {waiting()}
             </Text>
@@ -77,29 +70,39 @@ export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
 
       {reached &&
         recordings.map((artifact) => (
-          <ScenarioRunPlayer
-            key={artifact.path}
-            runId={runId}
-            artifact={artifact}
-            seekMs={seekMs}
-          />
+          <Stack key={artifact.path} gap={4}>
+            <ScenarioRunPlayer
+              runId={runId}
+              artifact={artifact}
+              seekMs={seekMs}
+            />
+            {recordings.length > 1 && artifact.actor && (
+              <Text size="xs" c="dimmed" tt="uppercase" fz={10} lh={1.4}>
+                {artifact.actor}
+              </Text>
+            )}
+          </Stack>
         ))}
-      {reached &&
-        stills.map((artifact) => (
-          <ScenarioArtifactTile
-            key={artifact.path}
-            runId={runId}
-            artifact={artifact}
-          />
-        ))}
+
+      {reached && stills.length > 0 && (
+        <SimpleGrid cols={stills.length > 1 ? 2 : 1} spacing={8}>
+          {stills.map((artifact) => (
+            <ScenarioArtifactTile
+              key={artifact.path}
+              runId={runId}
+              artifact={artifact}
+            />
+          ))}
+        </SimpleGrid>
+      )}
 
       {!reached && artifacts.length > 0 && (
         <Box
           style={{
-            borderRadius: 8,
+            aspectRatio: '16 / 10',
+            borderRadius: 10,
             border: '1px solid var(--mantine-color-default-border)',
             background: 'var(--mantine-color-default)',
-            height: 180,
           }}
         />
       )}

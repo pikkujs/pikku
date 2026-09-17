@@ -191,7 +191,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
                 pt={24}
                 pb={12}
                 style={{
-                  maxWidth: 860,
+                  maxWidth: 1120,
                   position: 'sticky',
                   top: 0,
                   zIndex: 1,
