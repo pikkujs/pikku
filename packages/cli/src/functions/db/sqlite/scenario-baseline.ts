@@ -22,6 +22,11 @@ export async function captureSqliteScenarioBaseline(
 
   const withDb = <T>(run: (db: ReturnType<typeof runtime.open>) => T): T => {
     const db = runtime.open(resolved.dbFile)
+    // The app under test is still connected to this file. A rollback-journal
+    // database gives a writer an exclusive lock, so without a timeout the first
+    // statement that overlaps one of the app's reads fails outright with
+    // SQLITE_BUSY and takes the scenario with it.
+    db.exec('PRAGMA busy_timeout = 10000')
     try {
       return run(db)
     } finally {
