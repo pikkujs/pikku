@@ -148,6 +148,8 @@ export function semverLevel(
 }
 
 // bun outdated has no --json; it prints a table: | Package | Current | Update | Latest |
+// Under `--filter` it appends a fifth Workspace column, so both widths are read.
+// Latest sits at index 3 either way.
 export function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
   const updates: SecurityAuditUpdate[] = []
   const seen = new Set<string>()
@@ -157,7 +159,7 @@ export function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
       .split('|')
       .map((c) => c.trim())
       .filter((c) => c.length > 0)
-    if (cells.length !== 4) continue
+    if (cells.length !== 4 && cells.length !== 5) continue
     const [cell, current, , latest] = cells
     if (cell === 'Package' || /^-+$/.test(cell)) continue
     // bun annotates the section a dependency comes from — `lodash (dev)`. The
@@ -220,7 +222,7 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
       try {
         const issues = parseBunAudit(runBun(['audit', '--json'], root))
         const updates = includeOutdated
-          ? parseBunOutdated(runBun(['outdated'], root))
+          ? parseBunOutdated(runBun(['outdated', '--filter', '*'], root))
           : []
         const latestByPkg = new Map(updates.map((u) => [u.package, u.latest]))
         for (const i of issues)
