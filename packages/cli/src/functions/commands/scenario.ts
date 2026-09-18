@@ -761,7 +761,10 @@ export const scenarioRun = pikkuSessionlessFunc<
         }
         // Told here, acted on at the next scenario's reset — that is what closes
         // these windows and finalises the video this outcome decides the fate of.
-        browserLifecycle.endScenario(result.status)
+        // `results` only ever holds settled scenarios — a `running` one is
+        // written straight to the store — so the outcome is never `running`.
+        const outcome = result.status
+        if (outcome !== 'running') browserLifecycle.endScenario(outcome)
         Object.assign(result, identify(result, scenarioName, feature))
         await runStore.recordScenario(captureRunId, result)
         if (coverageActive) {
