@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Center, SimpleGrid, Stack, Text } from '@pikku/mantine/core'
+import { asI18n, type I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import type { ScenarioArtifact } from '@pikku/core/scenario'
 import type { ScenarioLensStatus } from '../scenario-run-lens'
@@ -13,7 +14,7 @@ type ScenarioFootageProps = {
   seekMs?: number
 }
 
-const WAITING_LABEL: Partial<Record<ScenarioLensStatus, () => string>> = {
+const WAITING_LABEL: Partial<Record<ScenarioLensStatus, () => I18nNode>> = {
   running: () => m.scenarios_footage_recording(),
   waiting: () => m.scenarios_footage_pending(),
   never: () => m.scenarios_footage_pending(),
@@ -78,7 +79,7 @@ export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
             />
             {recordings.length > 1 && artifact.actor && (
               <Text size="xs" c="dimmed" tt="uppercase" fz={10} lh={1.4}>
-                {artifact.actor}
+                {asI18n(artifact.actor)}
               </Text>
             )}
           </Stack>
