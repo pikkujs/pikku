@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3028 observable things**: 981 exported names, plus
-2047 members on the classes and interfaces among them, reachable
+**3035 observable things**: 983 exported names, plus
+2052 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -19,7 +19,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
-| `./channel` | 32 | 32 | 84 |
+| `./channel` | 33 | 33 | 89 |
 | `./types` | 23 | 20 | 77 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
@@ -58,11 +58,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./secret` | 7 | 7 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
+| `./testing` | 4 | 4 | 2 |
 | `./dev` | 4 | 4 | 2 |
 | `./credential` | 5 | 5 | 0 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
-| `./testing` | 3 | 3 | 2 |
 | `./node` | 3 | 3 | 0 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
@@ -936,6 +936,8 @@ export interface EventHubService<Topics extends Record<string, any>> {
   subscribe<T extends keyof Topics>(topic: T, channelId: string): Promise<void> | void
   unsubscribe<T extends keyof Topics>(topic: T, channelId: string): Promise<void> | void
   publish<T extends keyof Topics>(topic: T, channelId: string | null, data: Topics[T], isBinary?: boolean): Promise<void> | void
+  onChannelOpened(channelHandler: PikkuChannelHandler): Promise<void> | void
+  onChannelClosed(channelId: string): Promise<void> | void
 }
 export abstract class EventHubStore< EventTopics extends Record<string, any> = {}, > {
   public abstract getChannelIdsForTopic(topic: string): Promise<string[]>
@@ -963,6 +965,11 @@ export interface PikkuChannel< OpeningData, out Out, Remote extends (...args: an
   getState<T>(): Promise<T | undefined> | T | undefined
   clearState(): Promise<void> | void
   remote: Remote
+}
+export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {
+  send(message: Out, isBinary?: boolean): Promise<void> | void
+  sendBinary(data: BinaryData): Promise<void> | void
+  getChannel(): PikkuChannel<OpeningData, Out>
 }
 export type PikkuChannelHandlerFactory<OpeningData = unknown, Out = unknown> = (
   channelId: string,
@@ -5943,6 +5950,7 @@ validateSchema: (logger: Logger, schemaService: SchemaService | undefined, schem
 
 ```ts
 clearPikkuRuntimeState: () => void
+defineEventHubServiceTests: (name: string, makeHub: () => EventHubService<Record<string, any>> | Promise<EventHubService<Record<string, any>>>, { expectsHandlerSupport }?: { expectsHandlerSupport?: boolean | undefined; }) => void
 defineServiceTests: (config: ServiceTestConfig) => void
 export interface ServiceTestConfig {
   name: string
