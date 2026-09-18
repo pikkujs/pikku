@@ -43,7 +43,7 @@ describe('createConfig', () => {
 
     await assert.rejects(
       createConfig({} as any, { silent: true } as any, ['prebuild']),
-      /pikku.config.json not found/
+      /No Pikku config file/
     )
   })
 })
