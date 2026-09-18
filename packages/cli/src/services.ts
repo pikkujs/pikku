@@ -116,13 +116,26 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
  * produced a config, or a command run from the wrong directory, is exactly the
  * kind of thing worth reporting, so demanding a config would refuse the finding
  * at the moment it is most worth having.
+ * `fabric login` runs before there is a project to be inside, and `fabric
+ * changes` reads a queue over the fabric API, resolving its project from
+ * `pikkufabric.config.json` or `--project-id` — a harness emptying that queue is
+ * often not sitting in the checkout it is about to edit.
  */
-const CONFIG_FREE_COMMANDS = new Set([
+export const CONFIG_FREE_COMMANDS = new Set([
   'skills',
   'skills.list',
   'skills.install',
   'doc',
+  'fabric.login',
   'fabric.report',
+  'fabric.changes',
+  'fabric.changes.list',
+  'fabric.changes.show',
+  'fabric.changes.file',
+  'fabric.changes.claim',
+  'fabric.changes.ask',
+  'fabric.changes.shot',
+  'fabric.changes.done',
   'fabric.findings',
   'fabric.findings.list',
   'fabric.findings.flush',
