@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3028 observable things**: 981 exported names, plus
-2047 members on the classes and interfaces among them, reachable
+**3037 observable things**: 982 exported names, plus
+2055 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 435 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 45 | 45 | 134 |
+| `./scenario` | 46 | 46 | 142 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 84 |
@@ -1667,7 +1667,7 @@ export class ScenarioNoWitness extends PikkuError {
 }
 export interface ScenarioResult {
   name: string
-  status: 'passed' | 'failed'
+  status: 'passed' | 'failed' | 'running'
   durationMs: number
   output?: unknown
   error?: string
@@ -1675,6 +1675,9 @@ export interface ScenarioResult {
   failure?: ScenarioFailureDetail
   scenarioName?: string
   feature?: string
+  title?: string
+  description?: string
+  actors?: string[]
   tags?: string[]
   artifacts?: ScenarioArtifact[]
 }
@@ -1682,6 +1685,7 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   runId: string
   status: ScenarioRunStatus
   surface: string
+  version?: ScenarioRunVersion
   startedAt: string
   finishedAt?: string
 }
@@ -1706,6 +1710,7 @@ export interface ScenarioRunSummary {
   runId: string
   environment: string
   surface: string
+  version?: ScenarioRunVersion
   status: ScenarioRunStatus
   startedAt: string
   finishedAt?: string
@@ -1714,6 +1719,11 @@ export interface ScenarioRunSummary {
   failed: number
   skipped: number
   artifacts: number
+}
+export interface ScenarioRunVersion {
+  commit: string
+  dirty?: boolean
+  attempt: number
 }
 export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
 export interface ScenarioStepMeta {
