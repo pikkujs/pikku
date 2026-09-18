@@ -56,6 +56,7 @@ export const ScenarioRunTimeline: React.FC<ScenarioRunTimelineProps> = ({
             <Box
               component="button"
               type="button"
+              data-testid={`scenario-run-segment-${result.name}`}
               onClick={() => onOpen(result.name)}
               aria-label={asI18n(result.name)}
               style={{

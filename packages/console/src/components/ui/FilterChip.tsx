@@ -20,6 +20,7 @@ export const FilterChip: React.FC<FilterChipProps> = ({
     <Button
       variant="default"
       size="sm"
+      data-testid={`filter-chip-${filter.key}`}
       leftSection={filter.icon}
       rightSection={filter.options ? <ChevronDown size={13} /> : undefined}
       onClick={
@@ -55,6 +56,7 @@ export const FilterChip: React.FC<FilterChipProps> = ({
             <Menu.Item
               key={o.value}
               fw={picked ? 600 : 400}
+              data-testid={`filter-option-${filter.key}-${o.value}`}
               closeMenuOnClick={!filter.multiple}
               leftSection={
                 filter.multiple ? (
