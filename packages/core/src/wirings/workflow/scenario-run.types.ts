@@ -66,7 +66,12 @@ export interface ScenarioFailureDetail {
 
 export interface ScenarioResult {
   name: string
-  status: 'passed' | 'failed'
+  /**
+   * `running` is filed the moment the scenario starts and replaced when it
+   * ends, so a console watching a run in progress can tell the scenario on
+   * screen right now from the ones still waiting their turn.
+   */
+  status: 'passed' | 'failed' | 'running'
   durationMs: number
   output?: unknown
   error?: string
@@ -76,6 +81,11 @@ export interface ScenarioResult {
   scenarioName?: string
   /** The feature that grouped it, when one did. */
   feature?: string
+  /** The scenario's declared title, snapshotted so the record reads as prose. */
+  title?: string
+  description?: string
+  /** Who the scenario cast, in declaration order. */
+  actors?: string[]
   tags?: string[]
   /** Images and footage this scenario produced, filed under the run. */
   artifacts?: ScenarioArtifact[]
@@ -104,6 +114,33 @@ export interface ScenarioRunReport {
 export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
 
 /**
+ * Which version of the suite a run ran against.
+ *
+ * A run is only comparable to another run of the same thing, and "the same
+ * thing" is the commit — two runs a day apart are not a flake and a fix if the
+ * suite moved between them. `attempt` counts the runs already filed against
+ * that commit, so a suite re-run until it passes reads as one version with
+ * several attempts rather than several unrelated runs.
+ *
+ * Absent when the project is not in a git repository, or has no commits yet:
+ * an unversioned run is still a run, and saying nothing is better than
+ * inventing a version for it.
+ */
+export interface ScenarioRunVersion {
+  /** The commit the working tree was at, in full. */
+  commit: string
+  /**
+   * The tree had uncommitted changes, so the commit does not describe what
+   * actually ran. Recorded rather than refused — running against a dirty tree
+   * is the normal way to work — but a reader comparing two attempts of the
+   * same commit needs to know one of them was not really that commit.
+   */
+  dirty?: boolean
+  /** Which run this is against that commit, counting from one. */
+  attempt: number
+}
+
+/**
  * A whole run, as it is stored and read back.
  *
  * `status` is `running` from the moment the run is created until it finishes,
@@ -116,6 +153,8 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   status: ScenarioRunStatus
   /** The surface the run targeted: `default`, `browser`, … */
   surface: string
+  /** The suite version this ran against, when the project has one. */
+  version?: ScenarioRunVersion
   startedAt: string
   finishedAt?: string
 }
@@ -125,6 +164,7 @@ export interface ScenarioRunSummary {
   runId: string
   environment: string
   surface: string
+  version?: ScenarioRunVersion
   status: ScenarioRunStatus
   startedAt: string
   finishedAt?: string
@@ -150,7 +190,11 @@ export interface ScenarioRunSummary {
 export interface ScenarioRunStore {
   /** Open a run. Called before the first scenario, with `status: 'running'`. */
   start(record: ScenarioRunRecord): Promise<void>
-  /** Append one finished scenario to an open run. */
+  /**
+   * File one scenario's state against an open run, replacing whatever was
+   * filed for that name before — a scenario is recorded twice, once as
+   * `running` and once with its outcome.
+   */
   recordScenario(runId: string, result: ScenarioResult): Promise<void>
   /**
    * File the run's artifacts against the scenarios that produced them.

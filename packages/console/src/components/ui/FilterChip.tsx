@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button, Menu, Text } from '@pikku/mantine/core'
-import { ChevronDown } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 import {
   CONTROL_H,
   filterDisplay,
@@ -20,6 +20,7 @@ export const FilterChip: React.FC<FilterChipProps> = ({
     <Button
       variant="default"
       size="sm"
+      data-testid={`filter-chip-${filter.key}`}
       leftSection={filter.icon}
       rightSection={filter.options ? <ChevronDown size={13} /> : undefined}
       onClick={
@@ -47,15 +48,27 @@ export const FilterChip: React.FC<FilterChipProps> = ({
     <Menu position="bottom-start" withinPortal={withinPortal} shadow="md">
       <Menu.Target>{target}</Menu.Target>
       <Menu.Dropdown>
-        {filter.options.map((o) => (
-          <Menu.Item
-            key={o.value}
-            fw={o.value === filter.value ? 600 : 400}
-            onClick={() => filter.onChange?.(o.value)}
-          >
-            {o.label}
-          </Menu.Item>
-        ))}
+        {filter.options.map((o) => {
+          const picked = filter.multiple
+            ? (filter.values ?? []).includes(o.value)
+            : o.value === filter.value
+          return (
+            <Menu.Item
+              key={o.value}
+              fw={picked ? 600 : 400}
+              data-testid={`filter-option-${filter.key}-${o.value}`}
+              closeMenuOnClick={!filter.multiple}
+              leftSection={
+                filter.multiple ? (
+                  <Check size={13} opacity={picked ? 1 : 0} />
+                ) : undefined
+              }
+              onClick={() => filter.onChange?.(o.value)}
+            >
+              {o.label}
+            </Menu.Item>
+          )
+        })}
       </Menu.Dropdown>
     </Menu>
   )

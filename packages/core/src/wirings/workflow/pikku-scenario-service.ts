@@ -85,6 +85,7 @@ export type {
   ScenarioRunStatus,
   ScenarioRunStore,
   ScenarioRunSummary,
+  ScenarioRunVersion,
   ScenarioStepRow,
 } from './scenario-run.types.js'
 export { SCENARIO_SURFACES } from './scenario-step.types.js'

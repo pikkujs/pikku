@@ -3,27 +3,26 @@
  *
  * `pikku scenario run` files every invocation into a run store — the scenarios
  * it selected, the sentences they were made of, and the screenshots and footage
- * they produced — and the console reads that store back. These scenarios are
- * necessarily self-referential: the run they find in the list is the one they
- * are being executed by, which is exactly the claim worth proving. A store that
- * only fills in after the process exits would be no use to anyone watching a
- * suite go.
+ * they produced — and the console reads that store back as a lens over the
+ * suite. These scenarios are necessarily self-referential: the run they find is
+ * the one they are being executed by, which is exactly the claim worth proving.
+ * A store that only fills in after the process exits would be no use to anyone
+ * watching a suite go.
  *
- * The prose is asserted against the *snapshot*, not against today's source: a
- * scenario is code and code moves, and a run from last week has to keep
- * describing the suite that actually ran.
+ * The run the console opens on is the newest, which during a run is the one
+ * these scenarios are being executed by, so no run id has to be selected.
  */
 import {
   pikkuFeature,
   pikkuScenario,
 } from '#pikku/scenarios/pikku-scenario-types.gen.js'
 
-const RUNS_PAGE = '/console/scenarios?view=runs'
+const SCENARIOS_PAGE = '/console/scenarios'
 
 export const runsListedScenario = pikkuScenario<void, { runs: number }>({
-  title: 'The scenarios page lists the runs it has kept',
+  title: 'The scenarios page reads back the run it is being run by',
   description:
-    'A run is history, so it outlives the process that produced it and reads back as a list',
+    'A run is history, so the console reads the store back: the newest run is a lens over the suite, saying how it went',
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -33,15 +32,15 @@ export const runsListedScenario = pikkuScenario<void, { runs: number }>({
     }
 
     await scenario.given(
-      'opens the runs view of the scenarios page',
+      'opens the scenarios page',
       'opensConsolePage',
-      { path: RUNS_PAGE, waitFor: { testId: 'scenario-run-navigator' } },
+      { path: SCENARIOS_PAGE, waitFor: { testId: 'scenario-run-band' } },
       { actor: actors.admin }
     )
     const listed = await scenario.then(
       'sees the run it is being run by',
       'seesTestId',
-      { testId: 'scenario-run-row-', prefix: true, atLeast: 1 },
+      { testId: 'feature-result-bar', atLeast: 1 },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -59,9 +58,9 @@ export const runReadsBackItsProseScenario = pikkuScenario<
   void,
   { opened: true }
 >({
-  title: 'A run reads back the sentences it walked',
+  title: 'A run reads back the scenarios it walked',
   description:
-    'The ladder shown is the one snapshotted into the run, so history keeps describing the suite that ran',
+    'The timeline is the run as it was recorded, and opening a segment lands on that scenario in the document',
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -71,27 +70,27 @@ export const runReadsBackItsProseScenario = pikkuScenario<
     }
 
     await scenario.given(
-      'opens the runs view of the scenarios page',
+      'opens the scenarios page',
       'opensConsolePage',
-      { path: RUNS_PAGE, waitFor: { testId: 'scenario-run-detail' } },
+      { path: SCENARIOS_PAGE, waitFor: { testId: 'scenario-run-timeline' } },
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the newest run opened',
+      'sees the run as a timeline',
       'seesTestId',
-      { testId: 'scenario-run-detail' },
+      { testId: 'scenario-run-timeline' },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens a scenario from the timeline',
+      'clicksTestId',
+      { testId: 'scenario-run-segment-', prefix: true },
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees a scenario the run already finished',
+      'sees that scenario read as prose',
       'seesTestId',
-      { testId: 'scenario-run-result-', prefix: true, atLeast: 1 },
-      { actor: actors.admin }
-    )
-    await scenario.then(
-      'sees that scenario as the sentences it walked',
-      'seesTestId',
-      { testId: 'scenario-run-steps', atLeast: 1 },
+      { testId: 'scenario-section-', prefix: true, atLeast: 1 },
       { actor: actors.admin }
     )
 
