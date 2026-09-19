@@ -120,6 +120,7 @@ export type CoreChannel<
         func?: ChannelConnect
         middleware?: PikkuMiddleware[]
       }
+  /** Runs once after the socket closes, however it closed. Nothing it returns reaches the client. */
   onDisconnect?:
     | ChannelDisconnect
     | {

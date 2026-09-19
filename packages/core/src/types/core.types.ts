@@ -120,7 +120,9 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
 } & Config
 
 export interface CoreUserSession {
+  /** Who the session belongs to, as your own system identifies them. Pikku only carries it. */
   userId?: string
+  /** The tenant the session is acting inside, when the project has more than one. */
   orgId?: string
   /** True when the session belongs to a synthetic scenario actor — lets audits/analytics address synthetic traffic */
   actor?: boolean
