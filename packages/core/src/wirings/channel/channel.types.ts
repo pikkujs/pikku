@@ -63,6 +63,17 @@ export interface ChannelMeta {
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
   binary?: boolean | null
+  /**
+   * Whether a connection must carry a session. Absent means the channel did not
+   * say, which the runtime treats as requiring one.
+   *
+   * Recorded so that something deploying or routing in front of this channel can
+   * tell a public surface from a private one without reading the generated
+   * source: a `wireCLI({ auth: false })` program is reachable by anyone holding
+   * the address, and a proxy that does not know that will either guess or gate
+   * traffic it was never protecting.
+   */
+  auth?: boolean
   /** Set when the channel was wired by a gateway rather than declared directly. */
   gateway?: boolean
   summary?: string
