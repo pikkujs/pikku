@@ -15,7 +15,6 @@ installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep
   timeoutMs: 1800000
-  acceptanceRole: author
   acceptance:
     level: verified
     evidence: [changed-files, validation-output]

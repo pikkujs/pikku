@@ -1320,6 +1320,11 @@ wireCLI({
               description: 'Overwrite existing skills if already installed',
               default: false,
             },
+            agentExtensions: {
+              description:
+                'Comma-separated extension paths every projected agent loads — how a host that fences its writers or routes their model adds that to the agents it installs',
+              type: 'string',
+            },
           },
         }),
       },

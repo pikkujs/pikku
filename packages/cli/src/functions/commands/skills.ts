@@ -168,6 +168,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
     fabric?: boolean
     client?: boolean
     update?: boolean
+    agentExtensions?: string
   },
   void
 >({
@@ -180,6 +181,7 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       fabric = false,
       client = false,
       update = false,
+      agentExtensions,
     }
   ) => {
     const supportedAgents = Object.keys(AGENT_SKILL_DIRS)
@@ -240,7 +242,11 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       AGENT_SKILL_DIRS[agent]!.split(sep).join('/'),
       update,
       existsSync,
-      readSkillFile
+      readSkillFile,
+      agentExtensions
+        ?.split(',')
+        .map((path) => path.trim())
+        .filter(Boolean)
     )
     if (projected.written.length === 0 && projected.skipped.length === 0) return
 

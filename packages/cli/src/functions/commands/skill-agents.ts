@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { parse } from 'yaml'
+import { parse, stringify } from 'yaml'
 
 /**
  * The frontmatter a skill adds to become a subagent as well as a skill.
@@ -14,7 +14,38 @@ export interface SkillAgentSpec {
   tools?: string
   timeoutMs?: number
   acceptance?: Record<string, unknown>
-  acceptanceRole?: string
+}
+
+/**
+ * The tools that can change the workspace, and so decide the agent's role.
+ *
+ * `bash` counts because a shell is a superset of the rest: `sed -i`, `echo >` and
+ * `git checkout` all mutate without touching a file tool.
+ */
+const MUTATING_TOOLS = [
+  'bash',
+  'shell',
+  'write',
+  'edit',
+  'write_files',
+  'edit_files',
+  'patch',
+]
+
+const DEFAULT_TOOLS = 'read, write, edit, bash, grep'
+
+/**
+ * The role is derived from the tools rather than declared beside them.
+ *
+ * It is what acceptance is inferred from, so a skill that declares the two
+ * independently can declare them inconsistently — a read-only role holding `write`
+ * is an agent the host judges by rules its tools do not match.
+ */
+function acceptanceRole(tools: string): 'read-only' | 'writer' {
+  const declared = tools.split(',').map((tool) => tool.trim())
+  return declared.some((tool) => MUTATING_TOOLS.includes(tool))
+    ? 'writer'
+    : 'read-only'
 }
 
 interface SkillFrontmatter {
@@ -62,21 +93,31 @@ function agentDescription(description: string): string {
 function renderAgent(
   name: string,
   frontmatter: SkillFrontmatter,
-  skillDir: string
+  skillDir: string,
+  extensions: string[]
 ): string {
   const agent = frontmatter.agent!
+  const tools = agent.tools ?? DEFAULT_TOOLS
   const lines = [
     '---',
     `name: ${name}`,
     `description: ${JSON.stringify(agentDescription(frontmatter.description ?? name))}`,
-    `tools: ${agent.tools ?? 'read, write, edit, bash, grep'}`,
+    `tools: ${tools}`,
   ]
+  if (extensions.length > 0) {
+    lines.push(`extensions: ${extensions.join(', ')}`)
+  }
   if (agent.acceptance) {
-    lines.push(`acceptance: ${JSON.stringify(agent.acceptance)}`)
+    lines.push('acceptance:')
+    lines.push(
+      stringify(agent.acceptance, { indent: 2 })
+        .trimEnd()
+        .split('\n')
+        .map((line) => `  ${line}`)
+        .join('\n')
+    )
   }
-  if (agent.acceptanceRole) {
-    lines.push(`acceptanceRole: ${agent.acceptanceRole}`)
-  }
+  lines.push(`acceptanceRole: ${acceptanceRole(tools)}`)
   if (agent.timeoutMs) {
     lines.push(`timeoutMs: ${agent.timeoutMs}`)
   }
@@ -126,7 +167,16 @@ export async function installSkillAgents(
   skillDir: string,
   update: boolean,
   existing: (path: string) => boolean,
-  read: (path: string) => Promise<string | null>
+  read: (path: string) => Promise<string | null>,
+  /**
+   * Host extensions every projected agent loads, as pi resolves them.
+   *
+   * They are passed in rather than declared by the skill because they belong to
+   * whoever is running the agent, not to the instructions it follows: a sandbox
+   * fences its writers and routes their model, and the same skill run on a
+   * developer's own checkout needs neither.
+   */
+  extensions: string[] = []
 ): Promise<{ written: string[]; skipped: string[] }> {
   const written: string[] = []
   const skipped: string[] = []
@@ -145,7 +195,7 @@ export async function installSkillAgents(
     await mkdir(agentRoot, { recursive: true })
     await writeFile(
       target,
-      renderAgent(name, parsed.frontmatter, skillDir),
+      renderAgent(name, parsed.frontmatter, skillDir, extensions),
       'utf-8'
     )
     written.push(name)
