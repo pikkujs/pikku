@@ -1325,6 +1325,16 @@ wireCLI({
                 'Comma-separated extension paths every projected agent loads — how a host that fences its writers or routes their model adds that to the agents it installs',
               type: 'string',
             },
+            agentDir: {
+              description:
+                'Where to write the projected agents, overriding the harness default — an absolute path for a host whose agents live outside the project',
+              type: 'string',
+            },
+            agentSkillDir: {
+              description:
+                'The skill directory a projected agent points at, for a host that relocates the installed skills afterwards',
+              type: 'string',
+            },
           },
         }),
       },

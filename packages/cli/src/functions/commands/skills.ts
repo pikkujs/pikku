@@ -1,6 +1,6 @@
 import { readdir, mkdir, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
-import { dirname, join, sep } from 'path'
+import { dirname, isAbsolute, join, sep } from 'path'
 import { listSkillFiles, listSkillNames, readSkillFile } from '@pikku/skills'
 import { installSkillAgents } from './skill-agents.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -169,6 +169,8 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
     client?: boolean
     update?: boolean
     agentExtensions?: string
+    agentDir?: string
+    agentSkillDir?: string
   },
   void
 >({
@@ -182,6 +184,8 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       client = false,
       update = false,
       agentExtensions,
+      agentDir,
+      agentSkillDir,
     }
   ) => {
     const supportedAgents = Object.keys(AGENT_SKILL_DIRS)
@@ -233,13 +237,15 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       }`
     )
 
-    const agentRelative = AGENT_DIRS[agent]
+    const agentRelative = agentDir ?? AGENT_DIRS[agent]
     if (!agentRelative) return
 
     const projected = await installSkillAgents(
       wanted,
-      join(process.cwd(), agentRelative),
-      AGENT_SKILL_DIRS[agent]!.split(sep).join('/'),
+      isAbsolute(agentRelative)
+        ? agentRelative
+        : join(process.cwd(), agentRelative),
+      agentSkillDir ?? AGENT_SKILL_DIRS[agent]!.split(sep).join('/'),
       update,
       existsSync,
       readSkillFile,

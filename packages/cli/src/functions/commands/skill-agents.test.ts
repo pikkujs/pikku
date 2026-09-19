@@ -38,13 +38,14 @@ const reader = (skills: Record<string, string>) => async (path: string) =>
 
 const install = async (
   skills: Record<string, string>,
-  extensions: string[] = []
+  extensions: string[] = [],
+  skillDir = '.pi/skills'
 ) => {
   const out = mkdtempSync(join(tmpdir(), 'pikku-agents-'))
   const result = await installSkillAgents(
     Object.keys(skills),
     out,
-    '.pi/skills',
+    skillDir,
     true,
     existsSync,
     reader(skills),
@@ -73,7 +74,10 @@ describe('projecting skills into agents', () => {
 
   test('bash alone makes a writer, because a shell is every other tool', async () => {
     const { read } = await install({
-      sh: skill('sh', 'agent:\n  tools: read, bash\n  acceptance:\n    level: checked\n'),
+      sh: skill(
+        'sh',
+        'agent:\n  tools: read, bash\n  acceptance:\n    level: checked\n'
+      ),
     })
     assert.match(read('sh'), /^acceptanceRole: writer$/m)
   })
@@ -123,5 +127,11 @@ describe('projecting skills into agents', () => {
     const second = await installSkillAgents(...args)
     assert.deepEqual(second.written, [])
     assert.deepEqual(second.skipped, ['gated'])
+  })
+
+  test('the agent points at the skill directory it was given, not the default', async () => {
+    const { read } = await install({ gated: GATED }, [], '.agents/skills')
+    assert.ok(read('gated').includes('`.agents/skills/gated/SKILL.md`'))
+    assert.ok(!read('gated').includes('.pi/skills'))
   })
 })
