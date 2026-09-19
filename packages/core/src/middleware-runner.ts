@@ -164,13 +164,18 @@ export const combineMiddleware = (
 
   const resolved: CorePikkuMiddleware[] = []
 
-  const globals = pikkuState(
-    packageName,
-    'middleware',
-    'global'
-  ) as unknown as CorePikkuMiddleware[]
-  if (globals && globals.length > 0) {
-    resolved.push(...globals)
+  // Global middleware is application-wide, so the root namespace always
+  // applies — an addon's function still runs inside the host application.
+  // See `global-middleware-resolves-from-the-root-namespace-too.md`.
+  for (const ns of packageName === null ? [null] : [null, packageName]) {
+    const globals = pikkuState(
+      ns,
+      'middleware',
+      'global'
+    ) as unknown as CorePikkuMiddleware[]
+    if (globals && globals.length > 0) {
+      resolved.push(...globals)
+    }
   }
 
   if (wireInheritedMiddleware) {

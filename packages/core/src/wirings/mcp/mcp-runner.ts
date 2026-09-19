@@ -347,6 +347,9 @@ export const mcpTargetRequiresSession = (
   type: 'tool' | 'resource' | 'prompt',
   name: string
 ): boolean => {
+  // The transport passes the name exactly as the client sent it, which is the
+  // wire spelling — see `mcpWireName`.
+  name = mcpResolveWireName(type, name)
   const meta =
     type === 'tool'
       ? pikkuState(null, 'mcp', 'toolsMeta')[name]
@@ -372,4 +375,90 @@ export const mcpTargetRequiresSession = (
     return false
   }
   return !funcMeta.sessionless || funcMeta.auth === true
+}
+
+/**
+ * Whether every registered MCP target needs a session. An empty registry is
+ * not "all gated" — there is nothing to gate.
+ *
+ * See `the-mcp-handshake-is-challenged-only-when-every-target-is-gated.md`.
+ */
+export const mcpEveryTargetRequiresSession = (): boolean => {
+  const targets: Array<['tool' | 'resource' | 'prompt', string[]]> = [
+    ['tool', Object.keys(pikkuState(null, 'mcp', 'toolsMeta'))],
+    ['resource', Object.keys(pikkuState(null, 'mcp', 'resourcesMeta'))],
+    ['prompt', Object.keys(pikkuState(null, 'mcp', 'promptsMeta'))],
+  ]
+  let seen = 0
+  for (const [type, names] of targets) {
+    for (const name of names) {
+      seen++
+      if (!mcpTargetRequiresSession(type, name)) {
+        return false
+      }
+    }
+  }
+  return seen > 0
+}
+
+export type McpTargetType = 'tool' | 'resource' | 'prompt'
+
+const mcpMetaFor = (type: McpTargetType) =>
+  type === 'tool'
+    ? pikkuState(null, 'mcp', 'toolsMeta')
+    : type === 'resource'
+      ? pikkuState(null, 'mcp', 'resourcesMeta')
+      : pikkuState(null, 'mcp', 'promptsMeta')
+
+const WIRE_LEGAL = /^[A-Za-z0-9_-]+$/
+
+/**
+ * Registered name -> wire name for every target of one type.
+ *
+ * See `mcp-wire-names-are-assigned-over-the-whole-registry.md`.
+ */
+const mcpWireNames = (type: McpTargetType): Map<string, string> => {
+  const names = Object.keys(mcpMetaFor(type)).sort()
+  const assigned = new Map<string, string>()
+  const taken = new Set<string>()
+
+  for (const name of names) {
+    if (WIRE_LEGAL.test(name)) {
+      assigned.set(name, name)
+      taken.add(name)
+    }
+  }
+
+  for (const name of names) {
+    if (assigned.has(name)) {
+      continue
+    }
+    const base = name.replace(/[^A-Za-z0-9_-]/g, '_')
+    let candidate = base
+    let n = 2
+    while (taken.has(candidate)) {
+      candidate = `${base}_${n++}`
+    }
+    assigned.set(name, candidate)
+    taken.add(candidate)
+  }
+
+  return assigned
+}
+
+/** How a registered target's name is spelled on the wire. */
+export const mcpWireName = (type: McpTargetType, name: string): string =>
+  mcpWireNames(type).get(name) ?? name
+
+/** The registered name a client's wire name refers to. */
+export const mcpResolveWireName = (
+  type: McpTargetType,
+  wireName: string
+): string => {
+  for (const [name, wire] of mcpWireNames(type)) {
+    if (wire === wireName) {
+      return name
+    }
+  }
+  return wireName
 }

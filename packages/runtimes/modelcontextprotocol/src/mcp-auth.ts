@@ -1,4 +1,7 @@
-import { mcpTargetRequiresSession } from '@pikku/core/mcp'
+import {
+  mcpEveryTargetRequiresSession,
+  mcpTargetRequiresSession,
+} from '@pikku/core/mcp'
 import {
   bearerAuthChallengeResponse,
   getOAuthProtectedResourceMetadataUrl,
@@ -38,9 +41,23 @@ const corsHeaders = {
     'Authorization, Content-Type, MCP-Protocol-Version',
 }
 
-/** The public URL of the MCP endpoint itself, as the caller reached it. */
-const resourceUrl = (request: Request, mcpPath: string): URL =>
-  new URL(mcpPath, new URL(request.url).origin)
+/**
+ * The public URL of the MCP endpoint itself, as the caller reached it.
+ *
+ * See `the-advertised-resource-url-comes-from-the-forwarded-origin.md`.
+ */
+const resourceUrl = (request: Request, mcpPath: string): URL => {
+  const direct = new URL(request.url)
+  // A proxy chain appends, so the first entry is the client's own view.
+  const proto =
+    request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() ||
+    direct.protocol.replace(':', '')
+  const host =
+    request.headers.get('x-forwarded-host')?.split(',')[0]?.trim() ||
+    request.headers.get('host') ||
+    direct.host
+  return new URL(mcpPath, `${proto}://${host}`)
+}
 
 /**
  * The URL to name in a `WWW-Authenticate` challenge, per RFC 9728.
@@ -188,7 +205,12 @@ export const requestNeedsCredentials = async (
 
   const messages = Array.isArray(body) ? body : [body]
   return messages.some((message) => {
-    const target = GATED_METHODS[(message as { method?: string })?.method ?? '']
+    const method = (message as { method?: string })?.method ?? ''
+    // See `the-mcp-handshake-is-challenged-only-when-every-target-is-gated.md`.
+    if (method === 'initialize') {
+      return mcpEveryTargetRequiresSession()
+    }
+    const target = GATED_METHODS[method]
     if (!target) {
       return false
     }

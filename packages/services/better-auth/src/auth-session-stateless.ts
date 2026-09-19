@@ -14,7 +14,7 @@ import { defaultSession } from './default-session.js'
 import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
-import { isSecretNotFound } from './secret-not-found.js'
+import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
 
 type CachedSession = { session: any; user: any }
 
@@ -70,8 +70,10 @@ export const betterAuthStatelessSession = (
 
   return pikkuMiddleware({
     priority,
-    func: async (services, { http, setSession, session }, next) => {
-      if (!http?.request || !setSession || session) {
+    func: async (services, { http, setSession, session, getSession }, next) => {
+      // `session` is a snapshot taken when the wire props were built and is
+      // never updated; `getSession()` is the live value the chain has resolved.
+      if (!http?.request || !setSession || session || getSession?.()) {
         return next()
       }
       const request = http.request
@@ -82,6 +84,10 @@ export const betterAuthStatelessSession = (
           await (services as any).secrets?.getSecret(secretId)
         )?.reveal()
       } catch (e: any) {
+        // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
+        if (isSecretForbidden(e)) {
+          return next()
+        }
         if (!isSecretNotFound(e)) throw e
         services.logger?.error(
           `betterAuthStatelessSession: secret '${secretId}' not found — session middleware skipped. Ensure ${secretId} is configured.`

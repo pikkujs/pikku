@@ -576,3 +576,58 @@ describe('runMiddleware', () => {
     ])
   })
 })
+
+/**
+ * See `global-middleware-resolves-from-the-root-namespace-too.md`.
+ */
+describe('combineMiddleware global middleware namespaces', () => {
+  const globalFor = (ns: string | null, mw: CorePikkuMiddleware[]) => {
+    pikkuState(ns, 'middleware', 'global').push(...(mw as never[]))
+  }
+
+  test('a root dispatch sees the root globals', () => {
+    const app: CorePikkuMiddleware = async (_s, _w, next) => next()
+    globalFor(null, [app])
+
+    const result = combineMiddleware('http', Math.random().toString())
+
+    assert.deepEqual(result, [app])
+  })
+
+  test("an addon dispatch sees the host application's globals as well as its own", () => {
+    const app: CorePikkuMiddleware = async (_s, _w, next) => next()
+    const addon: CorePikkuMiddleware = async (_s, _w, next) => next()
+    globalFor(null, [app])
+    globalFor('bb2', [addon])
+
+    const result = combineMiddleware('mcp', Math.random().toString(), {
+      packageName: 'bb2',
+    })
+
+    assert.deepEqual(result, [app, addon])
+  })
+
+  test("an addon dispatch still sees the application's globals when it registers none of its own", () => {
+    const app: CorePikkuMiddleware = async (_s, _w, next) => next()
+    globalFor(null, [app])
+
+    const result = combineMiddleware('mcp', Math.random().toString(), {
+      packageName: 'bb2',
+    })
+
+    assert.deepEqual(result, [app])
+  })
+
+  test("one addon's globals do not leak into another addon's dispatch", () => {
+    const mine: CorePikkuMiddleware = async (_s, _w, next) => next()
+    const theirs: CorePikkuMiddleware = async (_s, _w, next) => next()
+    globalFor('bb2', [mine])
+    globalFor('other', [theirs])
+
+    const result = combineMiddleware('mcp', Math.random().toString(), {
+      packageName: 'bb2',
+    })
+
+    assert.deepEqual(result, [mine])
+  })
+})

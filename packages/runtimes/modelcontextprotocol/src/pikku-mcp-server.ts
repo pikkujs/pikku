@@ -45,6 +45,8 @@ import {
   getMCPResourcesMeta,
   getMCPToolsMeta,
   getMCPPromptsMeta,
+  mcpWireName,
+  mcpResolveWireName,
 } from '@pikku/core/mcp'
 
 export interface MCPServerConfig extends CoreConfig {
@@ -491,7 +493,7 @@ export class PikkuMCPServer {
       const tools = Object.values(this.mcpEndpointRegistry.getTools())
       return {
         tools: tools.map((tool) => ({
-          name: tool.name,
+          name: mcpWireName('tool', tool.name),
           title: tool.title,
           description: tool.description,
           inputSchema: tool.inputSchema,
@@ -503,7 +505,8 @@ export class PikkuMCPServer {
 
     // Handler for calling tools
     server.setRequestHandler('tools/call', async (request) => {
-      const { name, arguments: args } = request.params
+      const { arguments: args } = request.params
+      const name = mcpResolveWireName('tool', request.params.name)
       try {
         const result = await runMCPTool(
           {
@@ -607,7 +610,7 @@ export class PikkuMCPServer {
       const promptsMeta = Object.values(getMCPPromptsMeta())
       return {
         prompts: promptsMeta.map((prompt) => ({
-          name: prompt.name,
+          name: mcpWireName('prompt', prompt.name),
           description: prompt.description,
           arguments: prompt.arguments || [],
         })),
@@ -617,7 +620,8 @@ export class PikkuMCPServer {
     const mcp = this.createMCPService(server)
 
     server.setRequestHandler('prompts/get', async (request) => {
-      const { name, arguments: args } = request.params
+      const { arguments: args } = request.params
+      const name = mcpResolveWireName('prompt', request.params.name)
       const promptMeta = getMCPPromptsMeta()[name]
 
       if (!promptMeta) {

@@ -95,6 +95,10 @@ export const betterAuthSession = (
       if (!http?.request || !setSession || existingSession) {
         return next()
       }
+      // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
+      if (typeof (services as any).auth !== 'function') {
+        return next()
+      }
       // Capture the narrowed request so deferred closures (the impersonation
       // header reader below) keep the non-null type.
       const request = http.request

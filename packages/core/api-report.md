@@ -5,7 +5,7 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3033 observable things**: 986 exported names, plus
+**3037 observable things**: 990 exported names, plus
 2047 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
@@ -26,9 +26,9 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./http` | 26 | 26 | 56 |
 | `./errors` | 50 | 50 | 22 |
 | `./analytics` | 26 | 26 | 40 |
+| `./mcp` | 25 | 25 | 17 |
 | `./services/local-meta` | 22 | 2 | 40 |
 | `./cli` | 16 | 14 | 26 |
-| `./mcp` | 21 | 21 | 17 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
@@ -3119,6 +3119,7 @@ export class MCPEndpointRegistry {
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse)
 }
+mcpEveryTargetRequiresSession: () => boolean
 export type MCPPromptMeta = Record<
   string,
   Omit<CoreMCPPrompt, 'func' | 'middleware'> & {
@@ -3134,6 +3135,7 @@ export type MCPPromptMeta = Record<
   }
 >
 export type MCPPromptResponse = MCPPromptMessage[]
+mcpResolveWireName: (type: McpTargetType, wireName: string) => string
 export type MCPResourceMeta = Record<
   string,
   Omit<CoreMCPResource, 'func' | 'middleware'> & {
@@ -3145,6 +3147,7 @@ export type MCPResourceMeta = Record<
 >
 export type MCPResourceResponse = MCPResourceMessage[]
 mcpTargetRequiresSession: (type: "resource" | "tool" | "prompt", name: string) => boolean
+export type McpTargetType = 'tool' | 'resource' | 'prompt'
 export type MCPToolMeta = Record<
   string,
   Omit<CoreMCPTool, 'func' | 'middleware'> & {
@@ -3155,6 +3158,7 @@ export type MCPToolMeta = Record<
   }
 >
 export type MCPToolResponse = MCPToolMessage[]
+mcpWireName: (type: McpTargetType, name: string) => string
 export type PikkuMCP<Tools extends string = any> = {
   uri?: string
   sendResourceUpdated: (uri: string) => void

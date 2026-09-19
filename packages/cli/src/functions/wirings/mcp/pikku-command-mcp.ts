@@ -87,7 +87,10 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
       Object.keys(mcpEndpoints.toolsMeta).length > 0 ||
       Object.keys(mcpEndpoints.resourcesMeta).length > 0 ||
       Object.keys(mcpEndpoints.promptsMeta).length > 0
-    if (mcpEndpoints.files.size === 0 || !hasMcpContent) {
+    // `files` only holds sources that call wireMCPTool/Resource/Prompt, which
+    // an addon contributing tools through `wireAddon({ mcp })` never does.
+    // Gate on the content, or an addon-only app generates no meta at all.
+    if (!hasMcpContent) {
       return undefined
     }
 
