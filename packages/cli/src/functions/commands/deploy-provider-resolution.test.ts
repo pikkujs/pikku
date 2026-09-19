@@ -57,6 +57,16 @@ const writeEsmOnlyProvider = (rootDir: string, exportsMap: unknown) => {
     join(providerDir, 'dist', 'index.js'),
     `export const createAdapter = (options) => ({ name: 'esm-only', options })\n`
   )
+  // Two more builds, so a test about which condition won can name the winner
+  // rather than merely assert that something loaded.
+  writeFileSync(
+    join(providerDir, 'dist', 'node.js'),
+    `export const createAdapter = (options) => ({ name: 'node-build', options })\n`
+  )
+  writeFileSync(
+    join(providerDir, 'dist', 'browser.js'),
+    `export const createAdapter = (options) => ({ name: 'browser-build', options })\n`
+  )
 }
 
 describe('resolveProvider resolves the adapter from the project, not the CLI', () => {
@@ -122,6 +132,76 @@ describe('resolveProvider resolves the adapter from the project, not the CLI', (
     try {
       writeEsmOnlyProvider(rootDir, {
         '.': { import: { default: './dist/index.js' } },
+      })
+
+      const adapter = await resolveProvider(
+        { deploy: { providers: { esm: '@vendor/deploy-esm' } } },
+        'esm',
+        { projectDir: rootDir }
+      )
+
+      assert.equal((adapter as unknown as { name: string }).name, 'esm-only')
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  // A provider that ships both builds is resolved the way node would resolve
+  // it: `node` is listed first and is true here, so the browser build is never
+  // reached. Picking conditions off a fixed preference list instead loaded the
+  // browser build and left the deploy adapter without the node APIs it uses.
+  test('prefers a nested node condition over the default beside it', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-deploy-provider-'))
+    try {
+      writeEsmOnlyProvider(rootDir, {
+        '.': {
+          import: { node: './dist/node.js', default: './dist/browser.js' },
+        },
+      })
+
+      const adapter = await resolveProvider(
+        { deploy: { providers: { esm: '@vendor/deploy-esm' } } },
+        'esm',
+        { projectDir: rootDir }
+      )
+
+      assert.equal((adapter as unknown as { name: string }).name, 'node-build')
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  // The order is the package author's, not ours: `default` matches everything,
+  // so a map that lists it first has said the later conditions are unreachable.
+  test('honours declaration order when default is listed first', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-deploy-provider-'))
+    try {
+      writeEsmOnlyProvider(rootDir, {
+        '.': { default: './dist/browser.js', node: './dist/node.js' },
+      })
+
+      const adapter = await resolveProvider(
+        { deploy: { providers: { esm: '@vendor/deploy-esm' } } },
+        'esm',
+        { projectDir: rootDir }
+      )
+
+      assert.equal(
+        (adapter as unknown as { name: string }).name,
+        'browser-build'
+      )
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  // An array is a list of fallbacks and `null` is a deliberate block, so the
+  // walk carries on past both rather than stopping at the first miss.
+  test('walks past a blocked target to the next fallback', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-deploy-provider-'))
+    try {
+      writeEsmOnlyProvider(rootDir, {
+        '.': { import: [null, './dist/index.js'] },
       })
 
       const adapter = await resolveProvider(

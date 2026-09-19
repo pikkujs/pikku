@@ -182,6 +182,47 @@ async function resolveProjectId(projectDir: string): Promise<string> {
  * yields no entry and the bare import still runs, unchanged.
  */
 /**
+ * The conditions that are true for the `import()` this resolution ends in.
+ * `default` matches unconditionally and is handled by the resolver rather than
+ * listed here, because node treats it as the fallthrough rather than as a name.
+ */
+const ACTIVE_EXPORT_CONDITIONS = new Set(['node', 'import'])
+
+/**
+ * Picks an export target the way node does: a conditions object is walked in
+ * DECLARATION order and the first key that is active wins, nesting included.
+ *
+ * The order is the package author's, not ours. `{ "import": { "node": "./n.js",
+ * "default": "./browser.js" } }` resolves to `./n.js`, because `node` is listed
+ * first and is true here — preferring a fixed list of condition names instead
+ * would hand back the browser build and load a different provider than the one
+ * node would have.
+ *
+ * An array is a list of fallbacks, and `null` is a deliberate block, so both
+ * carry on to the next candidate rather than ending the walk.
+ */
+const resolveExportTarget = (target: unknown): string | undefined => {
+  if (typeof target === 'string') return target
+  if (target === null || target === undefined) return undefined
+  if (Array.isArray(target)) {
+    for (const candidate of target) {
+      const resolved = resolveExportTarget(candidate)
+      if (resolved !== undefined) return resolved
+    }
+    return undefined
+  }
+  if (typeof target !== 'object') return undefined
+  for (const [condition, value] of Object.entries(target)) {
+    if (condition !== 'default' && !ACTIVE_EXPORT_CONDITIONS.has(condition)) {
+      continue
+    }
+    const resolved = resolveExportTarget(value)
+    if (resolved !== undefined) return resolved
+  }
+  return undefined
+}
+
+/**
  * The entry an exports map offers to `import`, or, for a package with no
  * exports map at all, its legacy main. A map that deliberately omits a root
  * entry offers nothing: falling back to `main` there would reach past the
@@ -196,16 +237,10 @@ const esmEntryFromManifest = (manifest: any): string | undefined => {
   }
   const isSubpathMap =
     typeof exportsField === 'object' &&
+    !Array.isArray(exportsField) &&
     Object.keys(exportsField).some((key) => key.startsWith('.'))
   const root = isSubpathMap ? exportsField['.'] : exportsField
-  if (typeof root === 'string') return root
-  if (typeof root !== 'object' || root === null) return undefined
-  for (const condition of ['import', 'module', 'default'] as const) {
-    const value = root[condition]
-    if (typeof value === 'string') return value
-    if (typeof value?.default === 'string') return value.default
-  }
-  return undefined
+  return resolveExportTarget(root)
 }
 
 const resolveEsmOnlyEntry = (
