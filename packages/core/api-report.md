@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3037 observable things**: 990 exported names, plus
-2047 members on the classes and interfaces among them, reachable
+**3038 observable things**: 990 exported names, plus
+2048 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -19,7 +19,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./scenario` | 45 | 45 | 134 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
-| `./channel` | 32 | 32 | 84 |
+| `./channel` | 32 | 32 | 85 |
 | `./types` | 23 | 20 | 77 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
@@ -805,6 +805,7 @@ export interface ChannelMeta {
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
   binary?: boolean | null
+  auth?: boolean
   gateway?: boolean
   summary?: string
   description?: string
