@@ -14,11 +14,13 @@ export const telemetryOuter = pikkuMiddlewareFactory<{
       const start = performance.now()
       let outcome = 'ok'
       let errorMessage: string | undefined
+      let errorStack: string | undefined
       try {
         await next()
       } catch (e) {
         outcome = 'error'
         errorMessage = e instanceof Error ? e.message : String(e)
+        errorStack = e instanceof Error ? e.stack : undefined
         throw e
       } finally {
         services.logger.info({
@@ -30,6 +32,7 @@ export const telemetryOuter = pikkuMiddlewareFactory<{
           totalDuration: Math.round(performance.now() - start),
           outcome,
           ...(errorMessage ? { errorMessage } : {}),
+          ...(errorStack ? { errorStack } : {}),
           ...(wire.http
             ? {
                 httpStatus: wire.http.response?.statusCode,
@@ -57,11 +60,13 @@ export const telemetryInner = pikkuMiddlewareFactory<{
       const start = performance.now()
       let outcome = 'ok'
       let errorMessage: string | undefined
+      let errorStack: string | undefined
       try {
         await next()
       } catch (e) {
         outcome = 'error'
         errorMessage = e instanceof Error ? e.message : String(e)
+        errorStack = e instanceof Error ? e.stack : undefined
         throw e
       } finally {
         services.logger.info({
@@ -74,6 +79,7 @@ export const telemetryInner = pikkuMiddlewareFactory<{
           outcome,
           pikkuUserId: wire.pikkuUserId,
           ...(errorMessage ? { errorMessage } : {}),
+          ...(errorStack ? { errorStack } : {}),
           ...(environmentId ? { environmentId } : {}),
           ...(orgId ? { orgId } : {}),
         })
