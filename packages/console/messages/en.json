@@ -1240,5 +1240,11 @@
   "analytics_props_unreadable": "Shape not readable",
   "analytics_props_none": "No props",
   "analytics_panel_props": "Props",
-  "analytics_panel_source": "Declared in"
+  "analytics_panel_source": "Declared in",
+  "security_copy_prompt": "Copy upgrade prompt",
+  "security_prompt_copied": "Copied",
+  "security_select_all": "Select all upgradable",
+  "security_select_dep": "Select {package}",
+  "security_selected_count": "{count} packages selected",
+  "security_clear_selection": "Clear"
 }

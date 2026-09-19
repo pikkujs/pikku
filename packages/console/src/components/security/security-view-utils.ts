@@ -2,20 +2,22 @@ import type { ReactNode } from 'react'
 import { m } from '@/i18n/messages'
 import type {
   SecurityAuditReport,
-  SecurityAuditIssue,
   SecuritySeverity,
   SecurityUpdateLevel,
 } from '../../hooks/useSecurityAudit'
 import type { AdvisoryCategory } from './security-classify'
 
-// Per-finding remediation slot, rendered right-aligned in the finding row
-// header. OSS defaults to the free "Update dependency" button; Fabric passes its
-// own sandbox-verified action here.
-export type RenderRemediation = (args: {
-  pkg: string
-  version: string
-  issue: SecurityAuditIssue
+// The action offered for a chosen set of packages. A single row is a selection
+// of one, so a finding row and a multi-package selection share this one slot.
+// OSS defaults to bumping package.json and installing; a host that can verify
+// the result (Fabric) swaps in its own.
+export type RenderUpgradeAction = (args: {
+  deps: DepInfo[]
+  prompt: string
 }) => ReactNode
+
+/** The slot resolved for one package, as the rows receive it. */
+export type RenderUpgradeFor = (pkg: string) => ReactNode
 
 export const SEV_ORDER: SecuritySeverity[] = [
   'critical',

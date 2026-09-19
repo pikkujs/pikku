@@ -344,6 +344,14 @@ export { ScopesPage } from './pages/ScopesPage'
 export { RolesPage } from './pages/RolesPage'
 export { SecurityAuditView } from './components/security/SecurityAuditView'
 export type {
+  RenderUpgradeAction,
+  DepInfo,
+} from './components/security/security-view-utils'
+export {
+  buildUpgradePrompt,
+  isUpgradable,
+} from './components/security/upgrade-prompt'
+export type {
   SecurityAuditViewProps,
   SecurityLens,
 } from './components/security/SecurityAuditView'

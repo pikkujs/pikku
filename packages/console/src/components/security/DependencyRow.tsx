@@ -1,9 +1,8 @@
 import React from 'react'
-import { Badge, Box, Button, Group, Loader, Text } from '@pikku/mantine/core'
-import { Package, ShieldCheck, ArrowUpRight } from 'lucide-react'
+import { Badge, Box, Checkbox, Group, Text } from '@pikku/mantine/core'
+import { Package, ShieldCheck } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import { useUpdateDependency } from '../../hooks/useSecurityAudit'
 import {
   SEV_ORDER,
   SEV_COLOR,
@@ -11,16 +10,26 @@ import {
   LEVEL_COLOR,
   LEVEL_LABEL,
   type DepInfo,
+  type RenderUpgradeFor,
 } from './security-view-utils'
+import { isUpgradable } from './upgrade-prompt'
 
 export interface DependencyRowProps {
   dep: DepInfo
   first: boolean
+  selected: boolean
+  onSelectedChange: (selected: boolean) => void
+  renderUpgrade: RenderUpgradeFor
 }
 
-export const DependencyRow: React.FC<DependencyRowProps> = ({ dep, first }) => {
-  const update = useUpdateDependency()
-  const pending = update.isPending
+export const DependencyRow: React.FC<DependencyRowProps> = ({
+  dep,
+  first,
+  selected,
+  onSelectedChange,
+  renderUpgrade,
+}) => {
+  const upgradable = isUpgradable(dep)
   return (
     <Group
       gap="md"
@@ -32,6 +41,14 @@ export const DependencyRow: React.FC<DependencyRowProps> = ({ dep, first }) => {
           : '1px solid var(--mantine-color-default-border)',
       }}
     >
+      <Checkbox
+        size="xs"
+        checked={selected}
+        disabled={!upgradable}
+        onChange={(e) => onSelectedChange(e.currentTarget.checked)}
+        aria-label={m.security_select_dep({ package: dep.name })}
+        data-testid="security-dep-select"
+      />
       <Box
         style={{
           width: 34,
@@ -85,34 +102,7 @@ export const DependencyRow: React.FC<DependencyRowProps> = ({ dep, first }) => {
           ))
         )}
       </Group>
-      {dep.total > 0 && dep.latest && (
-        <Group gap="xs" wrap="nowrap" align="center">
-          {update.isError && (
-            <Text
-              span
-              size="xs"
-              c="red"
-              data-testid="security-dep-update-error"
-            >
-              {m.security_update_dep_error()}
-            </Text>
-          )}
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={
-              pending ? <Loader size={12} /> : <ArrowUpRight size={14} />
-            }
-            disabled={pending}
-            loading={pending}
-            onClick={() =>
-              update.mutate({ package: dep.name, version: dep.latest! })
-            }
-          >
-            {m.security_dep_update()}
-          </Button>
-        </Group>
-      )}
+      {upgradable && renderUpgrade(dep.name)}
     </Group>
   )
 }
