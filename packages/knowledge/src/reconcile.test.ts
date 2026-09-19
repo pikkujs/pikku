@@ -315,4 +315,33 @@ describe('the refusal as a question', () => {
     assert.equal(result.note, path)
     assert.equal(result.question?.options.length, 3)
   })
+  test('without --require the result carries no verdict, so a bare next stays a prompt', async () => {
+    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
+    await burn(path, SEATS.author)
+    const result = await runKnowledgeReconcile(cwd)
+    assert.equal(result.required, undefined)
+    assert.equal(result.satisfied, undefined)
+  })
+
+  test('--require names the kinds that count as done, and says so either way', async () => {
+    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
+    await burn(path, SEATS.author)
+
+    const met = await runKnowledgeReconcile(cwd, { require: 'ask-user,idle' })
+    assert.deepEqual(met.required, ['ask-user', 'idle'])
+    assert.equal(met.satisfied, true)
+
+    const unmet = await runKnowledgeReconcile(cwd, { require: 'idle' })
+    assert.deepEqual(unmet.required, ['idle'])
+    assert.equal(unmet.satisfied, false)
+    assert.equal(unmet.kind, 'ask-user')
+  })
+
+  test('an empty --require is not a gate, so a stray flag cannot silently pass everything', async () => {
+    const path = milestone('01-the-daily-entry.md', { status: 'ready' })
+    await burn(path, SEATS.author)
+    const result = await runKnowledgeReconcile(cwd, { require: ' , ' })
+    assert.equal(result.required, undefined)
+    assert.equal(result.satisfied, undefined)
+  })
 })

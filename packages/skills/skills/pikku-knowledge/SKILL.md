@@ -14,6 +14,17 @@ description: >-
   functions, routes, tables or permissions exist (that is `pikku meta` / `pikku info`, never a
   note), or to write a scenario test (use pikku-scenario).
 installGroups: [core]
+agent:
+  tools: read, write, edit, bash, grep
+  timeoutMs: 1800000
+  acceptanceRole: author
+  acceptance:
+    level: verified
+    evidence: [changed-files, validation-output]
+    verify:
+      - id: knowledge-consistent
+        command: pikku knowledge validate
+
 ---
 
 # Pikku Knowledge

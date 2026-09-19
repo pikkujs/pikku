@@ -721,6 +721,13 @@ wireCLI({
           render: renderKnowledgeReconcile,
           description:
             'Say the one thing to do next — repair a note, write a plan, ask the user, build, or nothing',
+          options: {
+            require: {
+              description:
+                'Exit non-zero unless the next action is one of these (comma-separated: idle, repair-note, write-plan, ask-user, dispatch, hold) — what turns this command into a gate a stage can be held to',
+              type: 'string',
+            },
+          },
         }),
         plan: {
           description:

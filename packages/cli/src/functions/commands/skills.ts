@@ -2,6 +2,7 @@ import { readdir, mkdir, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import { dirname, join, sep } from 'path'
 import { listSkillFiles, listSkillNames, readSkillFile } from '@pikku/skills'
+import { installSkillAgents } from './skill-agents.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
 
 /**
@@ -33,6 +34,18 @@ const AGENT_SKILL_DIRS: Record<string, string> = {
   claude: join('.claude', 'skills'),
   opencode: join('.opencode', 'skills'),
   pi: join('.pi', 'skills'),
+}
+
+/**
+ * Where a harness that dispatches subagents reads them from.
+ *
+ * Only harnesses that can enforce a post-condition are listed. Installing an agent
+ * for a harness that cannot run its `acceptance` gate ships the instruction to verify
+ * with nothing that verifies, which reads as stricter than the skill it came from
+ * while being exactly as strict.
+ */
+const AGENT_DIRS: Record<string, string> = {
+  pi: join('.pi', 'agents'),
 }
 
 function parseInstallGroups(frontmatter: string): string[] {
@@ -214,6 +227,28 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       `Installed ${installed} skill(s) into ${destLabel}${
         skipped > 0
           ? ` (skipped ${skipped} already present — pass --update to overwrite)`
+          : ''
+      }`
+    )
+
+    const agentRelative = AGENT_DIRS[agent]
+    if (!agentRelative) return
+
+    const projected = await installSkillAgents(
+      wanted,
+      join(process.cwd(), agentRelative),
+      AGENT_SKILL_DIRS[agent]!.split(sep).join('/'),
+      update,
+      existsSync,
+      readSkillFile
+    )
+    if (projected.written.length === 0 && projected.skipped.length === 0) return
+
+    const agentLabel = `${agentRelative.split(sep).join('/')}/`
+    logger.info(
+      `Projected ${projected.written.length} agent(s) into ${agentLabel}${
+        projected.skipped.length > 0
+          ? ` (skipped ${projected.skipped.length} already present — pass --update to overwrite)`
           : ''
       }`
     )

@@ -176,6 +176,7 @@ export async function nextAction(
     }
     if (!isSpent(ready.milestone, SEATS.user)) {
       return {
+        ...gate,
         kind: 'ask-user',
         note: ready.milestone,
         reason: plan.reason,
@@ -215,6 +216,7 @@ export async function nextAction(
     }
     if (!isSpent(ready.repairable, SEATS.user)) {
       return {
+        ...gate,
         kind: 'ask-user',
         note: ready.repairable,
         reason: ready.reason,
@@ -235,7 +237,18 @@ export async function nextAction(
   return { kind: 'idle', why: ready.reason }
 }
 
-export const KnowledgeReconcileInput = z.object({})
+export const KnowledgeReconcileInput = z.object({
+  /**
+   * The action kinds the caller will accept, comma-separated.
+   *
+   * It exists because "there is work left" is the normal answer here, so a bare
+   * `next` is always a success and a post-condition pointed at it asserts nothing —
+   * the shape of a gate that runs and checks nothing. Naming the kinds that count as
+   * done turns the same command into one a stage can be held to: an architect is done
+   * at `dispatch`, a build only at `idle`.
+   */
+  require: z.string().optional(),
+})
 
 /**
  * The action, flattened to what survives a process boundary.
@@ -263,27 +276,41 @@ export const KnowledgeReconcileOutput = z.object({
   notes: z.array(z.string()).optional(),
   /** The refusal as a question for a person, on `ask-user`. */
   question: KnowledgeQuestionSchema.optional(),
+  /** Whether `kind` is one the caller asked for; absent when it did not ask. */
+  satisfied: z.boolean().optional(),
+  /** The kinds the caller asked for, so a renderer can say what was expected. */
+  required: z.array(z.string()).optional(),
 })
 
 export type KnowledgeReconcileResult = z.infer<typeof KnowledgeReconcileOutput>
 
 export const runKnowledgeReconcile = async (
   root: string,
-  _input: z.infer<typeof KnowledgeReconcileInput> = {},
+  input: z.infer<typeof KnowledgeReconcileInput> = {},
   options: ReconcileOptions = {}
 ): Promise<KnowledgeReconcileResult> => {
   const action = await nextAction(root, options)
+  const required = input.require
+    ?.split(',')
+    .map((kind) => kind.trim())
+    .filter(Boolean)
+  const gate =
+    required && required.length > 0
+      ? { required, satisfied: required.includes(action.kind) }
+      : {}
   switch (action.kind) {
     case 'idle':
-      return { kind: 'idle', reason: action.why }
+      return { ...gate, kind: 'idle', reason: action.why }
     case 'dispatch':
       return {
+        ...gate,
         kind: 'dispatch',
         reason: `${action.note.path} has a plan and is ready to build`,
         note: action.note.path,
       }
     case 'hold':
       return {
+        ...gate,
         kind: 'hold',
         reason: action.reason,
         hold: action.hold,
@@ -291,6 +318,7 @@ export const runKnowledgeReconcile = async (
       }
     case 'ask-user':
       return {
+        ...gate,
         kind: 'ask-user',
         reason: action.reason,
         note: action.note.path,
@@ -298,6 +326,7 @@ export const runKnowledgeReconcile = async (
       }
     default:
       return {
+        ...gate,
         kind: action.kind,
         reason: action.reason,
         note: action.note.path,
