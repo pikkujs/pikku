@@ -493,9 +493,7 @@ export class PikkuMCPServer {
       const tools = Object.values(this.mcpEndpointRegistry.getTools())
       return {
         tools: tools.map((tool) => ({
-          // Advertised in the wire spelling, which is what the client will
-          // send back on `tools/call` — see `mcpWireName`.
-          name: mcpWireName(tool.name),
+          name: mcpWireName('tool', tool.name),
           title: tool.title,
           description: tool.description,
           inputSchema: tool.inputSchema,
@@ -612,7 +610,7 @@ export class PikkuMCPServer {
       const promptsMeta = Object.values(getMCPPromptsMeta())
       return {
         prompts: promptsMeta.map((prompt) => ({
-          name: mcpWireName(prompt.name),
+          name: mcpWireName('prompt', prompt.name),
           description: prompt.description,
           arguments: prompt.arguments || [],
         })),

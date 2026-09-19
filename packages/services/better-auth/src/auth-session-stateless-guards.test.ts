@@ -11,10 +11,7 @@ import { betterAuthStatelessSession } from './auth-session-stateless.js'
 /**
  * The two ways this middleware has to stand down.
  *
- * It is registered globally, so it runs for every dispatch — including ones it
- * was never meant to authenticate. Both cases below reach it through normal
- * wiring, and in both the right answer is to do nothing and let the chain
- * continue, rather than to throw or to overwrite what someone else resolved.
+ * See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
  */
 
 const EXISTING = { userId: 'u_already_here' }
@@ -47,8 +44,8 @@ async function run(opts: {
     setSession: (s: unknown) => {
       setTo = s
     },
-    // The snapshot taken when the wire props were built. It stays undefined
-    // for the whole chain, which is exactly the trap `getSession` closes.
+    // The build-time snapshot: undefined for the whole chain, whatever the
+    // chain resolves. That is the trap `getSession` closes.
     session: undefined,
     getSession: () => opts.live,
   }
@@ -87,10 +84,7 @@ describe('betterAuthStatelessSession stands down', () => {
   })
 
   test('when a middleware ahead of it already resolved a session', async () => {
-    // The secret is readable, so nothing else would stop it: only the live
-    // session does. Were it to read `session` alone — still the build-time
-    // snapshot, still undefined — it would redo the cookie lookup here and
-    // overwrite a session another middleware had already established.
+    // The secret is readable, so only the live session stops it here.
     const secrets = new LocalSecretService(
       new LocalVariablesService({ BETTER_AUTH_SECRET: 'shhh' })
     )

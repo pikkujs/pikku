@@ -578,11 +578,7 @@ describe('runMiddleware', () => {
 })
 
 /**
- * Global middleware is application-wide, and an addon's function runs inside
- * the host application like any other. A dispatch that carries an addon's
- * `packageName` therefore has to see the app's own globals — reading only that
- * package's namespace is what left an addon-contributed MCP tool with no
- * session middleware at all, and so with no session.
+ * See `global-middleware-resolves-from-the-root-namespace-too.md`.
  */
 describe('combineMiddleware global middleware namespaces', () => {
   const globalFor = (ns: string | null, mw: CorePikkuMiddleware[]) => {

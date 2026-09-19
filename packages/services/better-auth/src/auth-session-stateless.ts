@@ -71,11 +71,8 @@ export const betterAuthStatelessSession = (
   return pikkuMiddleware({
     priority,
     func: async (services, { http, setSession, session, getSession }, next) => {
-      // `session` is a snapshot taken when the wire props were built, so it is
-      // still undefined for middleware that runs after one which authenticated.
-      // `getSession()` reads the live value — without it this middleware would
-      // re-run its cookie lookup over a request another middleware has already
-      // resolved, and overwrite that session with `undefined`-or-worse.
+      // `session` is a snapshot taken when the wire props were built and is
+      // never updated; `getSession()` is the live value the chain has resolved.
       if (!http?.request || !setSession || session || getSession?.()) {
         return next()
       }
@@ -87,10 +84,7 @@ export const betterAuthStatelessSession = (
           await (services as any).secrets?.getSecret(secretId)
         )?.reveal()
       } catch (e: any) {
-        // A scoped namespace that was never granted this key is an expected
-        // shape, not a failure: an addon's wiring runs with its own scoped
-        // secrets and cannot read the host app's auth secret. Skip quietly so
-        // another middleware (a bearer-token one, say) can still authenticate.
+        // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
         if (isSecretForbidden(e)) {
           return next()
         }

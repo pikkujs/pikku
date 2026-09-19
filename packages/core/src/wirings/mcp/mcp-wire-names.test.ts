@@ -35,24 +35,64 @@ beforeEach(() => {
 /**
  * Names as a client is allowed to spell them.
  *
- * MCP constrains tool and prompt names to `[A-Za-z0-9_-]`, and pikku's
- * namespace separator is `:`. Clients drop the names they cannot accept rather
- * than failing the connection, so an addon's whole surface went missing
- * silently. The rewrite lives at the transport boundary; the registry keeps
- * its own spelling, because that is what dispatch keys on.
+ * See `mcp-wire-names-are-assigned-over-the-whole-registry.md`.
  */
 describe('mcpWireName', () => {
   test('leaves an already-legal name alone', () => {
-    assert.equal(mcpWireName('listProducts'), 'listProducts')
-    assert.equal(mcpWireName('list_products-2'), 'list_products-2')
+    registerTool('listProducts')
+    registerTool('list_products-2')
+    assert.equal(mcpWireName('tool', 'listProducts'), 'listProducts')
+    assert.equal(mcpWireName('tool', 'list_products-2'), 'list_products-2')
   })
 
   test('rewrites the namespace separator', () => {
-    assert.equal(mcpWireName('bb2:getMe'), 'bb2_getMe')
+    registerTool('bb2:getMe')
+    assert.equal(mcpWireName('tool', 'bb2:getMe'), 'bb2_getMe')
   })
 
   test('rewrites every other character a client would refuse', () => {
-    assert.equal(mcpWireName('a.b c/d:e'), 'a_b_c_d_e')
+    registerTool('a.b c/d:e')
+    assert.equal(mcpWireName('tool', 'a.b c/d:e'), 'a_b_c_d_e')
+  })
+
+  test('gives colliding names distinct wire names', () => {
+    registerTool('a:b')
+    registerTool('a.b')
+    const wire = ['a:b', 'a.b'].map((n) => mcpWireName('tool', n))
+    assert.equal(new Set(wire).size, 2, `both advertised as ${wire[0]}`)
+    for (const w of wire) {
+      assert.match(w, /^[A-Za-z0-9_-]+$/)
+    }
+  })
+
+  test('an already-legal name keeps its spelling against a colliding rewrite', () => {
+    registerTool('a_b')
+    registerTool('a:b')
+    assert.equal(mcpWireName('tool', 'a_b'), 'a_b')
+    assert.notEqual(mcpWireName('tool', 'a:b'), 'a_b')
+  })
+
+  test('every registered name is reachable under the name it is advertised as', () => {
+    const names = ['a:b', 'a.b', 'a_b', 'a b', 'plain']
+    for (const n of names) {
+      registerTool(n)
+    }
+    for (const n of names) {
+      assert.equal(mcpResolveWireName('tool', mcpWireName('tool', n)), n)
+    }
+  })
+
+  test('assignment does not depend on registration order', () => {
+    registerTool('a:b')
+    registerTool('a.b')
+    const first = ['a:b', 'a.b'].map((n) => mcpWireName('tool', n))
+
+    resetPikkuState()
+    registerTool('a.b')
+    registerTool('a:b')
+    const second = ['a:b', 'a.b'].map((n) => mcpWireName('tool', n))
+
+    assert.deepEqual(first, second)
   })
 })
 
@@ -68,9 +108,8 @@ describe('mcpResolveWireName', () => {
   })
 
   test('prefers an exact registration over a rewritten match', () => {
-    // The rewrite is lossy in principle: these two collapse to one wire name.
-    // A tool actually registered under the wire spelling must win, or a client
-    // asking for the one it can see would be handed the other.
+    // A tool registered under the wire spelling must win, or a client asking
+    // for the one it can see would be handed the other.
     registerTool('bb2_getMe')
     registerTool('bb2:getMe')
     assert.equal(mcpResolveWireName('tool', 'bb2_getMe'), 'bb2_getMe')
@@ -104,9 +143,7 @@ describe('mcpTargetRequiresSession accepts a wire name', () => {
 /**
  * Whether the handshake itself should be challenged.
  *
- * A client decides at connection time whether a server speaks OAuth, and all it
- * has to go on is whether `initialize` was challenged. Answering `200` and then
- * refusing every tool tells it "no sign-in needed" and then gives it nothing.
+ * See `the-mcp-handshake-is-challenged-only-when-every-target-is-gated.md`.
  */
 describe('mcpEveryTargetRequiresSession', () => {
   test('an empty registry is not "all gated" — there is nothing to gate', () => {

@@ -95,12 +95,7 @@ export const betterAuthSession = (
       if (!http?.request || !setSession || existingSession) {
         return next()
       }
-      // Global middleware is application-wide and so also runs on dispatches
-      // contributed by an addon — but an addon builds its own singleton
-      // services and is deliberately not handed the host application's
-      // better-auth instance. There is no session for this middleware to
-      // resolve in that scope, and no failure either: skip, exactly as it
-      // does for a secret that is not ours to read.
+      // See `a-session-middleware-stands-down-where-it-cannot-authenticate.md`.
       if (typeof (services as any).auth !== 'function') {
         return next()
       }

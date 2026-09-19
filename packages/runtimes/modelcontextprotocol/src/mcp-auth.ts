@@ -44,17 +44,11 @@ const corsHeaders = {
 /**
  * The public URL of the MCP endpoint itself, as the caller reached it.
  *
- * Behind a TLS-terminating reverse proxy the server sees a plaintext request, so
- * `request.url` carries the internal `http://host:port` rather than the origin
- * the client actually used. Advertising that in `resource` breaks discovery: a
- * client that reached us over HTTPS is told the resource lives at an http:// URL
- * and refuses to treat it as the same resource. `X-Forwarded-Proto` / `-Host`
- * are what the proxy sets to describe the outside view, so prefer them and fall
- * back to the request's own origin when the server is exposed directly.
+ * See `the-advertised-resource-url-comes-from-the-forwarded-origin.md`.
  */
 const resourceUrl = (request: Request, mcpPath: string): URL => {
   const direct = new URL(request.url)
-  // A proxy chain sets a comma-separated list; the first entry is the client.
+  // A proxy chain appends, so the first entry is the client's own view.
   const proto =
     request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() ||
     direct.protocol.replace(':', '')
@@ -212,10 +206,7 @@ export const requestNeedsCredentials = async (
   const messages = Array.isArray(body) ? body : [body]
   return messages.some((message) => {
     const method = (message as { method?: string })?.method ?? ''
-    // The handshake is challenged too, but only on a server where every target
-    // is gated. That is the one case where answering it `200` misinforms the
-    // client: it concludes the server needs no sign-in, and then finds it can
-    // call nothing. See `mcpEveryTargetRequiresSession`.
+    // See `the-mcp-handshake-is-challenged-only-when-every-target-is-gated.md`.
     if (method === 'initialize') {
       return mcpEveryTargetRequiresSession()
     }

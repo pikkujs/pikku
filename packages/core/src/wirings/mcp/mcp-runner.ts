@@ -378,19 +378,10 @@ export const mcpTargetRequiresSession = (
 }
 
 /**
- * Whether every registered MCP target needs a session — i.e. whether this
- * server has nothing at all to offer an anonymous caller.
+ * Whether every registered MCP target needs a session. An empty registry is
+ * not "all gated" — there is nothing to gate.
  *
- * A client decides at connection time whether a server speaks OAuth, and the
- * only thing it can decide from is whether the handshake was challenged. A
- * server that answers `initialize` with a `200` and then `401`s every single
- * tool call has told the client "no sign-in needed" and then refused it
- * everything — which is how a fully-gated server ends up detected as open.
- *
- * So the handshake is challenged too, but only when the answer here is yes.
- * A server with even one open target genuinely is usable anonymously, and
- * challenging its handshake would lock out clients that have no credentials
- * to offer. An empty registry is not "all gated" — there is nothing to gate.
+ * See `the-mcp-handshake-is-challenged-only-when-every-target-is-gated.md`.
  */
 export const mcpEveryTargetRequiresSession = (): boolean => {
   const targets: Array<['tool' | 'resource' | 'prompt', string[]]> = [
@@ -410,41 +401,64 @@ export const mcpEveryTargetRequiresSession = (): boolean => {
   return seen > 0
 }
 
-/**
- * How a target's name is spelled on the wire.
- *
- * MCP clients constrain tool and prompt names to `[A-Za-z0-9_-]`. Pikku's
- * namespace separator is `:`, so every target contributed by an addon —
- * `bb2:getMe` and friends — is a name the client cannot accept, and clients
- * drop them from the session rather than fail the connection. The names are
- * therefore rewritten at the transport boundary and resolved back on the way
- * in; the namespace itself is untouched, since it is what dispatch keys on.
- */
-export const mcpWireName = (name: string): string =>
-  name.replace(/[^A-Za-z0-9_-]/g, '_')
+export type McpTargetType = 'tool' | 'resource' | 'prompt'
+
+const mcpMetaFor = (type: McpTargetType) =>
+  type === 'tool'
+    ? pikkuState(null, 'mcp', 'toolsMeta')
+    : type === 'resource'
+      ? pikkuState(null, 'mcp', 'resourcesMeta')
+      : pikkuState(null, 'mcp', 'promptsMeta')
+
+const WIRE_LEGAL = /^[A-Za-z0-9_-]+$/
 
 /**
- * The registered name a client's wire name refers to.
+ * Registered name -> wire name for every target of one type.
  *
- * A name that is already registered is returned as-is: rewriting is lossy in
- * principle (`a:b` and `a_b` collapse together), so an exact match always wins
- * over a rewritten one, and a name matching nothing is handed back unchanged
- * for the runner to report as `Method not found`.
+ * See `mcp-wire-names-are-assigned-over-the-whole-registry.md`.
  */
+const mcpWireNames = (type: McpTargetType): Map<string, string> => {
+  const names = Object.keys(mcpMetaFor(type)).sort()
+  const assigned = new Map<string, string>()
+  const taken = new Set<string>()
+
+  for (const name of names) {
+    if (WIRE_LEGAL.test(name)) {
+      assigned.set(name, name)
+      taken.add(name)
+    }
+  }
+
+  for (const name of names) {
+    if (assigned.has(name)) {
+      continue
+    }
+    const base = name.replace(/[^A-Za-z0-9_-]/g, '_')
+    let candidate = base
+    let n = 2
+    while (taken.has(candidate)) {
+      candidate = `${base}_${n++}`
+    }
+    assigned.set(name, candidate)
+    taken.add(candidate)
+  }
+
+  return assigned
+}
+
+/** How a registered target's name is spelled on the wire. */
+export const mcpWireName = (type: McpTargetType, name: string): string =>
+  mcpWireNames(type).get(name) ?? name
+
+/** The registered name a client's wire name refers to. */
 export const mcpResolveWireName = (
-  type: 'tool' | 'resource' | 'prompt',
+  type: McpTargetType,
   wireName: string
 ): string => {
-  const meta =
-    type === 'tool'
-      ? pikkuState(null, 'mcp', 'toolsMeta')
-      : type === 'resource'
-        ? pikkuState(null, 'mcp', 'resourcesMeta')
-        : pikkuState(null, 'mcp', 'promptsMeta')
-  if (meta[wireName]) {
-    return wireName
+  for (const [name, wire] of mcpWireNames(type)) {
+    if (wire === wireName) {
+      return name
+    }
   }
-  return (
-    Object.keys(meta).find((name) => mcpWireName(name) === wireName) ?? wireName
-  )
+  return wireName
 }

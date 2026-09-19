@@ -164,11 +164,9 @@ export const combineMiddleware = (
 
   const resolved: CorePikkuMiddleware[] = []
 
-  // Global middleware is application-wide by definition, so the root
-  // namespace always applies — an addon's function is still running inside
-  // the host application. Reading only `packageName` here meant a wiring
-  // whose top-level dispatch belongs to an addon (an MCP tool, for example)
-  // never saw the app's own globals, and so never resolved a session.
+  // Global middleware is application-wide, so the root namespace always
+  // applies — an addon's function still runs inside the host application.
+  // See `global-middleware-resolves-from-the-root-namespace-too.md`.
   for (const ns of packageName === null ? [null] : [null, packageName]) {
     const globals = pikkuState(
       ns,
