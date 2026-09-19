@@ -46,6 +46,34 @@ describe('wrangler.toml service bindings', () => {
     assert.match(toml, /service = "root-svc-kysely"/)
   })
 
+  // toScreamingSnake flattens `-`, `_` and camel humps onto the same name, so
+  // two genuinely different units can ask for one binding. Emitting it once
+  // would bind the loser's callers to the winner's worker, which deploys
+  // cleanly and then answers from the wrong service.
+  test('refuses two dependencies that emit the same binding', () => {
+    assert.throws(
+      () =>
+        generateWranglerToml(
+          channelUnit(['svc-base', 'svc_base']),
+          manifest,
+          'root'
+        ),
+      /both bind as "SVC_BASE"/
+    )
+  })
+
+  test('refuses a camel-cased dependency colliding with a kebab one', () => {
+    assert.throws(
+      () =>
+        generateWranglerToml(
+          channelUnit(['svc-base', 'svcBase']),
+          manifest,
+          'root'
+        ),
+      /both bind as "SVC_BASE"/
+    )
+  })
+
   test('emits no service section without dependencies', () => {
     const toml = generateWranglerToml(channelUnit([]), manifest, 'root')
     assert.equal(toml.includes('[[services]]'), false)

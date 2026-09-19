@@ -105,12 +105,25 @@ export function generateWranglerToml(
   // serves, so two functions sharing a unit name that unit twice — and wrangler
   // refuses a config that binds the same name twice ("assigned to multiple
   // Worker bindings"), which fails the deploy outright rather than merely
-  // repeating a line. Two different units can still collapse onto one binding
-  // name through toScreamingSnake, so the set is keyed on the emitted name.
+  // repeating a line. The set is therefore keyed on the emitted name.
+  //
+  // Two DIFFERENT units can also collapse onto one emitted name, because
+  // toScreamingSnake flattens `-`, `_` and camel humps alike: `svc-base`,
+  // `svc_base` and `svcBase` all become SVC_BASE. Dropping the second one
+  // would leave its callers bound to the first unit's worker — a deploy that
+  // succeeds and then answers from the wrong service. Failing here is the
+  // lesser harm, since the collision is a naming problem the author can fix
+  // and a silently misrouted binding is one nobody would think to look for.
   const serviceBindings = new Map<string, string>()
   for (const dep of unit.dependsOn) {
     const binding = toScreamingSnake(dep)
-    if (!serviceBindings.has(binding)) serviceBindings.set(binding, dep)
+    const existing = serviceBindings.get(binding)
+    if (existing !== undefined && existing !== dep) {
+      throw new Error(
+        `Units "${existing}" and "${dep}" both bind as "${binding}" in ${unit.name}'s wrangler.toml — rename one so the two services stay distinguishable.`
+      )
+    }
+    serviceBindings.set(binding, dep)
   }
   for (const [binding, dep] of serviceBindings) {
     lines.push('')
