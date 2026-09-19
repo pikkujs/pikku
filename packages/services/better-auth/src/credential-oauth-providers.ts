@@ -33,7 +33,11 @@ export interface CredentialOAuthApp {
 }
 
 export interface CredentialOAuthSecretReader {
-  getSecret<T = unknown>(secretId: string): Promise<SecretValue<T>>
+  /**
+   * `undefined` for a secret declared `optional`, which every OAuth app secret
+   * is: absence is a supported state there, so it resolves rather than throws.
+   */
+  getSecret<T = unknown>(secretId: string): Promise<SecretValue<T> | undefined>
 }
 
 /** Minimal logger surface; the singleton `logger` satisfies it. */
@@ -83,7 +87,7 @@ export const credentialOAuthProviders = async (
             await secrets.getSecret<CredentialOAuthApp>(
               config.appCredentialSecretId
             )
-          ).reveal()
+          )?.reveal()
         } catch (e: any) {
           // Not configured yet — skip this provider, don't take down all of auth.
           if (isSecretNotFound(e)) {
@@ -94,7 +98,16 @@ export const credentialOAuthProviders = async (
           }
           throw e
         }
-        if (!app?.clientId) {
+        // An optional secret resolves undefined instead of throwing, so absence
+        // arrives here rather than in the catch above. It is the same
+        // unconfigured provider either way, not a malformed one.
+        if (app === undefined) {
+          logger?.warn(
+            `OAuth2 credential '${providerId}' skipped — app secret '${config.appCredentialSecretId}' is not configured.`
+          )
+          return null
+        }
+        if (!app.clientId) {
           throw new Error(
             `OAuth2 credential '${providerId}' has no clientId — secret '${config.appCredentialSecretId}' is malformed.`
           )

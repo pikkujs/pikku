@@ -125,6 +125,31 @@ describe('TypedSecretService', () => {
     assert.strictEqual(missing[0].secretId, 'GITHUB_TOKEN')
   })
 
+  test('an optional secret is not something the deployment is missing', async () => {
+    // `optional` already says absence is a supported state — that is why
+    // getSecret resolves undefined rather than throwing. Listing the same
+    // secret as missing contradicts it, and buries the required secrets
+    // someone actually has to go and configure.
+    const meta = {
+      STRIPE_KEY: { name: 'stripe', displayName: 'Stripe' },
+      GITHUB_TOKEN: { name: 'github', displayName: 'GitHub', optional: true },
+    }
+    const service = new TypedSecretService(createMockSecrets(), meta)
+
+    const missing = await service.getMissing()
+    assert.deepStrictEqual(
+      missing.map((c) => c.secretId),
+      ['STRIPE_KEY']
+    )
+
+    const all = await service.getAllStatus()
+    assert.strictEqual(
+      all.find((c) => c.secretId === 'GITHUB_TOKEN')?.optional,
+      true,
+      'getAllStatus still reports it, flagged optional'
+    )
+  })
+
   test('an optional secret that is missing resolves undefined instead of throwing', async () => {
     // getSecret throws for a missing secret, which is right for a required one:
     // the app cannot run without it. An optional secret's absence is a supported

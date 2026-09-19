@@ -304,6 +304,8 @@
   ],
   "./node": [],
   "./credential": [
+    "buildCredentialResolutions",
+    "credentialOverrideAliases",
     "defineCredential",
     "validateAndBuildCredentialDefinitionsMeta"
   ],
@@ -351,6 +353,7 @@
   ],
   "./secret": [
     "defineSecret",
+    "deriveOAuth2AppSecrets",
     "validateAndBuildSecretDefinitionsMeta"
   ],
   "./variable": [

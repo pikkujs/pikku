@@ -1,5 +1,9 @@
 import * as ts from 'typescript'
-import type { InspectorState, InspectorLogger } from '../types.js'
+import type {
+  InspectorState,
+  InspectorLogger,
+  CredentialOverrideMeta,
+} from '../types.js'
 
 function parseStringArray(node: ts.Expression): string[] | undefined {
   if (!ts.isArrayLiteralExpression(node)) return undefined
@@ -34,6 +38,55 @@ function parseStringRecord(
 }
 
 /**
+ * `credentialOverrides` takes either a rename string or an object that also
+ * decides where the value is read from, so it cannot use `parseStringRecord`.
+ * A non-literal member is dropped rather than guessed at — the wiring is read
+ * statically, and a value this cannot see must not be reported as a mode.
+ */
+function parseCredentialOverrideRecord(
+  obj: ts.ObjectLiteralExpression
+): Record<string, CredentialOverrideMeta> {
+  const result: Record<string, CredentialOverrideMeta> = {}
+  for (const prop of obj.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue
+    const keyNode = prop.name
+    const key = ts.isIdentifier(keyNode)
+      ? keyNode.text
+      : ts.isStringLiteral(keyNode)
+        ? keyNode.text
+        : undefined
+    if (!key) continue
+
+    if (ts.isStringLiteral(prop.initializer)) {
+      result[key] = prop.initializer.text
+      continue
+    }
+    if (!ts.isObjectLiteralExpression(prop.initializer)) continue
+
+    const override: Exclude<CredentialOverrideMeta, string> = {}
+    for (const member of prop.initializer.properties) {
+      if (!ts.isPropertyAssignment(member)) continue
+      const memberKey = ts.isIdentifier(member.name)
+        ? member.name.text
+        : ts.isStringLiteral(member.name)
+          ? member.name.text
+          : undefined
+      if (!memberKey || !ts.isStringLiteral(member.initializer)) continue
+      if (memberKey === 'name') override.name = member.initializer.text
+      else if (
+        memberKey === 'mode' &&
+        (member.initializer.text === 'wire' ||
+          member.initializer.text === 'singleton')
+      ) {
+        override.mode = member.initializer.text
+      }
+    }
+    result[key] = override
+  }
+  return result
+}
+
+/**
  * Detect wireAddon({ name: '...', package: '...' }) call expressions and
  * populate state.rpc.wireAddonDeclarations and state.rpc.usedAddons.
  */
@@ -59,7 +112,7 @@ export function addWireAddon(
   let scopes: string[] | undefined
   let secretOverrides: Record<string, string> | undefined
   let variableOverrides: Record<string, string> | undefined
-  let credentialOverrides: Record<string, string> | undefined
+  let credentialOverrides: Record<string, CredentialOverrideMeta> | undefined
   let secretGrants: string[] | undefined
   let credentialGrants: string[] | undefined
   let globalSecrets: string | undefined
@@ -105,7 +158,7 @@ export function addWireAddon(
       key === 'credentialOverrides' &&
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
-      credentialOverrides = parseStringRecord(prop.initializer)
+      credentialOverrides = parseCredentialOverrideRecord(prop.initializer)
     } else if (key === 'secretGrants') {
       secretGrants = parseStringArray(prop.initializer)
     } else if (key === 'credentialGrants') {
