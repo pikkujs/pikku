@@ -454,7 +454,7 @@ check(`${AGENT_UNIT}: requires agentRunService (marker valid)`, () => {
 // runner.
 
 const AGENT_RUNTIME_RE =
-  /core\/dist\/wirings\/agent\/(agent-runner|agent-stream|agent-agui|agent-rpc)\.js$/
+  /core\/dist\/wirings\/agent\/(agent-memory|agent-runner|agent-stream|agent-agui|agent-rpc)\.js$/
 
 check(`${LEAN_UNIT}: bundles zero agent runtime code`, () => {
   const hits = bundledModules(LEAN_UNIT).filter((m) => AGENT_RUNTIME_RE.test(m))
