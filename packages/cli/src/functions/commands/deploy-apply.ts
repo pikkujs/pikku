@@ -60,16 +60,30 @@ export function getEntryContext(
     ? `Partial<${singletonServicesType.type}>`
     : 'Record<string, unknown>'
 
-  // MCP: when the unit's .pikku has a non-empty mcp.gen.json, import it and pass
-  // it to the generated server so PikkuNodeHTTPServer mounts /mcp. Without this
-  // the deployed bundle never serves MCP even though the dev server does.
+  // MCP: when the unit's surface manifest is non-empty, import it and pass it
+  // to the generated server so it mounts the surface. Without this the deployed
+  // bundle never serves MCP even though the dev server does.
+  //
+  // An `mcp` unit serves exactly the one surface it was emitted for — its name
+  // carries that surface's slug, which is also the manifest's filename. Any
+  // other unit (a monolith, say) serves the default surface, as before.
   let mcpImport = ''
   let mcpServerOption = ''
-  const mcpJsonAbs = join(pikkuDir, 'mcp', 'mcp.gen.json')
+  const mcpSlug =
+    unit.role === 'mcp' && unit.name !== 'mcp-server'
+      ? unit.name.replace(/^mcp-/, '')
+      : undefined
+  const mcpJsonAbs = join(
+    pikkuDir,
+    'mcp',
+    mcpSlug ? `mcp.${mcpSlug}.gen.json` : 'mcp.gen.json'
+  )
   if (existsSync(mcpJsonAbs)) {
     let hasMcp = false
+    let mcpPath = '/mcp'
     try {
       const parsed = JSON.parse(readFileSync(mcpJsonAbs, 'utf-8')) as {
+        mcpPath?: string
         tools?: unknown[]
         resources?: unknown[]
         prompts?: unknown[]
@@ -79,6 +93,7 @@ export function getEntryContext(
           (parsed.resources?.length ?? 0) +
           (parsed.prompts?.length ?? 0) >
         0
+      mcpPath = parsed.mcpPath ?? mcpPath
     } catch (err) {
       console.warn(
         `[pikku] could not parse ${mcpJsonAbs} — skipping MCP mount: ${err instanceof Error ? err.message : String(err)}`
@@ -88,7 +103,10 @@ export function getEntryContext(
       const rel = relative(unitDir, mcpJsonAbs).replace(/\\/g, '/')
       const relImport = rel.startsWith('.') ? rel : `./${rel}`
       mcpImport = `import mcpJson from '${relImport}' with { type: 'json' }`
-      mcpServerOption = 'mcpJson, '
+      mcpServerOption =
+        mcpPath === '/mcp'
+          ? 'mcpJson, '
+          : `mcpJson, mcpPath: ${JSON.stringify(mcpPath)}, `
     }
   }
 
@@ -147,7 +165,105 @@ async function resolveProjectId(projectDir: string): Promise<string> {
  * configured provider may also be a URL, and a runtime whose `require.resolve`
  * hands a bare specifier straight back for its own built-ins has resolved
  * nothing. Both of those import as written.
+ *
+ * `require.resolve` applies the `require` condition, so an ESM-only provider —
+ * one whose exports map offers `types` and `import` and nothing else, which is
+ * a perfectly ordinary way to publish — does not resolve there even though it
+ * is installed and importable. Falling through to the bare import does not
+ * rescue it, because that resolves from the CLI rather than the project, so
+ * `resolveEsmOnlyEntry` reads the package's own entry instead. It has to walk
+ * the resolution paths by hand: the exports map that blocked the package also
+ * blocks `<name>/package.json`.
+ *
+ * Which is why it runs on any resolution failure rather than on one code. Node
+ * reports this as ERR_PACKAGE_PATH_NOT_EXPORTED and bun as a plain
+ * MODULE_NOT_FOUND, indistinguishable from a package that is genuinely absent.
+ * Telling them apart is what the filesystem is for: a package that is not there
+ * yields no entry and the bare import still runs, unchanged.
  */
+/**
+ * The conditions that are true for the `import()` this resolution ends in.
+ * `default` matches unconditionally and is handled by the resolver rather than
+ * listed here, because node treats it as the fallthrough rather than as a name.
+ */
+const ACTIVE_EXPORT_CONDITIONS = new Set(['node', 'import'])
+
+/**
+ * Picks an export target the way node does: a conditions object is walked in
+ * DECLARATION order and the first key that is active wins, nesting included.
+ *
+ * The order is the package author's, not ours. `{ "import": { "node": "./n.js",
+ * "default": "./browser.js" } }` resolves to `./n.js`, because `node` is listed
+ * first and is true here — preferring a fixed list of condition names instead
+ * would hand back the browser build and load a different provider than the one
+ * node would have.
+ *
+ * An array is a list of fallbacks, and `null` is a deliberate block, so both
+ * carry on to the next candidate rather than ending the walk.
+ */
+const resolveExportTarget = (target: unknown): string | undefined => {
+  if (typeof target === 'string') return target
+  if (target === null || target === undefined) return undefined
+  if (Array.isArray(target)) {
+    for (const candidate of target) {
+      const resolved = resolveExportTarget(candidate)
+      if (resolved !== undefined) return resolved
+    }
+    return undefined
+  }
+  if (typeof target !== 'object') return undefined
+  for (const [condition, value] of Object.entries(target)) {
+    if (condition !== 'default' && !ACTIVE_EXPORT_CONDITIONS.has(condition)) {
+      continue
+    }
+    const resolved = resolveExportTarget(value)
+    if (resolved !== undefined) return resolved
+  }
+  return undefined
+}
+
+/**
+ * The entry an exports map offers to `import`, or, for a package with no
+ * exports map at all, its legacy main. A map that deliberately omits a root
+ * entry offers nothing: falling back to `main` there would reach past the
+ * encapsulation the package asked for, so this reports no entry and the caller
+ * treats the provider as missing.
+ */
+const esmEntryFromManifest = (manifest: any): string | undefined => {
+  const exportsField = manifest.exports
+  if (exportsField === undefined || exportsField === null) {
+    const legacy = manifest.module ?? manifest.main
+    return typeof legacy === 'string' ? legacy : undefined
+  }
+  const isSubpathMap =
+    typeof exportsField === 'object' &&
+    !Array.isArray(exportsField) &&
+    Object.keys(exportsField).some((key) => key.startsWith('.'))
+  const root = isSubpathMap ? exportsField['.'] : exportsField
+  return resolveExportTarget(root)
+}
+
+const resolveEsmOnlyEntry = (
+  require: NodeRequire,
+  packageName: string
+): string | undefined => {
+  const searchPaths = require.resolve.paths(packageName) ?? []
+  for (const searchPath of searchPaths) {
+    const packageJsonPath = join(searchPath, packageName, 'package.json')
+    if (!existsSync(packageJsonPath)) continue
+    let manifest: any
+    try {
+      manifest = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
+    } catch {
+      return undefined
+    }
+    const entry = esmEntryFromManifest(manifest)
+    if (!entry) return undefined
+    return join(searchPath, packageName, entry)
+  }
+  return undefined
+}
+
 const importProviderPackage = async (
   packageName: string,
   projectDir?: string
@@ -164,9 +280,14 @@ const importProviderPackage = async (
     const err = e as { code?: string }
     if (
       err?.code !== 'ERR_MODULE_NOT_FOUND' &&
-      err?.code !== 'MODULE_NOT_FOUND'
+      err?.code !== 'MODULE_NOT_FOUND' &&
+      err?.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED'
     ) {
       throw e
+    }
+    const entry = resolveEsmOnlyEntry(require, packageName)
+    if (entry && existsSync(entry)) {
+      return await import(pathToFileURL(entry).href)
     }
   }
   return await import(packageName)

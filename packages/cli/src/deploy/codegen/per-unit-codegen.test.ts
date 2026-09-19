@@ -109,3 +109,89 @@ describe('collectFilterNames - addon units', () => {
     assert.ok(names().includes('/remote/rpc/:rpcName'))
   })
 })
+
+describe('collectFilterNames - the channel a CLI program is served over', () => {
+  const cliManifest = (): DeploymentManifest =>
+    ({
+      agents: [],
+      channels: [
+        {
+          name: 'seminarhof-cli',
+          route: '/cli',
+          unitName: 'channel-seminarhof-cli',
+          functionIds: ['cliHelp', 'cliRaw', 'getEventsListing'],
+        },
+      ],
+      mcpEndpoints: [],
+      workflows: [],
+      units: [],
+    }) as unknown as DeploymentManifest
+
+  const cliChannelUnit = (tags: string[]): DeploymentUnit => ({
+    name: 'channel-seminarhof-cli',
+    role: 'channel',
+    target: 'serverless',
+    functionIds: [],
+    services: [],
+    dependsOn: [],
+    handlers: [{ type: 'fetch', routes: [] }],
+    tags,
+  })
+
+  const cliState = {
+    functions: { meta: {} },
+    cli: {
+      meta: {
+        programs: {
+          seminarhof: {
+            program: 'seminarhof',
+            commands: {
+              events: { pikkuFuncId: 'getEventsListing' },
+              availability: { pikkuFuncId: 'getAvailability' },
+            },
+          },
+        },
+      },
+    },
+  } as unknown as InspectorState
+
+  const names = (unit: DeploymentUnit) =>
+    collectFilterNames(unit, cliManifest(), cliState, true)
+
+  test("the program's commands join the filter", () => {
+    // CLI programs are filtered by command name, so without these the program
+    // is emptied, dropped, and `__help`/`__raw` report "Program not found".
+    const collected = names(cliChannelUnit(['cli', 'seminarhof']))
+    assert.ok(collected.includes('events'))
+    assert.ok(collected.includes('availability'))
+  })
+
+  test('the program name joins the filter', () => {
+    assert.ok(names(cliChannelUnit(['cli', 'seminarhof'])).includes('seminarhof'))
+  })
+
+  test('the channel and its own wirings are still there', () => {
+    const collected = names(cliChannelUnit(['cli', 'seminarhof']))
+    for (const name of [
+      'seminarhof-cli',
+      'cliHelp',
+      'cliRaw',
+      'getEventsListing',
+    ]) {
+      assert.ok(collected.includes(name), `expected ${name}`)
+    }
+  })
+
+  test('a channel that serves no CLI program is unchanged', () => {
+    assert.deepEqual(names(cliChannelUnit(['websocket'])).sort(), [
+      'cliHelp',
+      'cliRaw',
+      'getEventsListing',
+      'seminarhof-cli',
+    ])
+  })
+
+  test('a cli tag naming no known program adds nothing', () => {
+    assert.ok(!names(cliChannelUnit(['cli', 'ghost'])).includes('ghost'))
+  })
+})

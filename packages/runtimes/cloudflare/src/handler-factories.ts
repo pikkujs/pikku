@@ -457,7 +457,18 @@ export class PikkuWebSocketHibernationServer extends CloudflareWebSocketHibernat
         'WebSocket handler not initialized — call createCloudflareWebSocketHandler first'
       )
     }
-    const singletonServices = await setupServices(this.env, wsFactories)
+    let singletonServices: CoreSingletonServices
+    try {
+      singletonServices = await setupServices(this.env, wsFactories)
+    } catch (e: unknown) {
+      const cause = (e as Error)?.message ?? String(e)
+      const err = new Error(
+        `channel singleton services failed to boot: ${cause}`
+      )
+      err.name = 'PikkuChannelServicesError'
+      err.stack = (e as Error)?.stack ?? err.stack
+      throw err
+    }
     const servicesWithEventHub = singletonServices as CoreSingletonServices & {
       eventHub: CloudflareEventHubService
     }
@@ -467,6 +478,45 @@ export class PikkuWebSocketHibernationServer extends CloudflareWebSocketHibernat
     )
     return { singletonServices: servicesWithEventHub }
   }
+}
+
+/**
+ * Reports a channel worker that could not serve the request at all.
+ *
+ * The HTTP handler runs `runFetch` with `exposeErrors: true`, so a worker that
+ * fails to boot answers with the reason. The channel handler threw instead, and
+ * an uncaught throw in a Worker is a bodiless CF 1101 that reaches no logger,
+ * no tail and no telemetry — the failure is invisible to the one person who can
+ * fix it. The `stage` distinguishes the two ways a channel dies, which have
+ * nothing to do with each other: `singleton-services` is the router's own boot,
+ * `durable-object` is everything the hibernation class does — including its
+ * own, separately cached boot, which reports as `PikkuChannelServicesError`;
+ * anything else there is the class not being callable at all (a DO binding
+ * whose class was never migrated in still resolves, then throws on dispatch).
+ *
+ * A WebSocket client mid-handshake can only be told "no" by a non-101 status,
+ * so this reads as a refusal there and as a readable error everywhere else.
+ *
+ * The reason itself stays in the log. This route is unauthenticated, and what
+ * fails during singleton boot is usually a service refusing to connect — an
+ * error whose message routinely carries the connection string that failed,
+ * credentials included. The `stage` is the part that is safe to hand out, and
+ * it is also the part that was missing: it separates the router's own boot from
+ * the durable object's, which is the fork a bodiless 1101 gave no way to take.
+ */
+const channelBootFailure = (
+  stage: 'singleton-services' | 'durable-object',
+  e: unknown
+): Response => {
+  console.error(`[CHANNEL] ${stage} failed:`, e)
+  return new Response(
+    JSON.stringify({
+      ok: false,
+      stage,
+      error: 'Channel unavailable',
+    }),
+    { status: 503, headers: { 'content-type': 'application/json' } }
+  )
 }
 
 /**
@@ -484,7 +534,11 @@ export function createCloudflareWebSocketHandler(factories: ServiceFactories) {
   wsFactories = factories
   return class PikkuWebSocketRouter extends WorkerEntrypoint<CloudflareEnv> {
     async fetch(request: Request): Promise<Response> {
-      await setupServices(this.env, factories)
+      try {
+        await setupServices(this.env, factories)
+      } catch (e: unknown) {
+        return channelBootFailure('singleton-services', e)
+      }
       const durableObject = this.env.WEBSOCKET_HIBERNATION_SERVER as
         | {
             idFromName: (name: string) => { toString: () => string }
@@ -499,9 +553,13 @@ export function createCloudflareWebSocketHandler(factories: ServiceFactories) {
           { status: 503 }
         )
       }
-      const id = durableObject.idFromName('default')
-      const stub = durableObject.get(id)
-      return stub.fetch(request)
+      try {
+        const id = durableObject.idFromName('default')
+        const stub = durableObject.get(id)
+        return await stub.fetch(request)
+      } catch (e: unknown) {
+        return channelBootFailure('durable-object', e)
+      }
     }
   }
 }
