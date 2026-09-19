@@ -99,10 +99,18 @@ describe('cloudflare channel handler', () => {
       throwingFactories
     )
     assert.equal(response.status, 503)
-    const body = (await response.json()) as Record<string, unknown>
+    const raw = await response.text()
+    const body = JSON.parse(raw) as Record<string, unknown>
     assert.equal(body.ok, false)
     assert.equal(body.stage, 'singleton-services')
-    assert.equal(body.message, 'DATABASE_URL not set')
+    assert.equal(body.error, 'Channel unavailable')
+    // The route is unauthenticated and a boot failure is usually a service
+    // refusing to connect, so the reason — which routinely carries the
+    // connection string that failed — must not be in the reply.
+    assert.equal(raw.includes('DATABASE_URL'), false)
+    assert.equal('message' in body, false)
+    assert.equal('stack' in body, false)
+    assert.equal('errorName' in body, false)
   })
 
   test('reports a missing durable object binding', async () => {
@@ -121,12 +129,17 @@ describe('cloudflare channel handler', () => {
       okFactories
     )
     assert.equal(response.status, 503)
-    const body = (await response.json()) as Record<string, unknown>
+    const raw = await response.text()
+    const body = JSON.parse(raw) as Record<string, unknown>
     assert.equal(body.stage, 'durable-object')
-    assert.equal(body.message, 'Durable Object class not found')
+    assert.equal(body.error, 'Channel unavailable')
+    assert.equal(raw.includes('Durable Object class not found'), false)
   })
 
-  test('names a boot failure inside the durable object as its own error', async () => {
+  // The durable object's own boot failure arrives here as a throw on dispatch,
+  // so it reports under the same stage. Which of the two it was is a question
+  // for the log — the reply says only that the channel is unavailable.
+  test('keeps a boot failure inside the durable object out of the reply', async () => {
     const inner = new Error(
       'channel singleton services failed to boot: no kysely'
     )
@@ -135,9 +148,12 @@ describe('cloudflare channel handler', () => {
       { WEBSOCKET_HIBERNATION_SERVER: durableObjectThrowing(inner) },
       okFactories
     )
-    const body = (await response.json()) as Record<string, unknown>
+    const raw = await response.text()
+    const body = JSON.parse(raw) as Record<string, unknown>
     assert.equal(body.stage, 'durable-object')
-    assert.equal(body.errorName, 'PikkuChannelServicesError')
+    assert.equal(body.error, 'Channel unavailable')
+    assert.equal(raw.includes('PikkuChannelServicesError'), false)
+    assert.equal(raw.includes('no kysely'), false)
   })
 
   test('passes a successful handshake through untouched', async () => {

@@ -496,22 +496,24 @@ export class PikkuWebSocketHibernationServer extends CloudflareWebSocketHibernat
  *
  * A WebSocket client mid-handshake can only be told "no" by a non-101 status,
  * so this reads as a refusal there and as a readable error everywhere else.
+ *
+ * The reason itself stays in the log. This route is unauthenticated, and what
+ * fails during singleton boot is usually a service refusing to connect — an
+ * error whose message routinely carries the connection string that failed,
+ * credentials included. The `stage` is the part that is safe to hand out, and
+ * it is also the part that was missing: it separates the router's own boot from
+ * the durable object's, which is the fork a bodiless 1101 gave no way to take.
  */
 const channelBootFailure = (
   stage: 'singleton-services' | 'durable-object',
   e: unknown
 ): Response => {
-  const error = e as Error | undefined
-  const errorName = error?.name ?? 'Error'
-  const message = error?.message ?? String(e)
-  console.error(`[CHANNEL] ${stage} failed:`, message, error?.stack)
+  console.error(`[CHANNEL] ${stage} failed:`, e)
   return new Response(
     JSON.stringify({
       ok: false,
       stage,
-      errorName,
-      message,
-      stack: error?.stack,
+      error: 'Channel unavailable',
     }),
     { status: 503, headers: { 'content-type': 'application/json' } }
   )
