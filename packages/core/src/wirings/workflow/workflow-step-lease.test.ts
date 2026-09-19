@@ -2,8 +2,14 @@ import { describe, mock, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
-import { startStepLeaseRefresh } from './workflow-step-lease.js'
-import { STEP_LEASE_REFRESH_MIN_MS } from './workflow-constants.js'
+import {
+  startStepLeaseRefresh,
+  stepLeaseMsForQueue,
+} from './workflow-step-lease.js'
+import {
+  DEFAULT_STEP_LEASE_MS,
+  STEP_LEASE_REFRESH_MIN_MS,
+} from './workflow-constants.js'
 import { pikkuState } from '../../pikku-state.js'
 import type { StepState } from './workflow.types.js'
 
@@ -145,9 +151,13 @@ describe('step leases', () => {
 
     mock.timers.enable({ apis: ['setInterval'] })
     try {
-      const stop = startStepLeaseRefresh('step-1', leaseMs, async (expiresAt) => {
-        refreshes.push(expiresAt)
-      })
+      const stop = startStepLeaseRefresh(
+        'step-1',
+        leaseMs,
+        async (expiresAt) => {
+          refreshes.push(expiresAt)
+        }
+      )
       mock.timers.tick(leaseMs - 1)
       stop()
     } finally {
@@ -157,6 +167,39 @@ describe('step leases', () => {
     assert.ok(
       refreshes.length > 0,
       `a ${leaseMs}ms lease was never refreshed in the ${leaseMs - 1}ms before it expired`
+    )
+  })
+})
+
+describe('stepLeaseMsForQueue', () => {
+  const register = (queueName: string, config: unknown) => {
+    pikkuState(null, 'queue', 'registrations').set(queueName, {
+      name: queueName,
+      config,
+    } as any)
+  }
+
+  test('takes the queue lock as the lease', () => {
+    register('charges', { lockDuration: 45_000, visibilityTimeout: 90 })
+    assert.equal(stepLeaseMsForQueue('charges'), 45_000)
+  })
+
+  // A visibility timeout is the same ownership window said in seconds, so it
+  // has to be converted rather than used as milliseconds.
+  test('converts a visibility timeout from seconds', () => {
+    register('shipments', { visibilityTimeout: 30 })
+    assert.equal(stepLeaseMsForQueue('shipments'), 30_000)
+  })
+
+  test('falls back to the default when the queue sets neither', () => {
+    register('emails', {})
+    assert.equal(stepLeaseMsForQueue('emails'), DEFAULT_STEP_LEASE_MS)
+  })
+
+  test('falls back to the default for an unregistered queue', () => {
+    assert.equal(
+      stepLeaseMsForQueue('nobody-wired-this'),
+      DEFAULT_STEP_LEASE_MS
     )
   })
 })
