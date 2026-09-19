@@ -99,14 +99,24 @@ export function generateWranglerToml(
   // Handler-driven sections (replaces role-specific config)
   addHandlerConfig(lines, unit, projectId)
 
-  // Service bindings for gateway units that depend on other workers
-  if (unit.dependsOn.length > 0) {
-    for (const dep of unit.dependsOn) {
-      lines.push('')
-      lines.push('[[services]]')
-      lines.push(`binding = "${toScreamingSnake(dep)}"`)
-      lines.push(`service = "${projectId}-${dep}"`)
-    }
+  // Service bindings for gateway units that depend on other workers.
+  //
+  // Deduplicated because a gateway collects one dependency per function it
+  // serves, so two functions sharing a unit name that unit twice — and wrangler
+  // refuses a config that binds the same name twice ("assigned to multiple
+  // Worker bindings"), which fails the deploy outright rather than merely
+  // repeating a line. Two different units can still collapse onto one binding
+  // name through toScreamingSnake, so the set is keyed on the emitted name.
+  const serviceBindings = new Map<string, string>()
+  for (const dep of unit.dependsOn) {
+    const binding = toScreamingSnake(dep)
+    if (!serviceBindings.has(binding)) serviceBindings.set(binding, dep)
+  }
+  for (const [binding, dep] of serviceBindings) {
+    lines.push('')
+    lines.push('[[services]]')
+    lines.push(`binding = "${binding}"`)
+    lines.push(`service = "${projectId}-${dep}"`)
   }
 
   // Secrets as vars placeholder
