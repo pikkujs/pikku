@@ -2,20 +2,22 @@ import type { ReactNode } from 'react'
 import { m } from '@/i18n/messages'
 import type {
   SecurityAuditReport,
-  SecurityAuditIssue,
   SecuritySeverity,
   SecurityUpdateLevel,
 } from '../../hooks/useSecurityAudit'
 import type { AdvisoryCategory } from './security-classify'
 
-// Per-finding remediation slot, rendered right-aligned in the finding row
-// header. OSS defaults to the free "Update dependency" button; Fabric passes its
-// own sandbox-verified action here.
-export type RenderRemediation = (args: {
-  pkg: string
-  version: string
-  issue: SecurityAuditIssue
+// The action offered for a chosen set of packages. A single row is a selection
+// of one, so a finding row and a multi-package selection share this one slot.
+// OSS defaults to bumping package.json and installing; a host that can verify
+// the result (Fabric) swaps in its own.
+export type RenderUpgradeAction = (args: {
+  deps: DepInfo[]
+  prompt: string
 }) => ReactNode
+
+/** The slot resolved for one package, as the rows receive it. */
+export type RenderUpgradeFor = (pkg: string) => ReactNode
 
 export const SEV_ORDER: SecuritySeverity[] = [
   'critical',
@@ -118,4 +120,38 @@ export function buildDeps(report: SecurityAuditReport): DepInfo[] {
       b.total - a.total ||
       a.name.localeCompare(b.name)
   )
+}
+
+export interface DepSelection {
+  /** The rows currently on screen that can be moved at all. */
+  selectable: DepInfo[]
+  /** Every chosen package, on screen or not — this is what gets upgraded. */
+  selected: DepInfo[]
+  allShownSelected: boolean
+  someShownSelected: boolean
+}
+
+/**
+ * Read a set of chosen package names against the report and the current filter.
+ *
+ * The batch deliberately ignores the filter: a choice is the user's, and
+ * narrowing the list afterwards must not silently drop packages from the count
+ * or from the upgrade. The select-all box speaks only for the rows on screen,
+ * so it is derived separately.
+ */
+export function resolveSelection(
+  deps: DepInfo[],
+  shown: DepInfo[],
+  chosen: ReadonlySet<string>,
+  canUpgrade: (dep: DepInfo) => boolean
+): DepSelection {
+  const selectable = shown.filter(canUpgrade)
+  const shownChosen = selectable.filter((d) => chosen.has(d.name))
+  return {
+    selectable,
+    selected: deps.filter((d) => canUpgrade(d) && chosen.has(d.name)),
+    allShownSelected:
+      selectable.length > 0 && shownChosen.length === selectable.length,
+    someShownSelected: shownChosen.length > 0,
+  }
 }
