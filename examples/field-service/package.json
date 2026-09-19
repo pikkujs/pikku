@@ -7,7 +7,7 @@
     "@pikku/addon-console": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "^0.12.44",
-    "@pikku/core": "^0.12.114",
+    "@pikku/core": "^0.12.115",
     "@pikku/fetch": "^0.12.11",
     "@pikku/kysely": "workspace:^",
     "@pikku/react": "workspace:*",
