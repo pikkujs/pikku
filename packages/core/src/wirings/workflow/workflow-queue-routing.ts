@@ -1,6 +1,10 @@
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import type { JobGroup, JobOptions } from '../queue/queue.types.js'
+import type {
+  JobGroup,
+  JobOptions,
+  QueueService,
+} from '../queue/queue.types.js'
 import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
@@ -113,6 +117,17 @@ export const jobGroupFor = (
   id?: string
 ): JobGroup | undefined =>
   id && strategy === 'shared-groups' ? { id, tier: id } : undefined
+
+/** The queue a remote run is driven through, or a clear account of its absence. */
+export const requireQueueService = (): QueueService => {
+  const queueService = getSingletonServices()?.queueService
+  if (!queueService) {
+    throw new Error(
+      'QueueService not configured. Remote workflows require a queue service.'
+    )
+  }
+  return queueService
+}
 
 export const stepJobOptions = (
   stepOptions?: WorkflowStepOptions

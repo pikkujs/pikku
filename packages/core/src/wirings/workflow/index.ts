@@ -7,8 +7,14 @@ export {
   WorkflowRunNotFoundError,
   WorkflowApprovalResolvedError,
   WorkflowStepFunctionMismatchError,
+  WorkflowStepLeaseExpiredError,
 } from './workflow-errors.js'
-export { DEFAULT_STEP_RETRIES } from './workflow-constants.js'
+export {
+  DEFAULT_STEP_RETRIES,
+  DEFAULT_STEP_LEASE_MS,
+  isStepLeaseLive,
+} from './workflow-constants.js'
+export { leaseAttemptsExhausted } from './workflow-step-claim.js'
 export {
   assertWorkflowRunOwner,
   WorkflowRunForbiddenError,
