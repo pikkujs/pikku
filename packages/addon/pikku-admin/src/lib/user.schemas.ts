@@ -15,15 +15,41 @@ export const User = z.object({
   banned: z.boolean().optional(),
   banReason: z.string().optional(),
   banExpires: z.string().optional(),
+  /**
+   * Present only when `includeRoles` was asked for, and only on a host with a
+   * scope service — an empty array then means the user holds no roles.
+   */
+  roles: z.array(z.string()).optional(),
+  /**
+   * The host's own `user.additionalFields`, by the names it declared them
+   * under. An addon cannot know an application's columns, so it reports
+   * whatever better-auth was configured with rather than a fixed shape — which
+   * is what lets a directory screen render a display name or an avatar without
+   * a second call into the application's own code.
+   */
+  fields: z.record(z.string(), z.unknown()).optional(),
 })
 
 export const ListUsersInput = z.object({
   search: z.string().optional(),
   limit: z.number().int().positive().optional(),
+  offset: z.number().int().nonnegative().optional(),
+  /**
+   * Roles cost a second query and are gated on `admin:scopes:read`, which
+   * `admin:users:list` does not imply — so they are asked for rather than
+   * always sent, and a caller without that scope is refused instead of
+   * quietly handed a directory with no roles in it.
+   */
+  includeRoles: z.boolean().optional(),
 })
 
 export const ListUsersOutput = z.object({
   users: z.array(User),
+  /**
+   * How many users match `search`, which is not `users.length` once `limit`
+   * and `offset` have done their work — it is what a pager counts against.
+   */
+  total: z.number(),
 })
 
 /**
