@@ -1,3 +1,78 @@
+## 0.12.156
+
+### Patch Changes
+
+- 0a1ca51: `pikku audit --outdated` sees every workspace, not just the root package
+
+  `bun outdated` reports only the package it is run from, so in a monorepo the
+  audit listed the root's dependencies and nothing from `apps/*` or `packages/*` —
+  on a five-workspace project that was 5 packages out of 23. It now runs with
+  `--filter '*'`, which also widens bun's table with a Workspace column, so the
+  parser reads the five-cell rows as well as the four-cell ones. Reading only the
+  four-cell shape would have returned no updates at all for those repos, and
+  advisories would have lost the `recommendedVersion` they take from that map.
+
+- cb8f57e: MCP clients can now discover that a server needs signing in to, and can see tools whose names carry a namespace.
+
+  Three separate reasons a client ended up connected to a server it could do nothing with:
+
+  - **The handshake was never challenged.** A client decides at connection time whether a server speaks OAuth, and all it has to go on is whether `initialize` came back `401` with a `WWW-Authenticate` challenge. Answering it `200` and then refusing every subsequent call told the client "no sign-in needed" and then gave it nothing — Claude's connector setup, for one, reported the server as open access. `initialize` is now challenged when `mcpEveryTargetRequiresSession()` holds, which is the only case where answering it openly is a lie; a server with even one open target still completes the handshake unauthenticated, as it should.
+  - **Namespaced names were dropped on the floor.** MCP constrains tool and prompt names to `[A-Za-z0-9_-]{1,64}`, and pikku's namespace separator is `:`. Clients discard the names they cannot accept rather than failing the connection, so an addon's entire surface went missing with nothing more than a note about "tools with unsupported names". Names are now rewritten at the transport boundary (`mcpWireName`) and resolved back on the way in (`mcpResolveWireName`), so `bb2:getMe` is offered as `bb2_getMe` and calls to it dispatch correctly. The registry keeps its own spelling, since that is what dispatch keys on, and a tool genuinely registered under the wire spelling still wins over a rewritten match.
+  - **An addon-only app generated no tool metadata.** `pikku all` decided whether to emit the MCP file from the set of source files calling `wireMCPTool`/`Resource`/`Prompt`. An addon that contributes its tools through `wireAddon({ mcp: [...] })` adds none, so an application whose only MCP surface came from addons got neither wirings nor meta — the tools were listed from `mcp.gen.json` and then every call failed to resolve, because `toolsMeta` (which carries the `pikkuFuncId`) had never been written. Content now decides; the file set only decides whether there are imports to serialize.
+
+  Also in here: the resource URL advertised in the challenge honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so a server behind a TLS-terminating proxy advertises the `https://` URL the client actually reached rather than its own internal `http://` origin — which the client would reject as a resource mismatch.
+
+- 6db6a14: A wiring can now decide whether an addon's credential is per-user or deployment-wide
+
+  `wireAddon`'s `credentialOverrides` takes an object as well as a rename string:
+
+  ```ts
+  wireAddon({
+    name: 'gmail',
+    package: '@pikku/addon-gmail',
+    credentialOverrides: {
+      gmailOAuth: { mode: 'wire' }, // each user connects their own
+      calendarOAuth: { name: 'CAL', mode: 'singleton' },
+    },
+  })
+  ```
+
+  An addon author declares a default with `defineCredential`; the deployment decides, so one addon serves both a per-user product and a single team account.
+
+  The wire credential service now resolves each credential by what it _is_ rather than by what a lookup returned: `wire` reads only the user's value, `singleton` reads the deployment's. A per-user credential can no longer pick up a platform-level value because the user has not connected — which, before, would have quietly run someone's request against the deployment's own account.
+
+  A credential is never read from the secret vault. The wire credential service no longer takes a `SecretService` at all, so the only way a credential arrives is the one its mode names — the user's own value, or the deployment's.
+
+  Modes are resolved at generation time into the credentials meta, so the console's connect flow reflects the wiring rather than the addon's default.
+
+  Two credentials that resolve to one name are rejected unless they agree on the mode. Generation writes a single metadata entry per name, so a `wire` credential aliased onto a `singleton` one used to take whichever wiring was read last — a per-user credential served from the deployment's own account, or a deployment credential handed out per user. The inspector reports the collision against both wirings by name, and `buildCredentialResolutions` refuses it at runtime too.
+
+  A mode-only override is checked against the credential it names. `{ mode: 'wire' }` renames nothing, so nothing was validated: an override naming a credential that does not exist was dropped in silence and the credential kept the mode its author declared.
+
+  A credential the wiring resolves as `singleton` is no longer read out of the user's own store. Per-user values are imported first and a name already present is left alone, so a value stored under a singleton's name — from an earlier wiring, or a connect flow since rewired — decided what the deployment's own slot resolved to. It is now skipped by mode, the same way a `wire` credential is kept away from the deployment's value.
+
+  The project's own credentials are registered into pikku state from the generated credentials file, so `wire.getCredential` resolves an app-level singleton the same way it resolves an addon's.
+
+  `pikku new addon` no longer requires a `pikku.config.json` in the working directory. Scaffolding an addon is something you do before a project config exists, so the command now reads one when it is there and falls back to the working directory when it is not.
+
+  An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all. A nested callback that names its own parameter after the factory's is no longer read as the factory's own: what it destructured went onto the addon's contract, so a consumer was asked for a service the addon never wanted from them.
+
+  An OAuth2 credential now implies its app secret, so nobody hand-writes one. The client id and secret an OAuth app needs is the same shape every time — `OAuth2AppCredential`, which is what the runtime already reads it as — so the inspector registers a secret for each credential's `appCredentialSecretId`. A hand-written `defineSecret` covering that id still wins, so an author who wants their own description or `docsUrl` keeps it. The derived secret is optional, matching what every hand-written declaration chose: an addon that also authenticates by API key must still deploy without an OAuth app configured.
+
+  `optional` now means a secret is not reported as missing. `getMissing()` filtered on "not configured" alone, so a secret whose declaration said absence was supported still showed up on the list of things a deployment had to go and supply — burying the ones that genuinely were. `getAllStatus()` still reports it, flagged `optional`.
+
+  An OAuth2 secret carries its declaration's `optional` through code generation, to the app credential and to the token store alike: nobody connects without the client id and secret, so a deployment allowed to omit the app is never asked for its tokens either. That branch never looked at the flag before.
+
+  `credentialOAuthProviders` treats an app secret that resolves `undefined` as unconfigured. An optional secret resolves rather than throws, so the absence arrived past the `catch` that was meant to skip the provider — and `.reveal()` on it threw a `TypeError` that took every `getSession` down with it, which is the exact failure that code exists to prevent.
+
+- Updated dependencies [cb8f57e]
+- Updated dependencies [cb8f57e]
+- Updated dependencies [cb8f57e]
+- Updated dependencies [6db6a14]
+  - @pikku/better-auth@0.12.44
+  - @pikku/core@0.12.114
+  - @pikku/inspector@0.12.83
+
 ## 0.12.155
 
 ### Patch Changes
