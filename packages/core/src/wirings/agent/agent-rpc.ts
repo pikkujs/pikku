@@ -1,16 +1,17 @@
 import type { PikkuRawWire } from '../../types/core.types.js'
-import type { SessionService } from '../../services/user-session-service.js'
-import type { CoreUserSession } from '../../types/core.types.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
-import type { AgentInput, AgentStreamChannel } from './agent.types.js'
+import type {
+  AgentInput,
+  AgentRPCOptions,
+  AgentStreamChannel,
+} from './agent.types.js'
 import type { StreamAgentOptions } from './agent-prepare.js'
+import { pikkuState } from '../../pikku-state.js'
 import { runAgent, resumeAgentSync } from './agent-runner.js'
 import { streamAgent, resumeAgent, interruptAgent } from './agent-stream.js'
 import { wrapChannelWithAGUI } from './agent-agui.js'
 
-export type AgentRPCOptions = {
-  sessionService?: SessionService<CoreUserSession>
-}
+export type { AgentRPCOptions }
 
 /**
  * `wire.rpc.agent`, implemented.
@@ -114,3 +115,13 @@ export const createAgentRPC = (
       ),
   }
 }
+
+/**
+ * The RPC primitive offers `rpc.agent` but must not import this file — a static
+ * reference from `rpc-runner` pins the whole agent runtime into every
+ * deployment unit, including the ones that hold no agent. Registering the
+ * factory here inverts that: only a unit that imports `@pikku/core/agent` pays
+ * for it, which is the same seam the inspector already uses to decide whether
+ * a unit requires the agent services.
+ */
+pikkuState(null, 'agent', 'rpcFactory', createAgentRPC)
