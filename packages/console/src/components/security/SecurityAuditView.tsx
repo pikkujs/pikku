@@ -23,6 +23,7 @@ import {
   SEV_LABEL,
   emptyCounts,
   buildDeps,
+  resolveSelection,
   type DepInfo,
   type RenderUpgradeAction,
 } from './security-view-utils'
@@ -138,15 +139,26 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
   )
 
   const affected = deps.filter((d) => d.total > 0).length
-  const selectable = depsShown.filter(isUpgradable)
-  const selectedDeps = selectable.filter((d) => selectedNames.has(d.name))
-  const allSelected =
-    selectable.length > 0 && selectedDeps.length === selectable.length
+  const {
+    selectable,
+    selected: selectedDeps,
+    allShownSelected,
+    someShownSelected,
+  } = resolveSelection(deps, depsShown, selectedNames, isUpgradable)
   const toggle = (name: string, on: boolean) =>
     setSelectedNames((prev) => {
       const next = new Set(prev)
       if (on) next.add(name)
       else next.delete(name)
+      return next
+    })
+  const toggleShown = (on: boolean) =>
+    setSelectedNames((prev) => {
+      const next = new Set(prev)
+      for (const d of selectable) {
+        if (on) next.add(d.name)
+        else next.delete(d.name)
+      }
       return next
     })
 
@@ -229,15 +241,9 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
             <Checkbox
               size="xs"
               disabled={selectable.length === 0}
-              checked={allSelected}
-              indeterminate={selectedDeps.length > 0 && !allSelected}
-              onChange={(e) =>
-                setSelectedNames(
-                  e.currentTarget.checked
-                    ? new Set(selectable.map((d) => d.name))
-                    : new Set()
-                )
-              }
+              checked={allShownSelected}
+              indeterminate={someShownSelected && !allShownSelected}
+              onChange={(e) => toggleShown(e.currentTarget.checked)}
               label={m.security_select_all()}
               data-testid="security-select-all"
             />

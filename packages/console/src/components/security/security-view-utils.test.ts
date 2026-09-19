@@ -1,6 +1,12 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildDeps, emptyCounts, SEV_ORDER } from './security-view-utils.js'
+import {
+  buildDeps,
+  emptyCounts,
+  resolveSelection,
+  SEV_ORDER,
+  type DepInfo,
+} from './security-view-utils.js'
 import type {
   SecurityAuditIssue,
   SecurityAuditReport,
@@ -166,5 +172,97 @@ describe('buildDeps', () => {
 
   test('is empty for a clean report', () => {
     assert.deepEqual(buildDeps(report([], [])), [])
+  })
+})
+
+describe('resolveSelection', () => {
+  const dep = (name: string, latest?: string): DepInfo => ({
+    name,
+    current: '1.0.0',
+    ...(latest ? { latest } : {}),
+    level: 'patch',
+    counts: emptyCounts(),
+    total: 0,
+  })
+  const movable = (d: DepInfo) => !!d.latest && d.latest !== d.current
+
+  const all = [dep('lodash', '1.0.1'), dep('zod', '1.0.1'), dep('pinned')]
+
+  test('only the rows on screen can be selected', () => {
+    const { selectable } = resolveSelection(
+      all,
+      all,
+      new Set<string>(),
+      movable
+    )
+    assert.deepEqual(
+      selectable.map((d) => d.name),
+      ['lodash', 'zod']
+    )
+  })
+
+  // The bug this guards: narrowing the list after choosing used to drop the
+  // hidden packages from the count and from the upgrade, while still
+  // remembering them — so the bar said one thing and the action did another.
+  test('a filter never drops a package the user already chose', () => {
+    const shown = [all[0]]
+    const { selected } = resolveSelection(
+      all,
+      shown,
+      new Set(['lodash', 'zod']),
+      movable
+    )
+    assert.deepEqual(
+      selected.map((d) => d.name),
+      ['lodash', 'zod']
+    )
+  })
+
+  test('select-all speaks only for the rows on screen', () => {
+    const shown = [all[0]]
+    const { allShownSelected, someShownSelected } = resolveSelection(
+      all,
+      shown,
+      new Set(['lodash']),
+      movable
+    )
+    assert.equal(allShownSelected, true)
+    assert.equal(someShownSelected, true)
+  })
+
+  test('a hidden choice alone leaves the visible box empty', () => {
+    const shown = [all[0]]
+    const { allShownSelected, someShownSelected, selected } = resolveSelection(
+      all,
+      shown,
+      new Set(['zod']),
+      movable
+    )
+    assert.equal(allShownSelected, false)
+    assert.equal(someShownSelected, false)
+    assert.deepEqual(
+      selected.map((d) => d.name),
+      ['zod']
+    )
+  })
+
+  test('a package that cannot move is never part of the batch', () => {
+    const { selected } = resolveSelection(
+      all,
+      all,
+      new Set(['pinned']),
+      movable
+    )
+    assert.deepEqual(selected, [])
+  })
+
+  test('nothing selectable leaves select-all off, not on', () => {
+    const { allShownSelected } = resolveSelection(
+      all,
+      [dep('pinned')],
+      new Set(['pinned']),
+      movable
+    )
+    assert.equal(allShownSelected, false)
   })
 })
