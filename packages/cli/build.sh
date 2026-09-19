@@ -345,7 +345,7 @@ import { PikkuCLI } from '../.pikku/cli/pikku-cli.gen.js'
 const updateCheck = checkForUpdate()
 await PikkuCLI(process.argv.slice(2))
 await updateCheck
-process.exit(0)
+process.exit(process.exitCode ?? 0)
 ENTRY
 
   for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64 bun-windows-x64; do
