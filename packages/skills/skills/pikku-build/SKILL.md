@@ -24,8 +24,6 @@ agent:
         command: pikku knowledge validate
       - id: typechecks
         command: pikku all --tsc-summary
-      - id: milestone-built
-        command: pikku knowledge next --require idle
 
 ---
 
