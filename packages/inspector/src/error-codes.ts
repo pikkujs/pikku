@@ -97,6 +97,9 @@ export enum ErrorCode {
   // Agent scorer reference errors
   AGENT_SCORER_NOT_FOUND = 'PKU155',
 
+  // Agent provider configuration errors
+  AGENT_PROVIDER_OPTIONS_UNREADABLE = 'PKU156',
+
   // File structure errors
   SCHEMA_AND_WIRING_COLOCATED = 'PKU490',
 
