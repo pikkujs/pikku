@@ -33,6 +33,32 @@ const writeFakeProvider = (rootDir: string) => {
   )
 }
 
+// An ESM-only provider: its exports map carries `types` and `import` and no
+// `require`, which is an ordinary way to publish and is exactly what
+// `require.resolve` refuses to resolve.
+const writeEsmOnlyProvider = (rootDir: string, exportsMap: unknown) => {
+  writeFileSync(
+    join(rootDir, 'package.json'),
+    JSON.stringify({ name: 'consumer', type: 'module' })
+  )
+  const providerDir = join(rootDir, 'node_modules', '@vendor', 'deploy-esm')
+  mkdirSync(join(providerDir, 'dist'), { recursive: true })
+  writeFileSync(
+    join(providerDir, 'package.json'),
+    JSON.stringify({
+      name: '@vendor/deploy-esm',
+      version: '0.0.0',
+      type: 'module',
+      main: 'dist/index.js',
+      exports: exportsMap,
+    })
+  )
+  writeFileSync(
+    join(providerDir, 'dist', 'index.js'),
+    `export const createAdapter = (options) => ({ name: 'esm-only', options })\n`
+  )
+}
+
 describe('resolveProvider resolves the adapter from the project, not the CLI', () => {
   test('loads a provider installed only in the project being deployed', async () => {
     const rootDir = mkdtempSync(join(tmpdir(), 'pikku-deploy-provider-'))
@@ -66,6 +92,62 @@ describe('resolveProvider resolves the adapter from the project, not the CLI', (
           { projectDir: rootDir }
         ),
         /@pikku\/deploy-absent' is not installed/
+      )
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('loads a provider whose exports map has no require condition', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-deploy-provider-'))
+    try {
+      writeEsmOnlyProvider(rootDir, {
+        '.': { types: './dist/index.d.ts', import: './dist/index.js' },
+      })
+
+      const adapter = await resolveProvider(
+        { deploy: { providers: { esm: '@vendor/deploy-esm' } } },
+        'esm',
+        { projectDir: rootDir }
+      )
+
+      assert.equal((adapter as unknown as { name: string }).name, 'esm-only')
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('loads a provider whose import condition nests a default', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-deploy-provider-'))
+    try {
+      writeEsmOnlyProvider(rootDir, {
+        '.': { import: { default: './dist/index.js' } },
+      })
+
+      const adapter = await resolveProvider(
+        { deploy: { providers: { esm: '@vendor/deploy-esm' } } },
+        'esm',
+        { projectDir: rootDir }
+      )
+
+      assert.equal((adapter as unknown as { name: string }).name, 'esm-only')
+    } finally {
+      rmSync(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('still reports an absent package rather than the exports failure', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'pikku-deploy-provider-'))
+    try {
+      writeEsmOnlyProvider(rootDir, { './other': './dist/index.js' })
+
+      await assert.rejects(
+        resolveProvider(
+          { deploy: { providers: { esm: '@vendor/deploy-esm' } } },
+          'esm',
+          { projectDir: rootDir }
+        ),
+        /@vendor\/deploy-esm' is not installed/
       )
     } finally {
       rmSync(rootDir, { recursive: true, force: true })
