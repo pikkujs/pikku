@@ -295,6 +295,42 @@ export class KyselyScopeService implements ScopeService {
     return rows.map((row) => row.role)
   }
 
+  async listRolesForUsers(
+    userIds: string[]
+  ): Promise<Record<string, string[]>> {
+    // Seeded with every id asked for, so a user holding no roles is an empty
+    // array rather than a missing key.
+    const byUser: Record<string, string[]> = {}
+    for (const userId of userIds) {
+      byUser[userId] = []
+    }
+
+    const distinct = Object.keys(byUser)
+    if (distinct.length === 0) {
+      return byUser
+    }
+
+    // Chunked because an `in` list is one bound parameter per id, and every
+    // engine caps those — SQLite at 999 on older builds, Postgres at 65535 for
+    // the whole statement. A caller asking for a page of users stays well
+    // inside one chunk; one asking for thousands still gets an answer instead
+    // of a driver error.
+    for (let i = 0; i < distinct.length; i += 500) {
+      const chunk = distinct.slice(i, i + 500)
+      const rows = await this.db
+        .selectFrom('pikkuUserRole')
+        .select(['userId', 'role'])
+        .where('userId', 'in', chunk)
+        .execute()
+
+      for (const row of rows) {
+        byUser[row.userId]!.push(row.role)
+      }
+    }
+
+    return byUser
+  }
+
   async addScopeToUser(
     userId: string,
     scope: string,
