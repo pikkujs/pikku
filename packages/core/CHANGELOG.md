@@ -1,3 +1,33 @@
+## 0.12.116
+
+### Patch Changes
+
+- 87971bd: `browser.screenshot('the order, confirmed', { showcase: true })` marks one shot as fit to publish outside the run, and the artifact ledger carries the flag. A gallery, a docs page or a marketing card can then be built from the scenario run itself instead of a second browser pass configured somewhere else, and the author of the step — the only one who knows the page is at a moment worth showing a stranger — is who decides.
+
+  Each filed screenshot also carries an `id`: the same shot under one key across runs. `path` leads with the order the run happened in, so inserting a step ahead of a shot renumbers it and anything meant to outlive one run (a caption override, a diff against last week's build) loses track of it.
+
+  Two supporting fixes in `@pikku/playwright`: contexts open at a pinned `viewport` (1440x900, overridable per config or via `E2E_VIEWPORT_WIDTH`/`E2E_VIEWPORT_HEIGHT`) and screenshots are taken with animations disabled, so two runs of the same scenario photograph the same thing. `{ fullPage: true }` is available for shots of a whole scrollable page.
+
+- b312867: A project can now serve several MCP endpoints, one per connector.
+
+  Until now every MCP tool in a project was pooled onto a single `/mcp`, so a hub offering three connectors offered one endpoint listing all three connectors' tools at once. A client pointed at it saw tools it had no business calling, and the only way to give a connector an endpoint of its own was to give it a deployment of its own — three deploys, three bills, three service graphs.
+
+  `wireAddon` gains `mcpEndpoint`. `true` serves that instance's tools at `/mcp/<name>`; a string is the path, used as given. Leaving it unset keeps the tools on the shared endpoint, which is where they have always been, so nothing existing moves.
+
+  A surfaced instance now gets its own manifest (`.pikku/mcp/mcp.<name>.gen.json`, carrying the path it answers on), its own deploy unit (`mcp-<name>`, routed on that path), and its own MCP server — with its own tool list, so a client pointed at one endpoint never sees another's tools. The plumbing for the per-surface manifest and unit already existed in `deploy apply`; nothing had ever produced one.
+
+  `pikku dev` mounts every endpoint the generated tree describes, not just the default one. Without that a project that moved its tools onto their own endpoints would have served nothing locally at all — the default manifest it reads is empty precisely because they moved — and the only way to try a connector would have been to deploy it.
+
+  The node and bun transports take `mcpSurfaces` alongside `mcpJson` and mount each at its own path, longest path first. `/mcp` claims everything beneath `/mcp/`, so without that ordering the default endpoint answers `/mcp/weather` and the surface's tools are unreachable.
+
+  OAuth discovery is split between the endpoints rather than duplicated across them. RFC 9728 folds a resource's path into its well-known route, so each endpoint's own document is already distinct, but the path-less `/.well-known/oauth-protected-resource` predates that and describes whichever resource answers it. Only the default endpoint claims it — otherwise every unit registers the same route and the provider's router decides which resource a client is told about, and in dev a client probing it is described whichever surface sorted first.
+
+- 51bd35a: Document five public keys that carried no JSDoc: `wireChannel`'s `onDisconnect`,
+  `wireRemoteAddon`'s `serverUrl` and `tags`, and `CoreUserSession`'s `userId` and
+  `orgId`. A key printed as a name and a type is a shape; what a caller needs is
+  what to put in it, and only the JSDoc where the type is declared carries that
+  into the IDE, the console and the shipped surface doc at once.
+
 ## 0.12.115
 
 ### Patch Changes

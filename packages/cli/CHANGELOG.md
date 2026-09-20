@@ -1,3 +1,135 @@
+## 0.12.157
+
+### Patch Changes
+
+- 938f9ef: Bundle a CLI program into the channel unit that serves it
+
+  A `wireCLI` channel deployed as its own unit answered a named command but
+  reported `Program "<name>" not found` for `__help` and `__raw`, which
+  resolve against the program rather than against a wiring. CLI programs are
+  filtered by command name, and a channel unit asked only for its channel and
+  its handler functions — so every command was dropped and the empty program
+  with it.
+
+- 38edd34: Add `--agent-dir` and `--agent-skill-dir` to `skills install`, for a host whose agents do not live beside its skills. A harness that discovers subagents from a global directory can now project straight into it instead of writing into the user's repository, and one that relocates the installed skills afterwards can tell the projected agents where those skills will end up.
+- 38edd34: Project the pipeline skills into verified subagents.
+
+  A skill declares `agent:` in its frontmatter — tools, timeout, and the
+  `acceptance` block a host acts on — and `pikku skills install --agent pi`
+  writes one agent per skill that has it. `--agent-extensions` passes the
+  host's own extensions through, for a host that fences its writers or
+  routes their model.
+
+  `pikku knowledge next` gains `--require`, naming the action kinds that
+  count as done. Without it the exit code is always 0, because "there is
+  work left" is the normal answer — so a post-condition pointed at a bare
+  `next` asserts nothing.
+
+- 938f9ef: Resolve a deploy provider whose exports map has no `require` condition
+
+  A provider is located with `require.resolve` against the project, so an
+  ESM-only package — one exporting `types` and `import` and nothing else —
+  failed with ERR_PACKAGE_PATH_NOT_EXPORTED and was reported as "not
+  installed". The bare-import fallback could not rescue it either, because
+  that resolves from the CLI rather than from the project.
+
+  The exports map is now read the way node reads it: conditions are walked in
+  the package author's declaration order, nesting included, so a provider
+  shipping `{ "import": { "node": "./node.js", "default": "./browser.js" } }`
+  loads the node build rather than the browser one.
+
+- 7a6595e: Serve MCP on a Cloudflare deploy.
+
+  An MCP unit deployed to Workers answered nothing, for three independent
+  reasons, and each one hid the next:
+
+  - the analyzer gave the unit `routes: []`, so the dispatcher had no route to
+    send it;
+  - `generateGatewayEntry` emitted a bare `createCloudflareWorkerHandler` and
+    dropped the `mcpJson` the CLI had already resolved for it;
+  - `@pikku/cloudflare` had no way to receive an MCP surface at all — its
+    `createCloudflareMCPHandler` was an alias for the plain worker handler, under
+    a comment saying the protocol was handled elsewhere. It wasn't.
+
+  The unit now carries the routes MCP actually needs — `POST`, `GET` and `DELETE`
+  on the endpoint, plus the two RFC 9728 discovery paths — the generated entry
+  passes its surface through, and `@pikku/cloudflare/mcp` mounts a
+  `PikkuMCPServer` over `createFetchHandler`, falling through to the unit's
+  ordinary HTTP routing for everything it does not own. A tool call now runs end
+  to end through the worker's `fetch`, which a test asserts rather than assumes.
+
+  MCP lives behind its own entry point so that the SDK only reaches the bundle of
+  a unit that serves MCP, and a unit whose surface came back empty stays an
+  ordinary worker rather than shipping it to answer 404s.
+
+  `setupServices` now keys its per-isolate cache by the factories that built it.
+  It served one unit per isolate and so never noticed, but a second unit's
+  factories asking for services were being handed the first unit's.
+
+  Mounting it also uncovered a latent bug in the entry generator. A path into a
+  dot-directory — `.pikku/mcp/mcp.gen.json` — starts with a dot without being
+  relative, and the generator's guard tested for `.` alone, so it emitted a bare
+  specifier no bundler can resolve. Nothing hit it before, because the MCP import
+  was the first one to point inside `.pikku` and was never emitted anyway. There
+  is now one helper doing this, with the guard the bootstrap import already had.
+
+  Known seam: the analyzer hardcodes `/mcp`, because it never reads the generated
+  `mcp.gen.json`. Pikku's own codegen never writes an `mcpPath` there, so the
+  route table and the mount agree today — but a project that overrides it moves
+  the mount without moving the routes.
+
+- d7f2ce5: `pikku fabric link` and `pikku fabric init` take `--organization`, naming the organization to import into by slug, display name or id. Without it the import still lands in whichever organization the session is scoped to, which silently put a repo in the wrong place for anyone who belongs to more than one.
+- 38edd34: Make the native CLI binaries report the exit code a command set. The compiled entry ended in a hardcoded `process.exit(0)`, so every non-zero `process.exitCode` — a failed `knowledge validate`, a missing milestone on `knowledge plan show` — left the binary exiting 0 while printing a failure. The node entry already did this correctly, so only the `bun --compile` builds were affected.
+- b312867: A project can now serve several MCP endpoints, one per connector.
+
+  Until now every MCP tool in a project was pooled onto a single `/mcp`, so a hub offering three connectors offered one endpoint listing all three connectors' tools at once. A client pointed at it saw tools it had no business calling, and the only way to give a connector an endpoint of its own was to give it a deployment of its own — three deploys, three bills, three service graphs.
+
+  `wireAddon` gains `mcpEndpoint`. `true` serves that instance's tools at `/mcp/<name>`; a string is the path, used as given. Leaving it unset keeps the tools on the shared endpoint, which is where they have always been, so nothing existing moves.
+
+  A surfaced instance now gets its own manifest (`.pikku/mcp/mcp.<name>.gen.json`, carrying the path it answers on), its own deploy unit (`mcp-<name>`, routed on that path), and its own MCP server — with its own tool list, so a client pointed at one endpoint never sees another's tools. The plumbing for the per-surface manifest and unit already existed in `deploy apply`; nothing had ever produced one.
+
+  `pikku dev` mounts every endpoint the generated tree describes, not just the default one. Without that a project that moved its tools onto their own endpoints would have served nothing locally at all — the default manifest it reads is empty precisely because they moved — and the only way to try a connector would have been to deploy it.
+
+  The node and bun transports take `mcpSurfaces` alongside `mcpJson` and mount each at its own path, longest path first. `/mcp` claims everything beneath `/mcp/`, so without that ordering the default endpoint answers `/mcp/weather` and the surface's tools are unreachable.
+
+  OAuth discovery is split between the endpoints rather than duplicated across them. RFC 9728 folds a resource's path into its well-known route, so each endpoint's own document is already distinct, but the path-less `/.well-known/oauth-protected-resource` predates that and describes whichever resource answers it. Only the default endpoint claims it — otherwise every unit registers the same route and the provider's router decides which resource a client is told about, and in dev a client probing it is described whichever surface sorted first.
+
+- e84fa68: fix: postgres introspection no longer re-derives primary keys per column
+
+  `getAllColumns` built its `pk_cols` CTE without a fence. Referenced once,
+  Postgres 12+ inlines such a CTE, so the constraint views it joins were
+  re-derived for every candidate row — quadratic in the number of tables, and
+  paid by every `pikku db migrate` and every schema regeneration. Fenced with
+  `AS MATERIALIZED`, it is computed once.
+
+- 20497ca: `knowledge validate` now reports code that no note describes.
+
+  The resource check ran one way. It asked whether every `resource:` a note points at still resolves, which catches a note rotting into fiction after a rename — but it could not answer the inverse, and the inverse is the question somebody asks before deciding what to build next: what is already here that nobody wrote down. Every check in `validate.ts` started from a note and walked outward, so a project could pass clean while half its functions had never been recorded.
+
+  Both directions are the same join, so the orphan report is a set difference over data the check already loads: the ids codegen meta offers, minus the ids any note claims in `resource:` or in a prose link. It is reported for `func`, `table` and `workflow` — a wire is a way to reach a function already reported, and a schema, scope, addon or persona is machinery rather than something a note would be about. `orphanPrefixes` changes the set and an empty array turns the report off.
+
+  An orphan is `info` and stays outside `ok`: a project is allowed to have more code than record, and on an imported repository that is the normal state rather than a fault. `baseline` subtracts ids no note will ever cover — a template's own auth and health functions — from the report without making them dangle. The CLI collapses orphans into one summary of at most ten, because an imported project reports every function it has and printing those in full buries the findings somebody can act on.
+
+- Updated dependencies [87971bd]
+- Updated dependencies [38edd34]
+- Updated dependencies [38edd34]
+- Updated dependencies [7a6595e]
+- Updated dependencies [0d7b2a3]
+- Updated dependencies [938f9ef]
+- Updated dependencies [b312867]
+- Updated dependencies [d4c0908]
+- Updated dependencies [51bd35a]
+- Updated dependencies [20497ca]
+  - @pikku/core@0.12.116
+  - @pikku/playwright@0.12.83
+  - @pikku/knowledge@0.12.15
+  - @pikku/skills@0.12.35
+  - @pikku/deploy-cloudflare@0.12.18
+  - @pikku/fetch@0.12.12
+  - @pikku/inspector@0.12.85
+  - @pikku/node-http-server@0.12.17
+  - @pikku/bun-server@0.12.13
+
 ## 0.12.156
 
 ### Patch Changes

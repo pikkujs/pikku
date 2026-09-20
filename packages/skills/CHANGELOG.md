@@ -1,5 +1,27 @@
 # @pikku/skills
 
+## 0.12.35
+
+### Patch Changes
+
+- 38edd34: Project the pipeline skills into verified subagents.
+
+  A skill declares `agent:` in its frontmatter — tools, timeout, and the
+  `acceptance` block a host acts on — and `pikku skills install --agent pi`
+  writes one agent per skill that has it. `--agent-extensions` passes the
+  host's own extensions through, for a host that fences its writers or
+  routes their model.
+
+  `pikku knowledge next` gains `--require`, naming the action kinds that
+  count as done. Without it the exit code is always 0, because "there is
+  work left" is the normal answer — so a post-condition pointed at a bare
+  `next` asserts nothing.
+
+- 38edd34: Drop `pikku knowledge next --require idle` from the build agent's acceptance. After a milestone is built, `next` moves on to the next unbuilt one, so the gate could only pass on a project with exactly one milestone — on any other it failed a build that had succeeded. Nothing `next` returns can assert that a particular build worked, because every kind it can return afterwards is legitimate.
+- d4c0908: Add a `pikku-mantine` skill covering the three Mantine-on-Pikku rules that were only written down downstream: formatting dates the generated clients hand back, flow-relative spacing for RTL locales, and colour-scheme branching without hardcoded shades.
+
+  The date rule is the one that earns the skill. `transformDates` revives fully-zoned ISO-8601 instants into `Date` objects and leaves every other date-shaped string alone, so a column's runtime type follows the value rather than the schema. Both ways of getting that wrong compile: a string method on a revived `Date` throws, and a raw `Date` in JSX throws `Objects are not valid as a React child` and drops the route into its error boundary. It is the most common white screen in a generated frontend and nothing in the type system catches it.
+
 ## 0.12.34
 
 ### Patch Changes

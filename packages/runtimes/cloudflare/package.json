@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cloudflare",
-  "version": "0.12.23",
+  "version": "0.12.24",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -42,15 +42,15 @@
     "kysely-d1": "^0.4.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.108",
+    "@pikku/core": "^0.12.116",
     "@pikku/kysely": "^0.13.25",
     "kysely": "^0.29.0",
-    "@pikku/modelcontextprotocol": "^0.12.13"
+    "@pikku/modelcontextprotocol": "^0.12.14"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.21.3",
     "@cloudflare/workers-types": "^5.20260815.1",
-    "@pikku/core": "^0.12.108",
+    "@pikku/core": "^0.12.116",
     "@pikku/kysely": "^0.13.25",
     "@vitest/runner": "^4.1.10",
     "@vitest/snapshot": "^4.1.10",

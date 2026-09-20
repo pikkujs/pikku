@@ -1,3 +1,60 @@
+## 0.12.24
+
+### Patch Changes
+
+- 938f9ef: A channel worker that cannot boot now answers instead of throwing.
+
+  The HTTP handler runs `runFetch` with `exposeErrors: true`, so a Worker that fails to start says what went wrong. The channel handler called `setupServices` and dispatched to the Durable Object with neither wrapped, and an uncaught throw in a Worker is a bodiless CF 1101 — no body, no tail, no telemetry, nothing in any log the person who has to fix it can reach. A stage whose WebSocket channels were dead looked exactly like a stage whose channels were not deployed.
+
+  Both paths now log the failure and answer 503 with `stage` and a fixed `Channel unavailable`. `stage` separates the router's own boot from everything the hibernation class does, including its own separately-cached boot — a Durable Object binding whose class was never migrated in still resolves and then throws on dispatch, and that is a different fault with a different fix. The reason itself stays in the log: this route is unauthenticated, and a singleton boot failure is usually a service refusing to connect, an error whose message routinely carries the connection string that failed. A client mid-handshake reads the non-101 as a refusal, as it did before.
+
+- 7a6595e: Serve MCP on a Cloudflare deploy.
+
+  An MCP unit deployed to Workers answered nothing, for three independent
+  reasons, and each one hid the next:
+
+  - the analyzer gave the unit `routes: []`, so the dispatcher had no route to
+    send it;
+  - `generateGatewayEntry` emitted a bare `createCloudflareWorkerHandler` and
+    dropped the `mcpJson` the CLI had already resolved for it;
+  - `@pikku/cloudflare` had no way to receive an MCP surface at all — its
+    `createCloudflareMCPHandler` was an alias for the plain worker handler, under
+    a comment saying the protocol was handled elsewhere. It wasn't.
+
+  The unit now carries the routes MCP actually needs — `POST`, `GET` and `DELETE`
+  on the endpoint, plus the two RFC 9728 discovery paths — the generated entry
+  passes its surface through, and `@pikku/cloudflare/mcp` mounts a
+  `PikkuMCPServer` over `createFetchHandler`, falling through to the unit's
+  ordinary HTTP routing for everything it does not own. A tool call now runs end
+  to end through the worker's `fetch`, which a test asserts rather than assumes.
+
+  MCP lives behind its own entry point so that the SDK only reaches the bundle of
+  a unit that serves MCP, and a unit whose surface came back empty stays an
+  ordinary worker rather than shipping it to answer 404s.
+
+  `setupServices` now keys its per-isolate cache by the factories that built it.
+  It served one unit per isolate and so never noticed, but a second unit's
+  factories asking for services were being handed the first unit's.
+
+  Mounting it also uncovered a latent bug in the entry generator. A path into a
+  dot-directory — `.pikku/mcp/mcp.gen.json` — starts with a dot without being
+  relative, and the generator's guard tested for `.` alone, so it emitted a bare
+  specifier no bundler can resolve. Nothing hit it before, because the MCP import
+  was the first one to point inside `.pikku` and was never emitted anyway. There
+  is now one helper doing this, with the guard the bootstrap import already had.
+
+  Known seam: the analyzer hardcodes `/mcp`, because it never reads the generated
+  `mcp.gen.json`. Pikku's own codegen never writes an `mcpPath` there, so the
+  route table and the mount agree today — but a project that overrides it moves
+  the mount without moving the routes.
+
+- Updated dependencies [87971bd]
+- Updated dependencies [51bd35a]
+- Updated dependencies [b312867]
+- Updated dependencies [51bd35a]
+  - @pikku/core@0.12.116
+  - @pikku/modelcontextprotocol@0.12.14
+
 ## 0.12.23
 
 ### Patch Changes

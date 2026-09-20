@@ -13,8 +13,8 @@
     "dev": "bun --watch src/start.ts"
   },
   "dependencies": {
-    "@pikku/bun-server": "^0.12.12",
-    "@pikku/core": "^0.12.115",
+    "@pikku/bun-server": "^0.12.13",
+    "@pikku/core": "^0.12.116",
     "@pikku/schedule": "^0.12.8",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3"
