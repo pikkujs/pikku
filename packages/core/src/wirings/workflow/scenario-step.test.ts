@@ -515,6 +515,150 @@ describe('pikkuScenarioStep (scenario.given/when/then)', () => {
   })
 })
 
+describe('a strict run refuses every route off the run surface', () => {
+  beforeEach(() => resetPikkuState())
+
+  const browserProvider = { sessionFor: async () => ({ actor: 'shopper' }) }
+
+  test('an action that would fall back fails, even declaring default', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser', true)
+    let ran = 0
+    registerStep('seedsAnAccount', {
+      surfaces: ['default'],
+      func: async () => {
+        ran++
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.given('an account exists', 'seedsAnAccount'),
+      /will not let it fall back to 'default'/
+    )
+    assert.equal(ran, 0)
+  })
+
+  test('the same step falls back as before without strict', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const ran: ScenarioSurface[] = []
+    registerStep('seedsAnAccount', {
+      surfaces: ['default'],
+      func: async (_services, _data, wire) => {
+        ran.push(wire.scenarioStep!.surface)
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('an account exists', 'seedsAnAccount')
+
+    assert.deepEqual(ran, ['default'])
+  })
+
+  test('an assertion witnessed only server-side fails', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser', true)
+    scenarioService.setScenarioBrowserProvider(browserProvider as any)
+    let ran = 0
+    registerStep('seesTheOrderConfirmed', {
+      surfaces: ['default'],
+      func: async () => {
+        ran++
+        return { status: 'paid' }
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+
+    await assert.rejects(
+      wire.then('shopper sees the order confirmed', 'seesTheOrderConfirmed'),
+      /was checked on default, not on 'browser'/
+    )
+    assert.equal(ran, 0, 'a refused assertion must not report an observation')
+  })
+
+  test('the same assertion is a counted coverage gap without strict', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    registerStep('seesTheOrderConfirmed', {
+      surfaces: ['default'],
+      func: async () => ({ status: 'paid' }),
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    const observed = await wire.then(
+      'shopper sees the order confirmed',
+      'seesTheOrderConfirmed'
+    )
+
+    assert.deepEqual(observed, { status: 'paid' })
+  })
+
+  test('a fully bound ladder runs unchanged under strict', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser', true)
+    scenarioService.setScenarioBrowserProvider(browserProvider as any)
+    const shopper = fakeActor('shopper', async () => ({}))
+    const ran: ScenarioSurface[] = []
+    registerStep('clicksBuy', {
+      surfaces: ['browser'],
+      func: async (_services, _data, wire) => {
+        ran.push(wire.scenarioStep!.surface)
+        return null
+      },
+    })
+    registerStep('seesTheOrderConfirmed', {
+      surfaces: ['browser', 'default'],
+      func: async (_services, _data, wire) => {
+        ran.push(wire.scenarioStep!.surface)
+        return { status: 'paid' }
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.when('shopper buys it', 'clicksBuy', undefined, {
+      actor: shopper,
+    })
+    const observed = await wire.then(
+      'shopper sees the order confirmed',
+      'seesTheOrderConfirmed',
+      undefined,
+      { actor: shopper }
+    )
+
+    assert.deepEqual(ran, ['browser', 'browser', 'default'])
+    assert.deepEqual(observed, { status: 'paid' })
+  })
+
+  test('strict is a no-op on a default run, where nothing can fall back', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('default', true)
+    const ran: ScenarioSurface[] = []
+    registerStep('seesTheOrderConfirmed', {
+      surfaces: ['browser', 'default'],
+      func: async (_services, _data, wire) => {
+        ran.push(wire.scenarioStep!.surface)
+        return { status: 'paid' }
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.then('shopper sees the order confirmed', 'seesTheOrderConfirmed')
+
+    assert.deepEqual(ran, ['default'])
+  })
+})
+
 describe('workflow.expectEventually', () => {
   beforeEach(() => resetPikkuState())
 

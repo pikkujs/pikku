@@ -369,7 +369,7 @@ export const scenarioRun = pikkuSessionlessFunc<
       apiUrl: env.apiUrl,
       appUrl: env.appUrl,
     })
-    scenarioService.setRunSurface(runSurface)
+    scenarioService.setRunSurface(runSurface, strict)
 
     // Scenario steps run here, not on the target — everything they touch of the
     // app goes over HTTP through an actor, which is what `guardRpc` below

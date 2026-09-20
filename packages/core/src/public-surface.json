@@ -82,6 +82,7 @@
     "ScenarioHookError",
     "ScenarioNoSurfaceBinding",
     "ScenarioNoWitness",
+    "ScenarioUnwitnessedAssertion",
     "ScenarioWitnessDisagreement",
     "addFeature",
     "composeStepProse",
