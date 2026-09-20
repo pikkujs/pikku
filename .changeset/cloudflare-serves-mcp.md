@@ -1,5 +1,5 @@
 ---
-'@pikku/cloudflare': minor
+'@pikku/cloudflare': patch
 '@pikku/deploy-cloudflare': patch
 '@pikku/cli': patch
 ---
