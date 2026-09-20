@@ -82,6 +82,11 @@ export const FabricLink = pikkuSessionlessFunc({
       )
     }
 
+    // Resolved here for the same reason, since `--gitea` reaches `createRemote`
+    // below: a misspelt organization must not cost the user a repository they
+    // then have to go and delete.
+    const organizationId = await resolveOrganizationId(rpc, organization)
+
     const remoteUrl = (await hasRemote())
       ? await adoptExistingRemote({ github, gitea })
       : await createRemote({ rpc, github, gitea, repoName })
@@ -122,8 +127,6 @@ export const FabricLink = pikkuSessionlessFunc({
         }
       }
     }
-
-    const organizationId = await resolveOrganizationId(rpc, organization)
 
     const project = await rpc.invoke('importProject', {
       repoUrl: remoteUrl,

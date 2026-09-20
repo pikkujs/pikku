@@ -54,9 +54,9 @@ describe('--organization accepts a slug, a name or an id', () => {
     )
   })
 
-  test('a slug resolves', async () => {
+  test('a slug resolves, case-insensitively', async () => {
     assert.strictEqual(
-      await resolveOrganizationId(rpcReturning(orgs), 'vlandor'),
+      await resolveOrganizationId(rpcReturning(orgs), 'VlAnDoR'),
       '22222222-2222-4222-8222-222222222222'
     )
   })
