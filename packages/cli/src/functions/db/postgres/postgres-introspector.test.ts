@@ -280,3 +280,57 @@ test('a multi-column CHECK is not read as an enum for either column', async () =
     await client.end()
   }
 })
+
+/**
+ * Wraps a PGlite client so the SQL `getAllColumns` actually sends can be read
+ * back and planned. Guessing at the query text would guard a copy of it rather
+ * than the one that runs.
+ */
+function planCapturingClient(inner: QueryClient): QueryClient & {
+  columnsPlan(): Promise<string>
+} {
+  let columnsSql: string | undefined
+  return {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      if (sql.includes('pk_cols')) columnsSql = sql
+      return inner.query<T>(sql, params)
+    },
+    end: () => inner.end(),
+    async columnsPlan() {
+      assert.ok(columnsSql, 'getAllColumns never queried for columns')
+      const plan = await inner.query<{ 'QUERY PLAN': string }>(
+        `EXPLAIN ${columnsSql}`
+      )
+      return plan.rows.map((r) => r['QUERY PLAN']).join('\n')
+    },
+  }
+}
+
+test('getAllColumns keeps the primary-key CTE out of the join', async () => {
+  // Referenced once, Postgres 12+ inlines a CTE unless it is fenced — and an
+  // inlined `pk_cols` is re-derived per row, which is quadratic in table count.
+  // A materialised CTE is computed once and shows as its own `CTE pk_cols` node
+  // in the plan; an inlined one leaves no node at all.
+  const client = planCapturingClient(
+    await pgliteClient(`
+      CREATE TABLE person (person_id serial PRIMARY KEY, name text);
+      CREATE TABLE note (note_id serial PRIMARY KEY, body text);
+    `)
+  )
+  try {
+    const byTable = await new PostgresIntrospector(client).getAllColumns()
+    assert.equal(
+      byTable.get('person')!.find((c) => c.name === 'person_id')!.pk,
+      true
+    )
+    const plan = await client.columnsPlan()
+    assert.match(
+      plan,
+      /CTE pk_cols/,
+      `expected pk_cols to be materialised into its own CTE node, got:\n` +
+        plan.split('\n').slice(0, 6).join('\n')
+    )
+  } finally {
+    await client.end()
+  }
+})
