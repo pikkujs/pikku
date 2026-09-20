@@ -300,6 +300,18 @@ describe('emit', () => {
     )
   })
 
+  test('a long frontmatter value is not folded across lines', () => {
+    const description =
+      'The conversation you build in \u2014 it decides, writes it down, and puts the builders to work.'
+    const source = `---\ntitle: Chat\ndescription: ${description}\n---\n\nProse.\n`
+    const rendered = renderGuidePage(
+      parseGuidePage('building/chat.md', source),
+      new Map(),
+      ''
+    )
+    assert.equal(rendered, source)
+  })
+
   test('a CRLF source is read as having frontmatter', () => {
     const parsed = parseGuidePage(
       'product/deployments.md',

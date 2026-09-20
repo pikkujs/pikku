@@ -429,7 +429,7 @@ export const renderGuidePage = (
   }
   const head =
     Object.keys(frontmatter).length > 0
-      ? `---\n${stringify(frontmatter).trimEnd()}\n---`
+      ? `---\n${stringify(frontmatter, { lineWidth: 0 }).trimEnd()}\n---`
       : '---\n---'
   return `${head}\n\n${trim(body)}\n`
 }
