@@ -15,6 +15,7 @@ import {
   removeRemote,
 } from '../lib/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
+import { resolveOrganizationId } from '../lib/organization.js'
 import { promptConfirm } from '../lib/prompt.js'
 
 export const FabricLinkInput = z.object({
@@ -25,6 +26,8 @@ export const FabricLinkInput = z.object({
   gitea: z.boolean().optional(),
   /** Name for a repo created here. Defaults to the directory name. */
   repoName: z.string().optional(),
+  /** Slug, name or id of the organization to import into. Defaults to the session's. */
+  organization: z.string().optional(),
 })
 
 export const FabricLinkOutput = z.object({
@@ -47,7 +50,7 @@ export const FabricLink = pikkuSessionlessFunc({
   output: FabricLinkOutput,
   func: async (
     _services,
-    { apiUrl: apiUrlOverride, github, gitea, repoName }
+    { apiUrl: apiUrlOverride, github, gitea, repoName, organization }
   ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token) {
@@ -120,9 +123,12 @@ export const FabricLink = pikkuSessionlessFunc({
       }
     }
 
+    const organizationId = await resolveOrganizationId(rpc, organization)
+
     const project = await rpc.invoke('importProject', {
       repoUrl: remoteUrl,
       productionBranch: 'main',
+      ...(organizationId ? { organizationId } : {}),
     })
 
     await writeProjectConfig(process.cwd(), {

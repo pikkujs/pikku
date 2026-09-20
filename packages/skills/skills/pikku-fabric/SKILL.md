@@ -327,6 +327,19 @@ pikku fabric validate           # must pass clean
 pikku fabric deploy apply --production -y
 ```
 
+`init` and `link` import into whichever organization your session is in. When
+you belong to several — a personal one and a company one, say — name the target
+with `--organization`, taking a slug, a display name or an id:
+
+```bash
+pikku fabric link --organization vlandor
+```
+
+You have to be a member of the organization you name, and its GitHub account
+has to be connected already: importing a `github.com/<owner>/<repo>` repo needs
+the Fabric GitHub App installed on `<owner>` _and_ linked to that organization,
+or the import refuses by name.
+
 The branch is positional and defaults to the checked-out one, and `-y` is the
 short form of `--auto-approve`, so a one-shot deploy is:
 
