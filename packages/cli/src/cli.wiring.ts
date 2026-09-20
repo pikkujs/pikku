@@ -897,6 +897,10 @@ wireCLI({
                 'Report features no page documents instead of failing on them',
               default: false,
             },
+            artifactBase: {
+              description:
+                "Prefix every figure with this instead of the path from the page to the run's artifacts — for a host that serves them at a fixed address. Route-relative (`/docs/_media/`) keeps the output portable; an origin pins it to one host",
+            },
           },
         }),
       },

@@ -37,6 +37,21 @@ export interface GuideScreenshot {
   path: string
 }
 
+/**
+ * The recording a scenario filed, when the run kept one.
+ *
+ * A browser run keeps a video per scenario and per actor, so a two-actor
+ * scenario files two. Same shape as a screenshot because a consumer treats it
+ * the same way — a key under the run's artifact root that a base is prefixed
+ * onto.
+ */
+export interface GuideVideo {
+  id?: string
+  /** Whose window it was, when the run recorded more than one. */
+  actor?: string
+  path: string
+}
+
 export interface GuideScenario {
   /** The scenario registration this ran. */
   name: string
@@ -50,6 +65,11 @@ export interface GuideScenario {
    */
   steps: GuideStep[]
   screenshots: GuideScreenshot[]
+  /**
+   * Optional so that a record predating video, and every fixture written
+   * against one, still describes a scenario.
+   */
+  videos?: GuideVideo[]
 }
 
 export interface GuideFeature {
@@ -283,7 +303,8 @@ export const checkGuideCoverage = (
       }
       cited.add(id)
       const figures = feature.scenarios.reduce(
-        (total, scenario) => total + scenario.screenshots.length,
+        (total, scenario) =>
+          total + scenario.screenshots.length + (scenario.videos?.length ?? 0),
         0
       )
       if (figures === 0) {
@@ -359,11 +380,27 @@ const GENERATED_FEATURE = /<!--\s*pikku:guide\s+feature=([^\s]+)/
  * A data-driven scenario runs once per row and so appears once per row in the
  * record. The rows differ only in their inputs, so their figures are collected
  * in run order and deduplicated by artifact id rather than repeated.
+ *
+ * A recording leads the scenario it belongs to, because it shows the whole flow
+ * the stills are moments of. It is emitted as an ordinary figure: this module
+ * writes no HTML, so what makes a `.webm` a player rather than a broken image
+ * is the consumer's renderer, the same way a consumer resolves the base.
  */
 const renderFeature = (feature: GuideFeature, artifactBase: string): string => {
   const figures: string[] = []
   const seen = new Set<string>()
   for (const scenario of feature.scenarios) {
+    for (const video of scenario.videos ?? []) {
+      const key = video.id ?? video.path
+      if (seen.has(key)) {
+        continue
+      }
+      seen.add(key)
+      const caption = video.actor
+        ? `${scenario.title} — ${video.actor}`
+        : scenario.title
+      figures.push(`![${caption}](${artifactBase}${video.path})`)
+    }
     for (const shot of scenario.screenshots) {
       const key = shot.id ?? shot.path
       if (seen.has(key)) {

@@ -987,12 +987,13 @@ export const scenarioGuide = pikkuSessionlessFunc<
     output?: string
     runId?: string
     allowUndocumented?: boolean
+    artifactBase?: string
   },
   void
 >({
   func: async (
     { logger, config, getInspectorState },
-    { docs = 'docs', output, runId, allowUndocumented = false }
+    { docs = 'docs', output, runId, allowUndocumented = false, artifactBase }
   ) => {
     const state = await getInspectorState(false, false, false, true)
     const outDir = resolve(config.rootDir, config.outDir)
@@ -1064,6 +1065,13 @@ export const scenarioGuide = pikkuSessionlessFunc<
                   .map((artifact) => ({
                     ...(artifact.id ? { id: artifact.id } : {}),
                     ...(artifact.name ? { name: artifact.name } : {}),
+                    path: artifact.path,
+                  })),
+                videos: (result.artifacts ?? [])
+                  .filter((artifact) => artifact.kind === 'video')
+                  .map((artifact) => ({
+                    ...(artifact.id ? { id: artifact.id } : {}),
+                    ...(artifact.actor ? { actor: artifact.actor } : {}),
                     path: artifact.path,
                   })),
               }
@@ -1139,8 +1147,16 @@ export const scenarioGuide = pikkuSessionlessFunc<
       const target = join(outputDir, page.path)
       // Relative, forward-slashed and computed per page: a guide is markdown
       // with ordinary image refs, and whoever consumes it rewrites the paths.
-      const base = relative(dirname(target), artifactRoot).split(sep).join('/')
-      const markdown = renderGuidePage(page, byId, `${base}/`)
+      // `artifactBase` replaces it with one prefix for every page, for a host
+      // that serves the artifacts at a fixed address rather than beside the
+      // markdown — and it stays as given, since only the caller knows whether
+      // it is a path, a route or an origin.
+      const base = artifactBase
+        ? artifactBase.endsWith('/')
+          ? artifactBase
+          : `${artifactBase}/`
+        : `${relative(dirname(target), artifactRoot).split(sep).join('/')}/`
+      const markdown = renderGuidePage(page, byId, base)
       mkdirSync(dirname(target), { recursive: true })
       writeFileSync(target, markdown)
     }

@@ -270,6 +270,44 @@ describe('emit', () => {
     )
   })
 
+  test('a recording leads the stills it is made of', () => {
+    const feature = deployments()
+    feature.scenarios[0]!.videos = [
+      { id: 'deploy-film', path: 'shipping/run.webm' },
+    ]
+    const markdown = renderGuidePage(
+      page(),
+      new Map([['deployments', feature]]),
+      '/docs/_media/'
+    )
+    const film = markdown.indexOf('/docs/_media/shipping/run.webm')
+    const still = markdown.indexOf('/docs/_media/shipping/2.png')
+    assert.ok(film > -1 && still > -1)
+    assert.ok(film < still)
+  })
+
+  test("a recording is a figure, so the page stays free of HTML", () => {
+    const feature = deployments()
+    feature.scenarios[0]!.videos = [
+      { id: 'deploy-film', actor: 'yasser', path: 'shipping/run.webm' },
+    ]
+    const markdown = renderGuidePage(
+      page(),
+      new Map([['deployments', feature]]),
+      ''
+    )
+    assert.match(markdown, /!\[Shipping a change — yasser\]\(shipping\/run\.webm\)/)
+    assert.doesNotMatch(markdown, /<video|<details/)
+  })
+
+  test('a feature with only a recording is not figureless', () => {
+    const feature = deployments()
+    feature.scenarios[0]!.screenshots = []
+    feature.scenarios[0]!.videos = [{ path: 'shipping/run.webm' }]
+    const coverage = checkGuideCoverage([feature], [page()])
+    assert.deepEqual(coverage.figureless, [])
+  })
+
   test('the scenario title and description are evidence, not content', () => {
     const feature = deployments()
     const markdown = renderGuidePage(page(), features(), '')
