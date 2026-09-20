@@ -23,6 +23,7 @@ import {
   withoutScenarioWorkflows,
 } from '../../functions/wirings/scenarios/scenario-partition.js'
 import { toSafeKebab } from './naming.js'
+import { mcpSurfaceSlug } from '../../utils/mcp-surface.js'
 import { createUnitResolver, type GroupingConfig } from './grouping.js'
 
 import type {
@@ -99,18 +100,37 @@ const WELL_KNOWN_PRM = '/.well-known/oauth-protected-resource'
  * The routes an MCP unit has to receive to serve Streamable HTTP. Without them
  * the unit deploys with an empty route table and nothing ever reaches it: POST
  * carries the JSON-RPC calls, GET opens the server-to-client stream, and DELETE
- * ends a session. The two well-known paths are how a client discovers the
+ * ends a session. The well-known paths are how a client discovers the
  * authorization server when the endpoint refuses it.
+ *
+ * `bareDiscovery` is what keeps a multi-endpoint project's route table
+ * unambiguous. RFC 9728 folds the resource's path into the well-known route, so
+ * each endpoint's own document is distinct, but the bare path predates that and
+ * describes whichever resource answers it. Handing it to every unit would
+ * register the same route twice and let the router pick a winner, so only the
+ * project's default endpoint claims it; a surface serves its path-aware
+ * document alone.
  *
  * The ids are synthetic, as they are for the agent gateway's routes: no single
  * pikku function answers here, because the MCP transport picks the tool out of
  * the JSON-RPC body and dispatches it itself.
  */
-const mcpRoutes = (mcpPath: string): HttpRouteInfo[] => [
+const mcpRoutes = (
+  mcpPath: string,
+  { bareDiscovery = true }: { bareDiscovery?: boolean } = {}
+): HttpRouteInfo[] => [
   { method: 'post', route: mcpPath, pikkuFuncId: 'mcp:call' },
   { method: 'get', route: mcpPath, pikkuFuncId: 'mcp:stream' },
   { method: 'delete', route: mcpPath, pikkuFuncId: 'mcp:end' },
-  { method: 'get', route: WELL_KNOWN_PRM, pikkuFuncId: 'mcp:discovery' },
+  ...(bareDiscovery
+    ? [
+        {
+          method: 'get' as const,
+          route: WELL_KNOWN_PRM,
+          pikkuFuncId: 'mcp:discovery',
+        },
+      ]
+    : []),
   {
     method: 'get',
     route: `${WELL_KNOWN_PRM}${mcpPath}`,
@@ -553,9 +573,23 @@ export function analyzeDeployment(
   // lists one would depend on a unit that was never emitted.
   const deployableFuncId = (funcId: string) =>
     !isScenarioFunction(state.functions.meta[funcId])
-  const mcpToolIds = values(state.mcpEndpoints.toolsMeta)
-    .map((t) => t.pikkuFuncId)
-    .filter(deployableFuncId)
+  // A tool naming a surface is served by that surface's endpoint and by no
+  // other, so it is grouped out of the default set here rather than pooled
+  // with it. Resources and prompts have no surface of their own yet.
+  const surfacePaths = state.mcpEndpoints.surfaces ?? {}
+  const toolIdsBySurface = new Map<string, string[]>()
+  const mcpToolIds: string[] = []
+  for (const tool of values(state.mcpEndpoints.toolsMeta)) {
+    if (!deployableFuncId(tool.pikkuFuncId)) continue
+    const surface = tool.surface
+    if (surface && surfacePaths[surface]) {
+      const ids = toolIdsBySurface.get(surface) ?? []
+      ids.push(tool.pikkuFuncId)
+      toolIdsBySurface.set(surface, ids)
+    } else {
+      mcpToolIds.push(tool.pikkuFuncId)
+    }
+  }
   const mcpResourceIds = values(state.mcpEndpoints.resourcesMeta)
     .map((r) => r.pikkuFuncId)
     .filter(deployableFuncId)
@@ -573,6 +607,31 @@ export function analyzeDeployment(
     ) {
       mcpToolIds.push(funcId)
     }
+  }
+
+  for (const [surface, toolIds] of toolIdsBySurface) {
+    const unitName = `mcp-${mcpSurfaceSlug(surface)}`
+    units.push({
+      name: unitName,
+      role: 'mcp',
+      target: 'serverless',
+      functionIds: [],
+      services: [],
+      dependsOn: toolIds.map((id) => unitFor(id)),
+      handlers: [
+        {
+          type: 'fetch',
+          routes: mcpRoutes(surfacePaths[surface]!, { bareDiscovery: false }),
+        },
+      ],
+      tags: collectTags(toolIds, tagsFor),
+    })
+    mcpEndpoints.push({
+      unitName,
+      toolFunctionIds: toolIds,
+      resourceFunctionIds: [],
+      promptFunctionIds: [],
+    })
   }
 
   const allMcpIds = [...mcpToolIds, ...mcpResourceIds, ...mcpPromptIds]

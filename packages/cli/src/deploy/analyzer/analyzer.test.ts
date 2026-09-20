@@ -172,6 +172,154 @@ describe('analyzeDeployment - scenarios are not deployable', () => {
     ])
   })
 
+  /**
+   * A project with two plain functions and nothing else, so an MCP test can say
+   * which endpoint each tool lands on without a scenario filter in the way.
+   */
+  function stateWithTools(): InspectorState {
+    return {
+      functions: {
+        meta: {
+          createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' },
+          forecast: { pikkuFuncId: 'forecast', name: 'forecast' },
+        },
+      },
+      http: { meta: {} },
+      agents: { agentsMeta: {} },
+      mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+      channels: { meta: {} },
+      queueWorkers: { meta: {} },
+      scheduledTasks: { meta: {} },
+      workflows: { graphMeta: {} },
+      secrets: { definitions: [] },
+      variables: { definitions: [] },
+    } as unknown as InspectorState
+  }
+
+  test('a tool naming a surface gets an endpoint of its own', () => {
+    // This is what lets one project expose several connectors: a client pointed
+    // at a surface must list that surface's tools and no others, so a surfaced
+    // tool has to leave the shared endpoint, not be copied onto both.
+    const state = stateWithTools()
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' },
+        forecast: {
+          pikkuFuncId: 'forecast',
+          name: 'weather:forecast',
+          surface: 'weather',
+        },
+      },
+      resourcesMeta: {},
+      promptsMeta: {},
+      surfaces: { weather: '/mcp/weather' },
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+
+    assert.deepEqual(
+      manifest.mcpEndpoints.map((e) => [e.unitName, e.toolFunctionIds]),
+      [
+        ['mcp-weather', ['forecast']],
+        ['mcp-server', ['createTodo']],
+      ]
+    )
+
+    const weather = manifest.units.find((u) => u.name === 'mcp-weather')
+    assert.equal(weather?.role, 'mcp')
+    assert.deepEqual(weather?.dependsOn, ['forecast'])
+  })
+
+  test('a surface endpoint is routable on its own path', () => {
+    const state = stateWithTools()
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        forecast: {
+          pikkuFuncId: 'forecast',
+          name: 'weather:forecast',
+          surface: 'weather',
+        },
+      },
+      resourcesMeta: {},
+      promptsMeta: {},
+      surfaces: { weather: '/connectors/weather' },
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+    const unit = manifest.units.find((u) => u.name === 'mcp-weather')
+    const routes = (unit?.handlers ?? []).flatMap((handler) =>
+      handler.type === 'fetch' ? handler.routes : []
+    )
+
+    assert.deepEqual(
+      routes.map((r) => `${r.method} ${r.route}`),
+      [
+        'post /connectors/weather',
+        'get /connectors/weather',
+        'delete /connectors/weather',
+        'get /.well-known/oauth-protected-resource/connectors/weather',
+      ]
+    )
+  })
+
+  // The bare discovery route describes no endpoint in particular, so giving it
+  // to every unit registers the same route twice and lets the provider's router
+  // pick which resource a client is told about.
+  test('only the default endpoint claims the path-less discovery route', () => {
+    const state = stateWithTools()
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' },
+        forecast: {
+          pikkuFuncId: 'forecast',
+          name: 'weather:forecast',
+          surface: 'weather',
+        },
+      },
+      resourcesMeta: {},
+      promptsMeta: {},
+      surfaces: { weather: '/mcp/weather' },
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+    const claimants = manifest.units
+      .filter((unit) =>
+        (unit.handlers ?? []).some(
+          (handler) =>
+            handler.type === 'fetch' &&
+            handler.routes.some(
+              (route) => route.route === '/.well-known/oauth-protected-resource'
+            )
+        )
+      )
+      .map((unit) => unit.name)
+
+    assert.deepEqual(claimants, ['mcp-server'])
+  })
+
+  test('surfacing every tool leaves no default endpoint behind', () => {
+    const state = stateWithTools()
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        forecast: {
+          pikkuFuncId: 'forecast',
+          name: 'weather:forecast',
+          surface: 'weather',
+        },
+      },
+      resourcesMeta: {},
+      promptsMeta: {},
+      surfaces: { weather: '/mcp/weather' },
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+
+    assert.deepEqual(
+      manifest.units.filter((u) => u.role === 'mcp').map((u) => u.name),
+      ['mcp-weather']
+    )
+  })
+
   // An MCP unit with an empty route table deploys and then never receives a
   // request: the provider builds its routing from exactly this list.
   test('the MCP gateway is routable', () => {

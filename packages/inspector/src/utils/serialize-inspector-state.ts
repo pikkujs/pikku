@@ -188,6 +188,7 @@ export interface SerializableInspectorState {
     toolsMeta: InspectorState['mcpEndpoints']['toolsMeta']
     promptsMeta: InspectorState['mcpEndpoints']['promptsMeta']
     files: string[]
+    surfaces?: InspectorState['mcpEndpoints']['surfaces']
   }
   agents: {
     invokedAgentsByFile?: Array<[string, string[]]>
@@ -425,6 +426,7 @@ export function serializeInspectorState(
       toolsMeta: state.mcpEndpoints.toolsMeta,
       promptsMeta: state.mcpEndpoints.promptsMeta,
       files: Array.from(state.mcpEndpoints.files),
+      surfaces: state.mcpEndpoints.surfaces,
     },
     agents: {
       agentsMeta: state.agents?.agentsMeta ?? {},
@@ -646,6 +648,7 @@ export function deserializeInspectorState(
       toolsMeta: data.mcpEndpoints.toolsMeta,
       promptsMeta: data.mcpEndpoints.promptsMeta,
       files: new Set(data.mcpEndpoints.files),
+      surfaces: data.mcpEndpoints.surfaces ?? {},
     },
     agents: {
       agentsMeta: data.agents?.agentsMeta || {},

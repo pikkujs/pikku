@@ -18,6 +18,18 @@ export type WireAddonConfig = {
    * and is typed against the addon's function names.
    */
   mcp?: boolean | string[]
+  /**
+   * Serves this addon's MCP tools on an endpoint of their own rather than
+   * folding them into the project's single `/mcp`. `true` mounts them at
+   * `/mcp/<name>`; a string is the path, used as given.
+   *
+   * This is what lets one project expose several connectors: each wired
+   * instance becomes its own MCP server, with its own tool list, so a client
+   * pointed at one never sees another's tools. Leaving it unset keeps the
+   * addon's tools on the shared endpoint, which is where they have always
+   * been.
+   */
+  mcpEndpoint?: boolean | string
   /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /** Required of every function in the addon, on top of the function's own. */

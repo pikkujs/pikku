@@ -41,6 +41,12 @@ export type MCPResourceMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // tag + explicit, already merged
+    /**
+     * The MCP endpoint this belongs to, when the project serves more than one.
+     * Absent means the project's default endpoint. Codegen splits the metadata
+     * by this key, so each endpoint's manifest lists only its own.
+     */
+    surface?: string
   }
 >
 
@@ -51,6 +57,12 @@ export type MCPToolMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // tag + explicit, already merged
+    /**
+     * The MCP endpoint this belongs to, when the project serves more than one.
+     * Absent means the project's default endpoint. Codegen splits the metadata
+     * by this key, so each endpoint's manifest lists only its own.
+     */
+    surface?: string
   }
 >
 
@@ -66,6 +78,12 @@ export type MCPPromptMeta = Record<
       required: boolean
     }>
     middleware?: MiddlewareMetadata[] // tag + explicit, already merged
+    /**
+     * The MCP endpoint this belongs to, when the project serves more than one.
+     * Absent means the project's default endpoint. Codegen splits the metadata
+     * by this key, so each endpoint's manifest lists only its own.
+     */
+    surface?: string
   }
 >
 

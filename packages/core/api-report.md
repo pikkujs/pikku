@@ -3007,6 +3007,7 @@ export type WireAddonConfig = {
   rpcEndpoint?: string
   auth?: boolean
   mcp?: boolean | string[]
+  mcpEndpoint?: boolean | string
   tags?: string[]
   scopes?: string[]
   secretOverrides?: Record<string, string>
@@ -3133,6 +3134,7 @@ export type MCPPromptMeta = Record<
       required: boolean
     }>
     middleware?: MiddlewareMetadata[]
+    surface?: string
   }
 >
 export type MCPPromptResponse = MCPPromptMessage[]
@@ -3144,6 +3146,7 @@ export type MCPResourceMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]
+    surface?: string
   }
 >
 export type MCPResourceResponse = MCPResourceMessage[]
@@ -3156,6 +3159,7 @@ export type MCPToolMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]
+    surface?: string
   }
 >
 export type MCPToolResponse = MCPToolMessage[]
