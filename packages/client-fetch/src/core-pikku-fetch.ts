@@ -16,6 +16,7 @@ export type HTTPMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'HEAD' | 'PUT'
  * @property {boolean} [transformDate] - Whether to transform date-like strings in the response to `Date` objects.
  * @property {string} [serverUrl] - The base server URL for requests.
  * @property {AuthHeaders} [authHeaders] - Authorization headers, including JWT or API key.
+ * @property {typeof globalThis.fetch} [fetch] - A fetch implementation to use instead of the global one.
  * @property {RequestInit['cache']} [cache] - The cache mode for the request.
  * @property {RequestInit['credentials']} [credentials] - The credentials mode for the request.
  * @property {RequestInit['mode']} [mode] - The mode for the request.
@@ -24,6 +25,7 @@ export type CorePikkuFetchOptions = {
   transformDate?: boolean
   serverUrl?: string
   authHeaders?: AuthHeaders
+  fetch?: typeof globalThis.fetch
 } & Pick<RequestInit, 'cache' | 'credentials' | 'mode'>
 
 /**
@@ -227,13 +229,18 @@ export class CorePikkuFetch {
 
     const run = async () => {
       try {
-        const response = await corePikkuFetch(url, null, {
-          method: 'GET',
-          mode: this.options.mode,
-          credentials: this.options.credentials,
-          headers: { ...this.getHeaders(), Accept: 'text/event-stream' },
-          signal: controller.signal,
-        })
+        const response = await corePikkuFetch(
+          url,
+          null,
+          {
+            method: 'GET',
+            mode: this.options.mode,
+            credentials: this.options.credentials,
+            headers: { ...this.getHeaders(), Accept: 'text/event-stream' },
+            signal: controller.signal,
+          },
+          this.options.fetch
+        )
         if (!response.ok || !response.body) {
           throw new Error(`SSE request failed: ${response.status}`)
         }
@@ -303,13 +310,18 @@ export class CorePikkuFetch {
       uri = `${this.options.serverUrl}/${uri}`
     }
 
-    return await corePikkuFetch(uri, data, {
-      ...options,
-      method,
-      mode: this.options.mode,
-      credentials: this.options.credentials,
-      headers: { ...this.getHeaders(), ...options?.headers },
-    })
+    return await corePikkuFetch(
+      uri,
+      data,
+      {
+        ...options,
+        method,
+        mode: this.options.mode,
+        credentials: this.options.credentials,
+        headers: { ...this.getHeaders(), ...options?.headers },
+      },
+      this.options.fetch
+    )
   }
 
   /**
