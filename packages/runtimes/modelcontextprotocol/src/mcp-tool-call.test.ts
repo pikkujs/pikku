@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import { afterEach, describe, test } from 'node:test'
-import { AddressInfo } from 'node:net'
+import type { AddressInfo } from 'node:net'
 
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
 import { addFunction } from '@pikku/core/function'
