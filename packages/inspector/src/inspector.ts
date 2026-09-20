@@ -38,6 +38,7 @@ import {
   validateSchemaWiringSeparation,
   validateScenarioServices,
   validateScenarioSteps,
+  validateScenarioFeatures,
   validateWorkflowGraphAddons,
 } from './utils/post-process.js'
 import { validateExposedFunctionsGated } from './utils/validate-exposed-functions-gated.js'
@@ -532,6 +533,7 @@ export const inspect = async (
     validateWorkflowGraphAddons(logger, state)
     validateScenarioServices(logger, state)
     validateScenarioSteps(logger, state)
+    validateScenarioFeatures(logger, state)
     // Needs every route, every function and every wireAddon declaration
     // together, so it can only run once the whole program is inspected.
     annotateHttpRouteAuth(state)
