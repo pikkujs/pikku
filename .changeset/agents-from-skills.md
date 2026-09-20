@@ -1,7 +1,7 @@
 ---
-'@pikku/knowledge': minor
-'@pikku/skills': minor
-'@pikku/cli': minor
+'@pikku/knowledge': patch
+'@pikku/skills': patch
+'@pikku/cli': patch
 ---
 
 Project the pipeline skills into verified subagents.
