@@ -33,7 +33,9 @@ export { type ResourcePrefix, type ResourceUri } from './resource-uri.js'
 export {
   type ResourceCheck,
   type ResourceProblem,
+  type ResourceOrphan,
   type ResourceCheckOptions,
+  ORPHAN_PREFIXES,
   bodyResourceUris,
   checkKnowledgeResources,
 } from './check-resources.js'

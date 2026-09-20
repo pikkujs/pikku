@@ -10,6 +10,8 @@ import type {
 } from '@pikku/knowledge'
 import { added, changed, dim, removed } from '../../fabric/lib/output.js'
 
+const ORPHANS_SHOWN = 10
+
 export const renderKnowledgeValidate = (
   _services: unknown,
   { ok, notes, findings }: KnowledgeValidateResult
@@ -18,7 +20,13 @@ export const renderKnowledgeValidate = (
   const warns = findings.filter((f) => f.severity === 'warn')
   const infos = findings.filter((f) => f.severity === 'info')
 
-  for (const finding of [...errors, ...warns, ...infos]) {
+  // Orphans are one finding each so a consumer can act on one at a time, but a
+  // project with no knowledge base yet reports every function it has — printing
+  // those in full buries the findings somebody can actually fix.
+  const orphans = infos.filter((f) => f.id.startsWith('knowledge-orphan-'))
+  const rest = infos.filter((f) => !f.id.startsWith('knowledge-orphan-'))
+
+  for (const finding of [...errors, ...warns, ...rest]) {
     const icon =
       finding.severity === 'error'
         ? removed('✗')
@@ -27,6 +35,21 @@ export const renderKnowledgeValidate = (
           : dim('ℹ')
     console.log(`${icon}  ${finding.message}`)
     console.log(`   ${dim('fix:')}  ${finding.fixHint}`)
+    console.log()
+  }
+
+  if (orphans.length) {
+    const shown = orphans.slice(0, ORPHANS_SHOWN)
+    console.log(
+      `${dim('ℹ')}  ${orphans.length} thing${orphans.length !== 1 ? 's' : ''} in the code that no note describes`
+    )
+    for (const orphan of shown) {
+      console.log(`   ${dim(orphan.id.slice('knowledge-orphan-'.length))}`)
+    }
+    if (orphans.length > shown.length) {
+      console.log(`   ${dim(`… and ${orphans.length - shown.length} more`)}`)
+    }
+    console.log(`   ${dim('fix:')}  ${shown[0]!.fixHint}`)
     console.log()
   }
 
