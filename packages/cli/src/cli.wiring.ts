@@ -87,6 +87,10 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
+import {
+  pikkuNewApp,
+  renderNewApp,
+} from './functions/commands/new-app.js'
 import { pikkuImportN8n } from './functions/commands/import-n8n.js'
 import { doc, renderDoc } from './functions/commands/doc.js'
 import {
@@ -1115,6 +1119,35 @@ wireCLI({
               description: 'Permission type: simple (default) or factory',
               short: 't',
               default: 'simple',
+            },
+          },
+        }),
+        app: pikkuCLICommand({
+          func: pikkuNewApp,
+          render: renderNewApp,
+          description:
+            'Create a second frontend by cloning an existing one, for a group the first app is not for',
+          parameters: '<slug>',
+          options: {
+            serves: {
+              description:
+                'Who the app is for, in their own word (staff, customer, supplier, patient) — not a surface word',
+            },
+            personas: {
+              description:
+                'Comma-separated persona ids that sign into it; each must be in definePersonas({…})',
+            },
+            from: {
+              description:
+                'Slug of the app to clone (defaults to the primary frontend)',
+            },
+            primary: {
+              description: 'Make this the primary frontend',
+              default: false,
+            },
+            install: {
+              description: 'Run `bun install` afterwards',
+              default: true,
             },
           },
         }),
