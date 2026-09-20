@@ -114,6 +114,39 @@ describe('the MCP manifest a generated entry mounts', () => {
     assert.equal(context.mcpServerOption, 'mcpJson, ')
   })
 
+  // The manifest lives in `.pikku/`, so the path to it from a unit sitting at
+  // the project root starts with a dot without being relative. A bundler reads
+  // that as a bare package specifier and fails to resolve it — which only ever
+  // surfaced at bundle time, because every assertion above is still satisfied
+  // by the unresolvable form.
+  test('the manifest is imported by a relative specifier', () => {
+    const context = contextWithManifest(
+      'mcp.gen.json',
+      oneTool,
+      unitNamed('mcp-server', 'mcp')
+    )
+    const specifier = context.mcpImport.match(/from '([^']+)'/)?.[1]
+    assert.ok(specifier, `no specifier in ${context.mcpImport}`)
+    assert.ok(
+      specifier.startsWith('./') || specifier.startsWith('../'),
+      `"${specifier}" is a bare specifier, so the unit will not bundle`
+    )
+  })
+
+  // Same trap, same directory: the bootstrap import is built the same way.
+  test('the bootstrap is imported by a relative specifier', () => {
+    const context = contextWithManifest(
+      'mcp.gen.json',
+      oneTool,
+      unitNamed('mcp-server', 'mcp')
+    )
+    assert.ok(
+      context.bootstrapPath.startsWith('./') ||
+        context.bootstrapPath.startsWith('../'),
+      `"${context.bootstrapPath}" is a bare specifier, so the unit will not bundle`
+    )
+  })
+
   test('an empty manifest mounts nothing', () => {
     const context = contextWithManifest(
       'mcp.weather.gen.json',

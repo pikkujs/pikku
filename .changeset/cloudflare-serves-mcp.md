@@ -32,6 +32,13 @@ ordinary worker rather than shipping it to answer 404s.
 It served one unit per isolate and so never noticed, but a second unit's
 factories asking for services were being handed the first unit's.
 
+Mounting it also uncovered a latent bug in the entry generator. A path into a
+dot-directory — `.pikku/mcp/mcp.gen.json` — starts with a dot without being
+relative, and the generator's guard tested for `.` alone, so it emitted a bare
+specifier no bundler can resolve. Nothing hit it before, because the MCP import
+was the first one to point inside `.pikku` and was never emitted anyway. There
+is now one helper doing this, with the guard the bootstrap import already had.
+
 Known seam: the analyzer hardcodes `/mcp`, because it never reads the generated
 `mcp.gen.json`. Pikku's own codegen never writes an `mcpPath` there, so the
 route table and the mount agree today — but a project that overrides it moves
