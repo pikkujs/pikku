@@ -826,7 +826,7 @@ wireCLI({
             },
             strict: {
               description:
-                'Fail rather than pass a `then` that has no witness for --run, i.e. an assertion nobody checked on the surface its prose claims',
+                'Every step must run on --run: an action may not fall back to its default binding, and a `then` may not be witnessed anywhere else. No effect on --run default',
               default: false,
             },
             spawn: {

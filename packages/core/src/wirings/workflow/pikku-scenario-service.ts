@@ -247,6 +247,9 @@ addError(ScenarioActorRequired, {
  * coverage gap. (A `then` that ran somewhere, just not on the run surface, is
  * the coverage gap; it is reported rather than thrown. See
  * {@link ScenarioNoWitness} for one that ran nowhere.)
+ *
+ * A strict run also throws it for a step that *could* fall back, because there
+ * the fallback is the thing being refused.
  */
 export class ScenarioNoSurfaceBinding extends PikkuError {
   constructor(
@@ -254,9 +257,13 @@ export class ScenarioNoSurfaceBinding extends PikkuError {
     public readonly declared: ScenarioSurface[],
     public readonly runSurface: ScenarioSurface
   ) {
+    const declares = `(declares: ${declared.join(', ') || 'nothing'})`
     super(
-      `[scenario] step '${stepFunc}' declares no binding for '${runSurface}' and no 'default' to fall back to ` +
-        `(declares: ${declared.join(', ') || 'nothing'}).`
+      declared.includes('default')
+        ? `[scenario] step '${stepFunc}' has no binding for '${runSurface}' and a strict run will not let it ` +
+            `fall back to 'default' ${declares}. Add a '${runSurface}' binding, or drop --strict.`
+        : `[scenario] step '${stepFunc}' declares no binding for '${runSurface}' and no 'default' to fall back to ` +
+            `${declares}.`
     )
   }
 }
@@ -290,6 +297,34 @@ export class ScenarioNoWitness extends PikkuError {
 addError(ScenarioNoWitness, {
   status: 500,
   message: 'Assertion has no witness for this surface.',
+})
+
+/**
+ * An assertion ran, but not on the surface the run targets.
+ *
+ * The sibling of {@link ScenarioNoWitness}: that one checked nothing anywhere,
+ * this one checked the system of record while the prose claims the actor saw it
+ * on the page. Ordinary runs count it as a coverage gap; a strict run refuses
+ * it, because a flow that cannot be observed end to end on the run surface is
+ * not a flow that surface can be documented from.
+ */
+export class ScenarioUnwitnessedAssertion extends PikkuError {
+  constructor(
+    public readonly stepFunc: string,
+    public readonly declared: ScenarioSurface[],
+    public readonly runSurface: ScenarioSurface,
+    public readonly witnessedOn: ScenarioSurface[]
+  ) {
+    super(
+      `[scenario] assertion '${stepFunc}' was checked on ${witnessedOn.join(', ')}, not on '${runSurface}'. ` +
+        `It held there — but nothing looked at '${runSurface}', which is what the step's prose claims the actor saw. ` +
+        `Add a '${runSurface}' witness (declares: ${declared.join(', ') || 'nothing'}), or drop --strict.`
+    )
+  }
+}
+addError(ScenarioUnwitnessedAssertion, {
+  status: 500,
+  message: 'Assertion was checked, but not on the run surface.',
 })
 
 /**
@@ -327,19 +362,31 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   private scenarioBrowserProvider?: ScenarioBrowserProvider
   private scenarioEnvironment?: ScenarioEnvironment
   private runSurface: ScenarioSurface = 'default'
+  private strictSurface = false
 
   constructor(private readonly engine: WorkflowRunEngine) {}
 
   /**
    * The surface every actor drives the system through for this run, set once by
    * the runner from `--run`. `default` is the server-side path — the fast suite.
+   *
+   * `strict` removes both routes off that surface: an action may not fall back
+   * to its `default` binding, and a `then` may not be witnessed anywhere else.
+   * It is what lets a run stand as evidence of the whole flow on one surface,
+   * which is what generating documentation from a run requires. On a `default`
+   * run it changes nothing, because nothing there can fall back.
    */
-  public setRunSurface(surface: ScenarioSurface) {
+  public setRunSurface(surface: ScenarioSurface, strict = false) {
     this.runSurface = surface
+    this.strictSurface = strict
   }
 
   public getRunSurface(): ScenarioSurface {
     return this.runSurface
+  }
+
+  public isStrictSurface(): boolean {
+    return this.strictSurface
   }
 
   /**
@@ -918,7 +965,10 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         }
 
         if (resolution.kind === 'action') {
-          if (resolution.fellBack && !declared.includes('default')) {
+          if (
+            resolution.fellBack &&
+            (this.strictSurface || !declared.includes('default'))
+          ) {
             throw new ScenarioNoSurfaceBinding(
               resolvedStepFunc,
               declared,
@@ -933,6 +983,15 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             resolvedStepFunc,
             declared,
             this.runSurface
+          )
+        }
+
+        if (this.strictSurface && resolution.unwitnessed) {
+          throw new ScenarioUnwitnessedAssertion(
+            resolvedStepFunc,
+            declared,
+            this.runSurface,
+            resolution.surfaces
           )
         }
 

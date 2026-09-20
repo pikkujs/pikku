@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3043 observable things**: 991 exported names, plus
-2052 members on the classes and interfaces among them, reachable
+**3046 observable things**: 992 exported names, plus
+2054 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 435 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 46 | 46 | 138 |
+| `./scenario` | 47 | 47 | 140 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 85 |
@@ -1562,8 +1562,9 @@ export interface PikkuBrowserWire {
 }
 export class PikkuScenarioService implements WorkflowRunExtension {
   constructor(private readonly engine: WorkflowRunEngine)
-  public setRunSurface(surface: ScenarioSurface): void
+  public setRunSurface(surface: ScenarioSurface, strict = false): void
   public getRunSurface(): ScenarioSurface
+  public isStrictSurface(): boolean
   public setScenarioBrowserProvider(provider: ScenarioBrowserProvider | undefined): void
   public getScenarioBrowserProvider(): ScenarioBrowserProvider | undefined
   public setScenarioEnvironment(env: ScenarioEnvironment | undefined): void
@@ -1749,6 +1750,9 @@ export interface ScenarioStepRow {
   error?: string
 }
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
+export class ScenarioUnwitnessedAssertion extends PikkuError {
+  constructor(public readonly stepFunc: string, public readonly declared: ScenarioSurface[], public readonly runSurface: ScenarioSurface, public readonly witnessedOn: ScenarioSurface[])
+}
 export class ScenarioWitnessDisagreement extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly expected: { surface: ScenarioSurface; observed: unknown }, public readonly actual: { surface: ScenarioSurface; observed: unknown })
 }
