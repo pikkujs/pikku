@@ -72,6 +72,7 @@ export type {
   ScenarioStepKind,
   ScenarioStepMeta,
   ScenarioStepOptions,
+  ScenarioScreenshotOptions,
   ScenarioStepPhase,
   ScenarioSurface,
   TestIdSelector,

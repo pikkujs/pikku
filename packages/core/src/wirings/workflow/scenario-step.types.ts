@@ -183,11 +183,26 @@ export interface TestIdSelector {
  * interface via `declare module`, so `wire.browser.page` is a fully typed
  * Playwright `Page` in a project that installs it.
  */
+/** How one deliberate screenshot is taken, and what it is for. */
+export interface ScenarioScreenshotOptions {
+  /**
+   * Publish this one outside the run — a marketing card, a docs page, a
+   * gallery. Declared at the call site because only the author of the step
+   * knows the page is at a moment worth showing a stranger.
+   */
+  showcase?: boolean
+  /** Photograph the whole scrollable page rather than the viewport. */
+  fullPage?: boolean
+}
+
 export interface PikkuBrowserWire {
   /** The actor whose browser context this is */
   readonly actor: string
   goto(url: string): Promise<void>
-  screenshot(name?: string): Promise<Uint8Array>
+  screenshot(
+    name?: string,
+    options?: ScenarioScreenshotOptions
+  ): Promise<Uint8Array>
 }
 
 /**

@@ -18,6 +18,7 @@ export type {
   ScenarioSurface,
   ScenarioSurfaceResolution,
   PikkuBrowserWire,
+  ScenarioScreenshotOptions,
   TestIdSelector,
   ScenarioBrowserProvider,
   ScenarioBrowserFailure,

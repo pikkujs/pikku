@@ -9,7 +9,11 @@ import type {
 } from '@playwright/test'
 import { pollUntil } from '@pikku/core/scenario'
 import type { TestIdSelector } from '@pikku/core/scenario'
-import type { PikkuBrowserWire, ScenarioArtifact } from '@pikku/core/scenario'
+import type {
+  PikkuBrowserWire,
+  ScenarioArtifact,
+  ScenarioScreenshotOptions,
+} from '@pikku/core/scenario'
 import type { BrowserConfig } from './config.js'
 import { slug } from './capture.js'
 import { locateTestId, type LocateTestIdOptions } from './testid.js'
@@ -92,6 +96,7 @@ export class ActorSession implements PikkuBrowserWire {
     this.context = await browser.newContext({
       ignoreHTTPSErrors: this.config.ignoreHTTPSErrors,
       locale: this.config.locale,
+      viewport: this.config.viewport,
       // Playwright records per context and only finalises the file on
       // context.close(), which is why `reset()` between scenarios is what makes
       // one video per scenario rather than one enormous file per run.
@@ -202,8 +207,16 @@ export class ActorSession implements PikkuBrowserWire {
    * the flag this still returns the bytes and writes nothing, so a scenario
    * that calls it is not broken by the flag being off.
    */
-  async screenshot(description?: string): Promise<Uint8Array> {
-    const bytes = await this.page.screenshot()
+  async screenshot(
+    description?: string,
+    options?: ScenarioScreenshotOptions
+  ): Promise<Uint8Array> {
+    // Animations disabled so the same moment photographs the same way twice —
+    // a shot that is published needs to be diffable across builds.
+    const bytes = await this.page.screenshot({
+      animations: 'disabled',
+      ...(options?.fullPage ? { fullPage: true } : {}),
+    })
     if (!this.capture?.screenshots || !description) {
       return bytes
     }
@@ -215,7 +228,8 @@ export class ActorSession implements PikkuBrowserWire {
     // The index leads so a directory listing reads in the order the run
     // happened, which is the order somebody reviewing it wants.
     const index = String(++this.capture.taken).padStart(2, '0')
-    const name = `${index}-${slug(description)}-${slug(this.actor)}.png`
+    const stem = `${slug(description)}-${slug(this.actor)}`
+    const name = `${index}-${stem}.png`
     writeFileSync(join(dir, name), bytes)
     this.capture.filed.push({
       scenario,
@@ -223,8 +237,10 @@ export class ActorSession implements PikkuBrowserWire {
       // Always forward slashes: this is a content key the console resolves
       // against a directory locally and a bucket when hosted.
       path: `${slug(scenario)}/${name}`,
+      id: `${slug(scenario)}/${stem}`,
       actor: this.actor,
       name: description,
+      ...(options?.showcase ? { showcase: true } : {}),
     })
     return bytes
   }
@@ -357,7 +373,6 @@ export class ActorSession implements PikkuBrowserWire {
     return this.page.innerText('body')
   }
 }
-
 
 function blankIssues(): PageIssues {
   return {
