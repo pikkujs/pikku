@@ -12,7 +12,7 @@
     "test": "bash ../functions/run-tests.sh --url http://localhost:8787 --http --websocket"
   },
   "dependencies": {
-    "@pikku/cloudflare": "^0.12.25",
+    "@pikku/cloudflare": "^0.12.26",
     "@pikku/core": "^0.12.117"
   },
   "devDependencies": {
