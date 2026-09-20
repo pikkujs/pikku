@@ -533,6 +533,8 @@ export interface InspectorFeature {
   name?: string
   description?: string
   tags?: string[]
+  /** `document: false` on the config, and only that — an absent flag documents. */
+  document?: boolean
   entries: InspectorFeatureEntry[]
   /**
    * Entries that are not literal — a spread, a `.map()`, a call. Counted rather
@@ -540,6 +542,17 @@ export interface InspectorFeature {
    * quietly showing a short feature.
    */
   unresolvedEntries: number
+  /**
+   * Every scenario the array names, including entries whose `data` could not be
+   * read. Membership is knowable there even when the entry is not — which is
+   * what the check for a scenario belonging to no feature compares against.
+   */
+  mentions: string[]
+  /**
+   * Entries that name no scenario at all — a spread, a `.map()`. Only these
+   * leave membership genuinely unknown.
+   */
+  unnamedEntries: number
   /**
    * Feature hooks run once around the whole group, never per scenario, and are
    * runtime-only — so only their presence is recorded.
