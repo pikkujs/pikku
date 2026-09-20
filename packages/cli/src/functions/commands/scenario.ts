@@ -1099,9 +1099,14 @@ export const scenarioGuide = pikkuSessionlessFunc<
         `${join(docs, path)} cites '${featureId}', which declares \`document: false\`.`
       )
     }
+    for (const { path, featureId } of coverage.figureless) {
+      logger.warn(
+        `${join(docs, path)} cites '${featureId}', whose run filed no screenshot — the block renders empty. Take one with \`actor.screenshot(...)\` in a scenario the feature owns.`
+      )
+    }
     for (const { path, featureId, locked, current } of coverage.stale) {
       logger.warn(
-        `${join(docs, path)} was written against '${featureId}' at ${locked}, which is now ${current} — its steps moved under the prose.`
+        `${join(docs, path)} was written against '${featureId}' at ${locked}, which is now ${current} — the flow moved, so re-read the prose around that block.`
       )
     }
     for (const featureId of coverage.missing) {

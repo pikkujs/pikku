@@ -157,15 +157,17 @@ describe('evidence', () => {
 })
 
 describe('data-driven scenarios', () => {
-  test('rows of one scenario render as one section', () => {
+  test('a row repeated with the same shots contributes one figure each', () => {
     const feature = deployments()
     const row = feature.scenarios[0]!
-    feature.scenarios = [row, { ...row, screenshots: [] }]
+    feature.scenarios = [row, { ...row }]
     const rendered = renderGuidePage(page(), new Map([[feature.id, feature]]), '')
-    assert.equal(rendered.split(`## ${row.title}`).length - 1, 1)
+    for (const shot of row.screenshots) {
+      assert.equal(rendered.split(shot.path).length - 1, 1)
+    }
   })
 
-  test('figures from every row reach the one section', () => {
+  test('figures from every row reach the block', () => {
     const feature = deployments()
     const row = feature.scenarios[0]!
     feature.scenarios = [
@@ -177,6 +179,24 @@ describe('data-driven scenarios', () => {
     for (const shot of row.screenshots) {
       assert.ok(rendered.includes(shot.path))
     }
+  })
+})
+
+describe('a citation that shows nothing', () => {
+  test('a cited feature whose run filed no figure is named', () => {
+    const feature = deployments()
+    for (const scenario of feature.scenarios) {
+      scenario.screenshots = []
+    }
+    const coverage = checkGuideCoverage([feature], [page()])
+    assert.deepEqual(coverage.figureless, [
+      { path: 'product/deployments.md', featureId: 'deployments' },
+    ])
+  })
+
+  test('a feature with a figure is not named', () => {
+    const coverage = checkGuideCoverage([deployments()], [page()])
+    assert.deepEqual(coverage.figureless, [])
   })
 })
 
@@ -241,15 +261,20 @@ describe('lock', () => {
 describe('emit', () => {
   const features = () => new Map([['deployments', deployments()]])
 
-  test('the generated block carries the scenario and its screenshots', () => {
+  test('the generated block carries the figures and nothing else', () => {
     const markdown = renderGuidePage(page(), features(), '../runs/abc/')
     assert.match(markdown, /^---\ntitle: Deployments\n/)
-    assert.match(markdown, /## Shipping a change/)
-    assert.match(markdown, /A push becomes a running deployment\./)
     assert.match(
       markdown,
       /!\[The deployment list\]\(\.\.\/runs\/abc\/shipping\/2\.png\)/
     )
+  })
+
+  test('the scenario title and description are evidence, not content', () => {
+    const feature = deployments()
+    const markdown = renderGuidePage(page(), features(), '')
+    assert.doesNotMatch(markdown, /## Shipping a change/)
+    assert.ok(!markdown.includes(feature.scenarios[0]!.description!))
   })
 
   test('the steps are evidence, not content', () => {
@@ -271,9 +296,8 @@ describe('emit', () => {
     )
     const markdown = renderGuidePage(source, features(), '')
     assert.ok(
-      markdown.indexOf('Before.') <
-        markdown.indexOf('## Shipping a change') &&
-        markdown.indexOf('## Shipping a change') < markdown.indexOf('## After')
+      markdown.indexOf('Before.') < markdown.indexOf('shipping/2.png') &&
+        markdown.indexOf('shipping/2.png') < markdown.indexOf('## After')
     )
   })
 
@@ -352,21 +376,21 @@ describe('emit', () => {
     const rebuilt = renderGuidePage(legacy, features(), '')
     assert.doesNotMatch(rebuilt, /evidence=/)
     assert.doesNotMatch(rebuilt, /stale/)
-    assert.match(rebuilt, /## Shipping a change/)
+    assert.match(rebuilt, /shipping\/2\.png/)
   })
 
   test('a rebuild rewrites only the generated region', () => {
     const first = renderGuidePage(page('Before.'), features(), '')
     const edited = first.replace('Before.', 'Before, rewritten by hand.')
-    const renamed = deployments()
-    renamed.scenarios[0]!.title = 'Shipping a change, end to end'
+    const reshot = deployments()
+    reshot.scenarios[0]!.screenshots = [{ id: 'a', path: 'shipping/7.png' }]
     const rebuilt = renderGuidePage(
       parseGuidePage('product/deployments.md', edited),
-      new Map([['deployments', renamed]]),
+      new Map([['deployments', reshot]]),
       ''
     )
     assert.match(rebuilt, /Before, rewritten by hand\./)
-    assert.match(rebuilt, /## Shipping a change, end to end/)
+    assert.match(rebuilt, /shipping\/7\.png/)
   })
 
   test('a block whose feature the page no longer cites is dropped', () => {

@@ -248,6 +248,8 @@ export interface GuideCoverage {
   unknown: Array<{ path: string; featureId: string }>
   /** Cited by a page and registered with `document: false`. */
   optedOut: Array<{ path: string; featureId: string }>
+  /** Cited, but the run filed no figure for it — a citation that shows nothing. */
+  figureless: Array<{ path: string; featureId: string }>
   /** Pages whose locked evidence is not the feature's current evidence. */
   stale: Array<{
     path: string
@@ -266,6 +268,7 @@ export const checkGuideCoverage = (
   const cited = new Set<string>()
   const unknown: GuideCoverage['unknown'] = []
   const optedOut: GuideCoverage['optedOut'] = []
+  const figureless: GuideCoverage['figureless'] = []
   const stale: GuideCoverage['stale'] = []
   for (const page of [...pages].sort((a, b) => a.path.localeCompare(b.path))) {
     for (const id of page.features) {
@@ -279,6 +282,13 @@ export const checkGuideCoverage = (
         continue
       }
       cited.add(id)
+      const figures = feature.scenarios.reduce(
+        (total, scenario) => total + scenario.screenshots.length,
+        0
+      )
+      if (figures === 0) {
+        figureless.push({ path: page.path, featureId: id })
+      }
       const locked = lock[id]
       const current = featureEvidence(feature)
       if (locked !== undefined && locked !== current) {
@@ -294,6 +304,7 @@ export const checkGuideCoverage = (
       .sort((a, b) => a.localeCompare(b)),
     unknown,
     optedOut,
+    figureless,
     stale,
   }
 }
@@ -336,50 +347,35 @@ const escapeRegExp = (value: string) =>
 const GENERATED_FEATURE = /<!--\s*pikku:guide\s+feature=([^\s]+)/
 
 /**
- * One feature's generated section: a heading and a paragraph per scenario, and
- * the shots it filed.
+ * One feature's generated region: the figures its run filed, and nothing else.
  *
- * The steps are not rendered. A numbered Given/When/Then ladder is a test
- * report, and nobody arrives at a documentation page wanting one; the scenario's
- * own description is the sentence its author already wrote for a reader, and the
- * screenshots carry the rest.
- */
-/**
- * One section per scenario the reader can tell apart. A data-driven scenario
- * runs once per row and so appears once per row in the record, but the rows
- * differ only in their inputs — which the page never shows — so rendering them
- * all would repeat one heading and one paragraph verbatim. Their figures merge
- * into the single section instead.
+ * Neither the steps nor the scenario's own title and description are rendered.
+ * All three are written to name and prove a test — third person, about the
+ * system, ending in the regression they guard — and a reader arriving at a
+ * documentation page wants none of it. The words on the page are the author's;
+ * what a run can contribute that no author can is the evidence that the words
+ * are still true, which is a picture of the thing actually doing it.
+ *
+ * A data-driven scenario runs once per row and so appears once per row in the
+ * record. The rows differ only in their inputs, so their figures are collected
+ * in run order and deduplicated by artifact id rather than repeated.
  */
 const renderFeature = (feature: GuideFeature, artifactBase: string): string => {
-  const sections = new Map<string, string[]>()
-  const shotKeys = new Map<string, Set<string>>()
+  const figures: string[] = []
+  const seen = new Set<string>()
   for (const scenario of feature.scenarios) {
-    let section = sections.get(scenario.title)
-    if (!section) {
-      section = [`## ${scenario.title}`]
-      if (scenario.description) {
-        section.push('', scenario.description)
-      }
-      sections.set(scenario.title, section)
-      shotKeys.set(scenario.title, new Set())
-    }
-    const seen = shotKeys.get(scenario.title)!
     for (const shot of scenario.screenshots) {
       const key = shot.id ?? shot.path
       if (seen.has(key)) {
         continue
       }
       seen.add(key)
-      section.push(
-        '',
+      figures.push(
         `![${shot.name ?? scenario.title}](${artifactBase}${shot.path})`
       )
     }
   }
-  return [...sections.values()]
-    .map((section) => section.join('\n'))
-    .join('\n\n')
+  return figures.join('\n\n')
 }
 
 /**
