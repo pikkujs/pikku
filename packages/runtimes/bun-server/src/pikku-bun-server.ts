@@ -82,6 +82,17 @@ export type PikkuBunServerOptions = RunHTTPWiringOptions & {
    */
   mcpPath?: string
   /**
+   * Further MCP endpoints to mount beside `mcpJson`, each its own server with
+   * its own tool list. This is how one project serves several connectors: a
+   * client pointed at one endpoint lists that endpoint's tools and no others.
+   *
+   * Mirrors `PikkuNodeHTTPServerOptions.mcpSurfaces`.
+   */
+  mcpSurfaces?: Array<{
+    mcpJson: { tools?: unknown[]; resources?: unknown[]; prompts?: unknown[] }
+    mcpPath: string
+  }>
+  /**
    * What the MCP endpoint advertises to a client it has refused: the
    * authorization servers that mint its tokens, the scopes it understands, and
    * a name for the resource. Every field defaults from the request, so an app
@@ -136,9 +147,15 @@ export class PikkuBunServer {
   private readonly options: RunHTTPWiringOptions
   private readonly mcpJson?: PikkuBunServerOptions['mcpJson']
   private readonly mcpPath: string
+  private readonly mcpSurfaces: PikkuBunServerOptions['mcpSurfaces']
   private readonly mcpAuth?: MCPAuthOptions
-  private mcpOwnsPath?: (pathname: string) => boolean
-  private mcpHandler?: (request: Request) => Promise<Response>
+  private mcpMounts: Array<{
+    path: string
+    isDefault: boolean
+    ownsPath: (pathname: string) => boolean
+    handler: (request: Request) => Promise<Response>
+  }> = []
+  private isBareDiscoveryPath?: (pathname: string) => boolean
   private readonly localContent?: LocalContentRequestHandler
 
   constructor(
@@ -150,6 +167,7 @@ export class PikkuBunServer {
       eventHub,
       mcpJson,
       mcpPath,
+      mcpSurfaces,
       mcpAuth,
       contentSigningJWT,
       ...httpOptions
@@ -157,6 +175,7 @@ export class PikkuBunServer {
     this.eventHub = eventHub ?? new BunEventHubService()
     this.mcpJson = mcpJson
     this.mcpPath = mcpPath ?? '/mcp'
+    this.mcpSurfaces = mcpSurfaces
     this.mcpAuth = mcpAuth
     this.options = httpOptions
     this.localContent = config.content
@@ -180,42 +199,59 @@ export class PikkuBunServer {
   }
 
   private async initMCP(): Promise<void> {
-    const mcpJson = this.mcpJson
-    if (!mcpJson) return
-    const { tools = [], resources = [], prompts = [] } = mcpJson
-    if (tools.length + resources.length + prompts.length === 0) return
-    try {
-      const { PikkuMCPServer } = await import('@pikku/modelcontextprotocol')
-      const mcpServer = new PikkuMCPServer(
-        {
-          name: 'pikku',
-          version: '1.0.0',
-          mcpJSON: mcpJson,
-          capabilities: {
-            ...(tools.length > 0 && { tools: {} }),
-            ...(resources.length > 0 && { resources: {} }),
-            ...(prompts.length > 0 && { prompts: {} }),
+    const surfaces = [
+      ...(this.mcpJson
+        ? [{ mcpJson: this.mcpJson, mcpPath: this.mcpPath, isDefault: true }]
+        : []),
+      ...(this.mcpSurfaces ?? []).map((surface) => ({
+        ...surface,
+        isDefault: false,
+      })),
+    ]
+    if (surfaces.length === 0) return
+
+    for (const { mcpJson, mcpPath, isDefault } of surfaces) {
+      const { tools = [], resources = [], prompts = [] } = mcpJson
+      if (tools.length + resources.length + prompts.length === 0) continue
+      try {
+        const { PikkuMCPServer, isBareDiscoveryPath } =
+          await import('@pikku/modelcontextprotocol')
+        this.isBareDiscoveryPath = isBareDiscoveryPath
+        const mcpServer = new PikkuMCPServer(
+          {
+            name: 'pikku',
+            version: '1.0.0',
+            mcpJSON: mcpJson,
+            capabilities: {
+              ...(tools.length > 0 && { tools: {} }),
+              ...(resources.length > 0 && { resources: {} }),
+              ...(prompts.length > 0 && { prompts: {} }),
+            },
           },
-        },
-        this.logger
-      )
-      await mcpServer.init()
-      const { handler, ownsPath } = mcpServer.createFetchHandler({
-        path: this.mcpPath,
-        auth: this.mcpAuth,
-      })
-      this.mcpHandler = handler
-      this.mcpOwnsPath = ownsPath
-      this.logger.info(`pikku-bun-server: MCP mounted at ${this.mcpPath}`)
-    } catch (err) {
-      this.logger.warn(
-        `pikku-bun-server: MCP could not be mounted — ${err instanceof Error ? err.message : String(err)}`
-      )
+          this.logger
+        )
+        await mcpServer.init()
+        const { handler, ownsPath } = mcpServer.createFetchHandler({
+          path: mcpPath,
+          auth: this.mcpAuth,
+        })
+        this.mcpMounts.push({ path: mcpPath, isDefault, handler, ownsPath })
+        this.logger.info(`pikku-bun-server: MCP mounted at ${mcpPath}`)
+      } catch (err) {
+        this.logger.warn(
+          `pikku-bun-server: MCP could not be mounted at ${mcpPath} — ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
     }
+
+    // `/mcp` claims everything under `/mcp/`, so a surface nested inside
+    // another endpoint's path is only ever reached if the longer path is
+    // offered the request first.
+    this.mcpMounts.sort((a, b) => b.path.length - a.path.length)
   }
 
   public async start(): Promise<void> {
-    const { config, logger, options, eventHub, mcpHandler } = this
+    const { config, logger, options, eventHub } = this
 
     this.server = Bun.serve<WsData>({
       port: config.port,
@@ -248,12 +284,17 @@ export class PikkuBunServer {
           })
         }
 
-        if (mcpHandler) {
+        if (this.mcpMounts.length > 0) {
           // `ownsPath` rather than `mcpPath`, because the OAuth discovery
-          // document the challenge points at lives outside the endpoint.
+          // document the challenge points at lives outside the endpoint. The
+          // path-less one is claimed by every endpoint, so the default answers
+          // it rather than whichever sorted first.
           const pathname = new URL(req.url).pathname
-          if (this.mcpOwnsPath?.(pathname)) {
-            return await mcpHandler(req)
+          const mount = this.isBareDiscoveryPath?.(pathname)
+            ? this.mcpMounts.find((m) => m.isDefault)
+            : this.mcpMounts.find((m) => m.ownsPath(pathname))
+          if (mount) {
+            return await mount.handler(req)
           }
         }
 

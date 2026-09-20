@@ -655,6 +655,13 @@ export interface InspectorState {
          */
         mcp?: boolean | string[]
         /**
+         * Serves this instance's MCP tools on an endpoint of their own rather
+         * than the project's default one. `true` means `/mcp/<name>`; a string
+         * is the path as given. Absent leaves the tools on the default
+         * endpoint, which is where they have always been.
+         */
+        mcpEndpoint?: boolean | string
+        /**
          * The addon's own gates. `runPikkuFunc` applies these to every function
          * in the package, on every wiring path — not just `namespace:function`.
          * Absent when the declared value was not a statically-knowable literal,
@@ -697,6 +704,12 @@ export interface InspectorState {
     toolsMeta: MCPToolMeta
     promptsMeta: MCPPromptMeta
     files: Set<string>
+    /**
+     * Every MCP endpoint the project serves beyond the default one, as
+     * surface name -> the path it is served on. A meta entry carrying a
+     * `surface` is served by the endpoint named here and by no other.
+     */
+    surfaces: Record<string, string>
   }
   agents: {
     agentsMeta: AgentsMeta

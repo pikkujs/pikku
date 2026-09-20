@@ -107,6 +107,7 @@ export function addWireAddon(
   let pkg: string | undefined
   let rpcEndpoint: string | undefined
   let mcp: boolean | string[] | undefined
+  let mcpEndpoint: boolean | string | undefined
   let auth: boolean | undefined
   let tags: string[] | undefined
   let scopes: string[] | undefined
@@ -134,6 +135,15 @@ export function addWireAddon(
         prop.initializer.kind === ts.SyntaxKind.FalseKeyword
           ? prop.initializer.kind === ts.SyntaxKind.TrueKeyword
           : parseStringArray(prop.initializer)
+    } else if (key === 'mcpEndpoint') {
+      if (ts.isStringLiteral(prop.initializer)) {
+        mcpEndpoint = prop.initializer.text
+      } else if (
+        prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+        prop.initializer.kind === ts.SyntaxKind.FalseKeyword
+      ) {
+        mcpEndpoint = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+      }
     } else if (
       key === 'auth' &&
       (prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
@@ -184,6 +194,7 @@ export function addWireAddon(
     file: node.getSourceFile().fileName,
     rpcEndpoint,
     mcp,
+    mcpEndpoint,
     auth,
     tags,
     scopes,

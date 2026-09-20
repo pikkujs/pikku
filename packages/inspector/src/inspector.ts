@@ -163,6 +163,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       toolsMeta: {},
       promptsMeta: {},
       files: new Set(),
+      surfaces: {},
     },
     agents: {
       agentsMeta: {},

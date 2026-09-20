@@ -32,7 +32,25 @@ export type MCPAuthOptions = {
   resourceName?: string
 }
 
-const WELL_KNOWN_PRM = '/.well-known/oauth-protected-resource'
+/**
+ * The RFC 9728 discovery route as it stood before the spec folded the
+ * resource's path into it. Every endpoint still answers it, so a host serving
+ * more than one has to decide which resource it describes — see
+ * `isBareDiscoveryPath`.
+ */
+export const WELL_KNOWN_PRM = '/.well-known/oauth-protected-resource'
+
+/**
+ * Whether this is the path-less discovery route, which describes no endpoint in
+ * particular.
+ *
+ * A host with several MCP endpoints cannot answer it from whichever one happens
+ * to match first: `isMCPPath` is true of it for all of them, so the answer would
+ * turn on mount order. The host sends it to its default endpoint instead, which
+ * is the resource a client probing the bare path is looking for.
+ */
+export const isBareDiscoveryPath = (pathname: string): boolean =>
+  pathname === WELL_KNOWN_PRM
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

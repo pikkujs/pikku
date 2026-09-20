@@ -224,6 +224,17 @@ export async function loadAddonFunctionsMeta(
       // decides which of the addon's functions a model gets to see.
       if (decl.mcp) {
         const selected = Array.isArray(decl.mcp) ? new Set(decl.mcp) : null
+        // `mcpEndpoint` gives this instance an endpoint to itself, which is
+        // what lets one project expose several connectors: a client pointed at
+        // one surface lists that surface's tools and no others. Unset keeps
+        // the tools on the project's single endpoint.
+        const surface = decl.mcpEndpoint ? namespace : undefined
+        if (surface) {
+          state.mcpEndpoints.surfaces[surface] =
+            typeof decl.mcpEndpoint === 'string'
+              ? decl.mcpEndpoint
+              : `/mcp/${namespace}`
+        }
         for (const [funcName, funcMeta] of Object.entries<any>(meta)) {
           if (selected ? !selected.has(funcName) : !funcMeta.mcp) {
             continue
@@ -236,6 +247,7 @@ export async function loadAddonFunctionsMeta(
             inputSchema: funcMeta.inputSchemaName ?? null,
             outputSchema: funcMeta.outputSchemaName ?? null,
             tags: funcMeta.tags,
+            ...(surface ? { surface } : {}),
           }
         }
         // A name the addon does not publish is a tool the app believes it

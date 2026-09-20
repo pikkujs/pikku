@@ -58,6 +58,7 @@ describe('addWireAddon', () => {
       file: 'wiring.ts',
       rpcEndpoint: '/rpc',
       mcp: undefined,
+      mcpEndpoint: undefined,
       auth: true,
       tags: ['admin', 'internal'],
       scopes: ['admin'],

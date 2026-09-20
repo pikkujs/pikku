@@ -70,6 +70,7 @@ export class NodeServerRunner implements DevServerRunner {
       // Read off this options object by the transport, not off `config` — so it
       // has to be forwarded here explicitly, exactly like the JWT above.
       mcpJson: options.mcpJson,
+      mcpSurfaces: options.mcpSurfaces,
     })
     return {
       init: () => server.init(),

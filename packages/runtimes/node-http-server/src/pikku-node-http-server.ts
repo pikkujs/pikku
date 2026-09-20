@@ -111,6 +111,15 @@ export type PikkuNodeHTTPServerOptions = {
    */
   mcpPath?: string
   /**
+   * Further MCP endpoints to mount beside `mcpJson`, each its own server with
+   * its own tool list. This is how one project serves several connectors: a
+   * client pointed at one endpoint lists that endpoint's tools and no others.
+   */
+  mcpSurfaces?: Array<{
+    mcpJson: { tools?: unknown[]; resources?: unknown[]; prompts?: unknown[] }
+    mcpPath: string
+  }>
+  /**
    * What the MCP endpoint tells an unauthenticated client about the token it
    * wants: the authorization servers to advertise, the scopes it understands
    * and a human-readable name. Every field defaults to something drawn from
@@ -204,11 +213,13 @@ export class PikkuNodeHTTPServer {
   private shutdownGracePeriodMs: number
   private mcpPath: string
   private mcpAuth?: MCPAuthOptions
-  private mcpOwnsPath?: (pathname: string) => boolean
-  private mcpHandler?: (
-    req: IncomingMessage,
-    res: ServerResponse
-  ) => Promise<void>
+  private mcpMounts: Array<{
+    path: string
+    isDefault: boolean
+    ownsPath: (pathname: string) => boolean
+    handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>
+  }> = []
+  private isBareDiscoveryPath?: (pathname: string) => boolean
 
   constructor(
     private readonly config: NodeHTTPServerConfig,
@@ -246,48 +257,79 @@ export class PikkuNodeHTTPServer {
   }
 
   private async initMCP(): Promise<void> {
-    const mcpJson = this.options.mcpJson
-    if (!mcpJson) return
-    const { tools = [], resources = [], prompts = [] } = mcpJson
-    if (tools.length + resources.length + prompts.length === 0) return
-    try {
-      const { PikkuMCPServer } = await import('@pikku/modelcontextprotocol')
-      const mcpServer = new PikkuMCPServer(
-        {
-          name: 'pikku',
-          version: '1.0.0',
-          mcpJSON: mcpJson,
-          capabilities: {
-            ...(tools.length > 0 && { tools: {} }),
-            ...(resources.length > 0 && { resources: {} }),
-            ...(prompts.length > 0 && { prompts: {} }),
+    const surfaces = [
+      ...(this.options.mcpJson
+        ? [
+            {
+              mcpJson: this.options.mcpJson,
+              mcpPath: this.mcpPath,
+              isDefault: true,
+            },
+          ]
+        : []),
+      ...(this.options.mcpSurfaces ?? []).map((surface) => ({
+        ...surface,
+        isDefault: false,
+      })),
+    ]
+    if (surfaces.length === 0) return
+
+    for (const { mcpJson, mcpPath, isDefault } of surfaces) {
+      const { tools = [], resources = [], prompts = [] } = mcpJson
+      if (tools.length + resources.length + prompts.length === 0) continue
+      try {
+        const { PikkuMCPServer, isBareDiscoveryPath } =
+          await import('@pikku/modelcontextprotocol')
+        this.isBareDiscoveryPath = isBareDiscoveryPath
+        const mcpServer = new PikkuMCPServer(
+          {
+            name: 'pikku',
+            version: '1.0.0',
+            mcpJSON: mcpJson,
+            capabilities: {
+              ...(tools.length > 0 && { tools: {} }),
+              ...(resources.length > 0 && { resources: {} }),
+              ...(prompts.length > 0 && { prompts: {} }),
+            },
           },
-        },
-        this.logger
-      )
-      await mcpServer.init()
-      const { handler, ownsPath } = mcpServer.createHTTPRequestHandler({
-        path: this.mcpPath,
-        auth: this.mcpAuth,
-      })
-      this.mcpHandler = handler
-      this.mcpOwnsPath = ownsPath
-      this.logger.info(`pikku-node-http-server: MCP mounted at ${this.mcpPath}`)
-    } catch (err) {
-      this.logger.warn(
-        `pikku-node-http-server: MCP could not be mounted — ${err instanceof Error ? err.message : String(err)}`
-      )
+          this.logger
+        )
+        await mcpServer.init()
+        const { handler, ownsPath } = mcpServer.createHTTPRequestHandler({
+          path: mcpPath,
+          auth: this.mcpAuth,
+        })
+        this.mcpMounts.push({ path: mcpPath, isDefault, handler, ownsPath })
+        this.logger.info(`pikku-node-http-server: MCP mounted at ${mcpPath}`)
+      } catch (err) {
+        this.logger.warn(
+          `pikku-node-http-server: MCP could not be mounted at ${mcpPath} — ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
     }
+
+    // `/mcp` claims everything under `/mcp/`, so a surface nested inside
+    // another endpoint's path is only ever reached if the longer path is
+    // offered the request first.
+    this.mcpMounts.sort((a, b) => b.path.length - a.path.length)
   }
 
   /**
    * The handler decides, because the OAuth discovery document its own challenge
    * points at lives outside `mcpPath` — RFC 9728 folds the resource's path into
    * the well-known route rather than nesting it under the endpoint.
+   *
+   * The path-less discovery route is the exception: every endpoint claims it, so
+   * it is answered by the default one rather than by whichever sorted first.
+   * A project with no default serving it would be describing a surface a client
+   * never asked about, so it 404s instead.
    */
-  private matchesMcpPath(url: string): boolean {
+  private matchingMcpMount(url: string) {
     const pathname = url.split(/[?#]/, 1)[0] ?? url
-    return this.mcpOwnsPath?.(pathname) ?? false
+    if (this.isBareDiscoveryPath?.(pathname)) {
+      return this.mcpMounts.find((mount) => mount.isDefault)
+    }
+    return this.mcpMounts.find((mount) => mount.ownsPath(pathname))
   }
 
   /**
@@ -430,8 +472,9 @@ export class PikkuNodeHTTPServer {
         return
       }
 
-      if (this.mcpHandler && req.url && this.matchesMcpPath(req.url)) {
-        await this.mcpHandler(req, res)
+      const mcpMount = req.url ? this.matchingMcpMount(req.url) : undefined
+      if (mcpMount) {
+        await mcpMount.handler(req, res)
         return
       }
 

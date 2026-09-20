@@ -53,7 +53,7 @@ const makeState = (
     secrets: { definitions: [] },
     variables: { definitions: [] },
     credentials: { definitions: [] },
-    mcpEndpoints: { toolsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, surfaces: {} },
     addonServerlessIncompatible: new Map(),
     addonRequiredParentServices: [],
     exportedContracts: { addonHttp: {}, addonCli: {}, addonChannel: {} },
@@ -216,6 +216,41 @@ describe('loadAddonFunctionsMeta — which of an addon’s functions reach MCP',
   test('an empty list offers nothing, unlike an absent one', async () => {
     assert.deepEqual(await toolNames([]), [])
     assert.deepEqual(await toolNames(undefined), [])
+  })
+
+  const surfaceState = async (mcpEndpoint: boolean | string | undefined) => {
+    const state = makeState(
+      rootDir,
+      new Map<string, any>([
+        ['slack', { package: ADDON, mcp: true, mcpEndpoint }],
+      ])
+    )
+    await loadAddonFunctionsMeta(logger, state)
+    return state
+  }
+
+  test('without mcpEndpoint the tools stay on the default endpoint', async () => {
+    const state = await surfaceState(undefined)
+    assert.deepEqual(state.mcpEndpoints.surfaces, {})
+    for (const tool of Object.values(state.mcpEndpoints.toolsMeta)) {
+      assert.equal(tool.surface, undefined)
+    }
+  })
+
+  test('mcpEndpoint: true gives the instance /mcp/<name> to itself', async () => {
+    const state = await surfaceState(true)
+    assert.deepEqual(state.mcpEndpoints.surfaces, { slack: '/mcp/slack' })
+    assert.deepEqual(
+      Object.values(state.mcpEndpoints.toolsMeta).map((t) => t.surface),
+      ['slack', 'slack']
+    )
+  })
+
+  test('a string mcpEndpoint is the path, used as given', async () => {
+    const state = await surfaceState('/connectors/slack')
+    assert.deepEqual(state.mcpEndpoints.surfaces, {
+      slack: '/connectors/slack',
+    })
   })
 
   test('a name the addon does not publish fails the build', async () => {
