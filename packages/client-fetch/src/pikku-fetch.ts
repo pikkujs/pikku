@@ -10,7 +10,8 @@
 export const corePikkuFetch = async (
   uri: string,
   data: any,
-  options?: Omit<RequestInit, 'body'>
+  options?: Omit<RequestInit, 'body'>,
+  fetchImpl?: typeof globalThis.fetch
 ) => {
   const method = options?.method?.toUpperCase() || 'GET'
   let body: any | undefined
@@ -38,7 +39,8 @@ export const corePikkuFetch = async (
     delete headers['Content-Type']
   }
 
-  return await fetch(uri, {
+  const send = fetchImpl ?? globalThis.fetch.bind(globalThis)
+  return await send(uri, {
     method: method.toUpperCase(),
     ...options,
     headers,
