@@ -1,6 +1,6 @@
 {
   "name": "@pikku/modelcontextprotocol",
-  "version": "0.12.14",
+  "version": "0.12.15",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -37,6 +37,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch.d.ts",
+      "import": "./dist/fetch.js",
+      "default": "./dist/fetch.js"
     }
   },
   "devDependencies": {

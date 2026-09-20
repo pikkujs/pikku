@@ -348,7 +348,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.157",
+      "version": "0.12.159",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -396,7 +396,7 @@
         "zod-to-ts": "^2.1.0",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.116",
+        "@pikku/core": "^0.12.117",
         "@pikku/playwright": "^0.12.83",
         "@pikku/ws": "^0.12.10",
         "@playwright/test": "^1.50.0",
@@ -409,7 +409,7 @@
         "ws": "^8.21.3",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.116",
+        "@pikku/core": "^0.12.117",
         "@pikku/playwright": "^0.12.83",
         "@pikku/ws": "^0.12.10",
         "better-auth": "^1.7.5",
@@ -529,7 +529,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.116",
+      "version": "0.12.117",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -844,25 +844,25 @@
     },
     "packages/runtimes/cloudflare": {
       "name": "@pikku/cloudflare",
-      "version": "0.12.24",
+      "version": "0.12.26",
       "dependencies": {
         "kysely-d1": "^0.4.0",
       },
       "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.21.3",
         "@cloudflare/workers-types": "^5.20260815.1",
-        "@pikku/core": "^0.12.116",
+        "@pikku/core": "^0.12.117",
         "@pikku/kysely": "^0.13.25",
-        "@pikku/modelcontextprotocol": "^0.12.14",
+        "@pikku/modelcontextprotocol": "^0.12.15",
         "@vitest/runner": "^4.1.10",
         "@vitest/snapshot": "^4.1.10",
         "kysely": "^0.29.5",
         "vitest": "^4.1.10",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.116",
+        "@pikku/core": "^0.12.117",
         "@pikku/kysely": "^0.13.25",
-        "@pikku/modelcontextprotocol": "^0.12.14",
+        "@pikku/modelcontextprotocol": "^0.12.15",
         "kysely": "^0.29.0",
       },
       "optionalPeers": [
@@ -940,7 +940,7 @@
     },
     "packages/runtimes/modelcontextprotocol": {
       "name": "@pikku/modelcontextprotocol",
-      "version": "0.12.14",
+      "version": "0.12.15",
       "dependencies": {
         "@modelcontextprotocol/server": "2.0.0",
       },
@@ -1605,14 +1605,14 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.157",
-        "@pikku/core": "^0.12.116",
+        "@pikku/cli": "^0.12.159",
+        "@pikku/core": "^0.12.117",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.116",
+        "@pikku/core": "^0.12.117",
         "zod": "^4",
       },
     },

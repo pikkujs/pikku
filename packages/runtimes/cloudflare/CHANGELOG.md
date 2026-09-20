@@ -1,3 +1,36 @@
+## 0.12.26
+
+### Patch Changes
+
+- f4f0684: Split the web-standard half of `PikkuMCPServer` into `@pikku/modelcontextprotocol/fetch`
+
+  `PikkuMCPServer` imports `node:http`, `node:stream` and `node:stream/promises` at
+  module level for its HTTP listener and stdio entry points. `@pikku/cloudflare`'s
+  MCP handler imported it from the package root, so workerd resolved those eagerly
+  and every Worker with an MCP wiring died at publish with
+  `Uncaught Error: No such module "node:http"`.
+
+  The web-standard core is now `PikkuMCPFetchServer`, exported from the new
+  `./fetch` entry, and `PikkuMCPServer` extends it with the node-only entry points.
+  The Cloudflare handler imports the fetch entry. The root entry is unchanged for
+  node consumers.
+
+- Updated dependencies [f4f0684]
+  - @pikku/modelcontextprotocol@0.12.15
+
+## 0.12.25
+
+### Patch Changes
+
+- dae3315: `@pikku/cloudflare` installs the MCP package it imports.
+
+  `mcp-handler.ts` imports `PikkuMCPServer` from `@pikku/modelcontextprotocol`, which the package declared as a peer dependency and nothing else. A peer is a requirement placed on the consumer, not an instruction to install anything here, so the workspace never linked it and the package's own build could not resolve the import — `TS2307` on a module that builds fine two packages over. The release stopped there and took every package queued behind it with it.
+
+  The two sibling runtimes that also serve MCP, `node-http-server` and `bun-server`, each declare it twice: peer for the consumer, dev so the build has it. This matches them. Nothing about what a consumer must install changes.
+
+- Updated dependencies [8a0ecb7]
+  - @pikku/core@0.12.117
+
 ## 0.12.24
 
 ### Patch Changes
