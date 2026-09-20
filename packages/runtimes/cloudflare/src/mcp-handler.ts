@@ -1,5 +1,5 @@
 import type { CoreSingletonServices } from '@pikku/core/types'
-import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
+import { PikkuMCPFetchServer } from '@pikku/modelcontextprotocol/fetch'
 import { WorkerEntrypoint } from 'cloudflare:workers'
 import { rpcService } from '@pikku/core/rpc'
 
@@ -12,7 +12,7 @@ import { runFetch } from './run-fetch.js'
 
 /**
  * The parsed contents of the unit's `.pikku/mcp/mcp*.gen.json`, which is what
- * `PikkuMCPServer` reads its tool, resource and prompt list from.
+ * `PikkuMCPFetchServer` reads its tool, resource and prompt list from.
  */
 export interface CloudflareMCPSurface {
   tools?: unknown[]
@@ -40,7 +40,7 @@ const surfaceIsEmpty = (surface: CloudflareMCPSurface): boolean =>
  * that the MCP SDK is only pulled into the bundle of a unit that actually
  * serves MCP. A worker that does not is unaffected by it.
  *
- * The server is built once per isolate and reused: `PikkuMCPServer` is
+ * The server is built once per isolate and reused: `PikkuMCPFetchServer` is
  * stateless per request (`createFetchHandler` builds a fresh protocol server
  * for each one), so the only thing worth caching is the surface it was
  * constructed from.
@@ -67,7 +67,7 @@ export function createCloudflareMCPHandler(
       return null
     }
     const { tools = [], resources = [], prompts = [] } = mcpJson
-    const mcpServer = new PikkuMCPServer(
+    const mcpServer = new PikkuMCPFetchServer(
       {
         name: 'pikku',
         version: '1.0.0',
