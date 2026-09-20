@@ -4,21 +4,27 @@
 '@pikku/cli': patch
 ---
 
-`pikku scenario guide` writes the user guide a scenario suite already contains. A feature reads as a page, a scenario as a section, a step as a sentence somebody wrote in English, and a run leaves screenshots behind with the captions their author took them under — the command joins that to the editorial prose a project checks in under `docs/` and writes markdown. It renders no HTML, ships no components, resolves no asset URLs and calls no model: an image is an ordinary relative `![caption](path)`, and whoever consumes the markdown rewrites the paths.
+`pikku scenario guide` writes the user guide a scenario suite already contains. A feature reads as a page and a scenario as a section, and a run leaves screenshots behind with the captions their author took them under — the command joins that to the editorial prose a project checks in under `docs/` and writes markdown. It renders no HTML, ships no components, resolves no asset URLs and calls no model: an image is an ordinary relative `![caption](path)`, and whoever consumes the markdown rewrites the paths.
 
-An editorial source declares which features it covers, and nothing declares where a feature is documented — the mapping is many-to-many and falls out of the union of those lists:
+A page cites a feature by leaving the marker pair where the block belongs:
 
-```yaml
+```markdown
 ---
 title: Deployments
-features:
-  - id: deploymentsFeature
-    evidence: '3f2a91c'
 ---
+
+A deployment is one tracked shipment of your app.
+
+<!-- pikku:guide feature=deploymentsFeature -->
+<!-- /pikku:guide -->
+
+## Does my app go down during a deploy?
 ```
 
-`evidence` is a hash of that feature's step sentences and artifact ids, deliberately not of the image bytes: restyling a UI changes every screenshot and no sentence, while inserting or renaming a step changes what the prose was describing. A page written against an older hash is reported as stale.
+That one line does both halves of the job. It says *where* the block goes, which a frontmatter list cannot express, and it is what the coverage gate counts to decide *whether* a feature is documented at all. The mapping stays many-to-many and falls out of the union of every marker in the tree. A rebuild rewrites exactly the regions between the markers, so every sentence a human wrote around them survives.
+
+**The steps are evidence, not content.** A generated block is the scenario's title, the description its author wrote, and the shots it filed — never a numbered Given/When/Then ladder, which is a test report and not something anybody arrives at a documentation page wanting. The sentences are still what the guide is kept honest against: `docs/.guide.lock` records a hash of each feature's step sentences and artifact ids, deliberately not of the image bytes. Restyling a UI changes every screenshot and no sentence; inserting or renaming a step changes what the prose was describing, and the page is reported stale. The lock is generated and checked in, so no hash is ever typed or merged by hand — and a tree whose lock is untracked reports every page as current forever.
 
 Every registered feature has to be cited by some page, and a feature that is pure plumbing says so rather than being written about — `pikkuFeature({ document: false })`, threaded through the inspector and `FeatureMeta`. An uncited feature fails the command by name; `--allow-undocumented` downgrades that one failure to a report. A page citing a feature id that is not registered stays an error either way.
 
-Generated blocks are delimited by `<!-- pikku:guide feature=<id> evidence=<hash> -->` … `<!-- /pikku:guide -->`, so a rebuild rewrites exactly those regions and every sentence a human wrote around them survives. Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record.
+Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record.

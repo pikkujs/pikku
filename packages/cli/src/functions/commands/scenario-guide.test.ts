@@ -5,7 +5,9 @@ import {
   checkGuideCoverage,
   featureEvidence,
   guideStep,
+  parseGuideLock,
   parseGuidePage,
+  renderGuideLock,
   renderGuidePage,
 } from './scenario-guide.js'
 import type { GuideFeature } from './scenario-guide.js'
@@ -43,10 +45,13 @@ const plumbing = (): GuideFeature => ({
   scenarios: [],
 })
 
+const cite = (id: string) =>
+  `<!-- pikku:guide feature=${id} -->\n<!-- /pikku:guide -->`
+
 const page = (body = '') =>
   parseGuidePage(
     'product/deployments.md',
-    `---\ntitle: Deployments\nfeatures:\n  - id: deployments\n---\n${body}`
+    `---\ntitle: Deployments\n---\n${body}\n${cite('deployments')}\n`
   )
 
 describe('guide coverage', () => {
@@ -57,7 +62,7 @@ describe('guide coverage', () => {
     assert.deepEqual(coverage.optedOut, [])
   })
 
-  test('names the feature no page documents', () => {
+  test('names the feature no page cites', () => {
     const orphan: GuideFeature = {
       ...deployments(),
       id: 'billing',
@@ -78,7 +83,7 @@ describe('guide coverage', () => {
       [
         parseGuidePage(
           'product/gone.md',
-          '---\nfeatures:\n  - id: removedFeature\n---\n'
+          `---\ntitle: Gone\n---\n${cite('removedFeature')}\n`
         ),
       ]
     )
@@ -93,7 +98,7 @@ describe('guide coverage', () => {
       [
         parseGuidePage(
           'product/wire.md',
-          '---\nfeatures:\n  - id: httpWire\n---\n'
+          `---\ntitle: Wire\n---\n${cite('httpWire')}\n`
         ),
       ]
     )
@@ -102,15 +107,18 @@ describe('guide coverage', () => {
     ])
   })
 
-  test('declared evidence that is no longer current is reported stale', () => {
-    const source = parseGuidePage(
-      'product/deployments.md',
-      '---\nfeatures:\n  - id: deployments\n    evidence: "abc1234"\n---\n'
-    )
-    const coverage = checkGuideCoverage([deployments()], [source])
+  test('locked evidence that is no longer current is reported stale', () => {
+    const coverage = checkGuideCoverage([deployments()], [page()], {
+      deployments: 'abc1234',
+    })
     assert.equal(coverage.stale.length, 1)
-    assert.equal(coverage.stale[0]!.declared, 'abc1234')
+    assert.equal(coverage.stale[0]!.locked, 'abc1234')
     assert.equal(coverage.stale[0]!.current, featureEvidence(deployments()))
+  })
+
+  test('a feature the lock has never seen is not stale', () => {
+    const coverage = checkGuideCoverage([deployments()], [page()], {})
+    assert.deepEqual(coverage.stale, [])
   })
 })
 
@@ -148,24 +156,66 @@ describe('evidence', () => {
   })
 })
 
+describe('lock', () => {
+  test('it holds the evidence of every documented feature', () => {
+    const lock = parseGuideLock(renderGuideLock([deployments(), plumbing()]))
+    assert.deepEqual(lock, { deployments: featureEvidence(deployments()) })
+  })
+
+  test('it is keyed in a stable order', () => {
+    const billing: GuideFeature = {
+      ...deployments(),
+      id: 'billing',
+      name: 'Billing',
+    }
+    assert.equal(
+      renderGuideLock([deployments(), billing]),
+      renderGuideLock([billing, deployments()])
+    )
+  })
+
+  test('an unreadable lock is refused rather than treated as empty', () => {
+    assert.throws(() => parseGuideLock('not json'), /unreadable/)
+    assert.throws(() => parseGuideLock('[]'), /not an object/)
+  })
+})
+
 describe('emit', () => {
   const features = () => new Map([['deployments', deployments()]])
 
-  test('the generated block carries the steps and the screenshots', () => {
+  test('the generated block carries the scenario and its screenshots', () => {
     const markdown = renderGuidePage(page(), features(), '../runs/abc/')
     assert.match(markdown, /^---\ntitle: "Deployments"\n/)
     assert.match(markdown, /## Shipping a change/)
-    assert.match(
-      markdown,
-      /1\. \*\*Given\*\* yasser \(the founder\) has a project/
-    )
-    assert.match(
-      markdown,
-      /3\. \*\*Then\*\* yasser sees the deployment go live/
-    )
+    assert.match(markdown, /A push becomes a running deployment\./)
     assert.match(
       markdown,
       /!\[The deployment list\]\(\.\.\/runs\/abc\/shipping\/2\.png\)/
+    )
+  })
+
+  test('the steps are evidence, not content', () => {
+    const markdown = renderGuidePage(page(), features(), '')
+    assert.doesNotMatch(markdown, /\*\*Given\*\*/)
+    assert.doesNotMatch(markdown, /yasser pushes a commit/)
+  })
+
+  test('the marker carries the feature id and nothing else', () => {
+    const markdown = renderGuidePage(page(), features(), '')
+    assert.match(markdown, /<!-- pikku:guide feature=deployments -->/)
+    assert.doesNotMatch(markdown, /evidence=/)
+  })
+
+  test('the block lands where the author left the markers', () => {
+    const source = parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\n---\nBefore.\n\n${cite('deployments')}\n\n## After\n\nTail.\n`
+    )
+    const markdown = renderGuidePage(source, features(), '')
+    assert.ok(
+      markdown.indexOf('Before.') <
+        markdown.indexOf('## Shipping a change') &&
+        markdown.indexOf('## Shipping a change') < markdown.indexOf('## After')
     )
   })
 
@@ -179,14 +229,14 @@ describe('emit', () => {
 
   test('identical inputs produce byte-identical output', () => {
     assert.equal(
-      renderGuidePage(page('Prose.\n'), features(), '../runs/abc/'),
-      renderGuidePage(page('Prose.\n'), features(), '../runs/abc/')
+      renderGuidePage(page('Prose.'), features(), '../runs/abc/'),
+      renderGuidePage(page('Prose.'), features(), '../runs/abc/')
     )
   })
 
   test('hand-written prose survives a rebuild', () => {
     const first = renderGuidePage(
-      page('Deploys are how work reaches users.\n'),
+      page('Deploys are how work reaches users.'),
       features(),
       ''
     )
@@ -199,27 +249,37 @@ describe('emit', () => {
     assert.equal(rebuilt, first)
   })
 
-  test('a rebuild rewrites only the generated region', () => {
-    const first = renderGuidePage(page('Before.\n'), features(), '')
-    const edited = first.replace('Before.', 'Before, rewritten by hand.')
-    const moved = deployments()
-    moved.scenarios[0]!.steps.push(
-      guideStep('Then yasser sees the release recorded')
+  test('a guide built before the hash moved into the lock rebuilds clean', () => {
+    const legacy = parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\n---\nBefore.\n\n<!-- pikku:guide feature=deployments evidence=abc1234 -->\nstale\n<!-- /pikku:guide -->\n`
     )
+    assert.deepEqual(legacy.features, ['deployments'])
+    const rebuilt = renderGuidePage(legacy, features(), '')
+    assert.doesNotMatch(rebuilt, /evidence=/)
+    assert.doesNotMatch(rebuilt, /stale/)
+    assert.match(rebuilt, /## Shipping a change/)
+  })
+
+  test('a rebuild rewrites only the generated region', () => {
+    const first = renderGuidePage(page('Before.'), features(), '')
+    const edited = first.replace('Before.', 'Before, rewritten by hand.')
+    const renamed = deployments()
+    renamed.scenarios[0]!.title = 'Shipping a change, end to end'
     const rebuilt = renderGuidePage(
       parseGuidePage('product/deployments.md', edited),
-      new Map([['deployments', moved]]),
+      new Map([['deployments', renamed]]),
       ''
     )
     assert.match(rebuilt, /Before, rewritten by hand\./)
-    assert.match(rebuilt, /4\. \*\*Then\*\* yasser sees the release recorded/)
+    assert.match(rebuilt, /## Shipping a change, end to end/)
   })
 
   test('a block whose feature the page no longer cites is dropped', () => {
-    const built = renderGuidePage(page('Prose.\n'), features(), '')
+    const built = renderGuidePage(page('Prose.'), features(), '')
     const uncited = parseGuidePage(
       'product/deployments.md',
-      built.replace('  - id: deployments', '  - id: other')
+      built.replace('feature=deployments', 'feature=other')
     )
     const rebuilt = renderGuidePage(uncited, new Map(), '')
     assert.doesNotMatch(rebuilt, /pikku:guide/)
@@ -235,12 +295,31 @@ describe('parsing', () => {
     )
   })
 
-  test('a bare feature id is the shorthand for one with no evidence', () => {
+  test('a page citing nothing cites nothing', () => {
+    const parsed = parseGuidePage(
+      'product/prose.md',
+      '---\ntitle: Prose\n---\nJust words.\n'
+    )
+    assert.deepEqual(parsed.features, [])
+  })
+
+  test('a feature cited twice is counted once', () => {
     const parsed = parseGuidePage(
       'product/deployments.md',
-      '---\nfeatures:\n  - deployments\n---\n'
+      `---\ntitle: Deployments\n---\n${cite('deployments')}\n\n${cite('deployments')}\n`
     )
-    assert.deepEqual(parsed.features, [{ id: 'deployments' }])
+    assert.deepEqual(parsed.features, ['deployments'])
+  })
+
+  test('the old frontmatter list is refused with the marker to write instead', () => {
+    assert.throws(
+      () =>
+        parseGuidePage(
+          'product/deployments.md',
+          '---\ntitle: Deployments\nfeatures:\n  - deployments\n---\n'
+        ),
+      /pikku:guide feature=<id>/
+    )
   })
 })
 

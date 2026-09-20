@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { resolve, join, dirname, relative, sep } from 'node:path'
-import { mkdirSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { glob } from 'tinyglobby'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -42,10 +42,12 @@ import {
   checkGuideCoverage,
   featureEvidence,
   guideStep,
+  parseGuideLock,
   parseGuidePage,
+  renderGuideLock,
   renderGuidePage,
 } from './scenario-guide.js'
-import type { GuideFeature, GuidePage } from './scenario-guide.js'
+import type { GuideFeature, GuideLock, GuidePage } from './scenario-guide.js'
 import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
 import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
 import { resolveEnvironment, isLocalUrl } from './environment.js'
@@ -965,10 +967,10 @@ export const scenarioRun = pikkuSessionlessFunc<
  * Structure comes from the registry (which features exist, what their scenarios
  * are called), and evidence from the latest run record (what the steps actually
  * said, and what they filed). Editorial prose comes from the project's own
- * `docs/` sources, which declare the features they cover; this merges the three
- * and writes one markdown file per source. It renders nothing, resolves no
- * asset URLs and calls no model: the writing is somebody else's concern, and
- * this is the compiler that keeps it honest.
+ * `docs/` sources, which cite a feature by leaving the marker pair where its
+ * block belongs; this merges the three and writes one markdown file per source.
+ * It renders nothing, resolves no asset URLs and calls no model: the writing is
+ * somebody else's concern, and this is the compiler that keeps it honest.
  */
 export const scenarioGuide = pikkuSessionlessFunc<
   {
@@ -1048,24 +1050,29 @@ export const scenarioGuide = pikkuSessionlessFunc<
       )
     }
 
-    const coverage = checkGuideCoverage(features, pages)
+    const lockPath = join(docsDir, '.guide.lock')
+    const lock: GuideLock = existsSync(lockPath)
+      ? parseGuideLock(readFileSync(lockPath, 'utf-8'))
+      : {}
+
+    const coverage = checkGuideCoverage(features, pages, lock)
     for (const { path, featureId } of coverage.unknown) {
       logger.error(
-        `${join(docs, path)} documents '${featureId}', which is not a registered feature — a page describing something that no longer exists.`
+        `${join(docs, path)} cites '${featureId}', which is not a registered feature — a page describing something that no longer exists.`
       )
     }
     for (const { path, featureId } of coverage.optedOut) {
       logger.error(
-        `${join(docs, path)} documents '${featureId}', which declares \`document: false\`.`
+        `${join(docs, path)} cites '${featureId}', which declares \`document: false\`.`
       )
     }
-    for (const { path, featureId, declared, current } of coverage.stale) {
+    for (const { path, featureId, locked, current } of coverage.stale) {
       logger.warn(
-        `${join(docs, path)} was written against '${featureId}' at ${declared}, which is now ${current} — its steps moved under the prose.`
+        `${join(docs, path)} was written against '${featureId}' at ${locked}, which is now ${current} — its steps moved under the prose.`
       )
     }
     for (const featureId of coverage.missing) {
-      const message = `Feature '${featureId}' is documented by no page. Write one under ${docs}/ citing it, or set \`document: false\` on the feature.`
+      const message = `Feature '${featureId}' is cited by no page. Place \`<!-- pikku:guide feature=${featureId} -->\` and \`<!-- /pikku:guide -->\` in a page under ${docs}/, or set \`document: false\` on the feature.`
       if (allowUndocumented) {
         logger.warn(message)
       } else {
@@ -1099,6 +1106,7 @@ export const scenarioGuide = pikkuSessionlessFunc<
       mkdirSync(dirname(target), { recursive: true })
       writeFileSync(target, markdown)
     }
+    writeFileSync(lockPath, renderGuideLock(features))
     logger.info(
       `${pages.length} page(s) → ${outputDir} (run ${record.runId}, ${features.filter((f) => f.document).length} documented feature(s))`
     )
