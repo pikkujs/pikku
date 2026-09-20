@@ -1170,6 +1170,77 @@ export function validateScenarioSteps(
 }
 
 /**
+ * Reports scenarios that no `pikkuFeature` lists.
+ *
+ * A feature is what a run stamps onto each result, and the only handle anything
+ * downstream has on a scenario: the console groups by it and the guide cites it.
+ * A scenario in no feature still runs and still passes — it simply files its
+ * results, and any screenshot or recording it took, where nothing can reach
+ * them. That is not a style violation, it is work being thrown away, and it is
+ * invisible precisely because the suite is green.
+ *
+ * It is an `error` rather than a `critical` because every suite written before
+ * the rule has some, and a hard failure on a CLI bump would strand them with no
+ * way to defer. `--fail-on-error` is how a project opts in once it has bound
+ * what it has.
+ *
+ * A feature whose `scenarios` array could not be read statically (a spread, a
+ * `.map()`) suppresses the check entirely: the scenario it would name may well
+ * be in that array, and a false accusation is worse than a missed one. The
+ * suppression says so rather than passing quietly — one unreadable feature
+ * blinds the whole project, and a silent pass is the thing being fixed.
+ */
+export function validateScenarioFeatures(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const features = state.workflows.featureFiles
+  if (!features) {
+    return
+  }
+  const unreadable = [...features.values()]
+    .filter((feature) => feature.unresolvedEntries > 0)
+    .map((feature) => feature.exportedName)
+  if (unreadable.length > 0) {
+    logger.diagnostic({
+      severity: 'warn',
+      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
+      message:
+        `Not checking which scenarios belong to a feature: ${unreadable.map((name) => `'${name}'`).join(', ')} ` +
+        `build their \`scenarios\` array with a spread or a call, so a scenario missing from every readable feature may still be in one of those. ` +
+        `List the scenarios literally to get the check back.`,
+    })
+    return
+  }
+
+  const owned = new Set<string>()
+  for (const feature of features.values()) {
+    for (const entry of feature.entries) {
+      owned.add(entry.scenario)
+    }
+  }
+
+  const files = state.workflows.files
+  for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
+    if (!(meta as { scenario?: boolean }).scenario) {
+      continue
+    }
+    const exported = files?.get(workflowName)?.exportedName
+    if (owned.has(workflowName) || (exported && owned.has(exported))) {
+      continue
+    }
+    logger.diagnostic({
+      severity: 'error',
+      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
+      message:
+        `Scenario '${workflowName}' is listed by no pikkuFeature, so nothing downstream can reach it — ` +
+        `a run stamps no feature onto its results, the console groups it under none, and a guide cannot cite it. ` +
+        `Add it to a feature's \`scenarios\` array.`,
+    })
+  }
+}
+
+/**
  * A `pikkuWorkflowGraph` node that references the `graph:` namespace (e.g.
  * `graph:editFields`) needs @pikku/addon-graph wired — otherwise the RPC never
  * registers and codegen fails deep in type-checking with an opaque error. Fail
