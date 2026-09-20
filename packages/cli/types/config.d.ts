@@ -817,6 +817,18 @@ export type PikkuCLIInput = {
      */
     defaultTarget?: 'serverless' | 'server'
     /**
+     * Rename identifiers when minifying worker bundles. Defaults to true.
+     * Set it to false to make a deployed worker's runtime errors name
+     * something the project can search for.
+     */
+    mangleIdentifiers?: boolean
+    /**
+     * Which bundler builds the deployment units. 'auto' (the default) picks
+     * Bun.build under bun and esbuild otherwise. Pin it to 'esbuild' where a
+     * Bun.build output misbehaves at runtime.
+     */
+    bundler?: 'auto' | 'bun' | 'esbuild'
+    /**
      * How many deployment units the app's functions collapse into.
      *
      * `strategy` decides what happens to a function no rule matches:
