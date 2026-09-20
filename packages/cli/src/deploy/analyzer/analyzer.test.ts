@@ -172,6 +172,36 @@ describe('analyzeDeployment - scenarios are not deployable', () => {
     ])
   })
 
+  // An MCP unit with an empty route table deploys and then never receives a
+  // request: the provider builds its routing from exactly this list.
+  test('the MCP gateway is routable', () => {
+    const state = stateWithScenario()
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        createTodo: { pikkuFuncId: 'createTodo', name: 'createTodo' },
+      },
+      resourcesMeta: {},
+      promptsMeta: {},
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+    const mcpUnit = manifest.units.find((u) => u.role === 'mcp')
+    const routes = (mcpUnit?.handlers ?? []).flatMap((handler) =>
+      handler.type === 'fetch' ? handler.routes : []
+    )
+
+    assert.deepEqual(
+      routes.map((r) => `${r.method} ${r.route}`),
+      [
+        'post /mcp',
+        'get /mcp',
+        'delete /mcp',
+        'get /.well-known/oauth-protected-resource',
+        'get /.well-known/oauth-protected-resource/mcp',
+      ]
+    )
+  })
+
   test('an exposed step gets no /rpc route', () => {
     const manifest = analyzeDeployment(stateWithScenario(), {
       projectId: 'test',

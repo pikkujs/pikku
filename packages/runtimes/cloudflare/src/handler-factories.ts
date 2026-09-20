@@ -43,6 +43,13 @@ export interface ServiceFactories {
   ) => Record<string, unknown> | Promise<Record<string, unknown>>
 }
 
+/**
+ * Singleton services are built once per isolate and reused, keyed by the
+ * factories that built them. An isolate normally serves one unit, so the key
+ * never changes there — but a second unit's factories asking for services must
+ * not be handed the first unit's, which is exactly what an unkeyed cache does.
+ */
+let cachedFactories: ServiceFactories | null = null
 let cachedServices: CoreSingletonServices | null = null
 
 export async function setupServices(
@@ -50,7 +57,7 @@ export async function setupServices(
   factories: ServiceFactories
 ): Promise<CoreSingletonServices> {
   setCloudflareEnv(env)
-  if (cachedServices) return cachedServices
+  if (cachedServices && cachedFactories === factories) return cachedServices
   const variables = new LocalVariablesService(
     env as Record<string, string | undefined>
   )
@@ -61,18 +68,22 @@ export async function setupServices(
     ? await factories.createPlatformServices(env)
     : {}
 
-  cachedServices = await factories.createSingletonServices(config, {
+  const services = await factories.createSingletonServices(config, {
     variables,
     secrets,
     ...platformServices,
   })
+  // Only once it has been built: a factory that threw must be retried, not
+  // remembered as the cache's owner.
+  cachedServices = services
+  cachedFactories = factories
   // Register the global singleton slot the core runners read. runFetch /
   // runQueueJob / runScheduled call into core (`fetchData` etc.) which resolve
   // services via the global `getSingletonServices()`, NOT the value returned
   // here — without this every function-bearing worker throws "Singleton
   // services not initialized" (CF 1101) on the first request.
-  setSingletonServices(cachedServices)
-  return cachedServices
+  setSingletonServices(services)
+  return services
 }
 
 /**
@@ -430,14 +441,6 @@ export function createCloudflareQueueHandler(factories: ServiceFactories) {
       return rpc.invoke(name, args)
     }
   }
-}
-
-/**
- * Creates an ExportedHandler with a fetch() entrypoint for MCP units.
- * MCP uses the same HTTP transport — the MCP protocol is handled by pikku core.
- */
-export function createCloudflareMCPHandler(factories: ServiceFactories) {
-  return createCloudflareWorkerHandler(factories)
 }
 
 /**

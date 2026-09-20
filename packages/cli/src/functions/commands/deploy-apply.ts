@@ -14,9 +14,13 @@ import {
   PikkuDeployBuildFailedError,
 } from '../../deploy/build-pipeline.js'
 
+// A bundler reads anything not starting with `./` or `../` as a bare package
+// specifier, and a path into a dot-directory (`.pikku/...`) starts with a dot
+// without being relative — so testing for `.` alone silently emits an import
+// no bundler can resolve.
 function toRelativeImport(fromDir: string, toFile: string): string {
   let rel = relative(fromDir, toFile).replace(/\\/g, '/')
-  if (!rel.startsWith('.')) rel = `./${rel}`
+  if (!rel.startsWith('./') && !rel.startsWith('../')) rel = `./${rel}`
   return rel.replace(/\.ts$/, '.js')
 }
 
@@ -26,14 +30,10 @@ export function getEntryContext(
   unit: EntryGenerationContext['unit'],
   inspectorState: InspectorState
 ): EntryGenerationContext {
-  const bootstrapRelative = relative(
+  const bootstrapPath = toRelativeImport(
     unitDir,
     join(pikkuDir, 'pikku-bootstrap.gen.js')
   )
-  const bootstrapPath =
-    bootstrapRelative.startsWith('./') || bootstrapRelative.startsWith('../')
-      ? bootstrapRelative
-      : `./${bootstrapRelative}`
 
   const {
     pikkuConfigFactory,
@@ -100,8 +100,7 @@ export function getEntryContext(
       )
     }
     if (hasMcp) {
-      const rel = relative(unitDir, mcpJsonAbs).replace(/\\/g, '/')
-      const relImport = rel.startsWith('.') ? rel : `./${rel}`
+      const relImport = toRelativeImport(unitDir, mcpJsonAbs)
       mcpImport = `import mcpJson from '${relImport}' with { type: 'json' }`
       mcpServerOption =
         mcpPath === '/mcp'

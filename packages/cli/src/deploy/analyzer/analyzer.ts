@@ -83,6 +83,41 @@ export interface AnalyzerOptions {
   grouping?: GroupingConfig
 }
 
+/**
+ * Where an MCP unit answers. Every runtime that mounts MCP defaults to `/mcp`,
+ * and pikku's own codegen never writes an `mcpPath` into the generated
+ * manifest, so the route table and the mount agree. A project that overrides
+ * `mcpPath` in `mcp.gen.json` moves the mount but not this — the analyzer never
+ * reads that file.
+ */
+const MCP_PATH = '/mcp'
+
+/** The discovery document `PikkuMCPServer` serves, per RFC 9728. */
+const WELL_KNOWN_PRM = '/.well-known/oauth-protected-resource'
+
+/**
+ * The routes an MCP unit has to receive to serve Streamable HTTP. Without them
+ * the unit deploys with an empty route table and nothing ever reaches it: POST
+ * carries the JSON-RPC calls, GET opens the server-to-client stream, and DELETE
+ * ends a session. The two well-known paths are how a client discovers the
+ * authorization server when the endpoint refuses it.
+ *
+ * The ids are synthetic, as they are for the agent gateway's routes: no single
+ * pikku function answers here, because the MCP transport picks the tool out of
+ * the JSON-RPC body and dispatches it itself.
+ */
+const mcpRoutes = (mcpPath: string): HttpRouteInfo[] => [
+  { method: 'post', route: mcpPath, pikkuFuncId: 'mcp:call' },
+  { method: 'get', route: mcpPath, pikkuFuncId: 'mcp:stream' },
+  { method: 'delete', route: mcpPath, pikkuFuncId: 'mcp:end' },
+  { method: 'get', route: WELL_KNOWN_PRM, pikkuFuncId: 'mcp:discovery' },
+  {
+    method: 'get',
+    route: `${WELL_KNOWN_PRM}${mcpPath}`,
+    pikkuFuncId: 'mcp:discovery',
+  },
+]
+
 export function analyzeDeployment(
   state: InspectorState,
   options: AnalyzerOptions
@@ -552,7 +587,7 @@ export function analyzeDeployment(
       functionIds: [], // No function code bundled
       services: [],
       dependsOn: mcpFuncUnitNames,
-      handlers: [{ type: 'fetch', routes: [] }],
+      handlers: [{ type: 'fetch', routes: mcpRoutes(MCP_PATH) }],
       tags: collectTags(allMcpIds, tagsFor),
     })
 
