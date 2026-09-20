@@ -687,8 +687,13 @@ export const fabricCommands = defineCLICommands({
           changeId: { description: 'The item the question is about' },
           question: {
             description:
-              'One decision, in the filer’s vocabulary, with the options named',
+              'One decision, in the filer’s vocabulary. Name the choices with --option, not as “(a) … (b) …” inside this text',
             short: 'q',
+          },
+          option: {
+            description:
+              'A choice the filer can click, repeatable — e.g. --option "Reprice them" --option "Leave them". Without these they have to type an answer',
+            type: 'string[]',
           },
           authorName: { description: 'Who is asking, e.g. claude-code' },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
