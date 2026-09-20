@@ -7,13 +7,15 @@ import { ErrorCode, type CodedDiagnostic } from '../error-codes.js'
 const feature = (
   exportedName: string,
   scenarios: string[],
-  unresolvedEntries = 0
+  unnamedEntries = 0
 ): InspectorFeature =>
   ({
     path: `/project/test/${exportedName}.ts`,
     exportedName,
     entries: scenarios.map((scenario) => ({ scenario })),
-    unresolvedEntries,
+    unresolvedEntries: 0,
+    mentions: scenarios,
+    unnamedEntries,
     hasBefore: false,
     hasAfter: false,
   }) as InspectorFeature
@@ -72,9 +74,7 @@ describe('validateScenarioFeatures', () => {
     assert.deepEqual(seen, [])
   })
 
-  // One feature nobody can read blinds the whole project, so the suppression
-  // has to be louder than the thing it suppresses.
-  test('an unreadable feature suppresses the check and says which one', () => {
+  test('an unreadable feature downgrades the report and names both sides', () => {
     const { seen, logger } = collect()
     validateScenarioFeatures(
       logger,
@@ -83,6 +83,15 @@ describe('validateScenarioFeatures', () => {
     assert.equal(seen.length, 1)
     assert.equal(seen[0]!.severity, 'warn')
     assert.match(seen[0]!.message, /spreadFeature/)
-    assert.doesNotMatch(seen[0]!.message, /stray/)
+    assert.match(seen[0]!.message, /stray/)
+  })
+
+  test('an unreadable feature is not mentioned when nothing is unowned', () => {
+    const { seen, logger } = collect()
+    validateScenarioFeatures(
+      logger,
+      stateWith(['bound'], [feature('spreadFeature', ['bound'], 3)])
+    )
+    assert.deepEqual(seen, [])
   })
 })
