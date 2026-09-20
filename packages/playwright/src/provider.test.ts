@@ -934,3 +934,86 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
     await rm(dir, { recursive: true, force: true })
   })
 })
+
+describe('PlaywrightScenarioBrowserProvider video clock', () => {
+  const providerWith = (
+    video: 'off' | 'failed' | 'all',
+    dir: string,
+    browser: any
+  ) =>
+    new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: ROOT,
+      actors: {
+        admin: { email: 'admin@test' },
+        shopper: { email: 'shopper@test' },
+      },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', video, compress: false },
+    })
+
+  test('an actor recording carries the moment their window opened', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser)
+
+    provider.beginScenario('Checkout')
+    const before = Date.now()
+    await provider.sessionFor('admin')
+    const startedAt = provider.videoStartedAt('admin')
+
+    assert.ok(startedAt !== undefined, 'a recorded window knows when it began')
+    assert.ok(startedAt! >= before && startedAt! <= Date.now())
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('each actor keeps their own clock, because each has their own file', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser)
+
+    provider.beginScenario('Checkout › two people')
+    await provider.sessionFor('admin')
+    await provider.sessionFor('shopper')
+
+    assert.notEqual(provider.videoStartedAt('admin'), undefined)
+    assert.notEqual(provider.videoStartedAt('shopper'), undefined)
+    assert.equal(
+      provider.videoStartedAt('nobody'),
+      undefined,
+      'an actor with no window has no clock'
+    )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a run recording nothing offers no clock to stamp steps with', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('off', dir, browser)
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+
+    assert.equal(provider.videoStartedAt('admin'), undefined)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('the clock is dropped with the context that was recording', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser)
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    provider.endScenario('passed')
+    await provider.reset()
+
+    assert.equal(
+      provider.videoStartedAt('admin'),
+      undefined,
+      'the next scenario records a new file, so the old start is not its start'
+    )
+    await rm(dir, { recursive: true, force: true })
+  })
+})

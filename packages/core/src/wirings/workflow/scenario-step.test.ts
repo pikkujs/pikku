@@ -942,3 +942,132 @@ describe('a step driven by a persona is given its actor', () => {
     })
   })
 })
+
+describe('a browser step records where it falls in the video', () => {
+  beforeEach(() => resetPikkuState())
+
+  /**
+   * A provider recording every actor from `startedAt`, so a step's offset is a
+   * known quantity rather than a race against the clock.
+   */
+  const recordingProvider = (startedAt: number | undefined) => ({
+    sessionFor: async (actorName: string) => ({ actor: actorName }) as any,
+    videoStartedAt: () => startedAt,
+    close: async () => {},
+  })
+
+  test('the offset is measured from the actor own recording, not the scenario', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const shopper = fakeActor('shopper', async () => ({}))
+    scenarioService.setScenarioBrowserProvider(
+      recordingProvider(Date.now() - 4_000) as any
+    )
+    registerStep('visitsCheckout', {
+      surfaces: ['browser'],
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+      actor: shopper,
+    })
+
+    const offsets = scenarioService.takeStepVideoOffsets(runId)
+    const step = offsets.get('shopper visits checkout')
+    assert.equal(step?.length, 1)
+    assert.equal(step![0]!.actor, 'shopper')
+    assert.ok(
+      step![0]!.offsetMs >= 4_000,
+      'four seconds of recording preceded the step'
+    )
+  })
+
+  test('a step that never touched a browser carries no offset', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setScenarioBrowserProvider(
+      recordingProvider(Date.now()) as any
+    )
+    registerStep('seedsAnAccount', {
+      surfaces: ['default'],
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('the platform seeds an account', 'seedsAnAccount')
+
+    assert.equal(scenarioService.takeStepVideoOffsets(runId).size, 0)
+  })
+
+  test('a run with no video records nothing, and the step still runs', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const shopper = fakeActor('shopper', async () => ({}))
+    let ran = false
+    scenarioService.setScenarioBrowserProvider(
+      recordingProvider(undefined) as any
+    )
+    registerStep('visitsCheckout', {
+      surfaces: ['browser'],
+      func: async () => {
+        ran = true
+        return null
+      },
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+      actor: shopper,
+    })
+
+    assert.equal(ran, true)
+    assert.equal(scenarioService.takeStepVideoOffsets(runId).size, 0)
+  })
+
+  test('a driver predating the field is one the runner still drives', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const shopper = fakeActor('shopper', async () => ({}))
+    scenarioService.setScenarioBrowserProvider({
+      sessionFor: async (actorName: string) => ({ actor: actorName }) as any,
+      close: async () => {},
+    } as any)
+    registerStep('visitsCheckout', {
+      surfaces: ['browser'],
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+      actor: shopper,
+    })
+
+    assert.equal(scenarioService.takeStepVideoOffsets(runId).size, 0)
+  })
+
+  test('the offsets are handed over once, so nothing holds them after the run', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const shopper = fakeActor('shopper', async () => ({}))
+    scenarioService.setScenarioBrowserProvider(
+      recordingProvider(Date.now()) as any
+    )
+    registerStep('visitsCheckout', {
+      surfaces: ['browser'],
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+      actor: shopper,
+    })
+
+    assert.equal(scenarioService.takeStepVideoOffsets(runId).size, 1)
+    assert.equal(scenarioService.takeStepVideoOffsets(runId).size, 0)
+  })
+})

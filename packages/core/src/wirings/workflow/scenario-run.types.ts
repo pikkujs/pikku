@@ -44,6 +44,22 @@ export interface ScenarioArtifact {
   showcase?: boolean
 }
 
+/**
+ * Where a step falls inside one actor's recording.
+ *
+ * Measured from the moment that actor's browser context opened — which is when
+ * Playwright starts the file — rather than from the start of the scenario, so
+ * it addresses the video's own clock. The two differ by however long the
+ * scenario spent before that window existed, plus every non-browser step since,
+ * which is why the offset is recorded at the moment the step runs instead of
+ * being summed back out of the ladder afterwards.
+ */
+export interface ScenarioStepVideoOffset {
+  /** Whose recording this offset is into: one actor, one video file. */
+  actor: string
+  offsetMs: number
+}
+
 /** One step of a run, already joined to the prose that declared it. */
 export interface ScenarioStepRow {
   sentence: string
@@ -57,6 +73,16 @@ export interface ScenarioStepRow {
   status: string
   durationMs?: number
   error?: string
+  /**
+   * Where this step lands in each actor's video, for the actors whose window
+   * was being recorded when it ran. Absent for a step with no actor, a run
+   * without video, and a step that never ran at all.
+   *
+   * A list rather than one number because a video belongs to an actor, not to
+   * the scenario: a step touching two windows falls at a different moment in
+   * each, and an offset that does not name its file cannot be seeked to.
+   */
+  video?: ScenarioStepVideoOffset[]
 }
 
 /** Everything known about why one scenario failed. */
@@ -81,10 +107,22 @@ export interface ScenarioResult {
   error?: string
   steps?: ScenarioStepRow[]
   failure?: ScenarioFailureDetail
-  /** The scenario registration this ran, which the label alone does not give. */
+  /**
+   * The registered scenario this ran, by the id it is registered under — the
+   * same id `FeatureMetaEntry.scenario` references. The label alone does not
+   * give it, and unlike the label it is not rewritten when the prose is.
+   */
   scenarioName?: string
-  /** The feature that grouped it, when one did. */
+  /** The feature that grouped it — its display name, which is freely renamed. */
   feature?: string
+  /**
+   * The registered feature that grouped it, by id.
+   *
+   * `feature` is a title someone writes for people to read, so nothing that
+   * outlives a run can key off it. This is what `addFeature` registered the
+   * feature under, and it is what survives the title being rewritten.
+   */
+  featureId?: string
   tags?: string[]
   /** Images and footage this scenario produced, filed under the run. */
   artifacts?: ScenarioArtifact[]

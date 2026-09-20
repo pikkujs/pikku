@@ -18,6 +18,7 @@ import type {
 import type { PikkuRawWire } from '../../types/core.types.js'
 import type { ScenarioPersonas } from '../../services/personas-service.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+import type { ScenarioStepVideoOffset } from './scenario-run.types.js'
 import type {
   ScenarioBrowserProvider,
   ScenarioEnvironment,
@@ -87,6 +88,7 @@ export type {
   ScenarioRunStore,
   ScenarioRunSummary,
   ScenarioStepRow,
+  ScenarioStepVideoOffset,
 } from './scenario-run.types.js'
 export { SCENARIO_SURFACES } from './scenario-step.types.js'
 
@@ -359,6 +361,13 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   // so the body and its hooks share one object rather than reading it back off
   // the persisted wire.
   private runContexts = new Map<string, Record<string, unknown>>()
+  // Where each browser step landed in its actor's recording, per run. Held
+  // apart from the run context because the runner reads it once the run has
+  // ended, which is exactly when `detachRunContext` has cleared that.
+  private runVideoOffsets = new Map<
+    string,
+    Map<string, ScenarioStepVideoOffset[]>
+  >()
   private scenarioBrowserProvider?: ScenarioBrowserProvider
   private scenarioEnvironment?: ScenarioEnvironment
   private runSurface: ScenarioSurface = 'default'
@@ -415,6 +424,48 @@ export class PikkuScenarioService implements WorkflowRunExtension {
 
   public getScenarioEnvironment(): ScenarioEnvironment | undefined {
     return this.scenarioEnvironment
+  }
+
+  /**
+   * Where each of a run's browser steps fell in its actor's video, keyed by the
+   * durable step name, handed over and forgotten in one call.
+   *
+   * Taken rather than read because the runner joins these onto the step rows
+   * after the run has finished — which is past the point anything else would
+   * clear them, and the only moment they are still wanted.
+   */
+  public takeStepVideoOffsets(
+    runId: string
+  ): Map<string, ScenarioStepVideoOffset[]> {
+    const offsets = this.runVideoOffsets.get(runId)
+    this.runVideoOffsets.delete(runId)
+    return offsets ?? new Map()
+  }
+
+  /**
+   * Stamp where a step began inside one actor's recording.
+   *
+   * First write per actor wins: a `then` step runs once per witness, and the
+   * moment the reader wants is when the sentence started, not when its last
+   * witness got around to the browser.
+   */
+  private recordVideoOffset(
+    runId: string,
+    stepName: string,
+    actor: string,
+    offsetMs: number
+  ): void {
+    let byStep = this.runVideoOffsets.get(runId)
+    if (!byStep) {
+      byStep = new Map()
+      this.runVideoOffsets.set(runId, byStep)
+    }
+    const offsets = byStep.get(stepName) ?? []
+    if (offsets.some((offset) => offset.actor === actor)) {
+      return
+    }
+    offsets.push({ actor, offsetMs })
+    byStep.set(stepName, offsets)
   }
 
   public async attachRunContext(
@@ -949,6 +1000,16 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             wire.browser = await this.scenarioBrowserProvider.sessionFor(
               actor!.name
             )
+            const videoStartedAt =
+              this.scenarioBrowserProvider.videoStartedAt?.(actor!.name)
+            if (videoStartedAt !== undefined) {
+              this.recordVideoOffset(
+                runId,
+                stepName,
+                actor!.name,
+                Math.max(0, Date.now() - videoStartedAt)
+              )
+            }
           }
           return await runPikkuFunc(
             'workflow',

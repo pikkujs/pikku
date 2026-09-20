@@ -259,6 +259,15 @@ export interface ScenarioBrowserProvider {
    */
   endScenario?(outcome: 'passed' | 'failed'): void
   /**
+   * When this actor's recording started, as epoch milliseconds.
+   *
+   * The seam that keeps the video clock out of `@pikku/core`: a driver knows
+   * when it opened the context it passed `recordVideo` to, and the runner turns
+   * that into a per-step offset. Absent for an actor with no window open, and
+   * for a run recording nothing — both of which leave the step's offset off.
+   */
+  videoStartedAt?(actorName: string): number | undefined
+  /**
    * Snapshot every open window for a failed scenario. `label` identifies the
    * scenario in artifact filenames. Never throws: a failure to capture must
    * not replace the failure being captured.

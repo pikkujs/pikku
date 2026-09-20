@@ -37,8 +37,8 @@ import {
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
-import { buildScenarioPlan } from './scenario-plan.js'
-import type { ScenarioPlanGroup } from './scenario-plan.js'
+import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
+import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
 import { resolveEnvironment, isLocalUrl } from './environment.js'
 import { readDevAddress } from './dev-address.js'
 import type { ScenarioBaseline } from '../db/scenario-baseline.js'
@@ -548,6 +548,11 @@ export const scenarioRun = pikkuSessionlessFunc<
         runId: string,
         flowName: string
       ) => {
+        // Taken from the run rather than derived from the ladder: the video
+        // clock starts when an actor's window opens, which is somewhere after
+        // step one, and every step that never touched a browser burns scenario
+        // time while the recording sits still.
+        const videoOffsets = scenarioService.takeStepVideoOffsets(runId)
         const prose = collectScenarioStepProse(
           state.workflows?.meta?.[flowName],
           functionsMeta,
@@ -564,6 +569,7 @@ export const scenarioRun = pikkuSessionlessFunc<
           expected: step.error?.expected,
           input: step.data,
           stepFunc: step.rpcName,
+          video: videoOffsets.get(step.stepName),
         }))
         return {
           rows: scenarioStepRows(steps, prose),
@@ -617,46 +623,40 @@ export const scenarioRun = pikkuSessionlessFunc<
       const hookFailures: string[] = []
 
       /**
-       * What a result carries beyond its own outcome: which registration ran,
-       * which feature grouped it, and the tags it was selected by. Snapshotted
-       * into the record because a run read back next week is describing a suite
+       * Which registration ran and which feature grouped it, snapshotted into
+       * the record because a run read back next week is describing a suite
        * whose source has moved on.
        */
-      const identify = (
-        result: ScenarioResult,
+      const identityOf = (
         scenarioName: string,
-        feature?: string
-      ): ScenarioResult => {
-        const tags = state.workflows?.meta?.[scenarioName]?.tags as
-          string[] | undefined
-        return {
-          ...result,
-          scenarioName,
-          ...(feature ? { feature } : {}),
-          ...(tags?.length ? { tags } : {}),
-        }
-      }
+        group?: ScenarioPlanGroup
+      ): ScenarioRunIdentity => ({
+        scenarioName,
+        featureId: group?.featureId,
+        featureName: group?.featureName,
+        tags: state.workflows?.meta?.[scenarioName]?.tags as
+          string[] | undefined,
+      })
 
       const runEntry = async (
         label: string,
         scenarioName: string,
         data: unknown,
-        feature?: string
+        identity: ScenarioRunIdentity
       ) => {
         const startedAt = Date.now()
         if (databaseBaseline) {
           try {
             await databaseBaseline.restore()
           } catch (e: any) {
-            const result = identify(
+            const result = identifyScenarioResult(
               {
                 name: label,
                 status: 'failed',
                 durationMs: Date.now() - startedAt,
                 error: `database reset failed: ${e?.message ?? e}`,
               },
-              scenarioName,
-              feature
+              identity
             )
             results.push(result)
             await runStore.recordScenario(captureRunId, result)
@@ -742,7 +742,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         // Told here, acted on at the next scenario's reset — that is what closes
         // these windows and finalises the video this outcome decides the fate of.
         browserLifecycle.endScenario(result.status)
-        Object.assign(result, identify(result, scenarioName, feature))
+        Object.assign(result, identifyScenarioResult(result, identity))
         await runStore.recordScenario(captureRunId, result)
         if (coverageActive) {
           const report = await invokeCoverage('pikkuScenarioTakeLiveCoverage')
@@ -796,15 +796,14 @@ export const scenarioRun = pikkuSessionlessFunc<
             // Setup failed, so nothing in the group ran. Reporting them as failed
             // rather than skipped is the honest reading: they did not pass.
             for (const entry of group.entries) {
-              const result = identify(
+              const result = identifyScenarioResult(
                 {
                   name: label(entry),
                   status: 'failed',
                   durationMs: 0,
                   error: `${groupName ? `feature '${groupName}' ` : ''}${beforeStage} failed: ${beforeError?.message ?? beforeError}`,
                 },
-                entry.scenarioName,
-                groupName
+                identityOf(entry.scenarioName, group)
               )
               results.push(result)
               await runStore.recordScenario(captureRunId, result)
@@ -815,7 +814,7 @@ export const scenarioRun = pikkuSessionlessFunc<
                 label(entry),
                 entry.scenarioName,
                 entry.data,
-                groupName
+                identityOf(entry.scenarioName, group)
               )
             }
           }

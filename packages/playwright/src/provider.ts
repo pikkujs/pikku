@@ -158,6 +158,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
         screenshots: options.capture.screenshots === true,
         taken: 0,
         filed: [],
+        videoStartedAt: new Map(),
       }
     }
   }
@@ -190,6 +191,15 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     this.outcome = outcome
   }
 
+  /**
+   * When this actor's recording started — the moment their context was opened
+   * with `recordVideo`, which is when Playwright starts the file. Absent for a
+   * run that records nothing and for an actor with no window open.
+   */
+  videoStartedAt(actorName: string): number | undefined {
+    return this.captureContext?.videoStartedAt.get(actorName)
+  }
+
   async sessionFor(actorName: string): Promise<ActorSession> {
     const existing = this.sessions.get(actorName)
     if (existing) {
@@ -219,6 +229,9 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   async reset(): Promise<void> {
     const sessions = [...this.sessions.values()]
     this.sessions.clear()
+    // The recordings these timestamps address are finalised by the closes
+    // below; the next scenario's windows start their own files.
+    this.captureContext?.videoStartedAt.clear()
     const scenario = this.captureContext?.scenario
     const keep = this.keepsVideo()
     for (const session of sessions) {
@@ -392,14 +405,21 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     const config = this.configFor(actorConfig)
     const session = new ActorSession(actorName, config)
     const capture = this.options.capture
+    const recording = Boolean(capture && capture.video !== 'off')
     await session.open(
       browser,
-      capture && capture.video !== 'off'
-        ? join(capture.dir, capture.runId, VIDEO_STAGING_DIR)
+      recording
+        ? join(capture!.dir, capture!.runId, VIDEO_STAGING_DIR)
         : undefined
     )
     if (this.captureContext) {
       session.capture = this.captureContext
+      if (recording) {
+        // Stamped once the context exists rather than before the call: the file
+        // starts with the context, and the sign-in that follows is already part
+        // of the footage.
+        this.captureContext.videoStartedAt.set(actorName, Date.now())
+      }
     }
     const signIn = this.options.signIn ?? this.defaultSignIn(actorConfig)
     const secret =

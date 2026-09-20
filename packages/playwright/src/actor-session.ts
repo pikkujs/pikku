@@ -57,6 +57,16 @@ export interface CaptureContext {
    * which actor produced it, and a directory listing cannot say.
    */
   filed: ScenarioArtifact[]
+  /**
+   * When each actor's recording started, as epoch milliseconds, for the actors
+   * whose context is currently open with video on.
+   *
+   * Shared by reference like the rest of this object, because the offset a step
+   * is stamped with is read through the provider while the session that set it
+   * is somewhere else entirely. Cleared by `reset()`, which is what closes the
+   * contexts and finalises the files these timestamps address.
+   */
+  videoStartedAt: Map<string, number>
 }
 
 /** Runtime problems collected for one page navigation. */
