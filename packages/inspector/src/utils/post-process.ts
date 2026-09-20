@@ -1184,11 +1184,14 @@ export function validateScenarioSteps(
  * way to defer. `--fail-on-error` is how a project opts in once it has bound
  * what it has.
  *
- * A feature whose `scenarios` array could not be read statically (a spread, a
- * `.map()`) suppresses the check entirely: the scenario it would name may well
- * be in that array, and a false accusation is worse than a missed one. The
- * suppression says so rather than passing quietly — one unreadable feature
- * blinds the whole project, and a silent pass is the thing being fixed.
+ * Membership reads the scenario each entry names, not the entry itself: a
+ * `data` the AST cannot evaluate leaves the entry partial for the console but
+ * says nothing about who owns the scenario.
+ *
+ * An entry that names no scenario at all (a spread, a `.map()`) does leave
+ * membership unknown. That only matters when something is already unowned, so
+ * the check reports it then and downgrades to a warn naming both sides, rather
+ * than accusing a scenario that may well be in that array.
  */
 export function validateScenarioFeatures(
   logger: InspectorLogger,
@@ -1198,29 +1201,16 @@ export function validateScenarioFeatures(
   if (!features) {
     return
   }
-  const unreadable = [...features.values()]
-    .filter((feature) => feature.unresolvedEntries > 0)
-    .map((feature) => feature.exportedName)
-  if (unreadable.length > 0) {
-    logger.diagnostic({
-      severity: 'warn',
-      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
-      message:
-        `Not checking which scenarios belong to a feature: ${unreadable.map((name) => `'${name}'`).join(', ')} ` +
-        `build their \`scenarios\` array with a spread or a call, so a scenario missing from every readable feature may still be in one of those. ` +
-        `List the scenarios literally to get the check back.`,
-    })
-    return
-  }
 
   const owned = new Set<string>()
   for (const feature of features.values()) {
-    for (const entry of feature.entries) {
-      owned.add(entry.scenario)
+    for (const mention of feature.mentions) {
+      owned.add(mention)
     }
   }
 
   const files = state.workflows.files
+  const unowned: string[] = []
   for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
     if (!(meta as { scenario?: boolean }).scenario) {
       continue
@@ -1229,11 +1219,35 @@ export function validateScenarioFeatures(
     if (owned.has(workflowName) || (exported && owned.has(exported))) {
       continue
     }
+    unowned.push(workflowName)
+  }
+
+  if (unowned.length === 0) {
+    return
+  }
+
+  const unreadable = [...features.values()]
+    .filter((feature) => feature.unnamedEntries > 0)
+    .map((feature) => feature.exportedName)
+
+  if (unreadable.length > 0) {
+    logger.diagnostic({
+      severity: 'warn',
+      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
+      message:
+        `${unowned.map((name) => `'${name}'`).join(', ')} appear in no feature's \`scenarios\` array, ` +
+        `but ${unreadable.map((name) => `'${name}'`).join(', ')} build theirs with a spread or a call, so one of them may still be listed there. ` +
+        `List those scenarios literally and this becomes a definite answer either way.`,
+    })
+    return
+  }
+
+  for (const name of unowned) {
     logger.diagnostic({
       severity: 'error',
       code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
       message:
-        `Scenario '${workflowName}' is listed by no pikkuFeature, so nothing downstream can reach it — ` +
+        `Scenario '${name}' is listed by no pikkuFeature, so nothing downstream can reach it — ` +
         `a run stamps no feature onto its results, the console groups it under none, and a guide cannot cite it. ` +
         `Add it to a feature's \`scenarios\` array.`,
     })
