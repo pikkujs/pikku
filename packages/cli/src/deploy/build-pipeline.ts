@@ -295,6 +295,8 @@ export async function runBuildPipeline(options: {
   srcDirectories?: string[]
   /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
   debugArtifacts?: boolean
+  /** Overrides the provider's own choice when set. See PikkuCLIConfig. */
+  mangleIdentifiers?: boolean
   logger: BuildLogger
   /** Runtime-specific bundler (esbuild for node, Bun.build for bun). */
   bundler: Bundler
@@ -306,6 +308,7 @@ export async function runBuildPipeline(options: {
     inspectorState,
     getEntryContext,
     debugArtifacts,
+    mangleIdentifiers,
     logger,
     bundler,
   } = options
@@ -404,7 +407,8 @@ export async function runBuildPipeline(options: {
         define: provider.getDefine?.(),
         platform: provider.getPlatform?.(),
         format: provider.getFormat?.(),
-        mangleIdentifiers: provider.getMangleIdentifiers?.(),
+        mangleIdentifiers:
+          mangleIdentifiers ?? provider.getMangleIdentifiers?.(),
         noRequireShim: provider.getNoRequireShim?.(),
         sourcemap: debugArtifacts,
         emitMetafile: debugArtifacts,
@@ -593,7 +597,8 @@ export async function runBuildPipeline(options: {
           define: provider.getDefine?.(),
           platform: provider.getPlatform?.(),
           format: provider.getFormat?.(),
-          mangleIdentifiers: provider.getMangleIdentifiers?.(),
+          mangleIdentifiers:
+            mangleIdentifiers ?? provider.getMangleIdentifiers?.(),
           noRequireShim: provider.getNoRequireShim?.(),
           sourcemap: debugArtifacts,
           emitMetafile: debugArtifacts,
@@ -625,6 +630,7 @@ export async function runBuildPipeline(options: {
           define: undefined,
           platform: 'node',
           format: 'esm',
+          mangleIdentifiers,
           noRequireShim: false,
           sourcemap: debugArtifacts,
           emitMetafile: debugArtifacts,
