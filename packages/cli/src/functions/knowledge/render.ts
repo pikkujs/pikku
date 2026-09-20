@@ -215,8 +215,25 @@ export const renderKnowledgePlanDefer = (
  */
 export const renderKnowledgeReconcile = (
   _services: unknown,
-  { kind, reason, note, hold, notes, question }: KnowledgeReconcileResult
+  {
+    kind,
+    reason,
+    note,
+    hold,
+    notes,
+    question,
+    required,
+    satisfied,
+  }: KnowledgeReconcileResult
 ): void => {
+  if (required && !satisfied) {
+    process.exitCode = 1
+    console.log(
+      `${removed('✗')}  next is ${kind}, and this check requires ${required.join(' or ')}`
+    )
+    console.log()
+  }
+
   if (kind === 'idle') {
     console.log(`${dim('=')}  ${dim(reason)}`)
     return

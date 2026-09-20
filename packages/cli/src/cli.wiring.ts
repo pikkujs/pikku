@@ -721,6 +721,13 @@ wireCLI({
           render: renderKnowledgeReconcile,
           description:
             'Say the one thing to do next — repair a note, write a plan, ask the user, build, or nothing',
+          options: {
+            require: {
+              description:
+                'Exit non-zero unless the next action is one of these (comma-separated: idle, repair-note, write-plan, ask-user, dispatch, hold) — what turns this command into a gate a stage can be held to',
+              type: 'string',
+            },
+          },
         }),
         plan: {
           description:
@@ -1312,6 +1319,21 @@ wireCLI({
             update: {
               description: 'Overwrite existing skills if already installed',
               default: false,
+            },
+            agentExtensions: {
+              description:
+                'Comma-separated extension paths every projected agent loads — how a host that fences its writers or routes their model adds that to the agents it installs',
+              type: 'string',
+            },
+            agentDir: {
+              description:
+                'Where to write the projected agents, overriding the harness default — an absolute path for a host whose agents live outside the project',
+              type: 'string',
+            },
+            agentSkillDir: {
+              description:
+                'The skill directory a projected agent points at, for a host that relocates the installed skills afterwards',
+              type: 'string',
             },
           },
         }),

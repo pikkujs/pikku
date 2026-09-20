@@ -12,6 +12,18 @@ description: >-
   the plan already exists and the job is to build it (use pikku-build), or the ask is a one-off
   edit to a working app.
 installGroups: [core]
+agent:
+  tools: read, write, edit, bash, grep
+  timeoutMs: 1800000
+  acceptance:
+    level: verified
+    evidence: [changed-files, validation-output]
+    verify:
+      - id: knowledge-consistent
+        command: pikku knowledge validate
+      - id: plan-accepted
+        command: pikku knowledge next --require dispatch,idle
+
 ---
 
 # Plan one milestone

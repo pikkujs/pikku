@@ -13,6 +13,18 @@ description: >-
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx --no pikku fabric report *)
 argument-hint: '[feature description]'
 installGroups: [core]
+agent:
+  tools: read, write, edit, bash, grep
+  timeoutMs: 5400000
+  acceptance:
+    level: verified
+    evidence: [changed-files, tests-added, commands-run, validation-output]
+    verify:
+      - id: knowledge-consistent
+        command: pikku knowledge validate
+      - id: typechecks
+        command: pikku all --tsc-summary
+
 ---
 
 # Build on Pikku
