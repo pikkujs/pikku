@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { resolve, join } from 'node:path'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { resolve, join, dirname, relative, sep } from 'node:path'
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs'
+import { glob } from 'tinyglobby'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/services'
@@ -37,6 +38,14 @@ import {
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
+import {
+  checkGuideCoverage,
+  featureEvidence,
+  guideStep,
+  parseGuidePage,
+  renderGuidePage,
+} from './scenario-guide.js'
+import type { GuideFeature, GuidePage } from './scenario-guide.js'
 import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
 import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
 import { resolveEnvironment, isLocalUrl } from './environment.js'
@@ -945,6 +954,157 @@ export const scenarioRun = pikkuSessionlessFunc<
             `scenario reset: could not drop the baseline copies: ${e?.message ?? e}`
           )
         }
+      }
+    }
+  },
+})
+
+/**
+ * `pikku scenario guide` — the suite, written out as markdown.
+ *
+ * Structure comes from the registry (which features exist, what their scenarios
+ * are called), and evidence from the latest run record (what the steps actually
+ * said, and what they filed). Editorial prose comes from the project's own
+ * `docs/` sources, which declare the features they cover; this merges the three
+ * and writes one markdown file per source. It renders nothing, resolves no
+ * asset URLs and calls no model: the writing is somebody else's concern, and
+ * this is the compiler that keeps it honest.
+ */
+export const scenarioGuide = pikkuSessionlessFunc<
+  {
+    docs?: string
+    output?: string
+    runId?: string
+    allowUndocumented?: boolean
+  },
+  void
+>({
+  func: async (
+    { logger, config, getInspectorState },
+    { docs = 'docs', output, runId, allowUndocumented = false }
+  ) => {
+    const state = await getInspectorState(false, false, false, true)
+    const outDir = resolve(config.rootDir, config.outDir)
+    await loadScenarioBootstrap(outDir)
+    const { features: registeredFeatures } = collectRegisteredWirings()
+
+    const runsDir = join(outDir, 'scenario-runs')
+    const runStore = new FileScenarioRunStore({ dir: runsDir })
+    const latest = runId ?? (await runStore.list({ limit: 1 }))[0]?.runId
+    const record = latest ? await runStore.get(latest) : undefined
+    if (!record) {
+      logger.error(
+        runId
+          ? `No run '${runId}' under ${runsDir}.`
+          : `No scenario run under ${runsDir} — run \`pikku scenario run <environment> --screenshots\` first, since a guide is written out of what a run recorded.`
+      )
+      process.exitCode = 1
+      return
+    }
+
+    const workflowsMeta = state.workflows?.meta ?? {}
+    const features: GuideFeature[] = [...registeredFeatures].map(
+      ([id, feature]) => {
+        const name = feature.name ?? id
+        return {
+          id,
+          name,
+          ...(feature.description ? { description: feature.description } : {}),
+          document: feature.document !== false,
+          scenarios: record.results
+            .filter((result) => result.feature === name)
+            .map((result) => {
+              const meta = result.scenarioName
+                ? workflowsMeta[result.scenarioName]
+                : undefined
+              return {
+                name: result.scenarioName ?? result.name,
+                title: meta?.title ?? result.name,
+                ...(meta?.description ? { description: meta.description } : {}),
+                steps: (result.steps ?? []).map((step) =>
+                  guideStep(step.sentence)
+                ),
+                screenshots: (result.artifacts ?? [])
+                  .filter((artifact) => artifact.kind === 'screenshot')
+                  .map((artifact) => ({
+                    ...(artifact.id ? { id: artifact.id } : {}),
+                    ...(artifact.name ? { name: artifact.name } : {}),
+                    path: artifact.path,
+                  })),
+              }
+            }),
+        }
+      }
+    )
+
+    const docsDir = resolve(config.rootDir, docs)
+    const sources = (
+      await glob('**/*.md', { cwd: docsDir, onlyFiles: true })
+    ).sort()
+    const pages: GuidePage[] = []
+    for (const source of sources) {
+      pages.push(
+        parseGuidePage(source, readFileSync(join(docsDir, source), 'utf-8'))
+      )
+    }
+
+    const coverage = checkGuideCoverage(features, pages)
+    for (const { path, featureId } of coverage.unknown) {
+      logger.error(
+        `${join(docs, path)} documents '${featureId}', which is not a registered feature — a page describing something that no longer exists.`
+      )
+    }
+    for (const { path, featureId } of coverage.optedOut) {
+      logger.error(
+        `${join(docs, path)} documents '${featureId}', which declares \`document: false\`.`
+      )
+    }
+    for (const { path, featureId, declared, current } of coverage.stale) {
+      logger.warn(
+        `${join(docs, path)} was written against '${featureId}' at ${declared}, which is now ${current} — its steps moved under the prose.`
+      )
+    }
+    for (const featureId of coverage.missing) {
+      const message = `Feature '${featureId}' is documented by no page. Write one under ${docs}/ citing it, or set \`document: false\` on the feature.`
+      if (allowUndocumented) {
+        logger.warn(message)
+      } else {
+        logger.error(message)
+      }
+    }
+
+    // A compiler that has found an error does not emit. Undocumented features
+    // are the one failure that can be downgraded, because a suite mid-way
+    // through being written still wants its pages built.
+    if (
+      coverage.unknown.length > 0 ||
+      coverage.optedOut.length > 0 ||
+      (!allowUndocumented && coverage.missing.length > 0)
+    ) {
+      process.exitCode = 1
+      return
+    }
+
+    const byId = new Map(features.map((feature) => [feature.id, feature]))
+    const outputDir = output
+      ? resolve(config.rootDir, output)
+      : join(outDir, 'guide')
+    const artifactRoot = join(runsDir, record.runId)
+    for (const page of pages) {
+      const target = join(outputDir, page.path)
+      // Relative, forward-slashed and computed per page: a guide is markdown
+      // with ordinary image refs, and whoever consumes it rewrites the paths.
+      const base = relative(dirname(target), artifactRoot).split(sep).join('/')
+      const markdown = renderGuidePage(page, byId, `${base}/`)
+      mkdirSync(dirname(target), { recursive: true })
+      writeFileSync(target, markdown)
+    }
+    logger.info(
+      `${pages.length} page(s) → ${outputDir} (run ${record.runId}, ${features.filter((f) => f.document).length} documented feature(s))`
+    )
+    for (const feature of features) {
+      if (feature.document) {
+        logger.debug(`  ${feature.id} ${featureEvidence(feature)}`)
       }
     }
   },

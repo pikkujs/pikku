@@ -231,6 +231,12 @@ type PikkuFeatureConfig<Scenarios extends readonly unknown[]> = {
   name: string
   description?: string
   tags?: string[]
+  /**
+   * Whether this feature is guide material, defaulting to true. \`pikku scenario
+   * guide\` requires every documented feature to be cited by a page; a feature
+   * that is pure plumbing sets this false rather than being written about.
+   */
+  document?: boolean
   scenarios: { [K in keyof Scenarios]: PikkuFeatureEntry<Scenarios[K]> }
   /**
    * Runs ONCE before the whole group — not before each scenario. Per-scenario

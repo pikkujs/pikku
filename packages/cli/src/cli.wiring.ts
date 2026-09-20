@@ -65,7 +65,11 @@ import {
   renderKnowledgePlanSet,
   renderKnowledgePlanShow,
 } from './functions/commands/knowledge-plan.js'
-import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
+import {
+  scenarioRun,
+  scenarioList,
+  scenarioGuide,
+} from './functions/commands/scenario.js'
 import {
   personaList,
   personaRun,
@@ -868,6 +872,32 @@ wireCLI({
         list: pikkuCLICommand({
           func: scenarioList,
           description: 'List scenarios with names and descriptions',
+        }),
+        guide: pikkuCLICommand({
+          func: scenarioGuide,
+          description:
+            "Write the user guide the suite already contains: each page's editorial prose merged with the steps and screenshots the latest run recorded. Markdown only — no HTML, no asset URLs, no model.",
+          options: {
+            docs: {
+              description:
+                'Where the editorial sources live, relative to the project. Each `<section>/<slug>.md` declares the features it covers in its frontmatter',
+              default: 'docs',
+            },
+            output: {
+              description:
+                'Where the merged markdown is written (default: <outDir>/guide)',
+              short: 'o',
+            },
+            runId: {
+              description:
+                'Build from this run rather than the most recent one',
+            },
+            allowUndocumented: {
+              description:
+                'Report features no page documents instead of failing on them',
+              default: false,
+            },
+          },
         }),
       },
     },

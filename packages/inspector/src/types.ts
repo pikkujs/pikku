@@ -533,6 +533,8 @@ export interface InspectorFeature {
   name?: string
   description?: string
   tags?: string[]
+  /** `document: false` on the config, and only that — an absent flag documents. */
+  document?: boolean
   entries: InspectorFeatureEntry[]
   /**
    * Entries that are not literal — a spread, a `.map()`, a call. Counted rather

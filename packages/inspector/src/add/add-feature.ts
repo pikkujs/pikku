@@ -130,6 +130,20 @@ const stringProperty = (
   return value && ts.isStringLiteralLike(value) ? value.text : undefined
 }
 
+const booleanProperty = (
+  config: ts.ObjectLiteralExpression,
+  name: string
+): boolean | undefined => {
+  const value = getProperty(config, name)
+  if (!value) {
+    return undefined
+  }
+  if (value.kind === ts.SyntaxKind.TrueKeyword) {
+    return true
+  }
+  return value.kind === ts.SyntaxKind.FalseKeyword ? false : undefined
+}
+
 const stringArrayProperty = (
   config: ts.ObjectLiteralExpression,
   name: string
@@ -224,6 +238,10 @@ export const addFeature: AddWiring = (logger, node, checker, state) => {
     const name = stringProperty(config, 'name')
     const description = stringProperty(config, 'description')
     const tags = stringArrayProperty(config, 'tags')
+    const document = booleanProperty(config, 'document')
+    if (document !== undefined) {
+      feature.document = document
+    }
     if (name !== undefined) {
       feature.name = name
     }

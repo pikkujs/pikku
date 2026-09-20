@@ -95,6 +95,49 @@ describe('addFeature', () => {
     }
   })
 
+  test('reads a feature out of the guide with document: false', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { lazyLoadScenario } from './credential.scenario.js'",
+        'export const wireFeature = pikkuFeature({',
+        "  name: 'HTTP wire',",
+        '  document: false,',
+        '  scenarios: [lazyLoadScenario],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      assert.equal(
+        state.workflows.featureFiles.get('wireFeature')!.document,
+        false
+      )
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('a feature that says nothing about documenting records nothing', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { lazyLoadScenario } from './credential.scenario.js'",
+        'export const credentialFeature = pikkuFeature({',
+        "  name: 'Credential API',",
+        '  scenarios: [lazyLoadScenario],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      const feature = state.workflows.featureFiles.get('credentialFeature')!
+      assert.equal('document' in feature, false)
+    } finally {
+      await cleanup()
+    }
+  })
+
   test('extracts the feature name, description and tags', async () => {
     const { state, criticals, cleanup } = await run(
       [
