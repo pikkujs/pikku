@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
 import { checkKnowledgeResources } from './check-resources.js'
+import type { ResourcePrefix } from './resource-uri.js'
 
 const project = async (files: Record<string, unknown>): Promise<string> => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-check-'))
@@ -105,7 +106,7 @@ describe('checkKnowledgeResources', () => {
     assert.equal((await check(root)).notes, 1)
   })
 
-  test('a project with no knowledge base is trivially ok', async () => {
+  test('a project with no knowledge base is ok, and all orphan', async () => {
     const root = await project(FUNC_META)
     assert.deepEqual(await check(root), {
       ok: true,
@@ -113,6 +114,10 @@ describe('checkKnowledgeResources', () => {
       checked: 0,
       skipped: 0,
       problems: [],
+      orphans: [
+        { uri: 'func:createEntry', prefix: 'func', id: 'createEntry' },
+        { uri: 'func:listEntries', prefix: 'func', id: 'listEntries' },
+      ],
     })
   })
 
@@ -195,5 +200,48 @@ describe('resource URIs in the prose', () => {
     })
     const result = await check(root)
     assert.deepEqual(result.problems, [])
+  })
+})
+
+describe('orphans', () => {
+  test('reports code no note claims', async () => {
+    const root = await project({
+      ...FUNC_META,
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\nresource: func:createEntry\n---\nx',
+    })
+    const result = await check(root)
+    assert.equal(result.ok, true)
+    assert.deepEqual(
+      result.orphans.map((orphan) => orphan.uri),
+      ['func:listEntries']
+    )
+  })
+
+  test('counts an inline prose reference as a claim', async () => {
+    const root = await project({
+      ...FUNC_META,
+      'knowledge/milestones/01-a.md':
+        '---\ntype: milestone\nresource: func:createEntry\n---\nIt lists via [listEntries](func:listEntries).',
+    })
+    assert.deepEqual((await check(root)).orphans, [])
+  })
+
+  test('subtracts the baseline', async () => {
+    const root = await project(FUNC_META)
+    const result = await checkKnowledgeResources(root, join(root, '.pikku'), {
+      baseline: new Map<ResourcePrefix, Set<string>>([
+        ['func', new Set(['createEntry', 'listEntries'])],
+      ]),
+    })
+    assert.deepEqual(result.orphans, [])
+  })
+
+  test('an empty orphanPrefixes turns the report off', async () => {
+    const root = await project(FUNC_META)
+    const result = await checkKnowledgeResources(root, join(root, '.pikku'), {
+      orphanPrefixes: [],
+    })
+    assert.deepEqual(result.orphans, [])
   })
 })

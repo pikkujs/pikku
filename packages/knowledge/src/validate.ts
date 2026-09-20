@@ -447,6 +447,16 @@ export const runKnowledgeValidate = async (
     )
   }
 
+  for (const orphan of resources.orphans) {
+    add(
+      'info',
+      `knowledge-orphan-${orphan.uri}`,
+      `${orphan.uri} exists in the code and no note describes it`,
+      KNOWLEDGE_DIR,
+      'Point an existing note at it with `resource:`, or write the note the code is missing'
+    )
+  }
+
   return {
     ok: !findings.some((finding) => finding.severity === 'error'),
     notes: notes.length,
