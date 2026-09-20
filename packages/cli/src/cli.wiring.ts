@@ -880,7 +880,7 @@ wireCLI({
           options: {
             docs: {
               description:
-                'Where the editorial sources live, relative to the project. Each `<section>/<slug>.md` declares the features it covers in its frontmatter',
+                'Where the editorial sources live, relative to the project. A `<!-- pikku:guide feature=<id> -->` marker pair in a `<section>/<slug>.md` is both the citation and the place the block is written',
               default: 'docs',
             },
             output: {

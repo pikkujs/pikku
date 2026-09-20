@@ -1139,9 +1139,9 @@ export const scenarioGuide = pikkuSessionlessFunc<
       mkdirSync(dirname(target), { recursive: true })
       writeFileSync(target, markdown)
     }
-    writeFileSync(lockPath, renderGuideLock(features))
+    writeFileSync(lockPath, renderGuideLock(features, coverage.cited))
     logger.info(
-      `${pages.length} page(s) → ${outputDir} (run ${record.runId}, ${features.filter((f) => f.document).length} documented feature(s))`
+      `${pages.length} page(s) → ${outputDir} (run ${record.runId}, ${coverage.cited.length} documented feature(s))`
     )
     for (const feature of features) {
       if (feature.document) {

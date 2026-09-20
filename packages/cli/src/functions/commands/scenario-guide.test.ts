@@ -156,10 +156,68 @@ describe('evidence', () => {
   })
 })
 
+describe('data-driven scenarios', () => {
+  test('rows of one scenario render as one section', () => {
+    const feature = deployments()
+    const row = feature.scenarios[0]!
+    feature.scenarios = [row, { ...row, screenshots: [] }]
+    const rendered = renderGuidePage(page(), new Map([[feature.id, feature]]), '')
+    assert.equal(rendered.split(`## ${row.title}`).length - 1, 1)
+  })
+
+  test('figures from every row reach the one section', () => {
+    const feature = deployments()
+    const row = feature.scenarios[0]!
+    feature.scenarios = [
+      row,
+      { ...row, screenshots: [{ id: 'z', path: 'shipping/9.png' }] },
+    ]
+    const rendered = renderGuidePage(page(), new Map([[feature.id, feature]]), '')
+    assert.ok(rendered.includes('shipping/9.png'))
+    for (const shot of row.screenshots) {
+      assert.ok(rendered.includes(shot.path))
+    }
+  })
+})
+
 describe('lock', () => {
   test('it holds the evidence of every documented feature', () => {
-    const lock = parseGuideLock(renderGuideLock([deployments(), plumbing()]))
+    const lock = parseGuideLock(
+      renderGuideLock([deployments(), plumbing()], ['deployments', 'plumbing'])
+    )
     assert.deepEqual(lock, { deployments: featureEvidence(deployments()) })
+  })
+
+  test('a feature no page cites yet is left out', () => {
+    const billing: GuideFeature = {
+      ...deployments(),
+      id: 'billing',
+      name: 'Billing',
+      scenarios: [],
+    }
+    const lock = parseGuideLock(
+      renderGuideLock([deployments(), billing], ['deployments'])
+    )
+    assert.deepEqual(Object.keys(lock), ['deployments'])
+  })
+
+  test('the first build of a page is never reported as stale', () => {
+    const billing: GuideFeature = {
+      ...deployments(),
+      id: 'billing',
+      name: 'Billing',
+      scenarios: [],
+    }
+    const features = [deployments(), billing]
+    const lock = parseGuideLock(
+      renderGuideLock(features, ['deployments'])
+    )
+    const withBilling = checkGuideCoverage(
+      features,
+      [page(cite('billing'))],
+      lock
+    )
+    assert.deepEqual(withBilling.stale, [])
   })
 
   test('it is keyed in a stable order', () => {
@@ -169,8 +227,8 @@ describe('lock', () => {
       name: 'Billing',
     }
     assert.equal(
-      renderGuideLock([deployments(), billing]),
-      renderGuideLock([billing, deployments()])
+      renderGuideLock([deployments(), billing], ['deployments', 'billing']),
+      renderGuideLock([billing, deployments()], ['billing', 'deployments'])
     )
   })
 

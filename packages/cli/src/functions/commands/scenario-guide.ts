@@ -222,12 +222,16 @@ export const parseGuideLock = (content: string): GuideLock => {
   return lock
 }
 
-export const renderGuideLock = (features: GuideFeature[]): string => {
+export const renderGuideLock = (
+  features: GuideFeature[],
+  cited: Iterable<string>
+): string => {
+  const documented = new Set(cited)
   const lock: GuideLock = {}
   for (const feature of [...features].sort((a, b) =>
     a.id.localeCompare(b.id)
   )) {
-    if (feature.document) {
+    if (feature.document && documented.has(feature.id)) {
       lock[feature.id] = featureEvidence(feature)
     }
   }
@@ -236,6 +240,8 @@ export const renderGuideLock = (features: GuideFeature[]): string => {
 
 /** Which features are documented, which pages cite something that is not. */
 export interface GuideCoverage {
+  /** Registered, documented, and cited by at least one page. */
+  cited: string[]
   /** Registered, documented, and cited by no page. */
   missing: string[]
   /** Cited by a page and not registered at all. */
@@ -281,6 +287,7 @@ export const checkGuideCoverage = (
     }
   }
   return {
+    cited: [...cited].sort((a, b) => a.localeCompare(b)),
     missing: features
       .filter((feature) => feature.document && !cited.has(feature.id))
       .map((feature) => feature.id)
@@ -337,22 +344,42 @@ const GENERATED_FEATURE = /<!--\s*pikku:guide\s+feature=([^\s]+)/
  * own description is the sentence its author already wrote for a reader, and the
  * screenshots carry the rest.
  */
+/**
+ * One section per scenario the reader can tell apart. A data-driven scenario
+ * runs once per row and so appears once per row in the record, but the rows
+ * differ only in their inputs — which the page never shows — so rendering them
+ * all would repeat one heading and one paragraph verbatim. Their figures merge
+ * into the single section instead.
+ */
 const renderFeature = (feature: GuideFeature, artifactBase: string): string => {
-  const blocks: string[] = []
+  const sections = new Map<string, string[]>()
+  const shotKeys = new Map<string, Set<string>>()
   for (const scenario of feature.scenarios) {
-    const section: string[] = [`## ${scenario.title}`]
-    if (scenario.description) {
-      section.push('', scenario.description)
+    let section = sections.get(scenario.title)
+    if (!section) {
+      section = [`## ${scenario.title}`]
+      if (scenario.description) {
+        section.push('', scenario.description)
+      }
+      sections.set(scenario.title, section)
+      shotKeys.set(scenario.title, new Set())
     }
+    const seen = shotKeys.get(scenario.title)!
     for (const shot of scenario.screenshots) {
+      const key = shot.id ?? shot.path
+      if (seen.has(key)) {
+        continue
+      }
+      seen.add(key)
       section.push(
         '',
         `![${shot.name ?? scenario.title}](${artifactBase}${shot.path})`
       )
     }
-    blocks.push(section.join('\n'))
   }
-  return blocks.join('\n\n')
+  return [...sections.values()]
+    .map((section) => section.join('\n'))
+    .join('\n\n')
 }
 
 /**
