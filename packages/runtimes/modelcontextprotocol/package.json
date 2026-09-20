@@ -37,6 +37,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch.d.ts",
+      "import": "./dist/fetch.js",
+      "default": "./dist/fetch.js"
     }
   },
   "devDependencies": {
