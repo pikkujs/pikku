@@ -66,6 +66,44 @@ describe('changes ask', () => {
     assert.strictEqual(parsed.question, 'Grouped or per-line?')
   })
 
+  test('carries the named options across', () => {
+    const parsed = FabricChangesAskInput.parse({
+      changeId: 'chg_1',
+      question: 'Grouped or per-line?',
+      option: [' Grouped ', 'Per line'],
+    })
+    assert.deepStrictEqual(parsed.option, ['Grouped', 'Per line'])
+  })
+
+  test('rejects a seventh option', () => {
+    assert.strictEqual(
+      FabricChangesAskInput.safeParse({
+        changeId: 'chg_1',
+        question: 'Which?',
+        option: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      }).success,
+      false
+    )
+  })
+
+  test('echoes what the filer can click, neutralized', () => {
+    const out = printed(() =>
+      renderChangesAsk(null, {
+        message: {
+          body: 'Grouped or per-line?',
+          attachments: [
+            { key: 'grouped', label: 'Grouped', kind: 'option' },
+            { key: 'hostile', label: HOSTILE, kind: 'option' },
+            { key: 'shot', label: 'A screenshot', kind: 'evidence' },
+          ],
+        },
+      } as never)
+    )
+    assert.ok(out.includes('they can click: Grouped · '))
+    assert.ok(!out.includes('A screenshot'))
+    assert.ok(!out.includes('\x1b'))
+  })
+
   test('neutralizes the echoed question', () => {
     const out = printed(() =>
       renderChangesAsk(null, { message: { body: HOSTILE } } as never)

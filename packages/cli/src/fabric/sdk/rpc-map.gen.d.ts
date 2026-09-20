@@ -589,6 +589,7 @@ export type AskChangeQuestionInput = {
         label: string;
         kind: "option" | "evidence";
     }[] | undefined;
+    option?: string[] | undefined;
 }
 export type AskChangeQuestionOutput = {
     message: {
