@@ -30,6 +30,7 @@ import { formatScenarioReport } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
   ScenarioResult,
+  ScenarioRunSelection,
 } from '@pikku/core/scenario'
 import {
   resolveScenarioBrowserProvider,
@@ -537,11 +538,19 @@ export const scenarioRun = pikkuSessionlessFunc<
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
     try {
+      const selection: ScenarioRunSelection = {
+        ...(split(flows) ? { flows: split(flows) } : {}),
+        ...(split(features) ? { features: split(features) } : {}),
+        ...(split(tags) ? { tags: split(tags) } : {}),
+        ...(split(excludeTags) ? { excludeTags: split(excludeTags) } : {}),
+      }
+
       await runStore.start({
         runId: captureRunId,
         environment,
         surface: runSurface,
         status: 'running',
+        ...(Object.keys(selection).length > 0 ? { selection } : {}),
         startedAt: startedAtIso,
         results: [],
         skipped,
@@ -1004,6 +1013,24 @@ export const scenarioGuide = pikkuSessionlessFunc<
       return
     }
 
+    if (record.status !== 'passed') {
+      logger.error(
+        `Run '${record.runId}' is ${record.status}. A guide is a claim that the product does what the page says, so it is only ever written out of a run that passed.`
+      )
+      process.exitCode = 1
+      return
+    }
+    if (record.selection) {
+      const narrowed = Object.entries(record.selection)
+        .map(([flag, values]) => `--${flag} ${(values as string[]).join(',')}`)
+        .join(' ')
+      logger.error(
+        `Run '${record.runId}' was narrowed (${narrowed}), so it is missing scenarios the suite has. Guide pages would be written as though those flows do not exist — run the whole suite, or pass --run-id for one that was.`
+      )
+      process.exitCode = 1
+      return
+    }
+
     const workflowsMeta = state.workflows?.meta ?? {}
     const features: GuideFeature[] = [...registeredFeatures].map(
       ([id, feature]) => {
@@ -1014,7 +1041,13 @@ export const scenarioGuide = pikkuSessionlessFunc<
           ...(feature.description ? { description: feature.description } : {}),
           document: feature.document !== false,
           scenarios: record.results
-            .filter((result) => result.feature === name)
+            // By id, never by the display name: a title is rewritten freely,
+            // and two features are allowed to share one.
+            .filter(
+              (result) =>
+                result.featureId === id ||
+                (result.featureId === undefined && result.feature === name)
+            )
             .map((result) => {
               const meta = result.scenarioName
                 ? workflowsMeta[result.scenarioName]

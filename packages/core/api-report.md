@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3053 observable things**: 993 exported names, plus
-2060 members on the classes and interfaces among them, reachable
+**3059 observable things**: 994 exported names, plus
+2065 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 435 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 48 | 48 | 146 |
+| `./scenario` | 49 | 49 | 151 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 85 |
@@ -1691,6 +1691,7 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   runId: string
   status: ScenarioRunStatus
   surface: string
+  selection?: ScenarioRunSelection
   startedAt: string
   finishedAt?: string
 }
@@ -1699,6 +1700,12 @@ export interface ScenarioRunReport {
   results: ScenarioResult[]
   skipped: ScenarioSkip[]
   hookFailures: string[]
+}
+export interface ScenarioRunSelection {
+  flows?: string[]
+  features?: string[]
+  tags?: string[]
+  excludeTags?: string[]
 }
 export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
 export interface ScenarioRunStore {

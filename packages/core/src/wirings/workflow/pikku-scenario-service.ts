@@ -84,6 +84,7 @@ export type {
   ScenarioResult,
   ScenarioRunRecord,
   ScenarioRunReport,
+  ScenarioRunSelection,
   ScenarioRunStatus,
   ScenarioRunStore,
   ScenarioRunSummary,

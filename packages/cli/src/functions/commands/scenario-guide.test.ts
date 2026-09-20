@@ -185,7 +185,7 @@ describe('emit', () => {
 
   test('the generated block carries the scenario and its screenshots', () => {
     const markdown = renderGuidePage(page(), features(), '../runs/abc/')
-    assert.match(markdown, /^---\ntitle: "Deployments"\n/)
+    assert.match(markdown, /^---\ntitle: Deployments\n/)
     assert.match(markdown, /## Shipping a change/)
     assert.match(markdown, /A push becomes a running deployment\./)
     assert.match(
@@ -223,8 +223,32 @@ describe('emit', () => {
     const markdown = renderGuidePage(page(), features(), '')
     assert.match(
       markdown,
-      /description: "How deploys are triggered, tracked, and promoted\."/
+      /description: How deploys are triggered, tracked, and promoted\./
     )
+  })
+
+  test('frontmatter the compiler does not own survives a rebuild', () => {
+    const source = parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\nslug: /deploying\nsidebar_position: 3\ndraft: false\n---\n${cite('deployments')}\n`
+    )
+    const markdown = renderGuidePage(source, features(), '')
+    assert.match(markdown, /slug: \/deploying/)
+    assert.match(markdown, /sidebar_position: 3/)
+    assert.match(markdown, /draft: false/)
+    assert.equal(
+      renderGuidePage(parseGuidePage('product/deployments.md', markdown), features(), ''),
+      markdown
+    )
+  })
+
+  test('a CRLF source is read as having frontmatter', () => {
+    const parsed = parseGuidePage(
+      'product/deployments.md',
+      `---\r\ntitle: Deployments\r\n---\r\n${cite('deployments')}\r\n`
+    )
+    assert.equal(parsed.title, 'Deployments')
+    assert.deepEqual(parsed.features, ['deployments'])
   })
 
   test('identical inputs produce byte-identical output', () => {

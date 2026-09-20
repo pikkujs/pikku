@@ -151,6 +151,22 @@ export interface ScenarioRunReport {
 export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
 
 /**
+ * The filters a run was selected with, recorded when it was narrowed at all.
+ *
+ * A narrowed run is a partial record of the suite: scenarios a feature owns can
+ * be missing from it, and whole features can be absent, with nothing in the
+ * results to say so. Anything that reads a run as evidence of what the suite
+ * does — rather than of what happened that afternoon — has to be able to tell
+ * the two apart, and it cannot be inferred from the results afterwards.
+ */
+export interface ScenarioRunSelection {
+  flows?: string[]
+  features?: string[]
+  tags?: string[]
+  excludeTags?: string[]
+}
+
+/**
  * A whole run, as it is stored and read back.
  *
  * `status` is `running` from the moment the run is created until it finishes,
@@ -163,6 +179,8 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   status: ScenarioRunStatus
   /** The surface the run targeted: `default`, `browser`, … */
   surface: string
+  /** Absent on a run of the whole suite; see {@link ScenarioRunSelection}. */
+  selection?: ScenarioRunSelection
   startedAt: string
   finishedAt?: string
 }

@@ -27,4 +27,8 @@ That one line does both halves of the job. It says *where* the block goes, which
 
 Every registered feature has to be cited by some page, and a feature that is pure plumbing says so rather than being written about — `pikkuFeature({ document: false })`, threaded through the inspector and `FeatureMeta`. An uncited feature fails the command by name; `--allow-undocumented` downgrades that one failure to a report. A page citing a feature id that is not registered stays an error either way.
 
-Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record.
+A guide is only written out of a run that can stand behind it. A run that failed or was killed halfway is refused, because a page is a claim that the product does what it says. So is a narrowed one: `pikku scenario run --flows`/`--features`/`--tags` leaves out scenarios the suite has, and a guide built from it would describe those flows as though they do not exist. `ScenarioRunRecord.selection` records the filters a run was selected with, since nothing in the results afterwards can tell a suite of forty from forty that were asked for.
+
+Results are joined to features by `featureId`, falling back to the display name only for records written before that field existed — a title is rewritten freely and two features may share one.
+
+Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record. Frontmatter the compiler does not own (`slug`, `draft`, `sidebar_position`, anything else a docs site reads) passes through untouched, and a source written with CRLF line endings is read as having frontmatter.

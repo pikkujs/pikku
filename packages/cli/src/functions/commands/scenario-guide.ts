@@ -13,7 +13,7 @@
  * makes the output byte-identical across runs.
  */
 import { createHash } from 'node:crypto'
-import { parse } from 'yaml'
+import { parse, stringify } from 'yaml'
 
 /** One step of a scenario, as the run recorded it. */
 export interface GuideStep {
@@ -72,11 +72,18 @@ export interface GuidePage {
    * the body rather than declared in frontmatter: see {@link parseGuidePage}.
    */
   features: string[]
+  /**
+   * The frontmatter as it was written, every key of it. Carried whole rather
+   * than picked apart because a docs site reads its own keys off it — `slug`,
+   * `draft`, `sidebar_position` — and a compiler that rebuilt the block from
+   * the fields it happens to know about would drop them on the first rebuild.
+   */
+  frontmatter: Record<string, unknown>
   /** Everything after the frontmatter, generated regions included. */
   body: string
 }
 
-const FRONTMATTER = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/
 
 /**
  * Read one editorial source.
@@ -117,6 +124,7 @@ export const parseGuidePage = (path: string, content: string): GuidePage => {
     ...(typeof frontmatter.description === 'string'
       ? { description: frontmatter.description }
       : {}),
+    frontmatter,
     features: citedFeatures(body),
     body,
   }
@@ -383,13 +391,20 @@ export const renderGuidePage = (
   }
   const title = page.title ?? first?.name
   const description = page.description ?? first?.description
-  const frontmatter = [
-    '---',
-    ...(title ? [`title: ${JSON.stringify(title)}`] : []),
-    ...(description ? [`description: ${JSON.stringify(description)}`] : []),
-    '---',
-  ]
-  return `${frontmatter.join('\n')}\n\n${trim(body)}\n`
+  // Only `title` and `description` are the compiler's to fill in, and only when
+  // the page states neither; every other key the author wrote passes through in
+  // the order they wrote it.
+  const { title: _t, description: _d, ...rest } = page.frontmatter
+  const frontmatter: Record<string, unknown> = {
+    ...(title ? { title } : {}),
+    ...(description ? { description } : {}),
+    ...rest,
+  }
+  const head =
+    Object.keys(frontmatter).length > 0
+      ? `---\n${stringify(frontmatter).trimEnd()}\n---`
+      : '---\n---'
+  return `${head}\n\n${trim(body)}\n`
 }
 
 const trim = (value: string) => value.replace(/^\n+/, '').replace(/\s+$/, '')
