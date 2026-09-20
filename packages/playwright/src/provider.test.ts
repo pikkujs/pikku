@@ -747,6 +747,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         scenario: 'Checkout › two people',
         kind: 'screenshot',
         path: 'checkout-two-people/01-opens-the-order-admin.png',
+        id: 'checkout-two-people/opens-the-order-admin',
         actor: 'admin',
         name: 'opens the order',
       },
@@ -754,10 +755,64 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         scenario: 'Checkout › two people',
         kind: 'screenshot',
         path: 'checkout-two-people/02-sees-it-arrive-shopper.png',
+        id: 'checkout-two-people/sees-it-arrive-shopper',
         actor: 'shopper',
         name: 'sees it arrive',
       },
     ])
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  /**
+   * The id is what survives an edit to the scenario: inserting a step ahead of
+   * a shot renumbers its path, and anything keyed off the path — a caption
+   * override, a diff against the build before — silently loses it.
+   */
+  test('the id ignores the ordinal, so an inserted step does not rename the shot', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: ROOT,
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', screenshots: true, video: 'off' },
+    })
+
+    provider.beginScenario('Checkout')
+    const session = await provider.sessionFor('admin')
+    await session.screenshot('an added step')
+    await session.screenshot('opens the order')
+
+    assert.deepEqual(
+      provider.artifacts().map((a) => a.id),
+      ['checkout/an-added-step-admin', 'checkout/opens-the-order-admin']
+    )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a showcase shot is marked as one, and an ordinary shot is not', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: ROOT,
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', screenshots: true, video: 'off' },
+    })
+
+    provider.beginScenario('Checkout')
+    const session = await provider.sessionFor('admin')
+    await session.screenshot('the empty basket')
+    await session.screenshot('the order, confirmed', { showcase: true })
+
+    assert.deepEqual(
+      provider.artifacts().map((a) => a.showcase),
+      [undefined, true]
+    )
     await rm(dir, { recursive: true, force: true })
   })
 

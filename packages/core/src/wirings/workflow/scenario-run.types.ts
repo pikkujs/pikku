@@ -33,6 +33,15 @@ export interface ScenarioArtifact {
   actor?: string
   /** The caption the scenario author took a screenshot under. */
   name?: string
+  /**
+   * The same shot across runs, under one key. `path` carries the order the run
+   * happened in, so it moves whenever a step is inserted before it — nothing
+   * that outlives a run (a caption override, a diff against last week) can key
+   * off it.
+   */
+  id?: string
+  /** Fit to show outside the run: a marketing card, a docs page, a gallery. */
+  showcase?: boolean
 }
 
 /** One step of a run, already joined to the prose that declared it. */

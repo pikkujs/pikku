@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3038 observable things**: 990 exported names, plus
-2048 members on the classes and interfaces among them, reachable
+**3043 observable things**: 991 exported names, plus
+2052 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 435 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 45 | 45 | 134 |
+| `./scenario` | 46 | 46 | 138 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 85 |
@@ -1558,7 +1558,7 @@ export type FeaturesMeta = Record<string, FeatureMeta>
 export interface PikkuBrowserWire {
   readonly actor: string
   goto(url: string): Promise<void>
-  screenshot(name?: string): Promise<Uint8Array>
+  screenshot(name?: string, options?: ScenarioScreenshotOptions): Promise<Uint8Array>
 }
 export class PikkuScenarioService implements WorkflowRunExtension {
   constructor(private readonly engine: WorkflowRunEngine)
@@ -1607,6 +1607,8 @@ export interface ScenarioArtifact {
   path: string
   actor?: string
   name?: string
+  id?: string
+  showcase?: boolean
 }
 export interface ScenarioBrowserFailure {
   actor: string
@@ -1715,6 +1717,10 @@ export interface ScenarioRunSummary {
   failed: number
   skipped: number
   artifacts: number
+}
+export interface ScenarioScreenshotOptions {
+  showcase?: boolean
+  fullPage?: boolean
 }
 export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
 export interface ScenarioStepMeta {
