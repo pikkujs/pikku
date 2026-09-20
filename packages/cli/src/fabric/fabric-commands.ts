@@ -170,6 +170,10 @@ export const fabricCommands = defineCLICommands({
           'Override the project display name (defaults to repo name)',
       },
       branch: { description: 'Default branch (defaults to main)' },
+      organization: {
+        description:
+          'Organization to import into — slug, name or id (defaults to the one your session is in)',
+      },
       force: {
         description: 'Replace existing fabric.config.json',
         default: false,
@@ -195,6 +199,10 @@ export const fabricCommands = defineCLICommands({
       repoName: {
         description:
           'Name for a repo created by --gitea (defaults to the directory name)',
+      },
+      organization: {
+        description:
+          'Organization to import into — slug, name or id (defaults to the one your session is in)',
       },
       apiUrl: {
         description: 'Override the fabric-api URL stored in fabric.config.json',
