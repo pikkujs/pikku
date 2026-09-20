@@ -63,27 +63,31 @@ Worth a scenario each, because they are two different claims: that a mechanic ca
 *see* the invoices nav item, and that their call to an invoices RPC is *refused*. The
 second is the one that catches a `permissions` field nobody wired.
 
-## The clone
+## The second app
 
 ```bash
 pikku new app admin --serves staff --personas manager,mechanic
 ```
 
-One command does every step this section used to list by hand: it clones the
-primary frontend (skipping `node_modules` and `src/paraglide`, which is
-compiled from `messages/` on first run and would otherwise ship one app's
-strings inside another), re-points the clone's `package.json` at its own name,
-its own dev/preview port and its own `--tsBuildInfoFile`, stamps `app: '<slug>'`
-onto each named persona in `definePersonas({…})`, adds the `frontends` entry,
-and re-runs `bun install`.
+One command does every step this section used to list by hand: it fetches
+`pikkujs/starter-template`'s `apps/app`, re-points its `package.json` at the
+new name, its own dev/preview port and its own `--tsBuildInfoFile`, stamps
+`app: '<slug>'` onto each named persona in `definePersonas({…})`, adds the
+`frontends` entry, and re-runs `bun install`.
 
-`--from <slug>` clones something other than the primary app. `--install false`
-skips the install when you are batching several.
+**It scaffolds from the starter template, not from the app you already have.**
+Copying the working app drags its screens, routes and nav into an audience that
+never asked for them, and the first hour in the new app goes on deleting
+someone else's product.
+
+`--template <source>` scaffolds from something else — any giget source, or a
+path inside the repo for an offline or vendored copy. `--install false` skips
+the install when you are batching several.
 
 **The `--tsBuildInfoFile` edit is the one that used to bite.** Two apps sharing
 one incremental cache produce type errors that vanish on a clean build: an hour
 of debugging for a one-word edit. It is handled now, but it is why you should
-not clone by hand.
+not copy by hand.
 
 ### What it refuses, and why that is the valuable part
 

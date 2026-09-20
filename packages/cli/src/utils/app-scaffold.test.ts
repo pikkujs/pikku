@@ -9,7 +9,7 @@ import {
   personaAppsInSource,
   personasNamedInSource,
   refuseNewApp,
-  retargetClonedPackage,
+  retargetApp,
   validateSlug,
   type Frontend,
 } from './app-scaffold.js'
@@ -132,7 +132,7 @@ describe('personas in source', () => {
   })
 })
 
-describe('retargetClonedPackage', () => {
+describe('retargetApp', () => {
   test('the clone takes its own name, port and build cache', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-clone-'))
     try {
@@ -147,7 +147,7 @@ describe('retargetClonedPackage', () => {
           },
         })
       )
-      retargetClonedPackage(dir, 'supplier', 7105)
+      retargetApp(dir, 'supplier', 7105)
       const pkg = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'))
       assert.equal(pkg.name, '@project/supplier')
       assert.equal(pkg.scripts.dev, 'vite dev --port 7105')

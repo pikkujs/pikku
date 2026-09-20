@@ -113,7 +113,9 @@ export function refuseNewApp(
   // The audience rule. Two kinds of user is not a reason to split: a role
   // inside an app changes which nav items and which buttons appear, and
   // nothing else.
-  const colleagues = Object.entries(frontends).find(([, f]) => f.serves === serves)
+  const colleagues = Object.entries(frontends).find(
+    ([, f]) => f.serves === serves
+  )
   if (colleagues) {
     return (
       `the "${colleagues[0]}" app already serves ${serves}. People sharing an ` +
@@ -238,11 +240,7 @@ export function assignPersonaApp(
  * fight over one incremental cache and produce type errors that vanish on a
  * clean build.
  */
-export function retargetClonedPackage(
-  appDir: string,
-  slug: string,
-  port: number
-): void {
+export function retargetApp(appDir: string, slug: string, port: number): void {
   const path = join(appDir, 'package.json')
   if (!existsSync(path)) return
   const raw = readFileSync(path, 'utf8')
