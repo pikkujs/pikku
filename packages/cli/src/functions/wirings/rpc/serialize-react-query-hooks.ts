@@ -1,7 +1,7 @@
 export const serializeReactQueryHooks = (
   rpcMapPath: string,
   workflowMapPath?: string,
-  auth?: { statelessCookie: boolean }
+  hasAuth?: boolean
 ) => {
   const workflowImport = workflowMapPath
     ? `\nimport type { FlattenedWorkflowMap } from '${workflowMapPath}'`
@@ -58,35 +58,33 @@ export const useWorkflowStatus = (
     : ''
 
   /**
-   * The session, and — on the stateless path — the thing that keeps it alive.
+   * The session — and, for free, the thing that heals the session cookie.
    *
-   * `betterAuthStatelessSession` verifies the signed `session_data` cookie with
-   * the secret alone, with no database behind it, and nothing rewrites that
-   * cookie once someone is signed in. So the session ends when the cookie does,
-   * however long the `session_token` still had. A query that re-reads the
-   * session on an interval re-mints it as a side effect, which is why this is
-   * `useSession` and not a refresh loop bolted on beside it: the app wants the
-   * session anyway, and refetching is already what react-query does.
+   * Under `betterAuthStatelessSession` the signed `session_data` cookie is the
+   * only thing authenticating a request, and nothing rewrites it once someone
+   * is signed in. When it ages out, better-auth's cookie-cache branch bails on
+   * the stale payload and falls through to the database, reading the session
+   * from the still-valid `session_token` and minting a fresh cookie on the way
+   * out. So an ordinary cached read heals an expired cookie by itself.
    *
-   * `disableCookieCache=true` is load-bearing, and only on the stateless path.
-   * Without it `/get-session` sees a valid cache and hands it straight back
-   * without touching the cookie; the branch that would extend it in place is
-   * governed by `cookieRefreshCache`, which better-auth forces to `false`
-   * whenever a database is configured. With it, better-auth reads the session
-   * from the database and writes a new cookie with a full `maxAge`. That read
-   * is the point rather than the cost: the database is where a ban or a revoked
-   * session is recorded, so each refetch is the moment those take effect.
+   * Which is why this does NOT pass `disableCookieCache`. Forcing it would turn
+   * every refetch into a database read — the exact cost the cookie cache exists
+   * to avoid — to re-mint a cookie that has most of its life left. The read is
+   * worth paying once, when the cookie has actually expired, and that is when
+   * better-auth does it anyway.
+   *
+   * better-auth's own sliding renewal (`session.cookieCache.refreshCache`) is
+   * not the answer either: it is force-disabled whenever a database is
+   * configured, and where it does apply it re-signs the cached blob without
+   * reading the database, so a banned user's cookie would renew forever.
    */
-  const sessionPath = auth?.statelessCookie
-    ? '/auth/get-session?disableCookieCache=true'
-    : '/auth/get-session'
+  const sessionImport = hasAuth ? ', usePikkuFetch' : ''
 
-  const sessionImport = auth ? ', usePikkuFetch' : ''
-
-  const sessionHook = auth
+  const sessionHook = hasAuth
     ? `
-/* Comfortably inside any cookie lifetime worth configuring, and one GET every
-   ten minutes is nothing beside what an open app does anyway. */
+/* Short enough that an expired cookie is healed long before anyone notices,
+   and cheap: while the cookie is good this is a cache hit with no database
+   behind it. */
 const SESSION_REFETCH_MS = 10 * 60 * 1000
 /* A tab flicked away from and back to should not refetch on every glance. */
 const SESSION_STALE_MS = 2 * 60 * 1000
@@ -98,7 +96,7 @@ export const useSession = <Session = unknown>(
   return useQuery<Session | null, Error>({
     queryKey: ['pikkuSession'],
     queryFn: async () => {
-      const response = await fetch.fetch('${sessionPath}', 'GET', undefined)
+      const response = await fetch.fetch('/auth/get-session', 'GET', undefined)
       if (!response.ok) return null
       // Signed out is a null body, not an error status.
       return ((await response.json().catch(() => null)) ?? null) as Session | null
