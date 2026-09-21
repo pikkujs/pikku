@@ -195,6 +195,14 @@ export interface ScenarioScreenshotOptions {
   fullPage?: boolean
 }
 
+/**
+ * One actor's browser session, handed to a step as `wire.browser`.
+ *
+ * Only what every driver can honour is declared here. A driver package adds
+ * the rest by declaration-merging onto this interface — `@pikku/playwright`
+ * contributes `page`, `context` and `locate` — so a step written against the
+ * structural surface keeps working whichever driver runs it.
+ */
 export interface PikkuBrowserWire {
   /** The actor whose browser context this is */
   readonly actor: string
