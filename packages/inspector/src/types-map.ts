@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 export class TypesMap {
   private map: Map<string, { originalName: string; path: string | null }> =
     new Map()
@@ -12,8 +14,22 @@ export class TypesMap {
     this.map.set(originalName, { originalName, path })
   }
 
+  /**
+   * The suffix is derived from the path, not random: it lands in generated
+   * `.d.ts` maps, and a fresh value on every run rewrote those files, which
+   * invalidated the schema cache mid-`pikku all` and cost a full
+   * ts-json-schema-generator pass each time.
+   */
   public addUniqueType(originalName: string, path: string): string {
-    const uniqueName = `${originalName}_${Math.random().toString(36).substring(7)}`
+    const digest = createHash('sha256').update(path).digest('hex').slice(0, 6)
+    let uniqueName = `${originalName}_${digest}`
+    let collision = 1
+    while (
+      this.map.get(uniqueName)?.path !== undefined &&
+      this.map.get(uniqueName)?.path !== path
+    ) {
+      uniqueName = `${originalName}_${digest}_${collision++}`
+    }
     this.map.set(uniqueName, { originalName, path })
     return uniqueName
   }
