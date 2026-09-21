@@ -783,7 +783,9 @@ export const scenarioRun = pikkuSessionlessFunc<
         }
         // Told here, acted on at the next scenario's reset — that is what closes
         // these windows and finalises the video this outcome decides the fate of.
-        browserLifecycle.endScenario(result.status)
+        browserLifecycle.endScenario(
+          result.status === 'failed' ? 'failed' : 'passed'
+        )
         Object.assign(result, identifyScenarioResult(result, identity))
         await runStore.recordScenario(captureRunId, result)
         if (coverageActive) {

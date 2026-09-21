@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box, Center, SimpleGrid, Stack, Text } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import type { ScenarioArtifact } from '@pikku/core/scenario'
 import type { ScenarioLensStatus } from '../scenario-run-lens'
@@ -62,7 +63,7 @@ export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
         >
           <Center h="100%">
             <Text size="xs" c="dimmed">
-              {waiting()}
+              {asI18n(waiting())}
             </Text>
           </Center>
         </Box>
@@ -78,7 +79,7 @@ export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
             />
             {recordings.length > 1 && artifact.actor && (
               <Text size="xs" c="dimmed" tt="uppercase" fz={10} lh={1.4}>
-                {artifact.actor}
+                {asI18n(artifact.actor)}
               </Text>
             )}
           </Stack>
