@@ -1,6 +1,7 @@
 import type { CoreSingletonServices } from '@pikku/core/types'
 import type { AuthInstance } from '@pikku/core/types'
 import { pikkuState } from '@pikku/core/state'
+import { applyStatelessCookieCacheDefault } from './stateless-cookie-default.js'
 
 /**
  * better-auth's instance as pikku sees it. `$context` is what credential
@@ -22,10 +23,35 @@ export const pikkuBetterAuth = <
 >(
   factory: PikkuBetterAuthFactory<I, S>
 ): PikkuBetterAuthFactory<I, S> => {
-  Object.defineProperty(factory, PIKKU_BETTER_AUTH, {
+  /*
+   * The instance is handed back through a wrapper so pikku gets one look at it
+   * before anything uses it — see `applyStatelessCookieCacheDefault`, which gives
+   * the session cookie a usable lifetime when the app left it unset and the
+   * stateless middleware is the thing authenticating requests.
+   *
+   * Only the RUNTIME is wrapped. The CLI reads `pikkuBetterAuth(async ({ ... }) =>
+   * ...)` off the app's own AST — the destructured services, the inner
+   * `betterAuth({ ... })` call, its providers and `session.cookieCache` — so
+   * inspection is untouched by anything that happens here.
+   *
+   * Returning a promise is safe: every consumer already treats the factory's
+   * result as one (`services.auth()` resolves it lazily and caches it).
+   */
+  const wrapped: PikkuBetterAuthFactory<I, S> = async (services) => {
+    const instance = await factory(services)
+    await applyStatelessCookieCacheDefault(instance, (services as any)?.logger)
+    return instance
+  }
+
+  Object.defineProperty(wrapped, PIKKU_BETTER_AUTH, {
     value: true,
     enumerable: false,
   })
-  pikkuState(null, 'package', 'authFactory', factory as any)
-  return factory
+  /* The app's own function, for anything reaching for `.toString()` or the name. */
+  Object.defineProperty(wrapped, 'pikkuSourceFactory', {
+    value: factory,
+    enumerable: false,
+  })
+  pikkuState(null, 'package', 'authFactory', wrapped as any)
+  return wrapped
 }

@@ -6,7 +6,10 @@ import './auth.wiring.js'
 import './me.http.js'
 
 import { fetch } from '@pikku/core/http'
-import { betterAuthStatelessSession } from '@pikku/better-auth'
+import {
+  betterAuthStatelessSession,
+  STATELESS_COOKIE_CACHE_MAX_AGE,
+} from '@pikku/better-auth'
 import { VERIFIER_OAUTH_PROVIDERS } from './providers.js'
 
 const BASE = 'http://localhost'
@@ -191,6 +194,32 @@ async function main(): Promise<void> {
         captured?.userId,
         expectedUserId,
         'stateless middleware populated session userId from the signed cookie'
+      )
+    }
+  )
+
+  await runTest(
+    'the cookie the app never configured still outlives five minutes',
+    async () => {
+      /*
+       * auth.wiring.ts asks for `cookieCache: { enabled: true }` and no maxAge —
+       * the ordinary case, and the one better-auth resolves to 300 seconds. With
+       * the stateless middleware there is no database behind that cookie, so 300
+       * seconds is not a cache expiry, it is a hard sign-out five minutes after
+       * login. `pikkuBetterAuth` inserts a day when the app chose nothing.
+       */
+      const res = await signUp('maxage@example.com', 'password123')
+      const setCookies = res.headers.getSetCookie?.() ?? []
+      const sessionData = setCookies.find((c) =>
+        c.startsWith('better-auth.session_data=')
+      )
+      assertTruthy(sessionData, 'session_data Set-Cookie header')
+
+      const maxAge = Number(/Max-Age=(\d+)/i.exec(sessionData!)?.[1])
+      assertEqual(
+        maxAge,
+        STATELESS_COOKIE_CACHE_MAX_AGE,
+        "session_data Max-Age defaulted to a day rather than better-auth's 300s"
       )
     }
   )

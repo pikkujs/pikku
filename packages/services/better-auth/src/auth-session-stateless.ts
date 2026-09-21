@@ -15,6 +15,7 @@ import { stampActorFlag } from './stamp-actor-flag.js'
 import { withResolvedScopes } from './auth-session-scopes.js'
 import { mergeRelayedCookies } from './cross-site-cookies.js'
 import { isSecretForbidden, isSecretNotFound } from './secret-not-found.js'
+import { markStatelessSessionInUse } from './stateless-cookie-default.js'
 
 type CachedSession = { session: any; user: any }
 
@@ -47,6 +48,14 @@ export type BetterAuthStatelessSessionOptions = {
  * server-side revocation isn't seen until the cookie cache expires; sign-out is
  * still immediate (it deletes the cookie).
  *
+ * That expiry is `session.cookieCache.maxAge`, and here it is not a cache expiry
+ * but a hard session limit — there is no database to fall back to when the cookie
+ * ages out. better-auth defaults it to 300 seconds, which signs everyone out five
+ * minutes after they log in, so `pikkuBetterAuth` inserts a day when the app set
+ * no value of its own (see stateless-cookie-default.ts). Set it explicitly to
+ * choose the trade: it is the longest a ban or a revoked session can go unnoticed,
+ * paid for in database reads.
+ *
  * That last part is the browser's to keep under AUTH_COOKIE_CROSS_SITE: a
  * relayed cookie lives in the client's own storage, so deleting the real cookie
  * cannot reach it. A client implementing the relay MUST drop the entries the
@@ -67,6 +76,14 @@ export const betterAuthStatelessSession = (
     priority,
     secretId = 'BETTER_AUTH_SECRET',
   } = options
+
+  /*
+   * Tell the auth factory that the cookie is now the only thing authenticating a
+   * request, so it can default `session.cookieCache.maxAge` to something survivable
+   * instead of better-auth's 300s. Constructed at module scope by the generated
+   * `auth-middleware.gen.ts`, long before the factory runs.
+   */
+  markStatelessSessionInUse()
 
   return pikkuMiddleware({
     priority,
