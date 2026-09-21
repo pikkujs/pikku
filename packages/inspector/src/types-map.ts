@@ -15,21 +15,15 @@ export class TypesMap {
   }
 
   /**
-   * The suffix is derived from the path, not random: it lands in generated
-   * `.d.ts` maps, and a fresh value on every run rewrote those files, which
-   * invalidated the schema cache mid-`pikku all` and cost a full
-   * ts-json-schema-generator pass each time.
+   * A pure function of the path, with no dependence on insertion order: the
+   * alias lands in generated `.d.ts` maps, and anything that varies between
+   * runs rewrites those files, which invalidates the schema cache mid-`pikku
+   * all` and costs a full ts-json-schema-generator pass each time. A counter
+   * over already-taken names would reintroduce that through traversal order.
    */
   public addUniqueType(originalName: string, path: string): string {
-    const digest = createHash('sha256').update(path).digest('hex').slice(0, 6)
-    let uniqueName = `${originalName}_${digest}`
-    let collision = 1
-    while (
-      this.map.get(uniqueName)?.path !== undefined &&
-      this.map.get(uniqueName)?.path !== path
-    ) {
-      uniqueName = `${originalName}_${digest}_${collision++}`
-    }
+    const digest = createHash('sha256').update(path).digest('hex').slice(0, 12)
+    const uniqueName = `${originalName}_${digest}`
     this.map.set(uniqueName, { originalName, path })
     return uniqueName
   }
