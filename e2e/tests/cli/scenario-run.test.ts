@@ -108,7 +108,7 @@ describe('pikku scenario run', () => {
     assertAllPassed(run)
     assert.match(
       run.output,
-      /coverage: [1-9]\d*\/\d+ functions exercised by 'orderSupportScenario'/,
+      /coverage: [1-9]\d*\/\d+ functions exercised by '(?:.+ › )?orderSupportScenario'/,
       `expected per-scenario coverage attribution:\n${run.output}`
     )
     assert.match(
