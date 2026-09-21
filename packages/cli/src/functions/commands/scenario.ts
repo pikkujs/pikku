@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { resolve, join } from 'node:path'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { resolve, join, dirname, relative, sep } from 'node:path'
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { glob } from 'tinyglobby'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { InMemoryWorkflowService } from '@pikku/core/services'
@@ -29,6 +30,7 @@ import { formatScenarioReport } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
   ScenarioResult,
+  ScenarioRunSelection,
 } from '@pikku/core/scenario'
 import {
   resolveScenarioBrowserProvider,
@@ -37,8 +39,18 @@ import {
 import { resolvePersonas } from '../../utils/resolve-personas.js'
 import { resolvePersonaCredentials } from '../../utils/persona-credentials.js'
 import { spawnDevServer } from '../../server/spawn-dev-server.js'
-import { buildScenarioPlan } from './scenario-plan.js'
-import type { ScenarioPlanGroup } from './scenario-plan.js'
+import {
+  checkGuideCoverage,
+  featureEvidence,
+  guideStep,
+  parseGuideLock,
+  parseGuidePage,
+  renderGuideLock,
+  renderGuidePage,
+} from './scenario-guide.js'
+import type { GuideFeature, GuideLock, GuidePage } from './scenario-guide.js'
+import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
+import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
 import { resolveEnvironment, isLocalUrl } from './environment.js'
 import { readDevAddress } from './dev-address.js'
 import type { ScenarioBaseline } from '../db/scenario-baseline.js'
@@ -526,11 +538,19 @@ export const scenarioRun = pikkuSessionlessFunc<
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
     try {
+      const selection: ScenarioRunSelection = {
+        ...(split(flows) ? { flows: split(flows) } : {}),
+        ...(split(features) ? { features: split(features) } : {}),
+        ...(split(tags) ? { tags: split(tags) } : {}),
+        ...(split(excludeTags) ? { excludeTags: split(excludeTags) } : {}),
+      }
+
       await runStore.start({
         runId: captureRunId,
         environment,
         surface: runSurface,
         status: 'running',
+        ...(Object.keys(selection).length > 0 ? { selection } : {}),
         startedAt: startedAtIso,
         results: [],
         skipped,
@@ -548,6 +568,11 @@ export const scenarioRun = pikkuSessionlessFunc<
         runId: string,
         flowName: string
       ) => {
+        // Taken from the run rather than derived from the ladder: the video
+        // clock starts when an actor's window opens, which is somewhere after
+        // step one, and every step that never touched a browser burns scenario
+        // time while the recording sits still.
+        const videoOffsets = scenarioService.takeStepVideoOffsets(runId)
         const prose = collectScenarioStepProse(
           state.workflows?.meta?.[flowName],
           functionsMeta,
@@ -564,6 +589,7 @@ export const scenarioRun = pikkuSessionlessFunc<
           expected: step.error?.expected,
           input: step.data,
           stepFunc: step.rpcName,
+          video: videoOffsets.get(step.stepName),
         }))
         return {
           rows: scenarioStepRows(steps, prose),
@@ -617,46 +643,40 @@ export const scenarioRun = pikkuSessionlessFunc<
       const hookFailures: string[] = []
 
       /**
-       * What a result carries beyond its own outcome: which registration ran,
-       * which feature grouped it, and the tags it was selected by. Snapshotted
-       * into the record because a run read back next week is describing a suite
+       * Which registration ran and which feature grouped it, snapshotted into
+       * the record because a run read back next week is describing a suite
        * whose source has moved on.
        */
-      const identify = (
-        result: ScenarioResult,
+      const identityOf = (
         scenarioName: string,
-        feature?: string
-      ): ScenarioResult => {
-        const tags = state.workflows?.meta?.[scenarioName]?.tags as
-          string[] | undefined
-        return {
-          ...result,
-          scenarioName,
-          ...(feature ? { feature } : {}),
-          ...(tags?.length ? { tags } : {}),
-        }
-      }
+        group?: ScenarioPlanGroup
+      ): ScenarioRunIdentity => ({
+        scenarioName,
+        featureId: group?.featureId,
+        featureName: group?.featureName,
+        tags: state.workflows?.meta?.[scenarioName]?.tags as
+          string[] | undefined,
+      })
 
       const runEntry = async (
         label: string,
         scenarioName: string,
         data: unknown,
-        feature?: string
+        identity: ScenarioRunIdentity
       ) => {
         const startedAt = Date.now()
         if (databaseBaseline) {
           try {
             await databaseBaseline.restore()
           } catch (e: any) {
-            const result = identify(
+            const result = identifyScenarioResult(
               {
                 name: label,
                 status: 'failed',
                 durationMs: Date.now() - startedAt,
                 error: `database reset failed: ${e?.message ?? e}`,
               },
-              scenarioName,
-              feature
+              identity
             )
             results.push(result)
             await runStore.recordScenario(captureRunId, result)
@@ -742,7 +762,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         // Told here, acted on at the next scenario's reset — that is what closes
         // these windows and finalises the video this outcome decides the fate of.
         browserLifecycle.endScenario(result.status)
-        Object.assign(result, identify(result, scenarioName, feature))
+        Object.assign(result, identifyScenarioResult(result, identity))
         await runStore.recordScenario(captureRunId, result)
         if (coverageActive) {
           const report = await invokeCoverage('pikkuScenarioTakeLiveCoverage')
@@ -796,15 +816,14 @@ export const scenarioRun = pikkuSessionlessFunc<
             // Setup failed, so nothing in the group ran. Reporting them as failed
             // rather than skipped is the honest reading: they did not pass.
             for (const entry of group.entries) {
-              const result = identify(
+              const result = identifyScenarioResult(
                 {
                   name: label(entry),
                   status: 'failed',
                   durationMs: 0,
                   error: `${groupName ? `feature '${groupName}' ` : ''}${beforeStage} failed: ${beforeError?.message ?? beforeError}`,
                 },
-                entry.scenarioName,
-                groupName
+                identityOf(entry.scenarioName, group)
               )
               results.push(result)
               await runStore.recordScenario(captureRunId, result)
@@ -815,7 +834,7 @@ export const scenarioRun = pikkuSessionlessFunc<
                 label(entry),
                 entry.scenarioName,
                 entry.data,
-                groupName
+                identityOf(entry.scenarioName, group)
               )
             }
           }
@@ -946,6 +965,208 @@ export const scenarioRun = pikkuSessionlessFunc<
             `scenario reset: could not drop the baseline copies: ${e?.message ?? e}`
           )
         }
+      }
+    }
+  },
+})
+
+/**
+ * `pikku scenario guide` — the suite, written out as markdown.
+ *
+ * Structure comes from the registry (which features exist, what their scenarios
+ * are called), and evidence from the latest run record (what the steps actually
+ * said, and what they filed). Editorial prose comes from the project's own
+ * `docs/` sources, which cite a feature by leaving the marker pair where its
+ * block belongs; this merges the three and writes one markdown file per source.
+ * It renders nothing, resolves no asset URLs and calls no model: the writing is
+ * somebody else's concern, and this is the compiler that keeps it honest.
+ */
+export const scenarioGuide = pikkuSessionlessFunc<
+  {
+    docs?: string
+    output?: string
+    runId?: string
+    allowUndocumented?: boolean
+    artifactBase?: string
+  },
+  void
+>({
+  func: async (
+    { logger, config, getInspectorState },
+    { docs = 'docs', output, runId, allowUndocumented = false, artifactBase }
+  ) => {
+    const state = await getInspectorState(false, false, false, true)
+    const outDir = resolve(config.rootDir, config.outDir)
+    await loadScenarioBootstrap(outDir)
+    const { features: registeredFeatures } = collectRegisteredWirings()
+
+    const runsDir = join(outDir, 'scenario-runs')
+    const runStore = new FileScenarioRunStore({ dir: runsDir })
+    const latest = runId ?? (await runStore.list({ limit: 1 }))[0]?.runId
+    const record = latest ? await runStore.get(latest) : undefined
+    if (!record) {
+      logger.error(
+        runId
+          ? `No run '${runId}' under ${runsDir}.`
+          : `No scenario run under ${runsDir} — run \`pikku scenario run <environment> --screenshots\` first, since a guide is written out of what a run recorded.`
+      )
+      process.exitCode = 1
+      return
+    }
+
+    if (record.status !== 'passed') {
+      logger.error(
+        `Run '${record.runId}' is ${record.status}. A guide is a claim that the product does what the page says, so it is only ever written out of a run that passed.`
+      )
+      process.exitCode = 1
+      return
+    }
+    if (record.selection) {
+      const narrowed = Object.entries(record.selection)
+        .map(([flag, values]) => `--${flag} ${(values as string[]).join(',')}`)
+        .join(' ')
+      logger.error(
+        `Run '${record.runId}' was narrowed (${narrowed}), so it is missing scenarios the suite has. Guide pages would be written as though those flows do not exist — run the whole suite, or pass --run-id for one that was.`
+      )
+      process.exitCode = 1
+      return
+    }
+
+    const workflowsMeta = state.workflows?.meta ?? {}
+    const features: GuideFeature[] = [...registeredFeatures].map(
+      ([id, feature]) => {
+        const name = feature.name ?? id
+        return {
+          id,
+          name,
+          ...(feature.description ? { description: feature.description } : {}),
+          document: feature.document !== false,
+          scenarios: record.results
+            // By id, never by the display name: a title is rewritten freely,
+            // and two features are allowed to share one.
+            .filter(
+              (result) =>
+                result.featureId === id ||
+                (result.featureId === undefined && result.feature === name)
+            )
+            .map((result) => {
+              const meta = result.scenarioName
+                ? workflowsMeta[result.scenarioName]
+                : undefined
+              return {
+                name: result.scenarioName ?? result.name,
+                title: meta?.title ?? result.name,
+                ...(meta?.description ? { description: meta.description } : {}),
+                steps: (result.steps ?? []).map((step) =>
+                  guideStep(step.sentence)
+                ),
+                screenshots: (result.artifacts ?? [])
+                  .filter((artifact) => artifact.kind === 'screenshot')
+                  .map((artifact) => ({
+                    ...(artifact.id ? { id: artifact.id } : {}),
+                    ...(artifact.name ? { name: artifact.name } : {}),
+                    path: artifact.path,
+                  })),
+                videos: (result.artifacts ?? [])
+                  .filter((artifact) => artifact.kind === 'video')
+                  .map((artifact) => ({
+                    ...(artifact.id ? { id: artifact.id } : {}),
+                    ...(artifact.actor ? { actor: artifact.actor } : {}),
+                    path: artifact.path,
+                  })),
+              }
+            }),
+        }
+      }
+    )
+
+    const docsDir = resolve(config.rootDir, docs)
+    const sources = (
+      await glob('**/*.md', { cwd: docsDir, onlyFiles: true })
+    ).sort()
+    const pages: GuidePage[] = []
+    for (const source of sources) {
+      pages.push(
+        parseGuidePage(source, readFileSync(join(docsDir, source), 'utf-8'))
+      )
+    }
+
+    const lockPath = join(docsDir, '.guide.lock')
+    const lock: GuideLock = existsSync(lockPath)
+      ? parseGuideLock(readFileSync(lockPath, 'utf-8'))
+      : {}
+
+    const coverage = checkGuideCoverage(features, pages, lock)
+    for (const { path, featureId } of coverage.unknown) {
+      logger.error(
+        `${join(docs, path)} cites '${featureId}', which is not a registered feature — a page describing something that no longer exists.`
+      )
+    }
+    for (const { path, featureId } of coverage.optedOut) {
+      logger.error(
+        `${join(docs, path)} cites '${featureId}', which declares \`document: false\`.`
+      )
+    }
+    for (const { path, featureId } of coverage.figureless) {
+      logger.warn(
+        `${join(docs, path)} cites '${featureId}', whose run filed no screenshot — the block renders empty. Take one with \`actor.screenshot(...)\` in a scenario the feature owns.`
+      )
+    }
+    for (const { path, featureId, locked, current } of coverage.stale) {
+      logger.warn(
+        `${join(docs, path)} was written against '${featureId}' at ${locked}, which is now ${current} — the flow moved, so re-read the prose around that block.`
+      )
+    }
+    for (const featureId of coverage.missing) {
+      const message = `Feature '${featureId}' is cited by no page. Place \`<!-- pikku:guide feature=${featureId} -->\` and \`<!-- /pikku:guide -->\` in a page under ${docs}/, or set \`document: false\` on the feature.`
+      if (allowUndocumented) {
+        logger.warn(message)
+      } else {
+        logger.error(message)
+      }
+    }
+
+    // A compiler that has found an error does not emit. Undocumented features
+    // are the one failure that can be downgraded, because a suite mid-way
+    // through being written still wants its pages built.
+    if (
+      coverage.unknown.length > 0 ||
+      coverage.optedOut.length > 0 ||
+      (!allowUndocumented && coverage.missing.length > 0)
+    ) {
+      process.exitCode = 1
+      return
+    }
+
+    const byId = new Map(features.map((feature) => [feature.id, feature]))
+    const outputDir = output
+      ? resolve(config.rootDir, output)
+      : join(outDir, 'guide')
+    const artifactRoot = join(runsDir, record.runId)
+    for (const page of pages) {
+      const target = join(outputDir, page.path)
+      // Relative, forward-slashed and computed per page: a guide is markdown
+      // with ordinary image refs, and whoever consumes it rewrites the paths.
+      // `artifactBase` replaces it with one prefix for every page, for a host
+      // that serves the artifacts at a fixed address rather than beside the
+      // markdown — and it stays as given, since only the caller knows whether
+      // it is a path, a route or an origin.
+      const base = artifactBase
+        ? artifactBase.endsWith('/')
+          ? artifactBase
+          : `${artifactBase}/`
+        : `${relative(dirname(target), artifactRoot).split(sep).join('/')}/`
+      const markdown = renderGuidePage(page, byId, base)
+      mkdirSync(dirname(target), { recursive: true })
+      writeFileSync(target, markdown)
+    }
+    writeFileSync(lockPath, renderGuideLock(features, coverage.cited))
+    logger.info(
+      `${pages.length} page(s) → ${outputDir} (run ${record.runId}, ${coverage.cited.length} documented feature(s))`
+    )
+    for (const feature of features) {
+      if (feature.document) {
+        logger.debug(`  ${feature.id} ${featureEvidence(feature)}`)
       }
     }
   },

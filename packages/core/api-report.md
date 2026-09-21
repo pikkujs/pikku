@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3046 observable things**: 992 exported names, plus
-2054 members on the classes and interfaces among them, reachable
+**3059 observable things**: 994 exported names, plus
+2065 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 435 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 47 | 47 | 140 |
+| `./scenario` | 49 | 49 | 151 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 85 |
@@ -1535,6 +1535,7 @@ export type CoreFeature = {
   name: string
   description?: string
   tags?: string[]
+  document?: boolean
   scenarios: readonly CoreFeatureScenario[]
   before?: CorePikkuFunctionHook
   after?: CorePikkuFunctionHook
@@ -1549,6 +1550,7 @@ export type FeatureMeta = {
   name: string
   description?: string
   tags: string[]
+  document?: boolean
   entries: FeatureMetaEntry[]
   unresolvedEntries: number
   hasBefore: boolean
@@ -1569,6 +1571,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   public getScenarioBrowserProvider(): ScenarioBrowserProvider | undefined
   public setScenarioEnvironment(env: ScenarioEnvironment | undefined): void
   public getScenarioEnvironment(): ScenarioEnvironment | undefined
+  public takeStepVideoOffsets(runId: string): Map<string, ScenarioStepVideoOffset[]>
   public async attachRunContext(runId: string, workflowMeta: any, options?: { actors?: ScenarioPersonas }): Promise<void>
   public detachRunContext(runId: string): void
   public getRunContext(runId: string): Record<string, unknown> | undefined
@@ -1625,6 +1628,7 @@ export interface ScenarioBrowserProvider {
   reset?(): Promise<void>
   beginScenario?(scenario: string): void
   endScenario?(outcome: 'passed' | 'failed'): void
+  videoStartedAt?(actorName: string): number | undefined
   captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
   artifacts?(): ScenarioArtifact[]
   close(): Promise<void>
@@ -1679,6 +1683,7 @@ export interface ScenarioResult {
   failure?: ScenarioFailureDetail
   scenarioName?: string
   feature?: string
+  featureId?: string
   tags?: string[]
   artifacts?: ScenarioArtifact[]
 }
@@ -1686,6 +1691,7 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   runId: string
   status: ScenarioRunStatus
   surface: string
+  selection?: ScenarioRunSelection
   startedAt: string
   finishedAt?: string
 }
@@ -1694,6 +1700,12 @@ export interface ScenarioRunReport {
   results: ScenarioResult[]
   skipped: ScenarioSkip[]
   hookFailures: string[]
+}
+export interface ScenarioRunSelection {
+  flows?: string[]
+  features?: string[]
+  tags?: string[]
+  excludeTags?: string[]
 }
 export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
 export interface ScenarioRunStore {
@@ -1748,6 +1760,11 @@ export interface ScenarioStepRow {
   status: string
   durationMs?: number
   error?: string
+  video?: ScenarioStepVideoOffset[]
+}
+export interface ScenarioStepVideoOffset {
+  actor: string
+  offsetMs: number
 }
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
 export class ScenarioUnwitnessedAssertion extends PikkuError {

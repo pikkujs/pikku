@@ -1,6 +1,6 @@
 import { resolveFeatureScenarios } from '@pikku/core/scenario'
 import type { CoreWorkflow } from '@pikku/core/workflow'
-import type { CoreFeature } from '@pikku/core/scenario'
+import type { CoreFeature, ScenarioResult } from '@pikku/core/scenario'
 
 /** One scenario run: a scenario name and, for a feature's paired entry, its input. */
 export type ScenarioPlanEntry = {
@@ -182,3 +182,30 @@ export const buildScenarioPlan = ({
 
   return { groups, unresolved }
 }
+
+/** Which registration ran, and under which feature, as the registry names them. */
+export type ScenarioRunIdentity = {
+  scenarioName: string
+  featureId?: string
+  featureName?: string
+  tags?: string[]
+}
+
+/**
+ * What a result carries beyond its own outcome.
+ *
+ * The ids come from the plan, which read them off the registry, rather than
+ * from the run's label: a label is assembled out of a feature's title and a
+ * scenario's prose, and both are rewritten freely, so nothing that outlives a
+ * run can be recovered from one.
+ */
+export const identifyScenarioResult = (
+  result: ScenarioResult,
+  identity: ScenarioRunIdentity
+): ScenarioResult => ({
+  ...result,
+  scenarioName: identity.scenarioName,
+  ...(identity.featureId ? { featureId: identity.featureId } : {}),
+  ...(identity.featureName ? { feature: identity.featureName } : {}),
+  ...(identity.tags?.length ? { tags: identity.tags } : {}),
+})

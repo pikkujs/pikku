@@ -32,6 +32,14 @@ export type CoreFeature = {
   name: string
   description?: string
   tags?: string[]
+  /**
+   * Whether this feature is guide material. Defaults to true: a feature is a
+   * page of the user guide unless it says otherwise, so a feature nobody has
+   * written about is a gap `pikku scenario guide` reports rather than a page
+   * silently missing. Pure plumbing — a wire, a validation layer, a bearer
+   * auth handshake — sets it false and stops being a coverage problem.
+   */
+  document?: boolean
   scenarios: readonly CoreFeatureScenario[]
   before?: CorePikkuFunctionHook
   after?: CorePikkuFunctionHook
@@ -47,6 +55,8 @@ export type FeatureMeta = {
   name: string
   description?: string
   tags: string[]
+  /** Present only when the feature opted out; absent means documented. */
+  document?: boolean
   entries: FeatureMetaEntry[]
   unresolvedEntries: number
   hasBefore: boolean

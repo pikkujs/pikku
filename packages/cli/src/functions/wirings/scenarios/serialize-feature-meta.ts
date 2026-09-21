@@ -23,6 +23,7 @@ export const buildFeaturesMeta = (
       name: feature.name ?? id,
       ...(feature.description ? { description: feature.description } : {}),
       tags: feature.tags ?? [],
+      ...(feature.document === undefined ? {} : { document: feature.document }),
       entries: feature.entries.map((entry) =>
         entry.data === undefined
           ? { scenario: entry.scenario }
