@@ -1,3 +1,75 @@
+## 0.12.160
+
+### Patch Changes
+
+- b4a895e: A generated block now carries the recording its run kept, and `--artifact-base` says where the figures are served from.
+
+  The runner has kept a video per scenario since video retention landed, and the guide model threw it away: `GuideScenario` held screenshots and nothing else, so a suite that recorded every flow it ran published pages with an empty block under them. A recording leads the stills it is made of, because it shows the whole flow the stills are moments of, and it is deduplicated by artifact id like everything else a data-driven scenario files once per row. `figureless` counts it, so a feature evidenced only by a recording no longer reports that its block renders empty.
+
+  It is emitted as an ordinary `![caption](…webm)`. This module writes markdown — no HTML, no asset URLs, no website — and what makes a `.webm` a player rather than a broken image is the consumer's renderer, the same way the consumer resolves the base. Keeping it a figure is what lets a guide stay one artifact that a docs site, a README and a print build can each read on their own terms.
+
+  `--artifact-base` is the second half. The base was computed per page as the relative path from the page to the run's artifact root, which is right when the artifacts sit beside the markdown and wrong for every host that serves them from somewhere else. A route-relative prefix (`/docs/_media/`) keeps one compiled tree portable across hosts and, where a host gates access, keeps the figures behind the same gate as the page that embeds them — an origin baked into the markdown is outside it, and cannot be moved without a rebuild. It stays exactly as given, since only the caller knows whether it is a path, a route or an origin.
+
+  `GuideScenario.videos` is optional, so a record written before this and every fixture built on one still describes a scenario.
+
+- b4a895e: A scenario step row now carries where it fell inside each actor's recording, and a scenario result now says which feature it came from by id as well as by title.
+
+  The video offset is recorded rather than estimated. Documentation built out of a run has to turn a step sentence into an exact moment — a chapter marker, or a still pulled with `ffmpeg -ss` — and the only number available until now was the scenario clock summed out of the ladder. That clock is not the video's: recording starts when the actor's browser context opens, which is somewhere after step one, and every RPC step before or between the browser ones burns scenario time while the file sits still. The two drift apart by however much of the scenario happened off camera, and a still forty seconds out is a picture of the wrong screen with nothing to say it is wrong.
+
+  So `ScenarioStepRow.video` is stamped at the moment the step runs, from the driver's own clock: `ScenarioBrowserProvider.videoStartedAt(actor)` reports when that actor's context was opened with `recordVideo`, and the runner subtracts. It is a list of `{ actor, offsetMs }` rather than one number, because a video belongs to an actor and not to the scenario — one step touching two windows falls at a different moment in each, and an offset that does not name its file cannot be seeked to. A run without video, a step with no actor, and a step that never ran all carry nothing, which is what keeps the console's existing estimate as the fallback for runs recorded before this.
+
+  `ScenarioResult.featureId` is the other half of the same problem. `feature` is a title written for people to read and rewritten whenever the wording improves, so nothing downstream could key off it; the id `addFeature` registered the feature under does not move. The runner threads it from the plan, which read it off the registry, instead of deriving it from the label. `scenarioName` already carried the registration id and keeps it.
+
+- ede46ac: deploy: add `deploy.bundler` and `deploy.mangleIdentifiers` to pikku.config.json
+
+  `bundler` pins which bundler builds the deployment units — 'auto' (the
+  default) keeps today's behaviour of Bun.build under bun and esbuild
+  otherwise, and 'esbuild' forces esbuild where a Bun.build output misbehaves
+  at runtime. A Cloudflare MCP worker was rejected at upload with
+  `TypeError: ZodLazy is not a constructor`: Bun.build ordered zod's lazy
+  module initializer after a dependency that constructs schemas at module
+  scope. The same entry bundles and boots correctly with esbuild.
+
+  `mangleIdentifiers: false` turns off identifier renaming, so a platform that
+  reports only a message and a line/column into a minified bundle names
+  something the project can search for.
+
+- b4a895e: `pikku scenario guide` writes the user guide a scenario suite already contains. A feature reads as a page and a scenario as a section, and a run leaves screenshots behind with the captions their author took them under — the command joins that to the editorial prose a project checks in under `docs/` and writes markdown. It renders no HTML, ships no components, resolves no asset URLs and calls no model: an image is an ordinary relative `![caption](path)`, and whoever consumes the markdown rewrites the paths.
+
+  A page cites a feature by leaving the marker pair where the block belongs:
+
+  ```markdown
+  ---
+  title: Deployments
+  ---
+
+  A deployment is one tracked shipment of your app.
+
+  <!-- pikku:guide feature=deploymentsFeature -->
+  <!-- /pikku:guide -->
+
+  ## Does my app go down during a deploy?
+  ```
+
+  That one line does both halves of the job. It says _where_ the block goes, which a frontmatter list cannot express, and it is what the coverage gate counts to decide _whether_ a feature is documented at all. The mapping stays many-to-many and falls out of the union of every marker in the tree. A rebuild rewrites exactly the regions between the markers, so every sentence a human wrote around them survives.
+
+  **The steps are evidence, not content.** A generated block is the scenario's title, the description its author wrote, and the shots it filed — never a numbered Given/When/Then ladder, which is a test report and not something anybody arrives at a documentation page wanting. The sentences are still what the guide is kept honest against: `docs/.guide.lock` records a hash of each feature's step sentences and artifact ids, deliberately not of the image bytes. Restyling a UI changes every screenshot and no sentence; inserting or renaming a step changes what the prose was describing, and the page is reported stale. The lock is generated and checked in, so no hash is ever typed or merged by hand — and a tree whose lock is untracked reports every page as current forever.
+
+  Every registered feature has to be cited by some page, and a feature that is pure plumbing says so rather than being written about — `pikkuFeature({ document: false })`, threaded through the inspector and `FeatureMeta`. An uncited feature fails the command by name; `--allow-undocumented` downgrades that one failure to a report. A page citing a feature id that is not registered stays an error either way.
+
+  A guide is only written out of a run that can stand behind it. A run that failed or was killed halfway is refused, because a page is a claim that the product does what it says. So is a narrowed one: `pikku scenario run --flows`/`--features`/`--tags` leaves out scenarios the suite has, and a guide built from it would describe those flows as though they do not exist. `ScenarioRunRecord.selection` records the filters a run was selected with, since nothing in the results afterwards can tell a suite of forty from forty that were asked for.
+
+  Results are joined to features by `featureId`, falling back to the display name only for records written before that field existed — a title is rewritten freely and two features may share one.
+
+  Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record. Frontmatter the compiler does not own (`slug`, `draft`, `sidebar_position`, anything else a docs site reads) passes through untouched, and a source written with CRLF line endings is read as having frontmatter.
+
+- Updated dependencies [f05fb4e]
+- Updated dependencies [b4a895e]
+- Updated dependencies [b4a895e]
+  - @pikku/inspector@0.12.86
+  - @pikku/core@0.12.118
+  - @pikku/playwright@0.12.84
+
 ## 0.12.159
 
 ### Patch Changes
