@@ -8,12 +8,36 @@ import { join } from 'node:path'
 import { resolveScenarioRunVersion } from './scenario-version.js'
 import type { ScenarioRunSummary } from '@pikku/core/scenario'
 
+/**
+ * Git's own hooks export `GIT_DIR` and friends, so a suite run from a
+ * `pre-push` inherits the repository it was pushed from and every command
+ * below quietly addresses that instead of the fixture in `cwd`. The code under
+ * test already drops them; the fixture has to as well, or these pass at a
+ * prompt and fail in the hook.
+ */
+const gitEnv = () => {
+  const env = { ...process.env }
+  for (const key of [
+    'GIT_DIR',
+    'GIT_WORK_TREE',
+    'GIT_INDEX_FILE',
+    'GIT_PREFIX',
+    'GIT_NAMESPACE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+    'GIT_CEILING_DIRECTORIES',
+  ]) {
+    delete env[key]
+  }
+  return env
+}
+
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, {
     cwd,
     encoding: 'utf8',
     env: {
-      ...process.env,
+      ...gitEnv(),
       GIT_AUTHOR_NAME: 't',
       GIT_AUTHOR_EMAIL: 't@t',
       GIT_COMMITTER_NAME: 't',
