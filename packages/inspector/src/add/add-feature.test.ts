@@ -14,8 +14,10 @@ function makeLogger(
     info: () => {},
     warn: () => {},
     error: () => {},
-    diagnostic: ({ code, message }: any) => {
-      criticals.push({ code, message })
+    diagnostic: ({ severity, code, message }: any) => {
+      if (severity === 'critical') {
+        criticals.push({ code, message })
+      }
     },
     critical: (code: any, message: string) => {
       criticals.push({ code, message })
@@ -84,6 +86,8 @@ describe('addFeature', () => {
               tags: ['credential'],
               entries: [{ scenario: 'lazyLoadScenario' }],
               unresolvedEntries: 0,
+              mentions: ['lazyLoadScenario'],
+              unnamedEntries: 0,
               hasBefore: false,
               hasAfter: false,
             },
@@ -330,6 +334,35 @@ describe('addFeature', () => {
       assert.equal(state.workflows.featureFiles.size, 0)
       assert.equal(criticals.length, 1)
       assert.match(criticals[0]!.message, /must be assigned to an export/)
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('an entry whose data is not literal still names its scenario', async () => {
+    const { state, criticals, cleanup } = await run(
+      [
+        "import { pikkuFeature } from '@pikku/core/workflow'",
+        "import { roundTripScenario, lazyLoadScenario } from './credential.scenario.js'",
+        'export const credentialFeature = pikkuFeature({',
+        "  name: 'Credential API',",
+        '  scenarios: [',
+        '    lazyLoadScenario,',
+        "    { scenario: roundTripScenario, data: { name: 'a'.repeat(4) } },",
+        '  ],',
+        '})',
+      ].join('\n')
+    )
+    try {
+      assert.deepEqual(criticals, [])
+      const feature = state.workflows.featureFiles.get('credentialFeature')!
+      assert.deepEqual(feature.entries, [{ scenario: 'lazyLoadScenario' }])
+      assert.equal(feature.unresolvedEntries, 1)
+      assert.deepEqual(feature.mentions, [
+        'lazyLoadScenario',
+        'roundTripScenario',
+      ])
+      assert.equal(feature.unnamedEntries, 0)
     } finally {
       await cleanup()
     }

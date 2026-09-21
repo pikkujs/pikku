@@ -487,6 +487,9 @@ export const createSingletonServices: CreateSingletonServices<
   // Keeping the check in this single place avoids `typeof Bun` branches leaking
   // into the deploy pipeline / dev command.
   const isBun = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
+  const deployBundler = config.deploy?.bundler ?? 'auto'
+  const bundleWithBun =
+    deployBundler === 'bun' || (deployBundler === 'auto' && isBun)
 
   return {
     config,
@@ -497,7 +500,7 @@ export const createSingletonServices: CreateSingletonServices<
     getInspectorState,
     invalidateInspectorState,
     workflowService,
-    bundler: isBun ? new BunBundler() : new NodeBundler(),
+    bundler: bundleWithBun ? new BunBundler() : new NodeBundler(),
     devServerRunner: isBun
       ? new BunServerRunner()
       : new NodeServerRunner(rootDir),

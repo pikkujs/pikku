@@ -158,6 +158,20 @@ const stringArrayProperty = (
   return values.length === value.elements.length ? values : undefined
 }
 
+const mentionedScenario = (
+  element: ts.Expression,
+  checker: ts.TypeChecker
+): string | undefined => {
+  if (ts.isIdentifier(element)) {
+    return scenarioName(element, checker)
+  }
+  if (ts.isObjectLiteralExpression(element)) {
+    const reference = getProperty(element, 'scenario')
+    return reference ? scenarioName(reference, checker) : undefined
+  }
+  return undefined
+}
+
 const readEntry = (
   element: ts.Expression,
   checker: ts.TypeChecker
@@ -229,6 +243,8 @@ export const addFeature: AddWiring = (logger, node, checker, state) => {
     exportedName,
     entries: [],
     unresolvedEntries: 0,
+    mentions: [],
+    unnamedEntries: 0,
     hasBefore: false,
     hasAfter: false,
   }
@@ -257,6 +273,12 @@ export const addFeature: AddWiring = (logger, node, checker, state) => {
     const scenarios = getProperty(config, 'scenarios')
     if (scenarios && ts.isArrayLiteralExpression(scenarios)) {
       for (const element of scenarios.elements) {
+        const mention = mentionedScenario(element, checker)
+        if (mention) {
+          feature.mentions.push(mention)
+        } else {
+          feature.unnamedEntries += 1
+        }
         const entry = readEntry(element, checker)
         if (entry) {
           feature.entries.push(entry)

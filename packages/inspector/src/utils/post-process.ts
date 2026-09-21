@@ -1170,6 +1170,91 @@ export function validateScenarioSteps(
 }
 
 /**
+ * Reports scenarios that no `pikkuFeature` lists.
+ *
+ * A feature is what a run stamps onto each result, and the only handle anything
+ * downstream has on a scenario: the console groups by it and the guide cites it.
+ * A scenario in no feature still runs and still passes — it simply files its
+ * results, and any screenshot or recording it took, where nothing can reach
+ * them. That is not a style violation, it is work being thrown away, and it is
+ * invisible precisely because the suite is green.
+ *
+ * It is an `error` rather than a `critical` because every suite written before
+ * the rule has some, and a hard failure on a CLI bump would strand them with no
+ * way to defer. `--fail-on-error` is how a project opts in once it has bound
+ * what it has.
+ *
+ * Membership reads the scenario each entry names, not the entry itself: a
+ * `data` the AST cannot evaluate leaves the entry partial for the console but
+ * says nothing about who owns the scenario.
+ *
+ * An entry that names no scenario at all (a spread, a `.map()`) does leave
+ * membership unknown. That only matters when something is already unowned, so
+ * the check reports it then and downgrades to a warn naming both sides, rather
+ * than accusing a scenario that may well be in that array.
+ */
+export function validateScenarioFeatures(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const features = state.workflows.featureFiles
+  if (!features) {
+    return
+  }
+
+  const owned = new Set<string>()
+  for (const feature of features.values()) {
+    for (const mention of feature.mentions) {
+      owned.add(mention)
+    }
+  }
+
+  const files = state.workflows.files
+  const unowned: string[] = []
+  for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
+    if (!(meta as { scenario?: boolean }).scenario) {
+      continue
+    }
+    const exported = files?.get(workflowName)?.exportedName
+    if (owned.has(workflowName) || (exported && owned.has(exported))) {
+      continue
+    }
+    unowned.push(workflowName)
+  }
+
+  if (unowned.length === 0) {
+    return
+  }
+
+  const unreadable = [...features.values()]
+    .filter((feature) => feature.unnamedEntries > 0)
+    .map((feature) => feature.exportedName)
+
+  if (unreadable.length > 0) {
+    logger.diagnostic({
+      severity: 'warn',
+      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
+      message:
+        `${unowned.map((name) => `'${name}'`).join(', ')} appear in no feature's \`scenarios\` array, ` +
+        `but ${unreadable.map((name) => `'${name}'`).join(', ')} build theirs with a spread or a call, so one of them may still be listed there. ` +
+        `List those scenarios literally and this becomes a definite answer either way.`,
+    })
+    return
+  }
+
+  for (const name of unowned) {
+    logger.diagnostic({
+      severity: 'error',
+      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
+      message:
+        `Scenario '${name}' is listed by no pikkuFeature, so nothing downstream can reach it — ` +
+        `a run stamps no feature onto its results, the console groups it under none, and a guide cannot cite it. ` +
+        `Add it to a feature's \`scenarios\` array.`,
+    })
+  }
+}
+
+/**
  * A `pikkuWorkflowGraph` node that references the `graph:` namespace (e.g.
  * `graph:editFields`) needs @pikku/addon-graph wired — otherwise the RPC never
  * registers and codegen fails deep in type-checking with an opaque error. Fail
