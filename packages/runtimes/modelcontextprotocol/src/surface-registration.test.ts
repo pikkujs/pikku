@@ -94,7 +94,16 @@ const startServer = async () => {
       version: '1.0.0',
       mcpJSON: {
         tools: [],
+        // The endpoint's own manifest: every surface it serves is named here,
+        // since the listings and the read/get paths are both scoped to it.
+        // The concrete resource declares no parameters, which is what keeps it
+        // out of `resources/templates/list`.
         resources: [
+          {
+            name: RESOURCE_URI,
+            uri: RESOURCE_URI,
+            description: 'Every note',
+          },
           {
             name: TEMPLATE_URI,
             uri: TEMPLATE_URI,
@@ -102,7 +111,7 @@ const startServer = async () => {
             parameters: { type: 'object' },
           },
         ],
-        prompts: [],
+        prompts: [{ name: PROMPT_NAME, description: 'Summarise a note' }],
       },
       capabilities: { resources: {}, prompts: {} },
     } as never,

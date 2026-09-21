@@ -355,6 +355,17 @@ export class PikkuMCPFetchServer {
     server.setRequestHandler('tools/call', async (request) => {
       const { arguments: args } = request.params
       const name = mcpResolveWireName('tool', request.params.name)
+      // A project can serve several MCP endpoints, and this server answers for
+      // exactly one of them. Dispatch resolves a tool out of the process-wide
+      // registry, which holds every tool in the project, so without this an
+      // endpoint runs another endpoint's tools for anyone who knows a name —
+      // tools/list would hide them and tools/call would run them anyway.
+      if (!this.mcpEndpointRegistry.getTool(name)) {
+        throw new ProtocolError(
+          -32602,
+          `Tool not found: ${request.params.name}`
+        )
+      }
       try {
         const result = await runMCPTool(
           {
@@ -386,6 +397,18 @@ export class PikkuMCPFetchServer {
     })
   }
 
+  /**
+   * Whether this endpoint's manifest carries the resource at `uri`.
+   *
+   * Resources are registered by name but listed and read by uri, so
+   * membership is matched on the uri rather than the map key.
+   */
+  private servesResource(uri: string): boolean {
+    return this.mcpEndpointRegistry
+      .getResources()
+      .some((resource) => resource.uri === uri)
+  }
+
   private setupResources(server: Server, http?: PikkuHTTP): void {
     server.setRequestHandler('resources/templates/list', async () => {
       const resourceTemplates = Object.values(
@@ -403,8 +426,12 @@ export class PikkuMCPFetchServer {
     })
 
     server.setRequestHandler('resources/list', async () => {
+      // The meta is process-wide, so it is filtered down to what this
+      // endpoint serves — otherwise a listing advertises another endpoint's
+      // resources and `resources/read` then refuses them. Fields come from
+      // the meta because the manifest does not carry mimeType or title.
       const resources = Object.values(getMCPResourcesMeta()).filter(
-        (resource) => !resource.inputSchema
+        (resource) => !resource.inputSchema && this.servesResource(resource.uri)
       )
       return {
         resources: resources.map((resource) => ({
@@ -421,6 +448,9 @@ export class PikkuMCPFetchServer {
 
     server.setRequestHandler('resources/read', async (request) => {
       const { uri } = request.params
+      if (!this.servesResource(uri)) {
+        throw new ProtocolError(-32602, `Resource not found: ${uri}`)
+      }
       try {
         const { result: contents } = await runMCPResource(
           {
@@ -455,7 +485,10 @@ export class PikkuMCPFetchServer {
 
   private setupPrompts(server: Server, http?: PikkuHTTP): void {
     server.setRequestHandler('prompts/list', async () => {
-      const promptsMeta = Object.values(getMCPPromptsMeta())
+      // Scoped for the same reason `resources/list` is.
+      const promptsMeta = Object.values(getMCPPromptsMeta()).filter((prompt) =>
+        this.mcpEndpointRegistry.getPrompt(prompt.name)
+      )
       return {
         prompts: promptsMeta.map((prompt) => ({
           name: mcpWireName('prompt', prompt.name),
@@ -470,7 +503,10 @@ export class PikkuMCPFetchServer {
     server.setRequestHandler('prompts/get', async (request) => {
       const { arguments: args } = request.params
       const name = mcpResolveWireName('prompt', request.params.name)
-      const promptMeta = getMCPPromptsMeta()[name]
+      // The project's prompts, not this endpoint's, so membership is checked
+      // against the registry for the same reason `tools/call` does.
+      const promptMeta =
+        this.mcpEndpointRegistry.getPrompt(name) && getMCPPromptsMeta()[name]
 
       if (!promptMeta) {
         throw new Error(`Prompt not found: ${name}`)
