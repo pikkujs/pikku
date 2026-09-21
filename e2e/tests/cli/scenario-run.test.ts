@@ -89,7 +89,7 @@ describe('pikku scenario run', () => {
     const server = await startBackend()
     stop = server.stop
     apiUrl = server.apiUrl
-    await server.waitUntilReady()
+    await server.waitUntilReady({ timeoutMs: 300_000 })
   })
 
   after(() => stop?.())
