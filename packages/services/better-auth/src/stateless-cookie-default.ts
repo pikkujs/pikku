@@ -55,10 +55,56 @@ export const resetStatelessSessionInUse = (): void => {
  * the JWE/JWT `exp` — reads `authCookies.sessionData.attributes.maxAge`. Mutating
  * `options` after the fact would change nothing.
  */
+/** The variable the CLI declares beside it, in `auth-secrets.gen.ts`. */
+export const SESSION_COOKIE_CACHE_MAX_AGE_VARIABLE =
+  'SESSION_COOKIE_CACHE_MAX_AGE'
+
+/**
+ * The lifetime an operator chose for this stage, or the one-day default.
+ *
+ * The value arrives as a string and is NOT parsed for us: `TypedVariablesService`
+ * hands back a stored host value exactly as the host set it and runs the declared
+ * schema only to resolve a default. So the coercion belongs here, and a value that
+ * is not a positive number of seconds is a misconfiguration worth saying out loud
+ * rather than a reason to leave the cookie at better-auth's 300s.
+ *
+ * An app generated before the CLI emitted the declaration has no such variable;
+ * that is the ordinary case, not an error, and the default simply stands.
+ */
+const resolveMaxAge = async (
+  services: any,
+  logger?: CoreSingletonServices['logger']
+): Promise<number> => {
+  let configured: unknown
+  try {
+    configured = await services?.variables?.get?.(
+      SESSION_COOKIE_CACHE_MAX_AGE_VARIABLE
+    )
+  } catch {
+    return STATELESS_COOKIE_CACHE_MAX_AGE
+  }
+
+  if (configured === undefined || configured === null || configured === '') {
+    return STATELESS_COOKIE_CACHE_MAX_AGE
+  }
+
+  const seconds = Number(configured)
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    logger?.warn(
+      `pikku: ${SESSION_COOKIE_CACHE_MAX_AGE_VARIABLE} is not a positive number of seconds (got "${String(configured)}") — using the default of ${STATELESS_COOKIE_CACHE_MAX_AGE}s.`
+    )
+    return STATELESS_COOKIE_CACHE_MAX_AGE
+  }
+
+  return seconds
+}
+
 export const applyStatelessCookieCacheDefault = async (
   instance: BetterAuthInstance,
-  logger?: CoreSingletonServices['logger']
+  services?: { logger?: CoreSingletonServices['logger']; variables?: unknown }
 ): Promise<void> => {
+  const logger = services?.logger
+
   if (!statelessSessionInUse) return
 
   const options = (instance as any)?.options
@@ -89,16 +135,22 @@ export const applyStatelessCookieCacheDefault = async (
     return
   }
 
-  attributes.maxAge = STATELESS_COOKIE_CACHE_MAX_AGE
+  const maxAge = await resolveMaxAge(services, logger)
+
+  attributes.maxAge = maxAge
 
   /* Minted from the same expression, so it carries the same broken default. */
   const accountAttributes = (await (instance as any).$context)?.authCookies
     ?.accountData?.attributes
   if (accountAttributes) {
-    accountAttributes.maxAge = STATELESS_COOKIE_CACHE_MAX_AGE
+    accountAttributes.maxAge = maxAge
   }
 
+  const source =
+    maxAge === STATELESS_COOKIE_CACHE_MAX_AGE
+      ? 'the one-day default'
+      : `${SESSION_COOKIE_CACHE_MAX_AGE_VARIABLE}`
   logger?.info(
-    `pikku: defaulted session.cookieCache.maxAge to ${STATELESS_COOKIE_CACHE_MAX_AGE}s (one day) because betterAuthStatelessSession authenticates from the cookie alone and better-auth's 300s default would sign users out five minutes after login. Set session.cookieCache.maxAge in your betterAuth config to choose your own — it is also the longest a ban or a revoked session can go unnoticed.`
+    `pikku: set session.cookieCache.maxAge to ${maxAge}s (${source}) because betterAuthStatelessSession authenticates from the cookie alone and better-auth's 300s default would sign users out five minutes after login. Set ${SESSION_COOKIE_CACHE_MAX_AGE_VARIABLE} on the stage to change it, or session.cookieCache.maxAge in your betterAuth config to pin it in code — it is also the longest a ban or a revoked session can go unnoticed.`
   )
 }

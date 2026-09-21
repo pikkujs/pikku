@@ -69,3 +69,15 @@ export type {
   UsePhotoCaptureResult,
   OpenPhotoPickerOptions,
 } from './photo-capture.js'
+
+// Keeps the Better Auth session cookie alive from the browser. Under
+// `betterAuthStatelessSession` that cookie is the only thing authenticating a
+// call, and nothing rewrites it once someone is signed in — so without this the
+// session ends when the cookie does, however long the session_token had left.
+// UI-free and gate-driven: call `startSessionRefresh` from the route gate.
+export {
+  refreshSessionCookie,
+  startSessionRefresh,
+  stopSessionRefresh,
+} from './session-refresh.js'
+export type { SessionRefreshOptions } from './session-refresh.js'
