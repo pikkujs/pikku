@@ -130,7 +130,13 @@ describe('FileScenarioRunStore', () => {
         artifacts: [{ scenario: 'x', kind: 'video', path: 'x/admin.mp4' }],
       })
     )
-    await store.recordScenario('newer', result({ status: 'failed' }))
+    await store.recordScenario(
+      'newer',
+      // A distinct scenario, not a second write of the one above: a result is
+      // filed under its name, so re-recording that name is the same scenario
+      // settling rather than another one running.
+      result({ name: 'todos › a member clears one', status: 'failed' })
+    )
     await store.finish('newer', {
       status: 'failed',
       finishedAt: '2026-08-15T10:00:05.000Z',
