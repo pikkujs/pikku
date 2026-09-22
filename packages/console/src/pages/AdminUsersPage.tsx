@@ -15,6 +15,7 @@ export const AdminUsersPage: React.FC = () => {
 
   return (
     <PageContainer
+      data-testid="admin-users"
       noPadding
       header={
         <ListPageHeader
