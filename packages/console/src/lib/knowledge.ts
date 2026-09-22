@@ -91,6 +91,17 @@ export const SEVERITY_ORDER: KnowledgeFinding['severity'][] = [
 ]
 
 /**
+ * The findings the CLI gate would fail on.
+ *
+ * `pikku knowledge validate` reports orphans — code no note describes — at
+ * `info`, keeps them outside `ok` and prints them as their own summary rather
+ * than among the problems. A console row that counted them would offer a clean
+ * base a list of work it does not have.
+ */
+export const issuesToFix = (findings: KnowledgeFinding[]): KnowledgeFinding[] =>
+  findings.filter((finding) => finding.severity !== 'info')
+
+/**
  * The worst severity present, so one icon can stand for a whole list. `info` for
  * an empty list: the only thing a base with no findings has to say is that it has
  * nothing to say.

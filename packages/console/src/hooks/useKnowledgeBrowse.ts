@@ -3,6 +3,7 @@ import { useKnowledge } from './useKnowledge'
 import {
   entryPointNote,
   groupNotesBySection,
+  issuesToFix,
   noteMatches,
   type KnowledgeSelection,
 } from '../lib/knowledge'
@@ -49,7 +50,7 @@ export const useKnowledgeBrowse = (): KnowledgeBrowse => {
   const [selection, setSelection] = useState<KnowledgeSelection | null>(null)
 
   const notes = bundle?.notes ?? []
-  const findings = bundle?.findings ?? []
+  const findings = useMemo(() => issuesToFix(bundle?.findings ?? []), [bundle])
 
   const matching = useMemo(
     () => notes.filter((note) => noteMatches(note, search)),

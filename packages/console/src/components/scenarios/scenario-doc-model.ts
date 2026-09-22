@@ -94,6 +94,8 @@ interface RawFeature {
   id: string
   name: string
   description?: string
+  /** Present only when the feature opted out; absent means documented. */
+  document?: boolean
   tags?: string[]
   entries?: Array<{ scenario: string; data?: unknown }>
   unresolvedEntries?: number
@@ -212,6 +214,11 @@ const toDoc = (workflow: RawScenario, featureTags: string[]): ScenarioDoc => ({
  * way it was written, the way a gherkin Feature file does — so nothing here
  * sorts scenarios or steps. Only features and the tag list are sorted, since
  * neither has an authored order.
+ *
+ * A feature with `document: false` is left out, as `pikku scenario guide`
+ * leaves it out: it is not part of the living documentation. The scenarios it
+ * names stay in the document as ungrouped, since opting a feature out says
+ * nothing about the scenarios themselves.
  */
 export function buildScenarioDocs({
   workflows,
@@ -230,6 +237,7 @@ export function buildScenarioDocs({
 
   for (const value of Object.values(features ?? {})) {
     const feature = value as RawFeature
+    if (feature.document === false) continue
     const featureTags = feature.tags ?? []
     const entries: FeatureDocEntry[] = []
 
