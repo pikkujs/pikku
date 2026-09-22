@@ -32,18 +32,33 @@ const gitEnv = () => {
   return env
 }
 
+/**
+ * `-c` rather than fixture config, and a closed stdin, because every way
+ * `git commit` blocks is a way this suite hangs for its whole timeout and then
+ * reports only SIGTERM: a `pre-commit` hook inherited through `core.hooksPath`,
+ * a `gpg` that wants a passphrase, or a prompt reading the terminal it was
+ * handed. `timeout` is the backstop — a fixture that cannot make a commit
+ * should say so with git's own words, not run out the test's clock.
+ */
 const git = (cwd: string, ...args: string[]) =>
-  execFileSync('git', args, {
-    cwd,
-    encoding: 'utf8',
-    env: {
-      ...gitEnv(),
-      GIT_AUTHOR_NAME: 't',
-      GIT_AUTHOR_EMAIL: 't@t',
-      GIT_COMMITTER_NAME: 't',
-      GIT_COMMITTER_EMAIL: 't@t',
-    },
-  }).trim()
+  execFileSync(
+    'git',
+    ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', ...args],
+    {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 30_000,
+      env: {
+        ...gitEnv(),
+        GIT_AUTHOR_NAME: 't',
+        GIT_AUTHOR_EMAIL: 't@t',
+        GIT_COMMITTER_NAME: 't',
+        GIT_COMMITTER_EMAIL: 't@t',
+        GIT_TERMINAL_PROMPT: '0',
+      },
+    }
+  ).trim()
 
 const repo = (commits: boolean) => {
   const dir = mkdtempSync(join(tmpdir(), 'scenario-version-'))
