@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -32,22 +33,30 @@ const gitEnv = () => {
   return env
 }
 
+const execFileAsync = promisify(execFile)
+
 /**
- * `-c` rather than fixture config, and a closed stdin, because every way
- * `git commit` blocks is a way this suite hangs for its whole timeout and then
+ * Spawned the way the code under test spawns git — asynchronously — rather
+ * than through `execFileSync`. The synchronous call blocks the worker for as
+ * long as git takes, and on a CI runner already running every other package's
+ * suite beside it that was tens of seconds a call: the same three fixtures
+ * timed out at 30s each while the two that ran after them finished in 18ms.
+ * Nothing about git was wrong, only about holding the thread while waiting.
+ *
+ * `-c` rather than fixture config, and a closed stdin, because every way `git
+ * commit` blocks is a way this suite hangs for its whole timeout and then
  * reports only SIGTERM: a `pre-commit` hook inherited through `core.hooksPath`,
  * a `gpg` that wants a passphrase, or a prompt reading the terminal it was
  * handed. `timeout` is the backstop — a fixture that cannot make a commit
  * should say so with git's own words, not run out the test's clock.
  */
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync(
+const git = async (cwd: string, ...args: string[]) => {
+  const { stdout } = await execFileAsync(
     'git',
     ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', ...args],
     {
       cwd,
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 30_000,
       env: {
         ...gitEnv(),
@@ -58,15 +67,17 @@ const git = (cwd: string, ...args: string[]) =>
         GIT_TERMINAL_PROMPT: '0',
       },
     }
-  ).trim()
+  )
+  return stdout.trim()
+}
 
-const repo = (commits: boolean) => {
+const repo = async (commits: boolean) => {
   const dir = mkdtempSync(join(tmpdir(), 'scenario-version-'))
-  git(dir, 'init', '-q', '-b', 'main')
+  await git(dir, 'init', '-q', '-b', 'main')
   if (commits) {
     writeFileSync(join(dir, 'a.txt'), 'one')
-    git(dir, 'add', 'a.txt')
-    git(dir, 'commit', '-qm', 'one')
+    await git(dir, 'add', 'a.txt')
+    await git(dir, 'commit', '-qm', 'one')
   }
   return dir
 }
@@ -77,8 +88,8 @@ const store = (runs: Partial<ScenarioRunSummary>[]) => ({
 
 describe('resolveScenarioRunVersion', () => {
   test('counts the attempt among the runs of the same commit', async () => {
-    const dir = repo(true)
-    const commit = git(dir, 'rev-parse', 'HEAD')
+    const dir = await repo(true)
+    const commit = await git(dir, 'rev-parse', 'HEAD')
 
     const version = await resolveScenarioRunVersion(
       store([
@@ -93,13 +104,13 @@ describe('resolveScenarioRunVersion', () => {
   })
 
   test('is the first attempt when nothing has run against the commit', async () => {
-    const dir = repo(true)
+    const dir = await repo(true)
     const version = await resolveScenarioRunVersion(store([{}]), dir)
     assert.equal(version?.attempt, 1)
   })
 
   test('marks a tree with uncommitted changes dirty', async () => {
-    const dir = repo(true)
+    const dir = await repo(true)
     writeFileSync(join(dir, 'a.txt'), 'two')
 
     const version = await resolveScenarioRunVersion(store([]), dir)
@@ -115,13 +126,13 @@ describe('resolveScenarioRunVersion', () => {
       undefined
     )
     assert.equal(
-      await resolveScenarioRunVersion(store([]), repo(false)),
+      await resolveScenarioRunVersion(store([]), await repo(false)),
       undefined
     )
   })
 
   test('keeps the commit when the history cannot be read', async () => {
-    const dir = repo(true)
+    const dir = await repo(true)
     const version = await resolveScenarioRunVersion(
       {
         list: async () => {
@@ -131,7 +142,7 @@ describe('resolveScenarioRunVersion', () => {
       dir
     )
 
-    assert.equal(version?.commit, git(dir, 'rev-parse', 'HEAD'))
+    assert.equal(version?.commit, await git(dir, 'rev-parse', 'HEAD'))
     assert.equal(version?.attempt, 1)
   })
 })
