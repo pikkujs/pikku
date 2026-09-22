@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Box, Center, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -6,6 +6,7 @@ import { ListPageHeader } from '../layout/PageLayout'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { FeatureNavigator } from './FeatureNavigator'
 import { FeatureDocument } from './FeatureDocument'
+import { WorkflowProvider } from '../../context/WorkflowContext'
 import { usePanelContext } from '../../context/PanelContext'
 import type { ShellHeaderFilter } from '../ui/shellHeaderShared'
 import { useScenariosBrowse } from '../../hooks/useScenariosBrowse'
@@ -52,7 +53,8 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   runLens: hostLens,
 }) => {
   const { personas } = useScenarioPersonaEntries()
-  const { openPersona } = usePanelContext()
+  const [stepWorkflow, setStepWorkflow] = useState<unknown>()
+  const { openWorkflowStep, openPersona } = usePanelContext()
   const dismiss = usePageOptionsDismiss()
 
   // Always mounted so the hook order never depends on the prop; the host's
@@ -80,6 +82,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   if (tags.length > 0) {
     headerFilters.push({
       key: 'tags',
+      testId: 'scenario-tag-filter',
       label: m.scenarios_tags_lens(),
       value: '',
       multiple: true,
@@ -96,6 +99,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   }
   headerFilters.push({
     key: 'run',
+    testId: 'scenario-run-filter',
     label: m.scenarios_run_lens(),
     value: runId,
     priority: 1,
@@ -144,85 +148,98 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   }
 
   return (
-    <ResizablePanelLayout
-      header={
-        <ListPageHeader
-          title={m.nav_scenarios()}
-          description={m.scenarios_page_description()}
-          docsHref="https://pikku.dev/docs/wiring/workflows"
-          search={{
-            placeholder: m.scenarios_search_placeholder(),
-            value: searchQuery,
-            onChange: setSearchQuery,
-          }}
-          headerFilters={headerFilters}
-        />
-      }
-      leftDrawerLabel={m.pane_features()}
-      leftDrawer={
-        loading || hostBrowse ? null : (
-          <FeatureNavigator
-            features={features}
-            selectedId={selectedId}
-            lens={lens}
-            onSelect={(id) => {
-              setSelectedId(id)
-              dismiss()
+    /* the provider sits above the panel so a step's details can read its own
+       scenario's workflow meta, not just the document's — a host that mounts
+       the panel outside this tree reads the same meta off the panel data */
+    <WorkflowProvider workflow={stepWorkflow}>
+      <ResizablePanelLayout
+        header={
+          <ListPageHeader
+            title={m.nav_scenarios()}
+            description={m.scenarios_page_description()}
+            docsHref="https://pikku.dev/docs/wiring/workflows"
+            search={{
+              placeholder: m.scenarios_search_placeholder(),
+              value: searchQuery,
+              onChange: setSearchQuery,
             }}
+            headerFilters={headerFilters}
           />
-        )
-      }
-      emptyPanelMessage={m.scenarios_select_step()}
-      hidePanel={loading}
-    >
-      {loading ? (
-        <ConsoleLoading />
-      ) : features.length === 0 ? (
-        <Center p="xl">
-          <Text size="sm" c="dimmed">
-            {m.scenarios_no_features()}
-          </Text>
-        </Center>
-      ) : (
-        <Stack gap="lg">
-          {run && lens && (
-            <Box
-              px={32}
-              pt={24}
-              pb={12}
-              style={{
-                maxWidth: 1120,
-                position: 'sticky',
-                top: 0,
-                zIndex: 1,
-                background: 'var(--mantine-color-body)',
-              }}
-            >
-              <ScenarioRunBand
-                run={run}
-                declared={declared}
-                onOpenScenario={revealScenario}
-                onDelete={() =>
-                  remove.mutate(run.runId, {
-                    onSuccess: () => setRunId(AS_WRITTEN),
-                  })
-                }
-                deleting={remove.isPending}
-              />
-            </Box>
-          )}
-          {showing.map((feature, index) => (
-            <FeatureDocument
-              key={feature.id}
-              feature={feature}
+        }
+        leftDrawerLabel={m.pane_features()}
+        leftDrawer={
+          loading || hostBrowse ? null : (
+            <FeatureNavigator
+              features={features}
+              selectedId={selectedId}
               lens={lens}
-              inSuite={!selected}
-              topPad={!run && index === 0}
-              onOpenPersona={showPersona}
+              onSelect={(id) => {
+                setSelectedId(id)
+                dismiss()
+              }}
             />
-          ))}
-        </Stack>
-      )}
-    </ResizablePanelLayout>
+          )
+        }
+        emptyPanelMessage={m.scenarios_select_step()}
+        hidePanel={loading}
+      >
+        {loading ? (
+          <ConsoleLoading />
+        ) : features.length === 0 ? (
+          <Center p="xl">
+            <Text size="sm" c="dimmed">
+              {m.scenarios_no_features()}
+            </Text>
+          </Center>
+        ) : (
+          <Stack gap="lg">
+            {run && lens && (
+              <Box
+                px={32}
+                pt={24}
+                pb={12}
+                style={{
+                  maxWidth: 1120,
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                  background: 'var(--mantine-color-body)',
+                }}
+              >
+                <ScenarioRunBand
+                  run={run}
+                  declared={declared}
+                  onOpenScenario={revealScenario}
+                  onDelete={() =>
+                    remove.mutate(run.runId, {
+                      onSuccess: () => setRunId(AS_WRITTEN),
+                    })
+                  }
+                  deleting={remove.isPending}
+                />
+              </Box>
+            )}
+            {showing.map((feature, index) => (
+              <FeatureDocument
+                key={feature.id}
+                feature={feature}
+                lens={lens}
+                inSuite={!selected}
+                topPad={!run && index === 0}
+                onOpenPersona={showPersona}
+                onSelectStep={(workflow, stepId, stepType, metadata) => {
+                  setStepWorkflow(workflow)
+                  openWorkflowStep(stepId, stepType, {
+                    ...metadata,
+                    stepType,
+                    workflow,
+                  })
+                }}
+              />
+            ))}
+          </Stack>
+        )}
+      </ResizablePanelLayout>
+    </WorkflowProvider>
   )
 }

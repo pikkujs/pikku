@@ -447,7 +447,7 @@ export const ShellHeader = <T extends string = string>({
         {filters.map((f) =>
           measureNode(
             'filter:' + f.key,
-            <FilterChip filter={f} withinPortal={false} />
+            <FilterChip filter={f} withinPortal={false} measurement />
           )
         )}
         {search && measureNode('search', renderSearchField(true))}

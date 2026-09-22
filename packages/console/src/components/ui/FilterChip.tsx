@@ -10,11 +10,14 @@ import {
 type FilterChipProps = {
   filter: ShellHeaderFilter
   withinPortal?: boolean
+  /** The off-screen width-measurement clone, which carries no test ids. */
+  measurement?: boolean
 }
 
 export const FilterChip: React.FC<FilterChipProps> = ({
   filter,
   withinPortal = true,
+  measurement = false,
 }) => {
   const target = (
     <Button
@@ -22,6 +25,7 @@ export const FilterChip: React.FC<FilterChipProps> = ({
       size="sm"
       leftSection={filter.icon}
       rightSection={filter.options ? <ChevronDown size={13} /> : undefined}
+      data-testid={measurement ? undefined : filter.testId}
       onClick={
         filter.options
           ? undefined
@@ -54,6 +58,11 @@ export const FilterChip: React.FC<FilterChipProps> = ({
           return (
             <Menu.Item
               key={o.value}
+              data-testid={
+                measurement || !filter.testId
+                  ? undefined
+                  : `${filter.testId}-option-${o.value}`
+              }
               fw={picked ? 600 : 400}
               closeMenuOnClick={!filter.multiple}
               leftSection={

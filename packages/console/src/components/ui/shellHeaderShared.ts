@@ -32,6 +32,10 @@ export interface ShellHeaderFilter {
   values?: string[]
   /** What the chip reads when `multiple` and nothing is selected. */
   emptyLabel?: I18nString
+  /** Stamps `data-testid` on the chip, and `<testId>-option-<value>` on each
+   *  option. The bar renders every chip a second time off-screen to measure it,
+   *  and the measuring copy carries neither. */
+  testId?: string
 }
 
 export interface ShellHeaderSearch {
