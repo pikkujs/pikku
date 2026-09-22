@@ -1,12 +1,14 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  RegistryError,
   getOpenApi,
   getPackage,
   registryId,
   searchOpenApis,
   searchPackages,
 } from './registry.js'
+import { isExpectedError } from '@pikku/core/errors'
 
 const API = 'https://api.example.test'
 
@@ -108,6 +110,26 @@ describe('reads', () => {
     const f = stubFetch(() => new Response('', { status: 200 }))
     try {
       assert.equal(await getOpenApi(API, 'stripe.com'), null)
+    } finally {
+      f.restore()
+    }
+  })
+
+  /**
+   * A registry that is down is not a crash in pikku. Thrown as a plain
+   * `Error`, `formatCLIError` prints the function-runner frames in front of
+   * the status, and the guard in `errors.test.ts` fails the whole directory.
+   */
+  test('a registry that refuses raises an error the CLI prints alone', async () => {
+    const f = stubFetch(() => new Response('upstream unavailable', { status: 503 }))
+    try {
+      await assert.rejects(getPackage(API, 'gmail'), (error: unknown) => {
+        assert.ok(error instanceof RegistryError)
+        assert.equal(isExpectedError(error), true)
+        assert.equal(error.status, 503)
+        assert.match(error.message, /503 upstream unavailable/)
+        return true
+      })
     } finally {
       f.restore()
     }

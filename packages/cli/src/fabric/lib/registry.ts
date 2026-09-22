@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PikkuError } from '@pikku/core/errors'
 
 /**
  * Read-only client for the Fabric community registry.
@@ -38,6 +39,23 @@ export const OpenApiEntrySchema = z.object({
 })
 export type OpenApiEntry = z.infer<typeof OpenApiEntrySchema>
 
+/**
+ * The registry answered, but not with an answer — it is down, rate-limiting or
+ * refusing. A `PikkuError` like `GitError` beside it, so `formatCLIError`
+ * prints the status and the body alone: ten frames of the function runner in
+ * front of "503 upstream unavailable" tell nobody anything, and discovery
+ * failing is not a bug in pikku.
+ */
+export class RegistryError extends PikkuError {
+  constructor(
+    public path: string,
+    public status: number,
+    public body: string
+  ) {
+    super(`Registry GET ${path} failed: ${status} ${body}`)
+  }
+}
+
 async function get<T>(apiUrl: string, path: string): Promise<T | null> {
   const response = await fetch(new URL(path, apiUrl))
   // A 404 is an answer, not a failure: "nothing by that name" is exactly what
@@ -45,9 +63,7 @@ async function get<T>(apiUrl: string, path: string): Promise<T | null> {
   // registry being down.
   if (response.status === 404) return null
   if (!response.ok) {
-    throw new Error(
-      `Registry GET ${path} failed: ${response.status} ${await response.text()}`
-    )
+    throw new RegistryError(path, response.status, await response.text())
   }
   const text = await response.text()
   return text ? (JSON.parse(text) as T) : null
