@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import {
   cpSync,
   existsSync,
@@ -22,24 +21,11 @@ import {
   type AppsConfig,
   type Frontend,
 } from '../../utils/app-scaffold.js'
-
-export const PikkuNewAppInput = z.object({
-  slug: z.string(),
-  serves: z.string().optional(),
-  personas: z.string().optional(),
-  template: z.string().optional(),
-  primary: z.boolean().optional(),
-  install: z.boolean().optional(),
-})
-
-export const PikkuNewAppOutputSchema = z.object({
-  slug: z.string(),
-  path: z.string(),
-  port: z.number(),
-  repaired: z.array(z.string()),
-  refusal: z.string().nullable(),
-})
-export type PikkuNewAppOutput = z.infer<typeof PikkuNewAppOutputSchema>
+import {
+  PikkuNewAppInput,
+  PikkuNewAppOutputSchema,
+  type PikkuNewAppOutput,
+} from './new-app.schemas.js'
 
 const DEFAULT_TEMPLATE = 'gh:pikkujs/starter-template/apps/app'
 
