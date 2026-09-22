@@ -36,6 +36,13 @@ export class UnusedScopeService implements ScopeService {
   async listUserRoles() {
     return []
   }
+  async listRolesForUsers(userIds: string[]) {
+    const byUser: Record<string, string[]> = {}
+    for (const userId of userIds) {
+      byUser[userId] = []
+    }
+    return byUser
+  }
   async addScopeToUser() {}
   async removeScopeFromUser() {}
   async listUserScopes() {

@@ -102,6 +102,14 @@ export class InMemoryScopeService implements ScopeService {
     return [...(this.userRoles.get(userId) ?? [])]
   }
 
+  async listRolesForUsers(userIds: string[]) {
+    const byUser: Record<string, string[]> = {}
+    for (const userId of userIds) {
+      byUser[userId] = [...(this.userRoles.get(userId) ?? [])]
+    }
+    return byUser
+  }
+
   async addScopeToUser(userId: string, scope: string) {
     const held = this.userScopes.get(userId) ?? new Set()
     held.add(scope)
