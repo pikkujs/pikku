@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3059 observable things**: 994 exported names, plus
-2065 members on the classes and interfaces among them, reachable
+**3060 observable things**: 994 exported names, plus
+2066 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 160 | 128 | 435 |
+| `./services` | 160 | 128 | 436 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 49 | 49 | 151 |
 | `./workflow` | 84 | 35 | 140 |
@@ -5143,6 +5143,7 @@ export interface ScopeService {
   addUserToRole(userId: string, role: string, grantedBy?: string): Promise<void>
   removeUserFromRole(userId: string, role: string): Promise<void>
   listUserRoles(userId: string): Promise<string[]>
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
   addScopeToUser(userId: string, scope: string, grantedBy?: string): Promise<void>
   removeScopeFromUser(userId: string, scope: string): Promise<void>
   listUserScopes(userId: string): Promise<string[]>
