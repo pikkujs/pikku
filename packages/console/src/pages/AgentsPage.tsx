@@ -47,6 +47,7 @@ export const AgentsPage: React.FC<{
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
+                  data-testid="page-search"
                   placeholder={m.agents_search_placeholder()}
                   leftSection={<Search size={14} />}
                   value={searchQuery}

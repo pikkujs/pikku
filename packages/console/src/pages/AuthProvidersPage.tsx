@@ -29,6 +29,7 @@ export const AuthProvidersPage: React.FC = () => {
             docsHref="https://www.better-auth.com/docs/concepts/oauth"
             filters={
               <TextInput
+                data-testid="page-search"
                 placeholder={m.auth_providers_search_placeholder()}
                 leftSection={<Search size={14} />}
                 value={searchQuery}

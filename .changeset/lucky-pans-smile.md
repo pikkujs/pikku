@@ -2,11 +2,15 @@
 '@pikku/console': patch
 ---
 
-Tag the users and audit screens so a scenario can tell them apart from a screen that never mounted
+Make every console screen nameable by a test
 
-Every other console screen carries something a test can wait for — a data
-table, an empty state, a board. These two carried nothing in any state, so a
-scenario could not distinguish "the audit trail is quiet" from "the audit screen
-failed to render", and both had to be skipped. `admin-users` and `audit-page` sit
-on the page root, which is the only thing nameable before it is known whether
-there is any data to show.
+Two gaps, same shape. `AdminUsersPage` and `AuditPage` carried no data-testid in
+any state, so a scenario could not tell "the audit trail is quiet" from "the
+audit screen failed to render"; `admin-users` and `audit-page` now sit on their
+page roots, which is the only thing nameable before it is known whether there is
+any data.
+
+And a screen whose search is built in the header's `filters` slot got no testid,
+while one that passes the `search` prop has carried `page-search` all along —
+the same control, nameable on some screens and not others depending on how the
+header was assembled. Eight pages now agree with the rest.
