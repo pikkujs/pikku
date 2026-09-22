@@ -3,16 +3,15 @@ name: pikku-knowledge
 description: >-
   Use when writing, reading, reorganising or validating a project's knowledge/ directory — the
   notes that say what the app is, in the language its users use. Covers the Open Knowledge Format
-  note (path-as-identity markdown, YAML frontmatter, only `type` required), the sections of the
-  app-project profile (milestones, entities, decisions, questions, wishlist) and the one question each
-  answers, milestone status/entities/gherkin rules, the `resource:` URI scheme tying a note to the
-  code it is about, the shapes that are NOT a knowledge base, and the `pikku knowledge
-  validate|index` commands. TRIGGER when: user asks to write down a decision, requirement, entity
-  or open question; asks what the app does or is; asks about knowledge/, notes, milestones,
-  an index.md, or a diagram, callout or decision block; or hands over a product
-  brief to record. DO NOT TRIGGER when: user asks what
-  functions, routes, tables or permissions exist (that is `pikku meta` / `pikku info`, never a
-  note), or to write a scenario test (use pikku-scenario).
+  note (path-as-identity markdown, YAML frontmatter, only `type` required), the app-project
+  profile's sections (milestones, entities, decisions, questions, wishlist) and what each answers,
+  milestone status/entities/gherkin rules, the `resource:` URI scheme tying a note to its code,
+  what is NOT a knowledge base, and `pikku knowledge validate|index`. TRIGGER when: user asks to
+  write down a decision, requirement, entity or open question; asks what the app does or is; asks
+  about knowledge/, notes, milestones, an index.md, or a diagram, callout or decision block; or
+  hands over a product brief to record. DO NOT TRIGGER when: user asks what functions, routes,
+  tables or permissions exist (that is `pikku meta` / `pikku info`, never a note), or to write a
+  scenario test (use pikku-scenario).
 installGroups: [core]
 agent:
   tools: read, write, edit, bash, grep
