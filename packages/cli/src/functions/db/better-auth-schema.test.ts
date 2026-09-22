@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { loadAuthOptions } from './better-auth-schema.js'
 
 /**
  * A Better Auth 1.7 plugin starts work in `init` and does not wait for it — the
@@ -40,10 +41,7 @@ export const auth = Object.assign(
 `
     )
 
-    const moduleUrl = resolve(
-      import.meta.dirname,
-      'better-auth-schema.ts'
-    )
+    const moduleUrl = resolve(import.meta.dirname, 'better-auth-schema.ts')
     const script = `
 const { loadAuthOptions } = await import(${JSON.stringify(moduleUrl)})
 const options = await loadAuthOptions({
@@ -68,6 +66,55 @@ await new Promise((r) => setTimeout(r, 250))
       `reading the schema exited ${run.status}: ${run.stderr || run.stdout}`
     )
   } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * The other half of the promise the guard makes: it borrows the process's
+ * unhandled-rejection handling for the length of one call and gives it back.
+ *
+ * This one runs in-process, because what it checks is observable from here —
+ * the listener list before and after — and it reads the options the way `pikku
+ * db generate` does rather than re-describing the path. The factory here does
+ * not reject: `bun test` claims a rejection before any listener of ours is
+ * consulted, so the swallowing half can only be witnessed by the exit code of
+ * the child above. What is left is the borrowing, which is what a host notices.
+ */
+test("a host's own unhandled-rejection listeners survive the read", async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pikku-auth-schema-'))
+  const host = () => {}
+  process.on('unhandledRejection', host)
+  try {
+    mkdirSync(join(root, 'src'), { recursive: true })
+    writeFileSync(
+      join(root, 'src', 'auth.ts'),
+      `const PIKKU_BETTER_AUTH = Symbol.for('pikku.betterAuth')
+// Marker for the source scan, which looks for pikkuBetterAuth( in the file.
+export const auth = Object.assign(
+  (_services: unknown) => ({ options: { database: { type: 'sqlite' } } }),
+  { [PIKKU_BETTER_AUTH]: true }
+)
+`
+    )
+
+    const options = await loadAuthOptions({
+      rootDir: root,
+      srcDirectories: ['src'],
+      kysely: {} as never,
+      logger: { error: () => {} } as never,
+    })
+
+    assert.equal(
+      (options as { database?: { type?: string } })?.database?.type,
+      'sqlite'
+    )
+    assert.ok(
+      process.listeners('unhandledRejection').includes(host),
+      'the listener the host had before the call is gone after it'
+    )
+  } finally {
+    process.off('unhandledRejection', host)
     rmSync(root, { recursive: true, force: true })
   }
 })
