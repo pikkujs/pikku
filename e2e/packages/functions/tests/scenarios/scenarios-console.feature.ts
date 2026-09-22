@@ -423,9 +423,15 @@ export const tagFilterNarrowsScenario = pikkuScenario<void, { narrowed: true }>(
         { actor: actors.admin }
       )
       await scenario.when(
+        'opens the tag filter',
+        'clicksTestId',
+        { testId: 'scenario-tag-filter' },
+        { actor: actors.admin }
+      )
+      await scenario.when(
         'filters to the addons tag',
-        'selectsOption',
-        { testId: 'scenario-tag-filter', value: 'addons' },
+        'clicksTestId',
+        { testId: 'scenario-tag-filter-option-addons' },
         { actor: actors.admin }
       )
       await scenario.then(
