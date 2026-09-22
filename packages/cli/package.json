@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/cli"
   },
-  "description": "Pikku CLI \u2014 code generation, dev server, migrations and deployment",
+  "description": "Pikku CLI — code generation, dev server, migrations and deployment",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
