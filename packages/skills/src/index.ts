@@ -2,9 +2,18 @@ import { existsSync } from 'fs'
 import { readdir, readFile } from 'fs/promises'
 import { dirname, join, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
-import { SKILL_FILES } from './skills.gen.js'
+import { SKILL_FILES, SKILL_SNIPPETS } from './skills.gen.js'
+import { expandSkillMarkdown } from './snippets.js'
 
-export { SKILL_FILES }
+export { SKILL_FILES, SKILL_SNIPPETS }
+export {
+  collectSnippets,
+  expandSkillMarkdown,
+  snippetRegionsIn,
+  DuplicateSnippetError,
+  MissingSnippetError,
+  UnclosedSnippetError,
+} from './snippets.js'
 
 /**
  * Absolute path to the `skills/` directory shipped beside this module, or `null`
@@ -28,8 +37,10 @@ const toPosix = (path: string) => path.split(sep).join('/')
 
 /**
  * Reading prefers the filesystem so that editing a SKILL.md is immediately live
- * for `pikku skills install` without re-running `yarn embed`; the manifest is the
- * fallback for bundled contexts. The two are identical after a build.
+ * for `pikku skills install` without re-running `bun run embed`; the manifest is
+ * the fallback for bundled contexts. A filesystem read expands `snippet:` fences
+ * from the embedded snippet map, so the installed text matches the manifest
+ * even though the source keeps placeholders.
  */
 export const listSkillNames = async (): Promise<string[]> => {
   if (skillsDir) {
@@ -73,7 +84,11 @@ export const readSkillFile = async (path: string): Promise<string | null> => {
   if (skillsDir) {
     const full = join(skillsDir, ...path.split('/'))
     if (!existsSync(full)) return null
-    return readFile(full, 'utf-8')
+    return expandSkillMarkdown(
+      await readFile(full, 'utf-8'),
+      SKILL_SNIPPETS,
+      path
+    )
   }
   return SKILL_FILES[path] ?? null
 }

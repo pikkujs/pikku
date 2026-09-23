@@ -254,46 +254,41 @@ score a perfect run while checking nothing.
 
 ## Configuration
 
-Personas, actors and environments live in `pikku.config.json`:
+Personas are declared in TypeScript. One `definePersonas({ … })` call for the
+whole project — codegen builds the `PersonaId` union from it, materialises one
+scenario actor per person, and seeds a user row each:
+
+```ts snippet:definePersonas
+```
+
+`pikku.config.json` carries the settings around them — nothing about a person:
 
 ```json
 {
   "scenarios": {
-    "personas": {
-      "shopper": { "description": "Buys things here", "primary": true },
-      "support": {
-        "description": "Answers for the shop",
-        "proficiency": "power"
-      },
-      "reminders": {
-        "description": "The shop chasing abandoned carts",
-        "kind": "system"
-      }
-    },
-    "actors": {
-      "shopper": {
-        "email": "shopper@actors.local",
-        "name": "Shopper",
-        "jobTitle": "First-time buyer",
-        "personality": "Impatient shopper who abandons slow checkouts"
-      },
-      "shopperB": { "persona": "shopper", "email": "shopper-b@actors.local" }
-    },
-    "environments": {
-      "local": {
-        "apiUrl": "http://localhost:4077",
-        "signInPath": "/api/auth/sign-in/actor"
-      }
+    "emailDomain": "actors.example.com",
+    "browserDriver": "@pikku/playwright",
+    "model": "claude-sonnet-4-5"
+  },
+  "environments": {
+    "local": {
+      "apiUrl": "http://localhost:4077",
+      "signInPath": "/api/auth/sign-in/actor"
     }
   }
 }
 ```
 
-**`references/personas.md`** covers the parts that bite: a persona is a
-kind of person and an actor is one body signing in as one, when to write an
-actor by hand, `kind: "system"` having no actor, `definePersonas` being read
-from source rather than evaluated, and the same actor list powering a human
-"Sign in as …" switcher.
+- `scenarios.emailDomain` is the mail domain actor addresses are built on.
+- `scenarios.browserDriver` is the package driving `browser` bindings.
+- `scenarios.model` is the model a persona thinks with (`actor.converse`, `pikku virtual-user run`).
+- `environments.<name>` are the targets a run can point at. The key is the required positional of `pikku scenario run`; `apiUrl` is required and `signInPath`/`rpcPath`/`sessionPath` have defaults.
+
+**`references/personas.md`** covers the parts that bite: one entry is one
+person and one actor, emails are derived and never written, `runnable: false`
+for someone only acted upon, `definePersonas` being read from source rather
+than evaluated, and the same actor list powering a human "Sign in as …"
+switcher.
 
 - `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`.
 - **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.
@@ -306,7 +301,7 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local
 SCENARIO_ACTOR_SECRET=… pikku scenario run local --flows orderSupportScenario
 SCENARIO_ACTOR_SECRET=… pikku scenario run local --features credentialFeature
 SCENARIO_ACTOR_SECRET=… pikku scenario run local --tags smoke,scenario
-SCENARIO_ACTOR_SECRET=… pikku scenario run local --spawn --no-browser --exclude-tags ai-live
+SCENARIO_ACTOR_SECRET=… pikku scenario run local --spawn --exclude-tags ai-live
 ```
 
 `run` takes the environment as a **required positional** — the key from `environments`. Every filter narrows the same plan, so narrowing a feature to two of its five scenarios still runs the feature's hooks exactly once around those two.
@@ -318,7 +313,8 @@ SCENARIO_ACTOR_SECRET=… pikku scenario run local --spawn --no-browser --exclud
 | `--tags` / `-t`            | Match-any tag filter                                                              |
 | `--exclude-tags`           | Hold tags back — unless the flow is named directly with `--flows`                 |
 | `--run <surface>`          | `default` (the default), `browser`, or `cli`                                      |
-| `--no-browser`             | Shorthand for `--run default`; scenarios with browser steps report as **skipped** |
+| `--screenshots`            | Write asked-for screenshots under `.pikku/scenario-runs/<run>/<scenario>`         |
+| `--video <mode>`           | `failed` (the default), `all`, or `off`                                           |
 | `--strict`                 | Fail, rather than pass, a `then` with no witness on the run's surface             |
 | `--spawn` / `--keep-alive` | Start `pikku dev` on the environment's apiUrl for the run; optionally leave it up |
 | `--api-url` / `--app-url`  | Override the environment's URLs — for a target that only exists at run time       |

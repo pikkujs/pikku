@@ -21,7 +21,7 @@ Use this skill as an execution checklist, not reference material.
 1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
 2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
 3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+4. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 6. Report anything about pikku itself that cost you time, the moment it happens — see **Report what fought you**.
 
@@ -256,103 +256,16 @@ Do not push without explicit confirmation. Do not merge.
 
 ## Report what fought you
 
-When pikku itself is what cost you time, report it with `pikku fabric report`.
-Nothing is written to the repo; the finding goes to the linked fabric project
-and the terminal shows you exactly what was sent.
+When pikku itself is what cost you time — a wrong generated type, a check that
+passed when it should not, a skill that misled you — file it with `pikku fabric
+report`. The `pikku-report` skill owns the ladder, the two kinds, the JSON-on-
+stdin form and the local spool; read it before filing.
 
-**Report at the moment it happens**, not at the end from memory — a run that
-falls over never reaches its end. One finding per thing that fought you.
+Reporting at all is permitted here (see **Hard constraints**) and is the one
+network call a build may make. Nothing is written to the repo. Never patch pikku
+itself — not `node_modules`, not a linked checkout — work around it in the app,
+report it, and let the fix happen once.
 
-### The ladder
-
-1. **Find the quicker workaround.** The user is paying for their feature, not
-   for pikku's health.
-2. **Investigate** only when there is no workaround, or when the user asks why
-   something is slow or wrong.
-3. **Report at the depth you already reached.** Never spend extra effort to
-   file; never throw away effort you already spent. If the investigation took
-   you to the mechanism, the finding says so — named file, named function, what
-   is actually happening, and what pikku should do instead.
-
-**Never fix pikku itself.** Not a patch in `node_modules`, not a linked
-checkout, not a branch in the framework repo. Many agents each patching pikku to
-unblock themselves is many divergent copies and a merge problem nobody signed up
-for. Work around it in the app, report it, and let the fix happen once.
-
-### What counts
-
-Anything that cost you time and would cost the next person the same. Most of
-these never produce an error: output that is quietly wrong, a generated type
-that disagrees with the runtime, a check that passes when it should not, a
-narrowing you had to write by hand because the framework should have written it.
-**Having to write code the framework should have written for you is a finding.**
-
-So is anything that only shows up in one place — invisible locally, fatal
-deployed, or the reverse. Say which, with `--surface`.
-
-Not a finding: a preference, a thing you would have designed differently, or
-baseline noise that was already failing before you started.
-
-### Two kinds
-
-- `--kind product` — pikku behaved wrongly. Fixing it is a change to the
-  framework.
-- `--kind harness` — a skill misled you: it told you to run something that does
-  not exist, described a flag that is spelled differently, or contradicted what
-  the CLI actually did. Pass `--skill <name>` and `--passage "<the line or
-  section>"`. This is the most useful kind to file, because it is fixable
-  immediately — so file it even when the cost was small.
-
-### When there was no workaround
-
-Report it anyway with `--unresolved`, and put what you tried and how each
-attempt failed in `--tried`. That is what stops the next person walking the same
-dead ends. Tell the user what you did instead — abandoned it, shipped something
-degraded, or stopped.
-
-`--unresolved` means **no workaround was found**. It does not mean the
-workaround was unpleasant.
-
-### The command
-
-Send it as JSON on stdin. Most of a finding is prose, and prose carries
-apostrophes, quotes, backticks and newlines — each one a shell metacharacter
-before it is a character in your sentence. A stack trace passed to `--error`
-breaks the command at its first newline; a backtick in `--actual` runs whatever
-follows it. Quote the heredoc delimiter (`<<'EOF'`, never `<<EOF`) so the shell
-leaves the body alone.
-
-```bash
-pikku fabric report --stdin <<'EOF'
-{
-  "title": "<one-line title>",
-  "kind": "product",
-  "model": "<the model you are>",
-  "expected": "<what you expected pikku to do>",
-  "actual": "<what it did instead>",
-  "command": "<the command you ran>",
-  "workaround": "<what you did instead, inside the app>"
-}
-EOF
-```
-
-Add whichever of these you actually have: `error` (the error's message line,
-verbatim), `repro` (the shortest way to reach it again), `proposal` (what pikku
-should do), `area`, `surface` (`local`, `deployed` or `both`), `cost` (measured
-if you measured it — "98s vs 20s steady" ranks; "slow" does not), `run` (an id
-shared by every finding from this build), `deployTarget`.
-
-The same fields exist as flags — `--kind`, `--expected` and so on — for a
-finding short enough to type. Anything with a newline or a quote in it goes
-through `--stdin`.
-
-Versions, platform and package manager are read off the installed tree for you.
-Do not pass them and do not ask the user for them.
-
-Reporting never fails a build. A finding that cannot be sent — logged out, or
-fabric unreachable — is held on the machine and goes out with the next report
-that succeeds, so nothing you file is lost. If it says the finding was queued,
-carry on with the feature; do not try to fix it, and do not file it again.
 
 ## Hard constraints
 

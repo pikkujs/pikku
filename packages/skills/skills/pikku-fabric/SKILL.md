@@ -1,6 +1,6 @@
 ---
 name: pikku-fabric
-description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `fabric.config.json`, the pikku-verify workflow, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
+description: 'Build, convert and debug apps on the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `pikkufabric.config.json`, the `pikku all` + `tsc` verification loop, and reading logs, traces and metrics from a deployed stage. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, asking about Fabric deployment, database or project conventions, asking about a `pikku fabric validate` finding including app-missing-actor-quick-login, or a deployed stage is erroring, timing out or behaving differently than local ("why is prod failing", "check the logs"). DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy instead — or the failure reproduces locally, which is where to debug it.'
 installGroups: [fabric]
 ---
 
@@ -18,7 +18,7 @@ Use this skill as an execution checklist, not reference material.
 2. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
 3. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
 4. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-5. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 6. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs on Cloudflare Workers with a SQLite database (via libSQL/Turso). This skill covers what's unique to Fabric. For general Pikku concepts, function authoring, HTTP wiring, and more, see `pikku-concepts`, `pikku-wiring`, `pikku-services`, etc.
@@ -31,20 +31,20 @@ Always run project discovery first:
 yarn pikku meta context --json
 ```
 
-Call the `pikku-meta` tool before grepping or editing a Fabric app.
+Run `pikku meta` before grepping or editing a Fabric app.
 
-- Use `section: "context"` for the project map: functions, wires, workflows, capabilities, and source files.
-- Use `section: "clients"` before frontend/RPC work.
-- Use `section: "functions"` to list function ids, then `section: "function", id: "<functionId>"` for one function.
-- Use `section: "schemas"` to list schema names. Only request full JSON Schema bodies with `schemas: ["SchemaName"]` for the specific schemas needed.
+- `pikku meta context --json` for the project map: functions, wires, workflows, capabilities, and source files.
+- `pikku meta clients --json` before frontend/RPC work.
+- `pikku meta functions --json` to list function ids, then `pikku meta functions get <id> --json` for one function.
+- `pikku meta schemas --json` to list schema names. Only request a full schema body with `pikku meta schemas get <name> --json` when you need it.
 
 Do not load every schema body by default; that wastes context and usually makes the model worse.
 
 For database work:
 
-- Use `pikku-db` for the actual attached Fabric database state: tables, columns, foreign keys, and applied migrations.
-- Use `pikku-meta` `section: "schemas"` for code-level JSON Schema contracts, not database introspection.
-- Do not inspect database credentials or connect to the database directly; Fabric Control already exposes the safe introspection surface.
+- Use `pikku fabric db schema [--branch <branch>]` for the actual attached Fabric database state: tables and columns.
+- Use `pikku meta schemas` for code-level JSON Schema contracts, not database introspection.
+- Do not inspect database credentials or connect to the database directly; Fabric already exposes the safe introspection surface.
 
 ## Database: SQLite via libSQL
 
@@ -437,16 +437,16 @@ the deploy with "local HEAD … ≠ remote …" even though your code is pushed.
 
 Functions with `expose: true` are versioned via `versions.pikku.json`. When you change a function's input or output schema, you must bump its version number — otherwise `pikku all` will report a breaking change and callers' generated clients become stale.
 
-The `pikku-verify` tool catches this automatically.
+`pikku all` catches this automatically.
 
 ## After every code change
 
-Always call the `pikku-verify` tool after modifying functions, wirings, or schemas. It runs:
+Run `pikku all` after modifying functions, wirings, or schemas, then `tsc --noEmit`:
 
 1. `pikku all` — regenerates all codegen, checks version compliance
 2. `tsc --noEmit` — validates TypeScript types
 
-The output card shows whether any breaking changes were detected.
+Breaking changes are reported by the version check in step 1.
 
 ### `app-missing-actor-quick-login-<app>`
 

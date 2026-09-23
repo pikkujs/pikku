@@ -32,7 +32,12 @@ for (const name of await listSkillNames()) {
 ```
 
 Reads prefer the `skills/` directory on disk, so editing a `SKILL.md` is live
-immediately. `SKILL_FILES` is the same content as an embedded path → contents map,
-which is what makes the skills available inside the `bun --compile` CLI binaries
-where no filesystem copy exists. Regenerate it with `bun run embed` after changing
-anything under `skills/`.
+immediately. A fence marked ```` ```ts snippet:<region> ```` is expanded at read
+time from the embedded snippet map, so an installed copy shows the compiled code
+even though the source keeps the placeholder. `SKILL_FILES` is the same content
+as an embedded path → contents map (already expanded), which is what makes the
+skills available inside the `bun --compile` CLI binaries where no filesystem copy
+exists. Regenerate it with `bun run embed` after changing anything under
+`skills/` — that is also when snippets are collected from
+`examples/online-shop`, and a fence naming a region that does not exist fails
+the embed.

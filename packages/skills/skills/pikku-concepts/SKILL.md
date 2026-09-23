@@ -20,7 +20,7 @@ Use this skill as an execution checklist, not reference material.
 1. Discover before editing. Run `pikku doc --ai` for the installed API surface, and the relevant `pikku meta ... --json` for what this project has wired.
 2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
 3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+4. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Pikku is a TypeScript framework that separates business logic from transport mechanisms. You define a function once, then wire it to HTTP, WebSocket, queues, schedulers, MCP, CLI, or RPC — without the function knowing how it's being called.

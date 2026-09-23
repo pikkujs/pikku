@@ -14,7 +14,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "embed": "node scripts/embed.mjs",
+    "embed": "bun run scripts/embed.ts",
     "tsc": "bun run embed && tsc",
     "build": "bun run embed && tsc -b",
     "ncu": "npx npm-check-updates",

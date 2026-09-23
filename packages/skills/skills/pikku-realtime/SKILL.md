@@ -3,17 +3,17 @@ name: pikku-realtime
 description: >-
   Use when making ANY view live/realtime in a Pikku app — a board, shared list, dashboard, ticker, bidding room, live count — or when adding two-way chat/presence. Covers the DEFAULT event-hub SSE path and the two-way WebSocket channel.
   TRIGGER when: the user wants live updates, realtime, "update without refresh", a live board/feed/ticker/room, presence, or chat; or when data that MORE THAN ONE signed-in user can change should reflect others
-  DO NOT TRIGGER when: a plain one-shot query/refetch is fine (data only one user changes, or a manual refresh is acceptable), or for background jobs (that is pikku-schedule/pikku-workflow).
+  DO NOT TRIGGER when: a plain one-shot query/refetch is fine (data only one user changes, or a manual refresh is acceptable), or for background jobs (see `pikku-wiring`'s scheduler and queue references, or `pikku-workflow`).
 installGroups: [core, client]
 ---
 
 # Pikku Realtime (SSE + WebSocket channels)
 
-There is NOTHING to hand-roll and NOTHING to "find". The event-hub SSE transport
-is already wired into every app, and the two patterns below ARE the realtime
-templates. Start from them and rename — never grep the project for existing
-`sse`/`eventHub` code to copy, never write a custom `EventSource`, and never
-write a bespoke `sse: true` route for a plain live feed.
+There is NOTHING to hand-roll and NOTHING to "find". `pikku enable events` wires
+the event-hub SSE transport and generates the typed client, and the two patterns
+below ARE the realtime templates. Start from them and rename — never grep the
+project for existing `sse`/`eventHub` code to copy, never write a custom
+`EventSource`, and never write a bespoke `sse: true` route for a plain live feed.
 
 ## Pick the transport (almost always SSE)
 
