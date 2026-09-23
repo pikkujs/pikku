@@ -94,6 +94,8 @@ export interface PikkuPackageState {
         rpcEndpoint?: string
         auth?: boolean
         tags?: string[]
+        /** Which functions `rpc.exposed` may call: unset/`true` keeps the addon's own `expose`, `false` none, a list exactly those */
+        expose?: boolean | string[]
         /** Required of every function in this package, on top of the function's own */
         scopes?: string[]
         /** Per-instance name-aliases: logical name the addon reads -> actual project secret name */

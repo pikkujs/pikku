@@ -64,6 +64,8 @@ export interface ResolvedFunction {
     package: string
     auth?: boolean
     tags?: string[]
+    /** Set by the consuming app: which functions `rpc.exposed` may call */
+    expose?: boolean | string[]
     rpcEndpoint?: string
     secretOverrides?: Record<string, string>
     variableOverrides?: Record<string, string>

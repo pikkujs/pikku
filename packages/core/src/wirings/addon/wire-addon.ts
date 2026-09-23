@@ -19,6 +19,16 @@ export type WireAddonConfig = {
    */
   mcp?: boolean | string[]
   /**
+   * Which of the addon's functions `rpc.exposed` may call, under
+   * `<name>:<function>`. Unset or `true` keeps the functions the addon itself
+   * declared `expose: true`; `false` exposes none of them; a list names exactly
+   * the functions to expose, whether or not the addon declared them, and is
+   * typed against the addon's function names.
+   *
+   * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
+   */
+  expose?: boolean | string[]
+  /**
    * Serves this addon's MCP tools on an endpoint of their own rather than
    * folding them into the project's single `/mcp`. `true` mounts them at
    * `/mcp/<name>`; a string is the path, used as given.
@@ -70,6 +80,7 @@ export const wireAddon = (config: WireAddonConfig): void => {
     rpcEndpoint: config.rpcEndpoint,
     auth: config.auth,
     tags: config.tags,
+    ...(config.expose !== undefined ? { expose: config.expose } : {}),
     ...(config.scopes ? { scopes: config.scopes } : {}),
     ...(config.secretOverrides
       ? { secretOverrides: config.secretOverrides }
@@ -89,6 +100,27 @@ export const wireAddon = (config: WireAddonConfig): void => {
       ? { globalCredentials: config.globalCredentials }
       : {}),
   })
+}
+
+/**
+ * Whether `rpc.exposed` may reach an addon function through the instance that
+ * resolved it. The wiring's `expose` decides when it is `false` or a list;
+ * otherwise the addon's own `expose: true` does.
+ *
+ * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
+ */
+export const isAddonFunctionExposed = (
+  expose: boolean | string[] | undefined,
+  functionName: string,
+  declaredExpose: boolean | undefined
+): boolean => {
+  if (Array.isArray(expose)) {
+    return expose.includes(functionName)
+  }
+  if (expose === false) {
+    return false
+  }
+  return declaredExpose === true
 }
 
 /**

@@ -48,6 +48,7 @@ wireAddon({
   rpcEndpoint?: string,            // Optional remote RPC endpoint for distributed execution
   auth?: boolean,                  // Require a session for every function in the addon
   mcp?: boolean | string[],        // true: every function the addon declared mcp: true; a list: the tools this app offers, typed against the addon's function names
+  expose?: boolean | string[],     // what rpc.exposed / POST /rpc may reach: unset/true = the addon's own expose: true, false = none, a list = exactly those (typed; PKU343 on unknown names)
   tags?: string[],                 // Tags applied to all addon functions
   scopes?: string[],               // Required of every function, on top of its own
   secretOverrides?: Record<string, string>,      // Remap secret names (and grant them)
@@ -297,7 +298,7 @@ packed, or it never arrives:
 **An unresolvable artifact stops `db generate`.** Because the file is
 unconditional, absence means the package cannot say whether it ships tables —
 either it was built with an older CLI, or `exports`/`files` do not carry it. The
-error names both causes. An addon with genuinely no tables is *not* this case:
+error names both causes. An addon with genuinely no tables is _not_ this case:
 it publishes `{}` and is waved through.
 
 Two more loud ones: a malformed artifact (missing the SQL for a dialect it

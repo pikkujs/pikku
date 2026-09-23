@@ -675,6 +675,13 @@ export interface InspectorState {
          */
         mcpEndpoint?: boolean | string
         /**
+         * Which functions `rpc.exposed` may call under `<name>:<function>`.
+         * Unset or `true` keeps what the addon declared `expose: true`; `false`
+         * exposes none; a list names exactly the functions to expose, whatever
+         * the addon declared.
+         */
+        expose?: boolean | string[]
+        /**
          * The addon's own gates. `runPikkuFunc` applies these to every function
          * in the package, on every wiring path — not just `namespace:function`.
          * Absent when the declared value was not a statically-knowable literal,

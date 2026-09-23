@@ -431,7 +431,15 @@ export function analyzeDeployment(
   // ── Step 1b: Addon units ───────────────────────────────────────────
   const addonUnitByRpcName = new Map<string, string>()
   for (const [namespace, addonMeta] of entries(state.addonFunctions ?? {})) {
-    const exposed = entries(addonMeta).filter(([, meta]) => meta.expose)
+    // The wiring's `expose` decides when it is `false` or a list; otherwise
+    // the addon's own `expose: true` does — the same rule `rpc.exposed`
+    // applies at runtime, so the unit carries exactly what can be called.
+    const wiredExpose = state.rpc?.wireAddonDeclarations?.get(namespace)?.expose
+    const exposed = entries(addonMeta).filter(([funcName, meta]) =>
+      Array.isArray(wiredExpose)
+        ? wiredExpose.includes(funcName)
+        : wiredExpose !== false && meta.expose
+    )
     if (exposed.length === 0) {
       continue
     }

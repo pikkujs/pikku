@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { ErrorCode } from '../error-codes.js'
 import type {
   InspectorState,
   InspectorLogger,
@@ -107,6 +108,7 @@ export function addWireAddon(
   let pkg: string | undefined
   let rpcEndpoint: string | undefined
   let mcp: boolean | string[] | undefined
+  let expose: boolean | string[] | undefined
   let mcpEndpoint: boolean | string | undefined
   let auth: boolean | undefined
   let tags: string[] | undefined
@@ -135,6 +137,20 @@ export function addWireAddon(
         prop.initializer.kind === ts.SyntaxKind.FalseKeyword
           ? prop.initializer.kind === ts.SyntaxKind.TrueKeyword
           : parseStringArray(prop.initializer)
+    } else if (key === 'expose') {
+      expose =
+        prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+        prop.initializer.kind === ts.SyntaxKind.FalseKeyword
+          ? prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+          : parseStringArray(prop.initializer)
+      // Read as unset, the deploy analyzer would build this addon's unit from
+      // the addon's own declarations while the runtime follows the real list.
+      if (expose === undefined) {
+        logger.critical(
+          ErrorCode.ADDON_EXPOSE_NOT_STATIC,
+          `wireAddon's expose must be true, false or an array of string literals, got: ${prop.initializer.getText()}`
+        )
+      }
     } else if (key === 'mcpEndpoint') {
       if (ts.isStringLiteral(prop.initializer)) {
         mcpEndpoint = prop.initializer.text
@@ -195,6 +211,7 @@ export function addWireAddon(
     rpcEndpoint,
     mcp,
     mcpEndpoint,
+    expose,
     auth,
     tags,
     scopes,
