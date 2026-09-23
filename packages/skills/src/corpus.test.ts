@@ -6,9 +6,12 @@ import { describe, test } from 'node:test'
 import { parse } from 'yaml'
 import {
   SKILL_FILES,
+  SKILL_SNIPPETS,
+  expandSkillMarkdown,
   listSkillFiles,
   listSkillNames,
   skillsDir,
+  snippetRegionsIn,
 } from './index.js'
 
 assert.ok(skillsDir, 'expected a skills/ directory beside this package')
@@ -36,6 +39,12 @@ const FABRIC_SKILLS = [
   'pikku-fabric',
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
+
+/**
+ * TypeScript fences in the corpus that are not `snippet:`-backed. This number
+ * is a ratchet, not a target: every conversion lowers it, no PR raises it.
+ */
+const UNBACKED_TS_FENCES = 73
 
 type Frontmatter = {
   name?: unknown
@@ -255,7 +264,10 @@ describe('bundled skills corpus', () => {
       const refs = join(skill.dir, 'references')
       if (existsSync(refs))
         for (const file of await readdir(refs))
-          docs.push([`references/${file}`, await readFile(join(refs, file), 'utf-8')])
+          docs.push([
+            `references/${file}`,
+            await readFile(join(refs, file), 'utf-8'),
+          ])
 
       for (const [where, doc] of docs) {
         let inFence = false
@@ -268,9 +280,14 @@ describe('bundled skills corpus', () => {
           // prose. A lowercase noun phrase ("the fabric plugin", "a fabric
           // dispatcher") is describing Fabric, not telling anyone to run it.
           const commands = inFence
-            ? [...line.matchAll(/(?<!pikku )(?<![\w/@-])fabric ([a-z][a-z-]+)/g)]
+            ? [
+                ...line.matchAll(
+                  /(?<!pikku )(?<![\w/@-])fabric ([a-z][a-z-]+)/g
+                ),
+              ]
             : [...line.matchAll(/`(?<!pikku )fabric ([a-z][a-z-]+)[^`]*`/g)]
-          for (const m of commands) offenders.push(`${skill.name}/${where}:${i + 1}: ${m[0]}`)
+          for (const m of commands)
+            offenders.push(`${skill.name}/${where}:${i + 1}: ${m[0]}`)
         }
       }
     }
@@ -297,6 +314,60 @@ describe('bundled skills corpus', () => {
       }
     }
   })
+
+  test('every snippet a skill shows is an embedded region', async () => {
+    const missing: string[] = []
+    for (const name of await listSkillNames()) {
+      for (const file of await listSkillFiles(name)) {
+        if (!file.endsWith('.md')) continue
+        const raw = await readFile(join(root, ...file.split('/')), 'utf-8')
+        for (const region of snippetRegionsIn(raw)) {
+          if (!(region in SKILL_SNIPPETS)) missing.push(`${file}: ${region}`)
+        }
+      }
+    }
+    assert.deepEqual(
+      missing,
+      [],
+      `snippet fences name regions no compiled example defines — run \`bun run embed\` and add the region: ${missing.join(', ')}`
+    )
+  })
+
+  test('TypeScript fences that are not snippet-backed do not grow', async () => {
+    // A fence marked `snippet:<region>` is generated from compiled code and
+    // cannot drift. A fence without one is a hand-copy waiting to rot, so the
+    // count is pinned and only ever lowered — converting a block lowers it.
+    const unbacked = async (): Promise<number> => {
+      let count = 0
+      for (const name of await listSkillNames()) {
+        for (const file of await listSkillFiles(name)) {
+          if (!file.endsWith('.md')) continue
+          const lines = (
+            await readFile(join(root, ...file.split('/')), 'utf-8')
+          ).split('\n')
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i]!
+            if (/^\s*```[^\s`]*\s+snippet:/.test(line)) {
+              while (++i < lines.length && !/^\s*```\s*$/.test(lines[i]!));
+              continue
+            }
+            const opening = line.match(/^\s*```(\S*)\s*$/)
+            if (!opening) continue
+            const lang = opening[1] ?? ''
+            while (++i < lines.length && !/^\s*```\s*$/.test(lines[i]!));
+            if (/^tsx?$/.test(lang)) count++
+          }
+        }
+      }
+      return count
+    }
+
+    const count = await unbacked()
+    assert.ok(
+      count <= UNBACKED_TS_FENCES,
+      `unbacked TypeScript fences grew from ${UNBACKED_TS_FENCES} to ${count} — back the new block with a snippet: region, or convert an existing one and lower the pin`
+    )
+  })
 })
 
 describe('the embedded manifest', () => {
@@ -322,13 +393,16 @@ describe('the embedded manifest', () => {
     assert.deepEqual(
       Object.keys(SKILL_FILES).sort(),
       await filesOnDisk(),
-      'skills.gen.ts is out of date — run `yarn embed` in @pikku/skills'
+      'skills.gen.ts is out of date — run `bun run embed` in @pikku/skills'
     )
     for (const [path, contents] of Object.entries(SKILL_FILES)) {
+      const raw = await readFile(join(root, ...path.split('/')), 'utf-8')
       assert.equal(
         contents,
-        await readFile(join(root, ...path.split('/')), 'utf-8'),
-        `${path} differs from the embedded copy — run \`yarn embed\``
+        path.endsWith('.md')
+          ? expandSkillMarkdown(raw, SKILL_SNIPPETS, path)
+          : raw,
+        `${path} differs from the embedded copy — run \`bun run embed\``
       )
     }
   })

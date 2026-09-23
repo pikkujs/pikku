@@ -19,14 +19,14 @@ missing dependency).
 
 ## Agent Operating Procedure
 
-1. Discover before editing. Prefer `pikku-meta`/`pikku meta ... --json` when
+1. Discover before editing. Prefer `pikku meta ... --json` when
    available; inspect only the focused output you need.
 2. Identify the source file that owns the behavior. Do not start from generated
    output, `.pikku`, `node_modules`, or vendored packages.
 3. Make the smallest source change that satisfies the task. Keep generated files
    generated.
-4. Validate with the narrowest relevant command first, then `pikku all` /
-   `pikku-verify` when functions, wirings, or schemas changed.
+4. Validate with the narrowest relevant command first, then `pikku all` when
+   functions, wirings, or schemas changed.
 5. If validation fails, fix the source cause and rerun. Never edit generated
    files to hide an error.
 

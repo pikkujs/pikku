@@ -25,7 +25,7 @@ export const opensTheCart = pikkuScenarioStep<
 
 - Install `@pikku/playwright` and `@playwright/test`, and import `@pikku/playwright` once (`import type {} from '@pikku/playwright'`) so `browser.page` is a typed Playwright `Page`. Without it you still get the structural `goto`/`screenshot` handle.
 - The environment needs an `appUrl` beside its `apiUrl`. `pikku scenario run` fails fast before running anything if a browser scenario has no `appUrl` or the driver is not installed.
-- `pikku scenario run <env> --no-browser` **skips** scenarios containing browser steps and reports them as skipped — it does not fail them. That is how a machine with no browser stays green.
+- A browser step only launches a browser under `--run browser`; under the default surface it takes its default path instead. A scenario with no binding for the run's surface and no default is reported as **could not run** and fails the run — hold it back with `--exclude-tags`, not with the expectation of a silent skip.
 - Playwright auto-waits; do not wrap `page.click` in `expectEventually`.
 
 ## Locate by message key, never by rendered copy

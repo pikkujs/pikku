@@ -1,20 +1,18 @@
 # Personas and actors
 
-A **persona** is a kind of person; an **actor** is one body that signs in as one. Above, `support` is declared only as a persona — its actor is materialised (`support@actors.local`), so `actors.support` works without an `actors` entry. Write an actor by hand only when you need something the materialised one wouldn't have:
+A **persona** is a person your product is for; an **actor** is one body that signs in as them. Every entry materialises exactly one actor, so `actors.<id>` exists for each declared persona and there is no second way to declare a login.
 
-- a **real email or personality** for it, like `shopper`;
-- a **second body of the same persona**, like `shopperB` — which is what tenant isolation, peer sharing, and "another member's row" scenarios are made of. Two actors of one persona must be two different users, so **two actors sharing an email is an error**.
-
-A persona holds only what is true of that kind of person for the app's whole lifetime — `description`, `primary` (whose experience the product is), `kind`, `proficiency`. What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
-
-`kind: "system"` is the app acting on its own — a schedule, a cleanup, a send. It gets **no actor**: there is nobody to sign in. Give it one by hand only if it genuinely has a service account.
+- Two people of the same kind are two entries, not one persona with two logins — "you see yours, not theirs" is only testable with two customers.
+- Never write an email address: each is derived from the persona id and `scenarios.emailDomain`, and a hand-written one signs in as somebody who was never created.
+- `roles` is typechecked against `defineSystemRole`; an undeclared role is a build error.
+- A person who is only ever acted *upon* — the account an admin bans — sets `runnable: false`: declared and seeded, never signed in, because a run as them would race the scenario that acts on them.
+- A persona holds only what is true of that kind of person for the app's whole lifetime (`name`, `jobTitle`, `description`, `personality`, `roles`, `goals`, `disposition`). What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
 
 ## Declaring personas in TypeScript
 
-`definePersonas({ … })` is the code form of the block above, and there may be
-**one call in the whole codebase** — one place to read the set from, one place
-to add to it. A second anywhere, including in the same file, is a critical.
-Generated files are exempt and never claim the slot.
+There may be **one `definePersonas` call in the whole codebase** — one place to
+read the set from, one place to add to it. A second anywhere, including in the
+same file, is a critical. Generated files are exempt and never claim the slot.
 
 > [!WARNING]
 > The declaration is **read from source, never evaluated** — the CLI writes it
@@ -47,7 +45,7 @@ stored, and the console shows them, but they do not reach the conversing
 persona's instructions. Anything that must shape how someone talks belongs in
 `personality` or in the task.
 
-An actor with no `persona` is its own persona, so a project that never declares any keeps working unchanged.
+A project that never declares a persona keeps working: a scenario that names no actor needs none.
 
 - `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`.
 - **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.
