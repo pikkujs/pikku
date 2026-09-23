@@ -1,3 +1,42 @@
+## 0.12.162
+
+### Patch Changes
+
+- 17d8746: An addon generated with `pikku new addon --openapi` never built. Every function file declared its zod schemas next to an import of `#pikku/function`, and `pikku all` loads the file that declares a schema to convert it. At runtime `#pikku` resolves through the addon's `imports` into `dist/`, which the first build has not written yet, so every schema failed with `Could not convert Zod schema … Cannot find module …/dist/.pikku/function/index.js` and the build stopped there. Each operation's schemas now go in a sibling `<operation>.schemas.ts` that imports only zod, and the function file imports them from it.
+
+  The generated imports also named the wrong tree. An addon's generated code lives under `.pikku/addon/`, so `#pikku/function` and `#pikku/variables/…` pointed at leaves that do not exist, and `tsc` failed even once codegen had run. They are now `#pikku/addon/function` and `#pikku/addon/variables/…`, as the hand-written addon scaffold already had them.
+
+  `pikku validate` now reports an installed Pikku package that resolves a different copy of a type-identity package (`zod`, `kysely`, `@pikku/core`, `better-auth`) than the project as an error, `skewed-type-identity-…`, and the codegen preflight warns about it as `PKU719`. Under bun's isolated layout `@pikku/cli` can carry its own `zod` beside it in the store. Codegen then reads the app's schemas with a different zod than wrote them, and correct schemas fail to convert. The existing check only looked at dependencies linked from outside the project, so it never saw this case.
+
+  The `pikku-build` skill now recognises an OpenAPI spec or an n8n export handed over with the request, says so, converts it first, then carries on building the app. `pikku-addon` gains an OpenAPI reference and corrects its addon import paths and build steps. `pikku-n8n-import` joins the `core` install group.
+
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [a95179a]
+- Updated dependencies [145b32b]
+- Updated dependencies [46f99b2]
+- Updated dependencies [17d8746]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [33b1d5a]
+- Updated dependencies [0602266]
+- Updated dependencies [33b1d5a]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+  - @pikku/kysely@0.13.28
+  - @pikku/inspector@0.12.87
+  - @pikku/skills@0.12.37
+  - @pikku/openapi-parser@0.12.22
+  - @pikku/playwright@0.12.85
+
 ## 0.12.161
 
 ### Patch Changes

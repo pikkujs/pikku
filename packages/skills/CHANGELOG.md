@@ -1,5 +1,54 @@
 # @pikku/skills
 
+## 0.12.37
+
+### Patch Changes
+
+- 46f99b2: The pikku-guide skill's capture-step example is now compiled from `examples/online-shop`, and uses named schemas. The inline `z.object` it showed before is rejected by pikku (PKU489).
+- 17d8746: An addon generated with `pikku new addon --openapi` never built. Every function file declared its zod schemas next to an import of `#pikku/function`, and `pikku all` loads the file that declares a schema to convert it. At runtime `#pikku` resolves through the addon's `imports` into `dist/`, which the first build has not written yet, so every schema failed with `Could not convert Zod schema … Cannot find module …/dist/.pikku/function/index.js` and the build stopped there. Each operation's schemas now go in a sibling `<operation>.schemas.ts` that imports only zod, and the function file imports them from it.
+
+  The generated imports also named the wrong tree. An addon's generated code lives under `.pikku/addon/`, so `#pikku/function` and `#pikku/variables/…` pointed at leaves that do not exist, and `tsc` failed even once codegen had run. They are now `#pikku/addon/function` and `#pikku/addon/variables/…`, as the hand-written addon scaffold already had them.
+
+  `pikku validate` now reports an installed Pikku package that resolves a different copy of a type-identity package (`zod`, `kysely`, `@pikku/core`, `better-auth`) than the project as an error, `skewed-type-identity-…`, and the codegen preflight warns about it as `PKU719`. Under bun's isolated layout `@pikku/cli` can carry its own `zod` beside it in the store. Codegen then reads the app's schemas with a different zod than wrote them, and correct schemas fail to convert. The existing check only looked at dependencies linked from outside the project, so it never saw this case.
+
+  The `pikku-build` skill now recognises an OpenAPI spec or an n8n export handed over with the request, says so, converts it first, then carries on building the app. `pikku-addon` gains an OpenAPI reference and corrects its addon import paths and build steps. `pikku-n8n-import` joins the `core` install group.
+
+- 33b1d5a: New `pikku-report` skill for `pikku fabric report`.
+
+  A finding is about pikku rather than about the app, and the corpus had no skill
+  for filing one: the material lived inside `pikku-build/references/feature.md`
+  and was reachable only in the "feature added to an existing app" mode. The new
+  skill owns the workaround-first ladder, the product-vs-harness kinds, the
+  strict validation rules (a resolved finding needs a workaround or a proposal; an
+  unresolved one needs `--tried`), the JSON-on-stdin form, and the local spool
+  (`pikku fabric findings list|flush|clear`). `pikku-build`'s reference now points
+  at it instead of carrying a copy. `installGroups: [core]`.
+
+- 0602266: New `pikku-guide` skill: how `pikku scenario guide` compiles a user guide from the scenario suite — that the run supplies only the figures and the page supplies every word, what a page must carry to teach the task, page markers, the capture step, `.guide.lock` staleness, `document: false`, and the traps that make a block come out empty or a run refused.
+
+  `pikku-build` now sets both local secrets (`BETTER_AUTH_SECRET`, `SCENARIO_ACTOR_SECRET`) in `.env` before the first run, and says why the stack must start through `bun run dev`: a frontend launched on its own has no persona list, so the "Sign in as …" switcher silently disappears, and its dev proxy defaults to `:3000`, so beside another project's server sign-ins reach the wrong API. It also covers `pikkuSessionlessFunc` for public reads, domain tables that collide with Better Auth's `session`, and mounting the switcher on a public homepage. `pikku-scenario` lists the three silent causes of a missing switcher.
+
+- 33b1d5a: Truth pass over the corpus and snippet-backed code fences.
+
+  Phantom names removed: `pikku-verify` (16 hits across 10 skills — no such
+  command; the real check is `pikku all`), `pikku-workflow-view`,
+  `pikku-queue`/`pikku-schedule` in routing prose, and the `pikku-meta`/`pikku-db`
+  tool spellings in `pikku-fabric`. Stale facts corrected in `pikku-scenario`
+  (personas live in `definePersonas`, not `pikku.config.json`; `--no-browser` does
+  not exist), `pikku-workflow` (generated HTTP routes, not `workflowStart`),
+  `pikku-realtime` (`pikku enable events` is required), and `pikku-fabric`
+  (`pikkufabric.config.json`, `-y` does not approve destructive migrations).
+
+  Code fences can now be generated from compiled code: a fence marked
+  ` ```ts snippet:<region> ` is expanded at embed time from the
+  `// @snippet start <region>` regions in `examples/online-shop`, the same source
+  the website's code blocks use. `SKILL_SNIPPETS` ships with the package so a
+  filesystem read (`pikku skills install` from a checkout) expands the same way.
+  The corpus suite fails on a fence naming a region that does not exist, a CLI
+  suite fails when the embedded snippets drift from the example, and a ratchet
+  pins the number of TypeScript fences still unbacked (`73`). `pikku-scenario`'s
+  persona declaration is the first converted block.
+
 ## 0.12.36
 
 ### Patch Changes
