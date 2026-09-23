@@ -28,7 +28,9 @@ const EXAMPLE =
  * acting with nobody there, so it is off until somebody turns it on and every
  * field is shown against what the persona declares.
  */
-export const VirtualUsersWorkspace: React.FC = () => {
+export const VirtualUsersWorkspace: React.FC<{ production?: boolean }> = ({
+  production,
+}) => {
   const { users, selected, setSelectedId, loading } = useVirtualUsers()
   const dismiss = usePageOptionsDismiss()
 
@@ -59,7 +61,7 @@ export const VirtualUsersWorkspace: React.FC = () => {
       {loading ? (
         <ConsoleLoading />
       ) : selected ? (
-        <VirtualUserDocument user={selected} />
+        <VirtualUserDocument user={selected} production={production} />
       ) : (
         <Center p="xl">
           <Stack gap="xs" align="center" style={{ maxWidth: '60ch' }}>

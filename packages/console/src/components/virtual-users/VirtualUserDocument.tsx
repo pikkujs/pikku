@@ -183,6 +183,8 @@ type VirtualUserDocumentProps = {
   user: VirtualUserDoc
   /** The environment name used in the example command. */
   environment?: string
+  /** Whether the connected server is production, where only accountable personas may run. */
+  production?: boolean
 }
 
 /**
@@ -195,6 +197,7 @@ type VirtualUserDocumentProps = {
 export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
   user,
   environment = 'staging',
+  production,
 }) => {
   const { profile, reach } = user
   const moveTotal =
@@ -636,7 +639,11 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
           declaredGoals={user.goals}
         />
 
-        <VirtualUserRuns persona={user.id} />
+        <VirtualUserRuns
+          persona={user.id}
+          disposition={user.disposition}
+          production={production}
+        />
 
         <Section title={m.virtual_users_run()} testId="virtual-user-run">
           <Text size="sm" ff="monospace" className={styles.command}>
