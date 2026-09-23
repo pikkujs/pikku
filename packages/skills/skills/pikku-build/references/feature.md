@@ -1,5 +1,19 @@
 # Pikku Create-a-Feature
 
+The stages, in order:
+
+- [Agent Operating Procedure](#agent-operating-procedure)
+- [Stage 1 — Discover](#stage-1--discover)
+- [Stage 2 — State intent in plain English (BEFORE writing code)](#stage-2--state-intent-in-plain-english-before-writing-code)
+- [Stage 3 — Branch off](#stage-3--branch-off)
+- [Stage 4 — Implement](#stage-4--implement)
+- [Stage 5 — Verify](#stage-5--verify)
+- [Stage 6 — Commit](#stage-6--commit)
+- [Stage 7 — Hand off](#stage-7--hand-off)
+- [Report what fought you](#report-what-fought-you)
+- [Hard constraints](#hard-constraints)
+- [Output discipline](#output-discipline)
+
 ## Agent Operating Procedure
 
 Use this skill as an execution checklist, not reference material.

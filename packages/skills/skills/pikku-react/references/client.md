@@ -1,6 +1,18 @@
 # Pikku React
 
 
+What is here:
+
+- [What ships](#what-ships)
+- [Resolving the server URL](#resolving-the-server-url)
+- [Setup at the app root](#setup-at-the-app-root)
+- [Calling an RPC directly (no React Query)](#calling-an-rpc-directly-no-react-query)
+- [Calling fetch directly](#calling-fetch-directly)
+- [Realtime subscriptions](#realtime-subscriptions)
+- [When to reach for what](#when-to-reach-for-what)
+- [Authentication](#authentication)
+- [What NOT to do](#what-not-to-do)
+
 ## What ships
 
 ```tsx
