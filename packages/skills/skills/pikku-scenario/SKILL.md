@@ -186,6 +186,12 @@ Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs 
 
 ### Grouping scenarios (`pikkuFeature`)
 
+A feature is also cited by a page of the user guide: `pikku scenario guide`
+fills each cited block with the feature's recordings and screenshots, and
+nothing else (see **pikku-guide**). A scenario's `title` captions its recording
+and a screenshot's `name` captions the still, so write both as copy a user would
+read. Mark plumbing features `document: false`.
+
 `pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip:
 
 ```typescript
