@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3060 observable things**: 994 exported names, plus
-2066 members on the classes and interfaces among them, reachable
+**3061 observable things**: 994 exported names, plus
+2067 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
