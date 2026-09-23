@@ -68,6 +68,7 @@ const WorkflowPageInner: React.FC<{
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
+                  data-testid="page-search"
                   placeholder={m.workflows_search_placeholder()}
                   leftSection={<Search size={14} />}
                   value={searchQuery}

@@ -1,6 +1,7 @@
 export const serializeReactQueryHooks = (
   rpcMapPath: string,
-  workflowMapPath?: string
+  workflowMapPath?: string,
+  hasAuth?: boolean
 ) => {
   const workflowImport = workflowMapPath
     ? `\nimport type { FlattenedWorkflowMap } from '${workflowMapPath}'`
@@ -56,8 +57,61 @@ export const useWorkflowStatus = (
 `
     : ''
 
+  /**
+   * The session — and, for free, the thing that heals the session cookie.
+   *
+   * Under `betterAuthStatelessSession` the signed `session_data` cookie is the
+   * only thing authenticating a request, and nothing rewrites it once someone
+   * is signed in. When it ages out, better-auth's cookie-cache branch bails on
+   * the stale payload and falls through to the database, reading the session
+   * from the still-valid `session_token` and minting a fresh cookie on the way
+   * out. So an ordinary cached read heals an expired cookie by itself.
+   *
+   * Which is why this does NOT pass `disableCookieCache`. Forcing it would turn
+   * every refetch into a database read — the exact cost the cookie cache exists
+   * to avoid — to re-mint a cookie that has most of its life left. The read is
+   * worth paying once, when the cookie has actually expired, and that is when
+   * better-auth does it anyway.
+   *
+   * better-auth's own sliding renewal (`session.cookieCache.refreshCache`) is
+   * not the answer either: it is force-disabled whenever a database is
+   * configured, and where it does apply it re-signs the cached blob without
+   * reading the database, so a banned user's cookie would renew forever.
+   */
+  const sessionImport = hasAuth ? ', usePikkuFetch' : ''
+
+  const sessionHook = hasAuth
+    ? `
+/* Short enough that an expired cookie is healed long before anyone notices,
+   and cheap: while the cookie is good this is a cache hit with no database
+   behind it. */
+const SESSION_REFETCH_MS = 10 * 60 * 1000
+/* A tab flicked away from and back to should not refetch on every glance. */
+const SESSION_STALE_MS = 2 * 60 * 1000
+
+export const useSession = <Session = unknown>(
+  options?: Omit<UseQueryOptions<Session | null, Error>, 'queryKey' | 'queryFn'>
+) => {
+  const fetch = usePikkuFetch()
+  return useQuery<Session | null, Error>({
+    queryKey: ['pikkuSession'],
+    queryFn: async () => {
+      const response = await fetch.fetch('/auth/get-session', 'GET', undefined)
+      if (!response.ok) return null
+      // Signed out is a null body, not an error status.
+      return ((await response.json().catch(() => null)) ?? null) as Session | null
+    },
+    refetchInterval: SESSION_REFETCH_MS,
+    refetchOnWindowFocus: true,
+    staleTime: SESSION_STALE_MS,
+    ...options,
+  })
+}
+`
+    : ''
+
   return `import { useQuery, useInfiniteQuery, useMutation, type UseQueryOptions, type UseInfiniteQueryOptions, type UseMutationOptions, type InfiniteData } from '@tanstack/react-query'
-import { usePikkuRPC } from '@pikku/react'
+import { usePikkuRPC${sessionImport} } from '@pikku/react'
 import type { FlattenedRPCMap } from '${rpcMapPath}'${workflowImport}
 
 type RPCInvoke = <Name extends keyof FlattenedRPCMap>(name: Name, data: FlattenedRPCMap[Name]['input']) => Promise<FlattenedRPCMap[Name]['output']>
@@ -109,5 +163,5 @@ export const usePikkuInfiniteQuery = <Name extends PaginatedKeys>(
     ...options,
   })
 }
-${workflowHooks}`
+${sessionHook}${workflowHooks}`
 }

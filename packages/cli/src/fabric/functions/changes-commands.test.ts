@@ -1,10 +1,11 @@
-import { describe, test } from 'node:test'
+import { after, describe, test } from 'node:test'
 import assert from 'node:assert'
 import { mock } from 'bun:test'
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as changesLib from '../lib/changes.js'
+import * as gitLib from '../lib/git.js'
 
 /**
  * The commands themselves, not the helpers they call: what reaches
@@ -38,11 +39,37 @@ mock.module('../lib/changes.js', () => ({
   }),
 }))
 
+/**
+ * The real probes, snapshotted before the mock takes their place.
+ *
+ * `mock.module` replaces the module for the whole process and is never undone,
+ * so this mock outlives the file that installs it: every test file that runs
+ * after this one gets it too. That makes both halves below load-bearing. The
+ * spread keeps the exports this file does not fake — `isTracked` among them —
+ * pointing at the real implementations instead of becoming `undefined`, and
+ * `gitOverride` hands the real probes back once these tests are done. Without
+ * the second part `isGitRepo` keeps answering `git.repo`, left `true` by the
+ * last test here, and a later suite asking about a bare temporary directory is
+ * told it is a git repository.
+ */
+const realGit = { ...gitLib }
+
+/** Whether the faked answers above are still in force. */
+let gitOverride = true
+
 mock.module('../lib/git.js', () => ({
-  isGitRepo: async () => git.repo,
-  currentBranch: async () => git.branch,
-  headSha: async () => git.sha,
+  ...realGit,
+  isGitRepo: async (cwd?: string) =>
+    gitOverride ? git.repo : realGit.isGitRepo(cwd),
+  currentBranch: async (cwd?: string) =>
+    gitOverride ? git.branch : realGit.currentBranch(cwd),
+  headSha: async (cwd?: string) =>
+    gitOverride ? git.sha : realGit.headSha(cwd),
 }))
+
+after(() => {
+  gitOverride = false
+})
 
 const { FabricChangesClaim } = await import('./changes-claim.function.js')
 const { FabricChangesAsk, FabricChangesAskInput } =

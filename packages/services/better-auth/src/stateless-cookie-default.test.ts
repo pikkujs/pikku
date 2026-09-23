@@ -82,11 +82,121 @@ describe('applyStatelessCookieCacheDefault', () => {
     await applyStatelessCookieCacheDefault(
       instance as any,
       {
-        error: (message: string) => errors.push(message),
+        logger: { error: (message: string) => errors.push(message) },
       } as any
     )
     assert.equal(errors.length, 1)
     assert.match(errors[0]!, /session\.cookieCache\.maxAge/)
+  })
+
+  test("an operator's SESSION_COOKIE_CACHE_MAX_AGE wins over the default", async () => {
+    markStatelessSessionInUse()
+    const instance = instanceWith({ enabled: true })
+    await applyStatelessCookieCacheDefault(
+      instance as any,
+      {
+        variables: { get: async () => '3600' },
+      } as any
+    )
+    assert.equal(await sessionMaxAge(instance), 3600)
+  })
+
+  /* The value arrives as the host set it — a string — because
+     TypedVariablesService only runs the declared schema to resolve a default. */
+  test('the variable is read as a string and coerced here', async () => {
+    markStatelessSessionInUse()
+    const instance = instanceWith({ enabled: true })
+    await applyStatelessCookieCacheDefault(
+      instance as any,
+      {
+        variables: { get: async () => '900' },
+      } as any
+    )
+    assert.equal(await sessionMaxAge(instance), 900)
+    assert.equal(typeof (await sessionMaxAge(instance)), 'number')
+  })
+
+  test('an unset variable leaves the one-day default', async () => {
+    markStatelessSessionInUse()
+    const instance = instanceWith({ enabled: true })
+    await applyStatelessCookieCacheDefault(
+      instance as any,
+      {
+        variables: { get: async () => undefined },
+      } as any
+    )
+    assert.equal(await sessionMaxAge(instance), STATELESS_COOKIE_CACHE_MAX_AGE)
+  })
+
+  /* An app generated before the CLI emitted the declaration. Ordinary, not an
+     error: the variable simply is not there. */
+  test('a variables service that throws falls back rather than crashing boot', async () => {
+    markStatelessSessionInUse()
+    const instance = instanceWith({ enabled: true })
+    await applyStatelessCookieCacheDefault(
+      instance as any,
+      {
+        variables: {
+          get: async () => {
+            throw new Error('not declared')
+          },
+        },
+      } as any
+    )
+    assert.equal(await sessionMaxAge(instance), STATELESS_COOKIE_CACHE_MAX_AGE)
+  })
+
+  test('a nonsense value warns and falls back rather than expiring the cookie instantly', async () => {
+    markStatelessSessionInUse()
+    const warnings: string[] = []
+    const instance = instanceWith({ enabled: true })
+    await applyStatelessCookieCacheDefault(
+      instance as any,
+      {
+        logger: {
+          warn: (message: string) => warnings.push(message),
+          info: () => {},
+        },
+        variables: { get: async () => 'soon' },
+      } as any
+    )
+    assert.equal(await sessionMaxAge(instance), STATELESS_COOKIE_CACHE_MAX_AGE)
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0]!, /SESSION_COOKIE_CACHE_MAX_AGE/)
+  })
+
+  test('zero and negative are refused, not honoured', async () => {
+    for (const value of ['0', '-1']) {
+      resetStatelessSessionInUse()
+      markStatelessSessionInUse()
+      const instance = instanceWith({ enabled: true })
+      await applyStatelessCookieCacheDefault(
+        instance as any,
+        {
+          logger: { warn: () => {}, info: () => {} },
+          variables: { get: async () => value },
+        } as any
+      )
+      assert.equal(
+        await sessionMaxAge(instance),
+        STATELESS_COOKIE_CACHE_MAX_AGE
+      )
+    }
+  })
+
+  /* Insert, not upsert — and that still holds against the variable. An app that
+     wrote a maxAge in code chose it; a stage binding must not silently override
+     the author. */
+  test('an explicit maxAge in code beats the variable', async () => {
+    markStatelessSessionInUse()
+    const instance = instanceWith({ enabled: true, maxAge: 60 }, 60)
+    await applyStatelessCookieCacheDefault(
+      instance as any,
+      {
+        variables: { get: async () => '3600' },
+      } as any
+    )
+    assert.equal(await sessionMaxAge(instance), 60)
   })
 
   test('reports rather than throws when the context rejects', async () => {
@@ -99,7 +209,7 @@ describe('applyStatelessCookieCacheDefault', () => {
     await applyStatelessCookieCacheDefault(
       instance as any,
       {
-        error: (message: string) => errors.push(message),
+        logger: { error: (message: string) => errors.push(message) },
       } as any
     )
     assert.equal(errors.length, 1)

@@ -39,7 +39,7 @@ export const pikkuBetterAuth = <
    */
   const wrapped: PikkuBetterAuthFactory<I, S> = async (services) => {
     const instance = await factory(services)
-    await applyStatelessCookieCacheDefault(instance, (services as any)?.logger)
+    await applyStatelessCookieCacheDefault(instance, services as any)
     return instance
   }
 

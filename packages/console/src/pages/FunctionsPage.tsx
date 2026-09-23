@@ -52,6 +52,7 @@ export const FunctionsPage: React.FC<{
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
+                  data-testid="page-search"
                   data-help="search"
                   placeholder={m.functions_search_placeholder()}
                   leftSection={<Search size={14} />}

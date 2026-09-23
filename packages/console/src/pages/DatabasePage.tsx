@@ -788,6 +788,7 @@ function DatabasePageInner() {
       view={
         <Group gap="xs" wrap="nowrap">
           <TextInput
+            data-testid="page-search"
             size="xs"
             placeholder={m.database_search_placeholder()}
             leftSection={<Search size={12} />}

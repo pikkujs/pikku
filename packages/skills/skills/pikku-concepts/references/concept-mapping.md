@@ -2,6 +2,22 @@
 
 Authoritative mapping table plus side-by-side code examples showing how common backend patterns translate to Pikku.
 
+- [Quick Reference Table](#quick-reference-table)
+- [Route Handler / Controller → pikkuFunc](#route-handler--controller--pikkufunc)
+- [Route Parameters → Merged into Data](#route-parameters--merged-into-data)
+- [Middleware → pikkuMiddleware](#middleware--pikkumiddleware)
+- [Auth Guard → Built-in Auth Middleware](#auth-guard--built-in-auth-middleware)
+- [Authorization / Role Checks → pikkuPermission](#authorization--role-checks--pikkupermission)
+- [DTO / Request Validation → Standard Schema](#dto--request-validation--standard-schema)
+- [Dependency Injection → Service Factories](#dependency-injection--service-factories)
+- [WebSocket Handlers → wireChannel](#websocket-handlers--wirechannel)
+- [Job Queue Workers → wireQueueWorker](#job-queue-workers--wirequeueworker)
+- [Cron / Scheduled Tasks → wireScheduler](#cron--scheduled-tasks--wirescheduler)
+- [Module / Feature Grouping → Tags + File Organization](#module--feature-grouping--tags--file-organization)
+- [Error Handling → Typed Errors](#error-handling--typed-errors)
+- [Session Management](#session-management)
+- [API Client Generation](#api-client-generation)
+
 ## Quick Reference Table
 
 | Generic Backend Concept                 | Pikku Equivalent                                                | Skill             |
