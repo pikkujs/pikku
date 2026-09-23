@@ -42,6 +42,12 @@ export interface BrowserConfig {
    * cannot be compared against the run before it.
    */
   viewport: { width: number; height: number }
+  /**
+   * How long a recorded window holds still after each browser step (ms), so a
+   * viewer can read the screen a step landed on. Applies only while recording
+   * video; a run without it keeps full speed.
+   */
+  videoStepPauseMs: number
   /** Explicit chromium binary (e.g. the sandbox-image system chromium). */
   chromiumPath?: string
   /**
@@ -87,6 +93,9 @@ export function browserConfigFromEnv(
       width: Number(env.E2E_VIEWPORT_WIDTH ?? 1440),
       height: Number(env.E2E_VIEWPORT_HEIGHT ?? 900),
     },
+    videoStepPauseMs:
+      overrides.videoStepPauseMs ??
+      Number(env.E2E_VIDEO_STEP_PAUSE_MS ?? 2_000),
     chromiumPath:
       overrides.chromiumPath ?? (env.PLAYWRIGHT_CHROMIUM_PATH || undefined),
     cdpUrl: overrides.cdpUrl ?? (env.XBROWSER_CDP_URL || undefined),

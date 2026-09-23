@@ -200,6 +200,19 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     return this.captureContext?.videoStartedAt.get(actorName)
   }
 
+  /**
+   * Hold a recorded window on the screen a step landed on. Steps otherwise
+   * follow each other within milliseconds, and the recording is too fast to
+   * follow. Nothing to wait for when this actor is not being recorded.
+   */
+  async settleStep(actorName: string): Promise<void> {
+    const pause = this.config.videoStepPauseMs
+    if (pause <= 0 || !this.captureContext?.videoStartedAt.has(actorName)) {
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, pause))
+  }
+
   async sessionFor(actorName: string): Promise<ActorSession> {
     const existing = this.sessions.get(actorName)
     if (existing) {

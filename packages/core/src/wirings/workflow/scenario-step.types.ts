@@ -276,6 +276,12 @@ export interface ScenarioBrowserProvider {
    */
   videoStartedAt?(actorName: string): number | undefined
   /**
+   * Called after each browser step an actor completes, before the next one
+   * starts. A driver that records video holds the window here so a viewer can
+   * read each screen; one that records nothing returns at once.
+   */
+  settleStep?(actorName: string): Promise<void>
+  /**
    * Snapshot every open window for a failed scenario. `label` identifies the
    * scenario in artifact filenames. Never throws: a failure to capture must
    * not replace the failure being captured.

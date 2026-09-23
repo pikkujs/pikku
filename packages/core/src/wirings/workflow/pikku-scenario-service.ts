@@ -1012,7 +1012,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               )
             }
           }
-          return await runPikkuFunc(
+          const result = await runPikkuFunc(
             'workflow',
             workflowName,
             resolvedStepFunc,
@@ -1024,6 +1024,10 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               packageName: packageName ?? undefined,
             }
           )
+          if (surface === 'browser') {
+            await this.scenarioBrowserProvider!.settleStep?.(actor!.name)
+          }
+          return result
         }
 
         if (resolution.kind === 'action') {

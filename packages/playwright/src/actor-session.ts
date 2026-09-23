@@ -103,6 +103,17 @@ export class ActorSession implements PikkuBrowserWire {
   ) {}
 
   async open(browser: Browser, recordVideoDir?: string) {
+    // `size` pins the recording to the viewport; Playwright otherwise scales it
+    // to fit 800x800. `showActions` (Playwright 1.6x; older versions ignore it)
+    // draws a pointer that travels to each target and marks the click, which a
+    // headless window has no cursor for.
+    const recordVideo = recordVideoDir
+      ? {
+          dir: recordVideoDir,
+          size: this.config.viewport,
+          showActions: { cursor: 'pointer' as const },
+        }
+      : undefined
     this.context = await browser.newContext({
       ignoreHTTPSErrors: this.config.ignoreHTTPSErrors,
       locale: this.config.locale,
@@ -110,7 +121,7 @@ export class ActorSession implements PikkuBrowserWire {
       // Playwright records per context and only finalises the file on
       // context.close(), which is why `reset()` between scenarios is what makes
       // one video per scenario rather than one enormous file per run.
-      ...(recordVideoDir ? { recordVideo: { dir: recordVideoDir } } : {}),
+      ...(recordVideo ? { recordVideo } : {}),
     })
     await this.context.addInitScript((apiUrl) => {
       ;(window as typeof window & { __E2E_API_URL?: string }).__E2E_API_URL =

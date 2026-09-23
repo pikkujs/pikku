@@ -939,10 +939,11 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
   const providerWith = (
     video: 'off' | 'failed' | 'all',
     dir: string,
-    browser: any
+    browser: any,
+    overrides: Partial<BrowserConfig> = {}
   ) =>
     new PlaywrightScenarioBrowserProvider({
-      config: config(),
+      config: config(overrides),
       secret: ROOT,
       actors: {
         admin: { email: 'admin@test' },
@@ -1014,6 +1015,36 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
       undefined,
       'the next scenario records a new file, so the old start is not its start'
     )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a recorded window holds still after each step', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser, { videoStepPauseMs: 50 })
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    const before = Date.now()
+    await provider.settleStep('admin')
+
+    assert.ok(Date.now() - before >= 45, 'the step is held for the pause')
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a run recording nothing never waits between steps', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('off', dir, browser, {
+      videoStepPauseMs: 5_000,
+    })
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    const before = Date.now()
+    await provider.settleStep('admin')
+
+    assert.ok(Date.now() - before < 1_000, 'no footage, so no reason to wait')
     await rm(dir, { recursive: true, force: true })
   })
 })
