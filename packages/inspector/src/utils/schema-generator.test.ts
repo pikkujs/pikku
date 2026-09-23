@@ -112,10 +112,12 @@ describe('generateAllSchemas', () => {
 
     if (UNDER_COVERAGE) return
 
-    // A retained program (with its SourceFiles and TypeChecker) measures tens of
-    // MB even for this one-file fixture; the schemas themselves are a few KB.
+    // A retained program (with its SourceFiles and TypeChecker) measures ~49MB
+    // for this fixture; the schemas themselves are a few KB. A released one
+    // still measures 7–11MB of one-time generator warm-up, so the bound sits
+    // in the gap rather than on top of that baseline.
     assert.ok(
-      retainedMB < 10,
+      retainedMB < 25,
       `expected the schema program to be released, but ${retainedMB.toFixed(1)}MB is still retained after GC`
     )
   })
