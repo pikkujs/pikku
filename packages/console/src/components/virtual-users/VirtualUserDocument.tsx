@@ -637,6 +637,7 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
           persona={user.id}
           declaredDisposition={user.disposition}
           declaredGoals={user.goals}
+          production={production}
         />
 
         <VirtualUserRuns
