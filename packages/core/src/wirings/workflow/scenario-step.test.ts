@@ -943,61 +943,6 @@ describe('a step driven by a persona is given its actor', () => {
   })
 })
 
-describe('a browser step lets its screen settle', () => {
-  beforeEach(() => resetPikkuState())
-
-  test('the driver settles each actor after their browser step, not before', async () => {
-    const { workflowService: ws, scenarioService } = createScenarioRunner()
-    scenarioService.setRunSurface('browser')
-    const shopper = fakeActor('shopper', async () => ({}))
-    const events: string[] = []
-    scenarioService.setScenarioBrowserProvider({
-      sessionFor: async (actorName: string) => ({ actor: actorName }) as any,
-      settleStep: async (actorName: string) => {
-        events.push(`settle ${actorName}`)
-      },
-      close: async () => {},
-    } as any)
-    registerStep('visitsCheckout', {
-      surfaces: ['browser'],
-      func: async () => {
-        events.push('step')
-        return null
-      },
-    })
-
-    const runId = await setup(ws)
-    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
-    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
-      actor: shopper,
-    })
-
-    assert.deepEqual(events, ['step', 'settle shopper'])
-  })
-
-  test('a step that never touched a browser is not held', async () => {
-    const { workflowService: ws, scenarioService } = createScenarioRunner()
-    let settled = false
-    scenarioService.setScenarioBrowserProvider({
-      sessionFor: async (actorName: string) => ({ actor: actorName }) as any,
-      settleStep: async () => {
-        settled = true
-      },
-      close: async () => {},
-    } as any)
-    registerStep('seedsAnAccount', {
-      surfaces: ['default'],
-      func: async () => null,
-    })
-
-    const runId = await setup(ws)
-    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
-    await wire.given('the platform seeds an account', 'seedsAnAccount')
-
-    assert.equal(settled, false)
-  })
-})
-
 describe('a browser step records where it falls in the video', () => {
   beforeEach(() => resetPikkuState())
 
@@ -1036,6 +981,38 @@ describe('a browser step records where it falls in the video', () => {
     assert.ok(
       step![0]!.offsetMs >= 4_000,
       'four seconds of recording preceded the step'
+    )
+  })
+
+  test('a driver that edits its footage answers the offset itself', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const shopper = fakeActor('shopper', async () => ({}))
+    const marked: string[] = []
+    scenarioService.setScenarioBrowserProvider({
+      ...recordingProvider(Date.now()),
+      markVideoStep: (actorName: string) => {
+        marked.push(actorName)
+        return 7_000
+      },
+    } as any)
+    registerStep('visitsCheckout', {
+      surfaces: ['browser'],
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+      actor: shopper,
+    })
+
+    assert.deepEqual(marked, ['shopper'])
+    assert.deepEqual(
+      scenarioService
+        .takeStepVideoOffsets(runId)
+        .get('shopper visits checkout'),
+      [{ actor: 'shopper', offsetMs: 7_000 }]
     )
   })
 

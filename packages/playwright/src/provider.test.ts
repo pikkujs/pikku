@@ -1018,33 +1018,58 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
     await rm(dir, { recursive: true, force: true })
   })
 
-  test('a recorded window holds still after each step', async () => {
+  test('each step lands one hold later, because the encode holds the one before', async (t) => {
+    if (!(await hasFfmpeg())) {
+      t.skip('ffmpeg is not on PATH')
+      return
+    }
     const { browser } = fakeBrowser()
     const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
-    const provider = providerWith('all', dir, browser, { videoStepPauseMs: 50 })
-
-    provider.beginScenario('Checkout')
-    await provider.sessionFor('admin')
-    const before = Date.now()
-    await provider.settleStep('admin')
-
-    assert.ok(Date.now() - before >= 45, 'the step is held for the pause')
-    await rm(dir, { recursive: true, force: true })
-  })
-
-  test('a run recording nothing never waits between steps', async () => {
-    const { browser } = fakeBrowser()
-    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
-    const provider = providerWith('off', dir, browser, {
-      videoStepPauseMs: 5_000,
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config({ videoStepHoldMs: 2_000 }),
+      secret: ROOT,
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', video: 'all' },
     })
 
     provider.beginScenario('Checkout')
     await provider.sessionFor('admin')
     const before = Date.now()
-    await provider.settleStep('admin')
+    const first = provider.markVideoStep('admin')!
+    const second = provider.markVideoStep('admin')!
 
-    assert.ok(Date.now() - before < 1_000, 'no footage, so no reason to wait')
+    assert.ok(Date.now() - before < 1_000, 'marking a step never waits')
+    assert.ok(second - first >= 2_000 && second - first < 2_500)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('footage that is never encoded is never held, so offsets stay raw', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser, {
+      videoStepHoldMs: 2_000,
+    })
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    const first = provider.markVideoStep('admin')!
+    const second = provider.markVideoStep('admin')!
+
+    assert.ok(second - first < 1_000)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a run recording nothing marks nothing', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('off', dir, browser)
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+
+    assert.equal(provider.markVideoStep('admin'), undefined)
     await rm(dir, { recursive: true, force: true })
   })
 })

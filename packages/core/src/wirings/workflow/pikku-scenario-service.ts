@@ -443,6 +443,18 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     return offsets ?? new Map()
   }
 
+  /** Where a step starting now falls in this actor's recording, if anywhere. */
+  private videoOffsetFor(actor: string): number | undefined {
+    const provider = this.scenarioBrowserProvider
+    if (provider?.markVideoStep) {
+      return provider.markVideoStep(actor)
+    }
+    const startedAt = provider?.videoStartedAt?.(actor)
+    return startedAt === undefined
+      ? undefined
+      : Math.max(0, Date.now() - startedAt)
+  }
+
   /**
    * Stamp where a step began inside one actor's recording.
    *
@@ -1001,15 +1013,9 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             wire.browser = await this.scenarioBrowserProvider.sessionFor(
               actor!.name
             )
-            const videoStartedAt =
-              this.scenarioBrowserProvider.videoStartedAt?.(actor!.name)
-            if (videoStartedAt !== undefined) {
-              this.recordVideoOffset(
-                runId,
-                stepName,
-                actor!.name,
-                Math.max(0, Date.now() - videoStartedAt)
-              )
+            const offsetMs = this.videoOffsetFor(actor!.name)
+            if (offsetMs !== undefined) {
+              this.recordVideoOffset(runId, stepName, actor!.name, offsetMs)
             }
           }
           const result = await runPikkuFunc(
@@ -1024,9 +1030,6 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               packageName: packageName ?? undefined,
             }
           )
-          if (surface === 'browser') {
-            await this.scenarioBrowserProvider!.settleStep?.(actor!.name)
-          }
           return result
         }
 
