@@ -1,0 +1,18 @@
+{
+  "name": "@pikku/verifiers-addon-openapi",
+  "type": "module",
+  "private": true,
+  "description": "Generates an addon from an OpenAPI spec with `pikku new addon --openapi` and builds it the way the generated package's own build script does",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^24"
+  }
+}

@@ -1877,6 +1877,18 @@
         "zod": "^4",
       },
     },
+    "verifiers/addon-openapi": {
+      "name": "@pikku/verifiers-addon-openapi",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "zod": "^4",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^24",
+      },
+    },
     "verifiers/addon-registry": {
       "name": "@pikku/verifiers-addon-registry",
     },
@@ -3429,6 +3441,8 @@
     "@pikku/verifier-registry-consumer": ["@pikku/verifier-registry-consumer@workspace:verifiers/addon-registry/consumer"],
 
     "@pikku/verifiers-addon": ["@pikku/verifiers-addon@workspace:verifiers/addon"],
+
+    "@pikku/verifiers-addon-openapi": ["@pikku/verifiers-addon-openapi@workspace:verifiers/addon-openapi"],
 
     "@pikku/verifiers-addon-registry": ["@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry"],
 
@@ -6352,6 +6366,8 @@
 
     "@pikku/verifiers-addon/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/verifiers-addon-openapi/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-addon-treeshake/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-analytics/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -6951,6 +6967,8 @@
     "@pikku/templates-ws-server/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifier-registry-consumer/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-addon-openapi/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-addon-treeshake/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
