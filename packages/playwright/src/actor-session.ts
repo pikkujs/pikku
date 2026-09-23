@@ -110,6 +110,7 @@ const drawCursor = () => {
       if (!document.documentElement) return
       pointer = document.createElement('div')
       pointer.setAttribute('aria-hidden', 'true')
+      pointer.setAttribute('data-pikku-cursor', '')
       pointer.style.cssText =
         'position:fixed;left:0;top:0;width:28px;height:28px;pointer-events:none;z-index:2147483647;transition:transform 80ms linear'
       pointer.innerHTML =
@@ -295,8 +296,10 @@ export class ActorSession implements PikkuBrowserWire {
   ): Promise<Uint8Array> {
     // Animations disabled so the same moment photographs the same way twice —
     // a shot that is published needs to be diffable across builds.
+    // The cursor is drawn for the video; a published still should not carry it.
     const bytes = await this.page.screenshot({
       animations: 'disabled',
+      style: '[data-pikku-cursor]{display:none!important}',
       ...(options?.fullPage ? { fullPage: true } : {}),
     })
     if (!this.capture?.screenshots || !description) {
