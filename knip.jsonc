@@ -27,9 +27,11 @@
     // A subcommand, not a binary: `pikku dev` in the dev-bun verifier, and
     // `yarn dev` in the app `create-pikku` has just scaffolded.
     "dev",
-    // An optional system binary. `@pikku/playwright` probes for it and keeps
-    // recordings uncompressed when it is absent, so it is never installed.
+    // Optional system binaries. `@pikku/playwright` probes for ffmpeg and keeps
+    // recordings uncompressed when it is absent, and its tests skip without it;
+    // ffprobe ships alongside.
     "ffmpeg",
+    "ffprobe",
     // Part of a Rust toolchain rather than of this repo. The test that checks
     // the generated Tauri shell parses skips itself when it is absent, so it
     // is never a dependency anyone has to install.
