@@ -1,3 +1,39 @@
+## 0.12.88
+
+### Patch Changes
+
+- 0619423: The console's scenarios page leaves out a feature that opted out of
+  documentation, and its knowledge page stops counting orphans as issues to fix.
+
+  `pikkuFeature({ document: false })` was honoured by `pikku scenario guide` but
+  ignored by `buildScenarioDocs`, so a feature that said it was not documentation
+  still rendered as a page — and the scenarios it named left the ungrouped
+  bucket. The flag now means the same thing in both: the feature is left out and
+  the scenarios it names read as ungrouped.
+
+  `pikku knowledge validate` reports orphans — code no note describes — at `info`,
+  keeps them outside `ok` and prints them as their own summary. The console piped
+  every finding into one "N issues" row, so a clean base was offered a list of
+  work it did not have. The row now counts only what the gate would fail on.
+
+- b84ba3c: Make every console screen nameable by a test
+
+  Two gaps, same shape. `AdminUsersPage` and `AuditPage` carried no data-testid in
+  any state, so a scenario could not tell "the audit trail is quiet" from "the
+  audit screen failed to render"; `admin-users` and `audit-page` now sit on their
+  page roots, which is the only thing nameable before it is known whether there is
+  any data.
+
+  And a screen whose search is built in the header's `filters` slot got no testid,
+  while one that passes the `search` prop has carried `page-search` all along —
+  the same control, nameable on some screens and not others depending on how the
+  header was assembled. Eight pages now agree with the rest.
+
+- Updated dependencies [e85f07e]
+- Updated dependencies [67c707a]
+  - @pikku/core@0.12.119
+  - @pikku/better-auth@0.12.46
+
 ## 0.12.87
 
 ### Patch Changes
