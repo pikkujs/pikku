@@ -25,7 +25,7 @@ Entry points worth knowing:
 - `pikku-scenario` — scenarios, personas, browser steps and the "Sign in as …"
   switcher.
 - `pikku-guide` — the user guide `pikku scenario guide` compiles from the
-  scenario suite: page markers, capture steps, `.guide.lock`.
+  scenario suite: what a page must say, page markers, capture steps, `.guide.lock`.
 
 ## What Pikku is
 
