@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely",
-  "version": "0.13.27",
+  "version": "0.13.28",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -26,7 +26,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.111"
+    "@pikku/core": "^0.12.120"
   },
   "dependencies": {
     "kysely": "^0.29.5"

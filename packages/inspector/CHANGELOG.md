@@ -1,3 +1,37 @@
+## 0.12.87
+
+### Patch Changes
+
+- a95179a: An AI agent's `providerOptions` now reaches the generated metadata.
+
+  The inspector read `model`, `temperature`, `maxSteps` and `toolChoice` off an agent declaration but never `providerOptions`, so `agentsMeta` always showed an agent with no provider configuration — even though the type says it carries one. Runs were unaffected, since the runner takes the value from the live agent object, which is exactly why the gap went unnoticed by everything except what reads the compiled meta: the console's agent view and `infra.json`.
+
+  The value is read as an object literal of strings, numbers, booleans, arrays and nested objects, all-or-nothing. A computed one is reported as `PKU156` rather than silently dropped.
+
+- 145b32b: Generated type aliases are deterministic
+
+  A type name that collided across files got a `Math.random()` suffix, so every
+  `pikku all` emitted different names into `pikku-agent-map.gen.d.ts` and
+  `pikku-workflow-map.gen.d.ts`. Those files sit in the schema generator's
+  dependency closure, so rewriting them invalidated the schema cache partway
+  through the same run and forced a full `ts-json-schema-generator` pass each
+  time. The suffix now comes from the declaring file's path.
+
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+
 ## 0.12.86
 
 ### Patch Changes
