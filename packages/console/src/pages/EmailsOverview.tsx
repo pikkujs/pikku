@@ -36,6 +36,7 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
+                data-testid="page-search"
                 placeholder={m.emails_search_placeholder()}
                 leftSection={<Search size={14} />}
                 value={searchQuery}

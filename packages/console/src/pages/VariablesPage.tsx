@@ -26,6 +26,7 @@ export const VariablesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
+                  data-testid="page-search"
                   placeholder={m.variables_search_placeholder()}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
