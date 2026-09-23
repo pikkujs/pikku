@@ -228,3 +228,47 @@ describe('validateExposedFunctionsGated', () => {
     assert.equal(diagnostics.length, 0)
   })
 })
+
+describe('validateExposedFunctionsGated — wireAddon expose lists', () => {
+  const withAddon = (
+    declaration: Record<string, unknown>,
+    addonMeta: Record<string, unknown>
+  ) => ({
+    ...stateWith({}, { shop: { package: '@x/shop', ...declaration } }),
+    addonFunctions: { shop: addonMeta },
+  })
+
+  test('warns when the list opens an ungated addon function', () => {
+    run(
+      withAddon(
+        { expose: ['voidInvoice'] },
+        { voidInvoice: { sessionless: true } }
+      )
+    )
+    assert.match(warning()!.message, /shop:voidInvoice/)
+  })
+
+  test('stays silent when the function or the instance gates it', () => {
+    run(
+      withAddon(
+        { expose: ['voidInvoice', 'getOrder'] },
+        {
+          voidInvoice: { sessionless: false },
+          getOrder: { sessionless: true, auth: true },
+        }
+      )
+    )
+    run(
+      withAddon(
+        { expose: ['voidInvoice'], auth: true },
+        { voidInvoice: { sessionless: true } }
+      )
+    )
+    assert.equal(warning(), undefined)
+  })
+
+  test('says nothing about an addon left on its own declarations', () => {
+    run(withAddon({}, { voidInvoice: { sessionless: true, expose: true } }))
+    assert.equal(warning(), undefined)
+  })
+})

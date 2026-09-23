@@ -47,7 +47,7 @@ import type { WireAddonConfig } from '@pikku/core/addon'
 export { wireRemoteAddon } from '@pikku/core/addon'
 
 /**
- * The functions each installed addon publishes. \`mcp\` names them.
+ * The functions each installed addon publishes. \`mcp\` and \`expose\` name them.
  */
 type AddonFunctions = {
 ${entries}
@@ -62,11 +62,13 @@ type AddonFunctionName<Package extends string> =
  *
  * \`mcp: true\` offers every function the addon itself declared as a tool; a list
  * names the functions to offer, checked against the ones the addon publishes.
+ * \`expose\` works the same way for \`rpc.exposed\`, and \`false\` exposes none.
  */
 export const wireAddon = <Package extends string>(
-  config: Omit<WireAddonConfig, 'package' | 'mcp'> & {
+  config: Omit<WireAddonConfig, 'package' | 'mcp' | 'expose'> & {
     package: Package
     mcp?: boolean | AddonFunctionName<Package>[]
+    expose?: boolean | AddonFunctionName<Package>[]
   }
 ): void => wireAddonCore(config)
 `

@@ -921,6 +921,33 @@ describe('analyzeDeployment - addon units', () => {
     )
   })
 
+  const withWiredExpose = (expose: boolean | string[]) => {
+    const state = stateWithAddon()
+    ;(state as any).rpc = {
+      wireAddonDeclarations: new Map([
+        ['admin', { package: '@x/admin', expose }],
+      ]),
+    }
+    return analyze(state)
+  }
+
+  test('a wireAddon expose list decides the unit, undeclared functions included', () => {
+    const unit = withWiredExpose(['internalSweep']).units.find(
+      (u) => u.name === 'addon-admin'
+    )
+    assert.deepEqual(unit?.functionIds, ['admin:internalSweep'])
+  })
+
+  test('wireAddon expose: false leaves the addon without a unit or a dispatch', () => {
+    const { units } = withWiredExpose(false)
+    assert.equal(
+      units.some((u) => u.name === 'addon-admin'),
+      false
+    )
+    const dispatcher = units.find((u) => u.name === 'rpc-caller')
+    assert.equal(dispatcher?.dispatch?.['admin:createUser'], undefined)
+  })
+
   test('the unit serves the rpc route for each exposed function', () => {
     const unit = analyze().units.find((u) => u.name === 'addon-admin')
     const routes = unit?.handlers

@@ -59,6 +59,7 @@ describe('addWireAddon', () => {
       rpcEndpoint: '/rpc',
       mcp: undefined,
       mcpEndpoint: undefined,
+      expose: undefined,
       auth: true,
       tags: ['admin', 'internal'],
       scopes: ['admin'],
@@ -203,6 +204,18 @@ describe('addWireAddon', () => {
     `)
 
     assert.equal(declarations.get('todos').mcp, undefined)
+  })
+
+  test('records expose as a boolean or as a function list', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'shop', package: '@x/y', expose: ['getOrder'] })
+      wireAddon({ name: 'closed', package: '@x/y', expose: false })
+      wireAddon({ name: 'open', package: '@x/y', expose: true })
+    `)
+
+    assert.deepEqual(declarations.get('shop').expose, ['getOrder'])
+    assert.equal(declarations.get('closed').expose, false)
+    assert.equal(declarations.get('open').expose, true)
   })
 
   test('keeps an explicitly empty scopes array distinct from an absent one', () => {

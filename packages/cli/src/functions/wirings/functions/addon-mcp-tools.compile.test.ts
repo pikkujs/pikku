@@ -19,6 +19,7 @@ export type WireAddonConfig = {
   package: string
   auth?: boolean
   mcp?: boolean | string[]
+  expose?: boolean | string[]
   tags?: string[]
 }
 export declare const wireAddon: (config: WireAddonConfig) => void
@@ -117,5 +118,31 @@ wireAddon({
 wireRemoteAddon({ name: 'remote', package: '@pikku/addon-slack' })
 `)
     assert.deepEqual(errors, [])
+  })
+})
+
+describe('the functions an addon exposes over RPC are typed', () => {
+  test('a list of the addon’s own function names compiles', () => {
+    const errors = typeErrors(`
+import { wireAddon } from './addon.js'
+
+wireAddon({ name: 'todos', package: '@pikku/addon-todos', expose: ['listTodos'] })
+wireAddon({ name: 'slack', package: '@pikku/addon-slack', expose: false })
+`)
+    assert.deepEqual(errors, [])
+  })
+
+  test('a name the addon does not publish is refused', () => {
+    const errors = typeErrors(`
+import { wireAddon } from './addon.js'
+
+wireAddon({
+  name: 'todos',
+  package: '@pikku/addon-todos',
+  expose: ['listTodos', 'postMessage'],
+})
+`)
+    assert.equal(errors.length, 1)
+    assert.match(errors[0]!, /postMessage/)
   })
 })

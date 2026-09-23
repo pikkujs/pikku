@@ -270,3 +270,58 @@ describe('loadAddonFunctionsMeta — which of an addon’s functions reach MCP',
     assert.match(criticals[0]!, /postMesage/)
   })
 })
+
+describe('loadAddonFunctionsMeta — wireAddon expose lists', () => {
+  let rootDir: string
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-expose-'))
+    writeAddonFixture(rootDir)
+    writeFileSync(
+      join(
+        rootDir,
+        'node_modules',
+        ADDON,
+        '.pikku',
+        'function',
+        'pikku-functions-meta.gen.json'
+      ),
+      JSON.stringify({ getOrder: { expose: true }, voidInvoice: {} })
+    )
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const criticalsFor = async (expose: boolean | string[] | undefined) => {
+    const criticals: string[] = []
+    const failing = {
+      ...logger,
+      critical: (code: string, message: string) => {
+        criticals.push(`${code}: ${message}`)
+      },
+    } as unknown as InspectorLogger
+    await loadAddonFunctionsMeta(
+      failing,
+      makeState(
+        rootDir,
+        new Map<string, any>([['shop', { package: ADDON, expose }]])
+      )
+    )
+    return criticals
+  }
+
+  test('a name the addon does not publish fails the build', async () => {
+    const criticals = await criticalsFor(['getOrder', 'getOrdr'])
+    assert.equal(criticals.length, 1)
+    assert.match(criticals[0]!, /PKU343/)
+    assert.match(criticals[0]!, /getOrdr/)
+  })
+
+  test('published names, including undeclared ones, and booleans pass', async () => {
+    assert.deepEqual(await criticalsFor(['getOrder', 'voidInvoice']), [])
+    assert.deepEqual(await criticalsFor(false), [])
+    assert.deepEqual(await criticalsFor(true), [])
+  })
+})

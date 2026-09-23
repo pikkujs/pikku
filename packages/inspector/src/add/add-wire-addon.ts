@@ -107,6 +107,7 @@ export function addWireAddon(
   let pkg: string | undefined
   let rpcEndpoint: string | undefined
   let mcp: boolean | string[] | undefined
+  let expose: boolean | string[] | undefined
   let mcpEndpoint: boolean | string | undefined
   let auth: boolean | undefined
   let tags: string[] | undefined
@@ -131,6 +132,12 @@ export function addWireAddon(
       rpcEndpoint = prop.initializer.text
     } else if (key === 'mcp') {
       mcp =
+        prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+        prop.initializer.kind === ts.SyntaxKind.FalseKeyword
+          ? prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+          : parseStringArray(prop.initializer)
+    } else if (key === 'expose') {
+      expose =
         prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
         prop.initializer.kind === ts.SyntaxKind.FalseKeyword
           ? prop.initializer.kind === ts.SyntaxKind.TrueKeyword
@@ -195,6 +202,7 @@ export function addWireAddon(
     rpcEndpoint,
     mcp,
     mcpEndpoint,
+    expose,
     auth,
     tags,
     scopes,
