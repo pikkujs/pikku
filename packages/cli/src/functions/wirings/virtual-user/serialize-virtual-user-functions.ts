@@ -471,10 +471,12 @@ export const setVirtualUserSchedule = pikkuFunc({
   scopes: ['virtualUser:schedule'],
   input: SetVirtualUserScheduleInput,
   output: SetVirtualUserScheduleOutput,
-  func: async ({ virtualUserScheduleStore }, input) => {
+  func: async ({ virtualUserScheduleStore, config }, input) => {
     const schedule = await writeVirtualUserSchedule({
       store: virtualUserScheduleStore,
       personas: personaConfigs,
+      environments: personaEnvironments,
+      config: config as { nodeEnv?: string } | undefined,
       ...input,
     })
     return serializeVirtualUserSchedule(schedule, personaConfigs)
