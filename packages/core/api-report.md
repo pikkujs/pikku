@@ -14,7 +14,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 160 | 128 | 435 |
+| `./services` | 160 | 128 | 436 |
 | `./virtual-user` | 66 | 66 | 212 |
 | `./scenario` | 49 | 49 | 152 |
 | `./workflow` | 84 | 35 | 140 |
@@ -5145,6 +5145,7 @@ export interface ScopeService {
   addUserToRole(userId: string, role: string, grantedBy?: string): Promise<void>
   removeUserFromRole(userId: string, role: string): Promise<void>
   listUserRoles(userId: string): Promise<string[]>
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
   addScopeToUser(userId: string, scope: string, grantedBy?: string): Promise<void>
   removeScopeFromUser(userId: string, scope: string): Promise<void>
   listUserScopes(userId: string): Promise<string[]>

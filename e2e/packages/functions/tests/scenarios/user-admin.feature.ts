@@ -310,6 +310,73 @@ export const userAdminListScopeDoesNotConferBanScenario = pikkuScenario<
   },
 })
 
+/**
+ * `includeRoles` reaches past the directory into the scope store, so it is
+ * gated on `admin:scopes:read` rather than on the scope that opened the
+ * directory. Proven with the guest holding exactly `admin:users:list`: the
+ * plain listing is served, the same listing asking for roles is refused.
+ */
+export const userAdminListScopeDoesNotConferRolesScenario = pikkuScenario<
+  void,
+  { restored: true }
+>({
+  title: 'Holding only the list scope does not confer roles',
+  description: 'admin:users:list lists the directory, it does not read scopes',
+  tags: ['scenario', 'user-admin'],
+  func: async (_services, _data, { scenario, actors }) => {
+    const guest = await scenario.given(
+      'the guest reads its own id',
+      'readsActorUserId',
+      undefined,
+      { actor: actors.guest }
+    )
+    await scenario.do(
+      'grants admin:users:list to the guest',
+      'admin:scopeAddScopeToUser',
+      { userId: guest.userId, scope: 'admin:users:list' },
+      { actor: actors.admin }
+    )
+
+    const listing = await scenario.when(
+      'the guest lists the directory',
+      'invokesRpcRaw',
+      { rpcName: LIST, data: { limit: 5 } },
+      { actor: actors.guest }
+    )
+    await scenario.then(
+      'sees it served, counted',
+      'expectsRpcResponse',
+      { call: listing, status: 200, contains: ['"total"'] },
+      { actor: actors.guest }
+    )
+
+    const withRoles = await scenario.when(
+      'the guest asks the same listing for roles',
+      'invokesRpcRaw',
+      { rpcName: LIST, data: { limit: 5, includeRoles: true } },
+      { actor: actors.guest }
+    )
+    await scenario.then(
+      'sees it refused',
+      'expectsRpcResponse',
+      {
+        call: withRoles,
+        status: 403,
+        contains: ['MissingScopeError', 'admin:scopes:read'],
+      },
+      { actor: actors.guest }
+    )
+
+    await scenario.do(
+      'revokes the scope',
+      'admin:scopeRemoveScopeFromUser',
+      { userId: guest.userId, scope: 'admin:users:list' },
+      { actor: actors.admin }
+    )
+    return { restored: true }
+  },
+})
+
 export const userAdminUnscopedCannotCreateScenario = pikkuScenario<
   void,
   { status: 403 }
@@ -620,6 +687,7 @@ export const userAdminFeature = pikkuFeature({
     userAdminScopedBanBlocksSignInScenario,
     userAdminScopedRevokesSessionsScenario,
     userAdminListScopeDoesNotConferBanScenario,
+    userAdminListScopeDoesNotConferRolesScenario,
     userAdminApiLifecycleScenario,
     userAdminCannotActOnSelfScenario,
   ],
