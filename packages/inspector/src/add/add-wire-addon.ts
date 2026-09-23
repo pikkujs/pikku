@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { ErrorCode } from '../error-codes.js'
 import type {
   InspectorState,
   InspectorLogger,
@@ -142,6 +143,14 @@ export function addWireAddon(
         prop.initializer.kind === ts.SyntaxKind.FalseKeyword
           ? prop.initializer.kind === ts.SyntaxKind.TrueKeyword
           : parseStringArray(prop.initializer)
+      // Read as unset, the deploy analyzer would build this addon's unit from
+      // the addon's own declarations while the runtime follows the real list.
+      if (expose === undefined) {
+        logger.critical(
+          ErrorCode.ADDON_EXPOSE_NOT_STATIC,
+          `wireAddon's expose must be true, false or an array of string literals, got: ${prop.initializer.getText()}`
+        )
+      }
     } else if (key === 'mcpEndpoint') {
       if (ts.isStringLiteral(prop.initializer)) {
         mcpEndpoint = prop.initializer.text

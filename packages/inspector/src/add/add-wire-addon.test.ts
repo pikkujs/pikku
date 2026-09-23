@@ -4,12 +4,16 @@ import * as ts from 'typescript'
 import { addWireAddon } from './add-wire-addon.js'
 
 let state: any
+let criticals: string[] = []
 
 const logger = {
   debug: () => {},
   info: () => {},
   warn: () => {},
   error: () => {},
+  critical: (code: string, message: string) => {
+    criticals.push(`${code}: ${message}`)
+  },
 } as any
 
 /** Parses a source snippet and runs addWireAddon over every call expression. */
@@ -29,6 +33,7 @@ const inspect = (source: string) => {
 }
 
 beforeEach(() => {
+  criticals = []
   state = {
     rpc: {
       wireAddonDeclarations: new Map(),
@@ -216,6 +221,19 @@ describe('addWireAddon', () => {
     assert.deepEqual(declarations.get('shop').expose, ['getOrder'])
     assert.equal(declarations.get('closed').expose, false)
     assert.equal(declarations.get('open').expose, true)
+  })
+
+  test('fails the build on an expose value it cannot read', () => {
+    // Recorded as unset, the deploy unit would follow the addon's declarations
+    // while the runtime follows the real list.
+    inspect(`
+      wireAddon({ name: 'shop', package: '@x/y', expose: SELECTED })
+      wireAddon({ name: 'more', package: '@x/y', expose: [...SELECTED] })
+    `)
+
+    assert.equal(criticals.length, 2)
+    assert.match(criticals[0]!, /PKU344/)
+    assert.match(criticals[0]!, /SELECTED/)
   })
 
   test('keeps an explicitly empty scopes array distinct from an absent one', () => {

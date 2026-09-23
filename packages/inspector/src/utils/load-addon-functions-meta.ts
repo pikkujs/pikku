@@ -266,7 +266,7 @@ export async function loadAddonFunctionsMeta(
       // function the app believes callable and never is.
       if (Array.isArray(decl.expose)) {
         for (const funcName of decl.expose) {
-          if (!(funcName in meta)) {
+          if (!Object.hasOwn(meta, funcName)) {
             logger.critical(
               ErrorCode.ADDON_EXPOSE_FUNCTION_NOT_FOUND,
               `wireAddon('${namespace}') lists '${funcName}' under expose, but ${decl.package} publishes no such function.`

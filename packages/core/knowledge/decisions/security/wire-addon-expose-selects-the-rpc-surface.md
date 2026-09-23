@@ -24,6 +24,10 @@ other way (the wiring decides), and the two now match.
   app is the one that knows what its deployment should offer. The generated
   `#pikku/addon` types the list against the package's function names, and a name
   that survives to the build unpublished fails it with PKU343.
+  The value has to be written inline (`true`, `false` or an array of string
+  literals): the build reads it statically, and a variable or spread fails it
+  with PKU344 rather than being read as unset, which would leave the deploy
+  units disagreeing with the runtime.
 
 The decision is per **instance**, not per package: two `wireAddon` calls for one
 package may expose different things, and the gate reads the config the

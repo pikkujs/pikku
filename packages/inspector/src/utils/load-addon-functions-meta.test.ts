@@ -313,8 +313,9 @@ describe('loadAddonFunctionsMeta — wireAddon expose lists', () => {
   }
 
   test('a name the addon does not publish fails the build', async () => {
-    const criticals = await criticalsFor(['getOrder', 'getOrdr'])
-    assert.equal(criticals.length, 1)
+    const criticals = await criticalsFor(['getOrder', 'getOrdr', 'toString'])
+    assert.equal(criticals.length, 2)
+    assert.match(criticals[1]!, /toString/)
     assert.match(criticals[0]!, /PKU343/)
     assert.match(criticals[0]!, /getOrdr/)
   })
