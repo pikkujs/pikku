@@ -143,6 +143,35 @@ describe('compressVideo', () => {
     assert.ok(statSync(result).size > 0, 'and it is not an empty file')
   })
 
+  test('holds the frame at each step and at the end, lengthening the video', async (t) => {
+    if (!(await hasFfmpeg())) {
+      t.skip('ffmpeg is not on PATH')
+      return
+    }
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-encode-'))
+    const source = recordFixture(dir)
+
+    const result = await compressVideo(source, {
+      atMs: [300, 600],
+      holdMs: 500,
+    })
+
+    const probe = spawnSync('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'csv=p=0',
+      result,
+    ])
+    // One second of footage plus three half-second holds.
+    assert.ok(
+      Math.abs(Number(String(probe.stdout).trim()) - 2.5) < 0.1,
+      `expected ~2.5s, got ${String(probe.stdout).trim()}`
+    )
+  })
+
   test('keeps the raw recording when the input is not a video', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'pikku-encode-'))
     const file = join(dir, 'broken.webm')

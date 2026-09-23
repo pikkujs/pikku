@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3059 observable things**: 994 exported names, plus
-2065 members on the classes and interfaces among them, reachable
+**3060 observable things**: 994 exported names, plus
+2066 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 435 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 49 | 49 | 151 |
+| `./scenario` | 49 | 49 | 152 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 85 |
@@ -1629,6 +1629,7 @@ export interface ScenarioBrowserProvider {
   beginScenario?(scenario: string): void
   endScenario?(outcome: 'passed' | 'failed'): void
   videoStartedAt?(actorName: string): number | undefined
+  markVideoStep?(actorName: string): number | undefined
   captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
   artifacts?(): ScenarioArtifact[]
   close(): Promise<void>

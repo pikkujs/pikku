@@ -276,6 +276,15 @@ export interface ScenarioBrowserProvider {
    */
   videoStartedAt?(actorName: string): number | undefined
   /**
+   * Mark a browser step starting in this actor's recording, answering where it
+   * falls in the finished video (ms).
+   *
+   * Preferred over `videoStartedAt` when present: a driver that edits its
+   * footage afterwards — holding each step's screen still, say — is the only
+   * one that knows how far that moves the step. Undefined when nothing records.
+   */
+  markVideoStep?(actorName: string): number | undefined
+  /**
    * Snapshot every open window for a failed scenario. `label` identifies the
    * scenario in artifact filenames. Never throws: a failure to capture must
    * not replace the failure being captured.

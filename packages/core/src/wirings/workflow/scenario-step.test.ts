@@ -984,6 +984,38 @@ describe('a browser step records where it falls in the video', () => {
     )
   })
 
+  test('a driver that edits its footage answers the offset itself', async () => {
+    const { workflowService: ws, scenarioService } = createScenarioRunner()
+    scenarioService.setRunSurface('browser')
+    const shopper = fakeActor('shopper', async () => ({}))
+    const marked: string[] = []
+    scenarioService.setScenarioBrowserProvider({
+      ...recordingProvider(Date.now()),
+      markVideoStep: (actorName: string) => {
+        marked.push(actorName)
+        return 7_000
+      },
+    } as any)
+    registerStep('visitsCheckout', {
+      surfaces: ['browser'],
+      func: async () => null,
+    })
+
+    const runId = await setup(ws)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
+    await wire.given('shopper visits checkout', 'visitsCheckout', undefined, {
+      actor: shopper,
+    })
+
+    assert.deepEqual(marked, ['shopper'])
+    assert.deepEqual(
+      scenarioService
+        .takeStepVideoOffsets(runId)
+        .get('shopper visits checkout'),
+      [{ actor: 'shopper', offsetMs: 7_000 }]
+    )
+  })
+
   test('a step that never touched a browser carries no offset', async () => {
     const { workflowService: ws, scenarioService } = createScenarioRunner()
     scenarioService.setScenarioBrowserProvider(

@@ -939,10 +939,11 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
   const providerWith = (
     video: 'off' | 'failed' | 'all',
     dir: string,
-    browser: any
+    browser: any,
+    overrides: Partial<BrowserConfig> = {}
   ) =>
     new PlaywrightScenarioBrowserProvider({
-      config: config(),
+      config: config(overrides),
       secret: ROOT,
       actors: {
         admin: { email: 'admin@test' },
@@ -1014,6 +1015,61 @@ describe('PlaywrightScenarioBrowserProvider video clock', () => {
       undefined,
       'the next scenario records a new file, so the old start is not its start'
     )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('each step lands one hold later, because the encode holds the one before', async (t) => {
+    if (!(await hasFfmpeg())) {
+      t.skip('ffmpeg is not on PATH')
+      return
+    }
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config({ videoStepHoldMs: 2_000 }),
+      secret: ROOT,
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', video: 'all' },
+    })
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    const before = Date.now()
+    const first = provider.markVideoStep('admin')!
+    const second = provider.markVideoStep('admin')!
+
+    assert.ok(Date.now() - before < 1_000, 'marking a step never waits')
+    assert.ok(second - first >= 2_000 && second - first < 2_500)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('footage that is never encoded is never held, so offsets stay raw', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser, {
+      videoStepHoldMs: 2_000,
+    })
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    const first = provider.markVideoStep('admin')!
+    const second = provider.markVideoStep('admin')!
+
+    assert.ok(second - first < 1_000)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a run recording nothing marks nothing', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('off', dir, browser)
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+
+    assert.equal(provider.markVideoStep('admin'), undefined)
     await rm(dir, { recursive: true, force: true })
   })
 })

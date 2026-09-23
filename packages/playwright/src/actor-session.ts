@@ -89,6 +89,70 @@ export interface PageIssues {
  * This is the object handed to a step as `wire.browser`, so a step reaches
  * Playwright through `wire.browser.page`.
  */
+/**
+ * A pointer drawn into recorded pages, since a headless window has none.
+ *
+ * It follows the real mouse events Playwright dispatches, and jumps to a field
+ * a step fills without clicking. Playwright's own `showActions` animates each
+ * action instead, which costs ~500ms of run time per action; this costs none,
+ * and the encode's held frames give the eye time to find it. The position is
+ * kept across navigations so the pointer does not vanish on every page load.
+ */
+const drawCursor = () => {
+  const key = '__pikkuCursor'
+  let at = { x: -40, y: -40 }
+  try {
+    at = JSON.parse(sessionStorage.getItem(key) ?? 'null') ?? at
+  } catch {}
+  let pointer: HTMLElement | undefined
+  const place = () => {
+    if (!pointer?.isConnected) {
+      if (!document.documentElement) return
+      pointer = document.createElement('div')
+      pointer.setAttribute('aria-hidden', 'true')
+      pointer.style.cssText =
+        'position:fixed;left:0;top:0;width:28px;height:28px;pointer-events:none;z-index:2147483647;transition:transform 80ms linear'
+      pointer.innerHTML =
+        '<svg width="28" height="28" viewBox="0 0 22 22"><path d="M3 2l14 8.5-6.2 1.3 3.6 6.8-2.6 1.3-3.6-6.8L3 18z" fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>'
+      document.documentElement.appendChild(pointer)
+    }
+    pointer.style.transform = `translate(${at.x - 4}px,${at.y - 3}px)`
+  }
+  const move = (x: number, y: number) => {
+    at = { x, y }
+    place()
+    try {
+      sessionStorage.setItem(key, JSON.stringify(at))
+    } catch {}
+  }
+  addEventListener('mousemove', (e) => move(e.clientX, e.clientY), {
+    capture: true,
+    passive: true,
+  })
+  addEventListener(
+    'focusin',
+    (e) => {
+      const box = (e.target as Element | null)?.getBoundingClientRect?.()
+      if (
+        !box ||
+        (at.x >= box.left &&
+          at.x <= box.right &&
+          at.y >= box.top &&
+          at.y <= box.bottom)
+      ) {
+        return
+      }
+      move(box.left + Math.min(box.width / 2, 24), box.top + box.height / 2)
+    },
+    true
+  )
+  if (document.readyState === 'loading') {
+    addEventListener('DOMContentLoaded', place)
+  } else {
+    place()
+  }
+}
+
 export class ActorSession implements PikkuBrowserWire {
   page!: Page
   context!: BrowserContext
@@ -103,6 +167,11 @@ export class ActorSession implements PikkuBrowserWire {
   ) {}
 
   async open(browser: Browser, recordVideoDir?: string) {
+    // `size` pins the recording to the viewport; Playwright otherwise scales it
+    // to fit 800x800.
+    const recordVideo = recordVideoDir
+      ? { dir: recordVideoDir, size: this.config.viewport }
+      : undefined
     this.context = await browser.newContext({
       ignoreHTTPSErrors: this.config.ignoreHTTPSErrors,
       locale: this.config.locale,
@@ -110,12 +179,15 @@ export class ActorSession implements PikkuBrowserWire {
       // Playwright records per context and only finalises the file on
       // context.close(), which is why `reset()` between scenarios is what makes
       // one video per scenario rather than one enormous file per run.
-      ...(recordVideoDir ? { recordVideo: { dir: recordVideoDir } } : {}),
+      ...(recordVideo ? { recordVideo } : {}),
     })
     await this.context.addInitScript((apiUrl) => {
       ;(window as typeof window & { __E2E_API_URL?: string }).__E2E_API_URL =
         apiUrl
     }, this.config.apiUrl)
+    if (recordVideo) {
+      await this.context.addInitScript(drawCursor)
+    }
     this.page = await this.context.newPage()
     this.page.setDefaultTimeout(this.config.timeout)
 
