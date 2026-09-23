@@ -32,6 +32,7 @@ const KNOWN_INSTALL_GROUPS = new Set(['core', 'client', 'fabric'])
 const FABRIC_SKILLS = [
   'pikku-admin-to-fabric',
   'pikku-blueprint-to-fabric',
+  'pikku-changes',
   'pikku-fabric',
 ]
 const SUBDIRS = ['references', 'scripts', 'example', 'assets']
