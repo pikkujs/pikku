@@ -9,6 +9,24 @@ status, plans — lives in `knowledge/`, an OKF v0.2 bundle. **Read it there, an
 save new knowledge there, rather than in the `~/.claude` memory store.** Start
 at `knowledge/index.md`; the `knowledge` skill has the read/write protocol.
 
+## Skills
+
+The agent skills Pikku ships to projects live in `packages/skills/skills/`, one
+directory per skill (`SKILL.md` plus `references/`). `pikku skills install`
+copies them into a project's `.claude/skills/`. Read the relevant one before
+changing the behaviour it documents, and update it in the same PR when you
+change that behaviour. After editing anything there, `bun run embed` in
+`packages/skills` regenerates the embedded copy the compiled CLI ships.
+
+Entry points worth knowing:
+
+- `pikku-build` — building an app end to end (App / Quick / Feature modes),
+  including the local `.env` secrets and the dev stack.
+- `pikku-scenario` — scenarios, personas, browser steps and the "Sign in as …"
+  switcher.
+- `pikku-guide` — the user guide `pikku scenario guide` compiles from the
+  scenario suite: page markers, capture steps, `.guide.lock`.
+
 ## What Pikku is
 
 A TypeScript framework that normalizes the different ways you interact with Node.js servers — HTTP requests, WebSocket connections, scheduled tasks, and channels — across runtimes (Express, Fastify, Next.js, AWS Lambda, Cloudflare Workers, …).

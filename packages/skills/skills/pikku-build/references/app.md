@@ -494,6 +494,35 @@ Rules that are not optional:
   render the failure inline next to the control that triggered it — not a toast.
 - An exposed function with no session and no permission is reachable by anyone
   over `POST /rpc/:rpcName` (PKU574). Either gate it or drop `expose: true`.
+- A public, signed-out read (a homepage's programme, a price list) is a
+  `pikkuSessionlessFunc`. `pikkuFunc` with `auth: false` still answers
+  `MissingSessionError` over `/rpc` to a caller with no session.
+- Better Auth already owns the `user`, `session`, `account` and `verification`
+  tables. A domain table with one of those names — a class *session*, a drop-in
+  *session* — collides in the migration. Name it for the domain instead
+  (`evening`, `class_meeting`) and keep the word in the UI copy.
+- The template's `/` redirects to `/app`, so the login screen — and its "Sign in
+  as …" switcher — is what a signed-out visitor sees first. Replace `/` with a
+  public homepage and that stops being true: mount `<DevActorSwitcher />` in the
+  public layout as well, or a reviewer lands on a site with no way in.
+
+Before the first run, make sure `.env` at the project root holds the two
+secrets the local stack needs. `bun run dev` appends whichever is missing, but
+check anyway — a project scaffolded from an older template, or a `.env` copied
+in from elsewhere, can lack one, and neither failure names the variable:
+
+- `BETTER_AUTH_SECRET` — without it the first sign-up is a 500.
+- `SCENARIO_ACTOR_SECRET` — without it `/api/auth/sign-in/actor` is disabled:
+  every scenario fails at sign-in before its first step, and the "Sign in as …"
+  switcher renders nothing.
+
+```sh
+grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+grep -q '^SCENARIO_ACTOR_SECRET=' .env 2>/dev/null || echo "SCENARIO_ACTOR_SECRET=$(openssl rand -base64 32)" >> .env
+```
+
+`.env` is gitignored and local only — never commit it. A deployed stage gets its
+secrets from the platform (`pikku fabric secrets`), not from this file.
 
 Then run it:
 
@@ -504,6 +533,19 @@ bun run prebuild && bun run dev
 That starts the API on :3000 and every frontend in `pikkufabric.config.json`. A
 frontend running against a dead API looks exactly like an app bug, so if every
 request fails, check that both halves came up.
+
+**Start the stack through `bun run dev`, not by launching `vite` or `pikku dev`
+yourself.** The dev script reads the personas, derives one credential per
+persona from `SCENARIO_ACTOR_SECRET`, and hands both to the frontend as
+`VITE_DEV_ACTORS` / `VITE_DEV_ACTOR_SECRETS`. Vite reads those once, at boot. A
+frontend started any other way — or restarted by hand later — has an empty
+actor list, and the switcher silently disappears from every page. If you do
+start the frontend on its own (say :3000 is taken by another project), you owe
+it three things: the two `VITE_DEV_*` values the dev script would have computed,
+and `VITE_API_PROXY` pointing at your API — the dev proxy defaults to
+`http://localhost:3000`, so beside another project's server your sign-ins go to
+*its* API and come back `401 Invalid actor secret`, which reads like a bad
+credential rather than the wrong server.
 
 The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the
 CLI's `#!/usr/bin/env node` shebang hands the process to whatever Node is on
@@ -614,10 +656,11 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
 - **Write the refusals.** The third step above is the whole point of §4: one
   persona reaching for another's row has to be rejected, and that rejection is a
   scenario. It is how you prove access control instead of asserting it.
-- **Add `SCENARIO_ACTOR_SECRET` to `.env`.** `bun run dev` generates that file
-  with a `BETTER_AUTH_SECRET` and nothing else, and without the actor secret
-  `/api/auth/sign-in/actor` is disabled — every scenario then fails at sign-in,
-  before its first step, for a reason that reads like an auth bug.
+- **`SCENARIO_ACTOR_SECRET` must be in `.env`** (§6, before the first run).
+  Without it `/api/auth/sign-in/actor` is disabled — every scenario then fails
+  at sign-in, before its first step, for a reason that reads like an auth bug.
+  `pikku scenario run` reads it from the environment, so source `.env` first
+  (`set -a && . ./.env && set +a`) when you run outside `bun run dev`.
 - **There is no state reset.** A scenario runs against a live server: scope what
   you create to your own rows and unique ids, and never assume a clean database.
 
@@ -785,6 +828,11 @@ When every milestone is `built` and the scenarios are green, read
 standalone`, `cloudflare`, `aws`), how to serve several frontends behind one
 API, the pre-release gate to run, and the contract that keeps `pikku fabric init`
 a one-command import later rather than a migration.
+
+The app is not handed over without its user guide. The scenarios you wrote are
+already its skeleton: read **pikku-guide**, write one page per audience citing
+every feature, and build it from a full, passing `--run browser --screenshots`
+run.
 
 Two things from it are worth knowing before you get there, because they are
 cheaper to honour than to retrofit:

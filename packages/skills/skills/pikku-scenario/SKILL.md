@@ -180,6 +180,11 @@ Hooks are scenario-only. A `before`/`after` on a `pikkuWorkflowFunc` never runs 
 
 ### Grouping scenarios (`pikkuFeature`)
 
+A feature is also a page of the user guide: `pikku scenario guide` turns each
+feature into a documented block with its scenarios' titles, descriptions and
+screenshots (see **pikku-guide**). Write feature and scenario titles as copy a
+user would read, and mark plumbing features `document: false`.
+
 `pikkuFeature` groups scenarios the way gherkin's `Feature:` groups `Scenario:`. Scenarios are referenced by **imported identifier**, so a renamed or deleted scenario is a compile error rather than a silent skip:
 
 ```typescript
@@ -735,6 +740,23 @@ Do not hand-roll the switcher: `useDevActors()` (`pikku-react`, a separate insta
 `<DevActorSwitcher />` from `@pikku/mantine/dev` is a ready rendering of it.
 `pikku fabric validate` **requires** any frontend with a login screen to ship
 one — without it a reviewer is locked out of their own sandbox.
+
+When the switcher is missing, it is one of three things, and none of them
+errors:
+
+- **The frontend was not started by the dev script.** The two `VITE_DEV_*` vars
+  are computed by `bun run dev` and read by vite once, at boot. A bare `vite dev`
+  — including one restarted by hand — has an empty list and renders nothing.
+- **`SCENARIO_ACTOR_SECRET` is not in `.env`.** No root secret, no per-persona
+  credentials, and the switcher filters out every actor it cannot sign in.
+- **It is not mounted on the page you are looking at.** The template mounts it
+  on the login screen. A public homepage that replaces the `/` → `/app`
+  redirect needs its own `<DevActorSwitcher />` in the public layout.
+
+When the switcher is there but signing in fails with `401 Invalid actor
+secret`, check which server answered before checking the secret: a frontend
+whose dev proxy (`VITE_API_PROXY`, default `http://localhost:3000`) points at
+another project's API sends the sign-in there.
 
 ## Running
 
