@@ -15,6 +15,7 @@ import {
   useVirtualUserRuns,
 } from '../../hooks/useVirtualUserRuns'
 import { VirtualUserTranscript } from './VirtualUserTranscript'
+import { virtualUserRunRefused } from '../../lib/virtualUserRunRefused'
 import styles from './virtual-users.module.css'
 import { appColorVars } from '@pikku/mantine/theme'
 
@@ -44,8 +45,16 @@ const STATUS_COLOUR: Record<RunRow['status'], string> = {
  *
  * The section stays even with nothing in it, because the trigger lives here: a
  * persona nobody has ever run is exactly the one somebody wants to run.
+ *
+ * Against production the server refuses every disposition but the accountable
+ * one, so the button is not offered for any other: clicking it could only fail.
  */
-export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
+export const VirtualUserRuns: React.FC<{
+  persona: string
+  disposition: string
+  production?: boolean
+}> = ({ persona, disposition, production }) => {
+  const refused = virtualUserRunRefused(disposition, production)
   const { data, error } = useVirtualUserRuns(persona)
   const start = useStartVirtualUserRun(persona)
   const [openRun, setOpenRun] = React.useState<string>()
@@ -68,12 +77,18 @@ export const VirtualUserRuns: React.FC<{ persona: string }> = ({ persona }) => {
           size="compact-xs"
           variant="light"
           loading={start.isPending}
+          disabled={refused}
           onClick={() => start.mutate(undefined)}
           data-testid="virtual-user-run-now"
         >
           {m.virtual_users_runs_start()}
         </Button>
       </Group>
+      {refused && (
+        <Text size="xs" c="dimmed" data-testid="virtual-user-run-refused">
+          {m.virtual_users_runs_production_only()}
+        </Text>
+      )}
       {start.error && (
         <Text size="xs" c="red">
           {asI18n(

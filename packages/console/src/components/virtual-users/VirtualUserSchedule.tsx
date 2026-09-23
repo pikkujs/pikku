@@ -17,6 +17,7 @@ import {
   useVirtualUserSchedules,
 } from '../../hooks/useVirtualUserSchedules'
 import styles from './virtual-users.module.css'
+import { virtualUserRunRefused } from '../../lib/virtualUserRunRefused'
 
 const HOUR_MS = 3_600_000
 
@@ -47,12 +48,17 @@ const DISPOSITIONS: VirtualUserDisposition[] = [
  * The intervals carry no `original`: nothing declares a cadence in code, and
  * there is deliberately nowhere to. A persona's timing is an operational choice
  * about how much to spend, made where it can be changed without a deploy.
+ *
+ * Against production the server refuses an enabled cadence whose disposition
+ * is not accountable, so neither turning one on nor saving one is offered.
+ * Turning one off always is, so a leftover cadence can still be stopped.
  */
 export const VirtualUserSchedule: React.FC<{
   persona: string
   declaredDisposition: VirtualUserDisposition
   declaredGoals: string[]
-}> = ({ persona, declaredDisposition, declaredGoals }) => {
+  production?: boolean
+}> = ({ persona, declaredDisposition, declaredGoals, production }) => {
   const { data, error } = useVirtualUserSchedules()
   const save = useSetVirtualUserSchedule(persona)
   const row = (data ?? []).find((schedule) => schedule.persona === persona)
@@ -80,6 +86,11 @@ export const VirtualUserSchedule: React.FC<{
   React.useEffect(() => {
     if (!dirty) setDraft(saved)
   }, [saved])
+  const enabled = row?.enabled ?? false
+  const enableRefused =
+    !enabled && virtualUserRunRefused(saved.disposition, production)
+  const saveRefused =
+    enabled && virtualUserRunRefused(draft.disposition, production)
 
   return (
     <Stack gap="sm" data-testid="virtual-user-schedule">
@@ -96,8 +107,8 @@ export const VirtualUserSchedule: React.FC<{
         </Text>
         <Switch
           size="sm"
-          checked={row?.enabled ?? false}
-          disabled={save.isPending}
+          checked={enabled}
+          disabled={save.isPending || enableRefused}
           onChange={(event) =>
             save.mutate({ enabled: event.currentTarget.checked })
           }
@@ -110,6 +121,11 @@ export const VirtualUserSchedule: React.FC<{
         {m.virtual_users_schedule_note()}
       </Text>
 
+      {(enableRefused || saveRefused) && (
+        <Text size="xs" c="dimmed" data-testid="virtual-user-schedule-refused">
+          {m.virtual_users_schedule_production_only()}
+        </Text>
+      )}
       {error && (
         <Text size="xs" c="red">
           {asI18n(error instanceof Error ? error.message : String(error))}
@@ -186,6 +202,7 @@ export const VirtualUserSchedule: React.FC<{
             size="compact-xs"
             variant="light"
             loading={save.isPending}
+            disabled={saveRefused}
             onClick={() =>
               save.mutate({
                 disposition: draft.disposition,
