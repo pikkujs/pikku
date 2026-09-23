@@ -173,22 +173,7 @@ describes something that no longer exists.
 The run only files screenshots a step asks for. Add one browser step that opens
 a page and takes a shot, and call it from a scenario each feature owns:
 
-```ts
-import { z } from 'zod'
-import { pikkuScenarioStep } from '#pikku/scenarios'
-
-export const capturesScreen = pikkuScenarioStep({
-  name: 'capturesScreen',
-  description: 'captures the named screen',
-  template: 'captures {name}',
-  input: z.object({ path: z.string(), name: z.string() }),
-  output: z.object({ captured: z.boolean() }),
-  browser: async (_services, { path, name }, { browser }) => {
-    await browser.goto(path)
-    await browser.screenshot(name, { showcase: true })
-    return { captured: true }
-  },
-})
+```ts snippet:guideCaptureStep
 ```
 
 - The screenshot `name` is the figure caption. Write it as a caption: "the
