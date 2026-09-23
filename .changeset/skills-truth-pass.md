@@ -20,5 +20,5 @@ the website's code blocks use. `SKILL_SNIPPETS` ships with the package so a
 filesystem read (`pikku skills install` from a checkout) expands the same way.
 The corpus suite fails on a fence naming a region that does not exist, a CLI
 suite fails when the embedded snippets drift from the example, and a ratchet
-pins the number of TypeScript fences still unbacked (`71`). `pikku-scenario`'s
+pins the number of TypeScript fences still unbacked (`73`). `pikku-scenario`'s
 persona declaration is the first converted block.
