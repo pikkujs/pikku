@@ -200,6 +200,106 @@ describe('split type identity via a linked dependency', () => {
   })
 })
 
+/**
+ * Bun's isolated layout, as a fresh fabric scaffold installs it: the workspace
+ * package links `@pikku/cli` into the in-project `.bun` store, and the store
+ * entry carries its own `zod` beside it. Nothing here leaves the project, which
+ * is why the linked-dependency check never looked at it.
+ */
+const installPikkuInStore = async (
+  root: string,
+  pkg: { name: string; dependencies?: Record<string, string> },
+  storeZod: string,
+  projectZod: string
+) => {
+  await writeJson(join(root, 'package.json'), { name: 'root' })
+  const consumer = join(root, 'packages', 'functions')
+  await writeJson(join(consumer, 'package.json'), { name: 'functions' })
+  await writeJson(join(consumer, 'node_modules', 'zod', 'package.json'), {
+    name: 'zod',
+    version: projectZod,
+  })
+
+  const storeModules = join(
+    root,
+    'node_modules',
+    '.bun',
+    `${pkg.name.replace('/', '+')}@1.0.0`,
+    'node_modules'
+  )
+  const real = join(storeModules, pkg.name)
+  await writeJson(join(real, 'package.json'), { version: '1.0.0', ...pkg })
+  await writeJson(join(storeModules, 'zod', 'package.json'), {
+    name: 'zod',
+    version: storeZod,
+  })
+
+  await mkdir(join(consumer, 'node_modules', '@pikku'), { recursive: true })
+  await symlink(real, join(consumer, 'node_modules', pkg.name), 'dir')
+}
+
+describe('an installed pikku package resolving its own copy', () => {
+  test('@pikku/cli on a different zod than the project → error naming both', async () => {
+    await withTmpPair(async (root) => {
+      await installPikkuInStore(
+        root,
+        { name: '@pikku/cli', dependencies: { zod: '^4' } },
+        '4.4.3',
+        '4.6.5'
+      )
+      const finding = (await runTypeIdentityChecks(root)).find((f) =>
+        f.id.startsWith('skewed-type-identity')
+      )
+      assert.ok(finding, 'expected a skewed-type-identity finding')
+      assert.equal(finding.severity, 'error')
+      assert.match(finding.message, /@pikku\/cli/)
+      assert.match(finding.message, /zod@4\.4\.3/)
+      assert.match(finding.message, /zod@4\.6\.5/)
+    })
+  })
+
+  test('the same zod on both sides → no finding', async () => {
+    await withTmpPair(async (root) => {
+      await installPikkuInStore(
+        root,
+        { name: '@pikku/cli', dependencies: { zod: '^4' } },
+        '4.6.5',
+        '4.6.5'
+      )
+      assert.deepEqual(await runTypeIdentityChecks(root), [])
+    })
+  })
+
+  // Bun's store also keeps hoisted fallbacks, so walking up from a package
+  // that never asked for zod can land on some unrelated copy.
+  test('a pikku package that does not depend on zod is not compared', async () => {
+    await withTmpPair(async (root) => {
+      await installPikkuInStore(
+        root,
+        { name: '@pikku/fetch', dependencies: {} },
+        '4.4.3',
+        '4.6.5'
+      )
+      assert.deepEqual(await runTypeIdentityChecks(root), [])
+    })
+  })
+
+  test('is planned whenever the root has an install, linked or not', async () => {
+    await withTmpPair(async (root) => {
+      await installPikkuInStore(
+        root,
+        { name: '@pikku/cli', dependencies: { zod: '^4' } },
+        '4.4.3',
+        '4.6.5'
+      )
+      const planned = (await planValidation(root)).filter(
+        ({ check }) => check.id === 'type-identity'
+      )
+      assert.equal(planned.length, 1)
+    })
+  })
+})
+
 describe('warnOnSplitTypeIdentity (codegen preflight)', () => {
   const collect = () => {
     const warnings: string[] = []

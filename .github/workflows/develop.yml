@@ -259,6 +259,7 @@ jobs:
         verifier:
           [
             addon,
+            addon-openapi,
             addon-registry,
             addon-treeshake,
             analytics,

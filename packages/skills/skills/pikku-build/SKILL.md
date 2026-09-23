@@ -24,7 +24,6 @@ agent:
         command: pikku knowledge validate
       - id: typechecks
         command: pikku all --tsc-summary
-
 ---
 
 # Build on Pikku
@@ -62,6 +61,24 @@ Once, now — not later when you start building. It wires the `#pikku` alias the
 generated code depends on, and on a fresh scaffold **every command that touches
 codegen fails until it has run**, including ones you would reasonably reach for
 while still planning. Those failures look alarming and are nothing but this.
+
+## Start from what you were handed
+
+When the request comes with a file or a URL, look at it before planning
+anything. Two kinds are converted first and then built on:
+
+| Handed                                                                                                              | Say, then do                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| An **OpenAPI / Swagger spec** — top-level `openapi` or `swagger` key, a `paths` object                              | "This is an OpenAPI spec — I'll turn it into an addon first." Follow the `pikku-addon` skill's OpenAPI reference. |
+| An **n8n export** — an object with `nodes` and `connections`, an array of them, or a `{ workflows: [...] }` wrapper | "This is an n8n workflow — I'll import it first." Follow `pikku-n8n-import`.                                      |
+
+Say it at once, in one line, and start: this is the obvious first move, not a
+question for the user. Generate the whole spec, however large.
+
+Neither is the app. When the conversion compiles, come back here and carry on
+in the mode the request calls for — App by default — planning milestones around
+what the user wants to do with the API or the workflow, and reaching the
+generated functions through `ref()`.
 
 ## What holds in every mode
 
