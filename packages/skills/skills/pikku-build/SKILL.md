@@ -103,6 +103,17 @@ generated functions through `ref()`.
   `pikku knowledge plan progress` measures the build against it from the
   generated meta. You plan it and you build it; what you never do is edit the
   plan afterwards to match what you built — that is grading yourself.
+- **Print the links whenever the stack comes up, and in every hand-over.** Full,
+  clickable URLs, with the ports taken from what `bun run dev` actually printed:
+  - **App** — the frontend's URL (`http://localhost:7104` in the template; each
+    frontend in `pikkufabric.config.json` has its own port)
+  - **API** — `http://localhost:3000`
+  - **Console** — `http://localhost:3000/console`, plus a deep link to each
+    page that shows what this turn produced: `/console/knowledge`,
+    `/console/scenarios`, `/console/personas`, `/console/functions`,
+    `/console/database`, `/console/changes`
+
+  A person who has to go hunting for the port assumes the app did not start.
 
 ## What NOT to do
 
