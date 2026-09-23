@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 export class TypesMap {
   private map: Map<string, { originalName: string; path: string | null }> =
     new Map()
@@ -12,8 +14,16 @@ export class TypesMap {
     this.map.set(originalName, { originalName, path })
   }
 
+  /**
+   * A pure function of the path, with no dependence on insertion order: the
+   * alias lands in generated `.d.ts` maps, and anything that varies between
+   * runs rewrites those files, which invalidates the schema cache mid-`pikku
+   * all` and costs a full ts-json-schema-generator pass each time. A counter
+   * over already-taken names would reintroduce that through traversal order.
+   */
   public addUniqueType(originalName: string, path: string): string {
-    const uniqueName = `${originalName}_${Math.random().toString(36).substring(7)}`
+    const digest = createHash('sha256').update(path).digest('hex').slice(0, 12)
+    const uniqueName = `${originalName}_${digest}`
     this.map.set(uniqueName, { originalName, path })
     return uniqueName
   }
