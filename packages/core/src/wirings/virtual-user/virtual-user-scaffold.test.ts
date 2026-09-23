@@ -22,6 +22,7 @@ import type {
   VirtualUserScheduleRecord,
   VirtualUserScheduleStore,
 } from './virtual-user-schedule-store.js'
+import { getErrorResponse } from '../../errors/error-handler.js'
 
 /**
  * These are the bodies of the scaffolded RPCs, so what is asserted here used to
@@ -142,6 +143,49 @@ describe('runnablePersona', () => {
     assert.throws(
       () => runnablePersona(personas, 'observed'),
       /declared as acted upon, never run/
+    )
+  })
+})
+
+// A refusal is the caller's to act on, so it has to reach them as a 4xx: a plain
+// Error becomes a 500 whose body is only an errorId, and the console shows that
+// and nothing else.
+describe('refusals reach the caller', () => {
+  const statusOf = async (run: () => unknown) => {
+    try {
+      await run()
+    } catch (e) {
+      return getErrorResponse(e)?.status
+    }
+    assert.fail('expected a refusal')
+  }
+
+  test('an undeclared persona is a 400', async () => {
+    assert.equal(await statusOf(() => runnablePersona(personas, 'nobody')), 400)
+  })
+
+  test('an acted-upon persona is a 400', async () => {
+    assert.equal(
+      await statusOf(() => runnablePersona(personas, 'observed')),
+      400
+    )
+  })
+
+  test('a probing disposition in production is a 403', async () => {
+    const { store } = runStore()
+    assert.equal(
+      await statusOf(() =>
+        startVirtualUserRun({
+          store,
+          personas,
+          config: { nodeEnv: 'development' },
+          environments: { production: { production: true } },
+          environment: 'production',
+          persona: 'susan',
+          disposition: 'newcomer',
+        })
+      ),
+      403
     )
   })
 })

@@ -7,6 +7,7 @@ import type {
   ResolvedPersona,
   ScenarioPersonas,
 } from '../../services/personas-service.js'
+import { BadRequestError, ForbiddenError } from '../../errors/errors.js'
 import { prepareVirtualUserRun } from './prepare-virtual-user-run.js'
 import { runVirtualUser as runVirtualUserEngine } from './run-virtual-user.js'
 import { personaVirtualUserTarget } from './virtual-user-target.js'
@@ -110,12 +111,12 @@ export const runnablePersona = (
 ): ResolvedPersona => {
   const persona = personas[personaId]
   if (!persona) {
-    throw new Error(
+    throw new BadRequestError(
       `Unknown persona "${personaId}" — declare it with definePersonas()`
     )
   }
   if (!persona.runnable) {
-    throw new Error(
+    throw new BadRequestError(
       `Persona "${personaId}" is declared as acted upon, never run`
     )
   }
@@ -247,7 +248,7 @@ export const startVirtualUserRun = async ({
     disposition !== PRODUCTION_DISPOSITION &&
     isProductionRun(config, environments, environment)
   ) {
-    throw new Error(
+    throw new ForbiddenError(
       `Only the '${PRODUCTION_DISPOSITION}' disposition may run against production; "${personaId}" is ${disposition}`
     )
   }
