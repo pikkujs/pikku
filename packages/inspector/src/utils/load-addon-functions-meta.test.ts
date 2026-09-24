@@ -326,3 +326,91 @@ describe('loadAddonFunctionsMeta — wireAddon expose lists', () => {
     assert.deepEqual(await criticalsFor(true), [])
   })
 })
+
+describe('loadAddonFunctionsMeta — where an addon resolves from', () => {
+  let rootDir: string
+  let functionsDir: string
+
+  before(() => {
+    rootDir = mkdtempSync(join(tmpdir(), 'pikku-addon-resolve-'))
+    writeFileSync(
+      join(rootDir, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces: ['packages/*'] })
+    )
+    functionsDir = join(rootDir, 'packages', 'functions')
+    mkdirSync(join(functionsDir, 'src'), { recursive: true })
+    writeFileSync(
+      join(functionsDir, 'package.json'),
+      JSON.stringify({ name: '@project/functions' })
+    )
+  })
+
+  after(() => {
+    rmSync(rootDir, { recursive: true, force: true })
+  })
+
+  const warnings: string[] = []
+  const recording = {
+    ...logger,
+    warn: (message: string) => warnings.push(message),
+  } as unknown as InspectorLogger
+
+  const load = async (pkg: string) => {
+    warnings.length = 0
+    const state = makeState(
+      rootDir,
+      new Map<string, any>([
+        [
+          'crm',
+          { package: pkg, file: join(functionsDir, 'src', 'crm.addon.ts') },
+        ],
+      ])
+    )
+    await loadAddonFunctionsMeta(recording, state)
+    return state
+  }
+
+  test('an addon installed only in the package that calls wireAddon still loads', async () => {
+    const addonDir = join(functionsDir, 'node_modules', '@addon', 'crm')
+    mkdirSync(join(addonDir, '.pikku', 'function'), { recursive: true })
+    writeFileSync(
+      join(addonDir, 'package.json'),
+      JSON.stringify({ name: '@addon/crm' })
+    )
+    writeFileSync(
+      join(addonDir, '.pikku', 'function', 'pikku-functions-meta.gen.json'),
+      JSON.stringify({ listContacts: {} })
+    )
+
+    const state = await load('@addon/crm')
+
+    assert.deepEqual(Object.keys(state.addonFunctions.crm), ['listContacts'])
+    assert.deepEqual(warnings, [])
+  })
+
+  test('a package that is not installed anywhere says where to add it', async () => {
+    await load('@addon/missing')
+
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /@addon\/missing, which is not installed/)
+    assert.match(
+      warnings[0],
+      /"@addon\/missing": "workspace:\*".*packages\/functions\/package\.json/
+    )
+  })
+
+  test('a package that is installed but unbuilt says to build it', async () => {
+    const addonDir = join(rootDir, 'node_modules', '@addon', 'unbuilt')
+    mkdirSync(addonDir, { recursive: true })
+    writeFileSync(
+      join(addonDir, 'package.json'),
+      JSON.stringify({ name: '@addon/unbuilt' })
+    )
+
+    await load('@addon/unbuilt')
+
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /is installed at .* but has not been built/)
+    assert.match(warnings[0], /pikku-functions-meta\.gen\.json/)
+  })
+})
