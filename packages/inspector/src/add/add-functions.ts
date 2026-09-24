@@ -876,15 +876,17 @@ export const addFunctions: AddWiring = (
               }
             }
           } else if (ts.isCallExpression(prop.initializer)) {
-            // Bad - it's an inline expression
             const schemaName = `${funcIdToTypeName(name)}${propName.charAt(0).toUpperCase() + propName.slice(1)}`
-            logger.critical(
-              ErrorCode.INLINE_SCHEMA,
-              `Inline schemas are not supported for '${propName}' in '${name}'.\n` +
+            logger.diagnostic({
+              severity: 'error',
+              code: ErrorCode.INLINE_SCHEMA,
+              message:
+                `Inline schemas are not supported for '${propName}' in '${name}'; ` +
+                `it is validated against its TypeScript type only, so refinements are not enforced.\n` +
                 `  Extract to an exported variable:\n` +
                 `    export const ${schemaName} = ${prop.initializer.getText()}\n` +
-                `  Then use: ${propName}: ${schemaName}`
-            )
+                `  Then use: ${propName}: ${schemaName}`,
+            })
           }
         }
       }
