@@ -120,8 +120,8 @@ generated functions through `ref()`.
   then genuinely changed shape gets `version: N+1` on its `pikkuFunc({...})`
   followed by `pikku versions update`; delete its entry and you erase a version
   a client is holding.
-- **A new migration reaches the database through `pikku db migrate`, and
-  nothing else.** `pikku dev` does not apply one — it will happily serve a
+- **A new migration reaches the database through `pikku db migrate` (or
+  `pikku db reset`, which wipes first).** `pikku dev` does not apply one — it will happily serve a
   schema older than the file you just wrote, and the failure surfaces as a
   function reading a column that is not there yet. Run `pikku db migrate`, then
   restart the dev server. And never put an underscore before a digit in a column
