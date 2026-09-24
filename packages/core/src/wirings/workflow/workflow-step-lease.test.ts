@@ -16,6 +16,15 @@ import type { StepState } from './workflow.types.js'
 const RPC_NAME = 'charge:card'
 const silentLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
+/** A step whose function is dispatched through the queue rather than inline. */
+function registerDispatched(rpcName: string): void {
+  const funcId = `fn:${rpcName}`
+  pikkuState(null, 'rpc', 'meta', { [rpcName]: funcId } as any)
+  pikkuState(null, 'function', 'meta', {
+    [funcId]: { workflowQueued: true },
+  } as any)
+}
+
 /** `recoverStalledRuns` re-drives a run through the queue, so it needs one. */
 function trackResumes(): { runIds: string[] } {
   const seen: string[] = []
@@ -142,6 +151,81 @@ describe('step leases', () => {
     assert.match(String(step.error?.message), /lease/i)
   })
 
+  // The sweep resumes the run, and the resumed run meets the step still
+  // `running`. Redispatching it as `scheduled` would hand it to the claim as a
+  // first run, and a step that kills its worker every time would never run out.
+  test('a resumed run redispatches a lapsed step without resetting its attempts', async () => {
+    const resumes = trackResumes()
+    registerDispatched(RPC_NAME)
+    const ws = new InMemoryWorkflowService()
+    const runId = await startRun(ws, 'Charge card', { retries: 0 })
+
+    await claim(ws, runId, 'Charge card')
+    await loseTheWorker(ws, runId, 'Charge card')
+    await assert.rejects(
+      (ws as any).rpcStep(runId, 'Charge card', RPC_NAME, {}, {}),
+      (e: Error) => e.name === 'WorkflowAsyncException'
+    )
+
+    assert.deepEqual(resumes.runIds, [runId], 'the step is dispatched again')
+    assert.equal(
+      (await ws.getStepState(runId, 'Charge card')).status,
+      'running',
+      'it is left running for the claim to count'
+    )
+    assert.equal(await claim(ws, runId, 'Charge card'), null)
+    assert.equal(
+      (await ws.getStepState(runId, 'Charge card')).status,
+      'failed',
+      'its one attempt is spent, so it fails'
+    )
+  })
+
+  test('a resumed run leaves a step with a live lease to its worker', async () => {
+    const resumes = trackResumes()
+    registerDispatched(RPC_NAME)
+    const ws = new InMemoryWorkflowService()
+    const runId = await startRun(ws, 'Charge card')
+
+    await claim(ws, runId, 'Charge card')
+    await assert.rejects(
+      (ws as any).rpcStep(runId, 'Charge card', RPC_NAME, {}, {}),
+      (e: Error) => e.name === 'WorkflowAsyncException'
+    )
+
+    assert.deepEqual(resumes.runIds, [], 'nothing is dispatched')
+    assert.equal(
+      (await ws.getStepState(runId, 'Charge card')).status,
+      'running'
+    )
+  })
+
+  // Releasing the lease of a step parked on a child run happens after the
+  // refresh stops. A renewal still in flight must not land after the release.
+  test('stopping the refresh waits for a renewal in flight', async () => {
+    let release!: () => void
+    let stopped = false
+
+    mock.timers.enable({ apis: ['setInterval'] })
+    try {
+      const stop = startStepLeaseRefresh(
+        'step-1',
+        10_000,
+        () => new Promise<void>((resolve) => (release = resolve))
+      )
+      mock.timers.tick(5_000)
+      const stopping = stop().then(() => (stopped = true))
+      await new Promise((resolve) => setImmediate(resolve))
+      assert.equal(stopped, false, 'stop returned with a renewal outstanding')
+      release()
+      await stopping
+    } finally {
+      mock.timers.reset()
+    }
+
+    assert.equal(stopped, true)
+  })
+
   test('a lease shorter than the refresh floor is still refreshed before it lapses', async () => {
     trackResumes()
     // Under twice the floor, which is where applying the floor as a maximum
@@ -159,7 +243,7 @@ describe('step leases', () => {
         }
       )
       mock.timers.tick(leaseMs - 1)
-      stop()
+      await stop()
     } finally {
       mock.timers.reset()
     }

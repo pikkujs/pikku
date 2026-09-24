@@ -146,6 +146,26 @@ addError(WorkflowStepLeaseExpiredError, {
   message: 'Workflow step lost its worker and has no attempts left.',
 })
 
+/**
+ * A write from a dispatch that no longer owns its step: its lease lapsed and
+ * another dispatch claimed the step as a newer attempt. The newer attempt owns
+ * the outcome, so the stale one is dropped rather than recorded over it.
+ */
+export class WorkflowStepSupersededError extends PikkuError {
+  constructor(
+    public readonly stepId: string,
+    public readonly attempt: number
+  ) {
+    super(
+      `Workflow step ${stepId}: attempt ${attempt} was superseded by a newer claim`
+    )
+  }
+}
+addError(WorkflowStepSupersededError, {
+  status: 409,
+  message: 'Workflow step was claimed by a newer attempt.',
+})
+
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: unknown) {
     super(`Workflow step name must be a string. Received: ${typeof stepName}`)

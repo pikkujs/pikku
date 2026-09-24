@@ -3,6 +3,7 @@ import {
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
   WorkflowStepLeaseExpiredError,
+  WorkflowStepSupersededError,
   isStepLeaseLive,
   leaseAttemptsExhausted,
 } from '@pikku/core/workflow'
@@ -239,13 +240,17 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   public override async refreshStepLease(
     stepId: string,
-    expiresAt: Date | null
+    expiresAt: Date | null,
+    attempt?: number
   ): Promise<void> {
-    await this.db
+    let query = this.db
       .updateTable('workflowStep')
       .set({ leaseExpiresAt: expiresAt, updatedAt: new Date() })
       .where('workflowStepId', '=', stepId)
-      .execute()
+    if (attempt !== undefined) {
+      query = query.where(sql`coalesce(current_attempt, 1)`, '=', attempt)
+    }
+    await query.execute()
   }
 
   protected async setStepScheduledImpl(stepId: string): Promise<void> {
@@ -270,7 +275,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   private async writeStepTransition(
     stepId: string,
     status: StepStatus,
-    historyValues: Record<string, unknown>
+    historyValues: Record<string, unknown>,
+    attempt?: number
   ): Promise<void> {
     const now = new Date()
     const stepValues: Record<string, unknown> = { status, updatedAt: now }
@@ -281,7 +287,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (status === 'failed') stepValues.result = null
 
     await this.db.transaction().execute(async (trx) => {
-      await trx
+      let step = trx
         .updateTable('workflowStep')
         .set({
           ...stepValues,
@@ -292,7 +298,16 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
           currentAttempt: sql`coalesce(current_attempt, 1)`,
         } as any)
         .where('workflowStepId', '=', stepId)
-        .execute()
+      // Fenced to the attempt that made the write, so a dispatch whose step
+      // was claimed again after its lease lapsed cannot record over the newer
+      // attempt. Throwing rolls the transaction back.
+      if (attempt !== undefined) {
+        step = step.where(sql`coalesce(current_attempt, 1)`, '=', attempt)
+      }
+      const moved = await step.executeTakeFirst()
+      if (attempt !== undefined && Number(moved?.numUpdatedRows ?? 0n) === 0) {
+        throw new WorkflowStepSupersededError(stepId, attempt)
+      }
 
       const written = await trx
         .updateTable('workflowStepHistory')
@@ -394,27 +409,39 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   protected async setStepResultImpl(
     stepId: string,
-    result: any
+    result: any,
+    attempt?: number
   ): Promise<void> {
-    await this.writeStepTransition(stepId, 'succeeded', {
-      result: JSON.stringify(result),
-      succeededAt: new Date(),
-    })
+    await this.writeStepTransition(
+      stepId,
+      'succeeded',
+      {
+        result: JSON.stringify(result),
+        succeededAt: new Date(),
+      },
+      attempt
+    )
   }
 
   protected async setStepErrorImpl(
     stepId: string,
-    error: Error
+    error: Error,
+    attempt?: number
   ): Promise<void> {
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
     }
-    await this.writeStepTransition(stepId, 'failed', {
-      error: JSON.stringify(serializedError),
-      failedAt: new Date(),
-    })
+    await this.writeStepTransition(
+      stepId,
+      'failed',
+      {
+        error: JSON.stringify(serializedError),
+        failedAt: new Date(),
+      },
+      attempt
+    )
   }
 
   protected async createRetryAttemptImpl(

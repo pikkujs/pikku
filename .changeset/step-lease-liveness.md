@@ -25,3 +25,7 @@ one-second floor the interval otherwise respects: applying that floor as a
 maximum would renew a shorter lease for the first time after it had already
 lapsed, which is the double-claim the lease exists to prevent. A lease that
 short is logged once, pointing at the queue's `lockDuration`.
+
+The lease lives in a new `workflow_step.lease_expires_at` column. Run
+`pikku db generate` and `pikku db migrate` after upgrading: the runtime does not
+add columns, and every step read selects this one.
