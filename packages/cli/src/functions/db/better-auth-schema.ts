@@ -181,6 +181,65 @@ async function loadAuthConfig(opts: {
   return userCreateConfig(new LocalVariablesService())
 }
 
+/**
+ * Build the auth instance without a plugin's background init being able to kill
+ * the process.
+ *
+ * Reading the schema means reading `options`, which Better Auth assembles while
+ * the constructor runs — but from 1.7 a plugin's `init` also starts real work
+ * and does not wait for it. The OAuth provider behind `@better-auth/mcp` seeds
+ * its `oauthResource` rows this way. Here that work has nowhere to go: the
+ * database it is handed is a throwaway whose auth tables do not exist yet, and
+ * on the SQLite path the handle is closed as soon as the options have been
+ * read. The seed then rejects with nothing awaiting it, and Node's default for
+ * an unhandled rejection is to terminate — so `pikku db generate` died on
+ * `database is not open`, from a write the schema derivation never wanted, in a
+ * project whose only offence was configuring MCP.
+ *
+ * Rejections are reported rather than swallowed: they say a plugin tried to
+ * touch the database while being introspected, which is worth seeing, but never
+ * worth failing the command over. Whatever the plugin was doing is irrelevant
+ * to the shape of its tables, which is all that is being read.
+ *
+ * The handler is installed only around the call and only added to whatever the
+ * host already has, so a real unhandled rejection anywhere else still behaves
+ * exactly as it did.
+ */
+async function withoutPluginInitCrashing<T>(build: () => T | Promise<T>): Promise<T> {
+  const existing = process.listeners('unhandledRejection')
+  const swallow = (reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    debugInitRejection(message)
+  }
+  for (const listener of existing) {
+    process.off('unhandledRejection', listener)
+  }
+  process.on('unhandledRejection', swallow)
+  try {
+    const instance = await build()
+    // One turn of the loop, so an init that rejects immediately does so while
+    // the guard is still the only listener. A slower one is caught by the
+    // `swallow` handler that outlives this only if the host had none of its
+    // own — which is why the originals go back on before it comes off.
+    await new Promise((resolve) => setImmediate(resolve))
+    return instance
+  } finally {
+    for (const listener of existing) {
+      process.on('unhandledRejection', listener)
+    }
+    process.off('unhandledRejection', swallow)
+  }
+}
+
+function debugInitRejection(message: string): void {
+  if (process.env.PIKKU_DEBUG) {
+    // eslint-disable-next-line no-console
+    console.debug(
+      `[pikku] a Better Auth plugin's init failed while its schema was being read, which does not affect the schema: ${message}`
+    )
+  }
+}
+
 export async function loadAuthOptions(opts: {
   rootDir: string
   srcDirectories: string[]
@@ -199,7 +258,7 @@ export async function loadAuthOptions(opts: {
   >
   services.config = await loadAuthConfig(opts)
 
-  const instance = await factory(services)
+  const instance = await withoutPluginInitCrashing(() => factory(services))
   const options = (instance as { options?: BetterAuthOptionsLike }).options
   return options ?? null
 }
