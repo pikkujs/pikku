@@ -580,6 +580,7 @@
   ],
   "./testing": [
     "clearPikkuRuntimeState",
+    "defineEventHubServiceTests",
     "defineServiceTests"
   ],
   "./dev": [
