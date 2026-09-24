@@ -50,6 +50,18 @@ describe('renderKnowledgePlanProgress', () => {
     process.exitCode = undefined
   })
 
+  test('the console link is printed when there is one', () => {
+    const url =
+      'http://localhost:3000/console/knowledge?id=knowledge/m.plan.json'
+    const out = capture(() =>
+      renderKnowledgePlanProgress(null, {
+        ...result({ ok: true }),
+        consoleUrl: url,
+      })
+    )
+    assert.ok(out.includes(url))
+  })
+
   test('a built first pass exits zero', () => {
     const out = capture(() =>
       renderKnowledgePlanProgress(

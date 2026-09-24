@@ -1,10 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useKnowledge } from './useKnowledge'
+import { applyUrlParams } from './url-state'
+import { useOptionalConsoleRouter } from '../router'
 import {
   entryPointNote,
   groupNotesBySection,
   issuesToFix,
+  knowledgeSelectionId,
   noteMatches,
+  resolveKnowledgeId,
   type KnowledgeSelection,
 } from '../lib/knowledge'
 
@@ -35,6 +39,26 @@ export interface KnowledgeBrowse {
 }
 
 /**
+ * Which note is open, as `?id=` when the console router is mounted so a
+ * selection can be linked to — `pikku knowledge plan` prints such links. A host
+ * that mounts the knowledge pages outside the router keeps it in memory. The
+ * router is fixed for the life of a mount, so the branch never changes hooks.
+ */
+const useSelectedId = (): [string | null, (id: string) => void] => {
+  const router = useOptionalConsoleRouter()
+  if (!router) return useState<string | null>(null)
+  const [searchParams, setSearchParams] = router.useSearchParams()
+  const set = useCallback(
+    (id: string) =>
+      setSearchParams((prev) => applyUrlParams(prev, { id }), {
+        replace: true,
+      }),
+    [setSearchParams]
+  )
+  return [searchParams.get('id'), set]
+}
+
+/**
  * The browse state `KnowledgeWorkspace` normally keeps to itself — the search
  * text and which note is being read, plus the grouped list they produce. Hoist
  * it here and the note rail can be mounted as its own surface (a host's side
@@ -47,7 +71,7 @@ export interface KnowledgeBrowse {
 export const useKnowledgeBrowse = (): KnowledgeBrowse => {
   const { bundle, isLoading } = useKnowledge()
   const [search, setSearch] = useState('')
-  const [selection, setSelection] = useState<KnowledgeSelection | null>(null)
+  const [selectedId, setSelectedId] = useSelectedId()
 
   const notes = bundle?.notes ?? []
   const findings = useMemo(() => issuesToFix(bundle?.findings ?? []), [bundle])
@@ -67,6 +91,15 @@ export const useKnowledgeBrowse = (): KnowledgeBrowse => {
   const byPath = useMemo(
     () => new Map(notes.map((note) => [note.path, note])),
     [notes]
+  )
+
+  const selection = useMemo(
+    () => resolveKnowledgeId(selectedId, byPath.keys()),
+    [selectedId, byPath]
+  )
+  const setSelection = useCallback(
+    (next: KnowledgeSelection) => setSelectedId(knowledgeSelectionId(next)),
+    [setSelectedId]
   )
 
   // A search that hides the selected note leaves the selection alone — it is
