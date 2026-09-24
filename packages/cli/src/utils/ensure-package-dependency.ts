@@ -13,14 +13,17 @@ type PackageJson = {
 
 const findPackageJson = async (
   fromDir: string,
-  accept: (pkg: PackageJson) => boolean = () => true
+  accept: (pkg: PackageJson) => boolean = (pkg) => !!pkg.name
 ): Promise<{ path: string; pkg: PackageJson } | undefined> => {
   let dir = fromDir
   while (true) {
     const path = join(dir, 'package.json')
     if (existsSync(path)) {
-      const pkg = JSON.parse(await readFile(path, 'utf-8')) as PackageJson
-      if (accept(pkg)) return { path, pkg }
+      let pkg: PackageJson | undefined
+      try {
+        pkg = JSON.parse(await readFile(path, 'utf-8')) as PackageJson
+      } catch {}
+      if (pkg && accept(pkg)) return { path, pkg }
     }
     const parent = dirname(dir)
     if (parent === dir) return undefined

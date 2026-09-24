@@ -14,23 +14,47 @@ const sdkPackage = async (pkg: Record<string, unknown>) => {
   await writeFile(join(root, 'package.json'), JSON.stringify(pkg, null, 2))
   return {
     file: join(root, 'src', 'pikku', 'cli-client.gen.ts'),
-    read: async () => JSON.parse(await readFile(join(root, 'package.json'), 'utf-8')),
+    read: async () =>
+      JSON.parse(await readFile(join(root, 'package.json'), 'utf-8')),
   }
 }
 
 describe('ensurePackageDependency', () => {
   test('declares the package in the nearest package.json, at the range the CLI ships with', async () => {
-    const sdk = await sdkPackage({ name: 'sdk', dependencies: { '@pikku/fetch': '^0.12.12' } })
+    const sdk = await sdkPackage({
+      name: 'sdk',
+      dependencies: { '@pikku/fetch': '^0.12.12' },
+    })
     await ensurePackageDependency(logger, sdk.file, '@pikku/websocket')
     const pkg = await sdk.read()
     assert.match(pkg.dependencies['@pikku/websocket'], /^\^?\d+\.\d+\.\d+/)
-    assert.deepEqual(Object.keys(pkg.dependencies), ['@pikku/fetch', '@pikku/websocket'])
+    assert.deepEqual(Object.keys(pkg.dependencies), [
+      '@pikku/fetch',
+      '@pikku/websocket',
+    ])
   })
 
   test('leaves a package that already declares it untouched', async () => {
-    const sdk = await sdkPackage({ name: 'sdk', peerDependencies: { '@pikku/websocket': '*' } })
+    const sdk = await sdkPackage({
+      name: 'sdk',
+      peerDependencies: { '@pikku/websocket': '*' },
+    })
     await ensurePackageDependency(logger, sdk.file, '@pikku/websocket')
-    assert.deepEqual(await sdk.read(), { name: 'sdk', peerDependencies: { '@pikku/websocket': '*' } })
+    assert.deepEqual(await sdk.read(), {
+      name: 'sdk',
+      peerDependencies: { '@pikku/websocket': '*' },
+    })
+  })
+
+  test('skips a nameless package.json stub and declares it in the real package', async () => {
+    const sdk = await sdkPackage({ name: 'sdk' })
+    const stub = join(sdk.file, '..', '..', 'package.json')
+    await writeFile(stub, JSON.stringify({ type: 'module' }))
+    await ensurePackageDependency(logger, sdk.file, '@pikku/websocket')
+    assert.deepEqual(JSON.parse(await readFile(stub, 'utf-8')), {
+      type: 'module',
+    })
+    assert.ok((await sdk.read()).dependencies['@pikku/websocket'])
   })
 
   test('adds nothing for a package the CLI itself does not ship with', async () => {
