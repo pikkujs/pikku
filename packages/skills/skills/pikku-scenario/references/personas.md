@@ -55,20 +55,12 @@ A project that never declares a persona keeps working: a scenario that names no 
 An addon generated from an upstream API (Dolibarr, a CRM, a calendar) calls it
 with the signed-in user's own credential. An actor has none until one is stored
 for it, so every step that reaches the addon fails with `No <X> session`. Give
-the `actor` plugin the credential names and a store, and each actor carries its
-upstream credential into every session:
+the `actor` plugin a `credentials` option, and each actor carries its upstream
+credential into every session:
 
-```ts
-pikkuActor({
-  secret: SCENARIO_ACTOR_SECRET,
-  allowSignIn: ALLOW_ACTOR_SIGN_IN,
-  credentials: {
-    names: ['dolibarr'],
-    store: (name, value, userId) => credentialService.set(name, value, userId),
-    remove: (name, userId) => credentialService.delete(name, userId),
-  },
-})
-```
+- `names: ['dolibarr']` — the credentials to carry
+- `store: (name, value, userId) => credentialService.set(name, value, userId)`
+- `remove: (name, userId) => credentialService.delete(name, userId)`
 
 At each actor sign-in the plugin reads `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` —
 `dan` + `dolibarr` is `ACTOR_CREDENTIAL_DAN_DOLIBARR` — and stores it with
