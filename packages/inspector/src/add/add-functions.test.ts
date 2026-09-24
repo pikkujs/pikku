@@ -741,3 +741,48 @@ describe('MCP tool naming', () => {
     }
   })
 })
+
+describe('inline input/output schemas', () => {
+  test('are reported against that function and do not block the build', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-inline-schema-'))
+    const file = join(rootDir, 'a.ts')
+    await writeFile(
+      file,
+      [
+        "import { pikkuFunc } from '@pikku/core'",
+        "import { z } from 'zod'",
+        'export const greet = pikkuFunc({',
+        '  input: z.object({ name: z.string() }),',
+        '  func: async (_services, data: { name: string }) => ({ hi: data.name })',
+        '})',
+      ].join('\n')
+    )
+
+    const diagnostics: Array<{ severity: string; code: ErrorCode }> = []
+    const logger: InspectorLogger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      diagnostic: ({ severity, code }) => {
+        diagnostics.push({ severity, code })
+      },
+      critical: (code: ErrorCode) => {
+        diagnostics.push({ severity: 'critical', code })
+      },
+      hasCriticalErrors: () =>
+        diagnostics.some((d) => d.severity === 'critical'),
+    }
+
+    try {
+      const state = await inspect(logger, [file], { rootDir })
+      assert.deepStrictEqual(diagnostics, [
+        { severity: 'error', code: ErrorCode.INLINE_SCHEMA },
+      ])
+      assert.ok(state.functions.meta['greet'])
+      assert.strictEqual(logger.hasCriticalErrors(), false)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+})
