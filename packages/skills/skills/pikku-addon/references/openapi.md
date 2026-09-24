@@ -92,6 +92,35 @@ another shared package. Codegen then reads the app's
 schemas with the wrong copy and fails on schemas that are correct. Pin one
 version for the whole install, as the finding says, and reinstall.
 
+## 6 — Check the spec against the real API
+
+A spec is a claim about the API, and it is often wrong: a list typed as
+`string[]` that returns objects, a body wrapped in a key the server never reads,
+a 404 where an empty list should be, flags typed as booleans that arrive as
+`"0"`. The generated schemas repeat every one of those mistakes, so check the
+spec before building on it:
+
+- **Sweep the reads.** Call every `GET` the credential can reach, following
+  ids from list results into the retrieve operations, and compare each
+  response with the spec's declared response: its shape, types, required
+  fields and status codes. Never sweep writes. A write is checked the first
+  time the app uses it, against a record made for the purpose.
+- **Fix the addon, not the app.** Correct the schema in
+  `src/functions/<op>.schemas.ts`, or the request shape in
+  `src/<name>-api.service.ts`, then rebuild the addon. A cast or a re-parse in
+  an app function hides the defect from every other consumer.
+- **Record every mismatch in `packages/addon-<name>/SPEC-ISSUES.md`.** It is
+  written for the API's maintainers, so they can fix the spec. For each one,
+  give the operation (`GET /thirdparties`), what the spec says, what the API
+  does, a minimal request and response as evidence, and the fix applied in the
+  addon. Strip credentials, tokens and real customer data from the evidence.
+  The file is also the list of edits to reapply if the addon is ever
+  regenerated from a new spec.
+
+Keep adding to it for the rest of the build, whenever a call disagrees with its
+schema. At hand-over, show it to the user and ask before sending it anywhere.
+An issue on the API's tracker is a public post.
+
 ## Then
 
 Go back to the mode you were building in (`pikku-build`). The addon is a
