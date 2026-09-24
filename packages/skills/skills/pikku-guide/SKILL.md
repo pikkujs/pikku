@@ -86,13 +86,13 @@ Email us before the second week and we will move you if there is a place.
   passes through untouched.
 
 The generated block is the feature's **figures and nothing else**: for each
-scenario, its recordings first (one per actor), then its screenshots, deduped
-across data-driven rows. Two strings from the suite do reach the page, as
-captions:
+scenario, its showcase screenshots, then its recordings (one per actor), then
+its other screenshots, deduped across data-driven rows. Two strings from the
+suite do reach the page, as captions:
 
 | Figure | Caption |
 |---|---|
-| Recording | the scenario's `title`, then ` — ` and the actor's name |
+| Recording | the scenario's `title` (plus ` — ` and the actor, when there are several) |
 | Screenshot | the `name` it was taken under |
 
 So those two are user-facing copy: "Take a place on a course", "the course list,
@@ -100,10 +100,22 @@ with places left on each ticket" — not "mira books c-intro-1024" or
 "courses /app/courses at 1440px". The scenario `description` and the steps are
 never rendered.
 
-A block is indivisible: all of a feature's figures land together, where the
-marker sits. Place the marker after the steps it illustrates, not before them.
-If one page needs figures beside two separate steps, those steps are two
-features.
+A feature-wide marker drops **every** scenario's figures in one place — a wall
+of recordings at the foot of the page. When a page walks a feature in
+sections, give each section the scenario that shows it, after its steps:
+
+```markdown
+## Rename the course
+
+1. Open **Details**. 2. Change **Course name**. 3. Choose **Save changes**.
+
+<!-- pikku:guide feature=bookingDetailFeature scenario=adminRenamesCourseScenario -->
+<!-- /pikku:guide -->
+```
+
+`scenario=` is the scenario's exported identifier. A name the feature does not
+register fails the build and lists the ones it does. A scenario that no section
+needs is simply not cited — the feature still counts as documented.
 
 Organise pages by who reads them, not by feature: `docs/using/`,
 `docs/teaching/`, `docs/organising/`. Use the project's own vocabulary, the one
@@ -260,5 +272,7 @@ and rebuild. The lock is rewritten on every successful build.
 - [ ] No page exists only to cite a smoke or acceptance feature.
 - [ ] Scenario titles and screenshot names read as captions — no routes,
       viewport sizes or test ids.
+- [ ] No page ends in a wall of recordings: each section cites its own
+      `scenario=`.
 - [ ] Open two generated pages and look at them: the figures are the screens the
       text describes, in the app's language.

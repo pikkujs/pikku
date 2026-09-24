@@ -29,6 +29,8 @@ export interface GuideScreenshot {
   id?: string
   /** The caption the scenario author took the shot under; the alt text. */
   name?: string
+  /** Taken to be shown, so it leads its scenario's figures. */
+  showcase?: boolean
   /**
    * The artifact's content key, relative to the run's artifact root and always
    * forward-slashed — what the record stores, not a path on this machine. A
@@ -81,6 +83,13 @@ export interface GuideFeature {
   scenarios: GuideScenario[]
 }
 
+/** One marker pair on a page. */
+export interface GuideCitation {
+  featureId: string
+  /** The scenario registration the block shows alone; absent, the whole feature. */
+  scenario?: string
+}
+
 /** One checked-in editorial source, parsed. */
 export interface GuidePage {
   /** Path relative to the docs source root, e.g. `deployments/promoting.md`. */
@@ -92,6 +101,12 @@ export interface GuidePage {
    * the body rather than declared in frontmatter: see {@link parseGuidePage}.
    */
   features: string[]
+  /**
+   * Every marker on the page, in order: a feature, and the one scenario of it
+   * the block is narrowed to when the marker names one. A page that walks a
+   * feature section by section cites it once per section.
+   */
+  citations: GuideCitation[]
   /**
    * The frontmatter as it was written, every key of it. Carried whole rather
    * than picked apart because a docs site reads its own keys off it — `slug`,
@@ -146,11 +161,30 @@ export const parseGuidePage = (path: string, content: string): GuidePage => {
       : {}),
     frontmatter,
     features: citedFeatures(body),
+    citations: citations(body),
     body,
   }
 }
 
-const CITATION = /<!--\s*pikku:guide\s+feature=([^\s]+)[^>]*-->/g
+const CITATION =
+  /<!--\s*pikku:guide\s+feature=([^\s>]+)(?:\s+scenario=([^\s>]+))?[^>]*-->/g
+
+const citationKey = ({ featureId, scenario }: GuideCitation) =>
+  scenario ? `${featureId} ${scenario}` : featureId
+
+const citations = (body: string): GuideCitation[] => {
+  const seen = new Map<string, GuideCitation>()
+  for (const [, featureId, scenario] of body.matchAll(CITATION)) {
+    if (!featureId) {
+      continue
+    }
+    const citation = scenario ? { featureId, scenario } : { featureId }
+    if (!seen.has(citationKey(citation))) {
+      seen.set(citationKey(citation), citation)
+    }
+  }
+  return [...seen.values()]
+}
 
 const citedFeatures = (body: string): string[] => {
   const seen: string[] = []
@@ -230,7 +264,9 @@ export const parseGuideLock = (content: string): GuideLock => {
     throw new Error(`The guide lock is unreadable: ${e?.message ?? e}`)
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('The guide lock is not an object of feature id to evidence.')
+    throw new Error(
+      'The guide lock is not an object of feature id to evidence.'
+    )
   }
   const lock: GuideLock = {}
   for (const [id, evidence] of Object.entries(parsed)) {
@@ -268,6 +304,13 @@ export interface GuideCoverage {
   unknown: Array<{ path: string; featureId: string }>
   /** Cited by a page and registered with `document: false`. */
   optedOut: Array<{ path: string; featureId: string }>
+  /** A marker naming a scenario the feature does not register. */
+  unknownScenarios: Array<{
+    path: string
+    featureId: string
+    scenario: string
+    known: string[]
+  }>
   /** Cited, but the run filed no figure for it — a citation that shows nothing. */
   figureless: Array<{ path: string; featureId: string }>
   /** Pages whose locked evidence is not the feature's current evidence. */
@@ -289,6 +332,7 @@ export const checkGuideCoverage = (
   const unknown: GuideCoverage['unknown'] = []
   const optedOut: GuideCoverage['optedOut'] = []
   const figureless: GuideCoverage['figureless'] = []
+  const unknownScenarios: GuideCoverage['unknownScenarios'] = []
   const stale: GuideCoverage['stale'] = []
   for (const page of [...pages].sort((a, b) => a.path.localeCompare(b.path))) {
     for (const id of page.features) {
@@ -316,6 +360,16 @@ export const checkGuideCoverage = (
         stale.push({ path: page.path, featureId: id, locked, current })
       }
     }
+    for (const { featureId, scenario } of page.citations) {
+      const feature = byId.get(featureId)
+      if (!scenario || !feature?.document) {
+        continue
+      }
+      const known = [...new Set(feature.scenarios.map((s) => s.name))]
+      if (!known.includes(scenario)) {
+        unknownScenarios.push({ path: page.path, featureId, scenario, known })
+      }
+    }
   }
   return {
     cited: [...cited].sort((a, b) => a.localeCompare(b)),
@@ -324,6 +378,7 @@ export const checkGuideCoverage = (
       .map((feature) => feature.id)
       .sort((a, b) => a.localeCompare(b)),
     unknown,
+    unknownScenarios,
     optedOut,
     figureless,
     stale,
@@ -336,13 +391,16 @@ export const checkGuideCoverage = (
  * An HTML comment, because it is the one thing every markdown renderer already
  * agrees to ignore, and because a page that has been through the compiler still
  * reads as an ordinary document in an editor, a diff and a preview. It carries
- * the feature id and nothing else: a rebuild rewrites exactly the block for that
- * feature and leaves every sentence a human wrote — before it, after it, or
- * around another feature's block — untouched, and there is no value on the line
- * anyone has to keep correct.
+ * the feature id, and the scenario when the author narrowed it to one, and
+ * nothing else: a rebuild rewrites exactly the block for that citation and
+ * leaves every sentence a human wrote — before it, after it, or around another
+ * block — untouched, and there is no value on the line anyone has to keep
+ * correct.
  */
-const generatedOpen = (featureId: string) =>
-  `<!-- pikku:guide feature=${featureId} -->`
+const generatedOpen = ({ featureId, scenario }: GuideCitation) =>
+  scenario
+    ? `<!-- pikku:guide feature=${featureId} scenario=${scenario} -->`
+    : `<!-- pikku:guide feature=${featureId} -->`
 
 const GENERATED_CLOSE = '<!-- /pikku:guide -->'
 
@@ -351,11 +409,13 @@ const GENERATED_CLOSE = '<!-- /pikku:guide -->'
  * before the hash moved into the lock carry it, and a rebuild is what removes
  * it.
  */
-const generatedRegion = (featureId: string) =>
+const generatedRegion = ({ featureId, scenario }: GuideCitation) =>
   new RegExp(
-    `<!--\\s*pikku:guide\\s+feature=${escapeRegExp(featureId)}[^>]*-->[\\s\\S]*?${escapeRegExp(
-      GENERATED_CLOSE
-    )}`
+    `<!--\\s*pikku:guide\\s+feature=${escapeRegExp(featureId)}${
+      scenario
+        ? `\\s+scenario=${escapeRegExp(scenario)}(?![^\\s>])`
+        : '(?![^\\s>])(?![^>]*scenario=)'
+    }[^>]*-->[\\s\\S]*?${escapeRegExp(GENERATED_CLOSE)}`
   )
 
 /** Any region, for dropping the blocks of features a page no longer cites. */
@@ -365,10 +425,11 @@ const ANY_GENERATED_REGION =
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-const GENERATED_FEATURE = /<!--\s*pikku:guide\s+feature=([^\s]+)/
+const GENERATED_CITATION =
+  /<!--\s*pikku:guide\s+feature=([^\s>]+)(?:\s+scenario=([^\s>]+))?/
 
 /**
- * One feature's generated region: the figures its run filed, and nothing else.
+ * One citation's generated region: the figures its run filed, and nothing else.
  *
  * Neither the steps nor the scenario's own title and description are rendered.
  * All three are written to name and prove a test — third person, about the
@@ -377,40 +438,53 @@ const GENERATED_FEATURE = /<!--\s*pikku:guide\s+feature=([^\s]+)/
  * what a run can contribute that no author can is the evidence that the words
  * are still true, which is a picture of the thing actually doing it.
  *
+ * A marker naming a scenario renders that scenario alone, so a page walking a
+ * feature section by section puts each figure under the steps it shows.
+ *
  * A data-driven scenario runs once per row and so appears once per row in the
  * record. The rows differ only in their inputs, so their figures are collected
  * in run order and deduplicated by artifact id rather than repeated.
  *
- * A recording leads the scenario it belongs to, because it shows the whole flow
- * the stills are moments of. It is emitted as an ordinary figure: this module
- * writes no HTML, so what makes a `.webm` a player rather than a broken image
- * is the consumer's renderer, the same way a consumer resolves the base.
+ * Within a scenario the shots taken to be shown lead, then the recording of the
+ * whole flow, then the remaining stills. A recording is captioned with its actor
+ * only when the scenario filed one per actor — a lone window needs no name. It
+ * is emitted as an ordinary figure: this module writes no HTML, so what makes a
+ * `.webm` a player rather than a broken image is the consumer's renderer, the
+ * same way a consumer resolves the base.
  */
-const renderFeature = (feature: GuideFeature, artifactBase: string): string => {
+const renderFeature = (
+  feature: GuideFeature,
+  artifactBase: string,
+  scenario?: string
+): string => {
   const figures: string[] = []
   const seen = new Set<string>()
-  for (const scenario of feature.scenarios) {
-    for (const video of scenario.videos ?? []) {
-      const key = video.id ?? video.path
-      if (seen.has(key)) {
-        continue
-      }
+  const add = (key: string, figure: string) => {
+    if (!seen.has(key)) {
       seen.add(key)
-      const caption = video.actor
-        ? `${scenario.title} — ${video.actor}`
-        : scenario.title
-      figures.push(`![${caption}](${artifactBase}${video.path})`)
+      figures.push(figure)
     }
-    for (const shot of scenario.screenshots) {
-      const key = shot.id ?? shot.path
-      if (seen.has(key)) {
-        continue
-      }
-      seen.add(key)
-      figures.push(
-        `![${shot.name ?? scenario.title}](${artifactBase}${shot.path})`
+  }
+  for (const each of feature.scenarios) {
+    if (scenario && each.name !== scenario) {
+      continue
+    }
+    const shot = (item: GuideScreenshot) =>
+      add(
+        item.id ?? item.path,
+        `![${item.name ?? each.title}](${artifactBase}${item.path})`
       )
+    const videos = each.videos ?? []
+    const actors = new Set(videos.map((video) => video.actor).filter(Boolean))
+    each.screenshots.filter((item) => item.showcase).forEach(shot)
+    for (const video of videos) {
+      const caption =
+        video.actor && actors.size > 1
+          ? `${each.title} — ${video.actor}`
+          : each.title
+      add(video.id ?? video.path, `![${caption}](${artifactBase}${video.path})`)
     }
+    each.screenshots.filter((item) => !item.showcase).forEach(shot)
   }
   return figures.join('\n\n')
 }
@@ -432,22 +506,27 @@ export const renderGuidePage = (
   features: Map<string, GuideFeature>,
   artifactBase: string
 ): string => {
-  const cited = page.features.filter((id) => features.has(id))
-  const first = cited[0] ? features.get(cited[0]) : undefined
+  const cited = page.citations.filter(({ featureId }) =>
+    features.has(featureId)
+  )
+  const keys = new Set(cited.map(citationKey))
+  const first = cited[0] ? features.get(cited[0].featureId) : undefined
   let body = page.body.replace(ANY_GENERATED_REGION, (region) => {
-    const id = region.match(GENERATED_FEATURE)?.[1]
-    return id && cited.includes(id) ? region : ''
+    const [, featureId, scenario] = region.match(GENERATED_CITATION) ?? []
+    return featureId && keys.has(citationKey({ featureId, scenario }))
+      ? region
+      : ''
   })
-  for (const id of cited) {
-    const feature = features.get(id)!
+  for (const citation of cited) {
+    const feature = features.get(citation.featureId)!
     const block = [
-      generatedOpen(id),
-      renderFeature(feature, artifactBase),
+      generatedOpen(citation),
+      renderFeature(feature, artifactBase, citation.scenario),
       GENERATED_CLOSE,
     ]
       .filter((part) => part.length > 0)
       .join('\n\n')
-    body = body.replace(generatedRegion(id), block)
+    body = body.replace(generatedRegion(citation), () => block)
   }
   const title = page.title ?? first?.name
   const description = page.description ?? first?.description
