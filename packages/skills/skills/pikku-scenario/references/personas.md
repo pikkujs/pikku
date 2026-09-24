@@ -57,8 +57,8 @@ Declared actors are not only for automated runs. `signInPath` is Better Auth's
 frontend gets a one-click "Sign in as …" switcher over the **same** list, and an
 app can be reviewed as each kind of user without anyone knowing a seed password.
 
-The sandbox dev server bakes both halves into the frontend from the declared
-personas: `VITE_DEV_ACTORS` (the JSON actor list) and `VITE_DEV_ACTOR_SECRETS`
+The dev server bakes both halves into the frontend from the declared
+personas — the sandbox's, or the template's `bun run dev`, never `pikku dev`: `VITE_DEV_ACTORS` (the JSON actor list) and `VITE_DEV_ACTOR_SECRETS`
 (`{ email: credential }`, one per persona — `SCENARIO_ACTOR_SECRET` itself never
 goes in a bundle; see **pikku-auth**). Neither var is set in a production
 build, so the control renders nothing there — but gate the reads on your
@@ -85,3 +85,39 @@ When the switcher is there but signing in fails with `401 Invalid actor
 secret`, check which server answered before checking the secret: a frontend
 whose dev proxy (`VITE_API_PROXY`, default `http://localhost:3000`) points at
 another project's API sends the sign-in there.
+
+**A runner of your own that starts vite has to bake them itself**, from the
+generated persona meta (`<outDir>/workflow/personas.gen.json`, which already
+carries the derived `email`):
+
+```js
+const personas = Object.values(JSON.parse(readFileSync(personasPath, 'utf8')))
+
+env.VITE_DEV_ACTORS = JSON.stringify(
+  personas.map(({ id, email, name, jobTitle }) => ({
+    key: id,
+    email,
+    name,
+    jobTitle: jobTitle ?? '',
+  }))
+)
+env.VITE_DEV_ACTOR_SECRETS = JSON.stringify(
+  Object.fromEntries(
+    await Promise.all(
+      personas.map(async ({ email }) => [
+        email,
+        await deriveActorSecret(env.SCENARIO_ACTOR_SECRET, email),
+      ])
+    )
+  )
+)
+```
+
+**Set `SCENARIO_ACTOR_SECRET` yourself**, at least 32 characters, in the
+environment both processes read. Left unset, `pikku dev` mints an ephemeral root
+for its own run that a separately spawned vite cannot see, so the two derive
+from different roots: the switcher renders every persona and each click is
+refused, which reads as a broken login rather than missing configuration. On a
+brand-new project the persona file does not exist until the first `pikku dev`
+codegen, after vite has baked an empty list — watch it and restart the frontend
+when it changes.
