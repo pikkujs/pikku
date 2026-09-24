@@ -1440,6 +1440,22 @@ function _toCamelCase(data: Record<string, unknown>): Record<string, unknown> {
 `
     : ''
 }
+function _upstreamMessage(text: string): string | undefined {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    const plain = text.trim()
+    return plain && !plain.startsWith('<') ? plain.slice(0, 200) : undefined
+  }
+  const body = (parsed ?? {}) as Record<string, unknown>
+  const nested = (body.error ?? {}) as Record<string, unknown>
+  const found = [nested.message, body.message, body.detail, body.title, body.error_description, body.error].find(
+    (value): value is string => typeof value === 'string' && value.trim() !== ''
+  )
+  return found?.trim().slice(0, 200)
+}
+
 export class ${pascalName}Service {
   constructor(${credsParam}private variables: TypedVariablesService) {}
 
@@ -1515,7 +1531,7 @@ ${authLine ? `    ${authLine}\n` : ''}
 
     if (!response.ok) {
       const errorText = await response.text()
-      const errorMessage = route?.errors?.[response.status] ?? errorText
+      const errorMessage = _upstreamMessage(errorText) ?? route?.errors?.[response.status] ?? \`HTTP \${response.status}\`
       switch (response.status) {
         case 400: throw new BadRequestError(errorMessage)
         case 401: ${unauthorized}
@@ -1526,7 +1542,7 @@ ${authLine ? `    ${authLine}\n` : ''}
         case 422: throw new UnprocessableContentError(errorMessage)
         case 429: throw new TooManyRequestsError(errorMessage)
         case 500: throw new InternalServerError(errorMessage)
-        default: throw new Error(\`${inTemplate(displayName)} API error (\${response.status}): \${errorText}\`)
+        default: throw new Error(\`${inTemplate(displayName)} API error (\${response.status}): \${errorMessage}\`)
       }
     }
 

@@ -580,6 +580,42 @@ describe('service file generation', () => {
     assert.ok(serviceFile.includes('NotFoundError'))
     assert.ok(serviceFile.includes('case 404'))
   })
+
+  test('errors carry the upstream message, never the raw body', () => {
+    const files = generateAddonFromOpenAPI(
+      makeSpec({ operations: [makeOp({ operationId: 'getItem' })] }),
+      makeVars(),
+      { oauth: false, secret: false }
+    )
+    const serviceFile = files['src/test-api-api.service.ts']!
+    assert.ok(!serviceFile.includes('?? errorText'))
+    assert.ok(!serviceFile.includes('${errorText}'))
+
+    const source = serviceFile.match(/function _upstreamMessage[\s\S]*?\n\}/)![0]
+    const upstreamMessage = new Function(
+      `${ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText}; return _upstreamMessage`
+    )() as (text: string) => string | undefined
+
+    assert.equal(
+      upstreamMessage(
+        JSON.stringify({
+          error: { code: 404, message: 'Not Found: Thirdparty not found' },
+          debug: { source: 'api_thirdparties.class.php:140' },
+        })
+      ),
+      'Not Found: Thirdparty not found'
+    )
+    assert.equal(
+      upstreamMessage(JSON.stringify({ type: 'about:blank', title: 'Bad', detail: 'name is required' })),
+      'name is required'
+    )
+    assert.equal(upstreamMessage(JSON.stringify({ error: 'invalid_grant' })), 'invalid_grant')
+    assert.equal(upstreamMessage('Service Unavailable'), 'Service Unavailable')
+    assert.equal(upstreamMessage('<html><body>502</body></html>'), undefined)
+    assert.equal(upstreamMessage(JSON.stringify({ stack: 'at x.php:1' })), undefined)
+    assert.equal(upstreamMessage(''), undefined)
+    assert.equal(upstreamMessage('x'.repeat(500))!.length, 200)
+  })
 })
 
 // ---------------------------------------------------------------------------

@@ -116,6 +116,11 @@ import type { FlattenedRPCMap } from '${rpcMapPath}'${workflowImport}
 
 type RPCInvoke = <Name extends keyof FlattenedRPCMap>(name: Name, data: FlattenedRPCMap[Name]['input']) => Promise<FlattenedRPCMap[Name]['output']>
 
+const retryUnlessClientError = (failureCount: number, error: Error) => {
+  const status = (error as { status?: number }).status
+  return !(status !== undefined && status >= 400 && status < 500) && failureCount < 3
+}
+
 export const usePikkuQuery = <Name extends keyof FlattenedRPCMap>(
   name: Name,
   data: FlattenedRPCMap[Name]['input'],
@@ -125,6 +130,7 @@ export const usePikkuQuery = <Name extends keyof FlattenedRPCMap>(
   return useQuery<FlattenedRPCMap[Name]['output'], Error>({
     queryKey: [name, data],
     queryFn: () => rpc.invoke(name, data),
+    retry: retryUnlessClientError,
     ...options,
   })
 }

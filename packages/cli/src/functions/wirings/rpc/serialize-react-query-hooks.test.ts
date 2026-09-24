@@ -1,10 +1,26 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
+import ts from 'typescript'
 import { serializeReactQueryHooks } from './serialize-react-query-hooks.js'
 
 const RPC_MAP = './pikku-rpc-map.gen.js'
 
 describe('serializeReactQueryHooks', () => {
+  test('usePikkuQuery does not retry a 4xx, and options can override it', () => {
+    const output = serializeReactQueryHooks(RPC_MAP)
+    const source = output.match(/const retryUnlessClientError = [\s\S]*?\n\}/)![0]
+    const retry = new Function(
+      `${ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText}; return retryUnlessClientError`
+    )()
+    const withStatus = (status?: number) => Object.assign(new Error('x'), { status })
+    assert.strictEqual(retry(0, withStatus(404)), false)
+    assert.strictEqual(retry(0, withStatus(403)), false)
+    assert.strictEqual(retry(0, withStatus(500)), true)
+    assert.strictEqual(retry(0, withStatus()), true)
+    assert.strictEqual(retry(3, withStatus(500)), false)
+    assert.match(output, /retry: retryUnlessClientError,\n    \.\.\.options,/)
+  })
+
   test('an app with no auth gets no useSession, and no import for it', () => {
     const output = serializeReactQueryHooks(RPC_MAP)
     assert.ok(!output.includes('useSession'))
