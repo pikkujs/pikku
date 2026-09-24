@@ -13,67 +13,81 @@ A JSON or YAML document with a top-level `openapi` key (3.x) or `swagger` key
 (2.0), and a `paths` object. A URL ending in `openapi.json`, `swagger.json` or
 `.yaml` is almost always one; open it and check the key before generating.
 
-## 1 — Put the spec in the repo
+## 1 — Look at the spec first
 
-`--openapi` reads a local path, not a URL. Download it to `specs/`, where it
-stays as the record of what the addon was generated from:
+`--openapi` takes a path or a URL. A spec published only to signed-in callers
+takes the key the way the API reads it: `--openapi-header "NAME: value"`
+(repeatable), or in the URL's query string when the API reads it there
+(Dolibarr's explorer takes `?DOLAPIKEY=`). A 401 while fetching says which.
+
+The generator warns loudly when the spec has fewer than five operations, or only
+auth routes. That is almost always the public half of a spec that shows more
+to an authenticated caller — fetch it again with the key, don't build on it.
+
+Keep a copy in `specs/` as the record of what the addon was generated from.
+
+## 2 — Generate, from the app's root
 
 ```bash
-mkdir -p specs
-curl -fsSL <url> -o specs/<name>.openapi.json
+bunx --bun pikku new addon <name> --openapi <path-or-url>
 ```
 
-## 2 — Generate
+One command. Inside an app it writes `packages/addon-<name>` as
+`@pikku/addon-<name>`, then installs it into the app:
 
-Inside an app, the addon is a workspace package under `packages/`:
+- the dependency in the root and the functions `package.json`
+- `src/addons/<name>.addon.ts` — `wireAddon` with `auth: true` and an explicit
+  `expose` list (every operation in per-user modes, only the `GET`s behind a
+  shared secret)
+- the auth wiring in `src/auth.ts` for the chosen mode
+- `<NAME>_BASE_URL` in `.env`
 
-```bash
-bunx --bun pikku new addon <name> --openapi specs/<name>.openapi.json --dir packages
-```
+and then runs install and the addon's build. `--no-install` generates the
+package alone.
 
-This writes `packages/addon-<name>` as `@pikku/addon-<name>`, installs it and
-builds it. Inside a workspace the generated test app depends on it as
-`workspace:*`, so nothing is published.
+| Flag                                  | When                                                                         |
+| ------------------------------------- | ---------------------------------------------------------------------------- |
+| `--auth user` (default)               | Each user brings their own credential                                        |
+| `--auth shared`                       | One secret behind every user; set it with `pikku secrets`                    |
+| `--auth none`                         | The API really takes no auth                                                 |
+| `--credential apikey\|bearer\|basic\|oauth2` | Override what the spec's `securitySchemes` declares                  |
+| `--auth-config <file>`                | Users sign in with their upstream login, or the spec gets auth wrong         |
+| `--tags a,b` / `--include` / `--exclude` | Keep part of a huge spec: tags, or globs on operationId, `/path`, `METHOD /path` |
+| `--mcp`                               | The operations should also be MCP tools                                      |
+| `--camel-case`                        | The API's property names are snake_case and the app's are not                |
 
-| Flag                          | When                                                                                      |
-| ----------------------------- | ----------------------------------------------------------------------------------------- |
-| `--credential apikey\|bearer` | The spec's `securitySchemes` is an API key or a bearer token — each user brings their own |
-| `--credential oauth2`         | The spec's `securitySchemes` is OAuth2                                                    |
-| `--auth-config <file>`        | The spec gets auth wrong or leaves it out: a custom header, a delegated login endpoint    |
-| `--mcp`                       | The operations should also be MCP tools                                                   |
-| `--camel-case`                | The API's property names are snake_case and the app's are not                             |
-
-Read the spec's `securitySchemes` to pick the credential. Leave the flag off
-only when the API really takes no auth.
+The mode comes from the spec unless a flag says otherwise. A spec with no
+machine-readable auth is refused rather than guessed: pass one of the flags the
+error names. Which mode fits, and the auth-config format, are in the
+`pikku-build` skill's `references/openapi.md`.
 
 ## 3 — Check what was generated
 
 ```
 packages/addon-<name>/
+├── <name>.svg                    # placeholder icon; replace with the real one
 ├── src/<name>-api.service.ts     # one fetch wrapper, reads <NAME>_BASE_URL
-├── src/<name>.variable.ts        # <NAME>_BASE_URL, an enum of the spec's servers
+├── src/<name>.variable.ts        # <NAME>_BASE_URL: z.string().url(), the first server as default
 ├── src/functions/<op>.function.ts
 ├── src/functions/<op>.schemas.ts # the op's zod schemas — never import #pikku here
 └── src/index.ts                  # re-exports every function
 ```
 
-`<NAME>_BASE_URL` is an enum of the spec's `servers`. When those are
-placeholders or a per-tenant host (`https://{tenant}.example.com`, or a server
-list that is only an example), change its schema in `src/<name>.variable.ts`
-to `z.string().url()` so each deployment sets its own.
+An operation whose spec gives no response, or one too vague to validate
+against, outputs `z.unknown()`. Tighten it in `<op>.schemas.ts` once §6 shows
+what the API really returns.
 
-## 4 — Wire it into the app
+An upstream 401 on a per-user credential throws `CredentialRejectedError`
+(403, `reauth: 'sign-in' | 'connect'`); a UI shows the matching screen again
+rather than a generic error.
 
-```typescript
-// src/addons.ts
-import { wireAddon } from '#pikku/addon'
+## 4 — Call it from the app
 
-wireAddon({ name: '<name>', package: '@pikku/addon-<name>' })
-```
-
-Then call operations by reference — `ref('<name>:<operationFn>')` in a
+Operations are reached by reference — `ref('<name>:<operationFn>')` in a
 workflow, agent tool or HTTP wiring — the same way as any other addon. See
-"Consuming an Addon" in the skill.
+"Consuming an Addon" in the skill. An exposed operation is also callable from
+the frontend at `POST /rpc/<name>:<operationFn>` with a body of
+`{ "data": { … } }`, as the signed-in user.
 
 ## 5 — Verify
 

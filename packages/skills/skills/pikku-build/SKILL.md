@@ -49,7 +49,9 @@ a picture of the screens first, committing to a design direction, and judging
 whether the screens realise it — read before the first screen is built, not
 after the last), `references/theming.md`
 (authoring the theme),
-`references/ship.md` (deploying, and the Fabric-readiness contract).
+`references/ship.md` (deploying, and the Fabric-readiness contract),
+`references/openapi.md` (an app on an OpenAPI spec: the auth mode, the
+auth-config format, and the sign-in or connect screen it implies).
 
 ## Bootstrap before anything else
 
@@ -69,7 +71,7 @@ anything. Two kinds are converted first and then built on:
 
 | Handed                                                                                                              | Say, then do                                                                                                      |
 | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| An **OpenAPI / Swagger spec** — top-level `openapi` or `swagger` key, a `paths` object                              | "This is an OpenAPI spec — I'll turn it into an addon first." Follow the `pikku-addon` skill's OpenAPI reference. |
+| An **OpenAPI / Swagger spec** — top-level `openapi` or `swagger` key, a `paths` object                              | "This is an OpenAPI spec — I'll turn it into an addon first." Pick the auth mode in `references/openapi.md`, then follow the `pikku-addon` skill's OpenAPI reference. |
 | An **n8n export** — an object with `nodes` and `connections`, an array of them, or a `{ workflows: [...] }` wrapper | "This is an n8n workflow — I'll import it first." Follow `pikku-n8n-import`.                                      |
 
 Say it at once, in one line, and start: this is the obvious first move, not a
@@ -112,6 +114,22 @@ generated functions through `ref()`.
     page that shows what this turn produced (the paths are below)
 
   A person who has to go hunting for the port assumes the app did not start.
+
+## Keep a BUILD-REPORT.md
+
+Whenever pikku or a skill costs you time — a command that failed on a fresh
+tree, a skill that described a flag the CLI does not have, generated code you
+had to fix by hand — add an entry to `BUILD-REPORT.md` at the repo root as it
+happens: what you ran, what you expected, what happened, and the workaround.
+Leave out secrets, tokens and customer data.
+
+At hand-over, show the file and ask the user whether to send it. Only with
+their okay, send each entry with `pikku fabric report --stdin` (JSON on stdin;
+`"kind": "product"` when pikku behaved wrongly, `"kind": "harness"` with
+`"skill"` and `"passage"` when a skill misled you). The `pikku-report` skill
+has the fields. When the CLI is not signed in to Fabric, the report is queued
+locally rather than sent: say so, and that `pikku fabric findings flush` sends
+the queue once they sign in. Do not retry or file it twice.
 
 ## Who you are talking to
 
