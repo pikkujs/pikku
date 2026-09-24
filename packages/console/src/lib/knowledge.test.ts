@@ -7,12 +7,14 @@ import {
   findingsForNote,
   groupNotesBySection,
   issuesToFix,
+  knowledgeSelectionId,
   maxSeverity,
   noteFileName,
   noteMatches,
   parseResourceUri,
   readableBody,
   resourceHref,
+  resolveKnowledgeId,
   resolveNoteLink,
   toNavSections,
   type KnowledgeFinding,
@@ -436,5 +438,69 @@ describe('resource URIs', () => {
   test('a kind whose screen has no query still opens the screen', () => {
     assert.equal(resourceHref('persona:owner'), '/personas')
     assert.equal(resourceHref('table:entry'), '/database')
+  })
+})
+
+describe('resolveKnowledgeId', () => {
+  const paths = [
+    'knowledge/index.md',
+    'knowledge/milestones/01-foo.md',
+    'knowledge/decisions/why.markdown',
+  ]
+
+  test('nothing in the URL selects nothing', () => {
+    assert.equal(resolveKnowledgeId(null, paths), null)
+    assert.equal(resolveKnowledgeId('', paths), null)
+  })
+
+  test('findings is its own selection', () => {
+    assert.deepEqual(resolveKnowledgeId('findings', paths), {
+      kind: 'findings',
+    })
+  })
+
+  test('a note path opens that note, with or without the prefix', () => {
+    const note = { kind: 'note', path: 'knowledge/milestones/01-foo.md' }
+    assert.deepEqual(
+      resolveKnowledgeId('knowledge/milestones/01-foo.md', paths),
+      note
+    )
+    assert.deepEqual(resolveKnowledgeId('milestones/01-foo.md', paths), note)
+  })
+
+  test('a plan opens the milestone note it is drawn on', () => {
+    const note = { kind: 'note', path: 'knowledge/milestones/01-foo.md' }
+    assert.deepEqual(
+      resolveKnowledgeId('milestones/01-foo.plan.json', paths),
+      note
+    )
+    assert.deepEqual(
+      resolveKnowledgeId('knowledge/milestones/01-foo.plan.json', paths),
+      note
+    )
+    assert.deepEqual(resolveKnowledgeId('decisions/why.plan.json', paths), {
+      kind: 'note',
+      path: 'knowledge/decisions/why.markdown',
+    })
+  })
+
+  test('an id naming no note selects nothing', () => {
+    assert.equal(resolveKnowledgeId('milestones/99-gone.md', paths), null)
+    assert.equal(
+      resolveKnowledgeId('milestones/99-gone.plan.json', paths),
+      null
+    )
+  })
+
+  test('a selection round-trips through its id', () => {
+    for (const selection of [
+      { kind: 'findings' } as const,
+      { kind: 'note', path: 'knowledge/milestones/01-foo.md' } as const,
+    ]) {
+      assert.deepEqual(
+        resolveKnowledgeId(knowledgeSelectionId(selection), paths),
+        selection
+      )
+    }
   })
 })
