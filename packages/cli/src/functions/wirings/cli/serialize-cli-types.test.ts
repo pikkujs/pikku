@@ -14,13 +14,6 @@ const serialize = (addon: boolean) =>
   )
 
 describe('serializeCLITypes', () => {
-  /**
-   * An addon declares commands; the consuming app mounts them with `refCLI`.
-   * `wireCLI` reaches a registry the addon does not own, so it is the one
-   * export the addon half of this leaf drops — along with `CLIWiring` and the
-   * `CoreCLI` import that only `CLIWiring` needs, since tsc compiles every
-   * file in the output tree whether the barrel re-exports it or not.
-   */
   test('an addon gets the command helpers but not wireCLI', () => {
     const out = serialize(true)
     assert.match(out, /export const defineCLICommands/)
