@@ -367,7 +367,10 @@ describe('sibling schemas file', () => {
 
   test('an operation with no response schema declares an unknown output', () => {
     const schemasFile = files['src/functions/ping.schemas.ts']
-    assert.ok(schemasFile.includes('export const PingOutput = z.unknown()'), schemasFile)
+    assert.ok(
+      schemasFile.includes('export const PingOutput = z.unknown()'),
+      schemasFile
+    )
     assert.ok(!schemasFile.includes('PingInput'), schemasFile)
   })
 })
@@ -591,7 +594,9 @@ describe('service file generation', () => {
     assert.ok(!serviceFile.includes('?? errorText'))
     assert.ok(!serviceFile.includes('${errorText}'))
 
-    const source = serviceFile.match(/function _upstreamMessage[\s\S]*?\n\}/)![0]
+    const source = serviceFile.match(
+      /function _upstreamMessage[\s\S]*?\n\}/
+    )![0]
     const upstreamMessage = new Function(
       `${ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText}; return _upstreamMessage`
     )() as (text: string) => string | undefined
@@ -606,13 +611,25 @@ describe('service file generation', () => {
       'Not Found: Thirdparty not found'
     )
     assert.equal(
-      upstreamMessage(JSON.stringify({ type: 'about:blank', title: 'Bad', detail: 'name is required' })),
+      upstreamMessage(
+        JSON.stringify({
+          type: 'about:blank',
+          title: 'Bad',
+          detail: 'name is required',
+        })
+      ),
       'name is required'
     )
-    assert.equal(upstreamMessage(JSON.stringify({ error: 'invalid_grant' })), 'invalid_grant')
+    assert.equal(
+      upstreamMessage(JSON.stringify({ error: 'invalid_grant' })),
+      'invalid_grant'
+    )
     assert.equal(upstreamMessage('Service Unavailable'), 'Service Unavailable')
     assert.equal(upstreamMessage('<html><body>502</body></html>'), undefined)
-    assert.equal(upstreamMessage(JSON.stringify({ stack: 'at x.php:1' })), undefined)
+    assert.equal(
+      upstreamMessage(JSON.stringify({ stack: 'at x.php:1' })),
+      undefined
+    )
     assert.equal(upstreamMessage(''), undefined)
     assert.equal(upstreamMessage('x'.repeat(500))!.length, 200)
   })
@@ -1170,7 +1187,9 @@ describe('vague responses, base URL and per-user credentials', () => {
       credential: 'apikey',
     })['src/test-api-api.service.ts']
     assert.ok(
-      connect.includes('case 401: throw new CredentialRejectedError("testApi", "connect")'),
+      connect.includes(
+        'case 401: throw new CredentialRejectedError("testApi", "connect")'
+      ),
       connect
     )
     const delegated = generateAddonFromOpenAPI(spec, makeVars(), {
@@ -1200,8 +1219,19 @@ describe('vague responses, base URL and per-user credentials', () => {
       ...flags,
       credential: 'basic',
     })['src/test-api-api.service.ts']
-    assert.ok(service.includes('{ username: string; password: string }'), service)
-    assert.ok(service.includes('`Basic ${btoa('), service)
+    assert.ok(
+      service.includes('{ username: string; password: string }'),
+      service
+    )
+    const encode = service.match(/`Basic \$\{(btoa\(.*\))\}`/)![1]
+    const header = new Function(
+      'creds',
+      `return ${encode.replaceAll('this.creds', 'creds')}`
+    )
+    assert.equal(
+      header({ username: 'jürgen', password: '€' }),
+      Buffer.from('jürgen:€', 'utf8').toString('base64')
+    )
   })
 
   test('form and multipart request bodies are marked on the route', () => {
@@ -1211,14 +1241,20 @@ describe('vague responses, base URL and per-user credentials', () => {
           method: 'post',
           path: '/form',
           operationId: 'sendForm',
-          requestBody: { type: 'object', properties: { a: { type: 'string' } } },
+          requestBody: {
+            type: 'object',
+            properties: { a: { type: 'string' } },
+          },
           requestBodyMediaType: 'application/x-www-form-urlencoded',
         }),
         makeOp({
           method: 'post',
           path: '/upload',
           operationId: 'upload',
-          requestBody: { type: 'object', properties: { file: { type: 'string' } } },
+          requestBody: {
+            type: 'object',
+            properties: { file: { type: 'string' } },
+          },
           requestBodyMediaType: 'multipart/form-data',
         }),
       ],
@@ -1307,7 +1343,9 @@ describe('generated sources parse', () => {
           fileName: path,
         })
         assert.deepEqual(
-          diagnostics?.map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n')),
+          diagnostics?.map((d) =>
+            ts.flattenDiagnosticMessageText(d.messageText, '\n')
+          ),
           [],
           `${path}:\n${source}`
         )

@@ -388,6 +388,28 @@ describe('loadAddonFunctionsMeta — where an addon resolves from', () => {
     assert.deepEqual(warnings, [])
   })
 
+  test('the declaring package’s copy wins over the root’s', async () => {
+    for (const [dir, fn] of [
+      [rootDir, 'rootVersion'],
+      [functionsDir, 'localVersion'],
+    ]) {
+      const addonDir = join(dir, 'node_modules', '@addon', 'both')
+      mkdirSync(join(addonDir, '.pikku', 'function'), { recursive: true })
+      writeFileSync(
+        join(addonDir, 'package.json'),
+        JSON.stringify({ name: '@addon/both' })
+      )
+      writeFileSync(
+        join(addonDir, '.pikku', 'function', 'pikku-functions-meta.gen.json'),
+        JSON.stringify({ [fn]: {} })
+      )
+    }
+
+    const state = await load('@addon/both')
+
+    assert.deepEqual(Object.keys(state.addonFunctions.crm), ['localVersion'])
+  })
+
   test('a package that is not installed anywhere says where to add it', async () => {
     await load('@addon/missing')
 

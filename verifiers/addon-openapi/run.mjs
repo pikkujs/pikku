@@ -28,7 +28,8 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(here, '../..')
 const generatedDir = join(here, 'generated')
 
-const PIKKU = process.env.PIKKU_BIN ?? join(repoRoot, 'packages/cli/dist/bin/pikku.js')
+const PIKKU =
+  process.env.PIKKU_BIN ?? join(repoRoot, 'packages/cli/dist/bin/pikku.js')
 const TSC = join(repoRoot, 'node_modules/.bin/tsc')
 
 async function run(label, file, args, cwd) {
@@ -75,7 +76,12 @@ const specUrl = `http://127.0.0.1:${server.address().port}/openapi.json`
 const corpus = [
   {
     name: 'petstore',
-    args: ['--openapi', 'fixtures/petstore.openapi.json', '--credential', 'bearer'],
+    args: [
+      '--openapi',
+      'fixtures/petstore.openapi.json',
+      '--credential',
+      'bearer',
+    ],
     baseUrl: 'https://petstore.example.com/api',
     schemas: ['GetPetInput', 'CreatePetInput', 'ListPetsOutput'],
   },
@@ -121,10 +127,21 @@ const corpus = [
 
 rmSync(generatedDir, { recursive: true, force: true })
 
+let selected = corpus
 try {
   const refused = await runAsync(
     'node',
-    [PIKKU, 'new', 'addon', 'refused', '--openapi', 'fixtures/weather.openapi31.yaml', '--dir', 'generated', '--no-build'],
+    [
+      PIKKU,
+      'new',
+      'addon',
+      'refused',
+      '--openapi',
+      'fixtures/weather.openapi31.yaml',
+      '--dir',
+      'generated',
+      '--no-build',
+    ],
     here
   )
   check(
@@ -134,29 +151,61 @@ try {
 
   const unauthorised = await runAsync(
     'node',
-    [PIKKU, 'new', 'addon', 'unauthorised', '--openapi', specUrl, '--dir', 'generated', '--no-build'],
+    [
+      PIKKU,
+      'new',
+      'addon',
+      'unauthorised',
+      '--openapi',
+      specUrl,
+      '--dir',
+      'generated',
+      '--no-build',
+    ],
     here
   )
   check(
-    unauthorised.status !== 0 && unauthorised.output.includes('--openapi-header'),
+    unauthorised.status !== 0 &&
+      unauthorised.output.includes('--openapi-header'),
     `a spec URL answering 401 must suggest --openapi-header, got exit ${unauthorised.status}:\n${unauthorised.output}`
   )
 
   const only = process.env.CORPUS_ONLY?.split(',')
-  for (const addon of corpus.filter((a) => !only || only.includes(a.name))) {
+  const unknown =
+    only?.filter((name) => !corpus.some((a) => a.name === name)) ?? []
+  check(
+    unknown.length === 0,
+    `CORPUS_ONLY names specs that are not in the corpus: ${unknown.join(', ')}`
+  )
+  selected = corpus.filter((a) => !only || only.includes(a.name))
+  for (const addon of selected) {
     const addonDir = join(generatedDir, `addon-${addon.name}`)
     const camelName = addon.name
     await run(
       `${addon.name}: pikku new addon --openapi`,
       'node',
-      [PIKKU, 'new', 'addon', addon.name, ...addon.args, '--dir', 'generated', '--no-build'],
+      [
+        PIKKU,
+        'new',
+        'addon',
+        addon.name,
+        ...addon.args,
+        '--dir',
+        'generated',
+        '--no-build',
+      ],
       here
     )
 
     const config = JSON.parse(read(join(addonDir, 'pikku.config.json')))
-    check(!('node' in config), `${addon.name}: pikku.config.json still has a "node" block`)
     check(
-      typeof config.addon === 'object' && config.addon.displayName && config.addon.icon,
+      !('node' in config),
+      `${addon.name}: pikku.config.json still has a "node" block`
+    )
+    check(
+      typeof config.addon === 'object' &&
+        config.addon.displayName &&
+        config.addon.icon,
       `${addon.name}: pikku.config.json "addon" must carry displayName and icon, got ${JSON.stringify(config.addon)}`
     )
     check(
@@ -170,10 +219,15 @@ try {
 
     const variable = read(join(addonDir, 'src', `${addon.name}.variable.ts`))
     check(
-      variable.includes(`z.string().url().default(${JSON.stringify(addon.baseUrl)})`),
+      variable.includes(
+        `z.string().url().default(${JSON.stringify(addon.baseUrl)})`
+      ),
       `${addon.name}: base URL must be z.string().url().default(${JSON.stringify(addon.baseUrl)}):\n${variable}`
     )
-    check(!variable.includes('z.enum'), `${addon.name}: base URL must not be an enum`)
+    check(
+      !variable.includes('z.enum'),
+      `${addon.name}: base URL must not be an enum`
+    )
 
     const functionsDir = join(addonDir, 'src', 'functions')
     const files = readdirSync(functionsDir)
@@ -203,16 +257,30 @@ try {
       )
     }
     if (addon.credential) {
-      const credentialFile = join(addonDir, 'src', `${addon.name}.credential.ts`)
-      check(existsSync(credentialFile), `${addon.name}: per-user ${addon.credential} must declare a credential`)
-      const service = read(join(addonDir, 'src', `${addon.name}-api.service.ts`))
+      const credentialFile = join(
+        addonDir,
+        'src',
+        `${addon.name}.credential.ts`
+      )
+      check(
+        existsSync(credentialFile),
+        `${addon.name}: per-user ${addon.credential} must declare a credential`
+      )
+      const service = read(
+        join(addonDir, 'src', `${addon.name}-api.service.ts`)
+      )
       check(
         service.includes('CredentialRejectedError'),
         `${addon.name}: an upstream 401 on a per-user credential must be a CredentialRejectedError`
       )
     }
 
-    const codegen = await run(`${addon.name}: pikku all`, 'node', [PIKKU, 'all'], addonDir)
+    const codegen = await run(
+      `${addon.name}: pikku all`,
+      'node',
+      [PIKKU, 'all'],
+      addonDir
+    )
     check(
       !codegen.includes('Could not convert Zod schema'),
       `${addon.name}: pikku all left zod schemas unconverted:\n${codegen}`
@@ -220,13 +288,22 @@ try {
     await run(`${addon.name}: tsc`, TSC, ['-p', 'tsconfig.json'], addonDir)
     await run(`${addon.name}: pikku dist`, 'node', [PIKKU, 'dist'], addonDir)
 
-    if (addon.delegated && process.env.DOLIBARR_LOGIN && process.env.DOLIBARR_PASSWORD) {
-      console.log('\n▶ dolibarr: live delegated sign-in (DOLIBARR_LOGIN is set)')
+    if (
+      addon.delegated &&
+      process.env.DOLIBARR_LOGIN &&
+      process.env.DOLIBARR_PASSWORD
+    ) {
+      console.log(
+        '\n▶ dolibarr: live delegated sign-in (DOLIBARR_LOGIN is set)'
+      )
       const { authenticateDolibarrUpstream } = await import(
         join(addonDir, 'dist', 'src', 'dolibarr-upstream-auth.js')
       )
       const identity = await authenticateDolibarrUpstream(
-        { login: process.env.DOLIBARR_LOGIN, password: process.env.DOLIBARR_PASSWORD },
+        {
+          login: process.env.DOLIBARR_LOGIN,
+          password: process.env.DOLIBARR_PASSWORD,
+        },
         process.env.DOLIBARR_BASE_URL ?? addon.baseUrl
       )
       check(
@@ -244,8 +321,19 @@ try {
     }
 
     for (const name of addon.schemas ?? []) {
-      const out = join(addonDir, 'dist', '.pikku', 'addon', 'schemas', 'schemas', `${name}.schema.json`)
-      check(existsSync(out), `${addon.name}: the built addon has no JSON schema for ${name}`)
+      const out = join(
+        addonDir,
+        'dist',
+        '.pikku',
+        'addon',
+        'schemas',
+        'schemas',
+        `${name}.schema.json`
+      )
+      check(
+        existsSync(out),
+        `${addon.name}: the built addon has no JSON schema for ${name}`
+      )
     }
   }
 } catch (error) {
@@ -259,4 +347,6 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`  - ${failure}`)
   process.exit(1)
 }
-console.log(`\n✓ ${corpus.length} OpenAPI specs generate, build and ship as addons`)
+console.log(
+  `\n✓ ${selected.length} OpenAPI specs generate, build and ship as addons`
+)

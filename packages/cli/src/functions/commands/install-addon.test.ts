@@ -13,7 +13,8 @@ import {
 
 const created: string[] = []
 afterEach(async () => {
-  for (const dir of created.splice(0)) await rm(dir, { recursive: true, force: true })
+  for (const dir of created.splice(0))
+    await rm(dir, { recursive: true, force: true })
 })
 
 const AUTH_TS = `import { betterAuth } from 'better-auth'
@@ -42,10 +43,12 @@ const install = (overrides: Partial<AddonInstall> = {}): AddonInstall => ({
   pascalName: 'Dolibarr',
   screamingName: 'DOLIBARR',
   packageName: '@pikku/addon-dolibarr',
-  depProtocol: 'workspace:*',
+  addonDir: '/app/packages/addon-dolibarr',
+  inWorkspace: true,
   mode: 'delegated',
   functions: {
-    usersRetrieveInfo: 'return dolibarr.call("GET", "/users/info", data) as any',
+    usersRetrieveInfo:
+      'return dolibarr.call("GET", "/users/info", data) as any',
     usersCreate: 'return dolibarr.call("POST", "/users", data) as any',
   },
   baseUrl: 'https://erp.example.com/api/index.php',
@@ -70,23 +73,53 @@ describe('exposedFunctions', () => {
 describe('wireAuth', () => {
   test('delegated mode adds pikkuDelegatedAuth that stores the upstream credential', () => {
     const { source } = wireAuth(AUTH_TS, install())
-    assert.match(source, /import \{ pikkuActor, pikkuBan, pikkuDelegatedAuth \} from '@pikku\/better-auth'/)
-    assert.match(source, /import \{ authenticateDolibarrUpstream \} from '@pikku\/addon-dolibarr'/)
-    assert.match(source, /async \(\{ kysely, secrets, variables, logger, credentialService, scopeService \}\)/)
-    assert.match(source, /variables\.get\('DOLIBARR_BASE_URL'\)\) \?\? "https:\/\/erp\.example\.com\/api\/index\.php"/)
-    assert.match(source, /credentialService\.set\('dolibarr', identity\.credential, userId\)/)
-    assert.ok(source.indexOf('pikkuDelegatedAuth({') < source.indexOf('pikkuActor({'))
+    assert.match(
+      source,
+      /import \{ pikkuActor, pikkuBan, pikkuDelegatedAuth \} from '@pikku\/better-auth'/
+    )
+    assert.match(
+      source,
+      /import \{ authenticateDolibarrUpstream \} from '@pikku\/addon-dolibarr'/
+    )
+    assert.match(
+      source,
+      /async \(\{ kysely, secrets, variables, logger, credentialService, scopeService \}\)/
+    )
+    assert.match(
+      source,
+      /variables\.get\('DOLIBARR_BASE_URL'\)\) \?\? "https:\/\/erp\.example\.com\/api\/index\.php"/
+    )
+    assert.match(
+      source,
+      /credentialService\.set\('dolibarr', identity\.credential, userId\)/
+    )
+    assert.ok(
+      source.indexOf('pikkuDelegatedAuth({') < source.indexOf('pikkuActor({')
+    )
   })
 
   test('scenario actors carry the upstream credential', () => {
     const { source } = wireAuth(AUTH_TS, install({ mode: 'connect' }))
-    assert.match(source, /pikkuActor\(\{\s+credentials: \{\s+names: \['dolibarr'\]/)
+    assert.match(
+      source,
+      /pikkuActor\(\{\s+credentials: \{\s+names: \['dolibarr'\]/
+    )
     assert.ok(!source.includes('pikkuDelegatedAuth'))
   })
 
   test('running twice changes nothing more', () => {
     const once = wireAuth(AUTH_TS, install()).source
     assert.equal(wireAuth(once, install()).source, once)
+  })
+
+  test('a factory shape it cannot edit is left alone and reported', () => {
+    const odd = AUTH_TS.replace(
+      'async ({ kysely, secrets, variables, logger })',
+      'async (services)'
+    )
+    const { source, notes } = wireAuth(odd, install())
+    assert.equal(source, odd)
+    assert.equal(notes.length, 1)
   })
 
   test('shared and none leave auth.ts alone', () => {
@@ -101,11 +134,19 @@ describe('installAddonIntoApp', () => {
     created.push(root)
     const srcDir = join(root, 'packages', 'functions', 'src')
     await mkdir(join(srcDir, 'addons'), { recursive: true })
-    await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'root', dependencies: { zod: '^4' } }))
-    await writeFile(join(root, 'packages', 'functions', 'package.json'), JSON.stringify({ name: 'fns' }))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'root', dependencies: { zod: '^4' } })
+    )
+    await writeFile(
+      join(root, 'packages', 'functions', 'package.json'),
+      JSON.stringify({ name: 'fns' })
+    )
     await writeFile(join(srcDir, 'auth.ts'), AUTH_TS)
 
-    const { written } = installAddonIntoApp(install({ projectRoot: root, srcDir }))
+    const { written } = installAddonIntoApp(
+      install({ projectRoot: root, srcDir })
+    )
     assert.deepEqual(written.sort(), [
       '.env',
       'package.json',
@@ -113,9 +154,17 @@ describe('installAddonIntoApp', () => {
       'packages/functions/src/addons/dolibarr.addon.ts',
       'packages/functions/src/auth.ts',
     ])
-    const rootPkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
-    assert.deepEqual(Object.keys(rootPkg.dependencies), ['@pikku/addon-dolibarr', 'zod'])
-    const wire = await readFile(join(srcDir, 'addons', 'dolibarr.addon.ts'), 'utf8')
+    const rootPkg = JSON.parse(
+      await readFile(join(root, 'package.json'), 'utf8')
+    )
+    assert.deepEqual(Object.keys(rootPkg.dependencies), [
+      '@pikku/addon-dolibarr',
+      'zod',
+    ])
+    const wire = await readFile(
+      join(srcDir, 'addons', 'dolibarr.addon.ts'),
+      'utf8'
+    )
     assert.match(wire, /auth: true/)
     assert.match(wire, /'usersRetrieveInfo'/)
     assert.equal(
@@ -124,11 +173,47 @@ describe('installAddonIntoApp', () => {
     )
   })
 
+  test('outside a workspace each package gets a file: path to the addon', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'install-addon-'))
+    created.push(root)
+    const srcDir = join(root, 'packages', 'functions', 'src')
+    await mkdir(srcDir, { recursive: true })
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'root' })
+    )
+    await writeFile(
+      join(root, 'packages', 'functions', 'package.json'),
+      JSON.stringify({ name: 'fns' })
+    )
+    installAddonIntoApp(
+      install({
+        projectRoot: root,
+        srcDir,
+        mode: 'none',
+        addonDir: join(root, 'addon-dolibarr'),
+        inWorkspace: false,
+      })
+    )
+    const dep = async (path: string) =>
+      JSON.parse(await readFile(join(root, path), 'utf8')).dependencies[
+        '@pikku/addon-dolibarr'
+      ]
+    assert.equal(await dep('package.json'), 'file:addon-dolibarr')
+    assert.equal(
+      await dep('packages/functions/package.json'),
+      'file:../../addon-dolibarr'
+    )
+  })
+
   test('an existing dependency is left as it is', async () => {
     const root = await mkdtemp(join(tmpdir(), 'install-addon-'))
     created.push(root)
     const path = join(root, 'package.json')
-    await writeFile(path, JSON.stringify({ dependencies: { '@pikku/addon-x': '1.0.0' } }))
+    await writeFile(
+      path,
+      JSON.stringify({ dependencies: { '@pikku/addon-x': '1.0.0' } })
+    )
     assert.equal(addDependency(path, '@pikku/addon-x', 'workspace:*'), false)
   })
 })

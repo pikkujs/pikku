@@ -65,6 +65,7 @@ pikkuActor({
   credentials: {
     names: ['dolibarr'],
     store: (name, value, userId) => credentialService.set(name, value, userId),
+    remove: (name, userId) => credentialService.delete(name, userId),
   },
 })
 ```
@@ -73,8 +74,8 @@ At each actor sign-in the plugin reads `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` —
 `dan` + `dolibarr` is `ACTOR_CREDENTIAL_DAN_DOLIBARR` — and stores it with
 `credentialService.set` for that actor. A bare value is stored as `{ token }`
 (what a delegated or bearer credential holds); a JSON object is stored as-is,
-e.g. `{"apiKey":"…"}` for an API-key credential. Unset means the actor simply
-has no upstream credential.
+e.g. `{"apiKey":"…"}` for an API-key credential. Unset means the actor has no
+upstream credential: `remove` drops one stored at an earlier sign-in.
 
 - **Values live in `.env` (or CI secrets), never in `personas.ts` or code.**
   Use a dedicated upstream test account per persona, not a real person's.

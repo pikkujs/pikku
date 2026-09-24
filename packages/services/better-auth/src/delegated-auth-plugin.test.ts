@@ -16,6 +16,7 @@ const identityFor = (
 ): UpstreamIdentity => ({
   externalId: 'bb2-1',
   email: 'Jane@Corp.com',
+  syntheticEmail: false,
   name: 'Jane Doe',
   role: 'Manager',
   credential: { token: 'jwt-1', expiresAt: 4102444800 },
@@ -313,7 +314,10 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
         },
       })
 
-      const res = await signInDelegated(auth, { [field]: 'dan', password: 'pw' })
+      const res = await signInDelegated(auth, {
+        [field]: 'dan',
+        password: 'pw',
+      })
       assert.equal(res.status, 200)
       assert.equal(db.user![0].email, 'dan@erp.example.com')
       assert.equal(stored.length, 1)
@@ -366,6 +370,20 @@ describe('better-auth pikkuDelegatedAuth plugin', () => {
       db.account!.some((a) => a.providerId === DELEGATED_PROVIDER_ID),
       false
     )
+  })
+
+  test('an authenticator that omits syntheticEmail never claims an existing user row', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const { auth } = makeAuth(db, {
+      authenticate: async () =>
+        identityFor({ email: 'jane@corp.com', syntheticEmail: undefined }),
+    })
+    await auth.api.signUpEmail({
+      body: { email: 'jane@corp.com', password: 'password123', name: 'Jane' },
+    })
+
+    const res = await signInDelegated(auth, { login: 'jane', password: 'x' })
+    assert.equal(res.status, 401)
   })
 
   test('mapRole and defaultRole shape the granted role', async () => {

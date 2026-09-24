@@ -30,7 +30,16 @@ export const resolveDevCredentialsKey = (
   }
   const key = randomBytes(32).toString('base64')
   mkdirSync(runtimeDir, { recursive: true })
-  writeFileSync(file, `${key}\n`, { encoding: 'utf8', mode: 0o600 })
+  try {
+    writeFileSync(file, `${key}\n`, {
+      encoding: 'utf8',
+      mode: 0o600,
+      flag: 'wx',
+    })
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+    return readFileSync(file, 'utf8').trim()
+  }
   return key
 }
 

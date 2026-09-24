@@ -269,6 +269,29 @@ describe('parseOpenAPISpec — Swagger 2.0', () => {
     assert.equal(spec.authType, 'apiKey')
   })
 
+  test('reads the token URL of a Swagger 2 application flow', async () => {
+    const appPath = join(tmpDir, 'application.json')
+    await writeFile(
+      appPath,
+      JSON.stringify({
+        ...swagger2Spec,
+        securityDefinitions: {
+          oauth: {
+            type: 'oauth2',
+            flow: 'application',
+            tokenUrl: 'https://auth.example.com/token',
+            scopes: { read: 'Read' },
+          },
+        },
+      })
+    )
+    const spec = await parseOpenAPISpec(appPath)
+    assert.equal(
+      spec.securitySchemes.oauth?.flows?.tokenUrl,
+      'https://auth.example.com/token'
+    )
+  })
+
   test('extracts requestBody from body parameter', async () => {
     const spec = await parseOpenAPISpec(specPath)
     const createPet = spec.operations.find(
@@ -398,8 +421,13 @@ paths:
     })
     const ping = spec.operations.find((op) => op.operationId === 'ping')
     assert.equal(ping?.responseMediaType, 'text/plain')
-    const patch = spec.operations.find((op) => op.operationId === 'patchStation')
-    assert.equal(patch?.requestBodyMediaType, 'application/x-www-form-urlencoded')
+    const patch = spec.operations.find(
+      (op) => op.operationId === 'patchStation'
+    )
+    assert.equal(
+      patch?.requestBodyMediaType,
+      'application/x-www-form-urlencoded'
+    )
     assert.equal(patch?.responseSchema, undefined)
   })
 
@@ -409,7 +437,12 @@ paths:
 })
 
 describe('filterOperations', () => {
-  const op = (method: string, path: string, operationId: string, tags: string[]) => ({
+  const op = (
+    method: string,
+    path: string,
+    operationId: string,
+    tags: string[]
+  ) => ({
     method,
     path,
     operationId,
@@ -437,9 +470,12 @@ describe('filterOperations', () => {
   })
 
   test('include and exclude match operationId, path or METHOD /path globs', () => {
-    assert.deepEqual(ids(filterOperations(spec, { include: ['/users*'], exclude: ['DELETE *'] })), [
-      'listUsers',
-    ])
+    assert.deepEqual(
+      ids(
+        filterOperations(spec, { include: ['/users*'], exclude: ['DELETE *'] })
+      ),
+      ['listUsers']
+    )
     assert.deepEqual(ids(filterOperations(spec, { include: ['list*'] })), [
       'listUsers',
       'listInvoices',
@@ -494,7 +530,10 @@ describe('detectLoginOperation', () => {
             responseSchema: {
               type: 'object',
               properties: {
-                success: { type: 'object', properties: { token: { type: 'string' } } },
+                success: {
+                  type: 'object',
+                  properties: { token: { type: 'string' } },
+                },
               },
             },
           },

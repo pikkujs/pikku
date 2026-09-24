@@ -159,14 +159,12 @@ const nearestPackageDir = (file: string): string | null => {
 
 /**
  * An addon is installed wherever the package that calls `wireAddon` lists it,
- * which in a workspace is usually not the repo root. Resolve from the root
- * first, then from the declaring package.
+ * which in a workspace is usually not the repo root. Resolve from the declaring
+ * package first, as its code does at runtime, then from the root.
  */
 const addonResolutionDirs = (rootDir: string, declFile?: string): string[] => {
-  const dirs = [rootDir]
   const declDir = declFile ? nearestPackageDir(declFile) : null
-  if (declDir && declDir !== rootDir) dirs.push(declDir)
-  return dirs
+  return declDir && declDir !== rootDir ? [declDir, rootDir] : [rootDir]
 }
 
 const createAddonResolver = (dirs: string[]): AddonResolver => {
@@ -211,11 +209,13 @@ export const describeMissingAddonMeta = (
   dirs: string[],
   declFile?: string
 ): string => {
-  const caller = declFile ? relative(dirs[0], declFile) || declFile : undefined
+  const caller = declFile
+    ? relative(dirs[dirs.length - 1], declFile) || declFile
+    : undefined
   const declaredIn = caller ? ` (declared in ${caller})` : ''
   const packageDir = findInstalledPackageDir(dirs, packageName)
   if (!packageDir) {
-    const declaringPackage = dirs[dirs.length - 1]
+    const declaringPackage = dirs[0]
     return (
       `wireAddon('${namespace}')${declaredIn} names ${packageName}, which is not installed where it can be resolved — tried ${dirs.join(', ')}. ` +
       `Add "${packageName}": "workspace:*" (or a version) to the dependencies of ${join(declaringPackage, 'package.json')} and run install.`
