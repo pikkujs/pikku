@@ -356,6 +356,10 @@ export function aggregateRequiredServices(
     requiredServices.add('analyticsService')
   }
 
+  if ((state.credentials?.definitions?.length ?? 0) > 0) {
+    requiredServices.add('credentialService')
+  }
+
   // 7. Services that consumed addons need from the parent project.
   const addonFnServices = new Map<string, string[] | undefined>()
   for (const [namespace, fns] of Object.entries(state.addonFunctions ?? {})) {

@@ -101,6 +101,7 @@ function makeState(
     scopeDefinitions?: any[]
     flagDefinitions?: any[]
     analytics?: any[]
+    credentialDefinitions?: any[]
   } = {}
 ): Omit<InspectorState, 'typesLookup'> {
   return {
@@ -138,6 +139,9 @@ function makeState(
     scopes: { definitions: overrides.scopeDefinitions ?? [] },
     featureFlags: { definitions: overrides.flagDefinitions ?? [] },
     ...(overrides.analytics ? { analytics: overrides.analytics } : {}),
+    ...(overrides.credentialDefinitions
+      ? { credentials: { definitions: overrides.credentialDefinitions } }
+      : {}),
     addonFunctions: overrides.addonFunctions ?? {},
     addonRequiredParentServices: overrides.addonRequiredParentServices ?? [],
     auth: overrides.authServices
@@ -1204,5 +1208,14 @@ describe('aggregateRequiredServices — flags and analytics imply their services
     const required = state.serviceAggregation.requiredServices
     assert.ok(!required.has('featureFlags'))
     assert.ok(!required.has('analyticsService'))
+    assert.ok(!required.has('credentialService'))
+  })
+
+  test('a declared credential requires credentialService', () => {
+    const state = makeState({
+      credentialDefinitions: [{ name: 'dolibarr', type: 'wire' }],
+    })
+    aggregateRequiredServices(state)
+    assert.ok(state.serviceAggregation.requiredServices.has('credentialService'))
   })
 })
