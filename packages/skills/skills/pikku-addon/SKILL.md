@@ -377,9 +377,13 @@ combined (a flag the upstream sends as `"0"`, a total summed from several
 calls, one field out of fifty), or when the app adds a permission of its own.
 `wireAddon`'s `scopes` gate every function in the addon at once, and a wiring
 carries middleware, not permissions, so a rule on one addon function lives in
-the `permissions` of an app function that calls it. Skip that rule when the
-upstream already enforces it: an addon called with the user's own credential
-is already limited to what that user may do upstream. Name it for what the screen means
+the `permissions` of an app function that calls it. An addon called with the
+user's own credential is already limited upstream to what that user may do, so
+a data-aware `pikkuPermission` repeating that check (may they read *this*
+invoice?) adds nothing. A session-only `pikkuAuth` (a role, a tier) is still
+worth it: it can be checked before any input exists, so the functions a user
+can't call drop out of the tools an MCP client, an agent or a workflow is
+offered, instead of failing upstream when called. Name it for what the screen means
 (`getMyProfile`), not after the upstream operation (`usersRetrieveInfo`), and
 give it an `output:` schema of only what the app uses. For an OpenAPI-generated
 addon this matters more: its outputs mirror the upstream's loose, oversized
