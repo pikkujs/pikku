@@ -11,10 +11,15 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   parseOpenAPISpec,
   computeContractHash,
+  detectLoginOperation,
+  filterOperations,
   generateAddonFromOpenAPI,
   loadAuthConfig,
+  specCoverageWarning,
   type AuthConfig,
+  type ParsedSpec,
 } from '@pikku/openapi-parser'
+import { installAddonIntoApp, type AddonAuthMode } from './install-addon.js'
 
 /**
  * Pick the protocol the generated test app uses to depend on its parent addon.
@@ -145,6 +150,16 @@ const inTemplate = (value: string) =>
 /** The same prose on a `//` comment line, where a newline ends the comment. */
 const inComment = (value: string) => value.replace(/\s+/g, ' ').trim()
 
+export type CredentialType = 'apikey' | 'bearer' | 'basic' | 'oauth2'
+
+const CREDENTIAL_SHAPES: Record<Exclude<CredentialType, 'oauth2'>, string> = {
+  apikey: '{ apiKey: string }',
+  bearer: '{ token: string }',
+  basic: '{ username: string; password: string }',
+}
+
+const CREDENTIAL_FIELDS = { apikey: 'apiKey', bearer: 'token' } as const
+
 export interface AddonVars {
   name: string
   camelName: string
@@ -156,13 +171,26 @@ export interface AddonVars {
   addonDepProtocol: string
 }
 
+const ICON_COLOURS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2']
+
+function placeholderIcon(displayName: string): string {
+  const letter = (displayName.match(/[A-Za-z0-9]/)?.[0] ?? '?').toUpperCase()
+  const colour =
+    ICON_COLOURS[
+      [...displayName].reduce((sum, c) => sum + c.charCodeAt(0), 0) %
+        ICON_COLOURS.length
+    ]
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${colour}"/><text x="32" y="43" font-family="system-ui, sans-serif" font-size="30" font-weight="600" fill="#fff" text-anchor="middle">${letter}</text></svg>
+`
+}
+
 export function getAddonFiles(
   vars: AddonVars,
   flags: {
     secret: boolean
     variable: boolean
     oauth: boolean
-    credential?: 'apikey' | 'bearer' | 'oauth2'
+    credential?: CredentialType
     /** Delegated login: credential is the upstream token + expiry, checked per call. */
     delegated?: boolean
   }
@@ -239,17 +267,19 @@ export function getAddonFiles(
       tsconfig: './tsconfig.json',
       srcDirectories: ['src', 'types'],
       outDir: './.pikku',
-      addon: true,
-      node: {
+      addon: {
         displayName,
         description,
         categories: [category],
         icon: `./${name}.svg`,
       },
+      forceRequiredServices: [camelName],
     },
     null,
     2
   )
+
+  files[`${name}.svg`] = placeholderIcon(displayName)
 
   // tsconfig.json
   files['tsconfig.json'] = JSON.stringify(
@@ -287,7 +317,7 @@ ${description}
 
 ## Setup
 
-1. Add icon SVG at \`${name}.svg\`
+1. Replace the placeholder icon at \`${name}.svg\`
 2. Update secret schema with required fields
 3. Implement API service methods
 4. Create function files for each operation
@@ -301,11 +331,12 @@ ${description}
 `
 
   // src/services.ts
-  if (flags.delegated) {
-    // Delegated login: the credential is the upstream token captured at
-    // sign-in; an expired token is the re-auth signal (UnauthorizedError).
-    files['src/services.ts'] =
-      `import { UnauthorizedError } from '@pikku/core/errors'
+  const wireCredential = (
+    shape: string,
+    check: string,
+    missing: string,
+    extra = ''
+  ) => `import { ${missing.startsWith('new MissingCredentialError') ? 'MissingCredentialError' : 'CredentialRejectedError'} } from '@pikku/core/errors'
 import { ${pascalName}Service } from './${name}-api.service.js'
 import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
@@ -314,65 +345,48 @@ export const createWireServices = pikkuAddonWireServices(
     if (!wire.getCredential) {
       throw new Error('Credential resolution is not available in this runtime')
     }
-    const cred = await wire.getCredential<{ token: string; expiresAt?: number }>('${camelName}')
-    if (!cred?.token) {
-      throw new UnauthorizedError(${literal(`No ${displayName} session — sign in again`)})
-    }
+    const cred = await wire.getCredential<${shape}>('${camelName}')
+    if (!${check}) {
+      throw ${missing}
+    }${extra}
+    const ${camelName} = new ${pascalName}Service(cred, variables)
+
+    return { ${camelName} }
+  }
+)
+`
+  if (flags.delegated) {
+    // Delegated login: the credential is the upstream token captured at
+    // sign-in, so a missing or expired one means signing in again.
+    files['src/services.ts'] = wireCredential(
+      '{ token: string; expiresAt?: number }',
+      'cred?.token',
+      `new CredentialRejectedError('${camelName}', 'sign-in', ${literal(`No ${displayName} session — sign in again`)})`,
+      `
     if (cred.expiresAt && cred.expiresAt * 1000 < Date.now()) {
-      throw new UnauthorizedError(${literal(`${displayName} session expired — sign in again`)})
-    }
-    const ${camelName} = new ${pascalName}Service(cred, variables)
-
-    return { ${camelName} }
-  }
-)
-`
+      throw new CredentialRejectedError('${camelName}', 'sign-in', ${literal(`${displayName} session expired — sign in again`)})
+    }`
+    )
   } else if (flags.credential && flags.credential !== 'oauth2') {
-    // Per-user credential: use createWireServices with wire.getCredential()
-    const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
-    files['src/services.ts'] =
-      `import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon/setup'
-
-export const createWireServices = pikkuAddonWireServices(
-  async ({ variables }, wire) => {
-    if (!wire.getCredential) {
-      throw new Error('Credential resolution is not available in this runtime')
-    }
-    const cred = await wire.getCredential<{ ${credField}: string }>('${camelName}')
-    if (!cred?.${credField}) {
-      throw new Error('Missing ${camelName} credential')
-    }
-    const ${camelName} = new ${pascalName}Service(cred, variables)
-
-    return { ${camelName} }
-  }
-)
-`
+    const shape = CREDENTIAL_SHAPES[flags.credential]
+    const field =
+      flags.credential === 'basic'
+        ? 'username'
+        : CREDENTIAL_FIELDS[flags.credential]
+    files['src/services.ts'] = wireCredential(
+      shape,
+      `cred?.${field}`,
+      `new MissingCredentialError('${camelName}', 'apikey')`
+    )
   } else if (flags.oauth || flags.credential === 'oauth2') {
     // The OAuth2 access token is owned and refreshed by the platform credential
     // service (better-auth). Resolve a ready token per-request via the wire and
     // hand it to the service — the addon does not do its own token exchange.
-    files['src/services.ts'] =
-      `import { UnauthorizedError } from '@pikku/core/errors'
-import { ${pascalName}Service } from './${name}-api.service.js'
-import { pikkuAddonWireServices } from '#pikku/addon/setup'
-
-export const createWireServices = pikkuAddonWireServices(
-  async ({ variables }, wire) => {
-    if (!wire.getCredential) {
-      throw new Error('Credential resolution is not available in this runtime')
-    }
-    const cred = await wire.getCredential<{ accessToken: string }>('${camelName}')
-    if (!cred?.accessToken) {
-      throw new UnauthorizedError(${literal(`No ${displayName} connection — connect ${displayName} first`)})
-    }
-    const ${camelName} = new ${pascalName}Service(cred, variables)
-
-    return { ${camelName} }
-  }
-)
-`
+    files['src/services.ts'] = wireCredential(
+      '{ accessToken: string }',
+      'cred?.accessToken',
+      `new MissingCredentialError('${camelName}', 'oauth2')`
+    )
   } else if (flags.secret) {
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
@@ -381,23 +395,24 @@ import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
-  { secrets }
+  { secrets, variables }
 ) => {
   const creds = await secrets.getSecret<${pascalName}Secrets>('${screamingName}_CREDENTIALS')
-  const ${camelName} = new ${pascalName}Service(creds.reveal())
+  const ${camelName} = new ${pascalName}Service(creds.reveal(), variables)
 
   return { ${camelName} }
 })
 `
   } else {
-    // The plain service takes no constructor argument — the secret, credential
-    // and oauth variants are the ones handed something to authenticate with.
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
 import { pikkuAddonServices } from '#pikku/addon/setup'
 
-export const createSingletonServices = pikkuAddonServices(async () => {
-  const ${camelName} = new ${pascalName}Service()
+export const createSingletonServices = pikkuAddonServices(async (
+  config,
+  { variables }
+) => {
+  const ${camelName} = new ${pascalName}Service(variables)
 
   return { ${camelName} }
 })
@@ -406,18 +421,16 @@ export const createSingletonServices = pikkuAddonServices(async () => {
 
   // src/{name}-api.service.ts
   if (flags.credential && flags.credential !== 'oauth2') {
-    const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
-    const credType = `{ ${credField}: string }`
-    const authHeader =
-      flags.credential === 'bearer'
-        ? `\`Bearer \${this.creds.token}\``
-        : `this.creds.apiKey`
-    const authLine =
-      flags.credential === 'bearer'
-        ? `'Authorization': ${authHeader},`
-        : `'Authorization': \`Bearer \${this.creds.apiKey}\`,`
+    const credType = CREDENTIAL_SHAPES[flags.credential]
+    const authLine = {
+      bearer: `'Authorization': \`Bearer \${this.creds.token}\`,`,
+      apikey: `'Authorization': \`Bearer \${this.creds.apiKey}\`,`,
+      basic: `'Authorization': \`Basic \${btoa(\`\${this.creds.username}:\${this.creds.password}\`)}\`,`,
+    }[flags.credential]
     files[`src/${name}-api.service.ts`] =
-      `const BASE_URL = 'https://api.example.com/v1'
+      `import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'
+
+const BASE_URL = 'https://api.example.com/v1'
 
 export interface RequestOptions {
   body?: unknown
@@ -425,7 +438,10 @@ export interface RequestOptions {
 }
 
 export class ${pascalName}Service {
-  constructor(private creds: ${credType}) {}
+  constructor(
+    private creds: ${credType},
+    _variables?: TypedVariablesService
+  ) {}
 
   async request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
@@ -515,6 +531,7 @@ export class ${pascalName}Service {
   } else if (flags.secret) {
     files[`src/${name}-api.service.ts`] =
       `import type { ${pascalName}Secrets } from './${name}.secret.js'
+import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'
 
 const BASE_URL = 'https://api.example.com/v1'
 
@@ -524,7 +541,10 @@ export interface RequestOptions {
 }
 
 export class ${pascalName}Service {
-  constructor(private creds: ${pascalName}Secrets) {}
+  constructor(
+    private creds: ${pascalName}Secrets,
+    _variables?: TypedVariablesService
+  ) {}
 
   async request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
@@ -561,7 +581,9 @@ export class ${pascalName}Service {
 `
   } else {
     files[`src/${name}-api.service.ts`] =
-      `const BASE_URL = 'https://api.example.com/v1'
+      `import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'
+
+const BASE_URL = 'https://api.example.com/v1'
 
 export interface RequestOptions {
   body?: unknown
@@ -569,6 +591,8 @@ export interface RequestOptions {
 }
 
 export class ${pascalName}Service {
+  constructor(_variables?: TypedVariablesService) {}
+
   async request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     endpoint: string,
@@ -644,6 +668,23 @@ import { defineCredential } from '#pikku/addon/auth'
 
 export const ${camelName}CredentialSchema = z.object({
   apiKey: z.string().describe(${literal(`${displayName} API key`)}),
+})
+
+defineCredential({
+  name: '${camelName}',
+  displayName: ${literal(displayName)},
+  description: ${literal(description)},
+  type: 'wire',
+  schema: ${camelName}CredentialSchema,
+})
+`
+  } else if (flags.credential === 'basic') {
+    files[`src/${name}.credential.ts`] = `import { z } from 'zod'
+import { defineCredential } from '#pikku/addon/auth'
+
+export const ${camelName}CredentialSchema = z.object({
+  username: z.string().describe(${literal(`${displayName} username`)}),
+  password: z.string().describe(${literal(`${displayName} password`)}),
 })
 
 defineCredential({
@@ -1054,6 +1095,110 @@ export const buildGeneratedAddon = (
   return true
 }
 
+/**
+ * `string[]` options split on commas, which would cut a header value like
+ * `Accept: a, b` in two; a piece that does not start a new `Name:` rejoins the
+ * previous one.
+ */
+export function parseHeaderOptions(raw: string[] = []): Record<string, string> {
+  const joined: string[] = []
+  for (const piece of raw) {
+    if (/^[A-Za-z0-9!#$%&'*+.^_`|~-]+\s*:/.test(piece) || joined.length === 0) {
+      joined.push(piece)
+    } else {
+      joined[joined.length - 1] += `, ${piece}`
+    }
+  }
+  const headers: Record<string, string> = {}
+  for (const header of joined) {
+    const at = header.indexOf(':')
+    if (at <= 0) {
+      throw new Error(`--openapi-header "${header}" is not "Name: value"`)
+    }
+    headers[header.slice(0, at).trim()] = header.slice(at + 1).trim()
+  }
+  return headers
+}
+
+export interface ResolvedAuth {
+  mode: AddonAuthMode
+  credential?: CredentialType
+  secret: boolean
+  oauth: boolean
+}
+
+/**
+ * How the addon authenticates, from the flags first and the spec second.
+ * Per-user is the default for anything the spec can authenticate: each user
+ * acts upstream as themselves. `--auth shared` puts one secret behind every
+ * user; `--auth none` is for public APIs.
+ */
+export function resolveAddonAuth(
+  spec: ParsedSpec,
+  flags: {
+    auth?: string
+    credential?: string
+    oauth?: boolean
+    secret?: boolean
+    authConfig?: AuthConfig
+  }
+): ResolvedAuth {
+  if (flags.auth && !['user', 'shared', 'none'].includes(flags.auth)) {
+    throw new Error(`--auth must be user, shared or none (got "${flags.auth}")`)
+  }
+  if (flags.authConfig?.delegated) {
+    return { mode: 'delegated', credential: 'bearer', secret: false, oauth: false }
+  }
+  if (flags.auth === 'none') {
+    return { mode: 'none', secret: false, oauth: false }
+  }
+  if (flags.auth === 'shared' || (flags.secret && !flags.credential && !flags.oauth)) {
+    return { mode: 'shared', secret: true, oauth: false }
+  }
+  const explicit = flags.credential ?? (flags.oauth ? 'oauth2' : undefined)
+  const fromSpec: CredentialType | undefined = flags.authConfig?.headerName
+    ? 'apikey'
+    : (
+        {
+          oauth2: 'oauth2',
+          apiKey: 'apikey',
+          bearer: 'bearer',
+          basic: 'basic',
+          none: undefined,
+        } as const
+      )[spec.authType]
+  const credential = (explicit ?? fromSpec) as CredentialType | undefined
+  if (!credential) {
+    throw new Error(
+      `${spec.info.title} declares no security scheme, so the addon cannot tell how to authenticate. ` +
+        'Pass --auth none for a public API, --credential apikey|bearer|basic|oauth2 for a per-user key, ' +
+        '--auth shared for one key behind every user, or --auth-config <file> for a custom header or a delegated login (see pikku-build references/openapi.md).'
+    )
+  }
+  if (!['apikey', 'bearer', 'basic', 'oauth2'].includes(credential)) {
+    throw new Error(
+      `Invalid credential type "${credential}": must be one of apikey, bearer, basic, oauth2`
+    )
+  }
+  return {
+    mode: credential === 'oauth2' ? 'oauth2' : 'connect',
+    credential,
+    secret: false,
+    oauth: credential === 'oauth2',
+  }
+}
+
+/** The project `pikku new addon` runs in, when it is an app rather than an addon. */
+function findAppProject(config: any): { root: string; srcDir: string } | undefined {
+  const root = config?.rootDir
+  if (!root || config.addon || !existsSync(join(root, 'pikku.config.json'))) {
+    return undefined
+  }
+  const src = config.srcDirectories?.[0]
+  if (!src) return undefined
+  return { root, srcDir: join(root, src) }
+}
+
 export const pikkuNewAddon = pikkuSessionlessFunc<
   {
     name: string
@@ -1067,6 +1212,12 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     credential?: string
     test?: boolean
     openapi?: string
+    openapiHeader?: string[]
+    tags?: string[]
+    include?: string[]
+    exclude?: string[]
+    auth?: string
+    install?: boolean
     authConfig?: string
     mcp?: boolean
     camelCase?: boolean
@@ -1088,6 +1239,12 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       credential,
       test = true,
       openapi,
+      openapiHeader,
+      tags,
+      include,
+      exclude,
+      auth,
+      install,
       authConfig,
       mcp = false,
       camelCase = false,
@@ -1108,8 +1265,21 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     const resolvedDescription =
       description || `${resolvedDisplayName} integration for Pikku`
 
+    const app = findAppProject(config)
+    const installing = Boolean(openapi) && (install ?? Boolean(app))
+    if (installing && !app) {
+      logger.error('--install needs to run inside a pikku app (a pikku.config.json that is not an addon)')
+      process.exit(1)
+    }
+
     // Resolve target directory
-    const baseDir = dir || config.scaffold?.addonDir || process.cwd()
+    const workspacePackages = app ? join(app.root, 'packages') : undefined
+    const baseDir =
+      dir ||
+      config.scaffold?.addonDir ||
+      (installing && workspacePackages && existsSync(workspacePackages)
+        ? workspacePackages
+        : process.cwd())
     // Folder mirrors the package name (@pikku/addon-<name>) so a packages/
     // listing reads as packages/addon-<name>, distinct from app workspaces.
     const addonDir = join(baseDir, `addon-${name}`)
@@ -1130,64 +1300,92 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       addonDepProtocol: resolveAddonDepProtocol(baseDir),
     }
 
-    // Load the auth config (custom auth header / delegated login overrides)
     let loadedAuthConfig: AuthConfig | undefined
     if (authConfig) {
       loadedAuthConfig = await loadAuthConfig(authConfig)
-      if (loadedAuthConfig.delegated) {
-        // Delegated login stores the upstream token per-user — bearer is the
-        // only coherent credential mode.
-        if (credential && credential !== 'bearer') {
-          logger.error(
-            `--auth-config with delegated login requires --credential bearer (got "${credential}")`
-          )
-          process.exit(1)
-        }
-        credential = 'bearer'
+      if (loadedAuthConfig.delegated && credential && credential !== 'bearer') {
+        logger.error(
+          `--auth-config with delegated login stores the upstream token per user, so it cannot be combined with --credential ${credential}`
+        )
+        process.exit(1)
       }
     }
 
-    // Validate credential type if provided
-    const credentialType = credential as
-      'apikey' | 'bearer' | 'oauth2' | undefined
-    if (
-      credentialType &&
-      !['apikey', 'bearer', 'oauth2'].includes(credentialType)
-    ) {
-      logger.error(
-        `Invalid credential type "${credential}": must be one of apikey, bearer, oauth2`
-      )
+    let spec: ParsedSpec | undefined
+    let resolved: ResolvedAuth
+    try {
+      if (openapi) {
+        spec = await parseOpenAPISpec(openapi, {
+          headers: parseHeaderOptions(openapiHeader),
+        })
+        const total = spec.operations.length
+        spec = filterOperations(spec, { tags, include, exclude })
+        if (spec.operations.length === 0) {
+          throw new Error(
+            `No operations left out of ${total} after --tags/--include/--exclude`
+          )
+        }
+        const warning = specCoverageWarning(spec)
+        if (warning) {
+          logger.warn(`\n⚠️  ${warning}\n`)
+        }
+        resolved = resolveAddonAuth(spec, {
+          auth,
+          credential,
+          oauth,
+          secret,
+          authConfig: loadedAuthConfig,
+        })
+        const login = detectLoginOperation(spec)
+        if (login && resolved.mode !== 'delegated') {
+          logger.info(
+            `${spec.info.title} has a login route (${login.method.toUpperCase()} ${login.path}). To let users sign in to the app with their ${resolvedDisplayName} account, pass --auth-config with a "delegated" block (see pikku-build references/openapi.md).`
+          )
+        }
+        logger.info(
+          `${spec.operations.length} operations, auth: ${resolved.mode}${resolved.credential ? ` (${resolved.credential})` : ''}`
+        )
+      } else {
+        const credentialType = credential as CredentialType | undefined
+        if (credentialType && !['apikey', 'bearer', 'basic', 'oauth2'].includes(credentialType)) {
+          throw new Error(
+            `Invalid credential type "${credential}": must be one of apikey, bearer, basic, oauth2`
+          )
+        }
+        const effectiveOAuth = oauth || credentialType === 'oauth2'
+        resolved = {
+          mode: effectiveOAuth ? 'oauth2' : credentialType ? 'connect' : secret ? 'shared' : 'none',
+          credential: loadedAuthConfig?.delegated ? 'bearer' : credentialType,
+          secret: (secret || effectiveOAuth) && !credentialType,
+          oauth: effectiveOAuth,
+        }
+        if (loadedAuthConfig?.delegated) resolved.mode = 'delegated'
+      }
+    } catch (error) {
+      logger.error(error instanceof Error ? error.message : String(error))
       process.exit(1)
     }
 
-    // oauth implies secret (unless credential flag is used); credential oauth2 implies oauth
-    const effectiveOAuth = oauth || credentialType === 'oauth2'
     const addonFiles = getAddonFiles(vars, {
-      secret: (secret || effectiveOAuth) && !credentialType,
+      secret: resolved.secret,
       variable,
-      oauth: effectiveOAuth,
-      credential: credentialType,
-      delegated: Boolean(loadedAuthConfig?.delegated),
+      oauth: resolved.oauth,
+      credential: resolved.credential,
+      delegated: resolved.mode === 'delegated',
     })
 
-    // If openapi spec provided, generate typed files and merge over scaffold
-    if (openapi) {
-      const spec = await parseOpenAPISpec(openapi)
+    if (spec) {
       const openapiFiles = generateAddonFromOpenAPI(spec, vars, {
-        oauth: effectiveOAuth,
-        secret: (secret || effectiveOAuth) && !credentialType,
-        credential: credentialType,
+        oauth: resolved.oauth,
+        secret: resolved.secret,
+        credential: resolved.credential,
         mcp,
         camelCase,
         authConfig: loadedAuthConfig,
       })
       Object.assign(addonFiles, openapiFiles)
 
-      // Inject openapi metadata into pikku.config.json
       const config = JSON.parse(addonFiles['pikku.config.json'])
-      if (typeof config.addon === 'boolean' || !config.addon) {
-        config.addon = {}
-      }
       config.addon.openapi = {
         version: spec.info.version,
         hash: computeContractHash(spec),
@@ -1213,6 +1411,30 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     logger.info(`Created addon at ${addonDir}`)
     for (const f of written) {
       logger.debug({ message: `  ${f}`, type: 'success' })
+    }
+
+    if (installing && app && spec) {
+      const functions = Object.fromEntries(
+        Object.entries(addonFiles)
+          .filter(([path]) => /^src\/functions\/[^/]+\.function\.ts$/.test(path))
+          .map(([path, source]) => [path.slice('src/functions/'.length, -'.function.ts'.length), source])
+      )
+      const baseUrl = spec.serverUrls.find((url) => /^https?:\/\//.test(url))
+      const { written: installed, notes } = installAddonIntoApp({
+        projectRoot: app.root,
+        srcDir: app.srcDir,
+        name,
+        camelName: vars.camelName,
+        pascalName,
+        screamingName: vars.screamingName,
+        packageName: `@pikku/addon-${name}`,
+        depProtocol: vars.addonDepProtocol,
+        mode: resolved.mode,
+        functions,
+        baseUrl: baseUrl?.replace(/\/+$/, ''),
+      })
+      for (const f of installed) logger.info(`  updated ${f}`)
+      for (const note of notes) logger.warn(note)
     }
 
     if (build && !buildGeneratedAddon(addonDir, logger)) {
