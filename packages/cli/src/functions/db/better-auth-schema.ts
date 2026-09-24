@@ -130,11 +130,29 @@ function fakeSecretService() {
   }
 }
 
+// Better Auth checks its tables against the database the moment it is built,
+// and logs "Database schema mismatch" when they are missing. Here they are
+// always missing: the database is a scratch one the auth migrations are about
+// to run into. The check reaches the database through `connection()` alone,
+// so parking that call keeps the instance quiet without touching the queries
+// the migrator runs.
+export function withoutAuthSchemaCheck<DB>(kysely: Kysely<DB>): Kysely<DB> {
+  return new Proxy(kysely, {
+    get: (target, prop) => {
+      if (prop === 'connection') {
+        return () => ({ execute: () => new Promise(() => {}) })
+      }
+      const value = Reflect.get(target, prop, target)
+      return typeof value === 'function' ? value.bind(target) : value
+    },
+  })
+}
+
 function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
   const variables = new LocalVariablesService()
   const secrets = fakeSecretService()
   const base: Record<string, unknown> = {
-    kysely,
+    kysely: withoutAuthSchemaCheck(kysely),
     logger,
     secrets,
     variables,

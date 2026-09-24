@@ -10,6 +10,7 @@ import {
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { writeSurfaceUsage } from '../surface/write-surface-usage.js'
 import { writeSchemaArtifact } from '../db/local-db.js'
+import { ensureDbTypes } from '../db/ensure-db-types.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -83,10 +84,23 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
 
+    const needsBootstrap = !existsSync(config.outDir)
+    const dbTypes = await ensureDbTypes(
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir,
+      config.db
+    )
+    if (dbTypes === 'stubbed') {
+      logger.warn(
+        'db/schema.gen.ts could not be generated from the migrations; wrote an empty DB until `pikku db migrate` runs'
+      )
+    }
+
     const allImports: string[] = []
     let functionTypesFileExists = true
 
-    if (!existsSync(config.outDir)) {
+    if (needsBootstrap) {
       logger.debug(`• .pikku directory not found, running bootstrap first...`)
       // Every `getInspectorState` step below discards its result on purpose. A
       // step's return value is stored as the step result and stays reachable for

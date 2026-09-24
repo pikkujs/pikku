@@ -4,7 +4,10 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { loadAuthOptions } from './better-auth-schema.js'
+import { betterAuth } from 'better-auth'
+import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
+import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
+import { loadAuthOptions, withoutAuthSchemaCheck } from './better-auth-schema.js'
 
 /**
  * A Better Auth 1.7 plugin starts work in `init` and does not wait for it — the
@@ -117,4 +120,35 @@ export const auth = Object.assign(
     process.off('unhandledRejection', host)
     rmSync(root, { recursive: true, force: true })
   }
+})
+
+async function errorsLoggedBuildingAuthOn(wrap: boolean) {
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(':memory:')
+  const kysely = createSqliteKysely({ db, camelCase: true })
+  const errors: string[] = []
+  const auth = betterAuth({
+    secret: 'x'.repeat(40),
+    baseURL: 'http://localhost',
+    database: {
+      db: wrap ? withoutAuthSchemaCheck(kysely) : kysely,
+      type: 'sqlite',
+    },
+    logger: {
+      log: (level, message) => level === 'error' && errors.push(message),
+    },
+  })
+  await auth.$context
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  await kysely.destroy()
+  return errors
+}
+
+test('an empty scratch database makes Better Auth log a schema mismatch', async () => {
+  const errors = await errorsLoggedBuildingAuthOn(false)
+  assert.ok(errors.some((e) => /schema mismatch/i.test(e)))
+})
+
+test('the schema-only kysely keeps that check from firing', async () => {
+  assert.deepEqual(await errorsLoggedBuildingAuthOn(true), [])
 })
