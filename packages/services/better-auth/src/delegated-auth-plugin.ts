@@ -13,6 +13,9 @@ export const DELEGATED_PROVIDER_ID = 'delegated'
  * {@link DelegatedAuthOptions.authenticate}, never stored.
  */
 export interface DelegatedCredentials {
+  /** The identifier the user typed: `login`, else `username`, else `email`. */
+  login?: string
+  /** Only set when the user signed in with an `email` field. */
   email?: string
   password?: string
   apiKey?: string
@@ -23,6 +26,11 @@ export interface UpstreamIdentity {
   /** Stable id in the upstream system (e.g. its user `_id`). */
   externalId: string
   email: string
+  /**
+   * The upstream had no email and `email` was made up from the login (e.g.
+   * `{login}@{host}`). A made-up address never claims an existing user row.
+   */
+  syntheticEmail?: boolean
   name?: string
   /** Upstream role; mapped via {@link DelegatedAuthOptions.mapRole} when set. */
   role?: string
@@ -122,21 +130,29 @@ export const pikkuDelegatedAuth = (
         method: 'POST',
         body: z.object({
           email: z.string().optional(),
+          username: z.string().optional(),
+          login: z.string().optional(),
           password: z.string().optional(),
           apiKey: z.string().optional(),
         }),
       },
       async (ctx) => {
-        const { email, password, apiKey } = ctx.body
-        if (!apiKey && !(email && password)) {
+        const { email, username, password, apiKey } = ctx.body
+        const login = ctx.body.login ?? username ?? email
+        if (!apiKey && !(login && password)) {
           throw new APIError('BAD_REQUEST', {
-            message: 'Provide email and password, or an apiKey',
+            message: 'Provide a login (or email) and password, or an apiKey',
           })
         }
 
         let identity: UpstreamIdentity | null = null
         try {
-          identity = await options.authenticate({ email, password, apiKey })
+          identity = await options.authenticate({
+            login,
+            email,
+            password,
+            apiKey,
+          })
         } catch (error) {
           // Upstream failures must not leak detail to the caller; treat as rejection.
           ctx.context.logger.error('delegated sign-in: authenticate threw', {
@@ -181,6 +197,11 @@ export const pikkuDelegatedAuth = (
           const existing = await adapter.findUserByEmail(identityEmail, {
             includeAccounts: true,
           })
+          if (existing && identity.syntheticEmail) {
+            throw new APIError('UNAUTHORIZED', {
+              message: 'Email is already used by another user',
+            })
+          }
           if (existing) {
             const existingUser = existing.user as AppUser
             // Never attach a delegated identity to synthetic operator/actor rows.
