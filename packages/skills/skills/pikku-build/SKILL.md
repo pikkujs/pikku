@@ -44,10 +44,10 @@ plus more effort" — it is App plus a deliberate surface checklist, so read the
 base first and follow it in full rather than blending the two into one plan.
 
 The supporting references belong to whichever mode sends you to them:
-`references/multi-app.md` (a second frontend), `references/design.md` (offering
-to mock the screens first, committing to a design direction, and judging whether
-the screens realise it — read before the first screen is built, not after the
-last), `references/theming.md`
+`references/multi-app.md` (a second frontend), `references/design.md` (showing
+a picture of the screens first, committing to a design direction, and judging
+whether the screens realise it — read before the first screen is built, not
+after the last), `references/theming.md`
 (authoring the theme),
 `references/ship.md` (deploying, and the Fabric-readiness contract).
 
@@ -109,11 +109,53 @@ generated functions through `ref()`.
     frontend in `pikkufabric.config.json` has its own port)
   - **API** — `http://localhost:3000`
   - **Console** — `http://localhost:3000/console`, plus a deep link to each
-    page that shows what this turn produced: `/console/knowledge`,
-    `/console/scenarios`, `/console/personas`, `/console/functions`,
-    `/console/database`, `/console/changes`
+    page that shows what this turn produced (the paths are below)
 
   A person who has to go hunting for the port assumes the app did not start.
+
+## Who you are talking to
+
+The prompt asks first how technical the person is: **not technical**,
+**technical, no code**, or **developer** (the default when unsaid). Whenever the
+build makes or changes something the console can show, give the
+`http://localhost:<port>/console/...` link instead of describing it.
+
+Until the app is deployed that is the local open-source console, on the port
+`pikku dev` printed. Once it is on Fabric, link the Fabric console for the stage
+you are talking about instead; the `pikku-fabric` skill says which.
+
+| Level              | Links                       | Code in the conversation |
+| ------------------ | --------------------------- | ------------------------ |
+| Not technical      | Product pages only          | Never                    |
+| Technical, no code | Product and technical pages | Never                    |
+| Developer          | Product and technical pages | As normal                |
+
+"Never" includes snippets and command lines; say what changed in the person's
+words and link to where they can see it.
+
+**Product pages** — the only ones a non-technical person gets:
+
+| Shows                 | Path                                                                      |
+| --------------------- | ------------------------------------------------------------------------- |
+| Knowledge, plans      | `/console/knowledge`, `/console/knowledge?id=<note path>`                 |
+| Personas              | `/console/personas`, `/console/virtual-users?persona=<id>`                |
+| Roles and permissions | `/console/roles`, `/console/scopes`                                       |
+| Scenarios and runs    | `/console/scenarios?id=<id>`, `/console/scenarios?view=runs&run=<run id>` |
+| Workflows             | `/console/workflow?id=<id>`                                               |
+| Agents                | `/console/agents`, `/console/agents/playground?id=<agent id>`             |
+
+**Technical pages** — never for a non-technical person: `/console/overview`,
+`/console/functions`, `/console/surface`, `/console/database`,
+`/console/changes`, `/console/wires/http`, `/console/wires/channel`,
+`/console/wires/mcp`, `/console/wires/cli`, `/console/wires/gateway`,
+`/console/async/scheduler`, `/console/async/queue`, `/console/async/trigger`,
+`/console/runtime`, `/console/emails`, `/console/webhooks`, `/console/secrets`,
+`/console/variables`, `/console/security`, `/console/auth-providers`,
+`/console/addons`, `/console/analytics`, `/console/credentials`,
+`/console/users`, `/console/audit`, `/console/flags`, `/console/scorers`.
+
+These come from `packages/console/src/App.tsx`; do not link a path that is not
+listed here.
 
 ## What NOT to do
 

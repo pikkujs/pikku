@@ -24,6 +24,9 @@ project shaped so `pikku fabric init` later adopts it with zero rework.
    wirings, schemas or generated clients may have changed.
 4. If validation fails, fix the source cause and rerun. Do not paper over
    generated errors by editing generated files.
+5. Report at the person's level (SKILL.md, "Who you are talking to"): a console
+   link for everything the console can show, and no code unless they are a
+   developer.
 
 ## 0. Bootstrap, before anything else
 
@@ -62,11 +65,13 @@ in one message. Then stop; do not interview the user.
   a reference (brand guide, screenshots, a site whose register they want); or
   their own design agent/prompt, whose output you take as the direction.
 - **Do they want to see the screens before you build them?** Offer it here, in
-  this same round, as a question and not a gate: one HTML page mocking the main
-  screens, a few minutes, far cheaper to change than built screens. If they say
-  yes, `references/design.md` owns what to make and what it then binds — the
+  this same round, with yes marked recommended, in the words of
+  `references/design.md` — "a picture of the main screens so you can say 'yes,
+  like that' or 'no, move this'", never "mock" or "wireframe". Behind it is one
+  HTML page mocking the main screens, a few minutes of work. On a yes, or no
+  answer at all, `references/design.md` owns what to make and what it then binds — the
   approved page becomes source of truth for the screens, and the theme is written
-  before it so what they approve is what ships. If they say no, build.
+  before it so what they approve is what ships. Only an explicit no skips it.
 - **What language should the app speak, and what language does the team work
   in?** Two answers, not one — see §1a, which is where they go. Ask only if the
   request is not obviously English; a brief written in English about an English

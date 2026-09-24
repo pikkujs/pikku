@@ -223,9 +223,10 @@ bunx --bun pikku scenario run local --spawn
 
 ## 6. Hand it over honestly
 
-Tell the user, in one short paragraph: what runs, what it is seeded with, and
-that this is a quick build — no knowledge base, no milestones, no design pass,
-access control clicked-through rather than proven.
+Tell the user, in one short paragraph and at their level (SKILL.md, "Who you
+are talking to"), with console links rather than descriptions: what runs, what
+it is seeded with, and that this is a quick build — no knowledge base, no
+milestones, no design pass, access control clicked-through rather than proven.
 
 **Upgrading to a real build is additive, not a rewrite.** If they want it, switch
 to `references/app.md` and do this, in order:
