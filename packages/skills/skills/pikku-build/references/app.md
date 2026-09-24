@@ -72,6 +72,11 @@ in one message. Then stop; do not interview the user.
   answer at all, `references/design.md` owns what to make and what it then binds — the
   approved page becomes source of truth for the screens, and the theme is written
   before it so what they approve is what ships. Only an explicit no skips it.
+- **May you write test records into the system it talks to?** Ask only when the
+  app reads a live system through an addon (an ERP, a CRM) and a milestone needs
+  data that isn't there yet: an unpaid invoice, a closed ticket. Say what you
+  would create and that it will be marked "Test". A no means building those
+  screens against their empty states.
 - **What language should the app speak, and what language does the team work
   in?** Two answers, not one — see §1a, which is where they go. Ask only if the
   request is not obviously English; a brief written in English about an English
@@ -368,8 +373,17 @@ How to order them:
 Number the files (`01-…`, `02-…`) so the order is visible in the tree. Then
 `knowledge index && knowledge validate` before you write a line of code.
 
-**Show the user the list before building.** This is the last cheap moment to
-reorder — after §6 the migrations are numbered and the order is concrete.
+**One approval, then build to the end.** Show the picture of the screens and
+the milestone list together, in one message, as the plan: which milestone builds
+which screen, in what order. That is the only approval you ask for. It is the
+last cheap moment to reorder: after §6 the migrations are numbered and the order
+is concrete.
+
+Once they approve it, or don't answer, build every milestone in order without
+stopping to ask between them. Post one line as each milestone closes, with its
+console links, and carry on. Stop only for what is theirs to decide: a
+credential you don't have, spending money, posting in public, deleting or
+overwriting their data, or a finding that changes the plan.
 
 ## 5a. The technical plan — one milestone at a time, before you build it
 
@@ -403,6 +417,8 @@ no plan, and everything after the current milestone is still allowed to move.
 ## PHASE 4 — Build
 
 ## 6. Implement milestones, one at a time
+
+All of them, one after another, on the one approval from §5.
 
 **Per milestone** — plan it (§5a), set its note to `status: dispatched`, do the
 six steps, close it out (§6a), set it to `built`. Do not start the next one

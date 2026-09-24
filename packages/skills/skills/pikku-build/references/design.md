@@ -110,6 +110,12 @@ first. Whatever your host offers for showing a page is how you show it: an
 Artifact, a file they open, a preview server. The page is the deliverable; how it
 gets in front of them is not this file's business.
 
+**Say it is a picture, on the page and in the message.** A well-drawn screen
+reads as a finished app, and a person who thinks it is already built asks why
+nothing works. The page opens with a banner that stays in view: "A picture of
+the planned screens. Nothing is built yet." The message that shows it says the
+same, then says what happens next: "Once you're happy with it, I'll build it."
+
 Write it to `knowledge/decisions/design/screens.html` and treat it as **source of
 truth for the screens** once they approve it. That has consequences worth
 stating:
