@@ -1,5 +1,23 @@
 # @pikku/better-auth
 
+## 0.12.47
+
+### Patch Changes
+
+- 2f317d0: The `actor` plugin can store upstream credentials for each actor at sign-in. Pass `credentials: { names, store }` and a persona signs in carrying `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` from the environment, stored through `credentialService.set` — so scenarios reach addons that call a third-party API as that persona.
+- 0210e96: Review fixes for the OpenAPI addon onboarding:
+
+  - A delegated sign-in whose email the upstream did not return, including a login typed as an email, never links to an existing user. An authenticator that omits `syntheticEmail` counts as synthetic.
+  - `pikkuActor` credentials take an optional `remove`, which drops a credential the environment no longer sets. The actor log line names the user id, not the email.
+  - Basic credentials are UTF-8 encoded, and a Swagger 2 `application` OAuth flow keeps its token URL.
+  - `pikku new addon` writes a `file:` path relative to each package when the app is not a workspace, and reports an auth.ts factory it cannot edit instead of half-wiring it.
+  - The inspector reads an addon from the package that declares it before the root.
+  - The dev credentials key file is created exclusively, so two `pikku dev` processes agree on one key.
+
+- 5442d94: `POST /sign-in/delegated` accepts `login` or `username` as well as `email`, and passes the identifier to `authenticate` as `credentials.login`. `email` still works as before. An identity marked `syntheticEmail` (a made-up address for an upstream user with no email) never attaches to an existing user row.
+- Updated dependencies [e84abd0]
+  - @pikku/core@0.12.121
+
 ## 0.12.46
 
 ### Patch Changes

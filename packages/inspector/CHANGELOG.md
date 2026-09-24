@@ -1,3 +1,23 @@
+## 0.12.88
+
+### Patch Changes
+
+- 55ab4d1: An addon's metadata now resolves from the package that calls `wireAddon`, as well as from the repo root, so a workspace addon listed only in `packages/functions` loads. When it still cannot be found, the warning names the package, the directories tried and the fix: add the dependency and install, or build the addon if it is installed but has no generated metadata.
+- f6c1dd6: A fresh project with Better Auth no longer gets PKU951 for `BETTER_AUTH_SECRET` on its first `pikku all`. The secret is declared by the generated `auth-secrets.gen.ts`, which did not exist yet when the first inspection ran.
+- 0210e96: Review fixes for the OpenAPI addon onboarding:
+
+  - A delegated sign-in whose email the upstream did not return, including a login typed as an email, never links to an existing user. An authenticator that omits `syntheticEmail` counts as synthetic.
+  - `pikkuActor` credentials take an optional `remove`, which drops a credential the environment no longer sets. The actor log line names the user id, not the email.
+  - Basic credentials are UTF-8 encoded, and a Swagger 2 `application` OAuth flow keeps its token URL.
+  - `pikku new addon` writes a `file:` path relative to each package when the app is not a workspace, and reports an auth.ts factory it cannot edit instead of half-wiring it.
+  - The inspector reads an addon from the package that declares it before the root.
+  - The dev credentials key file is created exclusively, so two `pikku dev` processes agree on one key.
+
+- 86c2f1d: `pikku dev` keeps stored credentials in the dev database, so connected accounts and delegated sign-ins survive a restart. The key comes from `PIKKU_DEV_CREDENTIALS_KEY`, or is generated once into `.pikku-runtime/dev-credentials.key`. A project that declares a credential now gets the credential tables in its generated migration; without them dev falls back to the in-memory store and says so once.
+- da9b931: An inline `input`/`output` schema (PKU489) is now an `error` diagnostic instead of a critical one, so `pikku dev` keeps running. The function is validated against its TypeScript type until the schema is extracted to an exported variable; `--fail-on-error` still blocks it.
+- Updated dependencies [e84abd0]
+  - @pikku/core@0.12.121
+
 ## 0.12.87
 
 ### Patch Changes
