@@ -11,6 +11,8 @@ import {
   workspaceCovers,
   getAddonFiles,
   getTestFiles,
+  parseHeaderOptions,
+  resolveAddonAuth,
   resolveAddonDepProtocol,
   type AddonVars,
 } from './new-addon.js'
@@ -488,5 +490,72 @@ describe('workspaceCovers', () => {
     await writeJson(join(root, 'package.json'), { workspaces: ['packages/*'] })
     assert.equal(workspaceCovers(root, root), false)
     assert.equal(workspaceCovers(root, join(root, '..', 'elsewhere')), false)
+  })
+})
+
+describe('openapi onboarding', () => {
+  const vars: AddonVars = {
+    name: 'acme',
+    camelName: 'acme',
+    pascalName: 'Acme',
+    screamingName: 'ACME',
+    displayName: 'Acme',
+    description: 'Acme integration',
+    category: 'General',
+    addonDepProtocol: 'workspace:*',
+  }
+  const spec = (authType: any) =>
+    ({ info: { title: 'Acme', version: '1' }, authType }) as any
+
+  test('the config lists the addon for the console and keeps its service', () => {
+    const files = getAddonFiles(vars, { secret: false, variable: false, oauth: false })
+    const config = JSON.parse(files['pikku.config.json']!)
+    assert.equal(config.node, undefined)
+    assert.deepEqual(config.addon, {
+      displayName: 'Acme',
+      description: 'Acme integration',
+      categories: ['General'],
+      icon: './acme.svg',
+    })
+    assert.deepEqual(config.forceRequiredServices, ['acme'])
+    assert.match(files['acme.svg']!, /^<svg /)
+  })
+
+  test('auth follows the spec, per user by default', () => {
+    assert.equal(resolveAddonAuth(spec('apiKey'), {}).credential, 'apikey')
+    assert.equal(resolveAddonAuth(spec('basic'), {}).credential, 'basic')
+    assert.deepEqual(resolveAddonAuth(spec('oauth2'), {}), {
+      mode: 'oauth2',
+      credential: 'oauth2',
+      secret: false,
+      oauth: true,
+    })
+    assert.equal(resolveAddonAuth(spec('apiKey'), { auth: 'shared' }).mode, 'shared')
+    assert.equal(resolveAddonAuth(spec('bearer'), { credential: 'apikey' }).credential, 'apikey')
+  })
+
+  test('a delegated auth-config wins over the spec', () => {
+    const resolved = resolveAddonAuth(spec('apiKey'), {
+      authConfig: { delegated: { loginPath: '/login' } } as any,
+    })
+    assert.equal(resolved.mode, 'delegated')
+    assert.equal(resolved.credential, 'bearer')
+  })
+
+  test('a spec without security needs an explicit choice', () => {
+    assert.throws(() => resolveAddonAuth(spec('none'), {}), /--auth none/)
+    assert.equal(resolveAddonAuth(spec('none'), { auth: 'none' }).mode, 'none')
+    assert.equal(
+      resolveAddonAuth(spec('none'), { authConfig: { headerName: 'X-Key' } as any }).credential,
+      'apikey'
+    )
+  })
+
+  test('header options survive the comma split of string[] options', () => {
+    assert.deepEqual(
+      parseHeaderOptions(['Authorization: Bearer x', 'Accept: a', 'b']),
+      { Authorization: 'Bearer x', Accept: 'a, b' }
+    )
+    assert.throws(() => parseHeaderOptions(['no-colon']), /Name: value/)
   })
 })

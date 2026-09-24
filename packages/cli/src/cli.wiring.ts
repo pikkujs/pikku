@@ -1155,7 +1155,11 @@ wireCLI({
             },
             credential: {
               description:
-                'Include per-user credential wiring (apikey, bearer, or oauth2)',
+                'Per-user credential type (apikey, bearer, basic, or oauth2); with --openapi it defaults to what the spec declares',
+            },
+            auth: {
+              description:
+                'With --openapi: user (default — each user connects their own credential), shared (one secret behind every user), or none (public API)',
             },
             test: {
               description: 'Include test harness (default: true)',
@@ -1163,7 +1167,26 @@ wireCLI({
             },
             openapi: {
               description:
-                'Path to OpenAPI YAML/JSON spec to generate functions from',
+                'Path or URL of an OpenAPI 3.x / Swagger 2.0 spec (YAML or JSON) to generate functions from',
+            },
+            openapiHeader: {
+              description:
+                'Header sent when fetching --openapi from a URL, as "Name: value" (repeatable), for specs published only to authenticated requests',
+            },
+            tags: {
+              description: 'With --openapi: keep only operations with these tags',
+            },
+            include: {
+              description:
+                'With --openapi: keep only operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            exclude: {
+              description:
+                'With --openapi: drop operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            install: {
+              description:
+                'With --openapi inside an app: add the addon to the app — dependencies, wireAddon, auth wiring, base URL (default: on inside an app)',
             },
             authConfig: {
               description:
