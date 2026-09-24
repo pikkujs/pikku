@@ -8,6 +8,7 @@ import { useScenarioPersonaEntries } from '../../hooks/useScenarioEntries'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import type { PersonaEntry } from '../personas/persona-types'
 import type { FeatureDoc, ScenarioDoc } from './scenario-doc-model'
+import type { ScenarioRunLens } from './scenario-run-lens'
 
 interface SectionModel {
   scenario: ScenarioDoc
@@ -41,6 +42,12 @@ const toSections = (feature: FeatureDoc): SectionModel[] => {
 
 type FeatureDocumentProps = {
   feature: FeatureDoc
+  /** The run being read over the suite, when one is selected. */
+  lens?: ScenarioRunLens
+  /** Set when this feature is one of many on screen, so it reads as a section. */
+  inSuite?: boolean
+  /** The first section under a header that is not there carries the top gutter. */
+  topPad?: boolean
   onOpenPersona?: (key: string) => void
   onSelectStep?: (
     workflow: unknown,
@@ -52,6 +59,9 @@ type FeatureDocumentProps = {
 
 export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
   feature,
+  lens,
+  inSuite,
+  topPad,
   onOpenPersona,
   onSelectStep,
 }) => {
@@ -66,11 +76,18 @@ export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
   return (
     <Box
       data-testid={`feature-document-${feature.id}`}
-      style={{ maxWidth: 860, padding: '28px 32px 64px' }}
+      style={{
+        maxWidth: 1120,
+        padding: inSuite ? `${topPad ? 24 : 0}px 32px 40px` : '28px 32px 64px',
+      }}
     >
       <Stack gap="lg">
         <Stack gap={8}>
-          <Text fw={700} size="xl" style={{ lineHeight: 1.25 }}>
+          <Text
+            fw={700}
+            size={inSuite ? 'lg' : 'xl'}
+            style={{ lineHeight: 1.25 }}
+          >
             {asI18n(feature.name)}
           </Text>
           {feature.description && (
@@ -120,6 +137,15 @@ export const FeatureDocument: React.FC<FeatureDocumentProps> = ({
                 (meta.workflows as Record<string, unknown>)?.[
                   section.scenario.name
                 ]
+              }
+              run={
+                lens
+                  ? {
+                      runId: lens.runId,
+                      status: lens.statusFor(section.scenario),
+                      result: lens.resultFor(section.scenario),
+                    }
+                  : undefined
               }
               onOpenPersona={onOpenPersona}
               onSelectStep={onSelectStep}

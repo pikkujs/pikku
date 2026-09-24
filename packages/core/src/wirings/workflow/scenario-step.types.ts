@@ -198,6 +198,9 @@ export interface ScenarioScreenshotOptions {
 /**
  * One actor's browser session, handed to a step as `wire.browser`.
  *
+ * Every actor gets their own, so a two-actor scenario drives two sessions and
+ * `screenshot` files each shot under the actor it belongs to.
+ *
  * Only what every driver can honour is declared here. A driver package adds
  * the rest by declaration-merging onto this interface — `@pikku/playwright`
  * contributes `page`, `context` and `locate` — so a step written against the

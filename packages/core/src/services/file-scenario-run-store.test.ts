@@ -130,7 +130,13 @@ describe('FileScenarioRunStore', () => {
         artifacts: [{ scenario: 'x', kind: 'video', path: 'x/admin.mp4' }],
       })
     )
-    await store.recordScenario('newer', result({ status: 'failed' }))
+    await store.recordScenario(
+      'newer',
+      // A distinct scenario, not a second write of the one above: a result is
+      // filed under its name, so re-recording that name is the same scenario
+      // settling rather than another one running.
+      result({ name: 'todos › a member clears one', status: 'failed' })
+    )
     await store.finish('newer', {
       status: 'failed',
       finishedAt: '2026-08-15T10:00:05.000Z',
@@ -345,5 +351,15 @@ describe('scenarioRunSummary', () => {
     assert.equal(summary.durationMs, undefined)
     assert.equal(summary.status, 'running')
     assert.equal(summary.passed, 1)
+  })
+
+  test('carries the version through, so a listed run can be placed', async () => {
+    const store = new FileScenarioRunStore({ dir })
+    const version = { commit: 'a'.repeat(40), dirty: true, attempt: 2 }
+    await store.start(record({ version }))
+
+    const listed = await store.list()
+
+    assert.deepEqual(listed[0]?.version, version)
   })
 })

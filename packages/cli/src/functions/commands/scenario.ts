@@ -50,6 +50,7 @@ import {
 } from './scenario-guide.js'
 import type { GuideFeature, GuideLock, GuidePage } from './scenario-guide.js'
 import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
+import { resolveScenarioRunVersion } from './scenario-version.js'
 import type { ScenarioPlanGroup, ScenarioRunIdentity } from './scenario-plan.js'
 import { resolveEnvironment, isLocalUrl } from './environment.js'
 import { readDevAddress } from './dev-address.js'
@@ -537,6 +538,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     // and the console can show a run while it is still going.
     const runStore = new FileScenarioRunStore({ dir: captureDir })
     const startedAtIso = new Date().toISOString()
+    const version = await resolveScenarioRunVersion(runStore, config.rootDir)
     try {
       const selection: ScenarioRunSelection = {
         ...(split(flows) ? { flows: split(flows) } : {}),
@@ -549,6 +551,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         runId: captureRunId,
         environment,
         surface: runSurface,
+        version,
         status: 'running',
         ...(Object.keys(selection).length > 0 ? { selection } : {}),
         startedAt: startedAtIso,
@@ -650,13 +653,25 @@ export const scenarioRun = pikkuSessionlessFunc<
       const identityOf = (
         scenarioName: string,
         group?: ScenarioPlanGroup
-      ): ScenarioRunIdentity => ({
-        scenarioName,
-        featureId: group?.featureId,
-        featureName: group?.featureName,
-        tags: state.workflows?.meta?.[scenarioName]?.tags as
-          string[] | undefined,
-      })
+      ): ScenarioRunIdentity => {
+        const meta = state.workflows?.meta?.[scenarioName] as
+          | {
+              tags?: string[]
+              title?: string
+              description?: string
+              actors?: string[]
+            }
+          | undefined
+        return {
+          scenarioName,
+          featureId: group?.featureId,
+          featureName: group?.featureName,
+          title: meta?.title,
+          description: meta?.description,
+          actors: meta?.actors,
+          tags: meta?.tags,
+        }
+      }
 
       const runEntry = async (
         label: string,
@@ -665,6 +680,13 @@ export const scenarioRun = pikkuSessionlessFunc<
         identity: ScenarioRunIdentity
       ) => {
         const startedAt = Date.now()
+        await runStore.recordScenario(
+          captureRunId,
+          identifyScenarioResult(
+            { name: label, status: 'running', durationMs: 0 },
+            identity
+          )
+        )
         if (databaseBaseline) {
           try {
             await databaseBaseline.restore()
@@ -761,7 +783,9 @@ export const scenarioRun = pikkuSessionlessFunc<
         }
         // Told here, acted on at the next scenario's reset — that is what closes
         // these windows and finalises the video this outcome decides the fate of.
-        browserLifecycle.endScenario(result.status)
+        browserLifecycle.endScenario(
+          result.status === 'failed' ? 'failed' : 'passed'
+        )
         Object.assign(result, identifyScenarioResult(result, identity))
         await runStore.recordScenario(captureRunId, result)
         if (coverageActive) {

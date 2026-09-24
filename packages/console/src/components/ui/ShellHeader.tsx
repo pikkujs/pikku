@@ -247,6 +247,7 @@ export const ShellHeader = <T extends string = string>({
 
   const measureNode = (id: string, node: ReactNode) => (
     <div
+      key={id}
       ref={(el) => void (measRef.current[id] = el)}
       style={{ flex: '0 0 auto' }}
     >
@@ -446,7 +447,7 @@ export const ShellHeader = <T extends string = string>({
         {filters.map((f) =>
           measureNode(
             'filter:' + f.key,
-            <FilterChip filter={f} withinPortal={false} />
+            <FilterChip filter={f} withinPortal={false} measurement />
           )
         )}
         {search && measureNode('search', renderSearchField(true))}

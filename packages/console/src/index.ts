@@ -131,10 +131,14 @@ export { PageOptionsPortal } from './components/shell/PageOptionsPortal'
 export {
   PageOptionsProvider,
   usePageOptions,
+  useOptionalPageOptions,
   usePageOptionsDismiss,
   usePageAction,
 } from './context/PageOptionsProvider'
-export type { PageAction } from './context/PageOptionsProvider'
+export type {
+  PageAction,
+  PageOptionsContextValue,
+} from './context/PageOptionsProvider'
 export {
   SidebarModeProvider,
   useSidebarMode,
@@ -598,6 +602,15 @@ export { ScenariosBrowseRail } from './components/scenarios/ScenariosBrowseRail'
 export type { ScenariosBrowseRailProps } from './components/scenarios/ScenariosBrowseRail'
 export { useScenariosBrowse } from './hooks/useScenariosBrowse'
 export type { ScenariosBrowse } from './hooks/useScenariosBrowse'
+// Which run the screen is read through, hoisted for the same reason: a host
+// mounting the rail itself needs its result bars and the document's markers to
+// report on one run.
+export { useScenarioLens, AS_WRITTEN } from './hooks/useScenarioLens'
+export type { ScenarioLens, ScenarioLensControl } from './hooks/useScenarioLens'
+export type {
+  ScenarioRunLens,
+  ScenarioLensStatus,
+} from './components/scenarios/scenario-run-lens'
 export { ScenarioSection } from './components/scenarios/ScenarioSection'
 export { ScenarioDocument } from './components/scenarios/ScenarioDocument'
 export { ScenarioCast } from './components/scenarios/ScenarioCast'
