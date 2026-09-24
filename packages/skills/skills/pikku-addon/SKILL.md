@@ -359,6 +359,32 @@ export const myFunc = pikkuFunc({
 })
 ```
 
+### Wrap an addon function only to reshape it
+
+A screen that shows the addon's data as the addon returns it calls the addon
+function itself: name it in `wireAddon({ expose: ['listTodos'], auth: true })`
+and the frontend calls `rpc.invoke('todos:listTodos', …)` (over HTTP,
+`POST /rpc/todos:listTodos` with `{ "data": … }`), still behind the session.
+Use `ref('todos:listTodos')` on an HTTP or MCP wiring only when the addon needs
+a route of its own. Don't write an app function that calls `rpc.invoke` and
+returns the result unchanged: it's a second name and a second schema for the
+same thing, and it drifts. `expose: true` exposes only what the addon itself
+declared `expose: true` — an OpenAPI-generated addon declares none, so list
+the names.
+
+Write your own function when the app needs the data narrowed, typed, or
+combined (a flag the upstream sends as `"0"`, a total summed from several
+calls, one field out of fifty), or when the app adds a permission of its own.
+`wireAddon`'s `scopes` gate every function in the addon at once, and a wiring
+carries middleware, not permissions, so a rule on one addon function lives in
+the `permissions` of an app function that calls it. Skip that rule when the
+upstream already enforces it: an addon called with the user's own credential
+is already limited to what that user may do upstream. Name it for what the screen means
+(`getMyProfile`), not after the upstream operation (`usersRetrieveInfo`), and
+give it an `output:` schema of only what the app uses. For an OpenAPI-generated
+addon this matters more: its outputs mirror the upstream's loose, oversized
+payloads, and the wrapper is where they become the app's own shape.
+
 ### Wire to HTTP
 
 ```typescript
