@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { CLILogger } from '../services/cli-logger.service.js'
@@ -65,7 +65,9 @@ export const ensurePackageDependency = async (
   pkg.dependencies = Object.fromEntries(
     Object.entries(dependencies).sort(([a], [b]) => a.localeCompare(b))
   )
-  await writeFile(path, `${JSON.stringify(pkg, null, 2)}\n`)
+  const tmp = `${path}.${process.pid}.tmp`
+  await writeFile(tmp, `${JSON.stringify(pkg, null, 2)}\n`)
+  await rename(tmp, path)
   logger.info(
     `Added ${name}@${range} to ${relative(process.cwd(), path) || path} — run your package manager's install`
   )
