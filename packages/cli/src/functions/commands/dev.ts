@@ -14,7 +14,6 @@ import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
   ConsoleLogger,
   LocalEmailService,
-  LocalCredentialService,
   spy,
   InMemoryAgentRunStateService,
 } from '@pikku/core/services'
@@ -46,6 +45,7 @@ import {
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { initOrWarn } from './init-or-warn.js'
+import { createDevCredentialService } from './dev-credentials.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
@@ -390,6 +390,15 @@ export const dev = pikkuSessionlessFunc<
     if (devWebhookService instanceof KyselyWebhookService) {
       await devWebhookService.init()
     }
+    const credentialService = await createDevCredentialService({
+      kysely,
+      runtimeDir: resolvedRuntimeDir,
+      logger,
+      expectsCredentials:
+        requiredServices.has('credentialService') ||
+        inspectorState.credentials.definitions.length > 0 ||
+        inspectorState.rpc.wireAddonDeclarations.size > 0,
+    })
     const inMemoryServices = {
       logger: devLogger,
       ...(agentRunner ? { agentRunner } : {}),
@@ -405,7 +414,7 @@ export const dev = pikkuSessionlessFunc<
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),
-      credentialService: new LocalCredentialService(),
+      credentialService,
       agentStorage,
       agentRunState,
       agentRunService,
