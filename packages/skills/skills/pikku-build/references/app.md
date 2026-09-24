@@ -16,8 +16,8 @@ through rather than searched: §0 bootstrap, §1-§1a the last questions and the
 three languages, §2 the knowledge graph, §3-§4 personas and apps, §5-§5a the
 milestones and each one's technical plan, §6-§6a building and closing one,
 §7-§7a proving it, §8 design, §9 ship. Four of them hand off to their own file —
-[scenarios.md](references/scenarios.md), [design.md](references/design.md),
-[multi-app.md](references/multi-app.md) and [ship.md](references/ship.md) — at the point you need it.
+[scenarios.md](scenarios.md), [design.md](design.md),
+[multi-app.md](multi-app.md) and [ship.md](ship.md) — at the point you need it.
 
 ## Agent Operating Procedure
 
@@ -672,7 +672,7 @@ here, because a passing one proves the app works the way a signed-in person
 experiences it. Three ship in `packages/functions/test/scenarios/` — keep them
 green — and every milestone's gherkin block from §5 becomes one more.
 
-**Read [scenarios.md](references/scenarios.md) before writing the milestone's scenarios,
+**Read [scenarios.md](scenarios.md) before writing the milestone's scenarios,
 and again whenever one of these describes what you are doing.** It is the file
 where the expensive lessons live, and most of them produce a GREEN suite that
 proves nothing:
@@ -723,7 +723,7 @@ webhook or a hand call leaves no trace in it. Read
 `coverage/scenario-coverage.json` **as each milestone closes** — per milestone it is a short list you can act on, whereas read for the
 first time after ten milestones it is a wall of red nobody triages. Every gap is
 a missing scenario, a function that should not exist, or a deferral worth
-writing down; [scenarios.md](references/scenarios.md) says how to tell them apart. Report
+writing down; [scenarios.md](scenarios.md) says how to tell them apart. Report
 the number when you hand the milestone over.
 
 ## 8. Make it look like someone designed it
@@ -861,9 +861,9 @@ cheaper to honour than to retrofit:
 
 Read these when the section that names them comes up, not up front:
 
-- [multi-app.md](references/multi-app.md) — adding a second frontend (§4), at the milestone
+- [multi-app.md](multi-app.md) — adding a second frontend (§4), at the milestone
   that needs it
-- [scenarios.md](references/scenarios.md) — writing journeys that stay proven (§7, §7a)
+- [scenarios.md](scenarios.md) — writing journeys that stay proven (§7, §7a)
 - `references/design.md` — committing to a design direction, and how to tell
   whether the screens realise it. Read BEFORE the first screen (§6), not at §8
 - `references/theming.md` — authoring the theme (§8a)
@@ -871,4 +871,4 @@ Read these when the section that names them comes up, not up front:
 - Sibling skills: `pikku-knowledge` (§2), `pikku-auth` (§3),
   `pikku-scenario` (§7, §7a), `pikku-deploy` and `pikku-fabric` (§9)
 - Project conventions written by the template: `AGENTS.md`
-- Doing less than this: [quick.md](references/quick.md). Doing more: [platform.md](references/platform.md).
+- Doing less than this: [quick.md](quick.md). Doing more: [platform.md](platform.md).
