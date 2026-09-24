@@ -1,5 +1,6 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
+import ts from 'typescript'
 import { generateAddonFromOpenAPI } from './codegen.js'
 import type { ParsedSpec, ParsedOperation } from './parse-openapi.js'
 
@@ -364,9 +365,10 @@ describe('sibling schemas file', () => {
     )
   })
 
-  test('an operation with no schemas gets no schemas file', () => {
-    assert.equal(files['src/functions/ping.schemas.ts'], undefined)
-    assert.ok(!files['src/functions/ping.function.ts'].includes('schemas.js'))
+  test('an operation with no response schema declares an unknown output', () => {
+    const schemasFile = files['src/functions/ping.schemas.ts']
+    assert.ok(schemasFile.includes('export const PingOutput = z.unknown()'), schemasFile)
+    assert.ok(!schemasFile.includes('PingInput'), schemasFile)
   })
 })
 
@@ -1059,4 +1061,221 @@ describe('auth config', () => {
     })
     assert.equal(files['src/test-api-upstream-auth.ts'], undefined)
   })
+})
+
+describe('vague responses, base URL and per-user credentials', () => {
+  const flags = { oauth: false, secret: false }
+
+  test('a missing or bare-string response becomes z.unknown()', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({ operationId: 'noBody', path: '/a' }),
+        makeOp({
+          operationId: 'bareString',
+          path: '/b',
+          responseSchema: { type: 'string' },
+        }),
+        makeOp({
+          operationId: 'stringList',
+          path: '/c',
+          responseSchema: { type: 'array', items: { type: 'string' } },
+        }),
+        makeOp({
+          operationId: 'csvExport',
+          path: '/d',
+          responseSchema: { type: 'string' },
+          responseMediaType: 'text/csv',
+        }),
+        makeOp({
+          operationId: 'dated',
+          path: '/e',
+          responseSchema: { type: 'string', format: 'date-time' },
+        }),
+      ],
+    })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), flags)
+    for (const id of ['noBody', 'bareString', 'stringList']) {
+      const schemas = files[`src/functions/${id}.schemas.ts`]
+      assert.match(schemas, /Output = z\.unknown\(\)/, `${id}: ${schemas}`)
+    }
+    for (const id of ['csvExport', 'dated']) {
+      const schemas = files[`src/functions/${id}.schemas.ts`]
+      assert.doesNotMatch(schemas, /z\.unknown\(\)/, `${id}: ${schemas}`)
+    }
+  })
+
+  test('the base URL is a url() with the first server as default, never an enum', () => {
+    const spec = makeSpec({
+      serverUrls: ['https://eu.example.com/v1', 'https://us.example.com/v1'],
+    })
+    const file = generateAddonFromOpenAPI(spec, makeVars(), flags)[
+      'src/test-api.variable.ts'
+    ]
+    assert.ok(
+      file.includes('z.string().url().default("https://eu.example.com/v1")'),
+      file
+    )
+    assert.ok(!file.includes('z.enum'), file)
+  })
+
+  test('a relative-only server leaves the base URL without a default', () => {
+    const spec = makeSpec({ serverUrls: ['/api/v3'], baseUrl: '/api/v3' })
+    const file = generateAddonFromOpenAPI(spec, makeVars(), flags)[
+      'src/test-api.variable.ts'
+    ]
+    assert.ok(file.includes('z.string().url()'), file)
+    assert.ok(!file.includes('.default('), file)
+  })
+
+  test('a 401 on a per-user credential is a typed re-link error', () => {
+    const spec = makeSpec({ operations: [makeOp()] })
+    const connect = generateAddonFromOpenAPI(spec, makeVars(), {
+      ...flags,
+      credential: 'apikey',
+    })['src/test-api-api.service.ts']
+    assert.ok(
+      connect.includes('case 401: throw new CredentialRejectedError("testApi", "connect")'),
+      connect
+    )
+    const delegated = generateAddonFromOpenAPI(spec, makeVars(), {
+      ...flags,
+      credential: 'bearer',
+      authConfig: {
+        headerName: 'DOLAPIKEY',
+        headerFormat: 'raw' as const,
+        delegated: { loginPath: '/login', tokenPath: 'success.token' } as any,
+      },
+    })['src/test-api-api.service.ts']
+    assert.ok(
+      delegated.includes('CredentialRejectedError("testApi", "sign-in")'),
+      delegated
+    )
+    const shared = generateAddonFromOpenAPI(spec, makeVars(), {
+      ...flags,
+      secret: true,
+    })['src/test-api-api.service.ts']
+    assert.ok(!shared.includes('CredentialRejectedError'), shared)
+    assert.ok(shared.includes('private creds: TestApiSecrets'), shared)
+  })
+
+  test('basic credentials are sent as an Authorization Basic header', () => {
+    const spec = makeSpec({ operations: [makeOp()], authType: 'basic' })
+    const service = generateAddonFromOpenAPI(spec, makeVars(), {
+      ...flags,
+      credential: 'basic',
+    })['src/test-api-api.service.ts']
+    assert.ok(service.includes('{ username: string; password: string }'), service)
+    assert.ok(service.includes('`Basic ${btoa('), service)
+  })
+
+  test('form and multipart request bodies are marked on the route', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          method: 'post',
+          path: '/form',
+          operationId: 'sendForm',
+          requestBody: { type: 'object', properties: { a: { type: 'string' } } },
+          requestBodyMediaType: 'application/x-www-form-urlencoded',
+        }),
+        makeOp({
+          method: 'post',
+          path: '/upload',
+          operationId: 'upload',
+          requestBody: { type: 'object', properties: { file: { type: 'string' } } },
+          requestBodyMediaType: 'multipart/form-data',
+        }),
+      ],
+    })
+    const service = generateAddonFromOpenAPI(spec, makeVars(), flags)[
+      'src/test-api-api.service.ts'
+    ]
+    assert.ok(service.includes('"body": "form"'), service)
+    assert.ok(service.includes('"body": "multipart"'), service)
+  })
+})
+
+describe('delegated login without a JWT', () => {
+  const authConfig = {
+    headerName: 'DOLAPIKEY',
+    headerFormat: 'raw' as const,
+    delegated: {
+      loginPath: '/login',
+      loginMethod: 'post',
+      credentials: ['login', 'password'] as ('login' | 'password')[],
+      fields: { login: 'login', password: 'password' },
+      encoding: 'json' as const,
+      tokenPath: 'success.token',
+      identity: { path: '/users/info', method: 'get' },
+      claims: {
+        externalId: 'id',
+        email: 'email',
+        name: ['firstname', 'lastname'],
+        role: 'admin',
+        tenantId: 'entity',
+      },
+      emailTemplate: '{login}@{host}',
+      roles: { '1': 'dolibarr-admin' },
+    },
+  }
+  const file = generateAddonFromOpenAPI(
+    makeSpec({ operations: [makeOp()] }),
+    makeVars(),
+    { oauth: false, secret: false, credential: 'bearer', authConfig }
+  )['src/test-api-upstream-auth.ts']
+
+  test('reads the identity endpoint with the fresh token', () => {
+    assert.ok(file.includes('/users/info'), file)
+    assert.ok(file.includes('"DOLAPIKEY"'), file)
+  })
+
+  test('synthesizes an email from the template when upstream has none', () => {
+    assert.ok(file.includes('{login}@{host}'), file)
+    assert.ok(file.includes('syntheticEmail'), file)
+  })
+
+  test('maps upstream roles', () => {
+    assert.ok(file.includes('"dolibarr-admin"'), file)
+  })
+})
+
+describe('generated sources parse', () => {
+  const modes = {
+    none: { oauth: false, secret: false },
+    shared: { oauth: false, secret: true },
+    apikey: { oauth: false, secret: false, credential: 'apikey' as const },
+    basic: { oauth: false, secret: false, credential: 'basic' as const },
+    oauth2: { oauth: true, secret: false, credential: 'oauth2' as const },
+    delegated: {
+      oauth: false,
+      secret: false,
+      credential: 'bearer' as const,
+      authConfig: {
+        headerName: 'X-Key',
+        headerFormat: 'raw' as const,
+        delegated: { loginPath: '/login', tokenPath: 'token' } as any,
+      },
+    },
+  }
+  for (const [mode, flags] of Object.entries(modes)) {
+    test(mode, () => {
+      const files = generateAddonFromOpenAPI(
+        makeSpec({ operations: [makeOp({ operationId: 'listItems' })] }),
+        makeVars(),
+        { ...flags, camelCase: mode === 'apikey' }
+      )
+      for (const [path, source] of Object.entries(files)) {
+        if (!path.endsWith('.ts')) continue
+        const { diagnostics } = ts.transpileModule(source, {
+          reportDiagnostics: true,
+          fileName: path,
+        })
+        assert.deepEqual(
+          diagnostics?.map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n')),
+          [],
+          `${path}:\n${source}`
+        )
+      }
+    })
+  }
 })

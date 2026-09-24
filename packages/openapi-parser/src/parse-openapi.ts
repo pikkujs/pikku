@@ -13,7 +13,7 @@ export interface ErrorResponse {
 }
 
 export interface SecuritySchemeInfo {
-  type: 'oauth2' | 'http' | 'apiKey'
+  type: 'oauth2' | 'http' | 'apiKey' | 'openIdConnect'
   scheme?: string
   bearerFormat?: string
   name?: string
@@ -29,11 +29,18 @@ export interface ParsedSpec {
   info: { title: string; version: string; description?: string }
   baseUrl: string
   serverUrls: string[]
-  authType: 'bearer' | 'oauth2' | 'apiKey' | 'none'
+  authType: AuthType
   operations: ParsedOperation[]
   componentSchemas: Record<string, OpenAPISchema>
   securitySchemes: Record<string, SecuritySchemeInfo>
   tagDescriptions: Record<string, string>
+}
+
+export type AuthType = 'bearer' | 'oauth2' | 'apiKey' | 'basic' | 'none'
+
+export interface ParseOptions {
+  /** Sent with the request when the spec is fetched from a URL. */
+  headers?: Record<string, string>
 }
 
 export interface ParsedOperation {
@@ -49,7 +56,9 @@ export interface ParsedOperation {
   requestBody?: OpenAPISchema
   requestBodyDescription?: string
   requestBodyRequired?: boolean
+  requestBodyMediaType?: string
   responseSchema?: OpenAPISchema
+  responseMediaType?: string
   responseDescription?: string
   errorResponses: ErrorResponse[]
   deprecated: boolean
@@ -64,18 +73,20 @@ export interface ParsedParam {
 }
 
 /**
- * Read and parse an OpenAPI spec from a file path.
- * Supports both YAML (.yaml, .yml) and JSON (.json) files.
+ * Read and parse an OpenAPI spec from a file path or an http(s) URL.
+ * JSON and YAML are both accepted, whatever the extension.
  */
-export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
-  const content = await readFile(filePath, 'utf-8')
-
-  let doc: any
-  if (filePath.endsWith('.json')) {
-    doc = JSON.parse(content)
-  } else {
-    doc = parseYAML(content)
-  }
+export async function parseOpenAPISpec(
+  source: string,
+  options: ParseOptions = {}
+): Promise<ParsedSpec> {
+  const isUrl = /^https?:\/\//i.test(source)
+  const content = isUrl
+    ? await fetchSpec(source, options.headers ?? {})
+    : await readFile(source, 'utf-8')
+  const doc: any = content.trimStart().startsWith('{')
+    ? JSON.parse(content)
+    : parseYAML(content)
 
   // Validate spec version
   const specVersion = doc.openapi ?? doc.swagger
@@ -100,7 +111,7 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
     description: doc.info?.description,
   }
 
-  const serverUrls = extractServerUrls(doc)
+  const serverUrls = extractServerUrls(doc, isUrl ? source : undefined)
   const baseUrl = serverUrls[0] ?? ''
   const authType = detectAuthType(doc)
   const securitySchemes = extractSecuritySchemes(doc)
@@ -134,6 +145,8 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
         // OpenAPI 3.x: op.requestBody, Swagger 2.x: parameters[].in === 'body'
         const body3 = op.requestBody
         const body2 = allParams.find((p: any) => p.in === 'body')
+        const body = extractRequestBody(op, allParams, doc)
+        const response = extractResponse(op, doc)
 
         operations.push({
           operationId: op.operationId,
@@ -145,10 +158,13 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
           pathParams: extractParams(allParams, 'path'),
           queryParams: extractParams(allParams, 'query'),
           headerParams: extractParams(allParams, 'header'),
-          requestBody: extractRequestBody(op),
+          requestBody: body?.schema,
+          requestBodyMediaType: body?.mediaType,
           requestBodyDescription: body3?.description ?? body2?.description,
-          requestBodyRequired: body3?.required ?? body2?.required,
-          responseSchema: extractResponseSchema(op),
+          requestBodyRequired:
+            body3?.required ?? body2?.required ?? body?.required,
+          responseSchema: response?.schema,
+          responseMediaType: response?.mediaType,
           responseDescription: extractResponseDescription(op),
           errorResponses: extractErrorResponses(op),
           deprecated: false,
@@ -216,28 +232,73 @@ function resolveRefPath(ref: string, root: any): any {
   return current
 }
 
-function extractServerUrls(doc: any): string[] {
+async function fetchSpec(
+  url: string,
+  headers: Record<string, string>
+): Promise<string> {
+  const response = await fetch(url, { headers })
+  if (!response.ok) {
+    const hint =
+      response.status === 401 || response.status === 403
+        ? ' — the spec needs credentials; pass them with --openapi-header "NAME: value"'
+        : ''
+    throw new Error(
+      `Could not fetch the spec from ${url}: HTTP ${response.status}${hint}`
+    )
+  }
+  return response.text()
+}
+
+const trimSlash = (url: string) => url.replace(/\/+$/, '')
+
+function resolveServerUrl(server: any, specUrl?: string): string | undefined {
+  if (typeof server?.url !== 'string' || !server.url) return undefined
+  const url = server.url.replace(
+    /\{([^}]+)\}/g,
+    (match: string, name: string) => server.variables?.[name]?.default ?? match
+  )
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return trimSlash(url)
+  if (specUrl) return trimSlash(new URL(url, specUrl).toString())
+  return trimSlash(url)
+}
+
+function extractServerUrls(doc: any, specUrl?: string): string[] {
   // OpenAPI 3.x
   if (doc.servers && doc.servers.length > 0) {
-    return doc.servers.map((s: any) => s.url).filter((url: string) => !!url)
+    return doc.servers
+      .map((server: any) => resolveServerUrl(server, specUrl))
+      .filter((url: string | undefined): url is string => !!url)
   }
-  // Swagger 2.x
-  if (doc.host) {
-    const schemes = doc.schemes?.length ? doc.schemes : ['https']
+  // Swagger 2.x: host defaults to the one serving the document
+  const host = doc.host ?? (specUrl ? new URL(specUrl).host : undefined)
+  if (host) {
+    const schemes = doc.schemes?.length
+      ? doc.schemes
+      : specUrl
+        ? [new URL(specUrl).protocol.replace(':', '')]
+        : ['https']
     const basePath = doc.basePath ?? ''
-    return schemes.map((scheme: string) => `${scheme}://${doc.host}${basePath}`)
+    return schemes.map((scheme: string) =>
+      trimSlash(`${scheme}://${host}${basePath}`)
+    )
   }
   return []
 }
 
-function detectAuthType(doc: any): 'bearer' | 'oauth2' | 'apiKey' | 'none' {
+function detectAuthType(doc: any): AuthType {
   const securitySchemes =
     doc.components?.securitySchemes ?? doc.securityDefinitions ?? {}
 
   for (const scheme of Object.values(securitySchemes) as any[]) {
     if (scheme.type === 'oauth2') return 'oauth2'
-    if (scheme.type === 'http' && scheme.scheme === 'bearer') return 'bearer'
+    if (scheme.type === 'http' && scheme.scheme?.toLowerCase() === 'bearer')
+      return 'bearer'
     if (scheme.type === 'apiKey') return 'apiKey'
+    if (
+      scheme.type === 'basic' ||
+      (scheme.type === 'http' && scheme.scheme?.toLowerCase() === 'basic')
+    )
+      return 'basic'
   }
 
   return 'none'
@@ -271,26 +332,60 @@ function extractParams(
     }))
 }
 
-function extractRequestBody(op: any): OpenAPISchema | undefined {
-  // OpenAPI 3.x: op.requestBody.content['application/json'].schema
-  const body = op.requestBody
-  if (body) {
-    const content = body.content
-    if (content) {
-      const jsonContent = content['application/json']
-      if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
+interface MediaSchema {
+  schema: OpenAPISchema
+  mediaType: string
+  required?: boolean
+}
 
-      const firstKey = Object.keys(content)[0]
-      if (firstKey && content[firstKey]?.schema) {
-        return content[firstKey].schema as OpenAPISchema
-      }
+function pickContent(content: any): MediaSchema | undefined {
+  if (!content) return undefined
+  const mediaTypes = Object.keys(content)
+  const mediaType =
+    mediaTypes.find((type) => /[/+]json\b/i.test(type) && content[type]?.schema) ??
+    mediaTypes.find((type) => content[type]?.schema)
+  if (!mediaType) return undefined
+  return { schema: content[mediaType].schema as OpenAPISchema, mediaType }
+}
+
+function extractRequestBody(
+  op: any,
+  params: any[],
+  doc: any
+): MediaSchema | undefined {
+  // OpenAPI 3.x: op.requestBody.content[<media type>].schema
+  const fromContent = pickContent(op.requestBody?.content)
+  if (fromContent) return fromContent
+
+  // Swagger 2.x: parameters[].in === 'body' → schema
+  const consumes: string[] = op.consumes ?? doc.consumes ?? []
+  const bodyParam = params.find((p: any) => p.in === 'body')
+  if (bodyParam?.schema) {
+    return {
+      schema: bodyParam.schema as OpenAPISchema,
+      mediaType: consumes[0] ?? 'application/json',
     }
   }
 
-  // Swagger 2.x: parameters[].in === 'body' → schema
-  if (op.parameters) {
-    const bodyParam = op.parameters.find((p: any) => p.in === 'body')
-    if (bodyParam?.schema) return bodyParam.schema as OpenAPISchema
+  // Swagger 2.x: parameters[].in === 'formData' → one object body
+  const formParams = params.filter((p: any) => p.in === 'formData')
+  if (formParams.length > 0) {
+    const properties: Record<string, OpenAPISchema> = {}
+    const required: string[] = []
+    for (const p of formParams) {
+      properties[p.name] = {
+        ...paramToSchema(p),
+        ...(p.description ? { description: p.description } : {}),
+      } as OpenAPISchema
+      if (p.required) required.push(p.name)
+    }
+    return {
+      schema: { type: 'object', properties, required } as OpenAPISchema,
+      mediaType: consumes.includes('multipart/form-data')
+        ? 'multipart/form-data'
+        : 'application/x-www-form-urlencoded',
+      required: required.length > 0,
+    }
   }
 
   return undefined
@@ -306,41 +401,36 @@ function extractResponseDescription(op: any): string | undefined {
   return undefined
 }
 
-function extractResponseSchema(op: any): OpenAPISchema | undefined {
+function extractResponse(op: any, doc: any): MediaSchema | undefined {
   const responses = op.responses
   if (!responses) return undefined
+  const produces: string[] = op.produces ?? doc.produces ?? []
 
-  // Look for 2xx responses in order of preference
-  for (const code of ['200', '201', '202', '204']) {
-    const resp = responses[code]
-    if (!resp) continue
-
-    // OpenAPI 3.x: resp.content['application/json'].schema
-    const content = resp.content
-    if (content) {
-      const jsonContent = content['application/json']
-      if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
-
-      const firstKey = Object.keys(content)[0]
-      if (firstKey && content[firstKey]?.schema) {
-        return content[firstKey].schema as OpenAPISchema
+  const fromResponse = (resp: any): MediaSchema | undefined => {
+    if (!resp) return undefined
+    const fromContent = pickContent(resp.content)
+    if (fromContent) return fromContent
+    if (resp.schema) {
+      return {
+        schema: resp.schema as OpenAPISchema,
+        mediaType:
+          produces.find((type) => /[/+]json\b/i.test(type)) ??
+          produces[0] ??
+          'application/json',
       }
     }
-
-    // Swagger 2.x: resp.schema directly
-    if (resp.schema) return resp.schema as OpenAPISchema
+    return undefined
   }
 
-  // Fallback: any 2xx
+  for (const code of ['200', '201', '202', '204']) {
+    const found = fromResponse(responses[code])
+    if (found) return found
+  }
   for (const [code, resp] of Object.entries(responses) as [string, any][]) {
     if (!code.startsWith('2')) continue
-    if (resp.content) {
-      const jsonContent = resp.content['application/json']
-      if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
-    }
-    if (resp.schema) return resp.schema as OpenAPISchema
+    const found = fromResponse(resp)
+    if (found) return found
   }
-
   return undefined
 }
 
@@ -368,7 +458,11 @@ function extractSecuritySchemes(doc: any): Record<string, SecuritySchemeInfo> {
 
   for (const [name, scheme] of Object.entries(raw) as [string, any][]) {
     const info: SecuritySchemeInfo = {
-      type: scheme.type === 'http' ? 'http' : scheme.type,
+      type: scheme.type === 'basic' ? 'http' : scheme.type,
+    }
+
+    if (scheme.type === 'basic') {
+      info.scheme = 'basic'
     }
 
     if (scheme.type === 'http') {
@@ -383,8 +477,10 @@ function extractSecuritySchemes(doc: any): Record<string, SecuritySchemeInfo> {
 
     if (scheme.type === 'oauth2') {
       // Extract flows — prefer authorizationCode, then implicit, then clientCredentials
-      const flows = scheme.flows ?? {}
+      const flows =
+        scheme.flows ?? (scheme.flow ? { [scheme.flow]: scheme } : {})
       const flow =
+        flows.accessCode ??
         flows.authorizationCode ??
         flows.implicit ??
         flows.clientCredentials ??
@@ -464,4 +560,105 @@ function extractTagDescriptions(doc: any): Record<string, string> {
     }
   }
   return result
+}
+
+export interface OperationFilter {
+  tags?: string[]
+  include?: string[]
+  exclude?: string[]
+}
+
+const globToRegExp = (glob: string) =>
+  new RegExp(
+    `^${glob
+      .split('*')
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*')}$`,
+    'i'
+  )
+
+/**
+ * `include` / `exclude` patterns match an operationId, a path, or
+ * `METHOD /path`, with `*` as a wildcard.
+ */
+function matchesAny(op: ParsedOperation, patterns: string[]): boolean {
+  const candidates = [
+    op.operationId ?? '',
+    op.path,
+    `${op.method.toUpperCase()} ${op.path}`,
+  ]
+  return patterns
+    .map(globToRegExp)
+    .some((pattern) => candidates.some((c) => pattern.test(c)))
+}
+
+export function filterOperations(
+  spec: ParsedSpec,
+  filter: OperationFilter
+): ParsedSpec {
+  const tags = filter.tags?.map((tag) => tag.toLowerCase())
+  const operations = spec.operations.filter(
+    (op) =>
+      (!tags?.length ||
+        op.tags.some((tag) => tags.includes(tag.toLowerCase()))) &&
+      (!filter.include?.length || matchesAny(op, filter.include)) &&
+      !(filter.exclude?.length && matchesAny(op, filter.exclude))
+  )
+  return { ...spec, operations }
+}
+
+const AUTH_ROUTE = /(^|\/)(log-?in|log-?out|sign-?in|sign-?out|auth\w*|token|session|oauth2?)(\/|$)/i
+
+/**
+ * Specs served by API explorers often hide every authenticated route until
+ * the request carries a key, so a spec that is nearly empty — or holds only
+ * its own login route — is a sign the real one was never fetched.
+ */
+export function specCoverageWarning(spec: ParsedSpec): string | undefined {
+  const count = spec.operations.length
+  const onlyAuth =
+    count > 0 && spec.operations.every((op) => AUTH_ROUTE.test(op.path))
+  if (count >= 5 && !onlyAuth) return undefined
+  const what = onlyAuth
+    ? `only authentication routes (${spec.operations.map((op) => `${op.method.toUpperCase()} ${op.path}`).join(', ')})`
+    : `only ${count} operation${count === 1 ? '' : 's'}`
+  return `The spec has ${what}. Many APIs publish their full spec only to an authenticated request — fetch it again with credentials (--openapi-header "NAME: value", or the key in the URL's query string if the API reads it there) before generating, or the addon will be missing most of the API.`
+}
+
+export interface LoginOperation {
+  method: string
+  path: string
+  tokenPath?: string
+}
+
+const TOKEN_KEY = /^(access_?token|token|id_?token|jwt|api_?key|session_?token)$/i
+
+function findTokenPath(schema: any, prefix = '', depth = 0): string | undefined {
+  if (!schema || typeof schema !== 'object' || depth > 3) return undefined
+  for (const [key, prop] of Object.entries<any>(schema.properties ?? {})) {
+    const path = prefix ? `${prefix}.${key}` : key
+    if (TOKEN_KEY.test(key)) return path
+    const nested = findTokenPath(prop, path, depth + 1)
+    if (nested) return nested
+  }
+  return undefined
+}
+
+/** A login route that trades credentials for a token, if the spec has one. */
+export function detectLoginOperation(
+  spec: ParsedSpec
+): LoginOperation | undefined {
+  const candidates = spec.operations.filter(
+    (op) =>
+      op.method === 'post' &&
+      /(^|\/)(log-?in|sign-?in|auth(enticate)?|token|sessions?)$/i.test(op.path)
+  )
+  for (const op of candidates) {
+    return {
+      method: op.method,
+      path: op.path,
+      tokenPath: findTokenPath(op.responseSchema),
+    }
+  }
+  return undefined
 }

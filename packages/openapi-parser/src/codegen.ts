@@ -20,7 +20,11 @@ import {
   detectCommonPrefix,
   type NamedOperation,
 } from './naming.js'
-import { authHeaderValue, type AuthConfig } from './auth-config.js'
+import {
+  authHeaderValue,
+  DelegatedLoginSchema,
+  type AuthConfig,
+} from './auth-config.js'
 
 interface AddonVars {
   name: string
@@ -34,7 +38,7 @@ interface AddonVars {
 interface CodegenFlags {
   oauth: boolean
   secret: boolean
-  credential?: 'apikey' | 'bearer' | 'oauth2'
+  credential?: 'apikey' | 'bearer' | 'basic' | 'oauth2'
   mcp?: boolean
   camelCase?: boolean
   /** Operator-supplied auth overrides (custom header, delegated login). */
@@ -67,6 +71,9 @@ const STATUS_TO_ERROR: Record<number, string> = {
   429: 'TooManyRequestsError',
   500: 'InternalServerError',
 }
+
+const inTemplate = (value: string) =>
+  value.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
 
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
@@ -684,9 +691,9 @@ function generateFunctionFile(
   if (hasInput) {
     inputCode = buildInputSchema(parsed, ctx)
   }
-  if (parsed.responseSchema) {
-    outputCode = buildOutputSchema(parsed.responseSchema, ctx)
-  }
+  outputCode = isVagueResponse(parsed)
+    ? 'z.unknown()'
+    : buildOutputSchema(parsed.responseSchema, ctx)
 
   // Bug 2: If generated Zod code is too large (> 500 lines), TypeScript
   // can't infer the type (TS7056). Replace with z.any() to stay compilable.
@@ -717,7 +724,7 @@ function generateFunctionFile(
 
   const schemaExports = [
     ...(hasInput && inputCode ? [inputName] : []),
-    ...(parsed.responseSchema && outputCode ? [outputName] : []),
+    ...(outputCode ? [outputName] : []),
   ]
 
   lines.push("import { pikkuSessionlessFunc } from '#pikku/addon/function'")
@@ -874,7 +881,7 @@ function generateFunctionFile(
   }
 
   // Build Output schema (exported for pikku schema discovery)
-  if (parsed.responseSchema && outputCode) {
+  if (outputCode) {
     schemaLines.push(`export const ${outputName} = ${outputCode}`)
     schemaLines.push('')
   }
@@ -887,9 +894,7 @@ function generateFunctionFile(
     funcConfig.push(`  description: ${JSON.stringify(description)},`)
   }
   if (hasInput) funcConfig.push(`  input: ${inputName},`)
-  if (parsed.responseSchema) {
-    funcConfig.push(`  output: ${outputName},`)
-  }
+  funcConfig.push(`  output: ${outputName},`)
 
   if (errorClasses.length > 0) {
     funcConfig.push(`  errors: [${errorClasses.join(', ')}],`)
@@ -905,7 +910,7 @@ function generateFunctionFile(
     ? `{ ${camelName} }, ${inputParamName}`
     : `{ ${camelName} }`
 
-  const returnCast = parsed.responseSchema ? ' as any' : ''
+  const returnCast = ' as any'
   funcConfig.push(
     `  func: async (${funcParams}) => {`,
     `    return ${camelName}.call(${JSON.stringify(method)}, ${JSON.stringify(parsed.path)}${hasInput ? `, ${inputParamName}` : ''})${returnCast}`,
@@ -1024,6 +1029,32 @@ function formatParamProp(
   return `  ${safeKey(outputKey)}: ${desc},`
 }
 
+const isBareString = (schema: any) =>
+  schema?.type === 'string' &&
+  !schema.format &&
+  !schema.enum &&
+  !schema.pattern &&
+  schema.const === undefined
+
+/**
+ * A response the spec leaves untyped, or types as a bare string (or a list of
+ * them) while serving JSON, carries no shape a caller can rely on: spec
+ * generators such as Restler emit exactly that as a placeholder for "some
+ * object". `z.unknown()` says so honestly instead of promising a string the
+ * API never returns. Text responses keep their string type.
+ */
+function isVagueResponse(parsed: ParsedOperation): boolean {
+  const schema: any = parsed.responseSchema
+  if (!schema) return true
+  if (parsed.responseMediaType && !/json/i.test(parsed.responseMediaType)) {
+    return false
+  }
+  return (
+    isBareString(schema) ||
+    (schema.type === 'array' && isBareString(schema.items))
+  )
+}
+
 function buildOutputSchema(schema: any, ctx: ZodCodegenContext): string {
   // For output schemas, filter out writeOnly properties.
   // Only create a filtered copy if there are actually writeOnly properties,
@@ -1069,200 +1100,262 @@ function generateIndexFile(
 /**
  * Emit `src/<name>-upstream-auth.ts`: a self-contained authenticate() for
  * delegated login. It performs the upstream login call described by the auth
- * config, extracts the token, reads identity claims from the decoded JWT
- * payload (base64url, NOT signature-verified — the token was just received
- * over TLS from the login we ourselves performed) or the response body, and
- * returns an identity object structurally compatible with
- * `@pikku/better-auth`'s `UpstreamIdentity` — without depending on it.
+ * config, extracts the token, optionally looks the user up with it, reads
+ * identity claims from the decoded JWT payload (base64url, NOT
+ * signature-verified — the token was just received over TLS from the login
+ * we ourselves performed), the login response or the lookup, and returns an
+ * identity object structurally compatible with `@pikku/better-auth`'s
+ * `UpstreamIdentity` — without depending on it.
  */
 function generateUpstreamAuthFile(
   vars: AddonVars,
   authConfig: AuthConfig
 ): string {
   const { pascalName } = vars
-  const delegated = authConfig.delegated!
+  const delegated = DelegatedLoginSchema.parse(authConfig.delegated)
   const claims = delegated.claims
+  const source = claims.source ?? (delegated.identity ? 'identity' : 'response')
   const namePaths = claims.name
     ? Array.isArray(claims.name)
       ? claims.name
       : [claims.name]
     : []
+  const q = (value: unknown) => JSON.stringify(value)
+  const fieldName = (credential: 'login' | 'email' | 'password') =>
+    q(delegated.fields?.[credential] ?? credential)
+  const extraHeaders = Object.entries(authConfig.extraHeaders ?? {})
+    .map(([header, value]) => `\n  ${q(header)}: ${q(value)},`)
+    .join('')
+  const tokenHeader = authHeaderValue(authConfig, 'token')
 
-  const lines: string[] = []
-  lines.push(`export interface ${pascalName}UpstreamIdentity {`)
-  lines.push('  externalId: string')
-  lines.push('  email: string')
-  lines.push('  name?: string')
-  lines.push('  role?: string')
-  lines.push('  tenantId?: string')
-  lines.push(
-    '  credential: { token: string; expiresAt?: number; tenantId?: string }'
-  )
-  lines.push('}')
-  lines.push('')
-  lines.push(`export interface ${pascalName}UpstreamCredentials {`)
-  lines.push('  email?: string')
-  lines.push('  password?: string')
-  lines.push('  apiKey?: string')
-  lines.push('}')
-  lines.push('')
-  lines.push('const pick = (obj: unknown, path: string): unknown =>')
-  lines.push('  path')
-  lines.push("    .split('.')")
-  lines.push('    .reduce<any>(')
-  lines.push(
-    "      (o, key) => (o && typeof o === 'object' ? o[key] : undefined),"
-  )
-  lines.push('      obj')
-  lines.push('    )')
-  lines.push('')
-  lines.push('const str = (value: unknown): string | undefined =>')
-  lines.push(
-    "  typeof value === 'string' && value ? value : typeof value === 'number' ? String(value) : undefined"
-  )
-  lines.push('')
-  lines.push(
-    '/** Decode a JWT payload without verifying — see file docblock. */'
-  )
-  lines.push('const decodeJwtPayload = (token: string): unknown => {')
-  lines.push("  const part = token.split('.')[1]")
-  lines.push('  if (!part) return undefined')
-  lines.push('  try {')
-  lines.push("    const pad = part + '==='.slice((part.length + 3) % 4)")
-  lines.push("    const bin = atob(pad.replace(/-/g, '+').replace(/_/g, '/'))")
-  lines.push('    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))')
-  lines.push('    return JSON.parse(new TextDecoder().decode(bytes))')
-  lines.push('  } catch {')
-  lines.push('    // Not a decodable JWT — caller treats it as missing claims.')
-  lines.push('    return undefined')
-  lines.push('  }')
-  lines.push('}')
-  lines.push('')
-  lines.push('/**')
-  lines.push(
-    ` * Verify credentials against the upstream ${vars.displayName} login and map`
-  )
-  lines.push(
-    ' * its response onto an upstream identity. Returns null when the upstream'
-  )
-  lines.push(
-    ' * rejects the credentials; network errors propagate to the caller.'
-  )
-  lines.push(' */')
-  lines.push(`export const authenticate${pascalName}Upstream = async (`)
-  lines.push(`  credentials: ${pascalName}UpstreamCredentials,`)
-  lines.push('  baseUrl: string')
-  lines.push(`): Promise<${pascalName}UpstreamIdentity | null> => {`)
-  lines.push('  const headers: Record<string, string> = {')
-  lines.push("    'Content-Type': 'application/json',")
-  for (const [header, value] of Object.entries(authConfig.extraHeaders ?? {})) {
-    lines.push(`    ${JSON.stringify(header)}: ${JSON.stringify(value)},`)
+  const fieldLines: string[] = []
+  if (delegated.credentials.includes('login')) {
+    fieldLines.push(`  if (login) fields[${fieldName('login')}] = login`)
   }
-  lines.push('  }')
-  lines.push('  const body: Record<string, string> = {}')
   if (delegated.credentials.includes('email')) {
-    lines.push('  if (credentials.email) body.email = credentials.email')
+    fieldLines.push(
+      `  if (credentials.email ?? login) fields[${fieldName('email')}] = (credentials.email ?? login)!`
+    )
   }
   if (delegated.credentials.includes('password')) {
-    lines.push(
-      '  if (credentials.password) body.password = credentials.password'
+    fieldLines.push(
+      `  if (credentials.password) fields[${fieldName('password')}] = credentials.password`
     )
   }
   if (delegated.credentials.includes('apiKey')) {
-    lines.push(
-      `  if (credentials.apiKey) headers[${JSON.stringify(delegated.apiKeyHeader)}] = credentials.apiKey`
+    fieldLines.push(
+      `  if (credentials.apiKey) headers[${q(delegated.apiKeyHeader)}] = credentials.apiKey`
     )
   }
-  lines.push('')
-  lines.push(
-    `  const response = await fetch(\`\${baseUrl.replace(/\\/+$/, '')}${delegated.loginPath}\`, {`
-  )
-  lines.push(
-    `    method: ${JSON.stringify(delegated.loginMethod.toUpperCase())},`
-  )
-  lines.push('    headers,')
-  lines.push(
-    '    body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,'
-  )
-  lines.push('  })')
-  lines.push('  if (!response.ok) return null')
-  lines.push('')
-  lines.push('  const data: unknown = await response.json()')
-  lines.push(
-    `  const token = str(pick(data, ${JSON.stringify(delegated.tokenPath)}))`
-  )
-  lines.push('  if (!token) return null')
-  lines.push('')
-  if (claims.source === 'jwt') {
-    lines.push('  const claims = decodeJwtPayload(token)')
-  } else {
-    lines.push('  const claims = data')
+
+  const sendFields = {
+    json: `  headers['Content-Type'] = 'application/json'
+  const body = Object.keys(fields).length > 0 ? JSON.stringify(fields) : undefined`,
+    form: `  headers['Content-Type'] = 'application/x-www-form-urlencoded'
+  const body = new URLSearchParams(fields).toString()`,
+    query: `  for (const [key, value] of Object.entries(fields)) {
+    loginUrl.searchParams.set(key, value)
   }
-  lines.push('  if (!claims) return null')
-  lines.push('')
-  lines.push(
-    `  const externalId = str(pick(claims, ${JSON.stringify(claims.externalId)}))`
-  )
-  lines.push(
-    `  const email = str(pick(claims, ${JSON.stringify(claims.email)}))`
-  )
-  lines.push('  if (!externalId || !email) return null')
-  lines.push('')
-  if (namePaths.length > 0) {
-    const parts = namePaths
-      .map((p) => `str(pick(claims, ${JSON.stringify(p)}))`)
-      .join(', ')
-    lines.push(`  const name = [${parts}]`)
-    lines.push('    .filter((part): part is string => Boolean(part))')
-    lines.push("    .join(' ') || undefined")
-  } else {
-    lines.push('  const name = undefined')
-  }
-  if (claims.role) {
-    lines.push(
-      `  const role = str(pick(claims, ${JSON.stringify(claims.role)}))`
+  const body = undefined`,
+  }[delegated.encoding]
+
+  const identityLookup = delegated.identity
+    ? `
+  const identityResponse = await fetch(\`\${root}${delegated.identity.path}\`, {
+    method: ${q(delegated.identity.method.toUpperCase())},
+    headers: { ...EXTRA_HEADERS, ${q(tokenHeader.header)}: ${tokenHeader.value} },
+  })
+  if (!identityResponse.ok) return null
+  const identity: unknown = await identityResponse.json()
+`
+    : ''
+
+  const claimsExpr = {
+    jwt: 'decodeJwtPayload(token)',
+    response: 'data',
+    identity: delegated.identity ? 'identity' : 'data',
+  }[source]
+
+  const nameExpr =
+    namePaths.length > 0
+      ? `[${namePaths.map((p) => `str(pick(claims, ${q(p)}))`).join(', ')}]
+    .filter((part): part is string => Boolean(part))
+    .join(' ') || login`
+      : 'login'
+
+  const roleExpr = !claims.role
+    ? 'undefined'
+    : delegated.roles
+      ? `mapRole(str(pick(claims, ${q(claims.role)})))`
+      : `str(pick(claims, ${q(claims.role)}))`
+
+  const expiresAtExpr = delegated.expiresAtPath
+    ? `pick(data, ${q(delegated.expiresAtPath)})`
+    : source === 'jwt'
+      ? `pick(claims, 'exp')`
+      : 'undefined'
+
+  return `export interface ${pascalName}UpstreamIdentity {
+  externalId: string
+  email: string
+  syntheticEmail?: boolean
+  name?: string
+  role?: string
+  tenantId?: string
+  credential: { token: string; expiresAt?: number; tenantId?: string }
+}
+
+export interface ${pascalName}UpstreamCredentials {
+  login?: string
+  email?: string
+  password?: string
+  apiKey?: string
+}
+
+const EXTRA_HEADERS: Record<string, string> = {${extraHeaders}${extraHeaders ? '\n' : ''}}
+${delegated.roles ? `\nconst ROLES: Record<string, string> = ${q(delegated.roles)}\n\nconst mapRole = (value: string | undefined) =>\n  value === undefined ? undefined : ROLES[value]\n` : ''}
+const pick = (obj: unknown, path: string): unknown =>
+  path
+    .split('.')
+    .reduce<any>(
+      (o, key) => (o && typeof o === 'object' ? o[key] : undefined),
+      obj
     )
-  } else {
-    lines.push('  const role = undefined')
+
+const str = (value: unknown): string | undefined =>
+  typeof value === 'string' && value ? value : typeof value === 'number' ? String(value) : undefined
+
+/** Decode a JWT payload without verifying — see file docblock. */
+const decodeJwtPayload = (token: string): unknown => {
+  const part = token.split('.')[1]
+  if (!part) return undefined
+  try {
+    const pad = part + '==='.slice((part.length + 3) % 4)
+    const bin = atob(pad.replace(/-/g, '+').replace(/_/g, '/'))
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+    return JSON.parse(new TextDecoder().decode(bytes))
+  } catch {
+    // Not a decodable JWT — caller treats it as missing claims.
+    return undefined
   }
-  if (claims.tenantId) {
-    lines.push(
-      `  const tenantId = str(pick(claims, ${JSON.stringify(claims.tenantId)}))`
+}
+
+const syntheticEmail = (values: Record<string, string>) =>
+  ${q(delegated.emailTemplate)}
+    .replace(/\\{(\\w+)\\}/g, (_, key: string) =>
+      (values[key] ?? '').replace(/[^A-Za-z0-9._+-]/g, '-')
     )
-  } else {
-    lines.push('  const tenantId = undefined')
+    .toLowerCase()
+
+/**
+ * Verify credentials against the upstream ${vars.displayName} login and map
+ * its response onto an upstream identity. Returns null when the upstream
+ * rejects the credentials; network errors propagate to the caller.
+ */
+export const authenticate${pascalName}Upstream = async (
+  credentials: ${pascalName}UpstreamCredentials,
+  baseUrl: string
+): Promise<${pascalName}UpstreamIdentity | null> => {
+  const root = baseUrl.replace(/\\/+$/, '')
+  const login = credentials.login ?? credentials.email
+  const headers: Record<string, string> = { ...EXTRA_HEADERS }
+  const fields: Record<string, string> = {}
+${fieldLines.join('\n')}
+
+  const loginUrl = new URL(\`\${root}${delegated.loginPath}\`)
+${sendFields}
+  const response = await fetch(loginUrl, {
+    method: ${q(delegated.loginMethod.toUpperCase())},
+    headers,
+    body,
+  })
+  if (!response.ok) return null
+
+  const data: unknown = await response.json().catch(() => undefined)
+  const token = str(pick(data, ${q(delegated.tokenPath)}))
+  if (!token) return null
+${identityLookup}
+  const claims = ${claimsExpr}
+  if (!claims) return null
+
+  const externalId = ${claims.externalId ? `str(pick(claims, ${q(claims.externalId)})) ?? login` : 'login'}
+  if (!externalId) return null
+  const who = login ?? externalId
+  const claimedEmail = ${claims.email ? `str(pick(claims, ${q(claims.email)}))` : 'undefined'}
+  const email =
+    claimedEmail ??
+    (who.includes('@')
+      ? who.toLowerCase()
+      : syntheticEmail({ login: who, externalId, host: new URL(root).host }))
+  const name = ${nameExpr}
+  const role = ${roleExpr}
+  const tenantId = ${claims.tenantId ? `str(pick(claims, ${q(claims.tenantId)}))` : 'undefined'}
+  const expiresAtRaw = ${expiresAtExpr}
+  const expiresAt = typeof expiresAtRaw === 'number' ? expiresAtRaw : undefined
+
+  return {
+    externalId,
+    email,
+    syntheticEmail: claimedEmail === undefined && !who.includes('@'),
+    name,
+    role,
+    tenantId,
+    credential: { token, expiresAt, tenantId },
   }
-  if (delegated.expiresAtPath) {
-    lines.push(
-      `  const expiresAtRaw = pick(data, ${JSON.stringify(delegated.expiresAtPath)})`
-    )
-  } else if (claims.source === 'jwt') {
-    lines.push("  const expiresAtRaw = pick(claims, 'exp')")
-  } else {
-    lines.push('  const expiresAtRaw = undefined')
-  }
-  lines.push(
-    "  const expiresAt = typeof expiresAtRaw === 'number' ? expiresAtRaw : undefined"
-  )
-  lines.push('')
-  lines.push('  return {')
-  lines.push('    externalId,')
-  lines.push('    email,')
-  lines.push('    name,')
-  lines.push('    role,')
-  lines.push('    tenantId,')
-  lines.push('    credential: { token, expiresAt, tenantId },')
-  lines.push('  }')
-  lines.push('}')
-  lines.push('')
-  return lines.join('\n')
+}
+`
 }
 
 interface RouteInfo {
   path: string[]
   query: string[]
   headers: string[]
+  body?: 'form' | 'multipart'
   errors?: Record<number, string>
+}
+
+type CredentialKind = NonNullable<CodegenFlags['credential']>
+
+const CREDENTIAL_SHAPES: Record<CredentialKind, string> = {
+  bearer: '{ token: string }',
+  apikey: '{ apiKey: string }',
+  basic: '{ username: string; password: string }',
+  oauth2: '{ accessToken: string }',
+}
+
+/** The statement that puts the caller's credential on the request, if any. */
+function authHeaderLine(
+  spec: ParsedSpec,
+  flags: CodegenFlags,
+  credential: CredentialKind | 'secret' | undefined
+): string | undefined {
+  if (!credential) return undefined
+  const tokenExpr = {
+    bearer: 'this.creds.token',
+    apikey: 'this.creds.apiKey',
+    secret: 'this.creds.apiKey',
+    oauth2: 'this.creds.accessToken',
+    basic: undefined,
+  }[credential]
+  if (!tokenExpr) {
+    return 'headers.Authorization = `Basic ${btoa(`${this.creds.username}:${this.creds.password}`)}`'
+  }
+  if (flags.authConfig?.headerName) {
+    const { header, value } = authHeaderValue(flags.authConfig, tokenExpr)
+    return `headers[${JSON.stringify(header)}] = ${value}`
+  }
+  if (credential === 'apikey' || credential === 'secret') {
+    const scheme = Object.values(spec.securitySchemes).find(
+      (s) => s.type === 'apiKey'
+    )
+    if (scheme?.name && scheme.in === 'header') {
+      return `headers[${JSON.stringify(scheme.name)}] = ${tokenExpr}`
+    }
+    if (scheme?.name && scheme.in === 'query') {
+      return `url.searchParams.set(${JSON.stringify(scheme.name)}, ${tokenExpr})`
+    }
+  }
+  return `headers.Authorization = \`Bearer \${${tokenExpr}}\``
 }
 
 function generateServiceFile(
@@ -1271,43 +1364,25 @@ function generateServiceFile(
   vars: AddonVars,
   flags: CodegenFlags
 ): string {
-  const { name, pascalName, screamingName } = vars
+  const { name, camelName, pascalName, screamingName } = vars
   const displayName = vars.displayName.replace(/'/g, '')
-  const lines: string[] = []
+  const credential: CredentialKind | 'secret' | undefined =
+    flags.credential ??
+    (flags.oauth ? 'oauth2' : flags.secret ? 'secret' : undefined)
+  const perUser = credential !== undefined && credential !== 'secret'
+  const reauth = flags.authConfig?.delegated ? 'sign-in' : 'connect'
 
-  // Always import all error classes used in the switch statement
-  const allErrorClasses = new Set<string>(Object.values(STATUS_TO_ERROR))
-
-  if (flags.credential && flags.credential !== 'oauth2') {
-    // Per-user credential: no special imports needed, creds passed via constructor
-  } else if (flags.oauth || flags.credential === 'oauth2') {
-    // OAuth2: the access token is resolved via the credential service and passed
-    // via the constructor — no special imports needed.
-  } else if (flags.secret) {
-    lines.push(
-      `import type { ${pascalName}Secrets } from './${name}.secret.js'`
-    )
-  }
-
-  if (allErrorClasses.size > 0) {
-    lines.push(
-      `import { ${[...allErrorClasses].sort().join(', ')} } from '@pikku/core/errors'`
-    )
-  }
-
-  lines.push(
-    `import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'`
-  )
-  lines.push('')
-
-  // Generate route map from parsed operations
   const routes: Record<string, RouteInfo> = {}
   for (const { parsed } of opPairs) {
-    const key = `${parsed.method.toUpperCase()} ${parsed.path}`
     const route: RouteInfo = {
       path: parsed.pathParams.map((p) => p.name),
       query: parsed.queryParams.map((p) => p.name),
       headers: parsed.headerParams.map((p) => p.name),
+    }
+    if (parsed.requestBodyMediaType?.includes('x-www-form-urlencoded')) {
+      route.body = 'form'
+    } else if (parsed.requestBodyMediaType?.includes('multipart/form-data')) {
+      route.body = 'multipart'
     }
     if (parsed.errorResponses.length > 0) {
       route.errors = {}
@@ -1315,264 +1390,159 @@ function generateServiceFile(
         route.errors[err.statusCode] = err.description
       }
     }
-    routes[key] = route
+    routes[`${parsed.method.toUpperCase()} ${parsed.path}`] = route
   }
 
-  lines.push(
-    `const ROUTES: Record<string, { path: string[], query: string[], headers: string[], errors?: Record<number, string> }> = ${JSON.stringify(routes, null, 2)}`
-  )
-  lines.push('')
+  const errorClasses = [
+    ...new Set([
+      ...Object.values(STATUS_TO_ERROR),
+      ...(perUser ? ['CredentialRejectedError'] : []),
+    ]),
+  ].sort()
 
-  if (flags.camelCase) {
-    lines.push(
-      'function _toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {'
-    )
-    lines.push('  return Object.fromEntries(')
-    lines.push(
-      '    Object.entries(data).map(([k, v]) => [k.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`), v])'
-    )
-    lines.push('  )')
-    lines.push('}')
-    lines.push('')
-    lines.push(
-      'function _toCamelCase(data: Record<string, unknown>): Record<string, unknown> {'
-    )
-    lines.push('  return Object.fromEntries(')
-    lines.push(
-      '    Object.entries(data).map(([k, v]) => [k.replace(/[-_]+(.)/g, (_, c) => c.toUpperCase()), v])'
-    )
-    lines.push('  )')
-    lines.push('}')
-    lines.push('')
-  }
-
-  // Class declaration
-  lines.push(`export class ${pascalName}Service {`)
-  lines.push('  private baseUrl: string')
-
-  if (flags.credential && flags.credential !== 'oauth2') {
-    const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
-    lines.push('')
-    lines.push(
-      `  constructor(private creds: { ${credField}: string }, variables: TypedVariablesService) {`
-    )
-    lines.push(
-      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
-    )
-    lines.push('  }')
-  } else if (flags.oauth || flags.credential === 'oauth2') {
-    lines.push('')
-    lines.push(
-      `  constructor(private creds: { accessToken: string }, variables: TypedVariablesService) {`
-    )
-    lines.push(
-      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
-    )
-    lines.push('  }')
-  } else if (flags.secret) {
-    lines.push('')
-    lines.push(
-      `  constructor(private creds: ${pascalName}Secrets, variables: TypedVariablesService) {`
-    )
-    lines.push(
-      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
-    )
-    lines.push('  }')
-  } else {
-    lines.push('')
-    lines.push(`  constructor(variables: TypedVariablesService) {`)
-    lines.push(
-      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
-    )
-    lines.push('  }')
-  }
-
-  lines.push('')
-
-  // call() method — splits data into path/query/headers/body using route map
-  lines.push('  async call<T>(')
-  lines.push("    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',")
-  lines.push('    path: string,')
-  lines.push('    data?: unknown')
-  lines.push('  ): Promise<T> {')
-  lines.push('    const input = data as Record<string, unknown> | undefined')
-  if (flags.camelCase) {
-    lines.push('    const rawData = input ? _toSnakeCase(input) : input')
-  }
-  lines.push('    const route = ROUTES[`${method} ${path}`]')
-  lines.push('    let endpoint = path')
-  lines.push('    let body: Record<string, unknown> | undefined')
-  lines.push('    const query: Record<string, string> = {}')
-  lines.push('    const headers: Record<string, string> = {')
-  lines.push("      'Content-Type': 'application/json',")
-  for (const [header, value] of Object.entries(
-    flags.authConfig?.extraHeaders ?? {}
-  )) {
-    lines.push(`      ${JSON.stringify(header)}: ${JSON.stringify(value)},`)
-  }
-  lines.push('    }')
-  lines.push('')
-  // When camelCase flag is on, use rawData (snake_case converted) for route matching
+  const credsParam =
+    credential === 'secret'
+      ? `private creds: ${pascalName}Secrets, `
+      : credential
+        ? `private creds: ${CREDENTIAL_SHAPES[credential]}, `
+        : ''
+  const authLine = authHeaderLine(spec, flags, credential)
   const dataVar = flags.camelCase ? 'rawData' : 'input'
-  lines.push(`    if (${dataVar} && route) {`)
-  lines.push('      // Interpolate path params')
-  lines.push('      for (const param of route.path) {')
-  lines.push(`        if (${dataVar}[param] !== undefined) {`)
-  lines.push(
-    `          endpoint = endpoint.replace(\`{\${param}}\`, String(${dataVar}[param]))`
-  )
-  lines.push('        }')
-  lines.push('      }')
-  lines.push('      // Extract query params')
-  lines.push('      for (const param of route.query) {')
-  lines.push(`        if (${dataVar}[param] !== undefined) {`)
-  lines.push(`          query[param] = String(${dataVar}[param])`)
-  lines.push('        }')
-  lines.push('      }')
-  lines.push('      // Extract header params')
-  lines.push('      for (const param of route.headers) {')
-  lines.push(`        if (${dataVar}[param] !== undefined) {`)
-  lines.push(`          headers[param] = String(${dataVar}[param])`)
-  lines.push('        }')
-  lines.push('      }')
-  lines.push('      // Everything else goes into body')
-  lines.push(
-    '      const pathQueryHeaders = new Set([...route.path, ...route.query, ...route.headers])'
-  )
-  lines.push('      const remaining = Object.fromEntries(')
-  lines.push(
-    `        Object.entries(${dataVar}).filter(([k]) => !pathQueryHeaders.has(k))`
-  )
-  lines.push('      )')
-  lines.push('      if (Object.keys(remaining).length > 0) {')
-  lines.push('        body = remaining')
-  lines.push('      }')
-  lines.push('    }')
-  lines.push('')
-  lines.push('    const url = new URL(`${this.baseUrl}${endpoint}`)')
-  lines.push('    for (const [key, value] of Object.entries(query)) {')
-  lines.push('      url.searchParams.set(key, value)')
-  lines.push('    }')
-  lines.push('')
+  const extraHeaders = Object.entries(flags.authConfig?.extraHeaders ?? {})
+    .map(([h, v]) => `\n      ${JSON.stringify(h)}: ${JSON.stringify(v)},`)
+    .join('')
+  const unauthorized = perUser
+    ? `throw new CredentialRejectedError(${JSON.stringify(camelName)}, ${JSON.stringify(reauth)})`
+    : 'throw new UnauthorizedError(errorMessage)'
+  const parseJson = flags.camelCase
+    ? `const result = JSON.parse(text)
+      return (typeof result === 'object' && result !== null && !Array.isArray(result) ? _toCamelCase(result) : result) as T`
+    : 'return JSON.parse(text) as T'
 
-  if (flags.credential && flags.credential !== 'oauth2') {
-    // Per-user credential: use creds from wire.getCredentials()
-    if (flags.credential === 'bearer') {
-      if (flags.authConfig?.headerName) {
-        // Custom auth header (e.g. `authentication: <raw jwt>`) from the auth config.
-        const { header, value } = authHeaderValue(
-          flags.authConfig,
-          'this.creds.token'
-        )
-        lines.push(`    headers[${JSON.stringify(header)}] = ${value}`)
-      } else {
-        lines.push('    headers.Authorization = `Bearer ${this.creds.token}`')
-      }
-    } else {
-      // apikey: auth-config override wins, else check spec for custom header name
-      const apiKeyScheme = Object.values(spec.securitySchemes).find(
-        (s) => s.type === 'apiKey'
-      )
-      if (flags.authConfig?.headerName) {
-        const { header, value } = authHeaderValue(
-          flags.authConfig,
-          'this.creds.apiKey'
-        )
-        lines.push(`    headers[${JSON.stringify(header)}] = ${value}`)
-      } else if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
-        lines.push(
-          `    headers[${JSON.stringify(apiKeyScheme.name)}] = this.creds.apiKey`
-        )
-      } else {
-        lines.push('    headers.Authorization = `Bearer ${this.creds.apiKey}`')
-      }
+  return `${credential === 'secret' ? `import type { ${pascalName}Secrets } from './${name}.secret.js'\n` : ''}import { ${errorClasses.join(', ')} } from '@pikku/core/errors'
+import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'
+
+const ROUTES: Record<string, { path: string[], query: string[], headers: string[], body?: 'form' | 'multipart', errors?: Record<number, string> }> = ${JSON.stringify(routes, null, 2)}
+${
+  flags.camelCase
+    ? `
+function _toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(data).map(([k, v]) => [k.replace(/[A-Z]/g, c => \`_\${c.toLowerCase()}\`), v])
+  )
+}
+
+function _toCamelCase(data: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(data).map(([k, v]) => [k.replace(/[-_]+(.)/g, (_, c) => c.toUpperCase()), v])
+  )
+}
+`
+    : ''
+}
+export class ${pascalName}Service {
+  constructor(${credsParam}private variables: TypedVariablesService) {}
+
+  private async baseUrl(): Promise<string> {
+    const baseUrl = await this.variables.get('${screamingName}_BASE_URL')
+    if (!baseUrl) {
+      throw new Error('${screamingName}_BASE_URL is not set — point it at the ${inTemplate(displayName)} API root')
     }
-    lines.push('')
-    lines.push('    const response = await fetch(url.toString(), {')
-    lines.push('      method,')
-    lines.push('      headers,')
-    lines.push('      body: body ? JSON.stringify(body) : undefined,')
-    lines.push('    })')
-  } else if (flags.oauth || flags.credential === 'oauth2') {
-    lines.push('    headers.Authorization = `Bearer ${this.creds.accessToken}`')
-    lines.push('')
-    lines.push('    const response = await fetch(url.toString(), {')
-    lines.push('      method,')
-    lines.push('      headers,')
-    lines.push('      body: body ? JSON.stringify(body) : undefined,')
-    lines.push('    })')
-  } else if (flags.secret) {
-    // Auth-config override wins, else use apiKey details from spec if available
-    const apiKeyScheme = Object.values(spec.securitySchemes).find(
-      (s) => s.type === 'apiKey'
-    )
-    if (flags.authConfig?.headerName) {
-      const { header, value } = authHeaderValue(
-        flags.authConfig,
-        'this.creds.apiKey'
-      )
-      lines.push(`    headers[${JSON.stringify(header)}] = ${value}`)
-    } else if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
-      lines.push(
-        `    headers[${JSON.stringify(apiKeyScheme.name)}] = this.creds.apiKey`
-      )
-    } else {
-      lines.push('    headers.Authorization = `Bearer ${this.creds.apiKey}`')
-    }
-    lines.push('')
-    lines.push('    const response = await fetch(url.toString(), {')
-    lines.push('      method,')
-    lines.push('      headers,')
-    lines.push('      body: body ? JSON.stringify(body) : undefined,')
-    lines.push('    })')
-  } else {
-    lines.push('    const response = await fetch(url.toString(), {')
-    lines.push('      method,')
-    lines.push('      headers,')
-    lines.push('      body: body ? JSON.stringify(body) : undefined,')
-    lines.push('    })')
+    return String(baseUrl).replace(/\\/+$/, '')
   }
 
-  lines.push('')
-  lines.push('    if (!response.ok) {')
-  lines.push('      const errorText = await response.text()')
-  lines.push(
-    '      const errorMessage = route?.errors?.[response.status] ?? errorText'
-  )
-  lines.push('      switch (response.status) {')
-  lines.push('        case 400: throw new BadRequestError(errorMessage)')
-  lines.push('        case 401: throw new UnauthorizedError(errorMessage)')
-  lines.push('        case 403: throw new ForbiddenError(errorMessage)')
-  lines.push('        case 404: throw new NotFoundError(errorMessage)')
-  lines.push('        case 405: throw new MethodNotAllowedError(errorMessage)')
-  lines.push('        case 409: throw new ConflictError(errorMessage)')
-  lines.push(
-    '        case 422: throw new UnprocessableContentError(errorMessage)'
-  )
-  lines.push('        case 429: throw new TooManyRequestsError(errorMessage)')
-  lines.push('        case 500: throw new InternalServerError(errorMessage)')
-  lines.push(
-    `        default: throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)`
-  )
-  lines.push('      }')
-  lines.push('    }')
-  lines.push('')
-  lines.push('    const text = await response.text()')
-  lines.push('    if (!text) return {} as T')
-  if (flags.camelCase) {
-    lines.push('    const result = JSON.parse(text)')
-    lines.push(
-      '    return (typeof result === "object" && result !== null && !Array.isArray(result) ? _toCamelCase(result) : result) as T'
-    )
-  } else {
-    lines.push('    return JSON.parse(text) as T')
+  async call<T>(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+    path: string,
+    data?: unknown
+  ): Promise<T> {
+    const input = data as Record<string, unknown> | undefined${flags.camelCase ? '\n    const rawData = input ? _toSnakeCase(input) : input' : ''}
+    const route = ROUTES[\`\${method} \${path}\`]
+    let endpoint = path
+    let body: Record<string, unknown> | undefined
+    const query: Record<string, string> = {}
+    const headers: Record<string, string> = {${extraHeaders}
+    }
+
+    if (${dataVar} && route) {
+      for (const param of route.path) {
+        if (${dataVar}[param] !== undefined) {
+          endpoint = endpoint.replace(\`{\${param}}\`, encodeURIComponent(String(${dataVar}[param])))
+        }
+      }
+      for (const param of route.query) {
+        if (${dataVar}[param] !== undefined) {
+          query[param] = String(${dataVar}[param])
+        }
+      }
+      for (const param of route.headers) {
+        if (${dataVar}[param] !== undefined) {
+          headers[param] = String(${dataVar}[param])
+        }
+      }
+      const pathQueryHeaders = new Set([...route.path, ...route.query, ...route.headers])
+      const remaining = Object.fromEntries(
+        Object.entries(${dataVar}).filter(([k]) => !pathQueryHeaders.has(k))
+      )
+      if (Object.keys(remaining).length > 0) {
+        body = remaining
+      }
+    }
+
+    const url = new URL(\`\${await this.baseUrl()}\${endpoint}\`)
+    for (const [key, value] of Object.entries(query)) {
+      url.searchParams.set(key, value)
+    }
+${authLine ? `    ${authLine}\n` : ''}
+    let payload: string | FormData | undefined
+    if (body && route?.body === 'form') {
+      headers['Content-Type'] = 'application/x-www-form-urlencoded'
+      payload = new URLSearchParams(
+        Object.entries(body).map(([k, v]) => [k, String(v)])
+      ).toString()
+    } else if (body && route?.body === 'multipart') {
+      const form = new FormData()
+      for (const [k, v] of Object.entries(body)) {
+        form.append(k, v instanceof Blob ? v : String(v))
+      }
+      payload = form
+    } else if (body) {
+      headers['Content-Type'] = 'application/json'
+      payload = JSON.stringify(body)
+    }
+
+    const response = await fetch(url.toString(), { method, headers, body: payload })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      const errorMessage = route?.errors?.[response.status] ?? errorText
+      switch (response.status) {
+        case 400: throw new BadRequestError(errorMessage)
+        case 401: ${unauthorized}
+        case 403: throw new ForbiddenError(errorMessage)
+        case 404: throw new NotFoundError(errorMessage)
+        case 405: throw new MethodNotAllowedError(errorMessage)
+        case 409: throw new ConflictError(errorMessage)
+        case 422: throw new UnprocessableContentError(errorMessage)
+        case 429: throw new TooManyRequestsError(errorMessage)
+        case 500: throw new InternalServerError(errorMessage)
+        default: throw new Error(\`${inTemplate(displayName)} API error (\${response.status}): \${errorText}\`)
+      }
+    }
+
+    const text = await response.text()
+    if (!text) return undefined as T
+    if (/json/i.test(response.headers.get('content-type') ?? 'application/json')) {
+      ${parseJson}
+    }
+    try {
+      return JSON.parse(text) as T
+    } catch {
+      return text as T
+    }
   }
-  lines.push('  }')
-
-  lines.push('}')
-  lines.push('')
-
-  return lines.join('\n')
+}
+`
 }
 
 function generateCredentialFile(spec: ParsedSpec, vars: AddonVars): string {
@@ -1651,8 +1621,7 @@ function generateCredentialFile(spec: ParsedSpec, vars: AddonVars): string {
 function generateVariableFile(spec: ParsedSpec, vars: AddonVars): string {
   const { camelName, screamingName } = vars
   const displayName = vars.displayName.replace(/'/g, '')
-  const serverUrls = spec.serverUrls.length > 0 ? spec.serverUrls : []
-  const defaultUrl = serverUrls[0]
+  const serverUrls = spec.serverUrls
 
   const lines: string[] = []
   lines.push("import { z } from 'zod'")
@@ -1660,17 +1629,17 @@ function generateVariableFile(spec: ParsedSpec, vars: AddonVars): string {
   lines.push('')
 
   const schemaVarName = `${camelName}BaseUrlSchema`
+  const absolute = serverUrls.filter((url) => /^https?:\/\//i.test(url))
+  const describe = [
+    `Base URL of the ${displayName} API`,
+    ...(absolute.length > 1 ? [`e.g. ${absolute.join(', ')}`] : []),
+  ].join(' — ')
 
-  if (serverUrls.length > 0) {
-    const urlsLiteral = serverUrls.map((u) => JSON.stringify(u)).join(', ')
-    lines.push(
-      `export const ${schemaVarName} = z.enum([${urlsLiteral}]).default(${JSON.stringify(defaultUrl)})`
-    )
-  } else {
-    lines.push(
-      `export const ${schemaVarName} = z.string().describe('Base URL for the ${displayName} API')`
-    )
-  }
+  // Any instance of the API can be configured, so the spec's server list is
+  // a default, never an allow-list.
+  lines.push(
+    `export const ${schemaVarName} = z.string().url()${absolute[0] ? `.default(${JSON.stringify(absolute[0])})` : ''}.describe(${JSON.stringify(describe)})`
+  )
 
   lines.push('')
   lines.push(`defineVariable({`)
