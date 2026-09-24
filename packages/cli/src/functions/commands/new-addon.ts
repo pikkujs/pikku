@@ -171,7 +171,14 @@ export interface AddonVars {
   addonDepProtocol: string
 }
 
-const ICON_COLOURS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2']
+const ICON_COLOURS = [
+  '#2563eb',
+  '#7c3aed',
+  '#db2777',
+  '#ea580c',
+  '#16a34a',
+  '#0891b2',
+]
 
 function placeholderIcon(displayName: string): string {
   const letter = (displayName.match(/[A-Za-z0-9]/)?.[0] ?? '?').toUpperCase()
@@ -1147,12 +1154,20 @@ export function resolveAddonAuth(
     throw new Error(`--auth must be user, shared or none (got "${flags.auth}")`)
   }
   if (flags.authConfig?.delegated) {
-    return { mode: 'delegated', credential: 'bearer', secret: false, oauth: false }
+    return {
+      mode: 'delegated',
+      credential: 'bearer',
+      secret: false,
+      oauth: false,
+    }
   }
   if (flags.auth === 'none') {
     return { mode: 'none', secret: false, oauth: false }
   }
-  if (flags.auth === 'shared' || (flags.secret && !flags.credential && !flags.oauth)) {
+  if (
+    flags.auth === 'shared' ||
+    (flags.secret && !flags.credential && !flags.oauth)
+  ) {
     return { mode: 'shared', secret: true, oauth: false }
   }
   const explicit = flags.credential ?? (flags.oauth ? 'oauth2' : undefined)
@@ -1189,7 +1204,9 @@ export function resolveAddonAuth(
 }
 
 /** The project `pikku new addon` runs in, when it is an app rather than an addon. */
-function findAppProject(config: any): { root: string; srcDir: string } | undefined {
+function findAppProject(
+  config: any
+): { root: string; srcDir: string } | undefined {
   const root = config?.rootDir
   if (!root || config.addon || !existsSync(join(root, 'pikku.config.json'))) {
     return undefined
@@ -1268,7 +1285,9 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     const app = findAppProject(config)
     const installing = Boolean(openapi) && (install ?? Boolean(app))
     if (installing && !app) {
-      logger.error('--install needs to run inside a pikku app (a pikku.config.json that is not an addon)')
+      logger.error(
+        '--install needs to run inside a pikku app (a pikku.config.json that is not an addon)'
+      )
       process.exit(1)
     }
 
@@ -1347,14 +1366,23 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         )
       } else {
         const credentialType = credential as CredentialType | undefined
-        if (credentialType && !['apikey', 'bearer', 'basic', 'oauth2'].includes(credentialType)) {
+        if (
+          credentialType &&
+          !['apikey', 'bearer', 'basic', 'oauth2'].includes(credentialType)
+        ) {
           throw new Error(
             `Invalid credential type "${credential}": must be one of apikey, bearer, basic, oauth2`
           )
         }
         const effectiveOAuth = oauth || credentialType === 'oauth2'
         resolved = {
-          mode: effectiveOAuth ? 'oauth2' : credentialType ? 'connect' : secret ? 'shared' : 'none',
+          mode: effectiveOAuth
+            ? 'oauth2'
+            : credentialType
+              ? 'connect'
+              : secret
+                ? 'shared'
+                : 'none',
           credential: loadedAuthConfig?.delegated ? 'bearer' : credentialType,
           secret: (secret || effectiveOAuth) && !credentialType,
           oauth: effectiveOAuth,
@@ -1416,8 +1444,13 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     if (installing && app && spec) {
       const functions = Object.fromEntries(
         Object.entries(addonFiles)
-          .filter(([path]) => /^src\/functions\/[^/]+\.function\.ts$/.test(path))
-          .map(([path, source]) => [path.slice('src/functions/'.length, -'.function.ts'.length), source])
+          .filter(([path]) =>
+            /^src\/functions\/[^/]+\.function\.ts$/.test(path)
+          )
+          .map(([path, source]) => [
+            path.slice('src/functions/'.length, -'.function.ts'.length),
+            source,
+          ])
       )
       const baseUrl = spec.serverUrls.find((url) => /^https?:\/\//.test(url))
       const { written: installed, notes } = installAddonIntoApp({
@@ -1428,7 +1461,8 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         pascalName,
         screamingName: vars.screamingName,
         packageName: `@pikku/addon-${name}`,
-        depProtocol: vars.addonDepProtocol,
+        addonDir,
+        inWorkspace: workspaceCovers(app.root, addonDir),
         mode: resolved.mode,
         functions,
         baseUrl: baseUrl?.replace(/\/+$/, ''),

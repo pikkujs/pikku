@@ -72,7 +72,7 @@ in one message. Then stop; do not interview the user.
   answer at all, `references/design.md` owns what to make and what it then binds — the
   approved page becomes source of truth for the screens, and the theme is written
   before it so what they approve is what ships. Only an explicit no skips it.
-- **May you write test records into the system it talks to?** Ask only when the
+- **May I write test records into the system it talks to?** Ask only when the
   app reads a live system through an addon (an ERP, a CRM) and a milestone needs
   data that isn't there yet: an unpaid invoice, a closed ticket. Say what you
   would create and that it will be marked "Test". A no means building those
@@ -353,8 +353,9 @@ What a milestone is:
   persona. If you cannot write the gherkin, you cannot build it yet — that is a
   `questions/` note, not a milestone.
 
-If §1's screen mock was made and approved, the milestones are read off it: every
-screen on that page belongs to some milestone, and a screen no milestone builds
+If §1's screen mock was made — approved, or drawn because nobody answered — the
+milestones are read off it: every screen on that page belongs to some milestone,
+and a screen no milestone builds
 is a hole in this plan. Say which milestone covers which screen.
 
 How to order them:
@@ -519,8 +520,8 @@ Rules that are not optional:
   `pikkuSessionlessFunc`. `pikkuFunc` with `auth: false` still answers
   `MissingSessionError` over `/rpc` to a caller with no session.
 - Better Auth already owns the `user`, `session`, `account` and `verification`
-  tables. A domain table with one of those names — a class *session*, a drop-in
-  *session* — collides in the migration. Name it for the domain instead
+  tables. A domain table with one of those names — a class _session_, a drop-in
+  _session_ — collides in the migration. Name it for the domain instead
   (`evening`, `class_meeting`) and keep the word in the UI copy.
 - The template's `/` redirects to `/app`, so the login screen — and its "Sign in
   as …" switcher — is what a signed-out visitor sees first. Replace `/` with a
@@ -565,7 +566,7 @@ start the frontend on its own (say :3000 is taken by another project), you owe
 it three things: the two `VITE_DEV_*` values the dev script would have computed,
 and `VITE_API_PROXY` pointing at your API — the dev proxy defaults to
 `http://localhost:3000`, so beside another project's server your sign-ins go to
-*its* API and come back `401 Invalid actor secret`, which reads like a bad
+_its_ API and come back `401 Invalid actor secret`, which reads like a bad
 credential rather than the wrong server.
 
 The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the

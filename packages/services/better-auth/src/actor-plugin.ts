@@ -58,6 +58,8 @@ export interface ActorCredentialsOptions {
   names: string[]
   /** Persist one credential for the actor — typically `credentialService.set(name, value, userId)`. */
   store: (name: string, value: unknown, userId: string) => Promise<void>
+  /** Drop one the environment no longer sets — typically `credentialService.delete(name, userId)`. */
+  remove?: (name: string, userId: string) => Promise<void>
   /** Defaults to `process.env`. A Worker passes `(key) => variables.get(key)`. */
   read?: (key: string) => string | undefined | Promise<string | undefined>
 }
@@ -92,7 +94,10 @@ const storeActorCredentials = async (
   for (const name of options.names) {
     const key = actorCredentialEnvKey(email, name)
     const raw = await read(key)
-    if (!raw) continue
+    if (!raw) {
+      await options.remove?.(name, userId)
+      continue
+    }
     let value: unknown
     try {
       value = parseActorCredential(raw)
@@ -246,7 +251,7 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
             )
             if (stored.length > 0) {
               logger.info(
-                `actor ${email} carries upstream credentials: ${stored.join(', ')}`
+                `actor ${user.id} carries upstream credentials: ${stored.join(', ')}`
               )
             }
           }

@@ -1296,7 +1296,7 @@ ${identityLookup}
   return {
     externalId,
     email,
-    syntheticEmail: claimedEmail === undefined && !who.includes('@'),
+    syntheticEmail: claimedEmail === undefined,
     name,
     role,
     tenantId,
@@ -1338,7 +1338,7 @@ function authHeaderLine(
     basic: undefined,
   }[credential]
   if (!tokenExpr) {
-    return 'headers.Authorization = `Basic ${btoa(`${this.creds.username}:${this.creds.password}`)}`'
+    return 'headers.Authorization = `Basic ${btoa(String.fromCharCode(...new TextEncoder().encode(`${this.creds.username}:${this.creds.password}`)))}`'
   }
   if (flags.authConfig?.headerName) {
     const { header, value } = authHeaderValue(flags.authConfig, tokenExpr)

@@ -342,8 +342,9 @@ function pickContent(content: any): MediaSchema | undefined {
   if (!content) return undefined
   const mediaTypes = Object.keys(content)
   const mediaType =
-    mediaTypes.find((type) => /[/+]json\b/i.test(type) && content[type]?.schema) ??
-    mediaTypes.find((type) => content[type]?.schema)
+    mediaTypes.find(
+      (type) => /[/+]json\b/i.test(type) && content[type]?.schema
+    ) ?? mediaTypes.find((type) => content[type]?.schema)
   if (!mediaType) return undefined
   return { schema: content[mediaType].schema as OpenAPISchema, mediaType }
 }
@@ -484,6 +485,7 @@ function extractSecuritySchemes(doc: any): Record<string, SecuritySchemeInfo> {
         flows.authorizationCode ??
         flows.implicit ??
         flows.clientCredentials ??
+        flows.application ??
         flows.password
 
       if (flow) {
@@ -607,7 +609,8 @@ export function filterOperations(
   return { ...spec, operations }
 }
 
-const AUTH_ROUTE = /(^|\/)(log-?in|log-?out|sign-?in|sign-?out|auth\w*|token|session|oauth2?)(\/|$)/i
+const AUTH_ROUTE =
+  /(^|\/)(log-?in|log-?out|sign-?in|sign-?out|auth\w*|token|session|oauth2?)(\/|$)/i
 
 /**
  * Specs served by API explorers often hide every authenticated route until
@@ -631,9 +634,14 @@ export interface LoginOperation {
   tokenPath?: string
 }
 
-const TOKEN_KEY = /^(access_?token|token|id_?token|jwt|api_?key|session_?token)$/i
+const TOKEN_KEY =
+  /^(access_?token|token|id_?token|jwt|api_?key|session_?token)$/i
 
-function findTokenPath(schema: any, prefix = '', depth = 0): string | undefined {
+function findTokenPath(
+  schema: any,
+  prefix = '',
+  depth = 0
+): string | undefined {
   if (!schema || typeof schema !== 'object' || depth > 3) return undefined
   for (const [key, prop] of Object.entries<any>(schema.properties ?? {})) {
     const path = prefix ? `${prefix}.${key}` : key

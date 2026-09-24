@@ -400,6 +400,7 @@ describe('actor upstream credentials', () => {
 
   const signInWith = async (env: Record<string, string>) => {
     const stored: Array<[string, unknown, string]> = []
+    const removed: string[] = []
     const db: Record<string, any[]> = { user: [], session: [], account: [] }
     const auth = betterAuth({
       baseURL: 'http://localhost:3000',
@@ -415,6 +416,9 @@ describe('actor upstream credentials', () => {
             store: async (name, value, userId) => {
               stored.push([name, value, userId])
             },
+            remove: async (name) => {
+              removed.push(name)
+            },
             read: (key) => env[key],
           },
         }),
@@ -425,7 +429,7 @@ describe('actor upstream credentials', () => {
       email,
       secret: await credentialFor(email),
     })
-    return { res, stored, db }
+    return { res, stored, removed, db }
   }
 
   test('derives the env key from the persona id and credential name', () => {
@@ -455,10 +459,16 @@ describe('actor upstream credentials', () => {
     ])
   })
 
-  test('stores nothing when no value is set', async () => {
-    const { res, stored } = await signInWith({})
+  test('stores nothing when no value is set, and removes what an earlier sign-in stored', async () => {
+    const { res, stored, removed } = await signInWith({
+      ACTOR_CREDENTIAL_DAN_DOLIBARR: 'tok-123',
+    })
     assert.equal(res.status, 200)
-    assert.deepEqual(stored, [])
+    assert.deepEqual(
+      stored.map(([name]) => name),
+      ['dolibarr']
+    )
+    assert.deepEqual(removed, ['calendar'])
   })
 
   test('refuses sign-in on a malformed JSON value', async () => {

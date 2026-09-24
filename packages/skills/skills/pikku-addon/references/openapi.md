@@ -45,16 +45,16 @@ One command. Inside an app it writes `packages/addon-<name>` as
 and then runs install and the addon's build. `--no-install` generates the
 package alone.
 
-| Flag                                  | When                                                                         |
-| ------------------------------------- | ---------------------------------------------------------------------------- |
-| `--auth user` (default)               | Each user brings their own credential                                        |
-| `--auth shared`                       | One secret behind every user; set it with `pikku secrets`                    |
-| `--auth none`                         | The API really takes no auth                                                 |
-| `--credential apikey\|bearer\|basic\|oauth2` | Override what the spec's `securitySchemes` declares                  |
-| `--auth-config <file>`                | Users sign in with their upstream login, or the spec gets auth wrong         |
-| `--tags a,b` / `--include` / `--exclude` | Keep part of a huge spec: tags, or globs on operationId, `/path`, `METHOD /path` |
-| `--mcp`                               | The operations should also be MCP tools                                      |
-| `--camel-case`                        | The API's property names are snake_case and the app's are not                |
+| Flag                                         | When                                                                             |
+| -------------------------------------------- | -------------------------------------------------------------------------------- |
+| `--auth user` (default)                      | Each user brings their own credential                                            |
+| `--auth shared`                              | One secret behind every user; locally it goes in `.env`                          |
+| `--auth none`                                | The API really takes no auth                                                     |
+| `--credential apikey\|bearer\|basic\|oauth2` | Override what the spec's `securitySchemes` declares                              |
+| `--auth-config <file>`                       | Users sign in with their upstream login, or the spec gets auth wrong             |
+| `--tags a,b` / `--include` / `--exclude`     | Keep part of a huge spec: tags, or globs on operationId, `/path`, `METHOD /path` |
+| `--mcp`                                      | The operations should also be MCP tools                                          |
+| `--camel-case`                               | The API's property names are snake_case and the app's are not                    |
 
 The mode comes from the spec unless a flag says otherwise. A spec with no
 machine-readable auth is refused rather than guessed: pass one of the flags the
@@ -113,7 +113,7 @@ building on the addon:
 
 - **Call the reads you can.** The `GET`s the credential can reach, following ids
   from lists into retrieves. Writes only if the user opts in.
-- **Fix the addon, not the app**: the schema in the op's function file, or the
+- **Fix the addon, not the app**: the schema in the op's `<op>.schemas.ts`, or the
   request shape in `src/<name>-api.service.ts`. Then rebuild it.
 - **List each mismatch in `packages/addon-<name>/SPEC-ISSUES.md`**: a title and a
   short description. No credentials or customer data.

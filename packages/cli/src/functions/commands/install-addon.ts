@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { dirname, join, relative } from 'path'
 
-export type AddonAuthMode = 'delegated' | 'connect' | 'oauth2' | 'shared' | 'none'
+export type AddonAuthMode =
+  'delegated' | 'connect' | 'oauth2' | 'shared' | 'none'
 
 export interface AddonInstall {
   projectRoot: string
@@ -11,7 +12,8 @@ export interface AddonInstall {
   pascalName: string
   screamingName: string
   packageName: string
-  depProtocol: string
+  addonDir: string
+  inWorkspace: boolean
   mode: AddonAuthMode
   /** Generated function file contents by function name. */
   functions: Record<string, string>
@@ -24,7 +26,10 @@ export interface InstallResult {
 }
 
 /** The package.json that owns `dir`, walking up to `stopAt`. */
-export function owningPackageDir(dir: string, stopAt: string): string | undefined {
+export function owningPackageDir(
+  dir: string,
+  stopAt: string
+): string | undefined {
   let current = dir
   while (current.startsWith(stopAt)) {
     if (existsSync(join(current, 'package.json'))) return current
@@ -85,13 +90,15 @@ wireAddon({
 `
 }
 
-const BETTER_AUTH_IMPORT =
-  /import\s*\{([^}]*)\}\s*from\s*'@pikku\/better-auth'/
+const BETTER_AUTH_IMPORT = /import\s*\{([^}]*)\}\s*from\s*'@pikku\/better-auth'/
 
 function addNamedImport(source: string, name: string): string {
   const match = source.match(BETTER_AUTH_IMPORT)
   if (match) {
-    const names = match[1]!.split(',').map((n) => n.trim()).filter(Boolean)
+    const names = match[1]!
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean)
     if (names.includes(name)) return source
     return source.replace(
       match[0],
@@ -101,19 +108,26 @@ function addNamedImport(source: string, name: string): string {
   return `import { ${name} } from '@pikku/better-auth'\n${source}`
 }
 
+const FACTORY_SERVICES = /pikkuBetterAuth\(\s*async\s*\(\{([^}]*)\}\)/
+
 function addFactoryService(source: string, service: string): string {
-  return source.replace(
-    /pikkuBetterAuth\(\s*async\s*\(\{([^}]*)\}\)/,
-    (whole, services: string) => {
-      const names = services.split(',').map((n) => n.trim()).filter(Boolean)
-      if (names.includes(service)) return whole
-      return whole.replace(`{${services}}`, `{ ${[...names, service].join(', ')} }`)
-    }
-  )
+  return source.replace(FACTORY_SERVICES, (whole, services: string) => {
+    const names = services
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean)
+    if (names.includes(service)) return whole
+    return whole.replace(
+      `{${services}}`,
+      `{ ${[...names, service].join(', ')} }`
+    )
+  })
 }
 
 function insertAfterImports(source: string, line: string): string {
-  const imports = [...source.matchAll(/^import[\s\S]*?from\s+'[^']+'[ \t]*\n/gm)]
+  const imports = [
+    ...source.matchAll(/^import[\s\S]*?from\s+'[^']+'[ \t]*\n/gm),
+  ]
   const last = imports[imports.length - 1]
   if (!last) return `${line}\n${source}`
   const at = last.index! + last[0].length
@@ -133,13 +147,24 @@ export function wireAuth(
   const { camelName, pascalName, screamingName, packageName } = install
   const perUser = install.mode !== 'shared' && install.mode !== 'none'
   if (!perUser) return { source, notes }
+  if (!FACTORY_SERVICES.test(source)) {
+    notes.push(
+      'auth.ts: pikkuBetterAuth is not `async ({ … }) =>`, so the upstream sign-in was not wired — add it by hand (see pikku-auth)'
+    )
+    return { source, notes }
+  }
 
   const storeCredential = `if (!credentialService) throw new Error('credentialService is not configured')`
   let next = addFactoryService(source, 'credentialService')
 
-  if (install.mode === 'delegated' && !next.includes(`authenticate${pascalName}Upstream`)) {
+  if (
+    install.mode === 'delegated' &&
+    !next.includes(`authenticate${pascalName}Upstream`)
+  ) {
     if (next.search(/plugins:\s*\[/) === -1) {
-      notes.push(`auth.ts has no plugins: [ … ] — add pikkuDelegatedAuth by hand (see pikku-auth)`)
+      notes.push(
+        `auth.ts has no plugins: [ … ] — add pikkuDelegatedAuth by hand (see pikku-auth)`
+      )
     } else {
       next = addFactoryService(next, 'variables')
       next = addFactoryService(next, 'scopeService')
@@ -149,7 +174,9 @@ export function wireAuth(
         next,
         `import { authenticate${pascalName}Upstream } from '${packageName}'`
       )
-      const fallback = install.baseUrl ? ` ?? ${JSON.stringify(install.baseUrl)}` : ''
+      const fallback = install.baseUrl
+        ? ` ?? ${JSON.stringify(install.baseUrl)}`
+        : ''
       const plugin = `
         pikkuDelegatedAuth({
           authenticate: async (credentials) =>
@@ -172,7 +199,9 @@ export function wireAuth(
 
   const actorAt = next.search(/pikkuActor\(\{/)
   if (actorAt === -1) {
-    notes.push('auth.ts has no pikkuActor — scenario personas will not carry upstream credentials')
+    notes.push(
+      'auth.ts has no pikkuActor — scenario personas will not carry upstream credentials'
+    )
   } else {
     const actorCall = next.slice(actorAt, next.indexOf('})', actorAt) + 2)
     if (!actorCall.includes('credentials:')) {
@@ -182,6 +211,9 @@ export function wireAuth(
             store: async (name, value, userId) => {
               ${storeCredential}
               await credentialService.set(name, value, userId)
+            },
+            remove: async (name, userId) => {
+              await credentialService?.delete(name, userId)
             },
           },`
       next = next.replace(/pikkuActor\(\{/, credentials)
@@ -210,10 +242,14 @@ export function installAddonIntoApp(install: AddonInstall): InstallResult {
 
   const functionsPkg = owningPackageDir(install.srcDir, install.projectRoot)
   const packageDirs = [install.projectRoot]
-  if (functionsPkg && functionsPkg !== install.projectRoot) packageDirs.push(functionsPkg)
+  if (functionsPkg && functionsPkg !== install.projectRoot)
+    packageDirs.push(functionsPkg)
   for (const dir of packageDirs) {
     const path = join(dir, 'package.json')
-    if (existsSync(path) && addDependency(path, install.packageName, install.depProtocol)) {
+    const spec = install.inWorkspace
+      ? 'workspace:*'
+      : `file:${relative(dir, install.addonDir)}`
+    if (existsSync(path) && addDependency(path, install.packageName, spec)) {
       written.push(rel(path))
     }
   }
@@ -240,15 +276,25 @@ export function installAddonIntoApp(install: AddonInstall): InstallResult {
       written.push(rel(authPath))
     }
   } else if (install.mode === 'delegated') {
-    notes.push(`no ${rel(authPath)} — add pikkuDelegatedAuth to your Better Auth config by hand (see pikku-auth)`)
+    notes.push(
+      `no ${rel(authPath)} — add pikkuDelegatedAuth to your Better Auth config by hand (see pikku-auth)`
+    )
   }
 
   const envPath = join(install.projectRoot, '.env')
-  if (addEnvLine(envPath, `${install.screamingName}_BASE_URL`, install.baseUrl ?? '')) {
+  if (
+    addEnvLine(
+      envPath,
+      `${install.screamingName}_BASE_URL`,
+      install.baseUrl ?? ''
+    )
+  ) {
     written.push(rel(envPath))
   }
   if (!install.baseUrl) {
-    notes.push(`the spec names no absolute server — set ${install.screamingName}_BASE_URL in .env`)
+    notes.push(
+      `the spec names no absolute server — set ${install.screamingName}_BASE_URL in .env`
+    )
   }
   return { written, notes }
 }

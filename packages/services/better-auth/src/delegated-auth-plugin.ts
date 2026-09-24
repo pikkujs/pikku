@@ -27,8 +27,9 @@ export interface UpstreamIdentity {
   externalId: string
   email: string
   /**
-   * The upstream had no email and `email` was made up from the login (e.g.
-   * `{login}@{host}`). A made-up address never claims an existing user row.
+   * `false` only when the upstream itself returned `email`. Anything else —
+   * made up from the login, or the login typed as an email — never claims an
+   * existing user row. Omitted counts as synthetic.
    */
   syntheticEmail?: boolean
   name?: string
@@ -197,7 +198,7 @@ export const pikkuDelegatedAuth = (
           const existing = await adapter.findUserByEmail(identityEmail, {
             includeAccounts: true,
           })
-          if (existing && identity.syntheticEmail) {
+          if (existing && identity.syntheticEmail !== false) {
             throw new APIError('UNAUTHORIZED', {
               message: 'Email is already used by another user',
             })

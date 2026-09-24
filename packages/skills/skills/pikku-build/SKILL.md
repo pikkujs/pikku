@@ -69,10 +69,10 @@ while still planning. Those failures look alarming and are nothing but this.
 When the request comes with a file or a URL, look at it before planning
 anything. Two kinds are converted first and then built on:
 
-| Handed                                                                                                              | Say, then do                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Handed                                                                                                              | Say, then do                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | An **OpenAPI / Swagger spec** — top-level `openapi` or `swagger` key, a `paths` object                              | "This is an OpenAPI spec — I'll turn it into an addon first." Pick the auth mode in `references/openapi.md`, then follow the `pikku-addon` skill's OpenAPI reference. |
-| An **n8n export** — an object with `nodes` and `connections`, an array of them, or a `{ workflows: [...] }` wrapper | "This is an n8n workflow — I'll import it first." Follow `pikku-n8n-import`.                                      |
+| An **n8n export** — an object with `nodes` and `connections`, an array of them, or a `{ workflows: [...] }` wrapper | "This is an n8n workflow — I'll import it first." Follow `pikku-n8n-import`.                                                                                          |
 
 Say it at once, in one line, and start: this is the obvious first move, not a
 question for the user. Generate the whole spec, however large.
@@ -153,14 +153,14 @@ words and link to where they can see it.
 
 **Product pages** — the only ones a non-technical person gets:
 
-| Shows                 | Path                                                                      |
-| --------------------- | ------------------------------------------------------------------------- |
-| Knowledge, plans      | `/console/knowledge`, `/console/knowledge?id=<note path>`                 |
-| Personas              | `/console/personas`, `/console/virtual-users?persona=<id>`                |
-| Roles and permissions | `/console/roles`, `/console/scopes`                                       |
-| Scenarios and runs    | `/console/scenarios?id=<id>`, `/console/scenarios?view=runs&run=<run id>` |
-| Workflows             | `/console/workflow?id=<id>`                                               |
-| Agents                | `/console/agents`, `/console/agents/playground?id=<agent id>`             |
+| Shows                 | Path                                                                       |
+| --------------------- | -------------------------------------------------------------------------- |
+| Knowledge, plans      | `/console/knowledge`, `/console/knowledge?id=<note path>`                  |
+| Personas              | `/console/personas`, `/console/virtual-users?persona=<id>`                 |
+| Roles and permissions | `/console/roles`, `/console/scopes` (only with `@pikku/addon-admin` wired) |
+| Scenarios and runs    | `/console/scenarios?id=<id>`, `/console/scenarios?view=runs&run=<run id>`  |
+| Workflows             | `/console/workflow?id=<id>`                                                |
+| Agents                | `/console/agents`, `/console/agents/playground?id=<agent id>`              |
 
 **Technical pages** — never for a non-technical person: `/console/overview`,
 `/console/functions`, `/console/surface`, `/console/database`,
