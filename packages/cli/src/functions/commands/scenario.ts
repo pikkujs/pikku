@@ -1065,6 +1065,7 @@ export const scenarioGuide = pikkuSessionlessFunc<
                   .map((artifact) => ({
                     ...(artifact.id ? { id: artifact.id } : {}),
                     ...(artifact.name ? { name: artifact.name } : {}),
+                    ...(artifact.showcase ? { showcase: true } : {}),
                     path: artifact.path,
                   })),
                 videos: (result.artifacts ?? [])
@@ -1102,6 +1103,16 @@ export const scenarioGuide = pikkuSessionlessFunc<
         `${join(docs, path)} cites '${featureId}', which is not a registered feature — a page describing something that no longer exists.`
       )
     }
+    for (const {
+      path,
+      featureId,
+      scenario,
+      known,
+    } of coverage.unknownScenarios) {
+      logger.error(
+        `${join(docs, path)} cites scenario '${scenario}' of '${featureId}', which registers no such scenario. It has: ${known.join(', ') || 'none'}.`
+      )
+    }
     for (const { path, featureId } of coverage.optedOut) {
       logger.error(
         `${join(docs, path)} cites '${featureId}', which declares \`document: false\`.`
@@ -1131,6 +1142,7 @@ export const scenarioGuide = pikkuSessionlessFunc<
     // through being written still wants its pages built.
     if (
       coverage.unknown.length > 0 ||
+      coverage.unknownScenarios.length > 0 ||
       coverage.optedOut.length > 0 ||
       (!allowUndocumented && coverage.missing.length > 0)
     ) {
