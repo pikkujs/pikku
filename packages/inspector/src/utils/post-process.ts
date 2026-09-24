@@ -1432,6 +1432,9 @@ export function validateSecretUsage(
       declared.add(definition.oauth2.tokenSecretId)
     }
   }
+  // auth-secrets.gen.ts declares it, but that file is written after the first
+  // inspection of a fresh project, so its defineSecret is not seen yet.
+  if (state.auth?.definition) declared.add('BETTER_AUTH_SECRET')
 
   for (const [file, usage] of state.secrets.usage) {
     const relativeFile = relative(state.rootDir, file)
