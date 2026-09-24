@@ -14,6 +14,7 @@ import { RemoteAddonAuthError } from '../addon/remote-addon-auth.js'
 import { wireAddon } from '../addon/wire-addon.js'
 import { wireRemoteAddon } from '../addon/wire-remote-addon.js'
 import { createSecretValue } from '../../classification/secret-value.js'
+import { MissingSessionError } from '../../errors/errors.js'
 
 const createLogger = () => ({
   debug: () => {},
@@ -598,6 +599,36 @@ describe('ContextAwareRPCService.rpcExposed', () => {
     await assert.rejects(
       () => service.rpcExposed('shop:declared', {}),
       RPCNotFoundError
+    )
+  })
+
+  test('an exposed function of an auth: true instance still needs a session', async () => {
+    wireAddon({
+      name: 'shop',
+      package: '@shop/pkg',
+      auth: true,
+      expose: ['undeclared'],
+    })
+    registerFunction('undeclared', async () => ({ ran: 'undeclared' }), {
+      packageName: '@shop/pkg',
+    })
+
+    await assert.rejects(
+      () =>
+        new ContextAwareRPCService(
+          createServices(),
+          {} as never,
+          {}
+        ).rpcExposed('shop:undeclared', {}),
+      MissingSessionError
+    )
+    assert.deepEqual(
+      await new ContextAwareRPCService(
+        createServices(),
+        { session: { userId: 'u1' } } as never,
+        {}
+      ).rpcExposed('shop:undeclared', {}),
+      { ran: 'undeclared' }
     )
   })
 
