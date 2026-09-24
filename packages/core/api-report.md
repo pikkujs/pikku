@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3061 observable things**: 994 exported names, plus
-2067 members on the classes and interfaces among them, reachable
+**3064 observable things**: 995 exported names, plus
+2069 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -24,7 +24,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
-| `./errors` | 50 | 50 | 22 |
+| `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./mcp` | 25 | 25 | 17 |
 | `./services/local-meta` | 22 | 2 | 40 |
@@ -4310,6 +4310,10 @@ export class AIProviderNotConfiguredError extends PikkuError {
 export class BadGatewayError extends PikkuError {}
 export class BadRequestError extends PikkuError {}
 export class ConflictError extends PikkuError {}
+export class CredentialRejectedError extends PikkuError {
+  public payload: { error: 'credential_rejected'; credentialName: string; reauth: 'sign-in' | 'connect' }
+  constructor(credentialName: string, reauth: 'sign-in' | 'connect', message?: string)
+}
 export interface ErrorDetails {
   status: number
   message: string

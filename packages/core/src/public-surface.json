@@ -371,6 +371,7 @@
     "BadGatewayError",
     "BadRequestError",
     "ConflictError",
+    "CredentialRejectedError",
     "ExpectationFailedError",
     "FeatureUnavailableError",
     "ForbiddenError",
