@@ -699,6 +699,35 @@ describe('a step lease on Postgres', () => {
     assert.equal(third, null, 'the re-claim took the lease with it')
   })
 
+  // A worker that stalled rather than died wakes up after its step was claimed
+  // again. Neither its renewals nor its outcome may land on the newer attempt.
+  test('a superseded attempt can neither renew the lease nor record an outcome', async () => {
+    const { runId } = await seedStep()
+
+    const stale = await claim(runId)
+    await lapseTheLease()
+    const current = await claim(runId)
+    const leaseOf = async () =>
+      (await service.getStepState(runId, 'step-1')).leaseExpiresAt?.getTime()
+    const held = await leaseOf()
+
+    await service.refreshStepLease(
+      stale.stepId,
+      new Date(Date.now() + 10 * 60_000),
+      stale.attemptCount
+    )
+    assert.equal(await leaseOf(), held, 'the stale renewal changed nothing')
+
+    await assert.rejects(
+      service.setStepResult(stale.stepId, 'stale', stale.attemptCount),
+      (e: Error) => e.name === 'WorkflowStepSupersededError'
+    )
+    await service.setStepResult(current.stepId, 'fresh', current.attemptCount)
+    const step = await service.getStepState(runId, 'step-1')
+    assert.equal(step.status, 'succeeded')
+    assert.equal(step.result, 'fresh')
+  })
+
   test('a run wedged on a lapsed lease is found as stalled', async () => {
     const { runId } = await seedStep()
     // Far enough ahead that the run and its step both read as idle, leaving

@@ -62,6 +62,7 @@
     "WorkflowRunNotFoundError",
     "WorkflowStepFunctionMismatchError",
     "WorkflowStepLeaseExpiredError",
+    "WorkflowStepSupersededError",
     "WorkflowSuspendedException",
     "addWorkflow",
     "assertWorkflowRunOwner",

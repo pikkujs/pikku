@@ -3,7 +3,9 @@ import {
   DEFAULT_STEP_LEASE_MS,
   STEP_LEASE_REFRESH_FACTOR,
   STEP_LEASE_REFRESH_MIN_MS,
+  isStepLeaseLive,
 } from './workflow-constants.js'
+import type { StepState } from './workflow.types.js'
 
 /**
  * How long a claim on a step dispatched through `queueName` is good for, taken
@@ -27,12 +29,15 @@ export const stepLeaseMsForQueue = (queueName: string): number => {
  *
  * The timer is unreferenced: a lease outliving its step must not be what keeps
  * a process from exiting.
+ *
+ * Stopping waits for a refresh already in flight, so a caller that releases the
+ * lease after stopping cannot have that release overwritten by a late renewal.
  */
 export const startStepLeaseRefresh = (
   stepId: string,
   leaseMs: number,
   refresh: (expiresAt: Date) => Promise<void>
-): (() => void) => {
+): (() => Promise<void>) => {
   // Half the lease, and never more. The floor is there to stop a short lease
   // spinning the timer, but it may not be applied as a maximum: a lease under
   // twice the floor would then be renewed for the first time after it had
@@ -49,8 +54,9 @@ export const startStepLeaseRefresh = (
     )
   }
 
+  let inFlight: Promise<void> = Promise.resolve()
   const timer = setInterval(() => {
-    refresh(new Date(Date.now() + leaseMs)).catch((error) =>
+    inFlight = refresh(new Date(Date.now() + leaseMs)).catch((error) =>
       getSingletonServices()?.logger?.warn(
         `Workflow step ${stepId}: could not refresh its lease; another worker may take the step`,
         error
@@ -58,5 +64,23 @@ export const startStepLeaseRefresh = (
     )
   }, interval)
   timer.unref?.()
-  return () => clearInterval(timer)
+  return async () => {
+    clearInterval(timer)
+    await inFlight
+  }
+}
+
+/**
+ * Who a `running` step belongs to, for a resumed run that meets it. `held` is a
+ * dispatch still working it. `lapsed` is one that died: the step is dispatched
+ * again but left `running`, so the claim counts it as another attempt rather
+ * than a first run — a step that kills its worker every time then runs out.
+ */
+export const runningStepLease = (
+  stepState: StepState
+): 'held' | 'lapsed' | undefined => {
+  if (stepState.status !== 'running' || stepState.leaseExpiresAt == null) {
+    return undefined
+  }
+  return isStepLeaseLive(stepState.leaseExpiresAt) ? 'held' : 'lapsed'
 }

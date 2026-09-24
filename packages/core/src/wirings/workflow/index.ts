@@ -8,6 +8,7 @@ export {
   WorkflowApprovalResolvedError,
   WorkflowStepFunctionMismatchError,
   WorkflowStepLeaseExpiredError,
+  WorkflowStepSupersededError,
 } from './workflow-errors.js'
 export {
   DEFAULT_STEP_RETRIES,
