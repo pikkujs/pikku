@@ -1,5 +1,14 @@
 # @pikku/skills
 
+## 0.12.38
+
+### Patch Changes
+
+- b31675a: pikku-scenario: how a custom dev runner bakes the actor switcher's env, and why SCENARIO_ACTOR_SECRET must be set rather than minted
+- 237c061: pikku-build: link the console at the person's technical level (local console until deploy, then the Fabric stage's) and offer a picture of the main screens
+- 0672bdd: pikku-build: print the app, API and console links whenever the dev stack comes up and at every hand-over
+- b3e5443: OpenAPI onboarding in the skills: pikku-build picks the auth mode and documents the auth-config format and the matching sign-in or connect screen, and keeps a BUILD-REPORT.md sent with the user's okay; pikku-addon's OpenAPI reference follows the one-command install; pikku-auth documents login/username delegated sign-in.
+
 ## 0.12.37
 
 ### Patch Changes

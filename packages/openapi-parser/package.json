@@ -1,6 +1,6 @@
 {
   "name": "@pikku/openapi-parser",
-  "version": "0.12.22",
+  "version": "0.12.23",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",

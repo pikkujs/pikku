@@ -1,3 +1,58 @@
+## 0.12.163
+
+### Patch Changes
+
+- b16645a: `pikku new addon --openapi` is one command: it takes a URL or path, --openapi-header, --tags/--include/--exclude and --auth user|shared|none, picks the auth mode from the spec (delegated with --auth-config), refuses a spec without machine-readable auth, writes a valid addon config with icon and forceRequiredServices, and inside an app installs the addon: dependencies, a wireAddon file with expose, Better Auth wiring and the base-URL env entry, then install and build.
+- 0210e96: Review fixes for the OpenAPI addon onboarding:
+
+  - A delegated sign-in whose email the upstream did not return, including a login typed as an email, never links to an existing user. An authenticator that omits `syntheticEmail` counts as synthetic.
+  - `pikkuActor` credentials take an optional `remove`, which drops a credential the environment no longer sets. The actor log line names the user id, not the email.
+  - Basic credentials are UTF-8 encoded, and a Swagger 2 `application` OAuth flow keeps its token URL.
+  - `pikku new addon` writes a `file:` path relative to each package when the app is not a workspace, and reports an auth.ts factory it cannot edit instead of half-wiring it.
+  - The inspector reads an addon from the package that declares it before the root.
+  - The dev credentials key file is created exclusively, so two `pikku dev` processes agree on one key.
+
+- 86c2f1d: `pikku dev` keeps stored credentials in the dev database, so connected accounts and delegated sign-ins survive a restart. The key comes from `PIKKU_DEV_CREDENTIALS_KEY`, or is generated once into `.pikku-runtime/dev-credentials.key`. A project that declares a credential now gets the credential tables in its generated migration; without them dev falls back to the in-memory store and says so once.
+- f6c1dd6: `pikku all` writes `db/schema.gen.ts` from the migrations when it is missing, so `#pikku/db/schema.gen.js` resolves on a fresh project before `pikku db migrate` has run. `pikku db migrate` no longer logs a Better Auth "Database schema mismatch" for the scratch database it reads the auth schema from.
+- 894e57a: The console's knowledge page keeps the open note in `?id=`, so a note or a milestone plan can be linked to. For example, `/console/knowledge?id=milestones/01-foo.plan.json` opens that milestone with its plan. `pikku knowledge plan set`, `show` and `progress` print that link, and add it to their JSON output as `consoleUrl`. The link uses the running `pikku dev` server's address when there is one, and `http://localhost:3000` otherwise.
+- 8167c4b: fix(cli): reading the auth schema survives a plugin whose init rejects
+
+  Better Auth 1.7 made constructing an auth instance do I/O. A plugin's `init`
+  starts real work and does not wait for it — the OAuth provider behind
+  `@better-auth/mcp` seeds its `oauthResource` rows that way.
+
+  Schema introspection builds the instance against a throwaway database purely to
+  read `options`, so that work has nowhere to go: the auth tables do not exist
+  yet, and on the SQLite path the handle is closed as soon as the options have
+  been read. The seed then rejected with nothing awaiting it, and the default for
+  an unhandled rejection is to terminate the process — so `pikku db generate` and
+  the `pikku db migrate` drift check died on `database is not open`, from a write
+  the schema derivation never wanted, in any project that merely configured MCP.
+
+  The rejection is now reported and stepped over. Whatever the plugin was doing
+  says nothing about the shape of its tables, which is all that is being read.
+
+- a8cf3a1: The generated `usePikkuQuery` no longer retries a 4xx. A missing record or a refused permission shows at once instead of after three retries. Pass `retry` in the options to override it.
+- Updated dependencies [2f317d0]
+- Updated dependencies [55ab4d1]
+- Updated dependencies [f6c1dd6]
+- Updated dependencies [0210e96]
+- Updated dependencies [e84abd0]
+- Updated dependencies [5442d94]
+- Updated dependencies [b31675a]
+- Updated dependencies [86c2f1d]
+- Updated dependencies [da9b931]
+- Updated dependencies [38d4f65]
+- Updated dependencies [a8cf3a1]
+- Updated dependencies [237c061]
+- Updated dependencies [0672bdd]
+- Updated dependencies [b3e5443]
+  - @pikku/better-auth@0.12.47
+  - @pikku/inspector@0.12.88
+  - @pikku/openapi-parser@0.12.23
+  - @pikku/core@0.12.121
+  - @pikku/skills@0.12.38
+
 ## 0.12.162
 
 ### Patch Changes

@@ -1,3 +1,9 @@
+## 0.12.121
+
+### Patch Changes
+
+- e84abd0: Add CredentialRejectedError: an upstream refused the stored per-user credential, so the user must sign in again or reconnect it.
+
 ## 0.12.120
 
 ### Patch Changes
