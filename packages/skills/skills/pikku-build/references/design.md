@@ -54,13 +54,18 @@ allowed is landing on one because it was nearest to hand.
 ## Offer to draw the screens before you build them
 
 Before the first milestone, **ask** whether they want to see the screens first.
-One question, in §1's round, not a gate of its own:
+One question, in §1's round, not a gate of its own, with yes marked
+recommended every time:
 
-> Want me to mock the main screens as a page you can look at before I build
-> anything? It takes a few minutes and it is much cheaper to change a picture
-> than a built screen.
+> Before I build, shall I show you a picture of the main screens so you can say
+> "yes, like that" or "no, move this"? (Recommended: it takes a few minutes and
+> changing a picture is much cheaper than changing a built app.)
 
-If they decline, build; the direction in words is enough to be accountable to.
+Never say "mock", "mockup" or "wireframe" to the person; most people do not
+know the words. They stay the technical terms in this file only.
+
+If they do not answer, draw it anyway and build from it. Only an explicit no
+skips it; then build, and the direction in words is enough to be accountable to.
 If they accept, this is the cheapest decision in the project — a picture of eight
 screens costs a fraction of eight built screens, and it is the only point where
 "that is not what I meant" is free.
