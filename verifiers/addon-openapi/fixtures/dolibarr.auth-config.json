@@ -1,0 +1,18 @@
+{
+  "headerName": "DOLAPIKEY",
+  "headerFormat": "raw",
+  "delegated": {
+    "loginPath": "/login",
+    "credentials": ["login", "password"],
+    "tokenPath": "success.token",
+    "identity": { "path": "/users/info" },
+    "claims": {
+      "externalId": "id",
+      "email": "email",
+      "name": ["firstname", "lastname"],
+      "role": "admin",
+      "tenantId": "entity"
+    },
+    "roles": { "1": "dolibarr-admin" }
+  }
+}

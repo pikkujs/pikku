@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: Open Weather
+  version: 1.0.0
+servers:
+  - url: https://{region}.weather.example.com/{version}
+    variables:
+      region:
+        default: eu
+        enum: [eu, us]
+      version:
+        default: v1
+paths:
+  /forecast:
+    get:
+      operationId: getForecast
+      tags: [forecast]
+      parameters:
+        - name: city
+          in: query
+          required: true
+          schema: { type: string }
+        - name: days
+          in: query
+          schema: { type: [integer, "null"] }
+      responses:
+        '200':
+          description: Forecast
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  city: { type: string }
+                  days:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date: { type: string, format: date }
+                        high: { type: number }
+                        low: { type: [number, "null"] }
+  /stations:
+    get:
+      operationId: listStations
+      tags: [stations]
+      responses:
+        '200':
+          description: Stations
+  /ping:
+    get:
+      operationId: ping
+      tags: [health]
+      responses:
+        '200':
+          description: pong
+          content:
+            text/plain:
+              schema: { type: string }
