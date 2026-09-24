@@ -437,10 +437,12 @@ export const writeVirtualUserSchedule = async ({
     enabled === undefined || disposition === undefined
       ? await scheduleStore.get(persona)
       : null
+  const created =
+    disposition === undefined && !current ? declared.disposition : undefined
   if (enabled ?? current?.enabled) {
     refuseInProduction(
       persona,
-      disposition ?? current?.disposition ?? declared.disposition ?? 'realistic',
+      disposition ?? current?.disposition ?? created ?? 'realistic',
       config,
       environments,
       environment
@@ -449,7 +451,7 @@ export const writeVirtualUserSchedule = async ({
   return scheduleStore.set({
     persona,
     enabled,
-    disposition: disposition as VirtualUserDisposition | undefined,
+    disposition: (disposition ?? created) as VirtualUserDisposition | undefined,
     goals,
     budget:
       budget === undefined

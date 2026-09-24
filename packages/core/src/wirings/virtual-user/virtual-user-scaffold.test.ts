@@ -639,6 +639,22 @@ describe('writeVirtualUserSchedule', () => {
     assert.equal(writes.length, 1)
   })
 
+  // A new row takes the persona's declared disposition, so the one checked is
+  // the one every tick will run with.
+  test('a new cadence is written with the disposition that was checked', async () => {
+    const { store, writes } = scheduleStore()
+    await writeVirtualUserSchedule({
+      store,
+      personas: {
+        susan: { ...personas.susan, disposition: 'accountable' },
+      } as unknown as ScaffoldPersonas,
+      persona: 'susan',
+      enabled: true,
+      ...production,
+    })
+    assert.equal(writes[0].disposition, 'accountable')
+  })
+
   // Turning one off, or editing one that is off, is never a run, so it is never
   // refused — or a probing cadence left over in production could not be stopped.
   test('disabling or editing an off cadence is allowed in production', async () => {
