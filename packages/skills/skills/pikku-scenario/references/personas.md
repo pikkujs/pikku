@@ -5,7 +5,7 @@ A **persona** is a person your product is for; an **actor** is one body that sig
 - Two people of the same kind are two entries, not one persona with two logins — "you see yours, not theirs" is only testable with two customers.
 - Never write an email address: each is derived from the persona id and `scenarios.emailDomain`, and a hand-written one signs in as somebody who was never created.
 - `roles` is typechecked against `defineSystemRole`; an undeclared role is a build error.
-- A person who is only ever acted *upon* — the account an admin bans — sets `runnable: false`: declared and seeded, never signed in, because a run as them would race the scenario that acts on them.
+- A person who is only ever acted _upon_ — the account an admin bans — sets `runnable: false`: declared and seeded, never signed in, because a run as them would race the scenario that acts on them.
 - A persona holds only what is true of that kind of person for the app's whole lifetime (`name`, `jobTitle`, `description`, `personality`, `roles`, `goals`, `disposition`). What someone is trying to get done, and the circumstances they are doing it in, belong to the **scenario**, not to them.
 
 ## Declaring personas in TypeScript
@@ -49,6 +49,39 @@ A project that never declares a persona keeps working: a scenario that names no 
 
 - `environments.<name>.apiUrl` is required. `signInPath` defaults to `/auth/sign-in/actor`, `rpcPath` to `/rpc`.
 - **`SCENARIO_ACTOR_SECRET` is an environment variable and never goes in `pikku.config.json`.** It signs actors in. `pikku scenario run` throws without it; a server auto-building actors warns and runs without them.
+
+## Actors that call a third-party API
+
+An addon generated from an upstream API (Dolibarr, a CRM, a calendar) calls it
+with the signed-in user's own credential. An actor has none until one is stored
+for it, so every step that reaches the addon fails with `No <X> session`. Give
+the `actor` plugin the credential names and a store, and each actor carries its
+upstream credential into every session:
+
+```ts
+pikkuActor({
+  secret: SCENARIO_ACTOR_SECRET,
+  allowSignIn: ALLOW_ACTOR_SIGN_IN,
+  credentials: {
+    names: ['dolibarr'],
+    store: (name, value, userId) => credentialService.set(name, value, userId),
+  },
+})
+```
+
+At each actor sign-in the plugin reads `ACTOR_CREDENTIAL_<PERSONA>_<NAME>` —
+`dan` + `dolibarr` is `ACTOR_CREDENTIAL_DAN_DOLIBARR` — and stores it with
+`credentialService.set` for that actor. A bare value is stored as `{ token }`
+(what a delegated or bearer credential holds); a JSON object is stored as-is,
+e.g. `{"apiKey":"…"}` for an API-key credential. Unset means the actor simply
+has no upstream credential.
+
+- **Values live in `.env` (or CI secrets), never in `personas.ts` or code.**
+  Use a dedicated upstream test account per persona, not a real person's.
+- `read` defaults to `process.env`; a Worker passes `(key) => variables.get(key)`.
+- A malformed JSON value refuses the sign-in with a 500 that names the variable.
+- A delegated token expires upstream like any other; re-signing the actor
+  in re-stores whatever the variable holds now.
 
 ## The same actors sign a human in
 

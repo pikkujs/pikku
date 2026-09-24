@@ -45,6 +45,66 @@ export interface ActorPluginOptions {
   allowSignIn?: string
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
+  /**
+   * Upstream credentials an actor carries into its session, e.g. the token an
+   * addon calls a third-party API with. Read at every sign-in from
+   * `ACTOR_CREDENTIAL_<PERSONA>_<NAME>`, so a value never lives in code.
+   */
+  credentials?: ActorCredentialsOptions
+}
+
+export interface ActorCredentialsOptions {
+  /** Credential names to look up, as the addon declares them (`defineCredential({ name })`). */
+  names: string[]
+  /** Persist one credential for the actor — typically `credentialService.set(name, value, userId)`. */
+  store: (name: string, value: unknown, userId: string) => Promise<void>
+  /** Defaults to `process.env`. A Worker passes `(key) => variables.get(key)`. */
+  read?: (key: string) => string | undefined | Promise<string | undefined>
+}
+
+const envSegment = (value: string) =>
+  value.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase()
+
+/** `dan@actors.local` + `dolibarr` → `ACTOR_CREDENTIAL_DAN_DOLIBARR`. */
+export const actorCredentialEnvKey = (email: string, name: string) =>
+  `ACTOR_CREDENTIAL_${envSegment(email.split('@')[0]!)}_${envSegment(name)}`
+
+/** A JSON object is stored as-is; anything else is a bare token, stored as `{ token }`. */
+export const parseActorCredential = (raw: string): unknown => {
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('{')) {
+    try {
+      return JSON.parse(trimmed)
+    } catch {
+      throw new Error('actor credential looks like JSON but does not parse')
+    }
+  }
+  return { token: trimmed }
+}
+
+const storeActorCredentials = async (
+  options: ActorCredentialsOptions,
+  email: string,
+  userId: string
+): Promise<string[]> => {
+  const read = options.read ?? ((key: string) => process.env[key])
+  const stored: string[] = []
+  for (const name of options.names) {
+    const key = actorCredentialEnvKey(email, name)
+    const raw = await read(key)
+    if (!raw) continue
+    let value: unknown
+    try {
+      value = parseActorCredential(raw)
+    } catch (e) {
+      throw new APIError('INTERNAL_SERVER_ERROR', {
+        message: `${key}: ${(e as Error).message}`,
+      })
+    }
+    await options.store(name, value, userId)
+    stored.push(name)
+  }
+  return stored
 }
 
 /**
@@ -177,6 +237,18 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
             throw new APIError('INTERNAL_SERVER_ERROR', {
               message: 'Failed to create actor session',
             })
+          }
+          if (options.credentials) {
+            const stored = await storeActorCredentials(
+              options.credentials,
+              email,
+              user.id
+            )
+            if (stored.length > 0) {
+              logger.info(
+                `actor ${email} carries upstream credentials: ${stored.join(', ')}`
+              )
+            }
           }
           await setSessionCookie(ctx, { session, user: user as any })
           return ctx.json({

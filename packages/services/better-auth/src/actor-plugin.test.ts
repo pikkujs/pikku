@@ -5,7 +5,11 @@ import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import { deriveActorSecret } from '@pikku/core/services'
 
-import { pikkuActor } from './actor-plugin.js'
+import {
+  actorCredentialEnvKey,
+  parseActorCredential,
+  pikkuActor,
+} from './actor-plugin.js'
 import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
   ACTOR_SIGN_IN_OPT_IN_VALUE,
@@ -385,5 +389,84 @@ describe('stampActorFlag', () => {
       stampActorFlag({ userId: 'u1', actor: false }, { actor: true }),
       { userId: 'u1', actor: false }
     )
+  })
+})
+
+describe('actor upstream credentials', () => {
+  beforeEach(() => {
+    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+  })
+  afterEach(clearGateEnv)
+
+  const signInWith = async (env: Record<string, string>) => {
+    const stored: Array<[string, unknown, string]> = []
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = betterAuth({
+      baseURL: 'http://localhost:3000',
+      secret: 'better-auth-test-secret',
+      database: memoryAdapter(db),
+      emailAndPassword: { enabled: true },
+      plugins: [
+        pikkuActor({
+          secret: ROOT,
+          logger: recordingLogger(),
+          credentials: {
+            names: ['dolibarr', 'calendar'],
+            store: async (name, value, userId) => {
+              stored.push([name, value, userId])
+            },
+            read: (key) => env[key],
+          },
+        }),
+      ],
+    })
+    const email = 'dan@actors.local'
+    const res = await signInActor(auth, {
+      email,
+      secret: await credentialFor(email),
+    })
+    return { res, stored, db }
+  }
+
+  test('derives the env key from the persona id and credential name', () => {
+    assert.equal(
+      actorCredentialEnvKey('dan@actors.local', 'dolibarr'),
+      'ACTOR_CREDENTIAL_DAN_DOLIBARR'
+    )
+    assert.equal(
+      actorCredentialEnvKey('ops-lead@actors.local', 'googleBooks'),
+      'ACTOR_CREDENTIAL_OPS_LEAD_GOOGLEBOOKS'
+    )
+  })
+
+  test('a bare value is a token, a JSON object is stored as-is', () => {
+    assert.deepEqual(parseActorCredential(' abc '), { token: 'abc' })
+    assert.deepEqual(parseActorCredential('{"apiKey":"k"}'), { apiKey: 'k' })
+    assert.throws(() => parseActorCredential('{nope'))
+  })
+
+  test('stores each configured credential for the signed-in actor', async () => {
+    const { res, stored, db } = await signInWith({
+      ACTOR_CREDENTIAL_DAN_DOLIBARR: 'tok-123',
+    })
+    assert.equal(res.status, 200)
+    assert.deepEqual(stored, [
+      ['dolibarr', { token: 'tok-123' }, db.user[0].id],
+    ])
+  })
+
+  test('stores nothing when no value is set', async () => {
+    const { res, stored } = await signInWith({})
+    assert.equal(res.status, 200)
+    assert.deepEqual(stored, [])
+  })
+
+  test('refuses sign-in on a malformed JSON value', async () => {
+    const { res, stored } = await signInWith({
+      ACTOR_CREDENTIAL_DAN_CALENDAR: '{broken',
+    })
+    assert.equal(res.status, 500)
+    assert.match(await res.text(), /ACTOR_CREDENTIAL_DAN_CALENDAR/)
+    assert.deepEqual(stored, [])
   })
 })
