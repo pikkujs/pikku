@@ -120,16 +120,14 @@ generated functions through `ref()`.
 Whenever pikku or a skill costs you time — a command that failed on a fresh
 tree, a skill that described a flag the CLI does not have, generated code you
 had to fix by hand — add an entry to `BUILD-REPORT.md` at the repo root as it
-happens: what you ran, what you expected, what happened, and the workaround.
-Leave out secrets, tokens and customer data.
+happens. The `pikku-report` skill has the entry format. Leave out secrets,
+tokens and customer data.
 
-At hand-over, show the file and ask the user whether to send it. Only with
-their okay, send each entry with `pikku fabric report --stdin` (JSON on stdin;
-`"kind": "product"` when pikku behaved wrongly, `"kind": "harness"` with
-`"skill"` and `"passage"` when a skill misled you). The `pikku-report` skill
-has the fields. When the CLI is not signed in to Fabric, the report is queued
-locally rather than sent: say so, and that `pikku fabric findings flush` sends
-the queue once they sign in. Do not retry or file it twice.
+It is the last thing in the hand-over, after the app runs (and is deployed, if
+they chose to): run `pikku fabric report`. It sends only when the user has said
+Always; otherwise it prints what it would send, and you ask them — Yes, No,
+Always or Never — and run it again with `--consent <answer>`. If it says
+reporting is off, do not ask.
 
 ## Who you are talking to
 

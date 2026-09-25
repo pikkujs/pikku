@@ -1,121 +1,119 @@
+import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { createInterface } from 'node:readline/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
 import { collectReportEnvironment } from '../lib/report-environment.js'
 import {
-  FindingInput,
-  buildFindingPayload,
-  parseFinding,
-  parseFindingJson,
-  postFinding,
-  renderReceipt,
-  validateFinding,
-  type FindingPayload,
-} from '../lib/finding.js'
-import { flushSpool, readSpool, spoolFinding } from '../lib/finding-spool.js'
+  REPORT_ANSWERS,
+  REPORT_MAX_BYTES,
+  parseAnswer,
+  postReport,
+  readConsent,
+  renderCard,
+  saveConsent,
+  type ReportAnswer,
+} from '../lib/report.js'
 import { FabricPreconditionError } from '../lib/errors.js'
 
-/**
- * Every field is optional here and the strictness lives in `FindingInput`,
- * because `--stdin` supplies the whole finding at once and the flags then
- * carry nothing. Whichever path was used, the same schema decides whether a
- * finding is well-formed.
- */
-export const FabricReportInput = FindingInput.partial().extend({
-  stdin: z.boolean().optional(),
+export const FabricReportInput = z.object({
+  file: z.string().optional(),
+  consent: z.string().optional(),
 })
 
 export const FabricReportOutput = z.object({
   sent: z.boolean(),
   reason: z.string().optional(),
-  spooled: z.boolean(),
-  queued: z.number(),
+  needsConsent: z.boolean(),
 })
 
-const readStdin = async (): Promise<string> => {
-  if (process.stdin.isTTY) {
-    throw new FabricPreconditionError(
-      '--stdin expects the finding as JSON on standard input, and nothing was piped in.'
-    )
+const askOnTerminal = async (): Promise<ReportAnswer | null> => {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  try {
+    const answer = await Promise.race([
+      rl.question('Send it? [y]es / [n]o / [a]lways / ne[v]er: '),
+      new Promise<null>((done) => rl.once('close', () => done(null))),
+    ])
+    return answer === null ? null : parseAnswer(answer)
+  } finally {
+    rl.close()
   }
-  const chunks: Buffer[] = []
-  for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk))
-  return Buffer.concat(chunks).toString('utf8')
-}
-
-/**
- * Every path that cannot send holds the finding instead. The states that stop
- * a send — logged out, fabric unreachable — are the states a finding is most
- * likely to be describing, so dropping it loses exactly the reports worth
- * having.
- */
-const hold = async (
-  payload: FindingPayload,
-  reason: string,
-  projectId: string | null,
-  message: string
-) => {
-  await spoolFinding({ payload, reason, projectId })
-  const queued = (await readSpool()).length
-  console.log(
-    `[fabric] ${message} — finding queued (${queued} waiting, sent on your next report)`
-  )
-  return { sent: false, reason, spooled: true, queued }
 }
 
 export const FabricReport = pikkuSessionlessFunc({
   description:
-    'Report a finding — something about pikku that cost time — to fabric.',
+    'Send a build report — what pikku got wrong along the way — to the Pikku team.',
   input: FabricReportInput,
   output: FabricReportOutput,
-  func: async (_services, { stdin, ...flags }) => {
-    const parsed = stdin
-      ? parseFindingJson(await readStdin())
-      : parseFinding(flags)
-    if ('problems' in parsed) {
-      throw new FabricPreconditionError(parsed.problems.join('\n'))
+  func: async (_services, { file = 'BUILD-REPORT.md', consent }) => {
+    let answer: ReportAnswer | null = null
+    if (consent !== undefined) {
+      answer = parseAnswer(consent)
+      if (!answer) {
+        throw new FabricPreconditionError(
+          `--consent is one of ${REPORT_ANSWERS.join(', ')}.`
+        )
+      }
     }
 
-    const problems = validateFinding(parsed.finding)
-    if (problems.length > 0) {
-      throw new FabricPreconditionError(problems.join('\n'))
+    const saved = await readConsent()
+    if (!answer && saved === 'never') {
+      console.log('[fabric] reporting is off — nothing sent')
+      return { sent: false, reason: 'never', needsConsent: false }
     }
 
-    const payload = buildFindingPayload(
-      parsed.finding,
-      await collectReportEnvironment()
-    )
-    console.log(renderReceipt(payload))
-
-    const ctx = await resolveApiContext()
-    if (!ctx.token) {
-      return hold(payload, 'not-logged-in', ctx.projectId, 'not logged in')
+    const path = resolve(file)
+    if (!existsSync(path)) {
+      throw new FabricPreconditionError(`No report at ${path}.`)
     }
-
-    const flushed = await flushSpool({
-      apiUrl: ctx.apiUrl,
-      token: ctx.token,
-      projectId: ctx.projectId,
-    })
-    if (flushed.sent > 0) {
-      console.log(`[fabric] sent ${flushed.sent} finding(s) held from earlier`)
+    const report = await readFile(path, 'utf8')
+    if (!report.trim()) {
+      console.log('[fabric] the report is empty — nothing to send')
+      return { sent: false, reason: 'empty', needsConsent: false }
     }
-
-    const result = await postFinding({
-      apiUrl: ctx.apiUrl,
-      token: ctx.token,
-      projectId: ctx.projectId,
-      payload,
-    })
-    if (!result.sent) {
-      return hold(
-        payload,
-        result.reason ?? 'send-failed',
-        ctx.projectId,
-        `fabric did not accept it (${result.reason})`
+    if (Buffer.byteLength(report) > REPORT_MAX_BYTES) {
+      throw new FabricPreconditionError(
+        `${file} is over ${REPORT_MAX_BYTES / 1000} KB. A report describes what went wrong; leave out logs and dumps.`
       )
     }
-    console.log('[fabric] finding sent')
-    return { sent: true, spooled: false, queued: flushed.remaining }
+
+    const { apiUrl } = await resolveApiContext()
+    const payload = {
+      report,
+      environment: await collectReportEnvironment(),
+      reportedAt: new Date().toISOString(),
+    }
+    console.log(renderCard({ file, payload, apiUrl }))
+
+    if (!answer && saved === 'always') answer = 'always'
+    if (!answer && process.stdin.isTTY) answer = await askOnTerminal()
+    if (!answer) {
+      console.log(
+        `[fabric] not sent. Ask the user whether to send it (yes / no / always / never), then run: pikku fabric report ${file} --consent <answer>`
+      )
+      return { sent: false, reason: 'unanswered', needsConsent: true }
+    }
+
+    if ((answer === 'always' || answer === 'never') && answer !== saved) {
+      await saveConsent(answer)
+    }
+    if (answer === 'no' || answer === 'never') {
+      console.log(
+        answer === 'never'
+          ? '[fabric] not sent, and reporting is now off'
+          : '[fabric] not sent'
+      )
+      return { sent: false, reason: answer, needsConsent: false }
+    }
+
+    const result = await postReport({ apiUrl, payload })
+    if (!result.sent) {
+      console.log(`[fabric] could not send the report (${result.reason})`)
+      return { sent: false, reason: result.reason, needsConsent: false }
+    }
+    console.log('[fabric] report sent — thank you')
+    return { sent: true, needsConsent: false }
   },
 })
