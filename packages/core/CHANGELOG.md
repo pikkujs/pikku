@@ -1,3 +1,10 @@
+## 0.12.122
+
+### Patch Changes
+
+- 3511717: A virtual user run refused for an unknown or acted-upon persona now answers 400, and one refused for a probing disposition in production answers 403, carrying the reason instead of a bare 500 errorId.
+- 3511717: Enabling a virtual user schedule whose disposition production refuses is now refused when written (403), rather than saved and then failing on every tick with nobody watching. Disabling one, or editing one that is off, is always allowed.
+
 ## 0.12.121
 
 ### Patch Changes

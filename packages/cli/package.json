@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.163",
+  "version": "0.12.164",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -38,7 +38,7 @@
     "@jridgewell/trace-mapping": "^0.3.31",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
     "@pikku/ai-vercel": "^0.12.14",
-    "@pikku/better-auth": "^0.12.47",
+    "@pikku/better-auth": "^0.12.48",
     "@pikku/bun-server": "^0.12.13",
     "@pikku/code-edit": "^0.12.2",
     "@pikku/deploy": "^0.12.11",
@@ -52,7 +52,7 @@
     "@pikku/node-http-server": "^0.12.17",
     "@pikku/openapi-parser": "^0.12.23",
     "@pikku/schedule": "^0.12.8",
-    "@pikku/skills": "^0.12.38",
+    "@pikku/skills": "^0.12.39",
     "@pikku/websocket": "^0.12.5",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
@@ -76,14 +76,14 @@
     "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.121",
+    "@pikku/core": "^0.12.122",
     "@pikku/playwright": "^0.12.85",
     "@pikku/ws": "^0.12.10",
     "better-auth": "^1.7.5",
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.121",
+    "@pikku/core": "^0.12.122",
     "@pikku/playwright": "^0.12.85",
     "@pikku/ws": "^0.12.10",
     "@playwright/test": "^1.50.0",
