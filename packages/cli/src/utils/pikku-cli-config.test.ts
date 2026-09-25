@@ -12,6 +12,7 @@ import {
   normalizeMetaLocale,
   tryGetPikkuCLIConfig,
 } from './pikku-cli-config.js'
+import { isExpectedError } from '@pikku/core/errors'
 
 describe('getPikkuCLIConfig', () => {
   const tempDirs: string[] = []
@@ -461,6 +462,39 @@ describe('tryGetPikkuCLIConfig', () => {
     process.chdir(root)
     await assert.rejects(() =>
       tryGetPikkuCLIConfig(silentLogger, undefined, [])
+    )
+  })
+})
+
+describe('getPikkuCLIConfig outside a project', () => {
+  const tempDirs: string[] = []
+
+  after(() => {
+    for (const dir of tempDirs) {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  const silentLogger = { error() {}, warn() {}, info() {} } as never
+
+  test('a missing config is an instruction, not a stack trace', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-no-config-'))
+    tempDirs.push(root)
+    await mkdir(join(root, '.git'), { recursive: true })
+
+    process.chdir(root)
+    await assert.rejects(
+      () => getPikkuCLIConfig(silentLogger, undefined, []),
+      (error: unknown) => {
+        assert.ok(
+          error instanceof PikkuCLIConfigError,
+          "a missing config must be an expected error, or formatCLIError prints the loader's frames in front of the one sentence that says what to do"
+        )
+        assert.ok(isExpectedError(error))
+        assert.match((error as Error).message, /No pikku\.config\.json/)
+        assert.match((error as Error).message, /--config <path>/)
+        return true
+      }
     )
   })
 })
