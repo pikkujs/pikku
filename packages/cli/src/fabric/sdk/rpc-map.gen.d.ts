@@ -5,7764 +5,8583 @@
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
 
-
 import type { ScenarioHttpResponse } from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/services/personas-service'
-import type { AgentMessage, AgentRunRow, AgentThread } from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/wirings/agent/agent.types'
+import type {
+  AgentMessage,
+  AgentRunRow,
+  AgentThread,
+} from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/wirings/agent/agent.types'
 import type { WorkflowRun } from '.bun/@pikku+core@0.12.106/node_modules/@pikku/core/dist/wirings/workflow/workflow.types'
 
 export type AcceptInvitationInput = {
-    token: string;
+  token: string
 }
 export type AcceptInvitationOutput = {
-    organizationId: string;
-    organizationSlug: string;
+  organizationId: string
+  organizationSlug: string
 }
 export type AcknowledgeStageSealingKeyInput = {
-    stageId: string;
-    keyId: string;
+  stageId: string
+  keyId: string
 }
 export type AcknowledgeStageSealingKeyOutput = {
-    keyId: string;
+  keyId: string
 }
 export type ActorBootsSandboxInput = {
-    projectId: string;
-    sizeSlug: string;
-    branch: string;
-    timeoutMs: number;
+  projectId: string
+  sizeSlug: string
+  branch: string
+  timeoutMs: number
 }
 export type ActorBootsSandboxOutput = {
-    sandboxId: string;
-    sandboxSlug: string;
-    hostname: string;
+  sandboxId: string
+  sandboxSlug: string
+  hostname: string
 }
 export type ActorProvisionsProjectInput = {
-    name: string;
-    tier: "free" | "pro" | "team";
-    templateSlug: string;
+  name: string
+  tier: 'free' | 'pro' | 'team'
+  templateSlug: string
 }
 export type ActorProvisionsProjectOutput = {
-    organizationId: string;
-    orgSlug: string;
-    projectId: string;
-    projectSlug: string;
+  organizationId: string
+  orgSlug: string
+  projectId: string
+  projectSlug: string
 }
 export type ActorTearsDownInput = {
-    projectId: string;
-    sandboxId: string;
+  projectId: string
+  sandboxId: string
 }
 export type ActorTearsDownOutput = {
-    sandboxDeleted: boolean;
-    projectDeleted: boolean;
+  sandboxDeleted: boolean
+  projectDeleted: boolean
 }
-export type AddonInstallRequestsSecretsScenarioOutput = { installed: string[]; declaredSecrets: number; }
+export type AddonInstallRequestsSecretsScenarioOutput = {
+  installed: string[]
+  declaredSecrets: number
+}
 export type AddOrganizationMemberInput = {
-    organizationId: string;
-    email: string;
-    role: "admin" | "member";
+  organizationId: string
+  email: string
+  role: 'admin' | 'member'
 }
 export type AddOrganizationMemberOutput = {
-    userId: string;
+  userId: string
 }
 export type AddStageCustomHostnameInput = {
-    stageId: string;
-    hostname: string;
-    target: "api" | "app";
-    appSlug?: (string | null) | undefined;
+  stageId: string
+  hostname: string
+  target: 'api' | 'app'
+  appSlug?: (string | null) | undefined
 }
 export type AddStageCustomHostnameOutput = {
-    customHostnameId: string;
-    cfCustomHostnameId: string;
-    status: "pending" | "validating" | "active" | "failed";
-    appSlug: string | null;
-    cnameTarget: string;
-    ownershipVerification: {
-        name?: string | undefined;
-        type?: string | undefined;
-        value?: string | undefined;
-    } | null;
+  customHostnameId: string
+  cfCustomHostnameId: string
+  status: 'pending' | 'validating' | 'active' | 'failed'
+  appSlug: string | null
+  cnameTarget: string
+  ownershipVerification: {
+    name?: string | undefined
+    type?: string | undefined
+    value?: string | undefined
+  } | null
 }
 export type AddTicketCommentInput = {
-    ticketId: string;
-    body: string;
+  ticketId: string
+  body: string
 }
 export type AddTicketCommentOutput = {
-    event: {
-        ticketEventId: string;
-        ticketId: string;
-        kind: "comment" | "progress" | "status_change" | "finding";
-        author: string;
-        boardColumn: string | null;
-        body: string | null;
-        data: unknown | null;
-        createdAt: string;
-    };
+  event: {
+    ticketEventId: string
+    ticketId: string
+    kind: 'comment' | 'progress' | 'status_change' | 'finding'
+    author: string
+    boardColumn: string | null
+    body: string | null
+    data: unknown | null
+    createdAt: string
+  }
 }
 export type AdminCreateOrgInput = {
-    name: string;
-    slug: string;
-    ownerEmail: string;
-    tier: "free" | "pro" | "team" | "enterprise";
+  name: string
+  slug: string
+  ownerEmail: string
+  tier: 'free' | 'pro' | 'team' | 'enterprise'
 }
 export type AdminCreateOrgOutput = {
-    organizationId: string;
-    slug: string;
-    ownerUserId: string;
+  organizationId: string
+  slug: string
+  ownerUserId: string
 }
 export type AdminCreateStripePriceInput = {
-    tier: string;
+  tier: string
 }
 export type AdminCreateStripePriceOutput = {
-    stripePriceId: string;
+  stripePriceId: string
 }
 export type AdminGetGitE2eTokenInput = {}
 export type AdminGetGitE2eTokenOutput = {
-    token: string;
-    username: string;
-    serverUrl: string;
-    org: string;
+  token: string
+  username: string
+  serverUrl: string
+  org: string
 }
 export type AdminGetPlansInput = {}
 export type AdminGetPlansOutput = {
-    plans: {
-        tier: string;
-        priceUsdCents: number;
-        priorityCreditUsdCents: number;
-        stripePriceId: string | null;
-        maxProjects: number;
-        maxStages: number;
-        maxDeployedUnits: number;
-        maxSandboxes: number;
-        maxMembers: number;
-        maxCronJobs: number;
-        allowServerDeploy: boolean;
-        maxInvocations: number;
-        maxStorageGb: number;
-        maxBandwidthGb: number;
-        maxRequestCpuMs: number;
-        logRetentionDays: number;
-        maxDatabaseStorageMb: number;
-        maxDatabaseRowsReadPerMonth: number;
-        maxDatabaseRowsWrittenPerMonth: number;
-        maxDatabaseSyncGb: number;
-    }[];
+  plans: {
+    tier: string
+    priceUsdCents: number
+    priorityCreditUsdCents: number
+    stripePriceId: string | null
+    maxProjects: number
+    maxStages: number
+    maxDeployedUnits: number
+    maxSandboxes: number
+    maxMembers: number
+    maxCronJobs: number
+    allowServerDeploy: boolean
+    maxInvocations: number
+    maxStorageGb: number
+    maxBandwidthGb: number
+    maxRequestCpuMs: number
+    logRetentionDays: number
+    maxDatabaseStorageMb: number
+    maxDatabaseRowsReadPerMonth: number
+    maxDatabaseRowsWrittenPerMonth: number
+    maxDatabaseSyncGb: number
+  }[]
 }
 export type AdminGetStatsInput = {}
 export type AdminGetStatsOutput = {
-    totalUsers: number;
-    totalOrgs: number;
-    totalProjects: number;
-    activeSandboxes: number;
-    totalMachines: number;
-    orgsByPlan: {
-        planTier: string;
-        count: number;
-    }[];
-    recentSignups7d: number;
+  totalUsers: number
+  totalOrgs: number
+  totalProjects: number
+  activeSandboxes: number
+  totalMachines: number
+  orgsByPlan: {
+    planTier: string
+    count: number
+  }[]
+  recentSignups7d: number
 }
 export type AdminGrantOrgCreditInput = {
-    organizationId: string;
-    amountUsdCents?: number | undefined;
-    reason?: string | undefined;
+  organizationId: string
+  amountUsdCents?: number | undefined
+  reason?: string | undefined
 }
 export type AdminGrantOrgCreditOutput = {
-    granted: boolean;
-    grantedUsdMicros: number;
+  granted: boolean
+  grantedUsdMicros: number
 }
-export type AdminImpersonatesNonAdminScenarioOutput = { impersonatedEmail: string; }
-export type AdminKeepsOwnIdentityScenarioOutput = { email: string; }
+export type AdminImpersonatesNonAdminScenarioOutput = {
+  impersonatedEmail: string
+}
+export type AdminKeepsOwnIdentityScenarioOutput = { email: string }
 export type AdminListAppsInput = {
-    search: string;
-    source: "all" | "customer" | "harness";
-    showcaseOnly: boolean;
+  search: string
+  source: 'all' | 'customer' | 'harness'
+  showcaseOnly: boolean
 }
 export type AdminListAppsOutput = {
-    total: number;
-    customerCount: number;
-    harnessCount: number;
-    showcased: number;
-    apps: {
-        appName: string;
-        url: string;
-        projectId: string;
-        projectName: string;
-        projectSlug: string;
-        orgName: string;
-        orgSlug: string;
-        stageId: string;
-        branch: string;
-        version: string;
-        deployMode: string;
-        gitSha: string | null;
-        deployedAt: string | null;
-        showcase: boolean;
-        harness: boolean;
-    }[];
+  total: number
+  customerCount: number
+  harnessCount: number
+  showcased: number
+  apps: {
+    appName: string
+    url: string
+    projectId: string
+    projectName: string
+    projectSlug: string
+    orgName: string
+    orgSlug: string
+    stageId: string
+    branch: string
+    version: string
+    deployMode: string
+    gitSha: string | null
+    deployedAt: string | null
+    showcase: boolean
+    harness: boolean
+  }[]
 }
 export type AdminListMachinesInput = {}
 export type AdminListMachinesOutput = {
-    machines: {
-        hostId: string;
-        hostname: string;
-        privateIp: string;
-        status: string;
-        role: string;
-        agentVersion: string | null;
-        provider: string | null;
-        providerInstanceId: string | null;
-        cpuTotalMillicores: number;
-        memMbTotal: number;
-        diskGbTotal: number;
-        cpuMillicoresFree: number | null;
-        memMbFree: number | null;
-        diskGbFree: number | null;
-        activeSandboxes: number;
-        lastHeartbeatAt: string | null;
-        createdAt: string;
-    }[];
+  machines: {
+    hostId: string
+    hostname: string
+    privateIp: string
+    status: string
+    role: string
+    agentVersion: string | null
+    provider: string | null
+    providerInstanceId: string | null
+    cpuTotalMillicores: number
+    memMbTotal: number
+    diskGbTotal: number
+    cpuMillicoresFree: number | null
+    memMbFree: number | null
+    diskGbFree: number | null
+    activeSandboxes: number
+    lastHeartbeatAt: string | null
+    createdAt: string
+  }[]
 }
 export type AdminListOpenApisInput = {
-    search: string;
-    status: "all" | "enriched" | "unenriched" | "errored";
-    limit: number;
-    offset: number;
+  search: string
+  status: 'all' | 'enriched' | 'unenriched' | 'errored'
+  limit: number
+  offset: number
 }
 export type AdminListOpenApisOutput = {
-    total: number;
-    counts: {
-        total: number;
-        enriched: number;
-        unenriched: number;
-        errored: number;
-        accessVerified: number;
-    };
-    apis: {
-        name: string;
-        version: string;
-        provider: string;
-        title: string;
-        categories: string[];
-        authType: string;
-        perUser: boolean;
-        tokenAcquisition: string | null;
-        apiStatus: string;
-        pricingModel: string;
-        freeTier: boolean | null;
-        accessStatus: string;
-        accessVerified: boolean;
-        enriched: boolean;
-        enrichedAt: string | null;
-        enrichSource: string | null;
-        enrichConfidence: string | null;
-        enrichError: string | null;
-        perUserReasoning: string | null;
-    }[];
+  total: number
+  counts: {
+    total: number
+    enriched: number
+    unenriched: number
+    errored: number
+    accessVerified: number
+  }
+  apis: {
+    name: string
+    version: string
+    provider: string
+    title: string
+    categories: string[]
+    authType: string
+    perUser: boolean
+    tokenAcquisition: string | null
+    apiStatus: string
+    pricingModel: string
+    freeTier: boolean | null
+    accessStatus: string
+    accessVerified: boolean
+    enriched: boolean
+    enrichedAt: string | null
+    enrichSource: string | null
+    enrichConfidence: string | null
+    enrichError: string | null
+    perUserReasoning: string | null
+  }[]
 }
 export type AdminListOrgsInput = {
-    page: number;
-    limit: number;
+  page: number
+  limit: number
 }
 export type AdminListOrgsOutput = {
-    orgs: {
-        organizationId: string;
-        name: string;
-        slug: string;
-        planTier: string;
-        personal: boolean;
-        memberCount: number;
-        balanceMicros: number;
-        createdAt: string;
-    }[];
-    total: number;
+  orgs: {
+    organizationId: string
+    name: string
+    slug: string
+    planTier: string
+    personal: boolean
+    memberCount: number
+    balanceMicros: number
+    createdAt: string
+  }[]
+  total: number
 }
 export type AdminListRuntimeReleasesInput = {}
 export type AdminListRuntimeReleasesOutput = {
-    releases: {
-        runtimeReleaseId: string;
-        runtimeType: string;
-        version: string;
-        commitSha: string | null;
-        imageRef: string | null;
-        artifactKey: string | null;
-        live: boolean;
-        createdAt: string;
-    }[];
+  releases: {
+    runtimeReleaseId: string
+    runtimeType: string
+    version: string
+    commitSha: string | null
+    imageRef: string | null
+    artifactKey: string | null
+    live: boolean
+    createdAt: string
+  }[]
 }
 export type AdminListSandboxesInput = {
-    page: number;
-    limit: number;
-    activeOnly: boolean;
+  page: number
+  limit: number
+  activeOnly: boolean
 }
 export type AdminListSandboxesOutput = {
-    sandboxes: {
-        sandboxId: string;
-        name: string;
-        slug: string;
-        sizeSlug: string;
-        currentStatus: string;
-        projectId: string;
-        projectName: string;
-        orgName: string;
-        orgSlug: string;
-        instanceStatus: string | null;
-        runtimeHostname: string | null;
-        hostId: string | null;
-        hostHostname: string | null;
-        hostPrivateIp: string | null;
-        hostStatus: string | null;
-        hostLastHeartbeatAt: string | null;
-        bootPhase: string | null;
-        sleepBlockers: string[];
-        liveSleepReady: boolean | null;
-        liveSleepBusy: boolean | null;
-        liveSleepReasons: string[];
-        liveSleepLastPath: string | null;
-        liveSleepLastMethod: string | null;
-        liveSleepRecommendedDelaySeconds: number | null;
-        startedAt: string | null;
-        lastActivityAt: string | null;
-        createdAt: string;
-    }[];
-    total: number;
+  sandboxes: {
+    sandboxId: string
+    name: string
+    slug: string
+    sizeSlug: string
+    currentStatus: string
+    projectId: string
+    projectName: string
+    orgName: string
+    orgSlug: string
+    instanceStatus: string | null
+    runtimeHostname: string | null
+    hostId: string | null
+    hostHostname: string | null
+    hostPrivateIp: string | null
+    hostStatus: string | null
+    hostLastHeartbeatAt: string | null
+    bootPhase: string | null
+    sleepBlockers: string[]
+    liveSleepReady: boolean | null
+    liveSleepBusy: boolean | null
+    liveSleepReasons: string[]
+    liveSleepLastPath: string | null
+    liveSleepLastMethod: string | null
+    liveSleepRecommendedDelaySeconds: number | null
+    startedAt: string | null
+    lastActivityAt: string | null
+    createdAt: string
+  }[]
+  total: number
 }
 export type AdminListSentEmailsInput = {
-    to?: string | undefined;
-    template?: string | undefined;
+  to?: string | undefined
+  template?: string | undefined
 }
 export type AdminListSentEmailsOutput = {
-    captured: boolean;
-    emails: {
-        to: string;
-        from: string | null;
-        subject: string | null;
-        template: string | null;
-        html: string | null;
-        text: string | null;
-        sentAt: string;
-    }[];
+  captured: boolean
+  emails: {
+    to: string
+    from: string | null
+    subject: string | null
+    template: string | null
+    html: string | null
+    text: string | null
+    sentAt: string
+  }[]
 }
 export type AdminListUsersInput = {
-    page: number;
-    limit: number;
+  page: number
+  limit: number
 }
 export type AdminListUsersOutput = {
-    users: {
-        userId: string;
-        email: string;
-        name: string | null;
-        orgCount: number;
-        createdAt: string;
-        isAdmin: boolean;
-    }[];
-    total: number;
+  users: {
+    userId: string
+    email: string
+    name: string | null
+    orgCount: number
+    createdAt: string
+    isAdmin: boolean
+  }[]
+  total: number
 }
 export type AdminProvisionTestUserInput = {
-    runId: string;
-    plan: "free" | "pro" | "team";
+  runId: string
+  plan: 'free' | 'pro' | 'team'
 }
 export type AdminProvisionTestUserOutput = {
-    token: string;
-    organizationId: string;
-    userId: string;
-    email: string;
-    username: string;
+  token: string
+  organizationId: string
+  userId: string
+  email: string
+  username: string
 }
-export type AdminRoleManagementScenarioOutput = { promotedWorked: boolean; revokedRefused: boolean; planRestored: boolean; }
-export type AdminRpcRefusesNonAdminScenarioInput = { rpcName: string; body?: unknown; }
-export type AdminRpcRefusesNonAdminScenarioOutput = { refused: true; status: number; }
+export type AdminRoleManagementScenarioOutput = {
+  promotedWorked: boolean
+  revokedRefused: boolean
+  planRestored: boolean
+}
+export type AdminRpcRefusesNonAdminScenarioInput = {
+  rpcName: string
+  body?: unknown
+}
+export type AdminRpcRefusesNonAdminScenarioOutput = {
+  refused: true
+  status: number
+}
 export type AdminSetOrgPlanInput = {
-    organizationId: string;
-    tier: "free" | "pro" | "team" | "enterprise";
+  organizationId: string
+  tier: 'free' | 'pro' | 'team' | 'enterprise'
 }
 export type AdminSetOrgPlanOutput = {
-    updated: boolean;
+  updated: boolean
 }
 export type AdminSetOrgQuotaInput = {
-    organizationId: string;
-    quotaKey: "queues" | "scheduledTasks" | "runtimeMachines";
-    value: number | null;
-    reason?: string | undefined;
+  organizationId: string
+  quotaKey: 'queues' | 'scheduledTasks' | 'runtimeMachines'
+  value: number | null
+  reason?: string | undefined
 }
 export type AdminSetOrgQuotaOutput = {
-    quotaKey: string;
-    value: number;
-    isDefault: boolean;
+  quotaKey: string
+  value: number
+  isDefault: boolean
 }
 export type AdminSetOrgSuspensionGraceInput = {
-    organizationId: string;
-    graceMs: number | null;
+  organizationId: string
+  graceMs: number | null
 }
 export type AdminSetOrgSuspensionGraceOutput = {
-    updated: boolean;
-    graceMs: number;
+  updated: boolean
+  graceMs: number
 }
 export type AdminSetProjectShowcaseInput = {
-    projectId: string;
-    showcase: boolean;
+  projectId: string
+  showcase: boolean
 }
 export type AdminSetProjectShowcaseOutput = {
-    showcase: boolean;
+  showcase: boolean
 }
 export type AdminSetUserRoleInput = {
-    userId: string;
-    role: "user" | "admin";
+  userId: string
+  role: 'user' | 'admin'
 }
 export type AdminSetUserRoleOutput = {
-    updated: boolean;
+  updated: boolean
 }
 export type AdminStartOpenApiEnrichmentInput = {
-    limit: number;
-    only: string[];
-    force: boolean;
+  limit: number
+  only: string[]
+  force: boolean
 }
 export type AdminStartOpenApiEnrichmentOutput = {
-    runId: string;
+  runId: string
 }
-export type AdminStatsServedToPlatformAdminScenarioOutput = { totalUsers: number; }
+export type AdminStatsServedToPlatformAdminScenarioOutput = {
+  totalUsers: number
+}
 export type AdminUpdatePlanStripePriceInput = {
-    tier: string;
-    priceUsdCents: number;
-    priorityCreditUsdCents: number;
-    stripePriceId: string | null;
-    maxProjects: number;
-    maxStages: number;
-    maxDeployedUnits: number;
-    maxSandboxes: number;
-    maxMembers: number;
-    maxCronJobs: number;
-    allowServerDeploy: boolean;
-    maxInvocations: number;
-    maxStorageGb: number;
-    maxBandwidthGb: number;
-    maxRequestCpuMs: number;
-    logRetentionDays: number;
-    maxDatabaseStorageMb: number;
-    maxDatabaseRowsReadPerMonth: number;
-    maxDatabaseRowsWrittenPerMonth: number;
-    maxDatabaseSyncGb: number;
+  tier: string
+  priceUsdCents: number
+  priorityCreditUsdCents: number
+  stripePriceId: string | null
+  maxProjects: number
+  maxStages: number
+  maxDeployedUnits: number
+  maxSandboxes: number
+  maxMembers: number
+  maxCronJobs: number
+  allowServerDeploy: boolean
+  maxInvocations: number
+  maxStorageGb: number
+  maxBandwidthGb: number
+  maxRequestCpuMs: number
+  logRetentionDays: number
+  maxDatabaseStorageMb: number
+  maxDatabaseRowsReadPerMonth: number
+  maxDatabaseRowsWrittenPerMonth: number
+  maxDatabaseSyncGb: number
 }
 export type AdminUpdatePlanStripePriceOutput = {
-    ok: boolean;
+  ok: boolean
 }
 export type AdvanceTicketInput = {
-    ticketId: string;
+  ticketId: string
 }
 export type AdvanceTicketOutput = {
-    card: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    };
+  card: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }
 }
-export type AgentApproveCallerInput = { agentName: string; runId: string; approvals: { toolCallId: string; approved: boolean; }[]; }
-export type AgentApproveCallerOutput = { runId: string; text: string; result?: unknown; threadId: string; usage: { inputTokens: number; outputTokens: number; }; status?: "suspended" | undefined; pendingApprovals?: { toolCallId: string; toolName: string; args: unknown; reason?: string | undefined; runId: string; }[] | undefined; }
-export type AgentCallerInput = { agentName: string; message: string; threadId: string; resourceId: string; }
-export type AgentCallerOutput = { runId: string; text: string; result?: unknown; threadId: string; usage: { inputTokens: number; outputTokens: number; }; status?: "suspended" | undefined; pendingApprovals?: { toolCallId: string; toolName: string; args: unknown; reason?: string | undefined; runId: string; }[] | undefined; }
-export type AgentReadsAttachmentScenarioInput = { kind: "csv" | "png" | "pdf" | "audio"; }
-export type AgentReadsAttachmentScenarioOutput = { kind: string; matched: number; }
-export type AgentResumeCallerInput = { agentName: string; runId: string; toolCallId: string; approved: boolean; }
-export type AgentStreamCallerInput = { agentName: string; message: string; threadId: string; resourceId: string; context?: string | undefined; }
-export type AiBudgetRulesScenarioOutput = { organizationId: string; ruleId: string; memberTargets: number; }
-export type AiKeysAreIndependentPerProviderAndScopeScenarioOutput = { organizationId: string; projectId: string; }
-export type AiKeysRefuseTheRetiredProductionScopeScenarioOutput = { status: number; }
-export type AiKeysScenarioOutput = { organizationId: string; providers: number; }
+export type AgentApproveCallerInput = {
+  agentName: string
+  runId: string
+  approvals: { toolCallId: string; approved: boolean }[]
+}
+export type AgentApproveCallerOutput = {
+  runId: string
+  text: string
+  result?: unknown
+  threadId: string
+  usage: { inputTokens: number; outputTokens: number }
+  status?: 'suspended' | undefined
+  pendingApprovals?:
+    | {
+        toolCallId: string
+        toolName: string
+        args: unknown
+        reason?: string | undefined
+        runId: string
+      }[]
+    | undefined
+}
+export type AgentCallerInput = {
+  agentName: string
+  message: string
+  threadId: string
+  resourceId: string
+}
+export type AgentCallerOutput = {
+  runId: string
+  text: string
+  result?: unknown
+  threadId: string
+  usage: { inputTokens: number; outputTokens: number }
+  status?: 'suspended' | undefined
+  pendingApprovals?:
+    | {
+        toolCallId: string
+        toolName: string
+        args: unknown
+        reason?: string | undefined
+        runId: string
+      }[]
+    | undefined
+}
+export type AgentReadsAttachmentScenarioInput = {
+  kind: 'csv' | 'png' | 'pdf' | 'audio'
+}
+export type AgentReadsAttachmentScenarioOutput = {
+  kind: string
+  matched: number
+}
+export type AgentResumeCallerInput = {
+  agentName: string
+  runId: string
+  toolCallId: string
+  approved: boolean
+}
+export type AgentStreamCallerInput = {
+  agentName: string
+  message: string
+  threadId: string
+  resourceId: string
+  context?: string | undefined
+}
+export type AiBudgetRulesScenarioOutput = {
+  organizationId: string
+  ruleId: string
+  memberTargets: number
+}
+export type AiKeysAreIndependentPerProviderAndScopeScenarioOutput = {
+  organizationId: string
+  projectId: string
+}
+export type AiKeysRefuseTheRetiredProductionScopeScenarioOutput = {
+  status: number
+}
+export type AiKeysScenarioOutput = { organizationId: string; providers: number }
 export type AnalyzeHarnessRunInput = {
-    runId: string;
+  runId: string
 }
 export type AnalyzeHarnessRunOutput = {
-    analyzed: boolean;
+  analyzed: boolean
 }
 export type AnswerChangeQuestionInput = {
-    changeId: string;
-    body: string;
-    chosenOption?: string | undefined;
+  changeId: string
+  body: string
+  chosenOption?: string | undefined
 }
 export type AnswerChangeQuestionOutput = {
-    message: {
-        messageId: string;
-        changeId: string;
-        authorKind: "agent" | "user";
-        authorName: string | null;
-        body: string;
-        attachments: {
-            key: string;
-            label: string;
-            kind: "option" | "evidence";
-        }[];
-        chosenOption: string | null;
-        createdAt: Date;
-    };
+  message: {
+    messageId: string
+    changeId: string
+    authorKind: 'agent' | 'user'
+    authorName: string | null
+    body: string
+    attachments: {
+      key: string
+      label: string
+      kind: 'option' | 'evidence'
+    }[]
+    chosenOption: string | null
+    createdAt: Date
+  }
 }
 export type AnswerStageChangeInput = {
-    stageId: string;
-    panelToken: string;
-    changeId: string;
-    body: string;
-    chosenOption?: string | undefined;
-    authorName?: string | undefined;
+  stageId: string
+  panelToken: string
+  changeId: string
+  body: string
+  chosenOption?: string | undefined
+  authorName?: string | undefined
 }
 export type AnswerStageChangeOutput = {
-    message: {
-        messageId: string;
-        changeId: string;
-        authorKind: "agent" | "user";
-        authorName: string | null;
-        body: string;
-        attachments: {
-            key: string;
-            label: string;
-            kind: "option" | "evidence";
-        }[];
-        chosenOption: string | null;
-        createdAt: Date;
-    };
+  message: {
+    messageId: string
+    changeId: string
+    authorKind: 'agent' | 'user'
+    authorName: string | null
+    body: string
+    attachments: {
+      key: string
+      label: string
+      kind: 'option' | 'evidence'
+    }[]
+    chosenOption: string | null
+    createdAt: Date
+  }
 }
 export type ApplyDeploymentInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type ApplyDeploymentOutput = {
-    deploymentId: string;
-    resumed: boolean;
+  deploymentId: string
+  resumed: boolean
 }
-export type ApplyDeployWorkflowInput = { deploymentId: string; }
-export type ApplyDeployWorkflowOutput = { success: boolean; workersDeployed: string[]; routeBound: string | null; }
+export type ApplyDeployWorkflowInput = { deploymentId: string }
+export type ApplyDeployWorkflowOutput = {
+  success: boolean
+  workersDeployed: string[]
+  routeBound: string | null
+}
 export type ApplyStageCascadeInput = {
-    stageId: string;
+  stageId: string
 }
 export type ApplyStageCascadeOutput = {
-    runId: string | null;
-    deploymentId: string | null;
+  runId: string | null
+  deploymentId: string | null
 }
 export type ApplyStageMigrationsInput = {
-    deploymentId: string;
-    stageId: string;
-    orgShortId: string;
-    projectShortId: string;
-    gitSha: string;
+  deploymentId: string
+  stageId: string
+  orgShortId: string
+  projectShortId: string
+  gitSha: string
 }
 export type ApplyStageMigrationsOutput = {
-    applied: string[];
-    skipped: boolean;
+  applied: string[]
+  skipped: boolean
 }
 export type AskChangeQuestionInput = {
-    changeId: string;
-    question: string;
-    authorName: string;
-    attachments?: {
-        key: string;
-        label: string;
-        kind: "option" | "evidence";
-    }[] | undefined;
-    option?: string[] | undefined;
+  changeId: string
+  question: string
+  authorName: string
+  attachments?:
+    | {
+        key: string
+        label: string
+        kind: 'option' | 'evidence'
+      }[]
+    | undefined
+  option?: string[] | undefined
 }
 export type AskChangeQuestionOutput = {
-    message: {
-        messageId: string;
-        changeId: string;
-        authorKind: "agent" | "user";
-        authorName: string | null;
-        body: string;
-        attachments: {
-            key: string;
-            label: string;
-            kind: "option" | "evidence";
-        }[];
-        chosenOption: string | null;
-        createdAt: Date;
-    };
+  message: {
+    messageId: string
+    changeId: string
+    authorKind: 'agent' | 'user'
+    authorName: string | null
+    body: string
+    attachments: {
+      key: string
+      label: string
+      kind: 'option' | 'evidence'
+    }[]
+    chosenOption: string | null
+    createdAt: Date
+  }
 }
 export type AsksAgentAboutAttachmentInput = {
-    token: string;
-    sandboxId: string;
-    baseUrl: string;
-    signedReadUrl: string;
-    contentType: string;
-    timeoutMs: number;
+  token: string
+  sandboxId: string
+  baseUrl: string
+  signedReadUrl: string
+  contentType: string
+  timeoutMs: number
 }
 export type AsksAgentAboutAttachmentOutput = {
-    reply: string;
+  reply: string
 }
 export type AsksAnAgentInput = {
-    agent: string;
-    task: string;
-    evaluate: string;
+  agent: string
+  task: string
+  evaluate: string
 }
 export type AsksAnAgentOutput = {
-    passed: true;
-    reasoning: string;
+  passed: true
+  reasoning: string
 }
 export type AssertManifestQuotasInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type AssertManifestQuotasOutput = {}
 export type AssertServerDeployAllowedInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type AssertServerDeployAllowedOutput = {}
 export type AttachChangeShotInput = {
-    changeId: string;
-    label: string;
-    kind: "option" | "evidence";
-    contentType: "image/png" | "image/jpeg" | "image/webp";
-    imageBase64: string;
-    authorName: string;
+  changeId: string
+  label: string
+  kind: 'option' | 'evidence'
+  contentType: 'image/png' | 'image/jpeg' | 'image/webp'
+  imageBase64: string
+  authorName: string
 }
 export type AttachChangeShotOutput = {
-    message: {
-        messageId: string;
-        changeId: string;
-        authorKind: "agent" | "user";
-        authorName: string | null;
-        body: string;
-        attachments: {
-            key: string;
-            label: string;
-            kind: "option" | "evidence";
-        }[];
-        chosenOption: string | null;
-        createdAt: Date;
-    };
-    key: string;
+  message: {
+    messageId: string
+    changeId: string
+    authorKind: 'agent' | 'user'
+    authorName: string | null
+    body: string
+    attachments: {
+      key: string
+      label: string
+      kind: 'option' | 'evidence'
+    }[]
+    chosenOption: string | null
+    createdAt: Date
+  }
+  key: string
 }
-export type AttachmentRoundTripScenarioOutput = { contentType: string; }
+export type AttachmentRoundTripScenarioOutput = { contentType: string }
 export type AttachProjectSourcesInput = {
-    repoName: string;
-    projectId: string;
-    organizationId: string;
-    sources: {
-        kind: "site" | "openapi" | "n8n" | "spreadsheet" | "document" | "data" | "archive";
-        name: string;
-        format?: string | undefined;
-        objectKey?: string | undefined;
-        url?: string | undefined;
-    }[];
+  repoName: string
+  projectId: string
+  organizationId: string
+  sources: {
+    kind:
+      | 'site'
+      | 'openapi'
+      | 'n8n'
+      | 'spreadsheet'
+      | 'document'
+      | 'data'
+      | 'archive'
+    name: string
+    format?: string | undefined
+    objectKey?: string | undefined
+    url?: string | undefined
+  }[]
 }
 export type AttachProjectSourcesOutput = {
-    recorded: number;
+  recorded: number
 }
 export type AttachTicketSpecInput = {
-    ticketId: string;
+  ticketId: string
 }
 export type AttachTicketSpecOutput = {
-    ok: true;
+  ok: true
 }
 export type AuthHandlerOutput = Promise<void> | Promise<any>
-export type AutoRechargeScenarioOutput = { organizationId: string; enableWithoutCardRefused: boolean; }
+export type AutoRechargeScenarioOutput = {
+  organizationId: string
+  enableWithoutCardRefused: boolean
+}
 export type AwaitImageBuildInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type AwaitImageBuildOutput = {
-    built: boolean;
+  built: boolean
 }
 export type AwaitProjectDeploymentInput = {
-    projectId: string;
-    branch: string;
-    timeoutMs?: number | undefined;
-    pollMs?: number | undefined;
+  projectId: string
+  branch: string
+  timeoutMs?: number | undefined
+  pollMs?: number | undefined
 }
 export type AwaitProjectDeploymentOutput = {
-    deploymentId: string;
-    stageId: string;
-    waitedMs: number;
+  deploymentId: string
+  stageId: string
+  waitedMs: number
 }
 export type AwaitProjectTransferInput = {
-    projectId: string;
-    timeoutMs?: number | undefined;
-    pollMs?: number | undefined;
+  projectId: string
+  timeoutMs?: number | undefined
+  pollMs?: number | undefined
 }
 export type AwaitProjectTransferOutput = {
-    status: string;
-    waitedMs: number;
+  status: string
+  waitedMs: number
 }
 export type AwaitsCascadeDeclarationsInput = {
-    token: string;
-    projectId: string;
-    kind: "secret" | "variable";
-    names: string[];
-    timeoutMs: number;
+  token: string
+  projectId: string
+  kind: 'secret' | 'variable'
+  names: string[]
+  timeoutMs: number
 }
 export type AwaitsCascadeDeclarationsOutput = {
-    declared: {
-        name: string;
-        blocked: boolean;
-    }[];
-    missing: string[];
+  declared: {
+    name: string
+    blocked: boolean
+  }[]
+  missing: string[]
 }
 export type AwaitsProjectRepoInput = {
-    token: string;
-    projectId: string;
-    timeoutMs: number;
+  token: string
+  projectId: string
+  timeoutMs: number
 }
 export type AwaitsProjectRepoOutput = {
-    gitRepoUrl: string;
+  gitRepoUrl: string
 }
 export type AwaitsProjectStageInput = {
-    token: string;
-    projectId: string;
-    timeoutMs: number;
+  token: string
+  projectId: string
+  timeoutMs: number
 }
 export type AwaitsProjectStageOutput = {
-    stageId: string;
-    branch: string;
+  stageId: string
+  branch: string
 }
 export type AwaitsRollupGrowthInput = {
-    eventName: string;
-    baseline: number;
-    delta: number;
-    timeoutMs: number;
-    claim: string;
+  eventName: string
+  baseline: number
+  delta: number
+  timeoutMs: number
+  claim: string
 }
 export type AwaitsRollupGrowthOutput = {
-    total: number;
+  total: number
 }
 export type AwaitsSandboxLiveInput = {
-    token: string;
-    sandboxId: string;
-    timeoutMs: number;
+  token: string
+  sandboxId: string
+  timeoutMs: number
 }
 export type AwaitsSandboxLiveOutput = {
-    hostname: string;
-    baseUrl: string;
+  hostname: string
+  baseUrl: string
 }
 export type AwaitStageDeploymentInput = {
-    deploymentId: string;
-    timeoutMs?: number | undefined;
-    pollMs?: number | undefined;
+  deploymentId: string
+  timeoutMs?: number | undefined
+  pollMs?: number | undefined
 }
 export type AwaitStageDeploymentOutput = {
-    status: string;
-    stageId: string;
-    dispatchNamespace: string | null;
-    hostname: string | null;
-    waitedMs: number;
+  status: string
+  stageId: string
+  dispatchNamespace: string | null
+  hostname: string | null
+  waitedMs: number
 }
-export type BillingSummaryScenarioOutput = { planTier: string; balanceUsd: number; invoices: number; ledgerEntries: number; }
+export type BillingSummaryScenarioOutput = {
+  planTier: string
+  balanceUsd: number
+  invoices: number
+  ledgerEntries: number
+}
 export type BootsSandboxInput = {
-    token: string;
-    projectId: string;
-    sizeSlug: string;
-    branch: string;
-    timeoutMs: number;
+  token: string
+  projectId: string
+  sizeSlug: string
+  branch: string
+  timeoutMs: number
 }
 export type BootsSandboxOutput = {
-    sandboxId: string;
-    hostname: string;
-    baseUrl: string;
+  sandboxId: string
+  hostname: string
+  baseUrl: string
 }
 export type CallsRpcAsTokenInput = {
-    token: string;
-    rpcName: string;
-    data?: unknown | undefined;
+  token: string
+  rpcName: string
+  data?: unknown | undefined
 }
 export type CallsRpcAsTokenOutput = {
-    status: number;
-    ok: boolean;
-    body: unknown;
-    serialized: string;
+  status: number
+  ok: boolean
+  body: unknown
+  serialized: string
 }
 export type CancelHarnessBuildTurnInput = {
-    sandboxHostname: string;
-    builderToken: string;
+  sandboxHostname: string
+  builderToken: string
 }
 export type CancelHarnessBuildTurnOutput = {
-    cancelled: boolean;
+  cancelled: boolean
 }
 export type CaptureHarnessPlanShapeInput = {
-    sandboxHostname: string;
-    builderToken: string;
+  sandboxHostname: string
+  builderToken: string
 }
 export type CaptureHarnessPlanShapeOutput = {
-    milestones: {
-        planId: string;
-        title: string;
-        status: string;
-        requires: string[];
-        surface: string | null;
-        tools: string[];
-        slots: {
-            [key: string]: number;
-        };
-        notApplicable: string[];
-        items: number;
-        transports: string[];
-        apps: string[];
-        tables: string[];
-        roles: string[];
-        screens: string[];
-    }[];
-    milestoneCount: number;
-    queued: {
-        planId: string;
-        title: string;
-        requires: string[];
-        surface: string | null;
-        tools: string[];
-    }[];
-    unplanned: {
-        planId: string;
-        reason: string;
-    }[];
-    unaccountedEntities: string[];
-    error: string | null;
+  milestones: {
+    planId: string
+    title: string
+    status: string
+    requires: string[]
+    surface: string | null
+    tools: string[]
+    slots: {
+      [key: string]: number
+    }
+    notApplicable: string[]
+    items: number
+    transports: string[]
+    apps: string[]
+    tables: string[]
+    roles: string[]
+    screens: string[]
+  }[]
+  milestoneCount: number
+  queued: {
+    planId: string
+    title: string
+    requires: string[]
+    surface: string | null
+    tools: string[]
+  }[]
+  unplanned: {
+    planId: string
+    reason: string
+  }[]
+  unaccountedEntities: string[]
+  error: string | null
 }
 export type CaptureHarnessRunSessionInput = {
-    runId: string;
+  runId: string
 }
 export type CaptureHarnessRunSessionOutput = {
-    attached: boolean;
-    turns: number;
+  attached: boolean
+  turns: number
 }
 export type CaptureHarnessSessionInput = {
-    runId: string;
-    sandboxId: string;
-    sandboxHostname: string;
-    builderToken: string;
+  runId: string
+  sandboxId: string
+  sandboxHostname: string
+  builderToken: string
 }
 export type CaptureHarnessSessionOutput = {
-    attached: boolean;
-    turns: number;
-    usage: {
-        tokensInput: number | null;
-        tokensOutput: number | null;
-        filesTouched: number | null;
-    };
-    providerError: string | null;
+  attached: boolean
+  turns: number
+  usage: {
+    tokensInput: number | null
+    tokensOutput: number | null
+    filesTouched: number | null
+  }
+  providerError: string | null
 }
 export type CaptureStagePreviewInput = {
-    deploymentId: string;
-    projectId: string;
-    stageId: string;
-    stageType: "production" | "environment" | "preview";
-    hostname: string;
+  deploymentId: string
+  projectId: string
+  stageId: string
+  stageType: 'production' | 'environment' | 'preview'
+  hostname: string
 }
 export type CaptureStagePreviewOutput = {
-    captured: string[];
-    reason: string | null;
+  captured: string[]
+  reason: string | null
 }
-export type CascadeRefusesReservedNamesAndScopesScenarioOutput = { projectId: string; refusals: number; }
-export type CascadeSecretIsEncryptedAtRestScenarioOutput = { kekVersionId: string; }
-export type CascadeStoresOneRowPerScopeAndKindScenarioOutput = { projectId: string; rejections: number; }
+export type CascadeRefusesReservedNamesAndScopesScenarioOutput = {
+  projectId: string
+  refusals: number
+}
+export type CascadeSecretIsEncryptedAtRestScenarioOutput = {
+  kekVersionId: string
+}
+export type CascadeStoresOneRowPerScopeAndKindScenarioOutput = {
+  projectId: string
+  rejections: number
+}
 export type ChangeBillingPlanInput = {
-    organizationId: string;
-    tier: "free" | "pro" | "team";
+  organizationId: string
+  tier: 'free' | 'pro' | 'team'
 }
 export type ChangeBillingPlanOutput = {
-    url: string | null;
-    planTier: string | null;
+  url: string | null
+  planTier: string | null
 }
 export type CheckBuildHostCapacityInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type CheckBuildHostCapacityOutput = {
-    placed: boolean;
-    hostId: string | null;
-    reason: string | null;
+  placed: boolean
+  hostId: string | null
+  reason: string | null
 }
 export type CheckCustomHostnameStatusInput = {
-    customHostnameId: string;
+  customHostnameId: string
 }
 export type CheckCustomHostnameStatusOutput = {
-    done: boolean;
-    status: "active" | "failed" | "validating";
+  done: boolean
+  status: 'active' | 'failed' | 'validating'
 }
 export type CheckGithubInstallInput = {}
 export type CheckGithubInstallOutput = {
-    installed: boolean;
-    installUrl?: string | undefined;
-    accountLogin?: string | undefined;
+  installed: boolean
+  installUrl?: string | undefined
+  accountLogin?: string | undefined
 }
 export type CheckHarnessDeployStatusInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type CheckHarnessDeployStatusOutput = {
-    terminal: boolean;
-    deployOk: boolean;
-    hostname: string | null;
-    status: string;
+  terminal: boolean
+  deployOk: boolean
+  hostname: string | null
+  status: string
 }
 export type CheckInitialDeployInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type CheckInitialDeployOutput = {
-    terminal: boolean;
-    status: string;
-    buildLog: string | null;
+  terminal: boolean
+  status: string
+  buildLog: string | null
 }
 export type CheckOrchestratorReadyInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type CheckOrchestratorReadyOutput = {
-    ready: boolean;
-    sandboxInstanceId: string;
-    hostname: string;
-    lastError: string;
+  ready: boolean
+  sandboxInstanceId: string
+  hostname: string
+  lastError: string
 }
 export type CheckRunningSandboxInput = {
-    projectId: string;
+  projectId: string
 }
 export type CheckRunningSandboxOutput = {
-    ready: boolean;
-    sandboxId: string | null;
-    sandboxHostname: string | null;
-    builderToken: string | null;
+  ready: boolean
+  sandboxId: string | null
+  sandboxHostname: string | null
+  builderToken: string | null
 }
 export type CheckSandboxHostCapacityInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type CheckSandboxHostCapacityOutput = {
-    ready: boolean;
+  ready: boolean
 }
 export type CheckUsernameInput = {
-    username: string;
+  username: string
 }
 export type CheckUsernameOutput = {
-    available: boolean;
-    reason?: ("invalid_format" | "reserved" | "redirect_hold" | "taken") | undefined;
+  available: boolean
+  reason?:
+    ('invalid_format' | 'reserved' | 'redirect_hold' | 'taken') | undefined
 }
 export type ClaimChangesInput = {
-    projectId: string;
-    groupId?: string | undefined;
-    changeIds?: string[] | undefined;
-    title?: string | undefined;
-    claimedBy: string;
-    leaseMinutes: number;
+  projectId: string
+  groupId?: string | undefined
+  changeIds?: string[] | undefined
+  title?: string | undefined
+  claimedBy: string
+  leaseMinutes: number
 }
 export type ClaimChangesOutput = {
-    group: {
-        groupId: string;
-        projectId: string;
-        title: string;
-        claimedBy: string | null;
-        claimExpiresAt: Date | null;
-        createdAt: Date;
-    };
-    changes: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-    }[];
+  group: {
+    groupId: string
+    projectId: string
+    title: string
+    claimedBy: string | null
+    claimExpiresAt: Date | null
+    createdAt: Date
+  }
+  changes: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+  }[]
 }
 export type ClaimUsernameInput = {
-    username: string;
+  username: string
 }
 export type ClaimUsernameOutput = {
-    organizationId: string;
-    username: string;
-    welcomeCredit: {
-        granted: boolean;
-        amountUsd: number;
-    };
+  organizationId: string
+  username: string
+  welcomeCredit: {
+    granted: boolean
+    amountUsd: number
+  }
 }
 export type CleanupScenarioProjectInput = {
-    projectId: string;
+  projectId: string
 }
 export type CleanupScenarioProjectOutput = {
-    deleted: boolean;
-    reason: string | null;
+  deleted: boolean
+  reason: string | null
 }
 export type CleanupTestUsersInput = {
-    dryRun: boolean;
-    olderThanMinutes: number;
+  dryRun: boolean
+  olderThanMinutes: number
 }
 export type CleanupTestUsersOutput = {
-    users: {
-        email: string;
-        userId: string;
-        orgCount: number;
-        projectCount: number;
-    }[];
-    deleted: boolean;
+  users: {
+    email: string
+    userId: string
+    orgCount: number
+    projectCount: number
+  }[]
+  deleted: boolean
 }
-export type CliAuthScenarioOutput = { organizationId: string; tokenDelivered: boolean; replayRefused: boolean; }
-export type CliCodeCannotBeReconfirmedScenarioOutput = { status: number; }
-export type CliHelpInput = { args?: string[] | undefined; }
-export type CliHelpOutput = { help: string; }
-export type CliRawInput = { args: string[]; }
-export type CliRawOutput = { action: "cli-output"; commandId?: string | undefined; data: unknown; } | { action: "cli-result"; commandId?: string | undefined; result: unknown; } | { action: "cli-help"; help: string; } | { action: "cli-error"; error: string; } | { action: "cli-control"; event: "complete"; exitCode: number; }
-export type CliRequireSessionOutput = { action: "cli-output"; commandId?: string | undefined; data: unknown; } | { action: "cli-result"; commandId?: string | undefined; result: unknown; } | { action: "cli-help"; help: string; } | { action: "cli-error"; error: string; } | { action: "cli-control"; event: "complete"; exitCode: number; }
-export type CliTokenIsDeliveredOnceScenarioOutput = { replayedStatus: string; }
+export type CliAuthScenarioOutput = {
+  organizationId: string
+  tokenDelivered: boolean
+  replayRefused: boolean
+}
+export type CliCodeCannotBeReconfirmedScenarioOutput = { status: number }
+export type CliHelpInput = { args?: string[] | undefined }
+export type CliHelpOutput = { help: string }
+export type CliRawInput = { args: string[] }
+export type CliRawOutput =
+  | { action: 'cli-output'; commandId?: string | undefined; data: unknown }
+  | { action: 'cli-result'; commandId?: string | undefined; result: unknown }
+  | { action: 'cli-help'; help: string }
+  | { action: 'cli-error'; error: string }
+  | { action: 'cli-control'; event: 'complete'; exitCode: number }
+export type CliRequireSessionOutput =
+  | { action: 'cli-output'; commandId?: string | undefined; data: unknown }
+  | { action: 'cli-result'; commandId?: string | undefined; result: unknown }
+  | { action: 'cli-help'; help: string }
+  | { action: 'cli-error'; error: string }
+  | { action: 'cli-control'; event: 'complete'; exitCode: number }
+export type CliTokenIsDeliveredOnceScenarioOutput = { replayedStatus: string }
 export type CompleteChangeInput = {
-    changeId: string;
-    branch?: string | undefined;
-    headCommit?: string | undefined;
-    note?: string | undefined;
-    authorName?: string | undefined;
+  changeId: string
+  branch?: string | undefined
+  headCommit?: string | undefined
+  note?: string | undefined
+  authorName?: string | undefined
 }
 export type CompleteChangeOutput = {
-    change: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-    };
+  change: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+  }
 }
 export type CompleteGitProviderLinkingInput = {
-    provider: "github" | "gitea";
-    codeOrToken: string;
+  provider: 'github' | 'gitea'
+  codeOrToken: string
 }
 export type CompleteGitProviderLinkingOutput = {
-    providerUsername: string;
-    providerEmail: string | null;
+  providerUsername: string
+  providerEmail: string | null
 }
 export type ConfigureStageChangesInput = {
-    stageId: string;
-    enabled?: boolean | undefined;
-    buildEnabled?: boolean | undefined;
+  stageId: string
+  enabled?: boolean | undefined
+  buildEnabled?: boolean | undefined
 }
 export type ConfigureStageChangesOutput = {
-    changesEnabled: boolean;
-    changesBuildEnabled: boolean;
-    needsDeploy: boolean;
+  changesEnabled: boolean
+  changesBuildEnabled: boolean
+  needsDeploy: boolean
 }
 export type ConfigureStageDeployModeInput = {
-    stageId: string;
-    mode: "fabric" | "webhook";
-    webhookUrl?: string | undefined;
+  stageId: string
+  mode: 'fabric' | 'webhook'
+  webhookUrl?: string | undefined
 }
 export type ConfigureStageDeployModeOutput = {
-    deployMode: "fabric" | "webhook";
-    webhookUrl: string | null;
-    webhookSecret: string | null;
+  deployMode: 'fabric' | 'webhook'
+  webhookUrl: string | null
+  webhookSecret: string | null
 }
 export type ConfirmCliAuthInput = {
-    code: string;
-    organizationId: string;
+  code: string
+  organizationId: string
 }
 export type ConfirmCliAuthOutput = {
-    ok: boolean;
+  ok: boolean
 }
-export type ConsoleAsksForAddonSecretsScenarioOutput = { installed: boolean; }
-export type ConsoleAssistantAnswersAtDeploymentScopeScenarioOutput = { passed: boolean; }
-export type ConsoleAssistantAnswersAtOrgScopeScenarioOutput = { passed: boolean; }
-export type ConsoleAssistantAnswersAtProjectScopeScenarioOutput = { passed: boolean; }
-export type ConsoleAssistantStaysInScopeScenarioInput = { agent: "fabricDeploymentAgent" | "fabricProjectAgent"; ask: string; expect: string; }
-export type ConsoleAssistantStaysInScopeScenarioOutput = { passed: boolean; }
+export type ConsoleAsksForAddonSecretsScenarioOutput = { installed: boolean }
+export type ConsoleAssistantAnswersAtDeploymentScopeScenarioOutput = {
+  passed: boolean
+}
+export type ConsoleAssistantAnswersAtOrgScopeScenarioOutput = {
+  passed: boolean
+}
+export type ConsoleAssistantAnswersAtProjectScopeScenarioOutput = {
+  passed: boolean
+}
+export type ConsoleAssistantStaysInScopeScenarioInput = {
+  agent: 'fabricDeploymentAgent' | 'fabricProjectAgent'
+  ask: string
+  expect: string
+}
+export type ConsoleAssistantStaysInScopeScenarioOutput = { passed: boolean }
 export type CrawlSiteResultInput = {
-    jobId: string;
-    cursor?: number | undefined;
-    limit?: number | undefined;
+  jobId: string
+  cursor?: number | undefined
+  limit?: number | undefined
 }
 export type CrawlSiteResultOutput = {
-    status: string;
-    done: boolean;
-    finished: number;
-    total: number;
-    cursor: number | null;
-    pages: {
-        url: string;
-        title: string | null;
-        markdown: string;
-        images: {
-            src: string;
-            alt: string | null;
-        }[];
-        status: number | null;
-    }[];
+  status: string
+  done: boolean
+  finished: number
+  total: number
+  cursor: number | null
+  pages: {
+    url: string
+    title: string | null
+    markdown: string
+    images: {
+      src: string
+      alt: string | null
+    }[]
+    status: number | null
+  }[]
 }
 export type CrawlSiteStartInput = {
-    url: string;
-    maxPages?: number | undefined;
+  url: string
+  maxPages?: number | undefined
 }
 export type CrawlSiteStartOutput = {
-    jobId: string;
+  jobId: string
 }
 export type CreateAiTopupSessionInput = {
-    organizationId: string;
-    amountUsd: number;
+  organizationId: string
+  amountUsd: number
 }
 export type CreateAiTopupSessionOutput = {
-    url: string;
+  url: string
 }
 export type CreateBillingCheckoutSessionInput = {
-    organizationId: string;
-    tier: "pro" | "team";
+  organizationId: string
+  tier: 'pro' | 'team'
 }
 export type CreateBillingCheckoutSessionOutput = {
-    url: string;
+  url: string
 }
 export type CreateBillingPortalSessionInput = {
-    organizationId: string;
-    returnUrl?: string | undefined;
+  organizationId: string
+  returnUrl?: string | undefined
 }
 export type CreateBillingPortalSessionOutput = {
-    url: string;
+  url: string
 }
 export type CreateChangeInput = {
-    stageId: string;
-    title: string;
-    body?: string | undefined;
-    route?: string | undefined;
-    deploymentId?: string | undefined;
-    gitSha?: string | undefined;
-    locale?: string | undefined;
-    viewport?: {
-        width: number;
-        height: number;
-    } | undefined;
-    capture?: {
+  stageId: string
+  title: string
+  body?: string | undefined
+  route?: string | undefined
+  deploymentId?: string | undefined
+  gitSha?: string | undefined
+  locale?: string | undefined
+  viewport?:
+    | {
+        width: number
+        height: number
+      }
+    | undefined
+  capture?:
+    | {
         stroke: {
-            x: number;
-            y: number;
-        }[];
+          x: number
+          y: number
+        }[]
         bounds: {
-            x: number;
-            y: number;
-            width: number;
-            height: number;
-        } | null;
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
         elements: {
-            testId: string | null;
-            sourceAnchor: string | null;
-            cssPath: string | null;
-            text: string | null;
-            rect: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-        }[];
-    } | undefined;
-    screenshotKey?: string | undefined;
-    consoleErrors?: string[] | undefined;
+          testId: string | null
+          sourceAnchor: string | null
+          cssPath: string | null
+          text: string | null
+          rect: {
+            x: number
+            y: number
+            width: number
+            height: number
+          } | null
+        }[]
+      }
+    | undefined
+  screenshotKey?: string | undefined
+  consoleErrors?: string[] | undefined
 }
 export type CreateChangeOutput = {
-    change: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-    };
+  change: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+  }
 }
 export type CreateCliTokenInput = {
-    /** CLI localhost callback URL */
-    callbackUrl: string;
+  /** CLI localhost callback URL */
+  callbackUrl: string
 }
 export type CreateCliTokenOutput = {
-    token: string;
-    redirectUrl: string;
+  token: string
+  redirectUrl: string
 }
 export type CreateDatabaseProjectInput = {
-    stageDbName: string;
-    projectId: string;
+  stageDbName: string
+  projectId: string
 }
 export type CreateDatabaseProjectOutput = {
-    dbProjectId?: string | undefined;
-    dbBranchId?: string | undefined;
+  dbProjectId?: string | undefined
+  dbBranchId?: string | undefined
 }
 export type CreateGitRepoInput = {
-    repoName: string;
-    projectId: string;
+  repoName: string
+  projectId: string
 }
 export type CreateGitRepoOutput = {
-    repoUrl: string;
+  repoUrl: string
 }
 export type CreateHarnessScenarioInput = {
-    goal: string;
-    templateSlug: string;
-    runType: string;
-    domain: "crm" | "healthcare" | "inventory" | "logistics" | "finance" | "education" | "ecommerce" | "booking" | "recruiting" | "insurance" | "property" | "legal" | "hospitality" | "service" | "general";
-    complexity: string;
-    expectLogin: boolean;
-    specSourceKey?: (string | null) | undefined;
-    specSourceKind?: (("openapi" | "reference" | "n8n" | "knowledge-archive") | null) | undefined;
-    specSourceName?: (string | null) | undefined;
-    generatedBy?: string | undefined;
-    agentBundleVersion?: number | undefined;
+  goal: string
+  templateSlug: string
+  runType: string
+  domain:
+    | 'crm'
+    | 'healthcare'
+    | 'inventory'
+    | 'logistics'
+    | 'finance'
+    | 'education'
+    | 'ecommerce'
+    | 'booking'
+    | 'recruiting'
+    | 'insurance'
+    | 'property'
+    | 'legal'
+    | 'hospitality'
+    | 'service'
+    | 'general'
+  complexity: string
+  expectLogin: boolean
+  specSourceKey?: (string | null) | undefined
+  specSourceKind?:
+    (('openapi' | 'reference' | 'n8n' | 'knowledge-archive') | null) | undefined
+  specSourceName?: (string | null) | undefined
+  generatedBy?: string | undefined
+  agentBundleVersion?: number | undefined
 }
 export type CreateHarnessScenarioOutput = {
-    harnessScenarioId: string;
+  harnessScenarioId: string
 }
 export type CreateOrgAiBudgetRuleInput = {
-    organizationId: string;
-    provider: string;
-    model: string;
-    scopeKind: "stage" | "sandbox" | "developer" | "project";
-    scopeId: string | null;
-    budgetUsd: number;
-    period: "1d" | "7d" | "30d" | "1mo";
+  organizationId: string
+  provider: string
+  model: string
+  scopeKind: 'stage' | 'sandbox' | 'developer' | 'project'
+  scopeId: string | null
+  budgetUsd: number
+  period: '1d' | '7d' | '30d' | '1mo'
 }
 export type CreateOrgAiBudgetRuleOutput = {
-    rule: {
-        ruleId: string;
-        provider: string;
-        model: string;
-        scopeKind: "stage" | "sandbox" | "developer" | "project";
-        scopeId: string | null;
-        scopeLabel: string | null;
-        budgetUsd: number;
-        period: string;
-    };
+  rule: {
+    ruleId: string
+    provider: string
+    model: string
+    scopeKind: 'stage' | 'sandbox' | 'developer' | 'project'
+    scopeId: string | null
+    scopeLabel: string | null
+    budgetUsd: number
+    period: string
+  }
 }
 export type CreateOrganizationInput = {
-    name: string;
-    slug: string;
+  name: string
+  slug: string
 }
 export type CreateOrganizationOutput = {
-    organizationId: string;
-    slug: string;
+  organizationId: string
+  slug: string
 }
 export type CreatePanelLinkInput = {
-    stageId: string;
-    route?: string | undefined;
+  stageId: string
+  route?: string | undefined
 }
 export type CreatePanelLinkOutput = {
-    url: string;
-    token: string;
-    expiresAt: Date;
+  url: string
+  token: string
+  expiresAt: Date
 }
 export type CreateProjectInput = {
-    name?: (string | null) | undefined;
-    templateSlug: string;
-    addons: string[];
-    sources: {
-        kind: "site" | "openapi" | "n8n" | "spreadsheet" | "document" | "data" | "archive";
-        name: string;
-        format?: string | undefined;
-        objectKey?: string | undefined;
-        url?: string | undefined;
-    }[];
-    onboardingPath?: ("greenfield" | "brownfield") | undefined;
-    description?: (string | null) | undefined;
-    createSandbox?: boolean | undefined;
-    plannerLocale?: string | undefined;
-    appLocale?: string | undefined;
-    planModel?: (string | null) | undefined;
-    buildModel?: (string | null) | undefined;
-    designModel?: (string | null) | undefined;
-    region: "west-europe" | "east-us" | "west-us" | "asia-pacific";
-    deployMain: boolean;
-    productionBranch?: string | undefined;
-    dbEngine?: ("sqlite" | "postgres") | undefined;
-    pgVersion?: number | undefined;
-    organizationId?: string | undefined;
+  name?: (string | null) | undefined
+  templateSlug: string
+  addons: string[]
+  sources: {
+    kind:
+      | 'site'
+      | 'openapi'
+      | 'n8n'
+      | 'spreadsheet'
+      | 'document'
+      | 'data'
+      | 'archive'
+    name: string
+    format?: string | undefined
+    objectKey?: string | undefined
+    url?: string | undefined
+  }[]
+  onboardingPath?: ('greenfield' | 'brownfield') | undefined
+  description?: (string | null) | undefined
+  createSandbox?: boolean | undefined
+  plannerLocale?: string | undefined
+  appLocale?: string | undefined
+  planModel?: (string | null) | undefined
+  buildModel?: (string | null) | undefined
+  designModel?: (string | null) | undefined
+  region: 'west-europe' | 'east-us' | 'west-us' | 'asia-pacific'
+  deployMain: boolean
+  productionBranch?: string | undefined
+  dbEngine?: ('sqlite' | 'postgres') | undefined
+  pgVersion?: number | undefined
+  organizationId?: string | undefined
 }
 export type CreateProjectOutput = {
-    runId: string;
-    projectId: string;
-    projectSlug: string;
+  runId: string
+  projectId: string
+  projectSlug: string
 }
-export type CreateProjectWorkflowInput = { organizationId: string; orgShortId: string; userId: string; projectId: string; projectSlug: string; projectShortId: string; addons?: string[] | undefined; sources?: { kind: "site" | "openapi" | "n8n" | "spreadsheet" | "document" | "data" | "archive"; name: string; format?: string | undefined; objectKey?: string | undefined; url?: string | undefined; }[] | undefined; onboardingPath?: "greenfield" | "brownfield" | undefined; description?: string | undefined; createSandbox?: boolean | undefined; deployMain?: boolean | undefined; }
-export type CreateProjectWorkflowOutput = { success: boolean; projectId: string; projectSlug: string; mainStageId: string; }
+export type CreateProjectWorkflowInput = {
+  organizationId: string
+  orgShortId: string
+  userId: string
+  projectId: string
+  projectSlug: string
+  projectShortId: string
+  addons?: string[] | undefined
+  sources?:
+    | {
+        kind:
+          | 'site'
+          | 'openapi'
+          | 'n8n'
+          | 'spreadsheet'
+          | 'document'
+          | 'data'
+          | 'archive'
+        name: string
+        format?: string | undefined
+        objectKey?: string | undefined
+        url?: string | undefined
+      }[]
+    | undefined
+  onboardingPath?: 'greenfield' | 'brownfield' | undefined
+  description?: string | undefined
+  createSandbox?: boolean | undefined
+  deployMain?: boolean | undefined
+}
+export type CreateProjectWorkflowOutput = {
+  success: boolean
+  projectId: string
+  projectSlug: string
+  mainStageId: string
+}
 export type CreateReviewFixTicketInput = {
-    projectId: string;
-    subject: "code" | "knowledge" | "ui";
-    targetIds: string[] | null;
-    includeStale: boolean;
-    mode: "autopilot" | "manual";
+  projectId: string
+  subject: 'code' | 'knowledge' | 'ui'
+  targetIds: string[] | null
+  includeStale: boolean
+  mode: 'autopilot' | 'manual'
 }
 export type CreateReviewFixTicketOutput = {
-    card: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    };
-    fixCount: number;
-    fileCount: number;
-    total: number;
+  card: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }
+  fixCount: number
+  fileCount: number
+  total: number
 }
 export type CreateSandboxInput = {
-    projectId: string;
-    sizeSlug: string;
-    branch: string;
-    name?: string | undefined;
+  projectId: string
+  sizeSlug: string
+  branch: string
+  name?: string | undefined
 }
 export type CreateSandboxOutput = {
-    runId: string;
-    sandboxId: string;
-    slug: string;
+  runId: string
+  sandboxId: string
+  slug: string
 }
 export type CreateSandboxTicketInput = {
-    title: string;
-    description?: string | undefined;
-    type: "feature" | "bug" | "security" | "test" | "chore";
-    priority: "low" | "medium" | "high" | "urgent";
+  title: string
+  description?: string | undefined
+  type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
 }
 export type CreateSandboxTicketOutput = {
-    card: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    };
+  card: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }
 }
 export type CreateSandboxWorkflowInput = {
-    sandboxId: string;
-    userId: string;
+  sandboxId: string
+  userId: string
 }
 export type CreateSandboxWorkflowOutput = {
-    sandboxId: string;
-    hostname: string;
+  sandboxId: string
+  hostname: string
 }
 export type CreatesProjectInput = {
-    token: string;
-    name: string;
-    dbEngine: "sqlite" | "postgres";
-    templateSlug: string;
-    deployMain: boolean;
-    createSandbox: boolean;
-    waitForWorkflow: boolean;
-    timeoutMs: number;
+  token: string
+  name: string
+  dbEngine: 'sqlite' | 'postgres'
+  templateSlug: string
+  deployMain: boolean
+  createSandbox: boolean
+  waitForWorkflow: boolean
+  timeoutMs: number
 }
 export type CreatesProjectOutput = {
-    projectId: string;
-    slug: string;
-    name: string;
-    runId: string;
-    workflowCompleted: boolean;
+  projectId: string
+  slug: string
+  name: string
+  runId: string
+  workflowCompleted: boolean
 }
 export type CreateStageIngestTokenInput = {
-    stageId: string;
+  stageId: string
 }
 export type CreateStageIngestTokenOutput = {
-    token: string;
-    ingestUrl: string;
+  token: string
+  ingestUrl: string
 }
 export type CreateStageInput = {
-    projectId: string;
-    branch: string;
+  projectId: string
+  branch: string
 }
 export type CreateStageOperatorTokenInput = {
-    stageId: string;
-    ttlSeconds?: number | undefined;
+  stageId: string
+  ttlSeconds?: number | undefined
 }
 export type CreateStageOperatorTokenOutput = {
-    token: string;
-    expiresAt: number;
-    appUrl: string;
+  token: string
+  expiresAt: number
+  appUrl: string
 }
 export type CreateStageOutput = {
-    stageId: string;
-    branch: string;
+  stageId: string
+  branch: string
 }
 export type CreateStageRecordInput = {
-    projectId: string;
+  projectId: string
 }
 export type CreateStageRecordOutput = {
-    stageId: string;
-    stageShortId: string;
-    dbBranchId: string | null;
+  stageId: string
+  stageShortId: string
+  dbBranchId: string | null
 }
 export type CreatesTeamOrgInput = {
-    token: string;
-    name: string;
-    slugPrefix: string;
+  token: string
+  name: string
+  slugPrefix: string
 }
 export type CreatesTeamOrgOutput = {
-    organizationId: string;
-    slug: string;
-    ownerUserId: string;
+  organizationId: string
+  slug: string
+  ownerUserId: string
 }
 export type CreateTicketInput = {
-    projectId: string;
-    title: string;
-    description?: string | undefined;
-    type: "feature" | "bug" | "security" | "test" | "chore";
-    priority: "low" | "medium" | "high" | "urgent";
-    mode: "autopilot" | "manual";
+  projectId: string
+  title: string
+  description?: string | undefined
+  type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  mode: 'autopilot' | 'manual'
 }
 export type CreateTicketOutput = {
-    card: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    };
+  card: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }
 }
 export type CreateWebhookEndpointInput = {
-    organizationId: string;
-    url: string;
-    events: string[];
-    description?: string | undefined;
+  organizationId: string
+  url: string
+  events: string[]
+  description?: string | undefined
 }
 export type CreateWebhookEndpointOutput = {
-    webhookEndpointId: string;
-    secret: string;
+  webhookEndpointId: string
+  secret: string
 }
 export type CredentialSchema_git_gitea = {
-    accessToken: string;
-    tokenId?: number | undefined;
+  accessToken: string
+  tokenId?: number | undefined
 }
 export type CredentialSchema_git_github = {
-    accessToken: string;
-    refreshToken?: string | undefined;
-    expiresAt?: string | undefined;
+  accessToken: string
+  refreshToken?: string | undefined
+  expiresAt?: string | undefined
 }
 export type CritiqueScreenshotInput = {
-    route: string;
-    viewport: "desktop" | "mobile";
-    app?: string | undefined;
-    imageBase64: string;
+  route: string
+  viewport: 'desktop' | 'mobile'
+  app?: string | undefined
+  imageBase64: string
 }
 export type CritiqueScreenshotOutput = {
-    verdict: "pass" | "fix";
-    findings: {
-        severity: "high" | "medium" | "low";
-        /** where on the screen, e.g. "header", "stat cards", "empty table" */
-        area: string;
-        /** what looks wrong */
-        issue: string;
-        /** the concrete, specific change to make */
-        fix: string;
-    }[];
+  verdict: 'pass' | 'fix'
+  findings: {
+    severity: 'high' | 'medium' | 'low'
+    /** where on the screen, e.g. "header", "stat cards", "empty table" */
+    area: string
+    /** what looks wrong */
+    issue: string
+    /** the concrete, specific change to make */
+    fix: string
+  }[]
 }
-export type DeleteAgentThreadInput = { threadId: string; resourceId?: string | undefined; }
-export type DeleteAgentThreadOutput = { deleted: boolean; }
+export type DeleteAgentThreadInput = {
+  threadId: string
+  resourceId?: string | undefined
+}
+export type DeleteAgentThreadOutput = { deleted: boolean }
 export type DeleteAIKeyInput = {
-    organizationId: string;
-    scope: "default" | "preview" | "dev-machine";
-    provider: "openai" | "anthropic" | "google" | "xai" | "openrouter";
+  organizationId: string
+  scope: 'default' | 'preview' | 'dev-machine'
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter'
 }
 export type DeleteAIKeyOutput = {
-    deleted: boolean;
+  deleted: boolean
 }
 export type DeleteContentFileInput = {
-    fileName: string;
+  fileName: string
 }
 export type DeleteContentFileOutput = {
-    success: boolean;
+  success: boolean
 }
 export type DeleteHarnessRunInput = {
-    runId: string;
+  runId: string
 }
 export type DeleteHarnessRunOutput = {
-    deleted: boolean;
+  deleted: boolean
 }
 export type DeleteOrgAiBudgetRuleInput = {
-    organizationId: string;
-    ruleId: string;
+  organizationId: string
+  ruleId: string
 }
 export type DeleteOrgAiBudgetRuleOutput = void | undefined
 export type DeleteOrganizationInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type DeleteOrganizationOutput = {
-    deleted: true;
+  deleted: true
 }
 export type DeleteProjectCascadeValueInput = {
-    projectId: string;
-    kind: "secret" | "variable";
-    scope: string;
-    name: string;
+  projectId: string
+  kind: 'secret' | 'variable'
+  scope: string
+  name: string
 }
 export type DeleteProjectCascadeValueOutput = {
-    deleted: boolean;
+  deleted: boolean
 }
 export type DeleteProjectCustomHostnamesInput = {
-    projectId: string;
+  projectId: string
 }
 export type DeleteProjectCustomHostnamesOutput = {
-    hostnamesProcessed: number;
+  hostnamesProcessed: number
 }
 export type DeleteProjectDatabaseInput = {
-    dbProjectId: string | null;
+  dbProjectId: string | null
 }
 export type DeleteProjectDatabaseOutput = {
-    deleted: boolean;
+  deleted: boolean
 }
 export type DeleteProjectGitRepoInput = {
-    orgShortId: string | null;
-    projectShortId: string | null;
+  orgShortId: string | null
+  projectShortId: string | null
 }
 export type DeleteProjectGitRepoOutput = {
-    deleted: boolean;
+  deleted: boolean
 }
 export type DeleteProjectInput = {
-    projectId: string;
+  projectId: string
 }
 export type DeleteProjectOutput = {
-    success: boolean;
+  success: boolean
 }
 export type DeleteProjectR2StorageInput = {
-    projectId: string;
-    orgShortId: string | null;
-    projectShortId: string | null;
+  projectId: string
+  orgShortId: string | null
+  projectShortId: string | null
 }
 export type DeleteProjectR2StorageOutput = {
-    keysDeleted: number;
+  keysDeleted: number
 }
 export type DeleteProjectRowInput = {
-    projectId: string;
+  projectId: string
 }
 export type DeleteProjectRowOutput = {
-    deleted: boolean;
+  deleted: boolean
 }
-export type DeleteProjectWorkflowInput = { projectId: string; }
-export type DeleteProjectWorkflowOutput = { success: boolean; }
+export type DeleteProjectWorkflowInput = { projectId: string }
+export type DeleteProjectWorkflowOutput = { success: boolean }
 export type DeletesAiKeyInput = {
-    token: string;
-    organizationId: string;
-    provider: "openai" | "anthropic" | "google" | "deepseek";
-    scope: "default" | "preview" | "dev-machine";
+  token: string
+  organizationId: string
+  provider: 'openai' | 'anthropic' | 'google' | 'deepseek'
+  scope: 'default' | 'preview' | 'dev-machine'
 }
 export type DeletesAiKeyOutput = {
-    status: number;
+  status: number
 }
 export type DeleteSandboxInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type DeleteSandboxOutput = {
-    ok: true;
+  ok: true
 }
 export type DeletesCascadeValueInput = {
-    token: string;
-    projectId: string;
-    kind: "secret" | "variable";
-    scope: string;
-    name: string;
+  token: string
+  projectId: string
+  kind: 'secret' | 'variable'
+  scope: string
+  name: string
 }
 export type DeletesCascadeValueOutput = {
-    status: number;
+  status: number
 }
 export type DeleteScenarioRunInput = {
-    sandboxId?: string | undefined;
-    stageId?: string | undefined;
-    runId: string;
+  sandboxId?: string | undefined
+  stageId?: string | undefined
+  runId: string
 }
 export type DeleteScenarioRunOutput = {
-    ok: boolean;
+  ok: boolean
 }
 export type DeletesSandboxInput = {
-    token: string;
-    sandboxId: string;
+  token: string
+  sandboxId: string
 }
 export type DeletesSandboxOutput = {
-    status: number;
+  status: number
 }
 export type DeleteStageAgentThreadInput = {
-    stageId: string;
-    threadId: string;
+  stageId: string
+  threadId: string
 }
 export type DeleteStageAgentThreadOutput = {
-    deleted: boolean;
+  deleted: boolean
 }
 export type DeleteStageCredentialFuncInput = {
-    stageId: string;
-    name: string;
+  stageId: string
+  name: string
 }
 export type DeleteStageCredentialFuncOutput = {
-    success: boolean;
+  success: boolean
 }
 export type DeleteStageInput = {
-    stageId: string;
+  stageId: string
 }
 export type DeleteStageOutput = {
-    success: boolean;
-    deleted: string[];
-    warnings: string[];
+  success: boolean
+  deleted: string[]
+  warnings: string[]
 }
 export type DeleteStageSecretInput = {
-    stageId: string;
-    name: string;
+  stageId: string
+  name: string
 }
 export type DeleteStageSecretOutput = {
-    name: string;
-    runId: string | null;
-    deploymentId: string | null;
+  name: string
+  runId: string | null
+  deploymentId: string | null
 }
 export type DeleteWebhookEndpointInput = {
-    organizationId: string;
-    webhookEndpointId: string;
+  organizationId: string
+  webhookEndpointId: string
 }
 export type DeleteWebhookEndpointOutput = {
-    ok: true;
+  ok: true
 }
 export type DeployByStageKindInput = {
-    projectId: string;
-    branch: string;
-    ref?: string | undefined;
-    expectedHeadSha?: string | undefined;
-    forceRebuild?: boolean | undefined;
-    sandboxId?: string | undefined;
+  projectId: string
+  branch: string
+  ref?: string | undefined
+  expectedHeadSha?: string | undefined
+  forceRebuild?: boolean | undefined
+  sandboxId?: string | undefined
 }
 export type DeployByStageKindOutput = {
-    deploymentId: string;
-    runId: string;
-    stageId: string;
+  deploymentId: string
+  runId: string
+  stageId: string
 }
 export type DeployStageInput = {
-    stageId: string;
-    expectedHeadSha?: string | undefined;
-    forceRebuild?: boolean | undefined;
-    autoApprove?: boolean | undefined;
-    sandboxId?: string | undefined;
+  stageId: string
+  expectedHeadSha?: string | undefined
+  forceRebuild?: boolean | undefined
+  autoApprove?: boolean | undefined
+  sandboxId?: string | undefined
 }
 export type DeployStageOutput = {
-    deploymentId: string;
-    runId: string;
+  deploymentId: string
+  runId: string
 }
 export type DeployTicketBranchInput = {
-    ticketId: string;
-    projectId: string;
-    column: "review" | "staging" | "production";
-    branch: string;
-    type: "preview" | "production" | "environment";
+  ticketId: string
+  projectId: string
+  column: 'review' | 'staging' | 'production'
+  branch: string
+  type: 'preview' | 'production' | 'environment'
 }
 export type DeployTicketBranchOutput = {
-    deploymentId: string | null;
-    stageId: string | null;
+  deploymentId: string | null
+  stageId: string | null
 }
-export type DeployWorkflowInput = { deploymentId: string; stageId: string; repoName: string; forceRebuild?: boolean | undefined; autoApprove?: boolean | undefined; }
-export type DeployWorkflowOutput = { success: boolean; workersDeployed: string[]; routeBound: string | null; }
+export type DeployWorkflowInput = {
+  deploymentId: string
+  stageId: string
+  repoName: string
+  forceRebuild?: boolean | undefined
+  autoApprove?: boolean | undefined
+}
+export type DeployWorkflowOutput = {
+  success: boolean
+  workersDeployed: string[]
+  routeBound: string | null
+}
 export type DismissDeploymentInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type DismissDeploymentOutput = {
-    success: boolean;
+  success: boolean
 }
 export type DispatchDeployBuildInput = {
-    deploymentId: string;
-    projectId: string;
-    stageId: string;
-    gitRepoUrl: string;
-    gitBranch: string;
-    gitSha: string;
-    dbEngine: ("postgres" | "sqlite") | null;
-    dbPgVersion: number | null;
-    projectRegion: "west-europe" | "east-us" | "west-us" | "asia-pacific";
-    forceRebuild?: boolean | undefined;
+  deploymentId: string
+  projectId: string
+  stageId: string
+  gitRepoUrl: string
+  gitBranch: string
+  gitSha: string
+  dbEngine: ('postgres' | 'sqlite') | null
+  dbPgVersion: number | null
+  projectRegion: 'west-europe' | 'east-us' | 'west-us' | 'asia-pacific'
+  forceRebuild?: boolean | undefined
 }
 export type DispatchDeployBuildOutput = {
-    reused: boolean;
+  reused: boolean
 }
 export type DispatchDeployWebhookInput = {
-    deploymentId: string;
-    stageId: string;
-    orgShortId: string;
-    projectShortId: string;
-    gitSha: string;
+  deploymentId: string
+  stageId: string
+  orgShortId: string
+  projectShortId: string
+  gitSha: string
 }
 export type DispatchDeployWebhookOutput = {
-    deadlineAt: string;
+  deadlineAt: string
 }
 export type DispatchImageBuildInput = {
-    deploymentId: string;
-    stageId: string;
-    orgShortId: string;
-    projectShortId: string;
-    gitSha: string;
+  deploymentId: string
+  stageId: string
+  orgShortId: string
+  projectShortId: string
+  gitSha: string
 }
 export type DispatchImageBuildOutput = {
-    dispatched: boolean;
+  dispatched: boolean
 }
 export type DrivePlannerInput = {
-    sandboxHostname: string;
-    builderToken: string;
-    goal: string;
-    projectName: string;
-    runId: string;
-    dispatchMilestone?: boolean | undefined;
-    locale?: string | undefined;
-    narrate?: boolean | undefined;
+  sandboxHostname: string
+  builderToken: string
+  goal: string
+  projectName: string
+  runId: string
+  dispatchMilestone?: boolean | undefined
+  locale?: string | undefined
+  narrate?: boolean | undefined
 }
 export type DrivePlannerOutput = {
-    enriched: boolean;
-    dispatched: boolean;
-    stuckReason: string | null;
-    reseeded: boolean;
-    reseedReason: string | null;
-    reseedFirstTurn: string | null;
+  enriched: boolean
+  dispatched: boolean
+  stuckReason: string | null
+  reseeded: boolean
+  reseedReason: string | null
+  reseedFirstTurn: string | null
 }
-export type DuplicateProjectNameIsRejectedScenarioOutput = { name: string; status: number; }
+export type DuplicateProjectNameIsRejectedScenarioOutput = {
+  name: string
+  status: number
+}
 export type EnqueuePlatformJobInput = {
-    stageId: string;
-    pikkuQueueName: string;
-    payload: unknown;
-    traceId?: string | undefined;
-    jobId?: string | undefined;
+  stageId: string
+  pikkuQueueName: string
+  payload: unknown
+  traceId?: string | undefined
+  jobId?: string | undefined
 }
 export type EnqueuePlatformJobOutput = {
-    jobId: string;
-    queue: string;
+  jobId: string
+  queue: string
 }
 export type EnsureProjectAspirationsInput = {
-    projectId: string;
-    sandboxId?: string | undefined;
+  projectId: string
+  sandboxId?: string | undefined
 }
 export type EnsureProjectAspirationsOutput = {
-    aspirations: {
-        title: string;
-        line: string;
-        reaction: ("liked" | "disliked") | null;
-        likes: number;
-        dislikes: number;
-        likedBy: string[];
-        dislikedBy: string[];
-    }[];
-    sourceDigest: string;
-    status: "ready" | "generating";
+  aspirations: {
+    title: string
+    line: string
+    reaction: ('liked' | 'disliked') | null
+    likes: number
+    dislikes: number
+    likedBy: string[]
+    dislikedBy: string[]
+  }[]
+  sourceDigest: string
+  status: 'ready' | 'generating'
 }
 export type EnsureStageVaultStepInput = {
-    stageId: string;
+  stageId: string
 }
 export type EnsureStageVaultStepOutput = {
-    ready: boolean;
+  ready: boolean
 }
 export type EnsureTelemetryOrgInput = {
-    orgShortId: string;
+  orgShortId: string
 }
 export type EnsureTelemetryOrgOutput = {
-    created: boolean;
+  created: boolean
 }
 export type EnsureTicketSandboxInput = {
-    ticketId: string;
+  ticketId: string
 }
 export type EnsureTicketSandboxOutput = {
-    sandboxId: string | null;
-    state: "booting" | "waking" | "skipped" | "error";
+  sandboxId: string | null
+  state: 'booting' | 'waking' | 'skipped' | 'error'
 }
 export type EvaluateSecurityGateInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type EvaluateSecurityGateOutput = {
-    blocked: boolean;
-    threshold: string;
-    newIssueCount: number;
-    newBlockingCount: number;
-    blockingIssues: {
-        package: string;
-        severity: string;
-        title: string;
-        advisoryId: string;
-        url: string;
-    }[];
+  blocked: boolean
+  threshold: string
+  newIssueCount: number
+  newBlockingCount: number
+  blockingIssues: {
+    package: string
+    severity: string
+    title: string
+    advisoryId: string
+    url: string
+  }[]
 }
 export type ExecuteVirtualUserRunInput = {
-    runId: string;
-    persona: string;
-    disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
-    goals: string[];
-    memory: {
-        [key: string]: string;
-    };
-    budget?: {
-        steps?: number | undefined;
-        mutations?: number | undefined;
-        durationMs?: number | undefined;
-    } | undefined;
-    seed: number;
-    operatorToken?: string | undefined;
+  runId: string
+  persona: string
+  disposition:
+    | 'realistic'
+    | 'careless'
+    | 'newcomer'
+    | 'stale'
+    | 'auditor'
+    | 'adversarial'
+    | 'accountable'
+  goals: string[]
+  memory: {
+    [key: string]: string
+  }
+  budget?:
+    | {
+        steps?: number | undefined
+        mutations?: number | undefined
+        durationMs?: number | undefined
+      }
+    | undefined
+  seed: number
+  operatorToken?: string | undefined
 }
 export type ExecuteVirtualUserRunOutput = {
-    findings: number;
+  findings: number
 }
 export type ExpectRpcRefusedInput = {
-    rpcName: string;
-    data?: unknown | undefined;
+  rpcName: string
+  data?: unknown | undefined
 }
 export type ExpectRpcRefusedOutput = {
-    refused: true;
-    status: number;
-    body: string;
+  refused: true
+  status: number
+  body: string
 }
 export type ExpectsAgentReplyMentionsInput = {
-    reply: string;
-    sentinels: string[];
-    claim: string;
+  reply: string
+  sentinels: string[]
+  claim: string
 }
 export type ExpectsAgentReplyMentionsOutput = {
-    matched: number;
+  matched: number
 }
 export type ExpectsAiKeyHintInput = {
-    token: string;
-    organizationId: string;
-    provider: "openai" | "anthropic" | "google" | "deepseek";
-    scope: "default" | "preview" | "dev-machine";
-    last4: string;
-    claim: string;
+  token: string
+  organizationId: string
+  provider: 'openai' | 'anthropic' | 'google' | 'deepseek'
+  scope: 'default' | 'preview' | 'dev-machine'
+  last4: string
+  claim: string
 }
 export type ExpectsAiKeyHintOutput = {
-    hint: string;
+  hint: string
 }
 export type ExpectsAiKeyUnsetInput = {
-    token: string;
-    organizationId: string;
-    provider: "openai" | "anthropic" | "google" | "deepseek";
-    scope: "default" | "preview" | "dev-machine";
-    claim: string;
+  token: string
+  organizationId: string
+  provider: 'openai' | 'anthropic' | 'google' | 'deepseek'
+  scope: 'default' | 'preview' | 'dev-machine'
+  claim: string
 }
 export type ExpectsAiKeyUnsetOutput = {
-    scope: string;
+  scope: string
 }
 export type ExpectsAttachmentReadableInput = {
-    signedReadUrl: string;
-    expectedContentType: string;
-    claim: string;
+  signedReadUrl: string
+  expectedContentType: string
+  claim: string
 }
 export type ExpectsAttachmentReadableOutput = {
-    status: number;
-    contentType: string;
+  status: number
+  contentType: string
 }
 export type ExpectsCallAcceptedInput = {
-    status: number;
-    serialized: string;
-    claim: string;
+  status: number
+  serialized: string
+  claim: string
 }
 export type ExpectsCallAcceptedOutput = {
-    status: number;
+  status: number
 }
 export type ExpectsCallRefusedInput = {
-    status: number;
-    serialized: string;
-    expected: number[];
-    claim: string;
+  status: number
+  serialized: string
+  expected: number[]
+  claim: string
 }
 export type ExpectsCallRefusedOutput = {
-    status: number;
+  status: number
 }
 export type ExpectsCascadeSecretEncryptedInput = {
-    valueWrapped: string;
-    kekVersionId: string;
-    hint: string;
-    plaintext: string;
+  valueWrapped: string
+  kekVersionId: string
+  hint: string
+  plaintext: string
 }
 export type ExpectsCascadeSecretEncryptedOutput = {
-    kekVersionId: string;
+  kekVersionId: string
 }
 export type ExpectsCascadeValueSetInput = {
-    token: string;
-    projectId: string;
-    kind: "secret" | "variable";
-    scope: string;
-    name: string;
-    expectedValue: string;
-    claim: string;
+  token: string
+  projectId: string
+  kind: 'secret' | 'variable'
+  scope: string
+  name: string
+  expectedValue: string
+  claim: string
 }
 export type ExpectsCascadeValueSetOutput = {
-    hint: string;
+  hint: string
 }
 export type ExpectsCascadeValueUnsetInput = {
-    token: string;
-    projectId: string;
-    kind: "secret" | "variable";
-    scope: string;
-    name: string;
-    claim: string;
+  token: string
+  projectId: string
+  kind: 'secret' | 'variable'
+  scope: string
+  name: string
+  claim: string
 }
 export type ExpectsCascadeValueUnsetOutput = {
-    scope: string;
+  scope: string
 }
 export type ExpectsDeclarationsInput = {
-    declared: {
-        name: string;
-        blocked: boolean;
-    }[];
-    missing: string[];
-    names: string[];
-    blocked: boolean;
-    checkBlocked: boolean;
-    claim: string;
+  declared: {
+    name: string
+    blocked: boolean
+  }[]
+  missing: string[]
+  names: string[]
+  blocked: boolean
+  checkBlocked: boolean
+  claim: string
 }
 export type ExpectsDeclarationsOutput = {
-    checked: number;
+  checked: number
 }
 export type ExpectsDeployFirstGuidanceInput = {
-    status: number;
-    serialized: string;
-    stageId: string;
-    claim: string;
+  status: number
+  serialized: string
+  stageId: string
+  claim: string
 }
 export type ExpectsDeployFirstGuidanceOutput = {
-    status: number;
+  status: number
 }
 export type ExpectsIngestAcceptedInput = {
-    status: number;
-    accepted: number;
-    expected: number;
-    serialized: string;
-    claim: string;
+  status: number
+  accepted: number
+  expected: number
+  serialized: string
+  claim: string
 }
 export type ExpectsIngestAcceptedOutput = {
-    accepted: number;
+  accepted: number
 }
 export type ExpectsLinkedGitAccountInput = {
-    token: string;
-    provider: string;
-    present: boolean;
-    claim: string;
+  token: string
+  provider: string
+  present: boolean
+  claim: string
 }
 export type ExpectsLinkedGitAccountOutput = {
-    providers: string[];
+  providers: string[]
 }
 export type ExpectsLinkingRedirectInput = {
-    redirectUrl: string;
-    expectedHost: string;
-    expectedPathPrefix: string;
-    claim: string;
+  redirectUrl: string
+  expectedHost: string
+  expectedPathPrefix: string
+  claim: string
 }
 export type ExpectsLinkingRedirectOutput = {
-    host: string;
+  host: string
 }
 export type ExpectsMemberRoleInput = {
-    token: string;
-    organizationId: string;
-    userId: string;
-    expectedRole: "owner" | "admin" | "member";
-    claim: string;
+  token: string
+  organizationId: string
+  userId: string
+  expectedRole: 'owner' | 'admin' | 'member'
+  claim: string
 }
 export type ExpectsMemberRoleOutput = {
-    role: "owner" | "admin" | "member";
+  role: 'owner' | 'admin' | 'member'
 }
 export type ExpectsNoLiveDeploymentInput = {
-    token: string;
-    projectId: string;
-    claim: string;
+  token: string
+  projectId: string
+  claim: string
 }
 export type ExpectsNoLiveDeploymentOutput = {
-    stageCount: number;
+  stageCount: number
 }
 export type ExpectsNoSandboxesInput = {
-    token: string;
-    projectId: string;
-    claim: string;
+  token: string
+  projectId: string
+  claim: string
 }
 export type ExpectsNoSandboxesOutput = {
-    count: number;
+  count: number
 }
 export type ExpectsNotAMemberRefusalInput = {
-    status: number;
-    serialized: string;
-    claim: string;
+  status: number
+  serialized: string
+  claim: string
 }
 export type ExpectsNotAMemberRefusalOutput = {
-    status: number;
+  status: number
 }
 export type ExpectsNoUnitsReplacedInput = {
-    status: number;
-    body: unknown;
-    serialized: string;
-    claim: string;
+  status: number
+  body: unknown
+  serialized: string
+  claim: string
 }
 export type ExpectsNoUnitsReplacedOutput = {
-    status: number;
+  status: number
 }
 export type ExpectsPlanLimitRefusalInput = {
-    status: number;
-    serialized: string;
-    resource: string;
-    claim: string;
+  status: number
+  serialized: string
+  resource: string
+  claim: string
 }
 export type ExpectsPlanLimitRefusalOutput = {
-    status: number;
+  status: number
 }
 export type ExpectsPlanTierInput = {
-    token: string;
-    organizationId: string;
-    expectedTier: string;
-    claim: string;
+  token: string
+  organizationId: string
+  expectedTier: string
+  claim: string
 }
 export type ExpectsPlanTierOutput = {
-    planTier: string;
+  planTier: string
 }
 export type ExpectsPresignedPairInput = {
-    uploadUrl: string;
-    signedReadUrl: string;
-    serialized: string;
-    claim: string;
+  uploadUrl: string
+  signedReadUrl: string
+  serialized: string
+  claim: string
 }
 export type ExpectsPresignedPairOutput = {
-    uploadUrl: string;
+  uploadUrl: string
 }
 export type ExpectsProjectAbsentInput = {
-    token: string;
-    organizationId: string;
-    name: string;
-    claim: string;
+  token: string
+  organizationId: string
+  name: string
+  claim: string
 }
 export type ExpectsProjectAbsentOutput = {
-    projectCount: number;
+  projectCount: number
 }
 export type ExpectsProjectFlippedToErrorInput = {
-    flipped: boolean;
-    status: string;
-    claim: string;
+  flipped: boolean
+  status: string
+  claim: string
 }
 export type ExpectsProjectFlippedToErrorOutput = {
-    status: string;
+  status: string
 }
 export type ExpectsRollupUnchangedInput = {
-    total: number;
-    expected: number;
-    claim: string;
+  total: number
+  expected: number
+  claim: string
 }
 export type ExpectsRollupUnchangedOutput = {
-    total: number;
+  total: number
 }
 export type ExpectsSandboxAddonsWiredInput = {
-    namespaces: string[];
-    expected: string[];
-    claim: string;
+  namespaces: string[]
+  expected: string[]
+  claim: string
 }
 export type ExpectsSandboxAddonsWiredOutput = {
-    namespaces: string[];
+  namespaces: string[]
 }
 export type ExpectsSandboxHealthyInput = {
-    baseUrl: string;
-    timeoutMs: number;
-    claim: string;
+  baseUrl: string
+  timeoutMs: number
+  claim: string
 }
 export type ExpectsSandboxHealthyOutput = {
-    status: number;
+  status: number
 }
 export type ExpectsSandboxSleepingInput = {
-    token: string;
-    sandboxId: string;
-    timeoutMs: number;
-    claim: string;
+  token: string
+  sandboxId: string
+  timeoutMs: number
+  claim: string
 }
 export type ExpectsSandboxSleepingOutput = {
-    status: string;
+  status: string
 }
 export type ExpectsSessionIdentityInput = {
-    body: unknown;
-    expectedUserId: string;
-    expectPlatformAdmin: boolean;
-    claim: string;
+  body: unknown
+  expectedUserId: string
+  expectPlatformAdmin: boolean
+  claim: string
 }
 export type ExpectsSessionIdentityOutput = {
-    userId: string;
-    email: string;
+  userId: string
+  email: string
 }
 export type ExpectsSoleMemberInput = {
-    token: string;
-    organizationId: string;
-    userId: string;
-    claim: string;
+  token: string
+  organizationId: string
+  userId: string
+  claim: string
 }
 export type ExpectsSoleMemberOutput = {
-    memberCount: number;
+  memberCount: number
 }
-export type ExpectsWebhookRejectedInput = { call: ScenarioHttpResponse<unknown>; status: number; contains?: string | undefined; }
-export type ExpectsWebhookRejectedOutput = { status: number; }
+export type ExpectsWebhookRejectedInput = {
+  call: ScenarioHttpResponse<unknown>
+  status: number
+  contains?: string | undefined
+}
+export type ExpectsWebhookRejectedOutput = { status: number }
 export type ExpectsWebhookSkippedInput = {
-    status: string;
-    reason: string;
-    expectedReason: string;
-    serialized: string;
-    claim: string;
+  status: string
+  reason: string
+  expectedReason: string
+  serialized: string
+  claim: string
 }
 export type ExpectsWebhookSkippedOutput = {
-    reason: string;
+  reason: string
 }
 export type FabricCliDeploymentsInput = {
-    projectId: string;
-    branch?: string | undefined;
-    limit?: number | undefined;
+  projectId: string
+  branch?: string | undefined
+  limit?: number | undefined
 }
 export type FabricCliDeploymentsOutput = {
-    deployments: {
-        deploymentId: string;
-        branch: string;
-        version: string;
-        status: string;
-        trigger: string;
-        gitSha: string | null;
-        url: string | null;
-        deployedAt: string | null;
-        createdAt: string;
-    }[];
+  deployments: {
+    deploymentId: string
+    branch: string
+    version: string
+    status: string
+    trigger: string
+    gitSha: string | null
+    url: string | null
+    deployedAt: string | null
+    createdAt: string
+  }[]
 }
 export type FabricCliProjectsInput = {}
 export type FabricCliProjectsOutput = {
-    projects: {
-        projectId: string;
-        name: string;
-        slug: string;
-        status: string;
-        productionBranch: string;
-        gitRepoUrl: string | null;
-        createdAt: string;
-    }[];
+  projects: {
+    projectId: string
+    name: string
+    slug: string
+    status: string
+    productionBranch: string
+    gitRepoUrl: string | null
+    createdAt: string
+  }[]
 }
 export type FabricCliReviewClearInput = {
-    projectId: string | null;
-    targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
-    targetId: string;
-    contractHash: string | null;
-    implementationHash: string | null;
-    subject: "code" | "knowledge" | "ui";
+  projectId: string | null
+  targetKind:
+    | 'function'
+    | 'workflow'
+    | 'agent'
+    | 'queue'
+    | 'knowledge'
+    | 'component'
+    | 'hook'
+    | 'context'
+  targetId: string
+  contractHash: string | null
+  implementationHash: string | null
+  subject: 'code' | 'knowledge' | 'ui'
 }
 export type FabricCliReviewClearOutput = {
-    cleared: boolean;
+  cleared: boolean
 }
 export type FabricCliReviewFixesInput = {
-    projectId: string | null;
-    gitSha: string | null;
-    subject: "code" | "knowledge" | "ui";
-    targetIds: string[] | null;
-    includeStale: boolean;
-    limit: number;
+  projectId: string | null
+  gitSha: string | null
+  subject: 'code' | 'knowledge' | 'ui'
+  targetIds: string[] | null
+  includeStale: boolean
+  limit: number
 }
 export type FabricCliReviewFixesOutput = {
-    fixes: {
-        target: {
-            projectId: string | null;
-            targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
-            targetId: string;
-            contractHash: string | null;
-            implementationHash: string | null;
-        };
-        commentId: string | null;
-        name: string;
-        reason: string;
-        label: string;
-        tier: "lint" | "critic" | "human";
-        note: string | null;
-        guidance: string | null;
-        prompt: string;
-        sourceFile: string | null;
-        bodyStart: number | null;
-        bodyEnd: number | null;
-        stale: boolean;
-        castAt: Date;
-    }[];
-    total: number;
-    stale: number;
+  fixes: {
+    target: {
+      projectId: string | null
+      targetKind:
+        | 'function'
+        | 'workflow'
+        | 'agent'
+        | 'queue'
+        | 'knowledge'
+        | 'component'
+        | 'hook'
+        | 'context'
+      targetId: string
+      contractHash: string | null
+      implementationHash: string | null
+    }
+    commentId: string | null
+    name: string
+    reason: string
+    label: string
+    tier: 'lint' | 'critic' | 'human'
+    note: string | null
+    guidance: string | null
+    prompt: string
+    sourceFile: string | null
+    bodyStart: number | null
+    bodyEnd: number | null
+    stale: boolean
+    castAt: Date
+  }[]
+  total: number
+  stale: number
 }
 export type FabricCliReviewQueueInput = {
-    projectId: string | null;
-    gitSha: string | null;
-    sinceGitSha: string | null;
-    subject: "code" | "knowledge" | "ui";
-    hours?: number | undefined;
-    limit: number;
+  projectId: string | null
+  gitSha: string | null
+  sinceGitSha: string | null
+  subject: 'code' | 'knowledge' | 'ui'
+  hours?: number | undefined
+  limit: number
 }
 export type FabricCliReviewQueueOutput = {
-    candidates: {
-        clusterId: string;
-        targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
-        pikkuFuncId: string;
-        name: string;
-        sourceFile: string;
-        bodyStart: number;
-        bodyEnd: number;
-        contractHash: string | null;
-        implementationHash: string | null;
-        services: string[];
-        wires: string[];
-        change: ("added" | "contract" | "implementation" | "removed") | null;
-        score: number;
-        components: {
-            label: string;
-            points: number;
-        }[];
-        clusterSize: number;
-        members: string[];
-        suggestedReasons: string[];
-        judgedAs: ("keep" | "reject") | null;
-        commentCount: number;
-        ui: {
-            unit: "component" | "hook" | "context";
-            lines: number;
-            hooks: string[];
-            rpcs: string[];
-        } | null;
-    }[];
-    comments: {
-        projectId: string | null;
-        targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
-        targetId: string;
-        contractHash: string | null;
-        implementationHash: string | null;
-        commentId: string;
-        subject: "code" | "knowledge" | "ui";
-        sourceFile: string;
-        lineStart: number;
-        lineEnd: number;
-        body: string;
-        castByUserId: string | null;
-        castAt: Date;
-    }[];
-    reasons: {
-        id: string;
-        label: string;
-        quick?: string | undefined;
-        subject: "code" | "knowledge" | "ui";
-        kind: "keep" | "reject";
-        tier: "lint" | "critic" | "human";
-        lintKey?: string | undefined;
-        guidance?: string | undefined;
-        check?: string | undefined;
-    }[];
-    total: number;
-    judged: number;
+  candidates: {
+    clusterId: string
+    targetKind:
+      | 'function'
+      | 'workflow'
+      | 'agent'
+      | 'queue'
+      | 'knowledge'
+      | 'component'
+      | 'hook'
+      | 'context'
+    pikkuFuncId: string
+    name: string
+    sourceFile: string
+    bodyStart: number
+    bodyEnd: number
+    contractHash: string | null
+    implementationHash: string | null
+    services: string[]
+    wires: string[]
+    change: ('added' | 'contract' | 'implementation' | 'removed') | null
+    score: number
+    components: {
+      label: string
+      points: number
+    }[]
+    clusterSize: number
+    members: string[]
+    suggestedReasons: string[]
+    judgedAs: ('keep' | 'reject') | null
+    commentCount: number
+    ui: {
+      unit: 'component' | 'hook' | 'context'
+      lines: number
+      hooks: string[]
+      rpcs: string[]
+    } | null
+  }[]
+  comments: {
+    projectId: string | null
+    targetKind:
+      | 'function'
+      | 'workflow'
+      | 'agent'
+      | 'queue'
+      | 'knowledge'
+      | 'component'
+      | 'hook'
+      | 'context'
+    targetId: string
+    contractHash: string | null
+    implementationHash: string | null
+    commentId: string
+    subject: 'code' | 'knowledge' | 'ui'
+    sourceFile: string
+    lineStart: number
+    lineEnd: number
+    body: string
+    castByUserId: string | null
+    castAt: Date
+  }[]
+  reasons: {
+    id: string
+    label: string
+    quick?: string | undefined
+    subject: 'code' | 'knowledge' | 'ui'
+    kind: 'keep' | 'reject'
+    tier: 'lint' | 'critic' | 'human'
+    lintKey?: string | undefined
+    guidance?: string | undefined
+    check?: string | undefined
+  }[]
+  total: number
+  judged: number
 }
 export type FabricCliReviewVerdictInput = {
-    projectId: string | null;
-    targetKind: "function" | "workflow" | "agent" | "queue" | "knowledge" | "component" | "hook" | "context";
-    targetId: string;
-    contractHash: string | null;
-    implementationHash: string | null;
-    subject: "code" | "knowledge" | "ui";
-    kind: "keep" | "reject";
-    reasons: string[];
-    note: string | null;
+  projectId: string | null
+  targetKind:
+    | 'function'
+    | 'workflow'
+    | 'agent'
+    | 'queue'
+    | 'knowledge'
+    | 'component'
+    | 'hook'
+    | 'context'
+  targetId: string
+  contractHash: string | null
+  implementationHash: string | null
+  subject: 'code' | 'knowledge' | 'ui'
+  kind: 'keep' | 'reject'
+  reasons: string[]
+  note: string | null
 }
 export type FabricCliReviewVerdictOutput = {
-    castUnderScope: string;
+  castUnderScope: string
 }
 export type FillsMemberQuotaInput = {
-    token: string;
-    organizationId: string;
-    maxMembers: number;
+  token: string
+  organizationId: string
+  maxMembers: number
 }
 export type FillsMemberQuotaOutput = {
-    invited: number;
-    consumedSeats: number;
+  invited: number
+  consumedSeats: number
 }
 export type FillsProjectQuotaInput = {
-    token: string;
-    organizationId: string;
-    count: number;
-    templateSlug: string;
+  token: string
+  organizationId: string
+  count: number
+  templateSlug: string
 }
 export type FillsProjectQuotaOutput = {
-    projectIds: string[];
-    created: number;
+  projectIds: string[]
+  created: number
 }
 export type FindsADeployedStageInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type FindsADeployedStageOutput = {
-    projectId: string;
-    projectName: string;
-    branch: string;
-    deploymentId: string;
+  projectId: string
+  projectName: string
+  branch: string
+  deploymentId: string
 }
 export type FinishProjectTransferInput = {
-    projectId: string;
-    fromOrganizationId: string;
-    targetOrganizationId: string;
-    rewrappedValues: number;
-    appliedStageIds: string[];
-    stagesNeedingRedeploy: string[];
+  projectId: string
+  fromOrganizationId: string
+  targetOrganizationId: string
+  rewrappedValues: number
+  appliedStageIds: string[]
+  stagesNeedingRedeploy: string[]
 }
 export type FinishProjectTransferOutput = {
-    projectId: string;
-    stagesNeedingRedeploy: string[];
+  projectId: string
+  stagesNeedingRedeploy: string[]
 }
-export type ForeignOrganizationIsRefusedScenarioOutput = { name: string; status: number; }
-export type ForgedImpersonationHeaderIsIgnoredScenarioOutput = { email: string; }
-export type FreeMemberQuotaCountsPendingInvitationsScenarioOutput = { organizationId: string; maxMembers: number; }
-export type FreeProjectQuotaBlocksTheNextProjectScenarioOutput = { organizationId: string; maxProjects: number; }
-export type FreeTierCanCreateOrgScenarioOutput = { status: number; }
+export type ForeignOrganizationIsRefusedScenarioOutput = {
+  name: string
+  status: number
+}
+export type ForgedImpersonationHeaderIsIgnoredScenarioOutput = { email: string }
+export type FreeMemberQuotaCountsPendingInvitationsScenarioOutput = {
+  organizationId: string
+  maxMembers: number
+}
+export type FreeProjectQuotaBlocksTheNextProjectScenarioOutput = {
+  organizationId: string
+  maxProjects: number
+}
+export type FreeTierCanCreateOrgScenarioOutput = { status: number }
 export type GenerateAppIdeaInput = {
-    complexity: "simple" | "medium" | "complex";
+  complexity: 'simple' | 'medium' | 'complex'
 }
 export type GenerateAppIdeaOutput = {
-    name: string;
-    goal: string;
-    domain: "crm" | "healthcare" | "inventory" | "logistics" | "finance" | "education" | "ecommerce" | "booking" | "recruiting" | "insurance" | "property" | "legal" | "hospitality" | "service" | "general";
-    expectLogin: boolean;
+  name: string
+  goal: string
+  domain:
+    | 'crm'
+    | 'healthcare'
+    | 'inventory'
+    | 'logistics'
+    | 'finance'
+    | 'education'
+    | 'ecommerce'
+    | 'booking'
+    | 'recruiting'
+    | 'insurance'
+    | 'property'
+    | 'legal'
+    | 'hospitality'
+    | 'service'
+    | 'general'
+  expectLogin: boolean
 }
 export type GenerateForeignSealingKeyInput = {}
 export type GenerateForeignSealingKeyOutput = {
-    privateKey: string;
-    publicKey: string;
+  privateKey: string
+  publicKey: string
 }
 export type GenerateLogoMarksInput = {
-    idea?: string | undefined;
+  idea?: string | undefined
 }
 export type GenerateLogoMarksOutput = {
-    marks: {
-        id: string;
-        object: string;
-        device: string;
-        url: string;
-        imageBase64: string;
-    }[];
-    error: string | null;
+  marks: {
+    id: string
+    object: string
+    device: string
+    url: string
+    imageBase64: string
+  }[]
+  error: string | null
 }
 export type GenerateProjectAspirationsStepInput = {
-    projectId: string;
-    userId: string;
-    sourceDigest: string;
-    knowledge?: string | undefined;
+  projectId: string
+  userId: string
+  sourceDigest: string
+  knowledge?: string | undefined
 }
 export type GenerateProjectAspirationsStepOutput = {
-    generated: number;
-    renamedTo: string | null;
+  generated: number
+  renamedTo: string | null
 }
-export type GenerateProjectAspirationsWorkflowInput = { projectId: string; userId: string; sourceDigest: string; knowledge?: string | undefined; }
-export type GenerateProjectAspirationsWorkflowOutput = { generated: number; }
+export type GenerateProjectAspirationsWorkflowInput = {
+  projectId: string
+  userId: string
+  sourceDigest: string
+  knowledge?: string | undefined
+}
+export type GenerateProjectAspirationsWorkflowOutput = { generated: number }
 export type GetActiveAgentBundleInput = {}
 export type GetActiveAgentBundleOutput = {
-    version: number;
-    bundleObjectKey: string;
-    presignedDownloadUrl: string | null;
+  version: number
+  bundleObjectKey: string
+  presignedDownloadUrl: string | null
 }
-export type GetAgentThreadMessagesInput = { threadId: string; resourceId?: string | undefined; }
+export type GetAgentThreadMessagesInput = {
+  threadId: string
+  resourceId?: string | undefined
+}
 export type GetAgentThreadMessagesOutput = any[]
-export type GetAgentThreadRunsInput = { threadId: string; resourceId?: string | undefined; }
+export type GetAgentThreadRunsInput = {
+  threadId: string
+  resourceId?: string | undefined
+}
 export type GetAgentThreadRunsOutput = any[]
-export type GetAgentThreadsInput = { agentName?: string | undefined; resourceId?: string | undefined; limit?: number | undefined; offset?: number | undefined; }
+export type GetAgentThreadsInput = {
+  agentName?: string | undefined
+  resourceId?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
+}
 export type GetAgentThreadsOutput = any[]
 export type GetAiUsageLedgerInput = {
-    organizationId: string;
-    page: number;
-    pageSize: number;
+  organizationId: string
+  page: number
+  pageSize: number
 }
 export type GetAiUsageLedgerOutput = {
-    entries: {
-        entryId: string;
-        kind: "topup" | "grant" | "grant_reset" | "debit";
-        amountUsd: number;
-        bucket: string | null;
-        reason: string | null;
-        eventCount: number | null;
-        createdAt: string;
-    }[];
-    total: number;
+  entries: {
+    entryId: string
+    kind: 'topup' | 'grant' | 'grant_reset' | 'debit'
+    amountUsd: number
+    bucket: string | null
+    reason: string | null
+    eventCount: number | null
+    createdAt: string
+  }[]
+  total: number
 }
 export type GetBillingInvoicesInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type GetBillingInvoicesOutput = {
-    invoices: {
-        id: string;
-        number: string | null;
-        created: string;
-        amountPaidUsd: number;
-        currency: string;
-        status: string | null;
-        hostedInvoiceUrl: string | null;
-        invoicePdf: string | null;
-    }[];
+  invoices: {
+    id: string
+    number: string | null
+    created: string
+    amountPaidUsd: number
+    currency: string
+    status: string | null
+    hostedInvoiceUrl: string | null
+    invoicePdf: string | null
+  }[]
 }
 export type GetBillingSummaryInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type GetBillingSummaryOutput = {
-    planTier: string;
-    subscriptionStatus: string | null;
-    currentPeriodEnd: string | null;
-    hasPaymentMethod: boolean;
-    hasBillingAccount: boolean;
-    paymentMethodBrand: string | null;
-    paymentMethodLast4: string | null;
-    balanceUsd: number;
-    priorityCreditUsd: number;
-    priorityCreditResetsAt: string | null;
-    trialUsd: number;
-    potUsd: number;
-    autoRechargeEnabled: boolean;
-    autoRechargeAmountUsd: number;
-    autoRechargeThresholdUsd: number;
-    paidResourcesBlocked: boolean;
+  planTier: string
+  subscriptionStatus: string | null
+  currentPeriodEnd: string | null
+  hasPaymentMethod: boolean
+  hasBillingAccount: boolean
+  paymentMethodBrand: string | null
+  paymentMethodLast4: string | null
+  balanceUsd: number
+  priorityCreditUsd: number
+  priorityCreditResetsAt: string | null
+  trialUsd: number
+  potUsd: number
+  autoRechargeEnabled: boolean
+  autoRechargeAmountUsd: number
+  autoRechargeThresholdUsd: number
+  paidResourcesBlocked: boolean
 }
 export type GetChangeInput = {
-    changeId: string;
+  changeId: string
 }
 export type GetChangeOutput = {
-    change: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-        screenshotUrl: string | null;
-    };
-    thread: {
-        messageId: string;
-        changeId: string;
-        authorKind: "agent" | "user";
-        authorName: string | null;
-        body: string;
-        attachments: {
-            key: string;
-            label: string;
-            kind: "option" | "evidence";
-            url: string | null;
-        }[];
-        chosenOption: string | null;
-        createdAt: Date;
-    }[];
-    stageUrl: string | null;
+  change: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+    screenshotUrl: string | null
+  }
+  thread: {
+    messageId: string
+    changeId: string
+    authorKind: 'agent' | 'user'
+    authorName: string | null
+    body: string
+    attachments: {
+      key: string
+      label: string
+      kind: 'option' | 'evidence'
+      url: string | null
+    }[]
+    chosenOption: string | null
+    createdAt: Date
+  }[]
+  stageUrl: string | null
 }
 export type GetChatAttachmentUrlInput = {
-    contentType: string;
-    sizeBytes: number;
+  contentType: string
+  sizeBytes: number
 }
 export type GetChatAttachmentUrlOutput = {
-    uploadUrl: string;
-    signedReadUrl: string;
-    uploadMethod?: ("PUT" | "POST") | undefined;
+  uploadUrl: string
+  signedReadUrl: string
+  uploadMethod?: ('PUT' | 'POST') | undefined
 }
 export type GetCliAuthStatusInput = {
-    code: string;
+  code: string
 }
 export type GetCliAuthStatusOutput = {
-    status: "pending" | "confirmed" | "consumed" | "expired" | "rejected";
-    expiresAt: string;
+  status: 'pending' | 'confirmed' | 'consumed' | 'expired' | 'rejected'
+  expiresAt: string
 }
 export type GetContentUploadUrlInput = {
-    fileKey: string;
-    contentType: string;
-    sizeBytes?: number | undefined;
-    visibility: "private" | "public";
+  fileKey: string
+  contentType: string
+  sizeBytes?: number | undefined
+  visibility: 'private' | 'public'
 }
 export type GetContentUploadUrlOutput = {
-    uploadUrl: string;
-    assetKey: string;
-    expiresAt: string;
-    uploadHeaders?: {
-        [key: string]: string;
-    } | undefined;
-    uploadMethod?: ("PUT" | "POST") | undefined;
+  uploadUrl: string
+  assetKey: string
+  expiresAt: string
+  uploadHeaders?:
+    | {
+        [key: string]: string
+      }
+    | undefined
+  uploadMethod?: ('PUT' | 'POST') | undefined
 }
 export type GetDeletedSandboxInput = {
-    projectId: string;
-    slug: string;
+  projectId: string
+  slug: string
 }
 export type GetDeletedSandboxOutput = {
-    deleted: {
-        name: string;
-        slug: string;
-        deletedAt: string;
-    } | null;
+  deleted: {
+    name: string
+    slug: string
+    deletedAt: string
+  } | null
 }
 export type GetDeployArtifactUploadUrlInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type GetDeployArtifactUploadUrlOutput = {
-    uploadUrl: string;
-    assetKey: string;
-    uploadMethod?: ("PUT" | "POST") | undefined;
-    uploadHeaders?: {
-        [key: string]: string;
-    } | undefined;
+  uploadUrl: string
+  assetKey: string
+  uploadMethod?: ('PUT' | 'POST') | undefined
+  uploadHeaders?:
+    | {
+        [key: string]: string
+      }
+    | undefined
 }
 export type GetDeploymentBuildLogInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type GetDeploymentBuildLogOutput = {
-    log: string | null;
+  log: string | null
 }
 export type GetDeploymentItemMetaInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type GetDeploymentItemMetaOutput = {
-    items: {
-        [key: string]: {
-            description: string | null;
-            auth?: boolean | undefined;
-            tags?: string[] | undefined;
-            optional?: boolean | undefined;
-        };
-    };
-    agents: {
-        name: string;
-        description: string | null;
-        model: string | null;
-        tools: string[];
-    }[];
+  items: {
+    [key: string]: {
+      description: string | null
+      auth?: boolean | undefined
+      tags?: string[] | undefined
+      optional?: boolean | undefined
+    }
+  }
+  agents: {
+    name: string
+    description: string | null
+    model: string | null
+    tools: string[]
+  }[]
 }
 export type GetDeploymentSecurityAuditInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type GetDeploymentSecurityAuditOutput = {
-    report: {
-        schemaVersion: number;
-        tool: string;
-        generatedAt: string;
-        note?: string | undefined;
-        issues: {
-            package: string;
-            severity: "critical" | "high" | "moderate" | "low" | "info";
-            title: string;
-            advisoryId: string;
-            url: string;
-            vulnerableVersions: string;
-            cwe: string[];
-            cvssScore: number | null;
-            recommendedVersion: string | null;
-        }[];
-        updates: {
-            package: string;
-            current: string;
-            latest: string;
-            level: "major" | "minor" | "patch" | "unknown";
-        }[];
-        summary: {
-            totalIssues: number;
-            critical: number;
-            high: number;
-            moderate: number;
-            low: number;
-            totalUpdates: number;
-            major: number;
-            minor: number;
-            patch: number;
-        };
-    } | null;
+  report: {
+    schemaVersion: number
+    tool: string
+    generatedAt: string
+    note?: string | undefined
+    issues: {
+      package: string
+      severity: 'critical' | 'high' | 'moderate' | 'low' | 'info'
+      title: string
+      advisoryId: string
+      url: string
+      vulnerableVersions: string
+      cwe: string[]
+      cvssScore: number | null
+      recommendedVersion: string | null
+    }[]
+    updates: {
+      package: string
+      current: string
+      latest: string
+      level: 'major' | 'minor' | 'patch' | 'unknown'
+    }[]
+    summary: {
+      totalIssues: number
+      critical: number
+      high: number
+      moderate: number
+      low: number
+      totalUpdates: number
+      major: number
+      minor: number
+      patch: number
+    }
+  } | null
 }
 export type GetDeploymentStatusInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type GetDeploymentStatusOutput = {
-    status: string;
-    statusReason: string | null;
-    hostname: string | null;
-    stageId: string;
-    stageType: string;
-    dispatchNamespace: string | null;
-    manifest: {
-        [key: string]: unknown;
-    };
-    imageBuildStatus: string | null;
-    imageBuildLog: string | null;
-    buildLog: string | null;
-    missingSecrets: {
-        name: string;
-        displayName: string | null;
-        description: string | null;
-        docsUrl: string | null;
-    }[];
-    missingVariables: {
-        name: string;
-        displayName: string | null;
-        description: string | null;
-        docsUrl: string | null;
-    }[];
+  status: string
+  statusReason: string | null
+  hostname: string | null
+  stageId: string
+  stageType: string
+  dispatchNamespace: string | null
+  manifest: {
+    [key: string]: unknown
+  }
+  imageBuildStatus: string | null
+  imageBuildLog: string | null
+  buildLog: string | null
+  missingSecrets: {
+    name: string
+    displayName: string | null
+    description: string | null
+    docsUrl: string | null
+  }[]
+  missingVariables: {
+    name: string
+    displayName: string | null
+    description: string | null
+    docsUrl: string | null
+  }[]
 }
 export type GetDeveloperLiteLLMKeyInput = {}
 export type GetDeveloperLiteLLMKeyOutput = {
-    proxyUrl: string;
-    apiKey: string;
+  proxyUrl: string
+  apiKey: string
 }
 export type GetFabricLogsByStageKindInput = {
-    projectId: string;
-    branch: string;
-    source?: ("workspace" | "deploy") | undefined;
-    functionName?: string | undefined;
-    level?: string | undefined;
-    search?: string | undefined;
-    traceId?: string | undefined;
+  projectId: string
+  branch: string
+  source?: ('workspace' | 'deploy') | undefined
+  functionName?: string | undefined
+  level?: string | undefined
+  search?: string | undefined
+  traceId?: string | undefined
 }
 export type GetFabricLogsByStageKindOutput = {
-    logs: {
-        timestamp: string;
-        level: string;
-        source?: string | undefined;
-        functionName: string;
-        message: string;
-        traceId?: string | undefined;
-    }[];
+  logs: {
+    timestamp: string
+    level: string
+    source?: string | undefined
+    functionName: string
+    message: string
+    traceId?: string | undefined
+  }[]
 }
 export type GetFabricLogsInput = {
-    environmentType: "stage" | "sandbox";
-    environmentId: string;
-    source?: ("workspace" | "deploy") | undefined;
-    functionName?: string | undefined;
-    level?: string | undefined;
-    search?: string | undefined;
-    traceId?: string | undefined;
-    tenantOrgId?: string | undefined;
-    tenantUserId?: string | undefined;
-    since?: string | undefined;
+  environmentType: 'stage' | 'sandbox'
+  environmentId: string
+  source?: ('workspace' | 'deploy') | undefined
+  functionName?: string | undefined
+  level?: string | undefined
+  search?: string | undefined
+  traceId?: string | undefined
+  tenantOrgId?: string | undefined
+  tenantUserId?: string | undefined
+  since?: string | undefined
 }
 export type GetFabricLogsOutput = {
-    logs: {
-        timestamp: string;
-        level: string;
-        source?: string | undefined;
-        functionName: string;
-        message: string;
-        traceId?: string | undefined;
-        tenantOrgId?: (string | null) | undefined;
-        tenantUserId?: (string | null) | undefined;
-    }[];
+  logs: {
+    timestamp: string
+    level: string
+    source?: string | undefined
+    functionName: string
+    message: string
+    traceId?: string | undefined
+    tenantOrgId?: (string | null) | undefined
+    tenantUserId?: (string | null) | undefined
+  }[]
 }
 export type GetGithubInstallationInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type GetGithubInstallationOutput = {
-    installed: boolean;
-    installations: {
-        accountLogin: string;
-        repositorySelection: string;
-        suspended: boolean;
-        manageUrl: string;
-    }[];
+  installed: boolean
+  installations: {
+    accountLogin: string
+    repositorySelection: string
+    suspended: boolean
+    manageUrl: string
+  }[]
 }
 export type GetHarnessBuildStatusInput = {
-    sandboxHostname: string;
-    builderToken: string;
-    projectId: string;
+  sandboxHostname: string
+  builderToken: string
+  projectId: string
 }
 export type GetHarnessBuildStatusOutput = {
-    active: boolean;
-    ended: boolean;
-    buildComplete: boolean | null;
-    summary: string | null;
-    milestones: number | null;
-    checkedAt: number;
+  active: boolean
+  ended: boolean
+  buildComplete: boolean | null
+  summary: string | null
+  milestones: number | null
+  checkedAt: number
 }
 export type GetHarnessRunsCostInput = {
-    sandboxIds: string[];
+  sandboxIds: string[]
 }
 export type GetHarnessRunsCostOutput = {
-    costs: {
-        sandboxId: string;
-        litellmCostUsd: number | null;
-    }[];
+  costs: {
+    sandboxId: string
+    litellmCostUsd: number | null
+  }[]
 }
 export type GetHarnessRunScreenshotsInput = {
-    runId: string;
+  runId: string
 }
 export type GetHarnessRunScreenshotsOutput = {
-    images: {
-        name: string;
-        pagePath: string | null;
-        url: string;
-        httpStatus: number | null;
-    }[];
+  images: {
+    name: string
+    pagePath: string | null
+    url: string
+    httpStatus: number | null
+  }[]
 }
 export type GetHarnessRunSessionInput = {
-    runId: string;
+  runId: string
 }
 export type GetHarnessRunSessionOutput = {
-    transcript: {
-        plan: string | null;
-        diff: string | null;
-        turns: {
-            role: string;
-            text: string | null;
-            tools: {
-                name: string;
-                title: string | null;
-                status: string | null;
-                result: string | null;
-                isError: boolean | null;
-                durationMs: number | null;
-            }[];
-            startedAt: number | null;
-            durationMs: number | null;
-            stopReason: string | null;
-            errorMessage: string | null;
-        }[];
-    } | null;
+  transcript: {
+    plan: string | null
+    diff: string | null
+    turns: {
+      role: string
+      text: string | null
+      tools: {
+        name: string
+        title: string | null
+        status: string | null
+        result: string | null
+        isError: boolean | null
+        durationMs: number | null
+      }[]
+      startedAt: number | null
+      durationMs: number | null
+      stopReason: string | null
+      errorMessage: string | null
+    }[]
+  } | null
 }
 export type GetHarnessScenarioInput = {
-    harnessScenarioId: string;
+  harnessScenarioId: string
 }
 export type GetHarnessScenarioOutput = {
-    harnessScenarioId: string;
-    goal: string;
-    templateSlug: string;
-    runType: string;
-    domain: string;
-    complexity: string;
-    expectLogin: boolean;
-    specSourceKey: string | null;
-    specSourceKind: ("openapi" | "reference" | "n8n" | "knowledge-archive") | null;
-    specSourceName: string | null;
-    agentBundleVersion: number;
+  harnessScenarioId: string
+  goal: string
+  templateSlug: string
+  runType: string
+  domain: string
+  complexity: string
+  expectLogin: boolean
+  specSourceKey: string | null
+  specSourceKind: ('openapi' | 'reference' | 'n8n' | 'knowledge-archive') | null
+  specSourceName: string | null
+  agentBundleVersion: number
 }
 export type GetInvitationInput = {
-    token: string;
+  token: string
 }
 export type GetInvitationOutput = {
-    invitationId: string;
-    organizationId: string;
-    organizationSlug: string;
-    organizationName: string;
-    email: string;
-    role: "admin" | "member" | "owner";
-    expiresAt: string;
-    expired: boolean;
-    alreadyAccepted: boolean;
+  invitationId: string
+  organizationId: string
+  organizationSlug: string
+  organizationName: string
+  email: string
+  role: 'admin' | 'member' | 'owner'
+  expiresAt: string
+  expired: boolean
+  alreadyAccepted: boolean
 }
 export type GetLiveSandboxReleaseOutput = {
-    version: string | null;
-    commitSha: string | null;
+  version: string | null
+  commitSha: string | null
 }
 export type GetMachineConfigInput = {}
 export type GetMachineConfigOutput = {
-    configs: {
-        type: string;
-        minMachines: number;
-        maxMachines: number;
-        updatedAt: Date;
-    }[];
+  configs: {
+    type: string
+    minMachines: number
+    maxMachines: number
+    updatedAt: Date
+  }[]
 }
 export type GetMyBadgesOutput = {
-    badges: {
-        badgeId: "signed_up" | "claimed_username" | "set_avatar" | "first_sandbox" | "deployed_staging" | "published_production" | "wire_rpc" | "wire_queue" | "wire_scheduler" | "wire_channel" | "wire_mcp" | "wire_cli" | "wire_agent" | "first_rollback" | "virtual_user_run" | "created_org" | "invited_teammate" | "accepted_invitation" | "first_ticket" | "connected_github" | "cli_linked" | "three_am_deploy";
-        group: "first-steps" | "wiring" | "ship" | "craft" | "collaboration" | "depth" | "whimsy";
-        earned: boolean;
-        earnedAt: Date | null;
-        context: {
-            [key: string]: unknown;
-        };
-        roleGated: boolean;
-    }[];
-    justAwarded: ("signed_up" | "claimed_username" | "set_avatar" | "first_sandbox" | "deployed_staging" | "published_production" | "wire_rpc" | "wire_queue" | "wire_scheduler" | "wire_channel" | "wire_mcp" | "wire_cli" | "wire_agent" | "first_rollback" | "virtual_user_run" | "created_org" | "invited_teammate" | "accepted_invitation" | "first_ticket" | "connected_github" | "cli_linked" | "three_am_deploy")[];
+  badges: {
+    badgeId:
+      | 'signed_up'
+      | 'claimed_username'
+      | 'set_avatar'
+      | 'first_sandbox'
+      | 'deployed_staging'
+      | 'published_production'
+      | 'wire_rpc'
+      | 'wire_queue'
+      | 'wire_scheduler'
+      | 'wire_channel'
+      | 'wire_mcp'
+      | 'wire_cli'
+      | 'wire_agent'
+      | 'first_rollback'
+      | 'virtual_user_run'
+      | 'created_org'
+      | 'invited_teammate'
+      | 'accepted_invitation'
+      | 'first_ticket'
+      | 'connected_github'
+      | 'cli_linked'
+      | 'three_am_deploy'
+    group:
+      | 'first-steps'
+      | 'wiring'
+      | 'ship'
+      | 'craft'
+      | 'collaboration'
+      | 'depth'
+      | 'whimsy'
+    earned: boolean
+    earnedAt: Date | null
+    context: {
+      [key: string]: unknown
+    }
+    roleGated: boolean
+  }[]
+  justAwarded: (
+    | 'signed_up'
+    | 'claimed_username'
+    | 'set_avatar'
+    | 'first_sandbox'
+    | 'deployed_staging'
+    | 'published_production'
+    | 'wire_rpc'
+    | 'wire_queue'
+    | 'wire_scheduler'
+    | 'wire_channel'
+    | 'wire_mcp'
+    | 'wire_cli'
+    | 'wire_agent'
+    | 'first_rollback'
+    | 'virtual_user_run'
+    | 'created_org'
+    | 'invited_teammate'
+    | 'accepted_invitation'
+    | 'first_ticket'
+    | 'connected_github'
+    | 'cli_linked'
+    | 'three_am_deploy'
+  )[]
 }
 export type GetOrgAiUsageInput = {
-    organizationId: string;
-    range: "1d" | "7d" | "30d";
-    scope?: ("project" | "stage" | "sandbox" | "user" | "agent") | undefined;
+  organizationId: string
+  range: '1d' | '7d' | '30d'
+  scope?: ('project' | 'stage' | 'sandbox' | 'user' | 'agent') | undefined
 }
 export type GetOrgAiUsageOutput = {
-    providers: {
-        provider: string;
-        totalTokens: number;
-        inputTokens: number;
-        outputTokens: number;
-        requestCount: number;
-        costUsd: number;
-        sharePct: number;
-        models: {
-            model: string;
-            totalTokens: number;
-            inputTokens: number;
-            outputTokens: number;
-            requestCount: number;
-            costUsd: number;
-            sharePct: number;
-        }[];
-    }[];
-    breakdown: {
-        id: string;
-        label: string;
-        topProvider: string | null;
-        totalTokens: number;
-        costUsd: number;
-    }[];
+  providers: {
+    provider: string
+    totalTokens: number
+    inputTokens: number
+    outputTokens: number
+    requestCount: number
+    costUsd: number
+    sharePct: number
+    models: {
+      model: string
+      totalTokens: number
+      inputTokens: number
+      outputTokens: number
+      requestCount: number
+      costUsd: number
+      sharePct: number
+    }[]
+  }[]
+  breakdown: {
+    id: string
+    label: string
+    topProvider: string | null
+    totalTokens: number
+    costUsd: number
+  }[]
 }
 export type GetOrgIssueSummaryInput = {
-    organizationId: string;
-    range: "1d" | "7d" | "30d";
-    limit: number;
+  organizationId: string
+  range: '1d' | '7d' | '30d'
+  limit: number
 }
 export type GetOrgIssueSummaryOutput = {
-    telemetryAvailable: boolean;
-    issues: {
-        stageId: string;
-        stageLabel: string;
-        projectName: string | null;
-        branch: string | null;
-        environment: string | null;
-        functionName: string;
-        errors: number;
-        requests: number;
-        errorRatePct: number;
-        lastSeen: string | null;
-    }[];
+  telemetryAvailable: boolean
+  issues: {
+    stageId: string
+    stageLabel: string
+    projectName: string | null
+    branch: string | null
+    environment: string | null
+    functionName: string
+    errors: number
+    requests: number
+    errorRatePct: number
+    lastSeen: string | null
+  }[]
 }
 export type GetPlatformUserLiteLLMKeyInput = {}
 export type GetPlatformUserLiteLLMKeyOutput = {
-    proxyUrl: string;
-    apiKey: string;
+  proxyUrl: string
+  apiKey: string
 }
 export type GetProjectAgentSessionInput = {
-    projectId: string;
+  projectId: string
 }
 export type GetProjectAgentSessionOutput = {
-    exists: boolean;
-    agentSessionId: string | null;
-    sessionId: string | null;
-    title: string | null;
-    sandboxId: string | null;
-    handoffStorageBucket: string | null;
-    handoffObjectKey: string | null;
-    handoffContentType: string | null;
-    handoffGeneratedAt: string | null;
-    lastAccessedAt: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
+  exists: boolean
+  agentSessionId: string | null
+  sessionId: string | null
+  title: string | null
+  sandboxId: string | null
+  handoffStorageBucket: string | null
+  handoffObjectKey: string | null
+  handoffContentType: string | null
+  handoffGeneratedAt: string | null
+  lastAccessedAt: string | null
+  createdAt: string | null
+  updatedAt: string | null
 }
 export type GetProjectAspirationsInput = {
-    projectId: string;
-    sourceDigest: string;
+  projectId: string
+  sourceDigest: string
 }
 export type GetProjectAspirationsOutput = {
-    aspirations: {
-        title: string;
-        line: string;
-        reaction: ("liked" | "disliked") | null;
-        likes: number;
-        dislikes: number;
-        likedBy: string[];
-        dislikedBy: string[];
-    }[];
+  aspirations: {
+    title: string
+    line: string
+    reaction: ('liked' | 'disliked') | null
+    likes: number
+    dislikes: number
+    likedBy: string[]
+    dislikedBy: string[]
+  }[]
 }
 export type GetProjectAssetUploadUrlInput = {
-    organizationId: string;
-    fileName: string;
-    contentType: string;
-    sizeBytes?: number | undefined;
+  organizationId: string
+  fileName: string
+  contentType: string
+  sizeBytes?: number | undefined
 }
 export type GetProjectAssetUploadUrlOutput = {
-    uploadUrl: string;
-    uploadMethod: "PUT";
-    objectKey: string;
-    storageBucket: string;
-    expiresAt: string;
+  uploadUrl: string
+  uploadMethod: 'PUT'
+  objectKey: string
+  storageBucket: string
+  expiresAt: string
 }
 export type GetProjectCascadeSchemaInput = {
-    projectId: string;
-    targetKey: string;
-    schemaName: string;
+  projectId: string
+  targetKey: string
+  schemaName: string
 }
 export type GetProjectCascadeSchemaOutput = unknown | null
 export type GetProjectCreationLogsInput = {
-    projectId: string;
+  projectId: string
 }
 export type GetProjectCreationLogsOutput = {
-    steps: {
-        stepName: string;
-        status: string;
-        error: string | null;
-        createdAt: string;
-    }[];
+  steps: {
+    stepName: string
+    status: string
+    error: string | null
+    createdAt: string
+  }[]
 }
 export type GetProjectDeploymentsInput = {
-    projectId: string;
-    includeDismissed?: boolean | undefined;
-    sort?: ("created" | "deployed" | "failures") | undefined;
+  projectId: string
+  includeDismissed?: boolean | undefined
+  sort?: ('created' | 'deployed' | 'failures') | undefined
 }
 export type GetProjectDeploymentsOutput = {
-    stages: {
-        stageId: string;
-        branch: string;
-        type: "production" | "environment" | "preview";
-        url: string | null;
-        containerUrl: string | null;
-        cname: string | null;
-        autoDeployOnPush: boolean;
-        createdAt: string;
-        lastUpdatedAt: string;
-        deployments: {
-            deploymentId: string;
-            workflowRunId: string | null;
-            status: string;
-            statusReason: string | null;
-            manifest: {
-                deployment: {
-                    [key: string]: unknown;
-                } | null;
-                versions: {
-                    [key: string]: unknown;
-                } | null;
-                workflowHashes: {
-                    [key: string]: string;
-                };
-                apps?: {
-                    name: string;
-                    distPath: string;
-                    kind?: ("static" | "ssr") | undefined;
-                    mainModule?: string | undefined;
-                    additionalModules?: string[] | undefined;
-                    scriptName?: string | undefined;
-                    hostname?: (string | null) | undefined;
-                    routed?: boolean | undefined;
-                    primary?: boolean | undefined;
-                }[] | undefined;
-            } | {
-                [key: string]: unknown;
-            };
-            deployedManifest: {
-                [key: string]: unknown;
-            } | null;
-            plan: {
-                [key: string]: unknown;
-            };
-            progressPhase: string | null;
-            progressMessage: string | null;
-            progressUpdatedAt: string | null;
-            trigger: string;
-            triggeredBy: string | null;
-            triggeredByDisplay: string | null;
-            gitSha: string | null;
-            hasServerUnit: boolean;
-            deployedAt: string | null;
-            dismissedAt: string | null;
-            createdAt: string;
-            versionMajor: number;
-            versionMinor: number;
-            versionPatch: number;
-            bumpType: "major" | "minor" | "patch" | "none";
-            promotedFromDeploymentId: string | null;
-            diff: {
-                units: {
-                    added: string[];
-                    removed: string[];
-                    unchanged: string[];
-                    changed?: string[] | undefined;
-                };
-                handlers: {
-                    added: {
-                        unit: string;
-                        kind: string;
-                        id: string;
-                        schedule?: string | undefined;
-                        scheduleText?: string | undefined;
-                    }[];
-                    removed: {
-                        unit: string;
-                        kind: string;
-                        id: string;
-                        schedule?: string | undefined;
-                        scheduleText?: string | undefined;
-                    }[];
-                };
-                contracts: {
-                    addedFunctions: string[];
-                    removedFunctions: string[];
-                    addedVersions: {
-                        functionKey: string;
-                        version: number;
-                    }[];
-                    removedVersions: {
-                        functionKey: string;
-                        version: number;
-                    }[];
-                    hashChanged: {
-                        functionKey: string;
-                        version: number;
-                    }[];
-                };
-                workflows: {
-                    added: string[];
-                    removed: string[];
-                    hashChanged: string[];
-                };
-                secrets: {
-                    added: string[];
-                    removed: string[];
-                    modified: string[];
-                };
-                variables: {
-                    added: string[];
-                    removed: string[];
-                    modified: string[];
-                };
-                dependencies?: {
-                    changed: string[];
-                } | undefined;
-            } | null;
-            changesets: {
-                featurePlanId: string;
-                title: string;
-                summary: string | null;
-                mergedAt: string;
-                bumpType: "major" | "minor" | "patch" | "none";
-            }[] | null;
-            migrations: {
-                migrationName: string;
-                migrationHash: string | null;
-                executedAt: string;
-            }[];
-            httpMeta: {
-                [key: string]: {
-                    [key: string]: {
-                        pikkuFuncId?: string | undefined;
-                        route: string;
-                        sourceFile?: string | undefined;
-                        method: string;
-                        params?: string[] | undefined;
-                        tags?: string[] | undefined;
-                        middleware?: {
-                            [key: string]: unknown;
-                        }[] | undefined;
-                        sse?: boolean | undefined;
-                        groupBasePath?: string | undefined;
-                        [x: string]: unknown;
-                    };
-                };
-            } | null;
-            unitFunctions: {
-                [key: string]: {
-                    pikkuFuncId: string;
-                    label: string;
-                }[];
-            } | null;
-        }[];
-    }[];
-    branchHeads: {
-        branch: string;
-        sha: string;
-        pushedAt: string;
-        pushedBy: string | null;
-        commitMessage: string | null;
-    }[];
+  stages: {
+    stageId: string
+    branch: string
+    type: 'production' | 'environment' | 'preview'
+    url: string | null
+    containerUrl: string | null
+    cname: string | null
+    autoDeployOnPush: boolean
+    createdAt: string
+    lastUpdatedAt: string
+    deployments: {
+      deploymentId: string
+      workflowRunId: string | null
+      status: string
+      statusReason: string | null
+      manifest:
+        | {
+            deployment: {
+              [key: string]: unknown
+            } | null
+            versions: {
+              [key: string]: unknown
+            } | null
+            workflowHashes: {
+              [key: string]: string
+            }
+            apps?:
+              | {
+                  name: string
+                  distPath: string
+                  kind?: ('static' | 'ssr') | undefined
+                  mainModule?: string | undefined
+                  additionalModules?: string[] | undefined
+                  scriptName?: string | undefined
+                  hostname?: (string | null) | undefined
+                  routed?: boolean | undefined
+                  primary?: boolean | undefined
+                }[]
+              | undefined
+          }
+        | {
+            [key: string]: unknown
+          }
+      deployedManifest: {
+        [key: string]: unknown
+      } | null
+      plan: {
+        [key: string]: unknown
+      }
+      progressPhase: string | null
+      progressMessage: string | null
+      progressUpdatedAt: string | null
+      trigger: string
+      triggeredBy: string | null
+      triggeredByDisplay: string | null
+      gitSha: string | null
+      hasServerUnit: boolean
+      deployedAt: string | null
+      dismissedAt: string | null
+      createdAt: string
+      versionMajor: number
+      versionMinor: number
+      versionPatch: number
+      bumpType: 'major' | 'minor' | 'patch' | 'none'
+      promotedFromDeploymentId: string | null
+      diff: {
+        units: {
+          added: string[]
+          removed: string[]
+          unchanged: string[]
+          changed?: string[] | undefined
+        }
+        handlers: {
+          added: {
+            unit: string
+            kind: string
+            id: string
+            schedule?: string | undefined
+            scheduleText?: string | undefined
+          }[]
+          removed: {
+            unit: string
+            kind: string
+            id: string
+            schedule?: string | undefined
+            scheduleText?: string | undefined
+          }[]
+        }
+        contracts: {
+          addedFunctions: string[]
+          removedFunctions: string[]
+          addedVersions: {
+            functionKey: string
+            version: number
+          }[]
+          removedVersions: {
+            functionKey: string
+            version: number
+          }[]
+          hashChanged: {
+            functionKey: string
+            version: number
+          }[]
+        }
+        workflows: {
+          added: string[]
+          removed: string[]
+          hashChanged: string[]
+        }
+        secrets: {
+          added: string[]
+          removed: string[]
+          modified: string[]
+        }
+        variables: {
+          added: string[]
+          removed: string[]
+          modified: string[]
+        }
+        dependencies?:
+          | {
+              changed: string[]
+            }
+          | undefined
+      } | null
+      changesets:
+        | {
+            featurePlanId: string
+            title: string
+            summary: string | null
+            mergedAt: string
+            bumpType: 'major' | 'minor' | 'patch' | 'none'
+          }[]
+        | null
+      migrations: {
+        migrationName: string
+        migrationHash: string | null
+        executedAt: string
+      }[]
+      httpMeta: {
+        [key: string]: {
+          [key: string]: {
+            pikkuFuncId?: string | undefined
+            route: string
+            sourceFile?: string | undefined
+            method: string
+            params?: string[] | undefined
+            tags?: string[] | undefined
+            middleware?:
+              | {
+                  [key: string]: unknown
+                }[]
+              | undefined
+            sse?: boolean | undefined
+            groupBasePath?: string | undefined
+            [x: string]: unknown
+          }
+        }
+      } | null
+      unitFunctions: {
+        [key: string]: {
+          pikkuFuncId: string
+          label: string
+        }[]
+      } | null
+    }[]
+  }[]
+  branchHeads: {
+    branch: string
+    sha: string
+    pushedAt: string
+    pushedBy: string | null
+    commitMessage: string | null
+  }[]
 }
 export type GetProjectDetailsInput = {
-    projectId: string;
+  projectId: string
 }
 export type GetProjectDetailsOutput = {
-    projectId: string;
-    name: string;
-    slug: string;
-    status: string;
-    region: string;
-    gitRepoUrl: string | null;
-    creationWorkflowRunId: string | null;
-    repoName: string | null;
-    vibeEntryPrompt: string | null;
-    planModel: string | null;
-    config: {
-        [key: string]: unknown;
-    };
-    createdAt: string | null;
+  projectId: string
+  name: string
+  slug: string
+  status: string
+  region: string
+  gitRepoUrl: string | null
+  creationWorkflowRunId: string | null
+  repoName: string | null
+  vibeEntryPrompt: string | null
+  planModel: string | null
+  config: {
+    [key: string]: unknown
+  }
+  createdAt: string | null
 }
 export type GetProjectIntakeStatusInput = {
-    projectId: string;
+  projectId: string
 }
 export type GetProjectIntakeStatusOutput = {
-    state: "none" | "no-sandbox" | "reading" | "done";
-    total: number;
-    pending: number;
-    done: number;
-    failed: number;
-    sources: {
-        name: string;
-        kind: string;
-        extraction: string;
-        path: string;
-        title: string | null;
-        description: string | null;
-        uploadedAt: string | null;
-        extractedAt: string | null;
-        extractedBy: string | null;
-    }[];
+  state: 'none' | 'no-sandbox' | 'reading' | 'done'
+  total: number
+  pending: number
+  done: number
+  failed: number
+  sources: {
+    name: string
+    kind: string
+    extraction: string
+    path: string
+    title: string | null
+    description: string | null
+    uploadedAt: string | null
+    extractedAt: string | null
+    extractedBy: string | null
+  }[]
 }
 export type GetProjectMetricsByStageKindInput = {
-    projectId: string;
-    branch: string;
-    hours?: number | undefined;
-    functionName?: string | undefined;
+  projectId: string
+  branch: string
+  hours?: number | undefined
+  functionName?: string | undefined
 }
 export type GetProjectMetricsByStageKindOutput = {
-    metrics: {
-        timestamp: string;
-        requests: number;
-        errors: number;
-        avgDuration: number;
-        minDuration: number;
-        maxDuration: number;
-    }[];
-    wireTypes: {
-        wireType: string;
-        requests: number;
-    }[];
-    cpuCeilingHits: number;
-    cpuCeilingMs: number;
+  metrics: {
+    timestamp: string
+    requests: number
+    errors: number
+    avgDuration: number
+    minDuration: number
+    maxDuration: number
+  }[]
+  wireTypes: {
+    wireType: string
+    requests: number
+  }[]
+  cpuCeilingHits: number
+  cpuCeilingMs: number
 }
 export type GetProjectMetricsInput = {
-    stageId: string;
-    hours?: number | undefined;
-    functionName?: string | undefined;
+  stageId: string
+  hours?: number | undefined
+  functionName?: string | undefined
 }
 export type GetProjectMetricsOutput = {
-    metrics: {
-        timestamp: string;
-        requests: number;
-        errors: number;
-        avgDuration: number;
-        minDuration: number;
-        maxDuration: number;
-    }[];
-    wireTypes: {
-        wireType: string;
-        requests: number;
-    }[];
-    cpuCeilingHits: number;
-    cpuCeilingMs: number;
+  metrics: {
+    timestamp: string
+    requests: number
+    errors: number
+    avgDuration: number
+    minDuration: number
+    maxDuration: number
+  }[]
+  wireTypes: {
+    wireType: string
+    requests: number
+  }[]
+  cpuCeilingHits: number
+  cpuCeilingMs: number
 }
 export type GetProjectStatusInput = {
-    projectId: string;
+  projectId: string
 }
 export type GetProjectStatusOutput = {
-    exists: boolean;
-    projectId?: string | undefined;
-    projectName?: string | undefined;
-    config?: {
-        [key: string]: unknown;
-    } | undefined;
-    mcpUrl?: (string | null) | undefined;
-    active?: ({
-        deploymentId: string;
-        stageId: string;
-        stageBranch: string;
-        status: string;
-        trigger: string;
-        gitSha: string | null;
-        deployedAt: string | null;
-        url: string | null;
-        createdAt: string;
-    } | null) | undefined;
-    deploying?: ({
-        deploymentId: string;
-        stageId: string;
-        stageBranch: string;
-        status: string;
-        trigger: string;
-        gitSha: string | null;
-        deployedAt: string | null;
-        url: string | null;
-        createdAt: string;
-    } | null) | undefined;
-    initialBuildComplete?: boolean | undefined;
+  exists: boolean
+  projectId?: string | undefined
+  projectName?: string | undefined
+  config?:
+    | {
+        [key: string]: unknown
+      }
+    | undefined
+  mcpUrl?: (string | null) | undefined
+  active?:
+    | ({
+        deploymentId: string
+        stageId: string
+        stageBranch: string
+        status: string
+        trigger: string
+        gitSha: string | null
+        deployedAt: string | null
+        url: string | null
+        createdAt: string
+      } | null)
+    | undefined
+  deploying?:
+    | ({
+        deploymentId: string
+        stageId: string
+        stageBranch: string
+        status: string
+        trigger: string
+        gitSha: string | null
+        deployedAt: string | null
+        url: string | null
+        createdAt: string
+      } | null)
+    | undefined
+  initialBuildComplete?: boolean | undefined
 }
 export type GetProjectUsageSummaryInput = {
-    projectId: string;
+  projectId: string
 }
 export type GetProjectUsageSummaryOutput = {
-    plan: {
-        tier: "free" | "pro" | "team" | "enterprise";
-        maxStages: number;
-        maxSandboxes: number;
-        maxCronJobs: number;
-        maxInvocations: number;
-        maxStorageGb: number;
-        maxBandwidthGb: number;
-        maxDatabaseStorageMb: number;
-        maxDatabaseRowsReadPerMonth: number;
-        maxDatabaseRowsWrittenPerMonth: number;
-        maxDatabaseSyncGb: number;
-    };
-    usage: {
-        storageBytes: number;
-        uploadedObjects: number;
-        storageLastUploadedAt: string | null;
-        storageLastReconciledAt: string | null;
-        invocationsCurrentCycle: number;
-        billableRequestsCurrentCycle: number;
-        billableUnitsCurrentCycle: number;
-        machineHoursCurrentCycle: number;
-        machineCostMicrosCurrentCycle: number;
-        stagesCount: number;
-        sandboxesCount: number;
-        cronJobsCount: number;
-        databaseBytes: number | null;
-        databaseRowsReadCurrentCycle: number | null;
-        databaseRowsWrittenCurrentCycle: number | null;
-        databaseSyncBytesCurrentCycle: number | null;
-        databaseLastUpdatedAt: string | null;
-        aiUsagePending: boolean;
-    };
+  plan: {
+    tier: 'free' | 'pro' | 'team' | 'enterprise'
+    maxStages: number
+    maxSandboxes: number
+    maxCronJobs: number
+    maxInvocations: number
+    maxStorageGb: number
+    maxBandwidthGb: number
+    maxDatabaseStorageMb: number
+    maxDatabaseRowsReadPerMonth: number
+    maxDatabaseRowsWrittenPerMonth: number
+    maxDatabaseSyncGb: number
+  }
+  usage: {
+    storageBytes: number
+    uploadedObjects: number
+    storageLastUploadedAt: string | null
+    storageLastReconciledAt: string | null
+    invocationsCurrentCycle: number
+    billableRequestsCurrentCycle: number
+    billableUnitsCurrentCycle: number
+    machineHoursCurrentCycle: number
+    machineCostMicrosCurrentCycle: number
+    stagesCount: number
+    sandboxesCount: number
+    cronJobsCount: number
+    databaseBytes: number | null
+    databaseRowsReadCurrentCycle: number | null
+    databaseRowsWrittenCurrentCycle: number | null
+    databaseSyncBytesCurrentCycle: number | null
+    databaseLastUpdatedAt: string | null
+    aiUsagePending: boolean
+  }
 }
 export type GetSandboxBaseBranchStatusInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type GetSandboxBaseBranchStatusOutput = {
-    baseBranch: string | null;
-    behind: boolean;
-    workBranch: string | null;
-    workBranchBehind: boolean;
+  baseBranch: string | null
+  behind: boolean
+  workBranch: string | null
+  workBranchBehind: boolean
 }
 export type GetSandboxBuilderTokenInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type GetSandboxBuilderTokenOutput = {
-    builderToken: string;
+  builderToken: string
 }
 export type GetSandboxBuildGateInput = {}
 export type GetSandboxBuildGateOutput = {
-    ok: true;
-    projectId: string;
-    initialBuildComplete: boolean;
+  ok: true
+  projectId: string
+  initialBuildComplete: boolean
 }
 export type GetSandboxCascadeEnvInput = {}
 export type GetSandboxCascadeEnvOutput = {
-    variables: {
-        [key: string]: string;
-    };
-    secrets: {
-        [key: string]: string;
-    };
+  variables: {
+    [key: string]: string
+  }
+  secrets: {
+    [key: string]: string
+  }
 }
 export type GetSandboxInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type GetSandboxMetricsInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type GetSandboxMetricsOutput = {
-    samples: {
-        at: number;
-        cpuPct: number;
-        memMb: number;
-    }[];
-    spendUsd: number;
+  samples: {
+    at: number
+    cpuPct: number
+    memMb: number
+  }[]
+  spendUsd: number
 }
 export type GetSandboxMilestoneSpendInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type GetSandboxMilestoneSpendOutput = {
-    milestones: {
-        milestone: string;
-        costUsd: number;
-        totalTokens: number;
-        requestCount: number;
-    }[];
+  milestones: {
+    milestone: string
+    costUsd: number
+    totalTokens: number
+    requestCount: number
+  }[]
 }
 export type GetSandboxOutput = {
-    sandboxId: string;
-    projectId: string;
-    ticketId: string | null;
-    name: string;
-    slug: string;
-    sizeSlug: string;
-    isDefault: boolean;
-    repoUrl: string | null;
-    currentStatus: string;
-    workflowRunId: string | null;
-    provisioningError: string | null;
-    desiredState: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
-    uptimeSeconds: number;
-    createdAt: string | null;
-    lastUpdatedAt: string | null;
-    currentInstance: {
-        sandboxInstanceId: string;
-        instanceNumber: number;
-        status: string;
-        platform: string | null;
-        runtimeName: string | null;
-        flyAppName: string | null;
-        flyMachineId: string | null;
-        machineClass: string;
-        cpuMillicores: number;
-        memoryMb: number;
-        diskGb: number;
-        hostname: string | null;
-        workloadName: string | null;
-        serviceName: string | null;
-        namespace: string | null;
-        startedAt: string | null;
-        usableAt: string | null;
-        shutDownAt: string | null;
-        unreachableAt: string | null;
-        stoppedAt: string | null;
-        lastActivityAt: string | null;
-        lastReadyToSleepAt: string | null;
-        sleepBlockers: string[];
-        stopReason: string | null;
-        bootPhase: string | null;
-        bootPhaseMessage: string | null;
-        bootPhaseUpdatedAt: string | null;
-        bootPhaseElapsedSec: number | null;
-        bootStep: number | null;
-        bootStepTotal: number;
-        expectedSandboxVersion: string | null;
-        expectedOrchestratorVersion: string | null;
-        reportedSandboxVersion: string | null;
-        reportedOrchestratorVersion: string | null;
-        expectedSandboxSha: string | null;
-        reportedSandboxSha: string | null;
-        sandboxImageStale: boolean;
-        orchestratorVersionHash: string | null;
-        sandboxUpdateAvailable: boolean;
-        orchestratorUpdateAvailable: boolean;
-        versionMismatch: boolean;
-    } | null;
+  sandboxId: string
+  projectId: string
+  ticketId: string | null
+  name: string
+  slug: string
+  sizeSlug: string
+  isDefault: boolean
+  repoUrl: string | null
+  currentStatus: string
+  workflowRunId: string | null
+  provisioningError: string | null
+  desiredState: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
+  uptimeSeconds: number
+  createdAt: string | null
+  lastUpdatedAt: string | null
+  currentInstance: {
+    sandboxInstanceId: string
+    instanceNumber: number
+    status: string
+    platform: string | null
+    runtimeName: string | null
+    flyAppName: string | null
+    flyMachineId: string | null
+    machineClass: string
+    cpuMillicores: number
+    memoryMb: number
+    diskGb: number
+    hostname: string | null
+    workloadName: string | null
+    serviceName: string | null
+    namespace: string | null
+    startedAt: string | null
+    usableAt: string | null
+    shutDownAt: string | null
+    unreachableAt: string | null
+    stoppedAt: string | null
+    lastActivityAt: string | null
+    lastReadyToSleepAt: string | null
+    sleepBlockers: string[]
+    stopReason: string | null
+    bootPhase: string | null
+    bootPhaseMessage: string | null
+    bootPhaseUpdatedAt: string | null
+    bootPhaseElapsedSec: number | null
+    bootStep: number | null
+    bootStepTotal: number
+    expectedSandboxVersion: string | null
+    expectedOrchestratorVersion: string | null
+    reportedSandboxVersion: string | null
+    reportedOrchestratorVersion: string | null
+    expectedSandboxSha: string | null
+    reportedSandboxSha: string | null
+    sandboxImageStale: boolean
+    orchestratorVersionHash: string | null
+    sandboxUpdateAvailable: boolean
+    orchestratorUpdateAvailable: boolean
+    versionMismatch: boolean
+  } | null
 }
 export type GetSandboxProjectImportsInput = {
-    objectKeys: string[];
+  objectKeys: string[]
 }
 export type GetSandboxProjectImportsOutput = {
-    ok: true;
-    projectId: string;
-    imports: {
-        objectKey: string;
-        url: string;
-    }[];
+  ok: true
+  projectId: string
+  imports: {
+    objectKey: string
+    url: string
+  }[]
 }
 export type GetSandboxProjectWishesInput = {}
 export type GetSandboxProjectWishesOutput = {
-    ok: true;
-    wishes: {
-        title: string;
-        line: string;
-    }[];
+  ok: true
+  wishes: {
+    title: string
+    line: string
+  }[]
 }
 export type GetSandboxSessionExportUrlInput = {
-    sandboxId: string;
-    sandboxSessionExportId: string;
+  sandboxId: string
+  sandboxSessionExportId: string
 }
 export type GetSandboxSessionExportUrlOutput = {
-    downloadUrl: string;
-    sessionId: string;
+  downloadUrl: string
+  sessionId: string
 }
 export type GetSandboxTicketInput = {}
 export type GetSandboxTicketOutput = {
-    card: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    };
-    events: {
-        ticketEventId: string;
-        ticketId: string;
-        kind: "comment" | "progress" | "status_change" | "finding";
-        author: string;
-        boardColumn: string | null;
-        body: string | null;
-        data: unknown | null;
-        createdAt: string;
-    }[];
+  card: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }
+  events: {
+    ticketEventId: string
+    ticketId: string
+    kind: 'comment' | 'progress' | 'status_change' | 'finding'
+    author: string
+    boardColumn: string | null
+    body: string | null
+    data: unknown | null
+    createdAt: string
+  }[]
 }
 export type GetSandboxWorkBranchStatusInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type GetSandboxWorkBranchStatusOutput = {
-    hasCommits: boolean;
+  hasCommits: boolean
 }
 export type GetScenarioRunArtifactInput = {
-    sandboxId?: string | undefined;
-    stageId?: string | undefined;
-    runId: string;
-    path: string;
+  sandboxId?: string | undefined
+  stageId?: string | undefined
+  runId: string
+  path: string
 }
 export type GetScenarioRunInput = {
-    sandboxId?: string | undefined;
-    stageId?: string | undefined;
-    runId: string;
+  sandboxId?: string | undefined
+  stageId?: string | undefined
+  runId: string
 }
 export type GetScenarioRunOutput = {
-    runId: string;
-    environment: string;
-    surface: string;
-    status: "running" | "passed" | "failed";
-    startedAt: string;
-    finishedAt?: string | undefined;
-    results: {
-        name: string;
-        status: "passed" | "failed";
-        durationMs: number;
-        output?: unknown | undefined;
-        error?: string | undefined;
-        steps?: {
-            sentence: string;
-            status: string;
-            durationMs?: number | undefined;
-            error?: string | undefined;
-        }[] | undefined;
-        failure?: {
-            sentence?: string | undefined;
-            message: string;
-            stack?: string | undefined;
-            expected?: boolean | undefined;
-            browser?: {
-                actor: string;
-                url?: string | undefined;
-                screenshot?: string | undefined;
-                consoleErrors: string[];
-                pageErrors: string[];
-                failedRequests: string[];
-                apiErrors: string[];
-            }[] | undefined;
-        } | undefined;
-        scenarioName?: string | undefined;
-        feature?: string | undefined;
-        tags?: string[] | undefined;
-        artifacts?: {
-            scenario: string;
-            kind: "screenshot" | "failure" | "video";
-            path: string;
-            actor?: string | undefined;
-            name?: string | undefined;
-        }[] | undefined;
-    }[];
-    skipped: {
-        name: string;
-        reason: string;
-    }[];
-    hookFailures: string[];
+  runId: string
+  environment: string
+  surface: string
+  status: 'running' | 'passed' | 'failed'
+  startedAt: string
+  finishedAt?: string | undefined
+  results: {
+    name: string
+    status: 'passed' | 'failed'
+    durationMs: number
+    output?: unknown | undefined
+    error?: string | undefined
+    steps?:
+      | {
+          sentence: string
+          status: string
+          durationMs?: number | undefined
+          error?: string | undefined
+        }[]
+      | undefined
+    failure?:
+      | {
+          sentence?: string | undefined
+          message: string
+          stack?: string | undefined
+          expected?: boolean | undefined
+          browser?:
+            | {
+                actor: string
+                url?: string | undefined
+                screenshot?: string | undefined
+                consoleErrors: string[]
+                pageErrors: string[]
+                failedRequests: string[]
+                apiErrors: string[]
+              }[]
+            | undefined
+        }
+      | undefined
+    scenarioName?: string | undefined
+    feature?: string | undefined
+    tags?: string[] | undefined
+    artifacts?:
+      | {
+          scenario: string
+          kind: 'screenshot' | 'failure' | 'video'
+          path: string
+          actor?: string | undefined
+          name?: string | undefined
+        }[]
+      | undefined
+  }[]
+  skipped: {
+    name: string
+    reason: string
+  }[]
+  hookFailures: string[]
 } | null
 export type GetSessionInput = {}
 export type GetSessionOutput = {
-    userId: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-    organizationId: string | null;
-    organizationSlug: string | null;
-    planTier: string | null;
-    aiProviders: {
-        provider: "openai" | "anthropic" | "google" | "xai" | "openrouter";
-        enabled: boolean;
-        source: "fabric" | "byok";
-        fabricAvailable: boolean;
-    }[];
-    pikkufabricadmin: boolean;
+  userId: string
+  name: string | null
+  email: string
+  image: string | null
+  organizationId: string | null
+  organizationSlug: string | null
+  planTier: string | null
+  aiProviders: {
+    provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter'
+    enabled: boolean
+    source: 'fabric' | 'byok'
+    fabricAvailable: boolean
+  }[]
+  pikkufabricadmin: boolean
 }
 export type GetStageAgentThreadMessagesInput = {
-    stageId: string;
-    threadId: string;
+  stageId: string
+  threadId: string
 }
 export type GetStageAgentThreadMessagesOutput = AgentMessage[]
 export type GetStageAgentThreadRunsInput = {
-    stageId: string;
-    threadId: string;
+  stageId: string
+  threadId: string
 }
 export type GetStageAgentThreadRunsOutput = AgentRunRow[]
 export type GetStageAllMetaInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageAllMetaOutput = {
-    functionUsedBy: {
-        [key: string]: unknown;
-    };
-    counts: unknown;
-    functions: unknown[];
-    httpMeta: unknown[];
-    cliMeta: unknown[];
-    cliRenderers: {
-        [key: string]: unknown;
-    };
-    channelsMeta: {
-        [key: string]: unknown;
-    };
-    queueMeta: {
-        [key: string]: unknown;
-    };
-    schedulerMeta: {
-        [key: string]: unknown;
-    };
-    rpcMeta: {
-        [key: string]: unknown;
-    };
-    mcpMeta: unknown[];
-    workflows: unknown;
-    personas: unknown;
-    systemRoles: unknown;
-    features: unknown;
-    triggerMeta: {
-        [key: string]: unknown;
-    };
-    triggerSourceMeta: {
-        [key: string]: unknown;
-    };
-    middlewareGroupsMeta: unknown;
-    permissionsGroupsMeta: unknown;
-    agentsMeta: unknown;
-    secretsMeta: {
-        [key: string]: unknown;
-    };
-    credentialsMeta: {
-        [key: string]: unknown;
-    };
-    variablesMeta: {
-        [key: string]: unknown;
-    };
+  functionUsedBy: {
+    [key: string]: unknown
+  }
+  counts: unknown
+  functions: unknown[]
+  httpMeta: unknown[]
+  cliMeta: unknown[]
+  cliRenderers: {
+    [key: string]: unknown
+  }
+  channelsMeta: {
+    [key: string]: unknown
+  }
+  queueMeta: {
+    [key: string]: unknown
+  }
+  schedulerMeta: {
+    [key: string]: unknown
+  }
+  rpcMeta: {
+    [key: string]: unknown
+  }
+  mcpMeta: unknown[]
+  workflows: unknown
+  personas: unknown
+  systemRoles: unknown
+  features: unknown
+  triggerMeta: {
+    [key: string]: unknown
+  }
+  triggerSourceMeta: {
+    [key: string]: unknown
+  }
+  middlewareGroupsMeta: unknown
+  permissionsGroupsMeta: unknown
+  agentsMeta: unknown
+  secretsMeta: {
+    [key: string]: unknown
+  }
+  credentialsMeta: {
+    [key: string]: unknown
+  }
+  variablesMeta: {
+    [key: string]: unknown
+  }
 }
 export type GetStageAuditFiltersInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageAuditFiltersOutput = {
-    users: {
-        userId: string;
-        name?: string | undefined;
-        email?: string | undefined;
-        actor?: boolean | undefined;
-    }[];
-    types: string[];
+  users: {
+    userId: string
+    name?: string | undefined
+    email?: string | undefined
+    actor?: boolean | undefined
+  }[]
+  types: string[]
 }
 export type GetStageAuditsInput = {
-    stageId: string;
-    userIds?: string[] | undefined;
-    types?: string[] | undefined;
-    from?: string | undefined;
-    to?: string | undefined;
-    limit: number;
-    offset: number;
+  stageId: string
+  userIds?: string[] | undefined
+  types?: string[] | undefined
+  from?: string | undefined
+  to?: string | undefined
+  limit: number
+  offset: number
 }
 export type GetStageAuditsOutput = {
-    events: {
-        eventId?: string | undefined;
-        type: string;
-        source: string;
-        outcome?: string | undefined;
-        occurredAt: string;
-        functionId?: string | undefined;
-        wireType?: string | undefined;
-        wireId?: string | undefined;
-        traceId?: string | undefined;
-        transactionId?: (string | null) | undefined;
-        queryId?: (string | null) | undefined;
-        userIdentity?: {
-            userId?: string | undefined;
-            orgId?: string | undefined;
-            pikkuUserId?: string | undefined;
-        } | undefined;
-        input?: unknown | undefined;
-        metadata?: unknown | undefined;
-    }[];
-    users: {
-        [key: string]: {
-            name?: string | undefined;
-            email?: string | undefined;
-            actor?: boolean | undefined;
-        };
-    };
-    nextCursor: number | null;
-    readable: boolean;
+  events: {
+    eventId?: string | undefined
+    type: string
+    source: string
+    outcome?: string | undefined
+    occurredAt: string
+    functionId?: string | undefined
+    wireType?: string | undefined
+    wireId?: string | undefined
+    traceId?: string | undefined
+    transactionId?: (string | null) | undefined
+    queryId?: (string | null) | undefined
+    userIdentity?:
+      | {
+          userId?: string | undefined
+          orgId?: string | undefined
+          pikkuUserId?: string | undefined
+        }
+      | undefined
+    input?: unknown | undefined
+    metadata?: unknown | undefined
+  }[]
+  users: {
+    [key: string]: {
+      name?: string | undefined
+      email?: string | undefined
+      actor?: boolean | undefined
+    }
+  }
+  nextCursor: number | null
+  readable: boolean
 }
 export type GetStageAuthProvidersInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageAuthProvidersOutput = {
-    providers: {
-        id: string;
-        displayName: string;
-        secretId: string;
-    }[];
-    plugins: {
-        id: string;
-        displayName: string;
-    }[];
-    hasCredentials: boolean;
+  providers: {
+    id: string
+    displayName: string
+    secretId: string
+  }[]
+  plugins: {
+    id: string
+    displayName: string
+  }[]
+  hasCredentials: boolean
 }
 export type GetStageCascadeStatusInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageCascadeStatusOutput = {
-    pending: boolean;
-    neverPublished: boolean;
-    publishedAt: string | null;
-    changedSecrets: string[];
-    changedVariables: string[];
+  pending: boolean
+  neverPublished: boolean
+  publishedAt: string | null
+  changedSecrets: string[]
+  changedVariables: string[]
 }
 export type GetStageConsoleSecretInput = {
-    stageId: string;
-    secretId: string;
+  stageId: string
+  secretId: string
 }
 export type GetStageConsoleSecretOutput = {
-    exists: boolean;
-    value: unknown | null;
+  exists: boolean
+  value: unknown | null
 }
 export type GetStageConsoleVariableInput = {
-    stageId: string;
-    variableId: string;
+  stageId: string
+  variableId: string
 }
 export type GetStageConsoleVariableOutput = {
-    exists: boolean;
-    value: unknown | null;
+  exists: boolean
+  value: unknown | null
 }
 export type GetStageCredentialStatusInput = {
-    stageId: string;
-    names: string[];
+  stageId: string
+  names: string[]
 }
 export type GetStageCredentialStatusOutput = {
-    statuses: {
-        [key: string]: boolean;
-    };
+  statuses: {
+    [key: string]: boolean
+  }
 }
 export type GetStageDatabaseSchemaInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageDatabaseSchemaOutput = {
-    schema: any | null;
-    snapshots: {
-        id: string;
-        migrationName: string;
-        createdAt: string;
-    }[];
+  schema: any | null
+  snapshots: {
+    id: string
+    migrationName: string
+    createdAt: string
+  }[]
 }
 export type GetStageDatabaseSchemaSnapshotInput = {
-    snapshotId: string;
+  snapshotId: string
 }
 export type GetStageDatabaseSchemaSnapshotOutput = {
-    schema: any;
-    migrationName: string;
-    createdAt: string;
+  schema: any
+  migrationName: string
+  createdAt: string
 }
 export type GetStageDeployModeInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageDeployModeOutput = {
-    deployMode: "fabric" | "webhook";
-    webhookUrl: string | null;
-    allowSelfHostedDeploy: boolean;
-    handoverInFlight: boolean;
+  deployMode: 'fabric' | 'webhook'
+  webhookUrl: string | null
+  allowSelfHostedDeploy: boolean
+  handoverInFlight: boolean
 }
 export type GetStageDeployPreviewInput = {
-    stageId: string;
-    gitSha?: string | undefined;
+  stageId: string
+  gitSha?: string | undefined
 }
 export type GetStageDeployPreviewOutput = {
-    stageId: string;
-    deploymentId: string | null;
-    repoName: string;
-    headSha: string | null;
-    computedAt: string;
-    runtimePlanSupported: boolean;
-    previewMode: "manifest" | "runtime-plan";
-    baseDeploymentId: string | null;
-    currentManifest: {
-        deployment: {
-            [key: string]: unknown;
-        } | null;
-        versions: {
-            [key: string]: unknown;
-        } | null;
-        workflowHashes: {
-            [key: string]: string;
-        };
-        apps?: {
-            name: string;
-            distPath: string;
-            kind?: ("static" | "ssr") | undefined;
-            mainModule?: string | undefined;
-            additionalModules?: string[] | undefined;
-            scriptName?: string | undefined;
-            hostname?: (string | null) | undefined;
-            routed?: boolean | undefined;
-            primary?: boolean | undefined;
-        }[] | undefined;
-    };
-    previousManifest: {
-        deployment: {
-            [key: string]: unknown;
-        } | null;
-        versions: {
-            [key: string]: unknown;
-        } | null;
-        workflowHashes: {
-            [key: string]: string;
-        };
-        apps?: {
-            name: string;
-            distPath: string;
-            kind?: ("static" | "ssr") | undefined;
-            mainModule?: string | undefined;
-            additionalModules?: string[] | undefined;
-            scriptName?: string | undefined;
-            hostname?: (string | null) | undefined;
-            routed?: boolean | undefined;
-            primary?: boolean | undefined;
-        }[] | undefined;
-    } | null;
-    diff: {
-        units: {
-            added: string[];
-            removed: string[];
-            unchanged: string[];
-            changed?: string[] | undefined;
-        };
-        handlers: {
-            added: {
-                unit: string;
-                kind: string;
-                id: string;
-                schedule?: string | undefined;
-                scheduleText?: string | undefined;
-            }[];
-            removed: {
-                unit: string;
-                kind: string;
-                id: string;
-                schedule?: string | undefined;
-                scheduleText?: string | undefined;
-            }[];
-        };
-        contracts: {
-            addedFunctions: string[];
-            removedFunctions: string[];
-            addedVersions: {
-                functionKey: string;
-                version: number;
-            }[];
-            removedVersions: {
-                functionKey: string;
-                version: number;
-            }[];
-            hashChanged: {
-                functionKey: string;
-                version: number;
-            }[];
-        };
-        workflows: {
-            added: string[];
-            removed: string[];
-            hashChanged: string[];
-        };
-        secrets: {
-            added: string[];
-            removed: string[];
-            modified: string[];
-        };
-        variables: {
-            added: string[];
-            removed: string[];
-            modified: string[];
-        };
-        dependencies?: {
-            changed: string[];
-        } | undefined;
-    };
-    pendingChangesets: {
-        featurePlanId: string;
-        title: string;
-        summary: string | null;
-        mergedAt: string;
-    }[];
+  stageId: string
+  deploymentId: string | null
+  repoName: string
+  headSha: string | null
+  computedAt: string
+  runtimePlanSupported: boolean
+  previewMode: 'manifest' | 'runtime-plan'
+  baseDeploymentId: string | null
+  currentManifest: {
+    deployment: {
+      [key: string]: unknown
+    } | null
+    versions: {
+      [key: string]: unknown
+    } | null
+    workflowHashes: {
+      [key: string]: string
+    }
+    apps?:
+      | {
+          name: string
+          distPath: string
+          kind?: ('static' | 'ssr') | undefined
+          mainModule?: string | undefined
+          additionalModules?: string[] | undefined
+          scriptName?: string | undefined
+          hostname?: (string | null) | undefined
+          routed?: boolean | undefined
+          primary?: boolean | undefined
+        }[]
+      | undefined
+  }
+  previousManifest: {
+    deployment: {
+      [key: string]: unknown
+    } | null
+    versions: {
+      [key: string]: unknown
+    } | null
+    workflowHashes: {
+      [key: string]: string
+    }
+    apps?:
+      | {
+          name: string
+          distPath: string
+          kind?: ('static' | 'ssr') | undefined
+          mainModule?: string | undefined
+          additionalModules?: string[] | undefined
+          scriptName?: string | undefined
+          hostname?: (string | null) | undefined
+          routed?: boolean | undefined
+          primary?: boolean | undefined
+        }[]
+      | undefined
+  } | null
+  diff: {
+    units: {
+      added: string[]
+      removed: string[]
+      unchanged: string[]
+      changed?: string[] | undefined
+    }
+    handlers: {
+      added: {
+        unit: string
+        kind: string
+        id: string
+        schedule?: string | undefined
+        scheduleText?: string | undefined
+      }[]
+      removed: {
+        unit: string
+        kind: string
+        id: string
+        schedule?: string | undefined
+        scheduleText?: string | undefined
+      }[]
+    }
+    contracts: {
+      addedFunctions: string[]
+      removedFunctions: string[]
+      addedVersions: {
+        functionKey: string
+        version: number
+      }[]
+      removedVersions: {
+        functionKey: string
+        version: number
+      }[]
+      hashChanged: {
+        functionKey: string
+        version: number
+      }[]
+    }
+    workflows: {
+      added: string[]
+      removed: string[]
+      hashChanged: string[]
+    }
+    secrets: {
+      added: string[]
+      removed: string[]
+      modified: string[]
+    }
+    variables: {
+      added: string[]
+      removed: string[]
+      modified: string[]
+    }
+    dependencies?:
+      | {
+          changed: string[]
+        }
+      | undefined
+  }
+  pendingChangesets: {
+    featurePlanId: string
+    title: string
+    summary: string | null
+    mergedAt: string
+  }[]
 }
 export type GetStageFunctionMetricsInput = {
-    stageId: string;
-    hours?: number | undefined;
+  stageId: string
+  hours?: number | undefined
 }
 export type GetStageFunctionMetricsOutput = {
-    metrics: {
-        [key: string]: {
-            lastRun: number | null;
-            requests: number;
-            errors: number;
-            avgDuration: number | null;
-            buckets: {
-                ts: number;
-                requests: number;
-                errors: number;
-            }[];
-        };
-    };
+  metrics: {
+    [key: string]: {
+      lastRun: number | null
+      requests: number
+      errors: number
+      avgDuration: number | null
+      buckets: {
+        ts: number
+        requests: number
+        errors: number
+      }[]
+    }
+  }
 }
 export type GetStageFunctionSourceInput = {
-    stageId: string;
-    sourceFile: string;
-    exportedName: string;
+  stageId: string
+  sourceFile: string
+  exportedName: string
 }
 export type GetStageFunctionSourceOutput = {
-    config: {
-        [key: string]: unknown;
-    };
-    body: string | null;
-    bodyStartLine: number | null;
-    declaration: string | null;
-    declarationStartLine: number | null;
-    wrapperName: string;
+  config: {
+    [key: string]: unknown
+  }
+  body: string | null
+  bodyStartLine: number | null
+  declaration: string | null
+  declarationStartLine: number | null
+  wrapperName: string
 }
 export type GetStageManifestOutput = {
-    stages: {
-        resourceName: string;
-        orgShortId: string;
-        projectShortId: string;
-        projectSlug: string;
-        stageShortId: string;
-        type: "production" | "environment" | "preview";
-    }[];
+  stages: {
+    resourceName: string
+    orgShortId: string
+    projectShortId: string
+    projectSlug: string
+    stageShortId: string
+    type: 'production' | 'environment' | 'preview'
+  }[]
 }
 export type GetStageQueueDepthsInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageQueueDepthsOutput = {
-    queues: {
-        [key: string]: {
-            queued: number;
-            active: number;
-            failed: number;
-        };
-    };
+  queues: {
+    [key: string]: {
+      queued: number
+      active: number
+      failed: number
+    }
+  }
 }
 export type GetStageSchedulerHistoryInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageSchedulerHistoryOutput = {
-    schedulers: {
-        [key: string]: {
-            lastRun: {
-                timestamp: number;
-                status: "completed" | "failed";
-                durationSeconds: number | null;
-                error: string | null;
-            } | null;
-            history: {
-                timestamp: number;
-                status: "completed" | "failed";
-                durationSeconds: number | null;
-                error: string | null;
-            }[];
-        };
-    };
+  schedulers: {
+    [key: string]: {
+      lastRun: {
+        timestamp: number
+        status: 'completed' | 'failed'
+        durationSeconds: number | null
+        error: string | null
+      } | null
+      history: {
+        timestamp: number
+        status: 'completed' | 'failed'
+        durationSeconds: number | null
+        error: string | null
+      }[]
+    }
+  }
 }
 export type GetStageSchemaInput = {
-    stageId: string;
-    schemaName: string;
+  stageId: string
+  schemaName: string
 }
 export type GetStageSchemaOutput = unknown | null
 export type GetStageScorersInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageScorersOutput = {
-    name: string;
-    description: string;
-    lane: "fast" | "slow";
-    sampleRate: number;
-    requiresReference: boolean;
-    sourceFile?: string | undefined;
-    exportedName?: string | undefined;
-    agents: string[];
+  name: string
+  description: string
+  lane: 'fast' | 'slow'
+  sampleRate: number
+  requiresReference: boolean
+  sourceFile?: string | undefined
+  exportedName?: string | undefined
+  agents: string[]
 }[]
 export type GetStageSealingKeyInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageSealingKeyOutput = {
-    keyId: string;
-    publicKey: string;
-    algorithm: string;
+  keyId: string
+  publicKey: string
+  algorithm: string
 }
 export type GetStageSealingKeyStatusInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageSealingKeyStatusOutput = {
-    keyId: string | null;
-    savedByUser: boolean;
-    needsRecoveryCopy: boolean;
-    staleSealedSecrets: string[] | null;
-    staleSealedCredentials: string[] | null;
-    hasUnopenableValues: boolean;
+  keyId: string | null
+  savedByUser: boolean
+  needsRecoveryCopy: boolean
+  staleSealedSecrets: string[] | null
+  staleSealedCredentials: string[] | null
+  hasUnopenableValues: boolean
 }
 export type GetStageSurfaceInput = {
-    stageId: string;
+  stageId: string
 }
 export type GetStageSurfaceOutput = {
-    doc: unknown | null;
-    usage: unknown;
+  doc: unknown | null
+  usage: unknown
 }
 export type GetStageWorkflowRunInput = {
-    stageId: string;
-    runId: string;
+  stageId: string
+  runId: string
 }
 export type GetStageWorkflowRunOutput = {
-    run: {
-        id: string;
-        workflow: string;
-        status: "running" | "suspended" | "completed" | "failed" | "cancelled";
-        input: unknown;
-        output?: unknown | undefined;
-        error?: {
-            message: string;
-            name?: string | undefined;
-            stack?: string | undefined;
-        } | undefined;
-        inline?: boolean | undefined;
-        graphHash?: string | undefined;
-        deterministic?: boolean | undefined;
-        plannedSteps?: {
-            stepName: string;
-        }[] | undefined;
-        wire: {
-            type: string;
-            id?: string | undefined;
-            parentRunId?: string | undefined;
-            parentStepId?: string | undefined;
-            pikkuUserId?: string | undefined;
-        };
-        createdAt: Date;
-        updatedAt: Date;
-    };
-    steps: {
-        stepId: string;
-        status: "pending" | "running" | "scheduled" | "succeeded" | "failed" | "suspended";
-        result?: unknown | undefined;
-        error?: {
-            message: string;
-            name?: string | undefined;
-            stack?: string | undefined;
-        } | undefined;
-        attemptCount: number;
-        retries?: number | undefined;
-        retryDelay?: (string | number) | undefined;
-        createdAt: Date;
-        updatedAt: Date;
-        childRunId?: string | undefined;
-        runningAt?: Date | undefined;
-        scheduledAt?: Date | undefined;
-        succeededAt?: Date | undefined;
-        failedAt?: Date | undefined;
-        stepName: string;
-        rpcName?: string | undefined;
-        data?: unknown | undefined;
-    }[];
+  run: {
+    id: string
+    workflow: string
+    status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+    input: unknown
+    output?: unknown | undefined
+    error?:
+      | {
+          message: string
+          name?: string | undefined
+          stack?: string | undefined
+        }
+      | undefined
+    inline?: boolean | undefined
+    graphHash?: string | undefined
+    deterministic?: boolean | undefined
+    plannedSteps?:
+      | {
+          stepName: string
+        }[]
+      | undefined
+    wire: {
+      type: string
+      id?: string | undefined
+      parentRunId?: string | undefined
+      parentStepId?: string | undefined
+      pikkuUserId?: string | undefined
+    }
+    createdAt: Date
+    updatedAt: Date
+  }
+  steps: {
+    stepId: string
+    status:
+      'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
+    result?: unknown | undefined
+    error?:
+      | {
+          message: string
+          name?: string | undefined
+          stack?: string | undefined
+        }
+      | undefined
+    attemptCount: number
+    retries?: number | undefined
+    retryDelay?: (string | number) | undefined
+    createdAt: Date
+    updatedAt: Date
+    childRunId?: string | undefined
+    runningAt?: Date | undefined
+    scheduledAt?: Date | undefined
+    succeededAt?: Date | undefined
+    failedAt?: Date | undefined
+    stepName: string
+    rpcName?: string | undefined
+    data?: unknown | undefined
+  }[]
 }
 export type GetTicketInput = {
-    ticketId: string;
+  ticketId: string
 }
 export type GetTicketOutput = {
-    card: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    };
-    events: {
-        ticketEventId: string;
-        ticketId: string;
-        kind: "comment" | "progress" | "status_change" | "finding";
-        author: string;
-        boardColumn: string | null;
-        body: string | null;
-        data: unknown | null;
-        createdAt: string;
-    }[];
-    boundSandboxSlug: string | null;
+  card: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }
+  events: {
+    ticketEventId: string
+    ticketId: string
+    kind: 'comment' | 'progress' | 'status_change' | 'finding'
+    author: string
+    boardColumn: string | null
+    body: string | null
+    data: unknown | null
+    createdAt: string
+  }[]
+  boundSandboxSlug: string | null
 }
 export type GetTraceByStageKindInput = {
-    projectId: string;
-    branch: string;
-    traceId: string;
+  projectId: string
+  branch: string
+  traceId: string
 }
 export type GetTraceByStageKindOutput = {
-    events: {
-        timestamp: string;
-        type: string;
-        scriptName: string;
-        wireType?: string | undefined;
-        wireId?: string | undefined;
-        level?: string | undefined;
-        message?: string | undefined;
-        outcome?: string | undefined;
-        totalDuration?: number | undefined;
-        functionDuration?: number | undefined;
-        pikkuUserId?: string | undefined;
-        httpStatus?: number | undefined;
-        httpMethod?: string | undefined;
-        httpPath?: string | undefined;
-        errorMessage?: string | undefined;
-    }[];
+  events: {
+    timestamp: string
+    type: string
+    scriptName: string
+    wireType?: string | undefined
+    wireId?: string | undefined
+    level?: string | undefined
+    message?: string | undefined
+    outcome?: string | undefined
+    totalDuration?: number | undefined
+    functionDuration?: number | undefined
+    pikkuUserId?: string | undefined
+    httpStatus?: number | undefined
+    httpMethod?: string | undefined
+    httpPath?: string | undefined
+    errorMessage?: string | undefined
+  }[]
 }
 export type GetTraceInput = {
-    stageId: string;
-    traceId: string;
+  stageId: string
+  traceId: string
 }
 export type GetTraceOutput = {
-    events: {
-        timestamp: string;
-        type: string;
-        scriptName: string;
-        wireType?: string | undefined;
-        wireId?: string | undefined;
-        level?: string | undefined;
-        message?: string | undefined;
-        outcome?: string | undefined;
-        totalDuration?: number | undefined;
-        functionDuration?: number | undefined;
-        pikkuUserId?: string | undefined;
-        httpStatus?: number | undefined;
-        httpMethod?: string | undefined;
-        httpPath?: string | undefined;
-        errorMessage?: string | undefined;
-    }[];
+  events: {
+    timestamp: string
+    type: string
+    scriptName: string
+    wireType?: string | undefined
+    wireId?: string | undefined
+    level?: string | undefined
+    message?: string | undefined
+    outcome?: string | undefined
+    totalDuration?: number | undefined
+    functionDuration?: number | undefined
+    pikkuUserId?: string | undefined
+    httpStatus?: number | undefined
+    httpMethod?: string | undefined
+    httpPath?: string | undefined
+    errorMessage?: string | undefined
+  }[]
 }
 export type GetVirtualUserRunInput = {
-    runId: string;
+  runId: string
 }
 export type GetVirtualUserRunOutput = {
-    runId: string;
-    persona: string;
-    disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
-    seed: number;
-    status: "running" | "completed" | "failed";
-    goals: string[];
-    memory: {
-        [key: string]: string;
-    };
-    findings: {
-        kind: string;
-        detail: string;
-        rpcName?: string | undefined;
-        status?: number | undefined;
-        intentId?: string | undefined;
-        step: number;
-    }[];
-    intents: {
-        id: string;
-        sourceId: string;
-        title: string;
-        status: string;
-        steps: number[];
-        suspensions: number;
-        summary?: string | undefined;
-    }[];
-    tally: {
-        [key: string]: unknown;
-    } | null;
-    stoppedBy: string | null;
-    error: string | null;
-    createdAt: string;
-    finishedAt: string | null;
+  runId: string
+  persona: string
+  disposition:
+    | 'realistic'
+    | 'careless'
+    | 'newcomer'
+    | 'stale'
+    | 'auditor'
+    | 'adversarial'
+    | 'accountable'
+  seed: number
+  status: 'running' | 'completed' | 'failed'
+  goals: string[]
+  memory: {
+    [key: string]: string
+  }
+  findings: {
+    kind: string
+    detail: string
+    rpcName?: string | undefined
+    status?: number | undefined
+    intentId?: string | undefined
+    step: number
+  }[]
+  intents: {
+    id: string
+    sourceId: string
+    title: string
+    status: string
+    steps: number[]
+    suspensions: number
+    summary?: string | undefined
+  }[]
+  tally: {
+    [key: string]: unknown
+  } | null
+  stoppedBy: string | null
+  error: string | null
+  createdAt: string
+  finishedAt: string | null
 }
 export type GetVirtualUserRunStepsInput = {
-    runId: string;
-    limit?: number | undefined;
-    offset?: number | undefined;
+  runId: string
+  limit?: number | undefined
+  offset?: number | undefined
 }
 export type GetVirtualUserRunStepsOutput = {
-    steps: {
-        index: number;
-        intentId?: string | undefined;
-        action: {
-            [key: string]: unknown;
-        };
-        status?: number | undefined;
-        ok?: boolean | undefined;
-        response?: string | undefined;
-        findingKinds?: string[] | undefined;
-        tokensIn: number;
-        tokensOut: number;
-    }[];
+  steps: {
+    index: number
+    intentId?: string | undefined
+    action: {
+      [key: string]: unknown
+    }
+    status?: number | undefined
+    ok?: boolean | undefined
+    response?: string | undefined
+    findingKinds?: string[] | undefined
+    tokensIn: number
+    tokensOut: number
+  }[]
 }
 export type GetWebhookDeliveryInput = {
-    organizationId: string;
-    deliveryId: string;
+  organizationId: string
+  deliveryId: string
 }
 export type GetWebhookDeliveryOutput = {
-    status: "pending" | "delivered" | "failed";
-    url: string;
-    event: string | null;
-    attempts: {
-        attemptNumber: number;
-        statusCode: number | null;
-        error: string | null;
-        createdAt: string;
-    }[];
+  status: 'pending' | 'delivered' | 'failed'
+  url: string
+  event: string | null
+  attempts: {
+    attemptNumber: number
+    statusCode: number | null
+    error: string | null
+    createdAt: string
+  }[]
 }
 export type GetWelcomeCreditOfferOutput = {
-    eligible: boolean;
-    remaining: number;
-    amountUsd: number;
+  eligible: boolean
+  remaining: number
+  amountUsd: number
 }
 export type GetWorkflowGraphInput = {
-    workflowName: string;
+  workflowName: string
 }
 export type GetWorkflowGraphOutput = {
-    name: string;
-    graphHash: string | null;
-    entryNodeIds: string[];
-    nodes: {
-        nodeId: string;
-        flow: string | null;
-        rpcName: string | null;
-        next: string | null;
-        reason: string | null;
-        variable: string | null;
-        retries: number | null;
-        branches: {
-            expression: string | null;
-            entry: string | null;
-        }[];
-    }[];
+  name: string
+  graphHash: string | null
+  entryNodeIds: string[]
+  nodes: {
+    nodeId: string
+    flow: string | null
+    rpcName: string | null
+    next: string | null
+    reason: string | null
+    variable: string | null
+    retries: number | null
+    branches: {
+      expression: string | null
+      entry: string | null
+    }[]
+  }[]
 }
 export type GithubInstallCallbackInput = {
-    installation_id: string;
-    setup_action?: string | undefined;
-    state?: string | undefined;
+  installation_id: string
+  setup_action?: string | undefined
+  state?: string | undefined
 }
 export type GithubInstallCallbackOutput = void | undefined
-export type GithubLinkingStartsAtGithubScenarioOutput = { host: string; }
+export type GithubLinkingStartsAtGithubScenarioOutput = { host: string }
 export type GithubPushWebhookInput = {
-    ref?: string | undefined;
-    after?: string | undefined;
-    before?: string | undefined;
-    deleted?: boolean | undefined;
-    repository?: {
-        full_name: string;
-        html_url: string;
-        clone_url: string;
-        default_branch?: string | undefined;
-        [x: string]: unknown;
-    } | undefined;
-    sender?: {
-        login: string;
-        [x: string]: unknown;
-    } | undefined;
-    action?: string | undefined;
-    installation?: {
-        id: number;
-        account?: {
-            login: string;
-            [x: string]: unknown;
-        } | undefined;
-        [x: string]: unknown;
-    } | undefined;
-    head_commit?: ({
-        message: string;
-        [x: string]: unknown;
-    } | null) | undefined;
-    [x: string]: unknown;
+  ref?: string | undefined
+  after?: string | undefined
+  before?: string | undefined
+  deleted?: boolean | undefined
+  repository?:
+    | {
+        full_name: string
+        html_url: string
+        clone_url: string
+        default_branch?: string | undefined
+        [x: string]: unknown
+      }
+    | undefined
+  sender?:
+    | {
+        login: string
+        [x: string]: unknown
+      }
+    | undefined
+  action?: string | undefined
+  installation?:
+    | {
+        id: number
+        account?:
+          | {
+              login: string
+              [x: string]: unknown
+            }
+          | undefined
+        [x: string]: unknown
+      }
+    | undefined
+  head_commit?:
+    | ({
+        message: string
+        [x: string]: unknown
+      } | null)
+    | undefined
+  [x: string]: unknown
 }
 export type GithubPushWebhookOutput = {
-    status: "queued" | "skipped";
-    reason?: string | undefined;
-    deploymentId?: string | undefined;
-    stageId?: string | undefined;
-    branch?: string | undefined;
+  status: 'queued' | 'skipped'
+  reason?: string | undefined
+  deploymentId?: string | undefined
+  stageId?: string | undefined
+  branch?: string | undefined
 }
 export type GithubUserLinkCallbackInput = {
-    code: string;
-    state: string;
+  code: string
+  state: string
 }
 export type GithubUserLinkCallbackOutput = void | undefined
 export type HarnessLoopInput = {
-    runId: string;
-    projectId: string;
-    scenarioId: string;
-    goal: string;
-    projectName: string;
-    templateSlug: string;
-    model?: string | undefined;
-    buildKind?: ("website") | undefined;
-    locale?: string | undefined;
-    planOnly?: boolean | undefined;
+  runId: string
+  projectId: string
+  scenarioId: string
+  goal: string
+  projectName: string
+  templateSlug: string
+  model?: string | undefined
+  buildKind?: 'website' | undefined
+  locale?: string | undefined
+  planOnly?: boolean | undefined
 }
 export type HarnessLoopOutput = {
-    completed: boolean;
-    rendered: boolean | null;
-    loginOk: boolean | null;
-    deployOk: boolean | null;
-    deployHostname: string | null;
-    buildMs: number;
+  completed: boolean
+  rendered: boolean | null
+  loginOk: boolean | null
+  deployOk: boolean | null
+  deployHostname: string | null
+  buildMs: number
 }
 export type HasStageConsoleSecretInput = {
-    stageId: string;
-    secretId: string;
+  stageId: string
+  secretId: string
 }
 export type HasStageConsoleSecretOutput = {
-    exists: boolean;
+  exists: boolean
 }
 export type HealthCheckOutput = {
-    ok: boolean;
+  ok: boolean
 }
 export type ImportProjectAssetsInput = {
-    projectId: string;
-    sources: {
-        kind: "site" | "openapi" | "n8n" | "spreadsheet" | "document" | "data" | "archive";
-        name: string;
-        format?: string | undefined;
-        objectKey?: string | undefined;
-        url?: string | undefined;
-    }[];
+  projectId: string
+  sources: {
+    kind:
+      | 'site'
+      | 'openapi'
+      | 'n8n'
+      | 'spreadsheet'
+      | 'document'
+      | 'data'
+      | 'archive'
+    name: string
+    format?: string | undefined
+    objectKey?: string | undefined
+    url?: string | undefined
+  }[]
 }
 export type ImportProjectAssetsOutput = {
-    committed: boolean;
-    paths: string[];
+  committed: boolean
+  paths: string[]
 }
 export type ImportProjectInput = {
-    organizationId?: string | undefined;
-    repoUrl: string;
-    defaultBranch?: string | undefined;
-    productionBranch: string;
-    name?: string | undefined;
-    dbEngine?: ("sqlite" | "postgres") | undefined;
-    pgVersion?: number | undefined;
+  organizationId?: string | undefined
+  repoUrl: string
+  defaultBranch?: string | undefined
+  productionBranch: string
+  name?: string | undefined
+  dbEngine?: ('sqlite' | 'postgres') | undefined
+  pgVersion?: number | undefined
 }
 export type ImportProjectOutput = {
-    projectId: string;
-    projectSlug: string;
-    projectShortId: string;
-    organizationId: string;
-    mainStageId: string;
+  projectId: string
+  projectSlug: string
+  projectShortId: string
+  organizationId: string
+  mainStageId: string
 }
 export type IngestContainerLogsInput = {
-    records: {
-        orgShortId: string;
-        streamClass: "production" | "stage" | "preview" | "workspace";
-        stageId?: string | undefined;
-        stageShortId?: string | undefined;
-        sandboxId?: string | undefined;
-        message: string;
-        level?: ("debug" | "info" | "warn" | "error") | undefined;
-        timestamp?: number | undefined;
-        containerName?: string | undefined;
-        traceId?: string | undefined;
-    }[];
+  records: {
+    orgShortId: string
+    streamClass: 'production' | 'stage' | 'preview' | 'workspace'
+    stageId?: string | undefined
+    stageShortId?: string | undefined
+    sandboxId?: string | undefined
+    message: string
+    level?: ('debug' | 'info' | 'warn' | 'error') | undefined
+    timestamp?: number | undefined
+    containerName?: string | undefined
+    traceId?: string | undefined
+  }[]
 }
 export type IngestContainerLogsOutput = {
-    ok: true;
-    ingested: number;
+  ok: true
+  ingested: number
 }
 export type IngestOrchestratorLogsInput = {
-    records: {
-        message: string;
-        level?: ("debug" | "info" | "warn" | "error") | undefined;
-        timestamp?: number | undefined;
-        source?: string | undefined;
-        traceId?: string | undefined;
-    }[];
+  records: {
+    message: string
+    level?: ('debug' | 'info' | 'warn' | 'error') | undefined
+    timestamp?: number | undefined
+    source?: string | undefined
+    traceId?: string | undefined
+  }[]
 }
 export type IngestOrchestratorLogsOutput = {
-    ok: true;
-    ingested: number;
+  ok: true
+  ingested: number
 }
 export type IngestSandboxLogsInput = {
-    records: {
-        message: string;
-        level?: ("debug" | "info" | "warn" | "error") | undefined;
-        timestamp?: number | undefined;
-        source?: string | undefined;
-        traceId?: string | undefined;
-    }[];
+  records: {
+    message: string
+    level?: ('debug' | 'info' | 'warn' | 'error') | undefined
+    timestamp?: number | undefined
+    source?: string | undefined
+    traceId?: string | undefined
+  }[]
 }
 export type IngestSandboxLogsOutput = {
-    ok: true;
-    ingested: number;
+  ok: true
+  ingested: number
 }
 export type IngestStageChangeInput = {
-    stageId: string;
-    panelToken: string;
-    title: string;
-    body?: string | undefined;
-    route?: string | undefined;
-    locale?: string | undefined;
-    viewport?: {
-        width: number;
-        height: number;
-    } | undefined;
-    capture?: {
+  stageId: string
+  panelToken: string
+  title: string
+  body?: string | undefined
+  route?: string | undefined
+  locale?: string | undefined
+  viewport?:
+    | {
+        width: number
+        height: number
+      }
+    | undefined
+  capture?:
+    | {
         stroke: {
-            x: number;
-            y: number;
-        }[];
+          x: number
+          y: number
+        }[]
         bounds: {
-            x: number;
-            y: number;
-            width: number;
-            height: number;
-        } | null;
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
         elements: {
-            testId: string | null;
-            sourceAnchor: string | null;
-            cssPath: string | null;
-            text: string | null;
-            rect: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-        }[];
-    } | undefined;
-    screenshotKey?: string | undefined;
-    consoleErrors?: string[] | undefined;
+          testId: string | null
+          sourceAnchor: string | null
+          cssPath: string | null
+          text: string | null
+          rect: {
+            x: number
+            y: number
+            width: number
+            height: number
+          } | null
+        }[]
+      }
+    | undefined
+  screenshotKey?: string | undefined
+  consoleErrors?: string[] | undefined
 }
 export type IngestStageChangeOutput = {
-    change: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-    };
+  change: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+  }
 }
 export type IngestStageTelemetryInput = {
-    records: ({
-        kind: "log";
-        message: string;
-        level?: ("debug" | "info" | "warn" | "error") | undefined;
-        timestamp?: number | undefined;
-        source?: string | undefined;
-        traceId?: string | undefined;
-    } | {
-        kind: "telemetry";
-        wireType: string;
-        wireId: string;
-        functionId?: string | undefined;
-        outcome: "ok" | "error";
-        durationMs: number;
-        timestamp?: number | undefined;
-        traceId?: string | undefined;
-        errorName?: string | undefined;
-        errorMessage?: string | undefined;
-    } | {
-        kind: "analytics";
-        name: string;
-        props?: {
-            [key: string]: string | number | boolean;
-        } | undefined;
-        at?: number | undefined;
-        userId?: (string | null) | undefined;
-    })[];
+  records: (
+    | {
+        kind: 'log'
+        message: string
+        level?: ('debug' | 'info' | 'warn' | 'error') | undefined
+        timestamp?: number | undefined
+        source?: string | undefined
+        traceId?: string | undefined
+      }
+    | {
+        kind: 'telemetry'
+        wireType: string
+        wireId: string
+        functionId?: string | undefined
+        outcome: 'ok' | 'error'
+        durationMs: number
+        timestamp?: number | undefined
+        traceId?: string | undefined
+        errorName?: string | undefined
+        errorMessage?: string | undefined
+      }
+    | {
+        kind: 'analytics'
+        name: string
+        props?:
+          | {
+              [key: string]: string | number | boolean
+            }
+          | undefined
+        at?: number | undefined
+        userId?: (string | null) | undefined
+      }
+  )[]
 }
 export type IngestStageTelemetryOutput = {
-    ok: true;
-    ingested: number;
+  ok: true
+  ingested: number
 }
 export type InstallAddonsInput = {
-    repoName: string;
-    addons: string[];
+  repoName: string
+  addons: string[]
 }
 export type InstallAddonsOutput = {
-    installed: boolean;
+  installed: boolean
 }
 export type InstallsAddonInConsoleInput = {
-    packageName: string;
-    namespace: string;
-    timeoutMs: number;
+  packageName: string
+  namespace: string
+  timeoutMs: number
 }
 export type InstallsAddonInConsoleOutput = {
-    installed: boolean;
+  installed: boolean
 }
 export type InstallsSandboxAddonInput = {
-    token: string;
-    sandboxId: string;
-    baseUrl: string;
-    packageName: string;
-    namespace: string;
-    version: string;
-    timeoutMs: number;
+  token: string
+  sandboxId: string
+  baseUrl: string
+  packageName: string
+  namespace: string
+  version: string
+  timeoutMs: number
 }
 export type InstallsSandboxAddonOutput = {
-    installed: boolean;
-    message: string;
+  installed: boolean
+  message: string
 }
-export type InvitationLifecycleScenarioOutput = { invitationId: string; revoked: boolean; }
+export type InvitationLifecycleScenarioOutput = {
+  invitationId: string
+  revoked: boolean
+}
 export type InviteOrganizationMemberInput = {
-    organizationId: string;
-    email: string;
-    role: "admin" | "member";
+  organizationId: string
+  email: string
+  role: 'admin' | 'member'
 }
 export type InviteOrganizationMemberOutput = {
-    invitationId: string;
-    token: string;
-    expiresAt: string;
+  invitationId: string
+  token: string
+  expiresAt: string
 }
 export type InvitesMemberInput = {
-    token: string;
-    organizationId: string;
-    email: string;
-    role: "owner" | "admin" | "member";
+  token: string
+  organizationId: string
+  email: string
+  role: 'owner' | 'admin' | 'member'
 }
 export type InvitesMemberOutput = {
-    invitationId: string;
-    token: string;
+  invitationId: string
+  token: string
 }
 export type InvokesRpcWithHeadersInput = {
-    rpcName: string;
-    data?: unknown | undefined;
-    headers: {
-        [key: string]: string;
-    };
+  rpcName: string
+  data?: unknown | undefined
+  headers: {
+    [key: string]: string
+  }
 }
 export type InvokesRpcWithHeadersOutput = {
-    status: number;
-    ok: boolean;
-    body: unknown;
-    serialized: string;
+  status: number
+  ok: boolean
+  body: unknown
+  serialized: string
 }
 export type KillOldRuntimesInput = {
-    stageId: string;
-    namespace: string;
-    keepInstanceIds: string[];
+  stageId: string
+  namespace: string
+  keepInstanceIds: string[]
 }
 export type KillOldRuntimesOutput = {
-    killed: number;
+  killed: number
 }
 export type KillRuntimeReplicasInput = {
-    instanceIds: string[];
+  instanceIds: string[]
 }
 export type KillRuntimeReplicasOutput = {
-    ok: true;
+  ok: true
 }
 export type LaunchSandboxNeedsRepairInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type LaunchSandboxNeedsRepairOutput = {
-    ok: true;
+  ok: true
 }
 export type LinkGithubInstallationInput = {
-    organizationId: string;
-    githubInstallationId: string;
+  organizationId: string
+  githubInstallationId: string
 }
 export type LinkGithubInstallationOutput = {
-    linked: boolean;
+  linked: boolean
 }
-export type LinksAndUnlinksGitAccountScenarioOutput = { providers: string[]; }
+export type LinksAndUnlinksGitAccountScenarioOutput = { providers: string[] }
 export type LinksGitAccountWithPatInput = {
-    token: string;
-    provider: "github" | "gitea";
+  token: string
+  provider: 'github' | 'gitea'
 }
 export type LinksGitAccountWithPatOutput = {
-    provider: string;
-    username: string;
+  provider: string
+  username: string
 }
 export type ListAIKeysInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListAIKeysOutput = {
-    keys: {
-        provider: "openai" | "anthropic" | "google" | "xai" | "openrouter";
-        scopes: {
-            default: string | null;
-            preview: string | null;
-            "dev-machine": string | null;
-        };
-    }[];
-    enabledModels: string[] | null;
+  keys: {
+    provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter'
+    scopes: {
+      default: string | null
+      preview: string | null
+      'dev-machine': string | null
+    }
+  }[]
+  enabledModels: string[] | null
 }
 export type ListAiModelsInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListAiModelsOutput = {
-    defaultModelId: string;
-    pricingAvailable: boolean;
-    models: {
-        id: string;
-        provider: "deepseek" | "openai" | "anthropic" | "google" | "moonshot" | "zai";
-        providerLabel: string;
-        label: string;
-        blurb: string;
-        strengths: string[];
-        inputPerMillion: number | null;
-        outputPerMillion: number | null;
-        cacheReadPerMillion: number | null;
-        maxInputTokens: number | null;
-        maxOutputTokens: number | null;
-        supportsVision: boolean;
-        supportsFunctionCalling: boolean;
-        supportsReasoning: boolean;
-        supportsPdfInput: boolean;
-        supportsAudioInput: boolean;
-        metered: boolean;
-        benchmarks: {
-            id: string;
-            score: number;
-            source: string;
-        }[];
-    }[];
+  defaultModelId: string
+  pricingAvailable: boolean
+  models: {
+    id: string
+    provider:
+      'deepseek' | 'openai' | 'anthropic' | 'google' | 'moonshot' | 'zai'
+    providerLabel: string
+    label: string
+    blurb: string
+    strengths: string[]
+    inputPerMillion: number | null
+    outputPerMillion: number | null
+    cacheReadPerMillion: number | null
+    maxInputTokens: number | null
+    maxOutputTokens: number | null
+    supportsVision: boolean
+    supportsFunctionCalling: boolean
+    supportsReasoning: boolean
+    supportsPdfInput: boolean
+    supportsAudioInput: boolean
+    metered: boolean
+    benchmarks: {
+      id: string
+      score: number
+      source: string
+    }[]
+  }[]
 }
 export type ListChangesInput = {
-    projectId: string;
-    stageId?: string | undefined;
-    route?: string | undefined;
-    status?: ("open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed")[] | undefined;
-    groupId?: string | undefined;
-    pickupOnly: boolean;
-    includeDone: boolean;
-    limit: number;
+  projectId: string
+  stageId?: string | undefined
+  route?: string | undefined
+  status?:
+    | (
+        | 'open'
+        | 'claimed'
+        | 'needs_answer'
+        | 'in_progress'
+        | 'done'
+        | 'dismissed'
+      )[]
+    | undefined
+  groupId?: string | undefined
+  pickupOnly: boolean
+  includeDone: boolean
+  limit: number
 }
 export type ListChangesOutput = {
-    changes: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-        screenshotUrl: string | null;
-    }[];
-    groups: {
-        groupId: string;
-        projectId: string;
-        title: string;
-        claimedBy: string | null;
-        claimExpiresAt: Date | null;
-        createdAt: Date;
-    }[];
+  changes: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+    screenshotUrl: string | null
+  }[]
+  groups: {
+    groupId: string
+    projectId: string
+    title: string
+    claimedBy: string | null
+    claimExpiresAt: Date | null
+    createdAt: Date
+  }[]
 }
 export type ListDeploymentsInput = {
-    stageId: string;
+  stageId: string
 }
 export type ListDeploymentsOutput = {
-    deployments: {
-        deploymentId: string;
-        stageBranch: string;
-        status: string;
-        trigger: string;
-        triggeredBy: string | null;
-        gitSha: string | null;
-        manifest: {
-            [key: string]: unknown;
-        };
-        plan: {
-            [key: string]: unknown;
-        };
-        deployedAt: string | null;
-        dismissedAt: string | null;
-        createdAt: string;
-        versionMajor: number;
-        versionMinor: number;
-        versionPatch: number;
-        bumpType: "major" | "minor" | "patch" | "none";
-        promotedFromDeploymentId: string | null;
-    }[];
+  deployments: {
+    deploymentId: string
+    stageBranch: string
+    status: string
+    trigger: string
+    triggeredBy: string | null
+    gitSha: string | null
+    manifest: {
+      [key: string]: unknown
+    }
+    plan: {
+      [key: string]: unknown
+    }
+    deployedAt: string | null
+    dismissedAt: string | null
+    createdAt: string
+    versionMajor: number
+    versionMinor: number
+    versionPatch: number
+    bumpType: 'major' | 'minor' | 'patch' | 'none'
+    promotedFromDeploymentId: string | null
+  }[]
 }
 export type ListDeploymentTargetsInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type ListDeploymentTargetsOutput = {
-    targets: {
-        target: "cloudflare" | "server" | "webhook";
-        status: "pending" | "running" | "succeeded" | "failed" | "timed_out" | "skipped";
-        required: boolean;
-        detail: string | null;
-        deadlineAt: string | null;
-        startedAt: string | null;
-        finishedAt: string | null;
-    }[];
+  targets: {
+    target: 'cloudflare' | 'server' | 'webhook'
+    status:
+      'pending' | 'running' | 'succeeded' | 'failed' | 'timed_out' | 'skipped'
+    required: boolean
+    detail: string | null
+    deadlineAt: string | null
+    startedAt: string | null
+    finishedAt: string | null
+  }[]
 }
 export type ListDeploymentWorkersInput = {
-    stageId: string;
+  stageId: string
 }
 export type ListDeploymentWorkersOutput = {
-    workers: {
-        name: string;
-        role: string;
-        status: string;
-        functionIds: string[];
-        createdAt: string;
-    }[];
+  workers: {
+    name: string
+    role: string
+    status: string
+    functionIds: string[]
+    createdAt: string
+  }[]
 }
 export type ListFavoriteProjectsInput = {}
 export type ListFavoriteProjectsOutput = {
-    projects: {
-        projectId: string;
-        name: string;
-        slug: string;
-        status: "creating" | "created" | "error";
-        organizationId: string;
-        orgSlug: string;
-        orgName: string;
-        favoritedAt: string;
-    }[];
+  projects: {
+    projectId: string
+    name: string
+    slug: string
+    status: 'creating' | 'created' | 'error'
+    organizationId: string
+    orgSlug: string
+    orgName: string
+    favoritedAt: string
+  }[]
 }
 export type ListGithubReposInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListGithubReposOutput = {
-    repos: {
-        id: number;
-        fullName: string;
-        name: string;
-        defaultBranch: string;
-        htmlUrl: string;
-        cloneUrl: string;
-        private: boolean;
-        accountLogin: string;
-    }[];
-    installations: {
-        accountLogin: string;
-        repositorySelection: string;
-        suspended: boolean;
-        manageUrl: string;
-    }[];
+  repos: {
+    id: number
+    fullName: string
+    name: string
+    defaultBranch: string
+    htmlUrl: string
+    cloneUrl: string
+    private: boolean
+    accountLogin: string
+  }[]
+  installations: {
+    accountLogin: string
+    repositorySelection: string
+    suspended: boolean
+    manageUrl: string
+  }[]
 }
 export type ListHarnessRunAnalysesInput = {
-    runId: string;
+  runId: string
 }
 export type ListHarnessRunAnalysesOutput = {
-    analyses: {
-        model: string;
-        suggestions: {
-            summary: string;
-            whatWentWrong: {
-                area: string;
-                detail: string;
-                severity: "low" | "medium" | "high";
-            }[];
-            timeSinks: {
-                phase: string;
-                ms: number | null;
-                detail: string;
-            }[];
-            orchestratorScaffoldSuggestions: {
-                target: string;
-                change: string;
-                rationale: string;
-            }[];
-            agentsMdSuggestions: {
-                target: string;
-                change: string;
-                rationale: string;
-            }[];
-            skillSuggestions: {
-                target: string;
-                change: string;
-                rationale: string;
-            }[];
-            proposedDiffMd: string | null;
-        };
-        pass: boolean | null;
-        error: string | null;
-        createdAt: string;
-    }[];
-    codeReviews: {
-        model: string;
-        report: {
-            verdict: "ship" | "rework" | "reject";
-            overall: number;
-            dimensions: {
-                dimension: string;
-                score: number;
-                evidence: string;
-            }[];
-            issues: {
-                file: string;
-                line: number | null;
-                severity: "low" | "medium" | "high";
-                rule: string;
-                detail: string;
-                fix: string;
-            }[];
-            strengths: string[];
-            reportMd: string;
-        };
-        pass: boolean | null;
-        error: string | null;
-        createdAt: string;
-    }[];
+  analyses: {
+    model: string
+    suggestions: {
+      summary: string
+      whatWentWrong: {
+        area: string
+        detail: string
+        severity: 'low' | 'medium' | 'high'
+      }[]
+      timeSinks: {
+        phase: string
+        ms: number | null
+        detail: string
+      }[]
+      orchestratorScaffoldSuggestions: {
+        target: string
+        change: string
+        rationale: string
+      }[]
+      agentsMdSuggestions: {
+        target: string
+        change: string
+        rationale: string
+      }[]
+      skillSuggestions: {
+        target: string
+        change: string
+        rationale: string
+      }[]
+      proposedDiffMd: string | null
+    }
+    pass: boolean | null
+    error: string | null
+    createdAt: string
+  }[]
+  codeReviews: {
+    model: string
+    report: {
+      verdict: 'ship' | 'rework' | 'reject'
+      overall: number
+      dimensions: {
+        dimension: string
+        score: number
+        evidence: string
+      }[]
+      issues: {
+        file: string
+        line: number | null
+        severity: 'low' | 'medium' | 'high'
+        rule: string
+        detail: string
+        fix: string
+      }[]
+      strengths: string[]
+      reportMd: string
+    }
+    pass: boolean | null
+    error: string | null
+    createdAt: string
+  }[]
 }
 export type ListHarnessRunsInput = {
-    limit?: number | undefined;
+  limit?: number | undefined
 }
 export type ListHarnessRunsOutput = {
-    runs: {
-        runId: string;
-        scenarioId: string;
-        goal: string;
-        templateSlug: string;
-        status: string | null;
-        completed: boolean;
-        rendered: boolean;
-        loginOk: boolean;
-        bootMs: number | null;
-        buildMs: number | null;
-        verifyMs: number | null;
-        screenshotMs: number | null;
-        totalMs: number | null;
-        diffChars: number | null;
-        filesTouched: number | null;
-        tokensInput: number | null;
-        tokensOutput: number | null;
-        costUsd: number | null;
-        sandboxId: string | null;
-        screenshotCount: number | null;
-        screenshots: {
-            name: string;
-            pagePath: string;
-            objectKey: string;
-            width?: (number | null) | undefined;
-            height?: (number | null) | undefined;
-            sizeBytes?: (number | null) | undefined;
-            httpStatus?: (number | null) | undefined;
-        }[] | null;
-        scorecard: unknown | null;
-        kind: "build" | "plan-only";
-        createdAt: string;
-        sandboxHostname: string | null;
-        orgSlug: string | null;
-        projectSlug: string | null;
-        sandboxSlug: string | null;
-    }[];
+  runs: {
+    runId: string
+    scenarioId: string
+    goal: string
+    templateSlug: string
+    status: string | null
+    completed: boolean
+    rendered: boolean
+    loginOk: boolean
+    bootMs: number | null
+    buildMs: number | null
+    verifyMs: number | null
+    screenshotMs: number | null
+    totalMs: number | null
+    diffChars: number | null
+    filesTouched: number | null
+    tokensInput: number | null
+    tokensOutput: number | null
+    costUsd: number | null
+    sandboxId: string | null
+    screenshotCount: number | null
+    screenshots:
+      | {
+          name: string
+          pagePath: string
+          objectKey: string
+          width?: (number | null) | undefined
+          height?: (number | null) | undefined
+          sizeBytes?: (number | null) | undefined
+          httpStatus?: (number | null) | undefined
+        }[]
+      | null
+    scorecard: unknown | null
+    kind: 'build' | 'plan-only'
+    createdAt: string
+    sandboxHostname: string | null
+    orgSlug: string | null
+    projectSlug: string | null
+    sandboxSlug: string | null
+  }[]
 }
 export type ListHarnessScenariosInput = {}
 export type ListHarnessScenariosOutput = {
-    scenarios: {
-        harnessScenarioId: string;
-        goal: string;
-        templateSlug: string;
-        domain: string;
-        complexity: string;
-        expectLogin: boolean;
-        status: string;
-        runCount: number;
-        passCount: number;
-        failCount: number;
-        lastRunAt: string | null;
-        generatedBy: string | null;
-    }[];
+  scenarios: {
+    harnessScenarioId: string
+    goal: string
+    templateSlug: string
+    domain: string
+    complexity: string
+    expectLogin: boolean
+    status: string
+    runCount: number
+    passCount: number
+    failCount: number
+    lastRunAt: string | null
+    generatedBy: string | null
+  }[]
 }
 export type ListLinkableGithubInstallationsInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListLinkableGithubInstallationsOutput = {
-    installations: {
-        githubInstallationId: string;
-        accountLogin: string;
-        accountType: string;
-        repositorySelection: string;
-        suspended: boolean;
-        linkedOrgNames: string[];
-    }[];
+  installations: {
+    githubInstallationId: string
+    accountLogin: string
+    accountType: string
+    repositorySelection: string
+    suspended: boolean
+    linkedOrgNames: string[]
+  }[]
 }
 export type ListLinkedGitAccountsInput = {}
 export type ListLinkedGitAccountsOutput = {
-    accounts: {
-        provider: "github" | "gitea";
-        providerUsername: string;
-        providerEmail: string | null;
-        tokenExpiresAt: string | null;
-    }[];
+  accounts: {
+    provider: 'github' | 'gitea'
+    providerUsername: string
+    providerEmail: string | null
+    tokenExpiresAt: string | null
+  }[]
 }
 export type ListMachineSizesInput = {}
 export type ListMachineSizesOutput = {
-    sizes: {
-        slug: string;
-        label: string;
-        cpuMillicores: number;
-        memoryMb: number;
-        displayOrder: number;
-    }[];
+  sizes: {
+    slug: string
+    label: string
+    cpuMillicores: number
+    memoryMb: number
+    displayOrder: number
+  }[]
 }
 export type ListMyOrganizationsInput = {}
 export type ListMyOrganizationsOutput = {
-    organizations: {
-        organizationId: string;
-        slug: string;
-        name: string;
-        personal: boolean;
-        role: "owner" | "admin" | "member";
-        planTier: string;
-        memberCount: number;
-        projectCount: number;
-    }[];
+  organizations: {
+    organizationId: string
+    slug: string
+    name: string
+    personal: boolean
+    role: 'owner' | 'admin' | 'member'
+    planTier: string
+    memberCount: number
+    projectCount: number
+  }[]
 }
 export type ListNavigationHistoryInput = {}
 export type ListNavigationHistoryOutput = {
-    places: {
-        surface: "org" | "project" | "stage" | "sandbox";
-        orgSlug: string;
-        orgName: string;
-        projectSlug: string | null;
-        projectName: string | null;
-        sandboxSlug: string | null;
-        sandboxName: string | null;
-        branch: string | null;
-        screen: string;
-        entity: string;
-        entityId: string | null;
-        runId: string | null;
-        section: string | null;
-        visitedAt: string;
-    }[];
+  places: {
+    surface: 'org' | 'project' | 'stage' | 'sandbox'
+    orgSlug: string
+    orgName: string
+    projectSlug: string | null
+    projectName: string | null
+    sandboxSlug: string | null
+    sandboxName: string | null
+    branch: string | null
+    screen: string
+    entity: string
+    entityId: string | null
+    runId: string | null
+    section: string | null
+    visitedAt: string
+  }[]
 }
 export type ListNotificationsInput = {
-    organizationId: string;
-    limit: number;
+  organizationId: string
+  limit: number
 }
 export type ListNotificationsOutput = {
-    unreadCount: number;
-    notifications: {
-        notificationId: string;
-        type: string;
-        severity: string;
-        params: {
-            [key: string]: unknown;
-        };
-        link: string | null;
-        read: boolean;
-        createdAt: string;
-    }[];
+  unreadCount: number
+  notifications: {
+    notificationId: string
+    type: string
+    severity: string
+    params: {
+      [key: string]: unknown
+    }
+    link: string | null
+    read: boolean
+    createdAt: string
+  }[]
 }
 export type ListOrgAiBudgetRulesInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListOrgAiBudgetRulesOutput = {
-    rules: {
-        ruleId: string;
-        provider: string;
-        model: string;
-        scopeKind: "stage" | "sandbox" | "developer" | "project";
-        scopeId: string | null;
-        scopeLabel: string | null;
-        budgetUsd: number;
-        period: string;
-    }[];
+  rules: {
+    ruleId: string
+    provider: string
+    model: string
+    scopeKind: 'stage' | 'sandbox' | 'developer' | 'project'
+    scopeId: string | null
+    scopeLabel: string | null
+    budgetUsd: number
+    period: string
+  }[]
 }
 export type ListOrgAiBudgetTargetsInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListOrgAiBudgetTargetsOutput = {
-    projects: {
-        projectId: string;
-        label: string;
-    }[];
-    stages: {
-        stageId: string;
-        projectId: string;
-        label: string;
-    }[];
-    sandboxes: {
-        sandboxId: string;
-        projectId: string;
-        label: string;
-    }[];
-    members: {
-        userId: string;
-        label: string;
-    }[];
+  projects: {
+    projectId: string
+    label: string
+  }[]
+  stages: {
+    stageId: string
+    projectId: string
+    label: string
+  }[]
+  sandboxes: {
+    sandboxId: string
+    projectId: string
+    label: string
+  }[]
+  members: {
+    userId: string
+    label: string
+  }[]
 }
 export type ListOrganizationInvitationsInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListOrganizationInvitationsOutput = {
-    invitations: {
-        invitationId: string;
-        email: string;
-        role: "admin" | "member" | "owner";
-        invitedBy: string;
-        expiresAt: string;
-        expired: boolean;
-        createdAt: string;
-    }[];
+  invitations: {
+    invitationId: string
+    email: string
+    role: 'admin' | 'member' | 'owner'
+    invitedBy: string
+    expiresAt: string
+    expired: boolean
+    createdAt: string
+  }[]
 }
 export type ListOrganizationMembersInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListOrganizationMembersOutput = {
-    members: {
-        userId: string;
-        name: string | null;
-        email: string;
-        image: string | null;
-        role: "owner" | "admin" | "member";
-        joinedAt: string;
-    }[];
-    maxMembers: number;
+  members: {
+    userId: string
+    name: string | null
+    email: string
+    image: string | null
+    role: 'owner' | 'admin' | 'member'
+    joinedAt: string
+  }[]
+  maxMembers: number
 }
 export type ListProjectCascadeValuesInput = {
-    projectId: string;
-    kind: "secret" | "variable";
+  projectId: string
+  kind: 'secret' | 'variable'
 }
 export type ListProjectCascadeValuesOutput = {
-    values: {
-        scope: string;
-        name: string;
-        hint: string | null;
-        updatedAt: string;
-    }[];
+  values: {
+    scope: string
+    name: string
+    hint: string | null
+    updatedAt: string
+  }[]
 }
 export type ListProjectMetricsInput = {
-    organizationId: string;
-    hours?: number | undefined;
+  organizationId: string
+  hours?: number | undefined
 }
 export type ListProjectMetricsOutput = {
-    projects: {
-        projectId: string;
-        requests: number;
-        errors: number;
-        errorRate: number | null;
-        series: number[];
-        deltaPct: number | null;
-    }[];
+  projects: {
+    projectId: string
+    requests: number
+    errors: number
+    errorRate: number | null
+    series: number[]
+    deltaPct: number | null
+  }[]
 }
 export type ListProjectRepoBranchesInput = {
-    projectId: string;
+  projectId: string
 }
 export type ListProjectRepoBranchesOutput = {
-    branches: string[];
+  branches: string[]
 }
 export type ListProjectsInput = {
-    organizationId: string;
-    sort?: ("health" | "updated" | "created" | "errors") | undefined;
+  organizationId: string
+  sort?: ('health' | 'updated' | 'created' | 'errors') | undefined
 }
 export type ListProjectsOutput = {
-    projects: {
-        id: string;
-        name: string;
-        slug: string;
-        status: "creating" | "created" | "error";
-        createdAt: string;
-        config: {
-            [key: string]: unknown;
-        };
-        previewImageUrl: string | null;
-        previewImages: {
-            name: string;
-            url: string;
-        }[];
-        gitRepoUrl: string | null;
-        gitProvider: ("github" | "gitea") | null;
-        defaultBuilderSandboxId: string | null;
-        productionBranch: string;
-        stages: {
-            branch: string;
-            type: "production" | "environment" | "preview";
-            version: string;
-            status: string;
-            deployedAt: string | null;
-            url: string | null;
-            apps: {
-                name: string;
-                url: string;
-            }[];
-            progressPhase: string | null;
-            progressMessage: string | null;
-            progressUpdatedAt: string | null;
-        }[];
-        sandboxes: {
-            sandboxId: string;
-            slug: string;
-            name: string;
-            status: string;
-            branch: string | null;
-            isDefault: boolean;
-            ticketId: string | null;
-        }[];
-        activity: {
-            kind: "deployed";
-            title: string;
-            timestamp: string;
-        }[];
-        unhealthyWorkers: string[];
-        failedStep: string | null;
-    }[];
+  projects: {
+    id: string
+    name: string
+    slug: string
+    status: 'creating' | 'created' | 'error'
+    createdAt: string
+    config: {
+      [key: string]: unknown
+    }
+    previewImageUrl: string | null
+    previewImages: {
+      name: string
+      url: string
+    }[]
+    gitRepoUrl: string | null
+    gitProvider: ('github' | 'gitea') | null
+    defaultBuilderSandboxId: string | null
+    productionBranch: string
+    stages: {
+      branch: string
+      type: 'production' | 'environment' | 'preview'
+      version: string
+      status: string
+      deployedAt: string | null
+      url: string | null
+      apps: {
+        name: string
+        url: string
+      }[]
+      progressPhase: string | null
+      progressMessage: string | null
+      progressUpdatedAt: string | null
+    }[]
+    sandboxes: {
+      sandboxId: string
+      slug: string
+      name: string
+      status: string
+      branch: string | null
+      isDefault: boolean
+      ticketId: string | null
+    }[]
+    activity: {
+      kind: 'deployed'
+      title: string
+      timestamp: string
+    }[]
+    unhealthyWorkers: string[]
+    failedStep: string | null
+  }[]
 }
 export type ListProjectTemplatesInput = {}
 export type ListProjectTemplatesOutput = {
-    templates: {
-        slug: string;
-        name: string;
-        description: string | null;
-        isDefault: boolean;
-        displayOrder: number;
-    }[];
+  templates: {
+    slug: string
+    name: string
+    description: string | null
+    isDefault: boolean
+    displayOrder: number
+  }[]
 }
 export type ListSandboxesInput = {
-    projectId: string;
+  projectId: string
 }
 export type ListSandboxesOutput = {
-    sandboxes: {
-        sandboxId: string;
-        projectId: string;
-        ticketId: string | null;
-        name: string;
-        slug: string;
-        sizeSlug: string;
-        isDefault: boolean;
-        repoUrl: string | null;
-        currentStatus: string;
-        workflowRunId: string | null;
-        provisioningError: string | null;
-        desiredState: string;
-        aiBudgets: {
-            [key: string]: {
-                usd: number;
-                period: "1d" | "7d" | "30d" | "1mo";
-            };
-        } | null;
-        uptimeSeconds: number;
-        createdAt: string | null;
-        lastUpdatedAt: string | null;
-        currentInstance: {
-            sandboxInstanceId: string;
-            instanceNumber: number;
-            status: string;
-            platform: string | null;
-            runtimeName: string | null;
-            flyAppName: string | null;
-            flyMachineId: string | null;
-            machineClass: string;
-            cpuMillicores: number;
-            memoryMb: number;
-            diskGb: number;
-            hostname: string | null;
-            workloadName: string | null;
-            serviceName: string | null;
-            namespace: string | null;
-            startedAt: string | null;
-            usableAt: string | null;
-            shutDownAt: string | null;
-            unreachableAt: string | null;
-            stoppedAt: string | null;
-            lastActivityAt: string | null;
-            lastReadyToSleepAt: string | null;
-            sleepBlockers: string[];
-            stopReason: string | null;
-            bootPhase: string | null;
-            bootPhaseMessage: string | null;
-            bootPhaseUpdatedAt: string | null;
-            bootPhaseElapsedSec: number | null;
-            bootStep: number | null;
-            bootStepTotal: number;
-            expectedSandboxVersion: string | null;
-            expectedOrchestratorVersion: string | null;
-            reportedSandboxVersion: string | null;
-            reportedOrchestratorVersion: string | null;
-            expectedSandboxSha: string | null;
-            reportedSandboxSha: string | null;
-            sandboxImageStale: boolean;
-            orchestratorVersionHash: string | null;
-            sandboxUpdateAvailable: boolean;
-            orchestratorUpdateAvailable: boolean;
-            versionMismatch: boolean;
-        } | null;
-    }[];
+  sandboxes: {
+    sandboxId: string
+    projectId: string
+    ticketId: string | null
+    name: string
+    slug: string
+    sizeSlug: string
+    isDefault: boolean
+    repoUrl: string | null
+    currentStatus: string
+    workflowRunId: string | null
+    provisioningError: string | null
+    desiredState: string
+    aiBudgets: {
+      [key: string]: {
+        usd: number
+        period: '1d' | '7d' | '30d' | '1mo'
+      }
+    } | null
+    uptimeSeconds: number
+    createdAt: string | null
+    lastUpdatedAt: string | null
+    currentInstance: {
+      sandboxInstanceId: string
+      instanceNumber: number
+      status: string
+      platform: string | null
+      runtimeName: string | null
+      flyAppName: string | null
+      flyMachineId: string | null
+      machineClass: string
+      cpuMillicores: number
+      memoryMb: number
+      diskGb: number
+      hostname: string | null
+      workloadName: string | null
+      serviceName: string | null
+      namespace: string | null
+      startedAt: string | null
+      usableAt: string | null
+      shutDownAt: string | null
+      unreachableAt: string | null
+      stoppedAt: string | null
+      lastActivityAt: string | null
+      lastReadyToSleepAt: string | null
+      sleepBlockers: string[]
+      stopReason: string | null
+      bootPhase: string | null
+      bootPhaseMessage: string | null
+      bootPhaseUpdatedAt: string | null
+      bootPhaseElapsedSec: number | null
+      bootStep: number | null
+      bootStepTotal: number
+      expectedSandboxVersion: string | null
+      expectedOrchestratorVersion: string | null
+      reportedSandboxVersion: string | null
+      reportedOrchestratorVersion: string | null
+      expectedSandboxSha: string | null
+      reportedSandboxSha: string | null
+      sandboxImageStale: boolean
+      orchestratorVersionHash: string | null
+      sandboxUpdateAvailable: boolean
+      orchestratorUpdateAvailable: boolean
+      versionMismatch: boolean
+    } | null
+  }[]
 }
 export type ListSandboxProjectTicketsInput = {}
 export type ListSandboxProjectTicketsOutput = {
-    tickets: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    }[];
+  tickets: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }[]
 }
 export type ListSandboxSessionExportsInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type ListSandboxSessionExportsOutput = {
-    exports: {
-        sandboxSessionExportId: string;
-        sessionId: string;
-        status: string;
-        actualSizeBytes: number | null;
-        uploadedAt: string | null;
-        createdAt: string;
-    }[];
+  exports: {
+    sandboxSessionExportId: string
+    sessionId: string
+    status: string
+    actualSizeBytes: number | null
+    uploadedAt: string | null
+    createdAt: string
+  }[]
 }
 export type ListScenarioRunsInput = {
-    sandboxId?: string | undefined;
-    stageId?: string | undefined;
-    limit?: number | undefined;
+  sandboxId?: string | undefined
+  stageId?: string | undefined
+  limit?: number | undefined
 }
 export type ListScenarioRunsOutput = {
-    runId: string;
-    environment: string;
-    surface: string;
-    status: "running" | "passed" | "failed";
-    startedAt: string;
-    finishedAt?: string | undefined;
-    durationMs?: number | undefined;
-    passed: number;
-    failed: number;
-    skipped: number;
-    artifacts: number;
+  runId: string
+  environment: string
+  surface: string
+  status: 'running' | 'passed' | 'failed'
+  startedAt: string
+  finishedAt?: string | undefined
+  durationMs?: number | undefined
+  passed: number
+  failed: number
+  skipped: number
+  artifacts: number
 }[]
 export type ListShowcaseAppsInput = {}
 export type ListShowcaseAppsOutput = {
-    apps: {
-        appName: string;
-        url: string;
-        projectName: string;
-        templateSlug: string | null;
-        deployedAt: string | null;
-    }[];
+  apps: {
+    appName: string
+    url: string
+    projectName: string
+    templateSlug: string | null
+    deployedAt: string | null
+  }[]
 }
 export type ListsSandboxAddonsInput = {
-    token: string;
-    sandboxId: string;
-    baseUrl: string;
+  token: string
+  sandboxId: string
+  baseUrl: string
 }
 export type ListsSandboxAddonsOutput = {
-    namespaces: string[];
-    packages: string[];
+  namespaces: string[]
+  packages: string[]
 }
 export type ListStageAgentThreadsInput = {
-    stageId: string;
-    agentName?: string | undefined;
-    limit: number;
-    offset: number;
+  stageId: string
+  agentName?: string | undefined
+  limit: number
+  offset: number
 }
 export type ListStageAgentThreadsOutput = AgentThread[]
 export type ListStageChangesInput = {
-    stageId: string;
-    panelToken: string;
-    route?: string | undefined;
-    includeDone: boolean;
-    limit: number;
+  stageId: string
+  panelToken: string
+  route?: string | undefined
+  includeDone: boolean
+  limit: number
 }
 export type ListStageChangesOutput = {
-    changes: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-        screenshotUrl: string | null;
-    }[];
-    groups: {
-        groupId: string;
-        projectId: string;
-        title: string;
-        claimedBy: string | null;
-        claimExpiresAt: Date | null;
-        createdAt: Date;
-    }[];
-    thread: {
-        messageId: string;
-        changeId: string;
-        authorKind: "agent" | "user";
-        authorName: string | null;
-        body: string;
-        attachments: {
-            key: string;
-            label: string;
-            kind: "option" | "evidence";
-            url: string | null;
-        }[];
-        chosenOption: string | null;
-        createdAt: Date;
-    }[];
+  changes: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+    screenshotUrl: string | null
+  }[]
+  groups: {
+    groupId: string
+    projectId: string
+    title: string
+    claimedBy: string | null
+    claimExpiresAt: Date | null
+    createdAt: Date
+  }[]
+  thread: {
+    messageId: string
+    changeId: string
+    authorKind: 'agent' | 'user'
+    authorName: string | null
+    body: string
+    attachments: {
+      key: string
+      label: string
+      kind: 'option' | 'evidence'
+      url: string | null
+    }[]
+    chosenOption: string | null
+    createdAt: Date
+  }[]
 }
 export type ListStageContentObjectsInput = {
-    stageId: string;
-    status?: ("pending_upload" | "uploaded" | "expired" | "deleted") | undefined;
-    limit: number;
-    offset: number;
+  stageId: string
+  status?: ('pending_upload' | 'uploaded' | 'expired' | 'deleted') | undefined
+  limit: number
+  offset: number
 }
-export type ListStageContentObjectsOutput = { contentObjectId: string; objectKey: string; contentType: string | null; status: string; actualSizeBytes: number | null; expectedSizeBytes: number | null; storageBucket: string; storageProvider: string; source: string; createdAt: string; uploadedAt: string | null; expiredAt: string | null; deletedAt: string | null; }[]
+export type ListStageContentObjectsOutput = {
+  contentObjectId: string
+  objectKey: string
+  contentType: string | null
+  status: string
+  actualSizeBytes: number | null
+  expectedSizeBytes: number | null
+  storageBucket: string
+  storageProvider: string
+  source: string
+  createdAt: string
+  uploadedAt: string | null
+  expiredAt: string | null
+  deletedAt: string | null
+}[]
 export type ListStageCredentialUsersFuncInput = {
-    stageId: string;
-    name: string;
+  stageId: string
+  name: string
 }
 export type ListStageCredentialUsersFuncOutput = {
-    userIds: string[];
+  userIds: string[]
 }
 export type ListStageCustomHostnamesInput = {
-    stageId: string;
+  stageId: string
 }
 export type ListStageCustomHostnamesOutput = {
-    hostnames: {
-        customHostnameId: string;
-        hostname: string;
-        target: "api" | "app";
-        appSlug: string | null;
-        status: "pending" | "validating" | "active" | "failed";
-        sslStatus: string | null;
-        validationErrors: any | null;
-        cfCustomHostnameId: string | null;
-        cnameTarget: string;
-        lastCheckedAt: string | null;
-        createdAt: string;
-    }[];
+  hostnames: {
+    customHostnameId: string
+    hostname: string
+    target: 'api' | 'app'
+    appSlug: string | null
+    status: 'pending' | 'validating' | 'active' | 'failed'
+    sslStatus: string | null
+    validationErrors: any | null
+    cfCustomHostnameId: string | null
+    cnameTarget: string
+    lastCheckedAt: string | null
+    createdAt: string
+  }[]
 }
 export type ListStageMigrationLedgerInput = {
-    /** Project UUID */
-    projectId: string;
+  /** Project UUID */
+  projectId: string
 }
 export type ListStageMigrationLedgerOutput = {
-    stages: {
-        stageId: string;
-        branch: string;
-        migrations: {
-            name: string;
-            hash: string | null;
-            appliedAt: string;
-        }[];
-    }[];
+  stages: {
+    stageId: string
+    branch: string
+    migrations: {
+      name: string
+      hash: string | null
+      appliedAt: string
+    }[]
+  }[]
 }
 export type ListStageSecretNamesInput = {
-    stageId: string;
+  stageId: string
 }
 export type ListStageSecretNamesOutput = {
-    secrets: {
-        name: string;
-        updatedAt: string;
-    }[];
+  secrets: {
+    name: string
+    updatedAt: string
+  }[]
 }
 export type ListStagesInput = {
-    /** Project UUID */
-    projectId: string;
+  /** Project UUID */
+  projectId: string
 }
 export type ListStagesOutput = {
-    stages: {
-        stageId: string;
-        branch: string;
-        type: "production" | "environment" | "preview";
-        url: string | null;
-        containerUrl: string | null;
-        createdAt: string;
-        hasActiveDeployment: boolean;
-        changesEnabled: boolean;
-        changesBuildEnabled: boolean;
-        /** Set when the stage was stopped because its organization could not pay */
-        suspension: ("stopped" | "resuming") | null;
-    }[];
+  stages: {
+    stageId: string
+    branch: string
+    type: 'production' | 'environment' | 'preview'
+    url: string | null
+    containerUrl: string | null
+    createdAt: string
+    hasActiveDeployment: boolean
+    changesEnabled: boolean
+    changesBuildEnabled: boolean
+    /** Set when the stage was stopped because its organization could not pay */
+    suspension: ('stopped' | 'resuming') | null
+  }[]
 }
 export type ListStageWebhookDeliveriesInput = {
-    stageId: string;
-    limit?: number | undefined;
+  stageId: string
+  limit?: number | undefined
 }
 export type ListStageWebhookDeliveriesOutput = {
-    deliveries: {
-        deliveryId: string;
-        event: string | null;
-        url: string;
-        status: "pending" | "delivered" | "failed";
-        attempts: number;
-        detail: string | null;
-        createdAt: string;
-        deliveredAt: string | null;
-    }[];
+  deliveries: {
+    deliveryId: string
+    event: string | null
+    url: string
+    status: 'pending' | 'delivered' | 'failed'
+    attempts: number
+    detail: string | null
+    createdAt: string
+    deliveredAt: string | null
+  }[]
 }
 export type ListStageWorkflowRunsInput = {
-    stageId: string;
-    workflowName?: string | undefined;
-    status?: string | undefined;
-    limit: number;
-    offset: number;
+  stageId: string
+  workflowName?: string | undefined
+  status?: string | undefined
+  limit: number
+  offset: number
 }
 export type ListStageWorkflowRunsOutput = WorkflowRun[]
 export type ListTicketsInput = {
-    projectId: string;
+  projectId: string
 }
 export type ListTicketsOutput = {
-    cards: {
-        ticketId: string;
-        projectId: string;
-        organizationId: string;
-        shortId: string;
-        title: string;
-        description: string | null;
-        type: "feature" | "bug" | "security" | "test" | "chore";
-        priority: "low" | "medium" | "high" | "urgent";
-        boardColumn: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-        status: "idle" | "running" | "blocked" | "failed" | "done";
-        mode: "autopilot" | "manual";
-        branch: string;
-        baseCommit: string | null;
-        headCommit: string | null;
-        workflowRunId: string | null;
-        stagingUrl: string | null;
-        productionUrl: string | null;
-        prNumber: number | null;
-        prUrl: string | null;
-        spec: unknown | null;
-        review: {
-            agent: string;
-            file: string;
-            line?: number | undefined;
-            severity: "must_resolve" | "advised_resolve";
-            reason: string;
-            suggestedFix: string;
-        }[] | null;
-        costBreakdown: {
-            [key: string]: number;
-        };
-        blocking: boolean;
-        rollbackPossible: boolean | null;
-        boundSandboxState: string | null;
-        createdBy: {
-            userId: string;
-            name: string;
-        } | null;
-        createdAt: string;
-        lastUpdatedAt: string;
-    }[];
+  cards: {
+    ticketId: string
+    projectId: string
+    organizationId: string
+    shortId: string
+    title: string
+    description: string | null
+    type: 'feature' | 'bug' | 'security' | 'test' | 'chore'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    boardColumn:
+      'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+    status: 'idle' | 'running' | 'blocked' | 'failed' | 'done'
+    mode: 'autopilot' | 'manual'
+    branch: string
+    baseCommit: string | null
+    headCommit: string | null
+    workflowRunId: string | null
+    stagingUrl: string | null
+    productionUrl: string | null
+    prNumber: number | null
+    prUrl: string | null
+    spec: unknown | null
+    review:
+      | {
+          agent: string
+          file: string
+          line?: number | undefined
+          severity: 'must_resolve' | 'advised_resolve'
+          reason: string
+          suggestedFix: string
+        }[]
+      | null
+    costBreakdown: {
+      [key: string]: number
+    }
+    blocking: boolean
+    rollbackPossible: boolean | null
+    boundSandboxState: string | null
+    createdBy: {
+      userId: string
+      name: string
+    } | null
+    createdAt: string
+    lastUpdatedAt: string
+  }[]
 }
 export type ListVirtualUserPersonasInput = {}
 export type ListVirtualUserPersonasOutput = {
-    personas: {
-        id: string;
-        name: string;
-        jobTitle: string | null;
-        disposition: string | null;
-        goals: string[];
-        environments: string[];
-        runnable: boolean;
-    }[];
+  personas: {
+    id: string
+    name: string
+    jobTitle: string | null
+    disposition: string | null
+    goals: string[]
+    environments: string[]
+    runnable: boolean
+  }[]
 }
 export type ListVirtualUserRunCostsInput = {
-    limit?: number | undefined;
+  limit?: number | undefined
 }
 export type ListVirtualUserRunCostsOutput = {
-    costs: {
-        runId: string;
-        costUsd: number | null;
-    }[];
+  costs: {
+    runId: string
+    costUsd: number | null
+  }[]
 }
 export type ListVirtualUserRunsInput = {
-    persona?: string | undefined;
-    limit?: number | undefined;
-    offset?: number | undefined;
+  persona?: string | undefined
+  limit?: number | undefined
+  offset?: number | undefined
 }
 export type ListVirtualUserRunsOutput = {
-    runs: {
-        runId: string;
-        persona: string;
-        disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
-        seed: number;
-        status: "running" | "completed" | "failed";
-        goals: string[];
-        memory: {
-            [key: string]: string;
-        };
-        findings: {
-            kind: string;
-            detail: string;
-            rpcName?: string | undefined;
-            status?: number | undefined;
-            intentId?: string | undefined;
-            step: number;
-        }[];
-        intents: {
-            id: string;
-            sourceId: string;
-            title: string;
-            status: string;
-            steps: number[];
-            suspensions: number;
-            summary?: string | undefined;
-        }[];
-        tally: {
-            [key: string]: unknown;
-        } | null;
-        stoppedBy: string | null;
-        error: string | null;
-        createdAt: string;
-        finishedAt: string | null;
-    }[];
+  runs: {
+    runId: string
+    persona: string
+    disposition:
+      | 'realistic'
+      | 'careless'
+      | 'newcomer'
+      | 'stale'
+      | 'auditor'
+      | 'adversarial'
+      | 'accountable'
+    seed: number
+    status: 'running' | 'completed' | 'failed'
+    goals: string[]
+    memory: {
+      [key: string]: string
+    }
+    findings: {
+      kind: string
+      detail: string
+      rpcName?: string | undefined
+      status?: number | undefined
+      intentId?: string | undefined
+      step: number
+    }[]
+    intents: {
+      id: string
+      sourceId: string
+      title: string
+      status: string
+      steps: number[]
+      suspensions: number
+      summary?: string | undefined
+    }[]
+    tally: {
+      [key: string]: unknown
+    } | null
+    stoppedBy: string | null
+    error: string | null
+    createdAt: string
+    finishedAt: string | null
+  }[]
 }
 export type ListVirtualUserSchedulesOutput = {
-    schedules: {
-        persona: string;
-        enabled: boolean;
-        disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
-        goals: string[];
-        budget: {
-            steps?: number | undefined;
-            mutations?: number | undefined;
-            durationMs?: number | undefined;
-        } | null;
-        minIntervalMs: number;
-        maxIntervalMs: number;
-        nextRunAt: string;
-        lastRunId: string | null;
-        lastRunAt: string | null;
-        declared: {
-            disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
-            goals: string[];
-        };
-    }[];
+  schedules: {
+    persona: string
+    enabled: boolean
+    disposition:
+      | 'realistic'
+      | 'careless'
+      | 'newcomer'
+      | 'stale'
+      | 'auditor'
+      | 'adversarial'
+      | 'accountable'
+    goals: string[]
+    budget: {
+      steps?: number | undefined
+      mutations?: number | undefined
+      durationMs?: number | undefined
+    } | null
+    minIntervalMs: number
+    maxIntervalMs: number
+    nextRunAt: string
+    lastRunId: string | null
+    lastRunAt: string | null
+    declared: {
+      disposition:
+        | 'realistic'
+        | 'careless'
+        | 'newcomer'
+        | 'stale'
+        | 'auditor'
+        | 'adversarial'
+        | 'accountable'
+      goals: string[]
+    }
+  }[]
 }
 export type ListWebhookEndpointsInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type ListWebhookEndpointsOutput = {
-    availableEvents: string[];
-    endpoints: {
-        webhookEndpointId: string;
-        url: string;
-        events: string[];
-        enabled: boolean;
-        description: string | null;
-        createdAt: string;
-    }[];
+  availableEvents: string[]
+  endpoints: {
+    webhookEndpointId: string
+    url: string
+    events: string[]
+    enabled: boolean
+    description: string | null
+    createdAt: string
+  }[]
 }
 export type LoadBuildResultInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type LoadBuildResultOutput = {
-    hasServerUnit: boolean;
+  hasServerUnit: boolean
 }
 export type LoadDeployAppliersInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type LoadDeployAppliersOutput = {
-    cloudflare: boolean;
-    server: boolean;
-    webhook: boolean;
-    migrations: boolean;
-    config: boolean;
+  cloudflare: boolean
+  server: boolean
+  webhook: boolean
+  migrations: boolean
+  config: boolean
 }
 export type LoadDeployContextInput = {
-    deploymentId: string;
-    workflowRunId?: string | undefined;
+  deploymentId: string
+  workflowRunId?: string | undefined
 }
 export type LoadDeployContextOutput = {
-    stageId: string;
-    stageShortId: string;
-    stageType: "production" | "environment" | "preview";
-    projectId: string;
-    projectSlug: string;
-    projectRegion: "west-europe" | "east-us" | "west-us" | "asia-pacific";
-    orgShortId: string;
-    projectShortId: string;
-    productionBranch: string;
-    role: string;
-    gitRepoUrl: string;
-    gitBranch: string;
-    gitSha: string;
-    dbEngine: ("postgres" | "sqlite") | null;
-    dbPgVersion: number | null;
-    hostname: string;
+  stageId: string
+  stageShortId: string
+  stageType: 'production' | 'environment' | 'preview'
+  projectId: string
+  projectSlug: string
+  projectRegion: 'west-europe' | 'east-us' | 'west-us' | 'asia-pacific'
+  orgShortId: string
+  projectShortId: string
+  productionBranch: string
+  role: string
+  gitRepoUrl: string
+  gitBranch: string
+  gitSha: string
+  dbEngine: ('postgres' | 'sqlite') | null
+  dbPgVersion: number | null
+  hostname: string
 }
 export type LoadDeployWebhookResultInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type LoadDeployWebhookResultOutput = {
-    externalRef: string | null;
+  externalRef: string | null
 }
 export type LoadImageBuildResultInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type LoadImageBuildResultOutput = {
-    imageUri: string | null;
+  imageUri: string | null
 }
 export type LoadProjectTransferContextInput = {
-    projectId: string;
-    targetOrganizationId: string;
+  projectId: string
+  targetOrganizationId: string
 }
 export type LoadProjectTransferContextOutput = {
-    projectId: string;
-    fromOrganizationId: string;
-    targetOrganizationId: string;
-    stageIds: string[];
-    applies: {
-        stageId: string;
-        deploymentId: string;
-    }[];
+  projectId: string
+  fromOrganizationId: string
+  targetOrganizationId: string
+  stageIds: string[]
+  applies: {
+    stageId: string
+    deploymentId: string
+  }[]
 }
 export type LookupOrganizationBySlugInput = {
-    slug: string;
+  slug: string
 }
-export type LookupOrganizationBySlugOutput = {
-    kind: "found";
-    organizationId: string;
-    slug: string;
-    name: string;
-    personal: boolean;
-} | {
-    kind: "redirect";
-    organizationId: string;
-    toSlug: string;
-} | {
-    kind: "not-found";
-}
+export type LookupOrganizationBySlugOutput =
+  | {
+      kind: 'found'
+      organizationId: string
+      slug: string
+      name: string
+      personal: boolean
+    }
+  | {
+      kind: 'redirect'
+      organizationId: string
+      toSlug: string
+    }
+  | {
+      kind: 'not-found'
+    }
 export type LookupProjectBySlugInput = {
-    organizationId: string;
-    slug: string;
+  organizationId: string
+  slug: string
 }
-export type LookupProjectBySlugOutput = {
-    kind: "found";
-    projectId: string;
-    slug: string;
-    name: string;
-} | {
-    kind: "redirect";
-    projectId: string;
-    toSlug: string;
-} | {
-    kind: "not-found";
-}
+export type LookupProjectBySlugOutput =
+  | {
+      kind: 'found'
+      projectId: string
+      slug: string
+      name: string
+    }
+  | {
+      kind: 'redirect'
+      projectId: string
+      toSlug: string
+    }
+  | {
+      kind: 'not-found'
+    }
 export type MarkDeploymentActiveInput = {
-    deploymentId: string;
-    stageId: string;
+  deploymentId: string
+  stageId: string
 }
 export type MarkDeploymentActiveOutput = {
-    archivedDeploymentIds: string[];
+  archivedDeploymentIds: string[]
 }
 export type MarkNotificationsReadInput = {
-    organizationId: string;
-    notificationIds: string[];
+  organizationId: string
+  notificationIds: string[]
 }
 export type MarkNotificationsReadOutput = {
-    marked: number;
+  marked: number
 }
 export type MarkProjectFailedInput = {
-    projectId: string;
+  projectId: string
 }
 export type MarkProjectFailedOutput = {
-    marked: boolean;
+  marked: boolean
 }
 export type MarkProjectForDeletionInput = {
-    projectId: string;
+  projectId: string
 }
 export type MarkProjectForDeletionOutput = {
-    projectId: string;
-    projectShortId: string | null;
-    orgShortId: string | null;
-    dbProjectId: string | null;
+  projectId: string
+  projectShortId: string | null
+  orgShortId: string | null
+  dbProjectId: string | null
 }
 export type MarkProjectInitialBuildCompleteInput = {}
 export type MarkProjectInitialBuildCompleteOutput = {
-    ok: true;
+  ok: true
 }
 export type MarkSandboxAccessedInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type MarkSandboxAccessedOutput = {
-    ok: true;
+  ok: true
 }
 export type MarkSandboxBootFailedInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    message: string | null;
+  sandboxId: string
+  sandboxInstanceId: string
+  message: string | null
 }
 export type MarkSandboxBootFailedOutput = {
-    ok: true;
+  ok: true
 }
 export type MaterializeStageSecretsInput = {
-    projectId: string;
-    stageId: string;
+  projectId: string
+  stageId: string
 }
 export type MaterializeStageSecretsOutput = {
-    materialized: boolean;
+  materialized: boolean
 }
 export type MaybeStartSandboxBuildInput = {
-    sandboxId: string;
-    hostname: string;
+  sandboxId: string
+  hostname: string
 }
 export type MaybeStartSandboxBuildOutput = {
-    started: boolean;
-    reason: string;
+  started: boolean
+  reason: string
 }
-export type MemberLifecycleScenarioOutput = { organizationId: string; remainingMembers: number; }
-export type MemberPermissionsScenarioOutput = { denials: number; leftVoluntarily: boolean; }
-export type MemberRoleScenarioOutput = { organizationId: string; promotedRole: string; foundAfterRemoval: boolean; }
+export type MemberLifecycleScenarioOutput = {
+  organizationId: string
+  remainingMembers: number
+}
+export type MemberPermissionsScenarioOutput = {
+  denials: number
+  leftVoluntarily: boolean
+}
+export type MemberRoleScenarioOutput = {
+  organizationId: string
+  promotedRole: string
+  foundAfterRemoval: boolean
+}
 export type MergeTicketBranchInput = {
-    ticketId: string;
-    column: "staging" | "production";
-    repoUrl: string;
-    head: string;
-    base: string;
-    prNumber: number | null;
+  ticketId: string
+  column: 'staging' | 'production'
+  repoUrl: string
+  head: string
+  base: string
+  prNumber: number | null
 }
 export type MergeTicketBranchOutput = {
-    ok: true;
+  ok: true
 }
 export type MintConsoleTokenInput = {
-    stageId: string;
+  stageId: string
 }
 export type MintConsoleTokenOutput = {
-    token: string;
-    apiUrl: string;
-    expiresAt: number;
+  token: string
+  apiUrl: string
+  expiresAt: number
 }
 export type MintRepoWriteCredentialInput = {
-    projectId: string;
+  projectId: string
 }
 export type MintRepoWriteCredentialOutput = {
-    provider: "github" | "gitea";
-    repoUrl: string;
-    username: string;
-    password: string;
-    expiresAt: string;
-    commitName: string;
-    commitEmail: string;
+  provider: 'github' | 'gitea'
+  repoUrl: string
+  username: string
+  password: string
+  expiresAt: string
+  commitName: string
+  commitEmail: string
 }
 export type NotifyOrchestratorReadyInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
+  sandboxId: string
+  sandboxInstanceId: string
 }
 export type NotifyOrchestratorReadyOutput = {
-    ok: true;
+  ok: true
 }
 export type OpensAddonsTabInput = {
-    orgSlug: string;
-    projectSlug: string;
-    sandboxSlug: string;
+  orgSlug: string
+  projectSlug: string
+  sandboxSlug: string
 }
 export type OpensAddonsTabOutput = {
-    url: string;
+  url: string
 }
 export type OpensWebhooksTabInput = {
-    orgSlug: string;
-    projectSlug: string;
-    sandboxSlug: string;
+  orgSlug: string
+  projectSlug: string
+  sandboxSlug: string
 }
 export type OpensWebhooksTabOutput = {
-    url: string;
-    empty: boolean;
+  url: string
+  empty: boolean
 }
-export type OrgAiSettingsScenarioOutput = { organizationId: string; enabledModels: string[] | null; telemetryAvailable: boolean; }
-export type OrgLifecycleScenarioOutput = { organizationId: string; finalSlug: string; }
-export type OrgMembershipScenarioOutput = { organizationId: string; memberCount: number; }
-export type OutsiderCannotMintRepoCredentialScenarioOutput = { status: number; }
-export type OutsiderCannotReachStageSecretsScenarioOutput = { stageId: string; denials: number; }
-export type OutsiderCannotTouchCascadeScenarioOutput = { listStatus: number; setStatus: number; }
-export type OversizedAttachmentIsRejectedScenarioOutput = { status: number; }
-export type PermissionBoundariesScenarioOutput = { denials: number; nonMemberLookup: string; }
+export type OrgAiSettingsScenarioOutput = {
+  organizationId: string
+  enabledModels: string[] | null
+  telemetryAvailable: boolean
+}
+export type OrgLifecycleScenarioOutput = {
+  organizationId: string
+  finalSlug: string
+}
+export type OrgMembershipScenarioOutput = {
+  organizationId: string
+  memberCount: number
+}
+export type OutsiderCannotMintRepoCredentialScenarioOutput = { status: number }
+export type OutsiderCannotReachStageSecretsScenarioOutput = {
+  stageId: string
+  denials: number
+}
+export type OutsiderCannotTouchCascadeScenarioOutput = {
+  listStatus: number
+  setStatus: number
+}
+export type OversizedAttachmentIsRejectedScenarioOutput = { status: number }
+export type PermissionBoundariesScenarioOutput = {
+  denials: number
+  nonMemberLookup: string
+}
 export type PersistDeployPlanInput = {
-    deploymentId: string;
-    stageId: string;
-    orgShortId: string;
-    projectShortId: string;
-    gitSha: string;
-    gitRepoUrl: string;
-    autoApprove?: boolean | undefined;
+  deploymentId: string
+  stageId: string
+  orgShortId: string
+  projectShortId: string
+  gitSha: string
+  gitRepoUrl: string
+  autoApprove?: boolean | undefined
 }
 export type PersistDeployPlanOutput = {
-    green: boolean;
-    autoDeploy: boolean;
-    reason: ("awaiting_approval" | "needs_attention" | "needs_config") | null;
-    missingSecrets: {
-        name: string;
-        displayName: string | null;
-        description: string | null;
-        docsUrl: string | null;
-    }[];
-    missingVariables: {
-        name: string;
-        displayName: string | null;
-        description: string | null;
-        docsUrl: string | null;
-    }[];
+  green: boolean
+  autoDeploy: boolean
+  reason: ('awaiting_approval' | 'needs_attention' | 'needs_config') | null
+  missingSecrets: {
+    name: string
+    displayName: string | null
+    description: string | null
+    docsUrl: string | null
+  }[]
+  missingVariables: {
+    name: string
+    displayName: string | null
+    description: string | null
+    docsUrl: string | null
+  }[]
 }
 export type PikkuConsoleGetVariableInput = {
-    variableId: string;
+  variableId: string
 }
 export type PikkuConsoleGetVariableOutput = {
-    exists: boolean;
-    value: unknown | null;
+  exists: boolean
+  value: unknown | null
 }
 export type PikkuConsoleSetVariableInput = {
-    variableId: string;
-    value: unknown;
+  variableId: string
+  value: unknown
 }
 export type PikkuConsoleSetVariableOutput = {
-    success: boolean;
+  success: boolean
 }
-export type PlatformAdminScenarioOutput = { totalUsers: number; totalOrgs: number; plans: number; creditGranted: boolean; }
-export type PlatformFleetScenarioOutput = { machines: number; sandboxes: number; releases: number; }
+export type PlatformAdminScenarioOutput = {
+  totalUsers: number
+  totalOrgs: number
+  plans: number
+  creditGranted: boolean
+}
+export type PlatformFleetScenarioOutput = {
+  machines: number
+  sandboxes: number
+  releases: number
+}
 export type PollCliAuthInput = {
-    code: string;
+  code: string
 }
 export type PollCliAuthOutput = {
-    status: "pending" | "confirmed" | "consumed" | "expired" | "rejected";
-    token?: string | undefined;
+  status: 'pending' | 'confirmed' | 'consumed' | 'expired' | 'rejected'
+  token?: string | undefined
 }
-export type PollCustomHostnameWorkflowInput = { customHostnameId: string; }
-export type PollCustomHostnameWorkflowOutput = { status: "failed" | "active"; }
-export type PostsWebhookInput = { path: string; body: unknown; headers?: Record<string, string> | undefined; }
+export type PollCustomHostnameWorkflowInput = { customHostnameId: string }
+export type PollCustomHostnameWorkflowOutput = { status: 'failed' | 'active' }
+export type PostsWebhookInput = {
+  path: string
+  body: unknown
+  headers?: Record<string, string> | undefined
+}
 export type PostsWebhookOutput = ScenarioHttpResponse<unknown>
 export type PreflightHarnessModelsInput = {
-    model?: string | undefined;
-    planModel?: string | undefined;
-    designModel?: string | undefined;
+  model?: string | undefined
+  planModel?: string | undefined
+  designModel?: string | undefined
 }
 export type PreflightHarnessModelsOutput = {
-    ok: boolean;
-    outage: boolean;
-    failures: {
-        model: string;
-        error: string;
-    }[];
+  ok: boolean
+  outage: boolean
+  failures: {
+    model: string
+    error: string
+  }[]
 }
-export type ProjectCatalogScenarioOutput = { templates: number; defaultTemplate: string; machineSizes: number; projects: number; }
-export type ProjectTransferScenarioOutput = { projectId: string; fromOrganizationId: string; toOrganizationId: string; assertions: number; }
+export type ProjectCatalogScenarioOutput = {
+  templates: number
+  defaultTemplate: string
+  machineSizes: number
+  projects: number
+}
+export type ProjectTransferScenarioOutput = {
+  projectId: string
+  fromOrganizationId: string
+  toOrganizationId: string
+  assertions: number
+}
 export type ProvisionBootstrapPikkuInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionBootstrapPikkuOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionBuildAddonsInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionBuildAddonsOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionCloneRepoInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionCloneRepoOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionGenerateFrontendInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionGenerateFrontendOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionInstallDepsInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionInstallDepsOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionMigrateInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionMigrateOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionRepoInput = {
-    name?: string | undefined;
-    organizationId?: string | undefined;
+  name?: string | undefined
+  organizationId?: string | undefined
 }
 export type ProvisionRepoOutput = {
-    repoUrl: string;
-    cloneUrl: string;
-    username: string;
-    password: string;
-    expiresAt: string;
-    commitName: string;
-    commitEmail: string;
+  repoUrl: string
+  cloneUrl: string
+  username: string
+  password: string
+  expiresAt: string
+  commitName: string
+  commitEmail: string
 }
 export type ProvisionRunCodegenInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionRunCodegenOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionStageRecordStepInput = {
-    projectId: string;
-    branch: string;
-    type: "production" | "environment" | "preview";
+  projectId: string
+  branch: string
+  type: 'production' | 'environment' | 'preview'
 }
 export type ProvisionStageRecordStepOutput = {
-    stageId: string;
-    stageShortId: string;
-    dbBranchId: string | null;
+  stageId: string
+  stageShortId: string
+  dbBranchId: string | null
 }
-export type ProvisionStageWorkflowInput = { projectId: string; branch: string; type: "production" | "environment" | "preview"; }
-export type ProvisionStageWorkflowOutput = { stageId: string; dbBranchId: string | null; }
+export type ProvisionStageWorkflowInput = {
+  projectId: string
+  branch: string
+  type: 'production' | 'environment' | 'preview'
+}
+export type ProvisionStageWorkflowOutput = {
+  stageId: string
+  dbBranchId: string | null
+}
 export type ProvisionStartServicesInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type ProvisionStartServicesOutput = {
-    ok: true;
+  ok: true
 }
 export type ProvisionsTestUserInput = {
-    plan: "free" | "pro" | "team";
-    prefix: string;
+  plan: 'free' | 'pro' | 'team'
+  prefix: string
 }
 export type ProvisionsTestUserOutput = {
-    token: string;
-    organizationId: string;
-    userId: string;
-    email: string;
-    username: string;
+  token: string
+  organizationId: string
+  userId: string
+  email: string
+  username: string
 }
 export type ProxyStageScopeRpcInput = {
-    stageId: string;
-    rpcName: "admin:scopeListRoles" | "admin:scopeListDeclared" | "admin:scopeListUserRoles" | "admin:scopeCreateRole" | "admin:scopeDeleteRole" | "admin:scopeSetRoleScopes" | "admin:scopeAddUserToRole" | "admin:scopeRemoveUserFromRole" | "admin:scopeAddScopeToUser" | "admin:scopeRemoveScopeFromUser" | "admin:listUsers" | "admin:createUser" | "admin:setUserBanned" | "admin:removeUser" | "admin:revokeUserSessions" | "admin:setUserPassword" | "admin:sendSignInLink";
-    data?: unknown | undefined;
+  stageId: string
+  rpcName:
+    | 'admin:scopeListRoles'
+    | 'admin:scopeListDeclared'
+    | 'admin:scopeListUserRoles'
+    | 'admin:scopeCreateRole'
+    | 'admin:scopeDeleteRole'
+    | 'admin:scopeSetRoleScopes'
+    | 'admin:scopeAddUserToRole'
+    | 'admin:scopeRemoveUserFromRole'
+    | 'admin:scopeAddScopeToUser'
+    | 'admin:scopeRemoveScopeFromUser'
+    | 'admin:listUsers'
+    | 'admin:createUser'
+    | 'admin:setUserBanned'
+    | 'admin:removeUser'
+    | 'admin:revokeUserSessions'
+    | 'admin:setUserPassword'
+    | 'admin:sendSignInLink'
+  data?: unknown | undefined
 }
 export type PublishAgentBundleInput = {
-    files: {
-        path: string;
-        content: string;
-    }[];
-    changedBecause: string;
-    diffMd?: (string | null) | undefined;
-    metricsSnapshot?: unknown | undefined;
-    changedBy?: string | undefined;
+  files: {
+    path: string
+    content: string
+  }[]
+  changedBecause: string
+  diffMd?: (string | null) | undefined
+  metricsSnapshot?: unknown | undefined
+  changedBy?: string | undefined
 }
 export type PublishAgentBundleOutput = {
-    agentBundleId: string;
-    version: number;
+  agentBundleId: string
+  version: number
 }
 export type PublishCloudflareDeploymentInput = {
-    deploymentId: string;
-    projectId: string;
-    stageId: string;
-    stageShortId: string;
-    stageType: "production" | "environment" | "preview";
-    projectSlug: string;
-    orgShortId: string;
-    projectShortId: string;
-    gitBranch: string;
-    productionBranch: string;
-    role: string;
-    gitSha: string;
-    hostname: string;
+  deploymentId: string
+  projectId: string
+  stageId: string
+  stageShortId: string
+  stageType: 'production' | 'environment' | 'preview'
+  projectSlug: string
+  orgShortId: string
+  projectShortId: string
+  gitBranch: string
+  productionBranch: string
+  role: string
+  gitSha: string
+  hostname: string
 }
 export type PublishCloudflareDeploymentOutput = {
-    workersDeployed: string[];
-    routeBound: string | null;
-    namespace: string;
-    runtimeRollout: {
-        stageId: string;
-        namespace: string;
-        imageRef: string;
-        secretDelivery: "vault" | "env";
-    } | null;
+  workersDeployed: string[]
+  routeBound: string | null
+  namespace: string
+  runtimeRollout: {
+    stageId: string
+    namespace: string
+    imageRef: string
+    secretDelivery: 'vault' | 'env'
+  } | null
 }
 export type PublishRuntimeReleaseInput = {
-    runtimeType: "sandbox" | "ci" | "orchestrator" | "machine-agent";
-    version: string;
-    imageRef?: string | undefined;
-    artifactKey?: string | undefined;
-    commitSha?: string | undefined;
+  runtimeType: 'sandbox' | 'ci' | 'orchestrator' | 'machine-agent'
+  version: string
+  imageRef?: string | undefined
+  artifactKey?: string | undefined
+  commitSha?: string | undefined
 }
 export type PublishRuntimeReleaseOutput = {
-    runtimeReleaseId: string;
-    runtimeType: "sandbox" | "ci" | "orchestrator" | "machine-agent";
-    version: string;
-    updatedLiveInstances: number;
+  runtimeReleaseId: string
+  runtimeType: 'sandbox' | 'ci' | 'orchestrator' | 'machine-agent'
+  version: string
+  updatedLiveInstances: number
 }
 export type PublishScenarioRunInput = {
-    record: {
-        runId: string;
-        environment: string;
-        surface: string;
-        status: "running" | "passed" | "failed";
-        startedAt: string;
-        finishedAt?: string | undefined;
-        results: {
-            name: string;
-            status: "passed" | "failed";
-            durationMs: number;
-            output?: unknown | undefined;
-            error?: string | undefined;
-            steps?: {
-                sentence: string;
-                status: string;
-                durationMs?: number | undefined;
-                error?: string | undefined;
-            }[] | undefined;
-            failure?: {
-                sentence?: string | undefined;
-                message: string;
-                stack?: string | undefined;
-                expected?: boolean | undefined;
-                browser?: {
-                    actor: string;
-                    url?: string | undefined;
-                    screenshot?: string | undefined;
-                    consoleErrors: string[];
-                    pageErrors: string[];
-                    failedRequests: string[];
-                    apiErrors: string[];
-                }[] | undefined;
-            } | undefined;
-            scenarioName?: string | undefined;
-            feature?: string | undefined;
-            tags?: string[] | undefined;
-            artifacts?: {
-                scenario: string;
-                kind: "screenshot" | "failure" | "video";
-                path: string;
-                actor?: string | undefined;
-                name?: string | undefined;
-            }[] | undefined;
-        }[];
-        skipped: {
-            name: string;
-            reason: string;
-        }[];
-        hookFailures: string[];
-    };
+  record: {
+    runId: string
+    environment: string
+    surface: string
+    status: 'running' | 'passed' | 'failed'
+    startedAt: string
+    finishedAt?: string | undefined
+    results: {
+      name: string
+      status: 'passed' | 'failed'
+      durationMs: number
+      output?: unknown | undefined
+      error?: string | undefined
+      steps?:
+        | {
+            sentence: string
+            status: string
+            durationMs?: number | undefined
+            error?: string | undefined
+          }[]
+        | undefined
+      failure?:
+        | {
+            sentence?: string | undefined
+            message: string
+            stack?: string | undefined
+            expected?: boolean | undefined
+            browser?:
+              | {
+                  actor: string
+                  url?: string | undefined
+                  screenshot?: string | undefined
+                  consoleErrors: string[]
+                  pageErrors: string[]
+                  failedRequests: string[]
+                  apiErrors: string[]
+                }[]
+              | undefined
+          }
+        | undefined
+      scenarioName?: string | undefined
+      feature?: string | undefined
+      tags?: string[] | undefined
+      artifacts?:
+        | {
+            scenario: string
+            kind: 'screenshot' | 'failure' | 'video'
+            path: string
+            actor?: string | undefined
+            name?: string | undefined
+          }[]
+        | undefined
+    }[]
+    skipped: {
+      name: string
+      reason: string
+    }[]
+    hookFailures: string[]
+  }
 }
 export type PublishScenarioRunOutput = {
-    runId: string;
-    uploads: {
-        path: string;
-        uploadUrl: string;
-    }[];
+  runId: string
+  uploads: {
+    path: string
+    uploadUrl: string
+  }[]
 }
 export type PushesSignedGithubBranchInput = {
-    gitRepoUrl: string;
-    branch: string;
+  gitRepoUrl: string
+  branch: string
 }
 export type PushesSignedGithubBranchOutput = {
-    httpStatus: number;
-    status: string;
-    reason: string;
-    serialized: string;
+  httpStatus: number
+  status: string
+  reason: string
+  serialized: string
 }
-export type QueuePikkuOutgoingWebhooksInput = { url: string; body: string; headers: Record<string, string>; event?: string | undefined; deliveryId?: string | undefined; }
+export type QueuePikkuOutgoingWebhooksInput = {
+  url: string
+  body: string
+  headers: Record<string, string>
+  event?: string | undefined
+  deliveryId?: string | undefined
+}
 export type R2ContentWebhookInput = {
-    events: {
-        eventType: "object.created" | "object.deleted";
-        storageBucket: string;
-        objectKey: string;
-        sizeBytes?: number | undefined;
-        etag?: string | undefined;
-        occurredAt?: Date | undefined;
-    }[];
+  events: {
+    eventType: 'object.created' | 'object.deleted'
+    storageBucket: string
+    objectKey: string
+    sizeBytes?: number | undefined
+    etag?: string | undefined
+    occurredAt?: Date | undefined
+  }[]
 }
 export type R2ContentWebhookOutput = {
-    processed: number;
-    updated: number;
-    missing: number;
+  processed: number
+  updated: number
+  missing: number
 }
 export type ReactToProjectAspirationInput = {
-    projectId: string;
-    title: string;
-    reaction: ("liked" | "disliked") | null;
+  projectId: string
+  title: string
+  reaction: ('liked' | 'disliked') | null
 }
 export type ReactToProjectAspirationOutput = {
-    reaction: ("liked" | "disliked") | null;
+  reaction: ('liked' | 'disliked') | null
 }
 export type ReadCascadeDefinitionInput = {
-    secret: string;
-    projectId: string;
-    kind: "secret" | "variable";
-    scope: string;
-    name: string;
+  secret: string
+  projectId: string
+  kind: 'secret' | 'variable'
+  scope: string
+  name: string
 }
 export type ReadCascadeDefinitionOutput = {
-    found: boolean;
-    valueWrapped: string | null;
-    kekVersionId: string | null;
-    hint: string | null;
+  found: boolean
+  valueWrapped: string | null
+  kekVersionId: string | null
+  hint: string | null
 }
 export type ReadHarnessCapabilitiesInput = {
-    limit: number;
+  limit: number
 }
 export type ReadHarnessCapabilitiesOutput = {
-    rows: {
-        runId: string;
-        scenarioId: string | null;
-        pass: boolean | null;
-        status: string | null;
-        commitSha: string | null;
-        capabilities: {
-            milestoneDispatched?: (boolean | null) | undefined;
-            architectPlan?: (boolean | null) | undefined;
-            designRound?: (boolean | null) | undefined;
-            buildComplete?: (boolean | null) | undefined;
-            scenarios?: (boolean | null) | undefined;
-            multiApp?: (boolean | null) | undefined;
-            aiAgent?: (boolean | null) | undefined;
-            aiPromises?: (boolean | null) | undefined;
-            realtime?: (boolean | null) | undefined;
-            fileUpload?: (boolean | null) | undefined;
-            workflowUi?: (boolean | null) | undefined;
-            email?: (boolean | null) | undefined;
-            addon?: (boolean | null) | undefined;
-            deploy?: (boolean | null) | undefined;
-            deployedSignup?: (boolean | null) | undefined;
-        };
-    }[];
+  rows: {
+    runId: string
+    scenarioId: string | null
+    pass: boolean | null
+    status: string | null
+    commitSha: string | null
+    capabilities: {
+      milestoneDispatched?: (boolean | null) | undefined
+      architectPlan?: (boolean | null) | undefined
+      designRound?: (boolean | null) | undefined
+      buildComplete?: (boolean | null) | undefined
+      scenarios?: (boolean | null) | undefined
+      multiApp?: (boolean | null) | undefined
+      aiAgent?: (boolean | null) | undefined
+      aiPromises?: (boolean | null) | undefined
+      realtime?: (boolean | null) | undefined
+      fileUpload?: (boolean | null) | undefined
+      workflowUi?: (boolean | null) | undefined
+      email?: (boolean | null) | undefined
+      addon?: (boolean | null) | undefined
+      deploy?: (boolean | null) | undefined
+      deployedSignup?: (boolean | null) | undefined
+    }
+  }[]
 }
 export type ReadsPlanLimitsInput = {
-    tier: "free" | "pro" | "team";
+  tier: 'free' | 'pro' | 'team'
 }
 export type ReadsPlanLimitsOutput = {
-    tier: string;
-    maxProjects: number;
-    maxMembers: number;
+  tier: string
+  maxProjects: number
+  maxMembers: number
 }
 export type ReadsStoredCascadeSecretInput = {
-    projectId: string;
-    scope: string;
-    name: string;
+  projectId: string
+  scope: string
+  name: string
 }
 export type ReadsStoredCascadeSecretOutput = {
-    valueWrapped: string;
-    kekVersionId: string;
-    hint: string;
+  valueWrapped: string
+  kekVersionId: string
+  hint: string
 }
-export type RealtimeEventStreamInput = { topic: string; }
-export type RealtimeSubscribeInput = { topic: string; }
-export type RealtimeUnsubscribeInput = { topic: string; }
+export type RealtimeEventStreamInput = { topic: string }
+export type RealtimeSubscribeInput = { topic: string }
+export type RealtimeUnsubscribeInput = { topic: string }
 export type ReapplyDeploymentInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type ReapplyDeploymentOutput = {
-    runId: string;
-    deploymentId: string;
+  runId: string
+  deploymentId: string
 }
 export type ReapplyTransferredStagesInput = {
-    projectId: string;
-    applies: {
-        stageId: string;
-        deploymentId: string;
-    }[];
+  projectId: string
+  applies: {
+    stageId: string
+    deploymentId: string
+  }[]
 }
 export type ReapplyTransferredStagesOutput = {
-    appliedStageIds: string[];
-    stagesNeedingRedeploy: string[];
+  appliedStageIds: string[]
+  stagesNeedingRedeploy: string[]
 }
 export type RecheckDeployConfigInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type RecheckDeployConfigOutput = {
-    missingSecrets: {
-        name: string;
-        displayName: string | null;
-        description: string | null;
-        docsUrl: string | null;
-    }[];
-    missingVariables: {
-        name: string;
-        displayName: string | null;
-        description: string | null;
-        docsUrl: string | null;
-    }[];
-    allClear: boolean;
+  missingSecrets: {
+    name: string
+    displayName: string | null
+    description: string | null
+    docsUrl: string | null
+  }[]
+  missingVariables: {
+    name: string
+    displayName: string | null
+    description: string | null
+    docsUrl: string | null
+  }[]
+  allClear: boolean
 }
 export type ReconcileProjectCascadeInput = {
-    projectId: string;
-    kind: "secret" | "variable";
+  projectId: string
+  kind: 'secret' | 'variable'
 }
 export type ReconcileProjectCascadeOutput = {
-    targets: {
-        key: string;
-        kind: "stage" | "sandbox";
-        label: string;
-        sublabel: string;
-        state: "known" | "no-deployment" | "asleep" | "unsupported" | "error";
-        scope: string | null;
-        scopeChain: string[];
-    }[];
-    declared: {
-        name: string;
-        hint: string | null;
-        blocked: boolean;
-        needs: {
-            targetKey: string;
-            from: string | null;
-        }[];
-        displayName: string | null;
-        description: string | null;
-        schemaRef: string | null;
-        schemaTargetKey: string | null;
-    }[];
-    orphans: {
-        scope: string;
-        name: string;
-        hint: string | null;
-    }[];
-    writeScopes: {
-        scope: string;
-        label: string;
-        desc: string;
-    }[];
-    storedCount: number;
-    scopeCounts: {
-        [key: string]: number;
-    };
+  targets: {
+    key: string
+    kind: 'stage' | 'sandbox'
+    label: string
+    sublabel: string
+    state: 'known' | 'no-deployment' | 'asleep' | 'unsupported' | 'error'
+    scope: string | null
+    scopeChain: string[]
+  }[]
+  declared: {
+    name: string
+    hint: string | null
+    blocked: boolean
+    needs: {
+      targetKey: string
+      from: string | null
+    }[]
+    displayName: string | null
+    description: string | null
+    schemaRef: string | null
+    schemaTargetKey: string | null
+  }[]
+  orphans: {
+    scope: string
+    name: string
+    hint: string | null
+  }[]
+  writeScopes: {
+    scope: string
+    label: string
+    desc: string
+  }[]
+  storedCount: number
+  scopeCounts: {
+    [key: string]: number
+  }
 }
-export type RecordAIUsageEventInput = ({
-    source: string;
-    requestId?: string | undefined;
-    occurredAt: Date;
-    organizationId: string;
-    projectId?: string | undefined;
-    stageId?: string | undefined;
-    sandboxId?: string | undefined;
-    userId?: string | undefined;
-    actorType: "user" | "agent" | "system";
-    featureSurface?: string | undefined;
-    agentId?: string | undefined;
-    workflowId?: string | undefined;
-    threadId?: string | undefined;
-    runId?: string | undefined;
-    provider: string;
-    model: string;
-    status: "ok" | "error";
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-    costUsd: number;
-    latencyMs?: number | undefined;
-    errorCode?: string | undefined;
-    metadata?: {
-        [key: string]: unknown;
-    } | undefined;
-} | {
-    id?: string | undefined;
-    model?: string | undefined;
-    status?: string | undefined;
-    request_id?: string | undefined;
-    response_cost?: number | undefined;
-    start_time?: (string | number | Date) | undefined;
-    end_time?: (string | number | Date) | undefined;
-    startTime?: (string | number | Date) | undefined;
-    endTime?: (string | number | Date) | undefined;
-    custom_llm_provider?: string | undefined;
-    metadata?: {
-        [key: string]: unknown;
-    } | undefined;
-    user_api_key_metadata?: {
-        [key: string]: unknown;
-    } | undefined;
-    kwargs?: {
-        [key: string]: unknown;
-    } | undefined;
-    completion_response?: {
-        [key: string]: unknown;
-    } | undefined;
-    response?: {
-        [key: string]: unknown;
-    } | undefined;
-    usage?: {
-        [key: string]: unknown;
-    } | undefined;
-    error?: (string | {
-        [key: string]: unknown;
-    }) | undefined;
-    [x: string]: unknown;
-})[] | {
-    entries: ({
-        source: string;
-        requestId?: string | undefined;
-        occurredAt: Date;
-        organizationId: string;
-        projectId?: string | undefined;
-        stageId?: string | undefined;
-        sandboxId?: string | undefined;
-        userId?: string | undefined;
-        actorType: "user" | "agent" | "system";
-        featureSurface?: string | undefined;
-        agentId?: string | undefined;
-        workflowId?: string | undefined;
-        threadId?: string | undefined;
-        runId?: string | undefined;
-        provider: string;
-        model: string;
-        status: "ok" | "error";
-        inputTokens: number;
-        outputTokens: number;
-        totalTokens: number;
-        costUsd: number;
-        latencyMs?: number | undefined;
-        errorCode?: string | undefined;
-        metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-    } | {
-        id?: string | undefined;
-        model?: string | undefined;
-        status?: string | undefined;
-        request_id?: string | undefined;
-        response_cost?: number | undefined;
-        start_time?: (string | number | Date) | undefined;
-        end_time?: (string | number | Date) | undefined;
-        startTime?: (string | number | Date) | undefined;
-        endTime?: (string | number | Date) | undefined;
-        custom_llm_provider?: string | undefined;
-        metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-        user_api_key_metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-        kwargs?: {
-            [key: string]: unknown;
-        } | undefined;
-        completion_response?: {
-            [key: string]: unknown;
-        } | undefined;
-        response?: {
-            [key: string]: unknown;
-        } | undefined;
-        usage?: {
-            [key: string]: unknown;
-        } | undefined;
-        error?: (string | {
-            [key: string]: unknown;
-        }) | undefined;
-        [x: string]: unknown;
-    })[];
-} | {
-    data: ({
-        source: string;
-        requestId?: string | undefined;
-        occurredAt: Date;
-        organizationId: string;
-        projectId?: string | undefined;
-        stageId?: string | undefined;
-        sandboxId?: string | undefined;
-        userId?: string | undefined;
-        actorType: "user" | "agent" | "system";
-        featureSurface?: string | undefined;
-        agentId?: string | undefined;
-        workflowId?: string | undefined;
-        threadId?: string | undefined;
-        runId?: string | undefined;
-        provider: string;
-        model: string;
-        status: "ok" | "error";
-        inputTokens: number;
-        outputTokens: number;
-        totalTokens: number;
-        costUsd: number;
-        latencyMs?: number | undefined;
-        errorCode?: string | undefined;
-        metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-    } | {
-        id?: string | undefined;
-        model?: string | undefined;
-        status?: string | undefined;
-        request_id?: string | undefined;
-        response_cost?: number | undefined;
-        start_time?: (string | number | Date) | undefined;
-        end_time?: (string | number | Date) | undefined;
-        startTime?: (string | number | Date) | undefined;
-        endTime?: (string | number | Date) | undefined;
-        custom_llm_provider?: string | undefined;
-        metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-        user_api_key_metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-        kwargs?: {
-            [key: string]: unknown;
-        } | undefined;
-        completion_response?: {
-            [key: string]: unknown;
-        } | undefined;
-        response?: {
-            [key: string]: unknown;
-        } | undefined;
-        usage?: {
-            [key: string]: unknown;
-        } | undefined;
-        error?: (string | {
-            [key: string]: unknown;
-        }) | undefined;
-        [x: string]: unknown;
-    })[] | ({
-        source: string;
-        requestId?: string | undefined;
-        occurredAt: Date;
-        organizationId: string;
-        projectId?: string | undefined;
-        stageId?: string | undefined;
-        sandboxId?: string | undefined;
-        userId?: string | undefined;
-        actorType: "user" | "agent" | "system";
-        featureSurface?: string | undefined;
-        agentId?: string | undefined;
-        workflowId?: string | undefined;
-        threadId?: string | undefined;
-        runId?: string | undefined;
-        provider: string;
-        model: string;
-        status: "ok" | "error";
-        inputTokens: number;
-        outputTokens: number;
-        totalTokens: number;
-        costUsd: number;
-        latencyMs?: number | undefined;
-        errorCode?: string | undefined;
-        metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-    } | {
-        id?: string | undefined;
-        model?: string | undefined;
-        status?: string | undefined;
-        request_id?: string | undefined;
-        response_cost?: number | undefined;
-        start_time?: (string | number | Date) | undefined;
-        end_time?: (string | number | Date) | undefined;
-        startTime?: (string | number | Date) | undefined;
-        endTime?: (string | number | Date) | undefined;
-        custom_llm_provider?: string | undefined;
-        metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-        user_api_key_metadata?: {
-            [key: string]: unknown;
-        } | undefined;
-        kwargs?: {
-            [key: string]: unknown;
-        } | undefined;
-        completion_response?: {
-            [key: string]: unknown;
-        } | undefined;
-        response?: {
-            [key: string]: unknown;
-        } | undefined;
-        usage?: {
-            [key: string]: unknown;
-        } | undefined;
-        error?: (string | {
-            [key: string]: unknown;
-        }) | undefined;
-        [x: string]: unknown;
-    });
-} | ({
-    source: string;
-    requestId?: string | undefined;
-    occurredAt: Date;
-    organizationId: string;
-    projectId?: string | undefined;
-    stageId?: string | undefined;
-    sandboxId?: string | undefined;
-    userId?: string | undefined;
-    actorType: "user" | "agent" | "system";
-    featureSurface?: string | undefined;
-    agentId?: string | undefined;
-    workflowId?: string | undefined;
-    threadId?: string | undefined;
-    runId?: string | undefined;
-    provider: string;
-    model: string;
-    status: "ok" | "error";
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-    costUsd: number;
-    latencyMs?: number | undefined;
-    errorCode?: string | undefined;
-    metadata?: {
-        [key: string]: unknown;
-    } | undefined;
-} | {
-    id?: string | undefined;
-    model?: string | undefined;
-    status?: string | undefined;
-    request_id?: string | undefined;
-    response_cost?: number | undefined;
-    start_time?: (string | number | Date) | undefined;
-    end_time?: (string | number | Date) | undefined;
-    startTime?: (string | number | Date) | undefined;
-    endTime?: (string | number | Date) | undefined;
-    custom_llm_provider?: string | undefined;
-    metadata?: {
-        [key: string]: unknown;
-    } | undefined;
-    user_api_key_metadata?: {
-        [key: string]: unknown;
-    } | undefined;
-    kwargs?: {
-        [key: string]: unknown;
-    } | undefined;
-    completion_response?: {
-        [key: string]: unknown;
-    } | undefined;
-    response?: {
-        [key: string]: unknown;
-    } | undefined;
-    usage?: {
-        [key: string]: unknown;
-    } | undefined;
-    error?: (string | {
-        [key: string]: unknown;
-    }) | undefined;
-    [x: string]: unknown;
-})
+export type RecordAIUsageEventInput =
+  | (
+      | {
+          source: string
+          requestId?: string | undefined
+          occurredAt: Date
+          organizationId: string
+          projectId?: string | undefined
+          stageId?: string | undefined
+          sandboxId?: string | undefined
+          userId?: string | undefined
+          actorType: 'user' | 'agent' | 'system'
+          featureSurface?: string | undefined
+          agentId?: string | undefined
+          workflowId?: string | undefined
+          threadId?: string | undefined
+          runId?: string | undefined
+          provider: string
+          model: string
+          status: 'ok' | 'error'
+          inputTokens: number
+          outputTokens: number
+          totalTokens: number
+          costUsd: number
+          latencyMs?: number | undefined
+          errorCode?: string | undefined
+          metadata?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+        }
+      | {
+          id?: string | undefined
+          model?: string | undefined
+          status?: string | undefined
+          request_id?: string | undefined
+          response_cost?: number | undefined
+          start_time?: (string | number | Date) | undefined
+          end_time?: (string | number | Date) | undefined
+          startTime?: (string | number | Date) | undefined
+          endTime?: (string | number | Date) | undefined
+          custom_llm_provider?: string | undefined
+          metadata?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          user_api_key_metadata?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          kwargs?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          completion_response?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          response?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          usage?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          error?:
+            | (
+                | string
+                | {
+                    [key: string]: unknown
+                  }
+              )
+            | undefined
+          [x: string]: unknown
+        }
+    )[]
+  | {
+      entries: (
+        | {
+            source: string
+            requestId?: string | undefined
+            occurredAt: Date
+            organizationId: string
+            projectId?: string | undefined
+            stageId?: string | undefined
+            sandboxId?: string | undefined
+            userId?: string | undefined
+            actorType: 'user' | 'agent' | 'system'
+            featureSurface?: string | undefined
+            agentId?: string | undefined
+            workflowId?: string | undefined
+            threadId?: string | undefined
+            runId?: string | undefined
+            provider: string
+            model: string
+            status: 'ok' | 'error'
+            inputTokens: number
+            outputTokens: number
+            totalTokens: number
+            costUsd: number
+            latencyMs?: number | undefined
+            errorCode?: string | undefined
+            metadata?:
+              | {
+                  [key: string]: unknown
+                }
+              | undefined
+          }
+        | {
+            id?: string | undefined
+            model?: string | undefined
+            status?: string | undefined
+            request_id?: string | undefined
+            response_cost?: number | undefined
+            start_time?: (string | number | Date) | undefined
+            end_time?: (string | number | Date) | undefined
+            startTime?: (string | number | Date) | undefined
+            endTime?: (string | number | Date) | undefined
+            custom_llm_provider?: string | undefined
+            metadata?:
+              | {
+                  [key: string]: unknown
+                }
+              | undefined
+            user_api_key_metadata?:
+              | {
+                  [key: string]: unknown
+                }
+              | undefined
+            kwargs?:
+              | {
+                  [key: string]: unknown
+                }
+              | undefined
+            completion_response?:
+              | {
+                  [key: string]: unknown
+                }
+              | undefined
+            response?:
+              | {
+                  [key: string]: unknown
+                }
+              | undefined
+            usage?:
+              | {
+                  [key: string]: unknown
+                }
+              | undefined
+            error?:
+              | (
+                  | string
+                  | {
+                      [key: string]: unknown
+                    }
+                )
+              | undefined
+            [x: string]: unknown
+          }
+      )[]
+    }
+  | {
+      data:
+        | (
+            | {
+                source: string
+                requestId?: string | undefined
+                occurredAt: Date
+                organizationId: string
+                projectId?: string | undefined
+                stageId?: string | undefined
+                sandboxId?: string | undefined
+                userId?: string | undefined
+                actorType: 'user' | 'agent' | 'system'
+                featureSurface?: string | undefined
+                agentId?: string | undefined
+                workflowId?: string | undefined
+                threadId?: string | undefined
+                runId?: string | undefined
+                provider: string
+                model: string
+                status: 'ok' | 'error'
+                inputTokens: number
+                outputTokens: number
+                totalTokens: number
+                costUsd: number
+                latencyMs?: number | undefined
+                errorCode?: string | undefined
+                metadata?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+              }
+            | {
+                id?: string | undefined
+                model?: string | undefined
+                status?: string | undefined
+                request_id?: string | undefined
+                response_cost?: number | undefined
+                start_time?: (string | number | Date) | undefined
+                end_time?: (string | number | Date) | undefined
+                startTime?: (string | number | Date) | undefined
+                endTime?: (string | number | Date) | undefined
+                custom_llm_provider?: string | undefined
+                metadata?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                user_api_key_metadata?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                kwargs?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                completion_response?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                response?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                usage?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                error?:
+                  | (
+                      | string
+                      | {
+                          [key: string]: unknown
+                        }
+                    )
+                  | undefined
+                [x: string]: unknown
+              }
+          )[]
+        | (
+            | {
+                source: string
+                requestId?: string | undefined
+                occurredAt: Date
+                organizationId: string
+                projectId?: string | undefined
+                stageId?: string | undefined
+                sandboxId?: string | undefined
+                userId?: string | undefined
+                actorType: 'user' | 'agent' | 'system'
+                featureSurface?: string | undefined
+                agentId?: string | undefined
+                workflowId?: string | undefined
+                threadId?: string | undefined
+                runId?: string | undefined
+                provider: string
+                model: string
+                status: 'ok' | 'error'
+                inputTokens: number
+                outputTokens: number
+                totalTokens: number
+                costUsd: number
+                latencyMs?: number | undefined
+                errorCode?: string | undefined
+                metadata?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+              }
+            | {
+                id?: string | undefined
+                model?: string | undefined
+                status?: string | undefined
+                request_id?: string | undefined
+                response_cost?: number | undefined
+                start_time?: (string | number | Date) | undefined
+                end_time?: (string | number | Date) | undefined
+                startTime?: (string | number | Date) | undefined
+                endTime?: (string | number | Date) | undefined
+                custom_llm_provider?: string | undefined
+                metadata?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                user_api_key_metadata?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                kwargs?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                completion_response?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                response?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                usage?:
+                  | {
+                      [key: string]: unknown
+                    }
+                  | undefined
+                error?:
+                  | (
+                      | string
+                      | {
+                          [key: string]: unknown
+                        }
+                    )
+                  | undefined
+                [x: string]: unknown
+              }
+          )
+    }
+  | (
+      | {
+          source: string
+          requestId?: string | undefined
+          occurredAt: Date
+          organizationId: string
+          projectId?: string | undefined
+          stageId?: string | undefined
+          sandboxId?: string | undefined
+          userId?: string | undefined
+          actorType: 'user' | 'agent' | 'system'
+          featureSurface?: string | undefined
+          agentId?: string | undefined
+          workflowId?: string | undefined
+          threadId?: string | undefined
+          runId?: string | undefined
+          provider: string
+          model: string
+          status: 'ok' | 'error'
+          inputTokens: number
+          outputTokens: number
+          totalTokens: number
+          costUsd: number
+          latencyMs?: number | undefined
+          errorCode?: string | undefined
+          metadata?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+        }
+      | {
+          id?: string | undefined
+          model?: string | undefined
+          status?: string | undefined
+          request_id?: string | undefined
+          response_cost?: number | undefined
+          start_time?: (string | number | Date) | undefined
+          end_time?: (string | number | Date) | undefined
+          startTime?: (string | number | Date) | undefined
+          endTime?: (string | number | Date) | undefined
+          custom_llm_provider?: string | undefined
+          metadata?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          user_api_key_metadata?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          kwargs?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          completion_response?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          response?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          usage?:
+            | {
+                [key: string]: unknown
+              }
+            | undefined
+          error?:
+            | (
+                | string
+                | {
+                    [key: string]: unknown
+                  }
+              )
+            | undefined
+          [x: string]: unknown
+        }
+    )
 export type RecordAIUsageEventOutput = {
-    inserted: boolean;
-    skipped: number;
+  inserted: boolean
+  skipped: number
 }
 export type RecordBuildFinishedInput = {
-    exitCode: number;
-    buildLog: string;
+  exitCode: number
+  buildLog: string
 }
 export type RecordBuildFinishedOutput = {
-    ok: true;
+  ok: true
 }
 export type RecordDeployArtifactInput = {
-    deploymentId: string;
-    artifactHash: string;
-    pikkuCliVersion?: string | undefined;
-    pikkuCoreVersion?: string | undefined;
-    pikkuCloudflareVersion?: string | undefined;
-    pikkuDeployCloudflareVersion?: string | undefined;
-    pikkuAddonConsoleVersion?: string | undefined;
-    pikkufabricDeployCloudflareVersion?: string | undefined;
-    hasServerUnit: boolean;
+  deploymentId: string
+  artifactHash: string
+  pikkuCliVersion?: string | undefined
+  pikkuCoreVersion?: string | undefined
+  pikkuCloudflareVersion?: string | undefined
+  pikkuDeployCloudflareVersion?: string | undefined
+  pikkuAddonConsoleVersion?: string | undefined
+  pikkufabricDeployCloudflareVersion?: string | undefined
+  hasServerUnit: boolean
 }
 export type RecordDeployArtifactOutput = {
-    artifactR2Key: string;
+  artifactR2Key: string
 }
 export type RecordDeployTargetsAppliedInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type RecordDeployTargetsAppliedOutput = {
-    applied: number;
+  applied: number
 }
 export type RecordDeployWebhookResultInput = {
-    deploymentId: string;
-    succeeded: boolean;
-    externalRef?: string | undefined;
-    detail?: string | undefined;
+  deploymentId: string
+  succeeded: boolean
+  externalRef?: string | undefined
+  detail?: string | undefined
 }
 export type RecordDeployWebhookResultOutput = {
-    ok: true;
+  ok: true
 }
-export type RecordedEventsReachTheRollupScenarioOutput = { baseline: number; total: number; }
+export type RecordedEventsReachTheRollupScenarioOutput = {
+  baseline: number
+  total: number
+}
 export type RecordFabricAnalyticsEventsInput = {
-    events: {
-        at?: number | undefined;
-        event: {
-            name: "page_viewed";
-            path: string;
-        } | {
-            name: "project_created";
-            source: "describe" | "existing" | "template" | "github" | "cli";
-        } | {
-            name: "stage_deployed";
-            result: "succeeded" | "failed";
-        };
-    }[];
+  events: {
+    at?: number | undefined
+    event:
+      | {
+          name: 'page_viewed'
+          path: string
+        }
+      | {
+          name: 'project_created'
+          source: 'describe' | 'existing' | 'template' | 'github' | 'cli'
+        }
+      | {
+          name: 'stage_deployed'
+          result: 'succeeded' | 'failed'
+        }
+  }[]
 }
 export type RecordFabricAnalyticsEventsOutput = {
-    accepted: number;
+  accepted: number
 }
 export type RecordHarnessRunInput = {
-    runId: string;
-    scenarioId: string;
-    goal: string;
-    templateSlug: string;
-    projectId: string;
-    status?: string | undefined;
-    sandboxId?: (string | null) | undefined;
-    model?: (string | null) | undefined;
-    completed?: boolean | undefined;
-    rendered?: (boolean | null) | undefined;
-    loginOk?: (boolean | null) | undefined;
-    bootMs?: (number | null) | undefined;
-    buildMs?: (number | null) | undefined;
-    verifyMs?: (number | null) | undefined;
-    screenshotMs?: (number | null) | undefined;
-    totalMs?: (number | null) | undefined;
-    diffChars?: (number | null) | undefined;
-    filesTouched?: (number | null) | undefined;
-    tokensInput?: (number | null) | undefined;
-    tokensOutput?: (number | null) | undefined;
-    costUsd?: (number | null) | undefined;
-    screenshotCount?: (number | null) | undefined;
-    screenshots?: ({
-        name: string;
-        pagePath: string;
-        objectKey: string;
-        width?: (number | null) | undefined;
-        height?: (number | null) | undefined;
-        sizeBytes?: (number | null) | undefined;
-        httpStatus?: (number | null) | undefined;
-    }[] | null) | undefined;
-    scorecard?: unknown | undefined;
-    runType?: (string | null) | undefined;
-    commitSha?: (string | null) | undefined;
-    models?: ({
-        [key: string]: string;
-    } | null) | undefined;
-    capabilities?: {
-        milestoneDispatched?: (boolean | null) | undefined;
-        architectPlan?: (boolean | null) | undefined;
-        designRound?: (boolean | null) | undefined;
-        buildComplete?: (boolean | null) | undefined;
-        scenarios?: (boolean | null) | undefined;
-        multiApp?: (boolean | null) | undefined;
-        aiAgent?: (boolean | null) | undefined;
-        aiPromises?: (boolean | null) | undefined;
-        realtime?: (boolean | null) | undefined;
-        fileUpload?: (boolean | null) | undefined;
-        workflowUi?: (boolean | null) | undefined;
-        email?: (boolean | null) | undefined;
-        addon?: (boolean | null) | undefined;
-        deploy?: (boolean | null) | undefined;
-        deployedSignup?: (boolean | null) | undefined;
-    } | undefined;
-    transcript?: {
-        plan: string | null;
-        diff: string | null;
+  runId: string
+  scenarioId: string
+  goal: string
+  templateSlug: string
+  projectId: string
+  status?: string | undefined
+  sandboxId?: (string | null) | undefined
+  model?: (string | null) | undefined
+  completed?: boolean | undefined
+  rendered?: (boolean | null) | undefined
+  loginOk?: (boolean | null) | undefined
+  bootMs?: (number | null) | undefined
+  buildMs?: (number | null) | undefined
+  verifyMs?: (number | null) | undefined
+  screenshotMs?: (number | null) | undefined
+  totalMs?: (number | null) | undefined
+  diffChars?: (number | null) | undefined
+  filesTouched?: (number | null) | undefined
+  tokensInput?: (number | null) | undefined
+  tokensOutput?: (number | null) | undefined
+  costUsd?: (number | null) | undefined
+  screenshotCount?: (number | null) | undefined
+  screenshots?:
+    | (
+        | {
+            name: string
+            pagePath: string
+            objectKey: string
+            width?: (number | null) | undefined
+            height?: (number | null) | undefined
+            sizeBytes?: (number | null) | undefined
+            httpStatus?: (number | null) | undefined
+          }[]
+        | null
+      )
+    | undefined
+  scorecard?: unknown | undefined
+  runType?: (string | null) | undefined
+  commitSha?: (string | null) | undefined
+  models?:
+    | ({
+        [key: string]: string
+      } | null)
+    | undefined
+  capabilities?:
+    | {
+        milestoneDispatched?: (boolean | null) | undefined
+        architectPlan?: (boolean | null) | undefined
+        designRound?: (boolean | null) | undefined
+        buildComplete?: (boolean | null) | undefined
+        scenarios?: (boolean | null) | undefined
+        multiApp?: (boolean | null) | undefined
+        aiAgent?: (boolean | null) | undefined
+        aiPromises?: (boolean | null) | undefined
+        realtime?: (boolean | null) | undefined
+        fileUpload?: (boolean | null) | undefined
+        workflowUi?: (boolean | null) | undefined
+        email?: (boolean | null) | undefined
+        addon?: (boolean | null) | undefined
+        deploy?: (boolean | null) | undefined
+        deployedSignup?: (boolean | null) | undefined
+      }
+    | undefined
+  transcript?:
+    | {
+        plan: string | null
+        diff: string | null
         turns: {
-            role: string;
-            text: string | null;
-            tools: {
-                name: string;
-                title: string | null;
-                status: string | null;
-                result: string | null;
-                isError: boolean | null;
-                durationMs: number | null;
-            }[];
-            startedAt: number | null;
-            durationMs: number | null;
-            stopReason: string | null;
-            errorMessage: string | null;
-        }[];
-    } | undefined;
+          role: string
+          text: string | null
+          tools: {
+            name: string
+            title: string | null
+            status: string | null
+            result: string | null
+            isError: boolean | null
+            durationMs: number | null
+          }[]
+          startedAt: number | null
+          durationMs: number | null
+          stopReason: string | null
+          errorMessage: string | null
+        }[]
+      }
+    | undefined
 }
 export type RecordHarnessRunOutput = {
-    harnessRunId: string;
+  harnessRunId: string
 }
 export type RecordImageBuildFinishedInput = {
-    exitCode: number;
-    imageUri: string | null;
-    skipped: boolean;
-    buildLog: string;
+  exitCode: number
+  imageUri: string | null
+  skipped: boolean
+  buildLog: string
 }
 export type RecordImageBuildFinishedOutput = {
-    ok: true;
+  ok: true
 }
 export type RecordMachineHeartbeatInput = {
-    hostId: string;
-    agentVersion?: string | undefined;
-    cpuMillicoresFree: number;
-    memMbFree: number;
-    diskGbFree: number;
-    containers: {
-        sandboxId: string;
-        containerId?: string | undefined;
-        state: "running" | "exited" | "created" | "paused" | "restarting" | "dead" | "removing" | "unknown";
-        exitCode?: (number | null) | undefined;
-    }[];
-    sandboxStats?: {
-        sandboxId: string;
-        cpuPct: number;
-        memMb: number;
-        cpuUsageUsec?: number | undefined;
-        cpuNrPeriods?: number | undefined;
-        cpuNrThrottled?: number | undefined;
-        cpuThrottledUsec?: number | undefined;
-        cpuPressure10?: number | undefined;
-        memPressure10?: number | undefined;
-        memLimitMb?: number | undefined;
-        oomKills?: number | undefined;
-        pgMajFault?: number | undefined;
-        pids?: number | undefined;
-    }[] | undefined;
+  hostId: string
+  agentVersion?: string | undefined
+  cpuMillicoresFree: number
+  memMbFree: number
+  diskGbFree: number
+  containers: {
+    sandboxId: string
+    containerId?: string | undefined
+    state:
+      | 'running'
+      | 'exited'
+      | 'created'
+      | 'paused'
+      | 'restarting'
+      | 'dead'
+      | 'removing'
+      | 'unknown'
+    exitCode?: (number | null) | undefined
+  }[]
+  sandboxStats?:
+    | {
+        sandboxId: string
+        cpuPct: number
+        memMb: number
+        cpuUsageUsec?: number | undefined
+        cpuNrPeriods?: number | undefined
+        cpuNrThrottled?: number | undefined
+        cpuThrottledUsec?: number | undefined
+        cpuPressure10?: number | undefined
+        memPressure10?: number | undefined
+        memLimitMb?: number | undefined
+        oomKills?: number | undefined
+        pgMajFault?: number | undefined
+        pids?: number | undefined
+      }[]
+    | undefined
 }
 export type RecordMachineHeartbeatOutput = {
-    ok: true;
-    expectedMachineAgentReleaseId: string | null;
-    release: {
-        version: string;
-        artifactUrl: string;
-    } | null;
-    sandboxImage: string | null;
+  ok: true
+  expectedMachineAgentReleaseId: string | null
+  release: {
+    version: string
+    artifactUrl: string
+  } | null
+  sandboxImage: string | null
 }
 export type RecordNavigationInput = {
-    organizationId: string;
-    projectSlug?: (string | null) | undefined;
-    sandboxSlug?: (string | null) | undefined;
-    branch?: (string | null) | undefined;
-    surface: "org" | "project" | "stage" | "sandbox";
-    screen: string;
-    entity: "screen" | "workflow" | "agent" | "email" | "scenario" | "deployment";
-    entityId?: (string | null) | undefined;
-    runId?: (string | null) | undefined;
-    section?: (string | null) | undefined;
+  organizationId: string
+  projectSlug?: (string | null) | undefined
+  sandboxSlug?: (string | null) | undefined
+  branch?: (string | null) | undefined
+  surface: 'org' | 'project' | 'stage' | 'sandbox'
+  screen: string
+  entity: 'screen' | 'workflow' | 'agent' | 'email' | 'scenario' | 'deployment'
+  entityId?: (string | null) | undefined
+  runId?: (string | null) | undefined
+  section?: (string | null) | undefined
 }
 export type RecordNavigationOutput = {
-    recorded: boolean;
+  recorded: boolean
 }
 export type RecordPlatformUsageInput = {
-    provider: "cf-crawl";
-    unit: "minutes" | "pages";
-    quantity: number;
-    source?: string | undefined;
+  provider: 'cf-crawl'
+  unit: 'minutes' | 'pages'
+  quantity: number
+  source?: string | undefined
 }
 export type RecordPlatformUsageOutput = {
-    ok: boolean;
+  ok: boolean
 }
 export type RecordProjectAgentHandoffInput = {
-    projectId: string;
-    storageBucket: string;
-    objectKey: string;
-    contentType?: string | undefined;
+  projectId: string
+  storageBucket: string
+  objectKey: string
+  contentType?: string | undefined
 }
 export type RecordProjectAgentHandoffOutput = {
-    exists: boolean;
-    agentSessionId: string | null;
-    sessionId: string | null;
-    title: string | null;
-    sandboxId: string | null;
-    handoffStorageBucket: string | null;
-    handoffObjectKey: string | null;
-    handoffContentType: string | null;
-    handoffGeneratedAt: string | null;
-    lastAccessedAt: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
+  exists: boolean
+  agentSessionId: string | null
+  sessionId: string | null
+  title: string | null
+  sandboxId: string | null
+  handoffStorageBucket: string | null
+  handoffObjectKey: string | null
+  handoffContentType: string | null
+  handoffGeneratedAt: string | null
+  lastAccessedAt: string | null
+  createdAt: string | null
+  updatedAt: string | null
 }
 export type RecordsAnalyticsEventsInput = {
-    token: string;
-    eventName: string;
-    path: string;
-    count: number;
+  token: string
+  eventName: string
+  path: string
+  count: number
 }
 export type RecordsAnalyticsEventsOutput = {
-    status: number;
-    accepted: number;
-    serialized: string;
+  status: number
+  accepted: number
+  serialized: string
 }
 export type RecordTicketBuildFinishedInput = {
-    ran: boolean;
-    summary: string;
-    complete: boolean;
+  ran: boolean
+  summary: string
+  complete: boolean
 }
 export type RecordTicketBuildFinishedOutput = {
-    ok: true;
+  ok: true
 }
 export type RecordTicketReviewFinishedInput = {
-    findings: {
-        agent: string;
-        file: string;
-        line?: number | undefined;
-        severity: "must_resolve" | "advised_resolve";
-        reason: string;
-        suggestedFix: string;
-    }[];
-    summary?: {
-        diffChars: number;
-        files: number;
+  findings: {
+    agent: string
+    file: string
+    line?: number | undefined
+    severity: 'must_resolve' | 'advised_resolve'
+    reason: string
+    suggestedFix: string
+  }[]
+  summary?:
+    | {
+        diffChars: number
+        files: number
         specialists: {
-            agent: string;
-            ran: boolean;
-            findings: number;
-        }[];
-    } | undefined;
+          agent: string
+          ran: boolean
+          findings: number
+        }[]
+      }
+    | undefined
 }
 export type RecordTicketReviewFinishedOutput = {
-    ok: true;
+  ok: true
 }
 export type RecordTicketSpecSummarizedInput = {
-    plan: string;
+  plan: string
 }
 export type RecordTicketSpecSummarizedOutput = {
-    ok: true;
+  ok: true
 }
 export type RecoverStageDatabaseUrlInput = {
-    stageId: string;
+  stageId: string
 }
 export type RecoverStageDatabaseUrlOutput = {
-    recovered: boolean;
+  recovered: boolean
 }
 export type RefreshProjectUsageStepInput = {
-    projectId: string;
+  projectId: string
 }
 export type RefreshProjectUsageStepOutput = {
-    refreshedAt: string;
+  refreshedAt: string
 }
-export type RefreshProjectUsageWorkflowInput = { projectId: string; }
-export type RefreshProjectUsageWorkflowOutput = { success: boolean; projectId: string; refreshedAt: string; }
+export type RefreshProjectUsageWorkflowInput = { projectId: string }
+export type RefreshProjectUsageWorkflowOutput = {
+  success: boolean
+  projectId: string
+  refreshedAt: string
+}
 export type RefreshStageCustomHostnameInput = {
-    customHostnameId: string;
+  customHostnameId: string
 }
 export type RefreshStageCustomHostnameOutput = {
-    status: "pending" | "validating" | "active" | "failed";
-    sslStatus: string | null;
-    validationErrors: any | null;
+  status: 'pending' | 'validating' | 'active' | 'failed'
+  sslStatus: string | null
+  validationErrors: any | null
 }
 export type RefreshStageDatabaseSchemaInput = {
-    stageId: string;
-    migrationName?: string | undefined;
+  stageId: string
+  migrationName?: string | undefined
 }
 export type RefreshStageDatabaseSchemaOutput = {
-    schema: any;
+  schema: any
 }
 export type RegisterMachineHostInput = {
-    hostId: string;
-    hostname: string;
-    privateIp: string;
-    cpuTotalMillicores: number;
-    memMbTotal: number;
-    diskGbTotal: number;
-    role: "sandbox" | "build" | "runtime" | "services";
+  hostId: string
+  hostname: string
+  privateIp: string
+  cpuTotalMillicores: number
+  memMbTotal: number
+  diskGbTotal: number
+  role: 'sandbox' | 'build' | 'runtime' | 'services'
 }
 export type RegisterMachineHostOutput = {
-    hostToken: string;
+  hostToken: string
 }
 export type RejectCliAuthInput = {
-    code: string;
+  code: string
 }
 export type RejectCliAuthOutput = {
-    ok: boolean;
+  ok: boolean
 }
 export type RemoteRPCHandlerInput = {
-    rpcName: string;
-    data?: unknown | undefined;
+  rpcName: string
+  data?: unknown | undefined
 }
 export type RemoveOrganizationMemberInput = {
-    organizationId: string;
-    userId: string;
+  organizationId: string
+  userId: string
 }
 export type RemoveOrganizationMemberOutput = {
-    ok: true;
+  ok: true
 }
 export type RemoveStageCustomHostnameInput = {
-    customHostnameId: string;
+  customHostnameId: string
 }
 export type RemoveStageCustomHostnameOutput = {
-    removed: boolean;
+  removed: boolean
 }
 export type RenameOrganizationSlugInput = {
-    organizationId: string;
-    slug: string;
+  organizationId: string
+  slug: string
 }
 export type RenameOrganizationSlugOutput = {
-    slug: string;
+  slug: string
 }
 export type RenderStageEmailPreviewInput = {
-    stageId: string;
-    templateName: string;
-    locale?: string | undefined;
-    data?: {
-        [key: string]: unknown;
-    } | undefined;
+  stageId: string
+  templateName: string
+  locale?: string | undefined
+  data?:
+    | {
+        [key: string]: unknown
+      }
+    | undefined
 }
 export type RenderStageEmailPreviewOutput = {
-    name: string;
-    locale: string;
-    subject: string;
-    html: string;
-    text?: string | undefined;
-    variables: string[];
-    hash: string;
-    missing: string[];
+  name: string
+  locale: string
+  subject: string
+  html: string
+  text?: string | undefined
+  variables: string[]
+  hash: string
+  missing: string[]
 }
 export type ReportDeployProgressInput = {
-    environmentId: string;
-    status: string;
-    message?: string | undefined;
-    timestamp?: string | undefined;
+  environmentId: string
+  status: string
+  message?: string | undefined
+  timestamp?: string | undefined
 }
 export type ReportDeployProgressOutput = {
-    ok: true;
+  ok: true
 }
 export type ReportSandboxBootPhaseInput = {
-    phase: "cloning" | "installing-deps" | "bootstrapping-pikku" | "running-codegen" | "migrating" | "generating-frontend" | "starting" | "cascade-env-loading" | "startup-failed" | "self-healing" | "ready" | "error" | "app-build-warning";
-    message?: string | undefined;
+  phase:
+    | 'cloning'
+    | 'installing-deps'
+    | 'bootstrapping-pikku'
+    | 'running-codegen'
+    | 'migrating'
+    | 'generating-frontend'
+    | 'starting'
+    | 'cascade-env-loading'
+    | 'startup-failed'
+    | 'self-healing'
+    | 'ready'
+    | 'error'
+    | 'app-build-warning'
+  message?: string | undefined
 }
 export type ReportSandboxBootPhaseOutput = {
-    ok: true;
+  ok: true
 }
 export type ReportSandboxRuntimeInput = {
-    sandboxVersion?: string | undefined;
-    sandboxSha?: string | undefined;
-    orchestratorVersion?: string | undefined;
-    orchestratorVersionHash?: string | undefined;
+  sandboxVersion?: string | undefined
+  sandboxSha?: string | undefined
+  orchestratorVersion?: string | undefined
+  orchestratorVersionHash?: string | undefined
 }
 export type ReportSandboxRuntimeOutput = {
-    ok: true;
+  ok: true
 }
 export type ReportSandboxSecurityAuditInput = {
-    report: {
-        schemaVersion: number;
-        tool: string;
-        generatedAt: string;
-        note?: string | undefined;
-        issues: {
-            package: string;
-            severity: "critical" | "high" | "moderate" | "low" | "info";
-            title: string;
-            advisoryId: string;
-            url: string;
-            vulnerableVersions: string;
-            cwe: string[];
-            cvssScore: number | null;
-            recommendedVersion: string | null;
-        }[];
-        updates: {
-            package: string;
-            current: string;
-            latest: string;
-            level: "major" | "minor" | "patch" | "unknown";
-        }[];
-        summary: {
-            totalIssues: number;
-            critical: number;
-            high: number;
-            moderate: number;
-            low: number;
-            totalUpdates: number;
-            major: number;
-            minor: number;
-            patch: number;
-        };
-    };
+  report: {
+    schemaVersion: number
+    tool: string
+    generatedAt: string
+    note?: string | undefined
+    issues: {
+      package: string
+      severity: 'critical' | 'high' | 'moderate' | 'low' | 'info'
+      title: string
+      advisoryId: string
+      url: string
+      vulnerableVersions: string
+      cwe: string[]
+      cvssScore: number | null
+      recommendedVersion: string | null
+    }[]
+    updates: {
+      package: string
+      current: string
+      latest: string
+      level: 'major' | 'minor' | 'patch' | 'unknown'
+    }[]
+    summary: {
+      totalIssues: number
+      critical: number
+      high: number
+      moderate: number
+      low: number
+      totalUpdates: number
+      major: number
+      minor: number
+      patch: number
+    }
+  }
 }
 export type ReportSandboxSecurityAuditOutput = {
-    ok: true;
+  ok: true
 }
 export type ReportSandboxSessionUploadedInput = {
-    sandboxSessionExportId: string;
-    sizeBytes: number;
+  sandboxSessionExportId: string
+  sizeBytes: number
 }
 export type ReportSandboxSessionUploadedOutput = {
-    ok: true;
+  ok: true
 }
 export type RequestCliAuthOutput = {
-    code: string;
-    expiresAt: string;
+  code: string
+  expiresAt: string
 }
 export type RequestHarnessScreenshotUploadInput = {
-    runId: string;
-    name: string;
-    contentType: string;
+  runId: string
+  name: string
+  contentType: string
 }
 export type RequestHarnessScreenshotUploadOutput = {
-    uploadUrl: string;
-    assetKey: string;
-    uploadMethod?: ("PUT" | "POST") | undefined;
+  uploadUrl: string
+  assetKey: string
+  uploadMethod?: ('PUT' | 'POST') | undefined
 }
 export type RequestSandboxScreenshotUploadInput = {
-    name: string;
-    contentType: string;
+  name: string
+  contentType: string
 }
 export type RequestSandboxScreenshotUploadOutput = {
-    uploadUrl: string;
-    assetKey: string;
-    downloadUrl: string;
-    uploadMethod?: ("PUT" | "POST") | undefined;
+  uploadUrl: string
+  assetKey: string
+  downloadUrl: string
+  uploadMethod?: ('PUT' | 'POST') | undefined
 }
 export type RequestSandboxSessionUploadInput = {
-    sessionId: string;
-    sizeBytes: number;
-    contentType: string;
+  sessionId: string
+  sizeBytes: number
+  contentType: string
 }
 export type RequestSandboxSessionUploadOutput = {
-    sandboxSessionExportId: string;
-    uploadUrl: string;
-    assetKey: string;
-    uploadMethod?: ("PUT" | "POST") | undefined;
-    uploadHeaders?: {
-        [key: string]: string;
-    } | undefined;
+  sandboxSessionExportId: string
+  uploadUrl: string
+  assetKey: string
+  uploadMethod?: ('PUT' | 'POST') | undefined
+  uploadHeaders?:
+    | {
+        [key: string]: string
+      }
+    | undefined
 }
 export type RequestsAttachmentUrlInput = {
-    token: string;
-    contentType: string;
-    sizeBytes: number;
+  token: string
+  contentType: string
+  sizeBytes: number
 }
 export type RequestsAttachmentUrlOutput = {
-    status: number;
-    uploadUrl: string;
-    signedReadUrl: string;
-    uploadMethod: string;
-    serialized: string;
+  status: number
+  uploadUrl: string
+  signedReadUrl: string
+  uploadMethod: string
+  serialized: string
 }
 export type ResolveSandboxGitCredentialsInput = {
-    protocol?: string | undefined;
-    host?: string | undefined;
-    path?: string | undefined;
+  protocol?: string | undefined
+  host?: string | undefined
+  path?: string | undefined
 }
 export type ResolveSandboxGitCredentialsOutput = {
-    provider: "github" | "gitea";
-    repoUrl: string;
-    username: string;
-    password: string;
-    expiresAt: string | null;
+  provider: 'github' | 'gitea'
+  repoUrl: string
+  username: string
+  password: string
+  expiresAt: string | null
 }
 export type ResolveSandboxSessionRestoreInput = {
-    sessionId?: string | undefined;
+  sessionId?: string | undefined
 }
 export type ResolveSandboxSessionRestoreOutput = {
-    found: boolean;
-    downloadUrl: string | null;
-    sessionId: string | null;
+  found: boolean
+  downloadUrl: string | null
+  sessionId: string | null
 }
 export type ResolveServerRuntimeTargetInput = {
-    deploymentId: string;
-    projectId: string;
-    stageId: string;
-    stageShortId: string;
-    stageType: "production" | "environment" | "preview";
-    projectSlug: string;
-    orgShortId: string;
-    projectShortId: string;
-    gitBranch: string;
-    productionBranch: string;
-    role: string;
-    gitSha: string;
-    hostname: string;
+  deploymentId: string
+  projectId: string
+  stageId: string
+  stageShortId: string
+  stageType: 'production' | 'environment' | 'preview'
+  projectSlug: string
+  orgShortId: string
+  projectShortId: string
+  gitBranch: string
+  productionBranch: string
+  role: string
+  gitSha: string
+  hostname: string
 }
 export type ResolveServerRuntimeTargetOutput = {
-    stageId: string;
-    namespace: string;
-    imageRef: string;
-    secretDelivery: "vault" | "env";
+  stageId: string
+  namespace: string
+  imageRef: string
+  secretDelivery: 'vault' | 'env'
 }
 export type RestartSandboxPikkuInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type RestartSandboxPikkuOutput = {
-    sandboxId: string;
-    projectId: string;
-    ticketId: string | null;
-    name: string;
-    slug: string;
-    sizeSlug: string;
-    isDefault: boolean;
-    repoUrl: string | null;
-    currentStatus: string;
-    workflowRunId: string | null;
-    provisioningError: string | null;
-    desiredState: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
-    uptimeSeconds: number;
-    createdAt: string | null;
-    lastUpdatedAt: string | null;
-    currentInstance: {
-        sandboxInstanceId: string;
-        instanceNumber: number;
-        status: string;
-        platform: string | null;
-        runtimeName: string | null;
-        flyAppName: string | null;
-        flyMachineId: string | null;
-        machineClass: string;
-        cpuMillicores: number;
-        memoryMb: number;
-        diskGb: number;
-        hostname: string | null;
-        workloadName: string | null;
-        serviceName: string | null;
-        namespace: string | null;
-        startedAt: string | null;
-        usableAt: string | null;
-        shutDownAt: string | null;
-        unreachableAt: string | null;
-        stoppedAt: string | null;
-        lastActivityAt: string | null;
-        lastReadyToSleepAt: string | null;
-        sleepBlockers: string[];
-        stopReason: string | null;
-        bootPhase: string | null;
-        bootPhaseMessage: string | null;
-        bootPhaseUpdatedAt: string | null;
-        bootPhaseElapsedSec: number | null;
-        bootStep: number | null;
-        bootStepTotal: number;
-        expectedSandboxVersion: string | null;
-        expectedOrchestratorVersion: string | null;
-        reportedSandboxVersion: string | null;
-        reportedOrchestratorVersion: string | null;
-        expectedSandboxSha: string | null;
-        reportedSandboxSha: string | null;
-        sandboxImageStale: boolean;
-        orchestratorVersionHash: string | null;
-        sandboxUpdateAvailable: boolean;
-        orchestratorUpdateAvailable: boolean;
-        versionMismatch: boolean;
-    } | null;
+  sandboxId: string
+  projectId: string
+  ticketId: string | null
+  name: string
+  slug: string
+  sizeSlug: string
+  isDefault: boolean
+  repoUrl: string | null
+  currentStatus: string
+  workflowRunId: string | null
+  provisioningError: string | null
+  desiredState: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
+  uptimeSeconds: number
+  createdAt: string | null
+  lastUpdatedAt: string | null
+  currentInstance: {
+    sandboxInstanceId: string
+    instanceNumber: number
+    status: string
+    platform: string | null
+    runtimeName: string | null
+    flyAppName: string | null
+    flyMachineId: string | null
+    machineClass: string
+    cpuMillicores: number
+    memoryMb: number
+    diskGb: number
+    hostname: string | null
+    workloadName: string | null
+    serviceName: string | null
+    namespace: string | null
+    startedAt: string | null
+    usableAt: string | null
+    shutDownAt: string | null
+    unreachableAt: string | null
+    stoppedAt: string | null
+    lastActivityAt: string | null
+    lastReadyToSleepAt: string | null
+    sleepBlockers: string[]
+    stopReason: string | null
+    bootPhase: string | null
+    bootPhaseMessage: string | null
+    bootPhaseUpdatedAt: string | null
+    bootPhaseElapsedSec: number | null
+    bootStep: number | null
+    bootStepTotal: number
+    expectedSandboxVersion: string | null
+    expectedOrchestratorVersion: string | null
+    reportedSandboxVersion: string | null
+    reportedOrchestratorVersion: string | null
+    expectedSandboxSha: string | null
+    reportedSandboxSha: string | null
+    sandboxImageStale: boolean
+    orchestratorVersionHash: string | null
+    sandboxUpdateAvailable: boolean
+    orchestratorUpdateAvailable: boolean
+    versionMismatch: boolean
+  } | null
 }
 export type ResumeSandboxInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type ResumeSandboxOutput = {
-    sandboxId: string;
-    projectId: string;
-    ticketId: string | null;
-    name: string;
-    slug: string;
-    sizeSlug: string;
-    isDefault: boolean;
-    repoUrl: string | null;
-    currentStatus: string;
-    workflowRunId: string | null;
-    provisioningError: string | null;
-    desiredState: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
-    uptimeSeconds: number;
-    createdAt: string | null;
-    lastUpdatedAt: string | null;
-    currentInstance: {
-        sandboxInstanceId: string;
-        instanceNumber: number;
-        status: string;
-        platform: string | null;
-        runtimeName: string | null;
-        flyAppName: string | null;
-        flyMachineId: string | null;
-        machineClass: string;
-        cpuMillicores: number;
-        memoryMb: number;
-        diskGb: number;
-        hostname: string | null;
-        workloadName: string | null;
-        serviceName: string | null;
-        namespace: string | null;
-        startedAt: string | null;
-        usableAt: string | null;
-        shutDownAt: string | null;
-        unreachableAt: string | null;
-        stoppedAt: string | null;
-        lastActivityAt: string | null;
-        lastReadyToSleepAt: string | null;
-        sleepBlockers: string[];
-        stopReason: string | null;
-        bootPhase: string | null;
-        bootPhaseMessage: string | null;
-        bootPhaseUpdatedAt: string | null;
-        bootPhaseElapsedSec: number | null;
-        bootStep: number | null;
-        bootStepTotal: number;
-        expectedSandboxVersion: string | null;
-        expectedOrchestratorVersion: string | null;
-        reportedSandboxVersion: string | null;
-        reportedOrchestratorVersion: string | null;
-        expectedSandboxSha: string | null;
-        reportedSandboxSha: string | null;
-        sandboxImageStale: boolean;
-        orchestratorVersionHash: string | null;
-        sandboxUpdateAvailable: boolean;
-        orchestratorUpdateAvailable: boolean;
-        versionMismatch: boolean;
-    } | null;
+  sandboxId: string
+  projectId: string
+  ticketId: string | null
+  name: string
+  slug: string
+  sizeSlug: string
+  isDefault: boolean
+  repoUrl: string | null
+  currentStatus: string
+  workflowRunId: string | null
+  provisioningError: string | null
+  desiredState: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
+  uptimeSeconds: number
+  createdAt: string | null
+  lastUpdatedAt: string | null
+  currentInstance: {
+    sandboxInstanceId: string
+    instanceNumber: number
+    status: string
+    platform: string | null
+    runtimeName: string | null
+    flyAppName: string | null
+    flyMachineId: string | null
+    machineClass: string
+    cpuMillicores: number
+    memoryMb: number
+    diskGb: number
+    hostname: string | null
+    workloadName: string | null
+    serviceName: string | null
+    namespace: string | null
+    startedAt: string | null
+    usableAt: string | null
+    shutDownAt: string | null
+    unreachableAt: string | null
+    stoppedAt: string | null
+    lastActivityAt: string | null
+    lastReadyToSleepAt: string | null
+    sleepBlockers: string[]
+    stopReason: string | null
+    bootPhase: string | null
+    bootPhaseMessage: string | null
+    bootPhaseUpdatedAt: string | null
+    bootPhaseElapsedSec: number | null
+    bootStep: number | null
+    bootStepTotal: number
+    expectedSandboxVersion: string | null
+    expectedOrchestratorVersion: string | null
+    reportedSandboxVersion: string | null
+    reportedOrchestratorVersion: string | null
+    expectedSandboxSha: string | null
+    reportedSandboxSha: string | null
+    sandboxImageStale: boolean
+    orchestratorVersionHash: string | null
+    sandboxUpdateAvailable: boolean
+    orchestratorUpdateAvailable: boolean
+    versionMismatch: boolean
+  } | null
 }
 export type ResumesSandboxInput = {
-    token: string;
-    sandboxId: string;
+  token: string
+  sandboxId: string
 }
 export type ResumesSandboxOutput = {
-    status: number;
+  status: number
 }
 export type ReviewHarnessCodeInput = {
-    runId: string;
-    sandboxHostname: string;
-    builderToken: string;
+  runId: string
+  sandboxHostname: string
+  builderToken: string
 }
 export type ReviewHarnessCodeOutput = {
-    reviewed: boolean;
-    verdict: string | null;
-    overall: number | null;
-    filesReviewed: number;
-    skippedReason: string | null;
+  reviewed: boolean
+  verdict: string | null
+  overall: number | null
+  filesReviewed: number
+  skippedReason: string | null
 }
 export type RevokeOrganizationInvitationInput = {
-    invitationId: string;
+  invitationId: string
 }
 export type RevokeOrganizationInvitationOutput = {
-    revoked: true;
+  revoked: true
 }
 export type RevokeStageSecretsInput = {
-    stageId: string;
+  stageId: string
 }
 export type RevokeStageSecretsOutput = {
-    runId: string | null;
-    deploymentId: string | null;
+  runId: string | null
+  deploymentId: string | null
 }
 export type RollbackDeploymentInput = {
-    projectId: string;
-    target?: string | undefined;
+  projectId: string
+  target?: string | undefined
 }
 export type RollbackDeploymentOutput = {
-    candidates: {
-        deploymentId: string;
-        gitSha: string | null;
-        artifactHash: string | null;
-        deployedAt: string | null;
-        versionMajor: number;
-        versionMinor: number;
-        versionPatch: number;
-    }[];
-    deploymentId?: string | undefined;
-    runId?: string | undefined;
-    rolledBackToDeploymentId?: string | undefined;
+  candidates: {
+    deploymentId: string
+    gitSha: string | null
+    artifactHash: string | null
+    deployedAt: string | null
+    versionMajor: number
+    versionMinor: number
+    versionPatch: number
+  }[]
+  deploymentId?: string | undefined
+  runId?: string | undefined
+  rolledBackToDeploymentId?: string | undefined
 }
 export type RotateStageSealingKeyInput = {
-    stageId: string;
-    discardSealedValues?: boolean | undefined;
+  stageId: string
+  discardSealedValues?: boolean | undefined
 }
 export type RotateStageSealingKeyOutput = {
-    keyId: string;
-    retiredKeyId: string | null;
-    privateKey: string;
-    resealedSecrets: number;
-    discardedSecrets: string[] | null;
-    discardedCredentials: string[] | null;
-    resealedCredentials: number;
-    resealedDatabaseUrl: boolean;
-    failures: string[];
-    runId: string | null;
-    deploymentId: string | null;
+  keyId: string
+  retiredKeyId: string | null
+  privateKey: string
+  resealedSecrets: number
+  discardedSecrets: string[] | null
+  discardedCredentials: string[] | null
+  resealedCredentials: number
+  resealedDatabaseUrl: boolean
+  failures: string[]
+  runId: string | null
+  deploymentId: string | null
 }
 export type RpcCallerInput = {
-    rpcName: string;
-    data?: unknown | undefined;
+  rpcName: string
+  data?: unknown | undefined
 }
 export type RunAnalyticsRollupDiagnosticInput = {
-    secret: string;
-    eventName: string;
+  secret: string
+  eventName: string
 }
 export type RunAnalyticsRollupDiagnosticOutput = {
-    selfTelemetryConfigured: boolean;
-    totalEventCount: number;
-    rowCount: number;
+  selfTelemetryConfigured: boolean
+  totalEventCount: number
+  rowCount: number
 }
 export type RunsAnalyticsRollupInput = {
-    eventName: string;
+  eventName: string
 }
 export type RunsAnalyticsRollupOutput = {
-    total: number;
+  total: number
 }
 export type RunsStuckProjectWatchdogInput = {
-    projectId: string;
+  projectId: string
 }
 export type RunsStuckProjectWatchdogOutput = {
-    flipped: boolean;
-    status: string;
+  flipped: boolean
+  status: string
 }
 export type RunStuckProjectWatchdogDiagnosticInput = {
-    secret: string;
-    projectId: string;
+  secret: string
+  projectId: string
 }
 export type RunStuckProjectWatchdogDiagnosticOutput = {
-    flipped: boolean;
-    status: string;
+  flipped: boolean
+  status: string
 }
-export type RuntimeRolloutWorkflowInput = { deploymentId: string; stageId: string; namespace: string; imageRef: string; secretDelivery: "vault" | "env"; projectId: string; stageShortId: string; stageType: "production" | "environment" | "preview"; orgShortId: string; projectShortId: string; branch: string; hostname: string; }
-export type RuntimeRolloutWorkflowOutput = { success: boolean; instanceIds: string[]; killedOld: number; }
+export type RuntimeRolloutWorkflowInput = {
+  deploymentId: string
+  stageId: string
+  namespace: string
+  imageRef: string
+  secretDelivery: 'vault' | 'env'
+  projectId: string
+  stageShortId: string
+  stageType: 'production' | 'environment' | 'preview'
+  orgShortId: string
+  projectShortId: string
+  branch: string
+  hostname: string
+}
+export type RuntimeRolloutWorkflowOutput = {
+  success: boolean
+  instanceIds: string[]
+  killedOld: number
+}
 export type RunVirtualUserInput = {
-    persona: string;
-    goals?: string[] | undefined;
-    memory?: {
-        [key: string]: string;
-    } | undefined;
-    disposition?: ("realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable") | undefined;
-    budget?: {
-        steps?: number | undefined;
-        mutations?: number | undefined;
-        durationMs?: number | undefined;
-    } | undefined;
-    seed?: number | undefined;
-    operatorToken?: string | undefined;
+  persona: string
+  goals?: string[] | undefined
+  memory?:
+    | {
+        [key: string]: string
+      }
+    | undefined
+  disposition?:
+    | (
+        | 'realistic'
+        | 'careless'
+        | 'newcomer'
+        | 'stale'
+        | 'auditor'
+        | 'adversarial'
+        | 'accountable'
+      )
+    | undefined
+  budget?:
+    | {
+        steps?: number | undefined
+        mutations?: number | undefined
+        durationMs?: number | undefined
+      }
+    | undefined
+  seed?: number | undefined
+  operatorToken?: string | undefined
 }
 export type RunVirtualUserOutput = {
-    runId: string;
+  runId: string
 }
-export type SandboxBranchPushIsNeverDeployedScenarioInput = { branch: string; }
-export type SandboxBranchPushIsNeverDeployedScenarioOutput = { branch: string; reason: string; }
-export type SandboxLifecycleScenarioOutput = { sandboxId: string; sleptAs: string; }
-export type SandboxWebhooksTabScenarioOutput = { empty: boolean; }
+export type SandboxBranchPushIsNeverDeployedScenarioInput = { branch: string }
+export type SandboxBranchPushIsNeverDeployedScenarioOutput = {
+  branch: string
+  reason: string
+}
+export type SandboxLifecycleScenarioOutput = {
+  sandboxId: string
+  sleptAs: string
+}
+export type SandboxWebhooksTabScenarioOutput = { empty: boolean }
 export type ScoreHarnessBuildInput = {
-    completed: boolean;
-    rendered: boolean | null;
-    loginOk: boolean | null;
-    scenariosOk: boolean | null;
-    scenarioCount: number | null;
-    deployOk: boolean | null;
-    deployStatus: string | null;
-    deployHostname: string | null;
-    buildMs: number;
-    tokensInput: number | null;
-    tokensOutput: number | null;
-    diffChars: number | null;
-    filesTouched: number | null;
-    buildSummary: string | null;
-    providerError: string | null;
-    milestones: number | null;
-    verifyRan: boolean;
-    goal: string | null;
-    planSubjects: string[] | null;
+  completed: boolean
+  rendered: boolean | null
+  loginOk: boolean | null
+  scenariosOk: boolean | null
+  scenarioCount: number | null
+  deployOk: boolean | null
+  deployStatus: string | null
+  deployHostname: string | null
+  buildMs: number
+  tokensInput: number | null
+  tokensOutput: number | null
+  diffChars: number | null
+  filesTouched: number | null
+  buildSummary: string | null
+  providerError: string | null
+  milestones: number | null
+  verifyRan: boolean
+  goal: string | null
+  planSubjects: string[] | null
 }
 export type ScoreHarnessBuildOutput = {
-    scorecard: {
-        pass: boolean;
-        completed: boolean;
-        rendered: boolean | null;
-        loginOk: boolean | null;
-        scenariosOk: boolean | null;
-        scenarioCount: number | null;
-        deployOk: boolean | null;
-        deployStatus: string | null;
-        deployHostname: string | null;
-        buildSecs: number;
-        milestones: number | null;
-        tokensIn: number | null;
-        tokensOut: number | null;
-        diffChars: number | null;
-        files: number | null;
-        buildSummary: string | null;
-        fault: "none" | "infra" | "build" | "unknown";
-        faultReason: string | null;
-        signals: string[];
-    };
+  scorecard: {
+    pass: boolean
+    completed: boolean
+    rendered: boolean | null
+    loginOk: boolean | null
+    scenariosOk: boolean | null
+    scenarioCount: number | null
+    deployOk: boolean | null
+    deployStatus: string | null
+    deployHostname: string | null
+    buildSecs: number
+    milestones: number | null
+    tokensIn: number | null
+    tokensOut: number | null
+    diffChars: number | null
+    files: number | null
+    buildSummary: string | null
+    fault: 'none' | 'infra' | 'build' | 'unknown'
+    faultReason: string | null
+    signals: string[]
+  }
 }
 export type ScorePlannerLocaleInput = {
-    runId: string;
-    sandboxHostname: string;
-    builderToken: string;
-    locale: string;
-    dispatched: boolean;
+  runId: string
+  sandboxHostname: string
+  builderToken: string
+  locale: string
+  dispatched: boolean
 }
 export type ScorePlannerLocaleOutput = {
-    locale: string;
-    chatTurns: number;
-    chatTurnsInLocale: number;
-    chatInLocale: boolean | null;
-    notes: number;
-    notesEnglish: number;
-    notesOffending: string[];
-    artifactsEnglish: boolean;
-    cardFences: number;
-    cardFencesParsed: number;
-    dispatched: boolean;
-    pass: boolean;
+  locale: string
+  chatTurns: number
+  chatTurnsInLocale: number
+  chatInLocale: boolean | null
+  notes: number
+  notesEnglish: number
+  notesOffending: string[]
+  artifactsEnglish: boolean
+  cardFences: number
+  cardFencesParsed: number
+  dispatched: boolean
+  pass: boolean
 }
 export type SealProjectToOrganizationInput = {
-    projectId: string;
-    fromOrganizationId: string;
-    targetOrganizationId: string;
+  projectId: string
+  fromOrganizationId: string
+  targetOrganizationId: string
 }
 export type SealProjectToOrganizationOutput = {
-    rewrappedValues: number;
+  rewrappedValues: number
 }
 export type SealsToUnknownKeyInput = {
-    plaintext: string;
+  plaintext: string
 }
 export type SealsToUnknownKeyOutput = {
-    sealedValue: string;
+  sealedValue: string
 }
 export type SealValueForStageInput = {
-    publicKey: string;
-    keyId: string;
-    plaintext: string;
+  publicKey: string
+  keyId: string
+  plaintext: string
 }
 export type SealValueForStageOutput = {
-    sealedValue: string;
+  sealedValue: string
 }
 export type SearchOrgMemberCandidatesInput = {
-    organizationId: string;
-    query: string;
+  organizationId: string
+  query: string
 }
 export type SearchOrgMemberCandidatesOutput = {
-    users: {
-        userId: string;
-        name: string | null;
-        email: string;
-        image: string | null;
-        username: string | null;
-    }[];
+  users: {
+    userId: string
+    name: string | null
+    email: string
+    image: string | null
+    username: string | null
+  }[]
 }
 export type SecretSchema_anthropicApiKey = string
 export type SecretSchema_betterAuthSecret = string
@@ -7773,15 +8592,15 @@ export type SecretSchema_gitAdminPassword = string
 export type SecretSchema_githubAppClientSecret = string
 export type SecretSchema_githubAppPrivateKeyPem = string
 export type SecretSchema_githubOAuth = {
-    clientId: string;
-    clientSecret: string;
+  clientId: string
+  clientSecret: string
 }
 export type SecretSchema_githubWebhookSecret = string
 export type SecretSchema_gitToken = string
 export type SecretSchema_googleApiKey = string
 export type SecretSchema_googleOAuth = {
-    clientId: string;
-    clientSecret: string;
+  clientId: string
+  clientSecret: string
 }
 export type SecretSchema_harnessStripeApiKey = string
 export type SecretSchema_neonApiKey = string
@@ -7793,988 +8612,1050 @@ export type SecretSchema_stripeWebhookSecret = string
 export type SecretSchema_tursoApiToken = string
 export type SecretSchema_unsplashAccessKey = string
 export type SeesSecretRequirementsInput = {
-    secretIds: string[];
-    unset: boolean;
-    claim: string;
-    timeoutMs: number;
+  secretIds: string[]
+  unset: boolean
+  claim: string
+  timeoutMs: number
 }
 export type SeesSecretRequirementsOutput = {
-    seen: string[];
+  seen: string[]
 }
-export type SessionHealthScenarioOutput = { email: string; userId: string; }
+export type SessionHealthScenarioOutput = { email: string; userId: string }
 export type SetAIKeyInput = {
-    organizationId: string;
-    scope: "default" | "preview" | "dev-machine";
-    provider: "openai" | "anthropic" | "google" | "xai" | "openrouter";
-    value: string;
+  organizationId: string
+  scope: 'default' | 'preview' | 'dev-machine'
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter'
+  value: string
 }
 export type SetAIKeyOutput = {
-    provider: "openai" | "anthropic" | "google" | "xai" | "openrouter";
-    scope: "default" | "preview" | "dev-machine";
-    hint: string;
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter'
+  scope: 'default' | 'preview' | 'dev-machine'
+  hint: string
 }
 export type SetChangeStatusInput = {
-    changeId: string;
-    status: "open" | "in_progress" | "dismissed";
+  changeId: string
+  status: 'open' | 'in_progress' | 'dismissed'
 }
 export type SetChangeStatusOutput = {
-    change: {
-        changeId: string;
-        shortId: string;
-        projectId: string;
-        stageId: string;
-        groupId: string | null;
-        title: string;
-        body: string | null;
-        status: "open" | "claimed" | "needs_answer" | "in_progress" | "done" | "dismissed";
-        route: string | null;
-        gitSha: string | null;
-        deploymentId: string | null;
-        locale: string | null;
-        viewport: {
-            width: number;
-            height: number;
-        } | null;
-        capture: {
-            stroke: {
-                x: number;
-                y: number;
-            }[];
-            bounds: {
-                x: number;
-                y: number;
-                width: number;
-                height: number;
-            } | null;
-            elements: {
-                testId: string | null;
-                sourceAnchor: string | null;
-                cssPath: string | null;
-                text: string | null;
-                rect: {
-                    x: number;
-                    y: number;
-                    width: number;
-                    height: number;
-                } | null;
-            }[];
-        } | null;
-        screenshotKey: string | null;
-        branch: string | null;
-        headCommit: string | null;
-        resolvedAt: Date | null;
-        createdAt: Date;
-        held: boolean;
-    };
+  change: {
+    changeId: string
+    shortId: string
+    projectId: string
+    stageId: string
+    groupId: string | null
+    title: string
+    body: string | null
+    status:
+      'open' | 'claimed' | 'needs_answer' | 'in_progress' | 'done' | 'dismissed'
+    route: string | null
+    gitSha: string | null
+    deploymentId: string | null
+    locale: string | null
+    viewport: {
+      width: number
+      height: number
+    } | null
+    capture: {
+      stroke: {
+        x: number
+        y: number
+      }[]
+      bounds: {
+        x: number
+        y: number
+        width: number
+        height: number
+      } | null
+      elements: {
+        testId: string | null
+        sourceAnchor: string | null
+        cssPath: string | null
+        text: string | null
+        rect: {
+          x: number
+          y: number
+          width: number
+          height: number
+        } | null
+      }[]
+    } | null
+    screenshotKey: string | null
+    branch: string | null
+    headCommit: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    held: boolean
+  }
 }
 export type SetMemberAiBudgetsInput = {
-    organizationId: string;
-    userId: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
+  organizationId: string
+  userId: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
 }
 export type SetMemberAiBudgetsOutput = void | undefined
 export type SetOrgAiSettingsInput = {
-    organizationId: string;
-    enabledModels: string[] | null;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
+  organizationId: string
+  enabledModels: string[] | null
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
 }
 export type SetOrgAiSettingsOutput = void | undefined
 export type SetProductionBranchInput = {
-    projectId: string;
-    branch: string;
+  projectId: string
+  branch: string
 }
 export type SetProductionBranchOutput = {
-    productionBranch: string;
+  productionBranch: string
 }
 export type SetProjectCascadeValueInput = {
-    projectId: string;
-    kind: "secret" | "variable";
-    scope: string;
-    name: string;
-    value: string;
+  projectId: string
+  kind: 'secret' | 'variable'
+  scope: string
+  name: string
+  value: string
 }
 export type SetProjectCascadeValueOutput = {
-    scope: string;
-    name: string;
-    hint: string;
+  scope: string
+  name: string
+  hint: string
 }
 export type SetProjectFavoriteInput = {
-    projectId: string;
-    favorite: boolean;
+  projectId: string
+  favorite: boolean
 }
 export type SetProjectFavoriteOutput = {
-    favorite: boolean;
+  favorite: boolean
 }
 export type SetsAiKeyInput = {
-    token: string;
-    organizationId: string;
-    provider: "openai" | "anthropic" | "google" | "deepseek";
-    scope: "default" | "preview" | "dev-machine";
-    last4: string;
+  token: string
+  organizationId: string
+  provider: 'openai' | 'anthropic' | 'google' | 'deepseek'
+  scope: 'default' | 'preview' | 'dev-machine'
+  last4: string
 }
 export type SetsAiKeyOutput = {
-    hint: string;
+  hint: string
 }
 export type SetSandboxAiBudgetsInput = {
-    sandboxId: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
+  sandboxId: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
 }
 export type SetSandboxAiBudgetsOutput = void | undefined
 export type SetSandboxSizeInput = {
-    sandboxId: string;
-    sizeSlug: string;
+  sandboxId: string
+  sizeSlug: string
 }
 export type SetSandboxSizeOutput = void | undefined
 export type SetSandboxTicketSpecInput = {
-    specDocument: string;
+  specDocument: string
 }
 export type SetSandboxTicketSpecOutput = {
-    ok: true;
+  ok: true
 }
 export type SetsCascadeValueInput = {
-    token: string;
-    projectId: string;
-    kind: "secret" | "variable";
-    scope: string;
-    name: string;
-    value: string;
+  token: string
+  projectId: string
+  kind: 'secret' | 'variable'
+  scope: string
+  name: string
+  value: string
 }
 export type SetsCascadeValueOutput = {
-    status: number;
-    ok: boolean;
+  status: number
+  ok: boolean
 }
 export type SetStageConsoleSecretInput = {
-    stageId: string;
-    secretId: string;
-    value: unknown;
+  stageId: string
+  secretId: string
+  value: unknown
 }
 export type SetStageConsoleSecretOutput = {
-    success: boolean;
-    runId: string | null;
-    deploymentId: string | null;
+  success: boolean
+  runId: string | null
+  deploymentId: string | null
 }
 export type SetStageConsoleVariableInput = {
-    stageId: string;
-    variableId: string;
-    value: unknown;
+  stageId: string
+  variableId: string
+  value: unknown
 }
 export type SetStageConsoleVariableOutput = {
-    success: boolean;
+  success: boolean
 }
 export type SetStageCredentialInput = {
-    stageId: string;
-    name: string;
-    value: unknown;
+  stageId: string
+  name: string
+  value: unknown
 }
 export type SetStageCredentialOutput = {
-    success: boolean;
+  success: boolean
 }
 export type SetStageSealedSecretInput = {
-    stageId: string;
-    name: string;
-    sealedValue: string;
+  stageId: string
+  name: string
+  sealedValue: string
 }
 export type SetStageSealedSecretOutput = {
-    name: string;
-    keyId: string;
-    runId: string | null;
-    deploymentId: string | null;
+  name: string
+  keyId: string
+  runId: string | null
+  deploymentId: string | null
 }
 export type SetStageSealingKeyInput = {
-    stageId: string;
-    privateKey: string;
+  stageId: string
+  privateKey: string
 }
 export type SetStageSealingKeyOutput = {
-    keyId: string;
+  keyId: string
 }
 export type SetVirtualUserScheduleInput = {
-    persona: string;
-    enabled?: boolean | undefined;
-    disposition?: ("realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable") | undefined;
-    goals?: string[] | undefined;
-    budget?: ({
-        steps?: number | undefined;
-        mutations?: number | undefined;
-        durationMs?: number | undefined;
-    } | null) | undefined;
-    minIntervalMs?: number | undefined;
-    maxIntervalMs?: number | undefined;
-    nextRunAt?: string | undefined;
+  persona: string
+  enabled?: boolean | undefined
+  disposition?:
+    | (
+        | 'realistic'
+        | 'careless'
+        | 'newcomer'
+        | 'stale'
+        | 'auditor'
+        | 'adversarial'
+        | 'accountable'
+      )
+    | undefined
+  goals?: string[] | undefined
+  budget?:
+    | ({
+        steps?: number | undefined
+        mutations?: number | undefined
+        durationMs?: number | undefined
+      } | null)
+    | undefined
+  minIntervalMs?: number | undefined
+  maxIntervalMs?: number | undefined
+  nextRunAt?: string | undefined
 }
 export type SetVirtualUserScheduleOutput = {
-    persona: string;
-    enabled: boolean;
-    disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
-    goals: string[];
-    budget: {
-        steps?: number | undefined;
-        mutations?: number | undefined;
-        durationMs?: number | undefined;
-    } | null;
-    minIntervalMs: number;
-    maxIntervalMs: number;
-    nextRunAt: string;
-    lastRunId: string | null;
-    lastRunAt: string | null;
-    declared: {
-        disposition: "realistic" | "careless" | "newcomer" | "stale" | "auditor" | "adversarial" | "accountable";
-        goals: string[];
-    };
+  persona: string
+  enabled: boolean
+  disposition:
+    | 'realistic'
+    | 'careless'
+    | 'newcomer'
+    | 'stale'
+    | 'auditor'
+    | 'adversarial'
+    | 'accountable'
+  goals: string[]
+  budget: {
+    steps?: number | undefined
+    mutations?: number | undefined
+    durationMs?: number | undefined
+  } | null
+  minIntervalMs: number
+  maxIntervalMs: number
+  nextRunAt: string
+  lastRunId: string | null
+  lastRunAt: string | null
+  declared: {
+    disposition:
+      | 'realistic'
+      | 'careless'
+      | 'newcomer'
+      | 'stale'
+      | 'auditor'
+      | 'adversarial'
+      | 'accountable'
+    goals: string[]
+  }
 }
 export type SignContentKeyInput = {
-    contentKey: string;
-    expiresInSeconds: number;
+  contentKey: string
+  expiresInSeconds: number
 }
 export type SignContentKeyOutput = {
-    signedUrl: string;
+  signedUrl: string
 }
 export type SleepHarnessSandboxInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type SleepHarnessSandboxOutput = {}
 export type SleepSandboxInput = {
-    sandboxId: string;
-    force: boolean;
+  sandboxId: string
+  force: boolean
 }
 export type SleepSandboxOutput = {
-    sandboxId: string;
-    projectId: string;
-    ticketId: string | null;
-    name: string;
-    slug: string;
-    sizeSlug: string;
-    isDefault: boolean;
-    repoUrl: string | null;
-    currentStatus: string;
-    workflowRunId: string | null;
-    provisioningError: string | null;
-    desiredState: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
-    uptimeSeconds: number;
-    createdAt: string | null;
-    lastUpdatedAt: string | null;
-    currentInstance: {
-        sandboxInstanceId: string;
-        instanceNumber: number;
-        status: string;
-        platform: string | null;
-        runtimeName: string | null;
-        flyAppName: string | null;
-        flyMachineId: string | null;
-        machineClass: string;
-        cpuMillicores: number;
-        memoryMb: number;
-        diskGb: number;
-        hostname: string | null;
-        workloadName: string | null;
-        serviceName: string | null;
-        namespace: string | null;
-        startedAt: string | null;
-        usableAt: string | null;
-        shutDownAt: string | null;
-        unreachableAt: string | null;
-        stoppedAt: string | null;
-        lastActivityAt: string | null;
-        lastReadyToSleepAt: string | null;
-        sleepBlockers: string[];
-        stopReason: string | null;
-        bootPhase: string | null;
-        bootPhaseMessage: string | null;
-        bootPhaseUpdatedAt: string | null;
-        bootPhaseElapsedSec: number | null;
-        bootStep: number | null;
-        bootStepTotal: number;
-        expectedSandboxVersion: string | null;
-        expectedOrchestratorVersion: string | null;
-        reportedSandboxVersion: string | null;
-        reportedOrchestratorVersion: string | null;
-        expectedSandboxSha: string | null;
-        reportedSandboxSha: string | null;
-        sandboxImageStale: boolean;
-        orchestratorVersionHash: string | null;
-        sandboxUpdateAvailable: boolean;
-        orchestratorUpdateAvailable: boolean;
-        versionMismatch: boolean;
-    } | null;
+  sandboxId: string
+  projectId: string
+  ticketId: string | null
+  name: string
+  slug: string
+  sizeSlug: string
+  isDefault: boolean
+  repoUrl: string | null
+  currentStatus: string
+  workflowRunId: string | null
+  provisioningError: string | null
+  desiredState: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
+  uptimeSeconds: number
+  createdAt: string | null
+  lastUpdatedAt: string | null
+  currentInstance: {
+    sandboxInstanceId: string
+    instanceNumber: number
+    status: string
+    platform: string | null
+    runtimeName: string | null
+    flyAppName: string | null
+    flyMachineId: string | null
+    machineClass: string
+    cpuMillicores: number
+    memoryMb: number
+    diskGb: number
+    hostname: string | null
+    workloadName: string | null
+    serviceName: string | null
+    namespace: string | null
+    startedAt: string | null
+    usableAt: string | null
+    shutDownAt: string | null
+    unreachableAt: string | null
+    stoppedAt: string | null
+    lastActivityAt: string | null
+    lastReadyToSleepAt: string | null
+    sleepBlockers: string[]
+    stopReason: string | null
+    bootPhase: string | null
+    bootPhaseMessage: string | null
+    bootPhaseUpdatedAt: string | null
+    bootPhaseElapsedSec: number | null
+    bootStep: number | null
+    bootStepTotal: number
+    expectedSandboxVersion: string | null
+    expectedOrchestratorVersion: string | null
+    reportedSandboxVersion: string | null
+    reportedOrchestratorVersion: string | null
+    expectedSandboxSha: string | null
+    reportedSandboxSha: string | null
+    sandboxImageStale: boolean
+    orchestratorVersionHash: string | null
+    sandboxUpdateAvailable: boolean
+    orchestratorUpdateAvailable: boolean
+    versionMismatch: boolean
+  } | null
 }
 export type SleepsSandboxInput = {
-    token: string;
-    sandboxId: string;
-    force: boolean;
+  token: string
+  sandboxId: string
+  force: boolean
 }
 export type SleepsSandboxOutput = {
-    status: number;
+  status: number
 }
 export type SpawnRuntimeReplicasInput = {
-    deploymentId: string;
-    stageId: string;
-    namespace: string;
-    imageRef: string;
-    secretDelivery: "vault" | "env";
-    projectId: string;
-    stageShortId: string;
-    stageType: "production" | "environment" | "preview";
-    orgShortId: string;
-    projectShortId: string;
-    branch: string;
-    hostname: string;
+  deploymentId: string
+  stageId: string
+  namespace: string
+  imageRef: string
+  secretDelivery: 'vault' | 'env'
+  projectId: string
+  stageShortId: string
+  stageType: 'production' | 'environment' | 'preview'
+  orgShortId: string
+  projectShortId: string
+  branch: string
+  hostname: string
 }
 export type SpawnRuntimeReplicasOutput = {
-    instanceIds: string[];
+  instanceIds: string[]
 }
 export type SpawnSandboxInstanceInput = {
-    sandboxId: string;
-    userId: string;
+  sandboxId: string
+  userId: string
 }
 export type SpawnSandboxInstanceOutput = {
-    placed: boolean;
+  placed: boolean
 }
-export type StageSealingKeyScenarioOutput = { projectId: string; mainKeyId: string; secondKeyId: string; rotatedKeyId: string; assertions: number; }
+export type StageSealingKeyScenarioOutput = {
+  projectId: string
+  mainKeyId: string
+  secondKeyId: string
+  rotatedKeyId: string
+  assertions: number
+}
 export type StartGithubInstallInput = {
-    organizationId: string;
+  organizationId: string
 }
 export type StartGithubInstallOutput = {
-    url: string;
+  url: string
 }
 export type StartGitProviderLinkingInput = {
-    provider: "github" | "gitea";
+  provider: 'github' | 'gitea'
 }
 export type StartGitProviderLinkingOutput = {
-    redirectUrl: string | null;
+  redirectUrl: string | null
 }
 export type StartHarnessBuildInput = {
-    sandboxHostname: string;
-    builderToken: string;
-    model?: (string | null) | undefined;
-    buildKind?: (("website") | null) | undefined;
+  sandboxHostname: string
+  builderToken: string
+  model?: (string | null) | undefined
+  buildKind?: ('website' | null) | undefined
 }
 export type StartHarnessBuildOutput = {
-    started: boolean;
-    reason: string | null;
+  started: boolean
+  reason: string | null
 }
 export type StartInitialSandboxInput = {
-    projectId: string;
-    projectSlug: string;
-    userId: string;
+  projectId: string
+  projectSlug: string
+  userId: string
 }
 export type StartInitialSandboxOutput = {
-    sandboxId: string | null;
+  sandboxId: string | null
 }
 export type StartsGitProviderLinkingInput = {
-    token: string;
-    provider: "github" | "gitea";
+  token: string
+  provider: 'github' | 'gitea'
 }
 export type StartsGitProviderLinkingOutput = {
-    redirectUrl: string;
+  redirectUrl: string
 }
 export type StockImageSearchInput = {
-    query: string;
-    count?: number | undefined;
-    orientation?: ("landscape" | "portrait" | "squarish") | undefined;
+  query: string
+  count?: number | undefined
+  orientation?: ('landscape' | 'portrait' | 'squarish') | undefined
 }
 export type StockImageSearchOutput = {
-    images: {
-        url: string;
-        alt: string | null;
-        creditName: string;
-        creditUrl: string;
-    }[];
+  images: {
+    url: string
+    alt: string | null
+    creditName: string
+    creditUrl: string
+  }[]
 }
-export type StuckProjectIsFlippedToErrorScenarioOutput = { projectId: string; status: string; }
+export type StuckProjectIsFlippedToErrorScenarioOutput = {
+  projectId: string
+  status: string
+}
 export type SubmitContactFormInput = {
-    name: string;
-    email: string;
-    company?: string | undefined;
-    reason: "early_access" | "enterprise" | "question";
-    message: string;
+  name: string
+  email: string
+  company?: string | undefined
+  reason: 'early_access' | 'enterprise' | 'question'
+  message: string
 }
 export type SubmitContactFormOutput = {
-    success: boolean;
+  success: boolean
 }
 export type SumSandboxAISpendInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type SumSandboxAISpendOutput = {
-    costUsd: number | null;
-    inputTokens: number | null;
-    outputTokens: number | null;
-    calls: number;
+  costUsd: number | null
+  inputTokens: number | null
+  outputTokens: number | null
+  calls: number
 }
 export type SuppliesSecretInConsoleInput = {
-    secretName: string;
-    secretId: string;
-    value: string;
-    timeoutMs: number;
+  secretName: string
+  secretId: string
+  value: string
+  timeoutMs: number
 }
 export type SuppliesSecretInConsoleOutput = {
-    stored: boolean;
+  stored: boolean
 }
 export type SwapRuntimeRouteInput = {
-    deploymentId: string;
-    namespace: string;
-    instanceIds: string[];
+  deploymentId: string
+  namespace: string
+  instanceIds: string[]
 }
 export type SwapRuntimeRouteOutput = {
-    ok: true;
+  ok: true
 }
 export type TearDownProjectSandboxesInput = {
-    projectId: string;
+  projectId: string
 }
 export type TearDownProjectSandboxesOutput = {
-    sandboxesProcessed: number;
+  sandboxesProcessed: number
 }
 export type TearDownProjectStagesInput = {
-    projectId: string;
-    dbProjectId: string | null;
+  projectId: string
+  dbProjectId: string | null
 }
 export type TearDownProjectStagesOutput = {
-    stagesProcessed: number;
+  stagesProcessed: number
 }
 export type TearsDownOrganizationInput = {
-    token: string;
-    organizationId: string;
-    projectIds: string[];
+  token: string
+  organizationId: string
+  projectIds: string[]
 }
 export type TearsDownOrganizationOutput = {
-    deletedProjects: number;
-    organizationDeleted: boolean;
+  deletedProjects: number
+  organizationDeleted: boolean
 }
 export type TearsDownProjectInput = {
-    token: string;
-    projectId: string;
-    sandboxId: string;
+  token: string
+  projectId: string
+  sandboxId: string
 }
 export type TearsDownProjectOutput = {
-    sandboxDeleted: boolean;
-    projectDeleted: boolean;
+  sandboxDeleted: boolean
+  projectDeleted: boolean
 }
 export type TestWebhookEndpointInput = {
-    organizationId: string;
-    webhookEndpointId: string;
+  organizationId: string
+  webhookEndpointId: string
 }
 export type TestWebhookEndpointOutput = {
-    deliveryId: string;
+  deliveryId: string
 }
 export type TicketBuildInput = {
-    ticketId: string;
-    projectId: string;
-    organizationId: string;
-    userId: string;
-    branch: string;
-    task: string;
+  ticketId: string
+  projectId: string
+  organizationId: string
+  userId: string
+  branch: string
+  task: string
 }
 export type TicketBuildOutput = {
-    baseCommit: string | null;
-    headCommit: string | null;
-    sandboxMissing: boolean;
-    incomplete: boolean;
+  baseCommit: string | null
+  headCommit: string | null
+  sandboxMissing: boolean
+  incomplete: boolean
 }
 export type TicketCostInput = {
-    ticketId: string;
+  ticketId: string
 }
 export type TicketCostOutput = {
-    totalUsd: number;
+  totalUsd: number
 }
 export type TicketDispatchBuildInput = {
-    ticketId: string;
-    projectId: string;
-    task: string;
+  ticketId: string
+  projectId: string
+  task: string
 }
 export type TicketDispatchBuildOutput = {
-    dispatched: boolean;
+  dispatched: boolean
 }
 export type TicketDispatchReviewInput = {
-    ticketId: string;
-    projectId: string;
-    baseBranch: string;
+  ticketId: string
+  projectId: string
+  baseBranch: string
 }
 export type TicketDispatchReviewOutput = {
-    dispatched: boolean;
+  dispatched: boolean
 }
 export type TicketEnterColumnInput = {
-    ticketId: string;
-    column: "ideas" | "spec" | "build" | "review" | "staging" | "production" | "done";
-    status?: ("idle" | "running" | "blocked" | "failed" | "done") | undefined;
+  ticketId: string
+  column:
+    'ideas' | 'spec' | 'build' | 'review' | 'staging' | 'production' | 'done'
+  status?: ('idle' | 'running' | 'blocked' | 'failed' | 'done') | undefined
 }
 export type TicketEnterColumnOutput = {
-    ok: true;
+  ok: true
 }
 export type TicketLoadReviewInput = {
-    ticketId: string;
+  ticketId: string
 }
 export type TicketLoadReviewOutput = {
-    blocking: boolean;
-    mustResolve: number;
-    advised: number;
+  blocking: boolean
+  mustResolve: number
+  advised: number
 }
 export type TicketOpenPullRequestInput = {
-    ticketId: string;
-    projectId: string;
-    branch: string;
+  ticketId: string
+  projectId: string
+  branch: string
 }
 export type TicketOpenPullRequestOutput = {
-    prNumber: number | null;
-    prUrl: string | null;
+  prNumber: number | null
+  prUrl: string | null
 }
 export type TicketPreviewInput = {
-    ticketId: string;
-    projectId: string;
-    branch: string;
+  ticketId: string
+  projectId: string
+  branch: string
 }
 export type TicketPreviewOutput = {
-    deploymentId: string | null;
-    stageId: string | null;
+  deploymentId: string | null
+  stageId: string | null
 }
 export type TicketProductionInput = {
-    ticketId: string;
-    projectId: string;
+  ticketId: string
+  projectId: string
 }
 export type TicketProductionOutput = {
-    deploymentId: string | null;
-    stageId: string | null;
-    deployed: boolean;
+  deploymentId: string | null
+  stageId: string | null
+  deployed: boolean
 }
 export type TicketProvisionSandboxInput = {
-    ticketId: string;
-    projectId: string;
-    userId: string;
-    branch: string;
+  ticketId: string
+  projectId: string
+  userId: string
+  branch: string
 }
 export type TicketProvisionSandboxOutput = {
-    sandboxId: string | null;
-    state: "booting" | "waking" | "skipped" | "error";
+  sandboxId: string | null
+  state: 'booting' | 'waking' | 'skipped' | 'error'
 }
 export type TicketRequirementsInput = {
-    ticketId: string;
-    projectId: string;
-    task: string;
+  ticketId: string
+  projectId: string
+  task: string
 }
 export type TicketRequirementsOutput = {
-    ok: true;
+  ok: true
 }
 export type TicketSandboxStatusInput = {
-    ticketId: string;
+  ticketId: string
 }
 export type TicketSandboxStatusOutput = {
-    running: boolean;
-    failed: boolean;
-    state: string;
+  running: boolean
+  failed: boolean
+  state: string
 }
 export type TicketSpecInput = {
-    ticketId: string;
-    projectId: string;
-    task: string;
+  ticketId: string
+  projectId: string
+  task: string
 }
 export type TicketSpecOutput = {
-    specReady: boolean;
+  specReady: boolean
 }
 export type TicketStagingInput = {
-    ticketId: string;
-    projectId: string;
-    branch: string;
+  ticketId: string
+  projectId: string
+  branch: string
 }
 export type TicketStagingOutput = {
-    deploymentId: string | null;
-    stageId: string | null;
-    deployed: boolean;
+  deploymentId: string | null
+  stageId: string | null
+  deployed: boolean
 }
-export type TicketWorkflowInput = { ticketId: string; projectId: string; organizationId: string; userId: string; branch: string; task: string; mode: "autopilot" | "manual"; }
-export type TicketWorkflowOutput = { success: boolean; ticketId: string; }
+export type TicketWorkflowInput = {
+  ticketId: string
+  projectId: string
+  organizationId: string
+  userId: string
+  branch: string
+  task: string
+  mode: 'autopilot' | 'manual'
+}
+export type TicketWorkflowOutput = { success: boolean; ticketId: string }
 export type TranscribeAudioInput = {
-    audioBase64: string;
-    format: "webm" | "mp4" | "ogg";
-    surface: "pichat" | "new-project" | "source-instructions";
+  audioBase64: string
+  format: 'webm' | 'mp4' | 'ogg'
+  surface: 'pichat' | 'new-project' | 'source-instructions'
 }
 export type TranscribeAudioOutput = {
-    text: string;
+  text: string
 }
 export type TransferProjectInput = {
-    projectId: string;
-    targetOrganizationId: string;
+  projectId: string
+  targetOrganizationId: string
 }
 export type TransferProjectOutput = {
-    projectId: string;
-    fromOrganizationId: string;
-    toOrganizationId: string;
-    runId: string;
+  projectId: string
+  fromOrganizationId: string
+  toOrganizationId: string
+  runId: string
 }
-export type TransferProjectWorkflowInput = { projectId: string; targetOrganizationId: string; }
-export type TransferProjectWorkflowOutput = { projectId: string; stagesNeedingRedeploy: string[]; }
+export type TransferProjectWorkflowInput = {
+  projectId: string
+  targetOrganizationId: string
+}
+export type TransferProjectWorkflowOutput = {
+  projectId: string
+  stagesNeedingRedeploy: string[]
+}
 export type TranslateMessagesInput = {
-    locale: string;
-    sourceLocale: string;
-    messages: {
-        [key: string]: string;
-    };
+  locale: string
+  sourceLocale: string
+  messages: {
+    [key: string]: string
+  }
 }
 export type TranslateMessagesOutput = {
-    translations: {
-        [key: string]: string;
-    };
-    error: string | null;
+  translations: {
+    [key: string]: string
+  }
+  error: string | null
 }
 export type TriggerBackendDeployInput = {
-    ref?: string | undefined;
+  ref?: string | undefined
 }
 export type TriggerBackendDeployOutput = {
-    status: "accepted";
+  status: 'accepted'
 }
 export type TriggerHarnessInput = {
-    harnessScenarioId: string;
-    model?: string | undefined;
-    planModel?: string | undefined;
-    designModel?: string | undefined;
-    buildKind?: ("website") | undefined;
-    locale?: string | undefined;
-    planOnly?: boolean | undefined;
+  harnessScenarioId: string
+  model?: string | undefined
+  planModel?: string | undefined
+  designModel?: string | undefined
+  buildKind?: 'website' | undefined
+  locale?: string | undefined
+  planOnly?: boolean | undefined
 }
 export type TriggerHarnessOutput = {
-    runId: string;
+  runId: string
 }
 export type TriggerInitialDeployInput = {
-    stageId: string;
-    repoName: string;
+  stageId: string
+  repoName: string
 }
 export type TriggerInitialDeployOutput = {
-    deploymentId: string;
+  deploymentId: string
 }
-export type UndeclaredEventIsRejectedScenarioOutput = { status: number; }
-export type UndeployedStageRefusesSecretsScenarioOutput = { stageId: string; refusals: number; }
-export type UnknownCliCodeIsRejectedScenarioOutput = { status: number; }
-export type UnknownTemplateIsRejectedScenarioOutput = { status: number; }
+export type UndeclaredEventIsRejectedScenarioOutput = { status: number }
+export type UndeployedStageRefusesSecretsScenarioOutput = {
+  stageId: string
+  refusals: number
+}
+export type UnknownCliCodeIsRejectedScenarioOutput = { status: number }
+export type UnknownTemplateIsRejectedScenarioOutput = { status: number }
 export type UnlinkGithubInstallationInput = {
-    organizationId: string;
-    githubInstallationId: string;
+  organizationId: string
+  githubInstallationId: string
 }
 export type UnlinkGithubInstallationOutput = {
-    unlinked: boolean;
+  unlinked: boolean
 }
 export type UnlinkGitProviderAccountInput = {
-    provider: "github" | "gitea";
+  provider: 'github' | 'gitea'
 }
 export type UnlinkGitProviderAccountOutput = {
-    success: boolean;
+  success: boolean
 }
-export type UnsupportedContentTypeIsRejectedScenarioOutput = { status: number; }
+export type UnsupportedContentTypeIsRejectedScenarioOutput = { status: number }
 export type UpdateAutoRechargeInput = {
-    organizationId: string;
-    enabled: boolean;
-    amountUsd?: number | undefined;
-    thresholdUsd?: number | undefined;
+  organizationId: string
+  enabled: boolean
+  amountUsd?: number | undefined
+  thresholdUsd?: number | undefined
 }
 export type UpdateAutoRechargeOutput = {
-    autoRechargeEnabled: boolean;
-    autoRechargeAmountUsd: number;
-    autoRechargeThresholdUsd: number;
+  autoRechargeEnabled: boolean
+  autoRechargeAmountUsd: number
+  autoRechargeThresholdUsd: number
 }
 export type UpdateHarnessScenarioInput = {
-    harnessScenarioId: string;
-    goal?: string | undefined;
-    status?: ("pending" | "retired" | "disabled") | undefined;
-    complexity?: ("simple" | "medium" | "complex") | undefined;
+  harnessScenarioId: string
+  goal?: string | undefined
+  status?: ('pending' | 'retired' | 'disabled') | undefined
+  complexity?: ('simple' | 'medium' | 'complex') | undefined
 }
 export type UpdateHarnessScenarioOutput = {
-    harnessScenarioId: string;
-    goal: string;
-    status: string;
+  harnessScenarioId: string
+  goal: string
+  status: string
 }
 export type UpdateHarnessScenarioStatsInput = {
-    harnessScenarioId: string;
-    runId: string;
-    pass: boolean;
-    scorecard: unknown;
+  harnessScenarioId: string
+  runId: string
+  pass: boolean
+  scorecard: unknown
 }
 export type UpdateHarnessScenarioStatsOutput = {}
 export type UpdateMachineConfigInput = {
-    type: "sandbox" | "build" | "runtime" | "services";
-    minMachines: number;
-    maxMachines: number;
-    serverTypes?: string[] | undefined;
+  type: 'sandbox' | 'build' | 'runtime' | 'services'
+  minMachines: number
+  maxMachines: number
+  serverTypes?: string[] | undefined
 }
 export type UpdateMachineConfigOutput = {
-    ok: boolean;
+  ok: boolean
 }
 export type UpdateOrgAiBudgetRuleInput = {
-    organizationId: string;
-    ruleId: string;
-    provider: string;
-    model: string;
-    scopeKind: "stage" | "sandbox" | "developer" | "project";
-    scopeId: string | null;
-    budgetUsd: number;
-    period: "1d" | "7d" | "30d" | "1mo";
+  organizationId: string
+  ruleId: string
+  provider: string
+  model: string
+  scopeKind: 'stage' | 'sandbox' | 'developer' | 'project'
+  scopeId: string | null
+  budgetUsd: number
+  period: '1d' | '7d' | '30d' | '1mo'
 }
 export type UpdateOrgAiBudgetRuleOutput = void | undefined
 export type UpdateOrganizationMemberRoleInput = {
-    organizationId: string;
-    userId: string;
-    role: "owner" | "admin" | "member";
+  organizationId: string
+  userId: string
+  role: 'owner' | 'admin' | 'member'
 }
 export type UpdateOrganizationMemberRoleOutput = {
-    ok: true;
+  ok: true
 }
 export type UpdateProjectDeploymentInput = {
-    deploymentId: string;
-    stageId?: string | undefined;
-    url?: string | undefined;
-    status?: ("active" | "stopped" | "deploying" | "error" | "timed_out") | undefined;
-    manifest?: {
-        [key: string]: unknown;
-    } | undefined;
-    plan?: {
-        [key: string]: unknown;
-    } | undefined;
-    buildLog?: string | undefined;
-    deployedAt?: string | undefined;
+  deploymentId: string
+  stageId?: string | undefined
+  url?: string | undefined
+  status?:
+    ('active' | 'stopped' | 'deploying' | 'error' | 'timed_out') | undefined
+  manifest?:
+    | {
+        [key: string]: unknown
+      }
+    | undefined
+  plan?:
+    | {
+        [key: string]: unknown
+      }
+    | undefined
+  buildLog?: string | undefined
+  deployedAt?: string | undefined
 }
 export type UpdateProjectDeploymentOutput = {
-    success: boolean;
+  success: boolean
 }
 export type UpdateProjectInput = {
-    projectId: string;
-    name?: string | undefined;
-    plannerLocale?: string | undefined;
-    planModel?: (string | null) | undefined;
-    buildModel?: (string | null) | undefined;
-    designModel?: (string | null) | undefined;
+  projectId: string
+  name?: string | undefined
+  plannerLocale?: string | undefined
+  planModel?: (string | null) | undefined
+  buildModel?: (string | null) | undefined
+  designModel?: (string | null) | undefined
 }
 export type UpdateProjectOutput = {
-    projectId: string;
-    name: string;
-    plannerLocale?: string | undefined;
-    planModel: string | null;
-    buildModel: string | null;
-    designModel: string | null;
+  projectId: string
+  name: string
+  plannerLocale?: string | undefined
+  planModel: string | null
+  buildModel: string | null
+  designModel: string | null
 }
 export type UpdateProjectStatusInput = {
-    projectId: string;
+  projectId: string
 }
 export type UpdateProjectStatusOutput = {
-    updated: boolean;
+  updated: boolean
 }
 export type UpdateSandboxOrchestratorInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type UpdateSandboxOrchestratorOutput = {
-    sandboxId: string;
-    projectId: string;
-    ticketId: string | null;
-    name: string;
-    slug: string;
-    sizeSlug: string;
-    isDefault: boolean;
-    repoUrl: string | null;
-    currentStatus: string;
-    workflowRunId: string | null;
-    provisioningError: string | null;
-    desiredState: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
-    uptimeSeconds: number;
-    createdAt: string | null;
-    lastUpdatedAt: string | null;
-    currentInstance: {
-        sandboxInstanceId: string;
-        instanceNumber: number;
-        status: string;
-        platform: string | null;
-        runtimeName: string | null;
-        flyAppName: string | null;
-        flyMachineId: string | null;
-        machineClass: string;
-        cpuMillicores: number;
-        memoryMb: number;
-        diskGb: number;
-        hostname: string | null;
-        workloadName: string | null;
-        serviceName: string | null;
-        namespace: string | null;
-        startedAt: string | null;
-        usableAt: string | null;
-        shutDownAt: string | null;
-        unreachableAt: string | null;
-        stoppedAt: string | null;
-        lastActivityAt: string | null;
-        lastReadyToSleepAt: string | null;
-        sleepBlockers: string[];
-        stopReason: string | null;
-        bootPhase: string | null;
-        bootPhaseMessage: string | null;
-        bootPhaseUpdatedAt: string | null;
-        bootPhaseElapsedSec: number | null;
-        bootStep: number | null;
-        bootStepTotal: number;
-        expectedSandboxVersion: string | null;
-        expectedOrchestratorVersion: string | null;
-        reportedSandboxVersion: string | null;
-        reportedOrchestratorVersion: string | null;
-        expectedSandboxSha: string | null;
-        reportedSandboxSha: string | null;
-        sandboxImageStale: boolean;
-        orchestratorVersionHash: string | null;
-        sandboxUpdateAvailable: boolean;
-        orchestratorUpdateAvailable: boolean;
-        versionMismatch: boolean;
-    } | null;
+  sandboxId: string
+  projectId: string
+  ticketId: string | null
+  name: string
+  slug: string
+  sizeSlug: string
+  isDefault: boolean
+  repoUrl: string | null
+  currentStatus: string
+  workflowRunId: string | null
+  provisioningError: string | null
+  desiredState: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
+  uptimeSeconds: number
+  createdAt: string | null
+  lastUpdatedAt: string | null
+  currentInstance: {
+    sandboxInstanceId: string
+    instanceNumber: number
+    status: string
+    platform: string | null
+    runtimeName: string | null
+    flyAppName: string | null
+    flyMachineId: string | null
+    machineClass: string
+    cpuMillicores: number
+    memoryMb: number
+    diskGb: number
+    hostname: string | null
+    workloadName: string | null
+    serviceName: string | null
+    namespace: string | null
+    startedAt: string | null
+    usableAt: string | null
+    shutDownAt: string | null
+    unreachableAt: string | null
+    stoppedAt: string | null
+    lastActivityAt: string | null
+    lastReadyToSleepAt: string | null
+    sleepBlockers: string[]
+    stopReason: string | null
+    bootPhase: string | null
+    bootPhaseMessage: string | null
+    bootPhaseUpdatedAt: string | null
+    bootPhaseElapsedSec: number | null
+    bootStep: number | null
+    bootStepTotal: number
+    expectedSandboxVersion: string | null
+    expectedOrchestratorVersion: string | null
+    reportedSandboxVersion: string | null
+    reportedOrchestratorVersion: string | null
+    expectedSandboxSha: string | null
+    reportedSandboxSha: string | null
+    sandboxImageStale: boolean
+    orchestratorVersionHash: string | null
+    sandboxUpdateAvailable: boolean
+    orchestratorUpdateAvailable: boolean
+    versionMismatch: boolean
+  } | null
 }
 export type UpdateSandboxRuntimeInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type UpdateSandboxRuntimeOutput = {
-    sandboxId: string;
-    projectId: string;
-    ticketId: string | null;
-    name: string;
-    slug: string;
-    sizeSlug: string;
-    isDefault: boolean;
-    repoUrl: string | null;
-    currentStatus: string;
-    workflowRunId: string | null;
-    provisioningError: string | null;
-    desiredState: string;
-    aiBudgets: {
-        [key: string]: {
-            usd: number;
-            period: "1d" | "7d" | "30d" | "1mo";
-        };
-    } | null;
-    uptimeSeconds: number;
-    createdAt: string | null;
-    lastUpdatedAt: string | null;
-    currentInstance: {
-        sandboxInstanceId: string;
-        instanceNumber: number;
-        status: string;
-        platform: string | null;
-        runtimeName: string | null;
-        flyAppName: string | null;
-        flyMachineId: string | null;
-        machineClass: string;
-        cpuMillicores: number;
-        memoryMb: number;
-        diskGb: number;
-        hostname: string | null;
-        workloadName: string | null;
-        serviceName: string | null;
-        namespace: string | null;
-        startedAt: string | null;
-        usableAt: string | null;
-        shutDownAt: string | null;
-        unreachableAt: string | null;
-        stoppedAt: string | null;
-        lastActivityAt: string | null;
-        lastReadyToSleepAt: string | null;
-        sleepBlockers: string[];
-        stopReason: string | null;
-        bootPhase: string | null;
-        bootPhaseMessage: string | null;
-        bootPhaseUpdatedAt: string | null;
-        bootPhaseElapsedSec: number | null;
-        bootStep: number | null;
-        bootStepTotal: number;
-        expectedSandboxVersion: string | null;
-        expectedOrchestratorVersion: string | null;
-        reportedSandboxVersion: string | null;
-        reportedOrchestratorVersion: string | null;
-        expectedSandboxSha: string | null;
-        reportedSandboxSha: string | null;
-        sandboxImageStale: boolean;
-        orchestratorVersionHash: string | null;
-        sandboxUpdateAvailable: boolean;
-        orchestratorUpdateAvailable: boolean;
-        versionMismatch: boolean;
-    } | null;
+  sandboxId: string
+  projectId: string
+  ticketId: string | null
+  name: string
+  slug: string
+  sizeSlug: string
+  isDefault: boolean
+  repoUrl: string | null
+  currentStatus: string
+  workflowRunId: string | null
+  provisioningError: string | null
+  desiredState: string
+  aiBudgets: {
+    [key: string]: {
+      usd: number
+      period: '1d' | '7d' | '30d' | '1mo'
+    }
+  } | null
+  uptimeSeconds: number
+  createdAt: string | null
+  lastUpdatedAt: string | null
+  currentInstance: {
+    sandboxInstanceId: string
+    instanceNumber: number
+    status: string
+    platform: string | null
+    runtimeName: string | null
+    flyAppName: string | null
+    flyMachineId: string | null
+    machineClass: string
+    cpuMillicores: number
+    memoryMb: number
+    diskGb: number
+    hostname: string | null
+    workloadName: string | null
+    serviceName: string | null
+    namespace: string | null
+    startedAt: string | null
+    usableAt: string | null
+    shutDownAt: string | null
+    unreachableAt: string | null
+    stoppedAt: string | null
+    lastActivityAt: string | null
+    lastReadyToSleepAt: string | null
+    sleepBlockers: string[]
+    stopReason: string | null
+    bootPhase: string | null
+    bootPhaseMessage: string | null
+    bootPhaseUpdatedAt: string | null
+    bootPhaseElapsedSec: number | null
+    bootStep: number | null
+    bootStepTotal: number
+    expectedSandboxVersion: string | null
+    expectedOrchestratorVersion: string | null
+    reportedSandboxVersion: string | null
+    reportedOrchestratorVersion: string | null
+    expectedSandboxSha: string | null
+    reportedSandboxSha: string | null
+    sandboxImageStale: boolean
+    orchestratorVersionHash: string | null
+    sandboxUpdateAvailable: boolean
+    orchestratorUpdateAvailable: boolean
+    versionMismatch: boolean
+  } | null
 }
 export type UpdateWebhookEndpointInput = {
-    organizationId: string;
-    webhookEndpointId: string;
-    events?: string[] | undefined;
-    enabled?: boolean | undefined;
-    description?: (string | null) | undefined;
+  organizationId: string
+  webhookEndpointId: string
+  events?: string[] | undefined
+  enabled?: boolean | undefined
+  description?: (string | null) | undefined
 }
 export type UpdateWebhookEndpointOutput = {
-    ok: true;
+  ok: true
 }
 export type UploadDeployMetaInput = {
-    deploymentId: string;
-    files: {
-        [key: string]: string;
-    };
+  deploymentId: string
+  files: {
+    [key: string]: string
+  }
 }
 export type UploadDeployMetaOutput = {
-    filesWritten: number;
+  filesWritten: number
 }
 export type UploadsSentinelAttachmentInput = {
-    token: string;
-    kind: "csv" | "png" | "pdf" | "audio";
+  token: string
+  kind: 'csv' | 'png' | 'pdf' | 'audio'
 }
 export type UploadsSentinelAttachmentOutput = {
-    signedReadUrl: string;
-    contentType: string;
-    sentinels: string[];
+  signedReadUrl: string
+  contentType: string
+  sentinels: string[]
 }
 export type UploadStageShotInput = {
-    stageId: string;
-    panelToken: string;
-    contentType: "image/png" | "image/jpeg" | "image/webp";
-    imageBase64: string;
+  stageId: string
+  panelToken: string
+  contentType: 'image/png' | 'image/jpeg' | 'image/webp'
+  imageBase64: string
 }
 export type UploadStageShotOutput = {
-    screenshotKey: string;
+  screenshotKey: string
 }
 export type UploadsTinyPngInput = {
-    uploadUrl: string;
-    uploadMethod: string;
+  uploadUrl: string
+  uploadMethod: string
 }
 export type UploadsTinyPngOutput = {
-    status: number;
-    bytes: number;
+  status: number
+  bytes: number
 }
 export type UpsertProjectAgentSessionInput = {
-    projectId: string;
-    sessionId: string;
-    title?: (string | null) | undefined;
+  projectId: string
+  sessionId: string
+  title?: (string | null) | undefined
 }
 export type UpsertProjectAgentSessionOutput = {
-    exists: boolean;
-    agentSessionId: string | null;
-    sessionId: string | null;
-    title: string | null;
-    sandboxId: string | null;
-    handoffStorageBucket: string | null;
-    handoffObjectKey: string | null;
-    handoffContentType: string | null;
-    handoffGeneratedAt: string | null;
-    lastAccessedAt: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
+  exists: boolean
+  agentSessionId: string | null
+  sessionId: string | null
+  title: string | null
+  sandboxId: string | null
+  handoffStorageBucket: string | null
+  handoffObjectKey: string | null
+  handoffContentType: string | null
+  handoffGeneratedAt: string | null
+  lastAccessedAt: string | null
+  createdAt: string | null
+  updatedAt: string | null
 }
-export type UsernameClaimScenarioOutput = { username: string; claimedThisRun: boolean; }
+export type UsernameClaimScenarioOutput = {
+  username: string
+  claimedThisRun: boolean
+}
 export type VariableSchema_authAllowedEmailDomains = string
 export type VariableSchema_authInviteOnly = string
 export type VariableSchema_authSocialEnabled = string
@@ -8784,455 +9665,1219 @@ export type VariableSchema_gitProjectsOrg = string
 export type VariableSchema_gitServerUrl = string
 export type VariableSchema_stageSecretsKvId = string
 export type VerifyHarnessBuildInput = {
-    sandboxHostname: string;
-    builderToken: string;
-    runId: string;
+  sandboxHostname: string
+  builderToken: string
+  runId: string
 }
 export type VerifyHarnessBuildOutput = {
-    rendered: boolean | null;
-    loginOk: boolean | null;
-    screenshotCount: number;
-    screenshots: {
-        name: string;
-        pagePath: string;
-        objectKey: string;
-        width?: (number | null) | undefined;
-        height?: (number | null) | undefined;
-        sizeBytes?: (number | null) | undefined;
-        httpStatus?: (number | null) | undefined;
-    }[];
-    screenshotMs: number;
-    scenariosOk: boolean | null;
-    scenarioCount: number | null;
+  rendered: boolean | null
+  loginOk: boolean | null
+  screenshotCount: number
+  screenshots: {
+    name: string
+    pagePath: string
+    objectKey: string
+    width?: (number | null) | undefined
+    height?: (number | null) | undefined
+    sizeBytes?: (number | null) | undefined
+    httpStatus?: (number | null) | undefined
+  }[]
+  screenshotMs: number
+  scenariosOk: boolean | null
+  scenarioCount: number | null
 }
 export type WaitForBuildCompleteWorkflowInput = {
-    sandboxHostname: string;
-    builderToken: string;
-    projectId: string;
+  sandboxHostname: string
+  builderToken: string
+  projectId: string
 }
 export type WaitForBuildCompleteWorkflowOutput = {
-    buildComplete: boolean;
-    summary: string | null;
-    elapsedMs: number;
-    milestones: number | null;
+  buildComplete: boolean
+  summary: string | null
+  elapsedMs: number
+  milestones: number | null
 }
 export type WaitForBuildHostInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type WaitForBuildHostOutput = {
-    hostId: string | null;
+  hostId: string | null
 }
 export type WaitForHarnessDeployInput = {
-    deploymentId: string;
+  deploymentId: string
 }
 export type WaitForHarnessDeployOutput = {
-    deployOk: boolean;
-    hostname: string | null;
-    status: string;
+  deployOk: boolean
+  hostname: string | null
+  status: string
 }
 export type WaitForInitialDeployInput = {
-    projectId: string;
-    deploymentId: string;
+  projectId: string
+  deploymentId: string
 }
 export type WaitForInitialDeployOutput = {
-    deploymentId: string;
-    status: string;
+  deploymentId: string
+  status: string
 }
 export type WaitForOrchestratorReadyInput = {
-    sandboxId: string;
+  sandboxId: string
 }
 export type WaitForOrchestratorReadyOutput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
-    hostname: string;
+  sandboxId: string
+  sandboxInstanceId: string
+  hostname: string
 }
 export type WaitForRunningSandboxInput = {
-    projectId: string;
+  projectId: string
 }
 export type WaitForRunningSandboxOutput = {
-    sandboxId: string;
-    sandboxHostname: string;
-    builderToken: string;
+  sandboxId: string
+  sandboxHostname: string
+  builderToken: string
 }
 export type WaitForSandboxPlacementInput = {
-    sandboxId: string;
-    userId: string;
+  sandboxId: string
+  userId: string
 }
 export type WaitForSandboxPlacementOutput = {
-    placed: boolean;
+  placed: boolean
 }
 export type WaitForSandboxReadyInput = {
-    sandboxId: string;
-    sandboxInstanceId: string;
+  sandboxId: string
+  sandboxInstanceId: string
 }
 export type WaitForSandboxReadyOutput = {
-    ready: boolean;
-    reason: "ready" | "startup-failed" | "stopped" | "timeout";
-    sandboxId: string;
-    hostname: string | null;
-    error: string | null;
+  ready: boolean
+  reason: 'ready' | 'startup-failed' | 'stopped' | 'timeout'
+  sandboxId: string
+  hostname: string | null
+  error: string | null
 }
 export type WaitRuntimeHealthyInput = {
-    deploymentId: string;
-    instanceIds: string[];
+  deploymentId: string
+  instanceIds: string[]
 }
 export type WaitRuntimeHealthyOutput = {
-    allHealthy: boolean;
-    healthyIds: string[];
-    unhealthyIds: string[];
+  allHealthy: boolean
+  healthyIds: string[]
+  unhealthyIds: string[]
 }
-export type WebhookDeliveryScenarioOutput = { organizationId: string; deliveryId: string; status: string; }
-export type WebhookRejectsUncredentialedScenarioInput = { path: string; body: unknown; headers?: Record<string, string> | undefined; contains?: string | undefined; }
-export type WebhookRejectsUncredentialedScenarioOutput = { rejected: true; }
+export type WebhookDeliveryScenarioOutput = {
+  organizationId: string
+  deliveryId: string
+  status: string
+}
+export type WebhookRejectsUncredentialedScenarioInput = {
+  path: string
+  body: unknown
+  headers?: Record<string, string> | undefined
+  contains?: string | undefined
+}
+export type WebhookRejectsUncredentialedScenarioOutput = { rejected: true }
 export type WorkflowApproverInput = {
-    workflowName: string;
-    runId: string;
-    reason: string;
-    decision: unknown;
+  workflowName: string
+  runId: string
+  reason: string
+  decision: unknown
 }
 export type WorkflowApproverOutput = {
-    ok: true;
+  ok: true
 }
 export type WorkflowRunnerInput = {
-    workflowName: string;
-    data?: unknown | undefined;
+  workflowName: string
+  data?: unknown | undefined
 }
 export type WorkflowStarterInput = {
-    workflowName: string;
-    data?: unknown | undefined;
+  workflowName: string
+  data?: unknown | undefined
 }
 export type WorkflowStarterOutput = {
-    runId: string;
+  runId: string
 }
 export type WorkflowStatusCheckerInput = {
-    workflowName: string;
-    runId: string;
+  workflowName: string
+  runId: string
 }
 export type WorkflowStatusStreamFullInput = {
-    workflowName: string;
-    runId: string;
+  workflowName: string
+  runId: string
 }
 export type WorkflowStatusStreamInput = {
-    workflowName: string;
-    runId: string;
+  workflowName: string
+  runId: string
 }
 
 interface RPCHandler<I, O> {
-    input: I;
-    output: O;
+  input: I
+  output: O
 }
 
 export type RPCMap = {
-  readonly 'adminCreateOrg': RPCHandler<AdminCreateOrgInput, AdminCreateOrgOutput>,
-  readonly 'adminCreateStripePrice': RPCHandler<AdminCreateStripePriceInput, AdminCreateStripePriceOutput>,
-  readonly 'adminGetGitE2eToken': RPCHandler<AdminGetGitE2eTokenInput, AdminGetGitE2eTokenOutput>,
-  readonly 'adminGetPlans': RPCHandler<AdminGetPlansInput, AdminGetPlansOutput>,
-  readonly 'adminGetStats': RPCHandler<AdminGetStatsInput, AdminGetStatsOutput>,
-  readonly 'adminGrantOrgCredit': RPCHandler<AdminGrantOrgCreditInput, AdminGrantOrgCreditOutput>,
-  readonly 'adminListApps': RPCHandler<AdminListAppsInput, AdminListAppsOutput>,
-  readonly 'adminListMachines': RPCHandler<AdminListMachinesInput, AdminListMachinesOutput>,
-  readonly 'adminListOpenApis': RPCHandler<AdminListOpenApisInput, AdminListOpenApisOutput>,
-  readonly 'adminListOrgs': RPCHandler<AdminListOrgsInput, AdminListOrgsOutput>,
-  readonly 'adminListRuntimeReleases': RPCHandler<AdminListRuntimeReleasesInput, AdminListRuntimeReleasesOutput>,
-  readonly 'adminListSandboxes': RPCHandler<AdminListSandboxesInput, AdminListSandboxesOutput>,
-  readonly 'adminListSentEmails': RPCHandler<AdminListSentEmailsInput, AdminListSentEmailsOutput>,
-  readonly 'adminListUsers': RPCHandler<AdminListUsersInput, AdminListUsersOutput>,
-  readonly 'adminProvisionTestUser': RPCHandler<AdminProvisionTestUserInput, AdminProvisionTestUserOutput>,
-  readonly 'adminSetOrgPlan': RPCHandler<AdminSetOrgPlanInput, AdminSetOrgPlanOutput>,
-  readonly 'adminSetOrgQuota': RPCHandler<AdminSetOrgQuotaInput, AdminSetOrgQuotaOutput>,
-  readonly 'adminSetOrgSuspensionGrace': RPCHandler<AdminSetOrgSuspensionGraceInput, AdminSetOrgSuspensionGraceOutput>,
-  readonly 'adminSetProjectShowcase': RPCHandler<AdminSetProjectShowcaseInput, AdminSetProjectShowcaseOutput>,
-  readonly 'adminSetUserRole': RPCHandler<AdminSetUserRoleInput, AdminSetUserRoleOutput>,
-  readonly 'adminStartOpenApiEnrichment': RPCHandler<AdminStartOpenApiEnrichmentInput, AdminStartOpenApiEnrichmentOutput>,
-  readonly 'adminUpdatePlanStripePrice': RPCHandler<AdminUpdatePlanStripePriceInput, AdminUpdatePlanStripePriceOutput>,
-  readonly 'cleanupTestUsers': RPCHandler<CleanupTestUsersInput, CleanupTestUsersOutput>,
-  readonly 'getMachineConfig': RPCHandler<GetMachineConfigInput, GetMachineConfigOutput>,
-  readonly 'updateMachineConfig': RPCHandler<UpdateMachineConfigInput, UpdateMachineConfigOutput>,
-  readonly 'listAiModels': RPCHandler<ListAiModelsInput, ListAiModelsOutput>,
-  readonly 'transcribeAudio': RPCHandler<TranscribeAudioInput, TranscribeAudioOutput>,
-  readonly 'recordFabricAnalyticsEvents': RPCHandler<RecordFabricAnalyticsEventsInput, RecordFabricAnalyticsEventsOutput>,
-  readonly 'changeBillingPlan': RPCHandler<ChangeBillingPlanInput, ChangeBillingPlanOutput>,
-  readonly 'createAiTopupSession': RPCHandler<CreateAiTopupSessionInput, CreateAiTopupSessionOutput>,
-  readonly 'createBillingPortalSession': RPCHandler<CreateBillingPortalSessionInput, CreateBillingPortalSessionOutput>,
-  readonly 'createBillingCheckoutSession': RPCHandler<CreateBillingCheckoutSessionInput, CreateBillingCheckoutSessionOutput>,
-  readonly 'getAiUsageLedger': RPCHandler<GetAiUsageLedgerInput, GetAiUsageLedgerOutput>,
-  readonly 'getBillingSummary': RPCHandler<GetBillingSummaryInput, GetBillingSummaryOutput>,
-  readonly 'getBillingInvoices': RPCHandler<GetBillingInvoicesInput, GetBillingInvoicesOutput>,
-  readonly 'getWelcomeCreditOffer': RPCHandler<null, GetWelcomeCreditOfferOutput>,
-  readonly 'updateAutoRecharge': RPCHandler<UpdateAutoRechargeInput, UpdateAutoRechargeOutput>,
-  readonly 'deleteProjectCascadeValue': RPCHandler<DeleteProjectCascadeValueInput, DeleteProjectCascadeValueOutput>,
-  readonly 'getProjectCascadeSchema': RPCHandler<GetProjectCascadeSchemaInput, GetProjectCascadeSchemaOutput>,
-  readonly 'listProjectCascadeValues': RPCHandler<ListProjectCascadeValuesInput, ListProjectCascadeValuesOutput>,
-  readonly 'reconcileProjectCascade': RPCHandler<ReconcileProjectCascadeInput, ReconcileProjectCascadeOutput>,
-  readonly 'setProjectCascadeValue': RPCHandler<SetProjectCascadeValueInput, SetProjectCascadeValueOutput>,
-  readonly 'answerChangeQuestion': RPCHandler<AnswerChangeQuestionInput, AnswerChangeQuestionOutput>,
-  readonly 'askChangeQuestion': RPCHandler<AskChangeQuestionInput, AskChangeQuestionOutput>,
-  readonly 'attachChangeShot': RPCHandler<AttachChangeShotInput, AttachChangeShotOutput>,
-  readonly 'claimChanges': RPCHandler<ClaimChangesInput, ClaimChangesOutput>,
-  readonly 'completeChange': RPCHandler<CompleteChangeInput, CompleteChangeOutput>,
-  readonly 'configureStageChanges': RPCHandler<ConfigureStageChangesInput, ConfigureStageChangesOutput>,
-  readonly 'createChange': RPCHandler<CreateChangeInput, CreateChangeOutput>,
-  readonly 'createPanelLink': RPCHandler<CreatePanelLinkInput, CreatePanelLinkOutput>,
-  readonly 'getChange': RPCHandler<GetChangeInput, GetChangeOutput>,
-  readonly 'listChanges': RPCHandler<ListChangesInput, ListChangesOutput>,
-  readonly 'setChangeStatus': RPCHandler<SetChangeStatusInput, SetChangeStatusOutput>,
-  readonly 'confirmCliAuth': RPCHandler<ConfirmCliAuthInput, ConfirmCliAuthOutput>,
-  readonly 'getCliAuthStatus': RPCHandler<GetCliAuthStatusInput, GetCliAuthStatusOutput>,
-  readonly 'pollCliAuth': RPCHandler<PollCliAuthInput, PollCliAuthOutput>,
-  readonly 'rejectCliAuth': RPCHandler<RejectCliAuthInput, RejectCliAuthOutput>,
-  readonly 'requestCliAuth': RPCHandler<null, RequestCliAuthOutput>,
-  readonly 'deleteContentFile': RPCHandler<DeleteContentFileInput, DeleteContentFileOutput>,
-  readonly 'getChatAttachmentUrl': RPCHandler<GetChatAttachmentUrlInput, GetChatAttachmentUrlOutput>,
-  readonly 'getContentUploadUrl': RPCHandler<GetContentUploadUrlInput, GetContentUploadUrlOutput>,
-  readonly 'recheckDeployConfig': RPCHandler<RecheckDeployConfigInput, RecheckDeployConfigOutput>,
-  readonly 'applyDeployment': RPCHandler<ApplyDeploymentInput, ApplyDeploymentOutput>,
-  readonly 'dismissDeployment': RPCHandler<DismissDeploymentInput, DismissDeploymentOutput>,
-  readonly 'getDeploymentBuildLog': RPCHandler<GetDeploymentBuildLogInput, GetDeploymentBuildLogOutput>,
-  readonly 'getDeploymentItemMeta': RPCHandler<GetDeploymentItemMetaInput, GetDeploymentItemMetaOutput>,
-  readonly 'getDeploymentSecurityAudit': RPCHandler<GetDeploymentSecurityAuditInput, GetDeploymentSecurityAuditOutput>,
-  readonly 'getDeploymentStatus': RPCHandler<GetDeploymentStatusInput, GetDeploymentStatusOutput>,
-  readonly 'listDeploymentTargets': RPCHandler<ListDeploymentTargetsInput, ListDeploymentTargetsOutput>,
-  readonly 'listDeploymentWorkers': RPCHandler<ListDeploymentWorkersInput, ListDeploymentWorkersOutput>,
-  readonly 'listDeployments': RPCHandler<ListDeploymentsInput, ListDeploymentsOutput>,
-  readonly 'rollbackDeployment': RPCHandler<RollbackDeploymentInput, RollbackDeploymentOutput>,
-  readonly 'fabricCliDeployments': RPCHandler<FabricCliDeploymentsInput, FabricCliDeploymentsOutput>,
-  readonly 'fabricCliProjects': RPCHandler<FabricCliProjectsInput, FabricCliProjectsOutput>,
-  readonly 'getSession': RPCHandler<GetSessionInput, GetSessionOutput>,
-  readonly 'completeGitProviderLinking': RPCHandler<CompleteGitProviderLinkingInput, CompleteGitProviderLinkingOutput>,
-  readonly 'listLinkedGitAccounts': RPCHandler<ListLinkedGitAccountsInput, ListLinkedGitAccountsOutput>,
-  readonly 'mintRepoWriteCredential': RPCHandler<MintRepoWriteCredentialInput, MintRepoWriteCredentialOutput>,
-  readonly 'startGitProviderLinking': RPCHandler<StartGitProviderLinkingInput, StartGitProviderLinkingOutput>,
-  readonly 'unlinkGitProviderAccount': RPCHandler<UnlinkGitProviderAccountInput, UnlinkGitProviderAccountOutput>,
-  readonly 'checkGithubInstall': RPCHandler<CheckGithubInstallInput, CheckGithubInstallOutput>,
-  readonly 'getGithubInstallation': RPCHandler<GetGithubInstallationInput, GetGithubInstallationOutput>,
-  readonly 'linkGithubInstallation': RPCHandler<LinkGithubInstallationInput, LinkGithubInstallationOutput>,
-  readonly 'listGithubRepos': RPCHandler<ListGithubReposInput, ListGithubReposOutput>,
-  readonly 'listLinkableGithubInstallations': RPCHandler<ListLinkableGithubInstallationsInput, ListLinkableGithubInstallationsOutput>,
-  readonly 'startGithubInstall': RPCHandler<StartGithubInstallInput, StartGithubInstallOutput>,
-  readonly 'unlinkGithubInstallation': RPCHandler<UnlinkGithubInstallationInput, UnlinkGithubInstallationOutput>,
-  readonly 'analyzeHarnessRun': RPCHandler<AnalyzeHarnessRunInput, AnalyzeHarnessRunOutput>,
-  readonly 'captureHarnessRunSession': RPCHandler<CaptureHarnessRunSessionInput, CaptureHarnessRunSessionOutput>,
-  readonly 'createHarnessScenario': RPCHandler<CreateHarnessScenarioInput, CreateHarnessScenarioOutput>,
-  readonly 'critiqueScreenshot': RPCHandler<CritiqueScreenshotInput, CritiqueScreenshotOutput>,
-  readonly 'deleteHarnessRun': RPCHandler<DeleteHarnessRunInput, DeleteHarnessRunOutput>,
-  readonly 'generateAppIdea': RPCHandler<GenerateAppIdeaInput, GenerateAppIdeaOutput>,
-  readonly 'getHarnessRunScreenshots': RPCHandler<GetHarnessRunScreenshotsInput, GetHarnessRunScreenshotsOutput>,
-  readonly 'getHarnessRunSession': RPCHandler<GetHarnessRunSessionInput, GetHarnessRunSessionOutput>,
-  readonly 'getHarnessRunsCost': RPCHandler<GetHarnessRunsCostInput, GetHarnessRunsCostOutput>,
-  readonly 'getHarnessScenario': RPCHandler<GetHarnessScenarioInput, GetHarnessScenarioOutput>,
-  readonly 'listHarnessRunAnalyses': RPCHandler<ListHarnessRunAnalysesInput, ListHarnessRunAnalysesOutput>,
-  readonly 'listHarnessRuns': RPCHandler<ListHarnessRunsInput, ListHarnessRunsOutput>,
-  readonly 'listHarnessScenarios': RPCHandler<ListHarnessScenariosInput, ListHarnessScenariosOutput>,
-  readonly 'preflightHarnessModels': RPCHandler<PreflightHarnessModelsInput, PreflightHarnessModelsOutput>,
-  readonly 'publishAgentBundle': RPCHandler<PublishAgentBundleInput, PublishAgentBundleOutput>,
-  readonly 'readHarnessCapabilities': RPCHandler<ReadHarnessCapabilitiesInput, ReadHarnessCapabilitiesOutput>,
-  readonly 'requestHarnessScreenshotUpload': RPCHandler<RequestHarnessScreenshotUploadInput, RequestHarnessScreenshotUploadOutput>,
-  readonly 'sleepHarnessSandbox': RPCHandler<SleepHarnessSandboxInput, SleepHarnessSandboxOutput>,
-  readonly 'triggerHarness': RPCHandler<TriggerHarnessInput, TriggerHarnessOutput>,
-  readonly 'updateHarnessScenario': RPCHandler<UpdateHarnessScenarioInput, UpdateHarnessScenarioOutput>,
-  readonly 'listNotifications': RPCHandler<ListNotificationsInput, ListNotificationsOutput>,
-  readonly 'markNotificationsRead': RPCHandler<MarkNotificationsReadInput, MarkNotificationsReadOutput>,
-  readonly 'acceptInvitation': RPCHandler<AcceptInvitationInput, AcceptInvitationOutput>,
-  readonly 'addOrganizationMember': RPCHandler<AddOrganizationMemberInput, AddOrganizationMemberOutput>,
-  readonly 'createOrgAiBudgetRule': RPCHandler<CreateOrgAiBudgetRuleInput, CreateOrgAiBudgetRuleOutput>,
-  readonly 'createOrganization': RPCHandler<CreateOrganizationInput, CreateOrganizationOutput>,
-  readonly 'deleteOrgAiBudgetRule': RPCHandler<DeleteOrgAiBudgetRuleInput, DeleteOrgAiBudgetRuleOutput>,
-  readonly 'deleteOrganization': RPCHandler<DeleteOrganizationInput, DeleteOrganizationOutput>,
-  readonly 'getDeveloperLiteLLMKey': RPCHandler<GetDeveloperLiteLLMKeyInput, GetDeveloperLiteLLMKeyOutput>,
-  readonly 'getInvitation': RPCHandler<GetInvitationInput, GetInvitationOutput>,
-  readonly 'getOrgAiUsage': RPCHandler<GetOrgAiUsageInput, GetOrgAiUsageOutput>,
-  readonly 'getOrgIssueSummary': RPCHandler<GetOrgIssueSummaryInput, GetOrgIssueSummaryOutput>,
-  readonly 'inviteOrganizationMember': RPCHandler<InviteOrganizationMemberInput, InviteOrganizationMemberOutput>,
-  readonly 'listMyOrganizations': RPCHandler<ListMyOrganizationsInput, ListMyOrganizationsOutput>,
-  readonly 'listOrgAiBudgetRules': RPCHandler<ListOrgAiBudgetRulesInput, ListOrgAiBudgetRulesOutput>,
-  readonly 'listOrgAiBudgetTargets': RPCHandler<ListOrgAiBudgetTargetsInput, ListOrgAiBudgetTargetsOutput>,
-  readonly 'listOrganizationInvitations': RPCHandler<ListOrganizationInvitationsInput, ListOrganizationInvitationsOutput>,
-  readonly 'listOrganizationMembers': RPCHandler<ListOrganizationMembersInput, ListOrganizationMembersOutput>,
-  readonly 'lookupOrganizationBySlug': RPCHandler<LookupOrganizationBySlugInput, LookupOrganizationBySlugOutput>,
-  readonly 'removeOrganizationMember': RPCHandler<RemoveOrganizationMemberInput, RemoveOrganizationMemberOutput>,
-  readonly 'renameOrganizationSlug': RPCHandler<RenameOrganizationSlugInput, RenameOrganizationSlugOutput>,
-  readonly 'revokeOrganizationInvitation': RPCHandler<RevokeOrganizationInvitationInput, RevokeOrganizationInvitationOutput>,
-  readonly 'searchOrgMemberCandidates': RPCHandler<SearchOrgMemberCandidatesInput, SearchOrgMemberCandidatesOutput>,
-  readonly 'setMemberAiBudgets': RPCHandler<SetMemberAiBudgetsInput, SetMemberAiBudgetsOutput>,
-  readonly 'setOrgAiSettings': RPCHandler<SetOrgAiSettingsInput, SetOrgAiSettingsOutput>,
-  readonly 'updateOrgAiBudgetRule': RPCHandler<UpdateOrgAiBudgetRuleInput, UpdateOrgAiBudgetRuleOutput>,
-  readonly 'updateOrganizationMemberRole': RPCHandler<UpdateOrganizationMemberRoleInput, UpdateOrganizationMemberRoleOutput>,
-  readonly 'recordMachineHeartbeat': RPCHandler<RecordMachineHeartbeatInput, RecordMachineHeartbeatOutput>,
-  readonly 'registerMachineHost': RPCHandler<RegisterMachineHostInput, RegisterMachineHostOutput>,
-  readonly 'createProject': RPCHandler<CreateProjectInput, CreateProjectOutput>,
-  readonly 'deleteProject': RPCHandler<DeleteProjectInput, DeleteProjectOutput>,
-  readonly 'ensureProjectAspirations': RPCHandler<EnsureProjectAspirationsInput, EnsureProjectAspirationsOutput>,
-  readonly 'getProjectAspirations': RPCHandler<GetProjectAspirationsInput, GetProjectAspirationsOutput>,
-  readonly 'getProjectAssetUploadUrl': RPCHandler<GetProjectAssetUploadUrlInput, GetProjectAssetUploadUrlOutput>,
-  readonly 'getProjectCreationLogs': RPCHandler<GetProjectCreationLogsInput, GetProjectCreationLogsOutput>,
-  readonly 'getProjectDeployments': RPCHandler<GetProjectDeploymentsInput, GetProjectDeploymentsOutput>,
-  readonly 'getProjectDetails': RPCHandler<GetProjectDetailsInput, GetProjectDetailsOutput>,
-  readonly 'getProjectIntakeStatus': RPCHandler<GetProjectIntakeStatusInput, GetProjectIntakeStatusOutput>,
-  readonly 'getProjectStatus': RPCHandler<GetProjectStatusInput, GetProjectStatusOutput>,
-  readonly 'getProjectUsageSummary': RPCHandler<GetProjectUsageSummaryInput, GetProjectUsageSummaryOutput>,
-  readonly 'importProject': RPCHandler<ImportProjectInput, ImportProjectOutput>,
-  readonly 'listProjectMetrics': RPCHandler<ListProjectMetricsInput, ListProjectMetricsOutput>,
-  readonly 'listProjectTemplates': RPCHandler<ListProjectTemplatesInput, ListProjectTemplatesOutput>,
-  readonly 'listProjects': RPCHandler<ListProjectsInput, ListProjectsOutput>,
-  readonly 'listShowcaseApps': RPCHandler<ListShowcaseAppsInput, ListShowcaseAppsOutput>,
-  readonly 'lookupProjectBySlug': RPCHandler<LookupProjectBySlugInput, LookupProjectBySlugOutput>,
-  readonly 'markProjectInitialBuildComplete': RPCHandler<MarkProjectInitialBuildCompleteInput, MarkProjectInitialBuildCompleteOutput>,
-  readonly 'provisionRepo': RPCHandler<ProvisionRepoInput, ProvisionRepoOutput>,
-  readonly 'reactToProjectAspiration': RPCHandler<ReactToProjectAspirationInput, ReactToProjectAspirationOutput>,
-  readonly 'transferProject': RPCHandler<TransferProjectInput, TransferProjectOutput>,
-  readonly 'updateProject': RPCHandler<UpdateProjectInput, UpdateProjectOutput>,
-  readonly 'createReviewFixTicket': RPCHandler<CreateReviewFixTicketInput, CreateReviewFixTicketOutput>,
-  readonly 'crawlSiteResult': RPCHandler<CrawlSiteResultInput, CrawlSiteResultOutput>,
-  readonly 'crawlSiteStart': RPCHandler<CrawlSiteStartInput, CrawlSiteStartOutput>,
-  readonly 'createSandboxTicket': RPCHandler<CreateSandboxTicketInput, CreateSandboxTicketOutput>,
-  readonly 'createSandbox': RPCHandler<CreateSandboxInput, CreateSandboxOutput>,
-  readonly 'deleteSandbox': RPCHandler<DeleteSandboxInput, DeleteSandboxOutput>,
-  readonly 'generateLogoMarks': RPCHandler<GenerateLogoMarksInput, GenerateLogoMarksOutput>,
-  readonly 'getDeletedSandbox': RPCHandler<GetDeletedSandboxInput, GetDeletedSandboxOutput>,
-  readonly 'getSandboxBaseBranchStatus': RPCHandler<GetSandboxBaseBranchStatusInput, GetSandboxBaseBranchStatusOutput>,
-  readonly 'getSandboxBuildGate': RPCHandler<GetSandboxBuildGateInput, GetSandboxBuildGateOutput>,
-  readonly 'getSandboxBuilderToken': RPCHandler<GetSandboxBuilderTokenInput, GetSandboxBuilderTokenOutput>,
-  readonly 'getSandboxCascadeEnv': RPCHandler<GetSandboxCascadeEnvInput, GetSandboxCascadeEnvOutput>,
-  readonly 'getSandboxMetrics': RPCHandler<GetSandboxMetricsInput, GetSandboxMetricsOutput>,
-  readonly 'getSandboxMilestoneSpend': RPCHandler<GetSandboxMilestoneSpendInput, GetSandboxMilestoneSpendOutput>,
-  readonly 'getSandboxProjectImports': RPCHandler<GetSandboxProjectImportsInput, GetSandboxProjectImportsOutput>,
-  readonly 'getSandboxProjectWishes': RPCHandler<GetSandboxProjectWishesInput, GetSandboxProjectWishesOutput>,
-  readonly 'getSandboxTicket': RPCHandler<GetSandboxTicketInput, GetSandboxTicketOutput>,
-  readonly 'getSandbox': RPCHandler<GetSandboxInput, GetSandboxOutput>,
-  readonly 'ingestOrchestratorLogs': RPCHandler<IngestOrchestratorLogsInput, IngestOrchestratorLogsOutput>,
-  readonly 'ingestSandboxLogs': RPCHandler<IngestSandboxLogsInput, IngestSandboxLogsOutput>,
-  readonly 'listMachineSizes': RPCHandler<ListMachineSizesInput, ListMachineSizesOutput>,
-  readonly 'listProjectRepoBranches': RPCHandler<ListProjectRepoBranchesInput, ListProjectRepoBranchesOutput>,
-  readonly 'listSandboxProjectTickets': RPCHandler<ListSandboxProjectTicketsInput, ListSandboxProjectTicketsOutput>,
-  readonly 'listSandboxes': RPCHandler<ListSandboxesInput, ListSandboxesOutput>,
-  readonly 'notifyOrchestratorReady': RPCHandler<NotifyOrchestratorReadyInput, NotifyOrchestratorReadyOutput>,
-  readonly 'reportSandboxBootPhase': RPCHandler<ReportSandboxBootPhaseInput, ReportSandboxBootPhaseOutput>,
-  readonly 'reportSandboxRuntime': RPCHandler<ReportSandboxRuntimeInput, ReportSandboxRuntimeOutput>,
-  readonly 'reportSandboxSecurityAudit': RPCHandler<ReportSandboxSecurityAuditInput, ReportSandboxSecurityAuditOutput>,
-  readonly 'reportSandboxSessionUploaded': RPCHandler<ReportSandboxSessionUploadedInput, ReportSandboxSessionUploadedOutput>,
-  readonly 'requestSandboxScreenshotUpload': RPCHandler<RequestSandboxScreenshotUploadInput, RequestSandboxScreenshotUploadOutput>,
-  readonly 'requestSandboxSessionUpload': RPCHandler<RequestSandboxSessionUploadInput, RequestSandboxSessionUploadOutput>,
-  readonly 'resolveSandboxGitCredentials': RPCHandler<ResolveSandboxGitCredentialsInput, ResolveSandboxGitCredentialsOutput>,
-  readonly 'resolveSandboxSessionRestore': RPCHandler<ResolveSandboxSessionRestoreInput, ResolveSandboxSessionRestoreOutput>,
-  readonly 'resumeSandbox': RPCHandler<ResumeSandboxInput, ResumeSandboxOutput>,
-  readonly 'setSandboxAiBudgets': RPCHandler<SetSandboxAiBudgetsInput, SetSandboxAiBudgetsOutput>,
-  readonly 'setSandboxSize': RPCHandler<SetSandboxSizeInput, SetSandboxSizeOutput>,
-  readonly 'setSandboxTicketSpec': RPCHandler<SetSandboxTicketSpecInput, SetSandboxTicketSpecOutput>,
-  readonly 'sleepSandbox': RPCHandler<SleepSandboxInput, SleepSandboxOutput>,
-  readonly 'stockImageSearch': RPCHandler<StockImageSearchInput, StockImageSearchOutput>,
-  readonly 'translateMessages': RPCHandler<TranslateMessagesInput, TranslateMessagesOutput>,
-  readonly 'updateSandboxOrchestrator': RPCHandler<UpdateSandboxOrchestratorInput, UpdateSandboxOrchestratorOutput>,
-  readonly 'deleteScenarioRun': RPCHandler<DeleteScenarioRunInput, DeleteScenarioRunOutput>,
-  readonly 'getScenarioRun': RPCHandler<GetScenarioRunInput, GetScenarioRunOutput>,
-  readonly 'listScenarioRuns': RPCHandler<ListScenarioRunsInput, ListScenarioRunsOutput>,
-  readonly 'publishScenarioRun': RPCHandler<PublishScenarioRunInput, PublishScenarioRunOutput>,
-  readonly 'deleteAIKey': RPCHandler<DeleteAIKeyInput, DeleteAIKeyOutput>,
-  readonly 'listAIKeys': RPCHandler<ListAIKeysInput, ListAIKeysOutput>,
-  readonly 'setAIKey': RPCHandler<SetAIKeyInput, SetAIKeyOutput>,
-  readonly 'acknowledgeStageSealingKey': RPCHandler<AcknowledgeStageSealingKeyInput, AcknowledgeStageSealingKeyOutput>,
-  readonly 'addStageCustomHostname': RPCHandler<AddStageCustomHostnameInput, AddStageCustomHostnameOutput>,
-  readonly 'applyStageCascade': RPCHandler<ApplyStageCascadeInput, ApplyStageCascadeOutput>,
-  readonly 'configureStageDeployMode': RPCHandler<ConfigureStageDeployModeInput, ConfigureStageDeployModeOutput>,
-  readonly 'createStageIngestToken': RPCHandler<CreateStageIngestTokenInput, CreateStageIngestTokenOutput>,
-  readonly 'createStageOperatorToken': RPCHandler<CreateStageOperatorTokenInput, CreateStageOperatorTokenOutput>,
-  readonly 'createStage': RPCHandler<CreateStageInput, CreateStageOutput>,
-  readonly 'deleteStageAgentThread': RPCHandler<DeleteStageAgentThreadInput, DeleteStageAgentThreadOutput>,
-  readonly 'deleteStageSecret': RPCHandler<DeleteStageSecretInput, DeleteStageSecretOutput>,
-  readonly 'deleteStage': RPCHandler<DeleteStageInput, DeleteStageOutput>,
-  readonly 'deployByStageKind': RPCHandler<DeployByStageKindInput, DeployByStageKindOutput>,
-  readonly 'deployStage': RPCHandler<DeployStageInput, DeployStageOutput>,
-  readonly 'getFabricLogsByStageKind': RPCHandler<GetFabricLogsByStageKindInput, GetFabricLogsByStageKindOutput>,
-  readonly 'getFabricLogs': RPCHandler<GetFabricLogsInput, GetFabricLogsOutput>,
-  readonly 'getProjectMetricsByStageKind': RPCHandler<GetProjectMetricsByStageKindInput, GetProjectMetricsByStageKindOutput>,
-  readonly 'getProjectMetrics': RPCHandler<GetProjectMetricsInput, GetProjectMetricsOutput>,
-  readonly 'getStageAgentThreadMessages': RPCHandler<GetStageAgentThreadMessagesInput, GetStageAgentThreadMessagesOutput>,
-  readonly 'getStageAgentThreadRuns': RPCHandler<GetStageAgentThreadRunsInput, GetStageAgentThreadRunsOutput>,
-  readonly 'getStageAllMeta': RPCHandler<GetStageAllMetaInput, GetStageAllMetaOutput>,
-  readonly 'getStageAuditFilters': RPCHandler<GetStageAuditFiltersInput, GetStageAuditFiltersOutput>,
-  readonly 'getStageAudits': RPCHandler<GetStageAuditsInput, GetStageAuditsOutput>,
-  readonly 'getStageAuthProviders': RPCHandler<GetStageAuthProvidersInput, GetStageAuthProvidersOutput>,
-  readonly 'getStageCascadeStatus': RPCHandler<GetStageCascadeStatusInput, GetStageCascadeStatusOutput>,
-  readonly 'getStageConsoleSecret': RPCHandler<GetStageConsoleSecretInput, GetStageConsoleSecretOutput>,
-  readonly 'getStageConsoleVariable': RPCHandler<GetStageConsoleVariableInput, GetStageConsoleVariableOutput>,
-  readonly 'getStageCredentialStatus': RPCHandler<GetStageCredentialStatusInput, GetStageCredentialStatusOutput>,
-  readonly 'getStageDatabaseSchemaSnapshot': RPCHandler<GetStageDatabaseSchemaSnapshotInput, GetStageDatabaseSchemaSnapshotOutput>,
-  readonly 'getStageDatabaseSchema': RPCHandler<GetStageDatabaseSchemaInput, GetStageDatabaseSchemaOutput>,
-  readonly 'getStageDeployMode': RPCHandler<GetStageDeployModeInput, GetStageDeployModeOutput>,
-  readonly 'getStageDeployPreview': RPCHandler<GetStageDeployPreviewInput, GetStageDeployPreviewOutput>,
-  readonly 'getStageFunctionMetrics': RPCHandler<GetStageFunctionMetricsInput, GetStageFunctionMetricsOutput>,
-  readonly 'getStageFunctionSource': RPCHandler<GetStageFunctionSourceInput, GetStageFunctionSourceOutput>,
-  readonly 'getStageQueueDepths': RPCHandler<GetStageQueueDepthsInput, GetStageQueueDepthsOutput>,
-  readonly 'getStageSchedulerHistory': RPCHandler<GetStageSchedulerHistoryInput, GetStageSchedulerHistoryOutput>,
-  readonly 'getStageSchema': RPCHandler<GetStageSchemaInput, GetStageSchemaOutput>,
-  readonly 'getStageScorers': RPCHandler<GetStageScorersInput, GetStageScorersOutput>,
-  readonly 'getStageSealingKeyStatus': RPCHandler<GetStageSealingKeyStatusInput, GetStageSealingKeyStatusOutput>,
-  readonly 'getStageSealingKey': RPCHandler<GetStageSealingKeyInput, GetStageSealingKeyOutput>,
-  readonly 'getStageSurface': RPCHandler<GetStageSurfaceInput, GetStageSurfaceOutput>,
-  readonly 'getStageWorkflowRun': RPCHandler<GetStageWorkflowRunInput, GetStageWorkflowRunOutput>,
-  readonly 'getTraceByStageKind': RPCHandler<GetTraceByStageKindInput, GetTraceByStageKindOutput>,
-  readonly 'getTrace': RPCHandler<GetTraceInput, GetTraceOutput>,
-  readonly 'hasStageConsoleSecret': RPCHandler<HasStageConsoleSecretInput, HasStageConsoleSecretOutput>,
-  readonly 'listStageAgentThreads': RPCHandler<ListStageAgentThreadsInput, ListStageAgentThreadsOutput>,
-  readonly 'listStageContentObjects': RPCHandler<ListStageContentObjectsInput, ListStageContentObjectsOutput>,
-  readonly 'listStageCustomHostnames': RPCHandler<ListStageCustomHostnamesInput, ListStageCustomHostnamesOutput>,
-  readonly 'listStageMigrationLedger': RPCHandler<ListStageMigrationLedgerInput, ListStageMigrationLedgerOutput>,
-  readonly 'listStageSecretNames': RPCHandler<ListStageSecretNamesInput, ListStageSecretNamesOutput>,
-  readonly 'listStageWebhookDeliveries': RPCHandler<ListStageWebhookDeliveriesInput, ListStageWebhookDeliveriesOutput>,
-  readonly 'listStageWorkflowRuns': RPCHandler<ListStageWorkflowRunsInput, ListStageWorkflowRunsOutput>,
-  readonly 'listStages': RPCHandler<ListStagesInput, ListStagesOutput>,
-  readonly 'proxyStageScopeRpc': RPCHandler<ProxyStageScopeRpcInput, null>,
-  readonly 'recoverStageDatabaseUrl': RPCHandler<RecoverStageDatabaseUrlInput, RecoverStageDatabaseUrlOutput>,
-  readonly 'refreshStageCustomHostname': RPCHandler<RefreshStageCustomHostnameInput, RefreshStageCustomHostnameOutput>,
-  readonly 'refreshStageDatabaseSchema': RPCHandler<RefreshStageDatabaseSchemaInput, RefreshStageDatabaseSchemaOutput>,
-  readonly 'removeStageCustomHostname': RPCHandler<RemoveStageCustomHostnameInput, RemoveStageCustomHostnameOutput>,
-  readonly 'renderStageEmailPreview': RPCHandler<RenderStageEmailPreviewInput, RenderStageEmailPreviewOutput>,
-  readonly 'revokeStageSecrets': RPCHandler<RevokeStageSecretsInput, RevokeStageSecretsOutput>,
-  readonly 'rotateStageSealingKey': RPCHandler<RotateStageSealingKeyInput, RotateStageSealingKeyOutput>,
-  readonly 'setProductionBranch': RPCHandler<SetProductionBranchInput, SetProductionBranchOutput>,
-  readonly 'setStageConsoleSecret': RPCHandler<SetStageConsoleSecretInput, SetStageConsoleSecretOutput>,
-  readonly 'setStageConsoleVariable': RPCHandler<SetStageConsoleVariableInput, SetStageConsoleVariableOutput>,
-  readonly 'setStageCredential': RPCHandler<SetStageCredentialInput, SetStageCredentialOutput>,
-  readonly 'setStageSealedSecret': RPCHandler<SetStageSealedSecretInput, SetStageSealedSecretOutput>,
-  readonly 'setStageSealingKey': RPCHandler<SetStageSealingKeyInput, SetStageSealingKeyOutput>,
-  readonly 'submitContactForm': RPCHandler<SubmitContactFormInput, SubmitContactFormOutput>,
-  readonly 'addTicketComment': RPCHandler<AddTicketCommentInput, AddTicketCommentOutput>,
-  readonly 'advanceTicket': RPCHandler<AdvanceTicketInput, AdvanceTicketOutput>,
-  readonly 'createTicket': RPCHandler<CreateTicketInput, CreateTicketOutput>,
-  readonly 'getTicket': RPCHandler<GetTicketInput, GetTicketOutput>,
-  readonly 'listTickets': RPCHandler<ListTicketsInput, ListTicketsOutput>,
-  readonly 'recordTicketBuildFinished': RPCHandler<RecordTicketBuildFinishedInput, RecordTicketBuildFinishedOutput>,
-  readonly 'recordTicketReviewFinished': RPCHandler<RecordTicketReviewFinishedInput, RecordTicketReviewFinishedOutput>,
-  readonly 'recordTicketSpecSummarized': RPCHandler<RecordTicketSpecSummarizedInput, RecordTicketSpecSummarizedOutput>,
-  readonly 'checkUsername': RPCHandler<CheckUsernameInput, CheckUsernameOutput>,
-  readonly 'claimUsername': RPCHandler<ClaimUsernameInput, ClaimUsernameOutput>,
-  readonly 'getMyBadges': RPCHandler<null, GetMyBadgesOutput>,
-  readonly 'listFavoriteProjects': RPCHandler<ListFavoriteProjectsInput, ListFavoriteProjectsOutput>,
-  readonly 'listNavigationHistory': RPCHandler<ListNavigationHistoryInput, ListNavigationHistoryOutput>,
-  readonly 'recordNavigation': RPCHandler<RecordNavigationInput, RecordNavigationOutput>,
-  readonly 'setProjectFavorite': RPCHandler<SetProjectFavoriteInput, SetProjectFavoriteOutput>,
-  readonly 'listVirtualUserPersonas': RPCHandler<ListVirtualUserPersonasInput, ListVirtualUserPersonasOutput>,
-  readonly 'listVirtualUserRunCosts': RPCHandler<ListVirtualUserRunCostsInput, ListVirtualUserRunCostsOutput>,
-  readonly 'createWebhookEndpoint': RPCHandler<CreateWebhookEndpointInput, CreateWebhookEndpointOutput>,
-  readonly 'deleteWebhookEndpoint': RPCHandler<DeleteWebhookEndpointInput, DeleteWebhookEndpointOutput>,
-  readonly 'getWebhookDelivery': RPCHandler<GetWebhookDeliveryInput, GetWebhookDeliveryOutput>,
-  readonly 'listWebhookEndpoints': RPCHandler<ListWebhookEndpointsInput, ListWebhookEndpointsOutput>,
-  readonly 'testWebhookEndpoint': RPCHandler<TestWebhookEndpointInput, TestWebhookEndpointOutput>,
-  readonly 'updateWebhookEndpoint': RPCHandler<UpdateWebhookEndpointInput, UpdateWebhookEndpointOutput>,
-  readonly 'getWorkflowGraph': RPCHandler<GetWorkflowGraphInput, GetWorkflowGraphOutput>,
-  readonly 'getAgentThreads': RPCHandler<GetAgentThreadsInput, GetAgentThreadsOutput>,
-  readonly 'getAgentThreadMessages': RPCHandler<GetAgentThreadMessagesInput, GetAgentThreadMessagesOutput>,
-  readonly 'getAgentThreadRuns': RPCHandler<GetAgentThreadRunsInput, GetAgentThreadRunsOutput>,
-  readonly 'deleteAgentThread': RPCHandler<DeleteAgentThreadInput, DeleteAgentThreadOutput>,
-  readonly 'pikkuConsoleGetVariable': RPCHandler<PikkuConsoleGetVariableInput, PikkuConsoleGetVariableOutput>,
-  readonly 'pikkuConsoleSetVariable': RPCHandler<PikkuConsoleSetVariableInput, PikkuConsoleSetVariableOutput>,
-  readonly 'runVirtualUser': RPCHandler<RunVirtualUserInput, RunVirtualUserOutput>,
-  readonly 'getVirtualUserRun': RPCHandler<GetVirtualUserRunInput, GetVirtualUserRunOutput>,
-  readonly 'listVirtualUserRuns': RPCHandler<ListVirtualUserRunsInput, ListVirtualUserRunsOutput>,
-  readonly 'getVirtualUserRunSteps': RPCHandler<GetVirtualUserRunStepsInput, GetVirtualUserRunStepsOutput>,
-  readonly 'setVirtualUserSchedule': RPCHandler<SetVirtualUserScheduleInput, SetVirtualUserScheduleOutput>,
-  readonly 'listVirtualUserSchedules': RPCHandler<null, ListVirtualUserSchedulesOutput>,
-};
-
+  readonly adminCreateOrg: RPCHandler<AdminCreateOrgInput, AdminCreateOrgOutput>
+  readonly adminCreateStripePrice: RPCHandler<
+    AdminCreateStripePriceInput,
+    AdminCreateStripePriceOutput
+  >
+  readonly adminGetGitE2eToken: RPCHandler<
+    AdminGetGitE2eTokenInput,
+    AdminGetGitE2eTokenOutput
+  >
+  readonly adminGetPlans: RPCHandler<AdminGetPlansInput, AdminGetPlansOutput>
+  readonly adminGetStats: RPCHandler<AdminGetStatsInput, AdminGetStatsOutput>
+  readonly adminGrantOrgCredit: RPCHandler<
+    AdminGrantOrgCreditInput,
+    AdminGrantOrgCreditOutput
+  >
+  readonly adminListApps: RPCHandler<AdminListAppsInput, AdminListAppsOutput>
+  readonly adminListMachines: RPCHandler<
+    AdminListMachinesInput,
+    AdminListMachinesOutput
+  >
+  readonly adminListOpenApis: RPCHandler<
+    AdminListOpenApisInput,
+    AdminListOpenApisOutput
+  >
+  readonly adminListOrgs: RPCHandler<AdminListOrgsInput, AdminListOrgsOutput>
+  readonly adminListRuntimeReleases: RPCHandler<
+    AdminListRuntimeReleasesInput,
+    AdminListRuntimeReleasesOutput
+  >
+  readonly adminListSandboxes: RPCHandler<
+    AdminListSandboxesInput,
+    AdminListSandboxesOutput
+  >
+  readonly adminListSentEmails: RPCHandler<
+    AdminListSentEmailsInput,
+    AdminListSentEmailsOutput
+  >
+  readonly adminListUsers: RPCHandler<AdminListUsersInput, AdminListUsersOutput>
+  readonly adminProvisionTestUser: RPCHandler<
+    AdminProvisionTestUserInput,
+    AdminProvisionTestUserOutput
+  >
+  readonly adminSetOrgPlan: RPCHandler<
+    AdminSetOrgPlanInput,
+    AdminSetOrgPlanOutput
+  >
+  readonly adminSetOrgQuota: RPCHandler<
+    AdminSetOrgQuotaInput,
+    AdminSetOrgQuotaOutput
+  >
+  readonly adminSetOrgSuspensionGrace: RPCHandler<
+    AdminSetOrgSuspensionGraceInput,
+    AdminSetOrgSuspensionGraceOutput
+  >
+  readonly adminSetProjectShowcase: RPCHandler<
+    AdminSetProjectShowcaseInput,
+    AdminSetProjectShowcaseOutput
+  >
+  readonly adminSetUserRole: RPCHandler<
+    AdminSetUserRoleInput,
+    AdminSetUserRoleOutput
+  >
+  readonly adminStartOpenApiEnrichment: RPCHandler<
+    AdminStartOpenApiEnrichmentInput,
+    AdminStartOpenApiEnrichmentOutput
+  >
+  readonly adminUpdatePlanStripePrice: RPCHandler<
+    AdminUpdatePlanStripePriceInput,
+    AdminUpdatePlanStripePriceOutput
+  >
+  readonly cleanupTestUsers: RPCHandler<
+    CleanupTestUsersInput,
+    CleanupTestUsersOutput
+  >
+  readonly getMachineConfig: RPCHandler<
+    GetMachineConfigInput,
+    GetMachineConfigOutput
+  >
+  readonly updateMachineConfig: RPCHandler<
+    UpdateMachineConfigInput,
+    UpdateMachineConfigOutput
+  >
+  readonly listAiModels: RPCHandler<ListAiModelsInput, ListAiModelsOutput>
+  readonly transcribeAudio: RPCHandler<
+    TranscribeAudioInput,
+    TranscribeAudioOutput
+  >
+  readonly recordFabricAnalyticsEvents: RPCHandler<
+    RecordFabricAnalyticsEventsInput,
+    RecordFabricAnalyticsEventsOutput
+  >
+  readonly changeBillingPlan: RPCHandler<
+    ChangeBillingPlanInput,
+    ChangeBillingPlanOutput
+  >
+  readonly createAiTopupSession: RPCHandler<
+    CreateAiTopupSessionInput,
+    CreateAiTopupSessionOutput
+  >
+  readonly createBillingPortalSession: RPCHandler<
+    CreateBillingPortalSessionInput,
+    CreateBillingPortalSessionOutput
+  >
+  readonly createBillingCheckoutSession: RPCHandler<
+    CreateBillingCheckoutSessionInput,
+    CreateBillingCheckoutSessionOutput
+  >
+  readonly getAiUsageLedger: RPCHandler<
+    GetAiUsageLedgerInput,
+    GetAiUsageLedgerOutput
+  >
+  readonly getBillingSummary: RPCHandler<
+    GetBillingSummaryInput,
+    GetBillingSummaryOutput
+  >
+  readonly getBillingInvoices: RPCHandler<
+    GetBillingInvoicesInput,
+    GetBillingInvoicesOutput
+  >
+  readonly getWelcomeCreditOffer: RPCHandler<null, GetWelcomeCreditOfferOutput>
+  readonly updateAutoRecharge: RPCHandler<
+    UpdateAutoRechargeInput,
+    UpdateAutoRechargeOutput
+  >
+  readonly deleteProjectCascadeValue: RPCHandler<
+    DeleteProjectCascadeValueInput,
+    DeleteProjectCascadeValueOutput
+  >
+  readonly getProjectCascadeSchema: RPCHandler<
+    GetProjectCascadeSchemaInput,
+    GetProjectCascadeSchemaOutput
+  >
+  readonly listProjectCascadeValues: RPCHandler<
+    ListProjectCascadeValuesInput,
+    ListProjectCascadeValuesOutput
+  >
+  readonly reconcileProjectCascade: RPCHandler<
+    ReconcileProjectCascadeInput,
+    ReconcileProjectCascadeOutput
+  >
+  readonly setProjectCascadeValue: RPCHandler<
+    SetProjectCascadeValueInput,
+    SetProjectCascadeValueOutput
+  >
+  readonly answerChangeQuestion: RPCHandler<
+    AnswerChangeQuestionInput,
+    AnswerChangeQuestionOutput
+  >
+  readonly askChangeQuestion: RPCHandler<
+    AskChangeQuestionInput,
+    AskChangeQuestionOutput
+  >
+  readonly attachChangeShot: RPCHandler<
+    AttachChangeShotInput,
+    AttachChangeShotOutput
+  >
+  readonly claimChanges: RPCHandler<ClaimChangesInput, ClaimChangesOutput>
+  readonly completeChange: RPCHandler<CompleteChangeInput, CompleteChangeOutput>
+  readonly configureStageChanges: RPCHandler<
+    ConfigureStageChangesInput,
+    ConfigureStageChangesOutput
+  >
+  readonly createChange: RPCHandler<CreateChangeInput, CreateChangeOutput>
+  readonly createPanelLink: RPCHandler<
+    CreatePanelLinkInput,
+    CreatePanelLinkOutput
+  >
+  readonly getChange: RPCHandler<GetChangeInput, GetChangeOutput>
+  readonly listChanges: RPCHandler<ListChangesInput, ListChangesOutput>
+  readonly setChangeStatus: RPCHandler<
+    SetChangeStatusInput,
+    SetChangeStatusOutput
+  >
+  readonly confirmCliAuth: RPCHandler<ConfirmCliAuthInput, ConfirmCliAuthOutput>
+  readonly getCliAuthStatus: RPCHandler<
+    GetCliAuthStatusInput,
+    GetCliAuthStatusOutput
+  >
+  readonly pollCliAuth: RPCHandler<PollCliAuthInput, PollCliAuthOutput>
+  readonly rejectCliAuth: RPCHandler<RejectCliAuthInput, RejectCliAuthOutput>
+  readonly requestCliAuth: RPCHandler<null, RequestCliAuthOutput>
+  readonly deleteContentFile: RPCHandler<
+    DeleteContentFileInput,
+    DeleteContentFileOutput
+  >
+  readonly getChatAttachmentUrl: RPCHandler<
+    GetChatAttachmentUrlInput,
+    GetChatAttachmentUrlOutput
+  >
+  readonly getContentUploadUrl: RPCHandler<
+    GetContentUploadUrlInput,
+    GetContentUploadUrlOutput
+  >
+  readonly recheckDeployConfig: RPCHandler<
+    RecheckDeployConfigInput,
+    RecheckDeployConfigOutput
+  >
+  readonly applyDeployment: RPCHandler<
+    ApplyDeploymentInput,
+    ApplyDeploymentOutput
+  >
+  readonly dismissDeployment: RPCHandler<
+    DismissDeploymentInput,
+    DismissDeploymentOutput
+  >
+  readonly getDeploymentBuildLog: RPCHandler<
+    GetDeploymentBuildLogInput,
+    GetDeploymentBuildLogOutput
+  >
+  readonly getDeploymentItemMeta: RPCHandler<
+    GetDeploymentItemMetaInput,
+    GetDeploymentItemMetaOutput
+  >
+  readonly getDeploymentSecurityAudit: RPCHandler<
+    GetDeploymentSecurityAuditInput,
+    GetDeploymentSecurityAuditOutput
+  >
+  readonly getDeploymentStatus: RPCHandler<
+    GetDeploymentStatusInput,
+    GetDeploymentStatusOutput
+  >
+  readonly listDeploymentTargets: RPCHandler<
+    ListDeploymentTargetsInput,
+    ListDeploymentTargetsOutput
+  >
+  readonly listDeploymentWorkers: RPCHandler<
+    ListDeploymentWorkersInput,
+    ListDeploymentWorkersOutput
+  >
+  readonly listDeployments: RPCHandler<
+    ListDeploymentsInput,
+    ListDeploymentsOutput
+  >
+  readonly rollbackDeployment: RPCHandler<
+    RollbackDeploymentInput,
+    RollbackDeploymentOutput
+  >
+  readonly fabricCliDeployments: RPCHandler<
+    FabricCliDeploymentsInput,
+    FabricCliDeploymentsOutput
+  >
+  readonly fabricCliProjects: RPCHandler<
+    FabricCliProjectsInput,
+    FabricCliProjectsOutput
+  >
+  readonly getSession: RPCHandler<GetSessionInput, GetSessionOutput>
+  readonly completeGitProviderLinking: RPCHandler<
+    CompleteGitProviderLinkingInput,
+    CompleteGitProviderLinkingOutput
+  >
+  readonly listLinkedGitAccounts: RPCHandler<
+    ListLinkedGitAccountsInput,
+    ListLinkedGitAccountsOutput
+  >
+  readonly mintRepoWriteCredential: RPCHandler<
+    MintRepoWriteCredentialInput,
+    MintRepoWriteCredentialOutput
+  >
+  readonly startGitProviderLinking: RPCHandler<
+    StartGitProviderLinkingInput,
+    StartGitProviderLinkingOutput
+  >
+  readonly unlinkGitProviderAccount: RPCHandler<
+    UnlinkGitProviderAccountInput,
+    UnlinkGitProviderAccountOutput
+  >
+  readonly checkGithubInstall: RPCHandler<
+    CheckGithubInstallInput,
+    CheckGithubInstallOutput
+  >
+  readonly getGithubInstallation: RPCHandler<
+    GetGithubInstallationInput,
+    GetGithubInstallationOutput
+  >
+  readonly linkGithubInstallation: RPCHandler<
+    LinkGithubInstallationInput,
+    LinkGithubInstallationOutput
+  >
+  readonly listGithubRepos: RPCHandler<
+    ListGithubReposInput,
+    ListGithubReposOutput
+  >
+  readonly listLinkableGithubInstallations: RPCHandler<
+    ListLinkableGithubInstallationsInput,
+    ListLinkableGithubInstallationsOutput
+  >
+  readonly startGithubInstall: RPCHandler<
+    StartGithubInstallInput,
+    StartGithubInstallOutput
+  >
+  readonly unlinkGithubInstallation: RPCHandler<
+    UnlinkGithubInstallationInput,
+    UnlinkGithubInstallationOutput
+  >
+  readonly analyzeHarnessRun: RPCHandler<
+    AnalyzeHarnessRunInput,
+    AnalyzeHarnessRunOutput
+  >
+  readonly captureHarnessRunSession: RPCHandler<
+    CaptureHarnessRunSessionInput,
+    CaptureHarnessRunSessionOutput
+  >
+  readonly createHarnessScenario: RPCHandler<
+    CreateHarnessScenarioInput,
+    CreateHarnessScenarioOutput
+  >
+  readonly critiqueScreenshot: RPCHandler<
+    CritiqueScreenshotInput,
+    CritiqueScreenshotOutput
+  >
+  readonly deleteHarnessRun: RPCHandler<
+    DeleteHarnessRunInput,
+    DeleteHarnessRunOutput
+  >
+  readonly generateAppIdea: RPCHandler<
+    GenerateAppIdeaInput,
+    GenerateAppIdeaOutput
+  >
+  readonly getHarnessRunScreenshots: RPCHandler<
+    GetHarnessRunScreenshotsInput,
+    GetHarnessRunScreenshotsOutput
+  >
+  readonly getHarnessRunSession: RPCHandler<
+    GetHarnessRunSessionInput,
+    GetHarnessRunSessionOutput
+  >
+  readonly getHarnessRunsCost: RPCHandler<
+    GetHarnessRunsCostInput,
+    GetHarnessRunsCostOutput
+  >
+  readonly getHarnessScenario: RPCHandler<
+    GetHarnessScenarioInput,
+    GetHarnessScenarioOutput
+  >
+  readonly listHarnessRunAnalyses: RPCHandler<
+    ListHarnessRunAnalysesInput,
+    ListHarnessRunAnalysesOutput
+  >
+  readonly listHarnessRuns: RPCHandler<
+    ListHarnessRunsInput,
+    ListHarnessRunsOutput
+  >
+  readonly listHarnessScenarios: RPCHandler<
+    ListHarnessScenariosInput,
+    ListHarnessScenariosOutput
+  >
+  readonly preflightHarnessModels: RPCHandler<
+    PreflightHarnessModelsInput,
+    PreflightHarnessModelsOutput
+  >
+  readonly publishAgentBundle: RPCHandler<
+    PublishAgentBundleInput,
+    PublishAgentBundleOutput
+  >
+  readonly readHarnessCapabilities: RPCHandler<
+    ReadHarnessCapabilitiesInput,
+    ReadHarnessCapabilitiesOutput
+  >
+  readonly requestHarnessScreenshotUpload: RPCHandler<
+    RequestHarnessScreenshotUploadInput,
+    RequestHarnessScreenshotUploadOutput
+  >
+  readonly sleepHarnessSandbox: RPCHandler<
+    SleepHarnessSandboxInput,
+    SleepHarnessSandboxOutput
+  >
+  readonly triggerHarness: RPCHandler<TriggerHarnessInput, TriggerHarnessOutput>
+  readonly updateHarnessScenario: RPCHandler<
+    UpdateHarnessScenarioInput,
+    UpdateHarnessScenarioOutput
+  >
+  readonly listNotifications: RPCHandler<
+    ListNotificationsInput,
+    ListNotificationsOutput
+  >
+  readonly markNotificationsRead: RPCHandler<
+    MarkNotificationsReadInput,
+    MarkNotificationsReadOutput
+  >
+  readonly acceptInvitation: RPCHandler<
+    AcceptInvitationInput,
+    AcceptInvitationOutput
+  >
+  readonly addOrganizationMember: RPCHandler<
+    AddOrganizationMemberInput,
+    AddOrganizationMemberOutput
+  >
+  readonly createOrgAiBudgetRule: RPCHandler<
+    CreateOrgAiBudgetRuleInput,
+    CreateOrgAiBudgetRuleOutput
+  >
+  readonly createOrganization: RPCHandler<
+    CreateOrganizationInput,
+    CreateOrganizationOutput
+  >
+  readonly deleteOrgAiBudgetRule: RPCHandler<
+    DeleteOrgAiBudgetRuleInput,
+    DeleteOrgAiBudgetRuleOutput
+  >
+  readonly deleteOrganization: RPCHandler<
+    DeleteOrganizationInput,
+    DeleteOrganizationOutput
+  >
+  readonly getDeveloperLiteLLMKey: RPCHandler<
+    GetDeveloperLiteLLMKeyInput,
+    GetDeveloperLiteLLMKeyOutput
+  >
+  readonly getInvitation: RPCHandler<GetInvitationInput, GetInvitationOutput>
+  readonly getOrgAiUsage: RPCHandler<GetOrgAiUsageInput, GetOrgAiUsageOutput>
+  readonly getOrgIssueSummary: RPCHandler<
+    GetOrgIssueSummaryInput,
+    GetOrgIssueSummaryOutput
+  >
+  readonly inviteOrganizationMember: RPCHandler<
+    InviteOrganizationMemberInput,
+    InviteOrganizationMemberOutput
+  >
+  readonly listMyOrganizations: RPCHandler<
+    ListMyOrganizationsInput,
+    ListMyOrganizationsOutput
+  >
+  readonly listOrgAiBudgetRules: RPCHandler<
+    ListOrgAiBudgetRulesInput,
+    ListOrgAiBudgetRulesOutput
+  >
+  readonly listOrgAiBudgetTargets: RPCHandler<
+    ListOrgAiBudgetTargetsInput,
+    ListOrgAiBudgetTargetsOutput
+  >
+  readonly listOrganizationInvitations: RPCHandler<
+    ListOrganizationInvitationsInput,
+    ListOrganizationInvitationsOutput
+  >
+  readonly listOrganizationMembers: RPCHandler<
+    ListOrganizationMembersInput,
+    ListOrganizationMembersOutput
+  >
+  readonly lookupOrganizationBySlug: RPCHandler<
+    LookupOrganizationBySlugInput,
+    LookupOrganizationBySlugOutput
+  >
+  readonly removeOrganizationMember: RPCHandler<
+    RemoveOrganizationMemberInput,
+    RemoveOrganizationMemberOutput
+  >
+  readonly renameOrganizationSlug: RPCHandler<
+    RenameOrganizationSlugInput,
+    RenameOrganizationSlugOutput
+  >
+  readonly revokeOrganizationInvitation: RPCHandler<
+    RevokeOrganizationInvitationInput,
+    RevokeOrganizationInvitationOutput
+  >
+  readonly searchOrgMemberCandidates: RPCHandler<
+    SearchOrgMemberCandidatesInput,
+    SearchOrgMemberCandidatesOutput
+  >
+  readonly setMemberAiBudgets: RPCHandler<
+    SetMemberAiBudgetsInput,
+    SetMemberAiBudgetsOutput
+  >
+  readonly setOrgAiSettings: RPCHandler<
+    SetOrgAiSettingsInput,
+    SetOrgAiSettingsOutput
+  >
+  readonly updateOrgAiBudgetRule: RPCHandler<
+    UpdateOrgAiBudgetRuleInput,
+    UpdateOrgAiBudgetRuleOutput
+  >
+  readonly updateOrganizationMemberRole: RPCHandler<
+    UpdateOrganizationMemberRoleInput,
+    UpdateOrganizationMemberRoleOutput
+  >
+  readonly recordMachineHeartbeat: RPCHandler<
+    RecordMachineHeartbeatInput,
+    RecordMachineHeartbeatOutput
+  >
+  readonly registerMachineHost: RPCHandler<
+    RegisterMachineHostInput,
+    RegisterMachineHostOutput
+  >
+  readonly createProject: RPCHandler<CreateProjectInput, CreateProjectOutput>
+  readonly deleteProject: RPCHandler<DeleteProjectInput, DeleteProjectOutput>
+  readonly ensureProjectAspirations: RPCHandler<
+    EnsureProjectAspirationsInput,
+    EnsureProjectAspirationsOutput
+  >
+  readonly getProjectAspirations: RPCHandler<
+    GetProjectAspirationsInput,
+    GetProjectAspirationsOutput
+  >
+  readonly getProjectAssetUploadUrl: RPCHandler<
+    GetProjectAssetUploadUrlInput,
+    GetProjectAssetUploadUrlOutput
+  >
+  readonly getProjectCreationLogs: RPCHandler<
+    GetProjectCreationLogsInput,
+    GetProjectCreationLogsOutput
+  >
+  readonly getProjectDeployments: RPCHandler<
+    GetProjectDeploymentsInput,
+    GetProjectDeploymentsOutput
+  >
+  readonly getProjectDetails: RPCHandler<
+    GetProjectDetailsInput,
+    GetProjectDetailsOutput
+  >
+  readonly getProjectIntakeStatus: RPCHandler<
+    GetProjectIntakeStatusInput,
+    GetProjectIntakeStatusOutput
+  >
+  readonly getProjectStatus: RPCHandler<
+    GetProjectStatusInput,
+    GetProjectStatusOutput
+  >
+  readonly getProjectUsageSummary: RPCHandler<
+    GetProjectUsageSummaryInput,
+    GetProjectUsageSummaryOutput
+  >
+  readonly importProject: RPCHandler<ImportProjectInput, ImportProjectOutput>
+  readonly listProjectMetrics: RPCHandler<
+    ListProjectMetricsInput,
+    ListProjectMetricsOutput
+  >
+  readonly listProjectTemplates: RPCHandler<
+    ListProjectTemplatesInput,
+    ListProjectTemplatesOutput
+  >
+  readonly listProjects: RPCHandler<ListProjectsInput, ListProjectsOutput>
+  readonly listShowcaseApps: RPCHandler<
+    ListShowcaseAppsInput,
+    ListShowcaseAppsOutput
+  >
+  readonly lookupProjectBySlug: RPCHandler<
+    LookupProjectBySlugInput,
+    LookupProjectBySlugOutput
+  >
+  readonly markProjectInitialBuildComplete: RPCHandler<
+    MarkProjectInitialBuildCompleteInput,
+    MarkProjectInitialBuildCompleteOutput
+  >
+  readonly provisionRepo: RPCHandler<ProvisionRepoInput, ProvisionRepoOutput>
+  readonly reactToProjectAspiration: RPCHandler<
+    ReactToProjectAspirationInput,
+    ReactToProjectAspirationOutput
+  >
+  readonly transferProject: RPCHandler<
+    TransferProjectInput,
+    TransferProjectOutput
+  >
+  readonly updateProject: RPCHandler<UpdateProjectInput, UpdateProjectOutput>
+  readonly createReviewFixTicket: RPCHandler<
+    CreateReviewFixTicketInput,
+    CreateReviewFixTicketOutput
+  >
+  readonly crawlSiteResult: RPCHandler<
+    CrawlSiteResultInput,
+    CrawlSiteResultOutput
+  >
+  readonly crawlSiteStart: RPCHandler<CrawlSiteStartInput, CrawlSiteStartOutput>
+  readonly createSandboxTicket: RPCHandler<
+    CreateSandboxTicketInput,
+    CreateSandboxTicketOutput
+  >
+  readonly createSandbox: RPCHandler<CreateSandboxInput, CreateSandboxOutput>
+  readonly deleteSandbox: RPCHandler<DeleteSandboxInput, DeleteSandboxOutput>
+  readonly generateLogoMarks: RPCHandler<
+    GenerateLogoMarksInput,
+    GenerateLogoMarksOutput
+  >
+  readonly getDeletedSandbox: RPCHandler<
+    GetDeletedSandboxInput,
+    GetDeletedSandboxOutput
+  >
+  readonly getSandboxBaseBranchStatus: RPCHandler<
+    GetSandboxBaseBranchStatusInput,
+    GetSandboxBaseBranchStatusOutput
+  >
+  readonly getSandboxBuildGate: RPCHandler<
+    GetSandboxBuildGateInput,
+    GetSandboxBuildGateOutput
+  >
+  readonly getSandboxBuilderToken: RPCHandler<
+    GetSandboxBuilderTokenInput,
+    GetSandboxBuilderTokenOutput
+  >
+  readonly getSandboxCascadeEnv: RPCHandler<
+    GetSandboxCascadeEnvInput,
+    GetSandboxCascadeEnvOutput
+  >
+  readonly getSandboxMetrics: RPCHandler<
+    GetSandboxMetricsInput,
+    GetSandboxMetricsOutput
+  >
+  readonly getSandboxMilestoneSpend: RPCHandler<
+    GetSandboxMilestoneSpendInput,
+    GetSandboxMilestoneSpendOutput
+  >
+  readonly getSandboxProjectImports: RPCHandler<
+    GetSandboxProjectImportsInput,
+    GetSandboxProjectImportsOutput
+  >
+  readonly getSandboxProjectWishes: RPCHandler<
+    GetSandboxProjectWishesInput,
+    GetSandboxProjectWishesOutput
+  >
+  readonly getSandboxTicket: RPCHandler<
+    GetSandboxTicketInput,
+    GetSandboxTicketOutput
+  >
+  readonly getSandbox: RPCHandler<GetSandboxInput, GetSandboxOutput>
+  readonly ingestOrchestratorLogs: RPCHandler<
+    IngestOrchestratorLogsInput,
+    IngestOrchestratorLogsOutput
+  >
+  readonly ingestSandboxLogs: RPCHandler<
+    IngestSandboxLogsInput,
+    IngestSandboxLogsOutput
+  >
+  readonly listMachineSizes: RPCHandler<
+    ListMachineSizesInput,
+    ListMachineSizesOutput
+  >
+  readonly listProjectRepoBranches: RPCHandler<
+    ListProjectRepoBranchesInput,
+    ListProjectRepoBranchesOutput
+  >
+  readonly listSandboxProjectTickets: RPCHandler<
+    ListSandboxProjectTicketsInput,
+    ListSandboxProjectTicketsOutput
+  >
+  readonly listSandboxes: RPCHandler<ListSandboxesInput, ListSandboxesOutput>
+  readonly notifyOrchestratorReady: RPCHandler<
+    NotifyOrchestratorReadyInput,
+    NotifyOrchestratorReadyOutput
+  >
+  readonly reportSandboxBootPhase: RPCHandler<
+    ReportSandboxBootPhaseInput,
+    ReportSandboxBootPhaseOutput
+  >
+  readonly reportSandboxRuntime: RPCHandler<
+    ReportSandboxRuntimeInput,
+    ReportSandboxRuntimeOutput
+  >
+  readonly reportSandboxSecurityAudit: RPCHandler<
+    ReportSandboxSecurityAuditInput,
+    ReportSandboxSecurityAuditOutput
+  >
+  readonly reportSandboxSessionUploaded: RPCHandler<
+    ReportSandboxSessionUploadedInput,
+    ReportSandboxSessionUploadedOutput
+  >
+  readonly requestSandboxScreenshotUpload: RPCHandler<
+    RequestSandboxScreenshotUploadInput,
+    RequestSandboxScreenshotUploadOutput
+  >
+  readonly requestSandboxSessionUpload: RPCHandler<
+    RequestSandboxSessionUploadInput,
+    RequestSandboxSessionUploadOutput
+  >
+  readonly resolveSandboxGitCredentials: RPCHandler<
+    ResolveSandboxGitCredentialsInput,
+    ResolveSandboxGitCredentialsOutput
+  >
+  readonly resolveSandboxSessionRestore: RPCHandler<
+    ResolveSandboxSessionRestoreInput,
+    ResolveSandboxSessionRestoreOutput
+  >
+  readonly resumeSandbox: RPCHandler<ResumeSandboxInput, ResumeSandboxOutput>
+  readonly setSandboxAiBudgets: RPCHandler<
+    SetSandboxAiBudgetsInput,
+    SetSandboxAiBudgetsOutput
+  >
+  readonly setSandboxSize: RPCHandler<SetSandboxSizeInput, SetSandboxSizeOutput>
+  readonly setSandboxTicketSpec: RPCHandler<
+    SetSandboxTicketSpecInput,
+    SetSandboxTicketSpecOutput
+  >
+  readonly sleepSandbox: RPCHandler<SleepSandboxInput, SleepSandboxOutput>
+  readonly stockImageSearch: RPCHandler<
+    StockImageSearchInput,
+    StockImageSearchOutput
+  >
+  readonly translateMessages: RPCHandler<
+    TranslateMessagesInput,
+    TranslateMessagesOutput
+  >
+  readonly updateSandboxOrchestrator: RPCHandler<
+    UpdateSandboxOrchestratorInput,
+    UpdateSandboxOrchestratorOutput
+  >
+  readonly deleteScenarioRun: RPCHandler<
+    DeleteScenarioRunInput,
+    DeleteScenarioRunOutput
+  >
+  readonly getScenarioRun: RPCHandler<GetScenarioRunInput, GetScenarioRunOutput>
+  readonly listScenarioRuns: RPCHandler<
+    ListScenarioRunsInput,
+    ListScenarioRunsOutput
+  >
+  readonly publishScenarioRun: RPCHandler<
+    PublishScenarioRunInput,
+    PublishScenarioRunOutput
+  >
+  readonly deleteAIKey: RPCHandler<DeleteAIKeyInput, DeleteAIKeyOutput>
+  readonly listAIKeys: RPCHandler<ListAIKeysInput, ListAIKeysOutput>
+  readonly setAIKey: RPCHandler<SetAIKeyInput, SetAIKeyOutput>
+  readonly acknowledgeStageSealingKey: RPCHandler<
+    AcknowledgeStageSealingKeyInput,
+    AcknowledgeStageSealingKeyOutput
+  >
+  readonly addStageCustomHostname: RPCHandler<
+    AddStageCustomHostnameInput,
+    AddStageCustomHostnameOutput
+  >
+  readonly applyStageCascade: RPCHandler<
+    ApplyStageCascadeInput,
+    ApplyStageCascadeOutput
+  >
+  readonly configureStageDeployMode: RPCHandler<
+    ConfigureStageDeployModeInput,
+    ConfigureStageDeployModeOutput
+  >
+  readonly createStageIngestToken: RPCHandler<
+    CreateStageIngestTokenInput,
+    CreateStageIngestTokenOutput
+  >
+  readonly createStageOperatorToken: RPCHandler<
+    CreateStageOperatorTokenInput,
+    CreateStageOperatorTokenOutput
+  >
+  readonly createStage: RPCHandler<CreateStageInput, CreateStageOutput>
+  readonly deleteStageAgentThread: RPCHandler<
+    DeleteStageAgentThreadInput,
+    DeleteStageAgentThreadOutput
+  >
+  readonly deleteStageSecret: RPCHandler<
+    DeleteStageSecretInput,
+    DeleteStageSecretOutput
+  >
+  readonly deleteStage: RPCHandler<DeleteStageInput, DeleteStageOutput>
+  readonly deployByStageKind: RPCHandler<
+    DeployByStageKindInput,
+    DeployByStageKindOutput
+  >
+  readonly deployStage: RPCHandler<DeployStageInput, DeployStageOutput>
+  readonly getFabricLogsByStageKind: RPCHandler<
+    GetFabricLogsByStageKindInput,
+    GetFabricLogsByStageKindOutput
+  >
+  readonly getFabricLogs: RPCHandler<GetFabricLogsInput, GetFabricLogsOutput>
+  readonly getProjectMetricsByStageKind: RPCHandler<
+    GetProjectMetricsByStageKindInput,
+    GetProjectMetricsByStageKindOutput
+  >
+  readonly getProjectMetrics: RPCHandler<
+    GetProjectMetricsInput,
+    GetProjectMetricsOutput
+  >
+  readonly getStageAgentThreadMessages: RPCHandler<
+    GetStageAgentThreadMessagesInput,
+    GetStageAgentThreadMessagesOutput
+  >
+  readonly getStageAgentThreadRuns: RPCHandler<
+    GetStageAgentThreadRunsInput,
+    GetStageAgentThreadRunsOutput
+  >
+  readonly getStageAllMeta: RPCHandler<
+    GetStageAllMetaInput,
+    GetStageAllMetaOutput
+  >
+  readonly getStageAuditFilters: RPCHandler<
+    GetStageAuditFiltersInput,
+    GetStageAuditFiltersOutput
+  >
+  readonly getStageAudits: RPCHandler<GetStageAuditsInput, GetStageAuditsOutput>
+  readonly getStageAuthProviders: RPCHandler<
+    GetStageAuthProvidersInput,
+    GetStageAuthProvidersOutput
+  >
+  readonly getStageCascadeStatus: RPCHandler<
+    GetStageCascadeStatusInput,
+    GetStageCascadeStatusOutput
+  >
+  readonly getStageConsoleSecret: RPCHandler<
+    GetStageConsoleSecretInput,
+    GetStageConsoleSecretOutput
+  >
+  readonly getStageConsoleVariable: RPCHandler<
+    GetStageConsoleVariableInput,
+    GetStageConsoleVariableOutput
+  >
+  readonly getStageCredentialStatus: RPCHandler<
+    GetStageCredentialStatusInput,
+    GetStageCredentialStatusOutput
+  >
+  readonly getStageDatabaseSchemaSnapshot: RPCHandler<
+    GetStageDatabaseSchemaSnapshotInput,
+    GetStageDatabaseSchemaSnapshotOutput
+  >
+  readonly getStageDatabaseSchema: RPCHandler<
+    GetStageDatabaseSchemaInput,
+    GetStageDatabaseSchemaOutput
+  >
+  readonly getStageDeployMode: RPCHandler<
+    GetStageDeployModeInput,
+    GetStageDeployModeOutput
+  >
+  readonly getStageDeployPreview: RPCHandler<
+    GetStageDeployPreviewInput,
+    GetStageDeployPreviewOutput
+  >
+  readonly getStageFunctionMetrics: RPCHandler<
+    GetStageFunctionMetricsInput,
+    GetStageFunctionMetricsOutput
+  >
+  readonly getStageFunctionSource: RPCHandler<
+    GetStageFunctionSourceInput,
+    GetStageFunctionSourceOutput
+  >
+  readonly getStageQueueDepths: RPCHandler<
+    GetStageQueueDepthsInput,
+    GetStageQueueDepthsOutput
+  >
+  readonly getStageSchedulerHistory: RPCHandler<
+    GetStageSchedulerHistoryInput,
+    GetStageSchedulerHistoryOutput
+  >
+  readonly getStageSchema: RPCHandler<GetStageSchemaInput, GetStageSchemaOutput>
+  readonly getStageScorers: RPCHandler<
+    GetStageScorersInput,
+    GetStageScorersOutput
+  >
+  readonly getStageSealingKeyStatus: RPCHandler<
+    GetStageSealingKeyStatusInput,
+    GetStageSealingKeyStatusOutput
+  >
+  readonly getStageSealingKey: RPCHandler<
+    GetStageSealingKeyInput,
+    GetStageSealingKeyOutput
+  >
+  readonly getStageSurface: RPCHandler<
+    GetStageSurfaceInput,
+    GetStageSurfaceOutput
+  >
+  readonly getStageWorkflowRun: RPCHandler<
+    GetStageWorkflowRunInput,
+    GetStageWorkflowRunOutput
+  >
+  readonly getTraceByStageKind: RPCHandler<
+    GetTraceByStageKindInput,
+    GetTraceByStageKindOutput
+  >
+  readonly getTrace: RPCHandler<GetTraceInput, GetTraceOutput>
+  readonly hasStageConsoleSecret: RPCHandler<
+    HasStageConsoleSecretInput,
+    HasStageConsoleSecretOutput
+  >
+  readonly listStageAgentThreads: RPCHandler<
+    ListStageAgentThreadsInput,
+    ListStageAgentThreadsOutput
+  >
+  readonly listStageContentObjects: RPCHandler<
+    ListStageContentObjectsInput,
+    ListStageContentObjectsOutput
+  >
+  readonly listStageCustomHostnames: RPCHandler<
+    ListStageCustomHostnamesInput,
+    ListStageCustomHostnamesOutput
+  >
+  readonly listStageMigrationLedger: RPCHandler<
+    ListStageMigrationLedgerInput,
+    ListStageMigrationLedgerOutput
+  >
+  readonly listStageSecretNames: RPCHandler<
+    ListStageSecretNamesInput,
+    ListStageSecretNamesOutput
+  >
+  readonly listStageWebhookDeliveries: RPCHandler<
+    ListStageWebhookDeliveriesInput,
+    ListStageWebhookDeliveriesOutput
+  >
+  readonly listStageWorkflowRuns: RPCHandler<
+    ListStageWorkflowRunsInput,
+    ListStageWorkflowRunsOutput
+  >
+  readonly listStages: RPCHandler<ListStagesInput, ListStagesOutput>
+  readonly proxyStageScopeRpc: RPCHandler<ProxyStageScopeRpcInput, null>
+  readonly recoverStageDatabaseUrl: RPCHandler<
+    RecoverStageDatabaseUrlInput,
+    RecoverStageDatabaseUrlOutput
+  >
+  readonly refreshStageCustomHostname: RPCHandler<
+    RefreshStageCustomHostnameInput,
+    RefreshStageCustomHostnameOutput
+  >
+  readonly refreshStageDatabaseSchema: RPCHandler<
+    RefreshStageDatabaseSchemaInput,
+    RefreshStageDatabaseSchemaOutput
+  >
+  readonly removeStageCustomHostname: RPCHandler<
+    RemoveStageCustomHostnameInput,
+    RemoveStageCustomHostnameOutput
+  >
+  readonly renderStageEmailPreview: RPCHandler<
+    RenderStageEmailPreviewInput,
+    RenderStageEmailPreviewOutput
+  >
+  readonly revokeStageSecrets: RPCHandler<
+    RevokeStageSecretsInput,
+    RevokeStageSecretsOutput
+  >
+  readonly rotateStageSealingKey: RPCHandler<
+    RotateStageSealingKeyInput,
+    RotateStageSealingKeyOutput
+  >
+  readonly setProductionBranch: RPCHandler<
+    SetProductionBranchInput,
+    SetProductionBranchOutput
+  >
+  readonly setStageConsoleSecret: RPCHandler<
+    SetStageConsoleSecretInput,
+    SetStageConsoleSecretOutput
+  >
+  readonly setStageConsoleVariable: RPCHandler<
+    SetStageConsoleVariableInput,
+    SetStageConsoleVariableOutput
+  >
+  readonly setStageCredential: RPCHandler<
+    SetStageCredentialInput,
+    SetStageCredentialOutput
+  >
+  readonly setStageSealedSecret: RPCHandler<
+    SetStageSealedSecretInput,
+    SetStageSealedSecretOutput
+  >
+  readonly setStageSealingKey: RPCHandler<
+    SetStageSealingKeyInput,
+    SetStageSealingKeyOutput
+  >
+  readonly submitContactForm: RPCHandler<
+    SubmitContactFormInput,
+    SubmitContactFormOutput
+  >
+  readonly addTicketComment: RPCHandler<
+    AddTicketCommentInput,
+    AddTicketCommentOutput
+  >
+  readonly advanceTicket: RPCHandler<AdvanceTicketInput, AdvanceTicketOutput>
+  readonly createTicket: RPCHandler<CreateTicketInput, CreateTicketOutput>
+  readonly getTicket: RPCHandler<GetTicketInput, GetTicketOutput>
+  readonly listTickets: RPCHandler<ListTicketsInput, ListTicketsOutput>
+  readonly recordTicketBuildFinished: RPCHandler<
+    RecordTicketBuildFinishedInput,
+    RecordTicketBuildFinishedOutput
+  >
+  readonly recordTicketReviewFinished: RPCHandler<
+    RecordTicketReviewFinishedInput,
+    RecordTicketReviewFinishedOutput
+  >
+  readonly recordTicketSpecSummarized: RPCHandler<
+    RecordTicketSpecSummarizedInput,
+    RecordTicketSpecSummarizedOutput
+  >
+  readonly checkUsername: RPCHandler<CheckUsernameInput, CheckUsernameOutput>
+  readonly claimUsername: RPCHandler<ClaimUsernameInput, ClaimUsernameOutput>
+  readonly getMyBadges: RPCHandler<null, GetMyBadgesOutput>
+  readonly listFavoriteProjects: RPCHandler<
+    ListFavoriteProjectsInput,
+    ListFavoriteProjectsOutput
+  >
+  readonly listNavigationHistory: RPCHandler<
+    ListNavigationHistoryInput,
+    ListNavigationHistoryOutput
+  >
+  readonly recordNavigation: RPCHandler<
+    RecordNavigationInput,
+    RecordNavigationOutput
+  >
+  readonly setProjectFavorite: RPCHandler<
+    SetProjectFavoriteInput,
+    SetProjectFavoriteOutput
+  >
+  readonly listVirtualUserPersonas: RPCHandler<
+    ListVirtualUserPersonasInput,
+    ListVirtualUserPersonasOutput
+  >
+  readonly listVirtualUserRunCosts: RPCHandler<
+    ListVirtualUserRunCostsInput,
+    ListVirtualUserRunCostsOutput
+  >
+  readonly createWebhookEndpoint: RPCHandler<
+    CreateWebhookEndpointInput,
+    CreateWebhookEndpointOutput
+  >
+  readonly deleteWebhookEndpoint: RPCHandler<
+    DeleteWebhookEndpointInput,
+    DeleteWebhookEndpointOutput
+  >
+  readonly getWebhookDelivery: RPCHandler<
+    GetWebhookDeliveryInput,
+    GetWebhookDeliveryOutput
+  >
+  readonly listWebhookEndpoints: RPCHandler<
+    ListWebhookEndpointsInput,
+    ListWebhookEndpointsOutput
+  >
+  readonly testWebhookEndpoint: RPCHandler<
+    TestWebhookEndpointInput,
+    TestWebhookEndpointOutput
+  >
+  readonly updateWebhookEndpoint: RPCHandler<
+    UpdateWebhookEndpointInput,
+    UpdateWebhookEndpointOutput
+  >
+  readonly getWorkflowGraph: RPCHandler<
+    GetWorkflowGraphInput,
+    GetWorkflowGraphOutput
+  >
+  readonly getAgentThreads: RPCHandler<
+    GetAgentThreadsInput,
+    GetAgentThreadsOutput
+  >
+  readonly getAgentThreadMessages: RPCHandler<
+    GetAgentThreadMessagesInput,
+    GetAgentThreadMessagesOutput
+  >
+  readonly getAgentThreadRuns: RPCHandler<
+    GetAgentThreadRunsInput,
+    GetAgentThreadRunsOutput
+  >
+  readonly deleteAgentThread: RPCHandler<
+    DeleteAgentThreadInput,
+    DeleteAgentThreadOutput
+  >
+  readonly pikkuConsoleGetVariable: RPCHandler<
+    PikkuConsoleGetVariableInput,
+    PikkuConsoleGetVariableOutput
+  >
+  readonly pikkuConsoleSetVariable: RPCHandler<
+    PikkuConsoleSetVariableInput,
+    PikkuConsoleSetVariableOutput
+  >
+  readonly runVirtualUser: RPCHandler<RunVirtualUserInput, RunVirtualUserOutput>
+  readonly getVirtualUserRun: RPCHandler<
+    GetVirtualUserRunInput,
+    GetVirtualUserRunOutput
+  >
+  readonly listVirtualUserRuns: RPCHandler<
+    ListVirtualUserRunsInput,
+    ListVirtualUserRunsOutput
+  >
+  readonly getVirtualUserRunSteps: RPCHandler<
+    GetVirtualUserRunStepsInput,
+    GetVirtualUserRunStepsOutput
+  >
+  readonly setVirtualUserSchedule: RPCHandler<
+    SetVirtualUserScheduleInput,
+    SetVirtualUserScheduleOutput
+  >
+  readonly listVirtualUserSchedules: RPCHandler<
+    null,
+    ListVirtualUserSchedulesOutput
+  >
+}
 
 // Addon package RPC maps
 import type { RPCMap as ConsoleRPCMap } from '@pikku/addon-console/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
@@ -9240,23 +10885,27 @@ import type { RPCMap as RegistryRPCMap } from '@pikkufabric/addon-registry/.pikk
 import type { RPCMap as ReviewRPCMap } from '@pikkufabric/addon-review/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 import type { RPCMap as StripeRPCMap } from '@pikku/addon-stripe/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 
-
 // Utility type to prefix keys with namespace (skips 'any' to prevent type poisoning)
-type PrefixKeys<T, Prefix extends string> = unknown extends T ? {} : {
-  [K in keyof T as `${Prefix}:${string & K}`]: T[K]
-}
+type PrefixKeys<T, Prefix extends string> = unknown extends T
+  ? {}
+  : {
+      [K in keyof T as `${Prefix}:${string & K}`]: T[K]
+    }
 
 // Merge all RPC maps with namespace prefixes
-export type FlattenedRPCMap =
-  RPCMap & PrefixKeys<ConsoleRPCMap, 'console'> & PrefixKeys<RegistryRPCMap, 'registry'> & PrefixKeys<ReviewRPCMap, 'review'> & PrefixKeys<StripeRPCMap, 'stripe'>
+export type FlattenedRPCMap = RPCMap &
+  PrefixKeys<ConsoleRPCMap, 'console'> &
+  PrefixKeys<RegistryRPCMap, 'registry'> &
+  PrefixKeys<ReviewRPCMap, 'review'> &
+  PrefixKeys<StripeRPCMap, 'stripe'>
 
-type IsAny<T> = 0 extends (1 & T) ? true : false
-type IsVoidishInput<T> = IsAny<T> extends true
-  ? false
-  : [T] extends [void | null | undefined]
-    ? true
-    : false
-
+type IsAny<T> = 0 extends 1 & T ? true : false
+type IsVoidishInput<T> =
+  IsAny<T> extends true
+    ? false
+    : [T] extends [void | null | undefined]
+      ? true
+      : false
 
 export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
   ...args: IsVoidishInput<FlattenedRPCMap[Name]['input']> extends true
@@ -9280,10 +10929,11 @@ import type { AgentMap as RegistryAgentMap } from '@pikkufabric/addon-registry/.
 import type { AgentMap as ReviewAgentMap } from '@pikkufabric/addon-review/.pikku/agent/pikku-agent-map.gen.d.js'
 import type { AgentMap as StripeAgentMap } from '@pikku/addon-stripe/.pikku/agent/pikku-agent-map.gen.d.js'
 
-
-type FlattenedAgentMap =
-  AgentMap & PrefixKeys<ConsoleAgentMap, 'console'> & PrefixKeys<RegistryAgentMap, 'registry'> & PrefixKeys<ReviewAgentMap, 'review'> & PrefixKeys<StripeAgentMap, 'stripe'>
-
+type FlattenedAgentMap = AgentMap &
+  PrefixKeys<ConsoleAgentMap, 'console'> &
+  PrefixKeys<RegistryAgentMap, 'registry'> &
+  PrefixKeys<ReviewAgentMap, 'review'> &
+  PrefixKeys<StripeAgentMap, 'stripe'>
 
 import type { PikkuRPC } from '@pikku/core/rpc'
 import type { AgentInput } from '@pikku/core/agent'
@@ -9302,22 +10952,40 @@ export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
 export type TypedWorkflowStatus = (
   workflowName: string,
   runId: string
-) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'; output?: unknown; error?: { message?: string } }>
+) => Promise<{
+  id: string
+  status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
+  output?: unknown
+  error?: { message?: string }
+}>
 
 type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
   ? (name: string, input: AgentInput) => Promise<any>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
       input: AgentInput
-    ) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
+    ) => Promise<{
+      runId: string
+      result: FlattenedAgentMap[Name]['output']
+      usage: { inputTokens: number; outputTokens: number }
+    }>
 
 type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
-  ? (name: string, input: AgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
+  ? (
+      name: string,
+      input: AgentInput,
+      options?: { requiresToolApproval?: 'all' | 'explicit' | false }
+    ) => Promise<void>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
       input: AgentInput,
       options?: { requiresToolApproval?: 'all' | 'explicit' | false }
     ) => Promise<void>
 
-export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
-  
+export type TypedPikkuRPC = PikkuRPC<
+  RPCInvoke,
+  RPCRemote,
+  TypedStartWorkflow,
+  TypedAgentRun,
+  TypedAgentStream
+>

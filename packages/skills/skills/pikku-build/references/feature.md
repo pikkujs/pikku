@@ -257,12 +257,13 @@ Do not push without explicit confirmation. Do not merge.
 ## Report what fought you
 
 When pikku itself is what cost you time — a wrong generated type, a check that
-passed when it should not, a skill that misled you — add it to
-`BUILD-REPORT.md` as it happens. The `pikku-report` skill owns the ladder, the
-entry format and how the file is sent; read it before writing one.
+passed when it should not, a skill that misled you — file it with `pikku fabric
+report`. The `pikku-report` skill owns the ladder, the two kinds, the JSON-on-
+stdin form and asking the user at hand-over; read it before filing.
 
-Sending the report with the user's okay is permitted here (see **Hard
-constraints**) and is the one network call a build may make. Never patch pikku
+Filing is permitted here (see **Hard constraints**), and sending what was filed
+is the one network call a build may make, once the user agrees. Nothing is
+written to the repo. Never patch pikku
 itself — not `node_modules`, not a linked checkout — work around it in the app,
 report it, and let the fix happen once.
 

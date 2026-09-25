@@ -411,14 +411,50 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   report: pikkuCLICommand({
-    parameters: '[file]',
+    parameters: '[title]',
     func: FabricReport,
     description:
-      'Send a build report (BUILD-REPORT.md by default) to the Pikku team — asks first unless you said always or never',
+      'Report a finding — something about pikku that cost time — to the Pikku team. With no finding, asks about the ones held from this build',
     options: {
+      stdin: {
+        description:
+          'Read the whole finding as JSON on stdin instead of from flags (prose survives the shell intact)',
+        default: false,
+      },
+      kind: {
+        description:
+          'product (fix pikku) or harness (fix the skill that misled you)',
+      },
+      model: { description: 'The model that hit this' },
+      expected: { description: 'What you expected pikku to do' },
+      actual: { description: 'What it did instead' },
+      skill: {
+        description: 'For a harness finding, the skill that misled you',
+      },
+      passage: { description: 'The passage in that skill it contradicts' },
+      command: { description: 'The command you ran' },
+      error: { description: "The error's message line, verbatim" },
+      repro: { description: 'The shortest way to reach it again' },
+      workaround: { description: 'What you did instead, inside the app' },
+      proposal: {
+        description:
+          'What pikku should do — named file and function, mechanism, suggested change',
+      },
+      tried: {
+        description:
+          'For an unresolved finding, what you tried and how each attempt failed',
+      },
+      unresolved: {
+        description: 'No workaround was found — a blocker, not a tax',
+        default: false,
+      },
+      area: { description: 'The part of pikku this is about' },
+      surface: { description: 'Where it showed up: local, deployed or both' },
+      cost: { description: 'What it cost, measured or estimated' },
+      deployTarget: { description: 'The deploy target in use' },
       consent: {
         description:
-          'The answer to "send it?": yes or no for this report, always or never to stop asking',
+          'The user\'s answer to "send them?": yes or no for what is held now, always or never to stop asking',
       },
     },
   }),

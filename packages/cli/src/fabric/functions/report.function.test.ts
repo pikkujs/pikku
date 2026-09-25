@@ -2,12 +2,13 @@ import { after, afterEach, before, beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { FabricReport } from './report.function.js'
 import { parseAnswer, readConsent } from '../lib/report.js'
+import { readHeld, runIdFor } from '../lib/held-findings.js'
 
 const received: { body: any; authorization?: string }[] = []
 let status = 200
@@ -17,8 +18,20 @@ const cwd = process.cwd()
 const tty = process.stdin.isTTY
 const env = { ...process.env }
 
-const run = (data: { file?: string; consent?: string } = {}) =>
-  FabricReport.func({} as any, data as any, {} as any)
+const finding = (title: string) => ({
+  title,
+  kind: 'product',
+  model: 'claude-opus-5',
+  expected: 'the scaffold to boot',
+  actual: 'it failed on a missing agent schema',
+  workaround: 'added the schema by hand',
+  unresolved: false,
+})
+
+const run = (data: Record<string, unknown> = {}) =>
+  FabricReport.func({} as any, { unresolved: false, ...data } as any, {} as any)
+
+const heldNow = async () => (await readHeld(await runIdFor())).length
 
 before(async () => {
   server = createServer((req, res) => {
@@ -39,18 +52,17 @@ after(() => server.close())
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'pikku-report-'))
-  process.chdir(dir)
+  await mkdir(join(dir, 'app'))
+  await writeFile(join(dir, 'app', 'pikku.config.json'), '{}')
+  process.chdir(join(dir, 'app'))
   const { port } = server.address() as AddressInfo
   process.env.FABRIC_API_URL = `http://127.0.0.1:${port}`
+  process.env.FABRIC_FINDINGS_DIR = join(dir, 'findings')
   process.env.FABRIC_REPORT_CONSENT_FILE = join(dir, 'consent.json')
   delete process.env.PIKKU_REPORT
   ;(process.stdin as any).isTTY = false
   received.length = 0
   status = 200
-  await writeFile(
-    join(dir, 'BUILD-REPORT.md'),
-    '# Build report\n\n## Scaffold does not boot\nwhat happened\n'
-  )
 })
 
 afterEach(async () => {
@@ -60,104 +72,120 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true })
 })
 
-describe('fabric report', () => {
-  test('with no saved answer and nobody at the terminal, it sends nothing and asks for one', async () => {
+describe('fabric report, with no saved answer', () => {
+  test('a finding is held, not sent', async () => {
+    const result = await run(finding('Scaffold does not boot'))
+    assert.deepEqual(result, { sent: 0, held: 1, needsConsent: false })
+    assert.equal(received.length, 0)
+  })
+
+  test('at hand-over it lists what is held and asks for an answer', async () => {
+    await run(finding('Scaffold does not boot'))
+    await run(finding('Test accounts get no roles'))
     const result = await run()
-    assert.deepEqual(result, {
-      sent: false,
-      reason: 'unanswered',
-      needsConsent: true,
-    })
+    assert.deepEqual(result, { sent: 0, held: 2, needsConsent: true })
     assert.equal(received.length, 0)
-    assert.equal(await readConsent(), null)
   })
 
-  test('yes sends the document anonymously and saves nothing', async () => {
+  test('yes sends every held finding, tied by one run id, anonymously', async () => {
+    await run(finding('Scaffold does not boot'))
+    await run(finding('Test accounts get no roles'))
     const result = await run({ consent: 'yes' })
-    assert.equal(result.sent, true)
-    assert.equal(received.length, 1)
+    assert.deepEqual(result, { sent: 2, held: 0, needsConsent: false })
+    assert.equal(received.length, 2)
+    const [first, second] = received.map((r) => r.body.finding)
+    assert.equal(first.title, 'Scaffold does not boot')
+    assert.equal(first.runId, second.runId)
     assert.equal(received[0]!.authorization, undefined)
-    assert.match(received[0]!.body.report, /Scaffold does not boot/)
-    assert.equal(received[0]!.body.projectId, undefined)
-    assert.ok(received[0]!.body.environment.platform)
+    assert.deepEqual(Object.keys(received[0]!.body), ['finding'])
     assert.equal(await readConsent(), null)
   })
 
-  test('no sends nothing and saves nothing, so the next report asks again', async () => {
-    await run({ consent: 'no' })
-    assert.equal(received.length, 0)
+  test('no discards them and saves nothing, so the next build asks again', async () => {
+    await run(finding('Scaffold does not boot'))
+    assert.equal((await run({ consent: 'no' })).reason, 'no')
+    assert.equal(await heldNow(), 0)
+    await run(finding('Another one'))
     assert.equal((await run()).needsConsent, true)
   })
 
-  test('always sends, and every later report goes without asking', async () => {
-    await run({ consent: 'always' })
-    const later = await run()
-    assert.equal(later.sent, true)
-    assert.equal(received.length, 2)
+  test('nothing held means nothing to ask', async () => {
+    assert.deepEqual(await run(), { sent: 0, held: 0, needsConsent: false })
   })
 
-  test('never sends nothing, and every later report does nothing at all', async () => {
+  test('a failed send keeps what was not sent', async () => {
+    await run(finding('Scaffold does not boot'))
+    status = 503
+    const result = await run({ consent: 'yes' })
+    assert.equal(result.sent, 0)
+    assert.equal(result.held, 1)
+    assert.equal(await heldNow(), 1)
+  })
+})
+
+describe('fabric report, always', () => {
+  test('sends each finding the moment it is filed', async () => {
+    await run(finding('Scaffold does not boot'))
+    await run({ consent: 'always' })
+    const result = await run(finding('Test accounts get no roles'))
+    assert.deepEqual(result, { sent: 1, held: 0, needsConsent: false })
+    assert.equal(received.length, 2)
+    assert.equal(await readConsent(), 'always')
+  })
+})
+
+describe('fabric report, never', () => {
+  test('does nothing at all afterwards, not even check the finding', async () => {
+    await run(finding('Scaffold does not boot'))
     await run({ consent: 'never' })
-    await rm(join(dir, 'BUILD-REPORT.md'))
-    const later = await run()
-    assert.deepEqual(later, {
-      sent: false,
-      reason: 'never',
+    assert.equal(await heldNow(), 0)
+    const result = await run({ title: 'half a finding' })
+    assert.deepEqual(result, {
+      sent: 0,
+      held: 0,
       needsConsent: false,
+      reason: 'never',
     })
     assert.equal(received.length, 0)
   })
 
-  test('an explicit answer replaces a saved never', async () => {
+  test('an explicit answer replaces it', async () => {
     await run({ consent: 'never' })
-    assert.equal((await run({ consent: 'always' })).sent, true)
-    assert.equal(await readConsent(), 'always')
+    await run({ consent: 'always' })
+    assert.equal((await run(finding('Back on'))).sent, 1)
   })
+})
 
-  test('PIKKU_REPORT answers for a machine with nobody to ask', async () => {
-    process.env.PIKKU_REPORT = 'never'
-    assert.equal((await run()).reason, 'never')
+describe('fabric report, on a machine with nobody to ask', () => {
+  test('PIKKU_REPORT answers without saving', async () => {
     process.env.PIKKU_REPORT = 'always'
-    assert.equal((await run()).sent, true)
+    assert.equal((await run(finding('Sent'))).sent, 1)
+    process.env.PIKKU_REPORT = 'never'
+    assert.equal((await run(finding('Dropped'))).reason, 'never')
     assert.equal(existsSync(join(dir, 'consent.json')), false)
   })
+})
 
-  test('an empty report is not sent and not asked about', async () => {
-    await writeFile(join(dir, 'BUILD-REPORT.md'), '\n')
-    assert.deepEqual(await run(), {
-      sent: false,
-      reason: 'empty',
-      needsConsent: false,
-    })
+describe('fabric report, run ids', () => {
+  test('one per checkout, found from any directory inside it', async () => {
+    const id = await runIdFor()
+    await mkdir(join(dir, 'app', 'packages'))
+    process.chdir(join(dir, 'app', 'packages'))
+    assert.equal(await runIdFor(), id)
+    await mkdir(join(dir, 'other'))
+    process.chdir(join(dir, 'other'))
+    assert.notEqual(await runIdFor(), id)
   })
+})
 
-  test('another file can be named', async () => {
-    await writeFile(join(dir, 'notes.md'), 'something else broke\n')
-    await run({ file: 'notes.md', consent: 'yes' })
-    assert.equal(received[0]!.body.report, 'something else broke\n')
-  })
-
-  test('a failed send is reported, not thrown', async () => {
-    status = 503
-    const result = await run({ consent: 'yes' })
-    assert.deepEqual(result, {
-      sent: false,
-      reason: 'fabric answered 503',
-      needsConsent: false,
-    })
-  })
-
-  test('an unknown answer, a missing file and an oversized report are refused', async () => {
+describe('fabric report, refusals', () => {
+  test('an unknown answer and a malformed finding are refused', async () => {
     await assert.rejects(run({ consent: 'maybe' }), /--consent is one of/)
-    await assert.rejects(run({ file: 'nope.md', consent: 'yes' }), /No report/)
-    await writeFile(join(dir, 'BUILD-REPORT.md'), 'x'.repeat(200_001))
-    await assert.rejects(run({ consent: 'yes' }), /over 200 KB/)
-  })
-
-  test('the saved answer is readable json on the machine', async () => {
-    await run({ consent: 'always' })
-    const saved = JSON.parse(await readFile(join(dir, 'consent.json'), 'utf8'))
-    assert.equal(saved.consent, 'always')
+    await assert.rejects(run({ title: 'half a finding' }), /kind/)
+    await assert.rejects(
+      run({ ...finding('No workaround'), workaround: undefined }),
+      /--workaround/
+    )
   })
 })
 

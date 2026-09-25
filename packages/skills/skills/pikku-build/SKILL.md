@@ -115,19 +115,17 @@ generated functions through `ref()`.
 
   A person who has to go hunting for the port assumes the app did not start.
 
-## Keep a BUILD-REPORT.md
+## Report what pikku got wrong, as it happens
 
 Whenever pikku or a skill costs you time — a command that failed on a fresh
 tree, a skill that described a flag the CLI does not have, generated code you
-had to fix by hand — add an entry to `BUILD-REPORT.md` at the repo root as it
-happens. The `pikku-report` skill has the entry format. Leave out secrets,
-tokens and customer data.
+had to fix by hand — file it then with `pikku fabric report --stdin`. The
+`pikku-report` skill has the fields. Leave out secrets, tokens and customer data.
 
-It is the last thing in the hand-over, after the app runs (and is deployed, if
-they chose to): run `pikku fabric report`. It sends only when the user has said
-Always; otherwise it prints what it would send, and you ask them — Yes, No,
-Always or Never — and run it again with `--consent <answer>`. If it says
-reporting is off, do not ask.
+Findings are held until hand-over. The last thing in the hand-over, after the
+app runs (and is deployed, if they chose to), is `pikku fabric report`: if it
+lists findings and asks, ask the user — Yes, No, Always or Never — and run it
+again with `--consent <answer>`. If it says reporting is off, do not ask.
 
 ## Who you are talking to
 

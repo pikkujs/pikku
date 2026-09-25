@@ -39,9 +39,7 @@ export const FabricChangesFile = pikkuSessionlessFunc({
   output: FabricChangesFileOutput,
   func: async (_services, input) => {
     if (input.body && input.bodyFile)
-      throw new FabricPreconditionError(
-        'Pass --body or --body-file, not both.'
-      )
+      throw new FabricPreconditionError('Pass --body or --body-file, not both.')
 
     const { rpc, projectId } = await changesContext(
       input.apiUrl,
