@@ -96,6 +96,14 @@ import {
 import { FabricSmoke, renderSmoke } from './functions/smoke.function.js'
 import { FabricPublish } from './functions/publish.function.js'
 import { FabricAdd } from './functions/add.function.js'
+import {
+  FabricAddonSearch,
+  renderAddonSearch,
+} from './functions/addon-search.function.js'
+import {
+  FabricAddonGet,
+  renderAddonGet,
+} from './functions/addon-get.function.js'
 import { FabricReport } from './functions/report.function.js'
 import {
   FabricAddonVerify,
@@ -204,8 +212,32 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   addon: {
-    description: 'Publish and install Fabric community-registry addons',
+    description:
+      'Search, publish and install Fabric community-registry addons',
     subcommands: {
+      search: pikkuCLICommand({
+        parameters: '<query>',
+        func: FabricAddonSearch,
+        render: renderAddonSearch,
+        description:
+          'Search the registry for an addon, or an OpenAPI spec to generate one from',
+        options: {
+          limit: {
+            description: 'How many OpenAPI entries to return (default 20)',
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      get: pikkuCLICommand({
+        parameters: '<name>',
+        func: FabricAddonGet,
+        render: renderAddonGet,
+        description:
+          'Look one entry up by name, in both the published-addon and OpenAPI catalogues',
+        options: {
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
       verify: pikkuCLICommand({
         parameters: '[dir]',
         func: FabricAddonVerify,

@@ -194,6 +194,15 @@ describe('serializeVirtualUserFunctions', () => {
     assert.doesNotMatch(out, /pikkuState|@pikku\/core\/internal/)
   })
 
+  // A cadence production refuses would fail every tick with nobody watching, so
+  // the write has to know which environment it is in to refuse it up front.
+  test('a schedule write is told which environment it is in', () => {
+    assert.match(
+      out,
+      /writeVirtualUserSchedule\(\{[^}]*environments: personaEnvironments,[^}]*config: config/
+    )
+  })
+
   // What is generated is the part that varies by application. Everything else
   // is a call into `@pikku/core/virtual-user`, where it is type checked when
   // core builds and fixed once rather than in every generated copy of it.

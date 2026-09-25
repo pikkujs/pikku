@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3064 observable things**: 995 exported names, plus
-2069 members on the classes and interfaces among them, reachable
+**3067 observable things**: 995 exported names, plus
+2072 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -15,7 +15,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 436 |
-| `./virtual-user` | 66 | 66 | 212 |
+| `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 49 | 49 | 152 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
@@ -2508,7 +2508,7 @@ export interface VirtualUserTuning {
   invertedOracle?: boolean
   instructions?: string
 }
-writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
+writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
   personas: ScaffoldPersonas
@@ -2520,6 +2520,9 @@ export interface WriteVirtualUserScheduleParams {
   minIntervalMs?: number
   maxIntervalMs?: number
   nextRunAt?: string
+  config?: { nodeEnv?: string }
+  environments?: Readonly<Record<string, PersonaEnvironment>>
+  environment?: string
 }
 ```
 
