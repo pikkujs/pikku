@@ -55,14 +55,7 @@ describe('readPikkuPackages', () => {
       const scope = join(root, 'node_modules', '@pikku')
       await mkdir(scope, { recursive: true })
       const stored = await installPackage(
-        join(
-          root,
-          'node_modules',
-          '.bun',
-          '@pikku+core@0.12.90',
-          'node_modules',
-          '@pikku'
-        ),
+        join(root, 'node_modules', '.bun', '@pikku+core@0.12.90', 'node_modules', '@pikku'),
         'core',
         '0.12.90'
       )
