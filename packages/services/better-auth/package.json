@@ -1,6 +1,6 @@
 {
   "name": "@pikku/better-auth",
-  "version": "0.12.47",
+  "version": "0.12.48",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -24,7 +24,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.121",
+    "@pikku/core": "^0.12.122",
     "better-auth": "^1.7.5",
     "zod": "^4"
   },

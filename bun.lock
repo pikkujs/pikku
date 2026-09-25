@@ -348,7 +348,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.163",
+      "version": "0.12.164",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -359,7 +359,7 @@
         "@jridgewell/trace-mapping": "^0.3.31",
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "@pikku/ai-vercel": "^0.12.14",
-        "@pikku/better-auth": "^0.12.47",
+        "@pikku/better-auth": "^0.12.48",
         "@pikku/bun-server": "^0.12.13",
         "@pikku/code-edit": "^0.12.2",
         "@pikku/deploy": "^0.12.11",
@@ -373,7 +373,7 @@
         "@pikku/node-http-server": "^0.12.17",
         "@pikku/openapi-parser": "^0.12.23",
         "@pikku/schedule": "^0.12.8",
-        "@pikku/skills": "^0.12.38",
+        "@pikku/skills": "^0.12.39",
         "@pikku/websocket": "^0.12.5",
         "@types/cookie": "^1.0.0",
         "@types/json-schema": "^7.0.15",
@@ -397,7 +397,7 @@
         "zod-to-ts": "^2.1.0",
       },
       "devDependencies": {
-        "@pikku/core": "^0.12.121",
+        "@pikku/core": "^0.12.122",
         "@pikku/playwright": "^0.12.85",
         "@pikku/ws": "^0.12.10",
         "@playwright/test": "^1.50.0",
@@ -410,7 +410,7 @@
         "ws": "^8.21.3",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.121",
+        "@pikku/core": "^0.12.122",
         "@pikku/playwright": "^0.12.85",
         "@pikku/ws": "^0.12.10",
         "better-auth": "^1.7.5",
@@ -530,7 +530,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.121",
+      "version": "0.12.122",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -1129,7 +1129,7 @@
     },
     "packages/services/better-auth": {
       "name": "@pikku/better-auth",
-      "version": "0.12.47",
+      "version": "0.12.48",
       "devDependencies": {
         "@better-auth/api-key": "^1.7.5",
         "@better-auth/core": "^1.7.5",
@@ -1142,7 +1142,7 @@
         "nanostores": "^1.4.2",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.121",
+        "@pikku/core": "^0.12.122",
         "better-auth": "^1.7.5",
         "zod": "^4",
       },
@@ -1361,7 +1361,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.38",
+      "version": "0.12.39",
       "devDependencies": {
         "@types/node": "^24.13.3",
         "yaml": "^2.9.0",
@@ -1606,14 +1606,14 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.163",
-        "@pikku/core": "^0.12.121",
+        "@pikku/cli": "^0.12.164",
+        "@pikku/core": "^0.12.122",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^6.0.3",
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/core": "^0.12.121",
+        "@pikku/core": "^0.12.122",
         "zod": "^4",
       },
     },

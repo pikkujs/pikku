@@ -1,5 +1,14 @@
 # @pikku/better-auth
 
+## 0.12.48
+
+### Patch Changes
+
+- e54ae19: `pikkuActor` takes an optional `personaSignIn: { personas, allowed }`, which serves `POST /sign-in/persona { id }`: it signs in as a declared, runnable persona without the caller presenting a credential, so a "Sign in as" switcher on a deployed preview never ships an actor secret to the browser. `allowed` is asked on every call, and the actor sign-in gate still applies.
+- Updated dependencies [3511717]
+- Updated dependencies [3511717]
+  - @pikku/core@0.12.122
+
 ## 0.12.47
 
 ### Patch Changes
