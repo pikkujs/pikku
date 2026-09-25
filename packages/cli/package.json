@@ -60,6 +60,7 @@
     "chalk": "^6.0.0",
     "chokidar": "^5.0.0",
     "esbuild": "~0.28.2",
+    "giget": "^3.3.1",
     "istanbul-lib-instrument": "^6.0.3",
     "kysely": "^0.29.5",
     "open": "^11.0.1",
