@@ -43,6 +43,15 @@ export interface ActorPluginOptions {
    * variable is.
    */
   allowSignIn?: string
+  /**
+   * Opens `POST /sign-in/persona { id }`, which signs in as a declared persona
+   * without the caller presenting a credential — the switcher a reviewer uses on
+   * a preview. `allowed` is asked on every call, so the app can gate it on a flag.
+   */
+  personaSignIn?: {
+    personas: ReadonlyArray<{ id: string; email?: string; name?: string; runnable?: boolean }>
+    allowed: () => boolean | Promise<boolean>
+  }
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
   /**
@@ -138,6 +147,72 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
     refusalAnnounced = true
   }
 
+  const signIn = async (ctx: any, email: string, name?: string) => {
+    type ActorUser = { id: string; actor?: boolean } & Record<
+      string,
+      unknown
+    >
+    const existing =
+      await ctx.context.internalAdapter.findUserByEmail(email)
+    let user: ActorUser | undefined = existing?.user as
+      ActorUser | undefined
+    if (user && !user.actor) {
+      // Real user row — the secret must never impersonate real users
+      throw new APIError('UNAUTHORIZED', {
+        message: 'User is not an actor',
+      })
+    }
+    if (!user) {
+      if (!gate.mayProvision) {
+        throw new APIError('UNAUTHORIZED', {
+          message: ACTOR_NOT_PROVISIONED_MESSAGE,
+        })
+      }
+      user = (await ctx.context.internalAdapter.createUser(
+        {
+          email,
+          emailVerified: true,
+          name: name ?? email.split('@')[0]!,
+          actor: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        { method: 'actor' }
+      )) as unknown as ActorUser | undefined
+      if (!user) {
+        throw new APIError('INTERNAL_SERVER_ERROR', {
+          message: 'Failed to create actor user',
+        })
+      }
+    }
+
+    const session = await ctx.context.internalAdapter.createSession(
+      user.id
+    )
+    if (!session) {
+      throw new APIError('INTERNAL_SERVER_ERROR', {
+        message: 'Failed to create actor session',
+      })
+    }
+    if (options.credentials) {
+      const stored = await storeActorCredentials(
+        options.credentials,
+        email,
+        user.id
+      )
+      if (stored.length > 0) {
+        logger.info(
+          `actor ${user.id} carries upstream credentials: ${stored.join(', ')}`
+        )
+      }
+    }
+    await setSessionCookie(ctx, { session, user: user as any })
+    return ctx.json({
+      token: session.token,
+      user: { id: user.id, email, actor: true },
+    })
+  }
+
   return {
     id: 'actor',
     /** Declared whether or not the gate is open — `pikku db generate` must never read a different shape in production than in development. */
@@ -191,77 +266,41 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
             })
           }
 
-          type ActorUser = { id: string; actor?: boolean } & Record<
-            string,
-            unknown
-          >
           const email = ctx.body.email.toLowerCase()
           if (!(await verifyActorSecret(root, email, ctx.body.secret))) {
             throw new APIError('UNAUTHORIZED', {
               message: 'Invalid actor secret',
             })
           }
-          const existing =
-            await ctx.context.internalAdapter.findUserByEmail(email)
-          let user: ActorUser | undefined = existing?.user as
-            ActorUser | undefined
-          if (user && !user.actor) {
-            // Real user row — the secret must never impersonate real users
-            throw new APIError('UNAUTHORIZED', {
-              message: 'User is not an actor',
-            })
-          }
-          if (!user) {
-            if (!gate.mayProvision) {
-              throw new APIError('UNAUTHORIZED', {
-                message: ACTOR_NOT_PROVISIONED_MESSAGE,
-              })
-            }
-            user = (await ctx.context.internalAdapter.createUser(
-              {
-                email,
-                emailVerified: true,
-                name: ctx.body.name ?? email.split('@')[0]!,
-                actor: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              },
-              { method: 'actor' }
-            )) as unknown as ActorUser | undefined
-            if (!user) {
-              throw new APIError('INTERNAL_SERVER_ERROR', {
-                message: 'Failed to create actor user',
-              })
-            }
-          }
-
-          const session = await ctx.context.internalAdapter.createSession(
-            user.id
-          )
-          if (!session) {
-            throw new APIError('INTERNAL_SERVER_ERROR', {
-              message: 'Failed to create actor session',
-            })
-          }
-          if (options.credentials) {
-            const stored = await storeActorCredentials(
-              options.credentials,
-              email,
-              user.id
-            )
-            if (stored.length > 0) {
-              logger.info(
-                `actor ${user.id} carries upstream credentials: ${stored.join(', ')}`
-              )
-            }
-          }
-          await setSessionCookie(ctx, { session, user: user as any })
-          return ctx.json({
-            token: session.token,
-            user: { id: user.id, email, actor: true },
-          })
+          return signIn(ctx, email, ctx.body.name)
         }
       ),
+      ...(options.personaSignIn
+        ? {
+            signInPersona: createAuthEndpoint(
+              '/sign-in/persona',
+              { method: 'POST', body: z.object({ id: z.string() }) },
+              async (ctx) => {
+                const personaSignIn = options.personaSignIn!
+                if (!gate.enabled || !(await personaSignIn.allowed())) {
+                  throw new APIError('UNAUTHORIZED', {
+                    message: 'Persona sign-in is disabled',
+                  })
+                }
+                const persona = personaSignIn.personas.find(
+                  (candidate) =>
+                    candidate.id === ctx.body.id && candidate.runnable !== false
+                )
+                if (!persona?.email) {
+                  throw new APIError('NOT_FOUND', {
+                    message: `No persona '${ctx.body.id}'`,
+                  })
+                }
+                return signIn(ctx, persona.email.toLowerCase(), persona.name)
+              }
+            ),
+          }
+        : {}),
     },
   }
 }

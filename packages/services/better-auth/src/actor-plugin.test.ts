@@ -39,7 +39,11 @@ const recordingLogger = () => {
 const makeAuth = (
   db: Record<string, any[]>,
   secret?: string,
-  options: { logger?: any; allowSignIn?: string } = {}
+  options: {
+    logger?: any
+    allowSignIn?: string
+    personaSignIn?: Parameters<typeof pikkuActor>[0]['personaSignIn']
+  } = {}
 ) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
@@ -50,6 +54,7 @@ const makeAuth = (
       pikkuActor({
         secret,
         allowSignIn: options.allowSignIn,
+        personaSignIn: options.personaSignIn,
         logger: options.logger ?? recordingLogger(),
       }),
     ],
@@ -192,6 +197,79 @@ describe('better-auth actor plugin', () => {
       secret: '',
     })
     assert.equal(unconfigured.status, 401)
+  })
+})
+
+const signInPersona = (auth: ReturnType<typeof makeAuth>, id: string) =>
+  auth.handler(
+    new Request('http://localhost:3000/api/auth/sign-in/persona', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+  )
+
+describe('persona sign-in', () => {
+  const personas = [
+    { id: 'customer', email: 'customer@actors.local', name: 'Customer' },
+    { id: 'banned', email: 'banned@actors.local', runnable: false },
+  ]
+  beforeEach(() => {
+    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+  })
+  afterEach(clearGateEnv)
+
+  test('signs in as a declared persona with no credential from the caller', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    const res = await signInPersona(auth, 'customer')
+
+    assert.equal(res.status, 200)
+    assert.match(res.headers.getSetCookie().join('; '), /better-auth\.session_token=/)
+    assert.equal((await res.json()).user.email, 'customer@actors.local')
+  })
+
+  test('asks `allowed` on every call', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    let allowed = false
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: async () => allowed },
+    })
+
+    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    allowed = true
+    assert.equal((await signInPersona(auth, 'customer')).status, 200)
+  })
+
+  test('stays shut when the actor gate is shut, whatever `allowed` says', async () => {
+    clearGateEnv()
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    assert.equal(db.user!.length, 0)
+  })
+
+  test('refuses an undeclared or non-runnable persona', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    assert.equal((await signInPersona(auth, 'nobody')).status, 404)
+    assert.equal((await signInPersona(auth, 'banned')).status, 404)
+  })
+
+  test('is not served unless configured', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const res = await signInPersona(makeAuth(db, ROOT), 'customer')
+    assert.equal(res.status, 404)
+    assert.equal(db.user!.length, 0)
   })
 })
 
