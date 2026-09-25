@@ -2,6 +2,10 @@ import type { SerializedError } from '@pikku/core/errors'
 import {
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
+  WorkflowStepLeaseExpiredError,
+  WorkflowStepSupersededError,
+  isStepLeaseLive,
+  leaseAttemptsExhausted,
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
@@ -154,6 +158,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         // already the count this used to aggregate — and reading it keeps the
         // engine's hottest query off a table that grows for the life of the run.
         'currentAttempt',
+        'leaseExpiresAt',
         'createdAt',
         'updatedAt',
       ])
@@ -177,6 +182,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
       fromStepName: row.fromStepName ?? undefined,
+      leaseExpiresAt: row.leaseExpiresAt
+        ? new Date(row.leaseExpiresAt)
+        : undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }
@@ -230,6 +238,21 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     })
   }
 
+  public override async refreshStepLease(
+    stepId: string,
+    expiresAt: Date | null,
+    attempt?: number
+  ): Promise<void> {
+    let query = this.db
+      .updateTable('workflowStep')
+      .set({ leaseExpiresAt: expiresAt, updatedAt: new Date() })
+      .where('workflowStepId', '=', stepId)
+    if (attempt !== undefined) {
+      query = query.where(sql`coalesce(current_attempt, 1)`, '=', attempt)
+    }
+    await query.execute()
+  }
+
   protected async setStepScheduledImpl(stepId: string): Promise<void> {
     await this.db
       .updateTable('workflowStep')
@@ -252,7 +275,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   private async writeStepTransition(
     stepId: string,
     status: StepStatus,
-    historyValues: Record<string, unknown>
+    historyValues: Record<string, unknown>,
+    attempt?: number
   ): Promise<void> {
     const now = new Date()
     const stepValues: Record<string, unknown> = { status, updatedAt: now }
@@ -263,7 +287,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (status === 'failed') stepValues.result = null
 
     await this.db.transaction().execute(async (trx) => {
-      await trx
+      let step = trx
         .updateTable('workflowStep')
         .set({
           ...stepValues,
@@ -274,7 +298,16 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
           currentAttempt: sql`coalesce(current_attempt, 1)`,
         } as any)
         .where('workflowStepId', '=', stepId)
-        .execute()
+      // Fenced to the attempt that made the write, so a dispatch whose step
+      // was claimed again after its lease lapsed cannot record over the newer
+      // attempt. Throwing rolls the transaction back.
+      if (attempt !== undefined) {
+        step = step.where(sql`coalesce(current_attempt, 1)`, '=', attempt)
+      }
+      const moved = await step.executeTakeFirst()
+      if (attempt !== undefined && Number(moved?.numUpdatedRows ?? 0n) === 0) {
+        throw new WorkflowStepSupersededError(stepId, attempt)
+      }
 
       const written = await trx
         .updateTable('workflowStepHistory')
@@ -376,27 +409,39 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   protected async setStepResultImpl(
     stepId: string,
-    result: any
+    result: any,
+    attempt?: number
   ): Promise<void> {
-    await this.writeStepTransition(stepId, 'succeeded', {
-      result: JSON.stringify(result),
-      succeededAt: new Date(),
-    })
+    await this.writeStepTransition(
+      stepId,
+      'succeeded',
+      {
+        result: JSON.stringify(result),
+        succeededAt: new Date(),
+      },
+      attempt
+    )
   }
 
   protected async setStepErrorImpl(
     stepId: string,
-    error: Error
+    error: Error,
+    attempt?: number
   ): Promise<void> {
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
     }
-    await this.writeStepTransition(stepId, 'failed', {
-      error: JSON.stringify(serializedError),
-      failedAt: new Date(),
-    })
+    await this.writeStepTransition(
+      stepId,
+      'failed',
+      {
+        error: JSON.stringify(serializedError),
+        failedAt: new Date(),
+      },
+      attempt
+    )
   }
 
   protected async createRetryAttemptImpl(
@@ -493,11 +538,17 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
    *
    * The winner then goes through the ordinary transition methods, so history
    * rows and the mirror see exactly what they saw before.
+   *
+   * A `running` step is taken back only once its lease has lapsed, and the
+   * lease is part of the same guarded `UPDATE` — checking it here and writing
+   * it afterwards would let two dispatches read one lapsed lease and both
+   * proceed.
    */
   protected override async claimStepForExecution(
     runId: string,
     stepName: string,
-    rpcName: string
+    rpcName: string,
+    leaseExpiresAt: Date
   ): Promise<StepState | null> {
     const stepState = await this.getStepState(runId, stepName)
 
@@ -509,12 +560,35 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       throw new WorkflowStepFunctionMismatchError(runId, stepName)
     }
 
-    if (stepState.status === 'succeeded' || stepState.status === 'running') {
+    if (stepState.status === 'succeeded') {
       return null
     }
 
-    if (stepState.status === 'failed') {
-      if (!(await this.claimStepStatus(stepState.stepId, ['failed']))) {
+    if (stepState.status === 'running') {
+      if (isStepLeaseLive(stepState.leaseExpiresAt)) {
+        return null
+      }
+      if (leaseAttemptsExhausted(stepState)) {
+        await this.setStepError(
+          stepState.stepId,
+          new WorkflowStepLeaseExpiredError(
+            runId,
+            stepName,
+            stepState.attemptCount
+          )
+        )
+        return null
+      }
+    }
+
+    if (stepState.status === 'failed' || stepState.status === 'running') {
+      if (
+        !(await this.claimStepStatus(
+          stepState.stepId,
+          [stepState.status],
+          leaseExpiresAt
+        ))
+      ) {
         return null
       }
       return this.createRetryAttempt(stepState.stepId, 'running')
@@ -522,10 +596,11 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
     if (stepState.status === 'pending' || stepState.status === 'scheduled') {
       if (
-        !(await this.claimStepStatus(stepState.stepId, [
-          'pending',
-          'scheduled',
-        ]))
+        !(await this.claimStepStatus(
+          stepState.stepId,
+          ['pending', 'scheduled'],
+          leaseExpiresAt
+        ))
       ) {
         return null
       }
@@ -537,19 +612,29 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * Move a step to `running` only if it is still in one of `from`, reporting
-   * whether this caller is the one that moved it.
+   * Move a step to `running` under a fresh lease, only if it is still in one of
+   * `from`, reporting whether this caller is the one that moved it.
+   *
+   * Claiming back a `running` step additionally requires its lease to have
+   * lapsed. A null lease never matches, which is what keeps a step parked on a
+   * child run — running, with no worker on it by design — out of reach.
    */
   private async claimStepStatus(
     stepId: string,
-    from: StepStatus[]
+    from: StepStatus[],
+    leaseExpiresAt: Date
   ): Promise<boolean> {
-    const claimed = await this.db
+    let query = this.db
       .updateTable('workflowStep')
-      .set({ status: 'running', updatedAt: new Date() })
+      .set({ status: 'running', leaseExpiresAt, updatedAt: new Date() })
       .where('workflowStepId', '=', stepId)
       .where('status', 'in', from)
-      .executeTakeFirst()
+
+    if (from.includes('running')) {
+      query = query.where('leaseExpiresAt', '<', new Date())
+    }
+
+    const claimed = await query.executeTakeFirst()
 
     return Number(claimed?.numUpdatedRows ?? 0n) > 0
   }
@@ -740,7 +825,21 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
             selectFrom('workflowStep as s')
               .select('s.workflowStepId')
               .whereRef('s.workflowRunId', '=', 'r.workflowRunId')
-              .where('s.status', 'in', ['running', 'scheduled', 'suspended'])
+              .where((eb) =>
+                eb.or([
+                  eb('s.status', 'in', ['scheduled', 'suspended']),
+                  // A `running` step counts as in flight only while someone
+                  // still holds it. A lapsed lease is a dispatch that died, and
+                  // a null one a step nothing was expected to hand back.
+                  eb.and([
+                    eb('s.status', '=', 'running'),
+                    eb.or([
+                      eb('s.leaseExpiresAt', 'is', null),
+                      eb('s.leaseExpiresAt', '>', new Date()),
+                    ]),
+                  ]),
+                ])
+              )
           )
         )
       )

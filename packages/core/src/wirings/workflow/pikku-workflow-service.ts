@@ -11,7 +11,6 @@ import type {
   GroupConcurrencyConfig,
   JobGroup,
   JobOptions,
-  QueueService,
 } from '../queue/queue.types.js'
 import type {
   ApprovalOutcome,
@@ -35,7 +34,6 @@ import {
   continueGraph,
   executeGraphStep,
   runWorkflowGraph,
-  runFromMeta,
   stripInstanceOrdinal,
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
@@ -70,6 +68,7 @@ import {
   WorkflowRunFailedError,
   WorkflowRunNotFoundError,
   WorkflowStepNameNotString,
+  WorkflowStepSupersededError,
   WorkflowSuspendedException,
 } from './workflow-errors.js'
 import type {
@@ -82,6 +81,7 @@ import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
 import {
   jobGroupFor,
   orchestratorQueueName,
+  requireQueueService,
   resolveWorkflowConfig,
   stepDispatchTarget,
   stepJobOptions,
@@ -97,6 +97,13 @@ import {
 import { auditApprovalDecision } from './workflow-approval-audit.js'
 import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
 import { claimStepByReadThenWrite } from './workflow-step-claim.js'
+import {
+  runningStepLease,
+  startStepLeaseRefresh,
+  stepLeaseMsForQueue,
+} from './workflow-step-lease.js'
+import { runInlineRetryLoop } from './workflow-step-retry.js'
+import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   RedispatchBackoff,
   sweepStalledRuns,
@@ -417,6 +424,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   protected abstract setStepRunningImpl(stepId: string): Promise<void>
 
+  /**
+   * Push the claim on a `running` step forward, so it keeps reading as owned
+   * for another lease.
+   *
+   * Does nothing by default, which leaves a store that records no lease exactly
+   * as it was: its `running` steps are owned until they move on their own, and
+   * a dispatch that dies takes the step with it. A store that overrides this
+   * gains recovery from a lost worker, through both `claimStepForExecution` and
+   * `recoverStalledRuns`.
+   *
+   * `null` releases the lease without ending the step, for a step that is
+   * legitimately `running` with no worker on it — one parked on a child run,
+   * which the child's completion drives rather than a redispatch.
+   * `attempt` fences it to the claim that holds it.
+   */
+  public async refreshStepLease(
+    _stepId: string,
+    _expiresAt: Date | null,
+    _attempt?: number
+  ): Promise<void> {}
+
   public async setStepScheduled(stepId: string): Promise<void> {
     await this.mirrored(
       () => this.setStepScheduledImpl(stepId),
@@ -426,16 +454,22 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   protected abstract setStepScheduledImpl(stepId: string): Promise<void>
 
-  public async setStepResult(stepId: string, result: any): Promise<void> {
+  /** `attempt` fences it: a newer claim's step throws `WorkflowStepSupersededError`. */
+  public async setStepResult(
+    stepId: string,
+    result: any,
+    attempt?: number
+  ): Promise<void> {
     await this.mirrored(
-      () => this.setStepResultImpl(stepId, result),
+      () => this.setStepResultImpl(stepId, result, attempt),
       (mirror) => mirror.setStepResult(stepId, result)
     )
   }
 
   protected abstract setStepResultImpl(
     stepId: string,
-    result: any
+    result: any,
+    attempt?: number
   ): Promise<void>
 
   public async setStepChildRunId(
@@ -453,9 +487,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     childRunId: string
   ): Promise<void>
 
-  public async setStepError(stepId: string, error: Error): Promise<void> {
+  public async setStepError(
+    stepId: string,
+    error: Error,
+    attempt?: number
+  ): Promise<void> {
     await this.mirrored(
-      () => this.setStepErrorImpl(stepId, error),
+      () => this.setStepErrorImpl(stepId, error, attempt),
       (mirror) => {
         const serialized: SerializedError = {
           message: error.message,
@@ -470,7 +508,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   protected abstract setStepErrorImpl(
     stepId: string,
-    error: Error
+    error: Error,
+    attempt?: number
   ): Promise<void>
 
   public async createRetryAttempt(
@@ -604,7 +643,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     workflowName?: string
   ): Promise<void> {
-    const queueService = this.verifyQueueService()
+    const queueService = requireQueueService()
     if (!workflowName) {
       const run = await this.getRun(runId)
       workflowName = run?.workflow
@@ -621,8 +660,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   /**
    * Ids of runs that are stalled: still `running`, with no step in a state that
-   * something is expected to complete (`running`, `scheduled`, `suspended`),
-   * and no step activity since `before`.
+   * something is expected to complete (`scheduled`, `suspended`, or `running`
+   * under a live lease), and no step activity since `before`.
+   *
+   * A `running` step whose lease has lapsed is the opposite of in flight — the
+   * dispatch that claimed it is gone — so it does not hold its run out of the
+   * sweep.
    *
    * Returns nothing by default so a store that cannot express the query keeps
    * working unchanged; a store that overrides it gains crash recovery through
@@ -712,7 +755,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<void> {
-    const queueService = this.verifyQueueService()
+    const queueService = requireQueueService()
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
       { runId, stepName, rpcName, data, fromStepName },
@@ -736,7 +779,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     retryDelay?: number | string,
     workflowName?: string
   ): Promise<void> {
-    const queueService = this.verifyQueueService()
+    const queueService = requireQueueService()
     if (!workflowName) {
       const run = await this.getRun(runId)
       workflowName = run?.workflow
@@ -1092,7 +1135,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       workflowMeta?.graphHash &&
       run.graphHash !== workflowMeta.graphHash
     ) {
-      await this.runVersionMismatchFallback(run, workflowMeta, rpcService)
+      await runVersionMismatchFallback(this, run, workflowMeta, rpcService)
       return
     }
 
@@ -1248,35 +1291,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.resumeWorkflow(parentRunId)
   }
 
-  private async runVersionMismatchFallback(
-    run: WorkflowRun,
-    currentMeta: { source: string },
-    rpcService: PikkuRPC
-  ): Promise<void> {
-    const source = currentMeta.source
-
-    if (source === 'complex') {
-      await this.updateRunStatus(run.id, 'failed', undefined, {
-        message: `Workflow '${run.workflow}' definition changed. Complex workflows with inline steps cannot be migrated.`,
-        stack: '',
-        code: 'VERSION_CONFLICT',
-      })
-      return
-    }
-
-    const version = await this.getWorkflowVersion(run.workflow, run.graphHash!)
-    if (!version) {
-      await this.updateRunStatus(run.id, 'failed', undefined, {
-        message: `Workflow '${run.workflow}' version '${run.graphHash}' not found. Cannot resume with changed definition.`,
-        stack: '',
-        code: 'VERSION_NOT_FOUND',
-      })
-      return
-    }
-
-    await runFromMeta(this, run.id, version.graph, rpcService)
-  }
-
   public async executeWorkflowStep(
     runId: string,
     stepName: string,
@@ -1293,6 +1307,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         data,
         rpcService
       )
+    } catch (error) {
+      // A newer claim owns the step and its outcome; this dispatch's is dropped.
+      if (!(error instanceof WorkflowStepSupersededError)) throw error
+      this.logger?.warn(error.message)
     } finally {
       this.exitExecution(runId)
     }
@@ -1310,14 +1328,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * store backs it with a real primitive. A store able to express the decision
    * as one conditional write should override this rather than reach for a lock,
    * which is what `@pikku/kysely` does with a status-guarded `UPDATE`.
+   *
+   * Ownership is held for `leaseExpiresAt` rather than forever. A dispatch that
+   * dies mid-step leaves the step `running` with nothing to complete it, and an
+   * unconditional rejection of `running` would then wedge it beyond the reach
+   * of both this claim and the stalled-run sweep.
    */
   protected async claimStepForExecution(
     runId: string,
     stepName: string,
-    rpcName: string
+    rpcName: string,
+    leaseExpiresAt: Date
   ): Promise<StepState | null> {
     return this.withStepLock(runId, stepName, () =>
-      claimStepByReadThenWrite(this, runId, stepName, rpcName)
+      claimStepByReadThenWrite(this, runId, stepName, rpcName, leaseExpiresAt)
     )
   }
 
@@ -1328,12 +1352,24 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: PikkuRPC
   ): Promise<void> {
-    const claimed = await this.claimStepForExecution(runId, stepName, rpcName)
+    const leaseMs = stepLeaseMsForQueue(this.getStepWorkerQueueName(rpcName))
+    const claimed = await this.claimStepForExecution(
+      runId,
+      stepName,
+      rpcName,
+      new Date(Date.now() + leaseMs)
+    )
 
     if (!claimed) {
       return
     }
     const stepState = claimed
+    const attempt = stepState.attemptCount
+    const stopLeaseRefresh = startStepLeaseRefresh(
+      stepState.stepId,
+      leaseMs,
+      (expiresAt) => this.refreshStepLease(stepState.stepId, expiresAt, attempt)
+    )
 
     try {
       let result: any
@@ -1416,11 +1452,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         }
       }
 
-      await this.setStepResult(stepState.stepId, result)
+      await this.setStepResult(stepState.stepId, result, attempt)
 
       await this.resumeWorkflow(runId)
     } catch (error: any) {
       if (error instanceof ChildWorkflowStartedException) {
+        // The step stays `running` with no worker on it, which is not the same
+        // as abandoned: the child run is what completes it. Releasing the lease
+        // says so, once no renewal in flight can undo it.
+        await stopLeaseRefresh()
+        await this.refreshStepLease(stepState.stepId, null, attempt)
         this.logger?.debug(
           `Workflow step '${stepName}': child workflow ${error.childRunId} started, waiting for completion`
         )
@@ -1436,7 +1477,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         return
       }
 
-      await this.setStepError(stepState.stepId, error)
+      await this.setStepError(stepState.stepId, error, attempt)
 
       const maxAttempts = (stepState.retries ?? DEFAULT_STEP_RETRIES) + 1
       const retriesExhausted = stepState.attemptCount >= maxAttempts
@@ -1446,6 +1487,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
 
       throw error
+    } finally {
+      await stopLeaseRefresh()
     }
   }
 
@@ -1482,16 +1525,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  private verifyQueueService(): QueueService {
-    if (!getSingletonServices()?.queueService) {
-      throw new Error(
-        'QueueService not configured. Remote workflows require a queue service.'
-      )
-    }
-
-    return getSingletonServices()!.queueService!
-  }
-
   private async invokeStepRpc(
     runId: string,
     stepName: string,
@@ -1514,59 +1547,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           : undefined,
       },
     })
-  }
-
-  private async runInlineRetryLoop(
-    stepState: StepState,
-    retries: number,
-    retryDelay: WorkflowStepOptions['retryDelay'],
-    doWork: (currentStepState: StepState) => Promise<any>,
-    onError?: (error: any) => Promise<void>
-  ): Promise<any> {
-    let currentStepState = stepState
-    while (true) {
-      try {
-        await this.setStepRunning(currentStepState.stepId)
-        const result = await doWork(currentStepState)
-        await this.setStepResult(currentStepState.stepId, result)
-        return result
-      } catch (error: any) {
-        if (onError) await onError(error)
-
-        await this.setStepError(currentStepState.stepId, error)
-
-        if (currentStepState.attemptCount < retries) {
-          currentStepState = await this.createRetryAttempt(
-            currentStepState.stepId,
-            'pending'
-          )
-          if (retryDelay) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, getDurationInMilliseconds(retryDelay))
-            )
-          }
-        } else {
-          throw error
-        }
-      }
-    }
-  }
-
-  private async runStepCompensation(
-    runId: string,
-    stepName: string,
-    onErrorRpcName: string,
-    rpcService: PikkuRPC,
-    error: Error
-  ): Promise<void> {
-    await this.rpcStep(
-      runId,
-      `${stepName}:onError`,
-      onErrorRpcName,
-      { error: { message: error.message } },
-      rpcService,
-      { retries: 0 }
-    )
   }
 
   private async rpcStep(
@@ -1606,12 +1586,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           `Step '${stepName}' failed after exhausting all retries`
       )
       if (resolvedStepOptions.onError) {
-        await this.runStepCompensation(
+        await this.rpcStep(
           runId,
-          stepName,
+          `${stepName}:onError`,
           resolvedStepOptions.onError,
+          { error: { message: error.message } },
           rpcService,
-          error
+          { retries: 0 }
         )
       }
       if (stepState.error) {
@@ -1621,6 +1602,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     if (stepState.status === 'scheduled') {
+      throw new WorkflowAsyncException(runId, stepName)
+    }
+
+    const lease = runningStepLease(stepState)
+    if (lease === 'held') {
       throw new WorkflowAsyncException(runId, stepName)
     }
 
@@ -1635,14 +1621,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           fromStepName
         )
     if (dispatched) {
-      await this.setStepScheduled(stepState.stepId)
+      if (lease !== 'lapsed') {
+        await this.setStepScheduled(stepState.stepId)
+      }
       throw new WorkflowAsyncException(runId, stepName)
     }
 
     const retries = resolvedStepOptions.retries ?? this.getConfig().retries
     const retryDelay = resolvedStepOptions.retryDelay
 
-    return this.runInlineRetryLoop(
+    return runInlineRetryLoop(
+      this,
       stepState,
       retries,
       retryDelay,
@@ -1728,7 +1717,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
 
     if (await this.isInline(runId)) {
-      return this.runInlineRetryLoop(stepState, retries, retryDelay, () => fn())
+      return runInlineRetryLoop(this, stepState, retries, retryDelay, () =>
+        fn()
+      )
     } else {
       let currentStepState = stepState
       try {
@@ -1811,7 +1802,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   private async scheduleRunWake(runId: string, delay: number): Promise<void> {
     try {
-      const queueService = this.verifyQueueService()
+      const queueService = requireQueueService()
       const run = await this.getRun(runId)
       if (!run?.workflow) return
       await queueService.add(
