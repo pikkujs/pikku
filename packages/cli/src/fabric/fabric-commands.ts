@@ -106,12 +106,6 @@ import {
 } from './functions/addon-get.function.js'
 import { FabricReport } from './functions/report.function.js'
 import {
-  FabricFindingsList,
-  renderFindingsList,
-} from './functions/findings-list.function.js'
-import { FabricFindingsFlush } from './functions/findings-flush.function.js'
-import { FabricFindingsClear } from './functions/findings-clear.function.js'
-import {
   FabricAddonVerify,
   renderAddonVerify,
 } from './functions/addon-verify.function.js'
@@ -452,7 +446,7 @@ export const fabricCommands = defineCLICommands({
     parameters: '[title]',
     func: FabricReport,
     description:
-      'Report a finding — something about pikku that cost time — to fabric',
+      'Report a finding — something about pikku that cost time — to the Pikku team. With no finding, asks about the ones held from this build',
     options: {
       stdin: {
         description:
@@ -489,32 +483,13 @@ export const fabricCommands = defineCLICommands({
       area: { description: 'The part of pikku this is about' },
       surface: { description: 'Where it showed up: local, deployed or both' },
       cost: { description: 'What it cost, measured or estimated' },
-      run: { description: 'Run id, to group findings from one build' },
       deployTarget: { description: 'The deploy target in use' },
+      consent: {
+        description:
+          'The user\'s answer to "send them?": yes or no for what is held now, always or never to stop asking',
+      },
     },
   }),
-  findings: {
-    description:
-      'Inspect the findings held locally because they could not be sent',
-    subcommands: {
-      list: pikkuCLICommand({
-        func: FabricFindingsList,
-        render: renderFindingsList,
-        description: 'List the findings queued locally, waiting to be sent',
-      }),
-      flush: pikkuCLICommand({
-        func: FabricFindingsFlush,
-        description: 'Send every finding queued locally',
-        options: {
-          apiUrl: { description: 'Override the fabric-api URL for this call' },
-        },
-      }),
-      clear: pikkuCLICommand({
-        func: FabricFindingsClear,
-        description: 'Discard every queued finding without sending it',
-      }),
-    },
-  },
   metrics: pikkuCLICommand({
     func: FabricMetrics,
     description: 'Show request rate / error rate / latency for a stage',

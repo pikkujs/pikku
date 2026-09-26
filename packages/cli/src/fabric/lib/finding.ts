@@ -19,7 +19,6 @@ export const FindingInput = z.object({
   area: z.string().optional(),
   surface: z.enum(['local', 'deployed', 'both']).optional(),
   cost: z.string().optional(),
-  run: z.string().optional(),
   deployTarget: z.string().optional(),
 })
 
@@ -65,8 +64,9 @@ export function parseFindingJson(raw: string): ParsedFinding {
   return parseFinding(parsed)
 }
 
-export interface FindingPayload extends Omit<FindingInput, 'run'> {
-  runId?: string
+export interface FindingPayload extends FindingInput {
+  /** Shared by every finding from one checkout, so fabric sees a build's findings together. */
+  runId: string
   environment: ReportEnvironment
   reportedAt: string
 }
@@ -107,10 +107,10 @@ export function validateFinding(input: FindingInput): string[] {
 export function buildFindingPayload(
   input: FindingInput,
   environment: ReportEnvironment,
+  runId: string,
   now: Date = new Date()
 ): FindingPayload {
-  const { run, ...rest } = input
-  return { ...rest, runId: run, environment, reportedAt: now.toISOString() }
+  return { ...input, runId, environment, reportedAt: now.toISOString() }
 }
 
 /**
@@ -120,28 +120,14 @@ export function buildFindingPayload(
  */
 export async function postFinding(opts: {
   apiUrl: string
-  token: string
-  /**
-   * Provenance, not a routing key. A finding is about the framework rather
-   * than about anyone's project, and the reports worth having most — a
-   * scaffold that never produced a config, a first run that went wrong — come
-   * from checkouts that have no project to name.
-   */
-  projectId: string | null
   payload: FindingPayload
   timeoutMs?: number
 }): Promise<{ sent: boolean; reason?: string }> {
   try {
     const response = await fetch(`${opts.apiUrl}/findings`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${opts.token}`,
-      },
-      body: JSON.stringify({
-        projectId: opts.projectId,
-        finding: opts.payload,
-      }),
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ finding: opts.payload }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? 5000),
     })
     if (!response.ok) {
@@ -154,9 +140,8 @@ export async function postFinding(opts: {
 }
 
 /**
- * The receipt. Nothing is written to disk, so the terminal is the only place
- * the user sees what left their machine. Printed before the request goes out,
- * so it is there whether or not the send succeeds.
+ * The receipt: exactly what would leave the machine, printed whether the
+ * finding is sent now or held until the user answers.
  */
 export function renderReceipt(payload: FindingPayload): string {
   const lines: string[] = [`[fabric] reporting: ${payload.title}`]

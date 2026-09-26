@@ -109,15 +109,15 @@ describe('validateFinding', () => {
 })
 
 describe('buildFindingPayload', () => {
-  test('renames run to runId and stamps the environment and time', () => {
+  test('carries the run id and stamps the environment and time', () => {
     const payload = buildFindingPayload(
-      finding({ run: 'build-42' }),
+      finding(),
       environment,
+      'build-42',
       new Date('2026-08-29T10:00:00.000Z')
     )
 
     assert.equal(payload.runId, 'build-42')
-    assert.equal('run' in payload, false)
     assert.equal(payload.reportedAt, '2026-08-29T10:00:00.000Z')
     assert.deepEqual(payload.environment, environment)
   })
@@ -132,10 +132,10 @@ describe('renderReceipt', () => {
           error: 'TypeError: e.getFullYear is not a function',
           surface: 'deployed',
           cost: '98s vs 20s steady state',
-          run: 'run_412',
           deployTarget: 'cloudflare',
         }),
         environment,
+        'run_412',
         new Date('2026-08-29T14:02:11.000Z')
       )
     )
@@ -153,7 +153,9 @@ describe('renderReceipt', () => {
   })
 
   test('omits fields that were not given rather than printing empties', () => {
-    const receipt = renderReceipt(buildFindingPayload(finding(), environment))
+    const receipt = renderReceipt(
+      buildFindingPayload(finding(), environment, 'run_1')
+    )
 
     assert.equal(receipt.includes('command:'), false)
     assert.equal(receipt.includes('error:'), false)
@@ -168,7 +170,8 @@ describe('renderReceipt', () => {
           workaround: undefined,
           tried: 'two dead ends',
         }),
-        environment
+        environment,
+        'run_1'
       )
     )
 
@@ -177,15 +180,19 @@ describe('renderReceipt', () => {
 
   test('calls out a skewed tree and a linked framework', () => {
     const receipt = renderReceipt(
-      buildFindingPayload(finding(), {
-        ...environment,
-        packages: [
-          { name: '@pikku/cli', version: '0.12.35', linked: false },
-          { name: '@pikku/core', version: '0.12.113', linked: true },
-        ],
-        versionSkew: true,
-        linkedFramework: true,
-      })
+      buildFindingPayload(
+        finding(),
+        {
+          ...environment,
+          packages: [
+            { name: '@pikku/cli', version: '0.12.35', linked: false },
+            { name: '@pikku/core', version: '0.12.113', linked: true },
+          ],
+          versionSkew: true,
+          linkedFramework: true,
+        },
+        'run_1'
+      )
     )
 
     assert.match(receipt, /not all the same/)
@@ -262,7 +269,7 @@ async function withServer(
 }
 
 describe('postFinding', () => {
-  test('posts the finding under its project with a bearer token', async () => {
+  test('posts the finding anonymously', async () => {
     let seen: { body: string; auth?: string | string[] } | null = null
 
     await withServer(
@@ -273,18 +280,17 @@ describe('postFinding', () => {
       async (apiUrl) => {
         const result = await postFinding({
           apiUrl,
-          token: 'tok_123',
-          projectId: 'prj_abc',
-          payload: buildFindingPayload(finding(), environment),
+          payload: buildFindingPayload(finding(), environment, 'run_1'),
         })
 
         assert.deepEqual(result, { sent: true })
       }
     )
 
-    assert.equal(seen!.auth, 'Bearer tok_123')
+    assert.equal(seen!.auth, undefined)
     const parsed = JSON.parse(seen!.body)
-    assert.equal(parsed.projectId, 'prj_abc')
+    assert.deepEqual(Object.keys(parsed), ['finding'])
+    assert.equal(parsed.finding.runId, 'run_1')
     assert.equal(parsed.finding.title, finding().title)
     assert.equal(parsed.finding.environment.node, 'v22.0.0')
   })
@@ -295,9 +301,7 @@ describe('postFinding', () => {
       async (apiUrl) => {
         const result = await postFinding({
           apiUrl,
-          token: 'tok_123',
-          projectId: 'prj_abc',
-          payload: buildFindingPayload(finding(), environment),
+          payload: buildFindingPayload(finding(), environment, 'run_1'),
         })
 
         assert.equal(result.sent, false)
@@ -312,9 +316,7 @@ describe('postFinding', () => {
       async (apiUrl) => {
         const result = await postFinding({
           apiUrl,
-          token: 'tok_123',
-          projectId: 'prj_abc',
-          payload: buildFindingPayload(finding(), environment),
+          payload: buildFindingPayload(finding(), environment, 'run_1'),
           timeoutMs: 20,
         })
 
@@ -326,9 +328,7 @@ describe('postFinding', () => {
   test('an unreachable endpoint is swallowed', async () => {
     const result = await postFinding({
       apiUrl: 'http://127.0.0.1:1',
-      token: 'tok_123',
-      projectId: 'prj_abc',
-      payload: buildFindingPayload(finding(), environment),
+      payload: buildFindingPayload(finding(), environment, 'run_1'),
       timeoutMs: 200,
     })
 

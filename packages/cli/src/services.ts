@@ -112,9 +112,9 @@ export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
  * `skills install` writes agent skills into a repo that has no pikku.config.json
  * yet — that is the whole point of it — so it cannot require one to start, and
  * `doc` answers from the surface shipped inside the CLI rather than the project.
- * `fabric report` files a finding about pikku itself: a scaffold that never
+ * `fabric report` sends a report about pikku itself: a scaffold that never
  * produced a config, or a command run from the wrong directory, is exactly the
- * kind of thing worth reporting, so demanding a config would refuse the finding
+ * kind of thing worth reporting, so demanding a config would refuse the report
  * at the moment it is most worth having.
  * `fabric login` runs before there is a project to be inside, and `fabric
  * changes` reads a queue over the fabric API, resolving its project from
@@ -137,10 +137,6 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'fabric.changes.ask',
   'fabric.changes.shot',
   'fabric.changes.done',
-  'fabric.findings',
-  'fabric.findings.list',
-  'fabric.findings.flush',
-  'fabric.findings.clear',
 ])
 
 export const createConfig: CreateConfig<
