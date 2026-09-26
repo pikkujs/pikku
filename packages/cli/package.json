@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.164",
+  "version": "0.12.165",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -52,7 +52,7 @@
     "@pikku/node-http-server": "^0.12.17",
     "@pikku/openapi-parser": "^0.12.23",
     "@pikku/schedule": "^0.12.8",
-    "@pikku/skills": "^0.12.39",
+    "@pikku/skills": "^0.12.40",
     "@pikku/websocket": "^0.12.5",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
@@ -76,14 +76,14 @@
     "zod-to-ts": "^2.1.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.122",
+    "@pikku/core": "^0.12.123",
     "@pikku/playwright": "^0.12.85",
     "@pikku/ws": "^0.12.10",
     "better-auth": "^1.7.5",
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.122",
+    "@pikku/core": "^0.12.123",
     "@pikku/playwright": "^0.12.85",
     "@pikku/ws": "^0.12.10",
     "@playwright/test": "^1.50.0",
