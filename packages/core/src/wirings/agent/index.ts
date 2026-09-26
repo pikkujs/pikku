@@ -1,3 +1,10 @@
+/**
+ * Registers `wire.rpc.agent`. Imported for the side effect alone so the RPC
+ * primitive can offer the agent surface without naming the agent runtime, which
+ * would pin it into every deployment unit.
+ */
+import './agent-rpc.js'
+
 export {
   agent,
   agentStream,
@@ -5,6 +12,7 @@ export {
   agentApprove,
   agentInterrupt,
 } from './agent-helpers.js'
+export type { AgentRPCOptions, AgentRPCFactory } from './agent.types.js'
 export { wrapChannelWithAGUI } from './agent-agui.js'
 export { runAgent, resumeAgentSync } from './agent-runner.js'
 export { resolveModelAlias } from './agent-model-config.js'
