@@ -135,7 +135,7 @@ than they save:
   type params, never an inline return type. The schema is the type.
 - Permission checks go in the `permissions` field, never the function body. An
   exposed function with no session and no permission is reachable by anyone over
-  `POST /rpc/:rpcName` (PKU574).
+  `POST /rpc/:rpcName` (PKU574). If that is the point, write `auth: false` on it.
 - No `process.env` inside a function — use the injected `variables` / `secrets`
   services.
 - A `z.date()` **input** arrives over RPC as an ISO string, not a `Date`.

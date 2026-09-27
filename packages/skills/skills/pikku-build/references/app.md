@@ -515,9 +515,11 @@ Rules that are not optional:
 - Surface errors. No empty catch, no swallowed promise. If a mutation can fail,
   render the failure inline next to the control that triggered it — not a toast.
 - An exposed function with no session and no permission is reachable by anyone
-  over `POST /rpc/:rpcName` (PKU574). Either gate it or drop `expose: true`.
+  over `POST /rpc/:rpcName` (PKU574). Either gate it, drop `expose: true`, or —
+  when public is the point — write `auth: false` on it to say so.
 - A public, signed-out read (a homepage's programme, a price list) is a
-  `pikkuSessionlessFunc`. `pikkuFunc` with `auth: false` still answers
+  `pikkuSessionlessFunc` with `auth: false` written out, which is what keeps
+  PKU574 quiet for it. `pikkuFunc` with `auth: false` still answers
   `MissingSessionError` over `/rpc` to a caller with no session.
 - Better Auth already owns the `user`, `session`, `account` and `verification`
   tables. A domain table with one of those names — a class _session_, a drop-in

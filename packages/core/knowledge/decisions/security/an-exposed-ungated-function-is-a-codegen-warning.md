@@ -42,7 +42,10 @@ case it would catch.
 Severity is `warn`, not `critical`. `expose: true` on an ungated sessionless
 function is legitimate for a genuinely public endpoint — a health check, a
 sign-up — so this cannot block a build without breaking correct programs. It
-fails a build only under `--fail-on-warn`.
+fails a build only under `--fail-on-warn`. And the public endpoint is not left
+warning forever: an explicit `auth: false` on a sessionless function declares it
+public on purpose and silences the check (see
+[public is declared with auth: false](./a-public-function-says-so-with-auth-false.md)).
 
 **What this rules out:** checking at boot, where the report arrives after
 deployment; checking in `pikku validate` from `.pikku` JSON, which does not
