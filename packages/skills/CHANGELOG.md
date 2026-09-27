@@ -1,5 +1,22 @@
 # @pikku/skills
 
+## 0.12.40
+
+### Patch Changes
+
+- bc488cf: fix(inspector): an explicit `auth: false` declares an exposed sessionless function public, so PKU574 no longer warns about it
+
+  A genuinely public endpoint — a published programme, a health check — had no
+  honest way to quiet PKU574: the only options were an always-true permission or
+  `permissionsInBody: true`, both of which claim a gate that does not exist. The
+  inspector now records `auth` on function meta exactly as written instead of
+  dropping `false`, and the check treats an explicit `auth: false` as the author
+  declaring the function public on purpose. A sessionless function that leaves
+  `auth` out still warns.
+
+- 3276942: `pikku fabric report` no longer needs a sign-in. A finding is filed the moment something goes wrong and held on the machine, tied to the build by a run id made for the checkout. At hand-over, `pikku fabric report` with no finding lists what is held and asks: yes or no for these, or always or never, which is saved (`~/.fabric/report-consent.json`, or `PIKKU_REPORT`) so the question is not asked again. Always sends each finding as it is filed; never keeps nothing. The `--run` flag and `pikku fabric findings list|flush|clear` are gone.
+- 1ac09c7: The `pikku-workflow` skill now documents sub-workflows: `workflow.do` with a workflow name runs it as a child run, graph nodes may name a workflow, and inline vs queued children differ on retries.
+
 ## 0.12.39
 
 ### Patch Changes
