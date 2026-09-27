@@ -43,10 +43,17 @@ export function usePanelUrl<T>({
   const openRef = useRef(open)
   openRef.current = open
 
+  const handledHashRef = useRef<string | null>(null)
+
   useEffect(() => registerPanelType?.(type), [registerPanelType, type])
 
   useEffect(() => {
-    if (!panelHash || !items?.length || !registeredPanelTypes) return
+    if (!panelHash) {
+      handledHashRef.current = null
+      return
+    }
+    if (!items?.length || !registeredPanelTypes) return
+    if (handledHashRef.current === panelHash) return
     const target = decodePanelHash(panelHash)
     if (!target) return
     if (
@@ -56,8 +63,13 @@ export function usePanelUrl<T>({
     ) {
       return
     }
-    if (activePanel === `${type}-${target.id}`) return
+    if (activePanel === `${type}-${target.id}`) {
+      handledHashRef.current = panelHash
+      return
+    }
     const item = items.find((row) => getIdRef.current(row) === target.id)
-    if (item) openRef.current(target.id, item)
+    if (!item) return
+    handledHashRef.current = panelHash
+    openRef.current(target.id, item)
   }, [panelHash, items, type, activePanel, registeredPanelTypes])
 }

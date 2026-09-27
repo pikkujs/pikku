@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { previewRuns } from './virtual-user-runs.preview'
 
 /** How often the list re-reads while a run is still going. */
 const RUNNING_POLL_MS = 5_000
@@ -21,16 +22,38 @@ export function useVirtualUserRuns(persona?: string) {
   return useQuery({
     queryKey: ['virtual-user-runs', persona],
     queryFn: async () =>
-      await rpc.invoke('console:getVirtualUserRuns', {
+      previewRuns(persona) ??
+      (await rpc.invoke('console:getVirtualUserRuns', {
         persona,
         limit: 20,
         offset: 0,
-      }),
+      })),
     enabled: !!persona,
     // A run is started and then let go of — the record it writes minutes later
     // is the only thing that says how it went, and nothing pushes that back
     // here. So the list watches its own rows: while one is still going it asks
     // again, and the moment none is, it stops.
+    refetchInterval: (query) =>
+      (query.state.data as { status?: string }[] | undefined)?.some(
+        (run) => run.status === 'running'
+      )
+        ? RUNNING_POLL_MS
+        : false,
+  })
+}
+
+/** The latest runs across every persona, newest first. */
+export function useRecentVirtualUserRuns() {
+  const rpc = usePikkuRPC()
+
+  return useQuery({
+    queryKey: ['virtual-user-runs', { recent: true }],
+    queryFn: async () =>
+      previewRuns() ??
+      (await rpc.invoke('console:getVirtualUserRuns', {
+        limit: 100,
+        offset: 0,
+      })),
     refetchInterval: (query) =>
       (query.state.data as { status?: string }[] | undefined)?.some(
         (run) => run.status === 'running'
@@ -84,8 +107,6 @@ export function useStartVirtualUserRun(persona?: string) {
         ...input,
       }),
     onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ['virtual-user-runs', persona],
-      }),
+      queryClient.invalidateQueries({ queryKey: ['virtual-user-runs'] }),
   })
 }

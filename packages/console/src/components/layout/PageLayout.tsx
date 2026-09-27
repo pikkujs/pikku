@@ -5,6 +5,7 @@ import type { I18nNode } from '@pikku/react'
 import { useLocale } from '@/i18n/config'
 import DocLink from '../ui/DocLink'
 import { HelpAffordance } from '../../help/HelpAffordance'
+import { DeveloperDetailsToggle } from '../../help/DeveloperDetailsToggle'
 import {
   ShellHeader,
   type ShellHeaderAction,
@@ -15,6 +16,7 @@ import {
 import { usePageGate } from '../../context/PageGateContext'
 import { useConsoleChrome } from '../../context/ConsoleChromeContext'
 import { usePhone } from '../../lib/breakpoints'
+import { PAGE_PANEL_SLOT } from '../shell/EdgePanel'
 import styles from '../shell/PageCard.module.css'
 import classes from '../ui/console.module.css'
 
@@ -32,6 +34,8 @@ interface ListPageHeaderProps<T extends string = string> {
   search?: ShellHeaderSearch
   selection?: ShellHeaderSelection<T>
   actions?: ShellHeaderAction[]
+  /** Shows the switch that reveals technical detail; read it with useDeveloperDetails. */
+  developerDetails?: boolean
 }
 
 // Renders the shared ShellHeader bar: title (first to collapse) + description as
@@ -47,6 +51,7 @@ export function ListPageHeader<T extends string = string>({
   view,
   search,
   selection,
+  developerDetails,
 }: ListPageHeaderProps<T>) {
   const docsButton = docsHref ? <DocLink href={docsHref} /> : null
   const right = (
@@ -55,6 +60,7 @@ export function ListPageHeader<T extends string = string>({
       {view}
       {lead}
       {docsButton}
+      {developerDetails && <DeveloperDetailsToggle />}
       <HelpAffordance />
     </>
   )
@@ -83,6 +89,7 @@ interface PageContainerProps extends ComponentProps<typeof Container> {
   loading?: ReactNode
   /** An extra band between the header and the body, inside the same card. */
   extraBand?: ReactNode
+  headerInCard?: boolean
 }
 
 /**
@@ -105,6 +112,7 @@ export function PageContainer({
   emptyState,
   loading,
   extraBand,
+  headerInCard = false,
   ...props
 }: PageContainerProps) {
   const gate = usePageGate()
@@ -161,6 +169,22 @@ export function PageContainer({
   // hairline under a page header is the one every panel header already draws,
   // and a page that loses it in one chrome and keeps it in the other reads as
   // two different products.
+  if (!cards && !phone && !headerInCard)
+    return (
+      <div className={styles.hostedStack} data-page-surface="cards">
+        <div className={styles.canvasHeader}>{header}</div>
+        <div className={styles.hostedRow}>
+          <div className={`${styles.card} ${styles.hostedCard}`}>
+            {extraBand ? (
+              <div className={styles.extraBand}>{extraBand}</div>
+            ) : null}
+            <div className={styles.body}>{bodyContainer}</div>
+          </div>
+          <PagePanelSlot />
+        </div>
+      </div>
+    )
+
   if (!cards)
     return (
       <div
@@ -178,15 +202,37 @@ export function PageContainer({
       </div>
     )
 
+  if (headerInCard || phone)
+    return (
+      <div className={styles.pageStack}>
+        <div className={styles.card}>
+          <div className={styles.headerBand}>{header}</div>
+          {extraBand ? (
+            <div className={styles.extraBand}>{extraBand}</div>
+          ) : null}
+          <div className={styles.body}>{bodyContainer}</div>
+        </div>
+      </div>
+    )
+
   return (
     <div className={styles.pageStack}>
-      <div className={styles.card}>
-        <div className={styles.headerBand}>{header}</div>
-        {extraBand ? <div className={styles.extraBand}>{extraBand}</div> : null}
-        <div className={styles.body}>{bodyContainer}</div>
+      <div className={styles.canvasHeader}>{header}</div>
+      <div className={styles.pageRow}>
+        <div className={styles.card}>
+          {extraBand ? (
+            <div className={styles.extraBand}>{extraBand}</div>
+          ) : null}
+          <div className={styles.body}>{bodyContainer}</div>
+        </div>
+        <PagePanelSlot />
       </div>
     </div>
   )
+}
+
+export function PagePanelSlot() {
+  return <div className={styles.panelSlot} {...{ [PAGE_PANEL_SLOT]: '' }} />
 }
 
 /**

@@ -8,17 +8,12 @@ export const isVerticalDock = (side: DockSide) =>
   side === 'left' || side === 'right'
 
 /**
- * Where the dock starts before anyone has moved it.
- *
- * An RTL reader's whole layout runs right-to-left, and a bottom dock puts the
- * identity tile — the anchor everything else is read from — at the far end of
- * the row from where their eye starts. The right edge is that same anchor on
- * the side the page is already read from. It is only a default: the dock's own
- * menu moves it, and once moved the stored side wins forever.
+ * Where the dock starts before anyone has moved it: the edge a reader's eye
+ * starts from, so left in LTR and right in RTL. Once moved, the stored side wins.
  */
 export function defaultDockSide(): DockSide {
-  if (typeof document === 'undefined') return 'bottom'
-  return document.documentElement.dir === 'rtl' ? 'right' : 'bottom'
+  if (typeof document === 'undefined') return 'left'
+  return document.documentElement.dir === 'rtl' ? 'right' : 'left'
 }
 
 /** Percent of the dock's natural size. */

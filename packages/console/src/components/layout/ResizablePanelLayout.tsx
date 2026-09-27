@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Box } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -9,6 +9,7 @@ import { ConsoleDetailPanel } from '../shell/ConsoleDetailPanel'
 import { ConsoleListPanel } from '../shell/ConsoleListPanel'
 import { ConsoleSidePanel } from '../shell/ConsoleSidePanel'
 import { PageOptionsPortal } from '../shell/PageOptionsPortal'
+import { PagePanelSlot } from './PageLayout'
 import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
 
@@ -23,6 +24,9 @@ interface ResizablePanelLayoutProps {
    *  a body of cards, a graph or a form still wants the gutter, and without
    *  it they butt against the card's border. */
   flushBody?: boolean
+  /** The body is a stack of its own cards, so the page frame around it steps
+   *  back to the canvas instead of adding a third layer. */
+  surface?: 'cards'
   header?: React.ReactNode
   leftDrawer?: React.ReactNode
   leftDrawerWidth?: number
@@ -51,8 +55,9 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   emptyPanelMessage,
   hidePanel = false,
   flushBody = false,
+  surface,
 }) => {
-  const { panels } = usePanelContext()
+  const { panels, claimDetailInline } = usePanelContext()
   // Under a host's chrome the selection opens in the end-edge panel instead of
   // a column welded into the list — same context, same content, a card of its
   // own beside the page rather than inside it.
@@ -67,21 +72,39 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   // wins — it is what decides what the page is showing at all.
   const listInSheet = !!leftDrawer && phone
   const sideInSheet = !!sidePanel && phone && !listInSheet
+  const slotted = !ownsChrome && !phone
+  const detailInline = slotted && !hidePanel
+  const bodyCard = slotted && surface !== 'cards'
+
+  useEffect(() => {
+    if (detailInline) return claimDetailInline()
+  }, [detailInline, claimDetailInline])
 
   return (
-    <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
+    <Box
+      className={classes.flexColumn}
+      style={{ flex: 1, minHeight: 0 }}
+      data-page-surface={slotted ? 'cards' : surface}
+    >
       {/* header renders as a full-bleed bar; the panel area below stays padded */}
       {header}
       <Box
-        className={`${classes.flexColumn} ${flushBody ? classes.flushBody : ''}`}
+        className={`${classes.flexColumn} ${flushBody && !slotted ? classes.flushBody : ''}`}
         style={{
           flex: 1,
           minHeight: 0,
-          gap: flushBody ? 0 : 'var(--mantine-spacing-md)',
-          padding: flushBody ? 0 : 'var(--console-body-gutter)',
+          gap: flushBody && !slotted ? 0 : 'var(--mantine-spacing-md)',
+          padding: flushBody && !slotted ? 0 : 'var(--console-body-gutter)',
         }}
       >
-        <Box style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        <Box
+          style={{
+            flex: 1,
+            display: 'flex',
+            minHeight: 0,
+            gap: slotted ? 'var(--mantine-spacing-md)' : undefined,
+          }}
+        >
           {listInSheet && (
             <PageOptionsPortal label={leftDrawerLabel}>
               <Box
@@ -129,11 +152,21 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
               </Box>
             ))}
           <Box
-            className={`${classes.flexColumn} ${classes.overflowAuto}`}
-            style={{ flex: 1, minWidth: 0 }}
+            className={[
+              classes.flexColumn,
+              classes.overflowAuto,
+              bodyCard ? classes.bodyCard : '',
+              bodyCard && flushBody ? classes.flushBody : '',
+            ].join(' ')}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: bodyCard && !flushBody ? 'var(--console-body-gutter)' : undefined,
+            }}
           >
             {children}
           </Box>
+          {slotted && <PagePanelSlot />}
           {sidePanel &&
             !sideInSheet &&
             (ownsChrome || phone ? (

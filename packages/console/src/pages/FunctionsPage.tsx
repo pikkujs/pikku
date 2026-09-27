@@ -1,13 +1,12 @@
 import React, { useState } from 'react'
 import { useSearchParams } from '../router'
-import { Box, Group, TextInput } from '@pikku/mantine/core'
-import { Search } from 'lucide-react'
+import { Box, Button, TextInput } from '@pikku/mantine/core'
+import { Eye, EyeOff, Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { PikkuToggle } from '../components/ui/PikkuToggle'
 import { FunctionsListPanel } from '../components/functions/FunctionsListPanel'
 import type {
   FunctionExtraColumn,
@@ -43,33 +42,13 @@ export const FunctionsPage: React.FC<{
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        flushBody
+        surface="cards"
         header={
           <ListPageHeader
             title={m.functions_title()}
-            description={m.functions_description()}
+            description={m.functions_tagline()}
             docsHref="https://pikku.dev/docs/core-features/functions"
-            filters={
-              <Group gap="sm" wrap="nowrap">
-                <TextInput
-                  data-help="search"
-                  placeholder={m.functions_search_placeholder()}
-                  leftSection={<Search size={14} />}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  size="xs"
-                  style={{ width: 240 }}
-                />
-                <Box data-help="internals">
-                  <PikkuToggle
-                    checked={showPikkuFunctions}
-                    onChange={setShowPikkuFunctions}
-                    tooltip={m.common_show_pikku_internals()}
-                  />
-                </Box>
-                {headerRight}
-              </Group>
-            }
+            filters={headerRight}
           />
         }
         emptyPanelMessage={m.functions_select_function()}
@@ -79,13 +58,39 @@ export const FunctionsPage: React.FC<{
           (rawFunctions as unknown as any[]).length === 0
         }
       >
-        <Box data-help="list" style={{ height: '100%' }}>
+        <Box
+          data-help="list"
+          style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+        >
           <FunctionsListPanel
             searchQuery={searchQuery}
             showPikkuFunctions={showPikkuFunctions}
             extraColumns={extraColumns}
             testsByFunction={testsByFunction}
             emptyHero={emptyHero}
+            search={
+              <TextInput
+                data-help="search"
+                placeholder={m.functions_search_by()}
+                leftSection={<Search size={16} />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            }
+            actions={
+              <Button
+                data-help="internals"
+                variant="default"
+                leftSection={
+                  showPikkuFunctions ? <EyeOff size={14} /> : <Eye size={14} />
+                }
+                onClick={() => setShowPikkuFunctions(!showPikkuFunctions)}
+              >
+                {showPikkuFunctions
+                  ? m.functions_hide_builtin()
+                  : m.functions_show_builtin()}
+              </Button>
+            }
           />
         </Box>
       </ResizablePanelLayout>

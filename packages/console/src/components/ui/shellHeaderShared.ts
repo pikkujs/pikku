@@ -64,6 +64,8 @@ export interface ShellHeaderAction {
 }
 
 export interface ShellHeaderProps<T extends string = string> {
+  /** Control shown before the title, set off by a divider (a scope picker). */
+  leading?: ReactNode
   /** Page title shown at the very start; the first thing to drop when narrow. */
   title?: I18nNode
   /** Status/count chip shown far left, already formatted (e.g. "6 · 1 error"). */

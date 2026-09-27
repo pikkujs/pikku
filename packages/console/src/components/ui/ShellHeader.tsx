@@ -3,6 +3,7 @@ import {
   ActionIcon,
   Box,
   Collapse,
+  Divider,
   Group,
   Indicator,
   Paper,
@@ -49,6 +50,7 @@ export type {
    ========================================================================== */
 
 export const ShellHeader = <T extends string = string>({
+  leading,
   title,
   count,
   selection,
@@ -68,6 +70,7 @@ export const ShellHeader = <T extends string = string>({
 
   // Re-measure whenever the content that affects natural widths changes.
   const sig = JSON.stringify({
+    leading: leading != null,
     title: title != null,
     count: count != null,
     sel: selection?.options.map((o) => o.value),
@@ -167,6 +170,7 @@ export const ShellHeader = <T extends string = string>({
       c.showCount && count != null ? measure('count') : 0
     )
     if (titleBlock > 0) parts.push(titleBlock)
+    if (leading != null) parts.push(measure('leading') + 1 + 2 * GAP)
     if (selection && !selInDrawer)
       parts.push(measure(c.selMode === 'switch' ? 'selSwitch' : 'selCycle'))
     visible.forEach((f) => parts.push(measure('filter:' + f.key)))
@@ -259,7 +263,8 @@ export const ShellHeader = <T extends string = string>({
       <Paper
         radius={0}
         py={0}
-        h={50}
+        h="var(--screen-header-height)"
+        bg="transparent"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -276,6 +281,18 @@ export const ShellHeader = <T extends string = string>({
           w="100%"
           style={{ minWidth: 0 }}
         >
+          <Group wrap="nowrap" gap={2 * GAP} style={{ minWidth: 0 }}>
+          {leading != null && (
+            <>
+              <div
+                ref={(el) => void (measRef.current.leading = el)}
+                style={{ flexShrink: 0 }}
+              >
+                {leading}
+              </div>
+              <Divider orientation="vertical" h={28} style={{ alignSelf: 'center' }} />
+            </>
+          )}
           {((chosen.showTitle && title != null) ||
             (chosen.showCount && count != null)) && (
             <Stack
@@ -286,9 +303,9 @@ export const ShellHeader = <T extends string = string>({
               {chosen.showTitle && title != null && (
                 <Text
                   component="div"
-                  fz="sm"
+                  fz={15}
                   fw={600}
-                  lh={1.2}
+                  lh={1.3}
                   style={{ whiteSpace: 'nowrap' }}
                 >
                   {title}
@@ -297,9 +314,9 @@ export const ShellHeader = <T extends string = string>({
               {chosen.showCount && count != null && (
                 <Text
                   component="div"
-                  fz="xs"
+                  fz={13.5}
                   c="dimmed"
-                  lh={1.2}
+                  lh={1.3}
                   style={{ whiteSpace: 'nowrap' }}
                 >
                   {count}
@@ -307,6 +324,7 @@ export const ShellHeader = <T extends string = string>({
               )}
             </Stack>
           )}
+          </Group>
 
           <Group
             wrap="nowrap"
@@ -419,14 +437,14 @@ export const ShellHeader = <T extends string = string>({
         {title != null &&
           measureNode(
             'title',
-            <Text component="div" fz="sm" fw={600}>
+            <Text component="div" fz={15} fw={600}>
               {title}
             </Text>
           )}
         {count != null &&
           measureNode(
             'count',
-            <Text component="div" fz="xs" c="dimmed">
+            <Text component="div" fz={13.5} c="dimmed">
               {count}
             </Text>
           )}

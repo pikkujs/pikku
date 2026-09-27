@@ -122,6 +122,8 @@ interface PanelContextType {
   /** The panel types this surface has lists for; see `usePanelUrl`. */
   registeredPanelTypes: Set<PanelType>
   registerPanelType: (type: PanelType) => () => void
+  detailInline: boolean
+  claimDetailInline: () => () => void
 }
 
 export const PanelContext = createContext<PanelContextType | undefined>(
@@ -168,6 +170,12 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
       else counts.delete(type)
       setRegisteredPanelTypes(new Set(counts.keys()))
     }
+  }, [])
+
+  const [inlineClaims, setInlineClaims] = useState(0)
+  const claimDetailInline = useCallback(() => {
+    setInlineClaims((n) => n + 1)
+    return () => setInlineClaims((n) => n - 1)
   }, [])
 
   const wroteHashRef = useRef(false)
@@ -535,6 +543,8 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
         panelHash,
         registeredPanelTypes,
         registerPanelType,
+        detailInline: inlineClaims > 0,
+        claimDetailInline,
       }}
     >
       {children}

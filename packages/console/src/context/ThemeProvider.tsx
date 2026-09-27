@@ -22,6 +22,27 @@ const DAYJS_LOCALE_MAP: Record<string, string> = {
   de: 'de',
 }
 
+const PAPER_VARIANTS: Record<string, Record<string, string>> = {
+  inset: {
+    background: 'var(--app-panel-bg)',
+    border: '1px solid var(--app-border)',
+    borderRadius: 'var(--mantine-radius-md)',
+    boxShadow: 'none',
+  },
+  accent: {
+    background: 'var(--app-surface-accent)',
+    border: '1px solid var(--app-blue-border)',
+    borderRadius: 'var(--mantine-radius-lg)',
+    boxShadow: 'none',
+  },
+  'accent-inset': {
+    background: 'var(--app-panel-bg)',
+    border: '1px solid var(--app-blue-border)',
+    borderRadius: 'var(--mantine-radius-md)',
+    boxShadow: 'none',
+  },
+}
+
 /**
  * The console's own additions to the shared palette.
  *
@@ -114,12 +135,49 @@ const consoleTheme = mergeThemeOverrides(
         },
       }),
       Badge: {
+        vars: (_theme: unknown, props: { size?: string }) =>
+          props.size === 'lg'
+            ? {
+                root: {
+                  '--badge-height': rem(24),
+                  '--badge-fz': rem(12.5),
+                  '--badge-padding-x': rem(10),
+                },
+              }
+            : { root: {} },
+        styles: (_theme: unknown, props: { size?: string }) => ({
+          root:
+            props.size === 'lg'
+              ? {
+                  fontWeight: 600,
+                  textTransform: 'none' as const,
+                  letterSpacing: 0,
+                  borderRadius: rem(999),
+                }
+              : {
+                  fontFamily: 'var(--mantine-font-family-monospace)',
+                  fontWeight: 500,
+                  borderWidth: 0,
+                  borderRadius: rem(4),
+                },
+        }),
+      },
+      Paper: {
+        styles: (_theme: unknown, props: { variant?: string }) => ({
+          root: PAPER_VARIANTS[props.variant ?? ''] ?? {},
+        }),
+      },
+      Card: {
+        defaultProps: { radius: 'lg', withBorder: true, padding: 'xl' },
         styles: {
           root: {
-            fontFamily: 'var(--mantine-font-family-monospace)',
-            fontWeight: 500,
-            borderWidth: 0,
-            borderRadius: rem(4),
+            background: 'var(--app-panel-bg-raised)',
+            borderColor: 'var(--app-border)',
+            boxShadow: 'none',
+            display: 'flex',
+            flexDirection: 'column' as const,
+            gap: 'var(--mantine-spacing-md)',
+            overflow: 'visible',
           },
         },
       },
