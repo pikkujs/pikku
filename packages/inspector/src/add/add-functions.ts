@@ -575,10 +575,11 @@ export const addFunctions: AddWiring = (
   let remote: boolean | undefined
   let mcp: boolean | undefined
   /**
-   * A sessionless function's own `auth: true`. `sessionless` records the
-   * baseline — a `pikkuFunc` always needs a session — while this records the
-   * tightening a `pikkuSessionlessFunc` applies to itself, which is otherwise
-   * invisible to anything reading meta.
+   * A sessionless function's own `auth`, exactly as written. `sessionless`
+   * records the baseline — a `pikkuFunc` always needs a session — while this
+   * records what a `pikkuSessionlessFunc` says about itself: `true` tightens it
+   * to require a session, `false` declares it public on purpose. Both are
+   * otherwise invisible to anything reading meta; left out, it stays undefined.
    */
   let auth: boolean | undefined
   /** The author's claim that the body authorizes its own callers. */
@@ -1370,7 +1371,7 @@ export const addFunctions: AddWiring = (
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
-    auth: auth || undefined,
+    auth: typeof auth === 'boolean' ? auth : undefined,
     permissionsInBody: permissionsInBody || undefined,
     audit,
     remote: remote || undefined,
