@@ -1,3 +1,75 @@
+## 0.12.165
+
+### Patch Changes
+
+- 39e2b7e: `pikku fabric deploy apply` no longer dies on a transient 5xx, 429 or dropped
+  connection while it waits on a deployment. The status poll and the approval
+  call retry with backoff until `--timeout`, so `-y` still approves a plan parked
+  at the gate instead of leaving it to time out. An approve whose success was
+  hidden behind a 502 is not re-refused on retry. If the command still gives up
+  after a deployment was created, it prints the id and the
+  `deploy apply --deployment-id <id> -y` command to resume.
+- 3e65d46: fix(fabric): held findings filed in the same millisecond are sent in the order they were held
+
+  `readHeld` sorts oldest first by `reportedAt`, which is only millisecond-precise,
+  and broke ties on a file name whose only other part was random. Two findings
+  filed back to back could come back in either order. The file name now carries
+  a monotonic sequence ahead of the random suffix.
+
+- 2b946e9: Read JSONC by tokens, so a comment or a comma in a string cannot change the value
+
+  `readJsonSafe` stripped comments by deleting them, which joined the tokens on
+  either side: `{"value": 1/* why */2}` parsed as `12`. Trailing commas were swept
+  with a regular expression that could not see string boundaries, so
+  `{"value": ",}"}` lost the comma inside its own string. And an unterminated
+  block comment silently discarded everything after it, letting a truncated file
+  parse as though it were whole.
+
+  A comment is now replaced by whitespace, trailing commas are recognised during
+  the scan rather than after it, and an unterminated block comment is reported
+  with its position.
+
+- 3276942: `pikku fabric report` no longer needs a sign-in. A finding is filed the moment something goes wrong and held on the machine, tied to the build by a run id made for the checkout. At hand-over, `pikku fabric report` with no finding lists what is held and asks: yes or no for these, or always or never, which is saved (`~/.fabric/report-consent.json`, or `PIKKU_REPORT`) so the question is not asked again. Always sends each finding as it is filed; never keeps nothing. The `--run` flag and `pikku fabric findings list|flush|clear` are gone.
+- 2b946e9: fix(deploy): say "native addon" when a serverless bundle hits one
+
+  A native addon cannot be bundled for a serverless runtime — there is no `.node`
+  loading on Workers — but that is not what the bundler reported. The addon's JS
+  wrapper imports `node:child_process`, `node:stream` and friends, none of which
+  resolve on a `neutral` platform, so the failure arrived as a wall of unresolved
+  builtins naming neither the package nor the reason:
+
+  ```
+  Could not resolve "node:util"          @ sharp/dist/constructor.mjs
+  Could not resolve "node:child_process" @ sharp/dist/libvips.mjs
+  Could not resolve "detect-libc"        @ sharp/dist/libvips.mjs
+  ```
+
+  Read as missing polyfills, that sends people to `nodejs_compat`, which cannot
+  help — the blocker is the binary underneath.
+
+  A failed serverless compile now reads the owning packages back out of the
+  unresolved-import lines only, checks each for a native binary (`gypfile`, a
+  `binary` declaration, a node-gyp install script, per-platform optional
+  dependencies), and when it finds one leads with the package, the evidence, and
+  the two ways out: `deploy.serverlessIncompatible` in `pikku.config.json`, or
+  `deploy: 'server'` on the function. The original error is kept underneath. A
+  failure with no native addon behind it is rethrown untouched.
+
+  An `os` restriction is not counted: a pure-JS package pinned to one platform
+  carries no binary, and reporting it as an addon says Node compatibility cannot
+  help when it is exactly what is needed. Nor is any failure other than an
+  unresolved import — a syntax error inside a native package is still a syntax
+  error, and keeps its own message.
+
+- Updated dependencies [50b59a3]
+- Updated dependencies [2b946e9]
+- Updated dependencies [bc488cf]
+- Updated dependencies [3276942]
+- Updated dependencies [1ac09c7]
+  - @pikku/core@0.12.123
+  - @pikku/inspector@0.12.89
+  - @pikku/skills@0.12.40
+
 ## 0.12.164
 
 ### Patch Changes

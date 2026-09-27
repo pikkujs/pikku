@@ -1,3 +1,22 @@
+## 0.12.89
+
+### Patch Changes
+
+- bc488cf: fix(inspector): an explicit `auth: false` declares an exposed sessionless function public, so PKU574 no longer warns about it
+
+  A genuinely public endpoint — a published programme, a health check — had no
+  honest way to quiet PKU574: the only options were an always-true permission or
+  `permissionsInBody: true`, both of which claim a gate that does not exist. The
+  inspector now records `auth` on function meta exactly as written instead of
+  dropping `false`, and the check treats an explicit `auth: false` as the author
+  declaring the function public on purpose. A sessionless function that leaves
+  `auth` out still warns.
+
+- Updated dependencies [50b59a3]
+- Updated dependencies [2b946e9]
+- Updated dependencies [bc488cf]
+  - @pikku/core@0.12.123
+
 ## 0.12.88
 
 ### Patch Changes
