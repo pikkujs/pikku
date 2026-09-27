@@ -25,6 +25,7 @@ import {
 } from '../../hooks/useVirtualUserSchedules'
 import { useDeveloperDetails } from '../../hooks/useDeveloperDetails'
 import { DISPOSITION_LABEL } from './disposition-labels'
+import { virtualUserRunRefused } from '../../lib/virtualUserRunRefused'
 
 const HOUR_MS = 3_600_000
 
@@ -143,7 +144,8 @@ export const VirtualUserSchedule: React.FC<{
   name: string
   declaredDisposition: VirtualUserDisposition
   declaredGoals: string[]
-}> = ({ persona, name, declaredDisposition, declaredGoals }) => {
+  production?: boolean
+}> = ({ persona, name, declaredDisposition, declaredGoals, production }) => {
   const { shown: developerDetails } = useDeveloperDetails()
   const { data, error } = useVirtualUserSchedules()
   const save = useSetVirtualUserSchedule(persona)
@@ -181,6 +183,10 @@ export const VirtualUserSchedule: React.FC<{
     setEdited(false)
   }, [saved])
   const enabled = row?.enabled ?? false
+  const enableRefused =
+    !enabled && virtualUserRunRefused(saved.disposition, production)
+  const saveRefused =
+    enabled && virtualUserRunRefused(draft.disposition, production)
 
   const { locale } = useLocale()
 
@@ -221,7 +227,7 @@ export const VirtualUserSchedule: React.FC<{
           size="md"
           mt={2}
           checked={enabled}
-          disabled={save.isPending}
+          disabled={save.isPending || enableRefused}
           onChange={(event) =>
             save.mutate({ enabled: event.currentTarget.checked })
           }
@@ -230,6 +236,17 @@ export const VirtualUserSchedule: React.FC<{
         />
       </Group>
 
+      {(enableRefused || saveRefused) && (
+        <Text
+          size="xs"
+          c="dimmed"
+          px={16}
+          pb={12}
+          data-testid="virtual-user-schedule-refused"
+        >
+          {m.virtual_users_schedule_production_only()}
+        </Text>
+      )}
       {(error || save.error) && (
         <Text size="xs" c="red" px={16} pb={12}>
           {asI18n(
@@ -337,6 +354,7 @@ export const VirtualUserSchedule: React.FC<{
               <Button
                 size="sm"
                 loading={save.isPending}
+                disabled={saveRefused}
                 onClick={() =>
                   save.mutate({
                     disposition: draft.disposition,

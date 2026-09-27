@@ -46,6 +46,9 @@ import {
 const NO_MILESTONE = (milestone: string) =>
   `No milestone note matching "${milestone}". Pass the note's id (its filename stem) or its path under knowledge/milestones/.`
 
+const PLAN_FIXED = (path: string) =>
+  `${path} already holds this milestone's plan. A plan is fixed once written: it is the order the build is measured against, so it cannot be replaced. Take an item out with \`pikku knowledge plan defer <milestone> <item> --reason <why>\`.`
+
 const resolve = async (
   root: string,
   milestone: string
@@ -217,6 +220,9 @@ export const runKnowledgePlanSet = async (
   const note = await resolve(root, milestone)
   if (!note) return { ok: false, path: '', problems: [NO_MILESTONE(milestone)] }
   const path = planPathFor(note.path)
+  if (readPlan(root, note.path).ok) {
+    return { ok: false, path, problems: [PLAN_FIXED(path)] }
+  }
   let raw: unknown
   try {
     raw = JSON.parse(readFileSync(file, 'utf8'))

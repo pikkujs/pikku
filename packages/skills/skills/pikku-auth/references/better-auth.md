@@ -1,5 +1,21 @@
 # Pikku Better Auth Integration
 
+Every section, in the order it is usually needed:
+
+- [⚠️ MANDATORY RULE — READ FIRST](#mandatory-rule--read-first)
+- [Installation](#installation)
+- [Core Concepts](#core-concepts)
+- [Standard Setup](#standard-setup)
+- [⚠️ Stateless session — ALWAYS enable `cookieCache` for deployed apps](#stateless-session--always-enable-cookiecache-for-deployed-apps)
+- [Social Providers needing extra config](#social-providers-needing-extra-config)
+- [Auth-Protected Functions](#auth-protected-functions)
+- [HTTP surface (call the real endpoints)](#http-surface-call-the-real-endpoints)
+- [Secret Management](#secret-management)
+- [`pikkuBetterAuth` API](#pikkubetterauth-api)
+- [Post-signup side effects](#post-signup-side-effects)
+- [Two-factor (2FA / MFA)](#two-factor-2fa--mfa)
+- [Security hardening](#security-hardening)
+
 ## ⚠️ MANDATORY RULE — READ FIRST
 
 **ALL authentication in Pikku apps MUST use `@pikku/better-auth`. No exceptions.**

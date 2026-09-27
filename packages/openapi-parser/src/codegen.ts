@@ -408,7 +408,7 @@ export function generateAddonFromOpenAPI(
       camelCase: flags.camelCase,
     })
     const inlineSchemas = singleSchemasPerOp.get(i) ?? new Set<string>()
-    const funcCode = generateFunctionFile(
+    const { functionFile, schemasFile } = generateFunctionFile(
       named,
       parsed,
       vars,
@@ -419,7 +419,10 @@ export function generateAddonFromOpenAPI(
       sharedWithDeps,
       schemaIdentityMap
     )
-    files[`src/functions/${named.functionName}.function.ts`] = funcCode
+    files[`src/functions/${named.functionName}.function.ts`] = functionFile
+    if (schemasFile) {
+      files[`src/functions/${named.functionName}.schemas.ts`] = schemasFile
+    }
     functionExports.push(named.functionName)
   }
 
@@ -660,7 +663,7 @@ function generateFunctionFile(
   inlineSchemas: Set<string> = new Set(),
   sharedSchemas: Set<string> = new Set(),
   schemaIdentityMap: Map<object, string> = new Map()
-): string {
+): { functionFile: string; schemasFile?: string } {
   const lines: string[] = []
   const { camelName, name } = vars
 
@@ -712,17 +715,25 @@ function generateFunctionFile(
   // Determine error imports needed
   const errorClasses = getErrorClassesForResponses(parsed.errorResponses)
 
-  const needsZod = hasInput || !!parsed.responseSchema || inlineSchemas.size > 0
-  if (needsZod) {
-    lines.push("import { z } from 'zod'")
-  }
-  lines.push("import { pikkuSessionlessFunc } from '#pikku/function'")
+  const schemaExports = [
+    ...(hasInput && inputCode ? [inputName] : []),
+    ...(parsed.responseSchema && outputCode ? [outputName] : []),
+  ]
 
+  lines.push("import { pikkuSessionlessFunc } from '#pikku/addon/function'")
   if (errorClasses.length > 0) {
     lines.push(
       `import { ${errorClasses.join(', ')} } from '@pikku/core/errors'`
     )
   }
+  if (schemaExports.length > 0) {
+    lines.push(
+      `import { ${schemaExports.join(', ')} } from './${named.functionName}.schemas.js'`
+    )
+  }
+  lines.push('')
+
+  const schemaLines: string[] = ["import { z } from 'zod'"]
 
   // Import referenced component schemas from the types file.
   // Only import schemas that are in the shared set (not inlined ones).
@@ -746,13 +757,13 @@ function generateFunctionFile(
       ),
     ].sort()
     if (schemaImports.length > 0) {
-      lines.push(
+      schemaLines.push(
         `import { ${schemaImports.join(', ')} } from '../${name}.types.js'`
       )
     }
   }
 
-  lines.push('')
+  schemaLines.push('')
 
   // Emit inline (single-use) schema definitions before input/output
   if (inlineSchemas.size > 0) {
@@ -826,15 +837,17 @@ function generateFunctionFile(
 
       // Forward declarations for cycles and forward references within inline schemas
       if (forwardRefs.size > 0) {
-        lines.push('// Forward declarations for circular references')
+        schemaLines.push('// Forward declarations for circular references')
         for (const sName of forwardRefs) {
           if (!inlineSchemas.has(sName)) continue
           const varN = schemaVarName(sName)
           const typeN = sanitizeTypeName(sName)
           emittedVarNames.add(varN)
           emittedTypeNames.add(typeN)
-          lines.push(`const ${varN}: z.ZodType<any> = z.lazy(() => _${varN})`)
-          lines.push('')
+          schemaLines.push(
+            `const ${varN}: z.ZodType<any> = z.lazy(() => _${varN})`
+          )
+          schemaLines.push('')
         }
       }
 
@@ -845,25 +858,25 @@ function generateFunctionFile(
         const zodCode = generatedCode.get(sName)!
 
         if (forwardRefs.has(sName)) {
-          lines.push(`const _${varN} = ${zodCode}`)
+          schemaLines.push(`const _${varN} = ${zodCode}`)
         } else {
-          lines.push(`const ${varN} = ${zodCode}`)
+          schemaLines.push(`const ${varN} = ${zodCode}`)
         }
-        lines.push('')
+        schemaLines.push('')
       }
     }
   }
 
   // Build Input schema (exported for pikku schema discovery)
   if (hasInput && inputCode) {
-    lines.push(`export const ${inputName} = ${inputCode}`)
-    lines.push('')
+    schemaLines.push(`export const ${inputName} = ${inputCode}`)
+    schemaLines.push('')
   }
 
   // Build Output schema (exported for pikku schema discovery)
   if (parsed.responseSchema && outputCode) {
-    lines.push(`export const ${outputName} = ${outputCode}`)
-    lines.push('')
+    schemaLines.push(`export const ${outputName} = ${outputCode}`)
+    schemaLines.push('')
   }
 
   const description = humanDescription(parsed)
@@ -904,7 +917,10 @@ function generateFunctionFile(
   lines.push('})')
   lines.push('')
 
-  return lines.join('\n')
+  return {
+    functionFile: lines.join('\n'),
+    schemasFile: schemaExports.length > 0 ? schemaLines.join('\n') : undefined,
+  }
 }
 
 function buildInputSchema(
@@ -1280,7 +1296,7 @@ function generateServiceFile(
   }
 
   lines.push(
-    `import type { TypedVariablesService } from '#pikku/variables/pikku-variables.gen.js'`
+    `import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'`
   )
   lines.push('')
 

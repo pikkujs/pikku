@@ -90,7 +90,9 @@ const Empty: React.FC = () => {
   )
 }
 
-export const VirtualUsersWorkspace: React.FC = () => {
+export const VirtualUsersWorkspace: React.FC<{ production?: boolean }> = ({
+  production,
+}) => {
   const { users, selected, setSelectedId, loading } = useVirtualUsers()
   const { data, error } = useRecentVirtualUserRuns()
   const dismiss = usePageOptionsDismiss()
@@ -178,6 +180,7 @@ export const VirtualUsersWorkspace: React.FC = () => {
                 user={selected}
                 tried={tries.get(selected.id)}
                 onOpenVisit={setVisit}
+                production={production}
               />
             ))}
         </CardsPage>

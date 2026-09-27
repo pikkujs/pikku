@@ -42,6 +42,7 @@ import { DispositionBadge, VirtualUserAvatar } from './VirtualUserAvatar'
 import { frequencyWord } from './disposition-labels'
 import { useDeveloperDetails } from '../../hooks/useDeveloperDetails'
 import { useStartVirtualUserRun } from '../../hooks/useVirtualUserRuns'
+import { virtualUserRunRefused } from '../../lib/virtualUserRunRefused'
 import { SectionCard } from '../ui/SectionCard'
 import { ForDevelopers } from '../ui/ForDevelopers'
 import type { PersonaLastTry, VirtualUserRunRow } from './run-summary'
@@ -552,6 +553,7 @@ type VirtualUserDocumentProps = {
   tried?: PersonaLastTry
   onOpenVisit: (run: VirtualUserRunRow) => void
   environment?: string
+  production?: boolean
 }
 
 export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
@@ -559,9 +561,11 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
   tried,
   onOpenVisit,
   environment = 'staging',
+  production,
 }) => {
   const { profile } = user
   const start = useStartVirtualUserRun(user.id)
+  const refused = virtualUserRunRefused(user.disposition, production)
   const moveTotal =
     profile.moves.continue +
     profile.moves.suspend +
@@ -618,7 +622,7 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
             size="lg"
             leftSection={<Play size={16} fill="currentColor" />}
             loading={start.isPending}
-            disabled={visiting}
+            disabled={visiting || refused}
             onClick={() => start.mutate(undefined)}
             data-testid="virtual-user-run-now"
           >
@@ -637,6 +641,11 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
             {m.virtual_users_schedule_open()}
           </Button>
         </Group>
+        {refused && (
+          <Text size="sm" c="dimmed" data-testid="virtual-user-run-refused">
+            {m.virtual_users_runs_production_only()}
+          </Text>
+        )}
         {start.error && (
           <Text size="sm" c="red">
             {asI18n(
@@ -761,6 +770,7 @@ export const VirtualUserDocument: React.FC<VirtualUserDocumentProps> = ({
           name={user.name}
           declaredDisposition={user.disposition}
           declaredGoals={user.goals}
+          production={production}
         />
         <VirtualUserVisits
           persona={user.id}

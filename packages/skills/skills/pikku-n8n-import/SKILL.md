@@ -1,6 +1,7 @@
 ---
 name: pikku-n8n-import
 description: 'Use to import an n8n workflow JSON export into a runnable Pikku workflow. Triggers when the user says "import this n8n workflow", "convert this n8n export to pikku", points at an n8n `.json` export or a directory of them, or picks up after `pikku import n8n` left throwing stub functions (`STUB — generated from n8n …`, `— implement me`) or a `<workflow>.integrations.json` manifest. Owns the whole flow: run the importer, triage what it could not map, fill each stub, report any missing `@pikku/addon-*` integrations, and verify the result compiles and runs with no surviving stubs. DO NOT TRIGGER for hand-written addon wiring unrelated to an n8n import (use pikku-addon), or for authoring workflows from scratch (use pikku-workflow).'
+installGroups: [core]
 metadata:
   version: 1.0.0
 ---
@@ -19,14 +20,14 @@ missing dependency).
 
 ## Agent Operating Procedure
 
-1. Discover before editing. Prefer `pikku-meta`/`pikku meta ... --json` when
+1. Discover before editing. Prefer `pikku meta ... --json` when
    available; inspect only the focused output you need.
 2. Identify the source file that owns the behavior. Do not start from generated
    output, `.pikku`, `node_modules`, or vendored packages.
 3. Make the smallest source change that satisfies the task. Keep generated files
    generated.
-4. Validate with the narrowest relevant command first, then `pikku all` /
-   `pikku-verify` when functions, wirings, or schemas changed.
+4. Validate with the narrowest relevant command first, then `pikku all` when
+   functions, wirings, or schemas changed.
 5. If validation fails, fix the source cause and rerun. Never edit generated
    files to hide an error.
 

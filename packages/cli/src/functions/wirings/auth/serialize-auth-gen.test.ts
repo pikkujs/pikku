@@ -212,6 +212,51 @@ describe('serializeAuthGen', () => {
     assert.doesNotMatch(out, /schema: z\.string\(\),/)
   })
 
+  describe('cookieCache → session cookie lifetime variable', () => {
+    /* The whole point of generating it: the stateless path is the one where the
+       cookie is the only thing authenticating a request, so it is the one where
+       the lifetime is a deployment decision rather than a cache tuning knob. */
+    test('the stateless path declares SESSION_COOKIE_CACHE_MAX_AGE', () => {
+      const secrets = genSecrets([], def({ cookieCache: true }))
+      assert.match(secrets, /variableId: 'SESSION_COOKIE_CACHE_MAX_AGE'/)
+      assert.match(secrets, /name: 'sessionCookieCacheMaxAge'/)
+      assert.match(
+        secrets,
+        /import { defineVariable } from '@pikku\/core\/variable'/
+      )
+    })
+
+    test('the stateful path declares nothing — there a short cookie is correct', () => {
+      const secrets = genSecrets([], def())
+      assert.doesNotMatch(secrets, /SESSION_COOKIE_CACHE_MAX_AGE/)
+    })
+
+    test('it is optional, so a deployment without it is still valid', () => {
+      const secrets = genSecrets([], def({ cookieCache: true }))
+      assert.match(secrets, /optional: true,/)
+    })
+
+    /* A string, not z.coerce.number(): TypedVariablesService returns a stored
+       host value unparsed and runs the schema only to resolve a default, so a
+       coercing schema would never fire on a real value. @pikku/better-auth
+       does the coercion when it reads it. */
+    test('the schema is a defaulted string, and a named const (PKU111)', () => {
+      const secrets = genSecrets([], def({ cookieCache: true }))
+      assert.match(
+        secrets,
+        /export const SessionCookieCacheMaxAgeSchema = z\.string\(\)\.default\('86400'\)/
+      )
+      assert.match(secrets, /schema: SessionCookieCacheMaxAgeSchema,/)
+      assert.doesNotMatch(secrets, /schema: z\.string\(\)\.default/)
+    })
+
+    test('it coexists with provider variables rather than replacing them', () => {
+      const secrets = genSecrets(['microsoft'], def({ cookieCache: true }))
+      assert.match(secrets, /SESSION_COOKIE_CACHE_MAX_AGE/)
+      assert.match(secrets, /tenantId/i)
+    })
+  })
+
   describe('cookieCache → stateless session middleware split', () => {
     const statelessDef = def({ cookieCache: true })
 

@@ -15,6 +15,7 @@ import {
   removeRemote,
 } from '../lib/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
+import { resolveOrganizationId } from '../lib/organization.js'
 import { promptConfirm } from '../lib/prompt.js'
 
 export const FabricLinkInput = z.object({
@@ -25,6 +26,8 @@ export const FabricLinkInput = z.object({
   gitea: z.boolean().optional(),
   /** Name for a repo created here. Defaults to the directory name. */
   repoName: z.string().optional(),
+  /** Slug, name or id of the organization to import into. Defaults to the session's. */
+  organization: z.string().optional(),
 })
 
 export const FabricLinkOutput = z.object({
@@ -45,14 +48,19 @@ export const FabricLink = pikkuSessionlessFunc({
     'Register the current git repo as a fabric project and queue an initial deploy.',
   input: FabricLinkInput,
   output: FabricLinkOutput,
-  func: async (_services, { apiUrl: apiUrlOverride, github, gitea, repoName }) => {
+  func: async (
+    _services,
+    { apiUrl: apiUrlOverride, github, gitea, repoName, organization }
+  ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token) {
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
     }
 
     if (github && gitea) {
-      throw new Error(
+      throw new FabricPreconditionError(
         '--github and --gitea name two different places to keep one repo. Pass one, or neither to use whatever `origin` already points at.'
       )
     }
@@ -74,6 +82,11 @@ export const FabricLink = pikkuSessionlessFunc({
       )
     }
 
+    // Resolved here for the same reason, since `--gitea` reaches `createRemote`
+    // below: a misspelt organization must not cost the user a repository they
+    // then have to go and delete.
+    const organizationId = await resolveOrganizationId(rpc, organization)
+
     const remoteUrl = (await hasRemote())
       ? await adoptExistingRemote({ github, gitea })
       : await createRemote({ rpc, github, gitea, repoName })
@@ -86,7 +99,7 @@ export const FabricLink = pikkuSessionlessFunc({
       const ghInstall = await rpc.invoke('checkGithubInstall', {})
       if (!ghInstall.installed) {
         if (!ghInstall.installUrl) {
-          throw new Error(
+          throw new FabricPreconditionError(
             'GitHub App is not configured on this fabric deployment.'
           )
         }
@@ -108,7 +121,7 @@ export const FabricLink = pikkuSessionlessFunc({
           }
         }
         if (!installed) {
-          throw new Error(
+          throw new FabricPreconditionError(
             'Timed out waiting for GitHub App installation. Run `pikku fabric link` again after installing.'
           )
         }
@@ -118,6 +131,7 @@ export const FabricLink = pikkuSessionlessFunc({
     const project = await rpc.invoke('importProject', {
       repoUrl: remoteUrl,
       productionBranch: 'main',
+      ...(organizationId ? { organizationId } : {}),
     })
 
     await writeProjectConfig(process.cwd(), {
@@ -166,12 +180,12 @@ async function adoptExistingRemote({
   const onGithub = isGithubUrl(remoteUrl)
 
   if (github && !onGithub) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `--github was passed, but origin is ${remoteUrl}, which is not on github.com.\nDrop the flag to link that remote, or repoint origin at the GitHub repo you meant.`
     )
   }
   if (gitea && onGithub) {
-    throw new Error(
+    throw new FabricPreconditionError(
       `--gitea was passed, but origin is already ${remoteUrl}.\nDrop the flag to link the GitHub repo. To host it on fabric instead, remove the remote first (\`git remote remove origin\`) and run link again.`
     )
   }
@@ -204,14 +218,14 @@ async function createRemote({
   repoName?: string
 }): Promise<string> {
   if (github) {
-    throw new Error(
+    throw new FabricPreconditionError(
       'There is no `origin` to link, and fabric cannot create a GitHub repository for you.\nCreate it on github.com, `git remote add origin <url>`, and run `pikku fabric link` again — or pass --gitea to host it on fabric instead.'
     )
   }
 
   if (!gitea) {
     if (!process.stdin.isTTY) {
-      throw new Error(
+      throw new FabricPreconditionError(
         'There is no `origin` to link.\nPass --gitea to create a repository on fabric and push to it, or add a remote yourself and run link again.'
       )
     }
@@ -220,7 +234,7 @@ async function createRemote({
       true
     )
     if (!confirmed) {
-      throw new Error(
+      throw new FabricPreconditionError(
         'Nothing linked. Add a remote yourself (`git remote add origin <url>`) and run `pikku fabric link` again.'
       )
     }
@@ -240,7 +254,7 @@ async function createRemote({
     // ago — so removing it is safe, and it is what stops a retry dying on
     // "remote origin already exists" instead of on the real problem.
     await removeRemote('origin')
-    throw new Error(
+    throw new FabricPreconditionError(
       `Created ${repo.repoUrl} but could not push to it: ${
         error instanceof Error ? error.message : String(error)
       }\nThe repository exists and is empty; push to it yourself, or run link again to get a fresh one.`

@@ -112,9 +112,9 @@ export const serializeAuthGen = (
     '',
     `import { defineSecret } from '@pikku/core/secret'`,
   ]
-  const hasVariables = known.some(
-    (name) => (PROVIDER_REGISTRY as any)[name].variables
-  )
+  const hasVariables =
+    known.some((name) => (PROVIDER_REGISTRY as any)[name].variables) ||
+    definition.cookieCache
   if (hasVariables) {
     secrets.push(`import { defineVariable } from '@pikku/core/variable'`)
   }
@@ -182,6 +182,42 @@ export const serializeAuthGen = (
       secrets.push(`})`)
       secrets.push('')
     }
+  }
+
+  // The stateless session's cookie lifetime, declared only on the cookieCache
+  // path because that is the only path where it decides anything. There the
+  // signed `session_data` cookie is the ONLY thing authenticating a request —
+  // `betterAuthStatelessSession` verifies it with the secret and never reaches
+  // the database — and an app typically calls no `/api/auth/*` route once
+  // someone is signed in, so nothing rewrites the cookie. better-auth's own
+  // 300s default therefore signs everyone out five minutes after they log in.
+  //
+  // @pikku/better-auth reads this variable and applies it to the instance, so
+  // the app's own `betterAuth({ session: { cookieCache } })` needs no `maxAge`.
+  // It is declared rather than hardcoded because the lifetime is also the
+  // longest a ban or a revoked session can go unnoticed, which is a per-stage
+  // policy decision. Optional: unset means the one-day default.
+  //
+  // The schema is a string, not a coerced number. `TypedVariablesService`
+  // returns a stored host value UNPARSED and runs the schema only to resolve a
+  // default, so a `z.coerce.number()` here would never fire on a real value and
+  // would only mislead whoever read it.
+  if (definition.cookieCache) {
+    secrets.push(
+      `export const SessionCookieCacheMaxAgeSchema = z.string().default('86400')`
+    )
+    secrets.push('')
+    secrets.push(`defineVariable({`)
+    secrets.push(`  name: 'sessionCookieCacheMaxAge',`)
+    secrets.push(`  displayName: 'Session Cookie Lifetime (seconds)',`)
+    secrets.push(
+      `  description: 'How long the signed session cookie is trusted before the API re-reads the session from the database. Also the longest a ban or a revoked session can go unnoticed. Defaults to 86400 (one day).',`
+    )
+    secrets.push(`  variableId: 'SESSION_COOKIE_CACHE_MAX_AGE',`)
+    secrets.push(`  schema: SessionCookieCacheMaxAgeSchema,`)
+    secrets.push(`  optional: true,`)
+    secrets.push(`})`)
+    secrets.push('')
   }
 
   // Wiring file: handler + catch-all routes. When cookieCache is enabled the

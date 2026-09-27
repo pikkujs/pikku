@@ -61,6 +61,7 @@ export const FlagBoard: React.FC<FlagBoardProps> = ({
       return (
         <Alert
           color="yellow"
+          m="md"
           title={m.flags_forbidden_title()}
           data-testid="flags-forbidden"
         >
@@ -71,7 +72,12 @@ export const FlagBoard: React.FC<FlagBoardProps> = ({
     return (
       <Alert
         color="red"
+        m="md"
         title={m.flags_load_error()}
+        // A server's message can be one unbroken token — a schema union listing
+        // every name it accepts — and an alert that will not break it runs off
+        // the side of the page, taking the part that says what went wrong.
+        styles={{ message: { overflowWrap: 'anywhere' } }}
         data-testid="flags-load-error"
       >
         {flagsQuery.error instanceof Error

@@ -23,6 +23,7 @@ import {
   withoutScenarioWorkflows,
 } from '../../functions/wirings/scenarios/scenario-partition.js'
 import { toSafeKebab } from './naming.js'
+import { mcpSurfaceSlug } from '../../utils/mcp-surface.js'
 import { createUnitResolver, type GroupingConfig } from './grouping.js'
 
 import type {
@@ -82,6 +83,60 @@ export interface AnalyzerOptions {
    */
   grouping?: GroupingConfig
 }
+
+/**
+ * Where an MCP unit answers. Every runtime that mounts MCP defaults to `/mcp`,
+ * and pikku's own codegen never writes an `mcpPath` into the generated
+ * manifest, so the route table and the mount agree. A project that overrides
+ * `mcpPath` in `mcp.gen.json` moves the mount but not this — the analyzer never
+ * reads that file.
+ */
+const MCP_PATH = '/mcp'
+
+/** The discovery document `PikkuMCPServer` serves, per RFC 9728. */
+const WELL_KNOWN_PRM = '/.well-known/oauth-protected-resource'
+
+/**
+ * The routes an MCP unit has to receive to serve Streamable HTTP. Without them
+ * the unit deploys with an empty route table and nothing ever reaches it: POST
+ * carries the JSON-RPC calls, GET opens the server-to-client stream, and DELETE
+ * ends a session. The well-known paths are how a client discovers the
+ * authorization server when the endpoint refuses it.
+ *
+ * `bareDiscovery` is what keeps a multi-endpoint project's route table
+ * unambiguous. RFC 9728 folds the resource's path into the well-known route, so
+ * each endpoint's own document is distinct, but the bare path predates that and
+ * describes whichever resource answers it. Handing it to every unit would
+ * register the same route twice and let the router pick a winner, so only the
+ * project's default endpoint claims it; a surface serves its path-aware
+ * document alone.
+ *
+ * The ids are synthetic, as they are for the agent gateway's routes: no single
+ * pikku function answers here, because the MCP transport picks the tool out of
+ * the JSON-RPC body and dispatches it itself.
+ */
+const mcpRoutes = (
+  mcpPath: string,
+  { bareDiscovery = true }: { bareDiscovery?: boolean } = {}
+): HttpRouteInfo[] => [
+  { method: 'post', route: mcpPath, pikkuFuncId: 'mcp:call' },
+  { method: 'get', route: mcpPath, pikkuFuncId: 'mcp:stream' },
+  { method: 'delete', route: mcpPath, pikkuFuncId: 'mcp:end' },
+  ...(bareDiscovery
+    ? [
+        {
+          method: 'get' as const,
+          route: WELL_KNOWN_PRM,
+          pikkuFuncId: 'mcp:discovery',
+        },
+      ]
+    : []),
+  {
+    method: 'get',
+    route: `${WELL_KNOWN_PRM}${mcpPath}`,
+    pikkuFuncId: 'mcp:discovery',
+  },
+]
 
 export function analyzeDeployment(
   state: InspectorState,
@@ -376,7 +431,15 @@ export function analyzeDeployment(
   // ── Step 1b: Addon units ───────────────────────────────────────────
   const addonUnitByRpcName = new Map<string, string>()
   for (const [namespace, addonMeta] of entries(state.addonFunctions ?? {})) {
-    const exposed = entries(addonMeta).filter(([, meta]) => meta.expose)
+    // The wiring's `expose` decides when it is `false` or a list; otherwise
+    // the addon's own `expose: true` does — the same rule `rpc.exposed`
+    // applies at runtime, so the unit carries exactly what can be called.
+    const wiredExpose = state.rpc?.wireAddonDeclarations?.get(namespace)?.expose
+    const exposed = entries(addonMeta).filter(([funcName, meta]) =>
+      Array.isArray(wiredExpose)
+        ? wiredExpose.includes(funcName)
+        : wiredExpose !== false && meta.expose
+    )
     if (exposed.length === 0) {
       continue
     }
@@ -518,9 +581,23 @@ export function analyzeDeployment(
   // lists one would depend on a unit that was never emitted.
   const deployableFuncId = (funcId: string) =>
     !isScenarioFunction(state.functions.meta[funcId])
-  const mcpToolIds = values(state.mcpEndpoints.toolsMeta)
-    .map((t) => t.pikkuFuncId)
-    .filter(deployableFuncId)
+  // A tool naming a surface is served by that surface's endpoint and by no
+  // other, so it is grouped out of the default set here rather than pooled
+  // with it. Resources and prompts have no surface of their own yet.
+  const surfacePaths = state.mcpEndpoints.surfaces ?? {}
+  const toolIdsBySurface = new Map<string, string[]>()
+  const mcpToolIds: string[] = []
+  for (const tool of values(state.mcpEndpoints.toolsMeta)) {
+    if (!deployableFuncId(tool.pikkuFuncId)) continue
+    const surface = tool.surface
+    if (surface && surfacePaths[surface]) {
+      const ids = toolIdsBySurface.get(surface) ?? []
+      ids.push(tool.pikkuFuncId)
+      toolIdsBySurface.set(surface, ids)
+    } else {
+      mcpToolIds.push(tool.pikkuFuncId)
+    }
+  }
   const mcpResourceIds = values(state.mcpEndpoints.resourcesMeta)
     .map((r) => r.pikkuFuncId)
     .filter(deployableFuncId)
@@ -540,6 +617,31 @@ export function analyzeDeployment(
     }
   }
 
+  for (const [surface, toolIds] of toolIdsBySurface) {
+    const unitName = `mcp-${mcpSurfaceSlug(surface)}`
+    units.push({
+      name: unitName,
+      role: 'mcp',
+      target: 'serverless',
+      functionIds: [],
+      services: [],
+      dependsOn: toolIds.map((id) => unitFor(id)),
+      handlers: [
+        {
+          type: 'fetch',
+          routes: mcpRoutes(surfacePaths[surface]!, { bareDiscovery: false }),
+        },
+      ],
+      tags: collectTags(toolIds, tagsFor),
+    })
+    mcpEndpoints.push({
+      unitName,
+      toolFunctionIds: toolIds,
+      resourceFunctionIds: [],
+      promptFunctionIds: [],
+    })
+  }
+
   const allMcpIds = [...mcpToolIds, ...mcpResourceIds, ...mcpPromptIds]
   if (allMcpIds.length > 0) {
     const unitName = 'mcp-server'
@@ -552,7 +654,7 @@ export function analyzeDeployment(
       functionIds: [], // No function code bundled
       services: [],
       dependsOn: mcpFuncUnitNames,
-      handlers: [{ type: 'fetch', routes: [] }],
+      handlers: [{ type: 'fetch', routes: mcpRoutes(MCP_PATH) }],
       tags: collectTags(allMcpIds, tagsFor),
     })
 
@@ -795,7 +897,7 @@ export function analyzeDeployment(
   // the key is a name the addon may read that it never declared.
   const grantedNames = (
     grants: string[] | undefined,
-    overrides: Record<string, string> | undefined
+    overrides: Record<string, unknown> | undefined
   ) => [...new Set([...(grants ?? []), ...Object.keys(overrides ?? {})])].sort()
 
   for (const [namespace, addon] of state.rpc?.wireAddonDeclarations ?? []) {

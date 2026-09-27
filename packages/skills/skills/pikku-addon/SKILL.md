@@ -3,8 +3,10 @@ name: pikku-addon
 description: >-
   Use when creating or consuming reusable function packages (addons) in Pikku. Covers wireAddon,
   ref(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, addons that ship
-  database tables (pikku db export), and cross-project function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, user asks about
-  addons, reusable function packages, cross-project sharing, or addon package structure. DO NOT
+  database tables (pikku db export), generating an addon from an OpenAPI/Swagger spec, and
+  cross-project function sharing. TRIGGER when: code uses wireAddon/ref()/pikkuAddonServices, user
+  asks about addons, reusable function packages, cross-project sharing, or addon package structure,
+  or the user hands over an OpenAPI/Swagger spec (file or URL) to build on. DO NOT
   TRIGGER when: user asks about internal function composition (use pikku-wiring) or general function
   definitions (use pikku-concepts).
 installGroups: [core]
@@ -19,7 +21,7 @@ Use this skill as an execution checklist, not reference material.
 1. Discover before editing. Run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
 2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
 3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+4. Validate with the narrowest relevant command first, then run `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Addons are reusable Pikku function packages that can be shared across projects. They bundle functions, services, secrets, and variables into a self-contained NPM package.
@@ -47,7 +49,8 @@ wireAddon({
   package: string,                 // NPM package name (e.g. '@pikku/addon-todos')
   rpcEndpoint?: string,            // Optional remote RPC endpoint for distributed execution
   auth?: boolean,                  // Require a session for every function in the addon
-  mcp?: boolean,
+  mcp?: boolean | string[],        // true: every function the addon declared mcp: true; a list: the tools this app offers, typed against the addon's function names
+  expose?: boolean | string[],     // what rpc.exposed / POST /rpc may reach: unset/true = the addon's own expose: true, false = none, a list = exactly those (typed; PKU343 on unknown names)
   tags?: string[],                 // Tags applied to all addon functions
   scopes?: string[],               // Required of every function, on top of its own
   secretOverrides?: Record<string, string>,      // Remap secret names (and grant them)
@@ -146,7 +149,7 @@ second argument is always present — an addon never falls back to its own logge
 variables or secrets; the consuming app supplies them:
 
 ```typescript
-import { pikkuAddonServices } from '#pikku/setup'
+import { pikkuAddonServices } from '#pikku/addon/setup'
 
 export const createSingletonServices = pikkuAddonServices(
   async (config, { secrets, logger }) => {
@@ -167,7 +170,7 @@ config object.
 Define per-request services for an addon package (created fresh per HTTP request, queue job, etc.):
 
 ```typescript
-import { pikkuAddonWireServices } from '#pikku/setup'
+import { pikkuAddonWireServices } from '#pikku/addon/setup'
 
 export const createWireServices = pikkuAddonWireServices(
   async (singletonServices, wire) => {
@@ -189,13 +192,17 @@ npx pikku new addon <name>          # name is a required positional
 npx pikku new addon stripe --display-name Stripe --category Payments --dir addons
 ```
 
+**Handed an OpenAPI or Swagger spec?** Don't hand-write the functions —
+`pikku new addon <name> --openapi <spec>` generates one function per operation,
+with its schemas, service and credential. Read `references/openapi.md`.
+
 This generates `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json` (`addon: true`), `tsconfig.json` (`#pikku` path mapping), `src/services.ts`, `src/functions/`, and `types/application-types.d.ts`. For the full file contents/exports you rarely hand-edit, read `references/addon-package-manifest.md`.
 
 ### Services
 
 ```typescript
 // src/services.ts
-import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/setup'
+import { pikkuAddonServices, pikkuAddonWireServices } from '#pikku/addon/setup'
 import { TodoStore } from './todo-store.service.js'
 
 export const createSingletonServices = pikkuAddonServices(async () => {
@@ -213,18 +220,30 @@ export const createWireServices = pikkuAddonWireServices(
 
 ### Functions
 
-An addon's generated tree roots at `.pikku/addon/`, but its `imports` map points
-`#pikku/*` there, so it authors against the same subpaths an application does —
-`#pikku/function`, `#pikku/http`. The `addon` segment is the package's own
-business, never part of a specifier.
+An addon's generated tree roots at `.pikku/addon/`, and its own source reaches
+it by that path — `#pikku/addon/function`, `#pikku/addon/setup`. An application
+authors against `#pikku/function`; an addon never does, because inside the addon
+`#pikku/function` names a leaf that does not exist.
+
+**Declare zod schemas in a file that never imports `#pikku`.** `pikku all` loads
+the file that declares each schema to convert it, and at runtime `#pikku`
+resolves through the package's `imports` — into a `dist` the first build has not
+written yet. Inline, every schema fails with `Could not convert Zod schema …
+Cannot find module …/dist/.pikku/…` and the addon never builds from clean. A
+sibling `<fn>.schemas.ts` is what `--openapi` generates:
+
+```typescript
+// src/functions/addTodo.schemas.ts
+import { z } from 'zod'
+
+export const AddTodoInput = z.object({ title: z.string() })
+export const AddTodoOutput = z.object({ id: z.string(), title: z.string() })
+```
 
 ```typescript
 // src/functions/addTodo.function.ts
-import { z } from 'zod'
-import { pikkuSessionlessFunc } from '#pikku/function'
-
-const AddTodoInput = z.object({ title: z.string() })
-const AddTodoOutput = z.object({ id: z.string(), title: z.string() })
+import { pikkuSessionlessFunc } from '#pikku/addon/function'
+import { AddTodoInput, AddTodoOutput } from './addTodo.schemas.js'
 
 export const addTodo = pikkuSessionlessFunc({
   description: 'Adds a new todo',
@@ -246,9 +265,7 @@ approvalDescription: async (_services, { title }) => `Add a todo called "${title
 ### Build
 
 ```bash
-yarn pikku all          # Generate types
-yarn tsc                # Compile TypeScript
-cp -r .pikku types dist/  # Ship the generated files and the types they import
+yarn build              # prebuild: pikku all, then tsc && pikku dist
 yarn pikku validate     # Check the published file set holds together
 ```
 
@@ -257,12 +274,11 @@ devDependency, and building it against a different CLI than it declares is how
 generated output ends up disagreeing with the packaged one. `npx pikku new
 addon` above is the exception — it runs before the addon, and its CLI, exist.
 
-`types/` has to be copied alongside `.pikku`: the generated files import
-`SingletonServices`, `Services`, `Config` and `UserSession` from
-`../../types/application-types.d.js`, and `tsc` never emits a hand-written
-`.d.ts` to `outDir`, so nothing else puts it in `dist`. Leave it out and the
-addon installs fine and fails to typecheck in every app that depends on it —
-which is what `pikku validate` is there to catch before you publish.
+`pikku dist` copies what `tsc` cannot emit — the generated `*.gen.json` meta and
+the hand-written `types/*.d.ts` the generated files import — to where `tsc` put
+everything else. Leave it out and the addon installs fine and fails to typecheck
+in every app that depends on it, which is what `pikku validate` is there to
+catch before you publish.
 
 ### Database tables
 
@@ -297,7 +313,7 @@ packed, or it never arrives:
 **An unresolvable artifact stops `db generate`.** Because the file is
 unconditional, absence means the package cannot say whether it ships tables —
 either it was built with an older CLI, or `exports`/`files` do not carry it. The
-error names both causes. An addon with genuinely no tables is *not* this case:
+error names both causes. An addon with genuinely no tables is _not_ this case:
 it publishes `{}` and is waved through.
 
 Two more loud ones: a malformed artifact (missing the SQL for a dialect it
@@ -323,11 +339,6 @@ wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
 ```
 
 After registration, run `yarn pikku all` to generate types for the addon's functions.
-
-Give each addon its own wiring file. A deployment unit imports a `wireAddon`
-file only while at least one addon that file wires survives the unit's filter,
-so wiring two addons from one file means a unit needing either one registers
-both and bundles both packages' dependencies.
 
 If the addon ships tables, `pikku db generate` then writes one migration per
 addon — named after the package, carrying the addon's own SQL — after Better

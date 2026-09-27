@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { refCLI, refChannel, refHTTP } from '#pikku/function'
+import { RPCNotFoundError, rpcService } from '@pikku/core/rpc'
+import { createConfig, createSingletonServices } from './services.js'
 
 const ADDON_PACKAGE = '@pikku/templates-function-addon'
 
@@ -105,6 +107,56 @@ if (overridden.basePath === '/custom') {
     `✗ refHTTP basePath override failed — got: ${JSON.stringify(overridden.basePath)}`
   )
   passed = false
+}
+
+// `mcp: ['goodbye']` is the app choosing the tool menu: the addon declared
+// `hello` a tool and not `goodbye`, and neither declaration decides this.
+const mcpMeta = readMeta('../.pikku/mcp/mcp.gen.json')
+const toolNames = (mcpMeta?.tools ?? []).map((tool: any) => tool.name).sort()
+if (toolNames.length === 1 && toolNames[0] === 'ext:goodbye') {
+  console.log('✓ wireAddon mcp list offers exactly the tools it names')
+} else {
+  console.log(
+    `✗ wireAddon mcp list did not decide the tool menu — got: ${JSON.stringify(toolNames)}`
+  )
+  passed = false
+}
+
+// `expose: ['goodbye']` is the app choosing what `rpc.exposed` — and so
+// `POST /rpc/:rpcName` — reaches. Neither function declared `expose: true`.
+const rpc = rpcService.getContextRPCService(
+  (await createSingletonServices(await createConfig())) as any,
+  {}
+)
+try {
+  const reply: any = await rpc.exposed('ext:goodbye', { name: 'Ada' })
+  if (reply?.message === 'Goodbye, Ada!') {
+    console.log('✓ wireAddon expose list makes a listed function callable')
+  } else {
+    console.log(`✗ ext:goodbye returned ${JSON.stringify(reply)}`)
+    passed = false
+  }
+} catch (error: any) {
+  console.log(
+    `✗ wireAddon expose list did not open ext:goodbye — ${error.message}`
+  )
+  passed = false
+}
+try {
+  await rpc.exposed('ext:hello', { name: 'Ada' })
+  console.log('✗ ext:hello was callable though the expose list omits it')
+  passed = false
+} catch (error) {
+  if (error instanceof RPCNotFoundError) {
+    console.log(
+      '✓ wireAddon expose list keeps an unlisted function unreachable'
+    )
+  } else {
+    console.log(
+      `✗ ext:hello failed for the wrong reason — ${(error as Error).message}`
+    )
+    passed = false
+  }
 }
 
 console.log('\n───────────────────────────────────────')

@@ -186,6 +186,63 @@ When you add a tool, tell whoever asked for it the URL. An assistant that cannot
 be pointed at an endpoint has not been connected to anything, and `/mcp` is the
 whole answer.
 
+## Authentication
+
+An MCP endpoint is not gated as a whole. Pikku already knows, tool by tool, which
+calls need a session, and the endpoint answers accordingly:
+
+| Declaration                              | Anonymous call      |
+| ---------------------------------------- | ------------------- |
+| `pikkuSessionlessFunc` with `mcp: true`  | runs                |
+| the same, plus `auth: true`              | `401` + a challenge |
+| `pikkuFunc` with `mcp: true`             | `401` + a challenge |
+
+```typescript
+// public: anyone connecting to /mcp can call this
+export const searchCatalog = pikkuSessionlessFunc<Query, Results>({
+  mcp: true,
+  func: async (services, data) => services.catalog.search(data),
+})
+
+// private: an anonymous caller is challenged, never dispatched
+export const myOrders = pikkuFunc<void, Order[]>({
+  mcp: true,
+  func: async (services, _data, session) =>
+    services.orders.forUser(session.userId),
+})
+```
+
+The `401` carries a `WWW-Authenticate` header naming the endpoint's RFC 9728
+Protected Resource Metadata document, which the server also serves — `/mcp` is
+described at `/.well-known/oauth-protected-resource/mcp`. That pair is what an
+MCP client needs to discover an authorization server and start an OAuth flow;
+a refusal delivered as a JSON-RPC result instead reads to a client as a tool that
+failed, and no discovery happens.
+
+`tools/list` is never gated, so a client can still see what exists before it has
+a token.
+
+Nothing needs configuring: the metadata document defaults to advertising the
+origin the request arrived on, which is right whenever the app is its own
+authorization server. To point elsewhere, pass `mcpAuth` to the runtime:
+
+```typescript
+new PikkuNodeHTTPServer(config, logger, {
+  mcpJson,
+  mcpAuth: {
+    authorizationServers: ['https://auth.example.com'],
+    scopesSupported: ['mcp'],
+    resourceName: 'Example API',
+  },
+})
+```
+
+The transport never verifies a token itself — session resolution stays with the
+app's own middleware, exactly as it works over HTTP. One consequence: only a
+request carrying *no* credentials is challenged. A token that is present but
+expired is dispatched, and the runner's refusal reaches the client as a tool
+error.
+
 ## Red flags
 
 | Symptom                                          | Cause                                                           |
@@ -195,3 +252,5 @@ whole answer.
 | Resource returning `{ uri, blob, mimeType }`     | Resources are text only: `{ uri, text }`                        |
 | Client sees a tool with no description           | `mcp: true` without a `description` — check the codegen warning |
 | `/mcp` 404s                                      | Nothing to serve yet — the mount is skipped until one tool, resource or prompt exists |
+| A tool an assistant should be able to call returns `401` | It is a `pikkuFunc`, or declares `auth: true` — make it a `pikkuSessionlessFunc` if it is genuinely public |
+| A private tool returns a result rather than a challenge | The request carried a credential, so it was dispatched; only a call with none is refused at the door |

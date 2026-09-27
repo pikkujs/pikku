@@ -60,7 +60,6 @@ export const askFreely = (
  * would otherwise have to learn.
  */
 export const STATUS_DESCRIPTIONS: Record<string, string> = {
-  designing: 'still choosing how it should look',
   proposed: 'settled, and ready to be built',
   dispatched: 'being built right now',
   built: 'already built',

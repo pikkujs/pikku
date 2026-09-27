@@ -1,5 +1,151 @@
 # @pikku/better-auth
 
+## 0.12.46
+
+### Patch Changes
+
+- 67c707a: The stateless session cookie's lifetime is now declared by the CLI and read by the framework, so an app needs no code of its own to get a session that outlives five minutes.
+
+  The previous fix stopped `betterAuthStatelessSession` leaving the cookie on better-auth's 300-second default, but it hardcoded one day. An app that wanted a different lifetime — and it is a real decision, because the lifetime is also the longest a ban or a revoked session can go unnoticed — had to declare a variable, read it, and thread it into its own `betterAuth({ session: { cookieCache } })`. That was the same three edits in every app, which is the shape of something the framework should be doing.
+
+  Now:
+
+  - **`@pikku/cli`** emits a `SESSION_COOKIE_CACHE_MAX_AGE` variable into `auth-secrets.gen.ts`, on the `cookieCache` branch that already decides whether to split the stateless middleware out. Only that branch: under the stateful middleware the cookie cache genuinely is a cache in front of the database, and a short life there is the correct trade rather than a bug. It is optional, so a deployment that never sets it stays valid.
+
+    The generated schema is `z.string().default('86400')` rather than a coerced number, because `TypedVariablesService` returns a stored host value **unparsed** and runs the declared schema only to resolve a default. A `z.coerce.number()` would never fire on a real value and would only mislead whoever read it.
+
+  - **`@pikku/better-auth`** reads that variable when it applies the default, coercing and range-checking it there. A value that is not a positive number of seconds is logged and ignored rather than honoured — a typo should not expire the cookie instantly. An app generated before the CLI emitted the declaration has no such variable, which is the ordinary case and not an error: the one-day default simply stands.
+
+    Insert-not-upsert still holds, and now holds against the variable too. An explicit `session.cookieCache.maxAge` in the app's own config is the author's decision and beats a stage binding.
+
+  - **`@pikku/cli`** also generates `useSession` into the react-query hooks file. An app wants the session anyway, and the same query heals the cookie for free: when `session_data` ages out, better-auth's cookie-cache branch bails on the stale payload and falls through to the database, reading the session from the still-valid `session_token` and minting a fresh cookie on the way out. `refetchInterval` and `refetchOnWindowFocus` are react-query's; there is no refresh loop beside them.
+
+    It deliberately does not pass `disableCookieCache`. That would make every refetch a database read — the exact cost the cookie cache exists to avoid — to re-mint a cookie with most of its life left. better-auth's own sliding renewal (`session.cookieCache.refreshCache`) is not an option either: it is force-disabled whenever a database is configured, and where it does apply it re-signs the cached blob without reading the database, so a banned user's cookie would renew forever.
+
+  The upshot for an app: `pikku gen`, use `useSession()` where it wants the signed-in user, and delete any hand-rolled equivalent. The app's `betterAuth` config needs no `maxAge`.
+
+- Updated dependencies [e85f07e]
+  - @pikku/core@0.12.119
+
+## 0.12.45
+
+### Patch Changes
+
+- 4bb7200: `betterAuthStatelessSession` no longer leaves the session cookie on better-auth's 300-second default, which signed every user out five minutes after they logged in.
+
+  The middleware verifies the signed `session_data` cookie with the secret alone — no `services.auth()`, no database. That is the point of it, but it also means the cookie is the only thing authenticating a request, and better-auth's unset-`maxAge` default of 300 seconds stops being a cache expiry and becomes a hard session limit. Nothing rewrites the cookie in between, because a pikku app talks to its own RPCs and never calls `/api/auth/*` again after sign-in. Five minutes in, every RPC answered 403 while the user's `session_token` was still good for a week — and because the failure is a 403 rather than a 401, a persona run watching for a 401 could not recover either (see the `HttpPersona` re-login note in `@pikku/core`, which treated the symptom).
+
+  `pikkuBetterAuth` now gives the cookie a day when, and only when, the app did not choose a lifetime itself. It is an insert, never an upsert: the check reads the app's own options object, so an explicit `maxAge` — including a short one, including an explicit `300` — is the author's decision and is left exactly as written. The default is also scoped to the configuration that needs it. Under the stateful middleware the cookie cache really is a cache in front of the database and a short life is the correct trade, so nothing changes there.
+
+  Pick your own with `session: { cookieCache: { enabled: true, maxAge: <seconds> } }`. It is worth choosing deliberately: under the stateless middleware that value is the longest a ban or a revoked session can go unnoticed, so it trades revocation latency against database reads. It is not the session length, which stays `session.expiresIn`.
+
+## 0.12.44
+
+### Patch Changes
+
+- cb8f57e: The session middlewares stand down instead of throwing when the thing they need is not theirs to read, and no longer overwrite a session another middleware already resolved.
+
+  Two failures showed up once global middleware started reaching addon dispatches, which is exactly when this middleware began running in places it was never meant to authenticate:
+
+  - A wiring in a scoped namespace runs with a `ScopedSecretService`, and an addon's namespace is deliberately not granted the host application's `BETTER_AUTH_SECRET`. Asking for it threw `Access denied to secret key: BETTER_AUTH_SECRET`, which surfaced to the caller as a failed tool call. That is the normal state for an addon, not a fault, so the new `isSecretForbidden` predicate recognises it and the middleware skips quietly — letting a bearer-token middleware further down the chain do the authenticating. `isSecretNotFound` still logs, because a missing secret in the root namespace really is a misconfiguration.
+  - The middleware read `session` off its wire props to decide whether someone had already authenticated. That value is a snapshot taken when the props were built, so it stays `undefined` for the whole chain however many middlewares resolve a session in the meantime — and this one would redo its own cookie lookup over an already-authenticated request and overwrite the result. It now consults the live `getSession()` as well.
+
+  A genuine failure — the secret store being unreachable, for instance — still rejects.
+
+  `betterAuthSession` had the same problem one service along: an addon builds its own singleton services and is deliberately not handed the host application's better-auth instance, so every addon dispatch failed with `services.auth is not a function` and the caller saw a failed tool call. It now skips when no `auth` service is in scope, for the same reason and with the same outcome.
+
+- 6db6a14: A wiring can now decide whether an addon's credential is per-user or deployment-wide
+
+  `wireAddon`'s `credentialOverrides` takes an object as well as a rename string:
+
+  ```ts
+  wireAddon({
+    name: 'gmail',
+    package: '@pikku/addon-gmail',
+    credentialOverrides: {
+      gmailOAuth: { mode: 'wire' }, // each user connects their own
+      calendarOAuth: { name: 'CAL', mode: 'singleton' },
+    },
+  })
+  ```
+
+  An addon author declares a default with `defineCredential`; the deployment decides, so one addon serves both a per-user product and a single team account.
+
+  The wire credential service now resolves each credential by what it _is_ rather than by what a lookup returned: `wire` reads only the user's value, `singleton` reads the deployment's. A per-user credential can no longer pick up a platform-level value because the user has not connected — which, before, would have quietly run someone's request against the deployment's own account.
+
+  A credential is never read from the secret vault. The wire credential service no longer takes a `SecretService` at all, so the only way a credential arrives is the one its mode names — the user's own value, or the deployment's.
+
+  Modes are resolved at generation time into the credentials meta, so the console's connect flow reflects the wiring rather than the addon's default.
+
+  Two credentials that resolve to one name are rejected unless they agree on the mode. Generation writes a single metadata entry per name, so a `wire` credential aliased onto a `singleton` one used to take whichever wiring was read last — a per-user credential served from the deployment's own account, or a deployment credential handed out per user. The inspector reports the collision against both wirings by name, and `buildCredentialResolutions` refuses it at runtime too.
+
+  A mode-only override is checked against the credential it names. `{ mode: 'wire' }` renames nothing, so nothing was validated: an override naming a credential that does not exist was dropped in silence and the credential kept the mode its author declared.
+
+  A credential the wiring resolves as `singleton` is no longer read out of the user's own store. Per-user values are imported first and a name already present is left alone, so a value stored under a singleton's name — from an earlier wiring, or a connect flow since rewired — decided what the deployment's own slot resolved to. It is now skipped by mode, the same way a `wire` credential is kept away from the deployment's value.
+
+  The project's own credentials are registered into pikku state from the generated credentials file, so `wire.getCredential` resolves an app-level singleton the same way it resolves an addon's.
+
+  `pikku new addon` no longer requires a `pikku.config.json` in the working directory. Scaffolding an addon is something you do before a project config exists, so the command now reads one when it is there and falls back to the working directory when it is not.
+
+  An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all. A nested callback that names its own parameter after the factory's is no longer read as the factory's own: what it destructured went onto the addon's contract, so a consumer was asked for a service the addon never wanted from them.
+
+  An OAuth2 credential now implies its app secret, so nobody hand-writes one. The client id and secret an OAuth app needs is the same shape every time — `OAuth2AppCredential`, which is what the runtime already reads it as — so the inspector registers a secret for each credential's `appCredentialSecretId`. A hand-written `defineSecret` covering that id still wins, so an author who wants their own description or `docsUrl` keeps it. The derived secret is optional, matching what every hand-written declaration chose: an addon that also authenticates by API key must still deploy without an OAuth app configured.
+
+  `optional` now means a secret is not reported as missing. `getMissing()` filtered on "not configured" alone, so a secret whose declaration said absence was supported still showed up on the list of things a deployment had to go and supply — burying the ones that genuinely were. `getAllStatus()` still reports it, flagged `optional`.
+
+  An OAuth2 secret carries its declaration's `optional` through code generation, to the app credential and to the token store alike: nobody connects without the client id and secret, so a deployment allowed to omit the app is never asked for its tokens either. That branch never looked at the flag before.
+
+  `credentialOAuthProviders` treats an app secret that resolves `undefined` as unconfigured. An optional secret resolves rather than throws, so the absence arrived past the `catch` that was meant to skip the provider — and `.reveal()` on it threw a `TypeError` that took every `getSession` down with it, which is the exact failure that code exists to prevent.
+
+- Updated dependencies [cb8f57e]
+- Updated dependencies [cb8f57e]
+- Updated dependencies [6db6a14]
+  - @pikku/core@0.12.114
+
+## 0.12.43
+
+### Patch Changes
+
+- dfd7019: better-auth moves to 1.7.5
+
+  The internal adapter renamed `findAccountByProviderId(accountId, providerId)` to
+  `findAccountByKey({ providerId, accountId })`, `createUser` now takes the
+  provisioning source as a second argument, and `generateState` takes its link
+  target by name rather than by position. The actor, fabric and delegated plugins
+  each name themselves as the provisioning method, so an app's `validateUserInfo`
+  hook can tell which one created a user.
+
+  `get-access-token` and `unlink-account` also changed their body to a strict
+  schema selecting the account by its own row id rather than by provider name, so
+  `BetterAuthCredentialService` resolves the row through the internal adapter
+  before asking for a token — which also means an unlinked provider is answered
+  without a round trip.
+
+- dfd7019: An MCP tool reads the claims its host verified
+
+  `PikkuHTTP` gains an `authInfo` of the new `PikkuHTTPAuthInfo`: the token,
+  client and scopes a transport that already verified a bearer token hands on.
+  It is strictly pass-through — nothing in pikku derives it from a request's own
+  headers, because verifying a token is the host's job. A function could always
+  read the `Authorization` header itself; what this adds is what the raw header
+  cannot carry.
+
+  `PikkuMCPServer`'s server factory now carries the SDK's `authInfo` onto the
+  wire beside the request, so the `authInfo` a host passes to
+  `createFetchHandler` reaches the tool rather than stopping at the SDK.
+
+  `pikkuCredentialOAuth` also names itself when it provisions the platform user.
+  Every other pikku plugin passes a source to `internalAdapter.createUser`, and
+  better-auth refuses a `user.validateUserInfo` gate that is handed none — so an
+  app with that hook configured could not link a singleton credential at all.
+
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [9b978e7]
+- Updated dependencies [1469e73]
+  - @pikku/core@0.12.113
+
 ## 0.12.42
 
 ### Patch Changes

@@ -117,9 +117,9 @@ export const CHECKS: ValidateCheck[] = [
   },
   {
     id: 'type-identity',
-    subject: 'linked dependencies',
-    // Root of an installed tree only. A linked dependency is a property of the
-    // install as a whole, so running this per workspace package reports the
+    subject: 'shared dependency versions',
+    // Root of an installed tree only. A linked or skewed dependency is a
+    // property of the install as a whole, so running this per workspace package reports the
     // same pair N times — and with nothing installed there is nothing to
     // compare.
     applies: async ({ dir, label }) =>

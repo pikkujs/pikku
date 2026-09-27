@@ -42,8 +42,13 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
             type: 'timing',
           })
         } catch (err) {
-          console.error(err)
-          logger.error('Error running watch')
+          // Through the logger, so it obeys --log-level and the dev server's
+          // formatting. `console.error(err)` printed a bare stack over the top
+          // of the watch output no matter what verbosity was asked for.
+          logger.error(
+            `Error running watch: ${err instanceof Error ? err.message : String(err)}`
+          )
+          logger.debug(err instanceof Error ? (err.stack ?? '') : String(err))
         }
       }
 

@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildScenarioPlan } from './scenario-plan.js'
+import { buildScenarioPlan, identifyScenarioResult } from './scenario-plan.js'
 import type { ScenarioPlanInput } from './scenario-plan.js'
 
 const scenarioConfig = (tags: string[] = []) =>
@@ -337,5 +337,42 @@ describe('buildScenarioPlan excludeTags', () => {
       group.entries.map((entry) => entry.scenarioName)
     )
     assert.deepEqual(names, ['smokeScenario'])
+  })
+})
+
+describe('identifyScenarioResult', () => {
+  const ran = {
+    name: 'Credential API › lazyLoadScenario',
+    status: 'passed' as const,
+    durationMs: 12,
+  }
+
+  test('a result says which feature and which scenario it came from, by id', () => {
+    const result = identifyScenarioResult(ran, {
+      scenarioName: 'lazyLoadScenario',
+      featureId: 'credentialFeature',
+      featureName: 'Credential API',
+      tags: ['credential'],
+    })
+
+    assert.equal(result.featureId, 'credentialFeature')
+    assert.equal(result.scenarioName, 'lazyLoadScenario')
+    assert.equal(
+      result.feature,
+      'Credential API',
+      'the display name stays, alongside the id rather than instead of it'
+    )
+    assert.deepEqual(result.tags, ['credential'])
+    assert.equal(result.name, ran.name, 'and the outcome is untouched')
+  })
+
+  test('a scenario belonging to no feature carries neither feature field', () => {
+    const result = identifyScenarioResult(ran, {
+      scenarioName: 'smokeScenario',
+    })
+
+    assert.equal('featureId' in result, false)
+    assert.equal('feature' in result, false)
+    assert.equal(result.scenarioName, 'smokeScenario')
   })
 })

@@ -546,6 +546,86 @@ describe('ContextAwareRPCService.rpcExposed', () => {
 
     assert.deepEqual(result, { data: { ok: true }, source: 'addon' })
   })
+
+  const wireExposeAddon = (expose: boolean | string[] | undefined) => {
+    wireAddon({ name: 'shop', package: '@shop/pkg', expose })
+    registerFunction('declared', async () => ({ ran: 'declared' }), {
+      packageName: '@shop/pkg',
+      expose: true,
+    })
+    registerFunction('undeclared', async () => ({ ran: 'undeclared' }), {
+      packageName: '@shop/pkg',
+    })
+    return new ContextAwareRPCService(createServices(), {} as never, {})
+  }
+
+  test('an unset wireAddon expose keeps what the addon declared', async () => {
+    const service = wireExposeAddon(undefined)
+    assert.deepEqual(await service.rpcExposed('shop:declared', {}), {
+      ran: 'declared',
+    })
+    await assert.rejects(
+      () => service.rpcExposed('shop:undeclared', {}),
+      RPCNotFoundError
+    )
+  })
+
+  test('wireAddon expose: false closes every function of the instance', async () => {
+    const service = wireExposeAddon(false)
+    await assert.rejects(
+      () => service.rpcExposed('shop:declared', {}),
+      RPCNotFoundError
+    )
+  })
+
+  test('a wireAddon expose list is exactly what is callable', async () => {
+    const service = wireExposeAddon(['undeclared'])
+    assert.deepEqual(await service.rpcExposed('shop:undeclared', {}), {
+      ran: 'undeclared',
+    })
+    await assert.rejects(
+      () => service.rpcExposed('shop:declared', {}),
+      RPCNotFoundError
+    )
+  })
+
+  test('two instances of one package expose independently', async () => {
+    wireAddon({ name: 'open', package: '@shop/pkg' })
+    const service = wireExposeAddon(false)
+    assert.deepEqual(await service.rpcExposed('open:declared', {}), {
+      ran: 'declared',
+    })
+    await assert.rejects(
+      () => service.rpcExposed('shop:declared', {}),
+      RPCNotFoundError
+    )
+  })
+
+  test('a function the wiring refuses is not forwarded to another deploy unit', async () => {
+    const calls: unknown[] = []
+    wireAddon({ name: 'shop', package: '@shop/pkg', expose: ['listed'] })
+    const service = new ContextAwareRPCService(
+      createServices({
+        deploymentService: {
+          invoke: async (...args: unknown[]) => {
+            calls.push(args)
+            return { remote: true }
+          },
+        },
+      }),
+      {} as never,
+      {}
+    )
+
+    await assert.rejects(
+      () => service.rpcExposed('shop:unlisted', {}),
+      RPCNotFoundError
+    )
+    assert.deepEqual(await service.rpcExposed('shop:listed', {}), {
+      remote: true,
+    })
+    assert.equal(calls.length, 1)
+  })
 })
 
 describe('ContextAwareRPCService.rpcWithWire', () => {

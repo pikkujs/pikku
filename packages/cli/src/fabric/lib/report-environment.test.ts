@@ -49,6 +49,27 @@ describe('readPikkuPackages', () => {
     }
   })
 
+  test('leaves a package linked into a store under node_modules unflagged', async () => {
+    const root = await makeTmp()
+    try {
+      const scope = join(root, 'node_modules', '@pikku')
+      await mkdir(scope, { recursive: true })
+      const stored = await installPackage(
+        join(root, 'node_modules', '.bun', '@pikku+core@0.12.90', 'node_modules', '@pikku'),
+        'core',
+        '0.12.90'
+      )
+      await symlink(stored, join(scope, 'core'))
+
+      const [core] = await readPikkuPackages(scope)
+
+      assert.equal(core.linked, false)
+      assert.equal(core.version, '0.12.90')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test('flags a package that resolves through a symlink', async () => {
     const root = await makeTmp()
     try {

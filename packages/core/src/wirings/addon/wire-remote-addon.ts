@@ -17,11 +17,13 @@ export type WireRemoteAddonConfig = {
   name: string
   /** Must be installed as a devDependency — `pikku verify` enforces this. */
   package: string
+  /** Where the addon is deployed, e.g. `https://registry.example.com`. A function when it varies per environment. */
   serverUrl: string | ((services: CoreServices) => string | Promise<string>)
   /** Omit when the addon declares its remote surface public. */
   auth?: RemoteAddonAuth
   /** Map a consumer-facing fn name → the remote fn name, when they differ (rare). */
   remoteName?: (fn: string) => string
+  /** Applied to every function the addon contributes, so tag middleware and permissions reach them. */
   tags?: string[]
 }
 

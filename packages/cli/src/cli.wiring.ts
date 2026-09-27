@@ -34,6 +34,14 @@ import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import {
+  examplesAdd,
+  examplesList,
+  examplesShow,
+  renderExamplesAdd,
+  renderExamplesList,
+  renderExamplesShow,
+} from './functions/commands/examples.js'
+import {
   knowledgeValidate,
   renderKnowledgeValidate,
 } from './functions/commands/knowledge-validate.js'
@@ -57,7 +65,11 @@ import {
   renderKnowledgePlanSet,
   renderKnowledgePlanShow,
 } from './functions/commands/knowledge-plan.js'
-import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
+import {
+  scenarioRun,
+  scenarioList,
+  scenarioGuide,
+} from './functions/commands/scenario.js'
 import {
   personaList,
   personaRun,
@@ -629,6 +641,62 @@ wireCLI({
         }),
       },
     },
+    examples: {
+      description:
+        'Worked examples of the things that are easy to get wrong and hard to discover — read one, or write it into this project already named for your own entity',
+      subcommands: {
+        list: pikkuCLICommand({
+          func: examplesList,
+          render: renderExamplesList,
+          description: 'List every example, with what each one is for',
+          options: {
+            group: {
+              description:
+                'Only the examples whose name starts with this, e.g. `scenario`',
+              short: 'g',
+            },
+          },
+        }),
+        show: pikkuCLICommand({
+          func: examplesShow,
+          render: renderExamplesShow,
+          description:
+            'Print one example, renamed onto your own entity, with everything the recipe says about itself',
+          options: {
+            name: {
+              description: 'Which example',
+              short: 'n',
+            },
+            entity: {
+              description:
+                "The domain symbol to rewrite the example's own onto",
+              short: 'e',
+            },
+          },
+        }),
+        add: pikkuCLICommand({
+          func: examplesAdd,
+          render: renderExamplesAdd,
+          description:
+            'Write one example into this project, or say what is in the way and write nothing',
+          options: {
+            name: {
+              description: 'Which example',
+              short: 'n',
+            },
+            entity: {
+              description: "The domain symbol to rename the example's own onto",
+              short: 'e',
+            },
+            app: {
+              description:
+                'Which frontend a screen belongs to, for a project with more than one',
+              short: 'a',
+            },
+          },
+        }),
+      },
+    },
     knowledge: {
       description:
         'Inspect and maintain the knowledge base — what this app is, in the language its users use',
@@ -657,6 +725,13 @@ wireCLI({
           render: renderKnowledgeReconcile,
           description:
             'Say the one thing to do next — repair a note, write a plan, ask the user, build, or nothing',
+          options: {
+            require: {
+              description:
+                'Exit non-zero unless the next action is one of these (comma-separated: idle, repair-note, write-plan, ask-user, dispatch, hold) — what turns this command into a gate a stage can be held to',
+              type: 'string',
+            },
+          },
         }),
         plan: {
           description:
@@ -755,7 +830,7 @@ wireCLI({
             },
             strict: {
               description:
-                'Fail rather than pass a `then` that has no witness for --run, i.e. an assertion nobody checked on the surface its prose claims',
+                'Every step must run on --run: an action may not fall back to its default binding, and a `then` may not be witnessed anywhere else. No effect on --run default',
               default: false,
             },
             spawn: {
@@ -797,6 +872,36 @@ wireCLI({
         list: pikkuCLICommand({
           func: scenarioList,
           description: 'List scenarios with names and descriptions',
+        }),
+        guide: pikkuCLICommand({
+          func: scenarioGuide,
+          description:
+            "Write the user guide the suite already contains: each page's editorial prose merged with the steps and screenshots the latest run recorded. Markdown only — no HTML, no asset URLs, no model.",
+          options: {
+            docs: {
+              description:
+                'Where the editorial sources live, relative to the project. A `<!-- pikku:guide feature=<id> -->` marker pair in a `<section>/<slug>.md` is both the citation and the place the block is written',
+              default: 'docs',
+            },
+            output: {
+              description:
+                'Where the merged markdown is written (default: <outDir>/guide)',
+              short: 'o',
+            },
+            runId: {
+              description:
+                'Build from this run rather than the most recent one',
+            },
+            allowUndocumented: {
+              description:
+                'Report features no page documents instead of failing on them',
+              default: false,
+            },
+            artifactBase: {
+              description:
+                "Prefix every figure with this instead of the path from the page to the run's artifacts — for a host that serves them at a fixed address. Route-relative (`/docs/_media/`) keeps the output portable; an origin pins it to one host",
+            },
+          },
         }),
       },
     },
@@ -1248,6 +1353,21 @@ wireCLI({
             update: {
               description: 'Overwrite existing skills if already installed',
               default: false,
+            },
+            agentExtensions: {
+              description:
+                'Comma-separated extension paths every projected agent loads — how a host that fences its writers or routes their model adds that to the agents it installs',
+              type: 'string',
+            },
+            agentDir: {
+              description:
+                'Where to write the projected agents, overriding the harness default — an absolute path for a host whose agents live outside the project',
+              type: 'string',
+            },
+            agentSkillDir: {
+              description:
+                'The skill directory a projected agent points at, for a host that relocates the installed skills afterwards',
+              type: 'string',
             },
           },
         }),

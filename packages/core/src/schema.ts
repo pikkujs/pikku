@@ -111,6 +111,39 @@ export const applyDefaultsFromSchema = (
   return result
 }
 
+/**
+ * A query string and an argv array carry numbers as text, and the JSON Schema
+ * check runs first — so without this a route declaring `year: number` can never
+ * be called at all: `?year=2027` is rejected as `Instance type "string" is
+ * invalid` long before zod or the function body get a look at it. The shipped
+ * validator is spec-compliant and has no `coerceTypes` of its own, so the
+ * conversion has to happen here.
+ *
+ * The rule is that a coerced value must be the *same* value, not merely a
+ * plausible reading of it. So a string converts only if the number it produces
+ * prints back as the identical text. That is a stronger test than it looks: it
+ * is what stops `9007199254740993` from silently becoming ...92, which is the
+ * one failure mode leniency cannot excuse, because a caller who sends an id as
+ * a string is usually doing it precisely because the number does not survive a
+ * double. It also rules out every reading that quietly rewrites the input —
+ * `007`, `+5`, `1e3`, `2027.50`, a padded ` 12 ` — along with the values
+ * `Number` invents out of nothing, where `''` and `'  '` both become 0.
+ *
+ * Anything it rejects is left exactly as it arrived, so the validator reports
+ * the value the caller actually sent rather than one this function made up.
+ * Erring that way costs a loud 422 on an odd-looking but legal input; erring
+ * the other way corrupts data in silence.
+ */
+const coerceNumeric = (value: string, integer: boolean) => {
+  const parsed = Number(value)
+  // Rejects NaN and Infinity, both of which would otherwise round-trip through
+  // String() unchanged, and neither of which JSON can carry anyway.
+  if (!Number.isFinite(parsed)) return value
+  if (String(parsed) !== value) return value
+  if (integer && !Number.isInteger(parsed)) return value
+  return parsed
+}
+
 export const coerceTopLevelDataFromSchema = (
   schemaName: string,
   data: any,
@@ -131,6 +164,11 @@ export const coerceTopLevelDataFromSchema = (
       data[key] = data[key].split(',')
     } else if (type === 'string' && property.format === 'date-time') {
       data[key] = new Date(data[key])
+    } else if (
+      (type === 'integer' || type === 'number') &&
+      typeof data[key] === 'string'
+    ) {
+      data[key] = coerceNumeric(data[key], type === 'integer')
     }
   }
 }

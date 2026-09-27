@@ -16,6 +16,10 @@ import { createOrder } from '../functions/orders/create-order.function.js'
 import { getOrder } from '../functions/orders/get-order.function.js'
 import { listOrders } from '../functions/orders/list-orders.function.js'
 import { cancelOrder } from '../functions/orders/cancel-order.function.js'
+import { streamOrderPreparation } from '../functions/orders/stream-order-preparation.function.js'
+import { getFeatures } from '../functions/get-features.function.js'
+import { requestItemPhotoUpload } from '../functions/media/request-item-photo-upload.function.js'
+import { getItemPhotoUrl } from '../functions/media/get-item-photo-url.function.js'
 
 // @snippet start shopRoutes
 // @snippet start wireHttp
@@ -119,6 +123,40 @@ wireHTTP({ method: 'get', route: '/items', func: listItems, auth: false })
 // Protected route — requires a user session
 wireHTTP({ method: 'post', route: '/orders', func: createOrder, auth: true })
 // @snippet end httpAuthRoute
+
+// @snippet start httpSse
+// One way, server to client: `sse: true` turns a GET into a stream the browser
+// reads with EventSource. The same function still answers as a plain RPC.
+wireHTTP({
+  method: 'get',
+  route: '/orders/:orderId/preparation',
+  func: streamOrderPreparation,
+  sse: true,
+  auth: true,
+})
+// @snippet end httpSse
+
+// What the signed-in shopper's UI may show. Never a gate — the gate is the
+// `scopes:` field on whatever each hidden control calls.
+wireHTTP({ method: 'get', route: '/features', func: getFeatures, auth: true })
+
+// @snippet start httpUpload
+// The browser PUTs the bytes straight at storage using the presigned URL, then
+// reads them back through a signed link. Neither the upload nor the download
+// passes through this server.
+wireHTTP({
+  method: 'post',
+  route: '/items/:itemId/photo',
+  func: requestItemPhotoUpload,
+  auth: true,
+})
+wireHTTP({
+  method: 'get',
+  route: '/items/:itemId/photo',
+  func: getItemPhotoUrl,
+  auth: false,
+})
+// @snippet end httpUpload
 
 // @snippet start httpMiddleware
 // Global middleware — applies to every HTTP route

@@ -64,9 +64,34 @@ export type CoreHTTPFunction = HTTPRouteBaseConfig & {
   returnsJSON?: false
 }
 
+/**
+ * The claims a transport that already verified a bearer token hands on.
+ *
+ * Strictly pass-through: nothing in pikku derives this from a request's own
+ * headers, because verifying a token is the host's job, not the wire's. A
+ * function can always read the `Authorization` header itself — what this adds
+ * is what the raw header cannot carry, the scopes and client the token was
+ * actually issued for.
+ *
+ * Shaped to match the MCP SDK's `AuthInfo`, which is the one caller that
+ * populates it today.
+ */
+export interface PikkuHTTPAuthInfo {
+  token: string
+  clientId: string
+  scopes: string[]
+  /** Seconds since the epoch. */
+  expiresAt?: number
+  /** The RFC 8707 resource server this token is valid for. */
+  resource?: URL
+  extra?: Record<string, unknown>
+}
+
 export interface PikkuHTTP<In = unknown> {
   request?: PikkuHTTPRequest<In>
   response?: PikkuHTTPResponse
+  /** Verified token claims, when the transport was handed them. */
+  authInfo?: PikkuHTTPAuthInfo
 }
 
 export type PikkuQuery<T = Record<string, string | undefined>> = Record<
@@ -136,6 +161,14 @@ type HTTPWiringAuth<
     }
 
 /**
+ * The event protocol a streaming route's frames follow, so the layer that
+ * terminates a failed stream can speak the same one the client is parsing.
+ * `'pikku'` frames are `{ type: 'error' | 'done' }`; `'agui'` frames are
+ * AG-UI events, where a failure is a single `RUN_ERROR`.
+ */
+export type HTTPStreamProtocol = 'pikku' | 'agui'
+
+/**
  * `sse` and `query` are each valid on one method only, so the method carries
  * them: streaming is a GET, and naming which input keys arrive in the query
  * string is only a question on a POST, where the rest of the input is a body.
@@ -151,6 +184,8 @@ type HTTPWiringMethod<In> =
       method: 'get'
       /** Streams the response as server-sent events instead of returning it once. GET only. */
       sse?: boolean
+      /** Which event protocol the frames on this stream follow. Defaults to `'pikku'`. */
+      streamProtocol?: HTTPStreamProtocol
     }
   | {
       /** The HTTP method. A route and method together address one wiring. */
@@ -277,6 +312,8 @@ export type HTTPRouteConfig<
   auth?: boolean
   middleware?: PikkuMiddleware[]
   sse?: boolean
+  /** Which event protocol the frames on this stream follow. Defaults to `'pikku'`. */
+  streamProtocol?: HTTPStreamProtocol
 }
 
 export type HTTPRoutesGroupConfig<

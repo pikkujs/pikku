@@ -17,6 +17,7 @@ import { KEYWORD_WIDTH } from './scenario-formatter.js'
 import type {
   ScenarioFailureDetail,
   ScenarioStepRow,
+  ScenarioStepVideoOffset,
 } from '@pikku/core/scenario'
 
 export interface ScenarioStepProse {
@@ -42,6 +43,8 @@ export interface ScenarioStepOutcome {
   input?: unknown
   /** The step function that ran it, as recorded on the run. */
   stepFunc?: string
+  /** Where the step fell in each recorded actor's video, as the run stamped it. */
+  video?: ScenarioStepVideoOffset[]
 }
 
 /**
@@ -331,6 +334,7 @@ export const scenarioStepRows = (
       status: step.status,
       durationMs: step.durationMs,
       error: step.error,
+      ...(step.video?.length ? { video: step.video } : {}),
     }
   })
 }

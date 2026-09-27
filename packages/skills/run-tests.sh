@@ -28,7 +28,7 @@ done
 # src/skills.gen.ts is gitignored, so a fresh clone has none and every test file
 # fails to import index.ts. Generating it here rather than in a `pretest` script
 # keeps it working whichever package manager invokes the suite.
-node scripts/embed.mjs > /dev/null
+bun run embed > /dev/null
 
 # Define the pattern to match your test files
 pattern="src/*.test.ts"

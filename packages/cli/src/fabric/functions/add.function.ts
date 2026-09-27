@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricAddInput = z.object({
   id: z.string(),
@@ -113,14 +114,15 @@ export const FabricAdd = pikkuSessionlessFunc({
       `${ctx.apiUrl}/registry/packages/${encodeURIComponent(id)}/download`
     )
     if (!metaRes.ok)
-      throw new Error(
+      throw new FabricPreconditionError(
         `download lookup failed → ${metaRes.status}: ${await metaRes.text()}`
       )
     const { url } = (await metaRes.json()) as { url: string }
 
     // 2. fetch the artifact
     const dl = await fetch(url)
-    if (!dl.ok) throw new Error(`artifact fetch failed → ${dl.status}`)
+    if (!dl.ok)
+      throw new FabricPreconditionError(`artifact fetch failed → ${dl.status}`)
     const artifact = Buffer.from(await dl.arrayBuffer())
 
     const root = resolveProjectRoot()
@@ -143,7 +145,9 @@ export const FabricAdd = pikkuSessionlessFunc({
         await readFile(join(staging, 'package.json'), 'utf8')
       ) as { name?: string; version?: string }
       if (!pkg.name)
-        throw new Error('artifact package.json is missing a "name" field')
+        throw new FabricPreconditionError(
+          'artifact package.json is missing a "name" field'
+        )
       const version = pkg.version ?? '0.0.0'
 
       // shadcn copy: folder is the last segment of the (scoped) package name

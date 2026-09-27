@@ -169,10 +169,81 @@ async function externalDependencyRoots(
 }
 
 /**
+ * Every installed `@pikku/*` package, by the real directory its imports resolve
+ * from. Probed under the root and each workspace package, because an isolated
+ * install links a dependency only under the package that declares it.
+ */
+async function installedPikkuPackages(
+  root: string
+): Promise<Map<string, string>> {
+  const bases = [root]
+  for (const group of ['packages', 'apps', 'backends']) {
+    const entries = await readdir(join(root, group), {
+      withFileTypes: true,
+    }).catch(() => [])
+    for (const d of entries) {
+      if (d.isDirectory()) bases.push(join(root, group, d.name))
+    }
+  }
+  const found = new Map<string, string>()
+  for (const base of bases) {
+    const scope = join(base, 'node_modules', '@pikku')
+    const entries = await readdir(scope).catch(() => [])
+    for (const entry of entries) {
+      const real = await realpath(join(scope, entry)).catch(() => null)
+      if (real && !found.has(real)) found.set(real, `@pikku/${entry}`)
+    }
+  }
+  return found
+}
+
+/**
+ * An installed pikku package can resolve its own copy of a type-identity
+ * package — bun's isolated store keeps one beside each entry — so the CLI can
+ * read the project's zod schemas with a different zod than wrote them. No link
+ * leaves the project, so the linked-dependency check never sees it.
+ *
+ * Only packages that declare the dependency are compared: walking up from one
+ * that never asked for it lands on whatever the store hoisted, which says
+ * nothing about what that package loads.
+ */
+async function runInstallSkewChecks(root: string): Promise<ValidateFinding[]> {
+  const findings: ValidateFinding[] = []
+  const installed = await installedPikkuPackages(root)
+  for (const pkg of TYPE_IDENTITY_PKGS) {
+    const local = await projectResolvedVersion(root, pkg)
+    if (!local) continue
+    for (const [real, name] of installed) {
+      if (name === pkg) continue
+      const manifest = await readJsonSafe<{
+        dependencies?: Record<string, string>
+        peerDependencies?: Record<string, string>
+      }>(join(real, 'package.json'))
+      if (!manifest?.dependencies?.[pkg] && !manifest?.peerDependencies?.[pkg])
+        continue
+      const theirs = await versionResolvedFrom(real, pkg)
+      if (!theirs || theirs === local.version) continue
+      findings.push({
+        id: `skewed-type-identity-${name.replace(/[@/]/g, '-')}-${pkg.replace(/[@/]/g, '-')}`,
+        severity: 'error',
+        message: `${name} resolves ${pkg}@${theirs}, while this project resolves ${pkg}@${local.version} — two copies of ${pkg} in one install`,
+        path: real,
+        fixHint: [
+          `${name} reads what the project builds with ${pkg} using its own copy, and TypeScript treats the two as unrelated types, so codegen can fail on schemas that are correct or exhaust the heap instead of reporting an error.`,
+          `Pin one ${pkg} for the whole install — "overrides": { "${pkg}": "${local.version}" } in the root package.json (bun/npm; "resolutions" for yarn) — and reinstall.`,
+        ].join('\n'),
+      })
+    }
+  }
+  return findings
+}
+
+/**
  * A linked dependency resolves its own imports from its own checkout, so it can
  * hand the project types built against a different version of a shared package.
- * The symptom is a typecheck that OOMs rather than one that fails, so nothing
- * else in this validator would catch it.
+ * An installed pikku package can do the same from its own store entry. The
+ * symptom is a typecheck that OOMs rather than one that fails, so nothing else
+ * in this validator would catch it.
  *
  * Runs against the workspace root only. The mismatch is a property of the
  * install, not of any one package in it, so running per workspace package would
@@ -181,7 +252,7 @@ async function externalDependencyRoots(
 export async function runTypeIdentityChecks(
   root: string
 ): Promise<ValidateFinding[]> {
-  const findings: ValidateFinding[] = []
+  const findings = await runInstallSkewChecks(root)
   const external = await externalDependencyRoots(root)
   if (external.size === 0) return findings
 
@@ -227,12 +298,12 @@ export async function warnOnSplitTypeIdentity(
   if (findings.length === 0) return
 
   logger.warn(
-    `[${ErrorCode.SPLIT_TYPE_IDENTITY}] ${findings.length === 1 ? 'A linked dependency resolves a shared package' : 'Linked dependencies resolve shared packages'} at a different version than this project:\n` +
+    `[${ErrorCode.SPLIT_TYPE_IDENTITY}] ${findings.length === 1 ? 'A dependency resolves a shared package' : 'Dependencies resolve shared packages'} at a different version than this project:\n` +
       findings.map((f) => `  ${f.message}`).join('\n') +
       `\nTypeScript treats each pair as two unrelated types and structurally compares them\n` +
       `wherever they meet, which inside a generic inference chain can exhaust the heap —\n` +
       `codegen then dies of memory pressure instead of reporting an error.\n\n` +
-      `Fix: align the versions so both trees resolve one copy, or drop the link and\n` +
+      `Fix: align the versions so the install resolves one copy, or drop the link and\n` +
       `reinstall. Set PIKKU_SKIP_TYPE_IDENTITY_CHECK=1 to silence this.`
   )
 }

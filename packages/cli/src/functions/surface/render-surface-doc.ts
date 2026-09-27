@@ -237,11 +237,46 @@ const renderSymbol = (
   return lines.join('\n').trimEnd()
 }
 
+/**
+ * Words in an identifier, however it was spelled: `PikkuScenarioWire` and
+ * `pikku-scenario-wire` both come back as pikku, scenario, wire.
+ */
+const words = (name: string): string[] =>
+  name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+
+/**
+ * A guessed name is almost never a substring of a real one — `PikkuScenarioWire`
+ * is contained in nothing, so whole-string matching offered no suggestion in the
+ * one case a suggestion is worth anything. Rank by shared words instead, which
+ * puts `PikkuBrowserWire` and `TypedScenario` in front of that guess.
+ */
 const near = (target: string, candidates: string[]): string[] => {
   const needle = target.toLowerCase()
+  const wanted = new Set(words(target))
   return candidates
-    .filter((candidate) => candidate.toLowerCase().includes(needle))
+    .map((candidate) => {
+      const own = words(candidate)
+      const shared = own.filter((word) => wanted.has(word)).length
+      const contains = candidate.toLowerCase().includes(needle)
+      return {
+        candidate,
+        score: shared + (contains ? wanted.size : 0),
+        extra: own.length - shared,
+      }
+    })
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.extra - b.extra ||
+        a.candidate.localeCompare(b.candidate)
+    )
     .slice(0, 5)
+    .map((entry) => entry.candidate)
 }
 
 export const renderSurfaceDoc = (

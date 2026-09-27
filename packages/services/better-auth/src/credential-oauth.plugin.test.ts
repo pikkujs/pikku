@@ -91,6 +91,68 @@ const link = (
     })
   )
 
+/**
+ * Answers the provider's token endpoint, so the callback can be driven without
+ * a real OAuth2 server. Returns the restore for the real fetch.
+ */
+const stubTokenEndpoint = () => {
+  const real = globalThis.fetch
+  globalThis.fetch = (async (input: any, init?: any) => {
+    const url =
+      typeof input === 'string' ? input : (input?.url ?? String(input))
+    if (url.endsWith('/token')) {
+      return new Response(
+        JSON.stringify({
+          access_token: 'at-1',
+          refresh_token: 'rt-1',
+          token_type: 'bearer',
+          expires_in: 3600,
+          scope: 'read',
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    }
+    return real(input, init)
+  }) as typeof fetch
+  return () => {
+    globalThis.fetch = real
+  }
+}
+
+const callback = (
+  auth: ReturnType<typeof makeAuth>,
+  providerId: string,
+  state: string,
+  cookie: string
+) =>
+  auth.handler(
+    new Request(
+      `http://localhost:3000/api/auth/credential-oauth/callback/${providerId}?code=auth-code&state=${state}`,
+      {
+        method: 'GET',
+        headers: { origin: 'http://localhost:3000', cookie },
+      }
+    )
+  )
+
+/**
+ * Start a link and read back everything the callback needs: the `state` the
+ * provider would echo, and the state cookie better-auth pairs it with.
+ */
+const startLink = async (
+  auth: ReturnType<typeof makeAuth>,
+  providerId: string,
+  sessionCookie: string
+) => {
+  const res = await link(auth, providerId, sessionCookie)
+  assert.equal(res.status, 200, await res.clone().text())
+  const { url } = await res.json()
+  return {
+    state: new URL(url).searchParams.get('state') as string,
+    cookie: [sessionCookie, ...res.headers.getSetCookie()].join('; '),
+  }
+}
+
 describe('credentialOAuth plugin', () => {
   test('an anonymous caller cannot start a link', async () => {
     const auth = makeAuth(emptyDb(), [provider('acme', 'wire')])
@@ -219,6 +281,83 @@ describe('credentialOAuth plugin', () => {
       db.user!.filter((u) => u.id === PLATFORM_USER_ID).length,
       1,
       'exactly one platform user row'
+    )
+  })
+
+  // Who the credential belongs to was decided when the link started and signed
+  // into the state; the callback reads it from there rather than re-deriving it
+  // from the returning request.
+  test('the callback writes the account against the signed state', async () => {
+    const db = emptyDb()
+    const auth = makeAuth(db, [provider('acme', 'wire')])
+    const { userId, cookie } = await signUp(auth, 'user@example.com')
+    const started = await startLink(auth, 'acme', cookie)
+
+    const restore = stubTokenEndpoint()
+    try {
+      const res = await callback(auth, 'acme', started.state, started.cookie)
+      assert.equal(res.status, 302)
+      assert.doesNotMatch(res.headers.get('location') ?? '', /\?error=/)
+    } finally {
+      restore()
+    }
+
+    const row = db.account!.find((account) => account.providerId === 'acme')
+    assert.equal(row?.userId, userId)
+    assert.equal(
+      row?.accountId,
+      userId,
+      'a credential has no identity of its own, so the owner is what identifies the account'
+    )
+  })
+
+  // A singleton is the platform's, and the state is what says so — the admin
+  // who clicked Connect holds the callback's session cookie but must not end up
+  // owning the token.
+  test('a singleton callback links the platform user, not the admin who clicked', async () => {
+    const db = emptyDb()
+    let auth = makeAuth(db, [provider('shared', 'singleton')])
+    const { userId, cookie } = await signUp(auth, 'admin@example.com')
+    auth = makeAuth(db, [provider('shared', 'singleton')], {
+      scopeService: scopeStore({ [userId]: ['admin'] }),
+    })
+    const started = await startLink(auth, 'shared', cookie)
+
+    const restore = stubTokenEndpoint()
+    try {
+      const res = await callback(auth, 'shared', started.state, started.cookie)
+      assert.equal(res.status, 302)
+    } finally {
+      restore()
+    }
+
+    const row = db.account!.find((account) => account.providerId === 'shared')
+    assert.equal(row?.userId, PLATFORM_USER_ID)
+    assert.equal(row?.accountId, PLATFORM_USER_ID)
+  })
+
+  // Re-linking has to land on the same row: getAccessToken takes the first
+  // match for (providerId, userId), so a second row would shadow the token
+  // that was just refreshed.
+  test('re-linking updates the row in place rather than shadowing it', async () => {
+    const db = emptyDb()
+    const auth = makeAuth(db, [provider('acme', 'wire')])
+    const { cookie } = await signUp(auth, 'user@example.com')
+
+    const restore = stubTokenEndpoint()
+    try {
+      const first = await startLink(auth, 'acme', cookie)
+      await callback(auth, 'acme', first.state, first.cookie)
+      const second = await startLink(auth, 'acme', cookie)
+      await callback(auth, 'acme', second.state, second.cookie)
+    } finally {
+      restore()
+    }
+
+    assert.equal(
+      db.account!.filter((account) => account.providerId === 'acme').length,
+      1,
+      'exactly one account row for the provider'
     )
   })
 })

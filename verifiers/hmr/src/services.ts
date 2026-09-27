@@ -15,7 +15,7 @@ export const createSingletonServices = pikkuServices(
     const variables = existingServices?.variables || new LocalVariablesService()
     const secrets =
       existingServices?.secrets || new LocalSecretService(variables)
-    const logger = new ConsoleLogger()
+    const logger = existingServices?.logger || new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
 
     return {

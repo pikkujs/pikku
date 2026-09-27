@@ -82,6 +82,7 @@
     "ScenarioHookError",
     "ScenarioNoSurfaceBinding",
     "ScenarioNoWitness",
+    "ScenarioUnwitnessedAssertion",
     "ScenarioWitnessDisagreement",
     "addFeature",
     "composeStepProse",
@@ -216,6 +217,10 @@
     "getMCPPromptsMeta",
     "getMCPResourcesMeta",
     "getMCPToolsMeta",
+    "mcpEveryTargetRequiresSession",
+    "mcpResolveWireName",
+    "mcpTargetRequiresSession",
+    "mcpWireName",
     "runMCPPrompt",
     "runMCPResource",
     "runMCPTool",
@@ -263,6 +268,18 @@
     "pikkuAgentScorer",
     "wireAgentScorerQueueWorkers"
   ],
+  "./analytics": [
+    "LoggerAnalyticsService",
+    "anonymousAnalyticsIdentity",
+    "composeAnalyticsIdentity",
+    "cookieAnalyticsIdentity",
+    "createInvocationAnalytics",
+    "defineAnalyticsEvents",
+    "fanOutAnalytics",
+    "flattenAnalyticsEvent",
+    "mintCookie",
+    "randomDigits"
+  ],
   "./gateway": [
     "createListenerMessageHandler",
     "resolveGatewayAdapter",
@@ -272,10 +289,12 @@
     "CLIError",
     "defineCLICommands",
     "executeCLI",
+    "formatCLIError",
     "generateCommandHelp",
     "parseCLIArguments",
     "pikkuCLIRender",
     "runCLICommand",
+    "wantsStackTrace",
     "wireCLI"
   ],
   "./cli/command-parser": [
@@ -289,6 +308,8 @@
   ],
   "./node": [],
   "./credential": [
+    "buildCredentialResolutions",
+    "credentialOverrideAliases",
     "defineCredential",
     "validateAndBuildCredentialDefinitionsMeta"
   ],
@@ -336,6 +357,7 @@
   ],
   "./secret": [
     "defineSecret",
+    "deriveOAuth2AppSecrets",
     "validateAndBuildSecretDefinitionsMeta"
   ],
   "./variable": [
@@ -563,17 +585,5 @@
     "pikkuDevReloader",
     "reconcileAddonRegistry",
     "reloadGeneratedMeta"
-  ],
-  "./analytics": [
-    "LoggerAnalyticsService",
-    "anonymousAnalyticsIdentity",
-    "composeAnalyticsIdentity",
-    "cookieAnalyticsIdentity",
-    "createInvocationAnalytics",
-    "defineAnalyticsEvents",
-    "fanOutAnalytics",
-    "flattenAnalyticsEvent",
-    "mintCookie",
-    "randomDigits"
   ]
 }

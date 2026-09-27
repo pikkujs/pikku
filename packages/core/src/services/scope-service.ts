@@ -64,6 +64,20 @@ export interface ScopeService {
   removeUserFromRole(userId: string, role: string): Promise<void>
   listUserRoles(userId: string): Promise<string[]>
 
+  /**
+   * The roles held by each of `userIds`, keyed by user id.
+   *
+   * Every id asked for comes back as a key, holding an empty array when the
+   * user has no roles — so a caller can index the result directly and cannot
+   * mistake "this user was not in the answer" for "this user holds nothing".
+   *
+   * Exists because listing a page of the user directory otherwise costs one
+   * query per row. Against a database reached over the network — which is the
+   * normal case for a deployed unit — that is a round trip per user, so a page
+   * of fifty is fifty of them.
+   */
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
+
   /** Grants outside of any role; additive with the user's role-derived scopes. */
   addScopeToUser(
     userId: string,

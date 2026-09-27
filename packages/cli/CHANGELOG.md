@@ -1,3 +1,564 @@
+## 0.12.162
+
+### Patch Changes
+
+- 17d8746: An addon generated with `pikku new addon --openapi` never built. Every function file declared its zod schemas next to an import of `#pikku/function`, and `pikku all` loads the file that declares a schema to convert it. At runtime `#pikku` resolves through the addon's `imports` into `dist/`, which the first build has not written yet, so every schema failed with `Could not convert Zod schema … Cannot find module …/dist/.pikku/function/index.js` and the build stopped there. Each operation's schemas now go in a sibling `<operation>.schemas.ts` that imports only zod, and the function file imports them from it.
+
+  The generated imports also named the wrong tree. An addon's generated code lives under `.pikku/addon/`, so `#pikku/function` and `#pikku/variables/…` pointed at leaves that do not exist, and `tsc` failed even once codegen had run. They are now `#pikku/addon/function` and `#pikku/addon/variables/…`, as the hand-written addon scaffold already had them.
+
+  `pikku validate` now reports an installed Pikku package that resolves a different copy of a type-identity package (`zod`, `kysely`, `@pikku/core`, `better-auth`) than the project as an error, `skewed-type-identity-…`, and the codegen preflight warns about it as `PKU719`. Under bun's isolated layout `@pikku/cli` can carry its own `zod` beside it in the store. Codegen then reads the app's schemas with a different zod than wrote them, and correct schemas fail to convert. The existing check only looked at dependencies linked from outside the project, so it never saw this case.
+
+  The `pikku-build` skill now recognises an OpenAPI spec or an n8n export handed over with the request, says so, converts it first, then carries on building the app. `pikku-addon` gains an OpenAPI reference and corrects its addon import paths and build steps. `pikku-n8n-import` joins the `core` install group.
+
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [a95179a]
+- Updated dependencies [145b32b]
+- Updated dependencies [46f99b2]
+- Updated dependencies [17d8746]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [33b1d5a]
+- Updated dependencies [0602266]
+- Updated dependencies [33b1d5a]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+  - @pikku/kysely@0.13.28
+  - @pikku/inspector@0.12.87
+  - @pikku/skills@0.12.37
+  - @pikku/openapi-parser@0.12.22
+  - @pikku/playwright@0.12.85
+
+## 0.12.161
+
+### Patch Changes
+
+- 22d542e: serve: keep the project's own `staticMounts`
+
+  `pikku serve` built its mount list from the console and frontend mounts alone
+  and dropped anything the project declared in `staticMounts`, so every mount an
+  app configured for itself was silently unserved under `serve`. `dev` already
+  appends them; `serve` never did.
+
+  They now sit between the console mount and the frontend mount: the console
+  stays first so a frontend at `/` cannot claim `/console`, and the app's own
+  mounts are offered the request before the catch-all frontend.
+
+- 67c707a: The stateless session cookie's lifetime is now declared by the CLI and read by the framework, so an app needs no code of its own to get a session that outlives five minutes.
+
+  The previous fix stopped `betterAuthStatelessSession` leaving the cookie on better-auth's 300-second default, but it hardcoded one day. An app that wanted a different lifetime — and it is a real decision, because the lifetime is also the longest a ban or a revoked session can go unnoticed — had to declare a variable, read it, and thread it into its own `betterAuth({ session: { cookieCache } })`. That was the same three edits in every app, which is the shape of something the framework should be doing.
+
+  Now:
+
+  - **`@pikku/cli`** emits a `SESSION_COOKIE_CACHE_MAX_AGE` variable into `auth-secrets.gen.ts`, on the `cookieCache` branch that already decides whether to split the stateless middleware out. Only that branch: under the stateful middleware the cookie cache genuinely is a cache in front of the database, and a short life there is the correct trade rather than a bug. It is optional, so a deployment that never sets it stays valid.
+
+    The generated schema is `z.string().default('86400')` rather than a coerced number, because `TypedVariablesService` returns a stored host value **unparsed** and runs the declared schema only to resolve a default. A `z.coerce.number()` would never fire on a real value and would only mislead whoever read it.
+
+  - **`@pikku/better-auth`** reads that variable when it applies the default, coercing and range-checking it there. A value that is not a positive number of seconds is logged and ignored rather than honoured — a typo should not expire the cookie instantly. An app generated before the CLI emitted the declaration has no such variable, which is the ordinary case and not an error: the one-day default simply stands.
+
+    Insert-not-upsert still holds, and now holds against the variable too. An explicit `session.cookieCache.maxAge` in the app's own config is the author's decision and beats a stage binding.
+
+  - **`@pikku/cli`** also generates `useSession` into the react-query hooks file. An app wants the session anyway, and the same query heals the cookie for free: when `session_data` ages out, better-auth's cookie-cache branch bails on the stale payload and falls through to the database, reading the session from the still-valid `session_token` and minting a fresh cookie on the way out. `refetchInterval` and `refetchOnWindowFocus` are react-query's; there is no refresh loop beside them.
+
+    It deliberately does not pass `disableCookieCache`. That would make every refetch a database read — the exact cost the cookie cache exists to avoid — to re-mint a cookie with most of its life left. better-auth's own sliding renewal (`session.cookieCache.refreshCache`) is not an option either: it is force-disabled whenever a database is configured, and where it does apply it re-signs the cached blob without reading the database, so a banned user's cookie would renew forever.
+
+  The upshot for an app: `pikku gen`, use `useSession()` where it wants the signed-in user, and delete any hand-rolled equivalent. The app's `betterAuth` config needs no `maxAge`.
+
+- Updated dependencies [bc29716]
+- Updated dependencies [e85f07e]
+- Updated dependencies [67c707a]
+- Updated dependencies [cb239e2]
+  - @pikku/skills@0.12.36
+  - @pikku/core@0.12.119
+  - @pikku/better-auth@0.12.46
+
+## 0.12.160
+
+### Patch Changes
+
+- b4a895e: A generated block now carries the recording its run kept, and `--artifact-base` says where the figures are served from.
+
+  The runner has kept a video per scenario since video retention landed, and the guide model threw it away: `GuideScenario` held screenshots and nothing else, so a suite that recorded every flow it ran published pages with an empty block under them. A recording leads the stills it is made of, because it shows the whole flow the stills are moments of, and it is deduplicated by artifact id like everything else a data-driven scenario files once per row. `figureless` counts it, so a feature evidenced only by a recording no longer reports that its block renders empty.
+
+  It is emitted as an ordinary `![caption](…webm)`. This module writes markdown — no HTML, no asset URLs, no website — and what makes a `.webm` a player rather than a broken image is the consumer's renderer, the same way the consumer resolves the base. Keeping it a figure is what lets a guide stay one artifact that a docs site, a README and a print build can each read on their own terms.
+
+  `--artifact-base` is the second half. The base was computed per page as the relative path from the page to the run's artifact root, which is right when the artifacts sit beside the markdown and wrong for every host that serves them from somewhere else. A route-relative prefix (`/docs/_media/`) keeps one compiled tree portable across hosts and, where a host gates access, keeps the figures behind the same gate as the page that embeds them — an origin baked into the markdown is outside it, and cannot be moved without a rebuild. It stays exactly as given, since only the caller knows whether it is a path, a route or an origin.
+
+  `GuideScenario.videos` is optional, so a record written before this and every fixture built on one still describes a scenario.
+
+- b4a895e: A scenario step row now carries where it fell inside each actor's recording, and a scenario result now says which feature it came from by id as well as by title.
+
+  The video offset is recorded rather than estimated. Documentation built out of a run has to turn a step sentence into an exact moment — a chapter marker, or a still pulled with `ffmpeg -ss` — and the only number available until now was the scenario clock summed out of the ladder. That clock is not the video's: recording starts when the actor's browser context opens, which is somewhere after step one, and every RPC step before or between the browser ones burns scenario time while the file sits still. The two drift apart by however much of the scenario happened off camera, and a still forty seconds out is a picture of the wrong screen with nothing to say it is wrong.
+
+  So `ScenarioStepRow.video` is stamped at the moment the step runs, from the driver's own clock: `ScenarioBrowserProvider.videoStartedAt(actor)` reports when that actor's context was opened with `recordVideo`, and the runner subtracts. It is a list of `{ actor, offsetMs }` rather than one number, because a video belongs to an actor and not to the scenario — one step touching two windows falls at a different moment in each, and an offset that does not name its file cannot be seeked to. A run without video, a step with no actor, and a step that never ran all carry nothing, which is what keeps the console's existing estimate as the fallback for runs recorded before this.
+
+  `ScenarioResult.featureId` is the other half of the same problem. `feature` is a title written for people to read and rewritten whenever the wording improves, so nothing downstream could key off it; the id `addFeature` registered the feature under does not move. The runner threads it from the plan, which read it off the registry, instead of deriving it from the label. `scenarioName` already carried the registration id and keeps it.
+
+- ede46ac: deploy: add `deploy.bundler` and `deploy.mangleIdentifiers` to pikku.config.json
+
+  `bundler` pins which bundler builds the deployment units — 'auto' (the
+  default) keeps today's behaviour of Bun.build under bun and esbuild
+  otherwise, and 'esbuild' forces esbuild where a Bun.build output misbehaves
+  at runtime. A Cloudflare MCP worker was rejected at upload with
+  `TypeError: ZodLazy is not a constructor`: Bun.build ordered zod's lazy
+  module initializer after a dependency that constructs schemas at module
+  scope. The same entry bundles and boots correctly with esbuild.
+
+  `mangleIdentifiers: false` turns off identifier renaming, so a platform that
+  reports only a message and a line/column into a minified bundle names
+  something the project can search for.
+
+- b4a895e: `pikku scenario guide` writes the user guide a scenario suite already contains. A feature reads as a page and a scenario as a section, and a run leaves screenshots behind with the captions their author took them under — the command joins that to the editorial prose a project checks in under `docs/` and writes markdown. It renders no HTML, ships no components, resolves no asset URLs and calls no model: an image is an ordinary relative `![caption](path)`, and whoever consumes the markdown rewrites the paths.
+
+  A page cites a feature by leaving the marker pair where the block belongs:
+
+  ```markdown
+  ---
+  title: Deployments
+  ---
+
+  A deployment is one tracked shipment of your app.
+
+  <!-- pikku:guide feature=deploymentsFeature -->
+  <!-- /pikku:guide -->
+
+  ## Does my app go down during a deploy?
+  ```
+
+  That one line does both halves of the job. It says _where_ the block goes, which a frontmatter list cannot express, and it is what the coverage gate counts to decide _whether_ a feature is documented at all. The mapping stays many-to-many and falls out of the union of every marker in the tree. A rebuild rewrites exactly the regions between the markers, so every sentence a human wrote around them survives.
+
+  **The steps are evidence, not content.** A generated block is the scenario's title, the description its author wrote, and the shots it filed — never a numbered Given/When/Then ladder, which is a test report and not something anybody arrives at a documentation page wanting. The sentences are still what the guide is kept honest against: `docs/.guide.lock` records a hash of each feature's step sentences and artifact ids, deliberately not of the image bytes. Restyling a UI changes every screenshot and no sentence; inserting or renaming a step changes what the prose was describing, and the page is reported stale. The lock is generated and checked in, so no hash is ever typed or merged by hand — and a tree whose lock is untracked reports every page as current forever.
+
+  Every registered feature has to be cited by some page, and a feature that is pure plumbing says so rather than being written about — `pikkuFeature({ document: false })`, threaded through the inspector and `FeatureMeta`. An uncited feature fails the command by name; `--allow-undocumented` downgrades that one failure to a report. A page citing a feature id that is not registered stays an error either way.
+
+  A guide is only written out of a run that can stand behind it. A run that failed or was killed halfway is refused, because a page is a claim that the product does what it says. So is a narrowed one: `pikku scenario run --flows`/`--features`/`--tags` leaves out scenarios the suite has, and a guide built from it would describe those flows as though they do not exist. `ScenarioRunRecord.selection` records the filters a run was selected with, since nothing in the results afterwards can tell a suite of forty from forty that were asked for.
+
+  Results are joined to features by `featureId`, falling back to the display name only for records written before that field existed — a title is rewritten freely and two features may share one.
+
+  Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record. Frontmatter the compiler does not own (`slug`, `draft`, `sidebar_position`, anything else a docs site reads) passes through untouched, and a source written with CRLF line endings is read as having frontmatter.
+
+- Updated dependencies [f05fb4e]
+- Updated dependencies [b4a895e]
+- Updated dependencies [b4a895e]
+  - @pikku/inspector@0.12.86
+  - @pikku/core@0.12.118
+  - @pikku/playwright@0.12.84
+
+## 0.12.159
+
+### Patch Changes
+
+- 31780ae: `pikku fabric changes ask` takes `--option`.
+
+  The flag existed only on fabric's own websocket CLI. A checkout-based agent runs
+  this copy instead, where `--option "Reprice them" --option "Leave them"` printed
+  `Warning: Unknown option: --option (ignored)` four times and then asked the
+  question with its choices nowhere the filer could click them — so every question
+  came back needing typed prose, which is the thing the option list exists to
+  avoid. The API has accepted `option` since the panel learned to render the
+  buttons; only this command never passed it on.
+
+  Repeatable or comma-separated, up to six. `--question` now says to name the
+  choices with the flag rather than as "(a) … (b) …" inside the text, and the
+  render echoes what the filer can click.
+
+## 0.12.158
+
+### Patch Changes
+
+- 8a0ecb7: `pikku scenario run <env> --run browser --strict` now refuses every route off the run surface, rather than only reporting one at the end. An action step that would fall back to its `default` binding throws `ScenarioNoSurfaceBinding` even when it declares `default`, and a `then` witnessed only server-side throws the new `ScenarioUnwitnessedAssertion`. Without `--strict` nothing changes: the fallback still runs and the unwitnessed assertion is still counted into the coverage line.
+
+  It exists because a run is becoming a source of documentation. A docs build runs the suite `--run browser --strict`, so a feature that cannot be driven end to end through the UI cannot produce a page — no flow where three steps are screenshots and the fourth quietly happened over RPC with nothing to show. The refusal names the step, the surface the run asked for and the surfaces that did bind it, which turns "what still has no browser binding" into a worklist the run prints rather than something to go looking for.
+
+  `--strict` on `--run default` is accepted and does nothing, since nothing on the default surface can fall back or be witnessed elsewhere. `PikkuScenarioService.setRunSurface` takes the flag as a second argument, and `isStrictSurface()` reads it back.
+
+- Updated dependencies [8a0ecb7]
+  - @pikku/core@0.12.117
+
+## 0.12.157
+
+### Patch Changes
+
+- 938f9ef: Bundle a CLI program into the channel unit that serves it
+
+  A `wireCLI` channel deployed as its own unit answered a named command but
+  reported `Program "<name>" not found` for `__help` and `__raw`, which
+  resolve against the program rather than against a wiring. CLI programs are
+  filtered by command name, and a channel unit asked only for its channel and
+  its handler functions — so every command was dropped and the empty program
+  with it.
+
+- 38edd34: Add `--agent-dir` and `--agent-skill-dir` to `skills install`, for a host whose agents do not live beside its skills. A harness that discovers subagents from a global directory can now project straight into it instead of writing into the user's repository, and one that relocates the installed skills afterwards can tell the projected agents where those skills will end up.
+- 38edd34: Project the pipeline skills into verified subagents.
+
+  A skill declares `agent:` in its frontmatter — tools, timeout, and the
+  `acceptance` block a host acts on — and `pikku skills install --agent pi`
+  writes one agent per skill that has it. `--agent-extensions` passes the
+  host's own extensions through, for a host that fences its writers or
+  routes their model.
+
+  `pikku knowledge next` gains `--require`, naming the action kinds that
+  count as done. Without it the exit code is always 0, because "there is
+  work left" is the normal answer — so a post-condition pointed at a bare
+  `next` asserts nothing.
+
+- 938f9ef: Resolve a deploy provider whose exports map has no `require` condition
+
+  A provider is located with `require.resolve` against the project, so an
+  ESM-only package — one exporting `types` and `import` and nothing else —
+  failed with ERR_PACKAGE_PATH_NOT_EXPORTED and was reported as "not
+  installed". The bare-import fallback could not rescue it either, because
+  that resolves from the CLI rather than from the project.
+
+  The exports map is now read the way node reads it: conditions are walked in
+  the package author's declaration order, nesting included, so a provider
+  shipping `{ "import": { "node": "./node.js", "default": "./browser.js" } }`
+  loads the node build rather than the browser one.
+
+- 7a6595e: Serve MCP on a Cloudflare deploy.
+
+  An MCP unit deployed to Workers answered nothing, for three independent
+  reasons, and each one hid the next:
+
+  - the analyzer gave the unit `routes: []`, so the dispatcher had no route to
+    send it;
+  - `generateGatewayEntry` emitted a bare `createCloudflareWorkerHandler` and
+    dropped the `mcpJson` the CLI had already resolved for it;
+  - `@pikku/cloudflare` had no way to receive an MCP surface at all — its
+    `createCloudflareMCPHandler` was an alias for the plain worker handler, under
+    a comment saying the protocol was handled elsewhere. It wasn't.
+
+  The unit now carries the routes MCP actually needs — `POST`, `GET` and `DELETE`
+  on the endpoint, plus the two RFC 9728 discovery paths — the generated entry
+  passes its surface through, and `@pikku/cloudflare/mcp` mounts a
+  `PikkuMCPServer` over `createFetchHandler`, falling through to the unit's
+  ordinary HTTP routing for everything it does not own. A tool call now runs end
+  to end through the worker's `fetch`, which a test asserts rather than assumes.
+
+  MCP lives behind its own entry point so that the SDK only reaches the bundle of
+  a unit that serves MCP, and a unit whose surface came back empty stays an
+  ordinary worker rather than shipping it to answer 404s.
+
+  `setupServices` now keys its per-isolate cache by the factories that built it.
+  It served one unit per isolate and so never noticed, but a second unit's
+  factories asking for services were being handed the first unit's.
+
+  Mounting it also uncovered a latent bug in the entry generator. A path into a
+  dot-directory — `.pikku/mcp/mcp.gen.json` — starts with a dot without being
+  relative, and the generator's guard tested for `.` alone, so it emitted a bare
+  specifier no bundler can resolve. Nothing hit it before, because the MCP import
+  was the first one to point inside `.pikku` and was never emitted anyway. There
+  is now one helper doing this, with the guard the bootstrap import already had.
+
+  Known seam: the analyzer hardcodes `/mcp`, because it never reads the generated
+  `mcp.gen.json`. Pikku's own codegen never writes an `mcpPath` there, so the
+  route table and the mount agree today — but a project that overrides it moves
+  the mount without moving the routes.
+
+- d7f2ce5: `pikku fabric link` and `pikku fabric init` take `--organization`, naming the organization to import into by slug, display name or id. Without it the import still lands in whichever organization the session is scoped to, which silently put a repo in the wrong place for anyone who belongs to more than one.
+- 38edd34: Make the native CLI binaries report the exit code a command set. The compiled entry ended in a hardcoded `process.exit(0)`, so every non-zero `process.exitCode` — a failed `knowledge validate`, a missing milestone on `knowledge plan show` — left the binary exiting 0 while printing a failure. The node entry already did this correctly, so only the `bun --compile` builds were affected.
+- b312867: A project can now serve several MCP endpoints, one per connector.
+
+  Until now every MCP tool in a project was pooled onto a single `/mcp`, so a hub offering three connectors offered one endpoint listing all three connectors' tools at once. A client pointed at it saw tools it had no business calling, and the only way to give a connector an endpoint of its own was to give it a deployment of its own — three deploys, three bills, three service graphs.
+
+  `wireAddon` gains `mcpEndpoint`. `true` serves that instance's tools at `/mcp/<name>`; a string is the path, used as given. Leaving it unset keeps the tools on the shared endpoint, which is where they have always been, so nothing existing moves.
+
+  A surfaced instance now gets its own manifest (`.pikku/mcp/mcp.<name>.gen.json`, carrying the path it answers on), its own deploy unit (`mcp-<name>`, routed on that path), and its own MCP server — with its own tool list, so a client pointed at one endpoint never sees another's tools. The plumbing for the per-surface manifest and unit already existed in `deploy apply`; nothing had ever produced one.
+
+  `pikku dev` mounts every endpoint the generated tree describes, not just the default one. Without that a project that moved its tools onto their own endpoints would have served nothing locally at all — the default manifest it reads is empty precisely because they moved — and the only way to try a connector would have been to deploy it.
+
+  The node and bun transports take `mcpSurfaces` alongside `mcpJson` and mount each at its own path, longest path first. `/mcp` claims everything beneath `/mcp/`, so without that ordering the default endpoint answers `/mcp/weather` and the surface's tools are unreachable.
+
+  OAuth discovery is split between the endpoints rather than duplicated across them. RFC 9728 folds a resource's path into its well-known route, so each endpoint's own document is already distinct, but the path-less `/.well-known/oauth-protected-resource` predates that and describes whichever resource answers it. Only the default endpoint claims it — otherwise every unit registers the same route and the provider's router decides which resource a client is told about, and in dev a client probing it is described whichever surface sorted first.
+
+- e84fa68: fix: postgres introspection no longer re-derives primary keys per column
+
+  `getAllColumns` built its `pk_cols` CTE without a fence. Referenced once,
+  Postgres 12+ inlines such a CTE, so the constraint views it joins were
+  re-derived for every candidate row — quadratic in the number of tables, and
+  paid by every `pikku db migrate` and every schema regeneration. Fenced with
+  `AS MATERIALIZED`, it is computed once.
+
+- 20497ca: `knowledge validate` now reports code that no note describes.
+
+  The resource check ran one way. It asked whether every `resource:` a note points at still resolves, which catches a note rotting into fiction after a rename — but it could not answer the inverse, and the inverse is the question somebody asks before deciding what to build next: what is already here that nobody wrote down. Every check in `validate.ts` started from a note and walked outward, so a project could pass clean while half its functions had never been recorded.
+
+  Both directions are the same join, so the orphan report is a set difference over data the check already loads: the ids codegen meta offers, minus the ids any note claims in `resource:` or in a prose link. It is reported for `func`, `table` and `workflow` — a wire is a way to reach a function already reported, and a schema, scope, addon or persona is machinery rather than something a note would be about. `orphanPrefixes` changes the set and an empty array turns the report off.
+
+  An orphan is `info` and stays outside `ok`: a project is allowed to have more code than record, and on an imported repository that is the normal state rather than a fault. `baseline` subtracts ids no note will ever cover — a template's own auth and health functions — from the report without making them dangle. The CLI collapses orphans into one summary of at most ten, because an imported project reports every function it has and printing those in full buries the findings somebody can act on.
+
+- Updated dependencies [87971bd]
+- Updated dependencies [38edd34]
+- Updated dependencies [38edd34]
+- Updated dependencies [7a6595e]
+- Updated dependencies [0d7b2a3]
+- Updated dependencies [938f9ef]
+- Updated dependencies [b312867]
+- Updated dependencies [d4c0908]
+- Updated dependencies [51bd35a]
+- Updated dependencies [20497ca]
+  - @pikku/core@0.12.116
+  - @pikku/playwright@0.12.83
+  - @pikku/knowledge@0.12.15
+  - @pikku/skills@0.12.35
+  - @pikku/deploy-cloudflare@0.12.18
+  - @pikku/fetch@0.12.12
+  - @pikku/inspector@0.12.85
+  - @pikku/node-http-server@0.12.17
+  - @pikku/bun-server@0.12.13
+
+## 0.12.156
+
+### Patch Changes
+
+- 0a1ca51: `pikku audit --outdated` sees every workspace, not just the root package
+
+  `bun outdated` reports only the package it is run from, so in a monorepo the
+  audit listed the root's dependencies and nothing from `apps/*` or `packages/*` —
+  on a five-workspace project that was 5 packages out of 23. It now runs with
+  `--filter '*'`, which also widens bun's table with a Workspace column, so the
+  parser reads the five-cell rows as well as the four-cell ones. Reading only the
+  four-cell shape would have returned no updates at all for those repos, and
+  advisories would have lost the `recommendedVersion` they take from that map.
+
+- cb8f57e: MCP clients can now discover that a server needs signing in to, and can see tools whose names carry a namespace.
+
+  Three separate reasons a client ended up connected to a server it could do nothing with:
+
+  - **The handshake was never challenged.** A client decides at connection time whether a server speaks OAuth, and all it has to go on is whether `initialize` came back `401` with a `WWW-Authenticate` challenge. Answering it `200` and then refusing every subsequent call told the client "no sign-in needed" and then gave it nothing — Claude's connector setup, for one, reported the server as open access. `initialize` is now challenged when `mcpEveryTargetRequiresSession()` holds, which is the only case where answering it openly is a lie; a server with even one open target still completes the handshake unauthenticated, as it should.
+  - **Namespaced names were dropped on the floor.** MCP constrains tool and prompt names to `[A-Za-z0-9_-]{1,64}`, and pikku's namespace separator is `:`. Clients discard the names they cannot accept rather than failing the connection, so an addon's entire surface went missing with nothing more than a note about "tools with unsupported names". Names are now rewritten at the transport boundary (`mcpWireName`) and resolved back on the way in (`mcpResolveWireName`), so `bb2:getMe` is offered as `bb2_getMe` and calls to it dispatch correctly. The registry keeps its own spelling, since that is what dispatch keys on, and a tool genuinely registered under the wire spelling still wins over a rewritten match.
+  - **An addon-only app generated no tool metadata.** `pikku all` decided whether to emit the MCP file from the set of source files calling `wireMCPTool`/`Resource`/`Prompt`. An addon that contributes its tools through `wireAddon({ mcp: [...] })` adds none, so an application whose only MCP surface came from addons got neither wirings nor meta — the tools were listed from `mcp.gen.json` and then every call failed to resolve, because `toolsMeta` (which carries the `pikkuFuncId`) had never been written. Content now decides; the file set only decides whether there are imports to serialize.
+
+  Also in here: the resource URL advertised in the challenge honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so a server behind a TLS-terminating proxy advertises the `https://` URL the client actually reached rather than its own internal `http://` origin — which the client would reject as a resource mismatch.
+
+- 6db6a14: A wiring can now decide whether an addon's credential is per-user or deployment-wide
+
+  `wireAddon`'s `credentialOverrides` takes an object as well as a rename string:
+
+  ```ts
+  wireAddon({
+    name: 'gmail',
+    package: '@pikku/addon-gmail',
+    credentialOverrides: {
+      gmailOAuth: { mode: 'wire' }, // each user connects their own
+      calendarOAuth: { name: 'CAL', mode: 'singleton' },
+    },
+  })
+  ```
+
+  An addon author declares a default with `defineCredential`; the deployment decides, so one addon serves both a per-user product and a single team account.
+
+  The wire credential service now resolves each credential by what it _is_ rather than by what a lookup returned: `wire` reads only the user's value, `singleton` reads the deployment's. A per-user credential can no longer pick up a platform-level value because the user has not connected — which, before, would have quietly run someone's request against the deployment's own account.
+
+  A credential is never read from the secret vault. The wire credential service no longer takes a `SecretService` at all, so the only way a credential arrives is the one its mode names — the user's own value, or the deployment's.
+
+  Modes are resolved at generation time into the credentials meta, so the console's connect flow reflects the wiring rather than the addon's default.
+
+  Two credentials that resolve to one name are rejected unless they agree on the mode. Generation writes a single metadata entry per name, so a `wire` credential aliased onto a `singleton` one used to take whichever wiring was read last — a per-user credential served from the deployment's own account, or a deployment credential handed out per user. The inspector reports the collision against both wirings by name, and `buildCredentialResolutions` refuses it at runtime too.
+
+  A mode-only override is checked against the credential it names. `{ mode: 'wire' }` renames nothing, so nothing was validated: an override naming a credential that does not exist was dropped in silence and the credential kept the mode its author declared.
+
+  A credential the wiring resolves as `singleton` is no longer read out of the user's own store. Per-user values are imported first and a name already present is left alone, so a value stored under a singleton's name — from an earlier wiring, or a connect flow since rewired — decided what the deployment's own slot resolved to. It is now skipped by mode, the same way a `wire` credential is kept away from the deployment's value.
+
+  The project's own credentials are registered into pikku state from the generated credentials file, so `wire.getCredential` resolves an app-level singleton the same way it resolves an addon's.
+
+  `pikku new addon` no longer requires a `pikku.config.json` in the working directory. Scaffolding an addon is something you do before a project config exists, so the command now reads one when it is there and falls back to the working directory when it is not.
+
+  An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all. A nested callback that names its own parameter after the factory's is no longer read as the factory's own: what it destructured went onto the addon's contract, so a consumer was asked for a service the addon never wanted from them.
+
+  An OAuth2 credential now implies its app secret, so nobody hand-writes one. The client id and secret an OAuth app needs is the same shape every time — `OAuth2AppCredential`, which is what the runtime already reads it as — so the inspector registers a secret for each credential's `appCredentialSecretId`. A hand-written `defineSecret` covering that id still wins, so an author who wants their own description or `docsUrl` keeps it. The derived secret is optional, matching what every hand-written declaration chose: an addon that also authenticates by API key must still deploy without an OAuth app configured.
+
+  `optional` now means a secret is not reported as missing. `getMissing()` filtered on "not configured" alone, so a secret whose declaration said absence was supported still showed up on the list of things a deployment had to go and supply — burying the ones that genuinely were. `getAllStatus()` still reports it, flagged `optional`.
+
+  An OAuth2 secret carries its declaration's `optional` through code generation, to the app credential and to the token store alike: nobody connects without the client id and secret, so a deployment allowed to omit the app is never asked for its tokens either. That branch never looked at the flag before.
+
+  `credentialOAuthProviders` treats an app secret that resolves `undefined` as unconfigured. An optional secret resolves rather than throws, so the absence arrived past the `catch` that was meant to skip the provider — and `.reveal()` on it threw a `TypeError` that took every `getSession` down with it, which is the exact failure that code exists to prevent.
+
+- Updated dependencies [cb8f57e]
+- Updated dependencies [cb8f57e]
+- Updated dependencies [cb8f57e]
+- Updated dependencies [6db6a14]
+  - @pikku/better-auth@0.12.44
+  - @pikku/core@0.12.114
+  - @pikku/inspector@0.12.83
+
+## 0.12.155
+
+### Patch Changes
+
+- c842054: A pikku command never ends in a node internals warning, and a secret can be set from a script.
+
+  `pikku fabric secrets set NAME` prompted for the value through readline in terminal mode. On a stdin that is not a tty that promise never settles at all, so the command printed `BETTER_AUTH_SECRET value:` and then node's "Detected unsettled top-level await", naming a line of `@pikku/cli`'s own bin — under bun it simply hung. The prompt now reads the first line of stdin when there is no tty, so `echo '<value>' | pikku fabric secrets set NAME` works, and refuses with the flag to reach for (`--value`) when stdin is closed or empty. `promptConfirm` gained the same backstop, so a caller that forgets its `isTTY` gate gets a refusal instead of a hang.
+
+  Alongside it, the places a raw stack could still reach a user:
+
+  - The `pikku` binary formats through `formatCLIError` instead of printing `error.message`, and installs `uncaughtException` / `unhandledRejection` handlers so nothing escaping a listener or a floating promise is dumped unformatted. A `CLIError` the runner already printed is no longer printed twice.
+  - The generated local and channel CLI bootstraps do the same, rather than `console.error('Fatal error:', error.message)` — which dropped the stack even when one was asked for.
+  - A missing `pikku.config.json` says where it looked and what to do, as a `PikkuCLIConfigError`, which is now a `PikkuError` along with `GitError` and every remaining plain `Error` raised by a `pikku fabric` command. A directory-wide test keeps it that way.
+  - `pikku dev`'s watcher and the MCP schema loader log their causes through the logger at debug level instead of `console.error(err)` over the top of the output.
+
+  Stacks are unchanged where they are the answer: an unexpected error still keeps its frames, and `--verbose` / `PIKKU_DEBUG` still prints the stack for a deliberate one. `formatCLIError` and `wantsStackTrace` are exported from `@pikku/core/cli` so every entrypoint that can be the last thing to catch an error prints it the same way.
+
+- dfd7019: better-auth moves to 1.7.5
+
+  The internal adapter renamed `findAccountByProviderId(accountId, providerId)` to
+  `findAccountByKey({ providerId, accountId })`, `createUser` now takes the
+  provisioning source as a second argument, and `generateState` takes its link
+  target by name rather than by position. The actor, fabric and delegated plugins
+  each name themselves as the provisioning method, so an app's `validateUserInfo`
+  hook can tell which one created a user.
+
+  `get-access-token` and `unlink-account` also changed their body to a strict
+  schema selecting the account by its own row id rather than by provider name, so
+  `BetterAuthCredentialService` resolves the row through the internal adapter
+  before asking for a token — which also means an unlinked provider is answered
+  without a round trip.
+
+- c842054: Middleware instance ids are now allocated per group across the whole inspection, not per source file, and a build that would drop a global middleware registration fails instead of shipping.
+
+  The per-group index restarted at 0 for every file, so the second file to register against a group minted ids the first already owned and overwrote its entries in `middleware.instances` — `instanceIds` listed one key twice while `count` correctly said two. For `addGlobalMiddleware` that was not cosmetic. Global middleware belongs to no wire group, so the instance map is the only record that its module must be imported, and per-unit deploy codegen emits its side-effect imports from that map. An app file registering a global middleware was erased by the generated auth scaffold registering its own, the app's module was never imported, its registration never ran — and because auth commonly lives in global middleware, a deployed unit answered every authenticated route with a 401 against a clean build log.
+
+  The inspector now also records each `addGlobalMiddleware` file in `middleware.globalFiles`, a plain set that no key collision can corrupt; codegen emits the side-effect imports from it, generates the middleware file when global middleware is a project's only middleware, and asserts against the text it emitted that every such file is imported — naming the files if not, rather than letting the unit deploy without its auth gate.
+
+- 9b978e7: A failed SSE stream reports the error in the protocol its client is parsing
+
+  An SSE route can now declare `streamProtocol: 'agui'`, and the generated agent
+  stream and resume routes do. A function that throws mid-stream then ends the
+  stream with a single AG-UI `RUN_ERROR` instead of Pikku's `error`/`done` frames,
+  which an AG-UI client could only surface as a Zod parse failure with the real
+  message nowhere in sight.
+
+- 1469e73: The app names which of an addon's functions reach MCP
+
+  `wireAddon`'s `mcp` takes a list as well as `true`. `true` still offers every
+  function the addon declared `mcp: true`; a list names the tools this deployment
+  offers, whether or not the addon declared them, and is typed against the
+  function names that addon publishes — a typo is a compile error rather than a
+  tool silently missing from the menu.
+
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [9b978e7]
+- Updated dependencies [1469e73]
+  - @pikku/core@0.12.113
+  - @pikku/better-auth@0.12.43
+  - @pikku/inspector@0.12.82
+  - @pikku/bun-server@0.12.12
+  - @pikku/node-http-server@0.12.16
+
+## 0.12.154
+
+### Patch Changes
+
+- b1d08fe: Set a busy timeout on the sqlite scenario baseline connection. The app under
+  test keeps its own connection to the file, and a rollback-journal database gives
+  a writer an exclusive lock, so a restore that overlapped one of the app's reads
+  failed the scenario outright with `database is locked`.
+- c354d17: Stop marking every bun and pnpm install as linked framework code in a finding
+- d10f5c2: Resolve a standalone build's database the way every other pikku host resolves it.
+
+  A standalone artifact opens its own database, and decided it had one by looking
+  for `db/sqlite` or `db/postgres` on disk. Every other host goes through
+  `loadUserConfigForDb`: `createConfig`'s `sqliteDb` / `postgresUrl` first, the
+  directory conventions only as the fallback. An app that declares its database in
+  config and keeps no migrations therefore got a `kysely` under `pikku dev` and
+  none in its artifact — a clean build, a plausible 94MB bundle, and a first run
+  that died on the line of `createSingletonServices` that reads it.
+
+  The build now asks the same question in the same order. Only the engine travels:
+  a configured SQLite path is a developer's local file and has no meaning on the
+  target host, which still names its own through `PIKKU_DATA_DIR`. Declaring both
+  dialects is refused by name, matching the existing refusal of two migration
+  directories, and a `createConfig` that cannot be loaded falls back to the
+  directories rather than failing a build — a project with no database at all must
+  still bundle.
+
+  Two JSDoc blocks that had drifted off their declarations are reattached:
+  `EntryGenerationContext['db']`, which was documenting `version`, and
+  `resolveStandaloneDb`, which was documenting `resolveProjectVersion`.
+
+- Updated dependencies [02eeffb]
+- Updated dependencies [d10f5c2]
+  - @pikku/core@0.12.112
+  - @pikku/deploy@0.12.11
+
+## 0.12.153
+
+### Patch Changes
+
+- 2f1ad31: `pikku dev` records the address it actually bound to, and `pikku scenario run` says so when a dev server is up somewhere other than the environment being targeted — a busy port previously surfaced only as a connection refused
+- bf7f333: Scenario suites can roll the local database back between run units, without the project exposing a reset of its own.
+
+  Set `scenarios.reset` in `pikku.config.json`:
+
+  ```json
+  {
+    "scenarios": {
+      "reset": { "enabled": true, "keep": ["user", "session", "account"] }
+    }
+  }
+  ```
+
+  The runner copies every table once, from the migrated and seeded database the
+  suite is pointed at, and replaces the rows from that copy before every scenario.
+  `keep` names the tables it leaves alone: an actor signs in once for the whole
+  run, so its session tables belong there, or every actor is signed out mid-suite.
+
+  A feature's `before` hook runs against the seed, and what it builds is then
+  captured as a second layer. Each of that feature's scenarios rolls back to the
+  seed _and_ the hook's fixtures, so the isolation is per scenario without the
+  hook running again or its work being thrown away. The layer is dropped when the
+  feature ends.
+
+  This is a copy-and-replace rather than a truncate-and-reseed because a project's
+  dev seed is plain `INSERT`s — replaying it over the tables `keep` held back is a
+  primary key conflict, not a reset. Foreign keys are suspended for the duration
+  (`PRAGMA foreign_keys` on sqlite, `session_replication_role` on Postgres), so a
+  kept table may be the parent of a replaced one; Postgres sequences are put back
+  with the rows, since restoring rows without them leaves the next insert claiming
+  an id that already exists.
+
+  The alternative it replaces is a project shipping its own `testReset` RPC and
+  gating it on an environment variable. That function is in the deploy bundle on
+  every stage, exposed and one console click from open, and the flag that arms it
+  is one wrong project id away from truncating a live database. Nothing here
+  reaches a bundle: it is the runner talking to a database file or server on this
+  machine. It is refused outright when the environment is marked `production`,
+  when `apiUrl` is not on this machine, and when `NODE_ENV=production`.
+
+- 2f1ad31: `pikku doc <name>` suggests the nearest real exports when the name does not exist — a guessed name like `PikkuScenarioWire` is a substring of nothing, so whole-string matching offered no suggestion in exactly the case one is worth having
+- 2f1ad31: Add the `field-service` example app and nine React hook recipes.
+
+  `online-shop` has no frontend, and `usePikkuQuery`/`usePikkuMutation` are generated per
+  project rather than exported from `@pikku/react` — so there was nowhere a hook example
+  could be typechecked. `examples/field-service` is that place: a multi-tenant dispatch
+  backend (scopes, a four-eyes quote approval workflow, a dispatch board channel, an agent,
+  three scenarios) plus an `apps/app` frontend whose components ARE the recipes. Both run in
+  the CI example matrix, so a hook that changes shape breaks the build instead of quietly
+  becoming wrong in the docs.
+
+- 2f1ad31: online-shop: presigned item photo uploads, a getFeatures RPC and an SSE order-preparation stream
+- 2f1ad31: `pikku examples` — 39 worked examples of the things that are easy to get wrong and hard to discover, read with `examples show` or written into the project with `examples add --entity <yours>` already renamed onto your own domain.
+- 49c9bf5: fabric validate: flag local SQL migrations that differ from the copy a stage already applied
+- Updated dependencies [2f1ad31]
+- Updated dependencies [2f1ad31]
+- Updated dependencies [2f1ad31]
+- Updated dependencies [2f1ad31]
+  - @pikku/knowledge@0.12.14
+  - @pikku/skills@0.12.34
+
 ## 0.12.152
 
 ### Patch Changes

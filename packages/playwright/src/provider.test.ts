@@ -747,6 +747,7 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         scenario: 'Checkout › two people',
         kind: 'screenshot',
         path: 'checkout-two-people/01-opens-the-order-admin.png',
+        id: 'checkout-two-people/opens-the-order-admin',
         actor: 'admin',
         name: 'opens the order',
       },
@@ -754,10 +755,64 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
         scenario: 'Checkout › two people',
         kind: 'screenshot',
         path: 'checkout-two-people/02-sees-it-arrive-shopper.png',
+        id: 'checkout-two-people/sees-it-arrive-shopper',
         actor: 'shopper',
         name: 'sees it arrive',
       },
     ])
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  /**
+   * The id is what survives an edit to the scenario: inserting a step ahead of
+   * a shot renumbers its path, and anything keyed off the path — a caption
+   * override, a diff against the build before — silently loses it.
+   */
+  test('the id ignores the ordinal, so an inserted step does not rename the shot', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: ROOT,
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', screenshots: true, video: 'off' },
+    })
+
+    provider.beginScenario('Checkout')
+    const session = await provider.sessionFor('admin')
+    await session.screenshot('an added step')
+    await session.screenshot('opens the order')
+
+    assert.deepEqual(
+      provider.artifacts().map((a) => a.id),
+      ['checkout/an-added-step-admin', 'checkout/opens-the-order-admin']
+    )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a showcase shot is marked as one, and an ordinary shot is not', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-ledger-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config(),
+      secret: ROOT,
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', screenshots: true, video: 'off' },
+    })
+
+    provider.beginScenario('Checkout')
+    const session = await provider.sessionFor('admin')
+    await session.screenshot('the empty basket')
+    await session.screenshot('the order, confirmed', { showcase: true })
+
+    assert.deepEqual(
+      provider.artifacts().map((a) => a.showcase),
+      [undefined, true]
+    )
     await rm(dir, { recursive: true, force: true })
   })
 
@@ -876,6 +931,145 @@ describe('PlaywrightScenarioBrowserProvider artifact ledger', () => {
       ['checkout/admin.mp4']
     )
     assert.ok(existsSync(join(dir, 'run-1', 'checkout', 'admin.mp4')))
+    await rm(dir, { recursive: true, force: true })
+  })
+})
+
+describe('PlaywrightScenarioBrowserProvider video clock', () => {
+  const providerWith = (
+    video: 'off' | 'failed' | 'all',
+    dir: string,
+    browser: any,
+    overrides: Partial<BrowserConfig> = {}
+  ) =>
+    new PlaywrightScenarioBrowserProvider({
+      config: config(overrides),
+      secret: ROOT,
+      actors: {
+        admin: { email: 'admin@test' },
+        shopper: { email: 'shopper@test' },
+      },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', video, compress: false },
+    })
+
+  test('an actor recording carries the moment their window opened', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser)
+
+    provider.beginScenario('Checkout')
+    const before = Date.now()
+    await provider.sessionFor('admin')
+    const startedAt = provider.videoStartedAt('admin')
+
+    assert.ok(startedAt !== undefined, 'a recorded window knows when it began')
+    assert.ok(startedAt! >= before && startedAt! <= Date.now())
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('each actor keeps their own clock, because each has their own file', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser)
+
+    provider.beginScenario('Checkout › two people')
+    await provider.sessionFor('admin')
+    await provider.sessionFor('shopper')
+
+    assert.notEqual(provider.videoStartedAt('admin'), undefined)
+    assert.notEqual(provider.videoStartedAt('shopper'), undefined)
+    assert.equal(
+      provider.videoStartedAt('nobody'),
+      undefined,
+      'an actor with no window has no clock'
+    )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a run recording nothing offers no clock to stamp steps with', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('off', dir, browser)
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+
+    assert.equal(provider.videoStartedAt('admin'), undefined)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('the clock is dropped with the context that was recording', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser)
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    provider.endScenario('passed')
+    await provider.reset()
+
+    assert.equal(
+      provider.videoStartedAt('admin'),
+      undefined,
+      'the next scenario records a new file, so the old start is not its start'
+    )
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('each step lands one hold later, because the encode holds the one before', async (t) => {
+    if (!(await hasFfmpeg())) {
+      t.skip('ffmpeg is not on PATH')
+      return
+    }
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = new PlaywrightScenarioBrowserProvider({
+      config: config({ videoStepHoldMs: 2_000 }),
+      secret: ROOT,
+      actors: { admin: { email: 'admin@test' } },
+      connectBrowser: async () => ({ browser }),
+      signIn: async () => {},
+      capture: { dir, runId: 'run-1', video: 'all' },
+    })
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    const before = Date.now()
+    const first = provider.markVideoStep('admin')!
+    const second = provider.markVideoStep('admin')!
+
+    assert.ok(Date.now() - before < 1_000, 'marking a step never waits')
+    assert.ok(second - first >= 2_000 && second - first < 2_500)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('footage that is never encoded is never held, so offsets stay raw', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('all', dir, browser, {
+      videoStepHoldMs: 2_000,
+    })
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+    const first = provider.markVideoStep('admin')!
+    const second = provider.markVideoStep('admin')!
+
+    assert.ok(second - first < 1_000)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test('a run recording nothing marks nothing', async () => {
+    const { browser } = fakeBrowser()
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-video-'))
+    const provider = providerWith('off', dir, browser)
+
+    provider.beginScenario('Checkout')
+    await provider.sessionFor('admin')
+
+    assert.equal(provider.markVideoStep('admin'), undefined)
     await rm(dir, { recursive: true, force: true })
   })
 })

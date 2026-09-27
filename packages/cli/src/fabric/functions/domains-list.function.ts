@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { findProjectConfig, resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricDomainsListInput = z.object({
   apiUrl: z.string().optional(),
@@ -18,11 +19,13 @@ export const FabricDomainsList = pikkuSessionlessFunc({
   func: async (_services, { apiUrl: apiUrlOverride }) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
 
     const local = await findProjectConfig()
     if (!local)
-      throw new Error(
+      throw new FabricPreconditionError(
         'No fabric.config.json found. Run `pikku fabric link` first.'
       )
 

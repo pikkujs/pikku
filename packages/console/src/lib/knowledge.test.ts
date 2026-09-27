@@ -6,6 +6,7 @@ import {
   entryPointNote,
   findingsForNote,
   groupNotesBySection,
+  issuesToFix,
   maxSeverity,
   noteFileName,
   noteMatches,
@@ -79,6 +80,28 @@ describe('noteMatches', () => {
 
   test('reports a miss', () => {
     assert.equal(noteMatches(subject, 'invoice'), false)
+  })
+})
+
+describe('issuesToFix', () => {
+  test('drops the orphans validate reports at info', () => {
+    assert.deepEqual(
+      issuesToFix([
+        finding({ id: 'knowledge-orphan-rpc:addToBasket', severity: 'info' }),
+        finding({ id: 'a', severity: 'warn' }),
+        finding({ id: 'b', severity: 'error' }),
+      ]).map((f) => f.id),
+      ['a', 'b']
+    )
+  })
+
+  test('a base with only orphans has nothing to fix', () => {
+    assert.deepEqual(
+      issuesToFix([
+        finding({ id: 'knowledge-orphan-rpc:addToBasket', severity: 'info' }),
+      ]),
+      []
+    )
   })
 })
 

@@ -31,12 +31,14 @@ import {
   computePermissionsGroupsMeta,
   computeRequiredSchemas,
   validateNoSecretAliasServices,
+  registerDerivedOAuth2AppSecrets,
   validateSecretUsage,
   computeDiagnostics,
   validateSchemaReferences,
   validateSchemaWiringSeparation,
   validateScenarioServices,
   validateScenarioSteps,
+  validateScenarioFeatures,
   validateWorkflowGraphAddons,
 } from './utils/post-process.js'
 import { validateExposedFunctionsGated } from './utils/validate-exposed-functions-gated.js'
@@ -162,6 +164,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       toolsMeta: {},
       promptsMeta: {},
       files: new Set(),
+      surfaces: {},
     },
     agents: {
       agentsMeta: {},
@@ -228,6 +231,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       definitions: {},
       instances: {},
       tagMiddleware: new Map(),
+      globalFiles: new Set(),
     },
     channelMiddleware: {
       definitions: {},
@@ -522,12 +526,14 @@ export const inspect = async (
     computeMiddlewareGroupsMeta(state)
     computePermissionsGroupsMeta(state)
     validateNoSecretAliasServices(logger, checker, state)
+    registerDerivedOAuth2AppSecrets(state)
     validateSecretUsage(logger, state)
     computeDiagnostics(state)
     validateSchemaWiringSeparation(logger, state)
     validateWorkflowGraphAddons(logger, state)
     validateScenarioServices(logger, state)
     validateScenarioSteps(logger, state)
+    validateScenarioFeatures(logger, state)
     // Needs every route, every function and every wireAddon declaration
     // together, so it can only run once the whole program is inspected.
     annotateHttpRouteAuth(state)

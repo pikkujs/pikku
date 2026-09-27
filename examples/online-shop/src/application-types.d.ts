@@ -4,7 +4,11 @@ import type {
   CoreConfig,
   CoreUserSession,
 } from '@pikku/core/types'
-import type { AuditLog, EmailService } from '@pikku/core/services'
+import type {
+  AuditLog,
+  ContentService,
+  EmailService,
+} from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 import type { DB } from '#pikku/db/schema.gen.js'
 import type { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
@@ -46,6 +50,10 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   // read as possibly-undefined and force needless `?.`/guards. A function with
   // `audit: true` ADDITIONALLY gets a kysely wrapped to capture every table write.
   auditLog: AuditLog
+  // Constructed and injected by the CLI's dev/serve commands from the `content`
+  // block in pikku.config.json, so declare it REQUIRED for the same reason as
+  // emailService above — optional here would force a guard on every upload.
+  content: ContentService
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

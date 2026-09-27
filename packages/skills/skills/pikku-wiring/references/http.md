@@ -147,6 +147,14 @@ it is optional because the same function can be reached over plain HTTP or RPC,
 where there is no stream to send on. The `if (channel)` guard is what lets one
 function serve both; the return value is the non-streaming answer.
 
+A function that throws once the stream is open cannot answer with a status code,
+so the runner ends the stream with `{ type: 'error', errorText }` then
+`{ type: 'done' }`. A route whose client parses a different event protocol says
+so with `streamProtocol`, and the failure is written in that one instead —
+`streamProtocol: 'agui'` ends the stream with a single AG-UI `RUN_ERROR` and
+nothing after it. The default is `'pikku'`; the generated agent stream routes
+set `'agui'`.
+
 ### Generated Fetch Client
 
 After `npx pikku all`, a type-safe client is generated:

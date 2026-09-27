@@ -1,6 +1,7 @@
 import { extname } from 'node:path'
 import { resolveApiContext } from './config.js'
 import { getFabricRPC } from './http.js'
+import { FabricPreconditionError } from './errors.js'
 import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 /**
@@ -17,7 +18,9 @@ export async function changesContext(
 ): Promise<{ rpc: PikkuRPC; projectId: string | null }> {
   const ctx = await resolveApiContext({ apiUrlOverride })
   if (!ctx.token)
-    throw new Error('Not logged in. Run `pikku fabric login` first.')
+    throw new FabricPreconditionError(
+      'Not logged in. Run `pikku fabric login` first.'
+    )
   return {
     rpc: getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token }),
     projectId: projectIdOverride ?? ctx.projectId,
@@ -26,7 +29,7 @@ export async function changesContext(
 
 export function requireProjectId(projectId: string | null): string {
   if (!projectId)
-    throw new Error(
+    throw new FabricPreconditionError(
       'No fabric project. Pass --project-id, or run `pikku fabric link` in the checkout.'
     )
   return projectId

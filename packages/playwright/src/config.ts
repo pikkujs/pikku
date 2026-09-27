@@ -35,6 +35,19 @@ export interface BrowserConfig {
   slowMo: number
   /** Browser locale (affects date/number formatting the app renders). */
   locale?: string
+  /**
+   * Window size every context opens at. Pinned rather than left to
+   * Playwright's 1280x720 default because screenshots are published: a run
+   * that photographs the app at whatever size the machine happened to give it
+   * cannot be compared against the run before it.
+   */
+  viewport: { width: number; height: number }
+  /**
+   * How long an encoded recording holds still at the start of each browser
+   * step and at its end (ms), so a viewer can read each screen. Added by the
+   * encode, never by the run, so it costs no test time.
+   */
+  videoStepHoldMs: number
   /** Explicit chromium binary (e.g. the sandbox-image system chromium). */
   chromiumPath?: string
   /**
@@ -76,6 +89,13 @@ export function browserConfigFromEnv(
     headed: overrides.headed ?? (env.HEADED === '1' || env.HEADED === 'true'),
     slowMo: overrides.slowMo ?? (env.HEADED ? 120 : 0),
     locale: overrides.locale ?? env.E2E_LOCALE,
+    viewport: overrides.viewport ?? {
+      width: Number(env.E2E_VIEWPORT_WIDTH ?? 1440),
+      height: Number(env.E2E_VIEWPORT_HEIGHT ?? 900),
+    },
+    videoStepHoldMs:
+      overrides.videoStepHoldMs ??
+      Number(env.E2E_VIDEO_STEP_HOLD_MS ?? 2_000),
     chromiumPath:
       overrides.chromiumPath ?? (env.PLAYWRIGHT_CHROMIUM_PATH || undefined),
     cdpUrl: overrides.cdpUrl ?? (env.XBROWSER_CDP_URL || undefined),

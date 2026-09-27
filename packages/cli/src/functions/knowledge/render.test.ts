@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { afterEach, describe, test } from 'node:test'
+import { afterEach, beforeEach, describe, test } from 'node:test'
 import type {
   KnowledgePlanProgressResult,
   KnowledgeReconcileResult,
@@ -38,6 +38,14 @@ const capture = (run: () => void): string => {
 
 // The exit code is the whole point of the command: the build gate reads it, not the prose.
 describe('renderKnowledgePlanProgress', () => {
+  // Cleared going in as well as coming out. `process.exitCode` belongs to the
+  // process, not the test, so when the suite shares one between files these
+  // tests start on whatever the last command left there — and `0` instead of
+  // `undefined` is enough to fail an assertion that a render set no code.
+  beforeEach(() => {
+    process.exitCode = undefined
+  })
+
   afterEach(() => {
     process.exitCode = undefined
   })
@@ -95,8 +103,15 @@ describe('renderKnowledgePlanProgress', () => {
 })
 
 describe('renderKnowledgeReconcile', () => {
+  beforeEach(() => {
+    process.exitCode = undefined
+  })
+
+  // Restored to `undefined`, the value a process starts on, rather than to `0`:
+  // both mean success to the build gate, but leaving `0` behind hands the next
+  // file a code this file invented.
   afterEach(() => {
-    process.exitCode = 0
+    process.exitCode = undefined
   })
 
   const action = (

@@ -138,3 +138,66 @@ describe('node builtins on Workers', () => {
     assert.equal(new CloudflareProviderAdapter().getAliases()['fs'], 'node:fs')
   })
 })
+
+const mcpUnit = {
+  name: 'mcp-server',
+  role: 'mcp',
+  target: 'serverless',
+  services: [],
+  handlers: [{ type: 'fetch', routes: [] }],
+  dependsOn: [],
+} as never
+
+const mcpCtx = (overrides: Record<string, unknown>) =>
+  ({
+    ...(ctx as Record<string, unknown>),
+    unit: mcpUnit,
+    unitDir: '/build/mcp-server',
+    ...overrides,
+  }) as never
+
+describe('CloudflareProviderAdapter MCP entries', () => {
+  test('an mcp unit with a surface mounts it', () => {
+    const source = new CloudflareProviderAdapter({}).generateEntrySource(
+      mcpCtx({
+        mcpImport: `import mcpJson from './.pikku/mcp/mcp.gen.json' with { type: 'json' }`,
+        mcpServerOption: 'mcpJson, ',
+      })
+    )
+
+    assert.match(
+      source,
+      /import { createCloudflareMCPHandler } from '@pikku\/cloudflare\/mcp'/
+    )
+    assert.match(
+      source,
+      /import mcpJson from '\.\/\.pikku\/mcp\/mcp\.gen\.json'/
+    )
+    assert.match(source, /createCloudflareMCPHandler\(.*, \{ mcpJson \}\)/s)
+  })
+
+  test('a custom mcpPath reaches the handler', () => {
+    const source = new CloudflareProviderAdapter({}).generateEntrySource(
+      mcpCtx({
+        mcpImport: `import mcpJson from './.pikku/mcp/mcp.weather.gen.json' with { type: 'json' }`,
+        mcpServerOption: 'mcpJson, mcpPath: "/connectors/weather", ',
+      })
+    )
+
+    assert.match(source, /\{ mcpJson, mcpPath: "\/connectors\/weather" \}/)
+  })
+
+  // Without a surface there is nothing to serve, so the unit must not pull the
+  // MCP SDK into its bundle just to answer 404s.
+  test('an mcp unit with no surface stays an ordinary worker', () => {
+    const source = new CloudflareProviderAdapter({}).generateEntrySource(
+      mcpCtx({ mcpImport: '', mcpServerOption: '' })
+    )
+
+    assert.match(
+      source,
+      /export default createCloudflareWorkerHandler\(\{ createConfig/
+    )
+    assert.equal(source.includes('@pikku/cloudflare/mcp'), false)
+  })
+})

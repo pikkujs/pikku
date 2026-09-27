@@ -702,8 +702,9 @@ export const addChannel: AddWiring = (
   // with pikkuChannelConnectionFunc/pikkuChannelDisconnectionFunc (not pikkuFunc/
   // pikkuSessionlessFunc), so the runtime has correct sessionless info without
   // needing to inject it at runtime.
+  const channelAuth = getPropertyValue(obj, 'auth')
   {
-    const routeAuth = getPropertyValue(obj, 'auth')
+    const routeAuth = channelAuth
     const sessionless = routeAuth === false ? true : undefined
     for (const funcId of [connectFuncId, disconnectFuncId]) {
       if (funcId && !state.functions.meta[funcId]) {
@@ -768,6 +769,11 @@ export const addChannel: AddWiring = (
     message,
     messageWirings,
     binary: binary === undefined ? undefined : binary,
+    // Recorded so a deploy can tell a public surface from a private one without
+    // reading the generated source. Only stored when the channel actually said,
+    // so a channel that never mentioned auth stays absent rather than claiming
+    // a default it did not declare.
+    auth: typeof channelAuth === 'boolean' ? channelAuth : undefined,
     summary,
     description,
     errors,

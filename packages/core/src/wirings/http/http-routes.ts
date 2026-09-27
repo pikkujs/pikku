@@ -85,6 +85,7 @@ function registerRoute(
     timeout: route.timeout,
     headers: route.headers,
     sse: route.sse,
+    streamProtocol: route.streamProtocol,
     // `CoreHTTPFunctionWiring` is discriminated by `method`, and a group builds
     // its routes from a method chosen at runtime — no arm can be narrowed to.
   } as CoreHTTPFunctionWiring<unknown, unknown, string>)

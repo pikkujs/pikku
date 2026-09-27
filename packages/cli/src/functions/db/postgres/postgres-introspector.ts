@@ -247,9 +247,15 @@ export class PostgresIntrospector implements DbIntrospector {
     }))
   }
 
+  /**
+   * `pk_cols` is fenced with `AS MATERIALIZED` deliberately. Referenced once,
+   * Postgres 12+ inlines it, and the constraint views it joins are then
+   * re-derived per candidate row — quadratic in the number of tables, minutes
+   * instead of milliseconds on a large schema.
+   */
   async getAllColumns(): Promise<Map<string, ColumnInfo[]>> {
     const result = await this.client.query<PgAllColumnRow>(
-      `WITH pk_cols AS (
+      `WITH pk_cols AS MATERIALIZED (
          SELECT tc.table_schema, tc.table_name, kcu.column_name
          FROM information_schema.table_constraints tc
          JOIN information_schema.key_column_usage kcu

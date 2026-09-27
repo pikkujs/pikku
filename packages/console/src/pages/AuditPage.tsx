@@ -10,7 +10,7 @@ export const AuditPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
 }) => {
   useLocale()
   return (
-    <Stack gap={0} style={{ height: '100%' }}>
+    <Stack data-testid="audit-page" gap={0} style={{ height: '100%' }}>
       <ListPageHeader
         title={m.audit_title()}
         description={m.audit_description()}

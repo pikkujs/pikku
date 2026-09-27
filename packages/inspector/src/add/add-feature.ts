@@ -130,6 +130,20 @@ const stringProperty = (
   return value && ts.isStringLiteralLike(value) ? value.text : undefined
 }
 
+const booleanProperty = (
+  config: ts.ObjectLiteralExpression,
+  name: string
+): boolean | undefined => {
+  const value = getProperty(config, name)
+  if (!value) {
+    return undefined
+  }
+  if (value.kind === ts.SyntaxKind.TrueKeyword) {
+    return true
+  }
+  return value.kind === ts.SyntaxKind.FalseKeyword ? false : undefined
+}
+
 const stringArrayProperty = (
   config: ts.ObjectLiteralExpression,
   name: string
@@ -142,6 +156,20 @@ const stringArrayProperty = (
     .filter(ts.isStringLiteralLike)
     .map((e) => e.text)
   return values.length === value.elements.length ? values : undefined
+}
+
+const mentionedScenario = (
+  element: ts.Expression,
+  checker: ts.TypeChecker
+): string | undefined => {
+  if (ts.isIdentifier(element)) {
+    return scenarioName(element, checker)
+  }
+  if (ts.isObjectLiteralExpression(element)) {
+    const reference = getProperty(element, 'scenario')
+    return reference ? scenarioName(reference, checker) : undefined
+  }
+  return undefined
 }
 
 const readEntry = (
@@ -215,6 +243,8 @@ export const addFeature: AddWiring = (logger, node, checker, state) => {
     exportedName,
     entries: [],
     unresolvedEntries: 0,
+    mentions: [],
+    unnamedEntries: 0,
     hasBefore: false,
     hasAfter: false,
   }
@@ -224,6 +254,10 @@ export const addFeature: AddWiring = (logger, node, checker, state) => {
     const name = stringProperty(config, 'name')
     const description = stringProperty(config, 'description')
     const tags = stringArrayProperty(config, 'tags')
+    const document = booleanProperty(config, 'document')
+    if (document !== undefined) {
+      feature.document = document
+    }
     if (name !== undefined) {
       feature.name = name
     }
@@ -239,6 +273,12 @@ export const addFeature: AddWiring = (logger, node, checker, state) => {
     const scenarios = getProperty(config, 'scenarios')
     if (scenarios && ts.isArrayLiteralExpression(scenarios)) {
       for (const element of scenarios.elements) {
+        const mention = mentionedScenario(element, checker)
+        if (mention) {
+          feature.mentions.push(mention)
+        } else {
+          feature.unnamedEntries += 1
+        }
         const entry = readEntry(element, checker)
         if (entry) {
           feature.entries.push(entry)

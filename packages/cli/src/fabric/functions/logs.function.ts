@@ -44,9 +44,11 @@ export const FabricLogs = pikkuSessionlessFunc({
   func: async (_services, { branch, level, json, follow }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
     if (!ctx.projectId)
-      throw new Error(
+      throw new FabricPreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
     if (!branch)

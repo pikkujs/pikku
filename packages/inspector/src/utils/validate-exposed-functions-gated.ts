@@ -21,27 +21,28 @@ export function validateExposedFunctionsGated(
 
   for (const [funcName, meta] of Object.entries(state.functions.meta)) {
     if (!meta.expose) continue
-
-    // A pikkuFunc always requires a session, on every path.
-    if (meta.sessionless === false) continue
-
-    // Scenario steps are refused by rpcExposed regardless of `expose`.
-    if (meta.scenarioStep) continue
-
-    // The author declared that the body authorizes its own callers — a gate
-    // this check has no way to see. Taking the claim at face value is the
-    // point: without it the warning fires forever on functions that are fine,
-    // and a warning that is usually wrong stops being read.
-    if (meta.permissionsInBody === true) continue
-
-    // The function gates itself.
-    if (meta.auth === true) continue
-    if (meta.scopes && meta.scopes.length > 0) continue
-    if (meta.permissions && meta.permissions.length > 0) continue
-
+    if (gatesItself(meta)) continue
     if (isGatedByItsAddon(state, meta.packageName)) continue
 
     ungated.push(funcName)
+  }
+
+  // A `wireAddon` expose list can open an addon function its author never
+  // exposed, so the app that listed it is the one to tell. The namespaced call
+  // is governed by that instance's config alone.
+  //
+  // knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
+  for (const [namespace, declaration] of state.rpc?.wireAddonDeclarations ??
+    []) {
+    if (!Array.isArray(declaration.expose)) continue
+    if (declaration.auth === true) continue
+    if (declaration.scopes && declaration.scopes.length > 0) continue
+    const addonMeta = state.addonFunctions?.[namespace] ?? {}
+    for (const funcName of declaration.expose) {
+      const meta = addonMeta[funcName]
+      if (!meta || gatesItself(meta)) continue
+      ungated.push(`${namespace}:${funcName}`)
+    }
   }
 
   if (ungated.length === 0) return
@@ -72,6 +73,27 @@ export function validateExposedFunctionsGated(
       `${one ? 'it was' : 'they were'} not meant to be callable from outside.`,
   })
 }
+
+const gatesItself = (meta: {
+  sessionless?: boolean
+  scenarioStep?: boolean
+  permissionsInBody?: boolean
+  auth?: boolean
+  scopes?: unknown[]
+  permissions?: unknown[]
+}): boolean =>
+  // A pikkuFunc always requires a session, on every path.
+  meta.sessionless === false ||
+  // Scenario steps are refused by rpcExposed regardless of `expose`.
+  meta.scenarioStep === true ||
+  // The author declared that the body authorizes its own callers — a gate
+  // this check has no way to see. Taking the claim at face value is the
+  // point: without it the warning fires forever on functions that are fine,
+  // and a warning that is usually wrong stops being read.
+  meta.permissionsInBody === true ||
+  meta.auth === true ||
+  (meta.scopes?.length ?? 0) > 0 ||
+  (meta.permissions?.length ?? 0) > 0
 
 /**
  * Whether every function in this package is already gated by its `wireAddon`.

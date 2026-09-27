@@ -1,3 +1,300 @@
+## 0.12.120
+
+### Patch Changes
+
+- 4a9dcd2: `admin:listUsers` now pages, counts and can carry roles.
+
+  `ListUsersInput` gains `offset` and `includeRoles`; `ListUsersOutput` gains `total`, and each `User` gains `roles` and `fields`. `total` is how many users match `search`, which is what a pager counts against — `users.length` never was, because it is capped by `limit`.
+
+  ```typescript
+  const { users, total } = await rpc.invoke('admin:listUsers', {
+    search: 'example.com',
+    limit: 50,
+    offset: 50,
+    includeRoles: true,
+  })
+  ```
+
+  Paging only means something over a stable order, so the query now sorts newest first rather than however the database felt like returning rows.
+
+  Synthetic principals — the platform credential owner, Fabric service users, scenario actors — are excluded by the query instead of dropped from the page afterwards. Filtering after the fact broke both halves of paging: `limit` had already counted the rows it then discarded, so a page came back short, and `offset` skipped synthetic rows as though they were people, so the same person could appear on two pages or on none.
+
+  `includeRoles` is refused without `admin:scopes:read`. `admin:users:list` says who may see the directory; it does not say who may see what each of those users can do.
+
+  `ScopeService` gains `listRolesForUsers(userIds)`, implemented in `@pikku/kysely`. It answers for every id asked for — an empty array for a user holding no roles, so a caller cannot read a missing key as "holds nothing" — and chunks its `in` list to stay inside the bound-parameter cap. A page of users used to cost one query per row, which on a database reached over the network is a round trip per row.
+
+  ```typescript
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
+  ```
+
+  Anything implementing `ScopeService` outside this repository has to add it.
+
+- 5ab24ad: Scenario recordings can be followed by eye, at no cost to the run. The encode holds each browser step's starting screen, and the last frame, for two seconds (`E2E_VIDEO_STEP_HOLD_MS`, `0` to turn off). The step offsets in the run record account for the holds. Recordings are made at the viewport's own size instead of Playwright's 800px downscale, and they show a pointer that follows the mouse and jumps to each filled field. Drivers get an optional `ScenarioBrowserProvider.markVideoStep(actor)`, which returns a step's offset in the finished video. It is preferred over `videoStartedAt`.
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+## 0.12.119
+
+### Patch Changes
+
+- e85f07e: A route declaring a numeric parameter could not be called over a query string. `coerceTopLevelDataFromSchema` converted an `array` from a comma-separated string and a `date-time` from text, but left numbers alone — and because the JSON Schema check runs before zod, `?year=2027` was rejected as `Instance type "string" is invalid. Expected "integer"` before the function ever ran. `z.coerce.number()` does not help: it runs after the schema has already refused. The shipped validator is spec-compliant and has no `coerceTypes` of its own, and `minimum`/`maximum` cannot stand in for one, being value constraints that apply only to instances that are already numbers.
+
+  `integer` and `number` now coerce from a string, on the same path as the two existing cases — so query strings, path params and argv reach a numeric parameter.
+
+  A string converts only when the number it produces prints back as the identical text. That rules out the readings that quietly rewrite the input — `007`, `+5`, `1e3`, `2027.50`, a padded `12` — and the values `Number` invents from nothing, where `''` and `'  '` both become `0`. It also rules out `9007199254740993`, which does not survive a double: a caller who sends an id as a string is usually doing so precisely because it does not, and rounding it silently would be data corruption. `NaN` and `Infinity` are refused for the same reason, and a fraction is refused where `integer` was asked for. Everything refused is left exactly as it arrived, so the validator reports the value the caller actually sent.
+
+  Note that this applies wherever the existing coercions already applied, which includes a JSON body — a string `"2027"` for a numeric field is now accepted there too, consistently with how an array and a `date-time` have always been read. A union `type` such as `['integer', 'null']` is left alone, as the array and `date-time` cases already leave it.
+
+## 0.12.118
+
+### Patch Changes
+
+- b4a895e: A scenario step row now carries where it fell inside each actor's recording, and a scenario result now says which feature it came from by id as well as by title.
+
+  The video offset is recorded rather than estimated. Documentation built out of a run has to turn a step sentence into an exact moment — a chapter marker, or a still pulled with `ffmpeg -ss` — and the only number available until now was the scenario clock summed out of the ladder. That clock is not the video's: recording starts when the actor's browser context opens, which is somewhere after step one, and every RPC step before or between the browser ones burns scenario time while the file sits still. The two drift apart by however much of the scenario happened off camera, and a still forty seconds out is a picture of the wrong screen with nothing to say it is wrong.
+
+  So `ScenarioStepRow.video` is stamped at the moment the step runs, from the driver's own clock: `ScenarioBrowserProvider.videoStartedAt(actor)` reports when that actor's context was opened with `recordVideo`, and the runner subtracts. It is a list of `{ actor, offsetMs }` rather than one number, because a video belongs to an actor and not to the scenario — one step touching two windows falls at a different moment in each, and an offset that does not name its file cannot be seeked to. A run without video, a step with no actor, and a step that never ran all carry nothing, which is what keeps the console's existing estimate as the fallback for runs recorded before this.
+
+  `ScenarioResult.featureId` is the other half of the same problem. `feature` is a title written for people to read and rewritten whenever the wording improves, so nothing downstream could key off it; the id `addFeature` registered the feature under does not move. The runner threads it from the plan, which read it off the registry, instead of deriving it from the label. `scenarioName` already carried the registration id and keeps it.
+
+- b4a895e: `pikku scenario guide` writes the user guide a scenario suite already contains. A feature reads as a page and a scenario as a section, and a run leaves screenshots behind with the captions their author took them under — the command joins that to the editorial prose a project checks in under `docs/` and writes markdown. It renders no HTML, ships no components, resolves no asset URLs and calls no model: an image is an ordinary relative `![caption](path)`, and whoever consumes the markdown rewrites the paths.
+
+  A page cites a feature by leaving the marker pair where the block belongs:
+
+  ```markdown
+  ---
+  title: Deployments
+  ---
+
+  A deployment is one tracked shipment of your app.
+
+  <!-- pikku:guide feature=deploymentsFeature -->
+  <!-- /pikku:guide -->
+
+  ## Does my app go down during a deploy?
+  ```
+
+  That one line does both halves of the job. It says _where_ the block goes, which a frontmatter list cannot express, and it is what the coverage gate counts to decide _whether_ a feature is documented at all. The mapping stays many-to-many and falls out of the union of every marker in the tree. A rebuild rewrites exactly the regions between the markers, so every sentence a human wrote around them survives.
+
+  **The steps are evidence, not content.** A generated block is the scenario's title, the description its author wrote, and the shots it filed — never a numbered Given/When/Then ladder, which is a test report and not something anybody arrives at a documentation page wanting. The sentences are still what the guide is kept honest against: `docs/.guide.lock` records a hash of each feature's step sentences and artifact ids, deliberately not of the image bytes. Restyling a UI changes every screenshot and no sentence; inserting or renaming a step changes what the prose was describing, and the page is reported stale. The lock is generated and checked in, so no hash is ever typed or merged by hand — and a tree whose lock is untracked reports every page as current forever.
+
+  Every registered feature has to be cited by some page, and a feature that is pure plumbing says so rather than being written about — `pikkuFeature({ document: false })`, threaded through the inspector and `FeatureMeta`. An uncited feature fails the command by name; `--allow-undocumented` downgrades that one failure to a report. A page citing a feature id that is not registered stays an error either way.
+
+  A guide is only written out of a run that can stand behind it. A run that failed or was killed halfway is refused, because a page is a claim that the product does what it says. So is a narrowed one: `pikku scenario run --flows`/`--features`/`--tags` leaves out scenarios the suite has, and a guide built from it would describe those flows as though they do not exist. `ScenarioRunRecord.selection` records the filters a run was selected with, since nothing in the results afterwards can tell a suite of forty from forty that were asked for.
+
+  Results are joined to features by `featureId`, falling back to the display name only for records written before that field existed — a title is rewritten freely and two features may share one.
+
+  Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record. Frontmatter the compiler does not own (`slug`, `draft`, `sidebar_position`, anything else a docs site reads) passes through untouched, and a source written with CRLF line endings is read as having frontmatter.
+
+## 0.12.117
+
+### Patch Changes
+
+- 8a0ecb7: `pikku scenario run <env> --run browser --strict` now refuses every route off the run surface, rather than only reporting one at the end. An action step that would fall back to its `default` binding throws `ScenarioNoSurfaceBinding` even when it declares `default`, and a `then` witnessed only server-side throws the new `ScenarioUnwitnessedAssertion`. Without `--strict` nothing changes: the fallback still runs and the unwitnessed assertion is still counted into the coverage line.
+
+  It exists because a run is becoming a source of documentation. A docs build runs the suite `--run browser --strict`, so a feature that cannot be driven end to end through the UI cannot produce a page — no flow where three steps are screenshots and the fourth quietly happened over RPC with nothing to show. The refusal names the step, the surface the run asked for and the surfaces that did bind it, which turns "what still has no browser binding" into a worklist the run prints rather than something to go looking for.
+
+  `--strict` on `--run default` is accepted and does nothing, since nothing on the default surface can fall back or be witnessed elsewhere. `PikkuScenarioService.setRunSurface` takes the flag as a second argument, and `isStrictSurface()` reads it back.
+
+## 0.12.116
+
+### Patch Changes
+
+- 87971bd: `browser.screenshot('the order, confirmed', { showcase: true })` marks one shot as fit to publish outside the run, and the artifact ledger carries the flag. A gallery, a docs page or a marketing card can then be built from the scenario run itself instead of a second browser pass configured somewhere else, and the author of the step — the only one who knows the page is at a moment worth showing a stranger — is who decides.
+
+  Each filed screenshot also carries an `id`: the same shot under one key across runs. `path` leads with the order the run happened in, so inserting a step ahead of a shot renumbers it and anything meant to outlive one run (a caption override, a diff against last week's build) loses track of it.
+
+  Two supporting fixes in `@pikku/playwright`: contexts open at a pinned `viewport` (1440x900, overridable per config or via `E2E_VIEWPORT_WIDTH`/`E2E_VIEWPORT_HEIGHT`) and screenshots are taken with animations disabled, so two runs of the same scenario photograph the same thing. `{ fullPage: true }` is available for shots of a whole scrollable page.
+
+- b312867: A project can now serve several MCP endpoints, one per connector.
+
+  Until now every MCP tool in a project was pooled onto a single `/mcp`, so a hub offering three connectors offered one endpoint listing all three connectors' tools at once. A client pointed at it saw tools it had no business calling, and the only way to give a connector an endpoint of its own was to give it a deployment of its own — three deploys, three bills, three service graphs.
+
+  `wireAddon` gains `mcpEndpoint`. `true` serves that instance's tools at `/mcp/<name>`; a string is the path, used as given. Leaving it unset keeps the tools on the shared endpoint, which is where they have always been, so nothing existing moves.
+
+  A surfaced instance now gets its own manifest (`.pikku/mcp/mcp.<name>.gen.json`, carrying the path it answers on), its own deploy unit (`mcp-<name>`, routed on that path), and its own MCP server — with its own tool list, so a client pointed at one endpoint never sees another's tools. The plumbing for the per-surface manifest and unit already existed in `deploy apply`; nothing had ever produced one.
+
+  `pikku dev` mounts every endpoint the generated tree describes, not just the default one. Without that a project that moved its tools onto their own endpoints would have served nothing locally at all — the default manifest it reads is empty precisely because they moved — and the only way to try a connector would have been to deploy it.
+
+  The node and bun transports take `mcpSurfaces` alongside `mcpJson` and mount each at its own path, longest path first. `/mcp` claims everything beneath `/mcp/`, so without that ordering the default endpoint answers `/mcp/weather` and the surface's tools are unreachable.
+
+  OAuth discovery is split between the endpoints rather than duplicated across them. RFC 9728 folds a resource's path into its well-known route, so each endpoint's own document is already distinct, but the path-less `/.well-known/oauth-protected-resource` predates that and describes whichever resource answers it. Only the default endpoint claims it — otherwise every unit registers the same route and the provider's router decides which resource a client is told about, and in dev a client probing it is described whichever surface sorted first.
+
+- 51bd35a: Document five public keys that carried no JSDoc: `wireChannel`'s `onDisconnect`,
+  `wireRemoteAddon`'s `serverUrl` and `tags`, and `CoreUserSession`'s `userId` and
+  `orgId`. A key printed as a name and a type is a shape; what a caller needs is
+  what to put in it, and only the JSDoc where the type is declared carries that
+  into the IDE, the console and the shipped surface doc at once.
+
+## 0.12.115
+
+### Patch Changes
+
+- 238902c: A channel's `auth` flag now reaches its meta. The inspector already read it to mark the connect and disconnect functions sessionless, then dropped it, so nothing downstream could tell a public channel from a private one without reading the generated source.
+
+  That matters in front of the channel rather than inside it. A `wireCLI({ auth: false })` program is reachable by anyone holding its address; a router or deploy that cannot see the flag either guesses or demands a token in front of a surface it was never protecting, locking out the clients the program was opened for.
+
+  The flag is only recorded when the channel actually said. A channel that never mentioned `auth` leaves it absent rather than claiming a default it did not declare, which the runtime continues to read as requiring a session.
+
+- 2fd2b22: Telemetry middleware now records `errorStack` alongside `errorMessage`, so an observability backend has the stack of a failed invocation and not only its message.
+
+## 0.12.114
+
+### Patch Changes
+
+- cb8f57e: Global middleware now runs for a dispatch that belongs to an addon, not just for one in the root namespace.
+
+  `combineMiddleware` read the global list out of a single namespace — the `packageName` the dispatch carried. For anything wired by the application itself that namespace is `null`, so it worked; for a wiring contributed by an addon (an MCP tool registered through `wireAddon({ mcp: [...] })`, say) it was the addon's own package name, and the application's globals were simply not in that list. The practical effect was that an addon's tools ran with no session middleware at all: every one of them refused with "authentication required" no matter who was calling, while the identical function reached through HTTP authenticated fine.
+
+  Global middleware is application-wide by definition, and an addon's function is still running inside the host application, so the root namespace always applies. A dispatch in the root namespace resolves `[null]` as before; one in an addon resolves `[null, packageName]` — the host's globals first, then the addon's own. Globals registered by one addon still do not reach another's dispatches.
+
+- cb8f57e: MCP clients can now discover that a server needs signing in to, and can see tools whose names carry a namespace.
+
+  Three separate reasons a client ended up connected to a server it could do nothing with:
+
+  - **The handshake was never challenged.** A client decides at connection time whether a server speaks OAuth, and all it has to go on is whether `initialize` came back `401` with a `WWW-Authenticate` challenge. Answering it `200` and then refusing every subsequent call told the client "no sign-in needed" and then gave it nothing — Claude's connector setup, for one, reported the server as open access. `initialize` is now challenged when `mcpEveryTargetRequiresSession()` holds, which is the only case where answering it openly is a lie; a server with even one open target still completes the handshake unauthenticated, as it should.
+  - **Namespaced names were dropped on the floor.** MCP constrains tool and prompt names to `[A-Za-z0-9_-]{1,64}`, and pikku's namespace separator is `:`. Clients discard the names they cannot accept rather than failing the connection, so an addon's entire surface went missing with nothing more than a note about "tools with unsupported names". Names are now rewritten at the transport boundary (`mcpWireName`) and resolved back on the way in (`mcpResolveWireName`), so `bb2:getMe` is offered as `bb2_getMe` and calls to it dispatch correctly. The registry keeps its own spelling, since that is what dispatch keys on, and a tool genuinely registered under the wire spelling still wins over a rewritten match.
+  - **An addon-only app generated no tool metadata.** `pikku all` decided whether to emit the MCP file from the set of source files calling `wireMCPTool`/`Resource`/`Prompt`. An addon that contributes its tools through `wireAddon({ mcp: [...] })` adds none, so an application whose only MCP surface came from addons got neither wirings nor meta — the tools were listed from `mcp.gen.json` and then every call failed to resolve, because `toolsMeta` (which carries the `pikkuFuncId`) had never been written. Content now decides; the file set only decides whether there are imports to serialize.
+
+  Also in here: the resource URL advertised in the challenge honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so a server behind a TLS-terminating proxy advertises the `https://` URL the client actually reached rather than its own internal `http://` origin — which the client would reject as a resource mismatch.
+
+- 6db6a14: A wiring can now decide whether an addon's credential is per-user or deployment-wide
+
+  `wireAddon`'s `credentialOverrides` takes an object as well as a rename string:
+
+  ```ts
+  wireAddon({
+    name: 'gmail',
+    package: '@pikku/addon-gmail',
+    credentialOverrides: {
+      gmailOAuth: { mode: 'wire' }, // each user connects their own
+      calendarOAuth: { name: 'CAL', mode: 'singleton' },
+    },
+  })
+  ```
+
+  An addon author declares a default with `defineCredential`; the deployment decides, so one addon serves both a per-user product and a single team account.
+
+  The wire credential service now resolves each credential by what it _is_ rather than by what a lookup returned: `wire` reads only the user's value, `singleton` reads the deployment's. A per-user credential can no longer pick up a platform-level value because the user has not connected — which, before, would have quietly run someone's request against the deployment's own account.
+
+  A credential is never read from the secret vault. The wire credential service no longer takes a `SecretService` at all, so the only way a credential arrives is the one its mode names — the user's own value, or the deployment's.
+
+  Modes are resolved at generation time into the credentials meta, so the console's connect flow reflects the wiring rather than the addon's default.
+
+  Two credentials that resolve to one name are rejected unless they agree on the mode. Generation writes a single metadata entry per name, so a `wire` credential aliased onto a `singleton` one used to take whichever wiring was read last — a per-user credential served from the deployment's own account, or a deployment credential handed out per user. The inspector reports the collision against both wirings by name, and `buildCredentialResolutions` refuses it at runtime too.
+
+  A mode-only override is checked against the credential it names. `{ mode: 'wire' }` renames nothing, so nothing was validated: an override naming a credential that does not exist was dropped in silence and the credential kept the mode its author declared.
+
+  A credential the wiring resolves as `singleton` is no longer read out of the user's own store. Per-user values are imported first and a name already present is left alone, so a value stored under a singleton's name — from an earlier wiring, or a connect flow since rewired — decided what the deployment's own slot resolved to. It is now skipped by mode, the same way a `wire` credential is kept away from the deployment's value.
+
+  The project's own credentials are registered into pikku state from the generated credentials file, so `wire.getCredential` resolves an app-level singleton the same way it resolves an addon's.
+
+  `pikku new addon` no longer requires a `pikku.config.json` in the working directory. Scaffolding an addon is something you do before a project config exists, so the command now reads one when it is there and falls back to the working directory when it is not.
+
+  An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all. A nested callback that names its own parameter after the factory's is no longer read as the factory's own: what it destructured went onto the addon's contract, so a consumer was asked for a service the addon never wanted from them.
+
+  An OAuth2 credential now implies its app secret, so nobody hand-writes one. The client id and secret an OAuth app needs is the same shape every time — `OAuth2AppCredential`, which is what the runtime already reads it as — so the inspector registers a secret for each credential's `appCredentialSecretId`. A hand-written `defineSecret` covering that id still wins, so an author who wants their own description or `docsUrl` keeps it. The derived secret is optional, matching what every hand-written declaration chose: an addon that also authenticates by API key must still deploy without an OAuth app configured.
+
+  `optional` now means a secret is not reported as missing. `getMissing()` filtered on "not configured" alone, so a secret whose declaration said absence was supported still showed up on the list of things a deployment had to go and supply — burying the ones that genuinely were. `getAllStatus()` still reports it, flagged `optional`.
+
+  An OAuth2 secret carries its declaration's `optional` through code generation, to the app credential and to the token store alike: nobody connects without the client id and secret, so a deployment allowed to omit the app is never asked for its tokens either. That branch never looked at the flag before.
+
+  `credentialOAuthProviders` treats an app secret that resolves `undefined` as unconfigured. An optional secret resolves rather than throws, so the absence arrived past the `catch` that was meant to skip the provider — and `.reveal()` on it threw a `TypeError` that took every `getSession` down with it, which is the exact failure that code exists to prevent.
+
+## 0.12.113
+
+### Patch Changes
+
+- c842054: A pikku command never ends in a node internals warning, and a secret can be set from a script.
+
+  `pikku fabric secrets set NAME` prompted for the value through readline in terminal mode. On a stdin that is not a tty that promise never settles at all, so the command printed `BETTER_AUTH_SECRET value:` and then node's "Detected unsettled top-level await", naming a line of `@pikku/cli`'s own bin — under bun it simply hung. The prompt now reads the first line of stdin when there is no tty, so `echo '<value>' | pikku fabric secrets set NAME` works, and refuses with the flag to reach for (`--value`) when stdin is closed or empty. `promptConfirm` gained the same backstop, so a caller that forgets its `isTTY` gate gets a refusal instead of a hang.
+
+  Alongside it, the places a raw stack could still reach a user:
+
+  - The `pikku` binary formats through `formatCLIError` instead of printing `error.message`, and installs `uncaughtException` / `unhandledRejection` handlers so nothing escaping a listener or a floating promise is dumped unformatted. A `CLIError` the runner already printed is no longer printed twice.
+  - The generated local and channel CLI bootstraps do the same, rather than `console.error('Fatal error:', error.message)` — which dropped the stack even when one was asked for.
+  - A missing `pikku.config.json` says where it looked and what to do, as a `PikkuCLIConfigError`, which is now a `PikkuError` along with `GitError` and every remaining plain `Error` raised by a `pikku fabric` command. A directory-wide test keeps it that way.
+  - `pikku dev`'s watcher and the MCP schema loader log their causes through the logger at debug level instead of `console.error(err)` over the top of the output.
+
+  Stacks are unchanged where they are the answer: an unexpected error still keeps its frames, and `--verbose` / `PIKKU_DEBUG` still prints the stack for a deliberate one. `formatCLIError` and `wantsStackTrace` are exported from `@pikku/core/cli` so every entrypoint that can be the last thing to catch an error prints it the same way.
+
+- dfd7019: An MCP tool reads the claims its host verified
+
+  `PikkuHTTP` gains an `authInfo` of the new `PikkuHTTPAuthInfo`: the token,
+  client and scopes a transport that already verified a bearer token hands on.
+  It is strictly pass-through — nothing in pikku derives it from a request's own
+  headers, because verifying a token is the host's job. A function could always
+  read the `Authorization` header itself; what this adds is what the raw header
+  cannot carry.
+
+  `PikkuMCPServer`'s server factory now carries the SDK's `authInfo` onto the
+  wire beside the request, so the `authInfo` a host passes to
+  `createFetchHandler` reaches the tool rather than stopping at the SDK.
+
+  `pikkuCredentialOAuth` also names itself when it provisions the platform user.
+  Every other pikku plugin passes a source to `internalAdapter.createUser`, and
+  better-auth refuses a `user.validateUserInfo` gate that is handed none — so an
+  app with that hook configured could not link a singleton credential at all.
+
+- dfd7019: An MCP call that needs a session is refused with an OAuth challenge
+
+  A tool fronting a session-requiring function used to answer an unauthenticated
+  caller with `200` and `isError: true`, which a client reads as a tool that
+  broke rather than one it has not authenticated for — so OAuth discovery never
+  began. Such a call now gets `401` with a `WWW-Authenticate: Bearer` challenge
+  naming the resource metadata, and `/.well-known/oauth-protected-resource` is
+  served alongside the MCP endpoint.
+
+  The endpoint is not gated as a whole. `mcpTargetRequiresSession` reads the
+  declarations the runner already enforces — a `pikkuFunc` needs a session, a
+  `pikkuSessionlessFunc` needs one only where it says `auth: true` — so public
+  and private tools can share one server and only the private ones are
+  challenged.
+
+  `createFetchHandler` and `createHTTPRequestHandler` take an optional `auth`
+  describing what to advertise (`authorizationServers`, `scopesSupported`,
+  `resourceName`), surfaced on both servers as an `mcpAuth` option. Every field
+  defaults from the request, because a pikku app is usually its own
+  authorization server. Both handlers now also return `ownsPath`, because the
+  discovery document lives outside `mcpPath` and a host routing on the endpoint
+  alone would 404 the document its own challenge points at.
+
+- 9b978e7: A failed SSE stream reports the error in the protocol its client is parsing
+
+  An SSE route can now declare `streamProtocol: 'agui'`, and the generated agent
+  stream and resume routes do. A function that throws mid-stream then ends the
+  stream with a single AG-UI `RUN_ERROR` instead of Pikku's `error`/`done` frames,
+  which an AG-UI client could only surface as a Zod parse failure with the real
+  message nowhere in sight.
+
+- 1469e73: The app names which of an addon's functions reach MCP
+
+  `wireAddon`'s `mcp` takes a list as well as `true`. `true` still offers every
+  function the addon declared `mcp: true`; a list names the tools this deployment
+  offers, whether or not the addon declared them, and is typed against the
+  function names that addon publishes — a typo is a compile error rather than a
+  tool silently missing from the menu.
+
+## 0.12.112
+
+### Patch Changes
+
+- 02eeffb: fix: hot reload reads the changed source instead of a leftover compiled copy
+
+  `pikku dev` announced `Hot-reloaded: <fn>` and kept serving the previous
+  implementation whenever a `.js` from an earlier `tsc`, `pikku dist` or bundler
+  run sat beside the edited `.ts` — the reloader preferred that file, and dev
+  never rebuilds it. The changed source is now what runs, and the module runner
+  resolves and compiles the project's own TypeScript dependencies so a helper
+  edited alongside its caller reloads with it.
+
 ## 0.12.111
 
 ### Patch Changes

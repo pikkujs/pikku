@@ -174,6 +174,42 @@ describe('buildScenarioDocs', () => {
     )
   })
 
+  test('leaves out a feature that opted out of documentation', () => {
+    const docs = buildScenarioDocs({
+      workflows: { a: scenarioMeta('a') },
+      features: {
+        fixtures: feature('fixtures', {
+          document: false,
+          entries: [{ scenario: 'a' }],
+        }),
+      },
+    })
+
+    assert.deepEqual(docs.features, [])
+  })
+
+  test('returns an opted-out feature’s scenarios to the ungrouped bucket', () => {
+    const docs = buildScenarioDocs({
+      workflows: { a: scenarioMeta('a'), b: scenarioMeta('b') },
+      features: {
+        documented: feature('documented', { entries: [{ scenario: 'b' }] }),
+        fixtures: feature('fixtures', {
+          document: false,
+          entries: [{ scenario: 'a' }],
+        }),
+      },
+    })
+
+    assert.deepEqual(
+      docs.features.map((f) => f.id),
+      ['documented']
+    )
+    assert.deepEqual(
+      docs.ungrouped.map((s) => s.name),
+      ['a']
+    )
+  })
+
   test('excludes the fixtures the scenario suite uses to test itself', () => {
     const docs = buildScenarioDocs({
       workflows: {

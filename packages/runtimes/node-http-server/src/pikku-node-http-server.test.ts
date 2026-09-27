@@ -598,12 +598,11 @@ describe(
   }
 )
 
-// A GET with no `accept` header is refused by the MCP transport before it
-// considers sessions at all, so this marker holds whatever the session
-// configuration is. The normal pikku pipeline never emits it, which is what
-// makes it usable as proof that a path did — or did not — reach the handler.
-const MCP_HANDLER_MARKER =
-  'Not Acceptable: Client must accept text/event-stream'
+// A GET is refused by the MCP transport before it considers sessions at all,
+// so this marker holds whatever the session configuration is. The normal pikku
+// pipeline never emits a JSON-RPC envelope, which is what makes it usable as
+// proof that a path did — or did not — reach the handler.
+const MCP_HANDLER_MARKER = '"code":-32000,"message":"Method not allowed."'
 
 describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
   let server: PikkuNodeHTTPServer | undefined
@@ -674,10 +673,10 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     )
 
     const response = await getMcp(origin)
-    // A GET to /mcp without an `accept` header is handled by the MCP server,
-    // which refuses it as not acceptable — proving the request was routed to
-    // the mounted handler rather than the normal pikku pipeline.
-    assert.equal(response.status, 406)
+    // A GET to /mcp is handled by the MCP server, which refuses the method —
+    // proving the request was routed to the mounted handler rather than the
+    // normal pikku pipeline.
+    assert.equal(response.status, 405)
     assert.equal((await response.text()).includes(MCP_HANDLER_MARKER), true)
     assert.ok(
       infos.some((msg) => msg.includes('MCP mounted at /mcp')),
@@ -695,7 +694,7 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     const mounted = await fetch(`${origin}/api/mcp`, {
       headers: { connection: 'close' },
     })
-    assert.equal(mounted.status, 406)
+    assert.equal(mounted.status, 405)
     assert.equal((await mounted.text()).includes(MCP_HANDLER_MARKER), true)
     assert.ok(
       infos.some((msg) => msg.includes('MCP mounted at /api/mcp')),
@@ -710,6 +709,115 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
       false,
       'the default /mcp path must not be served when a custom path is set'
     )
+  })
+
+  test('a surface is mounted beside the default endpoint', async () => {
+    const { logger, infos } = createCapturingLogger()
+    const origin = await startServer(
+      {
+        mcpJson: { tools: [{ name: 'echo' }] },
+        mcpSurfaces: [
+          {
+            mcpJson: { tools: [{ name: 'ext:goodbye' }] },
+            mcpPath: '/mcp/ext',
+          },
+        ],
+      },
+      logger
+    )
+
+    for (const path of ['/mcp', '/mcp/ext']) {
+      const response = await fetch(`${origin}${path}`, {
+        headers: { connection: 'close' },
+      })
+      assert.equal(response.status, 405, `${path} should reach an MCP server`)
+      assert.equal((await response.text()).includes(MCP_HANDLER_MARKER), true)
+    }
+
+    assert.ok(infos.some((msg) => msg.includes('MCP mounted at /mcp')))
+    assert.ok(infos.some((msg) => msg.includes('MCP mounted at /mcp/ext')))
+  })
+
+  test('a surface nested under another endpoint is not swallowed by it', async () => {
+    // `/mcp` claims everything under `/mcp/`, so without ordering by path the
+    // default endpoint answers `/mcp/ext` and the surface's tools are
+    // unreachable — the connector deploys and lists the wrong tools.
+    const origin = await startServer({
+      mcpJson: { tools: [{ name: 'echo' }] },
+      mcpSurfaces: [
+        { mcpJson: { tools: [{ name: 'ext:goodbye' }] }, mcpPath: '/mcp/ext' },
+      ],
+    })
+
+    const listTools = async (path: string) => {
+      const response = await fetch(`${origin}${path}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+          connection: 'close',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/list',
+          params: {},
+        }),
+      })
+      return await response.text()
+    }
+
+    const surface = await listTools('/mcp/ext')
+    assert.ok(
+      surface.includes('ext:goodbye'),
+      `/mcp/ext must list its own tool, got: ${surface.slice(0, 300)}`
+    )
+    assert.equal(
+      surface.includes('"echo"'),
+      false,
+      "/mcp/ext must not list the default endpoint's tools"
+    )
+  })
+
+  test('the path-less discovery document describes the default endpoint', async () => {
+    // Every endpoint claims the bare well-known route, so without deciding it
+    // explicitly the answer turns on mount order and a client probing it is
+    // told about whichever surface happened to sort first.
+    const origin = await startServer({
+      mcpJson: { tools: [{ name: 'echo' }] },
+      mcpSurfaces: [
+        { mcpJson: { tools: [{ name: 'ext:goodbye' }] }, mcpPath: '/mcp/ext' },
+      ],
+    })
+
+    const response = await fetch(
+      `${origin}/.well-known/oauth-protected-resource`,
+      { headers: { connection: 'close' } }
+    )
+    assert.equal(response.status, 200)
+    const { resource } = (await response.json()) as { resource: string }
+    assert.equal(
+      new URL(resource).pathname,
+      '/mcp',
+      'the path-less document must describe the default endpoint, not a surface'
+    )
+  })
+
+  test('a surface serves its own path-aware discovery document', async () => {
+    const origin = await startServer({
+      mcpJson: { tools: [{ name: 'echo' }] },
+      mcpSurfaces: [
+        { mcpJson: { tools: [{ name: 'ext:goodbye' }] }, mcpPath: '/mcp/ext' },
+      ],
+    })
+
+    const response = await fetch(
+      `${origin}/.well-known/oauth-protected-resource/mcp/ext`,
+      { headers: { connection: 'close' } }
+    )
+    assert.equal(response.status, 200)
+    const { resource } = (await response.json()) as { resource: string }
+    assert.equal(new URL(resource).pathname, '/mcp/ext')
   })
 
   test('does not route /mcp-prefixed paths to the MCP handler', async () => {

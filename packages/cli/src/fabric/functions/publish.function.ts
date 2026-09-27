@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { resolveApiContext } from '../lib/config.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricPublishInput = z.object({
   dir: z.string().optional(),
@@ -36,25 +37,31 @@ export const FabricPublish = pikkuSessionlessFunc({
     const verification = await rpc.invoke('FabricAddonVerify', { dir })
     await cli?.channel.send(verification)
     if (!verification.ok) {
-      throw new Error(
+      throw new FabricPreconditionError(
         'Addon verification failed — fix the errors above before publishing.'
       )
     }
 
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
 
     const packageDir = dir ?? process.cwd()
     const pkgPath = join(packageDir, 'package.json')
     if (!existsSync(pkgPath))
-      throw new Error(`No package.json found in ${packageDir}`)
+      throw new FabricPreconditionError(
+        `No package.json found in ${packageDir}`
+      )
     const pkg = JSON.parse(await readFile(pkgPath, 'utf8')) as {
       name?: string
       version?: string
     }
     if (!pkg.name || !pkg.version)
-      throw new Error('package.json must have a name and version')
+      throw new FabricPreconditionError(
+        'package.json must have a name and version'
+      )
 
     // Pack via `npm pack` so the artifact honours the package's `files` field
     // (ship src/.pikku/types, not build/VCS noise) and matches the layout a
@@ -81,7 +88,9 @@ export const FabricPublish = pikkuSessionlessFunc({
         body: JSON.stringify(body),
       })
       if (!r.ok)
-        throw new Error(`POST ${path} → ${r.status}: ${await r.text()}`)
+        throw new FabricPreconditionError(
+          `POST ${path} → ${r.status}: ${await r.text()}`
+        )
       return r.json() as Promise<any>
     }
 
@@ -95,7 +104,9 @@ export const FabricPublish = pikkuSessionlessFunc({
     //    is signed over host only; mismatched headers break the signature).
     const put = await fetch(uploadUrl, { method: 'PUT', body: artifact })
     if (!put.ok)
-      throw new Error(`upload failed → ${put.status}: ${await put.text()}`)
+      throw new FabricPreconditionError(
+        `upload failed → ${put.status}: ${await put.text()}`
+      )
 
     // 3. finalize — server reads the artifact back, extracts meta, indexes it
     const entry = await post('/registry/addons/publish', { artifactKey })

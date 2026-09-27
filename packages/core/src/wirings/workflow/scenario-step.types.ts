@@ -183,11 +183,37 @@ export interface TestIdSelector {
  * interface via `declare module`, so `wire.browser.page` is a fully typed
  * Playwright `Page` in a project that installs it.
  */
+/** How one deliberate screenshot is taken, and what it is for. */
+export interface ScenarioScreenshotOptions {
+  /**
+   * Publish this one outside the run — a marketing card, a docs page, a
+   * gallery. Declared at the call site because only the author of the step
+   * knows the page is at a moment worth showing a stranger.
+   */
+  showcase?: boolean
+  /** Photograph the whole scrollable page rather than the viewport. */
+  fullPage?: boolean
+}
+
+/**
+ * One actor's browser session, handed to a step as `wire.browser`.
+ *
+ * Every actor gets their own, so a two-actor scenario drives two sessions and
+ * `screenshot` files each shot under the actor it belongs to.
+ *
+ * Only what every driver can honour is declared here. A driver package adds
+ * the rest by declaration-merging onto this interface — `@pikku/playwright`
+ * contributes `page`, `context` and `locate` — so a step written against the
+ * structural surface keeps working whichever driver runs it.
+ */
 export interface PikkuBrowserWire {
   /** The actor whose browser context this is */
   readonly actor: string
   goto(url: string): Promise<void>
-  screenshot(name?: string): Promise<Uint8Array>
+  screenshot(
+    name?: string,
+    options?: ScenarioScreenshotOptions
+  ): Promise<Uint8Array>
 }
 
 /**
@@ -243,6 +269,24 @@ export interface ScenarioBrowserProvider {
    * scenario's reset, long after the outcome that decides whether to keep them.
    */
   endScenario?(outcome: 'passed' | 'failed'): void
+  /**
+   * When this actor's recording started, as epoch milliseconds.
+   *
+   * The seam that keeps the video clock out of `@pikku/core`: a driver knows
+   * when it opened the context it passed `recordVideo` to, and the runner turns
+   * that into a per-step offset. Absent for an actor with no window open, and
+   * for a run recording nothing — both of which leave the step's offset off.
+   */
+  videoStartedAt?(actorName: string): number | undefined
+  /**
+   * Mark a browser step starting in this actor's recording, answering where it
+   * falls in the finished video (ms).
+   *
+   * Preferred over `videoStartedAt` when present: a driver that edits its
+   * footage afterwards — holding each step's screen still, say — is the only
+   * one that knows how far that moves the step. Undefined when nothing records.
+   */
+  markVideoStep?(actorName: string): number | undefined
   /**
    * Snapshot every open window for a failed scenario. `label` identifies the
    * scenario in artifact filenames. Never throws: a failure to capture must

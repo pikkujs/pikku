@@ -149,7 +149,17 @@ than they save:
   keystroke now and a rewrite later.
 - Never hardcode a host or port — the API base resolves to same-origin `/api`.
 
-Then run it:
+Before the first run, make sure `.env` holds both local secrets — `bun run dev`
+appends missing ones, but an older scaffold or a copied `.env` may not have them:
+
+```sh
+grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+grep -q '^SCENARIO_ACTOR_SECRET=' .env 2>/dev/null || echo "SCENARIO_ACTOR_SECRET=$(openssl rand -base64 32)" >> .env
+```
+
+Never commit `.env`. Then run it — through `bun run dev`, never `vite` on its
+own, because the dev script is what hands the frontend the persona list for the
+"Sign in as …" switcher; without it the switcher silently renders nothing:
 
 ```sh
 bun run prebuild && bun run dev
@@ -200,8 +210,7 @@ export const ownerCreatesAndSeesItScenario = pikkuScenario<void, { id: string }>
   `pikkuScenarioStep`.** An RPC name in a `then` will not resolve.
 - **Every scenario must assert.** A ladder with no `then` is a PKU680 critical —
   it fails `pikku all`, stopping codegen rather than a test.
-- **Add `SCENARIO_ACTOR_SECRET` to `.env`.** `bun run dev` writes that file with
-  only a `BETTER_AUTH_SECRET`; without the actor secret
+- **`SCENARIO_ACTOR_SECRET` must be in `.env`** (above). Without it
   `/api/auth/sign-in/actor` is disabled and every scenario fails at sign-in, for
   a reason that reads like an auth bug.
 - **There is no state reset** — scope what you create to unique ids.

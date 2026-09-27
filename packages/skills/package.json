@@ -1,6 +1,6 @@
 {
   "name": "@pikku/skills",
-  "version": "0.12.33",
+  "version": "0.12.37",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -14,7 +14,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "embed": "node scripts/embed.mjs",
+    "embed": "bun run scripts/embed.ts",
     "tsc": "bun run embed && tsc",
     "build": "bun run embed && tsc -b",
     "ncu": "npx npm-check-updates",

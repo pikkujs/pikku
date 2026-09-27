@@ -11,13 +11,24 @@ interface MCPEndpoint {
   streaming?: boolean
 }
 
+/**
+ * Serializes one MCP endpoint's manifest.
+ *
+ * A project can serve several endpoints, and a wiring belongs to exactly one of
+ * them: the one named by its `surface`. Passing no surface serializes the
+ * default endpoint, which is every wiring that named none — so a project with
+ * no surfaces at all gets the single manifest it always got.
+ */
 export const serializeMCPJson = (
   logger: InspectorLogger,
-  state: InspectorState
+  state: InspectorState,
+  surface?: string
 ): string => {
   const { mcpEndpoints, functions, schemas } = state
   const { typesMap } = functions
   const { resourcesMeta, toolsMeta, promptsMeta } = mcpEndpoints
+  const onThisSurface = (meta: { surface?: string }) =>
+    (meta.surface ?? undefined) === surface
 
   const tools: MCPEndpoint[] = []
   const resources: MCPEndpoint[] = []
@@ -61,6 +72,7 @@ export const serializeMCPJson = (
   }
 
   for (const [name, endpointMeta] of Object.entries(resourcesMeta)) {
+    if (!onThisSurface(endpointMeta)) continue
     const functionMeta = resolveFunctionMeta(state, endpointMeta.pikkuFuncId)
     if (!functionMeta) {
       logger.warn(
@@ -86,6 +98,7 @@ export const serializeMCPJson = (
   }
 
   for (const [name, endpointMeta] of Object.entries(toolsMeta)) {
+    if (!onThisSurface(endpointMeta)) continue
     const functionMeta = resolveFunctionMeta(state, endpointMeta.pikkuFuncId)
     if (!functionMeta) {
       logger.warn(
@@ -110,6 +123,7 @@ export const serializeMCPJson = (
   }
 
   for (const [name, endpointMeta] of Object.entries(promptsMeta)) {
+    if (!onThisSurface(endpointMeta)) continue
     const functionMeta = resolveFunctionMeta(state, endpointMeta.pikkuFuncId)
     if (!functionMeta) {
       logger.warn(
@@ -146,5 +160,14 @@ export const serializeMCPJson = (
     })
   }
 
-  return JSON.stringify({ tools, resources, prompts }, null, 2)
+  // The path only travels in a surface's own manifest: the default endpoint
+  // stays at whatever the runtime mounts, which is what every existing project
+  // already relies on.
+  const mcpPath = surface ? mcpEndpoints.surfaces?.[surface] : undefined
+
+  return JSON.stringify(
+    { ...(mcpPath ? { mcpPath } : {}), tools, resources, prompts },
+    null,
+    2
+  )
 }

@@ -52,6 +52,7 @@ export type {
   UpstreamIdentity,
 } from './delegated-auth-plugin.js'
 export { betterAuthStatelessSession } from './auth-session-stateless.js'
+export { STATELESS_COOKIE_CACHE_MAX_AGE } from './stateless-cookie-default.js'
 export type { BetterAuthStatelessSessionOptions } from './auth-session-stateless.js'
 export { betterAuthStoreSession } from './auth-session-store.js'
 export type {

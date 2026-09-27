@@ -1,4 +1,5 @@
 import { pikkuState } from '../../pikku-state.js'
+import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 export type WireAddonConfig = {
@@ -10,8 +11,35 @@ export type WireAddonConfig = {
   rpcEndpoint?: string
   /** Requires a session for every function in the addon, whatever each one declares. Gates an addon whose functions are individually open. */
   auth?: boolean
-  /** Offers the addon's functions to MCP clients as tools, without wiring each one. */
-  mcp?: boolean
+  /**
+   * Offers the addon's functions to MCP clients as tools, without wiring each
+   * one. `true` offers every function the addon itself declared `mcp: true`; a
+   * list names the functions to offer, whether or not the addon declared them,
+   * and is typed against the addon's function names.
+   */
+  mcp?: boolean | string[]
+  /**
+   * Which of the addon's functions `rpc.exposed` may call, under
+   * `<name>:<function>`. Unset or `true` keeps the functions the addon itself
+   * declared `expose: true`; `false` exposes none of them; a list names exactly
+   * the functions to expose, whether or not the addon declared them, and is
+   * typed against the addon's function names.
+   *
+   * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
+   */
+  expose?: boolean | string[]
+  /**
+   * Serves this addon's MCP tools on an endpoint of their own rather than
+   * folding them into the project's single `/mcp`. `true` mounts them at
+   * `/mcp/<name>`; a string is the path, used as given.
+   *
+   * This is what lets one project expose several connectors: each wired
+   * instance becomes its own MCP server, with its own tool list, so a client
+   * pointed at one never sees another's tools. Leaving it unset keeps the
+   * addon's tools on the shared endpoint, which is where they have always
+   * been.
+   */
+  mcpEndpoint?: boolean | string
   /** Filters this addon in and out of a build — see the `tags` option on `pikku all`. It has no effect at runtime. */
   tags?: string[]
   /** Required of every function in the addon, on top of the function's own. */
@@ -20,8 +48,12 @@ export type WireAddonConfig = {
   secretOverrides?: Record<string, string>
   /** Points a variable the addon reads at a different key in this deployment. */
   variableOverrides?: Record<string, string>
-  /** Points a credential the addon reads at a different key in this deployment. */
-  credentialOverrides?: Record<string, string>
+  /**
+   * Points a credential the addon reads at a different key in this deployment,
+   * and — in the object form — decides whether it is per-user or
+   * deployment-wide. An addon declares a default; the wiring decides.
+   */
+  credentialOverrides?: CredentialOverrides
   /** Extra secrets this instance may read, named as the addon reads them — the scope check runs before `secretOverrides` renames them. */
   secretGrants?: string[]
   /** Credentials this instance may read on top of the ones it declared. */
@@ -48,6 +80,7 @@ export const wireAddon = (config: WireAddonConfig): void => {
     rpcEndpoint: config.rpcEndpoint,
     auth: config.auth,
     tags: config.tags,
+    ...(config.expose !== undefined ? { expose: config.expose } : {}),
     ...(config.scopes ? { scopes: config.scopes } : {}),
     ...(config.secretOverrides
       ? { secretOverrides: config.secretOverrides }
@@ -67,6 +100,27 @@ export const wireAddon = (config: WireAddonConfig): void => {
       ? { globalCredentials: config.globalCredentials }
       : {}),
   })
+}
+
+/**
+ * Whether `rpc.exposed` may reach an addon function through the instance that
+ * resolved it. The wiring's `expose` decides when it is `false` or a list;
+ * otherwise the addon's own `expose: true` does.
+ *
+ * knowledge: decisions/security/wire-addon-expose-selects-the-rpc-surface.md
+ */
+export const isAddonFunctionExposed = (
+  expose: boolean | string[] | undefined,
+  functionName: string,
+  declaredExpose: boolean | undefined
+): boolean => {
+  if (Array.isArray(expose)) {
+    return expose.includes(functionName)
+  }
+  if (expose === false) {
+    return false
+  }
+  return declaredExpose === true
 }
 
 /**

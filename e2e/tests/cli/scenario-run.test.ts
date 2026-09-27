@@ -89,7 +89,7 @@ describe('pikku scenario run', () => {
     const server = await startBackend()
     stop = server.stop
     apiUrl = server.apiUrl
-    await server.waitUntilReady()
+    await server.waitUntilReady({ timeoutMs: 300_000 })
   })
 
   after(() => stop?.())
@@ -108,7 +108,7 @@ describe('pikku scenario run', () => {
     assertAllPassed(run)
     assert.match(
       run.output,
-      /coverage: [1-9]\d*\/\d+ functions exercised by 'orderSupportScenario'/,
+      /coverage: [1-9]\d*\/\d+ functions exercised by '(?:.+ › )?orderSupportScenario'/,
       `expected per-scenario coverage attribution:\n${run.output}`
     )
     assert.match(

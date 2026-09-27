@@ -56,6 +56,21 @@ const LOCAL_HOSTNAMES = new Set([
 ])
 
 /**
+ * Whether a resolved URL names a server on this machine.
+ *
+ * The gate for anything the runner does to a target directly rather than
+ * through its API — reaching into its database, for one. A remote host is
+ * somebody else's data whatever the config asked for.
+ */
+export const isLocalUrl = (value: string): boolean => {
+  try {
+    return LOCAL_HOSTNAMES.has(new URL(value).hostname)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Absolute URLs only: the value is concatenated with paths (`${apiUrl}/rpc`)
  * and parsed by the spawn path, so a relative one fails far from its cause.
  */

@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
+import { FabricPreconditionError } from './errors.js'
 
 const DEFAULT_API_URL = 'https://api.pikkufabric.com'
 
@@ -99,7 +100,7 @@ export async function writeProjectConfig(
     try {
       raw = await readFile(path, 'utf8')
     } catch (error: any) {
-      throw new Error(
+      throw new FabricPreconditionError(
         `Cannot read ${projectConfigName} at ${path} (${error.message}) — refusing to overwrite it`
       )
     }
@@ -161,9 +162,9 @@ export interface ResolvedApiContext {
  * Token comes from ~/.fabric/auth.json keyed by the resolved api-url.
  */
 export async function resolveApiContext(
-  opts: { apiUrlOverride?: string } = {}
+  opts: { apiUrlOverride?: string; startDir?: string } = {}
 ): Promise<ResolvedApiContext> {
-  const projectFile = await findProjectConfig()
+  const projectFile = await findProjectConfig(opts.startDir)
   const apiUrl =
     opts.apiUrlOverride ??
     projectFile?.config.apiUrl ??

@@ -135,6 +135,21 @@ describe('buildFeaturesMeta', () => {
     assert.equal('path' in meta.authFeature!, false)
   })
 
+  test('carries an opt-out through, and says nothing when there is none', () => {
+    const meta = buildFeaturesMeta(
+      new Map([
+        [
+          'wireFeature',
+          feature({ exportedName: 'wireFeature', document: false }),
+        ],
+        ['authFeature', feature({ exportedName: 'authFeature' })],
+      ])
+    )
+
+    assert.equal(meta.wireFeature!.document, false)
+    assert.equal('document' in meta.authFeature!, false)
+  })
+
   test('a project with no features produces an empty record', () => {
     assert.deepEqual(buildFeaturesMeta(new Map()), {})
   })

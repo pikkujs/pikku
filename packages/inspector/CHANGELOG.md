@@ -1,3 +1,200 @@
+## 0.12.87
+
+### Patch Changes
+
+- a95179a: An AI agent's `providerOptions` now reaches the generated metadata.
+
+  The inspector read `model`, `temperature`, `maxSteps` and `toolChoice` off an agent declaration but never `providerOptions`, so `agentsMeta` always showed an agent with no provider configuration — even though the type says it carries one. Runs were unaffected, since the runner takes the value from the live agent object, which is exactly why the gap went unnoticed by everything except what reads the compiled meta: the console's agent view and `infra.json`.
+
+  The value is read as an object literal of strings, numbers, booleans, arrays and nested objects, all-or-nothing. A computed one is reported as `PKU156` rather than silently dropped.
+
+- 145b32b: Generated type aliases are deterministic
+
+  A type name that collided across files got a `Math.random()` suffix, so every
+  `pikku all` emitted different names into `pikku-agent-map.gen.d.ts` and
+  `pikku-workflow-map.gen.d.ts`. Those files sit in the schema generator's
+  dependency closure, so rewriting them invalidated the schema cache partway
+  through the same run and forced a full `ts-json-schema-generator` pass each
+  time. The suffix now comes from the declaring file's path.
+
+- 42b7ac3: The app decides which of an addon's functions `rpc.exposed` reaches
+
+  `wireAddon` takes `expose?: boolean | string[]`, mirroring `mcp`. Unset or
+  `true` keeps the functions the addon declared `expose: true`; `false` exposes
+  none of the instance's functions; a list names exactly the functions to expose,
+  whether or not the addon declared them, typed against the addon's function
+  names. A listed name the addon does not publish fails the build with PKU343, a value that is not written inline fails it with
+  PKU344,
+  and the deploy analyzer's per-addon unit carries only what the wiring exposes.
+
+- Updated dependencies [4a9dcd2]
+- Updated dependencies [5ab24ad]
+- Updated dependencies [42b7ac3]
+  - @pikku/core@0.12.120
+
+## 0.12.86
+
+### Patch Changes
+
+- f05fb4e: A scenario that belongs to no feature is now reported.
+
+  Features are what the guide is written against: prose cites a feature, and the compiler fills that citation with the evidence from the scenarios the feature owns. A scenario nobody listed is therefore invisible — it runs, it captures screenshots and recordings, and none of it ever reaches a page. That failure is silent today, and it is the single reason two real projects have hundreds of captures bound to nothing.
+
+  The inspector now walks every feature's scenario list, and any scenario not claimed by one is reported as `PKU682`. It is an error rather than a critical, so `pikku all` keeps passing by default and the list is there to work through; `--fail-on-error` makes it a wall once a project has caught up.
+
+  Membership reads the scenario each entry names, not the entry itself. A `data` the AST cannot evaluate — `'a'.repeat(64)`, a call, anything computed — leaves the entry partial for the console but says nothing about who owns the scenario, and the check no longer treats the two as the same thing.
+
+  An entry that names no scenario at all — a spread, a `.map()` — does leave membership unknown. That only matters once something is already unowned, so the check reports it then, as a warn naming both the unowned scenarios and the features that could be hiding them, rather than accusing a scenario that may well be in one of those arrays.
+
+- b4a895e: `pikku scenario guide` writes the user guide a scenario suite already contains. A feature reads as a page and a scenario as a section, and a run leaves screenshots behind with the captions their author took them under — the command joins that to the editorial prose a project checks in under `docs/` and writes markdown. It renders no HTML, ships no components, resolves no asset URLs and calls no model: an image is an ordinary relative `![caption](path)`, and whoever consumes the markdown rewrites the paths.
+
+  A page cites a feature by leaving the marker pair where the block belongs:
+
+  ```markdown
+  ---
+  title: Deployments
+  ---
+
+  A deployment is one tracked shipment of your app.
+
+  <!-- pikku:guide feature=deploymentsFeature -->
+  <!-- /pikku:guide -->
+
+  ## Does my app go down during a deploy?
+  ```
+
+  That one line does both halves of the job. It says _where_ the block goes, which a frontmatter list cannot express, and it is what the coverage gate counts to decide _whether_ a feature is documented at all. The mapping stays many-to-many and falls out of the union of every marker in the tree. A rebuild rewrites exactly the regions between the markers, so every sentence a human wrote around them survives.
+
+  **The steps are evidence, not content.** A generated block is the scenario's title, the description its author wrote, and the shots it filed — never a numbered Given/When/Then ladder, which is a test report and not something anybody arrives at a documentation page wanting. The sentences are still what the guide is kept honest against: `docs/.guide.lock` records a hash of each feature's step sentences and artifact ids, deliberately not of the image bytes. Restyling a UI changes every screenshot and no sentence; inserting or renaming a step changes what the prose was describing, and the page is reported stale. The lock is generated and checked in, so no hash is ever typed or merged by hand — and a tree whose lock is untracked reports every page as current forever.
+
+  Every registered feature has to be cited by some page, and a feature that is pure plumbing says so rather than being written about — `pikkuFeature({ document: false })`, threaded through the inspector and `FeatureMeta`. An uncited feature fails the command by name; `--allow-undocumented` downgrades that one failure to a report. A page citing a feature id that is not registered stays an error either way.
+
+  A guide is only written out of a run that can stand behind it. A run that failed or was killed halfway is refused, because a page is a claim that the product does what it says. So is a narrowed one: `pikku scenario run --flows`/`--features`/`--tags` leaves out scenarios the suite has, and a guide built from it would describe those flows as though they do not exist. `ScenarioRunRecord.selection` records the filters a run was selected with, since nothing in the results afterwards can tell a suite of forty from forty that were asked for.
+
+  Results are joined to features by `featureId`, falling back to the display name only for records written before that field existed — a title is rewritten freely and two features may share one.
+
+  Emission is deterministic — identical inputs give byte-identical output, and no timestamp goes in that did not come from the run record. Frontmatter the compiler does not own (`slug`, `draft`, `sidebar_position`, anything else a docs site reads) passes through untouched, and a source written with CRLF line endings is read as having frontmatter.
+
+- Updated dependencies [b4a895e]
+- Updated dependencies [b4a895e]
+  - @pikku/core@0.12.118
+
+## 0.12.85
+
+### Patch Changes
+
+- b312867: A project can now serve several MCP endpoints, one per connector.
+
+  Until now every MCP tool in a project was pooled onto a single `/mcp`, so a hub offering three connectors offered one endpoint listing all three connectors' tools at once. A client pointed at it saw tools it had no business calling, and the only way to give a connector an endpoint of its own was to give it a deployment of its own — three deploys, three bills, three service graphs.
+
+  `wireAddon` gains `mcpEndpoint`. `true` serves that instance's tools at `/mcp/<name>`; a string is the path, used as given. Leaving it unset keeps the tools on the shared endpoint, which is where they have always been, so nothing existing moves.
+
+  A surfaced instance now gets its own manifest (`.pikku/mcp/mcp.<name>.gen.json`, carrying the path it answers on), its own deploy unit (`mcp-<name>`, routed on that path), and its own MCP server — with its own tool list, so a client pointed at one endpoint never sees another's tools. The plumbing for the per-surface manifest and unit already existed in `deploy apply`; nothing had ever produced one.
+
+  `pikku dev` mounts every endpoint the generated tree describes, not just the default one. Without that a project that moved its tools onto their own endpoints would have served nothing locally at all — the default manifest it reads is empty precisely because they moved — and the only way to try a connector would have been to deploy it.
+
+  The node and bun transports take `mcpSurfaces` alongside `mcpJson` and mount each at its own path, longest path first. `/mcp` claims everything beneath `/mcp/`, so without that ordering the default endpoint answers `/mcp/weather` and the surface's tools are unreachable.
+
+  OAuth discovery is split between the endpoints rather than duplicated across them. RFC 9728 folds a resource's path into its well-known route, so each endpoint's own document is already distinct, but the path-less `/.well-known/oauth-protected-resource` predates that and describes whichever resource answers it. Only the default endpoint claims it — otherwise every unit registers the same route and the provider's router decides which resource a client is told about, and in dev a client probing it is described whichever surface sorted first.
+
+- Updated dependencies [87971bd]
+- Updated dependencies [b312867]
+- Updated dependencies [51bd35a]
+  - @pikku/core@0.12.116
+
+## 0.12.84
+
+### Patch Changes
+
+- 238902c: A channel's `auth` flag now reaches its meta. The inspector already read it to mark the connect and disconnect functions sessionless, then dropped it, so nothing downstream could tell a public channel from a private one without reading the generated source.
+
+  That matters in front of the channel rather than inside it. A `wireCLI({ auth: false })` program is reachable by anyone holding its address; a router or deploy that cannot see the flag either guesses or demands a token in front of a surface it was never protecting, locking out the clients the program was opened for.
+
+  The flag is only recorded when the channel actually said. A channel that never mentioned `auth` leaves it absent rather than claiming a default it did not declare, which the runtime continues to read as requiring a session.
+
+- Updated dependencies [238902c]
+- Updated dependencies [2fd2b22]
+  - @pikku/core@0.12.115
+
+## 0.12.83
+
+### Patch Changes
+
+- 6db6a14: A wiring can now decide whether an addon's credential is per-user or deployment-wide
+
+  `wireAddon`'s `credentialOverrides` takes an object as well as a rename string:
+
+  ```ts
+  wireAddon({
+    name: 'gmail',
+    package: '@pikku/addon-gmail',
+    credentialOverrides: {
+      gmailOAuth: { mode: 'wire' }, // each user connects their own
+      calendarOAuth: { name: 'CAL', mode: 'singleton' },
+    },
+  })
+  ```
+
+  An addon author declares a default with `defineCredential`; the deployment decides, so one addon serves both a per-user product and a single team account.
+
+  The wire credential service now resolves each credential by what it _is_ rather than by what a lookup returned: `wire` reads only the user's value, `singleton` reads the deployment's. A per-user credential can no longer pick up a platform-level value because the user has not connected — which, before, would have quietly run someone's request against the deployment's own account.
+
+  A credential is never read from the secret vault. The wire credential service no longer takes a `SecretService` at all, so the only way a credential arrives is the one its mode names — the user's own value, or the deployment's.
+
+  Modes are resolved at generation time into the credentials meta, so the console's connect flow reflects the wiring rather than the addon's default.
+
+  Two credentials that resolve to one name are rejected unless they agree on the mode. Generation writes a single metadata entry per name, so a `wire` credential aliased onto a `singleton` one used to take whichever wiring was read last — a per-user credential served from the deployment's own account, or a deployment credential handed out per user. The inspector reports the collision against both wirings by name, and `buildCredentialResolutions` refuses it at runtime too.
+
+  A mode-only override is checked against the credential it names. `{ mode: 'wire' }` renames nothing, so nothing was validated: an override naming a credential that does not exist was dropped in silence and the credential kept the mode its author declared.
+
+  A credential the wiring resolves as `singleton` is no longer read out of the user's own store. Per-user values are imported first and a name already present is left alone, so a value stored under a singleton's name — from an earlier wiring, or a connect flow since rewired — decided what the deployment's own slot resolved to. It is now skipped by mode, the same way a `wire` credential is kept away from the deployment's value.
+
+  The project's own credentials are registered into pikku state from the generated credentials file, so `wire.getCredential` resolves an app-level singleton the same way it resolves an addon's.
+
+  `pikku new addon` no longer requires a `pikku.config.json` in the working directory. Scaffolding an addon is something you do before a project config exists, so the command now reads one when it is there and falls back to the working directory when it is not.
+
+  An addon's `pikkuAddonWireServices` factory now declares the same service contract its singleton factory does: what it destructures off the parent's bag is required, and what it returns is built by the addon. Before, a service an addon built per wire was demanded from the consumer, and a wire-only addon declared no contract at all. A nested callback that names its own parameter after the factory's is no longer read as the factory's own: what it destructured went onto the addon's contract, so a consumer was asked for a service the addon never wanted from them.
+
+  An OAuth2 credential now implies its app secret, so nobody hand-writes one. The client id and secret an OAuth app needs is the same shape every time — `OAuth2AppCredential`, which is what the runtime already reads it as — so the inspector registers a secret for each credential's `appCredentialSecretId`. A hand-written `defineSecret` covering that id still wins, so an author who wants their own description or `docsUrl` keeps it. The derived secret is optional, matching what every hand-written declaration chose: an addon that also authenticates by API key must still deploy without an OAuth app configured.
+
+  `optional` now means a secret is not reported as missing. `getMissing()` filtered on "not configured" alone, so a secret whose declaration said absence was supported still showed up on the list of things a deployment had to go and supply — burying the ones that genuinely were. `getAllStatus()` still reports it, flagged `optional`.
+
+  An OAuth2 secret carries its declaration's `optional` through code generation, to the app credential and to the token store alike: nobody connects without the client id and secret, so a deployment allowed to omit the app is never asked for its tokens either. That branch never looked at the flag before.
+
+  `credentialOAuthProviders` treats an app secret that resolves `undefined` as unconfigured. An optional secret resolves rather than throws, so the absence arrived past the `catch` that was meant to skip the provider — and `.reveal()` on it threw a `TypeError` that took every `getSession` down with it, which is the exact failure that code exists to prevent.
+
+- Updated dependencies [cb8f57e]
+- Updated dependencies [cb8f57e]
+- Updated dependencies [6db6a14]
+  - @pikku/core@0.12.114
+
+## 0.12.82
+
+### Patch Changes
+
+- c842054: Middleware instance ids are now allocated per group across the whole inspection, not per source file, and a build that would drop a global middleware registration fails instead of shipping.
+
+  The per-group index restarted at 0 for every file, so the second file to register against a group minted ids the first already owned and overwrote its entries in `middleware.instances` — `instanceIds` listed one key twice while `count` correctly said two. For `addGlobalMiddleware` that was not cosmetic. Global middleware belongs to no wire group, so the instance map is the only record that its module must be imported, and per-unit deploy codegen emits its side-effect imports from that map. An app file registering a global middleware was erased by the generated auth scaffold registering its own, the app's module was never imported, its registration never ran — and because auth commonly lives in global middleware, a deployed unit answered every authenticated route with a 401 against a clean build log.
+
+  The inspector now also records each `addGlobalMiddleware` file in `middleware.globalFiles`, a plain set that no key collision can corrupt; codegen emits the side-effect imports from it, generates the middleware file when global middleware is a project's only middleware, and asserts against the text it emitted that every such file is imported — naming the files if not, rather than letting the unit deploy without its auth gate.
+
+- dfd7019: Resolve the MCP server instance per log message, and restore the wireAddon
+  declaration's source file.
+- 1469e73: The app names which of an addon's functions reach MCP
+
+  `wireAddon`'s `mcp` takes a list as well as `true`. `true` still offers every
+  function the addon declared `mcp: true`; a list names the tools this deployment
+  offers, whether or not the addon declared them, and is typed against the
+  function names that addon publishes — a typo is a compile error rather than a
+  tool silently missing from the menu.
+
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [9b978e7]
+- Updated dependencies [1469e73]
+  - @pikku/core@0.12.113
+
 ## 0.12.81
 
 ### Patch Changes

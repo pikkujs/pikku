@@ -1,9 +1,12 @@
 import React from 'react'
 import { FeatureNavigator } from './FeatureNavigator'
 import type { ScenariosBrowse } from '../../hooks/useScenariosBrowse'
+import type { ScenarioRunLens } from './scenario-run-lens'
 
 export interface ScenariosBrowseRailProps {
   browse: ScenariosBrowse
+  /** The run the rail's result bars report on; omitted reads as written. */
+  lens?: ScenarioRunLens
 }
 
 /**
@@ -14,10 +17,12 @@ export interface ScenariosBrowseRailProps {
  */
 export const ScenariosBrowseRail: React.FC<ScenariosBrowseRailProps> = ({
   browse,
+  lens,
 }) => (
   <FeatureNavigator
     features={browse.features}
-    selectedId={browse.selected?.id}
+    selectedId={browse.selectedId}
+    lens={lens}
     onSelect={browse.setSelectedId}
   />
 )

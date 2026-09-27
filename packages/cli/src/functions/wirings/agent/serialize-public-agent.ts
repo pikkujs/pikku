@@ -212,6 +212,7 @@ export const agentRoutes = defineHTTPRoutes({
       route: '${globalHTTPPrefix}/rpc/agent/:agentName/stream',
       method: 'post',
       sse: true,
+      streamProtocol: 'agui',
       func: agentStreamCaller,
     },
     agentApprove: {
@@ -223,6 +224,7 @@ export const agentRoutes = defineHTTPRoutes({
       route: '${globalHTTPPrefix}/rpc/agent/:agentName/resume',
       method: 'post',
       sse: true,
+      streamProtocol: 'agui',
       func: agentResumeCaller,
     },
   },

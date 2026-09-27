@@ -16,12 +16,12 @@ installGroups: [core]
 
 Use this skill as an execution checklist, not reference material.
 
-1. Capture baseline. Run `pikku-verify` (or `pikku all`) BEFORE writing code; note existing errors — only NEW errors are yours to fix.
-2. Discover before editing. Prefer `pikku-meta` / `pikku info functions --verbose` and `pikku info tags --verbose` to see functions usable as steps and project organization; inspect only the focused output you need.
+1. Capture baseline. Run `pikku all` BEFORE writing code; note existing errors — only NEW errors are yours to fix.
+2. Discover before editing. Prefer `pikku meta` / `pikku info functions --verbose` and `pikku info tags --verbose` to see functions usable as steps and project organization; inspect only the focused output you need.
 3. Identify the source files that own the behavior. Do not start from generated output, `.pikku`, `node_modules`, vendored packages, or build artifacts.
 4. Make the smallest source change. Keep generated files generated — never hand-edit SDKs, schema output, or typegen to paper over errors; fix the source cause.
-5. Validate with the narrowest relevant command, then re-run `pikku-verify`. If only files you did not touch still error, those are pre-existing — leave them unless asked.
-6. Call `pikku-workflow-view` only when `pikku-verify` fully passes (codegen AND type check both green) — never after a partial pass.
+5. Validate with the narrowest relevant command, then re-run `pikku all`. If only files you did not touch still error, those are pre-existing — leave them unless asked.
+6. Only claim success when `pikku all` and `tsc` both pass (codegen AND type check green) — never after a partial pass.
 
 See `pikku-concepts` for the core mental model.
 
@@ -33,7 +33,7 @@ The deciding question is: **does any part of this cross an external boundary tha
 
 - **Checkout WITH payment → workflow.** Get cart → compute total → **(atomic: create order + order items, deduct stock, clear cart)** → **charge payment through the provider** → send confirmation email. It's a workflow because the payment leg (and the email) are external and must be **retried, not lost, and not charged twice** across a restart — and the user benefits from seeing where the run is.
 - **Checkout with NO external payment** — e.g. it just records the order and decrements stock in one transaction, nothing leaves the process — is a **single-shot algorithm**: a plain `pikkuFunc` wrapping one `kysely.transaction`. Not a workflow. A workflow here would add durability machinery for a thing that already commits atomically in one shot.
-- **One durable step is NOT a workflow — it's a queue worker.** A lone side-effect that must be retried / not lost (send one email, fire one webhook, one external charge) → a **queue worker** (`pikku-queue`), enqueued fire-and-forget. A workflow adds a step graph for a thing that has no steps to orchestrate. (A single non-durable step is just a direct RPC call.)
+- **One durable step is NOT a workflow — it's a queue worker.** A lone side-effect that must be retried / not lost (send one email, fire one webhook, one external charge) → a **queue worker** (see `pikku-wiring`'s queue reference), enqueued fire-and-forget. A workflow adds a step graph for a thing that has no steps to orchestrate. (A single non-durable step is just a direct RPC call.)
 - Also workflows: onboarding sequences, settlements/payouts, digests and batch sends, anything that waits (`sleep`/`suspend`) or fans out with retries — the common thread is **multiple** steps or a durable wait, never a single step.
 
 **HARD RULE — never a single-RPC (one-step) workflow.** A workflow whose body is one `workflow.do('x', 'someRpc', …)` is a mislabeled durable function, not orchestration. Route by durability, NOT into a workflow:
@@ -310,12 +310,11 @@ export const userOnboarding = pikkuWorkflowGraph({
 
 ## Step dispatch & HTTP wiring
 
-For per-step inline-vs-queue dispatch (`workflowQueued: true` and the `dispatchStep` rules), the manual `workflowStart`/`workflow`/`workflowStatus` HTTP wirings, and a suspend/resume example, read `references/workflow-reference.md`.
+For per-step inline-vs-queue dispatch (`workflowQueued: true` and the `dispatchStep` rules) and a suspend/resume example, read `references/workflow-reference.md`.
 
 ## After writing
 
-1. `pikku-verify` (codegen + tsc).
+1. `pikku all`, then `tsc --noEmit` (codegen + type check).
 2. PKU641 → a `const`/`let` is inside a block; hoist it to the top of the function body.
 3. Import errors → use `#pikku/workflow/pikku-workflow-types.gen.js`, not `#pikku`.
 4. Type errors only in files you did not touch → pre-existing template errors; safe to ignore.
-5. Both green → call `pikku-workflow-view` with the workflow name.

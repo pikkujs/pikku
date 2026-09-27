@@ -71,6 +71,14 @@ describe('Schema', () => {
           createdAt: { type: 'string', format: 'date-time' },
         },
       })
+
+      addSchema('numericSchema', {
+        properties: {
+          year: { type: 'integer' },
+          ratio: { type: 'number' },
+          maybeYear: { type: ['integer', 'null'] },
+        },
+      })
     })
 
     test('should split a string into an array for properties of type array', () => {
@@ -109,6 +117,89 @@ describe('Schema', () => {
       const data = { createdAt: '2024-01-01T00:00:00Z' } as any
       coerceTopLevelDataFromSchema('dateSchema', data)
       assert.ok(data.createdAt instanceof Date)
+    })
+
+    test('should coerce a whole-number string for integer and number', () => {
+      const data = { year: '2027', ratio: '2027' } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.strictEqual(data.year, 2027)
+      assert.strictEqual(data.ratio, 2027)
+    })
+
+    test('should coerce a negative number', () => {
+      const data = { year: '-5', ratio: '-0.25' } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.strictEqual(data.year, -5)
+      assert.strictEqual(data.ratio, -0.25)
+    })
+
+    test('should not coerce a value it cannot reproduce exactly', () => {
+      // Every one of these reads as a number, and every one of them prints
+      // back as different text than it arrived as. Coercing would mean the
+      // function silently chose a value the caller did not send.
+      for (const rewritten of ['1e3', '007', '+5', '2027.50', ' 12 ', '-0']) {
+        const data = { ratio: rewritten } as any
+        coerceTopLevelDataFromSchema('numericSchema', data)
+        assert.strictEqual(data.ratio, rewritten)
+      }
+    })
+
+    test('should not coerce an integer too large to survive a double', () => {
+      // 2^53 + 1. Number() reads it as 9007199254740992, one less than it
+      // says. An id sent as a string is usually sent that way for exactly
+      // this reason, so quietly rounding it is data corruption.
+      const data = { year: '9007199254740993' } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.strictEqual(data.year, '9007199254740993')
+    })
+
+    test('should coerce an integer that does survive a double', () => {
+      const data = { year: '9007199254740991' } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.strictEqual(data.year, 9007199254740991)
+    })
+
+    test('should coerce a fraction for number but leave it for integer', () => {
+      const data = { year: '2027.5', ratio: '2027.5' } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.strictEqual(data.year, '2027.5')
+      assert.strictEqual(data.ratio, 2027.5)
+    })
+
+    for (const junk of [
+      '',
+      ' ',
+      'abc',
+      '2027abc',
+      '0x10',
+      'Infinity',
+      '1e999',
+    ]) {
+      test(`should leave ${JSON.stringify(junk)} untouched`, () => {
+        const data = { year: junk, ratio: junk } as any
+        coerceTopLevelDataFromSchema('numericSchema', data)
+        assert.strictEqual(data.year, junk)
+        assert.strictEqual(data.ratio, junk)
+      })
+    }
+
+    test('should leave an already-numeric value untouched', () => {
+      const data = { year: 2027, ratio: 1.5 } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.strictEqual(data.year, 2027)
+      assert.strictEqual(data.ratio, 1.5)
+    })
+
+    test('should not add keys the data never had', () => {
+      const data = { ratio: '1' } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.deepStrictEqual(Object.keys(data), ['ratio'])
+    })
+
+    test('should leave a union type alone, as the other cases do', () => {
+      const data = { maybeYear: '2027' } as any
+      coerceTopLevelDataFromSchema('numericSchema', data)
+      assert.strictEqual(data.maybeYear, '2027')
     })
   })
 

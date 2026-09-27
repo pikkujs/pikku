@@ -81,11 +81,11 @@ A brief saying "the entire UI is German" is about **one** of these. Getting this
 wrong has already shipped a project that can never add a second language, so
 settle all three explicitly before you write code.
 
-| Axis            | What it covers                                                                                                                       | Where it goes                                                                     |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                                    | Nowhere — **always English**, no setting, not negotiable                          |
-| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and persona descriptions        | `metaLocale` in `pikku.config.json`, default `en`                                     |
-| **Product UI**  | Every string the app shows a user                                                                                                    | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
+| Axis            | What it covers                                                                                                                 | Where it goes                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| **Identifiers** | Function, component, type, variable and file names. Database tables and columns. Commit messages.                              | Nowhere — **always English**, no setting, not negotiable                             |
+| **Meta**        | `description` on functions and steps, `name`/`title` on features and scenarios, step `template`, role and persona descriptions | `metaLocale` in `pikku.config.json`, default `en`                                    |
+| **Product UI**  | Every string the app shows a user                                                                                              | `messages/<locale>.json`, and `defaultLocale` for what a first-time visitor opens in |
 
 **Identifiers are English.** The product's market does not change this and
 neither does `metaLocale`. Identifiers are the surface the generated `#pikku/*`
@@ -218,7 +218,11 @@ defineSystemRole({
 })
 
 definePersonas({
-  visitor: { name: 'Visitor', jobTitle: 'Synthetic health-check user', account: {} },
+  visitor: {
+    name: 'Visitor',
+    jobTitle: 'Synthetic health-check user',
+    account: {},
+  },
   amina: {
     name: 'Amina',
     jobTitle: 'Property owner',
@@ -229,7 +233,8 @@ definePersonas({
   bilal: {
     name: 'Bilal',
     jobTitle: 'Property owner',
-    personality: 'A second owner — exists so "you see yours, not theirs" is testable',
+    personality:
+      'A second owner — exists so "you see yours, not theirs" is testable',
     roles: ['owner'],
     account: {},
   },
@@ -369,10 +374,10 @@ scenarios, split into passes. It is JSON, it lives beside the note, and
 `pikku knowledge plan progress` measures the finished build against it.
 
 **Read `pikku-architect` and follow it.** The plan is the denominator the
-completion check divides by, so a builder who writes their own plan can build a
-fraction, plan only that fraction, and certify itself complete. Fabric answers
-that by giving the plan its own seat; here the defence is the ORDER, and it only
-holds if you keep it: the plan is written against the note in its own turn,
+completion check divides by, so a builder who plans after seeing their own work
+can build a fraction, plan only that fraction, and certify itself complete. The
+defence is the ORDER, and it only holds if you keep it: the plan is written
+against the note in its own turn,
 before any of the code it measures exists, and is never edited afterwards to
 match what you ended up building. An item that will not land is deferred with
 its reason — `plan defer` — not quietly rewritten. Write it before you open a
@@ -396,8 +401,8 @@ no plan, and everything after the current milestone is still allowed to move.
 
 **Per milestone** — plan it (§5a), set its note to `status: dispatched`, do the
 six steps, close it out (§6a), set it to `built`. Do not start the next one
-until §6a passes, §7 is green for this one *and §7a shows its functions
-covered*. A stack of half-milestones cannot be reviewed and cannot be handed
+until §6a passes, §7 is green for this one _and §7a shows its functions
+covered_. A stack of half-milestones cannot be reviewed and cannot be handed
 over, and an uncovered function is a half-milestone whether or not the note says
 `built`.
 
@@ -416,7 +421,7 @@ over, and an uncovered function is a half-milestone whether or not the note says
    Do this generously and do it now: an empty app demos badly and critiques
    badly, and you cannot judge a screen's hierarchy, overflow, or truncation
    against zero rows. Seed rows each persona sees differently — with an ownership
-   rule that means seeding rows for the *second* owner too.
+   rule that means seeding rows for the _second_ owner too.
 3. **Functions.** One `pikkuFunc` per `*.function.ts`. Mark it `expose: true` and
    Pikku generates the typed RPC client and the React Query hooks the UI calls;
    you do NOT write an HTTP route for it. Add `wireHTTP` only for a real REST
@@ -443,8 +448,10 @@ over, and an uncovered function is a half-milestone whether or not the note says
    same as the scenario: a milestone whose screens nobody has seen is not built,
    it is unproven at the one layer scenarios cannot reach. `references/design.md`
    carries how to take the shot when no browser tool is wired up, and what to
-   look for. Then `status: built`, and say in the note what you looked at and
-   what it made you change.
+   look for. Then close it against its plan (§6a) — `pikku knowledge plan
+progress` has to exit zero before anything is `built` — and only then set
+   `status: built`, saying in the note what you looked at and what it made you
+   change.
 
 Rules that are not optional:
 
@@ -464,8 +471,8 @@ Rules that are not optional:
   ```typescript
   export const classifications = {
     payment: {
-      paid_at:  { kind: 'date' },                        // -> Date, not an ISO string
-      metadata: { kind: 'json', tsType: 'PaymentMeta' },  // -> parsed object, not unknown
+      paid_at: { kind: 'date' }, // -> Date, not an ISO string
+      metadata: { kind: 'json', tsType: 'PaymentMeta' }, // -> parsed object, not unknown
     },
   }
   ```
@@ -474,6 +481,7 @@ Rules that are not optional:
   `JSON` column with no entry types as `unknown` (the CLI warns PKU481). Add the
   annotation rather than casting around the generated type. Once the file carries
   manual fields, `db migrate` stops overwriting it.
+
 - A `z.date()` on a function's **input** arrives over RPC as an ISO string, not a
   `Date`. Normalise before calling date methods on it (`new Date(value)`), or it
   throws `.getTime is not a function` at runtime — schema validation accepts the
@@ -486,6 +494,35 @@ Rules that are not optional:
   render the failure inline next to the control that triggered it — not a toast.
 - An exposed function with no session and no permission is reachable by anyone
   over `POST /rpc/:rpcName` (PKU574). Either gate it or drop `expose: true`.
+- A public, signed-out read (a homepage's programme, a price list) is a
+  `pikkuSessionlessFunc`. `pikkuFunc` with `auth: false` still answers
+  `MissingSessionError` over `/rpc` to a caller with no session.
+- Better Auth already owns the `user`, `session`, `account` and `verification`
+  tables. A domain table with one of those names — a class *session*, a drop-in
+  *session* — collides in the migration. Name it for the domain instead
+  (`evening`, `class_meeting`) and keep the word in the UI copy.
+- The template's `/` redirects to `/app`, so the login screen — and its "Sign in
+  as …" switcher — is what a signed-out visitor sees first. Replace `/` with a
+  public homepage and that stops being true: mount `<DevActorSwitcher />` in the
+  public layout as well, or a reviewer lands on a site with no way in.
+
+Before the first run, make sure `.env` at the project root holds the two
+secrets the local stack needs. `bun run dev` appends whichever is missing, but
+check anyway — a project scaffolded from an older template, or a `.env` copied
+in from elsewhere, can lack one, and neither failure names the variable:
+
+- `BETTER_AUTH_SECRET` — without it the first sign-up is a 500.
+- `SCENARIO_ACTOR_SECRET` — without it `/api/auth/sign-in/actor` is disabled:
+  every scenario fails at sign-in before its first step, and the "Sign in as …"
+  switcher renders nothing.
+
+```sh
+grep -q '^BETTER_AUTH_SECRET=' .env 2>/dev/null || echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+grep -q '^SCENARIO_ACTOR_SECRET=' .env 2>/dev/null || echo "SCENARIO_ACTOR_SECRET=$(openssl rand -base64 32)" >> .env
+```
+
+`.env` is gitignored and local only — never commit it. A deployed stage gets its
+secrets from the platform (`pikku fabric secrets`), not from this file.
 
 Then run it:
 
@@ -496,6 +533,19 @@ bun run prebuild && bun run dev
 That starts the API on :3000 and every frontend in `pikkufabric.config.json`. A
 frontend running against a dead API looks exactly like an app bug, so if every
 request fails, check that both halves came up.
+
+**Start the stack through `bun run dev`, not by launching `vite` or `pikku dev`
+yourself.** The dev script reads the personas, derives one credential per
+persona from `SCENARIO_ACTOR_SECRET`, and hands both to the frontend as
+`VITE_DEV_ACTORS` / `VITE_DEV_ACTOR_SECRETS`. Vite reads those once, at boot. A
+frontend started any other way — or restarted by hand later — has an empty
+actor list, and the switcher silently disappears from every page. If you do
+start the frontend on its own (say :3000 is taken by another project), you owe
+it three things: the two `VITE_DEV_*` values the dev script would have computed,
+and `VITE_API_PROXY` pointing at your API — the dev proxy defaults to
+`http://localhost:3000`, so beside another project's server your sign-ins go to
+*its* API and come back `401 Invalid actor secret`, which reads like a bad
+credential rather than the wrong server.
 
 The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the
 CLI's `#!/usr/bin/env node` shebang hands the process to whatever Node is on
@@ -542,6 +592,7 @@ Three things it says, and what each one asks of you:
   milestone is two milestones — say so to the user rather than deferring again.
   What you may never do is drop the item silently: the plan is what the next
   person reads to know what this milestone was for.
+
 - **PROBLEMS** — something exists but does not do what was planned. A function
   planned as restricted whose meta says `auth: false`; a `cascade` no migration
   declares; a browser scenario that opens a page and asserts it is still on it.
@@ -550,8 +601,9 @@ Three things it says, and what each one asks of you:
   visible, never blocking.
 
 **Do not set the note to `built` while this exits non-zero**, and do not edit the
-plan to match what you built — `plan set` is the architect's seat, and a builder
-rewriting its own denominator is exactly what the split exists to stop.
+plan to match what you built — the plan was written before the code on purpose,
+and rewriting your own denominator afterwards is exactly what that order exists
+to stop.
 
 ## 7. Prove it — scenarios
 
@@ -566,26 +618,27 @@ import { pikkuScenario } from '#pikku/scenarios'
 
 export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
   title: 'A tenant reports a fault and the owner sees it',
-  description: 'The report lands on the owning landlord’s queue, and nobody else’s',
+  description:
+    'The report lands on the owning landlord’s queue, and nobody else’s',
   tags: ['scenario', 'maintenance'],
   func: async (_services, _data, { scenario, actors }) => {
     const report = await scenario.do(
       'reports a broken boiler',
       'createMaintenanceReport',
       { summary: 'No hot water' },
-      { actor: actors.chidi },
+      { actor: actors.chidi }
     )
     await scenario.then(
       'appears on the owner’s queue',
       'reportShowsOnQueue',
       { id: report.id },
-      { actor: actors.amina },
+      { actor: actors.amina }
     )
     await scenario.then(
       'is invisible to the other owner',
       'reportIsNotVisible',
       { id: report.id },
-      { actor: actors.bilal },
+      { actor: actors.bilal }
     )
     return { id: report.id }
   },
@@ -603,10 +656,11 @@ export const tenantReportsAFaultScenario = pikkuScenario<void, { id: string }>({
 - **Write the refusals.** The third step above is the whole point of §4: one
   persona reaching for another's row has to be rejected, and that rejection is a
   scenario. It is how you prove access control instead of asserting it.
-- **Add `SCENARIO_ACTOR_SECRET` to `.env`.** `bun run dev` generates that file
-  with a `BETTER_AUTH_SECRET` and nothing else, and without the actor secret
-  `/api/auth/sign-in/actor` is disabled — every scenario then fails at sign-in,
-  before its first step, for a reason that reads like an auth bug.
+- **`SCENARIO_ACTOR_SECRET` must be in `.env`** (§6, before the first run).
+  Without it `/api/auth/sign-in/actor` is disabled — every scenario then fails
+  at sign-in, before its first step, for a reason that reads like an auth bug.
+  `pikku scenario run` reads it from the environment, so source `.env` first
+  (`set -a && . ./.env && set +a`) when you run outside `bun run dev`.
 - **There is no state reset.** A scenario runs against a live server: scope what
   you create to your own rows and unique ids, and never assume a clean database.
 
@@ -774,6 +828,11 @@ When every milestone is `built` and the scenarios are green, read
 standalone`, `cloudflare`, `aws`), how to serve several frontends behind one
 API, the pre-release gate to run, and the contract that keeps `pikku fabric init`
 a one-command import later rather than a migration.
+
+The app is not handed over without its user guide. The scenarios you wrote are
+already its skeleton: read **pikku-guide**, write one page per audience citing
+every feature, and build it from a full, passing `--run browser --screenshots`
+run.
 
 Two things from it are worth knowing before you get there, because they are
 cheaper to honour than to retrofit:

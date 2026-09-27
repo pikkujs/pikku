@@ -615,6 +615,33 @@ export type PikkuCLIInput = {
      * `converse` refuses rather than guessing.
      */
     model?: string
+    /**
+     * Roll the local database back to its seeded state between scenarios.
+     *
+     * Enabled, the runner copies every table once from the database the suite
+     * is pointed at, then replaces the rows from that copy before every
+     * scenario.
+     *
+     * A feature's `before` hook runs against the seed and its fixtures are then
+     * captured too, so each of that feature's scenarios rolls back to the seed
+     * *and* the hook's setup — the isolation is per scenario without the hook
+     * having to run again or its work being thrown away.
+     *
+     * Scenarios stop depending on each other's leftovers without the project
+     * exposing a reset RPC of its own: nothing here reaches a deployed bundle,
+     * and it is refused unless the run targets an `apiUrl` on this machine.
+     */
+    reset?: {
+      enabled: boolean
+      /**
+       * Tables the rollback leaves alone.
+       *
+       * Session and account tables belong here: an actor signs in once for the
+       * whole suite, and rolling its session back to a copy taken before that
+       * sign-in logs every actor out mid-run.
+       */
+      keep?: string[]
+    }
   }
 
   scaffold?: {
@@ -789,6 +816,18 @@ export type PikkuCLIInput = {
      * Defaults to 'serverless'.
      */
     defaultTarget?: 'serverless' | 'server'
+    /**
+     * Rename identifiers when minifying worker bundles. Defaults to true.
+     * Set it to false to make a deployed worker's runtime errors name
+     * something the project can search for.
+     */
+    mangleIdentifiers?: boolean
+    /**
+     * Which bundler builds the deployment units. 'auto' (the default) picks
+     * Bun.build under bun and esbuild otherwise. Pin it to 'esbuild' where a
+     * Bun.build output misbehaves at runtime.
+     */
+    bundler?: 'auto' | 'bun' | 'esbuild'
     /**
      * How many deployment units the app's functions collapse into.
      *

@@ -16,7 +16,13 @@ import type {
   ScenarioBrowserProvider,
 } from '@pikku/core/scenario'
 import { ActorSession, type CaptureContext } from './actor-session.js'
-import { compressVideos, slug, type CaptureOptions } from './capture.js'
+import {
+  compressVideos,
+  hasFfmpeg,
+  slug,
+  type CaptureOptions,
+  type VideoHolds,
+} from './capture.js'
 import { connectOrLaunch, type BrowserConnection } from './browser-launch.js'
 import { browserConfigFromEnv, type BrowserConfig } from './config.js'
 
@@ -142,6 +148,19 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
    * the outcome has to outlive the scenario that produced it.
    */
   private outcome?: 'passed' | 'failed'
+  /**
+   * Where each actor's current recording should hold, as raw offsets. Moved
+   * onto the filed video when its context closes, and applied by the encode.
+   */
+  private videoMarks = new Map<string, number[]>()
+  /** Hold points for each kept recording, by its path in the ledger. */
+  private videoHolds = new Map<string, number[]>()
+  /**
+   * Whether kept recordings will be encoded, which is the only place holds
+   * happen. Settled before the first step is stamped, because a step's offset
+   * has to say where it lands in the footage somebody will actually watch.
+   */
+  private encodesVideo = false
 
   constructor(
     private readonly options: PlaywrightScenarioBrowserProviderOptions
@@ -158,6 +177,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
         screenshots: options.capture.screenshots === true,
         taken: 0,
         filed: [],
+        videoStartedAt: new Map(),
       }
     }
   }
@@ -190,6 +210,38 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     this.outcome = outcome
   }
 
+  /**
+   * When this actor's recording started — the moment their context was opened
+   * with `recordVideo`, which is when Playwright starts the file. Absent for a
+   * run that records nothing and for an actor with no window open.
+   */
+  videoStartedAt(actorName: string): number | undefined {
+    return this.captureContext?.videoStartedAt.get(actorName)
+  }
+
+  /**
+   * Mark a browser step starting in this actor's recording, and answer where
+   * it will fall in the encoded video.
+   *
+   * The encode freezes the frame at each mark for `videoStepHoldMs`, so every
+   * earlier mark pushes this one later by one hold. The run itself never
+   * waits. Without an encode there are no holds and the offset is the raw one.
+   */
+  markVideoStep(actorName: string): number | undefined {
+    const startedAt = this.videoStartedAt(actorName)
+    if (startedAt === undefined) {
+      return undefined
+    }
+    const raw = Math.max(0, Date.now() - startedAt)
+    const hold = this.config.videoStepHoldMs
+    if (!this.encodesVideo || hold <= 0) {
+      return raw
+    }
+    const marks = this.videoMarks.get(actorName) ?? []
+    this.videoMarks.set(actorName, [...marks, raw])
+    return raw + marks.length * hold
+  }
+
   async sessionFor(actorName: string): Promise<ActorSession> {
     const existing = this.sessions.get(actorName)
     if (existing) {
@@ -219,6 +271,11 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
   async reset(): Promise<void> {
     const sessions = [...this.sessions.values()]
     this.sessions.clear()
+    // The recordings these timestamps address are finalised by the closes
+    // below; the next scenario's windows start their own files.
+    this.captureContext?.videoStartedAt.clear()
+    const marks = this.videoMarks
+    this.videoMarks = new Map()
     const scenario = this.captureContext?.scenario
     const keep = this.keepsVideo()
     for (const session of sessions) {
@@ -230,7 +287,13 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
       // about to take away — even though the file it names only exists after.
       const video = resolved.video()
       await resolved.close().catch(() => {})
-      await this.retainVideo(video, resolved.actor, scenario, keep)
+      await this.retainVideo(
+        video,
+        resolved.actor,
+        scenario,
+        keep,
+        marks.get(resolved.actor) ?? []
+      )
     }
   }
 
@@ -246,7 +309,8 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     video: Video | undefined,
     actor: string,
     scenario: string | undefined,
-    keep: boolean
+    keep: boolean,
+    marks: number[]
   ): Promise<void> {
     const capture = this.options.capture
     if (!video || !capture) {
@@ -262,6 +326,7 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
           recursive: true,
         })
         await video.saveAs(join(capture.dir, capture.runId, path))
+        this.videoHolds.set(path, marks)
         this.captureContext?.filed.push({
           scenario: label,
           kind: 'video',
@@ -373,9 +438,22 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     )
     const absolute = (artifact: ScenarioArtifact) =>
       join(runDir, ...artifact.path.split('/'))
-    const renamed = await compressVideos(videos.map(absolute)).catch(
-      () => new Map<string, string>()
+    const holds = new Map(
+      videos.map((artifact) => [
+        absolute(artifact),
+        this.videoHolds.get(artifact.path),
+      ])
     )
+    const hold = this.config.videoStepHoldMs
+    const holdsFor = (file: string): VideoHolds | undefined => {
+      const atMs = holds.get(file)
+      return atMs && hold > 0 ? { atMs, holdMs: hold } : undefined
+    }
+    const renamed = await compressVideos(
+      videos.map(absolute),
+      undefined,
+      holdsFor
+    ).catch(() => new Map<string, string>())
     for (const artifact of videos) {
       const to = renamed.get(absolute(artifact))
       if (to) {
@@ -392,14 +470,22 @@ export class PlaywrightScenarioBrowserProvider implements ScenarioBrowserProvide
     const config = this.configFor(actorConfig)
     const session = new ActorSession(actorName, config)
     const capture = this.options.capture
+    const recording = Boolean(capture && capture.video !== 'off')
     await session.open(
       browser,
-      capture && capture.video !== 'off'
-        ? join(capture.dir, capture.runId, VIDEO_STAGING_DIR)
+      recording
+        ? join(capture!.dir, capture!.runId, VIDEO_STAGING_DIR)
         : undefined
     )
     if (this.captureContext) {
       session.capture = this.captureContext
+      if (recording) {
+        // Stamped once the context exists rather than before the call: the file
+        // starts with the context, and the sign-in that follows is already part
+        // of the footage.
+        this.captureContext.videoStartedAt.set(actorName, Date.now())
+        this.encodesVideo = capture!.compress !== false && (await hasFfmpeg())
+      }
     }
     const signIn = this.options.signIn ?? this.defaultSignIn(actorConfig)
     const secret =

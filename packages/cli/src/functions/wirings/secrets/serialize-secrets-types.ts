@@ -33,14 +33,21 @@ export const serializeSecretsTypes = ({
   for (const [name, meta] of credentialEntries) {
     if (meta.oauth2) {
       needsOAuth2Types = true
-      mapEntries.push(`  '${meta.secretId}': OAuth2AppCredential`)
-      mapEntries.push(`  '${meta.oauth2.tokenSecretId}': OAuth2Token`)
+      // Tokens are as optional as the app they belong to: nobody can connect
+      // without the client id and secret, so a deployment that is allowed to
+      // omit the app is never asked for the tokens either.
+      const optional = meta.optional ? '?' : ''
+      const optionalMeta = meta.optional ? ', optional: true' : ''
+      mapEntries.push(`  '${meta.secretId}'${optional}: OAuth2AppCredential`)
+      mapEntries.push(
+        `  '${meta.oauth2.tokenSecretId}'${optional}: OAuth2Token`
+      )
 
       metaEntries.push(
-        `  '${meta.secretId}': { name: '${name}', displayName: ${tsLiteral(meta.displayName)}, oauth2: { tokenSecretId: '${meta.oauth2.tokenSecretId}' } }`
+        `  '${meta.secretId}': { name: '${name}', displayName: ${tsLiteral(meta.displayName)}${optionalMeta}, oauth2: { tokenSecretId: '${meta.oauth2.tokenSecretId}' } }`
       )
       metaEntries.push(
-        `  '${meta.oauth2.tokenSecretId}': { name: '${name}_tokens', displayName: ${tsLiteral(`${meta.displayName} Tokens`)} }`
+        `  '${meta.oauth2.tokenSecretId}': { name: '${name}_tokens', displayName: ${tsLiteral(`${meta.displayName} Tokens`)}${optionalMeta} }`
       )
     } else if (meta.schema && typeof meta.schema === 'string') {
       const schemaRef = schemaLookup.get(meta.schema)

@@ -22,7 +22,7 @@ export const pikkuReactQuery = pikkuSessionlessFunc<void, void>({
       return
     }
 
-    const { workflows } = await getInspectorState()
+    const { workflows, auth } = await getInspectorState()
     const hasWorkflows = Object.keys(workflows?.meta ?? {}).length > 0
 
     const rpcMapPath = getFileImportRelativePath(
@@ -40,7 +40,12 @@ export const pikkuReactQuery = pikkuSessionlessFunc<void, void>({
       )
     }
 
-    const content = serializeReactQueryHooks(rpcMapPath, workflowMapPath)
+    // `useSession` only exists for an app that has auth at all.
+    const content = serializeReactQueryHooks(
+      rpcMapPath,
+      workflowMapPath,
+      !!auth.definition
+    )
     await writeFileInDir(logger, reactQueryFile, content)
   },
   middleware: [

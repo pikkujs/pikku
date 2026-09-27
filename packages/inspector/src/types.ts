@@ -208,6 +208,16 @@ export interface InspectorMiddlewareState {
   definitions: Record<string, InspectorMiddlewareDefinition>
   instances: Record<string, InspectorMiddlewareInstance>
   tagMiddleware: Map<string, MiddlewareGroupMeta>
+  /**
+   * Every source file with a top-level `addGlobalMiddleware` call.
+   *
+   * Global middleware belongs to no wire group, so the only thing that makes it
+   * run in a generated bundle is a side-effect import of its source file. This
+   * set is the record codegen emits those imports from, and the one it checks
+   * itself against — a plain set of file names, so nothing can overwrite an
+   * entry the way a keyed map could.
+   */
+  globalFiles: Set<string>
 }
 
 export interface InspectorChannelMiddlewareState {
@@ -523,6 +533,8 @@ export interface InspectorFeature {
   name?: string
   description?: string
   tags?: string[]
+  /** `document: false` on the config, and only that — an absent flag documents. */
+  document?: boolean
   entries: InspectorFeatureEntry[]
   /**
    * Entries that are not literal — a spread, a `.map()`, a call. Counted rather
@@ -531,12 +543,30 @@ export interface InspectorFeature {
    */
   unresolvedEntries: number
   /**
+   * Every scenario the array names, including entries whose `data` could not be
+   * read. Membership is knowable there even when the entry is not — which is
+   * what the check for a scenario belonging to no feature compares against.
+   */
+  mentions: string[]
+  /**
+   * Entries that name no scenario at all — a spread, a `.map()`. Only these
+   * leave membership genuinely unknown.
+   */
+  unnamedEntries: number
+  /**
    * Feature hooks run once around the whole group, never per scenario, and are
    * runtime-only — so only their presence is recorded.
    */
   hasBefore: boolean
   hasAfter: boolean
 }
+
+/**
+ * A `wireAddon` credential override as it survives static reading: a rename
+ * string, or the object form that also decides how the value resolves.
+ */
+export type CredentialOverrideMeta =
+  string | { name?: string; mode?: 'singleton' | 'wire' }
 
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
@@ -631,7 +661,26 @@ export interface InspectorState {
         /** The app source file whose `wireAddon` call declared this instance. */
         file?: string
         rpcEndpoint?: string
-        mcp?: boolean
+        /**
+         * `true` offers every function the addon declared `mcp: true`; a list
+         * names the functions to offer, whatever the addon declared. Absent
+         * when the declared value was not a statically-knowable literal.
+         */
+        mcp?: boolean | string[]
+        /**
+         * Serves this instance's MCP tools on an endpoint of their own rather
+         * than the project's default one. `true` means `/mcp/<name>`; a string
+         * is the path as given. Absent leaves the tools on the default
+         * endpoint, which is where they have always been.
+         */
+        mcpEndpoint?: boolean | string
+        /**
+         * Which functions `rpc.exposed` may call under `<name>:<function>`.
+         * Unset or `true` keeps what the addon declared `expose: true`; `false`
+         * exposes none; a list names exactly the functions to expose, whatever
+         * the addon declared.
+         */
+        expose?: boolean | string[]
         /**
          * The addon's own gates. `runPikkuFunc` applies these to every function
          * in the package, on every wiring path — not just `namespace:function`.
@@ -651,7 +700,7 @@ export interface InspectorState {
         authSecretId?: string
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
-        credentialOverrides?: Record<string, string>
+        credentialOverrides?: Record<string, CredentialOverrideMeta>
         /** Secrets the app lends this instance, named as the addon reads them. */
         secretGrants?: string[]
         /** Credentials the app lends this instance, named as the addon reads them. */
@@ -675,6 +724,12 @@ export interface InspectorState {
     toolsMeta: MCPToolMeta
     promptsMeta: MCPPromptMeta
     files: Set<string>
+    /**
+     * Every MCP endpoint the project serves beyond the default one, as
+     * surface name -> the path it is served on. A meta entry carrying a
+     * `surface` is served by the endpoint named here and by no other.
+     */
+    surfaces: Record<string, string>
   }
   agents: {
     agentsMeta: AgentsMeta

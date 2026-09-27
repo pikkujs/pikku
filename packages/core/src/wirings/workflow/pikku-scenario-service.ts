@@ -18,6 +18,7 @@ import type {
 import type { PikkuRawWire } from '../../types/core.types.js'
 import type { ScenarioPersonas } from '../../services/personas-service.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+import type { ScenarioStepVideoOffset } from './scenario-run.types.js'
 import type {
   ScenarioBrowserProvider,
   ScenarioEnvironment,
@@ -72,6 +73,7 @@ export type {
   ScenarioStepKind,
   ScenarioStepMeta,
   ScenarioStepOptions,
+  ScenarioScreenshotOptions,
   ScenarioStepPhase,
   ScenarioSurface,
   TestIdSelector,
@@ -82,10 +84,13 @@ export type {
   ScenarioResult,
   ScenarioRunRecord,
   ScenarioRunReport,
+  ScenarioRunSelection,
   ScenarioRunStatus,
   ScenarioRunStore,
   ScenarioRunSummary,
+  ScenarioRunVersion,
   ScenarioStepRow,
+  ScenarioStepVideoOffset,
 } from './scenario-run.types.js'
 export { SCENARIO_SURFACES } from './scenario-step.types.js'
 
@@ -246,6 +251,9 @@ addError(ScenarioActorRequired, {
  * coverage gap. (A `then` that ran somewhere, just not on the run surface, is
  * the coverage gap; it is reported rather than thrown. See
  * {@link ScenarioNoWitness} for one that ran nowhere.)
+ *
+ * A strict run also throws it for a step that *could* fall back, because there
+ * the fallback is the thing being refused.
  */
 export class ScenarioNoSurfaceBinding extends PikkuError {
   constructor(
@@ -253,9 +261,13 @@ export class ScenarioNoSurfaceBinding extends PikkuError {
     public readonly declared: ScenarioSurface[],
     public readonly runSurface: ScenarioSurface
   ) {
+    const declares = `(declares: ${declared.join(', ') || 'nothing'})`
     super(
-      `[scenario] step '${stepFunc}' declares no binding for '${runSurface}' and no 'default' to fall back to ` +
-        `(declares: ${declared.join(', ') || 'nothing'}).`
+      declared.includes('default')
+        ? `[scenario] step '${stepFunc}' has no binding for '${runSurface}' and a strict run will not let it ` +
+            `fall back to 'default' ${declares}. Add a '${runSurface}' binding, or drop --strict.`
+        : `[scenario] step '${stepFunc}' declares no binding for '${runSurface}' and no 'default' to fall back to ` +
+            `${declares}.`
     )
   }
 }
@@ -292,6 +304,34 @@ addError(ScenarioNoWitness, {
 })
 
 /**
+ * An assertion ran, but not on the surface the run targets.
+ *
+ * The sibling of {@link ScenarioNoWitness}: that one checked nothing anywhere,
+ * this one checked the system of record while the prose claims the actor saw it
+ * on the page. Ordinary runs count it as a coverage gap; a strict run refuses
+ * it, because a flow that cannot be observed end to end on the run surface is
+ * not a flow that surface can be documented from.
+ */
+export class ScenarioUnwitnessedAssertion extends PikkuError {
+  constructor(
+    public readonly stepFunc: string,
+    public readonly declared: ScenarioSurface[],
+    public readonly runSurface: ScenarioSurface,
+    public readonly witnessedOn: ScenarioSurface[]
+  ) {
+    super(
+      `[scenario] assertion '${stepFunc}' was checked on ${witnessedOn.join(', ')}, not on '${runSurface}'. ` +
+        `It held there — but nothing looked at '${runSurface}', which is what the step's prose claims the actor saw. ` +
+        `Add a '${runSurface}' witness (declares: ${declared.join(', ') || 'nothing'}), or drop --strict.`
+    )
+  }
+}
+addError(ScenarioUnwitnessedAssertion, {
+  status: 500,
+  message: 'Assertion was checked, but not on the run surface.',
+})
+
+/**
  * The scenario capability, layered onto a workflow service rather than being
  * one.
  *
@@ -323,22 +363,41 @@ export class PikkuScenarioService implements WorkflowRunExtension {
   // so the body and its hooks share one object rather than reading it back off
   // the persisted wire.
   private runContexts = new Map<string, Record<string, unknown>>()
+  // Where each browser step landed in its actor's recording, per run. Held
+  // apart from the run context because the runner reads it once the run has
+  // ended, which is exactly when `detachRunContext` has cleared that.
+  private runVideoOffsets = new Map<
+    string,
+    Map<string, ScenarioStepVideoOffset[]>
+  >()
   private scenarioBrowserProvider?: ScenarioBrowserProvider
   private scenarioEnvironment?: ScenarioEnvironment
   private runSurface: ScenarioSurface = 'default'
+  private strictSurface = false
 
   constructor(private readonly engine: WorkflowRunEngine) {}
 
   /**
    * The surface every actor drives the system through for this run, set once by
    * the runner from `--run`. `default` is the server-side path — the fast suite.
+   *
+   * `strict` removes both routes off that surface: an action may not fall back
+   * to its `default` binding, and a `then` may not be witnessed anywhere else.
+   * It is what lets a run stand as evidence of the whole flow on one surface,
+   * which is what generating documentation from a run requires. On a `default`
+   * run it changes nothing, because nothing there can fall back.
    */
-  public setRunSurface(surface: ScenarioSurface) {
+  public setRunSurface(surface: ScenarioSurface, strict = false) {
     this.runSurface = surface
+    this.strictSurface = strict
   }
 
   public getRunSurface(): ScenarioSurface {
     return this.runSurface
+  }
+
+  public isStrictSurface(): boolean {
+    return this.strictSurface
   }
 
   /**
@@ -367,6 +426,60 @@ export class PikkuScenarioService implements WorkflowRunExtension {
 
   public getScenarioEnvironment(): ScenarioEnvironment | undefined {
     return this.scenarioEnvironment
+  }
+
+  /**
+   * Where each of a run's browser steps fell in its actor's video, keyed by the
+   * durable step name, handed over and forgotten in one call.
+   *
+   * Taken rather than read because the runner joins these onto the step rows
+   * after the run has finished — which is past the point anything else would
+   * clear them, and the only moment they are still wanted.
+   */
+  public takeStepVideoOffsets(
+    runId: string
+  ): Map<string, ScenarioStepVideoOffset[]> {
+    const offsets = this.runVideoOffsets.get(runId)
+    this.runVideoOffsets.delete(runId)
+    return offsets ?? new Map()
+  }
+
+  /** Where a step starting now falls in this actor's recording, if anywhere. */
+  private videoOffsetFor(actor: string): number | undefined {
+    const provider = this.scenarioBrowserProvider
+    if (provider?.markVideoStep) {
+      return provider.markVideoStep(actor)
+    }
+    const startedAt = provider?.videoStartedAt?.(actor)
+    return startedAt === undefined
+      ? undefined
+      : Math.max(0, Date.now() - startedAt)
+  }
+
+  /**
+   * Stamp where a step began inside one actor's recording.
+   *
+   * First write per actor wins: a `then` step runs once per witness, and the
+   * moment the reader wants is when the sentence started, not when its last
+   * witness got around to the browser.
+   */
+  private recordVideoOffset(
+    runId: string,
+    stepName: string,
+    actor: string,
+    offsetMs: number
+  ): void {
+    let byStep = this.runVideoOffsets.get(runId)
+    if (!byStep) {
+      byStep = new Map()
+      this.runVideoOffsets.set(runId, byStep)
+    }
+    const offsets = byStep.get(stepName) ?? []
+    if (offsets.some((offset) => offset.actor === actor)) {
+      return
+    }
+    offsets.push({ actor, offsetMs })
+    byStep.set(stepName, offsets)
   }
 
   public async attachRunContext(
@@ -901,8 +1014,12 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             wire.browser = await this.scenarioBrowserProvider.sessionFor(
               actor!.name
             )
+            const offsetMs = this.videoOffsetFor(actor!.name)
+            if (offsetMs !== undefined) {
+              this.recordVideoOffset(runId, stepName, actor!.name, offsetMs)
+            }
           }
-          return await runPikkuFunc(
+          const result = await runPikkuFunc(
             'workflow',
             workflowName,
             resolvedStepFunc,
@@ -914,10 +1031,14 @@ export class PikkuScenarioService implements WorkflowRunExtension {
               packageName: packageName ?? undefined,
             }
           )
+          return result
         }
 
         if (resolution.kind === 'action') {
-          if (resolution.fellBack && !declared.includes('default')) {
+          if (
+            resolution.fellBack &&
+            (this.strictSurface || !declared.includes('default'))
+          ) {
             throw new ScenarioNoSurfaceBinding(
               resolvedStepFunc,
               declared,
@@ -932,6 +1053,15 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             resolvedStepFunc,
             declared,
             this.runSurface
+          )
+        }
+
+        if (this.strictSurface && resolution.unwitnessed) {
+          throw new ScenarioUnwitnessedAssertion(
+            resolvedStepFunc,
+            declared,
+            this.runSurface,
+            resolution.surfaces
           )
         }
 

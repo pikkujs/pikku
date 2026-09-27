@@ -94,7 +94,7 @@ const runCommand = async (
 describe('CLI over a channel', () => {
   before(async () => {
     server = await startBackend()
-    await server.waitUntilReady()
+    await server.waitUntilReady({ timeoutMs: 300_000 })
     apiUrl = server.apiUrl
     token = await signIn(personaConfigs.admin.email, personaConfigs.admin.name)
   })

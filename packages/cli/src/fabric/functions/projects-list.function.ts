@@ -3,6 +3,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
 import { findProjectConfig, resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { dim } from '../lib/output.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricProjectsListInput = z.object({
   apiUrl: z.string().optional(),
@@ -36,7 +37,9 @@ export const FabricProjectsList = pikkuSessionlessFunc({
   func: async (_services, { apiUrl: apiUrlOverride }) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const { projects } = await rpc.invoke('fabricCliProjects', {})

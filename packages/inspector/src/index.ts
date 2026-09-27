@@ -3,6 +3,7 @@ export type { TypesMap } from './types-map.js'
 export type {
   AddonConfig,
   AuthDefinition,
+  CredentialOverrideMeta,
   InspectorDiagnostic,
   InspectorFilters,
   InspectorHTTPState,

@@ -6,14 +6,17 @@ import { useLocale } from '@/i18n/config'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { SecurityReportPanel } from '../components/security/SecurityReportPanel'
 import type { SecurityLens } from '../components/security/SecurityAuditView'
+import type { RenderUpgradeAction } from '../components/security/security-view-utils'
 import {
   useSecurityAudit,
   useRunSecurityAudit,
 } from '../hooks/useSecurityAudit'
 
-export const SecurityPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
-  emptyHero,
-}) => {
+export const SecurityPage: React.FC<{
+  emptyHero?: React.ReactNode
+  /** Passed through to the report body; see {@link SecurityAuditView}. */
+  renderUpgradeAction?: RenderUpgradeAction
+}> = ({ emptyHero, renderUpgradeAction }) => {
   useLocale()
   const { report } = useSecurityAudit()
   const runAudit = useRunSecurityAudit()
@@ -84,6 +87,7 @@ export const SecurityPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
         query={query}
         emptyHero={emptyHero}
         runError={runAudit.isError}
+        renderUpgradeAction={renderUpgradeAction}
       />
     </Stack>
   )

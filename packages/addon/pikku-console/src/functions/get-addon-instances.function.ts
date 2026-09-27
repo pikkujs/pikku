@@ -1,5 +1,6 @@
 import { pikkuFunc } from '#pikku/addon/function'
 import { pikkuState } from '@pikku/core/state'
+import { credentialOverrideAliases } from '@pikku/core/credential'
 
 export interface AddonInstance {
   /** The `wireAddon` name / RPC namespace for this instance. */
@@ -8,7 +9,7 @@ export interface AddonInstance {
   secretOverrides?: Record<string, string>
   /** Logical variable name -> the project variable this instance resolves it to. */
   variableOverrides?: Record<string, string>
-  /** Logical credential name -> the project credential this instance resolves it to. */
+  /** Logical credential name -> the project credential this instance resolves it to. A wiring that only chose a mode renames nothing, so it has no entry here. */
   credentialOverrides?: Record<string, string>
 }
 
@@ -37,7 +38,9 @@ export const getAddonInstances = pikkuFunc<
         namespace,
         secretOverrides: config.secretOverrides,
         variableOverrides: config.variableOverrides,
-        credentialOverrides: config.credentialOverrides,
+        credentialOverrides: credentialOverrideAliases(
+          config.credentialOverrides
+        ),
       })
     }
     return instances

@@ -878,6 +878,15 @@ export function checkCovers(
   return problems
 }
 
+/**
+ * Compare a milestone's words against a plan's identifiers without caring how either
+ * spelled them. A note says `entities: repair job` and a plan says `repairJob`,
+ * `repair_jobs`, `RepairJobRow` — all the same thing, and a plain substring match
+ * refuses the plan over the separator. Collapsing to letters and digits makes the
+ * comparison about the word, which is what the check was always asking.
+ */
+const squash = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, '')
+
 export function checkAgainstMilestone(
   plan: Plan,
   milestone: { entities?: string; path: string; requires?: string },
@@ -895,14 +904,14 @@ export function checkAgainstMilestone(
     )
   }
   const entities = listOf(milestone.entities)
-  const haystack = [
-    ...itemsOf(plan.functions).map((f) => `${f.name} ${f.description}`),
-    ...itemsOf(plan.model).map((m) => `${m.table} ${m.description}`),
-  ]
-    .join(' ')
-    .toLowerCase()
+  const haystack = squash(
+    [
+      ...itemsOf(plan.functions).map((f) => `${f.name} ${f.description}`),
+      ...itemsOf(plan.model).map((m) => `${m.table} ${m.description}`),
+    ].join(' ')
+  )
   for (const entity of entities) {
-    if (!haystack.includes(entity.toLowerCase())) {
+    if (!haystack.includes(squash(entity))) {
       problems.push(
         `${milestone.path} is about \`${entity}\` but no function or table in the plan mentions it.`
       )
@@ -914,7 +923,7 @@ export function checkAgainstMilestone(
       : [...itemsOf(plan.scenarios.browser), ...itemsOf(plan.scenarios.backend)]
   for (const persona of personas) {
     const driven = driving.some((s) =>
-      s.scenario.toLowerCase().includes(persona.toLowerCase())
+      squash(s.scenario).includes(squash(persona))
     )
     if (!driven) {
       problems.push(

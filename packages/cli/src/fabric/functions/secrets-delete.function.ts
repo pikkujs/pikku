@@ -4,6 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { resolveStage } from '../lib/stage.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 export const FabricSecretsDeleteInput = z.object({
   name: z.string(),
@@ -25,9 +26,11 @@ export const FabricSecretsDelete = pikkuSessionlessFunc({
   func: async (_services, { name, branch: requested, force }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
     if (!ctx.projectId)
-      throw new Error(
+      throw new FabricPreconditionError(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
@@ -42,7 +45,7 @@ export const FabricSecretsDelete = pikkuSessionlessFunc({
 
     if (!force) {
       if (!process.stdin.isTTY) {
-        throw new Error(
+        throw new FabricPreconditionError(
           `Refusing to delete ${name} from ${branch} without confirmation — re-run with --force to delete non-interactively.`
         )
       }
@@ -53,7 +56,7 @@ export const FabricSecretsDelete = pikkuSessionlessFunc({
           `Delete ${name} from ${branch}? It cannot be recovered — the value must be set again.`
         ))
       ) {
-        throw new Error('Delete aborted.')
+        throw new FabricPreconditionError('Delete aborted.')
       }
     }
 

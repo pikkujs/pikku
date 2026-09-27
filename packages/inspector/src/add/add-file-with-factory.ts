@@ -14,15 +14,19 @@ const wrapperFunctionMap: Record<string, string> = {
 }
 
 /**
- * What an addon's `pikkuAddonServices` factory takes from the parent: the names
- * destructured off its second parameter, either in the parameter list or from a
- * `const { … } = existingServices` in the body.
+ * What an addon's services factory takes from the parent: the names
+ * destructured off the parameter carrying the parent's bag, either in the
+ * parameter list or from a `const { … } = existingServices` in the body.
+ *
+ * `pikkuAddonServices` receives it second, after the config;
+ * `pikkuAddonWireServices` receives it first, ahead of the wire.
  */
 const extractForwardedServices = (
-  functionNode: ts.ArrowFunction | ts.FunctionExpression
+  functionNode: ts.ArrowFunction | ts.FunctionExpression,
+  servicesParamIndex: number
 ): string[] => {
   const forwarded: string[] = []
-  const secondParam = functionNode.parameters[1]
+  const secondParam = functionNode.parameters[servicesParamIndex]
   if (!secondParam) return forwarded
 
   const collectBinding = (pattern: ts.ObjectBindingPattern) => {
@@ -48,6 +52,24 @@ const extractForwardedServices = (
   const body = functionNode.body
   if (!ts.isBlock(body)) return forwarded
 
+  /**
+   * A nested callback is free to name its own parameter `services` too. Its
+   * destructuring belongs to that parameter, not the factory's, so descending
+   * into it would put a service on the addon's contract the factory never
+   * asked the parent for.
+   */
+  const shadowsParam = (node: ts.Node): boolean => {
+    if (!ts.isFunctionLike(node)) return false
+    return node.parameters.some((parameter) => bindsName(parameter.name))
+  }
+
+  const bindsName = (name: ts.BindingName): boolean => {
+    if (ts.isIdentifier(name)) return name.text === paramName
+    return name.elements.some(
+      (element) => !ts.isOmittedExpression(element) && bindsName(element.name)
+    )
+  }
+
   const visit = (node: ts.Node) => {
     if (
       ts.isVariableDeclaration(node) &&
@@ -57,7 +79,9 @@ const extractForwardedServices = (
       node.initializer.text === paramName
     ) {
       collectBinding(node.name)
+      return
     }
+    if (shadowsParam(node)) return
     ts.forEachChild(node, visit)
   }
   ts.forEachChild(body, visit)
@@ -176,10 +200,22 @@ export const addFileWithFactory = (
             }
 
             // Extract existing services an addon needs from the parent
-            // (second parameter of pikkuAddonServices callback)
-            if (wrapperFunctionName === 'pikkuAddonServices' && functionNode) {
+            // (second parameter of pikkuAddonServices callback). A wire
+            // factory reads the same parent bag and returns services of its
+            // own, so it declares the same contract — a service it builds per
+            // wire is one the addon owns, not one its consumer owes.
+            if (
+              (wrapperFunctionName === 'pikkuAddonServices' ||
+                wrapperFunctionName === 'pikkuAddonWireServices') &&
+              functionNode
+            ) {
               state.addonServicesFactorySeen = true
-              const forwarded = new Set(extractForwardedServices(functionNode))
+              const forwarded = new Set(
+                extractForwardedServices(
+                  functionNode,
+                  wrapperFunctionName === 'pikkuAddonWireServices' ? 0 : 1
+                )
+              )
               for (const name of forwarded) {
                 state.addonRequiredParentServices.push(name)
               }

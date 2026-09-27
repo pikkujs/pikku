@@ -1,3 +1,4 @@
+import type { CredentialOverrideMeta } from '../types.js'
 import type { SecretUsage } from './extract-secret-usage.js'
 import type { JSONValue } from '@pikku/core/utils'
 import type {
@@ -172,7 +173,7 @@ export interface SerializableInspectorState {
           authSecretId?: string
           secretOverrides?: Record<string, string>
           variableOverrides?: Record<string, string>
-          credentialOverrides?: Record<string, string>
+          credentialOverrides?: Record<string, CredentialOverrideMeta>
           secretGrants?: string[]
           credentialGrants?: string[]
           globalSecrets?: string
@@ -187,6 +188,7 @@ export interface SerializableInspectorState {
     toolsMeta: InspectorState['mcpEndpoints']['toolsMeta']
     promptsMeta: InspectorState['mcpEndpoints']['promptsMeta']
     files: string[]
+    surfaces?: InspectorState['mcpEndpoints']['surfaces']
   }
   agents: {
     invokedAgentsByFile?: Array<[string, string[]]>
@@ -245,6 +247,7 @@ export interface SerializableInspectorState {
   middleware: {
     definitions: InspectorState['middleware']['definitions']
     instances: InspectorState['middleware']['instances']
+    globalFiles: string[]
     tagMiddleware: Array<
       [
         string,
@@ -423,6 +426,7 @@ export function serializeInspectorState(
       toolsMeta: state.mcpEndpoints.toolsMeta,
       promptsMeta: state.mcpEndpoints.promptsMeta,
       files: Array.from(state.mcpEndpoints.files),
+      surfaces: state.mcpEndpoints.surfaces,
     },
     agents: {
       agentsMeta: state.agents?.agentsMeta ?? {},
@@ -485,6 +489,7 @@ export function serializeInspectorState(
     middleware: {
       definitions: state.middleware.definitions,
       instances: state.middleware.instances,
+      globalFiles: Array.from(state.middleware.globalFiles),
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
     },
     channelMiddleware: {
@@ -643,6 +648,7 @@ export function deserializeInspectorState(
       toolsMeta: data.mcpEndpoints.toolsMeta,
       promptsMeta: data.mcpEndpoints.promptsMeta,
       files: new Set(data.mcpEndpoints.files),
+      surfaces: data.mcpEndpoints.surfaces ?? {},
     },
     agents: {
       agentsMeta: data.agents?.agentsMeta || {},
@@ -705,6 +711,7 @@ export function deserializeInspectorState(
     middleware: {
       definitions: data.middleware.definitions,
       instances: data.middleware.instances || {},
+      globalFiles: new Set(data.middleware.globalFiles || []),
       tagMiddleware: new Map(data.middleware.tagMiddleware),
     },
     channelMiddleware: {

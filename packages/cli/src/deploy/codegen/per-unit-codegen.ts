@@ -153,6 +153,29 @@ export function collectFilterNames(
         names.add(channelDef.name)
         for (const id of channelDef.functionIds) names.add(id)
       }
+      // A CLI channel is a whole program's transport, not a set of commands.
+      //
+      // `wireCLI` generates this channel and tags it ['cli', <program>]. Its
+      // own wirings are the per-command ones plus `__help` and `__raw`, and
+      // those two resolve against `CLIMeta.programs[<program>]` rather than
+      // against a wiring — so without the program the channel connects, serves
+      // a named command, and answers `__help` with "Program not found".
+      //
+      // CLI programs are filtered by COMMAND name (see the inspector's
+      // filter-inspector-state), and a command name matches nothing in the set
+      // above, so every command is dropped and the empty program with it. The
+      // program's commands are what has to be asked for.
+      if (unit.tags.includes('cli')) {
+        const programs = inspectorState.cli?.meta?.programs ?? {}
+        for (const tag of unit.tags) {
+          const programMeta = programs[tag]
+          if (!programMeta) continue
+          names.add(tag)
+          for (const commandName of Object.keys(programMeta.commands ?? {})) {
+            names.add(commandName)
+          }
+        }
+      }
       break
     }
     case 'function': {

@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { pikkuBetterAuth } from '@pikku/better-auth'
-import type { CoreSingletonServices } from '@pikku/core/types'
+import type { CoreConfig, CoreSingletonServices } from '@pikku/core/types'
 import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 
@@ -20,9 +20,12 @@ import type { KyselyPikkuDB } from '@pikku/kysely'
  */
 export const auth = pikkuBetterAuth(
   async ({
+    config,
     secrets,
     kysely,
-  }: CoreSingletonServices & { kysely: Kysely<KyselyPikkuDB> }) => {
+  }: CoreSingletonServices<CoreConfig & { postgresUrl?: string }> & {
+    kysely: Kysely<KyselyPikkuDB>
+  }) => {
     // Fetch every secret in one batch rather than awaiting each individually.
     const { BETTER_AUTH_SECRET, GITHUB_OAUTH } = await secrets.getSecrets<{
       BETTER_AUTH_SECRET: string
@@ -38,7 +41,15 @@ export const auth = pikkuBetterAuth(
 
     return betterAuth({
       secret: betterAuthSecret,
-      database: { db: kysely, type: 'sqlite' },
+      database: {
+        db: kysely,
+        // The dialect Better Auth introspects with has to be the one the
+        // injected Kysely actually speaks: it runs dialect-specific index
+        // queries, and asking a Postgres database a `pragma_index_list`
+        // question fails outright. `postgresUrl` is the same flag `pikku db
+        // migrate` resolves the app database from.
+        type: config.postgresUrl ? 'postgres' : 'sqlite',
+      },
       emailAndPassword: { enabled: true },
       // Enables the stateless session middleware split (CLI detects this), so
       // non-auth workers skip bundling the full better-auth server.

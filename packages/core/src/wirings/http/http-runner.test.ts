@@ -53,6 +53,7 @@ class TestResponse extends PikkuMockResponse {
   public headersMap = new Map<string, string | string[]>()
   public jsonBody: unknown
   public bufferBody: unknown
+  public frames: unknown[] = []
   public mode: 'stream' | null = null
   public closed = false
 
@@ -63,6 +64,7 @@ class TestResponse extends PikkuMockResponse {
 
   arrayBuffer(data: XMLHttpRequestBodyInit): this {
     this.bufferBody = data
+    this.frames.push(data)
     return this
   }
 
@@ -499,5 +501,59 @@ describe('http-runner helpers', () => {
     assert.equal(response.headersMap.get('Cache-Control'), 'no-cache')
     assert.equal(response.closed, true)
     assert.equal(response.bufferBody, JSON.stringify({ hello: 'world' }))
+  })
+
+  test('a failed pikku-protocol stream ends with error and done frames', async () => {
+    setRouteMeta('/sse-error', 'get', { sse: true })
+    wireHTTP({
+      route: '/sse-error',
+      method: 'get',
+      sse: true,
+      auth: false,
+      func: {
+        func: async () => {
+          throw new NotFoundError('nope')
+        },
+      },
+    })
+    httpRouter.initialize()
+
+    const response = new TestResponse()
+    await fetchData(new TestRequest('/sse-error', 'get'), response)
+
+    assert.deepEqual(response.frames.map((f) => JSON.parse(f as string)), [
+      {
+        type: 'error',
+        errorText: 'The server cannot find the requested resource.',
+      },
+      { type: 'done' },
+    ])
+  })
+
+  test('a failed agui-protocol stream ends with a single RUN_ERROR frame', async () => {
+    setRouteMeta('/sse-agui-error', 'get', { sse: true })
+    wireHTTP({
+      route: '/sse-agui-error',
+      method: 'get',
+      sse: true,
+      streamProtocol: 'agui',
+      auth: false,
+      func: {
+        func: async () => {
+          throw new NotFoundError('nope')
+        },
+      },
+    })
+    httpRouter.initialize()
+
+    const response = new TestResponse()
+    await fetchData(new TestRequest('/sse-agui-error', 'get'), response)
+
+    assert.deepEqual(response.frames.map((f) => JSON.parse(f as string)), [
+      {
+        type: 'RUN_ERROR',
+        message: 'The server cannot find the requested resource.',
+      },
+    ])
   })
 })

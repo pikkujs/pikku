@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import {
   Accordion,
   Badge,
+  Button,
+  Checkbox,
   Group,
   Paper,
   Stack,
@@ -21,8 +23,12 @@ import {
   SEV_LABEL,
   emptyCounts,
   buildDeps,
-  type RenderRemediation,
+  resolveSelection,
+  type DepInfo,
+  type RenderUpgradeAction,
 } from './security-view-utils'
+import { buildUpgradePrompt, isUpgradable } from './upgrade-prompt'
+import { CopyUpgradePromptButton } from './CopyUpgradePromptButton'
 import { SeverityDot } from './SeverityDot'
 import { FindingItem } from './FindingItem'
 import { DependencyRow } from './DependencyRow'
@@ -35,16 +41,23 @@ export interface SecurityAuditViewProps {
   report: SecurityAuditReport
   lens: SecurityLens
   query: string
-  // Per-finding remediation slot, rendered right-aligned in the finding row
-  // header. OSS defaults to the free "Update dependency" button; Fabric passes
-  // its own sandbox-verified action here.
-  renderRemediation?: RenderRemediation
+  // The action offered for a selected package set, in a finding row and beneath
+  // a multi-package selection. OSS bumps package.json for one and copies a
+  // prompt for many; Fabric passes its own sandbox-verified action here.
+  renderUpgradeAction?: RenderUpgradeAction
 }
 
-// The default OSS remediation — bump package.json + bun install.
-const defaultRemediation: RenderRemediation = ({ pkg, version }) => (
-  <UpdateDependencyButton pkg={pkg} version={version} />
-)
+// The default OSS action — bump package.json + bun install for a single
+// package, and for a selection the prompt to hand another agent, since the
+// console has no sandbox to verify a multi-package upgrade in.
+const defaultUpgradeAction: RenderUpgradeAction = ({ deps, prompt }) => {
+  const only = deps.length === 1 ? deps[0] : undefined
+  return only?.latest ? (
+    <UpdateDependencyButton pkg={only.name} version={only.latest} />
+  ) : (
+    <CopyUpgradePromptButton prompt={prompt} />
+  )
+}
 
 // Stable, collision-free identity for a finding — advisoryId can be empty.
 const issueKey = (issue: SecurityAuditIssue, idx: number) =>
@@ -54,10 +67,30 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
   report,
   lens,
   query,
-  renderRemediation = defaultRemediation,
+  renderUpgradeAction = defaultUpgradeAction,
 }) => {
   const [vulnerableOnly, setVulnerableOnly] = useState(true)
+  const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set())
   const deps = useMemo(() => buildDeps(report), [report])
+  const depsByName = useMemo(
+    () => new Map(deps.map((d) => [d.name, d])),
+    [deps]
+  )
+  const upgrade = useCallback(
+    (selection: DepInfo[]) =>
+      renderUpgradeAction({
+        deps: selection,
+        prompt: buildUpgradePrompt(selection, report),
+      }),
+    [renderUpgradeAction, report]
+  )
+  const renderUpgradeFor = useCallback(
+    (pkg: string) => {
+      const dep = depsByName.get(pkg)
+      return dep ? upgrade([dep]) : null
+    },
+    [depsByName, upgrade]
+  )
   const latestOf = useMemo(() => {
     const map = new Map<string, string | undefined>()
     deps.forEach((d) => map.set(d.name, d.latest))
@@ -106,6 +139,28 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
   )
 
   const affected = deps.filter((d) => d.total > 0).length
+  const {
+    selectable,
+    selected: selectedDeps,
+    allShownSelected,
+    someShownSelected,
+  } = resolveSelection(deps, depsShown, selectedNames, isUpgradable)
+  const toggle = (name: string, on: boolean) =>
+    setSelectedNames((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(name)
+      else next.delete(name)
+      return next
+    })
+  const toggleShown = (on: boolean) =>
+    setSelectedNames((prev) => {
+      const next = new Set(prev)
+      for (const d of selectable) {
+        if (on) next.add(d.name)
+        else next.delete(d.name)
+      }
+      return next
+    })
 
   return (
     <Stack gap="lg" data-testid="security-audit">
@@ -171,7 +226,7 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
                         itemValue={key}
                         issue={issue}
                         latest={latestOf.get(issue.package)}
-                        renderRemediation={renderRemediation}
+                        renderUpgrade={renderUpgradeFor}
                       />
                     )
                   })}
@@ -182,7 +237,16 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
         )
       ) : (
         <Stack gap="sm">
-          <Group justify="flex-end">
+          <Group justify="space-between">
+            <Checkbox
+              size="xs"
+              disabled={selectable.length === 0}
+              checked={allShownSelected}
+              indeterminate={someShownSelected && !allShownSelected}
+              onChange={(e) => toggleShown(e.currentTarget.checked)}
+              label={m.security_select_all()}
+              data-testid="security-select-all"
+            />
             <Switch
               size="sm"
               checked={vulnerableOnly}
@@ -195,8 +259,39 @@ export const SecurityAuditView: React.FC<SecurityAuditViewProps> = ({
           ) : (
             <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
               {depsShown.map((d, i) => (
-                <DependencyRow key={d.name} dep={d} first={i === 0} />
+                <DependencyRow
+                  key={d.name}
+                  dep={d}
+                  first={i === 0}
+                  selected={selectedNames.has(d.name)}
+                  onSelectedChange={(on) => toggle(d.name, on)}
+                  renderUpgrade={renderUpgradeFor}
+                />
               ))}
+            </Paper>
+          )}
+          {selectedDeps.length > 1 && (
+            <Paper
+              withBorder
+              radius="md"
+              p="sm"
+              data-testid="security-selection-bar"
+            >
+              <Group justify="space-between" wrap="wrap" gap="sm">
+                <Text span size="sm">
+                  {m.security_selected_count({ count: selectedDeps.length })}
+                </Text>
+                <Group gap="xs">
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    onClick={() => setSelectedNames(new Set())}
+                  >
+                    {m.security_clear_selection()}
+                  </Button>
+                  {upgrade(selectedDeps)}
+                </Group>
+              </Group>
             </Paper>
           )}
         </Stack>

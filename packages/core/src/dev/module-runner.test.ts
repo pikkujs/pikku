@@ -102,6 +102,74 @@ describe('createModuleRunner', { concurrency: false }, () => {
     assert.strictEqual(dep.registry.get('createTodo'), mod!.createTodo)
   })
 
+  test('resolves a sibling import that only exists as TypeScript', async () => {
+    // A TS project writes `./sibling.js` for a file that is only ever
+    // `./sibling.ts`, and the reloader runs the source — so this is the shape
+    // every relative import in a reloaded file arrives in.
+    await writeFile(
+      join(tmpDir, 'ledger.ts'),
+      `export const read = (): string => 'v1'`
+    )
+
+    const runner = createModuleRunner()
+    const file = join(tmpDir, 'reader.ts')
+    await writeFile(
+      file,
+      `import { read } from './ledger.js'
+       export const reader = { func: async () => read() }`
+    )
+
+    const result = await runner.run(file)
+    assert.equal(result.ok, true, (result as any).error?.message)
+    assert.equal(await ((result as any).exports.reader as any).func(), 'v1')
+  })
+
+  test('compiles a .tsx dependency as JSX, not as plain TypeScript', async () => {
+    await writeFile(
+      join(tmpDir, 'Badge.tsx'),
+      `export const Badge = (): any => (<span>ok</span>)`
+    )
+
+    const runner = createModuleRunner()
+    const file = join(tmpDir, 'uses-badge.ts')
+    await writeFile(
+      file,
+      `import { Badge } from './Badge.js'
+       export const render = { func: async () => typeof Badge }`
+    )
+
+    const result = await runner.run(file)
+    assert.equal(result.ok, true, (result as any).error?.message)
+    assert.equal(
+      await ((result as any).exports.render as any).func(),
+      'function'
+    )
+  })
+
+  test('re-reads a changed TypeScript dependency on the next run', async () => {
+    await writeFile(
+      join(tmpDir, 'ledger.ts'),
+      `export const read = (): string => 'v1'`
+    )
+
+    const runner = createModuleRunner()
+    const file = join(tmpDir, 'reader.ts')
+    await writeFile(
+      file,
+      `import { read } from './ledger.js'
+       export const reader = { func: async () => read() }`
+    )
+    await runner.run(file)
+
+    await writeFile(
+      join(tmpDir, 'ledger.ts'),
+      `export const read = (): string => 'v2'`
+    )
+    const second = await runner.run(file)
+    assert.equal(second.ok, true, (second as any).error?.message)
+    assert.equal(await ((second as any).exports.reader as any).func(), 'v2')
+  })
+
   test('re-running the same path overwrites a single registry slot', async () => {
     const runner = createModuleRunner()
     const file = join(tmpDir, 'value.ts')
@@ -229,7 +297,9 @@ describe('createModuleRunner', { concurrency: false }, () => {
     const result = await runner.run(userFile)
     assert.equal(result.ok, true)
     const mod = (result as { exports: Record<string, unknown> }).exports
-    assert.equal(await (mod.fn as { func: () => Promise<string> }).func(), 'from-dep')
+    assert.equal(
+      await (mod.fn as { func: () => Promise<string> }).func(),
+      'from-dep'
+    )
   })
-
 })

@@ -117,6 +117,21 @@ describe('parseBunAudit', () => {
   })
 })
 
+// Verbatim `bun outdated --filter '*'` output (bun 1.4.0) for a workspace
+// repo. The filter is what makes bun look past the root package, and it adds a
+// fifth Workspace column to every row — including the separators.
+const BUN_OUTDATED_WORKSPACE_TABLE = `bun outdated v1.4.0 (34cbb9a40)
+|--------------------------------------------------------------|
+| Package       | Current | Update | Latest  | Workspace       |
+|---------------|---------|--------|---------|-----------------|
+| @mantine/core | 8.4.1   | 8.4.3  | 8.4.3   | app             |
+|---------------|---------|--------|---------|-----------------|
+| kysely        | 0.28.9  | 0.28.9 | 0.29.0  | functions       |
+|---------------|---------|--------|---------|-----------------|
+| react (dev)   | 19.2.0  | 19.2.1 | 19.2.1  | app             |
+|--------------------------------------------------------------|
+`
+
 describe('parseBunOutdated', () => {
   test('reads the update rows out of the real table', () => {
     assert.deepEqual(parseBunOutdated(BUN_OUTDATED_TABLE), [
@@ -133,6 +148,22 @@ describe('parseBunOutdated', () => {
         latest: '1.2.8',
         level: 'patch',
       },
+    ])
+  })
+
+  // A workspace repo needs `--filter '*'` or bun reports the root package only,
+  // and that flag widens every row with a Workspace column. Reading just the
+  // four-cell shape silently returned nothing for every monorepo.
+  test('reads the five-column table --filter writes', () => {
+    assert.deepEqual(parseBunOutdated(BUN_OUTDATED_WORKSPACE_TABLE), [
+      {
+        package: '@mantine/core',
+        current: '8.4.1',
+        latest: '8.4.3',
+        level: 'patch',
+      },
+      { package: 'kysely', current: '0.28.9', latest: '0.29.0', level: 'minor' },
+      { package: 'react', current: '19.2.0', latest: '19.2.1', level: 'patch' },
     ])
   })
 

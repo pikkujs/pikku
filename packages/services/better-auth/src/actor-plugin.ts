@@ -152,14 +152,17 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
                 message: ACTOR_NOT_PROVISIONED_MESSAGE,
               })
             }
-            user = (await ctx.context.internalAdapter.createUser({
-              email,
-              emailVerified: true,
-              name: ctx.body.name ?? email.split('@')[0]!,
-              actor: true,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            })) as unknown as ActorUser | undefined
+            user = (await ctx.context.internalAdapter.createUser(
+              {
+                email,
+                emailVerified: true,
+                name: ctx.body.name ?? email.split('@')[0]!,
+                actor: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+              { method: 'actor' }
+            )) as unknown as ActorUser | undefined
             if (!user) {
               throw new APIError('INTERNAL_SERVER_ERROR', {
                 message: 'Failed to create actor user',

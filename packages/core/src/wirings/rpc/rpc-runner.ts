@@ -8,6 +8,7 @@ import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import type { AddonInstance } from '../addon/addon-runner.js'
 import { addonInstanceForNamespace } from '../addon/addon-runner.js'
+import { isAddonFunctionExposed } from '../addon/wire-addon.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
@@ -160,11 +161,12 @@ export class ContextAwareRPCService {
 
   public async rpcExposed(funcName: string, data: any): Promise<any> {
     let functionMeta: any
+    let resolvedAddon: ResolvedFunction | null = null
     if (funcName.includes(':')) {
-      const resolved = resolveNamespace(funcName)
-      if (resolved) {
-        functionMeta = pikkuState(resolved.package, 'function', 'meta')[
-          resolved.function
+      resolvedAddon = resolveNamespace(funcName)
+      if (resolvedAddon) {
+        functionMeta = pikkuState(resolvedAddon.package, 'function', 'meta')[
+          resolvedAddon.function
         ]
       }
     } else {
@@ -174,12 +176,31 @@ export class ContextAwareRPCService {
       ]
     }
     if (!functionMeta) {
-      if (funcName.includes(':') && this.services.deploymentService) {
+      // The addon runs in another deploy unit, which only carries the
+      // functions the analyzer found exposed. A wiring present here still
+      // gets to narrow what is forwarded.
+      const refusedHere =
+        resolvedAddon &&
+        (resolvedAddon.addonConfig.expose === false ||
+          (Array.isArray(resolvedAddon.addonConfig.expose) &&
+            !resolvedAddon.addonConfig.expose.includes(resolvedAddon.function)))
+      if (
+        funcName.includes(':') &&
+        this.services.deploymentService &&
+        !refusedHere
+      ) {
         return await this.rpc(funcName, data)
       }
       throw new RPCNotFoundError(funcName)
     }
-    if (!functionMeta.expose || functionMeta.scenarioStep) {
+    const exposed = resolvedAddon
+      ? isAddonFunctionExposed(
+          resolvedAddon.addonConfig.expose,
+          resolvedAddon.function,
+          functionMeta.expose
+        )
+      : functionMeta.expose
+    if (!exposed || functionMeta.scenarioStep) {
       throw new RPCNotFoundError(funcName)
     }
     return await this.rpc(funcName, data)

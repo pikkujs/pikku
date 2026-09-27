@@ -5,6 +5,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { SecurityAuditView, type SecurityLens } from './SecurityAuditView'
+import type { RenderUpgradeAction } from './security-view-utils'
 import { useSecurityAudit } from '../../hooks/useSecurityAudit'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
 
@@ -17,6 +18,8 @@ export interface SecurityReportPanelProps {
    * button, since the mutation state lives with it.
    */
   runError?: boolean
+  /** Passed through to {@link SecurityAuditView}; see its own prop. */
+  renderUpgradeAction?: RenderUpgradeAction
 }
 
 /**
@@ -29,6 +32,7 @@ export const SecurityReportPanel: React.FC<SecurityReportPanelProps> = ({
   query,
   emptyHero,
   runError = false,
+  renderUpgradeAction,
 }) => {
   useLocale()
   const { report, isLoading } = useSecurityAudit()
@@ -61,7 +65,12 @@ export const SecurityReportPanel: React.FC<SecurityReportPanelProps> = ({
             {m.security_run_error()}
           </Text>
         )}
-        <SecurityAuditView report={report} lens={lens} query={query} />
+        <SecurityAuditView
+          report={report}
+          lens={lens}
+          query={query}
+          renderUpgradeAction={renderUpgradeAction}
+        />
       </Box>
     </ScrollArea>
   )

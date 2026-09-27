@@ -20,3 +20,35 @@ export const runDuration = (ms?: number): string => {
   const seconds = Math.round((ms % 60000) / 1000)
   return `${minutes}m ${seconds}s`
 }
+
+/**
+ * A run's version, short enough to sit at the end of a line.
+ *
+ * Seven characters of the commit, the way git itself abbreviates, with a `+`
+ * for a tree that had uncommitted changes — the commit is then only where the
+ * run started from, not what it ran. The attempt is only worth saying from the
+ * second one on: `#1` on every first run would be noise on most of them.
+ */
+export const runVersionLabel = (version?: {
+  commit: string
+  dirty?: boolean
+  attempt: number
+}): string => {
+  if (!version) return ''
+  const commit = `${version.commit.slice(0, 7)}${version.dirty ? '+' : ''}`
+  return version.attempt > 1 ? `${commit} #${version.attempt}` : commit
+}
+
+/**
+ * Where each step starts inside its scenario's recording. Steps are recorded
+ * with a duration and no timestamp, so the offset is the sum of everything
+ * before it — which is also how the recording was laid down.
+ */
+export const stepOffsets = (steps: { durationMs?: number }[]): number[] => {
+  let elapsed = 0
+  return steps.map((step) => {
+    const offset = elapsed
+    elapsed += step.durationMs ?? 0
+    return offset
+  })
+}

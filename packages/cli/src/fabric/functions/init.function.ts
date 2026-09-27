@@ -7,6 +7,8 @@ import {
   writeProjectConfig,
 } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { FabricPreconditionError } from '../lib/errors.js'
+import { resolveOrganizationId } from '../lib/organization.js'
 
 export const FabricInitInput = z.object({
   repo: z.string(),
@@ -14,6 +16,7 @@ export const FabricInitInput = z.object({
   branch: z.string().optional(),
   force: z.boolean().optional(),
   apiUrl: z.string().optional(),
+  organization: z.string().optional(),
 })
 
 export const FabricInitOutput = z.object({
@@ -36,25 +39,29 @@ export const FabricInit = pikkuSessionlessFunc({
   output: FabricInitOutput,
   func: async (
     _services,
-    { repo, name, branch, force, apiUrl: apiUrlOverride }
+    { repo, name, branch, force, apiUrl: apiUrlOverride, organization }
   ) => {
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
-      throw new Error('Not logged in. Run `pikku fabric login` first.')
+      throw new FabricPreconditionError(
+        'Not logged in. Run `pikku fabric login` first.'
+      )
 
     const existing = await findProjectConfig()
     if (existing && isLinkedProjectId(existing.config.projectId) && !force) {
-      throw new Error(
+      throw new FabricPreconditionError(
         `Already linked: ${existing.config.projectId} at ${existing.path}. Pass --force to replace.`
       )
     }
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const organizationId = await resolveOrganizationId(rpc, organization)
     const result = await rpc.invoke('importProject', {
       repoUrl: repo,
       name,
       defaultBranch: branch,
       productionBranch: 'main',
+      ...(organizationId ? { organizationId } : {}),
     })
 
     const path = await writeProjectConfig(process.cwd(), {

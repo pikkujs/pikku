@@ -3,6 +3,7 @@ import { readFile, readdir } from 'fs/promises'
 import { createRequire } from 'module'
 import { join, dirname } from 'path'
 import type { InspectorState, InspectorLogger } from '../types.js'
+import { ErrorCode } from '../error-codes.js'
 import type {
   ExportedChannelContractsMeta,
   ExportedHTTPRouteConfigMeta,
@@ -218,19 +219,58 @@ export async function loadAddonFunctionsMeta(
       )
       registerAddonTypes(state, metaPath, meta)
 
-      // If wireAddon has mcp: true, expose addon functions with mcp: true as MCP tools
+      // `mcp: true` offers what the addon declared as tools; `mcp: [...]` names
+      // the functions to offer, whatever the addon declared — the consuming app
+      // decides which of the addon's functions a model gets to see.
       if (decl.mcp) {
+        const selected = Array.isArray(decl.mcp) ? new Set(decl.mcp) : null
+        // `mcpEndpoint` gives this instance an endpoint to itself, which is
+        // what lets one project expose several connectors: a client pointed at
+        // one surface lists that surface's tools and no others. Unset keeps
+        // the tools on the project's single endpoint.
+        const surface = decl.mcpEndpoint ? namespace : undefined
+        if (surface) {
+          state.mcpEndpoints.surfaces[surface] =
+            typeof decl.mcpEndpoint === 'string'
+              ? decl.mcpEndpoint
+              : `/mcp/${namespace}`
+        }
         for (const [funcName, funcMeta] of Object.entries<any>(meta)) {
-          if (funcMeta.mcp) {
-            const toolName = `${namespace}:${funcName}`
-            state.mcpEndpoints.toolsMeta[toolName] = {
-              pikkuFuncId: `${namespace}:${funcName}`,
-              name: toolName,
-              description: funcMeta.description || funcMeta.title || funcName,
-              inputSchema: funcMeta.inputSchemaName ?? null,
-              outputSchema: funcMeta.outputSchemaName ?? null,
-              tags: funcMeta.tags,
-            }
+          if (selected ? !selected.has(funcName) : !funcMeta.mcp) {
+            continue
+          }
+          const toolName = `${namespace}:${funcName}`
+          state.mcpEndpoints.toolsMeta[toolName] = {
+            pikkuFuncId: `${namespace}:${funcName}`,
+            name: toolName,
+            description: funcMeta.description || funcMeta.title || funcName,
+            inputSchema: funcMeta.inputSchemaName ?? null,
+            outputSchema: funcMeta.outputSchemaName ?? null,
+            tags: funcMeta.tags,
+            ...(surface ? { surface } : {}),
+          }
+        }
+        // A name the addon does not publish is a tool the app believes it
+        // offers and never does, so it fails the build rather than silently
+        // offering one tool fewer than the list says.
+        for (const funcName of selected ?? []) {
+          if (!(funcName in meta)) {
+            logger.critical(
+              ErrorCode.ADDON_MCP_FUNCTION_NOT_FOUND,
+              `wireAddon('${namespace}') lists '${funcName}' under mcp, but ${decl.package} publishes no such function.`
+            )
+          }
+        }
+      }
+      // Same reasoning as mcp: a listed name the addon does not publish is a
+      // function the app believes callable and never is.
+      if (Array.isArray(decl.expose)) {
+        for (const funcName of decl.expose) {
+          if (!Object.hasOwn(meta, funcName)) {
+            logger.critical(
+              ErrorCode.ADDON_EXPOSE_FUNCTION_NOT_FOUND,
+              `wireAddon('${namespace}') lists '${funcName}' under expose, but ${decl.package} publishes no such function.`
+            )
           }
         }
       }

@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/verifiers-mcp-auth",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/modelcontextprotocol": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^24",
+    "tsx": "^4.23.12"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "pikku": "pikku",
+    "test": "pikku && tsc --noEmit && npx tsx test/test-mcp-auth.ts"
+  }
+}

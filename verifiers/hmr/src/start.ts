@@ -1,3 +1,4 @@
+import { unlinkSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
@@ -51,18 +52,15 @@ async function runTest(name: string, fn: () => Promise<void>): Promise<void> {
 // File helpers
 // ---------------------------------------------------------------------------
 
-const writeJsAndTouchTs = async (
-  jsFile: string,
-  tsFile: string,
-  jsContent: string
-) => {
-  await writeFile(jsFile, jsContent)
-  await writeFile(tsFile, `// hot-reload trigger ${Date.now()}\n`)
+/** What `tsc`, `pikku dist` or a bundler leaves beside a source file. `pikku
+ *  dev` never refreshes it, so a reload that reads it serves the code the
+ *  developer just replaced — while logging a successful reload. */
+const writeStaleCompiledSibling = async (jsFile: string, body: string) => {
+  await writeFile(jsFile, body)
 }
 
 const cleanupJsFile = (jsFile: string) => {
   try {
-    const { unlinkSync } = require('node:fs')
     unlinkSync(jsFile)
   } catch {
     // ignore
@@ -89,9 +87,22 @@ export const greeting = pikkuSessionlessFunc<
 })
 `
 
-const writeGreetingJs = async (returnExpr: string) => {
-  const js = `export const greeting = { func: async (_services, { name }) => (${returnExpr}), auth: false };\n`
-  await writeJsAndTouchTs(GREETING_JS, GREETING_TS, js)
+const writeGreetingTs = async (returnExpr: string) => {
+  await writeFile(
+    GREETING_TS,
+    `import { pikkuSessionlessFunc } from '#pikku/function'
+
+export const greeting = pikkuSessionlessFunc<
+  { name: string },
+  { message: string }
+>({
+  auth: false,
+  func: async (_services, { name }) => {
+    return ${returnExpr}
+  },
+})
+`
+  )
 }
 
 const restoreGreeting = async () => {
@@ -121,9 +132,24 @@ export const greeterWithMiddleware = pikkuSessionlessFunc<
 })
 `
 
-const writeMwFuncJs = async (returnExpr: string) => {
-  const js = `export const greeterWithMiddleware = { func: async (_services, { name }) => (${returnExpr}), auth: false };\n`
-  await writeJsAndTouchTs(MW_FUNC_JS, MW_FUNC_TS, js)
+const writeMwFuncTs = async (returnExpr: string) => {
+  await writeFile(
+    MW_FUNC_TS,
+    `import { pikkuSessionlessFunc } from '#pikku/function'
+import { loggingMiddleware } from './middleware.js'
+
+export const greeterWithMiddleware = pikkuSessionlessFunc<
+  { name: string },
+  { message: string }
+>({
+  auth: false,
+  func: async (_services, { name }) => {
+    return ${returnExpr}
+  },
+  middleware: [loggingMiddleware],
+})
+`
+  )
 }
 
 const restoreMwFunc = async () => {
@@ -198,10 +224,19 @@ const fetchMwGreeting = async (name: string) => {
   return response.json()
 }
 
-const silentLogger = {
-  info: () => {},
+/** The reloaded scheduler task reports through the app's logger and nothing
+ *  else — `runScheduledTask` resolves to void — so the log is the only place a
+ *  reloaded implementation can be observed from. */
+const logged: string[] = []
+
+const capturingLogger = {
+  info: (message: any, ..._meta: unknown[]) => {
+    logged.push(String(message))
+  },
   warn: () => {},
-  error: () => {},
+  error: (message: any, ..._meta: unknown[]) => {
+    logged.push(String(message))
+  },
   debug: () => {},
   setLevel: () => {},
 }
@@ -213,8 +248,7 @@ const silentLogger = {
 const createReloader = () =>
   pikkuDevReloader({
     srcDirectories: [resolve('src')],
-    logger: silentLogger,
-    pikkuDir: resolve('.pikku'),
+    logger: capturingLogger,
   })
 
 // ---------------------------------------------------------------------------
@@ -223,7 +257,7 @@ const createReloader = () =>
 
 async function main(): Promise<void> {
   const config = await createConfig()
-  await createSingletonServices(config)
+  await createSingletonServices(config, { logger: capturingLogger } as any)
 
   console.log('\nHMR (Hot Module Reload) Verifier')
   console.log('================================')
@@ -242,7 +276,7 @@ async function main(): Promise<void> {
   await runTest('HTTP: hot-reload updates function', async () => {
     const reloader = await createReloader()
     try {
-      await writeGreetingJs('{ message: `Hey there, ${name}!` }')
+      await writeGreetingTs('{ message: `Hey there, ${name}!` }')
       await wait(500)
       const body = await fetchGreeting('World')
       assertEqual(body, { message: 'Hey there, World!' }, 'reloaded response')
@@ -255,7 +289,7 @@ async function main(): Promise<void> {
   await runTest('HTTP: second reload', async () => {
     const reloader = await createReloader()
     try {
-      await writeGreetingJs('{ message: `Yo, ${name}!` }')
+      await writeGreetingTs('{ message: `Yo, ${name}!` }')
       await wait(500)
       const body = await fetchGreeting('Dev')
       assertEqual(body, { message: 'Yo, Dev!' }, 'second reload')
@@ -265,10 +299,31 @@ async function main(): Promise<void> {
     }
   })
 
-  await runTest('HTTP: invalid JS keeps existing function', async () => {
+  await runTest('HTTP: a stale compiled sibling never wins', async () => {
     const reloader = await createReloader()
     try {
-      await writeGreetingJs('{ message: `Safe and sound, ${name}!` }')
+      await writeStaleCompiledSibling(
+        GREETING_JS,
+        `export const greeting = { func: async (_services, { name }) => ({ message: \`Stale, \${name}!\` }), auth: false };\n`
+      )
+      await writeGreetingTs('{ message: `Fresh, ${name}!` }')
+      await wait(500)
+      const body = await fetchGreeting('World')
+      assertEqual(
+        body,
+        { message: 'Fresh, World!' },
+        'edited source wins over the leftover build output'
+      )
+    } finally {
+      reloader.close()
+      await restoreGreeting()
+    }
+  })
+
+  await runTest('HTTP: invalid source keeps existing function', async () => {
+    const reloader = await createReloader()
+    try {
+      await writeGreetingTs('{ message: `Safe and sound, ${name}!` }')
       await wait(500)
       const before = await fetchGreeting('Safe')
       assertEqual(
@@ -277,8 +332,7 @@ async function main(): Promise<void> {
         'baseline before bad reload'
       )
 
-      await writeFile(GREETING_JS, 'this is not valid javascript {{{')
-      await writeFile(GREETING_TS, `// trigger broken ${Date.now()}\n`)
+      await writeFile(GREETING_TS, 'this is not valid typescript {{{')
       await wait(500)
 
       const after = await fetchGreeting('Safe')
@@ -311,7 +365,7 @@ async function main(): Promise<void> {
   await runTest('Middleware: hot-reload updates function', async () => {
     const reloader = await createReloader()
     try {
-      await writeMwFuncJs('{ message: `MW Reloaded, ${name}!` }')
+      await writeMwFuncTs('{ message: `MW Reloaded, ${name}!` }')
       await wait(500)
       const body = await fetchMwGreeting('World')
       assertEqual(
@@ -338,12 +392,27 @@ async function main(): Promise<void> {
   await runTest('Scheduler: hot-reload updates function', async () => {
     const reloader = await createReloader()
     try {
-      const js = `export const myScheduledTask = { func: async ({ logger }) => { logger.info('RELOADED-SCHED'); }, auth: false };\n`
-      await writeJsAndTouchTs(SCHED_JS, SCHED_TS, js)
+      await writeFile(
+        SCHED_TS,
+        `import { pikkuSessionlessFunc } from '#pikku/function'
+
+export const myScheduledTask = pikkuSessionlessFunc<void, void>({
+  auth: false,
+  func: async ({ logger }) => {
+    logger.info('RELOADED-SCHED')
+  },
+})
+`
+      )
       await wait(500)
 
-      // If it doesn't throw, the reloaded function ran successfully
+      logged.length = 0
       await runScheduledTask({ name: 'myScheduledTask' })
+      assertEqual(
+        logged.includes('RELOADED-SCHED'),
+        true,
+        'the reloaded task is the one the scheduler ran'
+      )
     } finally {
       reloader.close()
       await restoreScheduled()
@@ -370,11 +439,24 @@ async function main(): Promise<void> {
   await runTest('Queue: hot-reload updates function', async () => {
     const reloader = await createReloader()
     try {
-      const js = `export const myQueueWorker = { func: async (_services, { item }) => ({ processed: 'reloaded: ' + item }), auth: false };\n`
-      await writeJsAndTouchTs(QUEUE_JS, QUEUE_TS, js)
+      await writeFile(
+        QUEUE_TS,
+        `import { pikkuSessionlessFunc } from '#pikku/function'
+
+export const myQueueWorker = pikkuSessionlessFunc<
+  { item: string },
+  { processed: string }
+>({
+  auth: false,
+  func: async (_services, { item }) => {
+    return { processed: \`reloaded: \${item}\` }
+  },
+})
+`
+      )
       await wait(500)
 
-      await runQueueJob({
+      const result = await runQueueJob({
         job: {
           id: 'test-2',
           queueName: 'myQueue',
@@ -382,6 +464,11 @@ async function main(): Promise<void> {
           status: () => 'waiting' as const,
         },
       })
+      assertEqual(
+        result,
+        { processed: 'reloaded: world' },
+        'the reloaded worker is the one the queue ran'
+      )
     } finally {
       reloader.close()
       await restoreQueue()

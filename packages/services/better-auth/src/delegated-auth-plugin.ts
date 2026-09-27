@@ -159,10 +159,10 @@ export const pikkuDelegatedAuth = (
         type AppUser = { id: string; email: string } & Record<string, unknown>
         let user: AppUser | undefined
 
-        const account = await adapter.findAccountByProviderId(
-          identity.externalId,
-          DELEGATED_PROVIDER_ID
-        )
+        const account = await adapter.findAccountByKey({
+          providerId: DELEGATED_PROVIDER_ID,
+          accountId: identity.externalId,
+        })
         if (account) {
           const found = (await adapter.findUserById(
             account.userId
@@ -203,13 +203,16 @@ export const pikkuDelegatedAuth = (
               ...(identity.name ? { name: identity.name } : {}),
             })) as AppUser
           } else {
-            user = (await adapter.createUser({
-              email: identityEmail,
-              emailVerified: true,
-              name: identity.name ?? identityEmail.split('@')[0]!,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            })) as unknown as AppUser
+            user = (await adapter.createUser(
+              {
+                email: identityEmail,
+                emailVerified: true,
+                name: identity.name ?? identityEmail.split('@')[0]!,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+              { method: DELEGATED_PROVIDER_ID }
+            )) as unknown as AppUser
             if (!user) {
               throw new APIError('INTERNAL_SERVER_ERROR', {
                 message: 'Failed to create user',

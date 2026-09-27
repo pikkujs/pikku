@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3017 observable things**: 977 exported names, plus
-2040 members on the classes and interfaces among them, reachable
+**3061 observable things**: 994 exported names, plus
+2067 members on the classes and interfaces among them, reachable
 through 55 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,22 +14,22 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 160 | 128 | 435 |
+| `./services` | 160 | 128 | 436 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 45 | 45 | 134 |
+| `./scenario` | 49 | 49 | 152 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
-| `./channel` | 32 | 32 | 84 |
+| `./channel` | 32 | 32 | 85 |
 | `./types` | 23 | 20 | 77 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
-| `./http` | 25 | 25 | 49 |
+| `./http` | 26 | 26 | 56 |
 | `./errors` | 50 | 50 | 22 |
 | `./analytics` | 26 | 26 | 40 |
+| `./mcp` | 25 | 25 | 17 |
 | `./services/local-meta` | 22 | 2 | 40 |
-| `./cli` | 14 | 12 | 26 |
+| `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
-| `./mcp` | 20 | 20 | 17 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
 | `./agent-scorer` | 18 | 18 | 12 |
@@ -50,16 +50,16 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./services/temporary-file-service` | 2 | 2 | 9 |
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
+| `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
 | `./scheduler` | 7 | 7 | 1 |
+| `./secret` | 8 | 8 | 0 |
 | `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
-| `./secret` | 7 | 7 | 0 |
 | `./variable` | 6 | 6 | 0 |
 | `./schema` | 6 | 6 | 0 |
 | `./dev` | 4 | 4 | 2 |
-| `./credential` | 5 | 5 | 0 |
 | `./services/istanbul-coverage` | 1 | 1 | 4 |
 | `./services/local-content-request-handler` | 5 | 5 | 0 |
 | `./testing` | 3 | 3 | 2 |
@@ -265,7 +265,7 @@ export type GetCredential<TCredentials = Record<string, unknown>> = {
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
@@ -805,6 +805,7 @@ export interface ChannelMeta {
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
   binary?: boolean | null
+  auth?: boolean
   gateway?: boolean
   summary?: string
   description?: string
@@ -1534,6 +1535,7 @@ export type CoreFeature = {
   name: string
   description?: string
   tags?: string[]
+  document?: boolean
   scenarios: readonly CoreFeatureScenario[]
   before?: CorePikkuFunctionHook
   after?: CorePikkuFunctionHook
@@ -1548,6 +1550,7 @@ export type FeatureMeta = {
   name: string
   description?: string
   tags: string[]
+  document?: boolean
   entries: FeatureMetaEntry[]
   unresolvedEntries: number
   hasBefore: boolean
@@ -1557,16 +1560,18 @@ export type FeaturesMeta = Record<string, FeatureMeta>
 export interface PikkuBrowserWire {
   readonly actor: string
   goto(url: string): Promise<void>
-  screenshot(name?: string): Promise<Uint8Array>
+  screenshot(name?: string, options?: ScenarioScreenshotOptions): Promise<Uint8Array>
 }
 export class PikkuScenarioService implements WorkflowRunExtension {
   constructor(private readonly engine: WorkflowRunEngine)
-  public setRunSurface(surface: ScenarioSurface): void
+  public setRunSurface(surface: ScenarioSurface, strict = false): void
   public getRunSurface(): ScenarioSurface
+  public isStrictSurface(): boolean
   public setScenarioBrowserProvider(provider: ScenarioBrowserProvider | undefined): void
   public getScenarioBrowserProvider(): ScenarioBrowserProvider | undefined
   public setScenarioEnvironment(env: ScenarioEnvironment | undefined): void
   public getScenarioEnvironment(): ScenarioEnvironment | undefined
+  public takeStepVideoOffsets(runId: string): Map<string, ScenarioStepVideoOffset[]>
   public async attachRunContext(runId: string, workflowMeta: any, options?: { actors?: ScenarioPersonas }): Promise<void>
   public detachRunContext(runId: string): void
   public getRunContext(runId: string): Record<string, unknown> | undefined
@@ -1606,6 +1611,8 @@ export interface ScenarioArtifact {
   path: string
   actor?: string
   name?: string
+  id?: string
+  showcase?: boolean
 }
 export interface ScenarioBrowserFailure {
   actor: string
@@ -1621,6 +1628,8 @@ export interface ScenarioBrowserProvider {
   reset?(): Promise<void>
   beginScenario?(scenario: string): void
   endScenario?(outcome: 'passed' | 'failed'): void
+  videoStartedAt?(actorName: string): number | undefined
+  markVideoStep?(actorName: string): number | undefined
   captureFailure?(label: string): Promise<ScenarioBrowserFailure[]>
   artifacts?(): ScenarioArtifact[]
   close(): Promise<void>
@@ -1675,6 +1684,7 @@ export interface ScenarioResult {
   failure?: ScenarioFailureDetail
   scenarioName?: string
   feature?: string
+  featureId?: string
   tags?: string[]
   artifacts?: ScenarioArtifact[]
 }
@@ -1682,6 +1692,7 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   runId: string
   status: ScenarioRunStatus
   surface: string
+  selection?: ScenarioRunSelection
   startedAt: string
   finishedAt?: string
 }
@@ -1690,6 +1701,12 @@ export interface ScenarioRunReport {
   results: ScenarioResult[]
   skipped: ScenarioSkip[]
   hookFailures: string[]
+}
+export interface ScenarioRunSelection {
+  flows?: string[]
+  features?: string[]
+  tags?: string[]
+  excludeTags?: string[]
 }
 export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
 export interface ScenarioRunStore {
@@ -1714,6 +1731,10 @@ export interface ScenarioRunSummary {
   failed: number
   skipped: number
   artifacts: number
+}
+export interface ScenarioScreenshotOptions {
+  showcase?: boolean
+  fullPage?: boolean
 }
 export type ScenarioStepKind = 'persona' | 'platform' | 'addon'
 export interface ScenarioStepMeta {
@@ -1740,8 +1761,16 @@ export interface ScenarioStepRow {
   status: string
   durationMs?: number
   error?: string
+  video?: ScenarioStepVideoOffset[]
+}
+export interface ScenarioStepVideoOffset {
+  actor: string
+  offsetMs: number
 }
 export type ScenarioSurface = 'browser' | 'cli' | 'default'
+export class ScenarioUnwitnessedAssertion extends PikkuError {
+  constructor(public readonly stepFunc: string, public readonly declared: ScenarioSurface[], public readonly runSurface: ScenarioSurface, public readonly witnessedOn: ScenarioSurface[])
+}
 export class ScenarioWitnessDisagreement extends PikkuError {
   constructor(public readonly stepFunc: string, public readonly expected: { surface: ScenarioSurface; observed: unknown }, public readonly actual: { surface: ScenarioSurface; observed: unknown })
 }
@@ -2632,6 +2661,15 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
 export interface PikkuHTTP<In = unknown> {
   request?: PikkuHTTPRequest<In>
   response?: PikkuHTTPResponse
+  authInfo?: PikkuHTTPAuthInfo
+}
+export interface PikkuHTTPAuthInfo {
+  token: string
+  clientId: string
+  scopes: string[]
+  expiresAt?: number
+  resource?: URL
+  extra?: Record<string, unknown>
 }
 export interface PikkuHTTPRequest<In = unknown> {
   method(): HTTPMethod
@@ -2996,12 +3034,14 @@ export type WireAddonConfig = {
   package: string
   rpcEndpoint?: string
   auth?: boolean
-  mcp?: boolean
+  mcp?: boolean | string[]
+  expose?: boolean | string[]
+  mcpEndpoint?: boolean | string
   tags?: string[]
   scopes?: string[]
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
-  credentialOverrides?: Record<string, string>
+  credentialOverrides?: CredentialOverrides
   secretGrants?: string[]
   credentialGrants?: string[]
   globalSecrets?: string
@@ -3110,6 +3150,7 @@ export class MCPEndpointRegistry {
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse)
 }
+mcpEveryTargetRequiresSession: () => boolean
 export type MCPPromptMeta = Record<
   string,
   Omit<CoreMCPPrompt, 'func' | 'middleware'> & {
@@ -3122,9 +3163,11 @@ export type MCPPromptMeta = Record<
       required: boolean
     }>
     middleware?: MiddlewareMetadata[]
+    surface?: string
   }
 >
 export type MCPPromptResponse = MCPPromptMessage[]
+mcpResolveWireName: (type: McpTargetType, wireName: string) => string
 export type MCPResourceMeta = Record<
   string,
   Omit<CoreMCPResource, 'func' | 'middleware'> & {
@@ -3132,9 +3175,12 @@ export type MCPResourceMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]
+    surface?: string
   }
 >
 export type MCPResourceResponse = MCPResourceMessage[]
+mcpTargetRequiresSession: (type: "resource" | "tool" | "prompt", name: string) => boolean
+export type McpTargetType = 'tool' | 'resource' | 'prompt'
 export type MCPToolMeta = Record<
   string,
   Omit<CoreMCPTool, 'func' | 'middleware'> & {
@@ -3142,9 +3188,11 @@ export type MCPToolMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]
+    surface?: string
   }
 >
 export type MCPToolResponse = MCPToolMessage[]
+mcpWireName: (type: McpTargetType, name: string) => string
 export type PikkuMCP<Tools extends string = any> = {
   uri?: string
   sendResourceUpdated: (uri: string) => void
@@ -3856,10 +3904,12 @@ export type CorePikkuCLIRender<
 > = CorePikkuRender<Data, void, Services, Session>
 defineCLICommands: <T extends Record<string, CoreCLICommandConfig<any, any, any, any>>>(commands: T) => T
 executeCLI: ({ programName, args, createConfig, createSingletonServices, createWireServices, }: { programName: string; args?: string[] | undefined; createConfig?: CreateConfig<any, any> | undefined; createSingletonServices: CreateSingletonServices<any, any>; createWireServices?: CreateWireServices<any, any, any> | undefined; }) => Promise<void>
+formatCLIError: (error: unknown, { verbose }?: { verbose?: boolean | undefined; }) => string
 generateCommandHelp: (programName: string, allMeta: CLIMeta, commandPath?: string[]) => string
 parseCLIArguments: (args: string[], programName: string, allMeta: CLIMeta) => ParsedCommand
 pikkuCLIRender: <Data, Services extends CoreSingletonServices = CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>, Session extends CoreUserSession = CoreUserSession>(renderer: (services: Services, data: Data, session?: Session | undefined) => void | Promise<void>) => CorePikkuCLIRender<Data, Services, Session>
 runCLICommand: ({ program, commandPath, data, singletonServices, createWireServices, onOutput, session, transport, }: { program: string; commandPath: string[]; data: Record<string, any>; singletonServices: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>; createWireServices?: CreateWireServices | undefined; session?: CoreUserSession | undefined; onOutput?: ((data: unknown) => void | Promise<void>) | undefined; transport?: PikkuChannel<unknown, any, any> | undefined; }) => Promise<any>
+wantsStackTrace: (args: string[], env?: Record<string, string | undefined>) => boolean
 wireCLI: <Commands extends Record<string, CoreCLICommandConfig<any, any, any>>, GlobalOptions, PikkuMiddleware extends CorePikkuMiddleware, GlobalOutput>(cli: CoreCLI<Commands, GlobalOptions, PikkuMiddleware, GlobalOutput>) => void
 ```
 
@@ -3921,6 +3971,7 @@ export type NodeType = 'trigger' | 'action' | 'end'
 ## ./credential
 
 ```ts
+buildCredentialResolutions: (declared: Record<string, { type?: string | undefined; }> | null | undefined, overrides: CredentialOverrides | undefined) => Record<string, CredentialResolution>
 export type CoreCredential<T = unknown> = {
   name: string
   displayName: string
@@ -3934,6 +3985,14 @@ export type CoreCredential<T = unknown> = {
 }
 export type CredentialDefinitions = CredentialDefinitionMeta[]
 export type CredentialDefinitionsMeta = Record<string, CredentialDefinitionMeta>
+export type CredentialOverride =
+  | string
+  | {
+      name?: string
+      mode?: 'singleton' | 'wire'
+    }
+credentialOverrideAliases: (overrides: CredentialOverrides | undefined) => Record<string, string>
+export type CredentialOverrides = Record<string, CredentialOverride>
 defineCredential: <T>(_config: CoreCredential<T>) => void
 validateAndBuildCredentialDefinitionsMeta: (definitions: CredentialDefinitions, schemaLookup: Map<string, SchemaRefLike>) => CredentialDefinitionsMeta
 ```
@@ -4167,6 +4226,7 @@ export type CoreSecret<T = unknown> = {
   allowedHosts?: string[]
 }
 defineSecret: <T>(_config: CoreSecret<T>) => void
+deriveOAuth2AppSecrets: (credentials: CredentialDefinitions, declared: SecretDefinitions) => SecretDefinitions
 export type OAuth2CredentialConfig = {
   tokenSecretId: string
   authorizationUrl: string
@@ -4951,7 +5011,7 @@ export interface PermissionsGroupsMeta {
 }
 PIKKU_OUTGOING_WEBHOOK_QUEUE_NAME: "pikku-outgoing-webhooks"
 export class PikkuCredentialWireService {
-  constructor(private credentialService?: CredentialService, private wire?: PikkuRawWire, private aliases?: Record<string, string>)
+  constructor(private credentialService?: CredentialService, private wire?: PikkuRawWire, private aliases?: Record<string, string>, private resolution?: CredentialResolutionConfig)
   set(name: string, value: unknown): void
   get<T = unknown>(name: string): T | null | Promise<T | null>
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>>
@@ -5085,6 +5145,7 @@ export interface ScopeService {
   addUserToRole(userId: string, role: string, grantedBy?: string): Promise<void>
   removeUserFromRole(userId: string, role: string): Promise<void>
   listUserRoles(userId: string): Promise<string[]>
+  listRolesForUsers(userIds: string[]): Promise<Record<string, string[]>>
   addScopeToUser(userId: string, scope: string, grantedBy?: string): Promise<void>
   removeScopeFromUser(userId: string, scope: string): Promise<void>
   listUserScopes(userId: string): Promise<string[]>
@@ -5794,7 +5855,7 @@ initializePikkuState: (packageName: string) => void
 export interface PikkuPackageState {
   function: { meta: FunctionsMeta; functions: Map<string, CorePikkuFunctionConfig<any, any>> }
   rpc: { meta: Record<string, string>; files: Map< string, { exportedName: string; path: string } > }
-  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: Record<string, string>; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
+  addons: { packages: Map< string, { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[]; expose?: boolean | string[]; scopes?: string[]; secretOverrides?: Record<string, string>; variableOverrides?: Record<string, string>; credentialOverrides?: CredentialOverrides; secretGrants?: string[]; credentialGrants?: string[]; globalSecrets?: string; globalCredentials?: string; remote?: boolean; serverUrl?: string | ((services: any) => string | Promise<string>); remoteAuth?: | { credentialId: string } | { secretId: string } | { resolve: (services: any, wire: any) => string | Promise<string> }; remoteName?: (fn: string) => string } > }
   http: { middleware: Map<string, CorePikkuMiddleware<any, any>[]>; permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>; routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>; meta: HTTPWiringsMeta }
   channel: { channels: Map<string, CoreChannel<any, any, any, any, any>>; meta: ChannelsMeta }
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }

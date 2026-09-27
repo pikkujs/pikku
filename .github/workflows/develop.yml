@@ -259,6 +259,7 @@ jobs:
         verifier:
           [
             addon,
+            addon-openapi,
             addon-registry,
             addon-treeshake,
             analytics,
@@ -286,6 +287,7 @@ jobs:
             bun-server,
             webhooks,
             db-schema,
+            mcp-auth,
           ]
     steps:
       - uses: actions/checkout@v7
@@ -482,7 +484,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        example: [online-shop]
+        example: [online-shop, field-service]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup

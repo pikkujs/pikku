@@ -49,6 +49,19 @@ export type DevServerOptions = {
     resources?: unknown[]
     prompts?: unknown[]
   }
+  /**
+   * The further MCP endpoints this project serves, one per surface, each with
+   * the path it answers on. Forwarded the same way and with the same
+   * consequence for forgetting: the surface 404s with no error anywhere.
+   */
+  mcpSurfaces?: Array<{
+    mcpJson: {
+      tools?: unknown[]
+      resources?: unknown[]
+      prompts?: unknown[]
+    }
+    mcpPath: string
+  }>
 }
 
 export interface DevServerRunner {

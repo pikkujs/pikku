@@ -328,3 +328,137 @@ export const getMCPToolsMeta = () => {
 export const getMCPPromptsMeta = () => {
   return pikkuState(null, 'mcp', 'promptsMeta')
 }
+
+/**
+ * Whether a call to this MCP target would need a session to run.
+ *
+ * Read from the same declarations the runner enforces: a `pikkuFunc` always
+ * needs one, and a `pikkuSessionlessFunc` needs one only where it says
+ * `auth: true`. A transport asks this to answer an unauthenticated call with a
+ * `401` challenge instead of dispatching it — the status and the
+ * `WWW-Authenticate` header have to be chosen before the response starts, which
+ * is earlier than the refusal itself can be known.
+ *
+ * Unknown targets are treated as open: a name nobody registered is a
+ * `Method not found`, and answering it with a challenge would invite a client
+ * to authenticate its way towards a tool that does not exist.
+ */
+export const mcpTargetRequiresSession = (
+  type: 'tool' | 'resource' | 'prompt',
+  name: string
+): boolean => {
+  // The transport passes the name exactly as the client sent it, which is the
+  // wire spelling — see `mcpWireName`.
+  name = mcpResolveWireName(type, name)
+  const meta =
+    type === 'tool'
+      ? pikkuState(null, 'mcp', 'toolsMeta')[name]
+      : type === 'resource'
+        ? pikkuState(null, 'mcp', 'resourcesMeta')[name]
+        : pikkuState(null, 'mcp', 'promptsMeta')[name]
+  if (!meta) {
+    return false
+  }
+
+  let funcName = meta.pikkuFuncId
+  let packageName: string | null = null
+  if (funcName.includes(':')) {
+    const resolved = resolveNamespace(funcName)
+    if (resolved) {
+      funcName = resolved.function
+      packageName = resolved.package
+    }
+  }
+
+  const funcMeta = pikkuState(packageName, 'function', 'meta')[funcName]
+  if (!funcMeta) {
+    return false
+  }
+  return !funcMeta.sessionless || funcMeta.auth === true
+}
+
+/**
+ * Whether every registered MCP target needs a session. An empty registry is
+ * not "all gated" — there is nothing to gate.
+ *
+ * See `the-mcp-handshake-is-challenged-only-when-every-target-is-gated.md`.
+ */
+export const mcpEveryTargetRequiresSession = (): boolean => {
+  const targets: Array<['tool' | 'resource' | 'prompt', string[]]> = [
+    ['tool', Object.keys(pikkuState(null, 'mcp', 'toolsMeta'))],
+    ['resource', Object.keys(pikkuState(null, 'mcp', 'resourcesMeta'))],
+    ['prompt', Object.keys(pikkuState(null, 'mcp', 'promptsMeta'))],
+  ]
+  let seen = 0
+  for (const [type, names] of targets) {
+    for (const name of names) {
+      seen++
+      if (!mcpTargetRequiresSession(type, name)) {
+        return false
+      }
+    }
+  }
+  return seen > 0
+}
+
+export type McpTargetType = 'tool' | 'resource' | 'prompt'
+
+const mcpMetaFor = (type: McpTargetType) =>
+  type === 'tool'
+    ? pikkuState(null, 'mcp', 'toolsMeta')
+    : type === 'resource'
+      ? pikkuState(null, 'mcp', 'resourcesMeta')
+      : pikkuState(null, 'mcp', 'promptsMeta')
+
+const WIRE_LEGAL = /^[A-Za-z0-9_-]+$/
+
+/**
+ * Registered name -> wire name for every target of one type.
+ *
+ * See `mcp-wire-names-are-assigned-over-the-whole-registry.md`.
+ */
+const mcpWireNames = (type: McpTargetType): Map<string, string> => {
+  const names = Object.keys(mcpMetaFor(type)).sort()
+  const assigned = new Map<string, string>()
+  const taken = new Set<string>()
+
+  for (const name of names) {
+    if (WIRE_LEGAL.test(name)) {
+      assigned.set(name, name)
+      taken.add(name)
+    }
+  }
+
+  for (const name of names) {
+    if (assigned.has(name)) {
+      continue
+    }
+    const base = name.replace(/[^A-Za-z0-9_-]/g, '_')
+    let candidate = base
+    let n = 2
+    while (taken.has(candidate)) {
+      candidate = `${base}_${n++}`
+    }
+    assigned.set(name, candidate)
+    taken.add(candidate)
+  }
+
+  return assigned
+}
+
+/** How a registered target's name is spelled on the wire. */
+export const mcpWireName = (type: McpTargetType, name: string): string =>
+  mcpWireNames(type).get(name) ?? name
+
+/** The registered name a client's wire name refers to. */
+export const mcpResolveWireName = (
+  type: McpTargetType,
+  wireName: string
+): string => {
+  for (const [name, wire] of mcpWireNames(type)) {
+    if (wire === wireName) {
+      return name
+    }
+  }
+  return wireName
+}

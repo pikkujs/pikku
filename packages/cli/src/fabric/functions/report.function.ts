@@ -13,6 +13,7 @@ import {
   type FindingPayload,
 } from '../lib/finding.js'
 import { flushSpool, readSpool, spoolFinding } from '../lib/finding-spool.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 
 /**
  * Every field is optional here and the strictness lives in `FindingInput`,
@@ -33,7 +34,7 @@ export const FabricReportOutput = z.object({
 
 const readStdin = async (): Promise<string> => {
   if (process.stdin.isTTY) {
-    throw new Error(
+    throw new FabricPreconditionError(
       '--stdin expects the finding as JSON on standard input, and nothing was piped in.'
     )
   }
@@ -72,12 +73,12 @@ export const FabricReport = pikkuSessionlessFunc({
       ? parseFindingJson(await readStdin())
       : parseFinding(flags)
     if ('problems' in parsed) {
-      throw new Error(parsed.problems.join('\n'))
+      throw new FabricPreconditionError(parsed.problems.join('\n'))
     }
 
     const problems = validateFinding(parsed.finding)
     if (problems.length > 0) {
-      throw new Error(problems.join('\n'))
+      throw new FabricPreconditionError(problems.join('\n'))
     }
 
     const payload = buildFindingPayload(

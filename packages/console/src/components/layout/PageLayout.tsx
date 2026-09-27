@@ -33,6 +33,8 @@ interface ListPageHeaderProps<T extends string = string> {
   // non-collapsing `actionsNode` escape hatch and overflow when narrow).
   search?: ShellHeaderSearch
   selection?: ShellHeaderSelection<T>
+  /** Structured filters, which collapse into the header's filter drawer. */
+  headerFilters?: ShellHeaderFilter[]
   actions?: ShellHeaderAction[]
   /** Shows the switch that reveals technical detail; read it with useDeveloperDetails. */
   developerDetails?: boolean
@@ -52,6 +54,7 @@ export function ListPageHeader<T extends string = string>({
   search,
   selection,
   developerDetails,
+  headerFilters,
 }: ListPageHeaderProps<T>) {
   const docsButton = docsHref ? <DocLink href={docsHref} /> : null
   const right = (
@@ -70,6 +73,7 @@ export function ListPageHeader<T extends string = string>({
       count={description}
       search={search}
       selection={selection}
+      filters={headerFilters}
       actions={actions}
       actionsNode={right}
     />

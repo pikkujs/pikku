@@ -15,8 +15,40 @@ import {
   resolveAgentMiddleware,
 } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
+import { getProperty, jsonObjectProperty } from '../utils/literal-properties.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
+
+/**
+ * Reads `providerOptions` off the declaration so it survives into `agentsMeta`.
+ *
+ * The runner takes the value from the live agent object, so an in-process run
+ * honours it either way — but everything that reads the compiled meta instead
+ * (the console's agent view, `infra.json`, the deploy analyzer) saw an agent
+ * with no provider configuration at all. A computed value is reported rather
+ * than dropped, because that is the case nobody notices.
+ */
+export function resolveProviderOptions(
+  obj: ts.ObjectLiteralExpression,
+  agentName: string,
+  logger: InspectorLogger
+): Record<string, Record<string, unknown>> | null {
+  if (!getProperty(obj, 'providerOptions')) {
+    return null
+  }
+
+  const providerOptions = jsonObjectProperty(obj, 'providerOptions')
+  if (!providerOptions) {
+    logger.diagnostic({
+      severity: 'warn',
+      code: ErrorCode.AGENT_PROVIDER_OPTIONS_UNREADABLE,
+      message: `AI agent '${agentName}' has a 'providerOptions' the inspector cannot read statically, so it is missing from the generated metadata. Inline it as an object literal of strings, numbers, booleans, arrays and nested objects.`,
+    })
+    return null
+  }
+
+  return providerOptions as Record<string, Record<string, unknown>>
+}
 
 function resolveToolReferences(
   obj: ts.ObjectLiteralExpression,
@@ -402,6 +434,11 @@ export const addAgent: AddWiring = (logger, node, checker, state, options) => {
     const temperatureValue = getPropertyValue(obj, 'temperature') as
       number | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
+    const providerOptionsValue = resolveProviderOptions(
+      obj,
+      nameValue || '',
+      logger
+    )
     const scorersValue = resolveScorerNames(obj, nameValue || '', logger)
     const toolsValue = resolveToolReferences(
       obj,
@@ -604,6 +641,9 @@ export const addAgent: AddWiring = (logger, node, checker, state, options) => {
       ...(temperatureValue !== null && { temperature: temperatureValue }),
       ...(toolChoiceValue !== null && {
         toolChoice: toolChoiceValue as 'auto' | 'required' | 'none',
+      }),
+      ...(providerOptionsValue !== null && {
+        providerOptions: providerOptionsValue,
       }),
       ...(toolsValue !== null && { tools: toolsValue }),
       ...(agentsValue !== null && { agents: agentsValue }),

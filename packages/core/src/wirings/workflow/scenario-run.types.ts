@@ -33,6 +33,31 @@ export interface ScenarioArtifact {
   actor?: string
   /** The caption the scenario author took a screenshot under. */
   name?: string
+  /**
+   * The same shot across runs, under one key. `path` carries the order the run
+   * happened in, so it moves whenever a step is inserted before it — nothing
+   * that outlives a run (a caption override, a diff against last week) can key
+   * off it.
+   */
+  id?: string
+  /** Fit to show outside the run: a marketing card, a docs page, a gallery. */
+  showcase?: boolean
+}
+
+/**
+ * Where a step falls inside one actor's recording.
+ *
+ * Measured from the moment that actor's browser context opened — which is when
+ * Playwright starts the file — rather than from the start of the scenario, so
+ * it addresses the video's own clock. The two differ by however long the
+ * scenario spent before that window existed, plus every non-browser step since,
+ * which is why the offset is recorded at the moment the step runs instead of
+ * being summed back out of the ladder afterwards.
+ */
+export interface ScenarioStepVideoOffset {
+  /** Whose recording this offset is into: one actor, one video file. */
+  actor: string
+  offsetMs: number
 }
 
 /** One step of a run, already joined to the prose that declared it. */
@@ -48,6 +73,16 @@ export interface ScenarioStepRow {
   status: string
   durationMs?: number
   error?: string
+  /**
+   * Where this step lands in each actor's video, for the actors whose window
+   * was being recorded when it ran. Absent for a step with no actor, a run
+   * without video, and a step that never ran at all.
+   *
+   * A list rather than one number because a video belongs to an actor, not to
+   * the scenario: a step touching two windows falls at a different moment in
+   * each, and an offset that does not name its file cannot be seeked to.
+   */
+  video?: ScenarioStepVideoOffset[]
 }
 
 /** Everything known about why one scenario failed. */
@@ -66,16 +101,38 @@ export interface ScenarioFailureDetail {
 
 export interface ScenarioResult {
   name: string
-  status: 'passed' | 'failed'
+  /**
+   * `running` is filed the moment the scenario starts and replaced when it
+   * ends, so a console watching a run in progress can tell the scenario on
+   * screen right now from the ones still waiting their turn.
+   */
+  status: 'passed' | 'failed' | 'running'
   durationMs: number
   output?: unknown
   error?: string
   steps?: ScenarioStepRow[]
   failure?: ScenarioFailureDetail
-  /** The scenario registration this ran, which the label alone does not give. */
+  /**
+   * The registered scenario this ran, by the id it is registered under — the
+   * same id `FeatureMetaEntry.scenario` references. The label alone does not
+   * give it, and unlike the label it is not rewritten when the prose is.
+   */
   scenarioName?: string
-  /** The feature that grouped it, when one did. */
+  /** The feature that grouped it — its display name, which is freely renamed. */
   feature?: string
+  /**
+   * The registered feature that grouped it, by id.
+   *
+   * `feature` is a title someone writes for people to read, so nothing that
+   * outlives a run can key off it. This is what `addFeature` registered the
+   * feature under, and it is what survives the title being rewritten.
+   */
+  featureId?: string
+  /** The scenario's declared title, snapshotted so the record reads as prose. */
+  title?: string
+  description?: string
+  /** Who the scenario cast, in declaration order. */
+  actors?: string[]
   tags?: string[]
   /** Images and footage this scenario produced, filed under the run. */
   artifacts?: ScenarioArtifact[]
@@ -104,6 +161,49 @@ export interface ScenarioRunReport {
 export type ScenarioRunStatus = 'running' | 'passed' | 'failed'
 
 /**
+ * The filters a run was selected with, recorded when it was narrowed at all.
+ *
+ * A narrowed run is a partial record of the suite: scenarios a feature owns can
+ * be missing from it, and whole features can be absent, with nothing in the
+ * results to say so. Anything that reads a run as evidence of what the suite
+ * does — rather than of what happened that afternoon — has to be able to tell
+ * the two apart, and it cannot be inferred from the results afterwards.
+ */
+export interface ScenarioRunSelection {
+  flows?: string[]
+  features?: string[]
+  tags?: string[]
+  excludeTags?: string[]
+}
+
+/**
+ * Which version of the suite a run ran against.
+ *
+ * A run is only comparable to another run of the same thing, and "the same
+ * thing" is the commit — two runs a day apart are not a flake and a fix if the
+ * suite moved between them. `attempt` counts the runs already filed against
+ * that commit, so a suite re-run until it passes reads as one version with
+ * several attempts rather than several unrelated runs.
+ *
+ * Absent when the project is not in a git repository, or has no commits yet:
+ * an unversioned run is still a run, and saying nothing is better than
+ * inventing a version for it.
+ */
+export interface ScenarioRunVersion {
+  /** The commit the working tree was at, in full. */
+  commit: string
+  /**
+   * The tree had uncommitted changes, so the commit does not describe what
+   * actually ran. Recorded rather than refused — running against a dirty tree
+   * is the normal way to work — but a reader comparing two attempts of the
+   * same commit needs to know one of them was not really that commit.
+   */
+  dirty?: boolean
+  /** Which run this is against that commit, counting from one. */
+  attempt: number
+}
+
+/**
  * A whole run, as it is stored and read back.
  *
  * `status` is `running` from the moment the run is created until it finishes,
@@ -116,6 +216,10 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   status: ScenarioRunStatus
   /** The surface the run targeted: `default`, `browser`, … */
   surface: string
+  /** Absent on a run of the whole suite; see {@link ScenarioRunSelection}. */
+  selection?: ScenarioRunSelection
+  /** The suite version this ran against, when the project has one. */
+  version?: ScenarioRunVersion
   startedAt: string
   finishedAt?: string
 }
@@ -125,6 +229,7 @@ export interface ScenarioRunSummary {
   runId: string
   environment: string
   surface: string
+  version?: ScenarioRunVersion
   status: ScenarioRunStatus
   startedAt: string
   finishedAt?: string
@@ -150,7 +255,11 @@ export interface ScenarioRunSummary {
 export interface ScenarioRunStore {
   /** Open a run. Called before the first scenario, with `status: 'running'`. */
   start(record: ScenarioRunRecord): Promise<void>
-  /** Append one finished scenario to an open run. */
+  /**
+   * File one scenario's state against an open run, replacing whatever was
+   * filed for that name before — a scenario is recorded twice, once as
+   * `running` and once with its outcome.
+   */
   recordScenario(runId: string, result: ScenarioResult): Promise<void>
   /**
    * File the run's artifacts against the scenarios that produced them.

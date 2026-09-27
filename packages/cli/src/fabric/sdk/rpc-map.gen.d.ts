@@ -589,6 +589,7 @@ export type AskChangeQuestionInput = {
         label: string;
         kind: "option" | "evidence";
     }[] | undefined;
+    option?: string[] | undefined;
 }
 export type AskChangeQuestionOutput = {
     message: {
@@ -5671,6 +5672,21 @@ export type ListStageCustomHostnamesOutput = {
         createdAt: string;
     }[];
 }
+export type ListStageMigrationLedgerInput = {
+    /** Project UUID */
+    projectId: string;
+}
+export type ListStageMigrationLedgerOutput = {
+    stages: {
+        stageId: string;
+        branch: string;
+        migrations: {
+            name: string;
+            hash: string | null;
+            appliedAt: string;
+        }[];
+    }[];
+}
 export type ListStageSecretNamesInput = {
     stageId: string;
 }
@@ -9159,6 +9175,7 @@ export type RPCMap = {
   readonly 'listStageAgentThreads': RPCHandler<ListStageAgentThreadsInput, ListStageAgentThreadsOutput>,
   readonly 'listStageContentObjects': RPCHandler<ListStageContentObjectsInput, ListStageContentObjectsOutput>,
   readonly 'listStageCustomHostnames': RPCHandler<ListStageCustomHostnamesInput, ListStageCustomHostnamesOutput>,
+  readonly 'listStageMigrationLedger': RPCHandler<ListStageMigrationLedgerInput, ListStageMigrationLedgerOutput>,
   readonly 'listStageSecretNames': RPCHandler<ListStageSecretNamesInput, ListStageSecretNamesOutput>,
   readonly 'listStageWebhookDeliveries': RPCHandler<ListStageWebhookDeliveriesInput, ListStageWebhookDeliveriesOutput>,
   readonly 'listStageWorkflowRuns': RPCHandler<ListStageWorkflowRunsInput, ListStageWorkflowRunsOutput>,

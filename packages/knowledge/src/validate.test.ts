@@ -231,13 +231,6 @@ describe('runKnowledgeValidate on milestones', () => {
     )
   })
 
-  test('a milestone still being designed passes — it is written down, not yet buildable', async () => {
-    const result = await withMilestone(
-      MILESTONE.replace('status: proposed', 'status: designing')
-    )
-    assert.deepEqual(result.findings, [])
-  })
-
   test('a title-cased status still passes, because the parser lowercases it', async () => {
     const result = await withMilestone(
       MILESTONE.replace('status: proposed', 'status: Built')

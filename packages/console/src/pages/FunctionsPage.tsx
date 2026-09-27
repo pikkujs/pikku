@@ -70,6 +70,7 @@ export const FunctionsPage: React.FC<{
             emptyHero={emptyHero}
             search={
               <TextInput
+                data-testid="page-search"
                 data-help="search"
                 placeholder={m.functions_search_by()}
                 leftSection={<Search size={16} />}

@@ -22,7 +22,7 @@ An addon's generated tree roots one level down, at `.pikku/addon/`, so its own
 leaves are reached as `#pikku/addon/<leaf>` while an application's are
 `#pikku/<leaf>`. `paths` are global to a tsx process rather than scoped to the
 package that declared them, and the extra segment is what stops a linked addon's
-`#pikku/function` from matching the *host application's* flat leaf.
+`#pikku/function` from matching the _host application's_ flat leaf.
 
 ## pikku.config.json
 
@@ -68,19 +68,24 @@ package that declared them, and the extra segment is what stops a linked addon's
   "scripts": {
     "prebuild": "pikku all",
     "pikku": "pikku all",
-    "build": "tsc && cp -r .pikku types dist/"
+    "build": "tsc && pikku dist"
   }
 }
 ```
 
 **`imports` names `dist`, never the source tree.** `files: ["dist"]` is the whole
-published package, and `build` copies `.pikku` and `types` into it — so a
+published package, and `pikku dist` copies `.pikku` and `types` into it — so a
 `#pikku/*` target under `./.pikku/` resolves for the author and for nobody else.
 It is a silent break: the addon compiles, packs, installs and then throws
 `Cannot find module '.../.pikku/addon/function/index.ts'` on first import in the
-consuming app, out of a file the consumer never wrote. The addon's own build
+consuming app, out of a file the consumer never wrote. The addon's own `tsc`
 does not read `imports` at all — tsconfig `paths` covers it, which is why the
 two maps point at different trees.
+
+`pikku all` does read `imports`, though: it loads each file that declares a zod
+schema to convert it to JSON Schema, and at runtime `#pikku` resolves through
+`imports`, into a `dist` the first build has not written yet. So a schema must
+live in a file that never imports `#pikku` — see "Functions" in the skill.
 
 **`exports` targets carry the `addon` segment; the subpaths do not.** A consumer
 writes `@my-org/addon-todos/.pikku/rpc/...`, exactly as it would in an

@@ -1,3 +1,143 @@
+## 0.12.15
+
+### Patch Changes
+
+- f4f0684: Split the web-standard half of `PikkuMCPServer` into `@pikku/modelcontextprotocol/fetch`
+
+  `PikkuMCPServer` imports `node:http`, `node:stream` and `node:stream/promises` at
+  module level for its HTTP listener and stdio entry points. `@pikku/cloudflare`'s
+  MCP handler imported it from the package root, so workerd resolved those eagerly
+  and every Worker with an MCP wiring died at publish with
+  `Uncaught Error: No such module "node:http"`.
+
+  The web-standard core is now `PikkuMCPFetchServer`, exported from the new
+  `./fetch` entry, and `PikkuMCPServer` extends it with the node-only entry points.
+  The Cloudflare handler imports the fetch entry. The root entry is unchanged for
+  node consumers.
+
+## 0.12.14
+
+### Patch Changes
+
+- 51bd35a: Cover an MCP tool actually running over the HTTP endpoint
+
+  Every existing test stopped at the mount: a GET without an `accept` header
+  returning 406 proved the handler was routed to, and nothing beyond that. A
+  tool had never been invoked over the transport in a test, so the path from a
+  JSON-RPC `tools/call` to a wired pikku function and back was unverified.
+
+  This drives a real session against a listening socket — `initialize`,
+  `tools/list`, `tools/call` — and asserts the function ran with the arguments
+  the client sent and that its return value came back through the transport.
+
+- b312867: A project can now serve several MCP endpoints, one per connector.
+
+  Until now every MCP tool in a project was pooled onto a single `/mcp`, so a hub offering three connectors offered one endpoint listing all three connectors' tools at once. A client pointed at it saw tools it had no business calling, and the only way to give a connector an endpoint of its own was to give it a deployment of its own — three deploys, three bills, three service graphs.
+
+  `wireAddon` gains `mcpEndpoint`. `true` serves that instance's tools at `/mcp/<name>`; a string is the path, used as given. Leaving it unset keeps the tools on the shared endpoint, which is where they have always been, so nothing existing moves.
+
+  A surfaced instance now gets its own manifest (`.pikku/mcp/mcp.<name>.gen.json`, carrying the path it answers on), its own deploy unit (`mcp-<name>`, routed on that path), and its own MCP server — with its own tool list, so a client pointed at one endpoint never sees another's tools. The plumbing for the per-surface manifest and unit already existed in `deploy apply`; nothing had ever produced one.
+
+  `pikku dev` mounts every endpoint the generated tree describes, not just the default one. Without that a project that moved its tools onto their own endpoints would have served nothing locally at all — the default manifest it reads is empty precisely because they moved — and the only way to try a connector would have been to deploy it.
+
+  The node and bun transports take `mcpSurfaces` alongside `mcpJson` and mount each at its own path, longest path first. `/mcp` claims everything beneath `/mcp/`, so without that ordering the default endpoint answers `/mcp/weather` and the surface's tools are unreachable.
+
+  OAuth discovery is split between the endpoints rather than duplicated across them. RFC 9728 folds a resource's path into its well-known route, so each endpoint's own document is already distinct, but the path-less `/.well-known/oauth-protected-resource` predates that and describes whichever resource answers it. Only the default endpoint claims it — otherwise every unit registers the same route and the provider's router decides which resource a client is told about, and in dev a client probing it is described whichever surface sorted first.
+
+- Updated dependencies [87971bd]
+- Updated dependencies [b312867]
+- Updated dependencies [51bd35a]
+  - @pikku/core@0.12.116
+
+## 0.12.13
+
+### Patch Changes
+
+- cb8f57e: MCP clients can now discover that a server needs signing in to, and can see tools whose names carry a namespace.
+
+  Three separate reasons a client ended up connected to a server it could do nothing with:
+
+  - **The handshake was never challenged.** A client decides at connection time whether a server speaks OAuth, and all it has to go on is whether `initialize` came back `401` with a `WWW-Authenticate` challenge. Answering it `200` and then refusing every subsequent call told the client "no sign-in needed" and then gave it nothing — Claude's connector setup, for one, reported the server as open access. `initialize` is now challenged when `mcpEveryTargetRequiresSession()` holds, which is the only case where answering it openly is a lie; a server with even one open target still completes the handshake unauthenticated, as it should.
+  - **Namespaced names were dropped on the floor.** MCP constrains tool and prompt names to `[A-Za-z0-9_-]{1,64}`, and pikku's namespace separator is `:`. Clients discard the names they cannot accept rather than failing the connection, so an addon's entire surface went missing with nothing more than a note about "tools with unsupported names". Names are now rewritten at the transport boundary (`mcpWireName`) and resolved back on the way in (`mcpResolveWireName`), so `bb2:getMe` is offered as `bb2_getMe` and calls to it dispatch correctly. The registry keeps its own spelling, since that is what dispatch keys on, and a tool genuinely registered under the wire spelling still wins over a rewritten match.
+  - **An addon-only app generated no tool metadata.** `pikku all` decided whether to emit the MCP file from the set of source files calling `wireMCPTool`/`Resource`/`Prompt`. An addon that contributes its tools through `wireAddon({ mcp: [...] })` adds none, so an application whose only MCP surface came from addons got neither wirings nor meta — the tools were listed from `mcp.gen.json` and then every call failed to resolve, because `toolsMeta` (which carries the `pikkuFuncId`) had never been written. Content now decides; the file set only decides whether there are imports to serialize.
+
+  Also in here: the resource URL advertised in the challenge honours `X-Forwarded-Proto` and `X-Forwarded-Host`, so a server behind a TLS-terminating proxy advertises the `https://` URL the client actually reached rather than its own internal `http://` origin — which the client would reject as a resource mismatch.
+
+- Updated dependencies [cb8f57e]
+- Updated dependencies [cb8f57e]
+- Updated dependencies [6db6a14]
+  - @pikku/core@0.12.114
+
+## 0.12.12
+
+### Patch Changes
+
+- dfd7019: An MCP tool reads the claims its host verified
+
+  `PikkuHTTP` gains an `authInfo` of the new `PikkuHTTPAuthInfo`: the token,
+  client and scopes a transport that already verified a bearer token hands on.
+  It is strictly pass-through — nothing in pikku derives it from a request's own
+  headers, because verifying a token is the host's job. A function could always
+  read the `Authorization` header itself; what this adds is what the raw header
+  cannot carry.
+
+  `PikkuMCPServer`'s server factory now carries the SDK's `authInfo` onto the
+  wire beside the request, so the `authInfo` a host passes to
+  `createFetchHandler` reaches the tool rather than stopping at the SDK.
+
+  `pikkuCredentialOAuth` also names itself when it provisions the platform user.
+  Every other pikku plugin passes a source to `internalAdapter.createUser`, and
+  better-auth refuses a `user.validateUserInfo` gate that is handed none — so an
+  app with that hook configured could not link a singleton credential at all.
+
+- dfd7019: An MCP call that needs a session is refused with an OAuth challenge
+
+  A tool fronting a session-requiring function used to answer an unauthenticated
+  caller with `200` and `isError: true`, which a client reads as a tool that
+  broke rather than one it has not authenticated for — so OAuth discovery never
+  began. Such a call now gets `401` with a `WWW-Authenticate: Bearer` challenge
+  naming the resource metadata, and `/.well-known/oauth-protected-resource` is
+  served alongside the MCP endpoint.
+
+  The endpoint is not gated as a whole. `mcpTargetRequiresSession` reads the
+  declarations the runner already enforces — a `pikkuFunc` needs a session, a
+  `pikkuSessionlessFunc` needs one only where it says `auth: true` — so public
+  and private tools can share one server and only the private ones are
+  challenged.
+
+  `createFetchHandler` and `createHTTPRequestHandler` take an optional `auth`
+  describing what to advertise (`authorizationServers`, `scopesSupported`,
+  `resourceName`), surfaced on both servers as an `mcpAuth` option. Every field
+  defaults from the request, because a pikku app is usually its own
+  authorization server. Both handlers now also return `ownsPath`, because the
+  discovery document lives outside `mcpPath` and a host routing on the endpoint
+  alone would 404 the document its own challenge points at.
+
+- dfd7019: The MCP runtime moves to `@modelcontextprotocol/server` v2
+
+  v1's monolithic `@modelcontextprotocol/sdk` is replaced by the v2 server
+  package, and the hand-rolled per-request transport wiring by its
+  `createMcpHandler` entry. Request handlers are now registered by method name
+  (`'tools/call'`) rather than by schema object, and stdio is served through
+  `serveStdio`.
+
+  Both protocol eras are served from pikku's single tool registration: 2026-07-28
+  clients take the modern path, and everything older — including every v1 client
+  — is answered by the stateless legacy fallback.
+
+  `createFetchHandler`'s handler now takes an optional second argument carrying
+  verified `authInfo`, which reaches MCP request handlers as `ctx.http.authInfo`.
+  It is strictly pass-through: the entry never derives it from request headers.
+
+- dfd7019: Resolve the MCP server instance per log message, and restore the wireAddon
+  declaration's source file.
+- Updated dependencies [c842054]
+- Updated dependencies [dfd7019]
+- Updated dependencies [dfd7019]
+- Updated dependencies [9b978e7]
+- Updated dependencies [1469e73]
+  - @pikku/core@0.12.113
+
 ## 0.12.11
 
 ### Patch Changes

@@ -25,6 +25,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# src/examples.gen.ts is a gitignored build artifact, and examples.test.ts imports
+# it. Regenerate it here rather than in `yarn test`, because CI runs this script
+# directly and never goes through package.json.
+node scripts/embed-examples.mjs
+
 # Define the pattern to match your test files
 pattern="src/*.test.ts"
 

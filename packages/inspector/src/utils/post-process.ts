@@ -1,3 +1,4 @@
+import type { CredentialOverrideMeta } from '../types.js'
 import type {
   InspectorState,
   InspectorLogger,
@@ -17,6 +18,7 @@ import { join } from 'node:path'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
 import { findSecretAliasServices } from './secret-alias-services.js'
+import { deriveOAuth2AppSecrets } from '@pikku/core/secret'
 import { resolveCoreType } from './resolve-core-type.js'
 import { relative } from 'node:path'
 import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
@@ -484,22 +486,64 @@ export function validateCredentialOverrides(
     state.credentials?.definitions.map((d) => d.name) ?? []
   )
 
+  /** Only a rename has a target to check; a mode-only override renames nothing. */
+  const renameTarget = (
+    override: CredentialOverrideMeta
+  ): string | undefined =>
+    typeof override === 'string' ? override : override.name
+
+  const overrideMode = (
+    override: CredentialOverrideMeta
+  ): 'singleton' | 'wire' | undefined =>
+    typeof override === 'string' ? undefined : override.mode
+
+  /**
+   * Which declaration set each resolved name's mode. Credential generation
+   * writes one shared metadata entry per name, so two declarations that map
+   * onto one name with opposite modes leave whichever ran last in the file the
+   * console reads — and the other addon silently gets the wrong resolution.
+   */
+  const modeClaims = new Map<
+    string,
+    { mode: 'singleton' | 'wire'; namespace: string; logicalName: string }
+  >()
+
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
-    for (const [logicalName, resolvedName] of Object.entries(
+    for (const [logicalName, override] of Object.entries(
       addonDecl.credentialOverrides ?? {}
     )) {
+      // A mode-only override still names a credential — the addon's own. It
+      // has to exist, or generation resolves nothing and the credential keeps
+      // its default mode with no sign that the wiring asked for another.
+      const renamed = renameTarget(override)
+      const resolvedName = renamed ?? logicalName
       if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
+        const target = renamed
+          ? `'${logicalName}' -> '${resolvedName}'`
+          : `'${logicalName}'`
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+          `Credential override ${target} in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
         )
       }
+
+      const mode = overrideMode(override)
+      if (!mode) continue
+      const claim = modeClaims.get(resolvedName)
+      if (claim && claim.mode !== mode) {
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Credential '${resolvedName}' is wired '${claim.mode}' by '${claim.logicalName}' in addon '${claim.namespace}' and '${mode}' by '${logicalName}' in addon '${namespace}'. One credential holds one mode, so the second wiring would silently take the first's resolution. Give them separate names, or wire both the same way.`
+        )
+      }
+      modeClaims.set(resolvedName, { mode, namespace, logicalName })
     }
 
     for (const logicalName of addonDecl.credentialGrants ?? []) {
+      const override = addonDecl.credentialOverrides?.[logicalName]
       const resolvedName =
-        addonDecl.credentialOverrides?.[logicalName] ?? logicalName
+        (override ? renameTarget(override) : undefined) ?? logicalName
       if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
         logger.critical(
@@ -1126,6 +1170,91 @@ export function validateScenarioSteps(
 }
 
 /**
+ * Reports scenarios that no `pikkuFeature` lists.
+ *
+ * A feature is what a run stamps onto each result, and the only handle anything
+ * downstream has on a scenario: the console groups by it and the guide cites it.
+ * A scenario in no feature still runs and still passes — it simply files its
+ * results, and any screenshot or recording it took, where nothing can reach
+ * them. That is not a style violation, it is work being thrown away, and it is
+ * invisible precisely because the suite is green.
+ *
+ * It is an `error` rather than a `critical` because every suite written before
+ * the rule has some, and a hard failure on a CLI bump would strand them with no
+ * way to defer. `--fail-on-error` is how a project opts in once it has bound
+ * what it has.
+ *
+ * Membership reads the scenario each entry names, not the entry itself: a
+ * `data` the AST cannot evaluate leaves the entry partial for the console but
+ * says nothing about who owns the scenario.
+ *
+ * An entry that names no scenario at all (a spread, a `.map()`) does leave
+ * membership unknown. That only matters when something is already unowned, so
+ * the check reports it then and downgrades to a warn naming both sides, rather
+ * than accusing a scenario that may well be in that array.
+ */
+export function validateScenarioFeatures(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const features = state.workflows.featureFiles
+  if (!features) {
+    return
+  }
+
+  const owned = new Set<string>()
+  for (const feature of features.values()) {
+    for (const mention of feature.mentions) {
+      owned.add(mention)
+    }
+  }
+
+  const files = state.workflows.files
+  const unowned: string[] = []
+  for (const [workflowName, meta] of Object.entries(state.workflows.meta)) {
+    if (!(meta as { scenario?: boolean }).scenario) {
+      continue
+    }
+    const exported = files?.get(workflowName)?.exportedName
+    if (owned.has(workflowName) || (exported && owned.has(exported))) {
+      continue
+    }
+    unowned.push(workflowName)
+  }
+
+  if (unowned.length === 0) {
+    return
+  }
+
+  const unreadable = [...features.values()]
+    .filter((feature) => feature.unnamedEntries > 0)
+    .map((feature) => feature.exportedName)
+
+  if (unreadable.length > 0) {
+    logger.diagnostic({
+      severity: 'warn',
+      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
+      message:
+        `${unowned.map((name) => `'${name}'`).join(', ')} appear in no feature's \`scenarios\` array, ` +
+        `but ${unreadable.map((name) => `'${name}'`).join(', ')} build theirs with a spread or a call, so one of them may still be listed there. ` +
+        `List those scenarios literally and this becomes a definite answer either way.`,
+    })
+    return
+  }
+
+  for (const name of unowned) {
+    logger.diagnostic({
+      severity: 'error',
+      code: ErrorCode.SCENARIO_HAS_NO_FEATURE,
+      message:
+        `Scenario '${name}' is listed by no pikkuFeature, so nothing downstream can reach it — ` +
+        `a run stamps no feature onto its results, the console groups it under none, and a guide cannot cite it. ` +
+        `Add it to a feature's \`scenarios\` array.`,
+    })
+  }
+}
+
+/**
  * A `pikkuWorkflowGraph` node that references the `graph:` namespace (e.g.
  * `graph:editFields`) needs @pikku/addon-graph wired — otherwise the RPC never
  * registers and codegen fails deep in type-checking with an opaque error. Fail
@@ -1274,6 +1403,21 @@ export function validateNoSecretAliasServices(
  * at first request rather than at deploy; a non-literal key is a read the
  * manifest cannot cover, so a per-unit scope cannot be narrowed around it.
  */
+/**
+ * Registers the app secrets the project's OAuth2 credentials imply, so a
+ * deployment is asked for the client id and secret every connect flow needs
+ * without an author restating a shape the runtime already fixes.
+ */
+export function registerDerivedOAuth2AppSecrets(
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const derived = deriveOAuth2AppSecrets(
+    state.credentials?.definitions ?? [],
+    state.secrets.definitions
+  )
+  state.secrets.definitions.push(...derived)
+}
+
 export function validateSecretUsage(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>

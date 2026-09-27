@@ -11,7 +11,8 @@ export const knowledgeReconcile = pikkuSessionlessFunc({
     'Say the one thing to do next with the knowledge base — repair a note, write a plan, ask the user, dispatch a build, or nothing — derived from what is on disk rather than from what a previous step remembered to announce.',
   input: KnowledgeReconcileInputSchema,
   output: KnowledgeReconcileOutputSchema,
-  func: async ({ config }) => runKnowledgeReconcile(config.rootDir),
+  func: async ({ config }, input) =>
+    runKnowledgeReconcile(config.rootDir, input),
 })
 
 export { renderKnowledgeReconcile }

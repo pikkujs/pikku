@@ -170,6 +170,10 @@ export const fabricCommands = defineCLICommands({
           'Override the project display name (defaults to repo name)',
       },
       branch: { description: 'Default branch (defaults to main)' },
+      organization: {
+        description:
+          'Organization to import into — slug, name or id (defaults to the one your session is in)',
+      },
       force: {
         description: 'Replace existing fabric.config.json',
         default: false,
@@ -195,6 +199,10 @@ export const fabricCommands = defineCLICommands({
       repoName: {
         description:
           'Name for a repo created by --gitea (defaults to the directory name)',
+      },
+      organization: {
+        description:
+          'Organization to import into — slug, name or id (defaults to the one your session is in)',
       },
       apiUrl: {
         description: 'Override the fabric-api URL stored in fabric.config.json',
@@ -326,7 +334,10 @@ export const fabricCommands = defineCLICommands({
         description: 'Set a stage-scoped secret',
         options: {
           branch: { description: 'Target branch', short: 'b' },
-          value: { description: 'Secret value (prompted if omitted)' },
+          value: {
+            description:
+              'Secret value (prompted if omitted, or read from stdin when piped)',
+          },
           force: {
             description: 'Overwrite without confirmation',
             default: false,
@@ -676,8 +687,13 @@ export const fabricCommands = defineCLICommands({
           changeId: { description: 'The item the question is about' },
           question: {
             description:
-              'One decision, in the filer’s vocabulary, with the options named',
+              'One decision, in the filer’s vocabulary. Name the choices with --option, not as “(a) … (b) …” inside this text',
             short: 'q',
+          },
+          option: {
+            description:
+              'A choice the filer can click, repeatable — e.g. --option "Reprice them" --option "Leave them". Without these they have to type an answer',
+            type: 'string[]',
           },
           authorName: { description: 'Who is asking, e.g. claude-code' },
           apiUrl: { description: 'Override the fabric-api URL for this call' },

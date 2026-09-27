@@ -61,6 +61,38 @@ export const hasFfmpeg = (): Promise<boolean> => {
 }
 
 /**
+ * Where a recording should stand still, and for how long.
+ *
+ * Steps run back to back, so raw footage flashes past faster than anyone can
+ * read it. Rather than slow the run down, the encode freezes the frame showing
+ * each step's starting screen, and the last frame, for `holdMs` — the run pays
+ * nothing and the viewer gets time to look.
+ */
+export interface VideoHolds {
+  /** Offsets into the raw recording (ms) at which to hold, ascending. */
+  atMs: number[]
+  holdMs: number
+}
+
+/**
+ * Shift every frame at or after each hold point later by `holdMs`, then let
+ * `fps` fill each gap by repeating the frame before it — a freeze-frame per
+ * hold with no segment juggling, and no empty segment when two holds fall
+ * within one frame of each other. `tpad` holds the final frame the same way.
+ */
+const holdFilters = ({ atMs, holdMs }: VideoHolds): string[] => {
+  const hold = holdMs / 1000
+  const shifts = atMs
+    .map((at) => `gte(T\\,${(at / 1000).toFixed(3)})`)
+    .join('+')
+  return [
+    ...(shifts ? [`setpts=PTS+${hold}/TB*(${shifts})`] : []),
+    'fps=25',
+    `tpad=stop_mode=clone:stop_duration=${hold}`,
+  ]
+}
+
+/**
  * Re-encode one recording to h264, keeping the original if the encode fails.
  *
  * `-crf 28` is deliberately aggressive. This footage is read by a person
@@ -76,7 +108,10 @@ export const hasFfmpeg = (): Promise<boolean> => {
  * Returns the path of the file that survived, which is a NEW path on success:
  * the container changes with the codec.
  */
-export const compressVideo = async (file: string): Promise<string> => {
+export const compressVideo = async (
+  file: string,
+  holds?: VideoHolds
+): Promise<string> => {
   if (!(await hasFfmpeg())) {
     return file
   }
@@ -102,7 +137,10 @@ export const compressVideo = async (file: string): Promise<string> => {
         // Chrome records at odd dimensions often enough, and libx264 refuses
         // them outright rather than rounding.
         '-vf',
-        'pad=ceil(iw/2)*2:ceil(ih/2)*2',
+        [
+          ...(holds ? holdFilters(holds) : []),
+          'pad=ceil(iw/2)*2:ceil(ih/2)*2',
+        ].join(','),
         '-movflags',
         '+faststart',
         '-an',
@@ -120,9 +158,11 @@ export const compressVideo = async (file: string): Promise<string> => {
 
   // Only replace the original if the encode actually saved something —
   // occasionally it does not, and a larger "compressed" file helps nobody.
+  // Held footage is kept regardless: the run already stamped its steps at the
+  // held timings, so falling back to the raw file would put them all wrong.
   const before = statSync(file).size
   const after = statSync(out).size
-  if (after >= before) {
+  if (!holds && after >= before) {
     rmSync(out, { force: true })
     return file
   }
@@ -146,7 +186,8 @@ export const compressVideo = async (file: string): Promise<string> => {
  */
 export const compressVideos = async (
   files: string[],
-  onWarn: (message: string) => void = console.warn
+  onWarn: (message: string) => void = console.warn,
+  holdsFor: (file: string) => VideoHolds | undefined = () => undefined
 ): Promise<Map<string, string>> => {
   const renamed = new Map<string, string>()
   if (files.length === 0) {
@@ -163,7 +204,7 @@ export const compressVideos = async (
     if (!existsSync(file)) {
       continue
     }
-    const out = await compressVideo(file)
+    const out = await compressVideo(file, holdsFor(file))
     if (out !== file) {
       renamed.set(file, out)
     }

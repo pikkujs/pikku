@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { FabricPreconditionError } from './errors.js'
+import { PikkuError } from '@pikku/core/errors'
 
 /**
  * Local git probes for the deploy safety checks (clean tree, HEAD == remote,
@@ -7,7 +8,15 @@ import { FabricPreconditionError } from './errors.js'
  * matches what wrangler/vercel/fly do, no runtime dep.
  */
 
-export class GitError extends Error {
+/**
+ * A `git` invocation that came back non-zero.
+ *
+ * A `PikkuError`, because the message already carries the whole diagnosis —
+ * which command, which exit code, and git's own stderr — and ten frames of the
+ * spawn helper in front of "fatal: not a git repository" answer a question
+ * nobody asked. `--verbose` / `PIKKU_DEBUG` still prints the stack.
+ */
+export class GitError extends PikkuError {
   constructor(
     public command: string,
     public exitCode: number,

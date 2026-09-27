@@ -42,18 +42,8 @@ export const inMilestonesDir = (path: string): boolean =>
 export const withoutMilestonesDir = (path: string): string =>
   path.replace(`${MILESTONES_DIR}/`, '')
 
-/**
- * `designing` sits before `proposed`: the milestone is written down but is NOT to
- * be built yet, because whoever is being shown its looks has not picked one. Only
- * `proposed` is dispatchable, so the two cannot be one status without a milestone
- * being built out from under the person still choosing how it should look.
- */
-export const MILESTONE_STATUSES = [
-  'designing',
-  'proposed',
-  'dispatched',
-  'built',
-] as const
+/** Only `proposed` is dispatchable; the other two are what happened to it after. */
+export const MILESTONE_STATUSES = ['proposed', 'dispatched', 'built'] as const
 
 export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number]
 

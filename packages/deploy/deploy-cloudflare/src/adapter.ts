@@ -480,12 +480,18 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     includeQueueHandler = false
   ): string {
     const isWorkflowRole = ctx.unit.role === 'workflow'
+    // An mcp unit only serves MCP when a surface was actually emitted for it.
+    // With an empty manifest there is nothing to mount, so it stays an ordinary
+    // worker rather than shipping the MCP SDK to answer 404s.
+    const servesMCP = ctx.unit.role === 'mcp' && ctx.mcpServerOption !== ''
 
     const bindingsMap = buildBindingsMap(ctx.unit)
 
-    const handlerName = includeQueueHandler
-      ? 'createCloudflareHandler'
-      : 'createCloudflareWorkerHandler'
+    const handlerName = servesMCP
+      ? 'createCloudflareMCPHandler'
+      : includeQueueHandler
+        ? 'createCloudflareHandler'
+        : 'createCloudflareWorkerHandler'
     const platform = this.resolvePlatformImports(ctx.unit, [
       handlerName,
       'CloudflareDeploymentService',
@@ -495,17 +501,26 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
 
     const httpQueueJobs = this.resolveHttpQueueJobs(ctx.unit)
 
-    const exportLine = includeQueueHandler
-      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes},\n  { httpQueueJobs: ${httpQueueJobs} }\n)`
-      : `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`
+    const factoriesArg = `{ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices }`
 
-    const handlerImport = includeQueueHandler
-      ? `import { createCloudflareHandler${isWorkflowRole ? ', setupServices' : ''} } from '@pikku/cloudflare/handler'`
-      : `import { createCloudflareWorkerHandler } from '@pikku/cloudflare/handler'`
+    const exportLine = servesMCP
+      ? `export default createCloudflareMCPHandler(${factoriesArg}, { ${ctx.mcpServerOption.replace(/,\s*$/, '')} })`
+      : includeQueueHandler
+        ? `export default createCloudflareHandler(\n  ${factoriesArg},\n  ${handlerTypes},\n  { httpQueueJobs: ${httpQueueJobs} }\n)`
+        : `export default createCloudflareWorkerHandler(${factoriesArg})`
+
+    // `@pikku/cloudflare/mcp` is its own entry point so that the MCP SDK only
+    // reaches the bundle of a unit that serves MCP.
+    const handlerImport = servesMCP
+      ? `import { createCloudflareMCPHandler } from '@pikku/cloudflare/mcp'`
+      : includeQueueHandler
+        ? `import { createCloudflareHandler${isWorkflowRole ? ', setupServices' : ''} } from '@pikku/cloudflare/handler'`
+        : `import { createCloudflareWorkerHandler } from '@pikku/cloudflare/handler'`
 
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       handlerImport,
+      ...(servesMCP ? [ctx.mcpImport] : []),
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
       `import { CloudflareDeploymentService } from '@pikku/cloudflare/deployment'`,
       ...(platform.needsQueue

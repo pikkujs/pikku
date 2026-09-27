@@ -21,6 +21,7 @@ import {
   testAgentRunWiring,
 } from './functions/agent.assert.js'
 import { testPriorityWiring } from './functions/priority.assert.js'
+import { testAgentProviderOptionsMeta } from './functions/agent-provider-options.assert.js'
 
 async function main(): Promise<void> {
   try {
@@ -491,6 +492,10 @@ async function main(): Promise<void> {
     // )
     const rpcPassed = true
 
+    // Compile-time metadata, not execution order: the declaration's
+    // `providerOptions` has to reach `agentsMeta`.
+    const agentProviderOptionsPassed = testAgentProviderOptionsMeta()
+
     const allPassed =
       priorityPassed &&
       httpTest1Passed &&
@@ -515,7 +520,8 @@ async function main(): Promise<void> {
       channelServerlessTest5Passed &&
       rpcPassed &&
       agentStreamPassed &&
-      agentRunPassed
+      agentRunPassed &&
+      agentProviderOptionsPassed
 
     if (allPassed) {
       console.log('\n\n✓ All wiring types tested successfully!')

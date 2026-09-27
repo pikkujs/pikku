@@ -4,12 +4,16 @@ import * as ts from 'typescript'
 import { addWireAddon } from './add-wire-addon.js'
 
 let state: any
+let criticals: string[] = []
 
 const logger = {
   debug: () => {},
   info: () => {},
   warn: () => {},
   error: () => {},
+  critical: (code: string, message: string) => {
+    criticals.push(`${code}: ${message}`)
+  },
 } as any
 
 /** Parses a source snippet and runs addWireAddon over every call expression. */
@@ -29,6 +33,7 @@ const inspect = (source: string) => {
 }
 
 beforeEach(() => {
+  criticals = []
   state = {
     rpc: {
       wireAddonDeclarations: new Map(),
@@ -53,9 +58,13 @@ describe('addWireAddon', () => {
 
     assert.deepEqual(declarations.get('console'), {
       package: '@pikku/addon-console',
+      // The file the declaration was read from, which is what decides whether
+      // a tree-shaken build may drop this wiring file.
       file: 'wiring.ts',
       rpcEndpoint: '/rpc',
       mcp: undefined,
+      mcpEndpoint: undefined,
+      expose: undefined,
       auth: true,
       tags: ['admin', 'internal'],
       scopes: ['admin'],
@@ -176,11 +185,108 @@ describe('addWireAddon', () => {
     assert.equal(declarations.get('console').scopes, undefined)
   })
 
+  test('records the tool list an addon is offered to MCP under', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'todos', package: '@x/y', mcp: ['listTodos', 'getTodo'] })
+    `)
+
+    assert.deepEqual(declarations.get('todos').mcp, ['listTodos', 'getTodo'])
+  })
+
+  test('still records mcp: true, which offers what the addon declared', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'todos', package: '@x/y', mcp: true })
+    `)
+
+    assert.equal(declarations.get('todos').mcp, true)
+  })
+
+  test('drops an mcp list that is not statically knowable', () => {
+    // Read as a partial list it would look like a narrower tool menu than the
+    // one the app actually offers, which is the wrong way round to be wrong.
+    const declarations = inspect(`
+      wireAddon({ name: 'todos', package: '@x/y', mcp: [...TOOLS] })
+    `)
+
+    assert.equal(declarations.get('todos').mcp, undefined)
+  })
+
+  test('records expose as a boolean or as a function list', () => {
+    const declarations = inspect(`
+      wireAddon({ name: 'shop', package: '@x/y', expose: ['getOrder'] })
+      wireAddon({ name: 'closed', package: '@x/y', expose: false })
+      wireAddon({ name: 'open', package: '@x/y', expose: true })
+    `)
+
+    assert.deepEqual(declarations.get('shop').expose, ['getOrder'])
+    assert.equal(declarations.get('closed').expose, false)
+    assert.equal(declarations.get('open').expose, true)
+  })
+
+  test('fails the build on an expose value it cannot read', () => {
+    // Recorded as unset, the deploy unit would follow the addon's declarations
+    // while the runtime follows the real list.
+    inspect(`
+      wireAddon({ name: 'shop', package: '@x/y', expose: SELECTED })
+      wireAddon({ name: 'more', package: '@x/y', expose: [...SELECTED] })
+    `)
+
+    assert.equal(criticals.length, 2)
+    assert.match(criticals[0]!, /PKU344/)
+    assert.match(criticals[0]!, /SELECTED/)
+  })
+
   test('keeps an explicitly empty scopes array distinct from an absent one', () => {
     const declarations = inspect(`
       wireAddon({ name: 'console', package: '@x/y', scopes: [] })
     `)
 
     assert.deepEqual(declarations.get('console').scopes, [])
+  })
+
+  test('reads a credential override that only renames', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'gmail',
+        package: '@pikku/addon-gmail',
+        credentialOverrides: { gmailOAuth: 'GMAIL_TEAM' },
+      })
+    `)
+
+    assert.deepEqual(declarations.get('gmail').credentialOverrides, {
+      gmailOAuth: 'GMAIL_TEAM',
+    })
+  })
+
+  test('reads the mode a wiring puts a credential in', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'gmail',
+        package: '@pikku/addon-gmail',
+        credentialOverrides: {
+          gmailOAuth: { mode: 'wire' },
+          calendarOAuth: { name: 'CAL_SUPPORT', mode: 'singleton' },
+        },
+      })
+    `)
+
+    assert.deepEqual(declarations.get('gmail').credentialOverrides, {
+      gmailOAuth: { mode: 'wire' },
+      calendarOAuth: { name: 'CAL_SUPPORT', mode: 'singleton' },
+    })
+  })
+
+  test('drops a mode that is not a statically knowable literal', () => {
+    const declarations = inspect(`
+      wireAddon({
+        name: 'gmail',
+        package: '@pikku/addon-gmail',
+        credentialOverrides: { gmailOAuth: { mode: runtimeMode } },
+      })
+    `)
+
+    assert.deepEqual(declarations.get('gmail').credentialOverrides, {
+      gmailOAuth: {},
+    })
   })
 })

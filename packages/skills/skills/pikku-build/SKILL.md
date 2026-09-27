@@ -13,19 +13,30 @@ description: >-
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git rm *), Bash(git mv *), Bash(git log *), Bash(git branch *), Bash(yarn pikku fabric report *), Bash(npx --no pikku fabric report *)
 argument-hint: '[feature description]'
 installGroups: [core]
+agent:
+  tools: read, write, edit, bash, grep
+  timeoutMs: 5400000
+  acceptance:
+    level: verified
+    evidence: [changed-files, tests-added, commands-run, validation-output]
+    verify:
+      - id: knowledge-consistent
+        command: pikku knowledge validate
+      - id: typechecks
+        command: pikku all --tsc-summary
 ---
 
 # Build on Pikku
 
 ## Which mode
 
-| The situation | Read |
-| --- | --- |
-| A template was just cloned or scaffolded, and the tree still looks like one | `references/post-clone.md` first, then come back |
-| A real product, meant to be picked up by someone else | `references/app.md` — the default |
-| A spike, a throwaway demo, an idea nobody has committed to | `references/quick.md` |
-| A showcase meant to exercise every Pikku surface | `references/platform.md`, which is a delta on top of `references/app.md` |
-| A feature added to an app that already has its knowledge base and milestones | `references/feature.md` |
+| The situation                                                                | Read                                                                     |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| A template was just cloned or scaffolded, and the tree still looks like one  | `references/post-clone.md` first, then come back                         |
+| A real product, meant to be picked up by someone else                        | `references/app.md` — the default                                        |
+| A spike, a throwaway demo, an idea nobody has committed to                   | `references/quick.md`                                                    |
+| A showcase meant to exercise every Pikku surface                             | `references/platform.md`, which is a delta on top of `references/app.md` |
+| A feature added to an app that already has its knowledge base and milestones | `references/feature.md`                                                  |
 
 **App is the default.** A small or toy-sounding app does not make it Quick;
 only an explicit signal of speed or throwaway-ness does. Platform is not "App
@@ -51,11 +62,30 @@ generated code depends on, and on a fresh scaffold **every command that touches
 codegen fails until it has run**, including ones you would reasonably reach for
 while still planning. Those failures look alarming and are nothing but this.
 
+## Start from what you were handed
+
+When the request comes with a file or a URL, look at it before planning
+anything. Two kinds are converted first and then built on:
+
+| Handed                                                                                                              | Say, then do                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| An **OpenAPI / Swagger spec** — top-level `openapi` or `swagger` key, a `paths` object                              | "This is an OpenAPI spec — I'll turn it into an addon first." Follow the `pikku-addon` skill's OpenAPI reference. |
+| An **n8n export** — an object with `nodes` and `connections`, an array of them, or a `{ workflows: [...] }` wrapper | "This is an n8n workflow — I'll import it first." Follow `pikku-n8n-import`.                                      |
+
+Say it at once, in one line, and start: this is the obvious first move, not a
+question for the user. Generate the whole spec, however large.
+
+Neither is the app. When the conversion compiles, come back here and carry on
+in the mode the request calls for — App by default — planning milestones around
+what the user wants to do with the API or the workflow, and reaching the
+generated functions through `ref()`.
+
 ## What holds in every mode
 
-- **The branch and the diff are the contract.** There is no plan JSON. A
-  reviewer sees real, compiled, working code: apply is a merge, reject is a
-  `git branch -D`.
+- **The branch and the diff are the contract.** A reviewer sees real, compiled,
+  working code: apply is a merge, reject is a `git branch -D`. The milestone's
+  plan is your own denominator, measured by `pikku knowledge plan progress` —
+  never something a reviewer is handed instead of the code.
 - **Discover before editing.** `yarn pikku meta context --json` returns
   functions, wires, middleware, permissions, workflows, `capabilities` and
   `layout` in one call. Fall back to targeted `meta` commands only for a full
@@ -66,11 +96,24 @@ while still planning. Those failures look alarming and are nothing but this.
   lives in `messages/*.json`.
 - **`pikku all` is the gate.** Run it after touching functions, wirings or
   schemas, and treat its criticals as real.
-- **A milestone is planned by a different seat than the one that builds it.**
+- **A milestone is planned before it is built, and the plan then stays fixed.**
   The plan — tables, functions, wires, roles, scopes, screens, scenarios, in
-  passes — is written through `pikku knowledge plan set` by `pikku-architect`,
-  and `pikku knowledge plan progress` measures the build against it from the
-  generated meta. A builder who writes its own plan is grading itself.
+  passes — is written through `pikku knowledge plan set` (how: `pikku-architect`)
+  in its own turn before any of that milestone's code exists, and
+  `pikku knowledge plan progress` measures the build against it from the
+  generated meta. You plan it and you build it; what you never do is edit the
+  plan afterwards to match what you built — that is grading yourself.
+- **Print the links whenever the stack comes up, and in every hand-over.** Full,
+  clickable URLs, with the ports taken from what `bun run dev` actually printed:
+  - **App** — the frontend's URL (`http://localhost:7104` in the template; each
+    frontend in `pikkufabric.config.json` has its own port)
+  - **API** — `http://localhost:3000`
+  - **Console** — `http://localhost:3000/console`, plus a deep link to each
+    page that shows what this turn produced: `/console/knowledge`,
+    `/console/scenarios`, `/console/personas`, `/console/functions`,
+    `/console/database`, `/console/changes`
+
+  A person who has to go hunting for the port assumes the app did not start.
 
 ## What NOT to do
 

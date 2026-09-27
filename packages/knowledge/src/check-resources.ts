@@ -16,6 +16,29 @@ export const ResourceProblemSchema = z.object({
 
 export type ResourceProblem = z.infer<typeof ResourceProblemSchema>
 
+export const ResourceOrphanSchema = z.object({
+  uri: z.string(),
+  prefix: z.string(),
+  id: z.string(),
+})
+
+export type ResourceOrphan = z.infer<typeof ResourceOrphanSchema>
+
+/**
+ * The kinds whose orphans mean something.
+ *
+ * An orphan is a capability nobody wrote down, so the kinds worth reporting are
+ * the ones that ARE capabilities. A wire (`http`, `queue`, `cron`, `channel`) is
+ * a way to reach a function that is already reported, and a `schema`, `scope`,
+ * `addon` or `persona` is machinery rather than something a note would be about
+ * — reporting those turns a useful signal into a list nobody reads.
+ */
+export const ORPHAN_PREFIXES: readonly ResourcePrefix[] = [
+  'func',
+  'table',
+  'workflow',
+]
+
 export const ResourceCheckSchema = z.object({
   ok: z.boolean(),
   /** Notes carrying a `resource:` at all. */
@@ -25,6 +48,12 @@ export const ResourceCheckSchema = z.object({
   /** URIs whose prefix had no meta in this project — unverifiable, not wrong. */
   skipped: z.number(),
   problems: z.array(ResourceProblemSchema),
+  /**
+   * Code no note claims. Informational, and deliberately outside `ok`: a project
+   * is allowed to have more code than record, and on an imported repo that is the
+   * normal state rather than a fault.
+   */
+  orphans: z.array(ResourceOrphanSchema),
 })
 
 export type ResourceCheck = z.infer<typeof ResourceCheckSchema>
@@ -102,12 +131,25 @@ export type ResourceCheckOptions = {
    * dangling, not one side missing it.
    */
   known?: Map<ResourcePrefix, Set<string>>
+  /**
+   * Ids that exist for reasons no note will ever cover — a template's own auth
+   * and health functions, a framework table. Subtracted from the orphan report
+   * only; a note may still point at one, and it resolves.
+   */
+  baseline?: Map<ResourcePrefix, Set<string>>
+  /** Defaults to {@link ORPHAN_PREFIXES}; an empty array turns the report off. */
+  orphanPrefixes?: readonly ResourcePrefix[]
 }
 
 export const checkKnowledgeResources = async (
   root: string,
   outDir: string,
-  { notes, known: extra }: ResourceCheckOptions = {}
+  {
+    notes,
+    known: extra,
+    baseline,
+    orphanPrefixes = ORPHAN_PREFIXES,
+  }: ResourceCheckOptions = {}
 ): Promise<ResourceCheck> => {
   const all = notes ?? (await readKnowledgeNotes(root))
   const known = await collectKnownResources(root, outDir)
@@ -116,6 +158,7 @@ export const checkKnowledgeResources = async (
     known.set(prefix, existing ? new Set([...existing, ...ids]) : ids)
   }
 
+  const claimed = new Set<string>()
   const problems: ResourceProblem[] = []
   let withResource = 0
   let checked = 0
@@ -142,6 +185,7 @@ export const checkKnowledgeResources = async (
         continue
       }
       checked++
+      claimed.add(`${parsed.prefix}:${parsed.id}`)
       if (!resolvable.has(parsed.id)) {
         problems.push({
           path: note.path,
@@ -153,11 +197,22 @@ export const checkKnowledgeResources = async (
     }
   }
 
+  const orphans: ResourceOrphan[] = []
+  for (const prefix of orphanPrefixes) {
+    const ignored = baseline?.get(prefix)
+    for (const id of known.get(prefix) ?? []) {
+      const uri = `${prefix}:${id}`
+      if (claimed.has(uri) || ignored?.has(id)) continue
+      orphans.push({ uri, prefix, id })
+    }
+  }
+
   return {
     ok: problems.length === 0,
     notes: withResource,
     checked,
     skipped,
     problems,
+    orphans,
   }
 }

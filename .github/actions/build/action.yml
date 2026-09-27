@@ -91,12 +91,20 @@ runs:
         name: build-output
         # Same node_modules exclusion as the cache above: these globs otherwise
         # sweep up every dependency's own dist and .pikku alongside our own.
+        #
+        # `templates/functions/pikku` is the scaffold directory that config's
+        # `scaffold.pikkuDir` names, and it is build output exactly as `.pikku`
+        # is. It has to travel with it: a variable or a secret declared in a
+        # scaffold is imported by name from `.pikku`, so shipping one without the
+        # other hands the next job a generated file whose import resolves to
+        # nothing, and codegen there dies on the first re-inspect.
         path: |
           packages/**/dist/**
           packages/**/bin/**
           packages/**/.pikku/**
           packages/cli/console-app/**
           templates/**/.pikku/**
+          templates/functions/pikku/**
           templates/**/dist/**
           !packages/**/node_modules/**
           !templates/**/node_modules/**

@@ -19,7 +19,7 @@ import {
   SEV_LABEL,
   CAT_LABEL,
   CAT_WHY,
-  type RenderRemediation,
+  type RenderUpgradeFor,
 } from './security-view-utils'
 
 export interface FindingItemProps {
@@ -27,14 +27,14 @@ export interface FindingItemProps {
   latest?: string
   // Stable, unique Accordion.Item value (advisoryId can be empty).
   itemValue: string
-  renderRemediation: RenderRemediation
+  renderUpgrade: RenderUpgradeFor
 }
 
 export const FindingItem: React.FC<FindingItemProps> = ({
   issue,
   latest,
   itemValue,
-  renderRemediation,
+  renderUpgrade,
 }) => {
   const cat = classifyAdvisory(issue.title)
   const sev = issue.severity
@@ -83,8 +83,7 @@ export const FindingItem: React.FC<FindingItemProps> = ({
               </Group>
             </Anchor>
           )}
-          {target &&
-            renderRemediation({ pkg: issue.package, version: target, issue })}
+          {target && renderUpgrade(issue.package)}
         </Group>
       </Box>
       <Accordion.Panel>

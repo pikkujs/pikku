@@ -28,3 +28,27 @@
   color: var(--mantine-primary-color-filled);
   text-decoration: underline;
 }
+
+/*
+ * Running is the one status that is not a fact yet, so it is the one that
+ * moves. Everything else on this screen holds still.
+ */
+.statusPulse {
+  animation: scenario-status-pulse 1s ease-in-out infinite;
+}
+
+@keyframes scenario-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusPulse {
+    animation: none;
+  }
+}

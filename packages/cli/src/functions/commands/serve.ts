@@ -255,10 +255,13 @@ export const serve = pikkuSessionlessFunc<
       ? await resolveFrontendMount(config.frontend)
       : undefined
     // The console goes first so a frontend mounted at `/` cannot claim
-    // `/console` before the console's own mount is offered the request.
-    const staticMounts = [consoleMount, frontendMount].filter(
-      (mount): mount is NonNullable<typeof mount> => Boolean(mount)
-    )
+    // `/console` before the console's own mount is offered the request, and
+    // the app's own mounts are kept ahead of the catch-all frontend.
+    const staticMounts = [
+      ...(consoleMount ? [consoleMount] : []),
+      ...(userConfig.staticMounts ?? []),
+      ...(frontendMount ? [frontendMount] : []),
+    ]
     const pikkuServer = devServerRunner.createServer(
       {
         ...userConfig,

@@ -140,11 +140,8 @@ describe('the node HTTP handler carries the caller through to the tool', () => {
       // path used to reach a different dispatch: a call that authenticated
       // nothing must be refused rather than inherit the last caller.
       const anonymous = await callTool(url, 'whoami')
-      const refusal = JSON.stringify(
-        anonymous.message.result?.content ?? anonymous.message
-      )
-      assert.match(refusal, /Authentication required/)
-      assert.ok(!refusal.includes('usr_1'))
+      assert.equal(anonymous.status, 401)
+      assert.ok(!JSON.stringify(anonymous.message).includes('usr_1'))
     } finally {
       await close()
     }

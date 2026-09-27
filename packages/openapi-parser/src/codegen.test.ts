@@ -232,13 +232,13 @@ describe('function file schema imports', () => {
       oauth: false,
       secret: false,
     })
-    const funcFile = files['src/functions/getPet.function.ts']
-    assert.ok(funcFile, 'function file should exist')
+    const schemasFile = files['src/functions/getPet.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
     assert.ok(
-      funcFile.includes("from '../test-api.types.js'"),
-      `should import from types file, got: ${funcFile.split('\n').slice(0, 10).join('\n')}`
+      schemasFile.includes("from '../test-api.types.js'"),
+      `should import from types file, got: ${schemasFile.split('\n').slice(0, 10).join('\n')}`
     )
-    assert.ok(funcFile.includes('PetSchema'), 'should reference PetSchema')
+    assert.ok(schemasFile.includes('PetSchema'), 'should reference PetSchema')
   })
 
   test('inlines single-use schemas instead of importing from types file', () => {
@@ -272,21 +272,101 @@ describe('function file schema imports', () => {
       oauth: false,
       secret: false,
     })
-    const funcFile = files['src/functions/getPet.function.ts']
-    assert.ok(funcFile, 'function file should exist')
+    const schemasFile = files['src/functions/getPet.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
     // Should NOT import from types file
     assert.ok(
-      !funcFile.includes("from '../test-api.types.js'"),
+      !schemasFile.includes("from '../test-api.types.js'"),
       `should not import from types file when schema is single-use`
     )
     // Schema should be inlined
-    assert.ok(funcFile.includes('const PetSchema'), 'should inline PetSchema')
+    assert.ok(
+      schemasFile.includes('const PetSchema'),
+      'should inline PetSchema'
+    )
     // Types file should not be generated (no shared schemas)
     assert.equal(
       files['src/test-api.types.ts'],
       undefined,
       'should not generate types file'
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Schemas are read by codegen before the addon's #pikku tree exists
+// ---------------------------------------------------------------------------
+describe('sibling schemas file', () => {
+  const spec = makeSpec({
+    operations: [
+      makeOp({
+        method: 'get',
+        path: '/pets/{id}',
+        operationId: 'getPet',
+        pathParams: [
+          { name: 'id', required: true, schema: { type: 'string' } },
+        ],
+        responseSchema: {
+          type: 'object' as const,
+          properties: { id: { type: 'string' as const } },
+        },
+      }),
+      makeOp({ method: 'post', path: '/ping', operationId: 'ping' }),
+    ],
+  })
+  const files = generateAddonFromOpenAPI(spec, makeVars(), {
+    oauth: false,
+    secret: false,
+  })
+
+  test('input and output schemas are declared in <fn>.schemas.ts', () => {
+    const schemasFile = files['src/functions/getPet.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
+    assert.ok(schemasFile.includes('export const GetPetInput = '))
+    assert.ok(schemasFile.includes('export const GetPetOutput = '))
+  })
+
+  test('the schemas file never imports #pikku', () => {
+    const schemasFile = files['src/functions/getPet.schemas.ts']
+    assert.ok(
+      !schemasFile.includes('#pikku'),
+      `schemas file must be importable before .pikku is built, got:\n${schemasFile}`
+    )
+  })
+
+  test('the function file imports its schemas instead of declaring them', () => {
+    const funcFile = files['src/functions/getPet.function.ts']
+    assert.ok(
+      funcFile.includes(
+        "import { GetPetInput, GetPetOutput } from './getPet.schemas.js'"
+      ),
+      funcFile
+    )
+    assert.ok(!funcFile.includes("from 'zod'"), funcFile)
+    assert.ok(!funcFile.includes('export const GetPetInput'), funcFile)
+  })
+
+  test('generated imports resolve into the addon tree, .pikku/addon/', () => {
+    const funcFile = files['src/functions/getPet.function.ts']
+    assert.ok(
+      funcFile.includes(
+        "import { pikkuSessionlessFunc } from '#pikku/addon/function'"
+      ),
+      funcFile
+    )
+    const service = Object.entries(files).find(([path]) =>
+      path.endsWith('-api.service.ts')
+    )?.[1]
+    assert.ok(service, 'service file should exist')
+    assert.ok(
+      service.includes("from '#pikku/addon/variables/pikku-variables.gen.js'"),
+      service
+    )
+  })
+
+  test('an operation with no schemas gets no schemas file', () => {
+    assert.equal(files['src/functions/ping.schemas.ts'], undefined)
+    assert.ok(!files['src/functions/ping.function.ts'].includes('schemas.js'))
   })
 })
 
@@ -316,11 +396,11 @@ describe('duplicate parameter deduplication', () => {
       oauth: false,
       secret: false,
     })
-    const funcFile = files['src/functions/getItem.function.ts']
-    assert.ok(funcFile, 'function file should exist')
+    const schemasFile = files['src/functions/getItem.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
 
     // Count occurrences of 'id:' in the input schema
-    const idMatches = funcFile.match(/\bid:/g)
+    const idMatches = schemasFile.match(/\bid:/g)
     assert.ok(idMatches, 'should contain id property')
     // Should only appear once in the input schema definition
     assert.equal(
@@ -546,20 +626,26 @@ describe('camelCase flag', () => {
       secret: false,
       camelCase: true,
     })
-    const funcFile = files['src/functions/getRepo.function.ts']
-    assert.ok(funcFile, 'function file should exist')
+    const schemasFile = files['src/functions/getRepo.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
     // Should use camelCase names
     assert.ok(
-      funcFile.includes('repoSlug:'),
+      schemasFile.includes('repoSlug:'),
       'should convert repo_slug to repoSlug'
     )
     assert.ok(
-      funcFile.includes('pageSize:'),
+      schemasFile.includes('pageSize:'),
       'should convert page_size to pageSize'
     )
     // Should NOT have original snake_case names in the schema
-    assert.ok(!funcFile.includes('repo_slug:'), 'should not contain repo_slug')
-    assert.ok(!funcFile.includes('page_size:'), 'should not contain page_size')
+    assert.ok(
+      !schemasFile.includes('repo_slug:'),
+      'should not contain repo_slug'
+    )
+    assert.ok(
+      !schemasFile.includes('page_size:'),
+      'should not contain page_size'
+    )
   })
 
   test('converts snake_case object property names to camelCase in response schema', () => {
@@ -591,19 +677,19 @@ describe('camelCase flag', () => {
       secret: false,
       camelCase: true,
     })
-    const funcFile = files['src/functions/getUser.function.ts']
-    assert.ok(funcFile, 'function file should exist')
+    const schemasFile = files['src/functions/getUser.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
     // Output schema should use camelCase
     assert.ok(
-      funcFile.includes('createdAt:'),
+      schemasFile.includes('createdAt:'),
       'should convert created_at to createdAt'
     )
     assert.ok(
-      funcFile.includes('displayName:'),
+      schemasFile.includes('displayName:'),
       'should convert display_name to displayName'
     )
     // Should still have 'id' (no conversion needed)
-    assert.ok(funcFile.includes('id:'), 'should keep id as-is')
+    assert.ok(schemasFile.includes('id:'), 'should keep id as-is')
   })
 
   test('converts snake_case body property names to camelCase in input schema', () => {
@@ -632,14 +718,14 @@ describe('camelCase flag', () => {
       secret: false,
       camelCase: true,
     })
-    const funcFile = files['src/functions/createUser.function.ts']
-    assert.ok(funcFile, 'function file should exist')
+    const schemasFile = files['src/functions/createUser.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
     assert.ok(
-      funcFile.includes('firstName:'),
+      schemasFile.includes('firstName:'),
       'should convert first_name to firstName'
     )
     assert.ok(
-      funcFile.includes('lastName:'),
+      schemasFile.includes('lastName:'),
       'should convert last_name to lastName'
     )
   })
@@ -689,11 +775,14 @@ describe('camelCase flag', () => {
       secret: false,
       camelCase: false,
     })
-    const funcFile = files['src/functions/getRepo.function.ts']
-    assert.ok(funcFile, 'function file should exist')
+    const schemasFile = files['src/functions/getRepo.schemas.ts']
+    assert.ok(schemasFile, 'schemas file should exist')
     // Should keep original snake_case names
-    assert.ok(funcFile.includes('repo_slug:'), 'should keep repo_slug as-is')
-    assert.ok(!funcFile.includes('repoSlug:'), 'should not convert to repoSlug')
+    assert.ok(schemasFile.includes('repo_slug:'), 'should keep repo_slug as-is')
+    assert.ok(
+      !schemasFile.includes('repoSlug:'),
+      'should not convert to repoSlug'
+    )
   })
 
   test('converts snake_case in shared component schemas', () => {

@@ -100,12 +100,15 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
     if (existing) {
       return PLATFORM_USER_ID
     }
-    await ctx.context.internalAdapter.createUser({
-      id: PLATFORM_USER_ID,
-      email: PLATFORM_USER_EMAIL,
-      name: 'Platform',
-      emailVerified: false,
-    })
+    await ctx.context.internalAdapter.createUser(
+      {
+        id: PLATFORM_USER_ID,
+        email: PLATFORM_USER_EMAIL,
+        name: 'Platform',
+        emailVerified: false,
+      },
+      { method: 'credential-oauth' }
+    )
     return PLATFORM_USER_ID
   }
 
@@ -156,11 +159,9 @@ export const pikkuCredentialOAuth = (options: CredentialOAuthOptions) => {
 
       // Carries the owner through the redirect; the callback trusts this signed
       // state rather than the (cross-site) callback request's cookies.
-      const state = await generateState(
-        ctx,
-        { userId: ownerId, email: session.user.email },
-        undefined
-      )
+      const state = await generateState(ctx, {
+        link: { userId: ownerId, email: session.user.email },
+      })
 
       const redirectURI = `${ctx.context.baseURL}${CALLBACK_PATH}/${config.providerId}`
       const url = await createAuthorizationURL({

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
+import { FabricPreconditionError } from '../lib/errors.js'
 import { changesContext, requireProjectId } from '../lib/changes.js'
 import { resolveStageId } from '../lib/stage.js'
 import { dim, safe } from '../lib/output.js'
@@ -38,7 +39,9 @@ export const FabricChangesFile = pikkuSessionlessFunc({
   output: FabricChangesFileOutput,
   func: async (_services, input) => {
     if (input.body && input.bodyFile)
-      throw new Error('Pass --body or --body-file, not both.')
+      throw new FabricPreconditionError(
+        'Pass --body or --body-file, not both.'
+      )
 
     const { rpc, projectId } = await changesContext(
       input.apiUrl,

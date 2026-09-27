@@ -1,6 +1,7 @@
 import * as ts from 'typescript'
 import type {
   AddWiring,
+  InspectorMiddlewareInstance,
   InspectorState,
   MiddlewareGroupMeta,
 } from '../types.js'
@@ -71,6 +72,64 @@ function recordMiddlewareGroup(
       new Set([...existing.services.services, ...group.services.services])
     ),
   }
+}
+
+/**
+ * Record one `add*Middleware` call's entries in the instance map, giving each
+ * entry an id that is unique across the whole inspection.
+ *
+ * The index used to restart at 0 for every call, so a second file registering
+ * against the same group (or against `global`, which is one group for the whole
+ * project) minted ids the first file already owned and silently overwrote its
+ * entries. For `global:*` that is fatal rather than cosmetic: the instance map
+ * is the only record of a global registration, and per-unit deploy codegen
+ * emits its side-effect imports from that map — a lost entry means the module
+ * is never imported, `addGlobalMiddleware` never runs, and an auth gate is
+ * simply absent from the deployed unit with nothing in the build log.
+ *
+ * Allocating from the ids already present makes N registrations against one
+ * group produce N distinct entries, whatever order the files are visited in.
+ */
+function registerMiddlewareInstances(
+  instances: Record<string, InspectorMiddlewareInstance>,
+  groupType: string,
+  groupKey: string,
+  entries: Array<{ definitionId: string; isFactoryCall: boolean }>,
+  sourceFile: string,
+  position: number
+): string[] {
+  // The inspector may revisit a file; the same call site is not a second
+  // registration, and re-allocating would inflate the map on every pass.
+  const alreadyRecorded = Object.entries(instances)
+    .filter(
+      ([id, instance]) =>
+        instance.sourceFile === sourceFile &&
+        instance.position === position &&
+        id.startsWith(`${makeContextBasedId(groupType, groupKey)}:`)
+    )
+    .map(([id]) => id)
+  if (alreadyRecorded.length === entries.length) {
+    return alreadyRecorded
+  }
+
+  const instanceIds: string[] = []
+  let next = 0
+  for (const entry of entries) {
+    let instanceId = makeContextBasedId(groupType, groupKey, String(next))
+    while (instances[instanceId]) {
+      next++
+      instanceId = makeContextBasedId(groupType, groupKey, String(next))
+    }
+    instances[instanceId] = {
+      definitionId: entry.definitionId,
+      sourceFile,
+      position,
+      isFactoryCall: entry.isFactoryCall,
+    }
+    instanceIds.push(instanceId)
+    next++
+  }
+  return instanceIds
 }
 
 function renameTempDefinitions(
@@ -340,17 +399,17 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     const sourceFile = node.getSourceFile().fileName
-    const instanceIds: string[] = []
-    for (let i = 0; i < refs.length; i++) {
-      const instanceId = makeContextBasedId('tag', tag, String(i))
-      state.middleware.instances[instanceId] = {
+    const instanceIds = registerMiddlewareInstances(
+      state.middleware.instances,
+      'tag',
+      tag,
+      refs.map((ref, i) => ({
         definitionId: definitionIds[i],
-        sourceFile,
-        position: node.getStart(),
-        isFactoryCall: refs[i].isFactoryCall,
-      }
-      instanceIds.push(instanceId)
-    }
+        isFactoryCall: ref.isFactoryCall,
+      })),
+      sourceFile,
+      node.getStart()
+    )
 
     const allServices = new Set<string>()
     for (const defId of definitionIds) {
@@ -433,15 +492,21 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       renameTempDefinitions(state, definitionIds, 'global', 'middleware')
     }
     const sourceFile = node.getSourceFile().fileName
-    for (let i = 0; i < refs.length; i++) {
-      const instanceId = makeContextBasedId('global', 'middleware', String(i))
-      state.middleware.instances[instanceId] = {
+    registerMiddlewareInstances(
+      state.middleware.instances,
+      'global',
+      'middleware',
+      refs.map((ref, i) => ({
         definitionId: definitionIds[i],
-        sourceFile,
-        position: node.getStart(),
-        isFactoryCall: refs[i].isFactoryCall,
-      }
-    }
+        isFactoryCall: ref.isFactoryCall,
+      })),
+      sourceFile,
+      node.getStart()
+    )
+    // The instance map is one map for the whole project, and codegen reads it
+    // by string-prefix. This set is the independent witness that lets codegen
+    // fail loudly if a global registration ever goes missing from it.
+    state.middleware.globalFiles.add(sourceFile)
     // Without this, bootstrap codegen's "import every file with a wire-call"
     // pass skips middleware-only files and the registration never runs.
     state.http.files.add(sourceFile)
@@ -484,17 +549,17 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     const sourceFile = node.getSourceFile().fileName
-    const instanceIds: string[] = []
-    for (let i = 0; i < refs.length; i++) {
-      const instanceId = makeContextBasedId('http', pattern, String(i))
-      state.middleware.instances[instanceId] = {
+    const instanceIds = registerMiddlewareInstances(
+      state.middleware.instances,
+      'http',
+      pattern,
+      refs.map((ref, i) => ({
         definitionId: definitionIds[i],
-        sourceFile,
-        position: node.getStart(),
-        isFactoryCall: refs[i].isFactoryCall,
-      }
-      instanceIds.push(instanceId)
-    }
+        isFactoryCall: ref.isFactoryCall,
+      })),
+      sourceFile,
+      node.getStart()
+    )
 
     const allServices = new Set<string>()
     for (const defId of definitionIds) {
@@ -805,17 +870,17 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     renameTempDefinitions(state, definitionIds, 'tag', tag, 'channelMiddleware')
 
     const sourceFile = node.getSourceFile().fileName
-    const instanceIds: string[] = []
-    for (let i = 0; i < refs.length; i++) {
-      const instanceId = makeContextBasedId('tag', tag, String(i))
-      state.channelMiddleware.instances[instanceId] = {
+    const instanceIds = registerMiddlewareInstances(
+      state.channelMiddleware.instances,
+      'tag',
+      tag,
+      refs.map((ref, i) => ({
         definitionId: definitionIds[i],
-        sourceFile,
-        position: node.getStart(),
-        isFactoryCall: refs[i].isFactoryCall,
-      }
-      instanceIds.push(instanceId)
-    }
+        isFactoryCall: ref.isFactoryCall,
+      })),
+      sourceFile,
+      node.getStart()
+    )
 
     const allServices = new Set<string>()
     for (const defId of definitionIds) {

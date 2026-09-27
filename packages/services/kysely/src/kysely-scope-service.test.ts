@@ -416,3 +416,87 @@ describe('KyselyScopeService — audit and prune', () => {
     )
   })
 })
+
+describe('KyselyScopeService — listRolesForUsers', () => {
+  beforeEach(async () => {
+    await service.createRole({ name: 'billing', scopes: ['billing:read'] })
+    await service.createRole({
+      name: 'invoicing',
+      scopes: ['admin:invoices:create'],
+    })
+    await addUser('u1')
+    await addUser('u2')
+    await addUser('u3')
+  })
+
+  test('answers for every id asked for, roles or not', async () => {
+    await service.addUserToRole('u1', 'billing')
+
+    const byUser = await service.listRolesForUsers(['u1', 'u2'])
+
+    assert.deepEqual(byUser, { u1: ['billing'], u2: [] })
+  })
+
+  test('keeps each user to their own roles', async () => {
+    await service.addUserToRole('u1', 'billing')
+    await service.addUserToRole('u1', 'invoicing')
+    await service.addUserToRole('u2', 'invoicing')
+
+    const byUser = await service.listRolesForUsers(['u1', 'u2', 'u3'])
+
+    assert.deepEqual(byUser.u1!.sort(), ['billing', 'invoicing'])
+    assert.deepEqual(byUser.u2, ['invoicing'])
+    assert.deepEqual(byUser.u3, [])
+  })
+
+  test('agrees with listUserRoles, one user at a time', async () => {
+    await service.addUserToRole('u1', 'billing')
+    await service.addUserToRole('u2', 'invoicing')
+
+    const byUser = await service.listRolesForUsers(['u1', 'u2', 'u3'])
+
+    for (const userId of ['u1', 'u2', 'u3']) {
+      assert.deepEqual(
+        byUser[userId]!.sort(),
+        (await service.listUserRoles(userId)).sort(),
+        userId
+      )
+    }
+  })
+
+  test('an id with no user at all still gets an entry', async () => {
+    assert.deepEqual(await service.listRolesForUsers(['ghost']), { ghost: [] })
+  })
+
+  test('asking for nothing queries nothing', async () => {
+    assert.deepEqual(await service.listRolesForUsers([]), {})
+  })
+
+  test('a repeated id is asked for once and answered once', async () => {
+    await service.addUserToRole('u1', 'billing')
+
+    assert.deepEqual(await service.listRolesForUsers(['u1', 'u1']), {
+      u1: ['billing'],
+    })
+  })
+
+  test('spans more users than fit in one chunk', async () => {
+    // Past the 500-id chunk the `in` list is split at, so a user in the second
+    // chunk has to come back with their role intact.
+    const ids: string[] = []
+    for (let i = 0; i < 600; i++) {
+      const id = `bulk-${i}`
+      await addUser(id)
+      ids.push(id)
+    }
+    await service.addUserToRole('bulk-0', 'billing')
+    await service.addUserToRole('bulk-599', 'invoicing')
+
+    const byUser = await service.listRolesForUsers(ids)
+
+    assert.equal(Object.keys(byUser).length, 600)
+    assert.deepEqual(byUser['bulk-0'], ['billing'])
+    assert.deepEqual(byUser['bulk-599'], ['invoicing'])
+    assert.deepEqual(byUser['bulk-300'], [])
+  })
+})
