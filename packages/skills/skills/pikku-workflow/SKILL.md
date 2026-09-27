@@ -159,6 +159,9 @@ export const processOrder = pikkuWorkflowFunc({
 // RPC step — run a registered Pikku function as a step (opts: retries, retryDelay, description)
 const result = await workflow.do('Step name', 'rpcFunctionName', { ...data }, { retries: 3, retryDelay: '1s' })
 
+// Sub-workflow step — name another workflow instead of an RPC (see "Sub-workflows")
+const onboarded = await workflow.do('Onboard', 'onboardUserWorkflow', { userId })
+
 // Inline closure step — immediate execution, cached for replay
 const msg = await workflow.do('Generate', async () => `Welcome, ${data.email}!`)
 
@@ -277,9 +280,59 @@ const users = await Promise.all(
 )
 ```
 
+### Sub-workflows
+
+A step whose second argument names a **workflow** rather than an RPC starts that
+workflow as a child run and resolves to its output. There is no separate API —
+it is the same `workflow.do`, and the generated `TypedWorkflow` has an overload
+keyed on `FlattenedWorkflowMap`, so the child's input and output are type-checked
+exactly like an RPC step's.
+
+```typescript
+export const signupWorkflow = pikkuWorkflowFunc<
+  { email: string },
+  { userId: string }
+>({
+  func: async (_services, data, { workflow }) => {
+    const user = await workflow.do('Create user', 'createUser', data)
+    // runs onboardUserWorkflow as a child run; awaits its output
+    await workflow.do('Onboard', 'onboardUserWorkflow', { userId: user.id })
+    await workflow.do('Send welcome', 'sendWelcomeEmail', { userId: user.id })
+    return { userId: user.id }
+  },
+})
+```
+
+How the child runs:
+
+- **It is its own run.** It gets its own `runId`, its own steps and its own
+  history; the parent step records it as `childRunId` and the child's wire
+  carries `parentRunId`/`parentStepId`. Inspect the child's steps on the child
+  run, not the parent.
+- **Identity is inherited.** The child's wire copies the parent's
+  `pikkuUserId`, so the child runs as whoever started the parent.
+- **Inline vs queued follows the deployment.** Without a `queueService` the
+  child runs inline and the parent step returns its output directly. With one,
+  the child is queued, the parent parks on that step, and the child's
+  completion writes the parent step's result and resumes the parent.
+- **Failure propagates.** A child that fails or is cancelled fails the parent
+  step (`'Sub-workflow failed'` / `'Sub-workflow was cancelled'` when the child
+  left no message). Inline, the step's `retries` start a fresh child run per
+  attempt; queued, the child's failure lands on the parent step once and is
+  not retried — put retries on the child's own steps instead.
+
+Use a sub-workflow when the child is a real orchestration you also start on
+its own, or reuse from several parents. A child that would be a single
+`workflow.do` is a function — call the RPC directly (see the single-RPC rule
+above).
+
+To start a workflow **without waiting** for it, that is not a sub-workflow:
+have an RPC step call `rpc.startWorkflow(name, input)`, which returns
+`{ runId }` immediately, and the new run has no parent link.
+
 ### Graph workflow (DAG)
 
-`pikkuWorkflowGraph` derives types from the RPC map — no explicit `input`/`output`. Nodes map `nodeName → Pikku function name`; `config.<node>.next` lists nodes to run after it (in parallel); `config.<node>.input: (ref) => ...` transforms input using refs to prior node outputs.
+`pikkuWorkflowGraph` derives types from the RPC map — no explicit `input`/`output`. Nodes map `nodeName → Pikku function name` — or a workflow name, which runs that workflow as a sub-workflow node; `config.<node>.next` lists nodes to run after it (in parallel); `config.<node>.input: (ref) => ...` transforms input using refs to prior node outputs.
 
 ```typescript
 import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
