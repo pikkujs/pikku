@@ -62,8 +62,12 @@ export async function holdFinding(payload: FindingPayload): Promise<void> {
   const dir = join(heldDir(), payload.runId)
   await mkdir(dir, { recursive: true })
   const stamp = payload.reportedAt.replace(/[:.]/g, '-')
+  // `reportedAt` is only millisecond-precise, and two findings filed in the
+  // same millisecond tie on it. The monotonic clock breaks that tie in the
+  // order they were held; the random suffix only keeps the name unique.
+  const seq = process.hrtime.bigint().toString().padStart(20, '0')
   await writeFile(
-    join(dir, `${stamp}-${randomBytes(3).toString('hex')}.json`),
+    join(dir, `${stamp}-${seq}-${randomBytes(3).toString('hex')}.json`),
     JSON.stringify(payload, null, 2) + '\n',
     { encoding: 'utf8', mode: 0o600 }
   )
