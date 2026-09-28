@@ -18,7 +18,7 @@ export const credentialsConsoleAdminScenario = pikkuScenario<
 >({
   title: 'An admin reaches the credential connections surface',
   description:
-    'The credentials page opens on its global tab and the per-user connections tab is reachable from the page header',
+    'The credentials page opens on what the whole app connects and switches to what each customer connects',
   tags: ['scenario', 'credentials-console', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -34,15 +34,15 @@ export const credentialsConsoleAdminScenario = pikkuScenario<
       { actor: actors.admin }
     )
     await scenario.when(
-      'switches to the connections tab',
-      'selectsTab',
-      { value: 'connections' },
+      'switches to what each customer connects',
+      'selectsSegment',
+      { value: 'customers' },
       { actor: actors.admin }
     )
     await scenario.then(
       'sees the per-user connections surface',
       'seesTestId',
-      { testId: 'credential-connections' },
+      { testId: 'credentials-services-customers' },
       { actor: actors.admin }
     )
 
@@ -89,7 +89,7 @@ export const credentialsConsoleNonAdminRefusedScenario = pikkuScenario<
     await scenario.then(
       'never reaches the credential surface',
       'doesNotSeeTestId',
-      { testId: 'credential-connections' },
+      { testId: 'credentials-services', prefix: true },
       { actor: actors.guest }
     )
 

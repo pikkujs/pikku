@@ -90,7 +90,7 @@ export const impersonationConsoleScopeScenario = pikkuScenario<
     await scenario.when(
       'opens the workflow',
       'clicksTestId',
-      { testId: 'entity-card-dslSequentialWorkflow' },
+      { testId: 'workflow-dslSequentialWorkflow' },
       { actor: actors.admin }
     )
 

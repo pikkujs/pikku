@@ -53,13 +53,13 @@ export const workflowsExcludeScenariosScenario = pikkuScenario<
     await scenario.then(
       'sees the workflow',
       'seesTestId',
-      { testId: `entity-card-${WORKFLOW}` },
+      { testId: `workflow-${WORKFLOW}` },
       { actor: actors.admin }
     )
     await scenario.then(
       'does not see the scenario',
       'doesNotSeeTestId',
-      { testId: `entity-card-${SCENARIO}` },
+      { testId: `workflow-${SCENARIO}` },
       { actor: actors.admin }
     )
 
@@ -142,6 +142,15 @@ export const scenarioReadsAsProseScenario = pikkuScenario<void, { read: true }>(
         { testId: `scenario-section-${SCENARIO}` },
         { actor: actors.admin }
       )
+      await scenario.when(
+        'opens the scenario',
+        'clicksTestId',
+        {
+          testId: 'scenario-row-toggle',
+          within: { testId: `scenario-section-${SCENARIO}` },
+        },
+        { actor: actors.admin }
+      )
       await scenario.then(
         'sees the shopper’s step in the author’s words',
         'seesTestId',
@@ -185,6 +194,15 @@ export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
         { testId: `feature-nav-${UNGROUPED}` },
         { actor: actors.admin }
       )
+      await scenario.when(
+        'opens the scenario',
+        'clicksTestId',
+        {
+          testId: 'scenario-row-toggle',
+          within: { testId: `scenario-section-${SCENARIO}` },
+        },
+        { actor: actors.admin }
+      )
       const read = await scenario.when(
         'reads the cast',
         'readsFlowCast',
@@ -203,7 +221,7 @@ export const scenarioCastListedScenario = pikkuScenario<void, { cast: number }>(
         'opens the shopper',
         'clicksTestId',
         {
-          testId: 'scenario-cast-member',
+          testId: 'ladder-actor',
           where: { 'data-persona-key': 'shopper' },
           within: { testId: `scenario-section-${SCENARIO}` },
         },
@@ -256,6 +274,15 @@ export const scenarioStepOpensAsStepScenario = pikkuScenario<
       'opens the ungrouped feature',
       'clicksTestId',
       { testId: `feature-nav-${UNGROUPED}` },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the scenario',
+      'clicksTestId',
+      {
+        testId: 'scenario-row-toggle',
+        within: { testId: `scenario-section-${SCENARIO}` },
+      },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -327,10 +354,19 @@ export const personaLinkStaysInTheDocumentScenario = pikkuScenario<
       { actor: actors.admin }
     )
     await scenario.when(
+      'opens the scenario',
+      'clicksTestId',
+      {
+        testId: 'scenario-row-toggle',
+        within: { testId: `scenario-section-${SCENARIO}` },
+      },
+      { actor: actors.admin }
+    )
+    await scenario.when(
       'opens the shopper',
       'clicksTestId',
       {
-        testId: 'scenario-cast-member',
+        testId: 'ladder-actor',
         where: { 'data-persona-key': 'shopper' },
         within: { testId: `scenario-section-${SCENARIO}` },
       },
@@ -378,6 +414,15 @@ export const skippedScenarioSaysWhyScenario = pikkuScenario<
       'opens the install-addon feature',
       'clicksTestId',
       { testId: 'feature-nav-consoleInstallAddonFeature' },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the skipped scenario',
+      'clicksTestId',
+      {
+        testId: 'scenario-row-toggle',
+        within: { testId: 'scenario-section-installAddonFreshNameScenario' },
+      },
       { actor: actors.admin }
     )
     await scenario.then(

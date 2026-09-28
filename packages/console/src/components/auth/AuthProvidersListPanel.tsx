@@ -71,7 +71,7 @@ const ProviderRow: React.FC<{
 
   return (
     <CardRow
-      testId="auth-provider-row"
+      testId={`auth-provider-${provider.id}`}
       onClick={onOpen}
       leading={
         <StatusTile tone={on ? 'good' : 'neutral'}>

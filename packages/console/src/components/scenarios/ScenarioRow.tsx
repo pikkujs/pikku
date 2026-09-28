@@ -108,9 +108,15 @@ export const ScenarioRow: React.FC<ScenarioRowProps> = ({
       testId={`scenario-section-${scenario.name}`}
       onClick={() => setOpen((value) => !value)}
       leading={
-        <StatusTile tone={tone}>
-          <Icon size={18} />
-        </StatusTile>
+        <Box
+          data-testid={
+            run ? `scenario-status-mark-${run.status}` : undefined
+          }
+        >
+          <StatusTile tone={tone}>
+            <Icon size={18} />
+          </StatusTile>
+        </Box>
       }
       title={asI18n(scenario.title)}
       badges={

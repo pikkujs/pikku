@@ -11,7 +11,7 @@
  *
  * A run is not its own screen: the scenarios page is the suite, and a run is a
  * lens laid over it. Opening the page with no run named reads the newest one,
- * so the band, the timeline and the marks beside each section are all claims
+ * so the verdict, the timeline and the marks beside each section are all claims
  * about the run that is producing this very assertion. The prose asserted is
  * the *snapshot* the run kept, not today's source: a scenario is code and code
  * moves, and a run from last week has to keep describing the suite that ran.
@@ -38,7 +38,7 @@ export const runsListedScenario = pikkuScenario<void, { runs: number }>({
     await scenario.given(
       'opens the scenarios page',
       'opensConsolePage',
-      { path: SCENARIOS_PAGE, waitFor: { testId: 'scenario-run-band' } },
+      { path: SCENARIOS_PAGE, waitFor: { testId: 'scenario-run-verdict' } },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -78,7 +78,7 @@ export const runReadsBackItsProseScenario = pikkuScenario<
     await scenario.given(
       'opens the scenarios page, which reads the newest run',
       'opensConsolePage',
-      { path: SCENARIOS_PAGE, waitFor: { testId: 'scenario-run-band' } },
+      { path: SCENARIOS_PAGE, waitFor: { testId: 'scenario-run-verdict' } },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -96,6 +96,12 @@ export const runReadsBackItsProseScenario = pikkuScenario<
     await scenario.then(
       'sees a scenario the run is in the middle of',
       'seesTestId',
+      { testId: 'scenario-status-mark-running' },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens that scenario',
+      'clicksTestId',
       { testId: 'scenario-status-mark-running' },
       { actor: actors.admin }
     )

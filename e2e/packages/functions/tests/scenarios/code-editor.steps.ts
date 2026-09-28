@@ -255,7 +255,7 @@ export const clicksAgentCard = pikkuScenarioStep<
   description: 'opens an agent in the console',
   browser: async (_services, { agentKey }, { browser }) => {
     await browser
-      .locate({ testId: `entity-card-${agentKey}` })
+      .locate({ testId: `agent-${agentKey}` })
       .first()
       .click({ timeout: CONSOLE_PAGE_READY_TIMEOUT })
     return { clicked: agentKey }
@@ -263,14 +263,14 @@ export const clicksAgentCard = pikkuScenarioStep<
 })
 
 export const seesEditButton = pikkuScenarioStep<
-  { title: string },
+  { name: string },
   { visible: true }
 >({
   name: 'seesEditButton',
   description: 'sees the edit button',
-  browser: async (_services, { title }, { browser }) => {
+  browser: async (_services, { name }, { browser }) => {
     await browser.page
-      .locator(`button[title="${title}"]`)
+      .getByRole('button', { name, exact: true })
       .first()
       .waitFor({ state: 'visible', timeout: 15_000 })
     return { visible: true }

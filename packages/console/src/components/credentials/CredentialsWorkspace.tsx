@@ -360,7 +360,7 @@ export const CredentialsWorkspace: React.FC<{ emptyHero?: React.ReactNode }> = (
           />
         )}
         <SectionCard
-          testId="credentials-services"
+          testId={`credentials-services-${scope}`}
           title={m.credentials_services_title()}
           subtitle={
             scope === 'customers'

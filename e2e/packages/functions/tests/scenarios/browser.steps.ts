@@ -303,10 +303,12 @@ export const readsFlowCast = pikkuScenarioStep<
     return {
       cast: await card
         .first()
-        .locator('[data-testid="scenario-cast-member"]')
-        .evaluateAll((nodes) =>
-          nodes.map((node) => node.getAttribute('data-persona-key') ?? '')
-        ),
+        .locator('[data-testid="ladder-actor"]')
+        .evaluateAll((nodes) => [
+          ...new Set(
+            nodes.map((node) => node.getAttribute('data-persona-key') ?? '')
+          ),
+        ]),
     }
   },
 })

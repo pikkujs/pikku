@@ -4,19 +4,21 @@
  * The page is a catalogue of every sign-in method the console knows about,
  * marked against what this project actually has wired. Provider ids (`github`,
  * `google`, `credentials`) and plugin ids (`bearer`) are declared in code, so
- * they are safe to select on; the badge copy beside them is translated and is
- * never read back. "Not configured" is therefore asserted as
- * `data-configured="false"` rather than as the absence of a badge — an absent
+ * they are safe to select on; the copy beside them is translated and is never
+ * read back. "Not configured" is therefore asserted as the row sitting in the
+ * off section rather than as its absence from the on section — an absent
  * element would also pass if the row never rendered at all.
  */
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 const AUTH_PROVIDERS_PAGE = '/console/auth-providers'
-const PROVIDERS_READY = { testId: 'auth-provider-row' }
+const PROVIDERS_READY = { testId: 'auth-providers-verdict' }
 
 const providerStatus = (id: string, configured: boolean) => ({
-  testId: 'auth-provider-status',
-  where: { 'data-provider': id, 'data-configured': String(configured) },
+  testId: `auth-provider-${id}`,
+  within: {
+    testId: configured ? 'auth-providers-on' : 'auth-providers-off',
+  },
 })
 
 export const authProvidersConfiguredScenario = pikkuScenario<
@@ -43,7 +45,7 @@ export const authProvidersConfiguredScenario = pikkuScenario<
     await scenario.then(
       'finds GitHub in the catalogue',
       'seesTestId',
-      { testId: 'auth-provider-row', where: { 'data-provider': 'github' } },
+      { testId: 'auth-provider-github' },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -81,10 +83,7 @@ export const authProvidersCredentialsConfiguredScenario = pikkuScenario<
     await scenario.then(
       'finds the credentials provider in the catalogue',
       'seesTestId',
-      {
-        testId: 'auth-provider-row',
-        where: { 'data-provider': 'credentials' },
-      },
+      { testId: 'auth-provider-credentials' },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -122,7 +121,7 @@ export const authProvidersUnconfiguredScenario = pikkuScenario<
     await scenario.then(
       'finds Google in the catalogue',
       'seesTestId',
-      { testId: 'auth-provider-row', where: { 'data-provider': 'google' } },
+      { testId: 'auth-provider-google' },
       { actor: actors.admin }
     )
     await scenario.then(
@@ -142,7 +141,7 @@ export const authProvidersPluginEnabledScenario = pikkuScenario<
 >({
   title: 'An enabled better-auth plugin is listed alongside the providers',
   description:
-    'Plugins change how a session is presented rather than who signs in, so they are shown as their own row of badges',
+    'Plugins change how a session is presented rather than who signs in, so they are listed in the developer details',
   tags: ['scenario', 'auth-console', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -157,10 +156,16 @@ export const authProvidersPluginEnabledScenario = pikkuScenario<
       { path: AUTH_PROVIDERS_PAGE, waitFor: PROVIDERS_READY },
       { actor: actors.admin }
     )
+    await scenario.when(
+      'opens the developer details',
+      'clicksTestId',
+      { testId: 'auth-providers-developers-toggle' },
+      { actor: actors.admin }
+    )
     await scenario.then(
       'sees the bearer plugin listed as enabled',
       'seesTestId',
-      { testId: 'auth-plugin-bearer' },
+      { testId: 'auth-providers-developers', containing: 'bearer' },
       { actor: actors.admin }
     )
 

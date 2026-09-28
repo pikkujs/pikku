@@ -13,7 +13,7 @@ import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 export const installedAddonsScenario = pikkuScenario<void, { addons: number }>({
   title: 'Installed addons are visible on the addons page',
   description:
-    'An admin filters the addons gallery to what this project installs and finds every one of them',
+    'An admin opens the addons gallery and finds every addon this project installs in its own section',
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -28,12 +28,6 @@ export const installedAddonsScenario = pikkuScenario<void, { addons: number }>({
       { path: '/console/addons' },
       { actor: actors.admin }
     )
-    await scenario.when(
-      'filters to installed addons',
-      'selectsSegment',
-      { value: 'installed' },
-      { actor: actors.admin }
-    )
 
     const installed = [
       '@pikku/addon-console',
@@ -44,7 +38,7 @@ export const installedAddonsScenario = pikkuScenario<void, { addons: number }>({
       await scenario.then(
         `sees ${packageName}`,
         'seesAddonCard',
-        { packageName, state: 'installed' },
+        { packageName, state: 'installed', within: 'integrations-in-app' },
         { actor: actors.admin }
       )
     }
@@ -72,9 +66,9 @@ export const communityAddonsScenario = pikkuScenario<void, { listed: true }>({
       { actor: actors.admin }
     )
     await scenario.then(
-      'sees the whole catalogue',
+      'sees the catalogue less the four this project already has',
       'countsAddonCards',
-      { count: 14 },
+      { count: 10, within: 'integrations-browse' },
       { actor: actors.admin }
     )
     await scenario.when(
@@ -86,7 +80,7 @@ export const communityAddonsScenario = pikkuScenario<void, { listed: true }>({
     await scenario.then(
       'sees the search narrow to one addon',
       'countsAddonCards',
-      { count: 1 },
+      { count: 1, within: 'integrations-browse' },
       { actor: actors.admin }
     )
     await scenario.then(

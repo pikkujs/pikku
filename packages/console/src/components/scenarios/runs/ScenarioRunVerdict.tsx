@@ -103,7 +103,7 @@ export const ScenarioRunVerdict: React.FC<ScenarioRunVerdictProps> = ({
       testId="scenario-run-verdict"
       hero
       eyebrow={
-        <Group gap={10} mb={4}>
+        <Group gap={10} mb={4} data-testid={`scenario-run-status-${run.status}`}>
           <StatusBadge tone={TONE[run.status]}>{LABEL[run.status]()}</StatusBadge>
           <Text size="sm" c="dimmed">
             {asI18n(runWhen(run.startedAt, locale))}
