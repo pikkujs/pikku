@@ -709,6 +709,21 @@ new RPC and does not re-run `afterStart`, so a fresh function answers 404 and
 anything provisioned at boot is missing — failures that read like a wiring bug
 and are nothing but a stale process.
 
+**Run the whole suite, not the milestone's own scenarios.** The milestone's
+scenarios are the ones you wrote to pass; the regression lives in someone
+else's. Tightening what "archived" means is a one-function change that reads as
+local and quietly breaks the milestone-01 scenario nobody re-ran.
+
+**Restart the server after adding a function, and never edit one while a run is
+in flight.** Hot reload does not register a new RPC and does not re-run
+`afterStart`, so a fresh function answers 404 and anything provisioned at boot
+is missing — failures that read like a wiring bug and are nothing but a stale
+process. The same reload is what makes a run unrepeatable if you edit during
+it: a browser pass is long enough to feel like free time, and a schema touched
+at minute four hot-reloads into a half-generated contract, so every scenario
+after that point fails on something you have already fixed. Wait for the run or
+kill it — a run you edited under is not a result.
+
 ### 7a. Coverage — which functions have actually been run
 
 Green scenarios tell you the journeys you wrote still work. They say nothing
