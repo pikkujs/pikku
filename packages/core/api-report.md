@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3080 observable things**: 1002 exported names, plus
-2078 members on the classes and interfaces among them, reachable
+**3088 observable things**: 1005 exported names, plus
+2083 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -15,16 +15,16 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 436 |
-| `./virtual-user` | 66 | 66 | 212 |
+| `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
-| `./agent` | 50 | 48 | 81 |
+| `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 23 | 20 | 77 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
-| `./errors` | 50 | 50 | 22 |
+| `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./services/local-meta` | 22 | 2 | 41 |
 | `./mcp` | 25 | 25 | 17 |
@@ -274,7 +274,7 @@ export interface PikkuPackageState {
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
   trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
+  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
@@ -2519,7 +2519,7 @@ export interface VirtualUserTuning {
   invertedOracle?: boolean
   instructions?: string
 }
-writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
+writeVirtualUserSchedule: ({ store, personas, persona, enabled, disposition, goals, budget, minIntervalMs, maxIntervalMs, nextRunAt, config, environments, environment, }: WriteVirtualUserScheduleParams) => Promise<VirtualUserScheduleRecord>
 export interface WriteVirtualUserScheduleParams {
   store: VirtualUserScheduleStore | undefined
   personas: ScaffoldPersonas
@@ -2531,6 +2531,9 @@ export interface WriteVirtualUserScheduleParams {
   minIntervalMs?: number
   maxIntervalMs?: number
   nextRunAt?: string
+  config?: { nodeEnv?: string }
+  environments?: Readonly<Record<string, PersonaEnvironment>>
+  environment?: string
 }
 ```
 
@@ -3283,6 +3286,13 @@ export interface AgentMessage {
   createdAt: Date
 }
 agentResume: () => { func: (services: any, data: { runId: string; toolCallId: string; approved: boolean; }, wire: any) => Promise<void>; }
+export type AgentRPCFactory = (
+  wire: PikkuRawWire,
+  options: AgentRPCOptions
+) => PikkuRPC['agent']
+export type AgentRPCOptions = {
+  sessionService?: SessionService<CoreUserSession>
+}
 export interface AgentRunRow {
   runId: string
   agentName: string
@@ -4357,6 +4367,10 @@ export class AIProviderNotConfiguredError extends PikkuError {
 export class BadGatewayError extends PikkuError {}
 export class BadRequestError extends PikkuError {}
 export class ConflictError extends PikkuError {}
+export class CredentialRejectedError extends PikkuError {
+  public payload: { error: 'credential_rejected'; credentialName: string; reauth: 'sign-in' | 'connect' }
+  constructor(credentialName: string, reauth: 'sign-in' | 'connect', message?: string)
+}
 export interface ErrorDetails {
   status: number
   message: string
@@ -5913,7 +5927,7 @@ export interface PikkuPackageState {
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
   trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
-  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string> }
+  agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
   cli: { meta: CLIMeta | Record<string, any>; programs: Record<string, CLIProgramState> }
   middleware: { tagGroup: Record<string, CorePikkuMiddlewareGroup>; httpGroup: Record<string, CorePikkuMiddlewareGroup>; global: CorePikkuMiddlewareGroup }
