@@ -1,3 +1,24 @@
+## 0.12.90
+
+### Patch Changes
+
+- 44da33f: Card-based pages for credentials, agents, scorers, workflows, channels, gateways, schedules, queues, triggers and runtime: a summary card, grouped section cards and a For developers strip per card. Queues show done and failed jobs, schedules show their last run, and scenarios show the CLI command that runs them.
+- 44da33f: A feature's result bar draws a cell per scenario, so the bar says how many as well as how it went
+- 44da33f: PageOptionsProvider accepts a host's own page-options state, so an embedding app's bottom sheet receives the console's rails
+- 44da33f: PageOptionsPortal renders in place instead of throwing when the host mounts no PageOptionsProvider
+- 44da33f: The footage sits in a rail beside the scenario it belongs to, resting as a poster frame
+- 44da33f: Scenario runs open one scenario at a time, with its recording driven by the step ladder
+- 44da33f: A scenario run records which version of the suite it ran against — the commit, and which attempt against that commit it is
+- 44da33f: A scenario's rule no longer carries its status — the mark beside the title says it once
+- 44da33f: Clicking a scenario step opens its details again — the merged scenarios surface seeks the recording but had stopped opening the panel — and a shell header filter can name a test id, which the bar stamps on the chip and on each of its options while leaving its off-screen measuring copy unmarked
+- 44da33f: Clicking a scenario step seeks the recording to it instead of opening the step panel, and the ladder is joined to the run by order so the times it seeks to are the ones the run recorded
+- 44da33f: The scenarios screen and the runs screen are one surface: the declared suite is the document and a run is a lens over it. A scenario is filed as `running` the moment it starts, so a console watching a run in progress can tell what is on screen now from what is still waiting, and the run snapshots each scenario's title, description and cast so the record reads as prose.
+- Updated dependencies [44da33f]
+- Updated dependencies [44da33f]
+- Updated dependencies [44da33f]
+  - @pikku/react-layout-panel@0.1.2
+  - @pikku/core@0.12.126
+
 ## 0.12.89
 
 ### Patch Changes

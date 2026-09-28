@@ -1,3 +1,13 @@
+## 0.12.169
+
+### Patch Changes
+
+- 44da33f: A scenario run records which version of the suite it ran against — the commit, and which attempt against that commit it is
+- 44da33f: The scenarios screen and the runs screen are one surface: the declared suite is the document and a run is a lens over it. A scenario is filed as `running` the moment it starts, so a console watching a run in progress can tell what is on screen now from what is still waiting, and the run snapshots each scenario's title, description and cast so the record reads as prose.
+- Updated dependencies [44da33f]
+- Updated dependencies [44da33f]
+  - @pikku/core@0.12.126
+
 ## 0.12.168
 
 ### Patch Changes
