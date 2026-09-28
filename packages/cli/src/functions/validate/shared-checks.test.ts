@@ -1,12 +1,14 @@
 import assert from 'node:assert'
 import { describe, test, beforeEach, afterEach } from 'node:test'
-import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
   betterAuthTableAliases,
   migrationCreatesTable,
+  nonSnakeCaseSqlIdentifiers,
   readJsonSafe,
+  runSharedProjectChecks,
   staticStubbedImports,
 } from './shared-checks.js'
 
@@ -218,5 +220,182 @@ describe('readJsonSafe', () => {
       /Unterminated block comment/,
       'a truncated file must not parse as though it were whole'
     )
+  })
+})
+
+describe('nonSnakeCaseSqlIdentifiers', () => {
+  // The production bug: CamelCasePlugin never touched the template, so SQLite
+  // got `createdAt` verbatim and the console page 500'd on `no such column`.
+  test('reports a camelCase identifier in a raw sql template', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers(
+        'const rows = await sql`select * from "user" order by "createdAt" desc`.execute(db)'
+      ),
+      ['createdAt']
+    )
+  })
+
+  test('accepts the snake_case identifier the schema actually has', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers(
+        'sql`select * from "user" order by "created_at" desc`'
+      ),
+      []
+    )
+  })
+
+  // Single quotes delimit a value in SQL, not an identifier.
+  test('ignores a camelCase single-quoted string literal', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers("sql`where status = 'inProgress'`"),
+      []
+    )
+  })
+
+  test('ignores TypeScript inside an interpolation', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers(
+        'sql`select * from "user" where id = ${userId}`'
+      ),
+      []
+    )
+  })
+
+  test('ignores an identifier that only appears in a comment', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers(
+        '// sql`order by "createdAt"` was the old query'
+      ),
+      []
+    )
+  })
+
+  test('ignores a template literal that is not tagged sql', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers('const label = `the "createdAt" column`'),
+      []
+    )
+  })
+
+  test('does not read a tag merely ending in sql', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers('mysql`select "createdAt"`'),
+      []
+    )
+  })
+
+  test('reports every offender in one template', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers(
+        'sql`select "userId", "createdAt" from "user" order by "updatedAt"`'
+      ),
+      ['userId', 'createdAt', 'updatedAt']
+    )
+  })
+
+  test('reports an offender in a multi-line template', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers(
+        [
+          'const q = sql`',
+          '  select "id", "displayName"',
+          '  from "user"',
+          '`',
+        ].join('\n')
+      ),
+      ['displayName']
+    )
+  })
+
+  // `""` is an escaped quote in SQL, so this is one identifier, not two.
+  test('treats a doubled quote as an escape inside one identifier', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers('sql`select "odd""Name" from "user"`'),
+      ['odd"Name']
+    )
+  })
+
+  test('does not split an escaped-quote identifier into a false positive', () => {
+    assert.deepStrictEqual(
+      nonSnakeCaseSqlIdentifiers('sql`select "odd""name" from "user"`'),
+      []
+    )
+  })
+
+  // The production bug wrote the tag with an explicit row type, and the nested
+  // generic is what an earlier version of this check tripped over — it matched
+  // only a bare `sql` immediately followed by a backtick, so the one query it
+  // existed to catch was the one query it missed.
+  test('reports an offender under a nested generic type argument', () => {
+    const source = [
+      ';({ rows } = await sql<',
+      '  Record<string, unknown>',
+      '>`select * from "user" order by "createdAt" desc limit ${sql.lit(MAX_ROWS)}`.execute(db))',
+    ].join('\n')
+    assert.deepEqual(nonSnakeCaseSqlIdentifiers(source), ['createdAt'])
+  })
+
+  test('reports an offender under a simple generic type argument', () => {
+    assert.deepEqual(
+      nonSnakeCaseSqlIdentifiers('sql<Row>`select "createdAt" from "user"`'),
+      ['createdAt']
+    )
+  })
+
+  test('does not read a bare sql reference as a tagged template', () => {
+    assert.deepEqual(
+      nonSnakeCaseSqlIdentifiers("import { sql } from 'kysely'"),
+      []
+    )
+    assert.deepEqual(nonSnakeCaseSqlIdentifiers('sql.lit(MAX_ROWS)'), [])
+  })
+
+  test('does not mistake comparison operators for type arguments', () => {
+    assert.deepEqual(
+      nonSnakeCaseSqlIdentifiers('if (a < b && c > d) { fn() }'),
+      []
+    )
+  })
+})
+
+describe('runSharedProjectChecks: raw sql identifiers', () => {
+  let root: string
+  const writeSource = async (name: string, body: string) => {
+    const dir = join(root, 'packages', 'functions', 'src')
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, name), body)
+  }
+  const rawSqlFindings = async () =>
+    (await runSharedProjectChecks(root)).findings.filter(
+      (f) => f.id === 'raw-sql-camel-case-identifier'
+    )
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'pikku-raw-sql-'))
+  })
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true })
+  })
+
+  test('reports the file whose template carries a row type', async () => {
+    await writeSource(
+      'list-users.ts',
+      'const { rows } = await sql<Record<string, unknown>>`select * from "user" order by "createdAt" desc`.execute(db)'
+    )
+
+    const findings = await rawSqlFindings()
+
+    assert.strictEqual(findings.length, 1)
+    assert.match(findings[0]!.path, /list-users\.ts$/)
+    assert.match(findings[0]!.message, /"createdAt"/)
+  })
+
+  test('is silent for a snake_case template', async () => {
+    await writeSource(
+      'list-users.ts',
+      'await sql`select * from "user" order by "created_at" desc`.execute(db)'
+    )
+
+    assert.deepStrictEqual(await rawSqlFindings(), [])
   })
 })
