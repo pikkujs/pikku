@@ -239,7 +239,8 @@ describe('parseFindingJson', () => {
 async function withServer(
   handler: (
     body: string,
-    headers: Record<string, string | string[] | undefined>
+    headers: Record<string, string | string[] | undefined>,
+    url?: string
   ) => { status: number; delayMs?: number },
   run: (url: string) => Promise<void>
 ): Promise<void> {
@@ -249,11 +250,12 @@ async function withServer(
     req.on('end', () => {
       const { status, delayMs } = handler(
         Buffer.concat(chunks).toString('utf8'),
-        req.headers
+        req.headers,
+        req.url
       )
       const reply = () => {
-        res.writeHead(status)
-        res.end()
+        res.writeHead(status, { 'content-type': 'application/json' })
+        res.end(status < 300 ? '{"findingId":"f_1"}' : '{}')
       }
       if (delayMs) setTimeout(reply, delayMs).unref()
       else reply()
@@ -269,13 +271,17 @@ async function withServer(
 }
 
 describe('postFinding', () => {
-  test('posts the finding anonymously', async () => {
-    let seen: { body: string; auth?: string | string[] } | null = null
+  test('submits the finding anonymously over rpc', async () => {
+    let seen: {
+      body: string
+      auth?: string | string[]
+      url?: string
+    } | null = null
 
     await withServer(
-      (body, headers) => {
-        seen = { body, auth: headers.authorization }
-        return { status: 202 }
+      (body, headers, url) => {
+        seen = { body, auth: headers.authorization, url }
+        return { status: 200 }
       },
       async (apiUrl) => {
         const result = await postFinding({
@@ -288,7 +294,8 @@ describe('postFinding', () => {
     )
 
     assert.equal(seen!.auth, undefined)
-    const parsed = JSON.parse(seen!.body)
+    assert.equal(seen!.url, '/rpc/submitFinding')
+    const parsed = JSON.parse(seen!.body).data
     assert.deepEqual(Object.keys(parsed), ['finding'])
     assert.equal(parsed.finding.runId, 'run_1')
     assert.equal(parsed.finding.title, finding().title)

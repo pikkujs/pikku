@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import type { ReportEnvironment } from './report-environment.js'
+import { PikkuFetch } from '../sdk/pikku-fetch.gen.js'
+import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 export const FindingInput = z.object({
   title: z.string(),
@@ -123,18 +125,25 @@ export async function postFinding(opts: {
   payload: FindingPayload
   timeoutMs?: number
 }): Promise<{ sent: boolean; reason?: string }> {
-  try {
-    const response = await fetch(`${opts.apiUrl}/findings`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ finding: opts.payload }),
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 5000),
+  const signal = AbortSignal.timeout(opts.timeoutMs ?? 5000)
+  const rpc = new PikkuRPC()
+  rpc.setPikkuFetch(
+    new PikkuFetch({
+      serverUrl: opts.apiUrl,
+      fetch: ((input, init) =>
+        fetch(input, { ...init, signal })) as typeof fetch,
     })
-    if (!response.ok) {
-      return { sent: false, reason: `fabric answered ${response.status}` }
-    }
+  )
+  try {
+    const { environment, ...finding } = opts.payload
+    await rpc.invoke('submitFinding', {
+      finding: { ...finding, environment: { ...environment } },
+    })
     return { sent: true }
   } catch (error: any) {
+    if (typeof error?.status === 'number') {
+      return { sent: false, reason: `fabric answered ${error.status}` }
+    }
     return { sent: false, reason: error?.message ?? 'request failed' }
   }
 }
