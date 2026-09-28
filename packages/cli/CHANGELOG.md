@@ -1,3 +1,9 @@
+## 0.12.166
+
+### Patch Changes
+
+- 6a9c62e: `pikku fabric report` sends findings through fabric's `submitFinding` RPC instead of the `/findings` route that never existed, so held findings finally leave the machine.
+
 ## 0.12.165
 
 ### Patch Changes
