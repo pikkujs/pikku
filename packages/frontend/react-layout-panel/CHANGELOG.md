@@ -1,5 +1,11 @@
 # @pikku/react-layout-panel
 
+## 0.1.2
+
+### Patch Changes
+
+- 44da33f: The dock opens at 70% of its old size by default, and can shrink to 50%
+
 ## 0.1.1
 
 ### Patch Changes
