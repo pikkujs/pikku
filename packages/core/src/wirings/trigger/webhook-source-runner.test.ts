@@ -105,6 +105,22 @@ describe('wireTriggerWebhookSource', () => {
     assert.equal(pikkuState(null, 'trigger', 'webhookSources').size, 0)
   })
 
+  test('registers inline steps but not ref() steps', () => {
+    setWebhookSourceMeta({
+      name: 'shop',
+      receive: 'shop:receive',
+      check: 'addon:check',
+    })
+    wireTriggerWebhookSource({
+      name: 'shop',
+      receive: { func: async () => ({ events: [] }) },
+      check: { rpcName: 'addon:check' } as never,
+    })
+    const functions = pikkuState(null, 'function', 'functions')
+    assert.ok(functions.has('shop:receive'))
+    assert.ok(!functions.has('addon:check'))
+  })
+
   test('throws on a duplicate source', () => {
     setWebhookSourceMeta({ name: 'shop' })
     wireTriggerWebhookSource({ name: 'shop' })
@@ -180,7 +196,7 @@ describe('receiveWebhookSourceRequest', () => {
 
     assert.deepEqual(result, { received: 1 })
     assert.equal(queued.length, 1)
-    assert.equal(queued[0]!.jobId, 'shop:evt_1')
+    assert.equal(queued[0]!.jobId, 'shop:paid:evt_1')
   })
 })
 

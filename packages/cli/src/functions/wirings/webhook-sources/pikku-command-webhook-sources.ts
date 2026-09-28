@@ -1,3 +1,5 @@
+import { existsSync } from 'fs'
+import { rm } from 'fs/promises'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -9,21 +11,32 @@ import {
   serializeWebhookSourcesLifecycle,
 } from './serialize-webhook-sources.js'
 
-/** Returns true when it wrote wirings, so the caller re-inspects to mount them. */
+/**
+ * Returns true when it wrote or removed wirings, so the caller re-inspects to
+ * mount or unmount them.
+ */
 export const pikkuWebhookSources = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
     const meta = state.triggers.webhookSourceMeta
-    if (Object.keys(meta).length === 0) {
-      return false
-    }
-
     const { webhookSourcesFile, webhookSourcesLifecycleFile, packageMappings } =
       config
     const schemasFile = webhookSourcesFile.replace(
       /\.gen\.ts$/,
       '.schemas.gen.ts'
     )
+
+    if (Object.keys(meta).length === 0) {
+      // A previous run's routes would otherwise stay mounted with no metadata
+      // behind them, and `pikku webhooks` would still list the removed sources.
+      const stale = [
+        webhookSourcesFile,
+        schemasFile,
+        webhookSourcesLifecycleFile,
+      ].filter((file) => existsSync(file))
+      await Promise.all(stale.map((file) => rm(file)))
+      return stale.includes(webhookSourcesFile)
+    }
     await writeFileInDir(logger, schemasFile, WEBHOOK_SOURCE_SCHEMAS)
     await writeFileInDir(
       logger,

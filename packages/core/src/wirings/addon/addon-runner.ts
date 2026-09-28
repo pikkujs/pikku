@@ -141,7 +141,7 @@ const scopeWebhookService = <T extends object>(
       return function (this: any, input: SendWebhookInput, ...rest: any[]) {
         return value.call(
           this,
-          input?.event
+          input?.event && !input.event.startsWith(`${namespace}:`)
             ? { ...input, event: `${namespace}:${input.event}` }
             : input,
           ...rest

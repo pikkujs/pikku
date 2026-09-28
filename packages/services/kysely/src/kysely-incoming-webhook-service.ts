@@ -45,7 +45,17 @@ export class KyselyIncomingWebhookService extends IncomingWebhookService {
     for (const event of events) {
       const receiptId = await this.record(source, event)
       if (!receiptId) continue
-      await this.enqueue({ source, event, receiptId })
+      try {
+        await this.enqueue({ source, event, receiptId })
+      } catch (error) {
+        // Without the receipt the provider's retry is accepted again rather
+        // than dropped as a duplicate of an event that was never queued.
+        await this.db
+          .deleteFrom('webhookReceipt')
+          .where('receiptId', '=', receiptId)
+          .execute()
+        throw error
+      }
       accepted++
     }
     return accepted

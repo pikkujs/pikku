@@ -34,10 +34,12 @@ export const buildWebhooksMeta = (
 export const serializeWebhooks = ({
   webhooks,
   outgoingWebhooksFile,
+  outgoingWebhooksMetaJsonFile,
   packageMappings,
 }: {
   webhooks: readonly WebhookDeclaration[]
   outgoingWebhooksFile: string
+  outgoingWebhooksMetaJsonFile?: string
   packageMappings: Record<string, string>
 }): string => {
   const sorted = [...webhooks].sort((a, b) => a.event.localeCompare(b.event))
@@ -54,7 +56,11 @@ export const serializeWebhooks = ({
       ? `import type { TypedWebhookService as CoreTypedWebhookService, OutgoingWebhookPayloadOf } from '@pikku/core/webhook'`
       : `import type { TypedWebhookService as CoreTypedWebhookService } from '@pikku/core/webhook'`,
     `import type { WebhookService } from '@pikku/core/services'`,
-    `import './pikku-outgoing-webhooks-meta.gen.json' with { type: 'json' }`,
+    ...(outgoingWebhooksMetaJsonFile
+      ? [
+          `import '${getFileImportRelativePath(outgoingWebhooksFile, outgoingWebhooksMetaJsonFile, packageMappings)}' with { type: 'json' }`,
+        ]
+      : []),
     ...imports,
     '',
     entries.length > 0

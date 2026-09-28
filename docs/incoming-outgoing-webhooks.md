@@ -2,14 +2,14 @@
 
 Two features with nothing in common but the word:
 
-| | Outgoing | Incoming |
-| --- | --- | --- |
-| Declared with | `defineOutgoingWebhook` | `wireTriggerWebhookSource` |
-| Direction | this app → a subscriber | a provider → this app |
-| Declares | `event`, `title`, `description?`, `payload` | `name`, `events`, `receive`, `check?`, `setup?`, `teardown?` |
-| Who registers | the subscriber, at runtime | this app, at deploy time, through `setup` |
-| Delivery | `QueueWebhookService` → `pikku-outgoing-webhooks` queue | `IncomingWebhookService` → `pikku-incoming-webhooks` queue |
-| History | `webhookDelivery` + `webhookDeliveryAttempt` (`@pikku/kysely`) | `webhookReceipt` + `webhookReceiptAttempt` (`@pikku/kysely`) |
+|               | Outgoing                                                       | Incoming                                                     |
+| ------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
+| Declared with | `defineOutgoingWebhook`                                        | `wireTriggerWebhookSource`                                   |
+| Direction     | this app → a subscriber                                        | a provider → this app                                        |
+| Declares      | `event`, `title`, `description?`, `payload`                    | `name`, `events`, `receive`, `check?`, `setup?`, `teardown?` |
+| Who registers | the subscriber, at runtime                                     | this app, at deploy time, through `setup`                    |
+| Delivery      | `QueueWebhookService` → `pikku-outgoing-webhooks` queue        | `IncomingWebhookService` → `pikku-incoming-webhooks` queue   |
+| History       | `webhookDelivery` + `webhookDeliveryAttempt` (`@pikku/kysely`) | `webhookReceipt` + `webhookReceiptAttempt` (`@pikku/kysely`) |
 
 `defineWebhook` only ever existed on `feat/console-ux` and was never released,
 so the rename to `defineOutgoingWebhook` breaks nobody.
@@ -47,9 +47,13 @@ Typed at both levels from generated maps:
   addon's map and prefixes it per wired instance:
 
   ```ts
-  type Prefixed<P extends string, M> = { [K in keyof M as `${P}:${K & string}`]: M[K] }
-  export interface OutgoingWebhooksMap extends AppOutgoingWebhooks,
-    Prefixed<'stripe-eu', StripeOutgoingWebhooksMap> {}
+  type Prefixed<P extends string, M> = {
+    [K in keyof M as `${P}:${K & string}`]: M[K]
+  }
+  export interface OutgoingWebhooksMap
+    extends
+      AppOutgoingWebhooks,
+      Prefixed<'stripe-eu', StripeOutgoingWebhooksMap> {}
   ```
 
   The app's `send` is typed against the full map, so it can send an addon's
@@ -69,11 +73,11 @@ This is how n8n (`webhook()` beside `trigger()` and `poll()`), Activepieces
 
 Three wires, one per kind, so each has its own shape and errors:
 
-| Wire | Lowers onto | Runs |
-| --- | --- | --- |
-| `wireTriggerSource` | unchanged: a long-lived subscription returning teardown | trigger worker |
-| `wireTriggerWebhookSource` | an HTTP route, `auth: false` | every API instance |
-| `wireTriggerPollSource` | a scheduled task `trigger-poll:<source>` | wherever schedulers run |
+| Wire                       | Lowers onto                                             | Runs                    |
+| -------------------------- | ------------------------------------------------------- | ----------------------- |
+| `wireTriggerSource`        | unchanged: a long-lived subscription returning teardown | trigger worker          |
+| `wireTriggerWebhookSource` | an HTTP route, `auth: false`                            | every API instance      |
+| `wireTriggerPollSource`    | a scheduled task `trigger-poll:<source>`                | wherever schedulers run |
 
 Webhook and poll sources lower onto routes and scheduled tasks the deploy
 analyzer already handles, so no deploy target changes. A source with no wired
@@ -157,7 +161,7 @@ Run by the CLI at deploy, never by the route:
 - `check({ url, label, events, previous })` → `ok | missing | drifted` — the
   read-only preview (`pikku webhooks status`) and drift detection.
 - `setup({ url, label, events, previous })` → `{ status, endpointId?, secret?,
-  expiresAt? }` — only when `check` is not `ok`, or always when there is no
+expiresAt? }` — only when `check` is not `ok`, or always when there is no
   `check`. `manual` with instructions when the provider has no API.
 - `teardown({ label, previous })` — when the stage goes away.
 
@@ -173,10 +177,11 @@ knows where to store what it returns.
 ### Running it
 
 `pikku webhooks status | setup | teardown --url <base url> --label-prefix
-<app>:<stage> [--previous <file>]` loads the app with its own services and
-prints one JSON line per source: `{ source, status, endpointId?, secretName?,
-secret?, instructions?, error? }`. Produced secrets go to stdout only for the
-caller to store.
+<app>:<stage> [--previous <file>] [--secrets-out <file>]` loads the app with
+its own services and prints one JSON line per source: `{ source, status,
+endpointId?, secretName?, secret?, instructions?, error? }`. With
+`--secrets-out`, produced secrets are written to that file (mode 600) as
+`{ secretName: secret }` and left out of stdout, which is what CI should use.
 
 ## Fabric
 
@@ -195,7 +200,7 @@ caller to store.
 2. **inspector** — source meta (`kind`, route, events, function ids), route
    synthesis, trigger-name validation, derived events.
 3. **CLI** — generated route and worker wiring, `pikku webhooks status | setup |
-   teardown`.
+teardown`.
 4. **@pikku/kysely** — `KyselyIncomingWebhookService` and its tables.
 5. **commerce-stripe** — the four functions and event schemas.
 6. **Fabric** — the CI phase, stored results, the gate, removing the event map.

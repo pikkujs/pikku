@@ -588,6 +588,10 @@ wireCLI({
               description:
                 'A JSON file of what the last setup returned as state, by source name',
             },
+            secretsOut: {
+              description:
+                'Write produced signing secrets to this file (mode 600) as { secretName: secret } instead of printing them',
+            },
           },
         }),
         teardown: pikkuCLICommand({

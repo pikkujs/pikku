@@ -42,7 +42,9 @@ export const wireTriggerWebhookSource = <
   for (const step of LIFECYCLE) {
     const funcId = meta[step]
     const config = source[step]
-    if (funcId && config) addFunction(funcId, config)
+    if (funcId && typeof (config as { func?: unknown })?.func === 'function') {
+      addFunction(funcId, config!)
+    }
   }
 }
 

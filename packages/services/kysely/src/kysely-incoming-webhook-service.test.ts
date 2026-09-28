@@ -33,7 +33,7 @@ const setup = async () => {
   }
   const service = new KyselyIncomingWebhookService(queue as any, db, 2)
   await service.init()
-  return { service, added }
+  return { service, added, queue }
 }
 
 describe('KyselyIncomingWebhookService', () => {
@@ -88,6 +88,28 @@ describe('KyselyIncomingWebhookService', () => {
       1
     )
     assert.equal(added.length, 2)
+  })
+
+  test('a queue failure releases the receipt so the retry is accepted', async () => {
+    const { service, added, queue } = await setup()
+    const event = { name: 'paid', id: 'evt_1', data: {} }
+    const add = queue.add
+    queue.add = async () => {
+      throw new Error('queue down')
+    }
+
+    await assert.rejects(
+      service.accept({ source: 'shop', request, events: [event] }),
+      /queue down/
+    )
+    assert.deepEqual(await service.listReceipts(), [])
+
+    queue.add = add
+    assert.equal(
+      await service.accept({ source: 'shop', request, events: [event] }),
+      1
+    )
+    assert.equal(added.length, 1)
   })
 
   test('events without an id are never de-duplicated', async () => {

@@ -143,7 +143,9 @@ pikku webhooks teardown --url https://api.example.com --labelPrefix shop:prod --
 Each prints one JSON line per source (`ok`, `missing`, `drifted`, `created`,
 `updated`, `unchanged`, `manual`, `deleted`, `absent`, `skipped`, `failed`). `setup` only
 runs where `check` does not report `ok`, and a `setup` that returns a new signing
-secret prints it with the `secret` name to store it under. Any step can be
+secret prints it with the `secret` name to store it under. In CI pass
+`--secretsOut <file>`: secrets are written there (mode 600) as
+`{ secretName: secret }` and left out of stdout. Any step can be
 `ref('<addon>:<fn>')` to use an addon's implementation.
 
 ## Usage Patterns

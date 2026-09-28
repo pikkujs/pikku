@@ -64,4 +64,27 @@ describe('addon webhookService', () => {
       ['stripe-us:order.paid', undefined]
     )
   })
+
+  test('prefixes once when the factory forwards to the parent service', async () => {
+    pikkuState(ADDON_PACKAGE, 'package', 'factories', {
+      createSingletonServices: (async (_config: unknown, parent: any) => ({
+        ...parent,
+        webhookService: {
+          send: (input: SendWebhookInput) => parent.webhookService.send(input),
+        },
+      })) as never,
+    })
+    const sent: SendWebhookInput[] = []
+    const services = await getOrCreatePackageSingletonServices(
+      ADDON_PACKAGE,
+      createParent(sent),
+      { namespace: 'stripe-us' }
+    )
+    await services.webhookService!.send({
+      url: 'https://x',
+      event: 'order.paid',
+      data: {},
+    })
+    assert.equal(sent[0]?.event, 'stripe-us:order.paid')
+  })
 })

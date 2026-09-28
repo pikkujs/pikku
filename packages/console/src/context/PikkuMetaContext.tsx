@@ -89,6 +89,7 @@ const EMPTY_META: PikkuMetaState = {
   secretsMeta: {},
   credentialsMeta: {},
   variablesMeta: {},
+  outgoingWebhooksMeta: {},
 }
 
 const EMPTY_COUNTS: MetaCounts = {
@@ -110,6 +111,7 @@ const EMPTY_COUNTS: MetaCounts = {
   variables: 0,
   featureFlags: 0,
   analyticsEvents: 0,
+  outgoingWebhooks: 0,
 }
 
 export const PikkuMetaProvider: React.FC<{
@@ -161,6 +163,7 @@ export const PikkuMetaProvider: React.FC<{
         secretsMeta: allMeta.secretsMeta,
         credentialsMeta: allMeta.credentialsMeta ?? {},
         variablesMeta: allMeta.variablesMeta,
+        outgoingWebhooksMeta: allMeta.outgoingWebhooksMeta ?? {},
       })
       setCounts({
         ...EMPTY_COUNTS,

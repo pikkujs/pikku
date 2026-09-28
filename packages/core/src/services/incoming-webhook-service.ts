@@ -54,11 +54,13 @@ export class IncomingWebhookService {
     return events.length
   }
 
-  /** The job id is the provider's event id, which de-duplicates on queues that honour job ids. */
+  /** The job id is the provider's event id under its event name, which de-duplicates on queues that honour job ids. */
   protected async enqueue(job: WebhookSourceJob): Promise<string> {
     const jobId =
       job.receiptId ??
-      (job.event.id ? `${job.source}:${job.event.id}` : undefined)
+      (job.event.id
+        ? `${job.source}:${job.event.name}:${job.event.id}`
+        : undefined)
     // knowledge: decisions/internals/queue-jobs-always-carry-an-explicit-attempts-count.md
     return this.queueService.add(PIKKU_INCOMING_WEBHOOK_QUEUE_NAME, job, {
       attempts: this.retries + 1,

@@ -28,6 +28,8 @@ describe('serializeWebhooks', () => {
       webhooks,
       outgoingWebhooksFile:
         '/app/.pikku/webhooks/pikku-outgoing-webhooks.gen.ts',
+      outgoingWebhooksMetaJsonFile:
+        '/app/.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json',
       packageMappings: {},
     })
 
@@ -63,6 +65,18 @@ describe('serializeWebhooks', () => {
     })
 
     assert.match(content, /export interface OutgoingWebhooksMap \{\}/)
+  })
+
+  test('imports the metadata from where it is configured to be written', () => {
+    const content = serializeWebhooks({
+      webhooks: [],
+      outgoingWebhooksFile:
+        '/app/.pikku/webhooks/pikku-outgoing-webhooks.gen.ts',
+      outgoingWebhooksMetaJsonFile: '/app/meta/webhooks.gen.json',
+      packageMappings: {},
+    })
+
+    assert.match(content, /import '\.\.\/\.\.\/meta\/webhooks\.gen\.json'/)
   })
 })
 

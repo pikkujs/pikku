@@ -22,7 +22,12 @@ export const pikkuOutgoingWebhooks = pikkuSessionlessFunc<void, void>({
     await writeFileInDir(
       logger,
       outgoingWebhooksFile,
-      serializeWebhooks({ webhooks, outgoingWebhooksFile, packageMappings })
+      serializeWebhooks({
+        webhooks,
+        outgoingWebhooksFile,
+        outgoingWebhooksMetaJsonFile,
+        packageMappings,
+      })
     )
 
     if (outgoingWebhooksMetaJsonFile) {

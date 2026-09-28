@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -206,5 +212,30 @@ describe('pikku webhooks: provider lifecycle', () => {
     )
     assert.deepEqual(readEndpoints(), [])
     assert.equal(webhooksCli('teardown')[0].status, 'absent')
+  })
+
+  test('--secretsOut keeps the secret out of stdout', () => {
+    const secretsOut = join(scratch, 'secrets.json')
+    const [outcome] = webhooksCli('setup', '--secretsOut', secretsOut)
+
+    assert.equal(outcome.status, 'created')
+    assert.equal(outcome.secretName, 'SHOP_WEBHOOK_SECRET')
+    assert.equal(outcome.secret, undefined)
+    assert.deepEqual(JSON.parse(readFileSync(secretsOut, 'utf-8')), {
+      SHOP_WEBHOOK_SECRET: 'whsec_shop:main:shop',
+    })
+    assert.equal(statSync(secretsOut).mode & 0o777, 0o600)
+  })
+
+  test('a missing --labelPrefix is refused before any provider call', () => {
+    writeEndpoints([])
+    assert.throws(() =>
+      execFileSync(
+        process.execPath,
+        [pikkuBin, 'webhooks', 'setup', '--url', 'https://shop.test/api'],
+        { cwd: root, env: process.env, stdio: 'pipe' }
+      )
+    )
+    assert.deepEqual(readEndpoints(), [])
   })
 })
