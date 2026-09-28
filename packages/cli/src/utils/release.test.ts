@@ -6,7 +6,6 @@ import {
   parseCommits,
   prependChangelog,
   renderChangelogSection,
-  resolveLevel,
   serializeSnapshot,
   setPackageVersion,
   type Commit,
@@ -42,45 +41,6 @@ describe('bumpVersion', () => {
     assert.throws(
       () => bumpVersion('1.4.2-rc.1', 'patch'),
       /plain MAJOR\.MINOR\.PATCH/
-    )
-  })
-})
-
-describe('resolveLevel', () => {
-  test('holds a breaking change to minor below 1.0', () => {
-    const level = resolveLevel('0.3.0', 'major', [commit('x')])
-    assert.equal(level.level, 'minor')
-    assert.equal(level.preOneDowngrade, true)
-  })
-
-  test('keeps major from 1.0 on', () => {
-    assert.equal(resolveLevel('1.0.0', 'major', []).level, 'major')
-  })
-
-  test('a Release trailer raises the level and is never downgraded', () => {
-    const level = resolveLevel('0.3.0', 'patch', [
-      commit('x', { release: ['major'] }),
-    ])
-    assert.deepEqual(level, {
-      level: 'major',
-      source: 'trailer',
-      preOneDowngrade: false,
-    })
-  })
-
-  test('a lower trailer does not lower the surface verdict', () => {
-    assert.equal(
-      resolveLevel('1.0.0', 'minor', [commit('x', { release: ['patch'] })])
-        .level,
-      'minor'
-    )
-  })
-
-  test('rejects an unknown trailer value', () => {
-    assert.throws(
-      () =>
-        resolveLevel('1.0.0', 'patch', [commit('x', { release: ['huge'] })]),
-      /major, minor or patch/
     )
   })
 })

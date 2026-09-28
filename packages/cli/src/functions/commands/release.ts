@@ -15,6 +15,7 @@ import { loadSurface, readSurface, type Surface } from '../../utils/surface.js'
 import {
   computeSurfaceDiff,
   type SurfaceChanges,
+  type Verdict,
 } from '../../utils/surface-diff.js'
 import {
   bumpVersion,
@@ -26,11 +27,9 @@ import {
   prependChangelog,
   readPackageVersion,
   renderChangelogSection,
-  resolveLevel,
   serializeSnapshot,
   setPackageVersion,
   SNAPSHOT_FILE,
-  type ReleaseLevel,
 } from '../../utils/release.js'
 
 type ReleaseConfig = {
@@ -249,7 +248,7 @@ export type ReleasePrepareResult =
       sha: string | null
       previousVersion: string
       version: string
-      level: ReleaseLevel
+      level: Verdict
       surface: SurfaceChanges
       commits: number
       changelog: string
@@ -303,8 +302,8 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
     const packagePath = join(cwd, 'package.json')
     const packageJson = readFileSync(packagePath, 'utf-8')
     const previousVersion = readPackageVersion(packageJson)
-    const level = resolveLevel(previousVersion, surface.verdict, commits)
-    const version = bumpVersion(previousVersion, level.level)
+    const level = surface.verdict
+    const version = bumpVersion(previousVersion, level)
     const changelog = renderChangelogSection({
       version,
       date: new Date().toISOString().slice(0, 10),

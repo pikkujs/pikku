@@ -165,14 +165,10 @@ It refuses when `release/next` was prepared on an older `staging` (prepare
 again), or when `main` has commits `staging` lacks (merge `main` into `staging`
 with a merge commit first).
 
-Commit trailers carry what the diff cannot see:
-
-- `Release: major|minor|patch` raises the bump; it never lowers the surface
-  verdict.
-- `Release-Note: …` adds a line to the changelog's Notes section.
-
-Below 1.0 a breaking surface change bumps the minor; `Release: major` is how a
-project reaches 1.0. Branch names are configurable in `pikku.config.json`:
+The bump comes from the surface diff alone — there is no manual override. A
+release whose surface did not move is a patch, and a breaking change is a
+major at any version, 0.x included. A `Release-Note: …` commit trailer adds a line to the
+changelog's Notes section. Branch names are configurable in `pikku.config.json`:
 
 ```json
 { "release": { "trunk": "staging", "production": "main", "branch": "release/next", "remote": "origin" } }

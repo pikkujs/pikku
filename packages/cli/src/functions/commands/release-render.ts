@@ -32,17 +32,13 @@ export const renderReleasePrepare = (
     return
   }
   const level =
-    result.level.level === 'major'
-      ? removed(result.level.level)
-      : result.level.level === 'minor'
-        ? changed(result.level.level)
-        : dim(result.level.level)
-  const why = [
-    result.level.source === 'trailer' ? 'raised by a Release: trailer' : null,
-    result.level.preOneDowngrade ? 'breaking held to minor below 1.0' : null,
-  ].filter(Boolean)
+    result.level === 'major'
+      ? removed(result.level)
+      : result.level === 'minor'
+        ? changed(result.level)
+        : dim(result.level)
   const lines = [
-    `v${result.previousVersion} → v${result.version}  ${level}${why.length ? dim(`  (${why.join(', ')})`) : ''}`,
+    `v${result.previousVersion} → v${result.version}  ${level}`,
     dim(
       `   ${result.surface.changes.length} surface changes, ${result.commits} commits on ${result.trunk}`
     ),

@@ -5,14 +5,6 @@ export const SNAPSHOT_FILE = 'surface.pikku.json'
 export const CHANGELOG_FILE = 'CHANGELOG.md'
 export const CHANGELOG_TITLE = '# Changelog'
 
-const LEVELS: Verdict[] = ['patch', 'minor', 'major']
-
-export const maxLevel = (a: Verdict, b: Verdict): Verdict =>
-  LEVELS.indexOf(a) >= LEVELS.indexOf(b) ? a : b
-
-export const isLevel = (value: string): value is Verdict =>
-  (LEVELS as string[]).includes(value)
-
 export interface ParsedVersion {
   major: number
   minor: number
@@ -64,41 +56,6 @@ export function parseCommits(output: string): Commit[] {
     commits.push({ sha: sha.trim(), subject: subject.trim(), trailers })
   }
   return commits
-}
-
-export interface ReleaseLevel {
-  level: Verdict
-  source: 'surface' | 'trailer'
-  preOneDowngrade: boolean
-}
-
-/** Surface verdict (breaking → minor below 1.0), raised but never lowered by `Release:` trailers. */
-export function resolveLevel(
-  currentVersion: string,
-  surfaceVerdict: Verdict,
-  commits: Commit[]
-): ReleaseLevel {
-  const preOne = parseVersion(currentVersion).major === 0
-  const preOneDowngrade = preOne && surfaceVerdict === 'major'
-  let level: Verdict = preOneDowngrade ? 'minor' : surfaceVerdict
-  let source: ReleaseLevel['source'] = 'surface'
-
-  for (const commit of commits) {
-    for (const value of commit.trailers['release'] ?? []) {
-      const requested = value.toLowerCase()
-      if (!isLevel(requested)) {
-        throw new Error(
-          `Commit ${commit.sha.slice(0, 7)} has 'Release: ${value}' — the trailer takes major, minor or patch.`
-        )
-      }
-      if (maxLevel(requested, level) !== level) {
-        level = requested
-        source = 'trailer'
-      }
-    }
-  }
-
-  return { level, source, preOneDowngrade }
 }
 
 const code = (value: string) => `\`${value}\``

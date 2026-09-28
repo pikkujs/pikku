@@ -89,14 +89,14 @@ describe('pikku release', () => {
     assert.equal((await run(pikkuReleasePrepare)).status, 'nothing')
   })
 
-  test('a Release trailer raises the bump', async () => {
+  test('a Release trailer does not change the bump', async () => {
     await run(pikkuReleasePrepare)
     await run(pikkuReleasePublish)
     checkoutStaging()
-    commitOnStaging('new report\n\nRelease: minor')
+    commitOnStaging('new report\n\nRelease: major')
     const prepared = await run(pikkuReleasePrepare)
     assert.equal(prepared.previousVersion, '0.1.1')
-    assert.equal(prepared.version, '0.2.0')
+    assert.equal(prepared.version, '0.1.2')
   })
 
   test('publish refuses a release prepared on an older trunk', async () => {
