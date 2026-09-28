@@ -167,3 +167,48 @@ describe('loadSurface', () => {
     )
   })
 })
+
+describe('readSurface — platform plumbing', () => {
+  test('scaffold and generated sources are not part of the app surface', () => {
+    const dir = join(root, 'platform', '.pikku')
+    writeJson(join(dir, 'function', 'pikku-functions-meta.gen.json'), {
+      getUser: { pikkuFuncId: 'getUser' },
+      relayChangeRequest: { pikkuFuncId: 'relayChangeRequest' },
+    })
+    writeJson(join(dir, 'function', 'pikku-functions-meta-verbose.gen.json'), {
+      getUser: { sourceFile: '/app/src/users.function.ts' },
+      relayChangeRequest: {
+        sourceFile: '/app/src/scaffold/fabric/changes/relay.function.ts',
+      },
+    })
+    writeJson(join(dir, 'http', 'pikku-http-wirings-meta.gen.json'), {
+      get: {
+        '/users/:id': {
+          pikkuFuncId: 'getUser',
+          sourceFile: '/app/src/users.http.ts',
+        },
+        '/api/auth': {
+          pikkuFuncId: 'auth',
+          sourceFile: '/app/pikku/auth/auth.gen.ts',
+        },
+      },
+      post: {
+        '/changes': {
+          pikkuFuncId: 'relayChangeRequest',
+          sourceFile: '/app/src/scaffold/fabric/changes/changes.http.ts',
+        },
+      },
+    })
+    writeJson(join(dir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json'), {
+      audit: {
+        pikkuFuncId: 'audit',
+        sourceFile: '/app/src/scaffold/fabric/audit/audit.queue.ts',
+      },
+    })
+
+    const surface = readSurface(dir)
+    assert.deepEqual(Object.keys(surface.functions), ['getUser'])
+    assert.deepEqual(Object.keys(surface.wirings), ['http'])
+    assert.deepEqual(Object.keys(surface.wirings.http!), ['GET /users/:id'])
+  })
+})

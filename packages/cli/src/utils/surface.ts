@@ -58,6 +58,54 @@ interface FunctionMetaEntry {
 
 const SCHEMA_SUFFIX = '.schema.json'
 
+/** Scaffold output and generated files are platform plumbing, not the app's API. */
+export function isPlatformSource(sourceFile: string): boolean {
+  return (
+    /(^|[\\/])scaffold[\\/]/.test(sourceFile) ||
+    /\.gen\.[cm]?[jt]s$/.test(sourceFile)
+  )
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value)
+
+function withoutPlatform(
+  entries: Record<string, unknown>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(entries)) {
+    if (!isRecord(value)) {
+      out[key] = value
+    } else if (typeof value.sourceFile === 'string') {
+      if (!isPlatformSource(value.sourceFile)) out[key] = value
+    } else {
+      const inner = withoutPlatform(value)
+      if (Object.keys(inner).length > 0 || Object.keys(value).length === 0) {
+        out[key] = inner
+      }
+    }
+  }
+  return out
+}
+
+function platformFunctionIds(pikkuDir: string): Set<string> {
+  const verbose = readJsonFile(
+    join(pikkuDir, 'function', 'pikku-functions-meta-verbose.gen.json')
+  )
+  const ids = new Set<string>()
+  if (!isRecord(verbose)) return ids
+  for (const [id, meta] of Object.entries(verbose)) {
+    if (
+      isRecord(meta) &&
+      typeof meta.sourceFile === 'string' &&
+      isPlatformSource(meta.sourceFile)
+    ) {
+      ids.add(id)
+    }
+  }
+  return ids
+}
+
 function readJsonFile(path: string): unknown {
   try {
     return JSON.parse(readFileSync(path, 'utf-8'))
@@ -109,11 +157,12 @@ export function readSurface(
 
   const functions: Record<string, SurfaceFunction> = {}
   const wanted = new Set<string>()
+  const platform = platformFunctionIds(pikkuDir)
 
   for (const [id, raw] of Object.entries(snapshot.functions ?? {})) {
     const meta = (raw ?? {}) as FunctionMetaEntry
     // A remote function is another service's surface, not this one's.
-    if (meta.remote === true) continue
+    if (meta.remote === true || platform.has(id)) continue
     const parsed = parseVersionedId(id)
     const inputSchemaName = meta.inputSchemaName ?? null
     const outputSchemaName = meta.outputSchemaName ?? null
@@ -131,8 +180,9 @@ export function readSurface(
   const wirings: Surface['wirings'] = {}
   for (const [category, entries] of Object.entries(snapshot)) {
     if (category === 'functions' || !entries) continue
-    if (Object.keys(entries).length === 0) continue
-    wirings[category as WiringCategory] = normalize(entries) as Record<
+    const own = withoutPlatform(entries as Record<string, unknown>)
+    if (Object.keys(own).length === 0) continue
+    wirings[category as WiringCategory] = normalize(own) as Record<
       string,
       unknown
     >

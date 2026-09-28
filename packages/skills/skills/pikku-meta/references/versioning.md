@@ -182,6 +182,11 @@ changelog's Notes section. Branch names are configurable in `pikku.config.json`:
 }
 ```
 
+Functions and wirings defined under a `scaffold/` directory or in a generated
+`*.gen.*` file are platform plumbing (auth, console, a host's injected shims)
+and are left out of the surface, so the same app diffs the same locally and in
+a platform's build.
+
 The verdict, in order:
 
 - **major** — a function or client-facing wiring was removed, or a surviving
