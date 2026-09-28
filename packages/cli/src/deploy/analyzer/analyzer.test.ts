@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   analyzeDeployment as analyzeUnpinned,
   toSafeKebab,
+  unroutedHttpWirings,
 } from './analyzer.js'
 import type { InspectorState } from '@pikku/inspector'
 
@@ -1281,8 +1282,53 @@ describe('analyzeDeployment - routes wired to an inline func', () => {
     assert.ok(servedRoutes().includes('POST /agents/shop'))
   })
 
-  test('a bridge onto a route a named function owns is still skipped', () => {
-    assert.ok(!servedRoutes().includes('OPTIONS /rpc/:rpcName'))
-    assert.ok(servedRoutes().includes('POST /rpc/:rpcName'))
+  // The OPTIONS preflight beside `rpcCaller`'s catch-all gets no unit of its
+  // own — it rides the unit of the function that owns the route, which is what
+  // makes it reachable rather than merely not-duplicated.
+  test('a bridge onto a route a named function owns rides that unit', () => {
+    const manifest = analyzeDeployment(stateWithInlineHttpFuncs(), {
+      projectId: 'test',
+    })
+    const rpcUnit = manifest.units.find((u) =>
+      u.functionIds.includes('rpcCaller')
+    )
+    assert.ok(rpcUnit)
+    const routes = rpcUnit.handlers
+      .flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      .map((r) => `${r.method} ${r.route}`)
+    assert.deepEqual(routes.sort(), [
+      'OPTIONS /rpc/:rpcName',
+      'POST /rpc/:rpcName',
+    ])
+  })
+})
+
+describe('unroutedHttpWirings', () => {
+  test('names a declared route that reached no unit', () => {
+    const state = stateWithInlineHttpFuncs()
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+    assert.deepEqual(unroutedHttpWirings(state.http.meta, manifest.units), [])
+
+    // The shape every dropped route had: declared, generated into the meta,
+    // owned by nothing. Previously indistinguishable from a healthy build.
+    assert.deepEqual(
+      unroutedHttpWirings(state.http.meta, []).map((r) => r.route).sort(),
+      ['/agents/shop', '/rpc/:rpcName', '/rpc/:rpcName']
+    )
+  })
+
+  // `agentCaller`'s `/rpc/agent/:agentName` is re-emitted as one concrete route
+  // per agent, so the parameterized declaration owning no unit is correct.
+  test('ignores the scaffold callers the analyzer expands per agent', () => {
+    const httpMeta = {
+      post: {
+        '/rpc/agent/:agentName': {
+          pikkuFuncId: 'agentCaller',
+          method: 'post',
+          route: '/rpc/agent/:agentName',
+        },
+      },
+    } as any
+    assert.deepEqual(unroutedHttpWirings(httpMeta, []), [])
   })
 })

@@ -91,6 +91,24 @@ export interface AnalyzerOptions {
  * `mcpPath` in `mcp.gen.json` moves the mount but not this — the analyzer never
  * reads that file.
  */
+/**
+ * Scaffold functions the analyzer re-emits as concrete routes: `agentCaller`'s
+ * `/rpc/agent/:agentName` becomes one route per agent, and the thread readers
+ * ride the agent gateway unit. Their parameterized declarations are therefore
+ * expected to own no unit, which is what keeps them out of
+ * `unroutedHttpWirings`.
+ */
+const EXPANDED_SCAFFOLD_CALLERS = new Set([
+  'agentCaller',
+  'agentStreamCaller',
+  'agentApproveCaller',
+  'agentResumeCaller',
+  'getAgentThreads',
+  'getAgentThreadMessages',
+  'getAgentThreadRuns',
+  'deleteAgentThread',
+])
+
 const MCP_PATH = '/mcp'
 
 /** The discovery document `PikkuMCPServer` serves, per RFC 9728. */
@@ -317,16 +335,7 @@ export function analyzeDeployment(
     }
 
     // Skip scaffold catch-all functions — they're bundled into units that need them
-    if (
-      funcId === 'agentCaller' ||
-      funcId === 'agentStreamCaller' ||
-      funcId === 'agentApproveCaller' ||
-      funcId === 'agentResumeCaller' ||
-      funcId === 'getAgentThreads' ||
-      funcId === 'getAgentThreadMessages' ||
-      funcId === 'getAgentThreadRuns' ||
-      funcId === 'deleteAgentThread'
-    ) {
+    if (EXPANDED_SCAFFOLD_CALLERS.has(funcId)) {
       continue
     }
 
@@ -452,12 +461,16 @@ export function analyzeDeployment(
     // the addon's own `expose: true` does — the same rule `rpc.exposed`
     // applies at runtime, so the unit carries exactly what can be called.
     const wiredExpose = state.rpc?.wireAddonDeclarations?.get(namespace)?.expose
-    const exposed = entries(addonMeta).filter(([funcName, meta]) =>
+    const isExposed = (funcName: string, meta: { expose?: boolean }) =>
       Array.isArray(wiredExpose)
         ? wiredExpose.includes(funcName)
-        : wiredExpose !== false && meta.expose
+        : wiredExpose !== false && !!meta.expose
+    const wired = entries(addonMeta).filter(
+      ([funcName, meta]) =>
+        isExposed(funcName, meta) ||
+        collectHttpRoutes(httpMeta, `${namespace}:${funcName}`).length > 0
     )
-    if (exposed.length === 0) {
+    if (wired.length === 0) {
       continue
     }
 
@@ -472,20 +485,23 @@ export function analyzeDeployment(
     const addonForcedBy: string[] = []
     let target: 'serverless' | 'server' = defaultTarget
 
-    for (const [funcName, funcMeta] of exposed) {
+    for (const [funcName, funcMeta] of wired) {
       const rpcName = `${namespace}:${funcName}`
       functionIds.push(rpcName)
-      addonUnitByRpcName.set(rpcName, unitName)
-      routes.push({
-        method: 'post',
-        route: prefixed(`/rpc/${rpcName}`),
-        pikkuFuncId: rpcName,
-      })
-      routes.push({
-        method: 'post',
-        route: prefixed(`/remote/rpc/${rpcName}`),
-        pikkuFuncId: rpcName,
-      })
+      routes.push(...collectHttpRoutes(httpMeta, rpcName))
+      if (isExposed(funcName, funcMeta)) {
+        addonUnitByRpcName.set(rpcName, unitName)
+        routes.push({
+          method: 'post',
+          route: prefixed(`/rpc/${rpcName}`),
+          pikkuFuncId: rpcName,
+        })
+        routes.push({
+          method: 'post',
+          route: prefixed(`/remote/rpc/${rpcName}`),
+          pikkuFuncId: rpcName,
+        })
+      }
       for (const service of collectServicesForFunction(funcMeta)) {
         if (
           !services.some(
@@ -1297,21 +1313,84 @@ function routeOfSyntheticHttpBridge(funcId: string): string {
   return funcId.slice(funcId.indexOf(':', 'http:'.length) + 1)
 }
 
+/**
+ * Routes the app declares that no unit ended up serving. Units are built by
+ * walking functions and asking which routes point at each one, so a route
+ * nothing claims produces no handler and no error — it simply is not deployed,
+ * and the stage 404s it while every worker reports healthy. Checked against the
+ * finished manifest so it holds however a route came to be dropped.
+ */
+export function unroutedHttpWirings(
+  httpMeta: HTTPWiringsMeta,
+  units: DeploymentUnit[]
+): HttpRouteInfo[] {
+  const served = new Set<string>()
+  for (const unit of units) {
+    for (const handler of unit.handlers) {
+      if (handler.type !== 'fetch') continue
+      for (const route of handler.routes) {
+        served.add(`${route.method.toUpperCase()} ${route.route}`)
+      }
+    }
+  }
+  const unrouted: HttpRouteInfo[] = []
+  const seen = new Set<string>()
+  for (const method of HTTP_METHODS) {
+    const methodRoutes = httpMeta[method]
+    if (!methodRoutes) continue
+    for (const routeMeta of values(methodRoutes)) {
+      if (EXPANDED_SCAFFOLD_CALLERS.has(routeMeta.pikkuFuncId)) continue
+      const key = `${method.toUpperCase()} ${routeMeta.route}`
+      if (served.has(key) || seen.has(key)) continue
+      seen.add(key)
+      unrouted.push({
+        method: method.toUpperCase(),
+        route: routeMeta.route,
+        pikkuFuncId: routeMeta.pikkuFuncId,
+      })
+    }
+  }
+  return unrouted
+}
+
 function collectHttpRoutes(
   httpMeta: HTTPWiringsMeta,
   funcId: string
 ): HttpRouteInfo[] {
   const routes: HttpRouteInfo[] = []
+  const owned = new Set<string>()
 
   for (const method of HTTP_METHODS) {
     const methodRoutes = httpMeta[method]
     if (!methodRoutes) continue
     for (const routeMeta of values(methodRoutes)) {
       if (routeMeta.pikkuFuncId === funcId) {
+        owned.add(routeMeta.route)
         routes.push({
           method: method.toUpperCase(),
           route: routeMeta.route,
           pikkuFuncId: funcId,
+        })
+      }
+    }
+  }
+
+  if (owned.size === 0 || isSyntheticHttpBridge(funcId)) {
+    return routes
+  }
+
+  for (const method of HTTP_METHODS) {
+    const methodRoutes = httpMeta[method]
+    if (!methodRoutes) continue
+    for (const routeMeta of values(methodRoutes)) {
+      if (
+        isSyntheticHttpBridge(routeMeta.pikkuFuncId) &&
+        owned.has(routeMeta.route)
+      ) {
+        routes.push({
+          method: method.toUpperCase(),
+          route: routeMeta.route,
+          pikkuFuncId: routeMeta.pikkuFuncId,
         })
       }
     }

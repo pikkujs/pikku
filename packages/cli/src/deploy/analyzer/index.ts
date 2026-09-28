@@ -1,4 +1,4 @@
-export { analyzeDeployment } from './analyzer.js'
+export { analyzeDeployment, unroutedHttpWirings } from './analyzer.js'
 export type { AnalyzerOptions } from './analyzer.js'
 export type {
   GroupingConfig,
