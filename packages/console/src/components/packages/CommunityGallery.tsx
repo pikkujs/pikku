@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import {
   Box,
+  Button,
   Group,
   Stack,
   Text,
-  Badge,
+  TextInput,
   SimpleGrid,
-  SegmentedControl,
   ThemeIcon,
   Loader,
   Center,
@@ -14,67 +14,47 @@ import {
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { ArrowRight, Search } from 'lucide-react'
 import type { PackageMeta } from './packageMeta'
 import { CategoryRail } from './CategoryRail'
-import { AddonCard } from './AddonCard'
-import { PublishCta } from './PublishCta'
-import type { CategoryBucket } from './addonCategoryMeta'
+import { AddonCard, type AddonCardStatus } from './AddonCard'
+import { getCategoryMeta, type CategoryBucket } from './addonCategoryMeta'
+import { QUICK_JOBS } from './addonJobs'
+import { readInstallResult } from './installResult'
 import { usePanelContext } from '../../context/PanelContext'
+import { CardsPage } from '../ui/CardsPage'
+import { SectionCard } from '../ui/SectionCard'
+import { ForDevelopers } from '../ui/ForDevelopers'
+import { DevLinks, DevNote } from '../ui/DevDetail'
 
 export type SortKey = 'name' | 'functions' | 'agents'
 
 interface CommunityGalleryProps {
-  /** The rows loaded so far — already searched, filtered and sorted server-side. */
   addons: PackageMeta[]
   searchQuery: string
+  onSearchChange: (query: string) => void
   installedNames: Set<string>
   editable: boolean
-  /** 'api' swaps card/panel wording to Import and hides the publish CTA. */
   kind?: 'addon' | 'api'
-  /**
-   * Catalogue-wide category buckets, from the registry. Derived counts would
-   * only describe the pages already scrolled past. Still needed when the rail is
-   * mounted elsewhere: the heading names the picked category.
-   */
   categories: CategoryBucket[]
-  /**
-   * Size of the unfiltered catalogue — the rail's "All" count. Summing
-   * `categories` would overcount every package that declares more than one
-   * category.
-   */
   catalogueTotal: number
-  /**
-   * Set false when the host mounts the rail itself (`PackagesBrowseRail`), so
-   * the gallery is the grid alone and there is only ever one rail on screen.
-   */
   withRail?: boolean
-  /** How many rows match the current search/filter across the whole catalogue. */
   total: number
   category: string
   onCategoryChange: (category: string) => void
-  /**
-   * Sorting is the registry's, so it is offered only where the registry can do
-   * it. The OpenAPI catalogue orders by name alone — omit both and the control
-   * is hidden rather than left inert.
-   */
-  sort?: SortKey
-  onSortChange?: (sort: SortKey) => void
+  inApp?: PackageMeta[]
+  popular?: PackageMeta[]
   hasMore: boolean
   loadingMore: boolean
   onLoadMore: () => void
-  /**
-   * Opening an *installed* addon: routes to its full detail page (which carries
-   * the Setup/OAuth + secrets requirements and richer surfaces) instead of the
-   * lightweight browse panel. Omitted for the API gallery, which has no such
-   * page, so those cards always open the panel.
-   */
   onOpenInstalled?: (addon: PackageMeta) => void
 }
 
 export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   addons,
   searchQuery,
+  onSearchChange,
   installedNames,
   editable,
   kind = 'addon',
@@ -84,8 +64,8 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   total,
   category,
   onCategoryChange,
-  sort,
-  onSortChange,
+  inApp,
+  popular,
   hasMore,
   loadingMore,
   onLoadMore,
@@ -93,16 +73,14 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
 }) => {
   useLocale()
   const { openPanel } = usePanelContext()
+  const queryClient = useQueryClient()
+  const isApi = kind === 'api'
 
-  // An installed addon opens its full detail page (Setup/OAuth lives there); a
-  // not-yet-installed one opens the browse panel to preview before installing.
   const openAddon = (addon: PackageMeta) => {
     if (onOpenInstalled && installedNames.has(addon.name)) {
       onOpenInstalled(addon)
       return
     }
-    // Only identity and a stable callback: panel metadata is captured on open
-    // and never refreshed, so install progress lives inside AddonDetail.
     openPanel('addon', addon.id, addon.displayName || addon.name, {
       addon,
       kind,
@@ -111,18 +89,6 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     })
   }
 
-  const sortData = useMemo(
-    () => [
-      { value: 'name', label: m.packages_sort_name() },
-      { value: 'functions', label: m.packages_sort_functions() },
-      { value: 'agents', label: m.packages_sort_agents() },
-    ],
-    []
-  )
-
-  // Pull the next page when the sentinel below the grid scrolls into view.
-  // `onLoadMore` is read through a ref so the observer isn't torn down and
-  // rebuilt on every render — which would re-fire while it re-intersects.
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const loadMoreRef = useRef(onLoadMore)
   loadMoreRef.current = onLoadMore
@@ -136,68 +102,170 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
           loadMoreRef.current()
         }
       },
-      // Start fetching a screenful early so scrolling doesn't visibly stall.
       { rootMargin: '400px' }
     )
     observer.observe(node)
     return () => observer.disconnect()
   }, [hasMore, loadingMore])
 
-  const heading =
-    category === 'all'
-      ? searchQuery.trim()
-        ? m.packages_results()
-        : kind === 'api'
-          ? m.packages_all_apis()
-          : m.packages_all_addons()
-      : asI18n(categories.find((c) => c.id === category)?.label ?? category)
+  const search = searchQuery.trim()
+  const shownInApp = inApp && inApp.length > 0 ? inApp : undefined
+  const shownPopular = popular && popular.length > 0 ? popular : undefined
+  const featured = new Set(
+    [...(shownInApp ?? []), ...(shownPopular ?? [])].map((a) => a.name)
+  )
+  const rest = addons.filter((a) => !featured.has(a.name))
+  const restTotal = Math.max(total - (addons.length - rest.length), 0)
 
-  // The grid — rail beside cards — is how the gallery stands on its own. A host
-  // that has mounted the rail as its own panel gets the cards alone, filling the
-  // width they were sharing.
-  const grid = (
-    <Stack
-      gap="md"
-      style={
-        withRail
-          ? { minWidth: 0, minHeight: '100%' }
-          : { minWidth: 0, minHeight: 0, flex: 1 }
+  const heading = search
+    ? m.integrations_results_title({ query: search })
+    : category !== 'all'
+      ? asI18n(categories.find((c) => c.id === category)?.label ?? category)
+      : featured.size > 0
+        ? m.integrations_more_title()
+        : isApi
+          ? m.integrations_all_apis()
+          : m.integrations_all_title()
+
+  const jobs = isApi
+    ? categories.slice(0, 6)
+    : QUICK_JOBS.map((id) => categories.find((c) => c.id === id)).filter(
+        (c): c is CategoryBucket => !!c
+      )
+
+  const inAppStatus = (addon: PackageMeta): AddonCardStatus => {
+    const result = readInstallResult(queryClient, addon.name)
+    if (!result) {
+      return {
+        tone: 'good',
+        label: m.integrations_status_added(),
+        next: m.integrations_next_check(),
       }
-    >
-      <Group justify="space-between" wrap="nowrap">
-        <Group gap="sm" wrap="nowrap">
-          <Text fw={700} size="sm">
-            {heading}
-          </Text>
-          <Badge size="sm" variant="light" color="gray">
-            {asI18n(String(total))}
-          </Badge>
-        </Group>
-        {sort && onSortChange && (
-          <Group gap="xs" wrap="nowrap">
-            <ThemeIcon size="sm" variant="transparent" color="gray">
-              <SlidersHorizontal size={14} />
-            </ThemeIcon>
-            <SegmentedControl
-              size="xs"
-              value={sort}
-              onChange={(v) => onSortChange(v as SortKey)}
-              data={sortData}
-            />
-          </Group>
-        )}
-      </Group>
+    }
+    if (result.missingSecrets.length + result.missingVariables.length > 0) {
+      return {
+        tone: 'warn',
+        label: m.integrations_status_needs_keys(),
+        next: m.integrations_next_keys(),
+      }
+    }
+    return {
+      tone: 'good',
+      label: m.integrations_status_ready(),
+      next: m.integrations_next_ready(),
+    }
+  }
 
-      {/* Content region grows to fill, keeping the publish CTA pinned to
-              the bottom whether the grid is short or the list is empty. */}
-      <Box style={{ flex: 1, minHeight: 0 }}>
-        {addons.length === 0 ? (
-          <Stack align="center" justify="center" gap={6} h="100%">
-            <ThemeIcon size={48} radius="md" variant="light" color="gray">
-              <Search size={22} />
+  const rows = (list: PackageMeta[], withStatus = false) => (
+    <Box mt="md" style={{ containerType: 'inline-size' }}>
+      <SimpleGrid type="container" cols={{ base: 1, '640px': 2 }} spacing="sm">
+        {list.map((addon) => (
+          <AddonCard
+            key={addon.id}
+            addon={addon}
+            installed={installedNames.has(addon.name)}
+            kind={kind}
+            status={withStatus ? inAppStatus(addon) : undefined}
+            onOpen={openAddon}
+          />
+        ))}
+      </SimpleGrid>
+    </Box>
+  )
+
+  const cards = (
+    <CardsPage>
+      <SectionCard
+        testId="integrations-hero"
+        hero
+        title={
+          isApi ? m.integrations_apis_hero_title() : m.integrations_hero_title()
+        }
+        blurb={
+          isApi ? m.integrations_apis_hero_blurb() : m.integrations_hero_blurb()
+        }
+      >
+        <Stack gap="sm" mt="md">
+          <TextInput
+            data-testid="packages-search"
+            aria-label={m.integrations_search_label()}
+            placeholder={
+              isApi
+                ? m.integrations_search_apis_placeholder()
+                : m.integrations_search_placeholder()
+            }
+            leftSection={<Search size={16} />}
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.currentTarget.value)}
+          />
+          {jobs.length > 0 && (
+            <Group gap={8}>
+              <Button
+                size="xs"
+                radius="xl"
+                variant={category === 'all' ? 'light' : 'default'}
+                onClick={() => onCategoryChange('all')}
+              >
+                {m.integrations_all()}
+              </Button>
+              {jobs.map((job) => {
+                const { icon: Icon } = getCategoryMeta(job.id)
+                return (
+                  <Button
+                    key={job.id}
+                    size="xs"
+                    radius="xl"
+                    variant={category === job.id ? 'light' : 'default'}
+                    leftSection={<Icon size={14} />}
+                    onClick={() => onCategoryChange(job.id)}
+                  >
+                    {asI18n(job.label)}
+                  </Button>
+                )
+              })}
+            </Group>
+          )}
+        </Stack>
+      </SectionCard>
+
+      {shownInApp && (
+        <SectionCard
+          testId="integrations-in-app"
+          title={m.integrations_in_app_title()}
+          subtitle={asI18n(String(shownInApp.length))}
+          blurb={m.integrations_in_app_blurb()}
+        >
+          {rows(shownInApp, true)}
+        </SectionCard>
+      )}
+
+      {shownPopular && (
+        <SectionCard
+          testId="integrations-popular"
+          title={m.integrations_popular_title()}
+          blurb={m.integrations_popular_blurb()}
+        >
+          {rows(shownPopular)}
+        </SectionCard>
+      )}
+
+      <SectionCard
+        testId="integrations-browse"
+        title={heading}
+        subtitle={
+          restTotal === 1
+            ? m.integrations_count_one()
+            : m.integrations_count({ count: restTotal })
+        }
+        blurb={m.integrations_browse_blurb()}
+      >
+        {rest.length === 0 && addons.length === 0 ? (
+          <Stack align="center" gap={6} py="xl">
+            <ThemeIcon size={40} radius="md" variant="light" color="gray">
+              <Search size={20} />
             </ThemeIcon>
             <Text fw={600} size="sm">
-              {m.packages_no_matches()}
+              {m.integrations_no_matches()}
             </Text>
             <Text size="sm" c="dimmed">
               {m.packages_no_matches_hint()}
@@ -205,17 +273,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
           </Stack>
         ) : (
           <>
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-              {addons.map((addon) => (
-                <AddonCard
-                  key={addon.id}
-                  addon={addon}
-                  installed={installedNames.has(addon.name)}
-                  kind={kind}
-                  onOpen={openAddon}
-                />
-              ))}
-            </SimpleGrid>
+            {rows(rest)}
             {hasMore && (
               <Box ref={sentinelRef} py="lg">
                 <Center>
@@ -225,38 +283,63 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             )}
           </>
         )}
-      </Box>
-
-      {/* Publishing is an authoring action — hide it on a read-only console
-          (e.g. a deployed stage) where you can't install or edit anyway. */}
-      {kind === 'addon' && editable && <PublishCta />}
-    </Stack>
+        <Box mt="lg">
+          <ForDevelopers
+            label={m.integrations_dev_label()}
+            hint={m.integrations_dev_hint()}
+            testId="integrations-developers"
+          >
+            <DevNote>
+              {isApi ? m.integrations_dev_body_apis() : m.integrations_dev_body()}
+            </DevNote>
+            <DevLinks
+              links={[
+                {
+                  href: 'https://pikku.dev/docs/external-packages',
+                  label: m.packages_docs(),
+                },
+              ]}
+            />
+            {editable && !isApi && (
+              <Group justify="space-between" gap="sm">
+                <DevNote>{m.packages_publish_subtext()}</DevNote>
+                <Button
+                  component="a"
+                  href="https://pikku.dev/docs/external-packages"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="default"
+                  size="xs"
+                  rightSection={<ArrowRight size={14} />}
+                >
+                  {m.packages_publish_cta()}
+                </Button>
+              </Group>
+            )}
+          </ForDevelopers>
+        </Box>
+      </SectionCard>
+    </CardsPage>
   )
 
+  if (!withRail) return cards
+
   return (
-    <Stack gap="lg" style={{ minHeight: '100%' }}>
-      {withRail ? (
-        <Box
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 210px) minmax(0, 1fr)',
-            gap: 'var(--mantine-spacing-xl)',
-            alignItems: 'stretch',
-            flex: 1,
-            minHeight: 0,
-          }}
-        >
-          <CategoryRail
-            categories={categories}
-            active={category}
-            total={catalogueTotal}
-            onPick={onCategoryChange}
-          />
-          {grid}
-        </Box>
-      ) : (
-        grid
-      )}
-    </Stack>
+    <Box
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 210px) minmax(0, 1fr)',
+        gap: 'var(--mantine-spacing-xl)',
+        alignItems: 'start',
+      }}
+    >
+      <CategoryRail
+        categories={categories}
+        active={category}
+        total={catalogueTotal}
+        onPick={onCategoryChange}
+      />
+      {cards}
+    </Box>
   )
 }

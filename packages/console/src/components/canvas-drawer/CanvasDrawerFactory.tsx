@@ -6,8 +6,7 @@ import {
   Text,
   Stack,
   Group,
-  UnstyledButton,
-  Loader,
+  UnstyledButton
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
@@ -39,6 +38,7 @@ import { useAddonMeta, useFunctionsMeta } from '../../hooks/useWirings'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { Code2 } from 'lucide-react'
 import classes from '../ui/console.module.css'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 interface AddonMeta {
   id: string
@@ -415,9 +415,7 @@ const TransformView: React.FC<{
     <Box>
       <BackButton title={asI18n('Transform')} onClick={onBack} />
       {isLoading && (
-        <Box p="xl" className={classes.centeredLoader}>
-          <Loader size="sm" />
-        </Box>
+        <ConsoleLoading py="xl" />
       )}
       {isError && (
         <Box p="md">
@@ -464,9 +462,7 @@ const FunctionsView: React.FC<{
     <Box>
       <BackButton title={asI18n('Functions')} onClick={onBack} />
       {isLoading && (
-        <Box p="xl" className={classes.centeredLoader}>
-          <Loader size="sm" />
-        </Box>
+        <ConsoleLoading py="xl" />
       )}
       {isError && (
         <Box p="md">
@@ -555,9 +551,7 @@ const AddonsView: React.FC<{
     <Box>
       <BackButton title={asI18n('Addons')} onClick={onBack} />
       {isLoading && (
-        <Box p="xl" className={classes.centeredLoader}>
-          <Loader size="sm" />
-        </Box>
+        <ConsoleLoading py="xl" />
       )}
       {isError && (
         <Box p="md">

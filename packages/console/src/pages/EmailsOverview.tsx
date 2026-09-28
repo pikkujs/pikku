@@ -5,21 +5,19 @@ import { Group, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { EmailTemplateListPanel } from '../components/emails/EmailTemplateListPanel'
-
-const EMAIL_DOCS_HREF = 'https://pikku.dev/docs'
+import { CardsPage } from '../components/ui/CardsPage'
+import { EmailsOverviewCards } from '../components/emails/EmailsCards'
+import type { EmailsCompose } from '../hooks/useEmailsCompose'
 
 export type EmailsOverviewProps = {
-  templateNames: string[]
-  templates: Record<string, any>
-  onSelect: (templateName: string) => void
+  compose: EmailsCompose
+  src?: string
   headerRight?: React.ReactNode
 }
 
 export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
-  templateNames,
-  templates,
-  onSelect,
+  compose,
+  src,
   headerRight,
 }) => {
   useLocale()
@@ -28,21 +26,21 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
   return (
     <ResizablePanelLayout
       hidePanel
+      surface="cards"
       header={
         <ListPageHeader
-          title={m.emails_title()}
-          description={m.emails_description()}
-          docsHref={EMAIL_DOCS_HREF}
+          title={m.emails_page_title()}
           filters={
-            <Group gap="sm" wrap="nowrap">
+            <Group gap="sm" wrap="nowrap" miw={0}>
               <TextInput
                 data-testid="page-search"
-                placeholder={m.emails_search_placeholder()}
+                placeholder={m.emails_search_emails()}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 size="xs"
-                style={{ width: 240 }}
+                w={240}
+                maw="100%"
               />
               {headerRight}
             </Group>
@@ -50,12 +48,13 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
         />
       }
     >
-      <EmailTemplateListPanel
-        templateNames={templateNames}
-        templates={templates}
-        onSelect={onSelect}
-        searchQuery={searchQuery}
-      />
+      <CardsPage>
+        <EmailsOverviewCards
+          compose={compose}
+          src={src}
+          searchQuery={searchQuery}
+        />
+      </CardsPage>
     </ResizablePanelLayout>
   )
 }

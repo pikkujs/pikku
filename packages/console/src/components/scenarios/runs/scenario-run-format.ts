@@ -52,3 +52,25 @@ export const stepOffsets = (steps: { durationMs?: number }[]): number[] => {
     return offset
   })
 }
+
+/** When a run started, as a reader would say it: a date and a time of day. */
+export const runWhen = (iso: string, locale?: string): string => {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
+
+/** How long ago a run started, in the reader's language. */
+export const runAgo = (iso: string, locale?: string): string => {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const minutes = Math.round((then - Date.now()) / 60000)
+  const format = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (Math.abs(minutes) < 60) return format.format(minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  if (Math.abs(hours) < 24) return format.format(hours, 'hour')
+  return format.format(Math.round(hours / 24), 'day')
+}

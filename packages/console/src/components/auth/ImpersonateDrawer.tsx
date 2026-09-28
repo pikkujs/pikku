@@ -5,9 +5,7 @@ import {
   Stack,
   TextInput,
   Text,
-  Loader,
-  Center,
-  Alert,
+  Alert
 } from '@pikku/mantine/core'
 import { Search, AlertTriangle } from 'lucide-react'
 import { useDebouncedValue } from '@mantine/hooks'
@@ -17,6 +15,7 @@ import { asI18n } from '@pikku/react'
 import { useAuth, type AuthUser } from '../../context/AuthContext'
 import { useImpersonation } from '../../context/ImpersonationContext'
 import { ImpersonateUserRow } from './ImpersonateUserRow'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export const ImpersonateDrawer: React.FC<{
   opened: boolean
@@ -59,9 +58,7 @@ export const ImpersonateDrawer: React.FC<{
         />
 
         {usersQuery.isLoading ? (
-          <Center py="xl">
-            <Loader size="sm" />
-          </Center>
+          <ConsoleLoading py="xl" />
         ) : usersQuery.error ? (
           <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
             <Text size="sm">{asI18n((usersQuery.error as Error).message)}</Text>

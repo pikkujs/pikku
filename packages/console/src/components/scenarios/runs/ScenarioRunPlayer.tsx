@@ -9,7 +9,9 @@ import { useScenarioArtifact } from '../../../hooks/useScenarioRuns'
 type ScenarioRunPlayerProps = {
   runId: string
   artifact: ScenarioArtifact
-  seekMs?: number
+  seek?: { stepId: string; nonce: number }
+  offsetFor?: (stepId: string, actor?: string) => number | undefined
+  onTime?: (ms: number, actor?: string) => void
 }
 
 /**
@@ -24,16 +26,23 @@ type ScenarioRunPlayerProps = {
 export const ScenarioRunPlayer: React.FC<ScenarioRunPlayerProps> = ({
   runId,
   artifact,
-  seekMs,
+  seek,
+  offsetFor,
+  onTime,
 }) => {
   const { url, error, loading } = useScenarioArtifact(runId, artifact.path)
   const video = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
 
+  const offsetRef = useRef(offsetFor)
+  offsetRef.current = offsetFor
+
   useEffect(() => {
-    if (!video.current || seekMs === undefined) return
-    video.current.currentTime = seekMs / 1000
-  }, [seekMs, url])
+    if (!video.current || !seek) return
+    const ms = offsetRef.current?.(seek.stepId, artifact.actor)
+    if (ms === undefined) return
+    video.current.currentTime = ms / 1000
+  }, [seek, url, artifact.actor])
 
   /**
    * A recording opens on a browser that has not navigated anywhere yet, so the
@@ -42,7 +51,7 @@ export const ScenarioRunPlayer: React.FC<ScenarioRunPlayerProps> = ({
    */
   const poster = () => {
     const element = video.current
-    if (!element || seekMs !== undefined || element.currentTime > 0) return
+    if (!element || seek || element.currentTime > 0) return
     element.currentTime = Math.min(2, element.duration / 4)
   }
 
@@ -77,6 +86,12 @@ export const ScenarioRunPlayer: React.FC<ScenarioRunPlayerProps> = ({
           controls={playing}
           preload="metadata"
           onLoadedMetadata={poster}
+          onTimeUpdate={(event) =>
+            onTime?.(event.currentTarget.currentTime * 1000, artifact.actor)
+          }
+          onSeeked={(event) =>
+            onTime?.(event.currentTarget.currentTime * 1000, artifact.actor)
+          }
           style={{
             width: '100%',
             height: '100%',

@@ -3,7 +3,11 @@ import { Box } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Package } from 'lucide-react'
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useQuery,
+  useInfiniteQuery,
+} from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../../context/ConsoleEditableContext'
 import { useAddonCategories } from '../../hooks/useAddonCategories'
@@ -18,6 +22,7 @@ import type {
 } from './packageMeta'
 import { PAGE_SIZE, installedToPackageMeta } from './packageMeta'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { POPULAR_NAMES } from './addonJobs'
 
 // The registry caps a page at 500 rows.
 const MAX_PAGE = 500
@@ -34,6 +39,7 @@ const matchesSearch = (addon: PackageMeta, search: string) => {
 
 export const AddonsList: React.FC<{
   searchQuery: string
+  onSearchChange: (query: string) => void
   filter: AddonFilter
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
   /**
@@ -43,12 +49,15 @@ export const AddonsList: React.FC<{
    */
   category?: string
   onCategoryChange?: (category: string) => void
+  sort?: SortKey
 }> = ({
   searchQuery,
+  onSearchChange,
   filter,
   onSelect,
   category: controlledCategory,
   onCategoryChange,
+  sort = 'name',
 }) => {
   const rpc = usePikkuRPC()
   useLocale()
@@ -57,7 +66,6 @@ export const AddonsList: React.FC<{
   const category = controlledCategory ?? ownCategory
   const setCategory = onCategoryChange ?? setOwnCategory
   const withRail = !onCategoryChange
-  const [sort, setSort] = useState<SortKey>('name')
   const { categories, catalogueTotal } = useAddonCategories()
 
   const { data: installedAddons } = useQuery<InstalledAddonRow[]>({
@@ -124,9 +132,35 @@ export const AddonsList: React.FC<{
     // Waiting avoids firing an unfiltered request first and flashing the
     // whole catalogue into the Installed view.
     enabled: installedFilterReady,
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000,
     retry: false,
   })
+
+  const showPopular =
+    filter === 'all' && !searchQuery.trim() && category === 'all'
+
+  const { data: popularPage } = useQuery({
+    queryKey: ['addons', 'popular'],
+    queryFn: async () =>
+      (await rpc.invoke('console:getAddonMeta', {
+        names: POPULAR_NAMES.join(','),
+        limit: POPULAR_NAMES.length,
+      })) as CataloguePage,
+    enabled: showPopular,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+
+  const popular = useMemo(() => {
+    if (!showPopular) return undefined
+    const byName = new Map(
+      (popularPage?.packages ?? []).map((a) => [a.name, a])
+    )
+    return POPULAR_NAMES.map((name) => byName.get(name)).filter(
+      (a): a is PackageMeta => !!a && !installedNames.has(a.name)
+    )
+  }, [showPopular, popularPage, installedNames])
 
   const catalogue = useMemo(
     () => (data?.pages ?? []).flatMap((page) => page.packages ?? []),
@@ -147,6 +181,14 @@ export const AddonsList: React.FC<{
     }
     return rows
   }, [isInstalledView, catalogue, installedAddons, search, category])
+
+  const inApp = useMemo(() => {
+    if (isInstalledView || search || category !== 'all') return undefined
+    const byName = new Map(catalogue.map((a) => [a.name, a]))
+    return (installedAddons ?? []).map(
+      (a) => byName.get(a.packageName) ?? installedToPackageMeta(a)
+    )
+  }, [isInstalledView, search, category, catalogue, installedAddons])
 
   if (isPending) {
     return (
@@ -173,14 +215,15 @@ export const AddonsList: React.FC<{
     <CommunityGallery
       addons={visible}
       searchQuery={searchQuery}
+      onSearchChange={onSearchChange}
       categories={categories}
       catalogueTotal={catalogueTotal}
       withRail={withRail}
       total={isInstalledView ? visible.length : (data.pages[0]?.total ?? 0)}
       category={category}
       onCategoryChange={setCategory}
-      sort={isInstalledView ? undefined : sort}
-      onSortChange={isInstalledView ? undefined : setSort}
+      inApp={inApp}
+      popular={popular}
       hasMore={!isInstalledView && !!hasNextPage}
       loadingMore={isFetchingNextPage}
       onLoadMore={fetchNextPage}

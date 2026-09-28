@@ -47,7 +47,7 @@ export const CategoryRail: React.FC<CategoryRailProps> = ({
 
       <NavLink
         active={active === 'all'}
-        label={m.packages_all_addons()}
+        label={m.integrations_all()}
         leftSection={
           <ThemeIcon size={22} radius="sm" variant="light" color="gray">
             <Package size={14} />

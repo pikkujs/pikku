@@ -5,6 +5,7 @@ import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { CliListPanel } from '../components/cli/CliListPanel'
+import { CardsPage } from '../components/ui/CardsPage'
 
 export const CliPage: React.FC = () => {
   const [search, setSearch] = useState('')
@@ -16,7 +17,7 @@ export const CliPage: React.FC = () => {
         header={
           <ListPageHeader
             title={m.cli_title()}
-            description={m.cli_description()}
+            description={m.wires_cli_description()}
             docsHref="https://pikku.dev/docs/core-features/cli"
             search={{
               placeholder: m.cli_search_placeholder(),
@@ -27,8 +28,11 @@ export const CliPage: React.FC = () => {
           />
         }
         hidePanel
+        surface="cards"
       >
-        <CliListPanel searchQuery={search} />
+        <CardsPage>
+          <CliListPanel searchQuery={search} />
+        </CardsPage>
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

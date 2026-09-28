@@ -19,14 +19,12 @@ import {
   Title,
   Tooltip,
   UnstyledButton,
-  Code,
 } from '@pikku/mantine/core'
 import {
   CheckCircle2,
   ChevronRight,
   Circle,
   Clock,
-  Code2,
   DollarSign,
   Play,
   ShieldCheck,
@@ -45,6 +43,7 @@ import { useStartVirtualUserRun } from '../../hooks/useVirtualUserRuns'
 import { virtualUserRunRefused } from '../../lib/virtualUserRunRefused'
 import { SectionCard } from '../ui/SectionCard'
 import { ForDevelopers } from '../ui/ForDevelopers'
+import { DevCode, DevField, DevFields, DevMono } from '../ui/DevDetail'
 import type { PersonaLastTry, VirtualUserRunRow } from './run-summary'
 
 const DISPOSITION_BLURB: Record<VirtualUserDisposition, () => I18nString> = {
@@ -386,31 +385,12 @@ const Reach: React.FC<{ user: VirtualUserDoc }> = ({ user }) => {
   )
 }
 
-const KV: React.FC<{ label: I18nNode; children: React.ReactNode }> = ({
-  label,
-  children,
-}) => (
-  <>
-    <Text size="sm" c="dimmed">
-      {label}
-    </Text>
-    <Box miw={0}>{children}</Box>
-  </>
-)
-
-const Mono: React.FC<{ children: string }> = ({ children }) => (
-  <Text size="sm" ff="monospace" style={{ wordBreak: 'break-word' }}>
-    {asI18n(children)}
-  </Text>
-)
-
 type NameList = 'offered' | 'mutations' | 'inferred'
 
 const DeveloperDetails: React.FC<{
   user: VirtualUserDoc
   environment: string
 }> = ({ user, environment }) => {
-  const { shown: developerDetails } = useDeveloperDetails()
   const [names, setNames] = React.useState<NameList>()
   const { profile, reach } = user
   const moveTotal =
@@ -422,28 +402,15 @@ const DeveloperDetails: React.FC<{
 
   return (
     <ForDevelopers
-      key={String(developerDetails)}
-      defaultOpen={developerDetails}
       label={m.virtual_users_dev_title()}
       hint={m.virtual_users_dev_hint()}
-      icon={<Code2 size={18} />}
       testId="virtual-user-dev"
     >
       <Stack gap="md">
-        <Box
-          style={{
-            display: 'grid',
-            gap: '8px 16px',
-            gridTemplateColumns: 'minmax(120px, 200px) minmax(0, 1fr)',
-          }}
-        >
-          <KV label={m.virtual_users_dev_key()}>
-            <Mono>{user.id}</Mono>
-          </KV>
-          <KV label={m.virtual_users_dev_disposition()}>
-            <Mono>{user.disposition}</Mono>
-          </KV>
-          <KV label={m.virtual_users_dev_moves()}>
+        <DevFields>
+          <DevField label={m.virtual_users_dev_key()} value={user.id} />
+          <DevField label={m.virtual_users_dev_disposition()} value={user.disposition} />
+          <DevField label={m.virtual_users_dev_moves()}>
             <Text size="sm" ff="monospace">
               {m.virtual_users_moves({
                 continue: percent(profile.moves.continue, moveTotal),
@@ -457,39 +424,29 @@ const DeveloperDetails: React.FC<{
                 {m.virtual_users_tuned({ dials: user.tunedDials.join(', ') })}
               </Text>
             )}
-          </KV>
-          <KV label={m.virtual_users_dev_roles()}>
-            <Mono>{user.roles.join(', ') || '—'}</Mono>
-          </KV>
-          <KV label={m.virtual_users_dev_scopes()}>
-            <Mono>{user.scopes.join(', ') || '—'}</Mono>
-          </KV>
+          </DevField>
+          <DevField label={m.virtual_users_dev_roles()} value={user.roles.join(', ') || undefined} />
+          <DevField label={m.virtual_users_dev_scopes()} value={user.scopes.join(', ') || undefined} />
           {user.persona.email && (
-            <KV label={m.virtual_users_dev_email()}>
-              <Mono>{user.persona.email}</Mono>
-            </KV>
+            <DevField label={m.virtual_users_dev_email()} value={user.persona.email} />
           )}
-          <KV label={m.virtual_users_dev_where()}>
+          <DevField label={m.virtual_users_dev_where()}>
             {user.environments ? (
-              <Mono>{user.environments.join(', ')}</Mono>
+              <DevMono value={user.environments.join(', ')} />
             ) : (
               <Text size="sm">{m.virtual_users_environments_default()}</Text>
             )}
-          </KV>
+          </DevField>
           {user.fixtures && user.fixtures.length > 0 && (
-            <KV label={m.virtual_users_fixtures()}>
-              <Mono>{user.fixtures.join(', ')}</Mono>
-            </KV>
+            <DevField label={m.virtual_users_fixtures()} value={user.fixtures.join(', ')} />
           )}
           {user.tags.length > 0 && (
-            <KV label={m.virtual_users_dev_tags()}>
-              <Mono>{user.tags.join(', ')}</Mono>
-            </KV>
+            <DevField label={m.virtual_users_dev_tags()} value={user.tags.join(', ')} />
           )}
-          <KV label={m.virtual_users_dev_budget()}>
+          <DevField label={m.virtual_users_dev_budget()}>
             <Text size="sm">{m.virtual_users_budget_default()}</Text>
-          </KV>
-          <KV label={m.virtual_users_dev_endpoints()}>
+          </DevField>
+          <DevField label={m.virtual_users_dev_endpoints()}>
             <Group gap={12}>
               <Anchor
                 component="button"
@@ -511,22 +468,18 @@ const DeveloperDetails: React.FC<{
                 </Anchor>
               )}
             </Group>
-          </KV>
-        </Box>
+          </DevField>
+        </DevFields>
         {names === 'offered' && <EndpointNames names={reach.offeredNames} />}
         {names === 'mutations' && <EndpointNames names={reach.mutationNames} />}
-        <Stack gap={6}>
-          <Text size="sm" fw={600}>
-            {m.virtual_users_dev_run()}
-          </Text>
-          <Code block>
-            {asI18n(`pikku persona run ${environment} ${user.id}`)}
-          </Code>
-          <Text size="sm" fw={600} pt={6}>
-            {m.virtual_users_dev_sync()}
-          </Text>
-          <Code block>{asI18n(`pikku persona sync ${environment}`)}</Code>
-        </Stack>
+        <DevCode
+          label={m.virtual_users_dev_run()}
+          code={`pikku persona run ${environment} ${user.id}`}
+        />
+        <DevCode
+          label={m.virtual_users_dev_sync()}
+          code={`pikku persona sync ${environment}`}
+        />
         {reach.inferred > 0 && (
           <Box>
             <Anchor

@@ -19,7 +19,7 @@ interface SectionModel {
  * Entries repeating the same scenario are the `Examples:` of one section, not
  * repeated sections — so they collapse into a single reading with a table.
  */
-const toSections = (feature: FeatureDoc): SectionModel[] => {
+export const toSections = (feature: FeatureDoc): SectionModel[] => {
   const sections: SectionModel[] = []
   const byName = new Map<string, SectionModel>()
 

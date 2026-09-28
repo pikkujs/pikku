@@ -10,7 +10,7 @@ import { ScenarioCast } from './ScenarioCast'
 import { ScenarioStatusMark } from './ScenarioStatusMark'
 import {
   alignLadderToRun,
-  ladderOffset,
+  stepVideoOffset,
   type ScenarioLensStatus,
 } from './scenario-run-lens'
 import { ScenarioFailureReport } from './runs/ScenarioFailureReport'
@@ -54,7 +54,7 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
   onOpenPersona,
   onSelectStep,
 }) => {
-  const [seekStep, setSeekStep] = useState<string>()
+  const [seekStep, setSeekStep] = useState<{ stepId: string; nonce: number }>()
   const recorded = useMemo(
     () =>
       run?.result?.steps
@@ -128,7 +128,7 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
               recorded={recorded}
               onOpenPersona={onOpenPersona}
               onSelectStep={(stepId, stepType, metadata) => {
-                setSeekStep(stepId)
+                setSeekStep({ stepId, nonce: Date.now() })
                 onSelectStep?.(workflow, stepId, stepType, metadata)
               }}
             />
@@ -144,10 +144,9 @@ export const ScenarioSection: React.FC<ScenarioSectionProps> = ({
                 runId={run.runId}
                 status={run.status}
                 artifacts={artifacts}
-                seekMs={
-                  seekStep === undefined
-                    ? undefined
-                    : ladderOffset(scenario.steps, recorded, seekStep)
+                seek={seekStep}
+                offsetFor={(stepId, actor) =>
+                  stepVideoOffset(scenario.steps, recorded, stepId, actor)
                 }
               />
             </Box>

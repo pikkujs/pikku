@@ -1,11 +1,12 @@
 import React from 'react'
-import { Box, Loader, Text } from '@pikku/mantine/core'
+import { Box, Text } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { useSchema } from '../../../../hooks/useWirings'
 import { SchemaViewer } from '../../../ui/SchemaViewer'
 import { SectionLabel } from './SectionLabel'
+import { ConsoleLoading } from '../../../ui/ConsoleLoading'
 
 export const SchemaSection: React.FC<{
   label?: I18nNode
@@ -20,7 +21,7 @@ export const SchemaSection: React.FC<{
     <Box>
       {label && <SectionLabel>{label}</SectionLabel>}
       {isLoading ? (
-        <Loader size="sm" />
+        <ConsoleLoading py="md" />
       ) : schema ? (
         <SchemaViewer schema={schema} />
       ) : (

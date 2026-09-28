@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
-import { ScopesVocabularyList } from '../components/scopes/ScopesVocabularyList'
+import { ScopesOverview } from '../components/scopes/ScopesOverview'
+import { CardsPage } from '../components/ui/CardsPage'
 import { useSearchParams } from '../router'
 import { useLocale } from '@/i18n/config'
 import { m } from '@/i18n/messages'
@@ -15,11 +16,11 @@ export const ScopesPage: React.FC = () => {
 
   return (
     <PageContainer
-      noPadding
+      data-testid="scopes-page"
       header={
         <ListPageHeader
           title={m.scopes_page_title()}
-          description={m.scopes_page_desc_vocab()}
+          description={m.scopes_page_desc_plain()}
           docsHref="https://pikku.dev/docs/core-features/permission-guards"
           search={{
             placeholder: m.scopes_search_scopes(),
@@ -30,7 +31,9 @@ export const ScopesPage: React.FC = () => {
         />
       }
     >
-      <ScopesVocabularyList search={search} />
+      <CardsPage>
+        <ScopesOverview search={search} />
+      </CardsPage>
     </PageContainer>
   )
 }

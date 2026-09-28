@@ -5,6 +5,7 @@ import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { ChannelsListPanel } from '../components/channel/ChannelsListPanel'
+import { CardsPage } from '../components/ui/CardsPage'
 
 export type ChannelsPageProps = {
   /** Shown in place of the empty list — fabric hands each wire kind its own. */
@@ -21,7 +22,7 @@ export const ChannelsPage: React.FC<ChannelsPageProps> = ({ emptyHero }) => {
         header={
           <ListPageHeader
             title={m.channels_title()}
-            description={m.channels_description()}
+            description={m.wires_channels_description()}
             docsHref="https://pikku.dev/docs/core-features/channels"
             search={{
               placeholder: m.channels_search_placeholder(),
@@ -32,8 +33,11 @@ export const ChannelsPage: React.FC<ChannelsPageProps> = ({ emptyHero }) => {
           />
         }
         hidePanel
+        surface="cards"
       >
-        <ChannelsListPanel searchQuery={search} emptyHero={emptyHero} />
+        <CardsPage>
+          <ChannelsListPanel searchQuery={search} emptyHero={emptyHero} />
+        </CardsPage>
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

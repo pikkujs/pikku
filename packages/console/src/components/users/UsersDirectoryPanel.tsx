@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Avatar, Loader, Stack, Text } from '@pikku/mantine/core'
+import { Avatar, Stack, Text } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
@@ -13,6 +13,7 @@ import { CreateUserPanel } from './CreateUserPanel'
 import type { UserAction } from './user-actions'
 import { describeUsersError, useAdminUsers } from '../../hooks/useAdminUsers'
 import type { AuthUser } from '../../context/AuthContext'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface UsersDirectoryPanelProps {
   /** Search term, already raw — the panel debounces before querying. */
@@ -64,7 +65,7 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
             {asI18n(describeUsersError(usersQuery.error))}
           </Text>
         ) : usersQuery.isLoading ? (
-          <Loader size="sm" mt="md" />
+          <ConsoleLoading py="xl" />
         ) : empty ? (
           search ? (
             <Text size="sm" c="dimmed" mt="md">

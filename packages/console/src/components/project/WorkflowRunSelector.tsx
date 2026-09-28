@@ -9,7 +9,7 @@ import {
   SegmentedControl,
   ActionIcon,
   Box,
-  Loader,
+  Loader
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { ChevronDown, X } from 'lucide-react'
@@ -17,6 +17,7 @@ import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
 import { useWorkflowRunContext } from '../../context/WorkflowRunContext'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { statusDefs } from '../ui/badge-defs'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 const formatTime = (dateStr: string) => {
   const date = new Date(dateStr)
@@ -144,9 +145,7 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
 
           <ScrollArea.Autosize mah={300}>
             {runsLoading ? (
-              <Box p="md" ta="center">
-                <Loader size="sm" />
-              </Box>
+              <ConsoleLoading py="md" />
             ) : filteredRuns.length === 0 ? (
               <Text size="sm" c="dimmed" ta="center" py="md">
                 {asI18n('No runs found')}

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { Stack, Group, Text, Box, Button, Loader } from '@pikku/mantine/core'
+import { Stack, Group, Text, Box, Button } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -66,6 +66,7 @@ import { DbColumnPanel } from '../project/panels/DbColumnPanel'
 import { EmailPreviewPanel } from '../project/panels/EmailPreviewPanel'
 import { ScenarioDocument } from '../scenarios/ScenarioDocument'
 import { ScenarioStepPanel } from '../scenarios/ScenarioStepPanel'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 interface PanelChild {
   id: string
@@ -161,7 +162,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   return (
     <Stack gap="md" data-testid="workflow-new-run-form">
       {isLoading ? (
-        <Loader size="sm" />
+        <ConsoleLoading py="xl" />
       ) : effectiveSchema ? (
         <SchemaForm
           schema={effectiveSchema}

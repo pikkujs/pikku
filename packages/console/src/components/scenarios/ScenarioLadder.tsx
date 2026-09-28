@@ -17,6 +17,8 @@ type ScenarioLadderProps = {
     stepType: string,
     metadata: Record<string, unknown>
   ) => void
+  onSeekStep?: (stepId: string) => void
+  activeStepId?: string
 }
 
 export const ScenarioLadder: React.FC<ScenarioLadderProps> = ({
@@ -25,6 +27,8 @@ export const ScenarioLadder: React.FC<ScenarioLadderProps> = ({
   recorded,
   onOpenPersona,
   onSelectStep,
+  onSeekStep,
+  activeStepId,
 }) => {
   if (steps.length === 0) {
     return (
@@ -47,6 +51,8 @@ export const ScenarioLadder: React.FC<ScenarioLadderProps> = ({
           marked={Boolean(recorded && recorded.size > 0)}
           onOpenPersona={onOpenPersona}
           onSelectStep={onSelectStep}
+          onSeekStep={onSeekStep}
+          active={step.id === activeStepId}
         />
       ))}
     </Stack>

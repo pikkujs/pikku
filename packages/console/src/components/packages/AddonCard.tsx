@@ -1,22 +1,37 @@
-import React, { useState } from 'react'
-import { Card, Group, Text, Badge, ThemeIcon, Stack } from '@pikku/mantine/core'
-import { asI18n } from '@pikku/react'
+import React from 'react'
+import {
+  ActionIcon,
+  Box,
+  Stack,
+  Text,
+  ThemeIcon,
+  VisuallyHidden,
+} from '@pikku/mantine/core'
+import { asI18n, type I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Check, ShieldCheck, FunctionSquare, Bot, Globe } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { plainSummary, type PackageMeta } from './packageMeta'
 import {
   getCategoryMeta,
   addonPrimaryCategory,
   isOfficialAddon,
 } from './addonCategoryMeta'
-import { AddonStatChip } from './AddonStatChip'
+import { addonJob } from './addonJobs'
+import { CardRow } from '../ui/CardRow'
+import { StatusBadge, type StatusTone } from '../ui/StatusBadge'
+
+export interface AddonCardStatus {
+  tone: StatusTone
+  label: I18nNode
+  next?: I18nNode
+}
 
 interface AddonCardProps {
   addon: PackageMeta
   installed: boolean
-  /** 'api' swaps the badge verb to Imported and the stat row to an operation count. */
   kind?: 'addon' | 'api'
+  status?: AddonCardStatus
   onOpen: (addon: PackageMeta) => void
 }
 
@@ -24,167 +39,100 @@ export const AddonCard: React.FC<AddonCardProps> = ({
   addon,
   installed,
   kind = 'addon',
+  status,
   onOpen,
 }) => {
   useLocale()
-  const [hovered, setHovered] = useState(false)
   const isApi = kind === 'api'
-  const category = addonPrimaryCategory(addon)
-  const { icon: CategoryIcon, color } = getCategoryMeta(category)
+  const { icon: CategoryIcon, color } = getCategoryMeta(
+    addonPrimaryCategory(addon)
+  )
   const official = !isApi && isOfficialAddon(addon.name)
-  const functionCount = Object.keys(addon.functions ?? {}).length
-  const agentCount = Object.keys(addon.agents ?? {}).length
   const iconSrc = addon.icon
     ? addon.icon.startsWith('<')
       ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(addon.icon)}`
       : addon.icon
     : null
+  const name = addon.displayName || addon.name
+  const job = isApi ? undefined : addonJob(addon.name)
+  const summary =
+    !job && addon.description ? plainSummary(addon.description) : ''
+  const badge: AddonCardStatus | undefined =
+    status ??
+    (installed
+      ? {
+          tone: 'good',
+          label: isApi ? m.packages_imported() : m.integrations_status_added(),
+        }
+      : undefined)
 
   return (
-    <Card
-      withBorder
-      radius="md"
-      padding={0}
+    <Box
       data-testid="addon-card"
       data-addon-package={addon.name}
       data-addon-installed={installed || undefined}
-      onClick={() => onOpen(addon)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        cursor: 'pointer',
-        display: 'flex',
-        flexDirection: 'column',
-        transform: hovered ? 'translateY(-2px)' : 'none',
-        boxShadow: hovered ? 'var(--mantine-shadow-md)' : undefined,
-        borderColor: hovered
-          ? 'var(--mantine-color-default-border)'
-          : undefined,
-        transition: 'transform 140ms ease, box-shadow 140ms ease',
-      }}
     >
-      <Stack gap="sm" p="md" style={{ flex: 1 }}>
-        <Group gap="sm" wrap="nowrap" align="flex-start">
-          {iconSrc ? (
-            <img
-              src={iconSrc}
-              width={44}
-              height={44}
-              alt={addon.displayName}
-              style={{
-                objectFit: 'contain',
-                borderRadius: 10,
-                display: 'block',
-              }}
-            />
-          ) : (
-            <ThemeIcon size={44} radius="md" variant="light" color={color}>
-              <CategoryIcon size={22} />
+      <CardRow
+        onClick={() => onOpen(addon)}
+        leading={
+          iconSrc ? (
+            <ThemeIcon size={36} radius="md" variant="default">
+              <img
+                src={iconSrc}
+                width={24}
+                height={24}
+                alt=""
+                style={{ objectFit: 'contain', display: 'block' }}
+              />
             </ThemeIcon>
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Text fw={600} size="sm" truncate>
-              {asI18n(addon.displayName || addon.name)}
-            </Text>
-            <Text size="xs" c="dimmed" ff="monospace" truncate>
-              {asI18n(addon.name)}
-            </Text>
-          </div>
-          {isApi ? (
-            addon.author && (
-              <Badge
-                size="sm"
-                variant="light"
-                color="gray"
-                tt="none"
-                style={{ flexShrink: 0 }}
-              >
-                {asI18n(addon.author)}
-              </Badge>
-            )
-          ) : official ? (
-            <Badge
-              size="sm"
-              variant="light"
-              color="blue"
-              leftSection={<ShieldCheck size={11} />}
-              style={{ flexShrink: 0 }}
-            >
-              {m.packages_official()}
-            </Badge>
           ) : (
-            <Badge
-              size="sm"
-              variant="light"
-              color="gray"
-              style={{ flexShrink: 0 }}
-            >
-              {m.packages_community()}
-            </Badge>
-          )}
-        </Group>
-
-        {addon.description && (
-          <Text
-            size="sm"
-            c="dimmed"
-            lineClamp={2}
-            style={{ minHeight: '2.6em' }}
+            <ThemeIcon size={36} radius="md" variant="light" color={color}>
+              <CategoryIcon size={18} />
+            </ThemeIcon>
+          )
+        }
+        title={job ?? asI18n(name)}
+        badges={
+          badge && (
+            <StatusBadge tone={badge.tone} size="sm">
+              {badge.label}
+            </StatusBadge>
+          )
+        }
+        meta={
+          <Stack gap={2}>
+            {badge?.next ? (
+              <Text fz={13.5} c="dimmed">
+                {badge.next}
+              </Text>
+            ) : (
+              summary && (
+                <Text fz={13.5} c="dimmed" lineClamp={2}>
+                  {asI18n(summary)}
+                </Text>
+              )
+            )}
+            {(official || (isApi && addon.author)) && (
+              <Text fz={12} c="dimmed" truncate>
+                {official
+                  ? m.integrations_made_by_fabric()
+                  : m.integrations_made_by({ author: addon.author })}
+              </Text>
+            )}
+            <VisuallyHidden>{asI18n(addon.name)}</VisuallyHidden>
+          </Stack>
+        }
+        trailing={
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            aria-label={m.integrations_open({ name })}
+            onClick={() => onOpen(addon)}
           >
-            {asI18n(plainSummary(addon.description))}
-          </Text>
-        )}
-
-        {(addon.tags ?? []).length > 0 && (
-          <Group gap={6}>
-            {addon.tags.slice(0, 3).map((tag) => (
-              <Badge
-                key={tag}
-                size="sm"
-                variant="light"
-                color="gray"
-                tt="none"
-                ff="monospace"
-                fw={400}
-              >
-                {asI18n(tag)}
-              </Badge>
-            ))}
-          </Group>
-        )}
-      </Stack>
-
-      <Group
-        justify="space-between"
-        wrap="nowrap"
-        px="md"
-        py="sm"
-        style={{
-          borderTop: '1px solid var(--mantine-color-default-border)',
-          background: 'var(--mantine-color-default-hover)',
-        }}
-      >
-        <Group gap="lg" wrap="nowrap">
-          {isApi ? (
-            <AddonStatChip icon={Globe} value={addon.totalOperations ?? 0} />
-          ) : (
-            <>
-              <AddonStatChip icon={FunctionSquare} value={functionCount} />
-              <AddonStatChip icon={Bot} value={agentCount} />
-            </>
-          )}
-        </Group>
-        {installed && (
-          <Badge
-            size="sm"
-            variant="light"
-            color="green"
-            leftSection={<Check size={11} />}
-          >
-            {isApi ? m.packages_imported() : m.packages_added()}
-          </Badge>
-        )}
-      </Group>
-    </Card>
+            <ChevronRight size={16} />
+          </ActionIcon>
+        }
+      />
+    </Box>
   )
 }

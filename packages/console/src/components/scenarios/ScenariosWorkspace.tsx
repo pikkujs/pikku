@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { Box, Center, Stack, Text } from '@pikku/mantine/core'
-import { asI18n } from '@pikku/react'
+import { Center, Stack, Text } from '@pikku/mantine/core'
+import { asI18n, type I18nString } from '@pikku/react'
+import { CircleSlash } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { ListPageHeader } from '../layout/PageLayout'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
 import { FeatureNavigator } from './FeatureNavigator'
-import { FeatureDocument } from './FeatureDocument'
+import { ScenarioFeatureCard } from './ScenarioFeatureCard'
 import { WorkflowProvider } from '../../context/WorkflowContext'
 import { usePanelContext } from '../../context/PanelContext'
 import type { ShellHeaderFilter } from '../ui/shellHeaderShared'
@@ -19,8 +20,14 @@ import {
   type ScenarioLens,
 } from '../../hooks/useScenarioLens'
 import { usePageOptionsDismiss } from '../../context/PageOptionsProvider'
-import { ScenarioRunBand } from './runs/ScenarioRunBand'
-import { runRelativeTime, runVersionLabel } from './runs/scenario-run-format'
+import { ScenarioRunVerdict } from './runs/ScenarioRunVerdict'
+import { runAgo } from './runs/scenario-run-format'
+import { useLocale } from '@/i18n/config'
+import { CardsPage } from '../ui/CardsPage'
+import { SectionCard } from '../ui/SectionCard'
+import { CardRow } from '../ui/CardRow'
+import { StatusTile } from '../ui/StatusTile'
+import type { ScenarioRunSummary } from '@pikku/core/scenario'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface ScenariosWorkspaceProps {
@@ -29,6 +36,17 @@ export interface ScenariosWorkspaceProps {
   browse?: ScenariosBrowse
   /** Run-lens state owned by the host, so its feature rail marks the same run. */
   runLens?: ScenarioLens
+}
+
+const runOptionLabel = (
+  summary: ScenarioRunSummary,
+  locale: string
+): I18nString => {
+  const when = runAgo(summary.startedAt, locale)
+  if (summary.status === 'running') return m.scenarios_run_option_running({ when })
+  if (summary.failed > 0)
+    return m.scenarios_run_option_failed({ when, count: summary.failed })
+  return m.scenarios_run_option_passed({ when, count: summary.passed })
 }
 
 const revealScenario = (name: string) => {
@@ -52,6 +70,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
   browse: hostBrowse,
   runLens: hostLens,
 }) => {
+  const { locale } = useLocale()
   const { personas } = useScenarioPersonaEntries()
   const [stepWorkflow, setStepWorkflow] = useState<unknown>()
   const { openWorkflowStep, openPersona } = usePanelContext()
@@ -108,15 +127,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
       { value: AS_WRITTEN, label: m.scenarios_run_as_written() },
       ...runList.map((summary) => ({
         value: summary.runId,
-        label: asI18n(
-          [
-            `${summary.environment} · ${summary.surface}`,
-            runRelativeTime(summary.startedAt),
-            runVersionLabel(summary.version),
-          ]
-            .filter(Boolean)
-            .join(' · ')
-        ),
+        label: runOptionLabel(summary, locale),
       })),
     ],
   })
@@ -182,6 +193,7 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
         }
         emptyPanelMessage={m.scenarios_select_step()}
         hidePanel={loading}
+        surface="cards"
       >
         {loading ? (
           <ConsoleLoading />
@@ -192,40 +204,32 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
             </Text>
           </Center>
         ) : (
-          <Stack gap="lg">
+          <CardsPage>
             {run && lens && (
-              <Box
-                px={32}
-                pt={24}
-                pb={12}
-                style={{
-                  maxWidth: 1120,
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 1,
-                  background: 'var(--mantine-color-body)',
+              <ScenarioRunVerdict
+                run={run}
+                declared={declared}
+                onOpenScenario={revealScenario}
+                onShowFailed={() => {
+                  const first = run.results.find(
+                    (result) => result.status === 'failed'
+                  )
+                  if (first) revealScenario(first.scenarioName ?? first.name)
                 }}
-              >
-                <ScenarioRunBand
-                  run={run}
-                  declared={declared}
-                  onOpenScenario={revealScenario}
-                  onDelete={() =>
-                    remove.mutate(run.runId, {
-                      onSuccess: () => setRunId(AS_WRITTEN),
-                    })
-                  }
-                  deleting={remove.isPending}
-                />
-              </Box>
+                onDelete={() =>
+                  remove.mutate(run.runId, {
+                    onSuccess: () => setRunId(AS_WRITTEN),
+                  })
+                }
+                deleting={remove.isPending}
+              />
             )}
-            {showing.map((feature, index) => (
-              <FeatureDocument
+            {showing.map((feature) => (
+              <ScenarioFeatureCard
                 key={feature.id}
                 feature={feature}
                 lens={lens}
-                inSuite={!selected}
-                topPad={!run && index === 0}
+                expanded={Boolean(selected) && !run}
                 onOpenPersona={showPersona}
                 onSelectStep={(workflow, stepId, stepType, metadata) => {
                   setStepWorkflow(workflow)
@@ -237,7 +241,29 @@ export const ScenariosWorkspace: React.FC<ScenariosWorkspaceProps> = ({
                 }}
               />
             ))}
-          </Stack>
+            {run && run.skipped.length > 0 && (
+              <SectionCard
+                title={m.scenarios_skipped_title()}
+                blurb={m.scenarios_skipped_blurb()}
+                testId="scenario-run-skipped"
+              >
+                <Stack gap="xs" mt="md">
+                  {run.skipped.map((skip) => (
+                    <CardRow
+                      key={skip.name}
+                      leading={
+                        <StatusTile tone="neutral">
+                          <CircleSlash size={18} />
+                        </StatusTile>
+                      }
+                      title={asI18n(skip.name)}
+                      meta={asI18n(skip.reason)}
+                    />
+                  ))}
+                </Stack>
+              </SectionCard>
+            )}
+          </CardsPage>
         )}
       </ResizablePanelLayout>
     </WorkflowProvider>

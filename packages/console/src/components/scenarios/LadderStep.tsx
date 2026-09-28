@@ -47,6 +47,8 @@ type LadderStepProps = {
     stepType: string,
     metadata: Record<string, unknown>
   ) => void
+  onSeekStep?: (stepId: string) => void
+  active?: boolean
 }
 
 export const LadderStep: React.FC<LadderStepProps> = ({
@@ -58,6 +60,8 @@ export const LadderStep: React.FC<LadderStepProps> = ({
   marked,
   onOpenPersona,
   onSelectStep,
+  onSeekStep,
+  active,
 }) => {
   const label = PHASE_LABEL[step.phase]?.()
   const carried = continuation && continuesActor === true
@@ -67,6 +71,19 @@ export const LadderStep: React.FC<LadderStepProps> = ({
     ? (STEP_ICON[recorded.status as keyof typeof STEP_ICON] ??
       STEP_ICON.skipped)
     : STEP_PENDING
+  const openDetails = () =>
+    onSelectStep?.(
+      step.id,
+      step.repeat ? 'fanout' : 'scenarioStep',
+      step.repeat
+        ? { stepName: step.id }
+        : {
+            stepName: step.sentence,
+            phase: step.phase,
+            actor,
+            actorName,
+          }
+    )
 
   return (
     <Group
@@ -74,20 +91,9 @@ export const LadderStep: React.FC<LadderStepProps> = ({
       align="flex-start"
       wrap="nowrap"
       data-testid={`ladder-step-${step.id}`}
-      onClick={() =>
-        onSelectStep?.(
-          step.id,
-          step.repeat ? 'fanout' : 'scenarioStep',
-          step.repeat
-            ? { stepName: step.id }
-            : {
-                stepName: step.sentence,
-                phase: step.phase,
-                actor,
-                actorName,
-              }
-        )
-      }
+      data-active={active || undefined}
+      onClick={() => (onSeekStep ? onSeekStep(step.id) : openDetails())}
+      onDoubleClick={onSeekStep ? openDetails : undefined}
       className={classes.ladderStep}
       style={{ paddingLeft: 8 + step.depth * 24 }}
     >
@@ -108,7 +114,7 @@ export const LadderStep: React.FC<LadderStepProps> = ({
           />
         </Box>
       )}
-      <Box style={{ width: 52, flexShrink: 0, textAlign: 'right' }}>
+      <Box w={{ base: 44, sm: 52 }} style={{ flexShrink: 0, textAlign: 'right' }}>
         {label && !step.repeat && (
           <Text size="sm" fw={600} c="dimmed" style={{ lineHeight: 1.6 }}>
             {continuation ? m.scenarios_phase_and() : asI18n(label)}
@@ -116,7 +122,12 @@ export const LadderStep: React.FC<LadderStepProps> = ({
         )}
       </Box>
       {step.repeat ? (
-        <Text size="sm" c="dimmed" fs="italic" style={{ lineHeight: 1.6 }}>
+        <Text
+          size="sm"
+          c="dimmed"
+          fs="italic"
+          style={{ lineHeight: 1.6, flex: 1, minWidth: 0 }}
+        >
           <span className={classes.ladderSentence}>
             {m.scenarios_repeat({
               item: step.repeat.itemVar,
@@ -125,7 +136,7 @@ export const LadderStep: React.FC<LadderStepProps> = ({
           </span>
         </Text>
       ) : (
-        <Text size="sm" style={{ lineHeight: 1.6 }}>
+        <Text size="sm" style={{ lineHeight: 1.6, flex: 1, minWidth: 0 }}>
           {subject ? (
             <Anchor
               component="span"

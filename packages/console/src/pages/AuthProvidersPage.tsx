@@ -1,8 +1,6 @@
 import React, { useState } from 'react'
-import { TextInput } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Search } from 'lucide-react'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -21,26 +19,21 @@ export const AuthProvidersPage: React.FC = () => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        flushBody
         header={
           <ListPageHeader
-            title={m.auth_providers_title()}
-            description={m.auth_providers_description()}
-            docsHref="https://www.better-auth.com/docs/concepts/oauth"
-            filters={
-              <TextInput
-                data-testid="page-search"
-                placeholder={m.auth_providers_search_placeholder()}
-                leftSection={<Search size={14} />}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                size="xs"
-                style={{ width: 240 }}
-              />
-            }
+            title={m.authproviders_title()}
+            description={m.authproviders_page_description()}
+            docsHref="https://better-auth.com/docs/concepts/oauth"
+            search={{
+              placeholder: m.authproviders_search_placeholder(),
+              value: searchQuery,
+              onChange: setSearchQuery,
+              width: 240,
+            }}
           />
         }
         emptyPanelMessage={m.auth_providers_select_provider()}
+        surface="cards"
       >
         <AuthProvidersListPanel externalSearch={searchQuery} />
       </ResizablePanelLayout>

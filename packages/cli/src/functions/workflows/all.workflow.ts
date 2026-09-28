@@ -316,6 +316,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Flags', 'pikkuFlags', {}),
       workflow.do('Personas', 'pikkuPersonas', {}),
       workflow.do('Variables', 'pikkuVariables', null),
+      workflow.do('Webhook definitions', 'pikkuWebhookDefinitions', null),
       workflow.do('Addon types', 'pikkuAddonTypes', null),
     ])
 

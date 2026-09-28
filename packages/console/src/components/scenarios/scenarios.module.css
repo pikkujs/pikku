@@ -20,6 +20,14 @@
     text-decoration-color 100ms;
 }
 
+.ladderStep[data-active] {
+  background: var(--mantine-primary-color-light);
+}
+
+.ladderStep[data-active] .ladderSentence {
+  color: var(--mantine-primary-color-light-color);
+}
+
 .ladderStep:hover:not(:has(.ladderActor:hover)) .ladderSentence {
   color: var(--mantine-primary-color-filled);
 }

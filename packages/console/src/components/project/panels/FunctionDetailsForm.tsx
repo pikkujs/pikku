@@ -4,15 +4,14 @@ import {
   Text,
   Box,
   Group,
-  Loader,
-  Center,
   Button,
-  ThemeIcon,
+  ThemeIcon
 } from '@pikku/mantine/core'
 import { asI18n, type I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { CodeHighlight } from '@mantine/code-highlight'
+import '../../ui/code-highlight-styles'
 import {
   Bot,
   Clock,
@@ -30,6 +29,7 @@ import {
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
 import { SchemaViewer } from '../../ui/SchemaViewer'
 import { CardRow } from '../../ui/CardRow'
+import { DevField, DevFields, devSourcePath } from '../../ui/DevDetail'
 import { ForDevelopers } from '../../ui/ForDevelopers'
 import { StatusBadge } from '../../ui/StatusBadge'
 import {
@@ -49,6 +49,7 @@ import {
 import type { FunctionTestData } from '../../functions/FunctionsListPanel'
 import { CommonDetails } from './shared/CommonDetails'
 import { FunctionEditor } from './FunctionEditor'
+import { ConsoleLoading } from '../../ui/ConsoleLoading'
 
 const PanelHeading: React.FC<{ children: I18nNode }> = ({ children }) => (
   <Text size="sm" fw={600}>
@@ -123,7 +124,7 @@ const SchemaBlock: React.FC<{
           {empty}
         </Text>
       ) : isLoading ? (
-        <Loader size="sm" />
+        <ConsoleLoading py="md" />
       ) : (
         <SchemaViewer schema={schema} />
       )}
@@ -142,9 +143,7 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
 
   if (isLoading && !passedMetadata) {
     return (
-      <Center py="xl">
-        <Loader size="sm" />
-      </Center>
+      <ConsoleLoading py="xl" />
     )
   }
 
@@ -245,15 +244,24 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
 
       <ForDevelopers
         label={m.functions_panel_dev_label()}
-        hint={asI18n(meta.funcWrapper ?? '')}
         testId="function-dev"
       >
-        <Stack gap="sm" mt="sm">
-          {meta.sourceFile && (
-            <Text size="xs" ff="monospace" c="dimmed" style={{ wordBreak: 'break-all' }}>
-              {asI18n(meta.sourceFile)}
-            </Text>
-          )}
+        <Stack gap="md">
+          <DevFields>
+            <DevField label={m.dev_function()} value={functionName} />
+            {meta.exportedName && meta.exportedName !== functionName && (
+              <DevField label={m.dev_export()} value={meta.exportedName} />
+            )}
+            {meta.sourceFile && (
+              <DevField
+                label={m.dev_source()}
+                value={devSourcePath(meta.sourceFile)}
+              />
+            )}
+            {meta.funcWrapper && (
+              <DevField label={m.dev_wrapper()} value={meta.funcWrapper} />
+            )}
+          </DevFields>
           <CommonDetails
             services={meta.services?.services || []}
             wires={meta.wires}
@@ -372,9 +380,7 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
 
   if (isLoading) {
     return (
-      <Center py="xl">
-        <Loader size="sm" />
-      </Center>
+      <ConsoleLoading py="xl" />
     )
   }
 
@@ -413,9 +419,7 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
 
   if (isLoading) {
     return (
-      <Center py="xl">
-        <Loader size="sm" />
-      </Center>
+      <ConsoleLoading py="xl" />
     )
   }
 

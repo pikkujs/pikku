@@ -2,7 +2,6 @@ import React from 'react'
 import { useLink } from '../router'
 import {
   Button,
-  Code,
   Group,
   Paper,
   SimpleGrid,
@@ -34,6 +33,7 @@ import { CardsPage } from '../components/ui/CardsPage'
 import { PageIntro } from '../components/ui/PageIntro'
 import { SectionCard } from '../components/ui/SectionCard'
 import { ForDevelopers } from '../components/ui/ForDevelopers'
+import { DevField, DevFields, DevNote } from '../components/ui/DevDetail'
 
 interface BuildingBlock {
   label: I18nString
@@ -232,8 +232,11 @@ export const OverviewPage: React.FC = () => {
           hint={m.overview_dev_hint()}
           testId="overview-dev"
         >
-          <Text size="sm">{m.overview_dev_body()}</Text>
-          <Code block>console:getAllMeta</Code>
+          <DevNote>{m.overview_dev_body()}</DevNote>
+          <DevFields>
+            <DevField label={m.dev_rpc()} value="console:getAllMeta" />
+            <DevField label={m.dev_source()} value=".pikku/" />
+          </DevFields>
         </ForDevelopers>
       </CardsPage>
     </PageContainer>

@@ -1,78 +1,43 @@
 import React from 'react'
-import { Box, Group, ScrollArea, Stack, Text } from '@pikku/mantine/core'
-import { asI18n } from '@pikku/react'
+import {
+  Group,
+  Paper,
+  ScrollArea,
+  Stack,
+  Text,
+  UnstyledButton,
+} from '@pikku/mantine/core'
+import { asI18n, type I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
-import { SCENARIO_STATUS_COLOUR } from './ScenarioStatusMark'
-import classes from './scenarios.module.css'
 import type { FeatureDoc } from './scenario-doc-model'
 import type { ScenarioFeatureTally, ScenarioRunLens } from './scenario-run-lens'
 
 /** The rail's first row: the whole suite, which is where the screen opens. */
 export const ALL_FEATURES = '__all__'
 
-const SEGMENTS: (keyof ScenarioFeatureTally)[] = [
-  'failed',
-  'running',
-  'passed',
-  'waiting',
-  'never',
-]
-
 const scenarioCount = (count: number) =>
   count === 1
     ? m.scenarios_scenario_count_one()
     : m.scenarios_scenario_count({ count })
 
-/**
- * How many scenarios a bar draws a cell each for.
- *
- * Past this the cells are thinner than the gaps between them at rail width and
- * the bar reads as a dotted line rather than a count, so a larger feature goes
- * back to one segment per outcome — the shape that still says something when
- * there is no room left to count.
- */
-const COUNTABLE = 48
-
-const Segment: React.FC<{
-  status: keyof ScenarioFeatureTally
-  grow: number
-}> = ({ status, grow }) => (
-  <Box
-    className={status === 'running' ? classes.statusPulse : undefined}
-    style={{
-      height: 3,
-      borderRadius: 2,
-      flexGrow: grow,
-      minWidth: 0,
-      background: SCENARIO_STATUS_COLOUR[status],
-    }}
-  />
-)
-
-/**
- * How a feature is doing, at rail width: one cell per scenario, ordered by
- * outcome so what the eye lands on is a single red scenario in a feature of
- * forty. Cells rather than one block per outcome because a bar is also how many
- * — a feature of fifteen passing scenarios and a feature of two both fill their
- * width, and only the number of cells tells them apart.
- */
-const ResultBar: React.FC<{ tally: ScenarioFeatureTally }> = ({ tally }) => {
-  const total = SEGMENTS.reduce((sum, key) => sum + tally[key], 0)
-  if (total === 0) return null
-  const cells = SEGMENTS.flatMap((key) =>
-    Array.from({ length: tally[key] }, () => key)
-  )
-  return (
-    <Group gap={2} wrap="nowrap" data-testid="feature-result-bar">
-      {total <= COUNTABLE
-        ? cells.map((status, index) => (
-            <Segment key={index} status={status} grow={1} />
-          ))
-        : SEGMENTS.filter((key) => tally[key] > 0).map((key) => (
-            <Segment key={key} status={key} grow={tally[key]} />
-          ))}
-    </Group>
-  )
+const outcome = (
+  tally: ScenarioFeatureTally
+): { colour: string; label: I18nNode } | undefined => {
+  if (tally.failed > 0)
+    return { colour: 'red', label: m.scenarios_feature_failed({ count: tally.failed }) }
+  if (tally.running > 0 || tally.waiting > 0)
+    return { colour: 'blue', label: m.scenarios_status_running() }
+  if (tally.passed > 0 && tally.never === 0)
+    return { colour: 'green', label: m.scenarios_feature_passed() }
+  if (tally.passed > 0)
+    return {
+      colour: 'dimmed',
+      label: m.scenarios_feature_partly_run({
+        done: tally.passed,
+        total: tally.passed + tally.never,
+      }),
+    }
+  return undefined
 }
 
 type FeatureNavigatorProps = {
@@ -91,9 +56,9 @@ export const FeatureNavigator: React.FC<FeatureNavigatorProps> = ({
 }) => {
   const rows: {
     id: string
-    name: string
+    name: I18nNode
     count: number
-    bar?: ScenarioFeatureTally
+    tally?: ScenarioFeatureTally
   }[] = [
     {
       id: ALL_FEATURES,
@@ -102,7 +67,7 @@ export const FeatureNavigator: React.FC<FeatureNavigatorProps> = ({
         (sum, feature) => sum + feature.scenarios.length,
         0
       ),
-      bar: lens
+      tally: lens
         ? features
             .map((feature) => lens.tally(feature))
             .reduce(
@@ -119,49 +84,50 @@ export const FeatureNavigator: React.FC<FeatureNavigatorProps> = ({
     },
     ...features.map((feature) => ({
       id: feature.id,
-      name: feature.name,
+      name: asI18n(feature.name),
       count: feature.scenarios.length,
-      bar: lens ? lens.tally(feature) : undefined,
+      tally: lens ? lens.tally(feature) : undefined,
     })),
   ]
 
   return (
-    <ScrollArea style={{ height: '100%' }} data-testid="feature-navigator">
-      <Stack gap={2} p="xs">
+    <ScrollArea h="100%" data-testid="feature-navigator">
+      <Stack gap={8} p="md">
         {features.length === 0 && (
-          <Text size="sm" c="dimmed" p="sm">
+          <Text size="sm" c="dimmed">
             {m.scenarios_no_features()}
           </Text>
         )}
         {features.length > 0 &&
           rows.map((row) => {
             const selected = row.id === selectedId
+            const result = row.tally ? outcome(row.tally) : undefined
             return (
-              <Box
+              <UnstyledButton
                 key={row.id}
+                w="100%"
+                data-selected={selected || undefined}
                 data-testid={`feature-nav-${row.id}`}
                 onClick={() => onSelect(row.id)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  background: selected
-                    ? 'var(--mantine-color-default-hover)'
-                    : 'transparent',
-                }}
               >
-                <Text size="sm" fw={selected ? 600 : 500} lineClamp={1}>
-                  {asI18n(row.name)}
-                </Text>
-                <Text size="xs" c="dimmed" ff="monospace">
-                  {scenarioCount(row.count)}
-                </Text>
-                {row.bar && (
-                  <Box pt={6}>
-                    <ResultBar tally={row.bar} />
-                  </Box>
-                )}
-              </Box>
+                <Paper variant={selected ? 'accent' : 'inset'} radius="lg" p={14}>
+                  <Stack gap={4}>
+                    <Text fw={600} lineClamp={2}>
+                      {row.name}
+                    </Text>
+                    <Group gap={6} wrap="nowrap">
+                      <Text size="xs" c="dimmed">
+                        {scenarioCount(row.count)}
+                      </Text>
+                      {result && (
+                        <Text size="xs" c={result.colour}>
+                          {result.label}
+                        </Text>
+                      )}
+                    </Group>
+                  </Stack>
+                </Paper>
+              </UnstyledButton>
             )
           })}
       </Stack>

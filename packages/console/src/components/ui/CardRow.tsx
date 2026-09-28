@@ -41,7 +41,7 @@ export const CardRow: React.FC<{
         style={{ flex: middle ? 'none' : 1 }}
       >
         <Group gap={8} wrap="wrap">
-          <Text fw={600} fz={15} truncate>
+          <Text fw={600} fz={15} lineClamp={2}>
             {title}
           </Text>
           {badges}

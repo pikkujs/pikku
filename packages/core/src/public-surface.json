@@ -364,6 +364,9 @@
     "defineVariable",
     "validateAndBuildVariableDefinitionsMeta"
   ],
+  "./webhook": [
+    "defineWebhook"
+  ],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",

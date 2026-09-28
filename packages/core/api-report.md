@@ -5,9 +5,9 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3061 observable things**: 994 exported names, plus
-2067 members on the classes and interfaces among them, reachable
-through 55 entry points.
+**3080 observable things**: 1002 exported names, plus
+2078 members on the classes and interfaces among them, reachable
+through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
 subsystem rather than shared machinery — which tends to mean a newer one.
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 160 | 128 | 436 |
 | `./virtual-user` | 66 | 66 | 212 |
-| `./scenario` | 49 | 49 | 152 |
+| `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 50 | 48 | 81 |
 | `./channel` | 32 | 32 | 85 |
@@ -26,8 +26,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./http` | 26 | 26 | 56 |
 | `./errors` | 50 | 50 | 22 |
 | `./analytics` | 26 | 26 | 40 |
+| `./services/local-meta` | 22 | 2 | 41 |
 | `./mcp` | 25 | 25 | 17 |
-| `./services/local-meta` | 22 | 2 | 40 |
 | `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
@@ -54,6 +54,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./role` | 9 | 9 | 0 |
 | `./scheduler` | 7 | 7 | 1 |
 | `./secret` | 8 | 8 | 0 |
+| `./webhook` | 7 | 7 | 1 |
 | `./state` | 9 | 8 | 0 |
 | `./channel/serverless` | 4 | 4 | 3 |
 | `./cli/command-parser` | 3 | 1 | 6 |
@@ -1676,7 +1677,7 @@ export class ScenarioNoWitness extends PikkuError {
 }
 export interface ScenarioResult {
   name: string
-  status: 'passed' | 'failed'
+  status: 'passed' | 'failed' | 'running'
   durationMs: number
   output?: unknown
   error?: string
@@ -1685,6 +1686,9 @@ export interface ScenarioResult {
   scenarioName?: string
   feature?: string
   featureId?: string
+  title?: string
+  description?: string
+  actors?: string[]
   tags?: string[]
   artifacts?: ScenarioArtifact[]
 }
@@ -1693,6 +1697,7 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   status: ScenarioRunStatus
   surface: string
   selection?: ScenarioRunSelection
+  version?: ScenarioRunVersion
   startedAt: string
   finishedAt?: string
 }
@@ -1723,6 +1728,7 @@ export interface ScenarioRunSummary {
   runId: string
   environment: string
   surface: string
+  version?: ScenarioRunVersion
   status: ScenarioRunStatus
   startedAt: string
   finishedAt?: string
@@ -1731,6 +1737,11 @@ export interface ScenarioRunSummary {
   failed: number
   skipped: number
   artifacts: number
+}
+export interface ScenarioRunVersion {
+  commit: string
+  dirty?: boolean
+  attempt: number
 }
 export interface ScenarioScreenshotOptions {
   showcase?: boolean
@@ -4281,6 +4292,42 @@ export type VariableDefinitions = VariableDefinitionMeta[]
 export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
 ```
 
+## ./webhook
+
+```ts
+export type CoreWebhook<
+  Event extends string = string,
+  Payload extends StandardSchemaV1 = StandardSchemaV1,
+> = {
+  event: Event
+  title: string
+  description?: string
+  payload: Payload
+}
+defineWebhook: <const Event extends string, Payload extends StandardSchemaV1>(webhook: CoreWebhook<Event, Payload>) => CoreWebhook<Event, Payload>
+export interface TypedWebhookService<TMap = Record<string, unknown>> extends Omit<WebhookService, 'send'> {
+  send<const T extends SendWebhookInput>(input: Safe<T> & WebhookDataFor<TMap, T>): Promise<SendWebhookResult>
+}
+export type WebhookDataFor<TMap, Input> = Input extends {
+  event: infer Event
+}
+  ? Event extends keyof TMap
+    ? { data: Safe<TMap[Event]> }
+    : unknown
+  : unknown
+export type WebhookDefinitionMeta = {
+  event: string
+  title: string
+  description?: string
+  payload?: Record<string, string>
+  exportedName?: string
+  sourceFile?: string
+}
+export type WebhookDefinitionsMeta = Record<string, WebhookDefinitionMeta>
+export type WebhookPayloadOf<W> =
+  W extends CoreWebhook<string, infer S> ? StandardSchemaV1.InferInput<S> : never
+```
+
 ## ./oauth2
 
 ```ts
@@ -4945,6 +4992,7 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getWebhooksMeta(): Promise<WebhookDefinitionsMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5553,6 +5601,7 @@ export class LocalMetaService implements MetaService {
   async getSecretsMeta(): Promise<SecretDefinitionsMeta>
   async getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   async getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  async getWebhooksMeta(): Promise<WebhookDefinitionsMeta>
   async getEmailMeta(): Promise<EmailsMeta>
   async getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   async getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5594,6 +5643,7 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getWebhooksMeta(): Promise<WebhookDefinitionsMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   getServicesMeta(): Promise<ServicesMetaRecord>

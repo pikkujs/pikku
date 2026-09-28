@@ -222,7 +222,19 @@ export { StatusBadge, STATUS_TONE_COLOR } from './components/ui/StatusBadge'
 export type { StatusTone } from './components/ui/StatusBadge'
 export { StatTile } from './components/ui/StatTile'
 export { CardRow } from './components/ui/CardRow'
+export { StatusTile } from './components/ui/StatusTile'
 export { ForDevelopers } from './components/ui/ForDevelopers'
+export {
+  DevCode,
+  DevCopy,
+  DevField,
+  DevFields,
+  DevLinks,
+  DevMono,
+  DevNote,
+  DevTable,
+  devSourcePath,
+} from './components/ui/DevDetail'
 // A long document as one card of collapsed sections, and the band above it.
 // Shared rather than local because the plan document is not the only screen
 // shaped that way, and a host embedding it needs the same two pieces to put its

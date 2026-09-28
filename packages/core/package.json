@@ -68,6 +68,7 @@
     "./persona": "./dist/wirings/persona/index.js",
     "./secret": "./dist/wirings/secret/index.js",
     "./variable": "./dist/wirings/variable/index.js",
+    "./webhook": "./dist/wirings/webhook/index.js",
     "./oauth2": "./dist/wirings/oauth2/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",

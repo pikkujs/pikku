@@ -159,3 +159,44 @@ export const ladderOffset = (
   }
   return undefined
 }
+
+export const stepVideoOffset = (
+  declared: ScenarioLadderStep[],
+  recorded: Map<string, ScenarioStepRow> | undefined,
+  stepId: string,
+  actor?: string
+): number | undefined => {
+  const offsets = recorded?.get(stepId)?.video
+  if (offsets?.length) {
+    const own = actor
+      ? offsets.find((offset) => offset.actor === actor)
+      : offsets[0]
+    if (own) return own.offsetMs
+  }
+  const later = declared.slice(declared.findIndex((step) => step.id === stepId))
+  for (const step of later) {
+    const next = recorded
+      ?.get(step.id)
+      ?.video?.find((offset) => !actor || offset.actor === actor)
+    if (next) return next.offsetMs
+  }
+  return ladderOffset(declared, recorded, stepId)
+}
+
+export const stepAtVideoTime = (
+  declared: ScenarioLadderStep[],
+  recorded: Map<string, ScenarioStepRow> | undefined,
+  ms: number,
+  actor?: string
+): string | undefined => {
+  let current: string | undefined
+  for (const step of declared) {
+    const offset = recorded
+      ?.get(step.id)
+      ?.video?.find((entry) => !actor || entry.actor === actor)
+    if (!offset) continue
+    if (offset.offsetMs > ms) break
+    current = step.id
+  }
+  return current
+}

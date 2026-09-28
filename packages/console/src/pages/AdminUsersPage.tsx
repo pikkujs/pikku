@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Button, Code, Text, ThemeIcon } from '@pikku/mantine/core'
+import { Button, ThemeIcon } from '@pikku/mantine/core'
 import { RotateCw, UserPlus, Users } from 'lucide-react'
-import { asI18n } from '@pikku/react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { UsersDirectoryPanel } from '../components/users/UsersDirectoryPanel'
 import { CardsPage } from '../components/ui/CardsPage'
 import { SectionCard } from '../components/ui/SectionCard'
 import { ForDevelopers } from '../components/ui/ForDevelopers'
+import { DevCode, DevNote } from '../components/ui/DevDetail'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { useUserAdmin } from '../context/UserAdminContext'
@@ -75,8 +75,12 @@ export const AdminUsersPage: React.FC = () => {
               testId={missing ? 'users-missing' : 'users-load-failed'}
             />
             <ForDevelopers label={m.users_dev_label()} testId="users-dev">
-              {missing && <Text size="sm">{m.users_missing_dev_body()}</Text>}
-              <Code block>{asI18n(describeUsersError(error))}</Code>
+              {missing && <DevNote>{m.users_missing_dev_body()}</DevNote>}
+              <DevCode
+                label={m.dev_error()}
+                code={describeUsersError(error)}
+                language="plaintext"
+              />
             </ForDevelopers>
           </>
         ) : (

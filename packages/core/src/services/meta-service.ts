@@ -26,6 +26,7 @@ import type {
 import type { SecretDefinitionsMeta } from '../wirings/secret/secret.types.js'
 import type { CredentialDefinitionsMeta } from '../wirings/credential/credential.types.js'
 import type { VariableDefinitionsMeta } from '../wirings/variable/variable.types.js'
+import type { WebhookDefinitionsMeta } from '../wirings/webhook/define-webhook.js'
 import type {
   FunctionMeta,
   FunctionsMeta,
@@ -205,6 +206,7 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getWebhooksMeta(): Promise<WebhookDefinitionsMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(
     templateName: string,
@@ -242,6 +244,7 @@ export class LocalMetaService implements MetaService {
   private secretsMetaCache: SecretDefinitionsMeta | null = null
   private credentialsMetaCache: CredentialDefinitionsMeta | null = null
   private variablesMetaCache: VariableDefinitionsMeta | null = null
+  private webhooksMetaCache: WebhookDefinitionsMeta | null = null
   private middlewareGroupsMetaCache: MiddlewareGroupsMeta | null = null
   private permissionsGroupsMetaCache: PermissionsGroupsMeta | null = null
   private agentsMetaCache: AgentsMeta | null = null
@@ -345,6 +348,7 @@ export class LocalMetaService implements MetaService {
     this.secretsMetaCache = null
     this.credentialsMetaCache = null
     this.variablesMetaCache = null
+    this.webhooksMetaCache = null
     this.middlewareGroupsMetaCache = null
     this.permissionsGroupsMetaCache = null
     this.agentsMetaCache = null
@@ -656,6 +660,14 @@ export class LocalMetaService implements MetaService {
     )
     this.variablesMetaCache = content ? JSON.parse(content) : {}
     return this.variablesMetaCache!
+  }
+
+  async getWebhooksMeta(): Promise<WebhookDefinitionsMeta> {
+    if (this.webhooksMetaCache) return this.webhooksMetaCache
+
+    const content = await this.readFile('webhooks/pikku-webhooks-meta.gen.json')
+    this.webhooksMetaCache = content ? JSON.parse(content) : {}
+    return this.webhooksMetaCache!
   }
 
   async getEmailMeta(): Promise<EmailsMeta> {

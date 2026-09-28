@@ -11,7 +11,9 @@ type ScenarioFootageProps = {
   runId: string
   status: ScenarioLensStatus
   artifacts: ScenarioArtifact[]
-  seekMs?: number
+  seek?: { stepId: string; nonce: number }
+  offsetFor?: (stepId: string, actor?: string) => number | undefined
+  onTime?: (ms: number, actor?: string) => void
 }
 
 const WAITING_LABEL: Partial<Record<ScenarioLensStatus, () => string>> = {
@@ -33,7 +35,9 @@ export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
   runId,
   status,
   artifacts,
-  seekMs,
+  seek,
+  offsetFor,
+  onTime,
 }) => {
   const rail = useRef<HTMLDivElement>(null)
   const [reached, setReached] = useState(false)
@@ -75,7 +79,9 @@ export const ScenarioFootage: React.FC<ScenarioFootageProps> = ({
             <ScenarioRunPlayer
               runId={runId}
               artifact={artifact}
-              seekMs={seekMs}
+              seek={seek}
+              offsetFor={offsetFor}
+              onTime={onTime}
             />
             {recordings.length > 1 && artifact.actor && (
               <Text size="xs" c="dimmed" tt="uppercase" fz={10} lh={1.4}>

@@ -65,7 +65,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
     name: 'Bitbucket',
     callbackId: 'bitbucket',
     description: 'Sign in with Bitbucket OAuth.',
-    setupUrl: 'https://bitbucket.org/account/settings/app-passwords/',
+    setupUrl: 'https://support.atlassian.com/bitbucket-cloud/docs/use-oauth-on-bitbucket-cloud/',
     setupLabel: 'Create OAuth consumer on Bitbucket',
     fields: [
       { key: 'AUTH_BITBUCKET_ID', label: 'Client ID (Key)' },
@@ -90,7 +90,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
     name: 'X / Twitter',
     callbackId: 'twitter',
     description: 'Sign in with X (formerly Twitter).',
-    setupUrl: 'https://developer.twitter.com/en/portal/dashboard',
+    setupUrl: 'https://developer.x.com/en/portal/dashboard',
     setupLabel: 'Create project on Twitter Developer Portal',
     fields: [
       { key: 'AUTH_TWITTER_ID', label: 'Client ID' },
@@ -151,7 +151,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
     callbackId: 'microsoft',
     description: 'Sign in with Microsoft Entra ID (Azure AD).',
     setupUrl:
-      'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+      'https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app',
     setupLabel: 'Register app on Azure Portal',
     fields: [
       { key: 'AUTH_MICROSOFT_ENTRA_ID_ID', label: 'Client ID' },
@@ -164,7 +164,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
     name: 'Notion',
     callbackId: 'notion',
     description: 'Sign in with Notion.',
-    setupUrl: 'https://www.notion.so/my-integrations',
+    setupUrl: 'https://app.notion.com/developers/connections',
     setupLabel: 'Create integration on Notion',
     fields: [
       { key: 'AUTH_NOTION_ID', label: 'OAuth Client ID' },
@@ -176,7 +176,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
     name: 'Okta',
     callbackId: 'okta',
     description: 'Sign in with Okta.',
-    setupUrl: 'https://developer.okta.com/',
+    setupUrl: 'https://help.okta.com/en-us/content/topics/apps/apps_app_integration_wizard_oidc.htm',
     setupLabel: 'Create app integration on Okta',
     fields: [
       { key: 'AUTH_OKTA_ID', label: 'Client ID' },
@@ -194,7 +194,7 @@ export const CREDENTIALS_PROVIDER: AuthProviderDef = {
   name: 'Credentials',
   callbackId: 'credentials',
   description: 'Email and password sign-in.',
-  setupUrl: 'https://www.better-auth.com/docs/authentication/email-password',
+  setupUrl: 'https://better-auth.com/docs/authentication/email-password',
   setupLabel: 'Better Auth email & password docs',
   fields: [],
 }

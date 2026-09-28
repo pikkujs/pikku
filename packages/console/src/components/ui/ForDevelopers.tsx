@@ -1,18 +1,21 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Collapse,
+  Group,
   Paper,
   Stack,
+  Switch,
   Text,
   UnstyledButton,
-  Group,
 } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Code2 } from 'lucide-react'
+import { m } from '@/i18n/messages'
+import { useDeveloperDetails } from '../../hooks/useDeveloperDetails'
 
 /** Technical detail an owner does not need, folded away behind one line. */
 export const ForDevelopers: React.FC<{
-  label: I18nNode
+  label?: I18nNode
   children: React.ReactNode
   defaultOpen?: boolean
   icon?: React.ReactNode
@@ -28,35 +31,53 @@ export const ForDevelopers: React.FC<{
   testId,
   detached = false,
 }) => {
-  const [open, setOpen] = useState(defaultOpen)
-  const Icon = open ? ChevronDown : ChevronRight
+  const { shown, setShown } = useDeveloperDetails()
+  const [open, setOpen] = useState(defaultOpen || shown)
+  useEffect(() => {
+    setOpen(defaultOpen || shown)
+  }, [shown, defaultOpen])
+  const Chevron = open ? ChevronDown : ChevronRight
   const body = (
     <Collapse expanded={open}>
-      <Stack gap={detached ? 'md' : 'sm'} pt={detached ? 0 : 'sm'}>
+      <Stack gap="md" pt={detached ? 0 : 'md'}>
         {children}
       </Stack>
     </Collapse>
   )
   const bar = (
-    <Paper variant="inset" px="md" py="sm" data-testid={testId}>
-      <UnstyledButton
-        onClick={() => setOpen((o) => !o)}
-        w="100%"
-        aria-expanded={open}
-        data-testid={testId && `${testId}-toggle`}
-      >
-        <Group gap={6} wrap="nowrap">
-          {icon ?? <Icon size={14} />}
-          <Text size="sm" c="dimmed" fw={500}>
-            {label}
-          </Text>
-          {hint && (
-            <Text size="xs" c="dimmed" ml="auto">
-              {hint}
+    <Paper variant="inset" px="md" py="sm" data-testid={testId} data-dev-block>
+      <Group gap="sm" wrap="nowrap">
+        <UnstyledButton
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          data-testid={testId && `${testId}-toggle`}
+          flex={1}
+          miw={0}
+        >
+          <Group gap={8} wrap="nowrap">
+            <Chevron size={14} />
+            {icon ?? <Code2 size={14} />}
+            <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap' }}>
+              {label ?? m.dev_label()}
             </Text>
-          )}
-        </Group>
-      </UnstyledButton>
+            {hint && (
+              <Text size="xs" c="dimmed" truncate visibleFrom="sm" miw={0}>
+                {hint}
+              </Text>
+            )}
+          </Group>
+        </UnstyledButton>
+        {open && (
+          <Switch
+            size="xs"
+            checked={shown}
+            onChange={(event) => setShown(event.currentTarget.checked)}
+            label={m.dev_always_open()}
+            data-testid={testId && `${testId}-always`}
+            styles={{ label: { whiteSpace: 'nowrap' } }}
+          />
+        )}
+      </Group>
       {!detached && body}
     </Paper>
   )
