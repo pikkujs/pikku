@@ -180,7 +180,7 @@ export function NavDock({
   /* ---------------- fit ---------------- */
 
   const dockRef = useRef<HTMLDivElement>(null)
-  const [condensed, setCondensed] = useState(false)
+  const [keep, setKeep] = useState<number | null>(null)
   const [overflow, setOverflow] = useState(false)
 
   /* Left to itself the dock reserves nothing — it floats over the card gutter
@@ -245,26 +245,34 @@ export function NavDock({
     const over = measure() > (vertical ? el.clientHeight : el.clientWidth) + 1
     // Rather than shrinking tiles past the point where they can be hit, the
     // whole contextual zone collapses into one.
-    if (over && contextual.length) setCondensed(true)
+    if (over && contextual.length) {
+      const tile = el.querySelector<HTMLElement>('button[data-tile]')
+      const step = (vertical ? tile?.offsetHeight : tile?.offsetWidth) || t
+      const excess = measure() - (vertical ? el.clientHeight : el.clientWidth)
+      const drop = Math.max(1, Math.ceil(excess / step))
+      setKeep((k) =>
+        k === 0 ? 0 : Math.max(0, (k ?? contextual.length - 1) - drop)
+      )
+    }
     setOverflow(over)
   }, [contextual.length, vertical, alwaysVisible, reserve, scale])
 
   useLayoutEffect(() => {
     fit()
-  }, [fit, contextual, pinned, utility, condensed, side])
+  }, [fit, contextual, pinned, utility, keep, side])
 
   /* The condense decision is made again from scratch on every move: the budget
      is shared across sides, but the measurement is not — the row is laid out
      along the new axis before it is measured. */
   useEffect(() => {
-    setCondensed(false)
+    setKeep(null)
   }, [side])
 
   useEffect(() => {
     const onResize = () => {
       // Always try the full row again, or a window that grew stays condensed
       // forever.
-      setCondensed(false)
+      setKeep(null)
       fit()
     }
     window.addEventListener('resize', onResize)
@@ -273,8 +281,14 @@ export function NavDock({
 
   /* ---------------- entries ---------------- */
 
-  const shownContextual: DockEntry[] = condensed
+  const kept = contextual.slice(0, keep ?? contextual.length)
+  while (kept.length && isSep(kept[kept.length - 1])) kept.pop()
+  const rest = keep === null ? [] : contextual.slice(keep)
+
+  const shownContextual: DockEntry[] = rest.length
     ? [
+        ...kept,
+        ...(kept.length ? [{ sep: true as const, key: 'sections-sep' }] : []),
         {
           id: 'sections',
           label: labels.sections,
@@ -285,7 +299,7 @@ export function NavDock({
             sections: [
               {
                 key: 'leaves',
-                rows: contextual
+                rows: rest
                   .filter(
                     (e): e is DockTile =>
                       !isSep(e) && !e.isGroup && !!e.onSelect
@@ -298,7 +312,7 @@ export function NavDock({
                     onSelect: t.onSelect!,
                   })),
               },
-              ...contextual
+              ...rest
                 .filter((e): e is DockTile => !isSep(e) && !!e.isGroup)
                 .map((g) => ({
                   key: g.id,

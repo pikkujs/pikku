@@ -3,7 +3,11 @@ import { Box } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Globe } from 'lucide-react'
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useQuery,
+  useInfiniteQuery,
+} from '@tanstack/react-query'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../../context/ConsoleEditableContext'
 import { useOpenapiCategories } from '../../hooks/useOpenapiCategories'
@@ -50,10 +54,16 @@ const apiToPackageMeta = (item: OpenApiEntry): PackageMeta => ({
 
 export const ApisList: React.FC<{
   searchQuery: string
+  onSearchChange: (query: string) => void
   /** Same contract as `AddonsList` — see its `category` / `onCategoryChange`. */
   category?: string
   onCategoryChange?: (category: string) => void
-}> = ({ searchQuery, category: controlledCategory, onCategoryChange }) => {
+}> = ({
+  searchQuery,
+  onSearchChange,
+  category: controlledCategory,
+  onCategoryChange,
+}) => {
   const rpc = usePikkuRPC()
   useLocale()
   const editable = useConsoleEditable()
@@ -88,6 +98,7 @@ export const ApisList: React.FC<{
       }
     },
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000,
     retry: false,
   })
@@ -157,6 +168,7 @@ export const ApisList: React.FC<{
     <CommunityGallery
       addons={apis}
       searchQuery={searchQuery}
+      onSearchChange={onSearchChange}
       categories={categories}
       catalogueTotal={catalogueTotal}
       withRail={withRail}

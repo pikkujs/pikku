@@ -1,5 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { Center, Loader } from '@pikku/mantine/core'
+import { Center } from '@pikku/mantine/core'
+import { consoleLogoInvert, consoleLogoSrc } from '../../lib/branding'
+import classes from './ConsoleLoading.module.css'
 
 /**
  * The mark a console screen shows while it waits.
@@ -25,6 +27,17 @@ export function ConsoleLoaderProvider({
   )
 }
 
+export function ConsoleLoadingMark() {
+  return (
+    <img
+      src={consoleLogoSrc}
+      alt=""
+      role="presentation"
+      className={`${classes.mark} ${consoleLogoInvert ? classes.invert : ''}`}
+    />
+  )
+}
+
 /**
  * A screen's waiting state: the host's mark when there is one, a centred
  * Mantine loader when the console stands alone.
@@ -47,7 +60,7 @@ export function ConsoleLoading({
       py={py}
       style={py ? undefined : { flex: 1, minWidth: 0, minHeight: 0 }}
     >
-      {loader ?? <Loader />}
+      {loader ?? <ConsoleLoadingMark />}
     </Center>
   )
 }

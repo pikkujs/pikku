@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { McpListPanel } from '../components/mcp/McpListPanel'
-import { useMcpItems } from '../hooks/useMcpItems'
+import { McpCards } from '../components/mcp/McpCards'
+import { CardsPage } from '../components/ui/CardsPage'
 
 export type McpPageProps = {
   /** Shown in place of the empty list — fabric hands each wire kind its own. */
@@ -13,23 +13,30 @@ export type McpPageProps = {
 }
 
 export const McpPage: React.FC<McpPageProps> = ({ emptyHero }) => {
-  const { items, loading } = useMcpItems()
+  const [search, setSearch] = useState('')
   useLocale()
 
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        flushBody
         header={
           <ListPageHeader
             title={m.mcp_title()}
-            description={m.mcp_description()}
+            description={m.wires_mcp_description()}
+            docsHref="https://pikku.dev/docs/wiring/mcp"
+            search={{
+              placeholder: m.mcp_search_placeholder(),
+              value: search,
+              onChange: setSearch,
+              width: 240,
+            }}
           />
         }
-        hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={m.mcp_select_entry()}
+        surface="cards"
       >
-        <McpListPanel emptyHero={emptyHero} />
+        <CardsPage>
+          <McpCards searchQuery={search} emptyHero={emptyHero} />
+        </CardsPage>
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

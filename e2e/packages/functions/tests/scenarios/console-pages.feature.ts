@@ -182,13 +182,13 @@ export const webhookDeliveryScenario = pikkuScenario<void, { delivered: true }>(
       await scenario.when(
         'opens the webhooks page',
         'opensConsolePage',
-        { path: WEBHOOKS_PAGE, waitFor: { testId: 'data-table' } },
+        { path: WEBHOOKS_PAGE, waitFor: { testId: 'webhooks-dev' } },
         { actor: actors.admin }
       )
       await scenario.then(
         'sees the delivery',
-        'seesTableRow',
-        { containing: delivery.sinkUrl, andContaining: 'delivered' },
+        'seesTestId',
+        { testId: 'webhooks-row-', prefix: true },
         { actor: actors.admin }
       )
       await scenario.when(
@@ -200,7 +200,7 @@ export const webhookDeliveryScenario = pikkuScenario<void, { delivered: true }>(
       await scenario.then(
         'sees the first attempt',
         'expectsDeliveryAttempt',
-        { attempt: '#1', status: 200 },
+        { attempt: 1, status: 200 },
         { actor: actors.admin }
       )
 

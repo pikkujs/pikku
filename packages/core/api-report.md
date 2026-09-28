@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3110 observable things**: 1027 exported names, plus
-2083 members on the classes and interfaces among them, reachable
+**3119 observable things**: 1028 exported names, plus
+2091 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -16,7 +16,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | --- | ---: | ---: | ---: |
 | `./services` | 163 | 131 | 441 |
 | `./virtual-user` | 66 | 66 | 215 |
-| `./scenario` | 49 | 49 | 152 |
+| `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
@@ -1678,7 +1678,7 @@ export class ScenarioNoWitness extends PikkuError {
 }
 export interface ScenarioResult {
   name: string
-  status: 'passed' | 'failed'
+  status: 'passed' | 'failed' | 'running'
   durationMs: number
   output?: unknown
   error?: string
@@ -1687,6 +1687,9 @@ export interface ScenarioResult {
   scenarioName?: string
   feature?: string
   featureId?: string
+  title?: string
+  description?: string
+  actors?: string[]
   tags?: string[]
   artifacts?: ScenarioArtifact[]
 }
@@ -1695,6 +1698,7 @@ export interface ScenarioRunRecord extends ScenarioRunReport {
   status: ScenarioRunStatus
   surface: string
   selection?: ScenarioRunSelection
+  version?: ScenarioRunVersion
   startedAt: string
   finishedAt?: string
 }
@@ -1725,6 +1729,7 @@ export interface ScenarioRunSummary {
   runId: string
   environment: string
   surface: string
+  version?: ScenarioRunVersion
   status: ScenarioRunStatus
   startedAt: string
   finishedAt?: string
@@ -1733,6 +1738,11 @@ export interface ScenarioRunSummary {
   failed: number
   skipped: number
   artifacts: number
+}
+export interface ScenarioRunVersion {
+  commit: string
+  dirty?: boolean
+  attempt: number
 }
 export interface ScenarioScreenshotOptions {
   showcase?: boolean

@@ -6,10 +6,11 @@ import {
   Group,
   Table,
   Loader,
-  Card,
+  Card
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
+import '../../ui/code-highlight-styles'
 import {
   useWorkflowNode,
   useWorkflowContext,
@@ -21,6 +22,7 @@ import { workflowInputTypeDefs } from '../../ui/badge-defs'
 import { SectionLabel } from '../../ui/SectionLabel'
 import { EmptyState } from './shared/EmptyState'
 import classes from '../../ui/console.module.css'
+import { ConsoleLoading } from '../../ui/ConsoleLoading'
 
 interface WorkflowStepPanelProps {
   stepId: string
@@ -305,7 +307,7 @@ export const WorkflowStepOutput: React.FC<
         <Card withBorder radius="md" padding={0}>
           {schemaLoading ? (
             <Card.Section p="md">
-              <Loader size="sm" />
+              <ConsoleLoading py="md" />
             </Card.Section>
           ) : schema?.properties ? (
             <Card.Section>

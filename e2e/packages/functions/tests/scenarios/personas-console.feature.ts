@@ -128,8 +128,11 @@ export const personaRolesScenario = pikkuScenario<void, { opened: true }>({
     // what a 403 was about, which naming the role alone does not.
     await scenario.then(
       'sees a scope the role grants',
-      'seesText',
-      { text: 'admin:scopes:manage' },
+      'seesTestId',
+      {
+        testId: 'persona-role-console-admin',
+        containing: 'admin:scopes:manage',
+      },
       { actor: actors.admin }
     )
 
@@ -228,7 +231,7 @@ export const personaPersonalityScenario = pikkuScenario<
 >({
   title: 'A persona reads as a person, not a row in a permissions table',
   description:
-    "Each row carries the persona's own personality line, and their disposition where they declare one",
+    "Each row carries the persona's own personality line, and the profile their disposition where they declare one",
   tags: ['scenario', 'console'],
   func: async (_services, _data, { scenario, actors }) => {
     if (!actors?.admin) {
@@ -249,14 +252,35 @@ export const personaPersonalityScenario = pikkuScenario<
     // person from the one that actually runs.
     await scenario.then(
       "sees the shopper's personality",
-      'seesText',
-      { text: 'Impatient shopper who abandons slow checkouts' },
+      'seesTestId',
+      {
+        testId: 'persona-blurb-shopper',
+        containing: 'Impatient shopper who abandons slow checkouts',
+      },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the shopper',
+      'clicksTestId',
+      { testId: 'persona-row-shopper' },
       { actor: actors.admin }
     )
     await scenario.then(
       'sees the disposition they declare',
       'seesTestId',
       { testId: 'persona-disposition-shopper' },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the admin persona',
+      'clicksTestId',
+      { testId: 'persona-row-admin' },
+      { actor: actors.admin }
+    )
+    await scenario.then(
+      'sees the admin profile',
+      'seesTestId',
+      { testId: 'persona-detail-admin' },
       { actor: actors.admin }
     )
     // Admin declares none, so the chip has to be absent rather than defaulted:
@@ -317,14 +341,20 @@ export const platformSubjectScenario = pikkuScenario<void, { shown: true }>({
     // what it can do, the way a person's roles are.
     await scenario.then(
       'sees a step the platform takes',
-      'seesText',
-      { text: 'Ships The Order' },
+      'seesTestId',
+      { testId: 'subject-row-platform', containing: 'Ships The Order' },
+      { actor: actors.admin }
+    )
+    await scenario.when(
+      'opens the platform',
+      'clicksTestId',
+      { testId: 'subject-row-platform' },
       { actor: actors.admin }
     )
     await scenario.then(
       'sees it marked as not a person',
       'seesTestId',
-      { testId: 'subject-not-a-person-platform' },
+      { testId: 'subject-detail-not-a-person-platform' },
       { actor: actors.admin }
     )
     // And the people are gone while it is filtered, so the two are never read

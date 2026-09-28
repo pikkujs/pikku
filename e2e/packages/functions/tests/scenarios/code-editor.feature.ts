@@ -205,7 +205,7 @@ export const codeEditorConsoleScenario = pikkuScenario<
     await scenario.then(
       'sees the function edit button',
       'seesEditButton',
-      { title: 'Edit function' },
+      { name: 'Edit in code' },
       { actor: actors.admin, description: 'sees the function edit button' }
     )
 
@@ -214,7 +214,7 @@ export const codeEditorConsoleScenario = pikkuScenario<
       'opensConsolePage',
       {
         path: '/console/agents',
-        waitFor: { testId: 'entity-card-todoReadAgent' },
+        waitFor: { testId: 'agent-todoReadAgent' },
       },
       { actor: actors.admin, description: 'opens the agents page' }
     )
@@ -227,7 +227,7 @@ export const codeEditorConsoleScenario = pikkuScenario<
     await scenario.then(
       'sees the agent edit button',
       'seesEditButton',
-      { title: 'Edit agent' },
+      { name: 'Edit agent' },
       { actor: actors.admin, description: 'sees the agent edit button' }
     )
 

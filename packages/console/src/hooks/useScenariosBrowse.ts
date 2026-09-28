@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { m } from '@/i18n/messages'
 import { useScenarioDocs } from './useScenarioDocs'
 import { filterFeatures } from '../components/scenarios/scenario-doc-model'
+import { ALL_FEATURES } from '../components/scenarios/FeatureNavigator'
 import type { FeatureDoc } from '../components/scenarios/scenario-doc-model'
 
 export interface ScenariosBrowse {
@@ -13,11 +14,12 @@ export interface ScenariosBrowse {
   setSelectedTags: (tags: string[]) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
-  selectedId: string | undefined
+  selectedId: string
   setSelectedId: (id: string) => void
-  /** The feature the document shows: the picked one, or the first that survives
-   *  the filters — so filtering never leaves the document on a feature the rail
-   *  no longer offers. */
+  /** The feature the document shows, or `undefined` while the whole suite is
+   *  being read — which is where the screen opens. A picked feature that the
+   *  filters remove falls back to the whole suite rather than to some other
+   *  feature the reader never chose. */
   selected: FeatureDoc | undefined
   loading: boolean
 }
@@ -35,7 +37,7 @@ export interface ScenariosBrowse {
 export const useScenariosBrowse = (): ScenariosBrowse => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [selectedId, setSelectedId] = useState<string>()
+  const [selectedId, setSelectedId] = useState<string>(ALL_FEATURES)
 
   const { allFeatures, tags, loading } = useScenarioDocs(
     m.scenarios_ungrouped()
@@ -47,8 +49,7 @@ export const useScenariosBrowse = (): ScenariosBrowse => {
     [allFeatures, searchQuery, selectedTags]
   )
 
-  const selected =
-    features.find((feature) => feature.id === selectedId) ?? features[0]
+  const selected = features.find((feature) => feature.id === selectedId)
 
   return {
     features,

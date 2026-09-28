@@ -1,40 +1,40 @@
 import React, { useState } from 'react'
-import { Text, Alert, Group, Avatar, Box } from '@pikku/mantine/core'
-import { AlertTriangle, UserCog } from 'lucide-react'
+import { Avatar, Stack, Text } from '@pikku/mantine/core'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
-import { TableListPage } from '../layout/TableListPage'
+import { SectionCard } from '../ui/SectionCard'
+import { CardRow } from '../ui/CardRow'
 import { UserRolesPanel } from './UserRolesPanel'
 import { UserStatusBadge } from './UserStatusBadge'
 import { UserActionsMenu } from './UserActionsMenu'
 import { UserActionPanel } from './UserActionPanel'
 import { CreateUserPanel } from './CreateUserPanel'
 import type { UserAction } from './user-actions'
-import { useAdminUsers } from '../../hooks/useAdminUsers'
+import { describeUsersError, useAdminUsers } from '../../hooks/useAdminUsers'
 import type { AuthUser } from '../../context/AuthContext'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 export interface UsersDirectoryPanelProps {
   /** Search term, already raw — the panel debounces before querying. */
   search?: string
-  /** Opens the create-user panel. The button that sets it lives with whoever
-   * owns the header, because only they know if the viewer may create users. */
+  /** Opens the create-user panel. The button that sets it is passed in as
+   * `action`, because only the host knows if the viewer may create users. */
   creating?: boolean
   onCreatingChange?: (creating: boolean) => void
+  action?: React.ReactNode
 }
 
 /**
- * The user directory table together with the panels its rows open — clicking a
- * row opens that user's roles and scopes, and the row's own menu opens ban/unban
- * and the rest of the per-user actions. The create panel lives here too.
- *
- * Fetches its own list through the ambient auth client, so a host can mount it
- * on its own and only has to supply a header if it wants search or create.
+ * The people signed up to the app, as one card of rows, together with the
+ * panels a row opens — clicking a row opens that user's roles and scopes, and
+ * its menu opens ban/unban and the rest of the per-user actions.
  */
 export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
   search = '',
   creating = false,
   onCreatingChange,
+  action,
 }) => {
   useLocale()
   const { usersQuery, users, refetchUsers } = useAdminUsers(search)
@@ -47,95 +47,47 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
     user: AuthUser
   } | null>(null)
 
+  const empty = !usersQuery.isLoading && users.length === 0
+
   return (
     <>
-      {usersQuery.error ? (
-        <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-          <Text size="sm">{asI18n((usersQuery.error as Error).message)}</Text>
-        </Alert>
-      ) : (
-        <TableListPage<AuthUser>
-          icon={UserCog}
-          title={m.users_title()}
-          docsHref="https://pikku.dev/docs/core-features/permission-guards"
-          data={users}
-          getKey={(u) => u.id}
-          getRowProps={(u) => ({
-            'data-testid': 'user-row',
-            'data-user-id': u.id,
-          })}
-          onRowClick={(u) => setRolesFor({ id: u.id, label: u.email ?? u.id })}
-          loading={usersQuery.isLoading}
-          externalSearch={search}
-          emptyTitle={m.users_empty()}
-          columns={[
-            {
-              key: 'user',
-              header: m.users_col_user(),
-              render: (u) => (
-                <Group gap="sm" wrap="nowrap">
-                  <Avatar src={u.image ?? undefined} radius="xl" size="sm">
-                    {(u.name ?? u.email).slice(0, 1).toUpperCase()}
-                  </Avatar>
-                  <Box style={{ minWidth: 0 }}>
-                    {u.name && (
-                      <Text size="sm" fw={500} truncate>
-                        {asI18n(u.name)}
-                      </Text>
-                    )}
-                    <Text size="xs" c="dimmed" truncate>
-                      {asI18n(u.email)}
-                    </Text>
-                  </Box>
-                </Group>
-              ),
-            },
-            // Only shown where the host wires `ban()`; without it the server
-            // reports no ban state and an always-empty column is just noise.
-            ...(users.some((u) => u.banned !== undefined)
-              ? [
-                  {
-                    key: 'status',
-                    header: m.users_col_status(),
-                    render: (u: AuthUser) => <UserStatusBadge user={u} />,
-                  },
-                ]
-              : []),
-            {
-              key: 'created',
-              header: m.users_col_created(),
-              render: (u) => (
-                <Text size="sm" c="dimmed">
-                  {u.createdAt
-                    ? asI18n(new Date(u.createdAt).toLocaleDateString())
-                    : m.users_empty_created()}
-                </Text>
-              ),
-            },
-            {
-              key: 'actions',
-              header: '',
-              align: 'right',
-              render: (u) => (
-                // The menu sits inside a row that opens the roles panel, so its
-                // own clicks must not also count as a click on the row.
-                <Group
-                  gap={6}
-                  justify="flex-end"
-                  wrap="nowrap"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <UserActionsMenu
-                    user={u}
-                    onAction={(action) => setActionFor({ action, user: u })}
-                    onUnbanned={refetchUsers}
-                  />
-                </Group>
-              ),
-            },
-          ]}
-        />
-      )}
+      <SectionCard
+        title={m.users_people_title()}
+        subtitle={users.length ? asI18n(String(users.length)) : undefined}
+        blurb={
+          empty && !search ? m.users_none_blurb() : m.users_people_blurb()
+        }
+        right={action}
+        testId="users-directory"
+      >
+        {usersQuery.error ? (
+          <Text size="sm" c="red" mt="md">
+            {asI18n(describeUsersError(usersQuery.error))}
+          </Text>
+        ) : usersQuery.isLoading ? (
+          <ConsoleLoading py="xl" />
+        ) : empty ? (
+          search ? (
+            <Text size="sm" c="dimmed" mt="md">
+              {m.users_empty()}
+            </Text>
+          ) : null
+        ) : (
+          <Stack gap={8} mt="md">
+            {users.map((u) => (
+              <UserRow
+                key={u.id}
+                user={u}
+                onOpen={() =>
+                  setRolesFor({ id: u.id, label: u.email ?? u.id })
+                }
+                onAction={(next) => setActionFor({ action: next, user: u })}
+                onUnbanned={refetchUsers}
+              />
+            ))}
+          </Stack>
+        )}
+      </SectionCard>
       <UserRolesPanel
         opened={rolesFor !== null}
         onClose={() => setRolesFor(null)}
@@ -156,3 +108,39 @@ export const UsersDirectoryPanel: React.FC<UsersDirectoryPanelProps> = ({
     </>
   )
 }
+
+const UserRow: React.FC<{
+  user: AuthUser
+  onOpen: () => void
+  onAction: (action: UserAction) => void
+  onUnbanned: () => void
+}> = ({ user, onOpen, onAction, onUnbanned }) => (
+  <CardRow
+    testId="user-row"
+    onClick={onOpen}
+    leading={
+      <Avatar src={user.image ?? undefined} size={40} color="blue">
+        {asI18n((user.name ?? user.email).slice(0, 1).toUpperCase())}
+      </Avatar>
+    }
+    title={asI18n(user.name || user.email)}
+    badges={<UserStatusBadge user={user} />}
+    meta={user.name ? asI18n(user.email) : undefined}
+    trailing={
+      <>
+        {user.createdAt && (
+          <Text size="sm" c="dimmed" ta="right" visibleFrom="sm">
+            {m.users_joined({
+              date: asI18n(new Date(user.createdAt).toLocaleDateString()),
+            })}
+          </Text>
+        )}
+        <UserActionsMenu
+          user={user}
+          onAction={onAction}
+          onUnbanned={onUnbanned}
+        />
+      </>
+    }
+  />
+)

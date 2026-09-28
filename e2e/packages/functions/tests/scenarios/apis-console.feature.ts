@@ -33,7 +33,7 @@ export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
     await scenario.given(
       'opens the MCP page',
       'opensConsolePage',
-      { path: MCP_PAGE, waitFor: { testId: 'data-table' } },
+      { path: MCP_PAGE, waitFor: { testId: 'mcp-section-tool' } },
       { actor: actors.admin }
     )
 
@@ -48,8 +48,8 @@ export const mcpToolsListedScenario = pikkuScenario<void, { tools: number }>({
     for (const tool of tools) {
       await scenario.then(
         `sees ${tool}`,
-        'seesTableRow',
-        { containing: tool },
+        'seesTestId',
+        { testId: `mcp-tool-${tool}` },
         { actor: actors.admin }
       )
     }
@@ -72,13 +72,16 @@ export const gatewayMetadataScenario = pikkuScenario<void, { listed: true }>({
     await scenario.given(
       'opens the Gateways page',
       'opensConsolePage',
-      { path: GATEWAYS_PAGE, waitFor: { testId: 'data-table' } },
+      { path: GATEWAYS_PAGE, waitFor: { testId: 'gateways-list' } },
       { actor: actors.admin }
     )
     await scenario.then(
       'sees the gateway and its route',
-      'seesTableRow',
-      { containing: 'e2e-webhook', andContaining: '/webhooks/e2e-gateway' },
+      'seesTestId',
+      {
+        testId: 'gateway-row-e2e-webhook',
+        containing: '/webhooks/e2e-gateway',
+      },
       { actor: actors.admin }
     )
 

@@ -88,6 +88,7 @@ export type {
   ScenarioRunStatus,
   ScenarioRunStore,
   ScenarioRunSummary,
+  ScenarioRunVersion,
   ScenarioStepRow,
   ScenarioStepVideoOffset,
 } from './scenario-run.types.js'

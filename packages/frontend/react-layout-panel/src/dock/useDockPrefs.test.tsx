@@ -20,18 +20,18 @@ describe('defaultDockSide', () => {
     assert.equal(defaultDockSide(), 'right')
   })
 
-  test('an LTR page keeps the bottom dock', () => {
+  test('an LTR page starts the dock on the left', () => {
     withDocumentDir('ltr')
-    assert.equal(defaultDockSide(), 'bottom')
+    assert.equal(defaultDockSide(), 'left')
   })
 
-  test('a page that never set dir keeps the bottom dock', () => {
+  test('a page that never set dir starts on the left', () => {
     withDocumentDir('')
-    assert.equal(defaultDockSide(), 'bottom')
+    assert.equal(defaultDockSide(), 'left')
   })
 
   test('rendering without a document does not throw', () => {
     withDocumentDir(undefined)
-    assert.equal(defaultDockSide(), 'bottom')
+    assert.equal(defaultDockSide(), 'left')
   })
 })

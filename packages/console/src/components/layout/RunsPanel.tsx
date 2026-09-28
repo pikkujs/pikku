@@ -6,11 +6,10 @@ import {
   Badge,
   SegmentedControl,
   Box,
-  Loader,
   Group,
   ActionIcon,
   Button,
-  UnstyledButton,
+  UnstyledButton
 } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
@@ -25,6 +24,7 @@ import {
 } from '../../context/PageOptionsProvider'
 import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
 
 const statusColors: Record<string, string> = {
   running: 'blue',
@@ -297,9 +297,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
           </Group>
         )}
         {loading ? (
-          <Box p="md" ta="center">
-            <Loader size="sm" />
-          </Box>
+          <ConsoleLoading py="xl" />
         ) : filteredRuns.length === 0 ? (
           <Text size="sm" c="dimmed" ta="center" py="md">
             {emptyMessage ?? m.runs_panel_empty()}

@@ -10,6 +10,7 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
+import '../../ui/code-highlight-styles'
 import { Clock, AlertTriangle, CheckCircle, Play } from 'lucide-react'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 import { PikkuBadge } from '../../ui/PikkuBadge'

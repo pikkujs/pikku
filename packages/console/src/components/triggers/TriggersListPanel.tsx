@@ -1,28 +1,43 @@
-import React, { useMemo } from 'react'
-import { Text } from '@pikku/mantine/core'
+import React from 'react'
+import { ActionIcon, Anchor, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Zap } from 'lucide-react'
+import { ChevronRight, Zap } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { useTriggerItems, type TriggerPair } from '../../hooks/useTriggerItems'
-import { TableListPage } from '../layout/TableListPage'
-import { PikkuBadge } from '../ui/PikkuBadge'
+import { toEnglishName } from '../../lib/strings'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
+import { CardsPage } from '../ui/CardsPage'
+import { SectionCard } from '../ui/SectionCard'
+import { SummaryCard } from '../ui/SummaryCard'
+import { CardRow } from '../ui/CardRow'
+import { StatusBadge } from '../ui/StatusBadge'
+import { StatusTile } from '../ui/StatusTile'
+import { ForDevelopers } from '../ui/ForDevelopers'
+import { DevMono, DevTable } from '../ui/DevDetail'
+
+const TRIGGERS_DOCS = 'https://pikku.dev/docs/wiring/triggers'
 
 export interface TriggersListPanelProps {
-  /** Filters the rows from outside; omit to use the panel's own search input. */
+  /** Filters the rows from outside; the screen above owns the search box. */
   externalSearch?: string
   emptyHero?: React.ReactNode
 }
 
+const funcName = (pair: TriggerPair, side: 'source' | 'trigger') => {
+  const id = pair[side]?.pikkuFuncId as string | undefined
+  return id ? toEnglishName(id) : undefined
+}
+
 /**
- * Every trigger in the project as selectable rows, each paired with its source.
+ * Every trigger in the project as a card of rows, each paired with its source.
  * Mount anywhere under a `ConsoleSurface` — it reads its own meta and opens the
  * source or trigger inspector.
  */
 export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
-  externalSearch,
+  externalSearch = '',
   emptyHero,
 }) => {
   const { openTriggerSource, openTrigger } = usePanelContext()
@@ -42,88 +57,192 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
     open: (id, pair) => openTriggerSource(id, pair.source),
   })
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'name',
-        header: 'Name',
-        render: (pair: TriggerPair) => (
-          <Text fw={500}>{asI18n(pair.name)}</Text>
-        ),
-      },
-      {
-        key: 'source',
-        header: 'Source',
-        render: (pair: TriggerPair) => (
-          <PikkuBadge
-            type="label"
-            size="sm"
-            variant={pair.source ? 'light' : 'outline'}
-            color={pair.source ? 'grape' : 'red'}
-            style={{ cursor: pair.source ? 'pointer' : 'default' }}
-            onClick={(e: React.MouseEvent) => {
-              if (pair.source) {
-                e.stopPropagation()
-                openTriggerSource(pair.name, pair.source)
-              }
-            }}
-          >
-            {asI18n(
-              pair.source ? pair.source.pikkuFuncId || 'Source' : 'Missing'
-            )}
-          </PikkuBadge>
-        ),
-      },
-      {
-        key: 'trigger',
-        header: 'Trigger',
-        align: 'right' as const,
-        render: (pair: TriggerPair) => (
-          <PikkuBadge
-            type="label"
-            size="sm"
-            variant={pair.trigger ? 'light' : 'outline'}
-            color={pair.trigger ? 'yellow' : 'red'}
-            style={{ cursor: pair.trigger ? 'pointer' : 'default' }}
-            onClick={(e: React.MouseEvent) => {
-              if (pair.trigger) {
-                e.stopPropagation()
-                openTrigger(pair.name, pair.trigger)
-              }
-            }}
-          >
-            {asI18n(
-              pair.trigger ? pair.trigger.pikkuFuncId || 'Trigger' : 'Missing'
-            )}
-          </PikkuBadge>
-        ),
-      },
-    ],
-    [openTriggerSource, openTrigger]
+  if (!loading && pairs.length === 0) {
+    return (
+      <EmptyStatePlaceholder
+        icon={Zap}
+        hero={emptyHero}
+        title={m.trigger_page_empty_title()}
+        description={m.trigger_page_empty_description()}
+        docsHref={TRIGGERS_DOCS}
+      />
+    )
+  }
+
+  const query = externalSearch.trim().toLowerCase()
+  const open = (pair: TriggerPair) => {
+    if (pair.source) openTriggerSource(pair.name, pair.source)
+    else if (pair.trigger) openTrigger(pair.name, pair.trigger)
+  }
+  const total = pairs.length
+  const listening = pairs.filter((p) => p.source).length
+  const running = pairs.filter((p) => p.trigger).length
+  const incomplete = pairs.filter((p) => !p.source || !p.trigger).length
+  const shown = pairs.filter(
+    (pair) =>
+      !query ||
+      [
+        pair.name,
+        toEnglishName(pair.name),
+        pair.source?.pikkuFuncId,
+        pair.trigger?.pikkuFuncId,
+      ].some((v) => v?.toLowerCase().includes(query))
   )
 
   return (
-    <TableListPage
-      title="Triggers"
-      icon={Zap}
-      docsHref="https://pikku.dev/docs/wiring/triggers"
-      data={pairs}
-      columns={columns}
-      getKey={(pair) => pair.name}
-      onRowClick={(pair) => {
-        if (pair.source) openTriggerSource(pair.name, pair.source)
-        else if (pair.trigger) openTrigger(pair.name, pair.trigger)
-      }}
-      searchPlaceholder={m.triggers_search_placeholder()}
-      externalSearch={externalSearch}
-      searchFilter={(pair, q) =>
-        pair.name.toLowerCase().includes(q) ||
-        pair.source?.pikkuFuncId?.toLowerCase().includes(q) ||
-        pair.trigger?.pikkuFuncId?.toLowerCase().includes(q)
-      }
-      emptyMessage={m.triggers_empty_message()}
-      emptyHero={emptyHero}
-      loading={loading}
-    />
+    <CardsPage>
+      {!loading && !query && (
+        <SummaryCard
+          testId="triggers-summary"
+          title={
+            incomplete > 0
+              ? incomplete === 1
+                ? m.trigger_page_hero_incomplete_one()
+                : m.trigger_page_hero_incomplete({ count: incomplete })
+              : total === 1
+                ? m.trigger_page_hero_title_one()
+                : m.trigger_page_hero_title({ count: total })
+          }
+          blurb={m.trigger_page_hero_body()}
+          facts={[
+            {
+              label: m.trigger_page_fact_triggers(),
+              value: asI18n(String(total)),
+            },
+            {
+              label: m.trigger_page_fact_listening(),
+              value: m.trigger_page_fact_of({ done: listening, total }),
+              tone: listening < total ? 'warn' : undefined,
+            },
+            {
+              label: m.trigger_page_fact_running(),
+              value: m.trigger_page_fact_of({ done: running, total }),
+              tone: running < total ? 'warn' : undefined,
+            },
+          ]}
+        />
+      )}
+      <SectionCard
+        testId="triggers-list"
+        title={m.trigger_page_list_title()}
+        subtitle={
+          shown.length === 1
+            ? m.trigger_page_count_one()
+            : m.trigger_page_count({ count: shown.length })
+        }
+        blurb={m.trigger_page_list_blurb()}
+        footer={
+          <ForDevelopers
+            attached
+            hint={m.trigger_page_dev_hint()}
+            testId="triggers-developers"
+          >
+            <DevTable
+              columns={[
+                m.trigger_page_dev_col_name(),
+                m.trigger_page_dev_col_source(),
+                m.trigger_page_dev_col_handler(),
+              ]}
+              rows={pairs.map((pair) => ({
+                key: pair.name,
+                cells: [
+                  <DevMono key="name" value={pair.name} copy />,
+                  pair.source ? (
+                    <Anchor
+                      key="source"
+                      component="button"
+                      size="sm"
+                      ff="monospace"
+                      onClick={() => openTriggerSource(pair.name, pair.source)}
+                    >
+                      {asI18n(pair.source.pikkuFuncId || pair.name)}
+                    </Anchor>
+                  ) : (
+                    <Text key="source" size="sm" c="dimmed">
+                      {m.trigger_page_dev_missing()}
+                    </Text>
+                  ),
+                  pair.trigger ? (
+                    <Anchor
+                      key="handler"
+                      component="button"
+                      size="sm"
+                      ff="monospace"
+                      onClick={() => openTrigger(pair.name, pair.trigger)}
+                    >
+                      {asI18n(pair.trigger.pikkuFuncId || pair.name)}
+                    </Anchor>
+                  ) : (
+                    <Text key="handler" size="sm" c="dimmed">
+                      {m.trigger_page_dev_missing()}
+                    </Text>
+                  ),
+                ],
+              }))}
+            />
+          </ForDevelopers>
+        }
+      >
+        <Stack gap="xs" mt="md">
+          {shown.length === 0 ? (
+            <Text size="sm" c="dimmed">
+              {m.trigger_page_no_matches({ query: externalSearch.trim() })}
+            </Text>
+          ) : (
+            shown.map((pair) => {
+              const source = funcName(pair, 'source')
+              const handler = funcName(pair, 'trigger')
+              const ready = !!source && !!handler
+              return (
+                <CardRow
+                  key={pair.name}
+                  testId={`trigger-row-${pair.name}`}
+                  leading={
+                    <StatusTile tone={ready ? 'info' : 'warn'}>
+                      <Zap size={18} />
+                    </StatusTile>
+                  }
+                  title={asI18n(toEnglishName(pair.name.replace(/[-_]+/g, ' ')))}
+                  badges={
+                    <StatusBadge tone={ready ? 'good' : 'warn'} size="sm">
+                      {ready
+                        ? m.trigger_page_status_ready()
+                        : !source
+                          ? m.trigger_page_status_no_source()
+                          : m.trigger_page_status_no_handler()}
+                    </StatusBadge>
+                  }
+                  meta={
+                    <>
+                      {source
+                        ? m.trigger_page_row_listens({ source })
+                        : m.trigger_page_row_listens_none()}
+                      {asI18n(' · ')}
+                      {handler
+                        ? m.trigger_page_row_runs({ handler })
+                        : m.trigger_page_row_runs_none()}
+                    </>
+                  }
+                  trailing={
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      aria-label={m.trigger_page_row_show()}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation()
+                        open(pair)
+                      }}
+                    >
+                      <ChevronRight size={16} />
+                    </ActionIcon>
+                  }
+                  onClick={() => open(pair)}
+                />
+              )
+            })
+          )}
+        </Stack>
+      </SectionCard>
+    </CardsPage>
   )
 }

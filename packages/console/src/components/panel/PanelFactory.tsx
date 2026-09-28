@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { Stack, Group, Text, Box, Button, Loader } from '@pikku/mantine/core'
+import { Stack, Group, Text, Box, Button } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
@@ -66,6 +66,10 @@ import { DbColumnPanel } from '../project/panels/DbColumnPanel'
 import { EmailPreviewPanel } from '../project/panels/EmailPreviewPanel'
 import { ScenarioDocument } from '../scenarios/ScenarioDocument'
 import { ScenarioStepPanel } from '../scenarios/ScenarioStepPanel'
+import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { McpDetail } from '../mcp/McpCards'
+import { CliCommandDetail } from '../cli/CliProgramCards'
+import { ChannelMessageDetail } from '../channel/ChannelCards'
 
 interface PanelChild {
   id: string
@@ -161,7 +165,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   return (
     <Stack gap="md" data-testid="workflow-new-run-form">
       {isLoading ? (
-        <Loader size="sm" />
+        <ConsoleLoading py="xl" />
       ) : effectiveSchema ? (
         <SchemaForm
           schema={effectiveSchema}
@@ -318,6 +322,22 @@ export const createPanelChildren = (
       ]
 
     case 'channel':
+      if (panelData.metadata?.message) {
+        return [
+          {
+            id: 'configuration',
+            title: 'Details',
+            content: (
+              <Box px="md">
+                <ChannelMessageDetail
+                  channelName={panelData.metadata.message.channelName}
+                  selected={panelData.metadata.message.selected}
+                />
+              </Box>
+            ),
+          },
+        ]
+      }
       return [
         {
           id: 'configuration',
@@ -382,6 +402,22 @@ export const createPanelChildren = (
       ]
 
     case 'cli':
+      if (panelData.metadata?.command) {
+        return [
+          {
+            id: 'configuration',
+            title: 'Details',
+            content: (
+              <Box px="md">
+                <CliCommandDetail
+                  programId={panelData.metadata.command.programId}
+                  path={panelData.metadata.command.path}
+                />
+              </Box>
+            ),
+          },
+        ]
+      }
       return [
         {
           id: 'configuration',
@@ -398,6 +434,19 @@ export const createPanelChildren = (
       ]
 
     case 'mcp':
+      if (panelData.metadata?.item) {
+        return [
+          {
+            id: 'configuration',
+            title: 'Details',
+            content: (
+              <Box px="md">
+                <McpDetail item={panelData.metadata.item} />
+              </Box>
+            ),
+          },
+        ]
+      }
       return [
         {
           id: 'configuration',

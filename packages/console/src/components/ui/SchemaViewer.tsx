@@ -26,6 +26,16 @@ const getTypeLabel = (prop: any): string => {
 
 const getColor = (prop: any): string => {
   if (prop.enum) return schemaTypeColor('enum')
+  const variants = prop.anyOf || prop.oneOf
+  if (variants) {
+    const main = variants.find((v: any) => v.type && v.type !== 'null')
+    return schemaTypeColor(main?.enum ? 'enum' : (main?.type ?? 'any'))
+  }
+  if (Array.isArray(prop.type)) {
+    return schemaTypeColor(
+      prop.type.find((t: string) => t !== 'null') ?? 'any'
+    )
+  }
   return schemaTypeColor(prop.type)
 }
 
@@ -43,13 +53,17 @@ const PropertyRow: React.FC<{
   depth: number
 }> = ({ name, prop, required, depth }) => {
   const [expanded, setExpanded] = useState(depth < 1)
-  const hasChildren = prop.type === 'object' && prop.properties
+  const shape =
+    (prop.anyOf || prop.oneOf)?.find(
+      (v: any) => v.type === 'object' && v.properties
+    ) ?? prop
+  const hasChildren = shape.type === 'object' && shape.properties
   const hasArrayChildren =
     prop.type === 'array' &&
     prop.items?.type === 'object' &&
     prop.items?.properties
   const isExpandable = hasChildren || hasArrayChildren
-  const childSchema = hasChildren ? prop : hasArrayChildren ? prop.items : null
+  const childSchema = hasChildren ? shape : hasArrayChildren ? prop.items : null
   const notes = getNotes(prop)
 
   return (
@@ -160,48 +174,61 @@ export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
     )
   }
 
+  if (Object.keys(properties).length === 0) {
+    return (
+      <Text c="dimmed" size="sm">
+        {m.schema_viewer_no_fields()}
+      </Text>
+    )
+  }
+
   return (
-    <Table
-      verticalSpacing={6}
-      horizontalSpacing="sm"
-      layout="fixed"
-      styles={{
-        table: {
-          tableLayout: 'fixed',
-        },
-        th: {
-          color: 'var(--app-text-dim)',
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          borderBottom: '1px solid var(--app-border)',
-        },
-        td: {
-          borderBottom: '1px solid var(--app-border)',
-        },
+    <Box
+      style={{
+        border: '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
+        borderRadius: 'var(--mantine-radius-md)',
+        overflow: 'hidden',
       }}
     >
-      <colgroup>
-        <col />
-        <col style={{ width: 150 }} />
-        <col />
-      </colgroup>
-      <Table.Thead className={classes.tableHead}>
-        <Table.Tr>
-          <Table.Th>Field</Table.Th>
-          <Table.Th>Type</Table.Th>
-          <Table.Th>Notes</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        <PropertyRows
-          properties={properties}
-          required={resolvedSchema.required || []}
-          depth={0}
-        />
-      </Table.Tbody>
-    </Table>
+      <Table
+        verticalSpacing={6}
+        horizontalSpacing="sm"
+        layout="fixed"
+        styles={{
+          table: {
+            tableLayout: 'fixed',
+          },
+          th: {
+            color: 'var(--mantine-color-dimmed)',
+            fontSize: 'var(--mantine-font-size-xs)',
+            fontWeight: 600,
+            borderBottom: '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
+          },
+          td: {
+            borderBottom: '1px solid var(--app-border)',
+          },
+        }}
+      >
+        <colgroup>
+          <col />
+          <col style={{ width: 120 }} />
+          <col style={{ width: '28%' }} />
+        </colgroup>
+        <Table.Thead className={classes.tableHead}>
+          <Table.Tr>
+            <Table.Th>Field</Table.Th>
+            <Table.Th>Type</Table.Th>
+            <Table.Th>Notes</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          <PropertyRows
+            properties={properties}
+            required={resolvedSchema.required || []}
+            depth={0}
+          />
+        </Table.Tbody>
+      </Table>
+    </Box>
   )
 }

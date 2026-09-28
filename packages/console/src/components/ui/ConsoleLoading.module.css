@@ -1,0 +1,28 @@
+.mark {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+.invert {
+  filter: brightness(0) invert(1);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark {
+    animation: none;
+  }
+}

@@ -4,7 +4,7 @@ import { useLocale } from '@/i18n/config'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { GatewaysListPanel } from '../components/gateways/GatewaysListPanel'
+import { GatewaysWorkspace } from '../components/gateways/GatewaysWorkspace'
 import { useGatewayItems } from '../hooks/useGatewayItems'
 
 export type GatewaysPageProps = {
@@ -20,11 +20,11 @@ export const GatewaysPage: React.FC<GatewaysPageProps> = ({ emptyHero }) => {
   return (
     <ConsoleSurface>
       <ResizablePanelLayout
-        flushBody
+        surface="cards"
         header={
           <ListPageHeader
             title={m.gateways_title()}
-            description={m.gateways_description()}
+            description={m.gateway_page_description()}
             docsHref="https://pikku.dev/docs/wiring/gateway"
             search={{
               placeholder: m.gateways_search_placeholder(),
@@ -37,7 +37,7 @@ export const GatewaysPage: React.FC<GatewaysPageProps> = ({ emptyHero }) => {
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage={m.gateways_select_item()}
       >
-        <GatewaysListPanel externalSearch={search} emptyHero={emptyHero} />
+        <GatewaysWorkspace searchQuery={search} emptyHero={emptyHero} />
       </ResizablePanelLayout>
     </ConsoleSurface>
   )

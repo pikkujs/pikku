@@ -11,7 +11,6 @@ import {
   Cpu,
   Zap,
 } from 'lucide-react'
-import cronstrue from 'cronstrue'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { CommonDetails } from './shared/CommonDetails'
 import { FunctionLink } from './shared/FunctionLink'
@@ -20,6 +19,14 @@ import { SectionLabel } from '../../ui/SectionLabel'
 import { SchemaSection } from './shared/SchemaSection'
 import { usePanelContext } from '../../../context/PanelContext'
 import classes from '../../ui/console.module.css'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
+import { StatusBadge } from '../../ui/StatusBadge'
+import { toEnglishName } from '../../../lib/strings'
+import { describeCron } from '../../../lib/cron'
+import { useSchedulerRuns } from '../../../hooks/useSchedulerRuns'
+import { useQueueHistory } from '../../../hooks/useQueueHistory'
+import { runDuration, runWhen } from '../../scenarios/runs/scenario-run-format'
 
 interface WiringPanelProps {
   wireId: string
@@ -271,16 +278,20 @@ export const SchedulerConfiguration: React.FC<WiringPanelProps> = ({
   wireId,
   metadata = {},
 }) => {
+  const { locale } = useLocale()
+  const runs = useSchedulerRuns()
   const middleware = metadata?.middleware || []
   const permissions = metadata?.permissions || []
+  const name: string = metadata?.name || wireId
+  const history = runs?.[name]?.history
 
   return (
     <Stack gap="lg">
       <Box>
         <Group gap="xs">
           <Clock size={20} />
-          <Text size="lg" ff="monospace" fw={600}>
-            {asI18n(metadata?.name || wireId)}
+          <Text size="lg" fw={600}>
+            {asI18n(toEnglishName(name))}
           </Text>
         </Group>
         {metadata?.summary && (
@@ -299,18 +310,56 @@ export const SchedulerConfiguration: React.FC<WiringPanelProps> = ({
 
       {metadata?.schedule && (
         <Box>
-          <SectionLabel>{asI18n('Schedule')}</SectionLabel>
-          <Text size="sm">{asI18n(cronstrue.toString(metadata.schedule))}</Text>
-          <Text size="sm" c="dimmed" ff="monospace" mt={2}>
-            {asI18n(metadata.schedule)}
-          </Text>
+          <SectionLabel>{m.scheduler_status_schedule()}</SectionLabel>
+          <Text size="sm">{asI18n(describeCron(metadata.schedule))}</Text>
+          {metadata?.timezone && (
+            <Text size="sm" c="dimmed" mt={2}>
+              {asI18n(metadata.timezone)}
+            </Text>
+          )}
         </Box>
       )}
 
-      {metadata?.timezone && (
-        <Box>
-          <SectionLabel>{asI18n('Timezone')}</SectionLabel>
-          <Text size="sm">{asI18n(metadata.timezone)}</Text>
+      {runs && (
+        <Box data-testid="scheduler-panel-runs">
+          <SectionLabel>{m.scheduler_status_recent_runs()}</SectionLabel>
+          {history && history.length > 0 ? (
+            <Stack gap={8} mt={4}>
+              {history.map((run) => (
+                <Box key={run.timestamp}>
+                  <Group gap="xs" wrap="nowrap">
+                    <StatusBadge
+                      tone={run.status === 'failed' ? 'bad' : 'good'}
+                      size="sm"
+                    >
+                      {run.status === 'failed'
+                        ? m.scheduler_status_failed()
+                        : m.scheduler_status_succeeded()}
+                    </StatusBadge>
+                    <Text size="sm">
+                      {asI18n(
+                        runWhen(new Date(run.timestamp).toISOString(), locale)
+                      )}
+                    </Text>
+                    {run.durationSeconds !== null && (
+                      <Text size="sm" c="dimmed">
+                        {asI18n(runDuration(run.durationSeconds * 1000))}
+                      </Text>
+                    )}
+                  </Group>
+                  {run.error && (
+                    <Text size="xs" c="red" mt={2}>
+                      {asI18n(run.error)}
+                    </Text>
+                  )}
+                </Box>
+              ))}
+            </Stack>
+          ) : (
+            <Text size="sm" c="dimmed">
+              {m.scheduler_status_no_runs()}
+            </Text>
+          )}
         </Box>
       )}
 
@@ -330,6 +379,9 @@ export const QueueConfiguration: React.FC<WiringPanelProps> = ({
   wireId,
   metadata = {},
 }) => {
+  const { locale } = useLocale()
+  const history = useQueueHistory()
+  const stats = history?.queues[metadata?.name || wireId]
   const middleware = metadata?.middleware || []
   const permissions = metadata?.permissions || []
   const config = metadata?.config as Record<string, any> | undefined
@@ -365,6 +417,57 @@ export const QueueConfiguration: React.FC<WiringPanelProps> = ({
           <PikkuBadge type="flag" flag="permissioned" />
         )}
       </Group>
+
+      {history && (
+        <Box data-testid="queue-panel-jobs">
+          <SectionLabel>{m.queue_status_recent_jobs()}</SectionLabel>
+          {stats && stats.recent.length > 0 ? (
+            <>
+              <Text size="sm" c="dimmed" mb={4}>
+                {m.queue_status_week({
+                  done: stats.completed,
+                  failed: stats.failed,
+                })}
+              </Text>
+              <Stack gap={8} mt={4}>
+                {stats.recent.map((job) => (
+                  <Box key={job.timestamp}>
+                    <Group gap="xs" wrap="nowrap">
+                      <StatusBadge
+                        tone={job.status === 'failed' ? 'bad' : 'good'}
+                        size="sm"
+                      >
+                        {job.status === 'failed'
+                          ? m.queue_status_job_failed()
+                          : m.queue_status_job_done()}
+                      </StatusBadge>
+                      <Text size="sm">
+                        {asI18n(
+                          runWhen(new Date(job.timestamp).toISOString(), locale)
+                        )}
+                      </Text>
+                      {job.durationSeconds !== null && (
+                        <Text size="sm" c="dimmed">
+                          {asI18n(runDuration(job.durationSeconds * 1000))}
+                        </Text>
+                      )}
+                    </Group>
+                    {job.error && (
+                      <Text size="xs" c="red" mt={2}>
+                        {asI18n(job.error)}
+                      </Text>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </>
+          ) : (
+            <Text size="sm" c="dimmed">
+              {m.queue_status_no_jobs()}
+            </Text>
+          )}
+        </Box>
+      )}
 
       <CommonDetails
         description={metadata?.description}

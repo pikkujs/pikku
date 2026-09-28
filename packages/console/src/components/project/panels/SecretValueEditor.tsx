@@ -6,11 +6,10 @@ import {
   Textarea,
   Alert,
   SegmentedControl,
-  Loader,
   Text,
   Code,
   Group,
-  ActionIcon,
+  ActionIcon
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -21,6 +20,7 @@ import { useSchema } from '../../../hooks/useWirings'
 import { SchemaForm } from '../../ui/SchemaForm'
 import { SectionLabel } from '../../ui/SectionLabel'
 import { useConsoleEditable } from '../../../context/ConsoleEditableContext'
+import { ConsoleLoading } from '../../ui/ConsoleLoading'
 
 const OAUTH2_CLIENT_SCHEMA = {
   type: 'object',
@@ -132,7 +132,7 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
     return (
       <Box>
         <SectionLabel>{m.secret_editor_secret_value()}</SectionLabel>
-        <Loader size="sm" />
+        <ConsoleLoading py="md" />
       </Box>
     )
   }

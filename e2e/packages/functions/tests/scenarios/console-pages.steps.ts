@@ -201,39 +201,30 @@ export const opensWebhookDelivery = pikkuScenarioStep<
   name: 'opensWebhookDelivery',
   description: 'opens a delivery’s attempt history',
   template: 'opens the delivery',
-  browser: async (_services, { sinkUrl, status }, { browser }) => {
-    const row = browser.page
-      .locator('table tbody tr')
-      .filter({ hasText: sinkUrl })
+  browser: async (_services, { sinkUrl }, { browser }) => {
+    await browser.page.getByTestId('webhooks-dev-toggle').click()
+    await browser.page
+      .getByTestId('webhooks-dev')
+      .getByText(sinkUrl, { exact: false })
       .first()
-    await row.waitFor({ state: 'visible' })
-    const text = (await row.textContent()) ?? ''
-    if (!text.includes(status)) {
-      throw new Error(
-        `Expected the delivery to be ${status}, the row says: ${text}`
-      )
-    }
-    await row.click()
-    await browser.page.getByRole('dialog').waitFor({ state: 'visible' })
+      .waitFor({ state: 'visible' })
     return { opened: true }
   },
 })
 
 export const expectsDeliveryAttempt = pikkuScenarioStep<
-  { attempt: string; status: number },
-  { attempt: string }
+  { attempt: number; status: number },
+  { attempt: number }
 >({
   name: 'expectsDeliveryAttempt',
   description: 'expects an attempt with a given response status',
   template: 'expects attempt {attempt} to have answered {status}',
   browser: async (_services, { attempt, status }, { browser }) => {
-    const drawer = browser.page.getByRole('dialog')
-    for (const text of [attempt, String(status)]) {
-      await drawer
-        .getByText(text, { exact: false })
-        .first()
-        .waitFor({ state: 'visible' })
-    }
+    await browser.page
+      .getByTestId('webhooks-dev')
+      .getByText(new RegExp(`\\b${attempt}: ${status}\\b`))
+      .first()
+      .waitFor({ state: 'visible' })
     return { attempt }
   },
 })

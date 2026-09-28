@@ -131,10 +131,14 @@ export { PageOptionsPortal } from './components/shell/PageOptionsPortal'
 export {
   PageOptionsProvider,
   usePageOptions,
+  useOptionalPageOptions,
   usePageOptionsDismiss,
   usePageAction,
 } from './context/PageOptionsProvider'
-export type { PageAction } from './context/PageOptionsProvider'
+export type {
+  PageAction,
+  PageOptionsContextValue,
+} from './context/PageOptionsProvider'
 export {
   SidebarModeProvider,
   useSidebarMode,
@@ -187,6 +191,10 @@ export type {
 export { PikkuSwitch } from './components/ui/PikkuSwitch'
 export type { PikkuSwitchOption } from './components/ui/PikkuSwitch'
 export { ShellHeader } from './components/ui/ShellHeader'
+export {
+  ShellHeaderSlotContext,
+  useShellHeaderSlot,
+} from './components/ui/ShellHeaderSlot'
 export type {
   ShellHeaderProps,
   ShellHeaderSelection,
@@ -209,6 +217,28 @@ export { DetailHeader } from './components/ui/DetailHeader'
 export type { DetailHeaderProps } from './components/ui/DetailHeader'
 export { EmptyState } from './components/ui/EmptyState'
 export type { EmptyStateProps } from './components/ui/EmptyState'
+export { PageIntro } from './components/ui/PageIntro'
+export type { PageIntroStep } from './components/ui/PageIntro'
+export { CardsPage } from './components/ui/CardsPage'
+export { SectionCard } from './components/ui/SectionCard'
+export type { SectionCardProps } from './components/ui/SectionCard'
+export { StatusBadge, STATUS_TONE_COLOR } from './components/ui/StatusBadge'
+export type { StatusTone } from './components/ui/StatusBadge'
+export { StatTile } from './components/ui/StatTile'
+export { CardRow } from './components/ui/CardRow'
+export { StatusTile } from './components/ui/StatusTile'
+export { ForDevelopers } from './components/ui/ForDevelopers'
+export {
+  DevCode,
+  DevCopy,
+  DevField,
+  DevFields,
+  DevLinks,
+  DevMono,
+  DevNote,
+  DevTable,
+  devSourcePath,
+} from './components/ui/DevDetail'
 // A long document as one card of collapsed sections, and the band above it.
 // Shared rather than local because the plan document is not the only screen
 // shaped that way, and a host embedding it needs the same two pieces to put its
@@ -251,6 +281,10 @@ export { HttpPage } from './pages/HttpPage'
 export type { HttpPageProps } from './pages/HttpPage'
 export { ChannelsPage } from './pages/ChannelsPage'
 export type { ChannelsPageProps } from './pages/ChannelsPage'
+export { ChannelsBrowseRail } from './components/channel/ChannelsBrowseRail'
+export type { ChannelsBrowseRailProps } from './components/channel/ChannelsBrowseRail'
+export { useChannelsBrowse } from './hooks/useChannelsBrowse'
+export type { ChannelsBrowse } from './hooks/useChannelsBrowse'
 export { McpPage } from './pages/McpPage'
 export type { McpPageProps } from './pages/McpPage'
 export { CliPage } from './pages/CliPage'
@@ -515,10 +549,6 @@ export { HttpListPanel } from './components/http/HttpListPanel'
 export type { HttpListPanelProps } from './components/http/HttpListPanel'
 export { McpListPanel } from './components/mcp/McpListPanel'
 export type { McpListPanelProps } from './components/mcp/McpListPanel'
-export { QueuesListPanel } from './components/queues/QueuesListPanel'
-export type { QueuesListPanelProps } from './components/queues/QueuesListPanel'
-export { SchedulersListPanel } from './components/schedulers/SchedulersListPanel'
-export type { SchedulersListPanelProps } from './components/schedulers/SchedulersListPanel'
 export { TriggersListPanel } from './components/triggers/TriggersListPanel'
 export type { TriggersListPanelProps } from './components/triggers/TriggersListPanel'
 export { MiddlewareListPanel } from './components/middleware/MiddlewareListPanel'
@@ -598,6 +628,15 @@ export { ScenariosBrowseRail } from './components/scenarios/ScenariosBrowseRail'
 export type { ScenariosBrowseRailProps } from './components/scenarios/ScenariosBrowseRail'
 export { useScenariosBrowse } from './hooks/useScenariosBrowse'
 export type { ScenariosBrowse } from './hooks/useScenariosBrowse'
+// Which run the screen is read through, hoisted for the same reason: a host
+// mounting the rail itself needs its result bars and the document's markers to
+// report on one run.
+export { useScenarioLens, AS_WRITTEN } from './hooks/useScenarioLens'
+export type { ScenarioLens, ScenarioLensControl } from './hooks/useScenarioLens'
+export type {
+  ScenarioRunLens,
+  ScenarioLensStatus,
+} from './components/scenarios/scenario-run-lens'
 export { ScenarioSection } from './components/scenarios/ScenarioSection'
 export { ScenarioDocument } from './components/scenarios/ScenarioDocument'
 export { ScenarioCast } from './components/scenarios/ScenarioCast'
@@ -704,6 +743,8 @@ export type {
 export { HelpText } from './help/HelpText'
 export { HelpPanel } from './help/HelpPanel'
 export { HelpAffordance } from './help/HelpAffordance'
+export { DeveloperDetailsToggle } from './help/DeveloperDetailsToggle'
+export { useDeveloperDetails } from './hooks/useDeveloperDetails'
 export { registerHelpScreens, resolveHelpScreen } from './help/screens'
 export type { HelpScreen } from './help/screens'
 export { parseHelpText } from './help/parseHelpText'

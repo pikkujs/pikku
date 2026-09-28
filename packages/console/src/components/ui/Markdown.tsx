@@ -14,6 +14,7 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { CodeHighlight } from '@mantine/code-highlight'
+import './code-highlight-styles'
 import { m } from '@/i18n/messages'
 import {
   alertKindOf,

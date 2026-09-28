@@ -40,16 +40,17 @@ export const searchesAddons = pikkuScenarioStep<
 })
 
 export const seesAddonCard = pikkuScenarioStep<
-  { packageName: string; state?: 'installed' | 'available' },
+  { packageName: string; state?: 'installed' | 'available'; within?: string },
   { visible: true }
 >({
   name: 'seesAddonCard',
   description: 'sees an addon in the gallery',
   template: 'sees {state} addon {packageName}',
-  browser: async (_services, { packageName, state }, { browser }) => {
+  browser: async (_services, { packageName, state, within }, { browser }) => {
     const card = browser.locate({
       testId: 'addon-card',
       where: { 'data-addon-package': packageName },
+      ...(within ? { within: { testId: within } } : {}),
     })
     await card.first().waitFor({ state: 'visible', timeout: GALLERY_TIMEOUT })
     if (state !== undefined) {
@@ -73,14 +74,17 @@ export const seesAddonCard = pikkuScenarioStep<
  * lower bound would pass on a catalogue that had silently lost half its rows.
  */
 export const countsAddonCards = pikkuScenarioStep<
-  { count: number },
+  { count: number; within?: string },
   { count: number }
 >({
   name: 'countsAddonCards',
   description: 'counts the addons on show',
   template: 'sees exactly {count} addons on offer',
-  browser: async (_services, { count }, { browser }) => {
-    const cards = browser.locate({ testId: 'addon-card' })
+  browser: async (_services, { count, within }, { browser }) => {
+    const cards = browser.locate({
+      testId: 'addon-card',
+      ...(within ? { within: { testId: within } } : {}),
+    })
     await expect(cards).toHaveCount(count, { timeout: GALLERY_TIMEOUT })
     return { count }
   },
