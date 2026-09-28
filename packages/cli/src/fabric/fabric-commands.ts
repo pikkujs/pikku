@@ -96,13 +96,15 @@ import {
 import { FabricSmoke, renderSmoke } from './functions/smoke.function.js'
 import { FabricPublish } from './functions/publish.function.js'
 import { FabricAdd } from './functions/add.function.js'
-import { FabricReport } from './functions/report.function.js'
 import {
-  FabricFindingsList,
-  renderFindingsList,
-} from './functions/findings-list.function.js'
-import { FabricFindingsFlush } from './functions/findings-flush.function.js'
-import { FabricFindingsClear } from './functions/findings-clear.function.js'
+  FabricAddonSearch,
+  renderAddonSearch,
+} from './functions/addon-search.function.js'
+import {
+  FabricAddonGet,
+  renderAddonGet,
+} from './functions/addon-get.function.js'
+import { FabricReport } from './functions/report.function.js'
 import {
   FabricAddonVerify,
   renderAddonVerify,
@@ -210,8 +212,32 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   addon: {
-    description: 'Publish and install Fabric community-registry addons',
+    description:
+      'Search, publish and install Fabric community-registry addons',
     subcommands: {
+      search: pikkuCLICommand({
+        parameters: '<query>',
+        func: FabricAddonSearch,
+        render: renderAddonSearch,
+        description:
+          'Search the registry for an addon, or an OpenAPI spec to generate one from',
+        options: {
+          limit: {
+            description: 'How many OpenAPI entries to return (default 20)',
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      get: pikkuCLICommand({
+        parameters: '<name>',
+        func: FabricAddonGet,
+        render: renderAddonGet,
+        description:
+          'Look one entry up by name, in both the published-addon and OpenAPI catalogues',
+        options: {
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
       verify: pikkuCLICommand({
         parameters: '[dir]',
         func: FabricAddonVerify,
@@ -420,7 +446,7 @@ export const fabricCommands = defineCLICommands({
     parameters: '[title]',
     func: FabricReport,
     description:
-      'Report a finding — something about pikku that cost time — to fabric',
+      'Report a finding — something about pikku that cost time — to the Pikku team. With no finding, asks about the ones held from this build',
     options: {
       stdin: {
         description:
@@ -457,32 +483,13 @@ export const fabricCommands = defineCLICommands({
       area: { description: 'The part of pikku this is about' },
       surface: { description: 'Where it showed up: local, deployed or both' },
       cost: { description: 'What it cost, measured or estimated' },
-      run: { description: 'Run id, to group findings from one build' },
       deployTarget: { description: 'The deploy target in use' },
+      consent: {
+        description:
+          'The user\'s answer to "send them?": yes or no for what is held now, always or never to stop asking',
+      },
     },
   }),
-  findings: {
-    description:
-      'Inspect the findings held locally because they could not be sent',
-    subcommands: {
-      list: pikkuCLICommand({
-        func: FabricFindingsList,
-        render: renderFindingsList,
-        description: 'List the findings queued locally, waiting to be sent',
-      }),
-      flush: pikkuCLICommand({
-        func: FabricFindingsFlush,
-        description: 'Send every finding queued locally',
-        options: {
-          apiUrl: { description: 'Override the fabric-api URL for this call' },
-        },
-      }),
-      clear: pikkuCLICommand({
-        func: FabricFindingsClear,
-        description: 'Discard every queued finding without sending it',
-      }),
-    },
-  },
   metrics: pikkuCLICommand({
     func: FabricMetrics,
     description: 'Show request rate / error rate / latency for a stage',

@@ -3159,7 +3159,7 @@ describe('the generated coercion map', () => {
   const withCoercions = `export const coercionMap = {
   "assessment": {
     "created_at": "date",
-    "admin_rights": "boolean"
+    "admin_rights": "bool"
   }
 } as const
 `
@@ -3198,6 +3198,24 @@ describe('the generated coercion map', () => {
       assert.ok(
         !result.findings.some((f) => f.id === 'coercion-map-not-wired'),
         'expected no finding once the plugin is wired'
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('is an error when the only declared kind is bool', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeCoercionMap(
+        tmp,
+        'export const coercionMap = {\n  "assessment": {\n    "admin_rights": "bool"\n  }\n} as const\n'
+      )
+      const result = await runValidate(tmp)
+      assert.ok(
+        result.findings.some((f) => f.id === 'coercion-map-not-wired'),
+        'expected coercion-map-not-wired for a bool-only map'
       )
     } finally {
       await rm(tmp, { recursive: true, force: true })

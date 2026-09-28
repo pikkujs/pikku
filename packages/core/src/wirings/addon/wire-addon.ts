@@ -2,6 +2,7 @@ import { pikkuState } from '../../pikku-state.js'
 import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import { getTagGroups } from '../../utils.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
+import type { AddonInstance } from './addon-runner.js'
 export type WireAddonConfig = {
   /** How this instance is addressed. One package may be wired more than once, and the name is what tells the instances apart. */
   name: string
@@ -215,7 +216,11 @@ export const resolveAddonAuth = (
 export const resolveAddonFunctionTarget = (
   funcName: string,
   packageName: string | null
-): { packageName: string; localName: string } | null => {
+): {
+  packageName: string
+  localName: string
+  instance: AddonInstance
+} | null => {
   const separator = funcName.indexOf(':')
   if (separator === -1) {
     return null
@@ -231,6 +236,12 @@ export const resolveAddonFunctionTarget = (
   return {
     packageName: config.package,
     localName: funcName.slice(separator + 1),
+    // The instance, not just its package: everything the consuming app lent
+    // this addon — `secretOverrides`, grants, the scoping opt-outs — hangs off
+    // here, and a caller that only learns the package runs the function with
+    // none of it. The namespace is the map key rather than a field on the
+    // stored config, so it is put back on the way out.
+    instance: { namespace, ...config },
   }
 }
 

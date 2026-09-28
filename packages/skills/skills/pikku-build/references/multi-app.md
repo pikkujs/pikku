@@ -63,86 +63,61 @@ Worth a scenario each, because they are two different claims: that a mechanic ca
 *see* the invoices nav item, and that their call to an invoices RPC is *refused*. The
 second is the one that catches a `permissions` field nobody wired.
 
-## The clone
+## The second app
 
 ```bash
-cp -R apps/app apps/admin
-rm -rf apps/admin/node_modules apps/admin/src/paraglide
+pikku new app admin --serves staff --personas manager,mechanic
 ```
 
-`src/paraglide` is compiled from `messages/` by the Vite plugin on first run;
-copying it forward ships one app's compiled strings inside another.
+One command does every step this section used to list by hand: it fetches
+`pikkujs/starter-template`'s `apps/app`, re-points its `package.json` at the
+new name, its own dev/preview port and its own `--tsBuildInfoFile`, stamps
+`app: '<slug>'` onto each named persona in `definePersonas({…})`, adds the
+`frontends` entry, and re-runs `bun install`.
 
-Then, in order:
+**It scaffolds from the starter template, not from the app you already have.**
+Copying the working app drags its screens, routes and nav into an audience that
+never asked for them, and the first hour in the new app goes on deleting
+someone else's product.
 
-### 1. `apps/admin/package.json`
+`--template <source>` scaffolds from something else — any giget source, or a
+path inside the repo for an offline or vendored copy. `--install false` skips
+the install when you are batching several.
 
-- `name` → `@project/admin`
-- `dev` and `preview` ports → `7105`. Every frontend needs its own, or the second
-  one fails to bind and the dev runner looks like it hung.
-- the `--tsBuildInfoFile` path inside the **`tsc` script** → `admin-tsc.tsbuildinfo`.
-  In this template it is a CLI flag on that script (`tsc --noEmit --incremental
-  --tsBuildInfoFile node_modules/.cache/app-tsc.tsbuildinfo`), not a
-  `compilerOptions` entry — `tsconfig.json` needs no change. Left alone, the two
-  apps fight over one incremental cache and you get type errors that vanish on a
-  clean build: an hour of debugging for a one-word edit.
+**The `--tsBuildInfoFile` edit is the one that used to bite.** Two apps sharing
+one incremental cache produce type errors that vanish on a clean build: an hour
+of debugging for a one-word edit. It is handled now, but it is why you should
+not copy by hand.
 
-### 2. `pikkufabric.config.json`
+### What it refuses, and why that is the valuable part
 
-This file is the source of truth for what apps exist, and it is read whether or
-not you ever deploy to Fabric.
+The scaffolding is five file edits. Getting the audience wrong is a whole
+second app nobody needed, so the command will not create one when:
 
-```json
-{
-  "projectId": "__PROJECT_ID__",
-  "frontends": {
-    "app": {
-      "cwd": "apps/app", "primary": true, "deploy": true, "kind": "ssr",
-      "dev": { "command": ["bun", "run", "dev"], "port": 7104, "healthPath": "/" },
-      "serves": "tenant",
-      "personas": ["visitor", "chidi"]
-    },
-    "admin": {
-      "cwd": "apps/admin", "primary": false, "deploy": true, "kind": "ssr",
-      "dev": { "command": ["bun", "run", "dev"], "port": 7105, "healthPath": "/" },
-      "serves": "owner",
-      "personas": ["amina", "bilal"]
-    }
-  }
-}
-```
+- **`--serves` names a surface.** `dashboard`, `portal`, `admin`, `console`,
+  `ui` and friends say nothing — every frontend is an app. Name the people in
+  their own word: staff, customer, supplier, patient.
+- **An existing app already serves that audience.** People sharing an audience
+  share ONE app and differ by nav and permitted actions. A new app is for a
+  group the first app is not for.
+- **A named persona already signs into another app.** A person signs into one
+  app; move them out first if they really belong here.
+- **The slug is what the plan calls an app that already exists.** The plan's
+  FIRST app is the one the project starts with — only the apps after it get
+  created.
+- **A persona is not in `definePersonas({…})`.** The app is built around who
+  signs into it, so it is not created for people who do not exist yet.
 
-Two things to fix while you are in here, not just add:
+It also repairs its own half-states: a run that died between writing the
+directory and writing the config entry leaves one without the other, and
+neither survives alone, so the next run clears the remains and carries on
+rather than sending you in to do the surgery by hand.
 
-- **The shipped `app` entry may say `["yarn", "dev"]`** while the rest of the
-  project is driven with bun. Correct it. A frontend that starts under a package
-  manager the project does not use is a failure that only appears on someone
-  else's machine.
-- **`serves` and `personas` name real personas.** Every persona should appear
-  under exactly one frontend. A persona listed nowhere is a person with no way
-  in, and that is a design bug worth seeing now rather than at review.
+### What it does NOT do
 
-### 3. The dev runner
-
-`dev.mjs`, under the project's scripts directory, spawns `@project/app` **by
-name** and will silently never start your second app — the frontend simply is not
-there, with no error to explain it.
-
-Make it read the `frontends` map and spawn one child per entry, rather than
-adding a second hardcoded line. Two sources of truth for "which apps exist" is
-the drift this whole file is trying to avoid.
-
-### 4. `pikku.config.json` → `environments`
-
-`local.appUrl` points at one app. Add an environment per frontend (`local`,
-`local-admin`) so the browser scenario pass can drive either one. A browser
-scenario run against the wrong `appUrl` fails on a missing element and reads like
-a UI bug rather than a config one.
-
-### 5. Re-run `bun install`
-
-`apps/*` is already globbed in the root workspaces, so this just links the new
-one.
+It stops after `bun install`. Serving the new app — a reverse proxy, a
+supervisor, a dev runner, a deploy target — belongs to whatever is hosting it.
+On a plain checkout, `bun --filter @project/<slug> dev` is enough.
 
 ## Sessions across two origins
 

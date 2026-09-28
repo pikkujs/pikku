@@ -3,12 +3,11 @@ name: pikku-report
 description: >-
   Use when pikku itself cost you time — wrong generated types, a check that passes when it
   should not, output that is quietly wrong, a skill that misled you — or when the user asks you
-  to report a framework bug, file a finding, or look at what is queued. Owns `pikku fabric
-  report` (a finding is about pikku, not the app), the product-vs-harness kinds, the
-  workaround-first ladder, and the local findings spool. TRIGGER when: the framework fought you,
+  to report a framework bug or file a finding. Owns `pikku fabric report` (a finding is about
+  pikku, not the app), the product-vs-harness kinds, the workaround-first ladder, and asking the
+  user at hand-over whether to send what was filed. TRIGGER when: the framework fought you,
   codegen produced something broken, a skill told you to run something that does not exist, the
-  user says "report this to pikku" / "file a finding" / "check the findings queue", or a finding
-  was queued and never sent. DO NOT TRIGGER when: the bug is in the app you are building (fix it
+  user says "report this to pikku" / "file a finding", or you are handing over a build. DO NOT TRIGGER when: the bug is in the app you are building (fix it
   there), or you are tempted to patch pikku's source (never do that from an app).
 installGroups: [core]
 ---
@@ -19,9 +18,9 @@ A finding is about **pikku**, not about the app you are building. It is how the
 framework learns what cost its users time — the bug, the misleading skill, the
 silence where a check should have complained.
 
-Nothing is written to the repository. The terminal receipt shows exactly what
-left your machine, and the command is spelled `pikku fabric report` — there is
-no top-level report command.
+File each one the moment it happens. Nothing leaves the machine until the user
+says so at hand-over, and nothing is written to the repository. The command is
+spelled `pikku fabric report` — there is no top-level report command.
 
 ## Report at the moment it happens
 
@@ -62,7 +61,7 @@ baseline noise that was already failing before you started.
 - `--kind harness` — a skill misled you: it told you to run something that does
   not exist, described a flag that is spelled differently, or contradicted what
   the CLI actually did. Pass `--skill <name>` and `--passage "<the line or
-  section>"`. This is the most useful kind to file, because it is fixable
+section>"`. This is the most useful kind to file, because it is fixable
   immediately — so file it even when the cost was small.
 
 ## The command
@@ -102,24 +101,44 @@ before anything is sent:
 Add whichever of these you actually have: `error` (the error's message line,
 verbatim), `repro` (the shortest way to reach it again), `proposal`, `area`,
 `surface`, `cost` (measured if you measured it — "98s vs 20s steady" ranks;
-"slow" does not), `run` (an id shared by every finding from this build),
-`deployTarget`.
+"slow" does not), `deployTarget`.
 
 Versions, platform and package manager are read off the installed tree for you.
 Do not pass them and do not ask the user for them.
 
-## When it cannot send
+## At hand-over
 
-Reporting never fails a build. A finding that cannot be sent — logged out, or
-fabric unreachable — is held on the machine and goes out with the next report
-that succeeds, so nothing you file is lost:
+Filing holds the finding on the machine, tied to this build by a run id the CLI
+makes for the checkout. The terminal says `held until hand-over`; carry on.
 
-- `pikku fabric findings list` shows what is queued.
-- `pikku fabric findings flush` sends everything queued.
-- `pikku fabric findings clear` discards it.
+The last thing in the hand-over — after the app runs, and is deployed if they
+chose to — is:
 
-If the terminal says the finding was queued, carry on with what you were doing.
-Do not try to fix the send, and do not file the same thing again.
+```bash
+pikku fabric report
+```
+
+With no finding, it lists what this build filed. What happens next depends on
+what the user said before, which the CLI keeps on their machine:
+
+- **Always** — every finding was sent the moment you filed it. Tell the user in
+  one line.
+- **Never** — nothing was kept. Do not ask and do not mention it.
+- **Nothing saved** — show the user the titles and ask once: _"Send these to the
+  Pikku team so they can fix them?"_ — **Yes**, **No**, **Always** or
+  **Never**. Then run it again with their answer:
+
+  ```bash
+  pikku fabric report --consent yes|no|always|never
+  ```
+
+  Yes sends and No discards what is held now; Always and Never are saved and the
+  question is not asked again. If nobody answers, leave them held and say that
+  `pikku fabric report` sends them later.
+
+Findings are anonymous: no account, no project. The receipt printed when you
+filed each one is exactly what leaves the machine. A send that fails keeps what
+was not sent; do not retry or file it twice.
 
 ## Never fix pikku itself
 

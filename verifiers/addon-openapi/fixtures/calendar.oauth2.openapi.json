@@ -1,0 +1,58 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Team Calendar", "version": "3.0.0", "description": "Shared team calendar" },
+  "servers": [{ "url": "https://calendar.example.com/api/v3" }],
+  "components": {
+    "securitySchemes": {
+      "oauth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://calendar.example.com/oauth/authorize",
+            "tokenUrl": "https://calendar.example.com/oauth/token",
+            "scopes": { "events.read": "Read events", "events.write": "Write events" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "required": ["id", "title", "start"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "start": { "type": "string", "format": "date-time" },
+          "end": { "type": "string", "format": "date-time" },
+          "attendees": { "type": "array", "items": { "type": "string", "format": "email" } },
+          "recurrence": { "oneOf": [{ "type": "string" }, { "type": "object", "properties": { "rule": { "type": "string" } } }] }
+        }
+      }
+    }
+  },
+  "security": [{ "oauth": ["events.read"] }],
+  "paths": {
+    "/events": {
+      "get": {
+        "operationId": "listEvents",
+        "tags": ["events"],
+        "parameters": [{ "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } }],
+        "responses": { "200": { "description": "Events", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } } } } } }
+      },
+      "post": {
+        "operationId": "createEvent",
+        "tags": ["events"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Event" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Event" } } } } }
+      }
+    },
+    "/events/{eventId}": {
+      "delete": {
+        "operationId": "deleteEvent",
+        "tags": ["events"],
+        "parameters": [{ "name": "eventId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "204": { "description": "Deleted" } }
+      }
+    }
+  }
+}

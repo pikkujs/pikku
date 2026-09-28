@@ -1,5 +1,87 @@
 # @pikku/skills
 
+## 0.12.40
+
+### Patch Changes
+
+- bc488cf: fix(inspector): an explicit `auth: false` declares an exposed sessionless function public, so PKU574 no longer warns about it
+
+  A genuinely public endpoint — a published programme, a health check — had no
+  honest way to quiet PKU574: the only options were an always-true permission or
+  `permissionsInBody: true`, both of which claim a gate that does not exist. The
+  inspector now records `auth` on function meta exactly as written instead of
+  dropping `false`, and the check treats an explicit `auth: false` as the author
+  declaring the function public on purpose. A sessionless function that leaves
+  `auth` out still warns.
+
+- 3276942: `pikku fabric report` no longer needs a sign-in. A finding is filed the moment something goes wrong and held on the machine, tied to the build by a run id made for the checkout. At hand-over, `pikku fabric report` with no finding lists what is held and asks: yes or no for these, or always or never, which is saved (`~/.fabric/report-consent.json`, or `PIKKU_REPORT`) so the question is not asked again. Always sends each finding as it is filed; never keeps nothing. The `--run` flag and `pikku fabric findings list|flush|clear` are gone.
+- 1ac09c7: The `pikku-workflow` skill now documents sub-workflows: `workflow.do` with a workflow name runs it as a child run, graph nodes may name a workflow, and inline vs queued children differ on retries.
+
+## 0.12.39
+
+### Patch Changes
+
+- b35d3d4: Fix `pikku-knowledge` teaching a section and a status that nothing reads.
+
+  The skill described the work-note section as `slices/` with `type: slice`.
+  `@pikku/knowledge` has no such concept: `MILESTONES_DIR` is
+  `knowledge/milestones`, `MILESTONE_TYPE` is the literal `'milestone'`, and
+  `readMilestones` filters on both. A note written the way the skill described
+  is invisible to `pikku knowledge next`, to the milestone gate and to
+  reconcile — the knowledge base looks empty rather than wrong, which is the
+  expensive way to fail. The type-table row also claimed `validate` accepts
+  both spellings; it does not.
+
+  It also documented `status: designing` as the step before `proposed`.
+  `MILESTONE_STATUSES` is `['proposed', 'dispatched', 'built']`, so that note
+  fails `validate`. The paragraph now says a profile may add a status of its
+  own ahead of `proposed` and that validating it is the profile's job, which
+  is what a downstream base actually does.
+
+- b35d3d4: Add `pikku new app` and the registry's discovery half.
+
+  **`pikku new app <slug> --serves <group> --personas <ids>`** adds a frontend,
+  scaffolded from `pikkujs/starter-template`'s `apps/app`. It re-points the copy's
+  `package.json` at its own name, dev/preview port and `--tsBuildInfoFile`, stamps
+  `app: '<slug>'` onto each named persona, writes the `frontends` entry and
+  re-runs the install. `pikku-build`'s `multi-app.md` described all of that as
+  five files to edit by hand, including the build-cache path whose absence
+  produces type errors that vanish on a clean build.
+
+  It scaffolds from the template rather than copying the app already in the
+  project: a copy drags the first app's screens, routes and nav into an audience
+  that never asked for them. `--template <source>` takes any giget source, or a
+  path inside the repo for an offline or vendored copy.
+
+  The refusals matter more than the scaffolding, because the scaffolding is five
+  edits and a wrong audience is a whole second app nobody needed: a `--serves`
+  that names a surface rather than people, an audience that already has an app,
+  a persona who already signs into another one, a slug the plan already uses for
+  an existing app, and a persona no `definePersonas({…})` declares. It repairs
+  its own half-states too — the directory is written before the config entry,
+  and neither half survives alone.
+
+  It stops after the install; serving the app belongs to whatever hosts it.
+
+  **`pikku fabric addon search|get`** fill in the registry's read half, next to
+  the `verify`/`publish`/`add` that were already there. Both catalogues are
+  public GETs, so discovery needs no login — the question "is there already an
+  addon for this?" comes up before adopting one, not after. `search` prints
+  published addons ahead of OpenAPI entries, because one is built and typed
+  while the other still costs a codegen round that can fail on a bad spec.
+  `get` accepts every spelling in the wild — `gmail`, `addon-gmail` and
+  `@pikku/addon-gmail` all reach `pikku-addon-gmail`, including the ones
+  `search` itself printed.
+
+## 0.12.38
+
+### Patch Changes
+
+- b31675a: pikku-scenario: how a custom dev runner bakes the actor switcher's env, and why SCENARIO_ACTOR_SECRET must be set rather than minted
+- 237c061: pikku-build: link the console at the person's technical level (local console until deploy, then the Fabric stage's) and offer a picture of the main screens
+- 0672bdd: pikku-build: print the app, API and console links whenever the dev stack comes up and at every hand-over
+- b3e5443: OpenAPI onboarding in the skills: pikku-build picks the auth mode and documents the auth-config format and the matching sign-in or connect screen, and keeps a BUILD-REPORT.md sent with the user's okay; pikku-addon's OpenAPI reference follows the one-command install; pikku-auth documents login/username delegated sign-in.
+
 ## 0.12.37
 
 ### Patch Changes

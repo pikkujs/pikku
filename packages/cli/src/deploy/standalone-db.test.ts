@@ -1,11 +1,24 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { existsSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 import { resolveStandaloneDb } from './build-pipeline.js'
+import { SQLITE_LIBRARY_ENV } from '../functions/db/sqlite/sqlite-library.js'
+
+/** sqlite-vec's library for this platform: `vec0.dylib`, `vec0.so`, `vec0.dll`. */
+const VEC0 = basename(
+  createRequire(import.meta.url)('sqlite-vec').getLoadablePath()
+)
 
 const silentLogger = {
   info: () => {},
@@ -29,8 +42,28 @@ const writeMigrations = (engine: 'sqlite' | 'postgres') => {
   writeFileSync(join(dir, '0001-init.sql'), 'select 1;', 'utf-8')
 }
 
-const resolve = () =>
-  resolveStandaloneDb(projectDir, pikkuDir, unitDir, ['src'], silentLogger)
+const resolve = (sqliteExtensions?: string[], withSqliteLibrary = false) =>
+  resolveStandaloneDb(
+    projectDir,
+    pikkuDir,
+    unitDir,
+    ['src'],
+    silentLogger,
+    sqliteExtensions,
+    { withSqliteLibrary }
+  )
+
+/** Runs `body` with PIKKU_SQLITE_LIBRARY set, restoring whatever was there. */
+const withLibraryEnv = async (value: string, body: () => Promise<void>) => {
+  const previous = process.env[SQLITE_LIBRARY_ENV]
+  process.env[SQLITE_LIBRARY_ENV] = value
+  try {
+    await body()
+  } finally {
+    if (previous === undefined) delete process.env[SQLITE_LIBRARY_ENV]
+    else process.env[SQLITE_LIBRARY_ENV] = previous
+  }
+}
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'pikku-standalone-db-'))
@@ -55,7 +88,10 @@ describe('resolveStandaloneDb', () => {
       `export const createConfig = async () => ({ sqliteDb: '.pikku-runtime/dev.db' })`
     )
 
-    assert.deepEqual(await resolve(), { engine: 'sqlite' })
+    assert.deepEqual(await resolve(), {
+      engine: 'sqlite',
+      sqliteExtensions: [VEC0],
+    })
   })
 
   test('postgresUrl in createConfig declares a database with no migrations dir', async () => {
@@ -89,7 +125,10 @@ describe('resolveStandaloneDb', () => {
       `export const createConfig = async () => { throw new Error('DATABASE_URL is not set') }`
     )
 
-    assert.deepEqual(await resolve(), { engine: 'sqlite' })
+    assert.deepEqual(await resolve(), {
+      engine: 'sqlite',
+      sqliteExtensions: [VEC0],
+    })
   })
 
   test('a createConfig that throws in a project with no database is not a build failure', async () => {
@@ -127,5 +166,117 @@ describe('resolveStandaloneDb', () => {
     const db = await resolve()
     assert.equal(db?.engine, 'sqlite')
     assert.match(db?.coercionImportPath ?? '', /coercion\.gen\.js$/)
+  })
+
+  test('a SQLite build ships sqlite-vec by default, with a manifest that embeds it', async () => {
+    writeMigrations('sqlite')
+    const db = await resolve()
+
+    assert.deepEqual(db?.sqliteExtensions, [VEC0])
+    assert.ok(existsSync(join(unitDir, 'sqlite-extensions', VEC0)))
+    const manifest = readFileSync(
+      join(unitDir, 'sqlite-extensions.gen.js'),
+      'utf-8'
+    )
+    assert.match(
+      manifest,
+      new RegExp(
+        `from './sqlite-extensions/${VEC0.replace('.', '\\.')}' with \\{ type: 'file' \\}`
+      )
+    )
+    assert.match(manifest, new RegExp(`name: '${VEC0.replace('.', '\\.')}'`))
+  })
+
+  test('db.sqliteExtensions: [] ships none', async () => {
+    writeMigrations('sqlite')
+    assert.deepEqual(await resolve([]), { engine: 'sqlite' })
+    assert.equal(existsSync(join(unitDir, 'sqlite-extensions')), false)
+  })
+
+  test('a Postgres build ships no SQLite extensions', async () => {
+    writeMigrations('postgres')
+    assert.deepEqual(await resolve(), { engine: 'postgres' })
+    assert.equal(existsSync(join(unitDir, 'sqlite-extensions')), false)
+  })
+
+  describe('the SQLite library a bun build carries', () => {
+    const macOnly = {
+      skip:
+        process.platform !== 'darwin' &&
+        'only macOS swaps in a libsqlite3; bun elsewhere brings its own',
+    }
+
+    test(
+      'is staged beside the extensions and embedded by the manifest',
+      macOnly,
+      async () => {
+        writeMigrations('sqlite')
+        const library = join(root, 'libsqlite3.3.53.4.dylib')
+        writeFileSync(library, 'lib')
+
+        await withLibraryEnv(library, async () => {
+          const db = await resolve(undefined, true)
+          assert.equal(db?.sqliteLibrary, 'libsqlite3.3.53.4.dylib')
+        })
+        assert.equal(
+          readFileSync(
+            join(unitDir, 'sqlite-extensions', 'libsqlite3.3.53.4.dylib'),
+            'utf-8'
+          ),
+          'lib'
+        )
+        assert.match(
+          readFileSync(join(unitDir, 'sqlite-extensions.gen.js'), 'utf-8'),
+          /export const sqliteLibrary = \{ name: 'libsqlite3\.3\.53\.4\.dylib', path: library \}/
+        )
+      }
+    )
+
+    test(
+      'is staged even when the project loads no extensions',
+      macOnly,
+      async () => {
+        writeMigrations('sqlite')
+        const library = join(root, 'libsqlite3.dylib')
+        writeFileSync(library, 'lib')
+
+        await withLibraryEnv(library, async () => {
+          assert.deepEqual(await resolve([], true), {
+            engine: 'sqlite',
+            sqliteLibrary: 'libsqlite3.dylib',
+          })
+        })
+      }
+    )
+
+    test('fails the build when there is none to carry', macOnly, async () => {
+      writeMigrations('sqlite')
+      await withLibraryEnv(join(root, 'missing.dylib'), async () => {
+        await assert.rejects(resolve(undefined, true), (error: Error) => {
+          assert.match(error.message, /ships its own libsqlite3/)
+          assert.match(error.message, /missing\.dylib/)
+          return true
+        })
+      })
+    })
+
+    test('is not staged for a runtime that does not ask for one', async () => {
+      writeMigrations('sqlite')
+      await withLibraryEnv(join(root, 'missing.dylib'), async () => {
+        const db = await resolve()
+        assert.equal(db?.sqliteLibrary, undefined)
+      })
+    })
+  })
+
+  test('an extension that cannot be resolved fails the build', async () => {
+    writeMigrations('sqlite')
+    await assert.rejects(
+      resolve(['@not-installed/sqlite-nothing']),
+      (error: Error) => {
+        assert.match(error.message, /cannot be shipped in this build/)
+        return true
+      }
+    )
   })
 })

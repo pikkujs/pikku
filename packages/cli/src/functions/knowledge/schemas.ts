@@ -16,6 +16,7 @@ import {
   KnowledgeValidateInput,
   KnowledgeValidateOutput,
 } from '@pikku/knowledge'
+import { ConsoleUrlOutput } from './console-url.js'
 
 /**
  * The knowledge command schemas, re-bound to variables declared HERE rather than
@@ -44,11 +45,16 @@ export const KnowledgeValidateOutputSchema = KnowledgeValidateOutput
 export const KnowledgePlanSchemaInputSchema = KnowledgePlanSchemaInput
 export const KnowledgePlanSchemaOutputSchema = KnowledgePlanSchemaOutput
 export const KnowledgePlanProgressInputSchema = KnowledgePlanProgressInput
-export const KnowledgePlanProgressOutputSchema = KnowledgePlanProgressOutput
+export const KnowledgePlanProgressOutputSchema =
+  KnowledgePlanProgressOutput.extend(ConsoleUrlOutput.shape)
 export const KnowledgePlanShowInputSchema = KnowledgePlanShowInput
-export const KnowledgePlanShowOutputSchema = KnowledgePlanShowOutput
+export const KnowledgePlanShowOutputSchema = KnowledgePlanShowOutput.extend(
+  ConsoleUrlOutput.shape
+)
 export const KnowledgePlanSetInputSchema = KnowledgePlanSetInput
-export const KnowledgePlanSetOutputSchema = KnowledgePlanSetOutput
+export const KnowledgePlanSetOutputSchema = KnowledgePlanSetOutput.extend(
+  ConsoleUrlOutput.shape
+)
 export const KnowledgePlanDeferInputSchema = KnowledgePlanDeferInput
 export const KnowledgePlanDeferOutputSchema = KnowledgePlanDeferOutput
 

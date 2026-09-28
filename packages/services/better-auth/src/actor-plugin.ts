@@ -43,8 +43,82 @@ export interface ActorPluginOptions {
    * variable is.
    */
   allowSignIn?: string
+  /**
+   * Opens `POST /sign-in/persona { id }`, which signs in as a declared persona
+   * without the caller presenting a credential — the switcher a reviewer uses on
+   * a preview. `allowed` is asked on every call, so the app can gate it on a flag.
+   */
+  personaSignIn?: {
+    personas: ReadonlyArray<{ id: string; email?: string; name?: string; runnable?: boolean }>
+    allowed: () => boolean | Promise<boolean>
+  }
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
+  /**
+   * Upstream credentials an actor carries into its session, e.g. the token an
+   * addon calls a third-party API with. Read at every sign-in from
+   * `ACTOR_CREDENTIAL_<PERSONA>_<NAME>`, so a value never lives in code.
+   */
+  credentials?: ActorCredentialsOptions
+}
+
+export interface ActorCredentialsOptions {
+  /** Credential names to look up, as the addon declares them (`defineCredential({ name })`). */
+  names: string[]
+  /** Persist one credential for the actor — typically `credentialService.set(name, value, userId)`. */
+  store: (name: string, value: unknown, userId: string) => Promise<void>
+  /** Drop one the environment no longer sets — typically `credentialService.delete(name, userId)`. */
+  remove?: (name: string, userId: string) => Promise<void>
+  /** Defaults to `process.env`. A Worker passes `(key) => variables.get(key)`. */
+  read?: (key: string) => string | undefined | Promise<string | undefined>
+}
+
+const envSegment = (value: string) =>
+  value.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase()
+
+/** `dan@actors.local` + `dolibarr` → `ACTOR_CREDENTIAL_DAN_DOLIBARR`. */
+export const actorCredentialEnvKey = (email: string, name: string) =>
+  `ACTOR_CREDENTIAL_${envSegment(email.split('@')[0]!)}_${envSegment(name)}`
+
+/** A JSON object is stored as-is; anything else is a bare token, stored as `{ token }`. */
+export const parseActorCredential = (raw: string): unknown => {
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('{')) {
+    try {
+      return JSON.parse(trimmed)
+    } catch {
+      throw new Error('actor credential looks like JSON but does not parse')
+    }
+  }
+  return { token: trimmed }
+}
+
+const storeActorCredentials = async (
+  options: ActorCredentialsOptions,
+  email: string,
+  userId: string
+): Promise<string[]> => {
+  const read = options.read ?? ((key: string) => process.env[key])
+  const stored: string[] = []
+  for (const name of options.names) {
+    const key = actorCredentialEnvKey(email, name)
+    const raw = await read(key)
+    if (!raw) {
+      await options.remove?.(name, userId)
+      continue
+    }
+    let value: unknown
+    try {
+      value = parseActorCredential(raw)
+    } catch (e) {
+      throw new APIError('INTERNAL_SERVER_ERROR', {
+        message: `${key}: ${(e as Error).message}`,
+      })
+    }
+    await options.store(name, value, userId)
+    stored.push(name)
+  }
+  return stored
 }
 
 /**
@@ -71,6 +145,72 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
   if (!gate.enabled && typeof options.secret === 'string' && options.secret) {
     logger.warn(actorSignInRefusedMessage())
     refusalAnnounced = true
+  }
+
+  const signIn = async (ctx: any, email: string, name?: string) => {
+    type ActorUser = { id: string; actor?: boolean } & Record<
+      string,
+      unknown
+    >
+    const existing =
+      await ctx.context.internalAdapter.findUserByEmail(email)
+    let user: ActorUser | undefined = existing?.user as
+      ActorUser | undefined
+    if (user && !user.actor) {
+      // Real user row — the secret must never impersonate real users
+      throw new APIError('UNAUTHORIZED', {
+        message: 'User is not an actor',
+      })
+    }
+    if (!user) {
+      if (!gate.mayProvision) {
+        throw new APIError('UNAUTHORIZED', {
+          message: ACTOR_NOT_PROVISIONED_MESSAGE,
+        })
+      }
+      user = (await ctx.context.internalAdapter.createUser(
+        {
+          email,
+          emailVerified: true,
+          name: name ?? email.split('@')[0]!,
+          actor: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        { method: 'actor' }
+      )) as unknown as ActorUser | undefined
+      if (!user) {
+        throw new APIError('INTERNAL_SERVER_ERROR', {
+          message: 'Failed to create actor user',
+        })
+      }
+    }
+
+    const session = await ctx.context.internalAdapter.createSession(
+      user.id
+    )
+    if (!session) {
+      throw new APIError('INTERNAL_SERVER_ERROR', {
+        message: 'Failed to create actor session',
+      })
+    }
+    if (options.credentials) {
+      const stored = await storeActorCredentials(
+        options.credentials,
+        email,
+        user.id
+      )
+      if (stored.length > 0) {
+        logger.info(
+          `actor ${user.id} carries upstream credentials: ${stored.join(', ')}`
+        )
+      }
+    }
+    await setSessionCookie(ctx, { session, user: user as any })
+    return ctx.json({
+      token: session.token,
+      user: { id: user.id, email, actor: true },
+    })
   }
 
   return {
@@ -126,65 +266,41 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
             })
           }
 
-          type ActorUser = { id: string; actor?: boolean } & Record<
-            string,
-            unknown
-          >
           const email = ctx.body.email.toLowerCase()
           if (!(await verifyActorSecret(root, email, ctx.body.secret))) {
             throw new APIError('UNAUTHORIZED', {
               message: 'Invalid actor secret',
             })
           }
-          const existing =
-            await ctx.context.internalAdapter.findUserByEmail(email)
-          let user: ActorUser | undefined = existing?.user as
-            ActorUser | undefined
-          if (user && !user.actor) {
-            // Real user row — the secret must never impersonate real users
-            throw new APIError('UNAUTHORIZED', {
-              message: 'User is not an actor',
-            })
-          }
-          if (!user) {
-            if (!gate.mayProvision) {
-              throw new APIError('UNAUTHORIZED', {
-                message: ACTOR_NOT_PROVISIONED_MESSAGE,
-              })
-            }
-            user = (await ctx.context.internalAdapter.createUser(
-              {
-                email,
-                emailVerified: true,
-                name: ctx.body.name ?? email.split('@')[0]!,
-                actor: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              },
-              { method: 'actor' }
-            )) as unknown as ActorUser | undefined
-            if (!user) {
-              throw new APIError('INTERNAL_SERVER_ERROR', {
-                message: 'Failed to create actor user',
-              })
-            }
-          }
-
-          const session = await ctx.context.internalAdapter.createSession(
-            user.id
-          )
-          if (!session) {
-            throw new APIError('INTERNAL_SERVER_ERROR', {
-              message: 'Failed to create actor session',
-            })
-          }
-          await setSessionCookie(ctx, { session, user: user as any })
-          return ctx.json({
-            token: session.token,
-            user: { id: user.id, email, actor: true },
-          })
+          return signIn(ctx, email, ctx.body.name)
         }
       ),
+      ...(options.personaSignIn
+        ? {
+            signInPersona: createAuthEndpoint(
+              '/sign-in/persona',
+              { method: 'POST', body: z.object({ id: z.string() }) },
+              async (ctx) => {
+                const personaSignIn = options.personaSignIn!
+                if (!gate.enabled || !(await personaSignIn.allowed())) {
+                  throw new APIError('UNAUTHORIZED', {
+                    message: 'Persona sign-in is disabled',
+                  })
+                }
+                const persona = personaSignIn.personas.find(
+                  (candidate) =>
+                    candidate.id === ctx.body.id && candidate.runnable !== false
+                )
+                if (!persona?.email) {
+                  throw new APIError('NOT_FOUND', {
+                    message: `No persona '${ctx.body.id}'`,
+                  })
+                }
+                return signIn(ctx, persona.email.toLowerCase(), persona.name)
+              }
+            ),
+          }
+        : {}),
     },
   }
 }

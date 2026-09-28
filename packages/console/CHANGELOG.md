@@ -1,3 +1,16 @@
+## 0.12.89
+
+### Patch Changes
+
+- 894e57a: The console's knowledge page keeps the open note in `?id=`, so a note or a milestone plan can be linked to. For example, `/console/knowledge?id=milestones/01-foo.plan.json` opens that milestone with its plan. `pikku knowledge plan set`, `show` and `progress` print that link, and add it to their JSON output as `consoleUrl`. The link uses the running `pikku dev` server's address when there is one, and `http://localhost:3000` otherwise.
+- 1d819ea: `VirtualUsersWorkspace` takes a `production` flag. When set, Run now is disabled for every persona whose disposition is not accountable, and a schedule with such a disposition cannot be turned on or saved while on, each with a line saying why, instead of offering what the server can only refuse. Turning a schedule off is always allowed.
+- Updated dependencies [2f317d0]
+- Updated dependencies [0210e96]
+- Updated dependencies [e84abd0]
+- Updated dependencies [5442d94]
+  - @pikku/better-auth@0.12.47
+  - @pikku/core@0.12.121
+
 ## 0.12.88
 
 ### Patch Changes

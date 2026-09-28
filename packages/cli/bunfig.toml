@@ -1,0 +1,4 @@
+[test]
+# Tests open SQLite the way the CLI does, so under bun on macOS they need the
+# same libsqlite3 swapped in before the first database opens.
+preload = ["./src/test-preload.ts"]

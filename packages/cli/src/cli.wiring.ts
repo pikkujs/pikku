@@ -87,6 +87,7 @@ import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
 import { pikkuNewAddon } from './functions/commands/new-addon.js'
+import { pikkuNewApp, renderNewApp } from './functions/commands/new-app.js'
 import { pikkuImportN8n } from './functions/commands/import-n8n.js'
 import { doc, renderDoc } from './functions/commands/doc.js'
 import {
@@ -1118,6 +1119,35 @@ wireCLI({
             },
           },
         }),
+        app: pikkuCLICommand({
+          func: pikkuNewApp,
+          render: renderNewApp,
+          description:
+            'Add a frontend from the starter template, for a group the first app is not for',
+          parameters: '<slug>',
+          options: {
+            serves: {
+              description:
+                'Who the app is for, in their own word (staff, customer, supplier, patient) — not a surface word',
+            },
+            personas: {
+              description:
+                'Comma-separated persona ids that sign into it; each must be in definePersonas({…})',
+            },
+            template: {
+              description:
+                'Template to scaffold from — a giget source or a path in the repo (defaults to gh:pikkujs/starter-template/apps/app)',
+            },
+            primary: {
+              description: 'Make this the primary frontend',
+              default: false,
+            },
+            install: {
+              description: 'Run `bun install` afterwards',
+              default: true,
+            },
+          },
+        }),
         addon: pikkuCLICommand({
           func: pikkuNewAddon,
           description: 'Scaffold a new addon package',
@@ -1155,7 +1185,11 @@ wireCLI({
             },
             credential: {
               description:
-                'Include per-user credential wiring (apikey, bearer, or oauth2)',
+                'Per-user credential type (apikey, bearer, basic, or oauth2); with --openapi it defaults to what the spec declares',
+            },
+            auth: {
+              description:
+                'With --openapi: user (default — each user connects their own credential), shared (one secret behind every user), or none (public API)',
             },
             test: {
               description: 'Include test harness (default: true)',
@@ -1163,7 +1197,26 @@ wireCLI({
             },
             openapi: {
               description:
-                'Path to OpenAPI YAML/JSON spec to generate functions from',
+                'Path or URL of an OpenAPI 3.x / Swagger 2.0 spec (YAML or JSON) to generate functions from',
+            },
+            openapiHeader: {
+              description:
+                'Header sent when fetching --openapi from a URL, as "Name: value" (repeatable), for specs published only to authenticated requests',
+            },
+            tags: {
+              description: 'With --openapi: keep only operations with these tags',
+            },
+            include: {
+              description:
+                'With --openapi: keep only operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            exclude: {
+              description:
+                'With --openapi: drop operations matching these globs (operationId, /path or "METHOD /path")',
+            },
+            install: {
+              description:
+                'With --openapi inside an app: add the addon to the app — dependencies, wireAddon, auth wiring, base URL (default: on inside an app)',
             },
             authConfig: {
               description:

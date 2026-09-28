@@ -5,7 +5,11 @@ import { memoryAdapter } from 'better-auth/adapters/memory'
 
 import { deriveActorSecret } from '@pikku/core/services'
 
-import { pikkuActor } from './actor-plugin.js'
+import {
+  actorCredentialEnvKey,
+  parseActorCredential,
+  pikkuActor,
+} from './actor-plugin.js'
 import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
   ACTOR_SIGN_IN_OPT_IN_VALUE,
@@ -35,7 +39,11 @@ const recordingLogger = () => {
 const makeAuth = (
   db: Record<string, any[]>,
   secret?: string,
-  options: { logger?: any; allowSignIn?: string } = {}
+  options: {
+    logger?: any
+    allowSignIn?: string
+    personaSignIn?: Parameters<typeof pikkuActor>[0]['personaSignIn']
+  } = {}
 ) =>
   betterAuth({
     baseURL: 'http://localhost:3000',
@@ -46,6 +54,7 @@ const makeAuth = (
       pikkuActor({
         secret,
         allowSignIn: options.allowSignIn,
+        personaSignIn: options.personaSignIn,
         logger: options.logger ?? recordingLogger(),
       }),
     ],
@@ -188,6 +197,79 @@ describe('better-auth actor plugin', () => {
       secret: '',
     })
     assert.equal(unconfigured.status, 401)
+  })
+})
+
+const signInPersona = (auth: ReturnType<typeof makeAuth>, id: string) =>
+  auth.handler(
+    new Request('http://localhost:3000/api/auth/sign-in/persona', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+  )
+
+describe('persona sign-in', () => {
+  const personas = [
+    { id: 'customer', email: 'customer@actors.local', name: 'Customer' },
+    { id: 'banned', email: 'banned@actors.local', runnable: false },
+  ]
+  beforeEach(() => {
+    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+  })
+  afterEach(clearGateEnv)
+
+  test('signs in as a declared persona with no credential from the caller', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    const res = await signInPersona(auth, 'customer')
+
+    assert.equal(res.status, 200)
+    assert.match(res.headers.getSetCookie().join('; '), /better-auth\.session_token=/)
+    assert.equal((await res.json()).user.email, 'customer@actors.local')
+  })
+
+  test('asks `allowed` on every call', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    let allowed = false
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: async () => allowed },
+    })
+
+    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    allowed = true
+    assert.equal((await signInPersona(auth, 'customer')).status, 200)
+  })
+
+  test('stays shut when the actor gate is shut, whatever `allowed` says', async () => {
+    clearGateEnv()
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    assert.equal(db.user!.length, 0)
+  })
+
+  test('refuses an undeclared or non-runnable persona', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = makeAuth(db, ROOT, {
+      personaSignIn: { personas, allowed: () => true },
+    })
+
+    assert.equal((await signInPersona(auth, 'nobody')).status, 404)
+    assert.equal((await signInPersona(auth, 'banned')).status, 404)
+  })
+
+  test('is not served unless configured', async () => {
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const res = await signInPersona(makeAuth(db, ROOT), 'customer')
+    assert.equal(res.status, 404)
+    assert.equal(db.user!.length, 0)
   })
 })
 
@@ -385,5 +467,94 @@ describe('stampActorFlag', () => {
       stampActorFlag({ userId: 'u1', actor: false }, { actor: true }),
       { userId: 'u1', actor: false }
     )
+  })
+})
+
+describe('actor upstream credentials', () => {
+  beforeEach(() => {
+    process.env[DEV_ACTOR_SIGN_IN_ENV] = 'true'
+  })
+  afterEach(clearGateEnv)
+
+  const signInWith = async (env: Record<string, string>) => {
+    const stored: Array<[string, unknown, string]> = []
+    const removed: string[] = []
+    const db: Record<string, any[]> = { user: [], session: [], account: [] }
+    const auth = betterAuth({
+      baseURL: 'http://localhost:3000',
+      secret: 'better-auth-test-secret',
+      database: memoryAdapter(db),
+      emailAndPassword: { enabled: true },
+      plugins: [
+        pikkuActor({
+          secret: ROOT,
+          logger: recordingLogger(),
+          credentials: {
+            names: ['dolibarr', 'calendar'],
+            store: async (name, value, userId) => {
+              stored.push([name, value, userId])
+            },
+            remove: async (name) => {
+              removed.push(name)
+            },
+            read: (key) => env[key],
+          },
+        }),
+      ],
+    })
+    const email = 'dan@actors.local'
+    const res = await signInActor(auth, {
+      email,
+      secret: await credentialFor(email),
+    })
+    return { res, stored, removed, db }
+  }
+
+  test('derives the env key from the persona id and credential name', () => {
+    assert.equal(
+      actorCredentialEnvKey('dan@actors.local', 'dolibarr'),
+      'ACTOR_CREDENTIAL_DAN_DOLIBARR'
+    )
+    assert.equal(
+      actorCredentialEnvKey('ops-lead@actors.local', 'googleBooks'),
+      'ACTOR_CREDENTIAL_OPS_LEAD_GOOGLEBOOKS'
+    )
+  })
+
+  test('a bare value is a token, a JSON object is stored as-is', () => {
+    assert.deepEqual(parseActorCredential(' abc '), { token: 'abc' })
+    assert.deepEqual(parseActorCredential('{"apiKey":"k"}'), { apiKey: 'k' })
+    assert.throws(() => parseActorCredential('{nope'))
+  })
+
+  test('stores each configured credential for the signed-in actor', async () => {
+    const { res, stored, db } = await signInWith({
+      ACTOR_CREDENTIAL_DAN_DOLIBARR: 'tok-123',
+    })
+    assert.equal(res.status, 200)
+    assert.deepEqual(stored, [
+      ['dolibarr', { token: 'tok-123' }, db.user[0].id],
+    ])
+  })
+
+  test('stores nothing when no value is set, and removes what an earlier sign-in stored', async () => {
+    const { res, stored, removed } = await signInWith({
+      ACTOR_CREDENTIAL_DAN_DOLIBARR: 'tok-123',
+    })
+    assert.equal(res.status, 200)
+    assert.deepEqual(
+      stored.map(([name]) => name),
+      ['dolibarr']
+    )
+    assert.deepEqual(removed, ['calendar'])
+  })
+
+  test('refuses sign-in on a malformed JSON value', async () => {
+    const { res, stored } = await signInWith({
+      ACTOR_CREDENTIAL_DAN_CALENDAR: '{broken',
+    })
+    assert.equal(res.status, 500)
+    assert.match(await res.text(), /ACTOR_CREDENTIAL_DAN_CALENDAR/)
+    assert.deepEqual(stored, [])
   })
 })

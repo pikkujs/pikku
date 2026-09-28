@@ -8211,6 +8211,36 @@ export type SubmitContactFormInput = {
 export type SubmitContactFormOutput = {
     success: boolean;
 }
+export type SubmitFindingInput = {
+    finding: {
+        runId: string;
+        title: string;
+        kind: "product" | "harness";
+        model: string;
+        expected: string;
+        actual: string;
+        skill?: string | undefined;
+        passage?: string | undefined;
+        command?: string | undefined;
+        error?: string | undefined;
+        repro?: string | undefined;
+        workaround?: string | undefined;
+        proposal?: string | undefined;
+        tried?: string | undefined;
+        unresolved?: boolean | undefined;
+        area?: string | undefined;
+        surface?: ("local" | "deployed" | "both") | undefined;
+        cost?: string | undefined;
+        deployTarget?: string | undefined;
+        environment: {
+            [key: string]: unknown;
+        };
+        reportedAt: string;
+    };
+}
+export type SubmitFindingOutput = {
+    findingId: string;
+}
 export type SumSandboxAISpendInput = {
     sandboxId: string;
 }
@@ -9195,6 +9225,7 @@ export type RPCMap = {
   readonly 'setStageSealedSecret': RPCHandler<SetStageSealedSecretInput, SetStageSealedSecretOutput>,
   readonly 'setStageSealingKey': RPCHandler<SetStageSealingKeyInput, SetStageSealingKeyOutput>,
   readonly 'submitContactForm': RPCHandler<SubmitContactFormInput, SubmitContactFormOutput>,
+  readonly 'submitFinding': RPCHandler<SubmitFindingInput, SubmitFindingOutput>,
   readonly 'addTicketComment': RPCHandler<AddTicketCommentInput, AddTicketCommentOutput>,
   readonly 'advanceTicket': RPCHandler<AdvanceTicketInput, AdvanceTicketOutput>,
   readonly 'createTicket': RPCHandler<CreateTicketInput, CreateTicketOutput>,

@@ -1,0 +1,83 @@
+{
+  "swagger": "2.0",
+  "info": { "title": "Bookshop", "version": "2.1.0" },
+  "host": "books.example.com",
+  "basePath": "/v2",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "basicAuth": { "type": "basic" }
+  },
+  "security": [{ "basicAuth": [] }],
+  "definitions": {
+    "Book": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "type": "integer", "format": "int64" },
+        "title": { "type": "string" },
+        "author": { "$ref": "#/definitions/Author" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Author": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "born": { "type": "string", "format": "date" }
+      }
+    }
+  },
+  "paths": {
+    "/books": {
+      "get": {
+        "operationId": "listBooks",
+        "tags": ["books"],
+        "parameters": [
+          { "name": "limit", "in": "query", "type": "integer" },
+          { "name": "tag", "in": "query", "type": "array", "items": { "type": "string" }, "collectionFormat": "csv" }
+        ],
+        "responses": {
+          "200": { "description": "Books", "schema": { "type": "array", "items": { "$ref": "#/definitions/Book" } } }
+        }
+      },
+      "post": {
+        "operationId": "createBook",
+        "tags": ["books"],
+        "parameters": [
+          { "name": "body", "in": "body", "required": true, "schema": { "$ref": "#/definitions/Book" } }
+        ],
+        "responses": { "201": { "description": "Created", "schema": { "$ref": "#/definitions/Book" } } }
+      }
+    },
+    "/books/{bookId}": {
+      "parameters": [{ "name": "bookId", "in": "path", "required": true, "type": "integer" }],
+      "get": {
+        "operationId": "getBook",
+        "tags": ["books"],
+        "responses": {
+          "200": { "description": "A book", "schema": { "$ref": "#/definitions/Book" } },
+          "404": { "description": "Not found" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteBook",
+        "tags": ["books"],
+        "responses": { "204": { "description": "Deleted" } }
+      }
+    },
+    "/books/{bookId}/cover": {
+      "put": {
+        "operationId": "uploadCover",
+        "tags": ["books"],
+        "consumes": ["multipart/form-data"],
+        "parameters": [
+          { "name": "bookId", "in": "path", "required": true, "type": "integer" },
+          { "name": "file", "in": "formData", "type": "file", "required": true }
+        ],
+        "responses": { "200": { "description": "Stored", "schema": { "type": "string" } } }
+      }
+    }
+  }
+}

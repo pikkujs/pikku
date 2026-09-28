@@ -88,6 +88,33 @@ addError(MissingCredentialError, {
   message: 'A required credential is not configured.',
 })
 
+export class CredentialRejectedError extends PikkuError {
+  public payload: {
+    error: 'credential_rejected'
+    credentialName: string
+    reauth: 'sign-in' | 'connect'
+  }
+
+  constructor(
+    credentialName: string,
+    reauth: 'sign-in' | 'connect',
+    message?: string
+  ) {
+    super(
+      message ??
+        (reauth === 'sign-in'
+          ? `${credentialName} rejected the stored session — sign in again`
+          : `${credentialName} rejected the stored credential — reconnect it`)
+    )
+    this.payload = { error: 'credential_rejected', credentialName, reauth }
+  }
+}
+addError(CredentialRejectedError, {
+  status: 403,
+  message:
+    'The upstream service rejected the stored credential; the user has to sign in again or reconnect it.',
+})
+
 export class MissingScopeError extends PikkuError {
   public payload: {
     error: 'missing_scope'

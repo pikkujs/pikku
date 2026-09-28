@@ -60,6 +60,35 @@ export interface KnowledgeBundle {
 export type KnowledgeSelection =
   { kind: 'findings' } | { kind: 'note'; path: string }
 
+/** The `?id=` a selection is addressed by: `findings`, or the note's path. */
+export const knowledgeSelectionId = (selection: KnowledgeSelection): string =>
+  selection.kind === 'findings' ? 'findings' : selection.path
+
+/**
+ * Reads an `?id=` back into a selection. The id may drop the `knowledge/`
+ * prefix, and may name a milestone's `.plan.json` — the plan is drawn on its
+ * milestone note, so that is the note it opens. An id naming no note is null,
+ * which leaves the reader on the entry point rather than a blank document.
+ */
+export const resolveKnowledgeId = (
+  id: string | null,
+  notePaths: Iterable<string>
+): KnowledgeSelection | null => {
+  if (!id) return null
+  if (id === 'findings') return { kind: 'findings' }
+  const paths = new Set(notePaths)
+  const bare = id.replace(/^\/+/, '')
+  const candidates = [bare, `knowledge/${bare}`].flatMap((path) =>
+    path.endsWith('.plan.json')
+      ? ['.md', '.markdown', '.txt'].map((ext) =>
+          path.replace(/\.plan\.json$/, ext)
+        )
+      : [path]
+  )
+  const path = candidates.find((candidate) => paths.has(candidate))
+  return path ? { kind: 'note', path } : null
+}
+
 /** `knowledge/decisions/why.md` → `why.md`, which is what a listing wants. */
 export const noteFileName = (path: string): string =>
   path.split('/').pop() ?? path

@@ -51,6 +51,34 @@ export const STANDALONE_FRONTEND_DIR = 'frontend'
 export const STANDALONE_FRONTEND_MANIFEST = './frontend-assets.gen.js'
 
 /**
+ * Where the build staged the loadable SQLite extensions, and the module that
+ * embeds them for bun — both written by the CLI beside the unit's bundle.
+ * The node entry loads the libraries from the directory beside itself; the bun
+ * one imports the manifest, which, like the frontend's, stays out of esbuild.
+ */
+export const STANDALONE_SQLITE_EXTENSIONS_DIR = 'sqlite-extensions'
+export const STANDALONE_SQLITE_EXTENSIONS_MANIFEST =
+  './sqlite-extensions.gen.js'
+
+/**
+ * Where a bun binary writes its embedded extensions out to, beside the
+ * database. SQLite cannot load a library from inside the binary, and this is
+ * the one directory the operator has already said is writable and kept.
+ */
+const EXTRACTED_EXTENSIONS_DIR = '.pikku-sqlite-extensions'
+
+const hasSqliteExtensions = (
+  db: EntryGenerationContext['db']
+): db is NonNullable<EntryGenerationContext['db']> =>
+  db?.engine === 'sqlite' && (db.sqliteExtensions?.length ?? 0) > 0
+
+/** Only a bun build is handed one; see ProviderAdapter.bundlesSqliteLibrary. */
+const hasSqliteLibrary = (
+  db: EntryGenerationContext['db']
+): db is NonNullable<EntryGenerationContext['db']> =>
+  db?.engine === 'sqlite' && Boolean(db.sqliteLibrary)
+
+/**
  * Lines every standalone entry ends with, whatever the runtime.
  *
  * The ready line is the handshake a parent process — `pikku dev --spawn`, or
@@ -68,9 +96,18 @@ const sidecarHandshakeLines = (): string[] => [
  * The runtime helpers the entry imports. The database ones are left out of a
  * build with no database, so the bundle carries no migrator it can never run.
  */
-const runtimeImport = (ctx: EntryGenerationContext): string => {
+const runtimeImport = (
+  ctx: EntryGenerationContext,
+  runtime: StandaloneRuntime
+): string => {
   const names = ['watchParentProcess', 'parseStandaloneCommand']
   if (ctx.db) names.push('runStandaloneCommand', 'resolveMigrationsDir')
+  if (
+    runtime === 'bun' &&
+    (hasSqliteExtensions(ctx.db) || hasSqliteLibrary(ctx.db))
+  ) {
+    names.push('materializeEmbeddedFiles')
+  }
   return `import { ${names.join(', ')} } from '@pikku/deploy-standalone/runtime'`
 }
 
@@ -130,6 +167,17 @@ const dbImportLines = (
     ? [
         `import { ${SQLITE_FACTORY[runtime].fn} } from '${SQLITE_FACTORY[runtime].specifier}'`,
         `import { mkdirSync as __pikkuMkdirSync } from 'node:fs'`,
+        ...(runtime === 'bun' && hasSqliteExtensions(db)
+          ? [
+              `import { sqliteExtensions as __pikkuEmbeddedSqliteExtensions } from '${STANDALONE_SQLITE_EXTENSIONS_MANIFEST}'`,
+            ]
+          : []),
+        ...(runtime === 'bun' && hasSqliteLibrary(db)
+          ? [
+              `import { sqliteLibrary as __pikkuEmbeddedSqliteLibrary } from '${STANDALONE_SQLITE_EXTENSIONS_MANIFEST}'`,
+              `import { Database as __pikkuBunDatabase } from 'bun:sqlite'`,
+            ]
+          : []),
       ]
     : [`import { PikkuKysely } from '@pikku/kysely-postgres'`]),
   ...(db.coercionImportPath ? coercionImportLines(db.coercionImportPath) : []),
@@ -158,9 +206,13 @@ const dbSetupLines = (
       `    ? process.env.${DATABASE_FILE_VAR}`,
       `    : __pikkuJoin(__pikkuRequireDataDir(), '${DEFAULT_DATABASE_FILENAME}')`,
       `  __pikkuMkdirSync(__pikkuDirname(__pikkuDbFile), { recursive: true })`,
+      ...sqliteExtensionLines(runtime, db),
       `  const kysely = ${SQLITE_FACTORY[runtime].fn}({`,
       `    filename: __pikkuDbFile,`,
       `    plugins: ${plugins},`,
+      ...(hasSqliteExtensions(db)
+        ? [`    extensions: __pikkuSqliteExtensions,`]
+        : []),
       `  })`,
     ]
   }
@@ -181,6 +233,49 @@ const dbSetupLines = (
           `  )`,
         ]
       : [`  const kysely = __pikkuPg.kysely`]),
+  ]
+}
+
+/**
+ * The paths of the extensions the database is opened with, bound once so the
+ * app and a `db migrate` open it the same way.
+ *
+ * Node loads the copies shipped beside the bundle. A compiled bun binary
+ * writes its embedded copies out beside the database first, since SQLite
+ * cannot load a library from inside the binary's own filesystem — and, when it
+ * carries a libsqlite3, points bun at that before anything opens a database,
+ * because bun takes one only before its first open.
+ */
+const sqliteExtensionLines = (
+  runtime: StandaloneRuntime,
+  db: NonNullable<EntryGenerationContext['db']>
+): string[] => {
+  const extractTo = `__pikkuJoin(__pikkuDirname(__pikkuDbFile), '${EXTRACTED_EXTENSIONS_DIR}')`
+  const library =
+    runtime === 'bun' && hasSqliteLibrary(db)
+      ? [
+          `  const [__pikkuSqliteLibrary] = materializeEmbeddedFiles(`,
+          `    [__pikkuEmbeddedSqliteLibrary],`,
+          `    ${extractTo}`,
+          `  )`,
+          `  __pikkuBunDatabase.setCustomSQLite(__pikkuSqliteLibrary)`,
+        ]
+      : []
+  if (!hasSqliteExtensions(db)) return library
+  if (runtime === 'bun') {
+    return [
+      ...library,
+      `  const __pikkuSqliteExtensions = materializeEmbeddedFiles(`,
+      `    __pikkuEmbeddedSqliteExtensions,`,
+      `    ${extractTo}`,
+      `  )`,
+    ]
+  }
+  const names = db.sqliteExtensions!.map((name) => `'${name}'`).join(', ')
+  return [
+    `  const __pikkuSqliteExtensions = [${names}].map((name) =>`,
+    `    __pikkuJoin(${bundleDirExpression('node')}, '${STANDALONE_SQLITE_EXTENSIONS_DIR}', name)`,
+    `  )`,
   ]
 }
 
@@ -232,7 +327,7 @@ const commandDispatchLines = (
   const dir = `__pikkuJoin(${bundleDirExpression(runtime)}, 'db', '${ctx.db.engine}')`
   const handle =
     ctx.db.engine === 'sqlite'
-      ? `databaseFile: __pikkuDbFile,`
+      ? `databaseFile: __pikkuDbFile,${hasSqliteExtensions(ctx.db) ? ' extensions: __pikkuSqliteExtensions,' : ''}`
       : `sql: __pikkuPg.sql,`
 
   return [
@@ -377,6 +472,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
   readonly runtime: StandaloneRuntime
+  readonly bundlesSqliteLibrary: boolean
   readonly desktop: boolean
   readonly projectDir?: string
   readonly desktopIdentifier?: string
@@ -385,6 +481,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
     this.runtime = options.runtime ?? 'node'
+    this.bundlesSqliteLibrary = this.runtime === 'bun'
     this.desktop = options.desktop ?? Boolean(options.desktopUrl)
     this.projectDir = options.projectDir
     this.desktopIdentifier = options.desktopIdentifier
@@ -451,7 +548,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
       `import { DEFAULT_WS_MAX_PAYLOAD, pikkuWebsocketHandler } from '@pikku/ws'`,
       `import { WebSocketServer } from 'ws'`,
-      runtimeImport(ctx),
+      runtimeImport(ctx, 'node'),
       ...(ctx.frontend || ctx.db
         ? [
             `import { dirname as __pikkuDirname, join as __pikkuJoin } from 'node:path'`,
@@ -545,7 +642,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     return [
       `// Generated standalone entry (bun runtime) — all functions in one process`,
       `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
-      runtimeImport(ctx),
+      runtimeImport(ctx, 'bun'),
       `import { pikkuState } from '@pikku/core/state'`,
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
@@ -652,6 +749,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       // `bun build --compile` — leave them as imports rather than inlining.
       externals.push('bun', 'bun:*', 'bun:sqlite', 'bun:ffi')
       externals.push(STANDALONE_FRONTEND_MANIFEST)
+      externals.push(STANDALONE_SQLITE_EXTENSIONS_MANIFEST)
     }
     return externals
   }
@@ -768,6 +866,36 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         await copyFile(join(unitDir, manifestName), join(outDir, manifestName))
       }
       logger.info(`Frontend: ${join(outDir, STANDALONE_FRONTEND_DIR)}`)
+    }
+
+    // --- 2a'. SQLite extensions, when the build staged any ---
+    // Node loads the libraries from beside the bundle; bun's compile follows the
+    // manifest to them and embeds them.
+    const extensionsDir = join(unitDir, STANDALONE_SQLITE_EXTENSIONS_DIR)
+    if (existsSync(extensionsDir)) {
+      await cp(extensionsDir, join(outDir, STANDALONE_SQLITE_EXTENSIONS_DIR), {
+        recursive: true,
+      })
+      const manifestName = STANDALONE_SQLITE_EXTENSIONS_MANIFEST.replace(
+        './',
+        ''
+      )
+      if (existsSync(join(unitDir, manifestName))) {
+        await copyFile(join(unitDir, manifestName), join(outDir, manifestName))
+      }
+      logger.info(
+        `SQLite extensions: ${join(outDir, STANDALONE_SQLITE_EXTENSIONS_DIR)}`
+      )
+    }
+
+    // --- 2a''. Migrations, when the app has a database ---
+    // `db migrate` reads them from beside the bundle (node) or the binary
+    // (bun), and both of those are here — without this the shipped artifact
+    // found no migrations and reported itself up to date.
+    const migrationsDir = join(unitDir, 'db')
+    if (existsSync(migrationsDir)) {
+      await cp(migrationsDir, join(outDir, 'db'), { recursive: true })
+      logger.info(`Migrations: ${join(outDir, 'db')}`)
     }
 
     // --- 2b. bun runtime: compile the bundle into a self-contained binary ---

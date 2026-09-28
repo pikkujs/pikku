@@ -69,8 +69,9 @@ export function validateExposedFunctionsGated(
       (rest > 0 ? `, and ${rest} more` : '') +
       `. Add permissions to the function, set \`auth: true\` if a session is ` +
       `required after all, gate the whole addon with ` +
-      `wireAddon({ auth: true }), or drop \`expose: true\` if ` +
-      `${one ? 'it was' : 'they were'} not meant to be callable from outside.`,
+      `wireAddon({ auth: true }), drop \`expose: true\` if ` +
+      `${one ? 'it was' : 'they were'} not meant to be callable from outside, ` +
+      `or set \`auth: false\` to declare ${one ? 'it' : 'them'} public on purpose.`,
   })
 }
 
@@ -92,6 +93,11 @@ const gatesItself = (meta: {
   // and a warning that is usually wrong stops being read.
   meta.permissionsInBody === true ||
   meta.auth === true ||
+  // The author wrote `auth: false` on a sessionless function: public on
+  // purpose — a health check, a sign-up, a published catalogue. A declaration,
+  // like `permissionsInBody`, so the default-open function nobody thought
+  // about still warns and the one somebody decided about does not.
+  meta.auth === false ||
   (meta.scopes?.length ?? 0) > 0 ||
   (meta.permissions?.length ?? 0) > 0
 

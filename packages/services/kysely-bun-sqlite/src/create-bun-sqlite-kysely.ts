@@ -27,12 +27,21 @@ export interface CreateBunSqliteKyselyOptions {
    * shows up as an error that explains itself.
    */
   functions?: SqliteFunctionMap
+  /**
+   * Absolute paths of loadable SQLite extensions (sqlite-vec's `vec0`, say) to
+   * load before the database is handed to Kysely. Loaded through the C API;
+   * SQL's own `load_extension()` stays refused. On macOS this throws unless
+   * the process pointed bun at a SQLite that allows it first
+   * (`Database.setCustomSQLite`), since Apple's system one does not.
+   */
+  extensions?: string[]
 }
 
 export function createBunSqliteKysely<DB>(
   options: CreateBunSqliteKyselyOptions
 ): Kysely<DB> {
   const db = new Database(options.filename)
+  for (const path of options.extensions ?? []) db.loadExtension(path)
   if (options.functions) registerSqliteFunctions(db, options.functions)
   const plugins: KyselyPlugin[] = []
   if (options.camelCase ?? true) plugins.push(new CamelCasePlugin())

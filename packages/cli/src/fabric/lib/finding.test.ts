@@ -1,9 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createServer, type Server } from 'node:http'
-import type { AddressInfo } from 'node:net'
 import {
   buildFindingPayload,
+  findingRPC,
   parseFindingJson,
   postFinding,
   renderReceipt,
@@ -109,15 +108,15 @@ describe('validateFinding', () => {
 })
 
 describe('buildFindingPayload', () => {
-  test('renames run to runId and stamps the environment and time', () => {
+  test('carries the run id and stamps the environment and time', () => {
     const payload = buildFindingPayload(
-      finding({ run: 'build-42' }),
+      finding(),
       environment,
+      'build-42',
       new Date('2026-08-29T10:00:00.000Z')
     )
 
     assert.equal(payload.runId, 'build-42')
-    assert.equal('run' in payload, false)
     assert.equal(payload.reportedAt, '2026-08-29T10:00:00.000Z')
     assert.deepEqual(payload.environment, environment)
   })
@@ -132,10 +131,10 @@ describe('renderReceipt', () => {
           error: 'TypeError: e.getFullYear is not a function',
           surface: 'deployed',
           cost: '98s vs 20s steady state',
-          run: 'run_412',
           deployTarget: 'cloudflare',
         }),
         environment,
+        'run_412',
         new Date('2026-08-29T14:02:11.000Z')
       )
     )
@@ -153,7 +152,9 @@ describe('renderReceipt', () => {
   })
 
   test('omits fields that were not given rather than printing empties', () => {
-    const receipt = renderReceipt(buildFindingPayload(finding(), environment))
+    const receipt = renderReceipt(
+      buildFindingPayload(finding(), environment, 'run_1')
+    )
 
     assert.equal(receipt.includes('command:'), false)
     assert.equal(receipt.includes('error:'), false)
@@ -168,7 +169,8 @@ describe('renderReceipt', () => {
           workaround: undefined,
           tried: 'two dead ends',
         }),
-        environment
+        environment,
+        'run_1'
       )
     )
 
@@ -177,15 +179,19 @@ describe('renderReceipt', () => {
 
   test('calls out a skewed tree and a linked framework', () => {
     const receipt = renderReceipt(
-      buildFindingPayload(finding(), {
-        ...environment,
-        packages: [
-          { name: '@pikku/cli', version: '0.12.35', linked: false },
-          { name: '@pikku/core', version: '0.12.113', linked: true },
-        ],
-        versionSkew: true,
-        linkedFramework: true,
-      })
+      buildFindingPayload(
+        finding(),
+        {
+          ...environment,
+          packages: [
+            { name: '@pikku/cli', version: '0.12.35', linked: false },
+            { name: '@pikku/core', version: '0.12.113', linked: true },
+          ],
+          versionSkew: true,
+          linkedFramework: true,
+        },
+        'run_1'
+      )
     )
 
     assert.match(receipt, /not all the same/)
@@ -229,110 +235,91 @@ describe('parseFindingJson', () => {
   })
 })
 
-async function withServer(
-  handler: (
-    body: string,
-    headers: Record<string, string | string[] | undefined>
-  ) => { status: number; delayMs?: number },
-  run: (url: string) => Promise<void>
-): Promise<void> {
-  const server: Server = createServer((req, res) => {
-    const chunks: Buffer[] = []
-    req.on('data', (c) => chunks.push(c))
-    req.on('end', () => {
-      const { status, delayMs } = handler(
-        Buffer.concat(chunks).toString('utf8'),
-        req.headers
-      )
-      const reply = () => {
-        res.writeHead(status)
-        res.end()
-      }
-      if (delayMs) setTimeout(reply, delayMs).unref()
-      else reply()
-    })
-  })
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
-  try {
-    const { port } = server.address() as AddressInfo
-    await run(`http://127.0.0.1:${port}`)
-  } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()))
-  }
-}
+const payload = () => buildFindingPayload(finding(), environment, 'run_1')
 
 describe('postFinding', () => {
-  test('posts the finding under its project with a bearer token', async () => {
-    let seen: { body: string; auth?: string | string[] } | null = null
-
-    await withServer(
-      (body, headers) => {
-        seen = { body, auth: headers.authorization }
-        return { status: 202 }
+  test('submits the finding through submitFinding', async () => {
+    const invoked: { name: string; data: any }[] = []
+    const rpc = {
+      invoke: async (name: string, data: unknown) => {
+        invoked.push({ name, data })
+        return { findingId: 'f_1' }
       },
-      async (apiUrl) => {
-        const result = await postFinding({
-          apiUrl,
-          token: 'tok_123',
-          projectId: 'prj_abc',
-          payload: buildFindingPayload(finding(), environment),
-        })
+    } as any
 
-        assert.deepEqual(result, { sent: true })
-      }
-    )
+    const result = await postFinding({ rpc, payload: payload() })
 
-    assert.equal(seen!.auth, 'Bearer tok_123')
-    const parsed = JSON.parse(seen!.body)
-    assert.equal(parsed.projectId, 'prj_abc')
-    assert.equal(parsed.finding.title, finding().title)
-    assert.equal(parsed.finding.environment.node, 'v22.0.0')
+    assert.deepEqual(result, { sent: true })
+    assert.equal(invoked.length, 1)
+    assert.equal(invoked[0]!.name, 'submitFinding')
+    assert.deepEqual(Object.keys(invoked[0]!.data), ['finding'])
+    assert.equal(invoked[0]!.data.finding.runId, 'run_1')
+    assert.equal(invoked[0]!.data.finding.title, finding().title)
+    assert.equal(invoked[0]!.data.finding.environment.node, 'v22.0.0')
   })
 
   test('a refusal is reported, never thrown', async () => {
-    await withServer(
-      () => ({ status: 500 }),
-      async (apiUrl) => {
-        const result = await postFinding({
-          apiUrl,
-          token: 'tok_123',
-          projectId: 'prj_abc',
-          payload: buildFindingPayload(finding(), environment),
-        })
+    const rpc = {
+      invoke: async () => {
+        throw Object.assign(new Error('Internal Server Error'), { status: 500 })
+      },
+    } as any
 
-        assert.equal(result.sent, false)
-        assert.match(result.reason!, /500/)
-      }
-    )
-  })
+    const result = await postFinding({ rpc, payload: payload() })
 
-  test('a slow endpoint times out instead of holding up the build', async () => {
-    await withServer(
-      () => ({ status: 202, delayMs: 500 }),
-      async (apiUrl) => {
-        const result = await postFinding({
-          apiUrl,
-          token: 'tok_123',
-          projectId: 'prj_abc',
-          payload: buildFindingPayload(finding(), environment),
-          timeoutMs: 20,
-        })
-
-        assert.equal(result.sent, false)
-      }
-    )
+    assert.equal(result.sent, false)
+    assert.match(result.reason!, /500/)
   })
 
   test('an unreachable endpoint is swallowed', async () => {
+    const rpc = {
+      invoke: async () => {
+        throw new TypeError('fetch failed')
+      },
+    } as any
+
+    const result = await postFinding({ rpc, payload: payload() })
+
+    assert.deepEqual(result, { sent: false, reason: 'fetch failed' })
+  })
+})
+
+describe('findingRPC', () => {
+  test('posts to the rpc route with no credentials', async () => {
+    let seen: { url: string; init: RequestInit } | null = null
+    const send = (async (url: string, init: RequestInit) => {
+      seen = { url, init }
+      return new Response('{"findingId":"f_1"}', {
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as unknown as typeof fetch
+
+    await findingRPC('https://api.example', 5000, send).invoke(
+      'submitFinding',
+      { finding: payload() as any }
+    )
+
+    assert.equal(seen!.url, 'https://api.example/rpc/submitFinding')
+    assert.equal(
+      (seen!.init.headers as Record<string, string>).Authorization,
+      undefined
+    )
+    assert.ok(seen!.init.signal)
+  })
+
+  test('a slow endpoint times out instead of holding up the build', async () => {
+    const send = ((_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) =>
+        init.signal!.addEventListener('abort', () =>
+          reject(init.signal!.reason)
+        )
+      )) as unknown as typeof fetch
+
     const result = await postFinding({
-      apiUrl: 'http://127.0.0.1:1',
-      token: 'tok_123',
-      projectId: 'prj_abc',
-      payload: buildFindingPayload(finding(), environment),
-      timeoutMs: 200,
+      rpc: findingRPC('https://api.example', 20, send),
+      payload: payload(),
     })
 
     assert.equal(result.sent, false)
-    assert.ok(result.reason)
   })
 })

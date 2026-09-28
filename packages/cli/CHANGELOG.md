@@ -1,3 +1,192 @@
+## 0.12.166
+
+### Patch Changes
+
+- 6a9c62e: `pikku fabric report` sends findings through fabric's `submitFinding` RPC instead of the `/findings` route that never existed, so held findings finally leave the machine.
+
+## 0.12.165
+
+### Patch Changes
+
+- 39e2b7e: `pikku fabric deploy apply` no longer dies on a transient 5xx, 429 or dropped
+  connection while it waits on a deployment. The status poll and the approval
+  call retry with backoff until `--timeout`, so `-y` still approves a plan parked
+  at the gate instead of leaving it to time out. An approve whose success was
+  hidden behind a 502 is not re-refused on retry. If the command still gives up
+  after a deployment was created, it prints the id and the
+  `deploy apply --deployment-id <id> -y` command to resume.
+- 3e65d46: fix(fabric): held findings filed in the same millisecond are sent in the order they were held
+
+  `readHeld` sorts oldest first by `reportedAt`, which is only millisecond-precise,
+  and broke ties on a file name whose only other part was random. Two findings
+  filed back to back could come back in either order. The file name now carries
+  a monotonic sequence ahead of the random suffix.
+
+- 2b946e9: Read JSONC by tokens, so a comment or a comma in a string cannot change the value
+
+  `readJsonSafe` stripped comments by deleting them, which joined the tokens on
+  either side: `{"value": 1/* why */2}` parsed as `12`. Trailing commas were swept
+  with a regular expression that could not see string boundaries, so
+  `{"value": ",}"}` lost the comma inside its own string. And an unterminated
+  block comment silently discarded everything after it, letting a truncated file
+  parse as though it were whole.
+
+  A comment is now replaced by whitespace, trailing commas are recognised during
+  the scan rather than after it, and an unterminated block comment is reported
+  with its position.
+
+- 3276942: `pikku fabric report` no longer needs a sign-in. A finding is filed the moment something goes wrong and held on the machine, tied to the build by a run id made for the checkout. At hand-over, `pikku fabric report` with no finding lists what is held and asks: yes or no for these, or always or never, which is saved (`~/.fabric/report-consent.json`, or `PIKKU_REPORT`) so the question is not asked again. Always sends each finding as it is filed; never keeps nothing. The `--run` flag and `pikku fabric findings list|flush|clear` are gone.
+- 2b946e9: fix(deploy): say "native addon" when a serverless bundle hits one
+
+  A native addon cannot be bundled for a serverless runtime — there is no `.node`
+  loading on Workers — but that is not what the bundler reported. The addon's JS
+  wrapper imports `node:child_process`, `node:stream` and friends, none of which
+  resolve on a `neutral` platform, so the failure arrived as a wall of unresolved
+  builtins naming neither the package nor the reason:
+
+  ```
+  Could not resolve "node:util"          @ sharp/dist/constructor.mjs
+  Could not resolve "node:child_process" @ sharp/dist/libvips.mjs
+  Could not resolve "detect-libc"        @ sharp/dist/libvips.mjs
+  ```
+
+  Read as missing polyfills, that sends people to `nodejs_compat`, which cannot
+  help — the blocker is the binary underneath.
+
+  A failed serverless compile now reads the owning packages back out of the
+  unresolved-import lines only, checks each for a native binary (`gypfile`, a
+  `binary` declaration, a node-gyp install script, per-platform optional
+  dependencies), and when it finds one leads with the package, the evidence, and
+  the two ways out: `deploy.serverlessIncompatible` in `pikku.config.json`, or
+  `deploy: 'server'` on the function. The original error is kept underneath. A
+  failure with no native addon behind it is rethrown untouched.
+
+  An `os` restriction is not counted: a pure-JS package pinned to one platform
+  carries no binary, and reporting it as an addon says Node compatibility cannot
+  help when it is exactly what is needed. Nor is any failure other than an
+  unresolved import — a syntax error inside a native package is still a syntax
+  error, and keeps its own message.
+
+- Updated dependencies [50b59a3]
+- Updated dependencies [2b946e9]
+- Updated dependencies [bc488cf]
+- Updated dependencies [3276942]
+- Updated dependencies [1ac09c7]
+  - @pikku/core@0.12.123
+  - @pikku/inspector@0.12.89
+  - @pikku/skills@0.12.40
+
+## 0.12.164
+
+### Patch Changes
+
+- 182989a: A generated CLI-over-channel client imports `@pikku/websocket`; the CLI now declares it in the package that owns the client file when that package doesn't already list it.
+- 663c8c2: fabric login and fabric changes run outside a pikku project, and a missing config says what to do
+
+  Neither command reads `pikku.config.json` — `changesContext` resolves the api url, bearer and project from `pikkufabric.config.json` or `--project-id`, and you log in before there is a project to be inside. Both were still gated on a config being found, so a harness emptying the change queue from anywhere but a linked checkout died before its function ran.
+
+  The refusal itself is now a `PikkuError`, so "no pikku.config.json here" prints as the single line it is, naming the directory searched and the `--config` flag, rather than a stack trace through the loader.
+
+- b35d3d4: Add `pikku new app` and the registry's discovery half.
+
+  **`pikku new app <slug> --serves <group> --personas <ids>`** adds a frontend,
+  scaffolded from `pikkujs/starter-template`'s `apps/app`. It re-points the copy's
+  `package.json` at its own name, dev/preview port and `--tsBuildInfoFile`, stamps
+  `app: '<slug>'` onto each named persona, writes the `frontends` entry and
+  re-runs the install. `pikku-build`'s `multi-app.md` described all of that as
+  five files to edit by hand, including the build-cache path whose absence
+  produces type errors that vanish on a clean build.
+
+  It scaffolds from the template rather than copying the app already in the
+  project: a copy drags the first app's screens, routes and nav into an audience
+  that never asked for them. `--template <source>` takes any giget source, or a
+  path inside the repo for an offline or vendored copy.
+
+  The refusals matter more than the scaffolding, because the scaffolding is five
+  edits and a wrong audience is a whole second app nobody needed: a `--serves`
+  that names a surface rather than people, an audience that already has an app,
+  a persona who already signs into another one, a slug the plan already uses for
+  an existing app, and a persona no `definePersonas({…})` declares. It repairs
+  its own half-states too — the directory is written before the config entry,
+  and neither half survives alone.
+
+  It stops after the install; serving the app belongs to whatever hosts it.
+
+  **`pikku fabric addon search|get`** fill in the registry's read half, next to
+  the `verify`/`publish`/`add` that were already there. Both catalogues are
+  public GETs, so discovery needs no login — the question "is there already an
+  addon for this?" comes up before adopting one, not after. `search` prints
+  published addons ahead of OpenAPI entries, because one is built and typed
+  while the other still costs a codegen round that can fail on a bad spec.
+  `get` accepts every spelling in the wild — `gmail`, `addon-gmail` and
+  `@pikku/addon-gmail` all reach `pikku-addon-gmail`, including the ones
+  `search` itself printed.
+
+- 3511717: Enabling a virtual user schedule whose disposition production refuses is now refused when written (403), rather than saved and then failing on every tick with nobody watching. Disabling one, or editing one that is off, is always allowed.
+- Updated dependencies [e54ae19]
+- Updated dependencies [b35d3d4]
+- Updated dependencies [b35d3d4]
+- Updated dependencies [3511717]
+- Updated dependencies [3511717]
+  - @pikku/better-auth@0.12.48
+  - @pikku/skills@0.12.39
+  - @pikku/core@0.12.122
+
+## 0.12.163
+
+### Patch Changes
+
+- b16645a: `pikku new addon --openapi` is one command: it takes a URL or path, --openapi-header, --tags/--include/--exclude and --auth user|shared|none, picks the auth mode from the spec (delegated with --auth-config), refuses a spec without machine-readable auth, writes a valid addon config with icon and forceRequiredServices, and inside an app installs the addon: dependencies, a wireAddon file with expose, Better Auth wiring and the base-URL env entry, then install and build.
+- 0210e96: Review fixes for the OpenAPI addon onboarding:
+
+  - A delegated sign-in whose email the upstream did not return, including a login typed as an email, never links to an existing user. An authenticator that omits `syntheticEmail` counts as synthetic.
+  - `pikkuActor` credentials take an optional `remove`, which drops a credential the environment no longer sets. The actor log line names the user id, not the email.
+  - Basic credentials are UTF-8 encoded, and a Swagger 2 `application` OAuth flow keeps its token URL.
+  - `pikku new addon` writes a `file:` path relative to each package when the app is not a workspace, and reports an auth.ts factory it cannot edit instead of half-wiring it.
+  - The inspector reads an addon from the package that declares it before the root.
+  - The dev credentials key file is created exclusively, so two `pikku dev` processes agree on one key.
+
+- 86c2f1d: `pikku dev` keeps stored credentials in the dev database, so connected accounts and delegated sign-ins survive a restart. The key comes from `PIKKU_DEV_CREDENTIALS_KEY`, or is generated once into `.pikku-runtime/dev-credentials.key`. A project that declares a credential now gets the credential tables in its generated migration; without them dev falls back to the in-memory store and says so once.
+- f6c1dd6: `pikku all` writes `db/schema.gen.ts` from the migrations when it is missing, so `#pikku/db/schema.gen.js` resolves on a fresh project before `pikku db migrate` has run. `pikku db migrate` no longer logs a Better Auth "Database schema mismatch" for the scratch database it reads the auth schema from.
+- 894e57a: The console's knowledge page keeps the open note in `?id=`, so a note or a milestone plan can be linked to. For example, `/console/knowledge?id=milestones/01-foo.plan.json` opens that milestone with its plan. `pikku knowledge plan set`, `show` and `progress` print that link, and add it to their JSON output as `consoleUrl`. The link uses the running `pikku dev` server's address when there is one, and `http://localhost:3000` otherwise.
+- 8167c4b: fix(cli): reading the auth schema survives a plugin whose init rejects
+
+  Better Auth 1.7 made constructing an auth instance do I/O. A plugin's `init`
+  starts real work and does not wait for it — the OAuth provider behind
+  `@better-auth/mcp` seeds its `oauthResource` rows that way.
+
+  Schema introspection builds the instance against a throwaway database purely to
+  read `options`, so that work has nowhere to go: the auth tables do not exist
+  yet, and on the SQLite path the handle is closed as soon as the options have
+  been read. The seed then rejected with nothing awaiting it, and the default for
+  an unhandled rejection is to terminate the process — so `pikku db generate` and
+  the `pikku db migrate` drift check died on `database is not open`, from a write
+  the schema derivation never wanted, in any project that merely configured MCP.
+
+  The rejection is now reported and stepped over. Whatever the plugin was doing
+  says nothing about the shape of its tables, which is all that is being read.
+
+- a8cf3a1: The generated `usePikkuQuery` no longer retries a 4xx. A missing record or a refused permission shows at once instead of after three retries. Pass `retry` in the options to override it.
+- Updated dependencies [2f317d0]
+- Updated dependencies [55ab4d1]
+- Updated dependencies [f6c1dd6]
+- Updated dependencies [0210e96]
+- Updated dependencies [e84abd0]
+- Updated dependencies [5442d94]
+- Updated dependencies [b31675a]
+- Updated dependencies [86c2f1d]
+- Updated dependencies [da9b931]
+- Updated dependencies [38d4f65]
+- Updated dependencies [a8cf3a1]
+- Updated dependencies [237c061]
+- Updated dependencies [0672bdd]
+- Updated dependencies [b3e5443]
+  - @pikku/better-auth@0.12.47
+  - @pikku/inspector@0.12.88
+  - @pikku/openapi-parser@0.12.23
+  - @pikku/core@0.12.121
+  - @pikku/skills@0.12.38
+
 ## 0.12.162
 
 ### Patch Changes

@@ -25,8 +25,15 @@ export {
 export type { AuthGetter } from './admin-users.js'
 export { pikkuBan, BAN_PLUGIN_ID } from './ban-plugin.js'
 export type { BanPluginOptions } from './ban-plugin.js'
-export { pikkuActor } from './actor-plugin.js'
-export type { ActorPluginOptions } from './actor-plugin.js'
+export {
+  pikkuActor,
+  actorCredentialEnvKey,
+  parseActorCredential,
+} from './actor-plugin.js'
+export type {
+  ActorPluginOptions,
+  ActorCredentialsOptions,
+} from './actor-plugin.js'
 export {
   ACTOR_NOT_PROVISIONED_MESSAGE,
   ACTOR_SIGN_IN_DISABLED_MESSAGE,

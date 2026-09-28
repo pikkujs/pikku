@@ -208,208 +208,225 @@ export const FabricDeployApply = pikkuSessionlessFunc({
   input: FabricDeployValidatedInput,
   output: FabricDeployApplyOutput,
   func: async (_services, input) => {
-    const emit = input.json
-      ? (event: ProgressEvent) => console.log(JSON.stringify(event))
-      : () => {}
-
-    const timeoutSeconds = input.timeout ?? DEFAULT_TIMEOUT_SECONDS
-    if (timeoutSeconds <= 0) {
-      throw new FabricPreconditionError(
-        '--timeout must be a positive number of seconds.'
-      )
-    }
-
-    if (input.deploymentId && (input.branch || input.production)) {
-      throw new FabricPreconditionError(
-        '--deployment-id already names its target — drop the branch/--production.'
-      )
-    }
-
-    const attaching = Boolean(input.deploymentId)
-    let projectId: string
-    let deploymentId: string
-    let branch: string | undefined
-    let ref: string | undefined
-    let stageId: string | undefined
-    let runId: string | undefined
-    let rpc: FabricRPC
-
-    if (attaching) {
-      const { ctx, projectId: id } = await prepAttach()
-      projectId = id
-      rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-      deploymentId = input.deploymentId!
-      const current = await readDeploymentStatus(rpc, deploymentId)
-      stageId = current.stageId
-      branch = (await describeDeployment(rpc, projectId, deploymentId))?.branch
-      emit({ event: 'attached', deploymentId, status: current.status })
-    } else {
-      const {
-        ctx,
-        projectId: id,
-        targetBranch,
-        resolved,
-        safety,
-        inferred,
-      } = await prepDeploy(input)
-      projectId = id
-      branch = targetBranch
-      ref = resolved
-      rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-
-      // An inferred target is said out loud before anything is built. Under -y
-      // there is no confirmation prompt to name it, and a deploy that never
-      // told you which branch it picked is the one that ships the wrong branch.
-      if (inferred && !input.json) {
-        console.log(dim(`Deploying the current branch: ${targetBranch}`))
+    const started: { deploymentId?: string } = {}
+    try {
+      return await applyDeploy(input, started)
+    } catch (error) {
+      if (started.deploymentId && !input.json) {
+        console.error(resumeHint(started.deploymentId, input))
       }
+      throw error
+    }
+  },
+})
 
-      if (!input.autoApprove) {
-        const target = `${branch} @ ${resolved.slice(0, 8)}`
-        if (!process.stdin.isTTY) {
-          throw new FabricPreconditionError(
-            `Refusing to deploy ${target} without confirmation — re-run with --auto-approve to deploy non-interactively.`
-          )
-        }
-        if (!(await promptConfirm(`Deploy ${target}?`))) {
-          throw new FabricPreconditionError('Deploy aborted.')
-        }
-      }
+async function applyDeploy(
+  input: DeployInput,
+  started: { deploymentId?: string }
+): Promise<ApplyOutput> {
+  const emit = input.json
+    ? (event: ProgressEvent) => console.log(JSON.stringify(event))
+    : () => {}
 
-      const created = await rpc.invoke('deployByStageKind', {
-        projectId,
-        branch,
-        ref: resolved,
-        expectedHeadSha: safety.headSha,
-      })
-      deploymentId = created.deploymentId
-      stageId = created.stageId
-      runId = created.runId
+  const timeoutSeconds = input.timeout ?? DEFAULT_TIMEOUT_SECONDS
+  if (timeoutSeconds <= 0) {
+    throw new FabricPreconditionError(
+      '--timeout must be a positive number of seconds.'
+    )
+  }
 
-      // Read the commit back off the deployment rather than repeating the one
-      // that was asked for: `deployByStageKind` attaches to an already-parked
-      // plan for the branch instead of cutting a new one, and that plan is
-      // pinned to whatever commit it was created at.
-      ref = reconcileDeployedRef({
-        requested: resolved,
-        actual:
-          (await describeDeployment(rpc, projectId, deploymentId))?.gitSha ??
-          null,
-        deploymentId,
-      })
-      emit({ event: 'created', deploymentId, branch, ref })
+  if (input.deploymentId && (input.branch || input.production)) {
+    throw new FabricPreconditionError(
+      '--deployment-id already names its target — drop the branch/--production.'
+    )
+  }
+
+  const attaching = Boolean(input.deploymentId)
+  let projectId: string
+  let deploymentId: string
+  let branch: string | undefined
+  let ref: string | undefined
+  let stageId: string | undefined
+  let runId: string | undefined
+  let rpc: FabricRPC
+
+  if (attaching) {
+    const { ctx, projectId: id } = await prepAttach()
+    projectId = id
+    rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+    deploymentId = input.deploymentId!
+    started.deploymentId = deploymentId
+    const current = await readDeploymentStatus(rpc, deploymentId)
+    stageId = current.stageId
+    branch = (await describeDeployment(rpc, projectId, deploymentId))?.branch
+    emit({ event: 'attached', deploymentId, status: current.status })
+  } else {
+    const {
+      ctx,
+      projectId: id,
+      targetBranch,
+      resolved,
+      safety,
+      inferred,
+    } = await prepDeploy(input)
+    projectId = id
+    branch = targetBranch
+    ref = resolved
+    rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+
+    // An inferred target is said out loud before anything is built. Under -y
+    // there is no confirmation prompt to name it, and a deploy that never
+    // told you which branch it picked is the one that ships the wrong branch.
+    if (inferred && !input.json) {
+      console.log(dim(`Deploying the current branch: ${targetBranch}`))
     }
 
-    const base = {
-      event: 'result' as const,
+    if (!input.autoApprove) {
+      const target = `${branch} @ ${resolved.slice(0, 8)}`
+      if (!process.stdin.isTTY) {
+        throw new FabricPreconditionError(
+          `Refusing to deploy ${target} without confirmation — re-run with --auto-approve to deploy non-interactively.`
+        )
+      }
+      if (!(await promptConfirm(`Deploy ${target}?`))) {
+        throw new FabricPreconditionError('Deploy aborted.')
+      }
+    }
+
+    const created = await rpc.invoke('deployByStageKind', {
       projectId,
-      deploymentId,
       branch,
-      ...(ref ? { ref } : {}),
-      ...(stageId ? { stageId } : {}),
-      ...(runId ? { runId } : {}),
-    }
-
-    if (input.detach && !attaching) {
-      return { ...base, outcome: 'queued' as const }
-    }
-
-    let approvalWithheld: ApplyOutput['approvalWithheld']
-
-    const approveGate = async (status: DeploymentStatus): Promise<boolean> => {
-      const described = await describeDeployment(rpc, projectId, deploymentId)
-      const destructive = destructiveMigrations(described?.changes)
-
-      if (destructive.length > 0 && !input.allowDestructive) {
-        if (input.autoApprove || input.json || !process.stdin.isTTY) {
-          approvalWithheld = 'destructive_migrations'
-          return false
-        }
-      } else if (input.autoApprove) {
-        return true
-      }
-      if (input.json || !process.stdin.isTTY) return false
-
-      const warning =
-        destructive.length > 0
-          ? `\n${destructiveLines(destructive).join('\n')}\n`
-          : ''
-      return promptConfirm(
-        `Plan for ${branch ?? deploymentId} is ready to publish (${stateLabel(
-          status.status,
-          status.statusReason
-        )}).${warning} Approve?`
-      )
-    }
-
-    if (input.detach) {
-      const status = await readDeploymentStatus(rpc, deploymentId)
-      const klass = classifyStatus(status.status)
-      const outcome: ApplyOutput['outcome'] =
-        klass === 'in_flight' ? 'queued' : klass
-      const finished = await finalise(
-        rpc,
-        projectId,
-        deploymentId,
-        status.stageId,
-        outcome
-      )
-      process.exitCode = EXIT_BY_OUTCOME[outcome]
-      return {
-        ...base,
-        outcome,
-        status: status.status,
-        statusReason: status.statusReason,
-        url: status.hostname ? `https://${status.hostname}` : null,
-        ...(outcome === 'blocked'
-          ? {
-              blockedReason: blockedReason(status.statusReason),
-              missingSecrets: status.missingSecrets,
-              missingVariables: status.missingVariables,
-            }
-          : {}),
-        ...finished,
-      }
-    }
-
-    const waited = await waitForDeployment({
-      rpc,
-      deploymentId,
-      timeoutMs: timeoutSeconds * 1000,
-      approve: approveGate,
-      onEvent: emit,
+      ref: resolved,
+      expectedHeadSha: safety.headSha,
     })
+    deploymentId = created.deploymentId
+    started.deploymentId = deploymentId
+    stageId = created.stageId
+    runId = created.runId
 
+    // Read the commit back off the deployment rather than repeating the one
+    // that was asked for: `deployByStageKind` attaches to an already-parked
+    // plan for the branch instead of cutting a new one, and that plan is
+    // pinned to whatever commit it was created at.
+    ref = reconcileDeployedRef({
+      requested: resolved,
+      actual:
+        (await describeDeployment(rpc, projectId, deploymentId))?.gitSha ??
+        null,
+      deploymentId,
+    })
+    emit({ event: 'created', deploymentId, branch, ref })
+  }
+
+  const base = {
+    event: 'result' as const,
+    projectId,
+    deploymentId,
+    branch,
+    ...(ref ? { ref } : {}),
+    ...(stageId ? { stageId } : {}),
+    ...(runId ? { runId } : {}),
+  }
+
+  if (input.detach && !attaching) {
+    return { ...base, outcome: 'queued' as const }
+  }
+
+  let approvalWithheld: ApplyOutput['approvalWithheld']
+
+  const approveGate = async (status: DeploymentStatus): Promise<boolean> => {
+    const described = await describeDeployment(rpc, projectId, deploymentId)
+    const destructive = destructiveMigrations(described?.changes)
+
+    if (destructive.length > 0 && !input.allowDestructive) {
+      if (input.autoApprove || input.json || !process.stdin.isTTY) {
+        approvalWithheld = 'destructive_migrations'
+        return false
+      }
+    } else if (input.autoApprove) {
+      return true
+    }
+    if (input.json || !process.stdin.isTTY) return false
+
+    const warning =
+      destructive.length > 0
+        ? `\n${destructiveLines(destructive).join('\n')}\n`
+        : ''
+    return promptConfirm(
+      `Plan for ${branch ?? deploymentId} is ready to publish (${stateLabel(
+        status.status,
+        status.statusReason
+      )}).${warning} Approve?`
+    )
+  }
+
+  if (input.detach) {
+    const status = await readDeploymentStatus(rpc, deploymentId)
+    const klass = classifyStatus(status.status)
+    const outcome: ApplyOutput['outcome'] =
+      klass === 'in_flight' ? 'queued' : klass
     const finished = await finalise(
       rpc,
       projectId,
       deploymentId,
-      waited.stageId,
-      waited.outcome
+      status.stageId,
+      outcome
     )
-
-    process.exitCode = EXIT_BY_OUTCOME[waited.outcome]
+    process.exitCode = EXIT_BY_OUTCOME[outcome]
     return {
       ...base,
-      outcome: waited.outcome,
-      status: waited.status,
-      statusReason: waited.statusReason,
-      approved: waited.approved,
-      elapsedMs: waited.elapsedMs,
-      url: waited.hostname ? `https://${waited.hostname}` : null,
-      ...(waited.outcome === 'timeout' ? { timeoutSeconds } : {}),
-      ...(waited.outcome === 'blocked'
+      outcome,
+      status: status.status,
+      statusReason: status.statusReason,
+      url: status.hostname ? `https://${status.hostname}` : null,
+      ...(outcome === 'blocked'
         ? {
-            blockedReason: waited.reason ?? 'unknown',
-            missingSecrets: waited.missingSecrets,
-            missingVariables: waited.missingVariables,
-            ...(approvalWithheld ? { approvalWithheld } : {}),
+            blockedReason: blockedReason(status.statusReason),
+            missingSecrets: status.missingSecrets,
+            missingVariables: status.missingVariables,
           }
         : {}),
       ...finished,
     }
-  },
-})
+  }
+
+  const waited = await waitForDeployment({
+    rpc,
+    deploymentId,
+    timeoutMs: timeoutSeconds * 1000,
+    approve: approveGate,
+    onEvent: emit,
+  })
+
+  const finished = await finalise(
+    rpc,
+    projectId,
+    deploymentId,
+    waited.stageId,
+    waited.outcome
+  )
+
+  process.exitCode = EXIT_BY_OUTCOME[waited.outcome]
+  return {
+    ...base,
+    outcome: waited.outcome,
+    status: waited.status,
+    statusReason: waited.statusReason,
+    approved: waited.approved,
+    elapsedMs: waited.elapsedMs,
+    url: waited.hostname ? `https://${waited.hostname}` : null,
+    ...(waited.outcome === 'timeout' ? { timeoutSeconds } : {}),
+    ...(waited.outcome === 'blocked'
+      ? {
+          blockedReason: waited.reason ?? 'unknown',
+          missingSecrets: waited.missingSecrets,
+          missingVariables: waited.missingVariables,
+          ...(approvalWithheld ? { approvalWithheld } : {}),
+        }
+      : {}),
+    ...finished,
+  }
+}
 
 async function finalise(
   rpc: FabricRPC,
@@ -486,6 +503,14 @@ const missingLines = (
 const reattachHint = (deploymentId: string): string =>
   dim(
     `Re-attach with \`pikku fabric deploy apply --deployment-id ${deploymentId}\`.`
+  )
+
+const resumeHint = (
+  deploymentId: string,
+  { autoApprove, allowDestructive }: DeployInput
+): string =>
+  dim(
+    `Deployment ${deploymentId} was created. Resume with \`pikku fabric deploy apply --deployment-id ${deploymentId}${autoApprove ? ' -y' : ''}${allowDestructive ? ' --allow-destructive' : ''}\`.`
   )
 
 export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {

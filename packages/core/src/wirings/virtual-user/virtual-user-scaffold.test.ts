@@ -22,6 +22,7 @@ import type {
   VirtualUserScheduleRecord,
   VirtualUserScheduleStore,
 } from './virtual-user-schedule-store.js'
+import { getErrorResponse } from '../../errors/error-handler.js'
 
 /**
  * These are the bodies of the scaffolded RPCs, so what is asserted here used to
@@ -142,6 +143,49 @@ describe('runnablePersona', () => {
     assert.throws(
       () => runnablePersona(personas, 'observed'),
       /declared as acted upon, never run/
+    )
+  })
+})
+
+// A refusal is the caller's to act on, so it has to reach them as a 4xx: a plain
+// Error becomes a 500 whose body is only an errorId, and the console shows that
+// and nothing else.
+describe('refusals reach the caller', () => {
+  const statusOf = async (run: () => unknown) => {
+    try {
+      await run()
+    } catch (e) {
+      return getErrorResponse(e)?.status
+    }
+    assert.fail('expected a refusal')
+  }
+
+  test('an undeclared persona is a 400', async () => {
+    assert.equal(await statusOf(() => runnablePersona(personas, 'nobody')), 400)
+  })
+
+  test('an acted-upon persona is a 400', async () => {
+    assert.equal(
+      await statusOf(() => runnablePersona(personas, 'observed')),
+      400
+    )
+  })
+
+  test('a probing disposition in production is a 403', async () => {
+    const { store } = runStore()
+    assert.equal(
+      await statusOf(() =>
+        startVirtualUserRun({
+          store,
+          personas,
+          config: { nodeEnv: 'development' },
+          environments: { production: { production: true } },
+          environment: 'production',
+          persona: 'susan',
+          disposition: 'newcomer',
+        })
+      ),
+      403
     )
   })
 })
@@ -485,7 +529,7 @@ describe('serializeVirtualUserSchedule', () => {
 })
 
 describe('writeVirtualUserSchedule', () => {
-  const scheduleStore = () => {
+  const scheduleStore = (existing: VirtualUserScheduleRecord | null = null) => {
     const writes: any[] = []
     return {
       writes,
@@ -494,7 +538,7 @@ describe('writeVirtualUserSchedule', () => {
           writes.push(input)
           return { ...schedule(), ...input }
         },
-        get: async () => null,
+        get: async () => existing,
         list: async () => [],
         due: async () => [],
         claim: async () => true,
@@ -523,6 +567,129 @@ describe('writeVirtualUserSchedule', () => {
       /declared as acted upon, never run/
     )
     assert.equal(writes.length, 0)
+  })
+
+  // An enabled cadence production refuses is a tick that fails every time with
+  // nobody watching, so it is refused when written instead.
+  const production = {
+    config: undefined,
+    environments: { production: { production: true } },
+    environment: 'production',
+  }
+
+  test('refuses enabling a probing disposition in production', async () => {
+    const { store, writes } = scheduleStore()
+    await assert.rejects(
+      writeVirtualUserSchedule({
+        store,
+        personas,
+        persona: 'susan',
+        enabled: true,
+        ...production,
+      }),
+      (e) =>
+        getErrorResponse(e)?.status === 403 &&
+        /Only the 'accountable' disposition/.test((e as Error).message)
+    )
+    assert.equal(writes.length, 0)
+  })
+
+  // Fields left out keep what the row had, so the disposition checked is the
+  // one it will hold after the write.
+  test('refuses enabling a row saved earlier with a probing disposition', async () => {
+    const { store, writes } = scheduleStore({ ...schedule(), enabled: false })
+    await assert.rejects(
+      writeVirtualUserSchedule({
+        store,
+        personas,
+        persona: 'susan',
+        enabled: true,
+        ...production,
+      }),
+      /"susan" is adversarial/
+    )
+    assert.equal(writes.length, 0)
+  })
+
+  test('refuses a probing disposition on a row that is already enabled', async () => {
+    const { store, writes } = scheduleStore(schedule())
+    await assert.rejects(
+      writeVirtualUserSchedule({
+        store,
+        personas,
+        persona: 'susan',
+        disposition: 'careless',
+        ...production,
+      }),
+      /"susan" is careless/
+    )
+    assert.equal(writes.length, 0)
+  })
+
+  test('an accountable cadence may be enabled in production', async () => {
+    const { store, writes } = scheduleStore()
+    await writeVirtualUserSchedule({
+      store,
+      personas,
+      persona: 'susan',
+      enabled: true,
+      disposition: 'accountable',
+      ...production,
+    })
+    assert.equal(writes.length, 1)
+  })
+
+  // A new row takes the persona's declared disposition, so the one checked is
+  // the one every tick will run with.
+  test('a new cadence is written with the disposition that was checked', async () => {
+    const { store, writes } = scheduleStore()
+    await writeVirtualUserSchedule({
+      store,
+      personas: {
+        susan: { ...personas.susan, disposition: 'accountable' },
+      } as unknown as ScaffoldPersonas,
+      persona: 'susan',
+      enabled: true,
+      ...production,
+    })
+    assert.equal(writes[0].disposition, 'accountable')
+  })
+
+  // Turning one off, or editing one that is off, is never a run, so it is never
+  // refused — or a probing cadence left over in production could not be stopped.
+  test('disabling or editing an off cadence is allowed in production', async () => {
+    const { store, writes } = scheduleStore(schedule())
+    await writeVirtualUserSchedule({
+      store,
+      personas,
+      persona: 'susan',
+      enabled: false,
+      ...production,
+    })
+    const off = scheduleStore({ ...schedule(), enabled: false })
+    await writeVirtualUserSchedule({
+      store: off.store,
+      personas,
+      persona: 'susan',
+      disposition: 'careless',
+      ...production,
+    })
+    assert.equal(writes.length, 1)
+    assert.equal(off.writes.length, 1)
+  })
+
+  test('outside production any enabled disposition is written', async () => {
+    const { store, writes } = scheduleStore()
+    await writeVirtualUserSchedule({
+      store,
+      personas,
+      persona: 'susan',
+      enabled: true,
+      disposition: 'adversarial',
+      environments: { staging: {}, production: { production: true } },
+      environment: 'staging',
+    })
+    assert.equal(writes.length, 1)
   })
 
   test('durationMs is written as the budget duration the engine reads', async () => {

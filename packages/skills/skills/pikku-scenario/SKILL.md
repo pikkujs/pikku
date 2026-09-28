@@ -35,13 +35,13 @@ Use this skill as an execution checklist, not reference material.
 This skill covers writing and running scenarios end to end. Four topics are one level down, and
 each says when to open it:
 
-| Read                        | For                                                                       |
-| --------------------------- | ------------------------------------------------------------------------- |
-| `references/steps.md`       | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given |
-| `references/browser.md`     | Browser bindings, and locating by message key in a translated app         |
-| `references/personas.md`    | Personas vs actors, `definePersonas`, and the human "Sign in as …" switcher |
-| `references/coverage.md`    | Live coverage, filling it, and unit tests for pure logic                  |
-| `references/persona-run.md` | Running a persona as a model-driven virtual user against a stage          |
+| Read                        | For                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `references/steps.md`       | Authoring a `pikkuScenarioStep` — intent, witnesses, what a step is given                                    |
+| `references/browser.md`     | Browser bindings, and locating by message key in a translated app                                            |
+| `references/personas.md`    | Personas vs actors, `definePersonas`, upstream credentials for actors, and the human "Sign in as …" switcher |
+| `references/coverage.md`    | Live coverage, filling it, and unit tests for pure logic                                                     |
+| `references/persona-run.md` | Running a persona as a model-driven virtual user against a stage                                             |
 
 ## What a scenario is
 
@@ -245,7 +245,7 @@ suite survives its first redesign:
   through the actor.
 - **Steps describe intent, not actions** — `buys the £5 strawberry milkshake`, never
   `clicks [data-testid=add]`. The clicking lives in plain utilities the step composes.
-- **`then` bindings are witnesses, not alternatives** — a `then` runs *every* binding it declares
+- **`then` bindings are witnesses, not alternatives** — a `then` runs _every_ binding it declares
   and fails when they disagree, because "database right, user still watching a spinner" is the bug
   nobody catches.
 - **What language the prose is in** — identifiers are English in every project; `description`,
@@ -265,6 +265,7 @@ whole project — codegen builds the `PersonaId` union from it, materialises one
 scenario actor per person, and seeds a user row each:
 
 ```ts snippet:definePersonas
+
 ```
 
 `pikku.config.json` carries the settings around them — nothing about a person:

@@ -36,10 +36,11 @@ export type FunctionRuntimeMeta = {
   featureFlag?: string
   expose?: boolean
   /**
-   * A sessionless function's own `auth: true`. `sessionless` carries the
-   * baseline — a `pikkuFunc` always requires a session — and this carries the
-   * tightening a `pikkuSessionlessFunc` applies to itself. Both are needed to
-   * know whether a function is gated without running it.
+   * A sessionless function's own `auth`, as written. `sessionless` carries the
+   * baseline — a `pikkuFunc` always requires a session — and this carries what
+   * a `pikkuSessionlessFunc` declares about itself: `true` requires a session,
+   * `false` says it is public on purpose, absent says nothing. All three are
+   * needed to know whether an exposed function is gated without running it.
    */
   auth?: boolean
   /**

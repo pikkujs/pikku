@@ -24,6 +24,9 @@ project shaped so `pikku fabric init` later adopts it with zero rework.
    wirings, schemas or generated clients may have changed.
 4. If validation fails, fix the source cause and rerun. Do not paper over
    generated errors by editing generated files.
+5. Report at the person's level (SKILL.md, "Who you are talking to"): a console
+   link for everything the console can show, and no code unless they are a
+   developer.
 
 ## 0. Bootstrap, before anything else
 
@@ -62,11 +65,18 @@ in one message. Then stop; do not interview the user.
   a reference (brand guide, screenshots, a site whose register they want); or
   their own design agent/prompt, whose output you take as the direction.
 - **Do they want to see the screens before you build them?** Offer it here, in
-  this same round, as a question and not a gate: one HTML page mocking the main
-  screens, a few minutes, far cheaper to change than built screens. If they say
-  yes, `references/design.md` owns what to make and what it then binds — the
+  this same round, with yes marked recommended, in the words of
+  `references/design.md` — "a picture of the main screens so you can say 'yes,
+  like that' or 'no, move this'", never "mock" or "wireframe". Behind it is one
+  HTML page mocking the main screens, a few minutes of work. On a yes, or no
+  answer at all, `references/design.md` owns what to make and what it then binds — the
   approved page becomes source of truth for the screens, and the theme is written
-  before it so what they approve is what ships. If they say no, build.
+  before it so what they approve is what ships. Only an explicit no skips it.
+- **May I write test records into the system it talks to?** Ask only when the
+  app reads a live system through an addon (an ERP, a CRM) and a milestone needs
+  data that isn't there yet: an unpaid invoice, a closed ticket. Say what you
+  would create and that it will be marked "Test". A no means building those
+  screens against their empty states.
 - **What language should the app speak, and what language does the team work
   in?** Two answers, not one — see §1a, which is where they go. Ask only if the
   request is not obviously English; a brief written in English about an English
@@ -343,8 +353,9 @@ What a milestone is:
   persona. If you cannot write the gherkin, you cannot build it yet — that is a
   `questions/` note, not a milestone.
 
-If §1's screen mock was made and approved, the milestones are read off it: every
-screen on that page belongs to some milestone, and a screen no milestone builds
+If §1's screen mock was made — approved, or drawn because nobody answered — the
+milestones are read off it: every screen on that page belongs to some milestone,
+and a screen no milestone builds
 is a hole in this plan. Say which milestone covers which screen.
 
 How to order them:
@@ -363,8 +374,17 @@ How to order them:
 Number the files (`01-…`, `02-…`) so the order is visible in the tree. Then
 `knowledge index && knowledge validate` before you write a line of code.
 
-**Show the user the list before building.** This is the last cheap moment to
-reorder — after §6 the migrations are numbered and the order is concrete.
+**One approval, then build to the end.** Show the picture of the screens and
+the milestone list together, in one message, as the plan: which milestone builds
+which screen, in what order. That is the only approval you ask for. It is the
+last cheap moment to reorder: after §6 the migrations are numbered and the order
+is concrete.
+
+Once they approve it, or don't answer, build every milestone in order without
+stopping to ask between them. Post one line as each milestone closes, with its
+console links, and carry on. Stop only for what is theirs to decide: a
+credential you don't have, spending money, posting in public, deleting or
+overwriting their data, or a finding that changes the plan.
 
 ## 5a. The technical plan — one milestone at a time, before you build it
 
@@ -398,6 +418,8 @@ no plan, and everything after the current milestone is still allowed to move.
 ## PHASE 4 — Build
 
 ## 6. Implement milestones, one at a time
+
+All of them, one after another, on the one approval from §5.
 
 **Per milestone** — plan it (§5a), set its note to `status: dispatched`, do the
 six steps, close it out (§6a), set it to `built`. Do not start the next one
@@ -493,13 +515,15 @@ Rules that are not optional:
 - Surface errors. No empty catch, no swallowed promise. If a mutation can fail,
   render the failure inline next to the control that triggered it — not a toast.
 - An exposed function with no session and no permission is reachable by anyone
-  over `POST /rpc/:rpcName` (PKU574). Either gate it or drop `expose: true`.
+  over `POST /rpc/:rpcName` (PKU574). Either gate it, drop `expose: true`, or —
+  when public is the point — write `auth: false` on it to say so.
 - A public, signed-out read (a homepage's programme, a price list) is a
-  `pikkuSessionlessFunc`. `pikkuFunc` with `auth: false` still answers
+  `pikkuSessionlessFunc` with `auth: false` written out, which is what keeps
+  PKU574 quiet for it. `pikkuFunc` with `auth: false` still answers
   `MissingSessionError` over `/rpc` to a caller with no session.
 - Better Auth already owns the `user`, `session`, `account` and `verification`
-  tables. A domain table with one of those names — a class *session*, a drop-in
-  *session* — collides in the migration. Name it for the domain instead
+  tables. A domain table with one of those names — a class _session_, a drop-in
+  _session_ — collides in the migration. Name it for the domain instead
   (`evening`, `class_meeting`) and keep the word in the UI copy.
 - The template's `/` redirects to `/app`, so the login screen — and its "Sign in
   as …" switcher — is what a signed-out visitor sees first. Replace `/` with a
@@ -544,7 +568,7 @@ start the frontend on its own (say :3000 is taken by another project), you owe
 it three things: the two `VITE_DEV_*` values the dev script would have computed,
 and `VITE_API_PROXY` pointing at your API — the dev proxy defaults to
 `http://localhost:3000`, so beside another project's server your sign-ins go to
-*its* API and come back `401 Invalid actor secret`, which reads like a bad
+_its_ API and come back `401 Invalid actor secret`, which reads like a bad
 credential rather than the wrong server.
 
 The `--bun` in `bunx --bun pikku …` is load-bearing — keep it. Without it the

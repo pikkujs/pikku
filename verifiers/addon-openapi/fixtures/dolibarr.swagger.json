@@ -1,0 +1,3726 @@
+{
+ "swagger": "2.0",
+ "host": "dolibarr.pikkufabric.cloud",
+ "basePath": "/api/index.php",
+ "produces": [
+  "application/json",
+  "application/xml"
+ ],
+ "consumes": [
+  "application/json",
+  "application/xml",
+  "multipart/form-data"
+ ],
+ "paths": {
+  "/login": {
+   "get": {
+    "operationId": "loginLoginUnsecured",
+    "tags": [
+     "login"
+    ],
+    "parameters": [
+     {
+      "name": "login",
+      "type": "string",
+      "description": "User login",
+      "in": "query",
+      "required": true
+     },
+     {
+      "name": "password",
+      "type": "string",
+      "description": "User password",
+      "in": "query",
+      "required": true
+     },
+     {
+      "name": "entity",
+      "type": "string",
+      "description": "Entity (when multicompany module is used). '' means 1=first company.",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "reset",
+      "type": "integer",
+      "format": "int64",
+      "description": "Reset token (0=get current token, 1=ask a new token and canceled old token. This means access using current existing API token of user will fails: new token will be required for new access)",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Login 🔓",
+    "description": "Request the API token for a couple username / password. WARNING: You should NEVER use this API, like you should never use the similar API that uses the POST method. This will expose your password. To use the APIs, you should instead set an API token to the user you want to allow to use API (This API token called DOLAPIKEY can be found/set on the user page) and use this token as credential for any API call. From the API explorer, you can enter directly the \"DOLAPIKEY\" into the field at the top right of the page to get access to any allowed APIs.",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "403": {
+      "description": "Access denied"
+     },
+     "500": {
+      "description": "System error"
+     }
+    }
+   },
+   "post": {
+    "operationId": "listLogin",
+    "tags": [
+     "login"
+    ],
+    "parameters": [
+     {
+      "name": "listLoginModel",
+      "description": "**login** (required)  \n**password** (required)  \nentity  \nreset  \n",
+      "in": "body",
+      "required": true,
+      "schema": {
+       "$ref": "#/definitions/listLoginModel"
+      }
+     }
+    ],
+    "summary": "Login 🔓",
+    "description": "Request the API token for a couple username / password. WARNING: You should NEVER use this API, like you should never use the similar API that uses the GET method. This will expose your password. To use the APIs, you should instead set an API token to the user you want to allow to use API (This API token called DOLAPIKEY can be found/set on the user page) and use this token as credential for any API call. From the API explorer, you can enter directly the \"DOLAPIKEY\" into the field at the top right of the page to get access to any allowed APIs.",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "403": {
+      "description": "Access denied"
+     },
+     "500": {
+      "description": "System error"
+     }
+    }
+   }
+  },
+  "/status": {
+   "get": {
+    "operationId": "listStatus",
+    "tags": [
+     "status"
+    ],
+    "parameters": [],
+    "summary": "Get status (Dolibarr version) 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}": {
+   "get": {
+    "operationId": "retrieveThirdparties",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party to load",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Get a third party 🔐",
+    "description": "Return the third party object",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "put": {
+    "operationId": "updateThirdparties",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of thirdparty to update",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "updateThirdpartiesModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/updateThirdpartiesModel"
+      }
+     }
+    ],
+    "summary": "Update third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     },
+     "500": {
+      "description": "Internal Server Error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "removeThirdparties",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/email/{email}": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveByEmail",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "email",
+      "type": "string",
+      "description": "Email of the third party to load",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Get properties of a third party by email. 🔐",
+    "description": " Return an array with third party information",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/barcode/{barcode}": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveByBarcode",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "barcode",
+      "type": "string",
+      "description": "Barcode of the third party",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Get a third party by barcode. 🔐",
+    "description": " Return an array with third party information",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties": {
+   "get": {
+    "operationId": "listThirdparties",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "sortfield",
+      "type": "string",
+      "defaultValue": "t.rowid",
+      "description": "Sort field",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sortorder",
+      "type": "string",
+      "defaultValue": "ASC",
+      "description": "Sort order",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "limit",
+      "type": "integer",
+      "format": "int64",
+      "defaultValue": 100,
+      "description": "List limit",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "page",
+      "type": "integer",
+      "format": "int64",
+      "description": "Page number",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "mode",
+      "type": "integer",
+      "format": "int64",
+      "description": "Set to 0 to show all third parties, Set to 1 to show only customers, 2 for prospects, 3 for neither customer nor prospect, 4 for suppliers",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "category",
+      "type": "integer",
+      "format": "int64",
+      "description": "Use this param to filter the list by category",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sqlfilters",
+      "type": "string",
+      "description": "Other criteria to filter answers separated by a comma. Syntax example \"((t.nom:like:'TheCompany%') or (t.name_alias:like:'TheCompany%')) and (t.datec:<:'20160101')\"",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "properties",
+      "type": "string",
+      "description": "Restrict the data returned to these properties. Ignored if empty. Comma separated list of properties names",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "pagination_data",
+      "type": "boolean",
+      "description": "If this parameter is set to true, the response will include pagination data. The default value is false. Page starts from 0*",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "List third parties 🔐",
+    "description": "Get a list of third parties",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "403": {
+      "description": "Forbidden"
+     },
+     "404": {
+      "description": "Not Found"
+     },
+     "503": {
+      "description": "Service Unavailable"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "post": {
+    "operationId": "createThirdparties",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "createThirdpartiesModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/createThirdpartiesModel"
+      }
+     }
+    ],
+    "summary": "Create a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/merge/{idtodelete}": {
+   "put": {
+    "operationId": "thirdpartiesMerge",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of thirdparty to keep (the target third party)",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "idtodelete",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of thirdparty to remove (the third party to delete), once data has been merged into the target third party.",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Merge a third party into another third party 🔐",
+    "description": "Merge content (properties, notes) and objects (like invoices, events, orders, proposals, ...) of a third party into a target third party, then delete the merged third party. If a property has a defined value both in the third party to delete and the third party to keep, the value of the third party to delete will be ignored, the value of the target third party will remain, except for notes (content is concatenated).",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/setpricelevel/{priceLevel}": {
+   "put": {
+    "operationId": "thirdpartiesSetThirdpartyPriceLevel",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of thirdparty",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "priceLevel",
+      "type": "integer",
+      "format": "int64",
+      "description": "Price level to apply to thirdparty",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Set a new price level for the given third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "400": {
+      "description": "Price level out of bounds"
+     },
+     "401": {
+      "description": "Access not allowed for your login"
+     },
+     "404": {
+      "description": "Third party not found"
+     },
+     "500": {
+      "description": "Error fetching/setting price level"
+     },
+     "501": {
+      "description": "Request needs modules \"Thirdparties\" and \"Products\" and setting Multiprices activated"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/representative/{representative_id}": {
+   "post": {
+    "operationId": "thirdpartiesAddRepresentative",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "representative_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of representative",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Add a customer representative to a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "401": {
+      "description": "Access not allowed for your login"
+     },
+     "404": {
+      "description": "User or Third party not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "thirdpartiesRemoveRepresentative",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "representative_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of representative",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Remove the link between a customer representative and a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "401": {
+      "description": "Access not allowed for your login"
+     },
+     "404": {
+      "description": "User or Third party not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/categories": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveCategories",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "sortfield",
+      "type": "string",
+      "defaultValue": "s.rowid",
+      "description": "Sort field",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sortorder",
+      "type": "string",
+      "defaultValue": "ASC",
+      "description": "Sort order",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "limit",
+      "type": "integer",
+      "format": "int64",
+      "description": "List limit",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "page",
+      "type": "integer",
+      "format": "int64",
+      "description": "Page number",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get customer categories for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/categories/{category_id}": {
+   "put": {
+    "operationId": "thirdpartiesAddCategory",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "category_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of category",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Add a customer category to a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "thirdpartiesRemoveCategory",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "category_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of category",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Remove the link between a customer category and the third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/supplier_categories": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveSupplierCategories",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "sortfield",
+      "type": "string",
+      "defaultValue": "s.rowid",
+      "description": "Sort field",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sortorder",
+      "type": "string",
+      "defaultValue": "ASC",
+      "description": "Sort order",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "limit",
+      "type": "integer",
+      "format": "int64",
+      "description": "List limit",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "page",
+      "type": "integer",
+      "format": "int64",
+      "description": "Page number",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get supplier categories for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/supplier_categories/{category_id}": {
+   "put": {
+    "operationId": "thirdpartiesAddSupplierCategory",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "category_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of category",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Add a supplier category to a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "thirdpartiesRemoveSupplierCategory",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "category_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of category",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Remove the link between a category and the third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/outstandingproposals": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveOutStandingProposals",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "mode",
+      "type": "string",
+      "defaultValue": "customer",
+      "description": "'customer' or 'supplier'",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get outstanding proposals for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/outstandingorders": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveOutStandingOrder",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "mode",
+      "type": "string",
+      "defaultValue": "customer",
+      "description": "'customer' or 'supplier'",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get outstanding orders for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/outstandinginvoices": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveOutStandingInvoices",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "mode",
+      "type": "string",
+      "defaultValue": "customer",
+      "description": "'customer' or 'supplier'",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get outstanding invoices for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/representatives": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveSalesRepresentatives",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "mode",
+      "type": "integer",
+      "format": "int64",
+      "description": "0=Array with properties, 1=Array of id.",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get representatives of a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/fixedamountdiscounts": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveFixedAmountDiscounts",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "mode",
+      "type": "string",
+      "defaultValue": "customer",
+      "description": "'customer' or 'supplier'",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "filter",
+      "type": "string",
+      "defaultValue": "none",
+      "enum": [
+       "none",
+       "available",
+       "used"
+      ],
+      "description": "Filter exceptional discount. \"none\" will return every discount, \"available\" returns unapplied discounts, \"used\" returns applied discounts",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sortfield",
+      "type": "string",
+      "defaultValue": "f.type",
+      "description": "Sort field",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sortorder",
+      "type": "string",
+      "defaultValue": "ASC",
+      "description": "Sort order",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get fixed amount discount of a third party 🔐",
+    "description": "all sources: deposit, credit note, commercial offers, etc.",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     },
+     "503": {
+      "description": "Service Unavailable"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "post": {
+    "operationId": "thirdpartiesCreateFixedAmountDiscount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of thirdparty",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesCreateFixedAmountDiscountModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesCreateFixedAmountDiscountModel"
+      }
+     }
+    ],
+    "summary": "Create a fixed amount discount for a thirdparty 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "400": {
+      "description": "Bad request"
+     },
+     "401": {
+      "description": "Access not allowed for login"
+     },
+     "404": {
+      "description": "Thirdparty not found"
+     },
+     "500": {
+      "description": "Error creating discount"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/splitdiscount/{discountid}": {
+   "post": {
+    "operationId": "thirdpartiesSplitdiscount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the thirdparty",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "discountid",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of a discount coming from a credit note",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesSplitdiscountModel",
+      "description": "**amount_ttc_1** (required)  \n**amount_ttc_2** (required)  \n",
+      "in": "body",
+      "required": true,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesSplitdiscountModel"
+      }
+     }
+    ],
+    "summary": "Split a discount in 2 smaller discount 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "403": {
+      "description": "Forbidden"
+     },
+     "404": {
+      "description": "Not Found"
+     },
+     "405": {
+      "description": "Method Not Allowed"
+     },
+     "409": {
+      "description": "Conflict"
+     },
+     "500": {
+      "description": "Internal Server Error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/getinvoicesqualifiedforreplacement": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveInvoicesQualifiedForReplacement",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of a third party",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Return invoices qualified to be replaced by another invoice 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     },
+     "405": {
+      "description": "Method Not Allowed"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/getinvoicesqualifiedforcreditnote": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveInvoicesQualifiedForCreditNote",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of a third party",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Return invoices qualified to be corrected by a credit note 🔐",
+    "description": "Invoices matching the following rules are returned (validated + payment on process) or classified (paid completely or paid partially) + not already replaced + not already a credit note",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "401": {
+      "description": "Unauthorized"
+     },
+     "404": {
+      "description": "Not Found"
+     },
+     "405": {
+      "description": "Method Not Allowed"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/notifications": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveCompanyNotification",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Get company notifications for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "post": {
+    "operationId": "thirdpartiesCreateCompanyNotification",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesCreateCompanyNotificationModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesCreateCompanyNotificationModel"
+      }
+     }
+    ],
+    "summary": "Create a company notification for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/notificationsbycode/{code}": {
+   "post": {
+    "operationId": "thirdpartiesCreateCompanyNotificationByCode",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "code",
+      "type": "string",
+      "description": "Action Trigger code",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesCreateCompanyNotificationByCodeModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesCreateCompanyNotificationByCodeModel"
+      }
+     }
+    ],
+    "summary": "Create a company notification for a third party using action trigger code 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/notifications/{notification_id}": {
+   "delete": {
+    "operationId": "thirdpartiesRemoveCompanyNotification",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "notification_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of CompanyNotification",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete a company notification attached to a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "put": {
+    "operationId": "thirdpartiesUpdateCompanyNotification",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "notification_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of CompanyNotification",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesUpdateCompanyNotificationModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesUpdateCompanyNotificationModel"
+      }
+     }
+    ],
+    "summary": "Update a company notification for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/bankaccounts": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveCompanyBankAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Get company bank accounts of a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "post": {
+    "operationId": "thirdpartiesCreateCompanyBankAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesCreateCompanyBankAccountModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesCreateCompanyBankAccountModel"
+      }
+     }
+    ],
+    "summary": "Create a company bank account for a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/bankaccounts/{bankaccount_id}": {
+   "put": {
+    "operationId": "thirdpartiesUpdateCompanyBankAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "bankaccount_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of CompanyBankAccount",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesUpdateCompanyBankAccountModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesUpdateCompanyBankAccountModel"
+      }
+     }
+    ],
+    "summary": "Update a company bank account of a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "thirdpartiesRemoveCompanyBankAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "bankaccount_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of CompanyBankAccount",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete a bank account attached to a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/generateBankAccountDocument/{companybankid}/{model}": {
+   "get": {
+    "operationId": "thirdpartiesGenerateBankAccountDocument",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "companybankid",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of company bank",
+      "in": "path",
+      "required": false
+     },
+     {
+      "name": "model",
+      "type": "string",
+      "defaultValue": "sepamandate",
+      "description": "Model of document to generate",
+      "in": "path",
+      "required": false
+     }
+    ],
+    "summary": "Generate a document from a bank account record 🔐",
+    "description": "Like SEPA mandate",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/accounts": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveSocieteAccounts",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "site",
+      "type": "string",
+      "description": "Site key",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get a specific account attached to a third party 🔐",
+    "description": "Specify the site key",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Unauthorized: User does not have permission to read thirdparties"
+     },
+     "404": {
+      "description": "Not Found: Specified thirdparty ID does not belongs to an existing thirdparty"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "post": {
+    "operationId": "thirdpartiesCreateSocieteAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesCreateSocieteAccountModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesCreateSocieteAccountModel"
+      }
+     }
+    ],
+    "summary": "Create and attach a new account to an existing third party 🔐",
+    "description": "Possible fields for request_data (request body) are specified in <code>llx_societe_account</code> table.<br> See <a href=\"https://wiki.dolibarr.org/index.php/Table_llx_societe_account\">Table llx_societe_account</a> wiki page for more information<br><br> <u>Example body payload :</u> <pre>{\"key_account\": \"cus_DAVkLSs1LYyYI\", \"site\": \"stripe\"}</pre>",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Unauthorized: User does not have permission to read thirdparties"
+     },
+     "409": {
+      "description": "Conflict: An Account already exists for this company and site."
+     },
+     "500": {
+      "description": "Internal Server Error: Error creating SocieteAccount account"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "thirdpartiesRemoveSocieteAccounts",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete all accounts attached to a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Unauthorized: User does not have permission to delete thirdparties accounts"
+     },
+     "404": {
+      "description": "Not Found: Specified thirdparty ID does not belongs to an existing thirdparty"
+     },
+     "500": {
+      "description": "Internal Server Error: Error deleting SocieteAccount entity"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/accounts/{site}/{key_account}": {
+   "get": {
+    "operationId": "thirdpartiesRetrieveSocieteByAccounts",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "site",
+      "type": "string",
+      "description": "Site key",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "key_account",
+      "type": "string",
+      "description": "Key of the account",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Get a specific third party by account 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Unauthorized: User does not have permission to read thirdparties"
+     },
+     "404": {
+      "description": "Not Found: Specified thirdparty ID does not belongs to an existing thirdparty"
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/thirdparties/{id}/accounts/{site}": {
+   "post": {
+    "operationId": "thirdpartiesCreateSocieteAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "site",
+      "type": "string",
+      "description": "Site key",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesCreateSocieteAccountModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesCreateSocieteAccountModel"
+      }
+     }
+    ],
+    "summary": "Create and attach a new (or replace an existing) specific site account for a third party 🔐",
+    "description": "You <strong>MUST</strong> pass all values to keep (otherwise, they will be deleted) !<br> If you just need to update specific fields prefer <code>PUT /thirdparties/{id}/accounts/{site}</code> endpoint.<br><br> When a <strong>SocieteAccount</strong> entity does not exist for the <code>id</code> and <code>site</code> supplied, a new one will be created. In that case <code>fk_soc</code> and <code>site</code> members form request body payload will be ignored and <code>id</code> and <code>site</code> query strings parameters will be used instead.",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Unauthorized: User does not have permission to read thirdparties"
+     },
+     "500": {
+      "description": "Internal Server Error: Error updating SocieteAccount entity"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "put": {
+    "operationId": "thirdpartiesUpdateSocieteAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "site",
+      "type": "string",
+      "description": "Site key",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "thirdpartiesUpdateSocieteAccountModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/thirdpartiesUpdateSocieteAccountModel"
+      }
+     }
+    ],
+    "summary": "Update specified values of a specific account attached to a third party 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Unauthorized: User does not have permission to read thirdparties"
+     },
+     "404": {
+      "description": "Not Found: Specified thirdparty ID does not belongs to an existing thirdparty"
+     },
+     "409": {
+      "description": "Conflict: Another SocieteAccount entity already exists for this thirdparty with this site key."
+     },
+     "500": {
+      "description": "Internal Server Error: Error updating SocieteAccount entity"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "thirdpartiesRemoveSocieteAccount",
+    "tags": [
+     "thirdparties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the third party",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "site",
+      "type": "string",
+      "description": "Site key",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete a specific site account attached to a third party 🔐",
+    "description": "by account id",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Unauthorized: User does not have permission to delete thirdparties accounts"
+     },
+     "404": {
+      "description": "Not Found: Specified thirdparty ID does not belongs to an existing thirdparty"
+     },
+     "500": {
+      "description": "Internal Server Error: Error deleting SocieteAccount entity"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users": {
+   "get": {
+    "operationId": "listUsers",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "sortfield",
+      "type": "string",
+      "defaultValue": "t.rowid",
+      "description": "Sort field",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sortorder",
+      "type": "string",
+      "defaultValue": "ASC",
+      "description": "Sort order",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "limit",
+      "type": "integer",
+      "format": "int64",
+      "defaultValue": 100,
+      "description": "Limit for list",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "page",
+      "type": "integer",
+      "format": "int64",
+      "description": "Page number",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "user_ids",
+      "type": "string",
+      "description": "User ids filter field. Example: '1' or '1,2,3'",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "category",
+      "type": "integer",
+      "format": "int64",
+      "description": "Use this param to filter list by category",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sqlfilters",
+      "type": "string",
+      "description": "Other criteria to filter answers separated by a comma. Syntax example \"(t.ref:like:'SO-%') and (t.date_creation:>:'20160101')\"",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "properties",
+      "type": "string",
+      "description": "Restrict the data returned to these properties. Ignored if empty. Comma separated list of properties names",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "List users 🔐",
+    "description": "Get a list of Users",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "post": {
+    "operationId": "createUsers",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "createUsersModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/createUsersModel"
+      }
+     }
+    ],
+    "summary": "Create a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "403": {
+      "description": "Not allowed"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}": {
+   "get": {
+    "operationId": "retrieveUsers",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of user",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "includepermissions",
+      "type": "integer",
+      "format": "int64",
+      "description": "Set this to 1 to have the array of permissions loaded (not done by default for performance purpose)",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "400": {
+      "description": "Bad request"
+     },
+     "401": {
+      "description": "Insufficient rights"
+     },
+     "404": {
+      "description": "User or group not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "put": {
+    "operationId": "updateUsers",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "Id of account to update",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "updateUsersModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/updateUsersModel"
+      }
+     }
+    ],
+    "summary": "Update a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "Not found"
+     },
+     "500": {
+      "description": "System error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "removeUsers",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "Account ID",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "User not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/login/{login}": {
+   "get": {
+    "operationId": "usersRetrieveByLogin",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "login",
+      "type": "string",
+      "description": "Login of user",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "includepermissions",
+      "type": "integer",
+      "format": "int64",
+      "description": "Set this to 1 to have the array of permissions loaded (not done by default for performance purpose)",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get a user by login 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "400": {
+      "description": "Bad request"
+     },
+     "401": {
+      "description": "Insufficient rights"
+     },
+     "404": {
+      "description": "User or group not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/email/{email}": {
+   "get": {
+    "operationId": "usersRetrieveByEmail",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "email",
+      "type": "string",
+      "description": "Email of user",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "includepermissions",
+      "type": "integer",
+      "format": "int64",
+      "description": "Set this to 1 to have the array of permissions loaded (not done by default for performance purpose)",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get a user by email 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "400": {
+      "description": "Bad request"
+     },
+     "401": {
+      "description": "Insufficient rights"
+     },
+     "404": {
+      "description": "User or group not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/info": {
+   "get": {
+    "operationId": "usersRetrieveInfo",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "includepermissions",
+      "type": "integer",
+      "format": "int64",
+      "description": "Set this to 1 to have the array of permissions loaded (not done by default for performance purpose)",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get more properties of the current user (so user of API token). 🔐",
+    "description": " This route could also ave been named \"/users/me\".",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "401": {
+      "description": "Insufficient rights"
+     },
+     "404": {
+      "description": "User or group not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}/setPassword": {
+   "get": {
+    "operationId": "usersSetPassword",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "User ID",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "send_password",
+      "type": "boolean",
+      "description": "Only if set to true, the new password will send to the user",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Update a user password 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "User not found"
+     },
+     "500": {
+      "description": "System error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}/groups": {
+   "get": {
+    "operationId": "usersRetrieveGroups",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "Id of user",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "List the groups of a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad request"
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "Not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}/setGroup/{group}": {
+   "get": {
+    "operationId": "usersSetGroup",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "User ID",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "group",
+      "type": "integer",
+      "format": "int64",
+      "description": "Group ID",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "entity",
+      "type": "integer",
+      "format": "int64",
+      "defaultValue": 1,
+      "description": "Entity ID (valid only for superadmin in multicompany transverse mode)",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Add a user to a group 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "User not found"
+     },
+     "500": {
+      "description": "System error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/groups": {
+   "post": {
+    "operationId": "usersCreateGroups",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "usersCreateGroupsModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/usersCreateGroupsModel"
+      }
+     }
+    ],
+    "summary": "Create user group 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "500": {
+      "description": "Server Error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "get": {
+    "operationId": "usersListGroups",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "sortfield",
+      "type": "string",
+      "defaultValue": "t.rowid",
+      "description": "Sort field",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sortorder",
+      "type": "string",
+      "defaultValue": "ASC",
+      "description": "Sort order",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "limit",
+      "type": "integer",
+      "format": "int64",
+      "defaultValue": 100,
+      "description": "Limit for list",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "page",
+      "type": "integer",
+      "format": "int64",
+      "description": "Page number",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "group_ids",
+      "type": "string",
+      "description": "Groups ids filter field. Example: '1' or '1,2,3'",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "sqlfilters",
+      "type": "string",
+      "description": "Other criteria to filter answers separated by a comma. Syntax example \"(t.ref:like:'SO-%') and (t.date_creation:>:'20160101')\"",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "properties",
+      "type": "string",
+      "description": "Restrict the data returned to these properties. Ignored if empty. Comma separated list of properties names",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "List groups of the current user (so user of API token) 🔐",
+    "description": "Return an array with a list of Groups",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "User not found"
+     },
+     "503": {
+      "description": "Error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/groups/{group}": {
+   "put": {
+    "operationId": "usersUpdateGroups",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "group",
+      "type": "integer",
+      "format": "int64",
+      "description": "Id of usergroup to update",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "usersUpdateGroupsModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/usersUpdateGroupsModel"
+      }
+     }
+    ],
+    "summary": "Update user group 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "500": {
+      "description": "Server Error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "get": {
+    "operationId": "usersInfoGroups",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "group",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of group",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "load_members",
+      "type": "integer",
+      "format": "int64",
+      "maximum": 1,
+      "description": "Load members list or not",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "includepermissions",
+      "type": "integer",
+      "format": "int64",
+      "description": "Set this to 1 to have the array of permissions loaded (not done by default for performance purpose)",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "summary": "Get properties of a user group 🔐",
+    "description": "Return an array with group information",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "$ref": "#/definitions/Obj"
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "User not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "delete": {
+    "operationId": "usersRemoveGroups",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "group",
+      "type": "integer",
+      "format": "int64",
+      "description": "usergroup ID",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete a usergroup 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "403": {
+      "description": "Not allowed"
+     },
+     "404": {
+      "description": "User not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}/remove-group/{group}": {
+   "post": {
+    "operationId": "usersRemoveUserFromGroup",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "User ID",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "group",
+      "type": "integer",
+      "format": "int64",
+      "description": "Group ID",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Remove user from group (only admin) 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "403": {
+      "description": "Not allowed - only admin"
+     },
+     "503": {
+      "description": "Error"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}/notifications": {
+   "get": {
+    "operationId": "usersRetrieveUserNotification",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the user",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Get notifications for a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     },
+     "400": {
+      "description": "Bad Request"
+     },
+     "403": {
+      "description": "Access denied"
+     },
+     "404": {
+      "description": "Not found"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "post": {
+    "operationId": "usersCreateUserNotification",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the user",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "usersCreateUserNotificationModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/usersCreateUserNotificationModel"
+      }
+     }
+    ],
+    "summary": "Create a notification for a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}/notificationsbycode/{code}": {
+   "post": {
+    "operationId": "usersCreateUserNotificationByCode",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the user",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "code",
+      "type": "string",
+      "description": "Action Trigger code",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "usersCreateUserNotificationByCodeModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/usersCreateUserNotificationByCodeModel"
+      }
+     }
+    ],
+    "summary": "Create a notification for a user using action trigger code 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  },
+  "/users/{id}/notifications/{notification_id}": {
+   "delete": {
+    "operationId": "usersRemoveUserNotification",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the user",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "notification_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of UserNotification",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "summary": "Delete a notification attached to a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "integer",
+       "format": "int64"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   },
+   "put": {
+    "operationId": "usersUpdateUserNotification",
+    "tags": [
+     "users"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of the User",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "notification_id",
+      "type": "integer",
+      "format": "int64",
+      "description": "ID of UserNotification",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "usersUpdateUserNotificationModel",
+      "description": "request_data  \n",
+      "in": "body",
+      "required": false,
+      "schema": {
+       "$ref": "#/definitions/usersUpdateUserNotificationModel"
+      }
+     }
+    ],
+    "summary": "Update a notification for a user 🔐",
+    "description": "",
+    "responses": {
+     "200": {
+      "description": "Success",
+      "schema": {
+       "type": "string"
+      }
+     },
+     "500": {
+      "description": "RestException"
+     }
+    },
+    "security": [
+     {
+      "api_key": []
+     }
+    ]
+   }
+  }
+ },
+ "definitions": {
+  "listLoginModel": {
+   "properties": {
+    "login": {
+     "type": "string",
+     "description": "User login"
+    },
+    "password": {
+     "type": "string",
+     "description": "User password"
+    },
+    "entity": {
+     "type": "string",
+     "description": "Entity (when multicompany module is used). '' means 1=first company."
+    },
+    "reset": {
+     "type": "integer",
+     "format": "int64",
+     "description": "Reset token (0=get current token, 1=ask a new token and canceled old token. This means access using current existing API token of user will fails: new token will be required for new access)"
+    }
+   },
+   "required": [
+    "login",
+    "password"
+   ]
+  },
+  "Obj": {
+   "properties": {
+    "stringEncoderFunction": {
+     "type": "string",
+     "description": ""
+    },
+    "numberEncoderFunction": {
+     "type": "string",
+     "description": ""
+    },
+    "fix": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "key value pairs for fixing value types using functions. For example 'id'=>'intval' will make sure all values of the id properties will be converted to integers intval function 'password'=> null will remove all the password entries"
+    },
+    "separatorChar": {
+     "type": "string",
+     "description": "character that is used to identify sub objects For example when Object::$separatorChar = '.'; array('my.object'=>true) will result in array( 'my'=>array('object'=>true) );"
+    },
+    "removeEmpty": {
+     "type": "boolean",
+     "description": "set it to true when empty arrays, blank strings, null values to be automatically removed from response"
+    },
+    "removeNull": {
+     "type": "boolean",
+     "description": "set it to true to remove all null values from the result"
+    }
+   },
+   "required": [
+    "stringEncoderFunction",
+    "numberEncoderFunction",
+    "fix",
+    "separatorChar",
+    "removeEmpty",
+    "removeNull"
+   ]
+  },
+  "updateThirdpartiesModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Data"
+    }
+   }
+  },
+  "createThirdpartiesModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "thirdpartiesCreateFixedAmountDiscountModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data - amount float Amount including tax (required if price_base_type is TTC) - description string Description of the discount (required) - tva_tx float VAT rate in percentage - discount_type int Type of discount: 0 = customer discount, 1 = supplier discount (default: 0) - price_base_type string Price base type: 'HT' or 'TTC' (default: 'HT')"
+    }
+   }
+  },
+  "thirdpartiesSplitdiscountModel": {
+   "properties": {
+    "amount_ttc_1": {
+     "type": "number",
+     "format": "double",
+     "description": "Amount 1 (inc. tax)"
+    },
+    "amount_ttc_2": {
+     "type": "number",
+     "format": "double",
+     "description": "Amount 2 (inc. tax)"
+    }
+   },
+   "required": [
+    "amount_ttc_1",
+    "amount_ttc_2"
+   ]
+  },
+  "thirdpartiesCreateCompanyNotificationModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "thirdpartiesCreateCompanyNotificationByCodeModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "thirdpartiesUpdateCompanyNotificationModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "thirdpartiesCreateCompanyBankAccountModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "thirdpartiesUpdateCompanyBankAccountModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "thirdpartiesCreateSocieteAccountModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "thirdpartiesUpdateSocieteAccountModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "createUsersModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "New user data"
+    }
+   }
+  },
+  "updateUsersModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Datas"
+    }
+   }
+  },
+  "usersCreateGroupsModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "New user group data"
+    }
+   }
+  },
+  "usersUpdateGroupsModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Datas"
+    }
+   }
+  },
+  "usersCreateUserNotificationModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "usersCreateUserNotificationByCodeModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  },
+  "usersUpdateUserNotificationModel": {
+   "properties": {
+    "request_data": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Request data"
+    }
+   }
+  }
+ },
+ "securityDefinitions": {
+  "api_key": {
+   "type": "apiKey",
+   "name": "api_key",
+   "in": "query"
+  }
+ },
+ "info": {
+  "version": "1",
+  "title": "Restler API Explorer",
+  "description": "Live API Documentation",
+  "contact": {
+   "name": "Restler Support",
+   "url": "luracast.com/products/restler",
+   "email": "arul@luracast.com"
+  },
+  "license": {
+   "name": "LGPL-2.1",
+   "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"
+  }
+ }
+}

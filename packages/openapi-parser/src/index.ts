@@ -1,7 +1,14 @@
 export {
   parseOpenAPISpec,
   computeContractHash,
+  filterOperations,
+  specCoverageWarning,
+  detectLoginOperation,
   type ParsedSpec,
+  type ParseOptions,
+  type AuthType,
+  type OperationFilter,
+  type LoginOperation,
 } from './parse-openapi.js'
 
 export { generateAddonFromOpenAPI } from './codegen.js'
