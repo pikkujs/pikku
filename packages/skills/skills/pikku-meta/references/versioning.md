@@ -135,8 +135,7 @@ npx pikku release diff                                   # vs surface.pikku.json
 npx pikku release diff --against https://api.acme.com/surface.json  # vs any baseline
 npx pikku release diff --fail-on major                   # PR gate
 npx pikku release snapshot --out surface.json            # write a snapshot
-npx pikku release prepare                                # bump, changelog, push release/next
-npx pikku release publish                                # tag + fast-forward, one atomic push
+npx pikku release prepare                                # bump package.json, write changelog + snapshot
 ```
 
 `--against` takes three things and tells them apart itself: a directory is read
@@ -148,21 +147,31 @@ _after_ the CLI banner, so a bare `> file.json` captures the banner too.
 ### Shipping a release
 
 Work lands on the trunk branch (default `staging`); production (default `main`)
-only ever fast-forwards to a tagged release. Nothing is force-pushed except the
-disposable `release/next` branch, and no host API is used — plain git only.
+only ever fast-forwards to a release commit. pikku works the release out and
+writes it; it never commits, tags or pushes. Who does that is your call — you
+with plain git, or a platform with its own credentials.
 
-1. `prepare` runs on a checkout of `origin/staging` after `pikku all`. It diffs
-   the surface against `surface.pikku.json`, reads the commits production does
-   not have yet, bumps `package.json`, prepends a `CHANGELOG.md` section,
-   rewrites the snapshot, and pushes that one commit to `release/next`. No
-   commits since the last release means nothing to release.
-2. `publish` is the ship decision. It fast-forwards `staging` and `main` to
-   `release/next`, pushes the `vX.Y.Z` tag and deletes `release/next` in one
-   `--atomic` push, so it lands entirely or not at all.
+`prepare` runs on a checkout of `origin/staging` after `pikku all`. It diffs the
+surface against `surface.pikku.json`, reads the commits production does not have
+yet, bumps `package.json`, prepends a `CHANGELOG.md` section and rewrites the
+snapshot. No commits since the last release means nothing to release. It
+refuses when `main` has commits `staging` lacks (merge `main` into `staging`
+with a merge commit first). `.pikku/release.gen.json` records the version, the
+changelog section, the trunk sha it was prepared on and the files it wrote,
+named from the repository root.
 
-It refuses when `release/next` was prepared on an older `staging` (prepare
-again), or when `main` has commits `staging` lacks (merge `main` into `staging`
-with a merge commit first).
+Shipping is then one commit on top of that trunk sha:
+
+```bash
+npx pikku release prepare
+git add package.json CHANGELOG.md surface.pikku.json
+git commit -m "release: v0.4.0"
+git tag v0.4.0
+git push --atomic origin HEAD:staging HEAD:main v0.4.0
+```
+
+The push only fast-forwards, so if `staging` moved since prepare it is rejected
+and you prepare again.
 
 The bump comes from the surface diff alone — there is no manual override. A
 release whose surface did not move is a patch. Below 1.0 a breaking change
@@ -181,6 +190,10 @@ changelog's Notes section. Branch names are configurable in `pikku.config.json`:
   }
 }
 ```
+
+`branch` is not used by pikku itself; it is passed through in
+`release.gen.json` as the name a platform gives the prepared release commit
+while it waits to ship.
 
 Functions and wirings defined under a `scaffold/` directory or in a generated
 `*.gen.*` file are platform plumbing (auth, console, a host's injected shims)

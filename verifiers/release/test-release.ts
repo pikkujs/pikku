@@ -4,6 +4,8 @@
  * Runs the built CLI against a real pikku app in a git repo with a bare
  * remote, so the bump comes from real codegen output: a commit with no API
  * change is a patch, a new route is a minor, a removed route is a major.
+ * Prepare only writes files, so the verifier commits, tags and pushes each
+ * release itself, the way a developer or a platform would.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -137,9 +139,8 @@ function commitOnStaging(message: string, change: () => void) {
   pikku([])
 }
 
-function ship(): { version: string; level: string } {
-  const prepared = pikku(['release', 'prepare'])
-  pikku(['release', 'publish'])
+function ship(args: string[] = []): { version: string; level: string } {
+  const prepared = pikku(['release', 'prepare', ...args])
   const result = JSON.parse(
     readFileSync(join(APP, '.pikku', 'release.gen.json'), 'utf-8')
   )
@@ -148,6 +149,18 @@ function ship(): { version: string; level: string } {
       `prepare output does not name v${result.version}:\n${prepared}`
     )
   }
+  git('add', '--', ...result.files)
+  git('commit', '-q', '-m', `release: v${result.version}`)
+  git('tag', `v${result.version}`)
+  git(
+    'push',
+    '-q',
+    '--atomic',
+    'origin',
+    'HEAD:refs/heads/staging',
+    'HEAD:refs/heads/main',
+    `refs/tags/v${result.version}`
+  )
   return { version: result.version, level: result.level }
 }
 
@@ -234,8 +247,7 @@ check('--go-live releases 1.0.0', () => {
   git('fetch', '-q', 'origin')
   git('checkout', '-q', '--detach', 'origin/staging')
   pikku([])
-  pikku(['release', 'prepare', '--go-live'])
-  pikku(['release', 'publish'])
+  ship(['--go-live'])
   git('fetch', '-q', '--tags', 'origin')
   assert(
     git('rev-parse', 'origin/main') === git('rev-parse', 'v1.0.0^{commit}'),
@@ -243,15 +255,19 @@ check('--go-live releases 1.0.0', () => {
   )
 })
 
-check('publish leaves no release branch behind', () => {
+check('prepare commits and pushes nothing', () => {
+  commitOnStaging('after launch', () => write('README.md', '# app, live\n'))
+  const head = git('rev-parse', 'HEAD')
+  pikku(['release', 'prepare'])
+  assert(git('rev-parse', 'HEAD') === head, 'prepare moved HEAD')
   git('fetch', '-q', '--prune', 'origin')
   assert(
-    git('branch', '-r', '--list', 'origin/release/next') === '',
-    'release/next still exists'
+    git('rev-parse', 'origin/staging') === head,
+    'prepare pushed to staging'
   )
   assert(
-    git('rev-parse', 'origin/main') === git('rev-parse', 'origin/staging'),
-    'main and staging differ'
+    git('branch', '-r', '--list', 'origin/release/next') === '',
+    'prepare pushed a release branch'
   )
 })
 

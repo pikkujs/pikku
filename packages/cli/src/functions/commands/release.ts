@@ -4,7 +4,6 @@ import { PikkuError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   git,
-  GitError,
   headSha,
   isAncestor,
   isWorkingTreeClean,
@@ -22,7 +21,6 @@ import {
   CHANGELOG_FILE,
   CHANGELOG_TITLE,
   COMMIT_FORMAT,
-  latestChangelogSection,
   parseCommits,
   prependChangelog,
   readPackageVersion,
@@ -47,13 +45,6 @@ const FAIL_LEVELS = ['major', 'minor', 'patch'] as const
 type FailLevel = (typeof FAIL_LEVELS)[number]
 const SEVERITY: Record<FailLevel, number> = { patch: 0, minor: 1, major: 2 }
 
-const BOT_IDENTITY = [
-  '-c',
-  'user.name=pikku release',
-  '-c',
-  'user.email=release@pikku.dev',
-]
-
 function settings(config: ReleaseConfig) {
   return {
     trunk: config.release?.trunk ?? 'staging',
@@ -73,15 +64,6 @@ async function currentSurface(config: ReleaseConfig): Promise<Surface> {
     join(config.rootDir, 'versions.pikku.json')
   )
   return readSurface(resolve(config.rootDir, config.outDir), manifest)
-}
-
-async function identityArgs(cwd: string): Promise<string[]> {
-  try {
-    await git(['config', 'user.email'], cwd)
-    return []
-  } catch {
-    return BOT_IDENTITY
-  }
 }
 
 async function remoteBranchSha(
@@ -245,13 +227,15 @@ export type ReleasePrepareResult =
       branch: string
       trunk: string
       trunkSha: string
-      sha: string | null
+      production: string
+      productionSha: string | null
       previousVersion: string
       version: string
       level: Verdict
       surface: SurfaceChanges
       commits: number
       changelog: string
+      files: string[]
     }
 
 export const pikkuReleasePrepare = pikkuSessionlessFunc<
@@ -267,7 +251,6 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
     if (!trunkSha) {
       throw new PikkuError(`${s.remote}/${s.trunk} does not exist.`)
     }
-    const releaseSha = await remoteBranchSha(s.remote, s.branch, cwd)
     if ((await headSha(cwd)) !== trunkSha) {
       throw new PikkuError(
         `HEAD is not ${s.remote}/${s.trunk}. Check out ${s.trunk} at ${trunkSha.slice(0, 7)} and run \`pikku all\` before preparing a release.`
@@ -317,18 +300,25 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
       commits,
     })
 
-    const base = {
+    const prefix = await git(['rev-parse', '--show-prefix'], cwd)
+    const result: ReleasePrepareResult = {
+      status: input?.dryRun ? 'dry-run' : 'prepared',
       branch: s.branch,
       trunk: s.trunk,
       trunkSha,
+      production: s.production,
+      productionSha,
       previousVersion,
       version,
       level,
       surface,
       commits: commits.length,
       changelog,
+      files: ['package.json', CHANGELOG_FILE, SNAPSHOT_FILE].map(
+        (file) => `${prefix}${file}`
+      ),
     }
-    if (input?.dryRun) return { status: 'dry-run', sha: null, ...base }
+    if (input?.dryRun) return result
 
     const changelogPath = join(cwd, CHANGELOG_FILE)
     writeFileSync(packagePath, setPackageVersion(packageJson, version), 'utf-8')
@@ -341,140 +331,7 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
       'utf-8'
     )
     writeFileSync(snapshotPath, serializeSnapshot(after), 'utf-8')
-
-    await git(['checkout', '--quiet', '--detach'], cwd)
-    await git(['add', '--', 'package.json', CHANGELOG_FILE, SNAPSHOT_FILE], cwd)
-    await git(
-      [
-        ...(await identityArgs(cwd)),
-        'commit',
-        '--quiet',
-        '-m',
-        `release: v${version}`,
-      ],
-      cwd
-    )
-    const sha = await headSha(cwd)
-    try {
-      await git(
-        [
-          'push',
-          '--quiet',
-          `--force-with-lease=refs/heads/${s.branch}:${releaseSha ?? ''}`,
-          s.remote,
-          `${sha}:refs/heads/${s.branch}`,
-        ],
-        cwd
-      )
-    } catch {
-      throw new PikkuError(
-        `${s.remote}/${s.branch} changed while preparing (another prepare ran). Rerun \`pikku release prepare\`.`
-      )
-    }
-
-    const result: ReleasePrepareResult = { status: 'prepared', sha, ...base }
     writeJson(join(resolve(cwd, config.outDir), 'release.gen.json'), result)
-    return result
-  },
-})
-
-export type ReleasePublishInput = { dryRun?: boolean }
-export type ReleasePublishResult = {
-  status: 'published' | 'dry-run'
-  version: string
-  tag: string
-  sha: string
-  trunk: string
-  production: string
-  changelog: string | null
-}
-
-export const pikkuReleasePublish = pikkuSessionlessFunc<
-  ReleasePublishInput,
-  ReleasePublishResult
->({
-  func: async ({ config }, input) => {
-    const s = settings(config)
-    const cwd = config.rootDir
-
-    await fetchRemote(s.remote, cwd)
-    const sha = await remoteBranchSha(s.remote, s.branch, cwd)
-    if (!sha) {
-      throw new PikkuError(
-        `Nothing to publish: ${s.remote}/${s.branch} does not exist. Run \`pikku release prepare\` first.`
-      )
-    }
-    const trunkSha = await remoteBranchSha(s.remote, s.trunk, cwd)
-    if (!trunkSha) {
-      throw new PikkuError(`${s.remote}/${s.trunk} does not exist.`)
-    }
-    if ((await git(['rev-parse', `${sha}^`], cwd)) !== trunkSha) {
-      throw new PikkuError(
-        `${s.branch} was prepared on an older ${s.trunk}. Run \`pikku release prepare\` again.`
-      )
-    }
-    const productionSha = await remoteBranchSha(s.remote, s.production, cwd)
-    await assertProductionBehindTrunk(s, productionSha, trunkSha, cwd)
-
-    const prefix = await git(['rev-parse', '--show-prefix'], cwd)
-    const version = readPackageVersion(
-      await git(['show', `${sha}:${prefix}package.json`], cwd)
-    )
-    const tag = `v${version}`
-    if (await git(['ls-remote', '--tags', s.remote, `refs/tags/${tag}`], cwd)) {
-      throw new PikkuError(`${tag} is already tagged on ${s.remote}.`)
-    }
-    let changelog: string | null = null
-    try {
-      changelog = latestChangelogSection(
-        await git(['show', `${sha}:${prefix}${CHANGELOG_FILE}`], cwd)
-      )
-    } catch (err) {
-      if (!(err instanceof GitError)) throw err
-    }
-
-    const result: ReleasePublishResult = {
-      status: input?.dryRun ? 'dry-run' : 'published',
-      version,
-      tag,
-      sha,
-      trunk: s.trunk,
-      production: s.production,
-      changelog,
-    }
-    if (input?.dryRun) return result
-
-    await git(
-      [
-        ...(await identityArgs(cwd)),
-        'tag',
-        '--annotate',
-        tag,
-        sha,
-        '-m',
-        changelog ? `${tag}\n\n${changelog}` : tag,
-      ],
-      cwd
-    )
-    try {
-      await git(
-        [
-          'push',
-          '--quiet',
-          '--atomic',
-          `--force-with-lease=refs/heads/${s.branch}:${sha}`,
-          s.remote,
-          `${sha}:refs/heads/${s.trunk}`,
-          `${sha}:refs/heads/${s.production}`,
-          `refs/tags/${tag}`,
-          `:refs/heads/${s.branch}`,
-        ],
-        cwd
-      )
-    } catch (err) {
-      await git(['tag', '--delete', tag], cwd).catch(() => undefined)
-      throw err
-    }
     return result
   },
 })

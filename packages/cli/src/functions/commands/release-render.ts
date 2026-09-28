@@ -2,7 +2,6 @@ import { added, changed, dim, removed } from '../../fabric/lib/output.js'
 import type {
   ReleaseInitResult,
   ReleasePrepareResult,
-  ReleasePublishResult,
 } from './release.js'
 
 export const renderReleaseInit = (
@@ -46,27 +45,10 @@ export const renderReleasePrepare = (
     result.changelog.trimEnd(),
     '',
     result.status === 'dry-run'
-      ? dim('   dry run — nothing written or pushed')
+      ? dim('   dry run — nothing written')
       : dim(
-          `   pushed ${result.branch} at ${result.sha?.slice(0, 7)}; run \`pikku release publish\` to ship it`
+          `   wrote ${result.files.join(', ')}; commit them on ${result.trunk} and fast-forward ${result.production} to ship`
         ),
   ]
   console.log(lines.join('\n'))
-}
-
-export const renderReleasePublish = (
-  _services: unknown,
-  result: ReleasePublishResult
-): void => {
-  const verb = result.status === 'dry-run' ? 'Would publish' : 'Published'
-  console.log(
-    [
-      `${verb} ${result.tag} at ${result.sha.slice(0, 7)}`,
-      dim(
-        result.status === 'dry-run'
-          ? `   ${result.trunk} and ${result.production} would fast-forward`
-          : `   ${result.trunk} and ${result.production} fast-forwarded, tag pushed`
-      ),
-    ].join('\n')
-  )
 }

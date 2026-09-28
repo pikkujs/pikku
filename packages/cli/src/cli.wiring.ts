@@ -36,13 +36,11 @@ import {
   pikkuReleaseDiff,
   pikkuReleaseInit,
   pikkuReleasePrepare,
-  pikkuReleasePublish,
   pikkuReleaseSnapshot,
 } from './functions/commands/release.js'
 import {
   renderReleaseInit,
   renderReleasePrepare,
-  renderReleasePublish,
 } from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import {
@@ -425,7 +423,7 @@ wireCLI({
     }),
     release: {
       description:
-        'Version, changelog and ship releases from the trunk branch to production with plain git',
+        'Version and changelog releases from the API surface, for trunk to ship to production',
       subcommands: {
         diff: pikkuCLICommand({
           func: pikkuReleaseDiff,
@@ -475,26 +473,14 @@ wireCLI({
           func: pikkuReleasePrepare,
           render: renderReleasePrepare,
           description:
-            'Bump package.json, write the changelog and snapshot, and push them as one commit to the release branch',
+            'Bump package.json and write the changelog and snapshot for the next release; commits and pushes nothing',
           options: {
             dryRun: {
-              description: 'Work out the release without writing or pushing',
+              description: 'Work out the release without writing anything',
               default: false,
             },
             goLive: {
               description: 'Release 1.0.0: the app is live and 0.x is over',
-              default: false,
-            },
-          },
-        }),
-        publish: pikkuCLICommand({
-          func: pikkuReleasePublish,
-          render: renderReleasePublish,
-          description:
-            'Fast-forward trunk and production to the prepared release and tag it, in one atomic push',
-          options: {
-            dryRun: {
-              description: 'Check the release can ship without pushing',
               default: false,
             },
           },
