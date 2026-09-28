@@ -179,7 +179,17 @@
     "runScheduledTask",
     "wireScheduler"
   ],
-  "./trigger": ["PikkuTriggerService", "wireTrigger", "wireTriggerSource"],
+  "./trigger": [
+    "PIKKU_INCOMING_WEBHOOK_QUEUE_NAME",
+    "PikkuTriggerService",
+    "dispatchWebhookSourceJob",
+    "receiveWebhookSourceRequest",
+    "runWebhookSourceLifecycle",
+    "subscribedWebhookEvents",
+    "wireTrigger",
+    "wireTriggerSource",
+    "wireTriggerWebhookSource"
+  ],
   "./rpc": [
     "PikkuRPCService",
     "RPCNotFoundError",
@@ -347,12 +357,7 @@
     "validateAndBuildSecretDefinitionsMeta"
   ],
   "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
-  "./webhook": [
-    "defineIncomingWebhook",
-    "defineOutgoingWebhook",
-    "incomingWebhookRoute",
-    "upsertIncomingWebhooks"
-  ],
+  "./webhook": ["defineOutgoingWebhook"],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -417,6 +422,7 @@
     "InMemorySessionStore",
     "InMemoryTriggerService",
     "InMemoryWorkflowService",
+    "IncomingWebhookService",
     "JsonConsoleLogger",
     "LocalCredentialService",
     "LocalEmailService",

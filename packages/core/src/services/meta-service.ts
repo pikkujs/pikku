@@ -27,7 +27,7 @@ import type { SecretDefinitionsMeta } from '../wirings/secret/secret.types.js'
 import type { CredentialDefinitionsMeta } from '../wirings/credential/credential.types.js'
 import type { VariableDefinitionsMeta } from '../wirings/variable/variable.types.js'
 import type { OutgoingWebhooksMeta } from '../wirings/webhook/define-outgoing-webhook.js'
-import type { IncomingWebhooksMeta } from '../wirings/webhook/define-incoming-webhook.js'
+import type { WebhookSourcesMeta } from '../wirings/trigger/webhook-source.types.js'
 import type {
   FunctionMeta,
   FunctionsMeta,
@@ -208,7 +208,7 @@ export interface MetaService {
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
   getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
-  getIncomingWebhooksMeta(): Promise<IncomingWebhooksMeta>
+  getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(
     templateName: string,
@@ -226,7 +226,7 @@ export class LocalMetaService implements MetaService {
   public readonly basePath: string
 
   private httpMetaCache: HTTPWiringsMeta | null = null
-  private incomingWebhooksMetaCache: IncomingWebhooksMeta | null = null
+  private webhookSourcesMetaCache: WebhookSourcesMeta | null = null
   private channelsMetaCache: ChannelsMeta | null = null
   private schedulerMetaCache: ScheduledTasksMeta | null = null
   private queueMetaCache: QueueWorkersMeta | null = null
@@ -352,7 +352,7 @@ export class LocalMetaService implements MetaService {
     this.credentialsMetaCache = null
     this.variablesMetaCache = null
     this.outgoingWebhooksMetaCache = null
-    this.incomingWebhooksMetaCache = null
+    this.webhookSourcesMetaCache = null
     this.middlewareGroupsMetaCache = null
     this.permissionsGroupsMetaCache = null
     this.agentsMetaCache = null
@@ -676,14 +676,14 @@ export class LocalMetaService implements MetaService {
     return this.outgoingWebhooksMetaCache!
   }
 
-  async getIncomingWebhooksMeta(): Promise<IncomingWebhooksMeta> {
-    if (this.incomingWebhooksMetaCache) return this.incomingWebhooksMetaCache
+  async getWebhookSourcesMeta(): Promise<WebhookSourcesMeta> {
+    if (this.webhookSourcesMetaCache) return this.webhookSourcesMetaCache
 
     const content = await this.readFile(
-      'webhooks/pikku-incoming-webhooks-meta.gen.json'
+      'webhooks/pikku-webhook-sources-meta.gen.json'
     )
-    this.incomingWebhooksMetaCache = content ? JSON.parse(content) : {}
-    return this.incomingWebhooksMetaCache!
+    this.webhookSourcesMetaCache = content ? JSON.parse(content) : {}
+    return this.webhookSourcesMetaCache!
   }
 
   async getEmailMeta(): Promise<EmailsMeta> {
