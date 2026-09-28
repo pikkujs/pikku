@@ -586,6 +586,18 @@ export async function loadAddonFunctionsMeta(
       } catch {
         // No addon channel contracts metadata
       }
+
+      try {
+        const incomingWebhooksPath = require.resolve(
+          `${decl.package}/.pikku/webhooks/pikku-incoming-webhooks-meta.gen.json`
+        )
+        state.addonIncomingWebhooks ??= {}
+        state.addonIncomingWebhooks[namespace] = JSON.parse(
+          await readFile(incomingWebhooksPath, 'utf-8')
+        )
+      } catch {
+        // No addon incoming webhooks
+      }
     } catch (error: any) {
       logger.warn(
         `Failed to load addon function metadata for '${namespace}' (${decl.package}): ${error.message}`
