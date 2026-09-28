@@ -3,8 +3,8 @@ name: pikku-meta
 description: >-
   Use to inspect or evolve a project you did not just write — `pikku meta` and `pikku info` for
   what the project declares (functions, schemas, wires, workflows, middleware, permissions) and
-  `pikku meta apply` to change it, `pikku versions` / `pikku semver` for contract hashes,
-  breaking-change detection and the semver a release should get, and `pikku audit` / `pikku
+  `pikku meta apply` to change it, `pikku versions` / `pikku release` for contract hashes,
+  breaking-change detection, the semver a release should get and shipping it, and `pikku audit` / `pikku
   update` for dependency advisories and moving Pikku forward. TRIGGER when: user asks what
   functions or routes exist, wants a function's input/output shape, wants to retag a function or
   set config on a declaration, asks about API versioning, breaking changes, what semver a release
@@ -13,7 +13,7 @@ description: >-
   Pikku concepts (use pikku-concepts).
 installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku info *)
-argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply|versions|semver|audit|update]'
+argument-hint: '[context|functions|schemas|workflows|middleware|permissions|wires|apply|versions|release|audit|update]'
 ---
 
 # Pikku Project Metadata
@@ -26,7 +26,7 @@ and change it through the write path rather than by hand.
 | You are… | Read |
 | --- | --- |
 | Asking what exists, or setting config on a declaration | `references/meta.md` |
-| Versioning a contract, or deciding a release's semver | `references/versioning.md` |
+| Versioning a contract, or versioning and shipping a release | `references/versioning.md` |
 | Chasing a dependency advisory, or upgrading Pikku | `references/audit.md` |
 
 ## Start with `pikku meta context`
@@ -41,7 +41,7 @@ they are the same ground in two shapes.
 An input is contravariant (the caller writes it) and an output is covariant (the
 caller reads it), so the same edit is not the same event on both. Adding a
 required field breaks an input and is compatible on an output; making a field
-optional is the reverse. `pikku semver` reads the generated JSON Schemas with
+optional is the reverse. `pikku release diff` reads the generated JSON Schemas with
 that asymmetry built in, so let it decide rather than eyeballing a diff.
 
 ## What NOT to do

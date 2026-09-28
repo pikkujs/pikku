@@ -313,7 +313,7 @@ Then run the slice's scenarios. All four green — validate, codegen, `tsc`, sce
 
 Never batch. A rebuild verified only at the end gives you an undifferentiated pile of failures with no bisect point, and the whole reason for slicing is that each slice is a checkpoint you can trust.
 
-New functions with `expose: true` are versioned from the start — `pikku versions` / `pikku semver` (**pikku-meta**); you're establishing v1 contracts, not migrating them.
+New functions with `expose: true` are versioned from the start — `pikku versions` / `pikku release` (**pikku-meta**); you're establishing v1 contracts, not migrating them.
 
 ## Stage 9 — The parity report (the deliverable)
 

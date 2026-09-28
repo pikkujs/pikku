@@ -54,7 +54,7 @@ function envWithoutInheritedRepo(): NodeJS.ProcessEnv {
   return env
 }
 
-function git(
+export function git(
   args: string[],
   cwd = process.cwd(),
   extraEnv?: NodeJS.ProcessEnv

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { parseVersionedId } from '@pikku/core/utils'
 import type { VersionManifest } from '@pikku/inspector'
 import {
+  normalize,
   readMetaSnapshot,
   type MetaDiffCategoryName,
   type MetaSnapshot,
@@ -131,7 +132,10 @@ export function readSurface(
   for (const [category, entries] of Object.entries(snapshot)) {
     if (category === 'functions' || !entries) continue
     if (Object.keys(entries).length === 0) continue
-    wirings[category as WiringCategory] = entries
+    wirings[category as WiringCategory] = normalize(entries) as Record<
+      string,
+      unknown
+    >
   }
 
   return {
@@ -151,7 +155,7 @@ function assertSurface(value: unknown, source: string): Surface {
   const surface = value as Partial<Surface>
   if (typeof surface.functions !== 'object' || surface.functions === null) {
     throw new Error(
-      `Baseline at ${source} is not a surface snapshot (no "functions" map). Produce one with \`pikku semver --emit\`.`
+      `Baseline at ${source} is not a surface snapshot (no "functions" map). Produce one with \`pikku release snapshot\`.`
     )
   }
   if (

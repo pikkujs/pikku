@@ -122,28 +122,61 @@ the manifest alone. Fix the contract or bump the version, then run it again.
 4. If intentional: pin the old contract as `…V1` with `version: 1`, bump the
    live function to `version: 2`, then `pikku versions update`
 
-## The `pikku semver` command
+## The `pikku release` command
 
-`versions check` and `semver` answer different questions and share no state.
+`versions check` and `release` answer different questions and share no state.
 `check` is a within-repo gate — "you changed a contract without bumping
-`version:`". `semver` is a release question — "what does this build owe the
-clients of the one already deployed?" — and needs an **external baseline**,
-which is why the answer is always relative to an environment rather than to
-the previous commit.
+`version:`". `release` is a release question — "what does this build owe the
+clients of the last release, and how do we ship it?". The baseline is
+`surface.pikku.json`, the snapshot committed by the previous release.
 
 ```bash
-npx pikku semver --against https://api.acme.com/surface.json  # vs production
-npx pikku semver --against ../other-app/.pikku                # vs a checkout
-npx pikku semver --emit --out surface.json                    # publish a baseline
-npx pikku semver --against ... --fail-on major                # CI gate
+npx pikku release init                                   # first run: snapshot + CHANGELOG.md
+npx pikku release diff                                   # vs surface.pikku.json
+npx pikku release diff --against https://api.acme.com/surface.json  # vs any baseline
+npx pikku release diff --fail-on major                   # PR gate
+npx pikku release snapshot --out surface.json            # write a snapshot
+npx pikku release prepare                                # bump, changelog, push release/next
+npx pikku release publish                                # tag + fast-forward, one atomic push
 ```
 
 `--against` takes three things and tells them apart itself: a directory is read
 as a `.pikku` tree, an `http(s)` URL is fetched as a published snapshot, and any
-other file is read as a snapshot. `--emit` produces the snapshot; **use `--out`**
-— plain `--emit` writes to stdout _after_ the CLI banner, so a bare `> file.json`
-captures the banner too. Publish the snapshot from CI on deploy and it becomes
-the baseline everyone else compares against.
+other file is read as a snapshot. `snapshot` without `--out` writes to stdout
+_after_ the CLI banner, so a bare `> file.json` captures the banner too.
+`pikku semver` is a deprecated alias for `release diff` / `release snapshot`.
+
+### Shipping a release
+
+Work lands on the trunk branch (default `staging`); production (default `main`)
+only ever fast-forwards to a tagged release. Nothing is force-pushed except the
+disposable `release/next` branch, and no host API is used — plain git only.
+
+1. `prepare` runs on a checkout of `origin/staging` after `pikku all`. It diffs
+   the surface against `surface.pikku.json`, reads the commits production does
+   not have yet, bumps `package.json`, prepends a `CHANGELOG.md` section,
+   rewrites the snapshot, and pushes that one commit to `release/next`. No
+   commits since the last release means nothing to release.
+2. `publish` is the ship decision. It fast-forwards `staging` and `main` to
+   `release/next`, pushes the `vX.Y.Z` tag and deletes `release/next` in one
+   `--atomic` push, so it lands entirely or not at all.
+
+It refuses when `release/next` was prepared on an older `staging` (prepare
+again), or when `main` has commits `staging` lacks (merge `main` into `staging`
+with a merge commit first).
+
+Commit trailers carry what the diff cannot see:
+
+- `Release: major|minor|patch` raises the bump; it never lowers the surface
+  verdict.
+- `Release-Note: …` adds a line to the changelog's Notes section.
+
+Below 1.0 a breaking surface change bumps the minor; `Release: major` is how a
+project reaches 1.0. Branch names are configurable in `pikku.config.json`:
+
+```json
+{ "release": { "trunk": "staging", "production": "main", "branch": "release/next", "remote": "origin" } }
+```
 
 The verdict, in order:
 
@@ -179,7 +212,7 @@ the wiring level only `auth` going from absent/false to true is classified as
 breaking; every other metadata change is reported as compatible, because there
 is no general way to tell a cosmetic wiring edit from a restricting one.
 
-Output is `.pikku/changes.gen.json` (override with `--out`), so it rides the
+`release diff` writes `.pikku/changes.gen.json` (override with `--out`), so it rides the
 same meta pipeline as `audit.json`:
 
 ```json
@@ -215,7 +248,7 @@ jobs:
       - run: npm ci
       - run: npx pikku versions check
       # Refuse to ship a breaking change to production unintentionally.
-      - run: npx pikku semver --against https://api.acme.com/surface.json --fail-on major
+      - run: npx pikku release diff --fail-on major
 ```
 
 ## Complete Example

@@ -252,6 +252,17 @@ describe('computeSurfaceDiff — wirings', () => {
     assert.equal(result.verdict, 'minor')
     assert.equal(changeFor(result, 'GET /x')?.breaking, false)
   })
+
+  test('a different checkout path is not a change', () => {
+    const result = computeSurfaceDiff(
+      http({ 'GET /x': { pikkuFuncId: 'f', sourceFile: '/home/ci/app/x.ts' } }),
+      http({
+        'GET /x': { pikkuFuncId: 'f', sourceFile: '/Users/dev/app/x.ts' },
+      }),
+      'prod'
+    )
+    assert.deepEqual(result.changes, [])
+  })
 })
 
 describe('computeSurfaceDiff — ordering', () => {
