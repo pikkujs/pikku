@@ -8,6 +8,7 @@ import { ScopedSecretService } from '../../services/scoped-secret-service.js'
 import { ScopedCredentialService } from '../../services/scoped-credential-service.js'
 import type { CredentialOverrides } from '../credential/credential-overrides.js'
 import type { VariablesService } from '../../services/variables-service.js'
+import type { SendWebhookInput } from '../../services/webhook-service.js'
 
 export type AddonInstance = {
   namespace: string
@@ -125,6 +126,33 @@ const wrapWorkflowServiceForPackage = <T extends object>(
   })
 }
 
+const scopedWebhookServices = new WeakSet<object>()
+
+/** An addon names its outgoing events locally; they leave as `<instance>:<event>`. */
+const scopeWebhookService = <T extends object>(
+  service: T,
+  namespace: string
+): T => {
+  if (scopedWebhookServices.has(service)) return service
+  const scoped = new Proxy(service, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver)
+      if (prop !== 'send' || typeof value !== 'function') return value
+      return function (this: any, input: SendWebhookInput, ...rest: any[]) {
+        return value.call(
+          this,
+          input?.event && !input.event.startsWith(`${namespace}:`)
+            ? { ...input, event: `${namespace}:${input.event}` }
+            : input,
+          ...rest
+        )
+      }
+    },
+  })
+  scopedWebhookServices.add(scoped)
+  return scoped
+}
+
 export const getOrCreatePackageSingletonServices = async (
   packageName: string,
   parentServices: CoreSingletonServices,
@@ -187,6 +215,18 @@ export const getOrCreatePackageSingletonServices = async (
     }
   }
 
+  const namespace =
+    addonInstance?.namespace ?? findAddonNamespaceForPackage(packageName)
+  if (namespace && existingServices.webhookService) {
+    existingServices = {
+      ...existingServices,
+      webhookService: scopeWebhookService(
+        existingServices.webhookService,
+        namespace
+      ),
+    }
+  }
+
   if (!factories || !factories.createSingletonServices) {
     return existingServices
   }
@@ -210,6 +250,13 @@ export const getOrCreatePackageSingletonServices = async (
       packageName,
       addonInstance?.namespace ?? null
     ) as typeof packageServices.workflowService
+  }
+
+  if (namespace && packageServices.webhookService) {
+    packageServices.webhookService = scopeWebhookService(
+      packageServices.webhookService,
+      namespace
+    )
   }
 
   pikkuState(cacheKey, 'package', 'singletonServices', packageServices)

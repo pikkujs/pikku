@@ -296,6 +296,19 @@ export interface PikkuCLICoreOutputFiles {
 
   // Variables metadata JSON
   variablesMetaJsonFile: string
+
+  outgoingWebhooksFile: string
+
+  outgoingWebhooksMetaJsonFile: string
+
+  // Each webhook source's route and the worker that dispatches its events.
+  webhookSourcesFile: string
+
+  webhookSourcesLifecycleFile: string
+
+  webhookSourcesMetaFile: string
+
+  webhookSourcesMetaJsonFile: string
 }
 
 export type PikkuCLIInput = {

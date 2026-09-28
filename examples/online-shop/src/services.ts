@@ -1,4 +1,5 @@
 import {
+  IncomingWebhookService,
   JsonConsoleLogger,
   LocalEmailService,
   LocalSecretService,
@@ -71,6 +72,15 @@ export const createSingletonServices = pikkuServices(
       // `secrets` at all (every function-facing services type is bounded by
       // SecretlessServices).
       ...(credentialService ? { credentialService } : {}),
+      // Webhook sources queue what they receive, so they need the runtime's queue.
+      ...(existingServices?.queueService &&
+      !existingServices.incomingWebhookService
+        ? {
+            incomingWebhookService: new IncomingWebhookService(
+              existingServices.queueService
+            ),
+          }
+        : {}),
     }
   }
 )

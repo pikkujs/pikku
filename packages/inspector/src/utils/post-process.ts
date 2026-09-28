@@ -270,6 +270,23 @@ export function aggregateRequiredServices(
     requiredServices.add('queueService')
   }
 
+  // Webhook source routes and their worker are generated and destructure
+  // nothing, so they are found by id: the route accepts into the queue through
+  // incomingWebhookService and the worker records attempts through it.
+  const hasWebhookSources = Object.values(
+    state.triggers?.webhookSourceMeta ?? {}
+  ).some(
+    ({ method, route }) =>
+      state.functions.meta[`http:${method}:${route}`] !== undefined
+  )
+  if (
+    hasWebhookSources ||
+    state.functions.meta['queue:pikku-incoming-webhooks'] !== undefined
+  ) {
+    requiredServices.add('incomingWebhookService')
+    requiredServices.add('queueService')
+  }
+
   // 6b. Inject synthetic queue workers for workflow graph steps.
   // Each workflow gets an orchestrator queue and per-step queues.
   // Without these, the PikkuWorkflowService constructor can't find

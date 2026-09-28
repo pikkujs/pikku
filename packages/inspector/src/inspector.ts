@@ -47,6 +47,7 @@ import { annotateHttpRouteAuth } from './utils/annotate-http-route-auth.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core/state'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
+import { validateWebhookSourceTriggers } from './add/add-trigger.js'
 import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
 import {
   finalizeWorkflowHelperTypes,
@@ -128,6 +129,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     triggers: {
       meta: {},
       sourceMeta: {},
+      webhookSourceMeta: {},
       files: new Set(),
     },
     scheduledTasks: {
@@ -458,6 +460,8 @@ export const inspect = async (
     logger.debug(
       `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(0)}ms`
     )
+
+    validateWebhookSourceTriggers(logger, state)
 
     resolveLatestVersions(state, logger)
 

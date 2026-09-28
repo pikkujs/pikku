@@ -8,7 +8,11 @@ import {
   reloadGeneratedMeta,
   reconcileAddonRegistry,
 } from '@pikku/core/dev'
-import { InMemoryQueueService, QueueWebhookService } from '@pikku/core/services'
+import {
+  IncomingWebhookService,
+  InMemoryQueueService,
+  QueueWebhookService,
+} from '@pikku/core/services'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
@@ -27,6 +31,7 @@ import {
   KyselyFeatureFlagStore,
   KyselyScopeService,
   KyselyWebhookService,
+  KyselyIncomingWebhookService,
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
@@ -390,6 +395,13 @@ export const dev = pikkuSessionlessFunc<
     if (devWebhookService instanceof KyselyWebhookService) {
       await devWebhookService.init()
     }
+    const devIncomingWebhookService =
+      kysely && requiredServices.has('incomingWebhookService')
+        ? new KyselyIncomingWebhookService(devQueueService, kysely as any)
+        : new IncomingWebhookService(devQueueService)
+    if (devIncomingWebhookService instanceof KyselyIncomingWebhookService) {
+      await devIncomingWebhookService.init()
+    }
     const credentialService = await createDevCredentialService({
       kysely,
       runtimeDir: resolvedRuntimeDir,
@@ -410,6 +422,7 @@ export const dev = pikkuSessionlessFunc<
       schedulerService,
       queueService: devQueueService,
       webhookService: devWebhookService,
+      incomingWebhookService: devIncomingWebhookService,
       ...(scopeService ? { scopeService } : {}),
       workflowService,
       workflowRunService: workflowService,

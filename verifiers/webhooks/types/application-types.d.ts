@@ -7,7 +7,10 @@ import type {
 
 export interface Config extends CoreConfig {}
 
-export interface SingletonServices extends CoreSingletonServices<Config> {}
+export interface SingletonServices extends CoreSingletonServices<Config> {
+  /** Whether a shop webhook body carries a valid signature. */
+  verifyShopSignature: (body: Uint8Array, signature: string) => Promise<boolean>
+}
 
 export interface Services extends CoreServices<SingletonServices> {}
 

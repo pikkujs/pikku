@@ -1213,6 +1213,44 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    const webhooksDir = join(result.outDir, 'webhooks')
+    if (!result.outgoingWebhooksFile) {
+      result.outgoingWebhooksFile = join(
+        webhooksDir,
+        'pikku-outgoing-webhooks.gen.ts'
+      )
+    }
+    if (!result.outgoingWebhooksMetaJsonFile) {
+      result.outgoingWebhooksMetaJsonFile = join(
+        webhooksDir,
+        'pikku-outgoing-webhooks-meta.gen.json'
+      )
+    }
+    if (!result.webhookSourcesFile) {
+      result.webhookSourcesFile = join(
+        webhooksDir,
+        'pikku-webhook-sources.gen.ts'
+      )
+    }
+    if (!result.webhookSourcesLifecycleFile) {
+      result.webhookSourcesLifecycleFile = join(
+        webhooksDir,
+        'pikku-webhook-sources-lifecycle.gen.ts'
+      )
+    }
+    if (!result.webhookSourcesMetaFile) {
+      result.webhookSourcesMetaFile = join(
+        webhooksDir,
+        'pikku-webhook-sources-meta.gen.ts'
+      )
+    }
+    if (!result.webhookSourcesMetaJsonFile) {
+      result.webhookSourcesMetaJsonFile = join(
+        webhooksDir,
+        'pikku-webhook-sources-meta.gen.json'
+      )
+    }
+
     result.globalHTTPPrefix = result.globalHTTPPrefix
       ? result.globalHTTPPrefix.replace(/\/+$/, '')
       : ''

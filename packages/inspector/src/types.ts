@@ -5,7 +5,11 @@ import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
+import type {
+  TriggerMeta,
+  TriggerSourceMeta,
+  WebhookSourcesMeta,
+} from '@pikku/core/trigger'
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type {
@@ -593,6 +597,14 @@ export interface InspectorState {
      *  inspector cannot read off the declaration. */
     props?: Record<string, Record<string, string>>
   }>
+  outgoingWebhooks?: Array<{
+    file: string
+    variable: string
+    event: string
+    title: string
+    description?: string
+    payload?: Record<string, string>
+  }>
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType
@@ -617,6 +629,7 @@ export interface InspectorState {
   triggers: {
     meta: TriggerMeta
     sourceMeta: TriggerSourceMeta
+    webhookSourceMeta: WebhookSourcesMeta
     files: Set<string>
   }
   scheduledTasks: {

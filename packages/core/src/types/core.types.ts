@@ -1,3 +1,4 @@
+import type { IncomingWebhookService } from '../services/incoming-webhook-service.js'
 import type { Logger, LogLevel } from '../services/logger.js'
 import type { VariablesService } from '../services/variables-service.js'
 import type { SecretService } from '../services/secret-service.js'
@@ -175,6 +176,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
    * the delivery-read methods; a store-backed implementation records history.
    */
   webhookService?: WebhookService
+  /** Queues what webhook trigger sources receive. Required once any `wireTriggerWebhookSource` is wired. */
+  incomingWebhookService?: IncomingWebhookService
   metaService?: MetaService
   /**
    * Where virtual-user runs are recorded. A run is dispatched and answered for

@@ -26,6 +26,8 @@ import type {
 import type { SecretDefinitionsMeta } from '../wirings/secret/secret.types.js'
 import type { CredentialDefinitionsMeta } from '../wirings/credential/credential.types.js'
 import type { VariableDefinitionsMeta } from '../wirings/variable/variable.types.js'
+import type { OutgoingWebhooksMeta } from '../wirings/webhook/define-outgoing-webhook.js'
+import type { WebhookSourcesMeta } from '../wirings/trigger/webhook-source.types.js'
 import type {
   FunctionMeta,
   FunctionsMeta,
@@ -205,6 +207,8 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
+  getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(
     templateName: string,
@@ -222,6 +226,7 @@ export class LocalMetaService implements MetaService {
   public readonly basePath: string
 
   private httpMetaCache: HTTPWiringsMeta | null = null
+  private webhookSourcesMetaCache: WebhookSourcesMeta | null = null
   private channelsMetaCache: ChannelsMeta | null = null
   private schedulerMetaCache: ScheduledTasksMeta | null = null
   private queueMetaCache: QueueWorkersMeta | null = null
@@ -242,6 +247,7 @@ export class LocalMetaService implements MetaService {
   private secretsMetaCache: SecretDefinitionsMeta | null = null
   private credentialsMetaCache: CredentialDefinitionsMeta | null = null
   private variablesMetaCache: VariableDefinitionsMeta | null = null
+  private outgoingWebhooksMetaCache: OutgoingWebhooksMeta | null = null
   private middlewareGroupsMetaCache: MiddlewareGroupsMeta | null = null
   private permissionsGroupsMetaCache: PermissionsGroupsMeta | null = null
   private agentsMetaCache: AgentsMeta | null = null
@@ -345,6 +351,8 @@ export class LocalMetaService implements MetaService {
     this.secretsMetaCache = null
     this.credentialsMetaCache = null
     this.variablesMetaCache = null
+    this.outgoingWebhooksMetaCache = null
+    this.webhookSourcesMetaCache = null
     this.middlewareGroupsMetaCache = null
     this.permissionsGroupsMetaCache = null
     this.agentsMetaCache = null
@@ -656,6 +664,26 @@ export class LocalMetaService implements MetaService {
     )
     this.variablesMetaCache = content ? JSON.parse(content) : {}
     return this.variablesMetaCache!
+  }
+
+  async getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta> {
+    if (this.outgoingWebhooksMetaCache) return this.outgoingWebhooksMetaCache
+
+    const content = await this.readFile(
+      'webhooks/pikku-outgoing-webhooks-meta.gen.json'
+    )
+    this.outgoingWebhooksMetaCache = content ? JSON.parse(content) : {}
+    return this.outgoingWebhooksMetaCache!
+  }
+
+  async getWebhookSourcesMeta(): Promise<WebhookSourcesMeta> {
+    if (this.webhookSourcesMetaCache) return this.webhookSourcesMetaCache
+
+    const content = await this.readFile(
+      'webhooks/pikku-webhook-sources-meta.gen.json'
+    )
+    this.webhookSourcesMetaCache = content ? JSON.parse(content) : {}
+    return this.webhookSourcesMetaCache!
   }
 
   async getEmailMeta(): Promise<EmailsMeta> {

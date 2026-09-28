@@ -338,6 +338,7 @@ export const createSingletonServices: CreateSingletonServices<
         config.consoleFunctionsFile,
         config.remoteRpcWorkersFile,
         config.webhookWorkersFile,
+        config.webhookSourcesFile,
         config.remoteJobsFile,
         config.workflowRoutesFile,
         config.publicRpcFile,

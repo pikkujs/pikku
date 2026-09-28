@@ -330,6 +330,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Flags', 'pikkuFlags', {}),
       workflow.do('Personas', 'pikkuPersonas', {}),
       workflow.do('Variables', 'pikkuVariables', null),
+      workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
       workflow.do('Addon types', 'pikkuAddonTypes', null),
     ])
 
@@ -407,11 +408,17 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     let remoteRPC = false
     let webhook = false
+    let webhookSources = false
     let remoteJobs = false
     let workflowRoutes = false
     if (!config.addon) {
       remoteRPC = await workflow.do('Remote RPC', 'pikkuRemoteRPC', null)
       webhook = await workflow.do('Webhook', 'pikkuWebhook', null)
+      webhookSources = await workflow.do(
+        'Webhook sources',
+        'pikkuWebhookSources',
+        null
+      )
       remoteJobs = await workflow.do('Remote jobs', 'pikkuRemoteJobs', null)
       if (workflows) {
         workflowRoutes = await workflow.do(
@@ -441,6 +448,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflows ||
       remoteRPC ||
       webhook ||
+      webhookSources ||
       remoteJobs ||
       workflowRoutes ||
       unresolvedSchemas
@@ -488,6 +496,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         allImports.push(
           config.triggersWiringMetaFile,
           config.triggerSourcesMetaFile,
+          config.webhookSourcesMetaFile,
           config.triggersWiringFile
         )
       }

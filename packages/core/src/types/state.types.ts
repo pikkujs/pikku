@@ -1,3 +1,7 @@
+import type {
+  CoreTriggerWebhookSource,
+  WebhookSourcesMeta,
+} from '../wirings/trigger/webhook-source.types.js'
 import type { CredentialOverrides } from '../wirings/credential/credential-overrides.js'
 import type {
   PikkuErrorConstructor,
@@ -160,6 +164,8 @@ export interface PikkuPackageState {
     triggerSources: Map<string, CoreTriggerSource>
     meta: TriggerMeta
     sourceMeta: TriggerSourceMeta
+    webhookSources: Map<string, CoreTriggerWebhookSource>
+    webhookSourceMeta: WebhookSourcesMeta
   }
   mcp: {
     resources: Map<string, CoreMCPResource>

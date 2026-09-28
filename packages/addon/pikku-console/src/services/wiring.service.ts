@@ -6,6 +6,7 @@ import type { ResolvedPersona } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
 import type { FeatureFlagDefinitionsMeta } from '@pikku/core/flag'
 import type { AnalyticsEventsMeta } from '@pikku/core/analytics'
+import type { OutgoingWebhooksMeta } from '@pikku/core/webhook'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -243,6 +244,7 @@ export interface MetaCounts {
   emails: number
   secrets: number
   variables: number
+  outgoingWebhooks: number
   featureFlags: number
   analyticsEvents: number
 }
@@ -288,6 +290,7 @@ export interface PikkuMetaState {
   secretsMeta: Record<string, unknown>
   credentialsMeta: Record<string, unknown>
   variablesMeta: Record<string, unknown>
+  outgoingWebhooksMeta: OutgoingWebhooksMeta
 }
 
 export interface AllMeta extends PikkuMetaState {
@@ -331,6 +334,7 @@ export class WiringService {
       secretsMeta,
       credentialsMeta,
       variablesMeta,
+      outgoingWebhooksMeta,
     ] = await Promise.all([
       this.metaService.getFunctionsMeta(),
       this.metaService.getHttpMeta(),
@@ -356,6 +360,7 @@ export class WiringService {
       this.metaService.getSecretsMeta(),
       this.metaService.getCredentialsMeta(),
       this.metaService.getVariablesMeta(),
+      this.metaService.getOutgoingWebhooksMeta(),
     ])
 
     const httpMeta = Object.entries(httpMetaRaw || {}).flatMap(
@@ -597,6 +602,7 @@ export class WiringService {
       emails: Object.keys(emailsMeta.templates ?? {}).length,
       secrets: Object.keys(secretsMeta).length,
       variables: Object.keys(variablesMeta).length,
+      outgoingWebhooks: Object.keys(outgoingWebhooksMeta).length,
       featureFlags: Object.keys(featureFlags).length,
       analyticsEvents: Object.keys(analyticsEvents).length,
     }
@@ -628,6 +634,7 @@ export class WiringService {
       secretsMeta,
       credentialsMeta,
       variablesMeta,
+      outgoingWebhooksMeta,
       functionUsedBy,
       counts,
     }

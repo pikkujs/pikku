@@ -108,6 +108,8 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     triggerSources: new Map(),
     meta: {} as TriggerMeta,
     sourceMeta: {},
+    webhookSources: new Map(),
+    webhookSourceMeta: {},
   },
   mcp: {
     resources: new Map(),
