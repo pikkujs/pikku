@@ -20,6 +20,7 @@ import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbCodegen } from './functions/commands/db-codegen.js'
+import { webhooksUpsert } from './functions/commands/webhooks-upsert.js'
 import { dbCheck } from './functions/commands/db-check.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
@@ -541,6 +542,26 @@ wireCLI({
           func: pikkuEmails,
           description:
             'Generate typed email renderers and metadata from emailTemplatesDir in pikku.config.json',
+        }),
+      },
+    },
+    webhooks: {
+      description: 'Register incoming webhooks with their providers',
+      subcommands: {
+        upsert: pikkuCLICommand({
+          func: webhooksUpsert,
+          description:
+            'Create or update each incoming webhook at its provider, printing one JSON line per webhook with any signing secret it produced',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+          },
         }),
       },
     },
@@ -1204,7 +1225,8 @@ wireCLI({
                 'Header sent when fetching --openapi from a URL, as "Name: value" (repeatable), for specs published only to authenticated requests',
             },
             tags: {
-              description: 'With --openapi: keep only operations with these tags',
+              description:
+                'With --openapi: keep only operations with these tags',
             },
             include: {
               description:
