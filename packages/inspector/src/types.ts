@@ -5,8 +5,11 @@ import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
-import type { IncomingWebhooksMeta } from '@pikku/core/webhook'
+import type {
+  TriggerMeta,
+  TriggerSourceMeta,
+  WebhookSourcesMeta,
+} from '@pikku/core/trigger'
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type {
@@ -377,11 +380,6 @@ export type InspectorOptions = Partial<{
    * `pikku.config.json`. Absent or false means the feature is refused with a
    * critical naming the flag that would permit it.
    */
-  /**
-   * The generated file that mounts every incoming webhook's route. Unset, the
-   * routes are left unmounted.
-   */
-  incomingWebhooksWiringFile: string
   allow: Partial<{
     permissionsInBody: boolean
     complexWorkflows: boolean
@@ -607,21 +605,6 @@ export interface InspectorState {
     description?: string
     payload?: Record<string, string>
   }>
-  incomingWebhooks?: Array<{
-    file: string
-    variable: string
-    id: string
-    pikkuFuncId: string
-    events: string[]
-    needs: string[]
-    title?: string
-    secret?: string
-    route?: string
-  }>
-  /** Each wired addon's incoming webhooks, as the addon published them, keyed by instance. */
-  addonIncomingWebhooks?: Record<string, IncomingWebhooksMeta>
-  /** Every incoming webhook the app mounts, its own and its addons', keyed by scoped id. */
-  incomingWebhooksMeta?: IncomingWebhooksMeta
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType
@@ -646,6 +629,7 @@ export interface InspectorState {
   triggers: {
     meta: TriggerMeta
     sourceMeta: TriggerSourceMeta
+    webhookSourceMeta: WebhookSourcesMeta
     files: Set<string>
   }
   scheduledTasks: {

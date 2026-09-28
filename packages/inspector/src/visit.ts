@@ -37,7 +37,6 @@ import { addFeature } from './add/add-feature.js'
 import { addAgent } from './add/add-agent.js'
 import { addAnalytics } from './add/add-analytics.js'
 import { addOutgoingWebhook } from './add/add-outgoing-webhook.js'
-import { addIncomingWebhook } from './add/add-incoming-webhook.js'
 import { addAgentScorer } from './add/add-agent-scorer.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
 
@@ -181,7 +180,6 @@ export const visitRoutes = (
   addFeature(logger, node, checker, state, nextOptions)
   addAgent(logger, node, checker, state, nextOptions)
   addAgentScorer(logger, node, checker, state, nextOptions)
-  addIncomingWebhook(logger, node, checker, state)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, nextOptions)

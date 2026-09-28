@@ -132,6 +132,7 @@ export interface SerializableInspectorState {
   triggers: {
     meta: InspectorState['triggers']['meta']
     sourceMeta: InspectorState['triggers']['sourceMeta']
+    webhookSourceMeta?: InspectorState['triggers']['webhookSourceMeta']
     files: string[]
   }
   scheduledTasks: {
@@ -384,6 +385,7 @@ export function serializeInspectorState(
     triggers: {
       meta: state.triggers.meta,
       sourceMeta: state.triggers.sourceMeta,
+      webhookSourceMeta: state.triggers.webhookSourceMeta,
       files: Array.from(state.triggers.files),
     },
     scheduledTasks: {
@@ -608,6 +610,7 @@ export function deserializeInspectorState(
     triggers: {
       meta: data.triggers?.meta ?? {},
       sourceMeta: data.triggers?.sourceMeta ?? {},
+      webhookSourceMeta: data.triggers?.webhookSourceMeta ?? {},
       files: new Set(data.triggers?.files ?? []),
     },
     scheduledTasks: {

@@ -510,14 +510,12 @@ export const addHTTPRoute: AddWiring = (
   node,
   checker,
   state,
-  options
+  _options
 ) => {
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args } = node
   if (!ts.isIdentifier(expression) || expression.text !== 'wireHTTP') return
-  if (node.getSourceFile().fileName === options.incomingWebhooksWiringFile)
-    return
 
   const firstArg = args[0]
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return

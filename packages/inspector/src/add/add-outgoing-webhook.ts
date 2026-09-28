@@ -8,7 +8,7 @@ import {
 
 const DEFINE_OUTGOING_WEBHOOK = 'defineOutgoingWebhook'
 
-export const stringProperty = (
+const stringProperty = (
   object: ts.ObjectLiteralExpression,
   key: string
 ): string | undefined => {
@@ -26,7 +26,7 @@ export const stringProperty = (
   return undefined
 }
 
-export const propertyInitializer = (
+const propertyInitializer = (
   object: ts.ObjectLiteralExpression,
   key: string
 ): ts.Expression | undefined => {
