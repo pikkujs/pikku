@@ -334,6 +334,32 @@ jobs:
         shell: bash
         run: cd verifiers/binary && bun run test
 
+  # Vector extensions on both embedded databases, through the CLI and both
+  # standalone artifacts. Its own job over two OSes because the macOS path is
+  # the one that differs: bun there opens Apple's SQLite, which cannot load
+  # extensions, so the CLI and the compiled binary swap in Homebrew's.
+  verifiers-db-vectors:
+    name: Vector extensions (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Install a SQLite that loads extensions
+        if: runner.os == 'macOS'
+        run: brew list sqlite >/dev/null 2>&1 || brew install sqlite
+      - name: Run vector extensions verifier
+        shell: bash
+        run: cd verifiers/db-vectors && bun run test
+
   # The workflow verifier's pg/redis runners need real queue + storage backends,
   # so they can't run in the plain `verifiers` job. This job gives them Postgres
   # (KyselyWorkflowService + pg-boss) and Redis (RedisWorkflowService + bullmq)
