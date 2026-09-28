@@ -64,6 +64,7 @@ describe('generating a Tauri shell around a pikku binary', () => {
         'Cargo.toml',
         'build.rs',
         'src/main.rs',
+        'src/lib.rs',
         'icons/icon.png',
         '.gitignore',
       ]) {
@@ -98,12 +99,12 @@ describe('generating a Tauri shell around a pikku binary', () => {
     }
   })
 
-  it('emits main.rs wired to the decisions this shell rests on', async () => {
+  it('emits lib.rs wired to the decisions this shell rests on', async () => {
     const dir = await scratch()
     try {
       await generate(dir)
       const main = await readFile(
-        join(dir, 'src-tauri', 'src', 'main.rs'),
+        join(dir, 'src-tauri', 'src', 'lib.rs'),
         'utf-8'
       )
 
@@ -132,7 +133,7 @@ describe('generating a Tauri shell around a pikku binary', () => {
     try {
       await generate(dir)
       const main = await readFile(
-        join(dir, 'src-tauri', 'src', 'main.rs'),
+        join(dir, 'src-tauri', 'src', 'lib.rs'),
         'utf-8'
       )
 
@@ -152,7 +153,7 @@ describe('generating a Tauri shell around a pikku binary', () => {
     try {
       await generate(dir)
       const main = await readFile(
-        join(dir, 'src-tauri', 'src', 'main.rs'),
+        join(dir, 'src-tauri', 'src', 'lib.rs'),
         'utf-8'
       )
       assert.doesNotMatch(
@@ -267,11 +268,11 @@ describe('generating a Tauri shell around a pikku binary', () => {
       await generate(dir)
       const result = await generate(dir, { windowTitle: 'Shop Desktop' })
       assert.ok(
-        result.written.includes('src/main.rs'),
+        result.written.includes('src/lib.rs'),
         'a template change must reach a file nobody has claimed'
       )
       const main = await readFile(
-        join(dir, 'src-tauri', 'src', 'main.rs'),
+        join(dir, 'src-tauri', 'src', 'lib.rs'),
         'utf-8'
       )
       assert.match(main, /Shop Desktop/)
@@ -331,12 +332,12 @@ describe('generating a Tauri shell that points at a remote pikku server', () => 
     }
   })
 
-  it('leaves the sidecar machinery out of main.rs entirely', async () => {
+  it('leaves the sidecar machinery out of lib.rs entirely', async () => {
     const dir = await scratch()
     try {
       await remote(dir)
       const main = await readFile(
-        join(dir, 'src-tauri', 'src', 'main.rs'),
+        join(dir, 'src-tauri', 'src', 'lib.rs'),
         'utf-8'
       )
 
@@ -393,6 +394,212 @@ describe('generating a Tauri shell that points at a remote pikku server', () => 
       await assert.rejects(
         () => generate(dir, { remoteUrl: 'not a url' }),
         /url/i
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+const readShell = (dir: string, path: string) =>
+  readFile(join(dir, 'src-tauri', path), 'utf-8')
+
+const DESKTOP_DEPS = `[target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'.dependencies]`
+const MOBILE_DEPS = `[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]`
+
+describe('a shell that can be built for a phone', () => {
+  it('declares a library target, which is what a mobile build links', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir)
+      const cargo = await readShell(dir, 'Cargo.toml')
+      assert.match(cargo, /^\[lib\]\nname = "shop_shell_lib"$/m)
+      assert.match(
+        cargo,
+        /^crate-type = \["staticlib", "cdylib", "rlib"\]$/m,
+        'Android loads a cdylib and iOS links a staticlib'
+      )
+      assert.match(
+        await readShell(dir, 'src/main.rs'),
+        /shop_shell_lib::run\(\)/,
+        'main.rs is only the desktop entry point into the library'
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('gates single-instance to desktop, in Cargo.toml and in lib.rs', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir, { remoteUrl: 'https://shop.example.com' })
+      const cargo = await readShell(dir, 'Cargo.toml')
+      const [plainDeps, desktopDeps] = cargo.split(DESKTOP_DEPS)
+      assert.ok(desktopDeps, cargo)
+      assert.match(desktopDeps!, /^tauri-plugin-single-instance = "2"$/m)
+      assert.doesNotMatch(plainDeps!, /single-instance/)
+
+      const lib = await readShell(dir, 'src/lib.rs')
+      assert.match(
+        lib,
+        /#\[cfg\(desktop\)\]\n\s+let builder = builder\.plugin\(tauri_plugin_single_instance::init/
+      )
+      assert.match(lib, /#\[cfg_attr\(mobile, tauri::mobile_entry_point\)\]/)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('makes the sidecar shell refuse a mobile build with a reason', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir)
+      assert.match(
+        await readShell(dir, 'src/lib.rs'),
+        /#\[cfg\(mobile\)\]\ncompile_error!\(\n\s+"[^"]*--desktop-url/
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('native APIs in the shell', () => {
+  const remoteUrl = 'https://shop.example.com/app'
+
+  it('puts mobile-only crates under a mobile target, portable ones in plain deps', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir, {
+        remoteUrl,
+        native: 'haptics, geolocation,biometric',
+      })
+      const cargo = await readShell(dir, 'Cargo.toml')
+      const [plainDeps] = cargo.split('[target.')
+      assert.match(plainDeps!, /^tauri-plugin-geolocation = "2"$/m)
+      assert.doesNotMatch(plainDeps!, /biometric|haptics/)
+
+      const [, mobileDeps] = cargo.split(MOBILE_DEPS)
+      assert.ok(mobileDeps, cargo)
+      assert.match(
+        mobileDeps!,
+        /^tauri-plugin-biometric = "2"\ntauri-plugin-haptics = "2"$/m,
+        'catalogue order, whatever order the flag listed them in'
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('initialises every chosen plugin, mobile-only ones behind cfg(mobile)', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir, { remoteUrl, native: ['biometric', 'geolocation'] })
+      const lib = await readShell(dir, 'src/lib.rs')
+      assert.match(
+        lib,
+        /#\[cfg\(mobile\)\]\n\s+let builder = builder\.plugin\(tauri_plugin_biometric::init\(\)\);/
+      )
+      assert.match(
+        lib,
+        /\);\n\s+let builder = builder\.plugin\(tauri_plugin_geolocation::init\(\)\);/,
+        'a plugin with a desktop build is not gated'
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('grants the permissions to the remote origin, split by platform', async () => {
+    const dir = await scratch()
+    try {
+      const result = await generate(dir, {
+        remoteUrl,
+        native: ['biometric', 'geolocation'],
+      })
+      assert.deepEqual(
+        result.native.map((api) => api.name),
+        ['biometric', 'geolocation']
+      )
+      const desktop = JSON.parse(
+        await readShell(dir, 'capabilities/remote.json')
+      )
+      assert.deepEqual(desktop.remote.urls, ['https://shop.example.com'])
+      assert.deepEqual(desktop.permissions, [
+        'core:default',
+        'geolocation:default',
+      ])
+      const mobile = JSON.parse(
+        await readShell(dir, 'capabilities/remote-mobile.json')
+      )
+      assert.deepEqual(mobile.platforms, ['iOS', 'android'])
+      assert.deepEqual(mobile.permissions, ['biometric:default'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('writes the iOS consent strings the chosen APIs need', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir, { remoteUrl, native: ['biometric', 'geolocation'] })
+      const plist = await readShell(dir, 'Info.ios.plist')
+      assert.match(plist, /<key>NSFaceIDUsageDescription<\/key>/)
+      assert.match(plist, /<key>NSLocationWhenInUseUsageDescription<\/key>/)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('writes no grant, no plist and no extra crate when none are asked for', async () => {
+    const dir = await scratch()
+    try {
+      const result = await generate(dir, { remoteUrl })
+      assert.deepEqual(result.native, [])
+      assert.ok(!result.written.includes('capabilities/remote.json'))
+      assert.ok(!result.written.includes('Info.ios.plist'))
+      assert.ok(
+        !(await readShell(dir, 'Cargo.toml')).includes(MOBILE_DEPS),
+        'no mobile dependency section without a mobile-only plugin'
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('initialises portable plugins in a sidecar shell, granted to loopback', async () => {
+    const dir = await scratch()
+    try {
+      await generate(dir, { native: 'dialog' })
+      assert.match(
+        await readShell(dir, 'src/lib.rs'),
+        /\.plugin\(tauri_plugin_shell::init\(\)\)\n\s+\.plugin\(tauri_plugin_dialog::init\(\)\)/
+      )
+      const grant = JSON.parse(await readShell(dir, 'capabilities/remote.json'))
+      assert.deepEqual(grant.remote.urls, ['http://127.0.0.1:*'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses a mobile-only API on a shell that can only run on a desktop', async () => {
+    const dir = await scratch()
+    try {
+      await assert.rejects(
+        () => generate(dir, { native: 'biometric' }),
+        /biometric exists only on iOS and Android/
+      )
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses an API it does not know, and lists the ones it does', async () => {
+    const dir = await scratch()
+    try {
+      await assert.rejects(
+        () => generate(dir, { remoteUrl, native: 'camera,haptics' }),
+        /Unknown native api "camera"\. Available: biometric, haptics/
       )
     } finally {
       await rm(dir, { recursive: true, force: true })

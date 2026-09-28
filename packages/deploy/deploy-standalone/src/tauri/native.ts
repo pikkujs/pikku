@@ -140,7 +140,7 @@ export const NATIVE_APIS: readonly NativeApi[] = [
 
 const BY_NAME = new Map(NATIVE_APIS.map((api) => [api.name, api]))
 
-/** `name — summary` for every API, for `--help` and error messages. */
+/** Every API's name, comma-separated, for `--help` and error messages. */
 export const nativeApiList = (): string =>
   NATIVE_APIS.map((api) => api.name).join(', ')
 
