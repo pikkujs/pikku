@@ -10,7 +10,7 @@ import { FabricReport } from './report.function.js'
 import { parseAnswer, readConsent } from '../lib/report.js'
 import { readHeld, runIdFor } from '../lib/held-findings.js'
 
-const received: { body: any; authorization?: string }[] = []
+const received: { url?: string; body: any; authorization?: string }[] = []
 let status = 200
 let server: Server
 let dir: string
@@ -39,10 +39,13 @@ before(async () => {
     req.on('data', (chunk) => (raw += chunk))
     req.on('end', () => {
       received.push({
-        body: JSON.parse(raw),
+        url: req.url,
+        body: JSON.parse(raw).data,
         authorization: req.headers.authorization,
       })
-      res.writeHead(status).end()
+      res
+        .writeHead(status, { 'content-type': 'application/json' })
+        .end(status < 300 ? '{"findingId":"f_1"}' : '{}')
     })
   })
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
@@ -97,6 +100,7 @@ describe('fabric report, with no saved answer', () => {
     assert.equal(first.title, 'Scaffold does not boot')
     assert.equal(first.runId, second.runId)
     assert.equal(received[0]!.authorization, undefined)
+    assert.equal(received[0]!.url, '/rpc/submitFinding')
     assert.deepEqual(Object.keys(received[0]!.body), ['finding'])
     assert.equal(await readConsent(), null)
   })
