@@ -52,6 +52,7 @@ describe('serializeWebhooks', () => {
     })
 
     assert.match(content, /export interface WebhooksMap \{\}/)
+    assert.doesNotMatch(content, /WebhookPayloadOf/)
   })
 })
 

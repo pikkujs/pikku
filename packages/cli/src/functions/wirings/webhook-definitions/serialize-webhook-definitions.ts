@@ -50,7 +50,7 @@ export const serializeWebhooks = ({
       `  ${JSON.stringify(webhook.event)}: WebhookPayloadOf<typeof webhook${index}>`
   )
   return [
-    `import type { TypedWebhookService as CoreTypedWebhookService, WebhookPayloadOf } from '@pikku/core/webhook'`,
+    `import type { TypedWebhookService as CoreTypedWebhookService${entries.length > 0 ? ', WebhookPayloadOf' : ''} } from '@pikku/core/webhook'`,
     `import type { WebhookService } from '@pikku/core/services'`,
     `import './pikku-webhooks-meta.gen.json' with { type: 'json' }`,
     ...imports,
