@@ -98,6 +98,13 @@ export interface EntryGenerationContext {
      * binary.
      */
     sqliteExtensions?: string[]
+    /**
+     * File name of the libsqlite3 the build staged beside the extensions, for a
+     * runtime that must be pointed at one before it opens a database — bun on
+     * macOS, whose own is Apple's and cannot load extensions. Also embedded by
+     * `sqlite-extensions.gen.js`. Absent everywhere else.
+     */
+    sqliteLibrary?: string
   }
 
   /**
@@ -146,6 +153,14 @@ export interface ProviderAdapter {
    *   `wireQueue(...)` user code are unaffected.
    */
   readonly workflowQueues?: boolean
+
+  /**
+   * Whether the artifact opens SQLite through a libsqlite3 it has to carry
+   * itself. True for a compiled bun binary: on macOS bun otherwise opens
+   * Apple's SQLite, which cannot load extensions, so the build ships the host's
+   * own libsqlite3 and the entry points bun at it before the first open.
+   */
+  readonly bundlesSqliteLibrary?: boolean
 
   /**
    * Generate the entry file source for a deployment unit.

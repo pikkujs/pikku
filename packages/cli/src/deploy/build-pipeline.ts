@@ -188,12 +188,14 @@ export async function resolveStandaloneDb(
   unitDir: string,
   srcDirectories: string[],
   logger: BuildLogger,
-  sqliteExtensions?: string[]
+  sqliteExtensions?: string[],
+  { withSqliteLibrary = false }: { withSqliteLibrary?: boolean } = {}
 ): Promise<
   | {
       engine: 'sqlite' | 'postgres'
       coercionImportPath?: string
       sqliteExtensions?: string[]
+      sqliteLibrary?: string
     }
   | undefined
 > {
@@ -234,14 +236,20 @@ export async function resolveStandaloneDb(
     })
   }
 
-  const extensions =
+  const { extensions, library } =
     engine === 'sqlite'
-      ? await stageSqliteExtensions(projectDir, unitDir, sqliteExtensions)
-      : []
+      ? await stageSqliteExtensions(projectDir, unitDir, sqliteExtensions, {
+          withLibrary: withSqliteLibrary,
+        })
+      : { extensions: [], library: undefined }
   if (extensions.length > 0) {
     logger.info(`SQLite extensions: ${extensions.join(', ')}`)
   }
-  const staged = extensions.length > 0 ? { sqliteExtensions: extensions } : {}
+  if (library) logger.info(`SQLite library: ${library}`)
+  const staged = {
+    ...(extensions.length > 0 ? { sqliteExtensions: extensions } : {}),
+    ...(library ? { sqliteLibrary: library } : {}),
+  }
 
   // Absent for an app that annotates no columns, which is a database with
   // nothing to coerce rather than a reason to hand the app no database.
@@ -410,7 +418,8 @@ export async function runBuildPipeline(options: {
         unitDir,
         options.srcDirectories ?? ['src'],
         logger,
-        options.sqliteExtensions
+        options.sqliteExtensions,
+        { withSqliteLibrary: provider.bundlesSqliteLibrary }
       ),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }

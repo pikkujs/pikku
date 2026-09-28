@@ -539,6 +539,14 @@ export type PikkuCLIInput = {
      * sqlite-vec does), resolved from the project and then from the CLI, or a
      * path to the extension's library file, relative to the project.
      *
+     * A standalone build ships them inside the artifact, from the build
+     * machine, so an entry that cannot be resolved there fails the build.
+     *
+     * Bun on macOS opens Apple's SQLite, which cannot load extensions, so under
+     * bun the CLI uses Homebrew's libsqlite3 (`brew install sqlite`) instead, or
+     * the one `PIKKU_SQLITE_LIBRARY` names; a bun standalone build carries that
+     * library too. Without one the CLI warns and loads no extensions.
+     *
      * Separate from `pgliteExtensions` because a Postgres extension and a SQLite
      * one never share a build, and often not a name.
      */

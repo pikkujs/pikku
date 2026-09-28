@@ -4,6 +4,7 @@ import {
   loadSqliteRuntime,
   type SyncSqliteDatabase,
 } from '@pikku/migrator-sql/sqlite'
+import { sqliteLibraryFallbackReason } from './sqlite-library.js'
 
 /**
  * Loaded when a project says nothing: vector search over embeddings is common
@@ -100,15 +101,19 @@ async function loadExtensions(
 }
 
 /**
- * Bun on macOS links Apple's system SQLite, which is built without extension
- * loading — the one place the failure is the runtime's rather than the
- * extension's, so point at the way round it.
+ * Bun on macOS opens Apple's system SQLite, which is built without extension
+ * loading, unless the CLI found another libsqlite3 at startup — the one place
+ * the failure is the runtime's rather than the extension's, so point at the way
+ * round it.
  */
 function hintFor(reason: string): string {
-  return /does not support dynamic extension loading/.test(reason)
-    ? ' (this SQLite was built without extension loading — on macOS that is ' +
-        "bun's system SQLite; run the CLI on Node 24+ to load extensions)"
-    : ''
+  if (!/does not support dynamic extension loading/.test(reason)) return ''
+  const fallback = sqliteLibraryFallbackReason()
+  return (
+    " (this is Apple's SQLite, which bun on macOS falls back to" +
+    (fallback ? ` because ${fallback}` : '') +
+    '; or run the CLI on Node 24+)'
+  )
 }
 
 /**

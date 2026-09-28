@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 
 import { resolveStandaloneDb } from './build-pipeline.js'
+import { SQLITE_LIBRARY_ENV } from '../functions/db/sqlite/sqlite-library.js'
 
 /** sqlite-vec's library for this platform: `vec0.dylib`, `vec0.so`, `vec0.dll`. */
 const VEC0 = basename(
@@ -41,15 +42,28 @@ const writeMigrations = (engine: 'sqlite' | 'postgres') => {
   writeFileSync(join(dir, '0001-init.sql'), 'select 1;', 'utf-8')
 }
 
-const resolve = (sqliteExtensions?: string[]) =>
+const resolve = (sqliteExtensions?: string[], withSqliteLibrary = false) =>
   resolveStandaloneDb(
     projectDir,
     pikkuDir,
     unitDir,
     ['src'],
     silentLogger,
-    sqliteExtensions
+    sqliteExtensions,
+    { withSqliteLibrary }
   )
+
+/** Runs `body` with PIKKU_SQLITE_LIBRARY set, restoring whatever was there. */
+const withLibraryEnv = async (value: string, body: () => Promise<void>) => {
+  const previous = process.env[SQLITE_LIBRARY_ENV]
+  process.env[SQLITE_LIBRARY_ENV] = value
+  try {
+    await body()
+  } finally {
+    if (previous === undefined) delete process.env[SQLITE_LIBRARY_ENV]
+    else process.env[SQLITE_LIBRARY_ENV] = previous
+  }
+}
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'pikku-standalone-db-'))
@@ -183,6 +197,76 @@ describe('resolveStandaloneDb', () => {
     writeMigrations('postgres')
     assert.deepEqual(await resolve(), { engine: 'postgres' })
     assert.equal(existsSync(join(unitDir, 'sqlite-extensions')), false)
+  })
+
+  describe('the SQLite library a bun build carries', () => {
+    const macOnly = {
+      skip:
+        process.platform !== 'darwin' &&
+        'only macOS swaps in a libsqlite3; bun elsewhere brings its own',
+    }
+
+    test(
+      'is staged beside the extensions and embedded by the manifest',
+      macOnly,
+      async () => {
+        writeMigrations('sqlite')
+        const library = join(root, 'libsqlite3.3.53.4.dylib')
+        writeFileSync(library, 'lib')
+
+        await withLibraryEnv(library, async () => {
+          const db = await resolve(undefined, true)
+          assert.equal(db?.sqliteLibrary, 'libsqlite3.3.53.4.dylib')
+        })
+        assert.equal(
+          readFileSync(
+            join(unitDir, 'sqlite-extensions', 'libsqlite3.3.53.4.dylib'),
+            'utf-8'
+          ),
+          'lib'
+        )
+        assert.match(
+          readFileSync(join(unitDir, 'sqlite-extensions.gen.js'), 'utf-8'),
+          /export const sqliteLibrary = \{ name: 'libsqlite3\.3\.53\.4\.dylib', path: library \}/
+        )
+      }
+    )
+
+    test(
+      'is staged even when the project loads no extensions',
+      macOnly,
+      async () => {
+        writeMigrations('sqlite')
+        const library = join(root, 'libsqlite3.dylib')
+        writeFileSync(library, 'lib')
+
+        await withLibraryEnv(library, async () => {
+          assert.deepEqual(await resolve([], true), {
+            engine: 'sqlite',
+            sqliteLibrary: 'libsqlite3.dylib',
+          })
+        })
+      }
+    )
+
+    test('fails the build when there is none to carry', macOnly, async () => {
+      writeMigrations('sqlite')
+      await withLibraryEnv(join(root, 'missing.dylib'), async () => {
+        await assert.rejects(resolve(undefined, true), (error: Error) => {
+          assert.match(error.message, /ships its own libsqlite3/)
+          assert.match(error.message, /missing\.dylib/)
+          return true
+        })
+      })
+    })
+
+    test('is not staged for a runtime that does not ask for one', async () => {
+      writeMigrations('sqlite')
+      await withLibraryEnv(join(root, 'missing.dylib'), async () => {
+        const db = await resolve()
+        assert.equal(db?.sqliteLibrary, undefined)
+      })
+    })
   })
 
   test('an extension that cannot be resolved fails the build', async () => {
