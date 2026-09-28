@@ -1,18 +1,29 @@
-import { after, afterEach, before, beforeEach, describe, test } from 'node:test'
+import { afterEach, beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createServer, type Server } from 'node:http'
-import type { AddressInfo } from 'node:net'
+import { mock } from 'bun:test'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { FabricReport } from './report.function.js'
+import * as findingLib from '../lib/finding.js'
 import { parseAnswer, readConsent } from '../lib/report.js'
 import { readHeld, runIdFor } from '../lib/held-findings.js'
 
-const received: { url?: string; body: any; authorization?: string }[] = []
+const invoked: { name: string; data: any }[] = []
 let status = 200
-let server: Server
+
+mock.module('../lib/finding.js', () => ({
+  ...findingLib,
+  findingRPC: () => ({
+    invoke: async (name: string, data: unknown) => {
+      invoked.push({ name, data })
+      if (status >= 300) throw Object.assign(new Error('refused'), { status })
+      return { findingId: 'f_1' }
+    },
+  }),
+}))
+
+const { FabricReport } = await import('./report.function.js')
 let dir: string
 const cwd = process.cwd()
 const tty = process.stdin.isTTY
@@ -33,38 +44,17 @@ const run = (data: Record<string, unknown> = {}) =>
 
 const heldNow = async () => (await readHeld(await runIdFor())).length
 
-before(async () => {
-  server = createServer((req, res) => {
-    let raw = ''
-    req.on('data', (chunk) => (raw += chunk))
-    req.on('end', () => {
-      received.push({
-        url: req.url,
-        body: JSON.parse(raw).data,
-        authorization: req.headers.authorization,
-      })
-      res
-        .writeHead(status, { 'content-type': 'application/json' })
-        .end(status < 300 ? '{"findingId":"f_1"}' : '{}')
-    })
-  })
-  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done))
-})
-
-after(() => server.close())
-
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'pikku-report-'))
   await mkdir(join(dir, 'app'))
   await writeFile(join(dir, 'app', 'pikku.config.json'), '{}')
   process.chdir(join(dir, 'app'))
-  const { port } = server.address() as AddressInfo
-  process.env.FABRIC_API_URL = `http://127.0.0.1:${port}`
+  process.env.FABRIC_API_URL = 'http://127.0.0.1:1'
   process.env.FABRIC_FINDINGS_DIR = join(dir, 'findings')
   process.env.FABRIC_REPORT_CONSENT_FILE = join(dir, 'consent.json')
   delete process.env.PIKKU_REPORT
   ;(process.stdin as any).isTTY = false
-  received.length = 0
+  invoked.length = 0
   status = 200
 })
 
@@ -79,7 +69,7 @@ describe('fabric report, with no saved answer', () => {
   test('a finding is held, not sent', async () => {
     const result = await run(finding('Scaffold does not boot'))
     assert.deepEqual(result, { sent: 0, held: 1, needsConsent: false })
-    assert.equal(received.length, 0)
+    assert.equal(invoked.length, 0)
   })
 
   test('at hand-over it lists what is held and asks for an answer', async () => {
@@ -87,7 +77,7 @@ describe('fabric report, with no saved answer', () => {
     await run(finding('Test accounts get no roles'))
     const result = await run()
     assert.deepEqual(result, { sent: 0, held: 2, needsConsent: true })
-    assert.equal(received.length, 0)
+    assert.equal(invoked.length, 0)
   })
 
   test('yes sends every held finding, tied by one run id, anonymously', async () => {
@@ -95,13 +85,12 @@ describe('fabric report, with no saved answer', () => {
     await run(finding('Test accounts get no roles'))
     const result = await run({ consent: 'yes' })
     assert.deepEqual(result, { sent: 2, held: 0, needsConsent: false })
-    assert.equal(received.length, 2)
-    const [first, second] = received.map((r) => r.body.finding)
+    assert.equal(invoked.length, 2)
+    const [first, second] = invoked.map((r) => r.data.finding)
     assert.equal(first.title, 'Scaffold does not boot')
     assert.equal(first.runId, second.runId)
-    assert.equal(received[0]!.authorization, undefined)
-    assert.equal(received[0]!.url, '/rpc/submitFinding')
-    assert.deepEqual(Object.keys(received[0]!.body), ['finding'])
+    assert.equal(invoked[0]!.name, 'submitFinding')
+    assert.deepEqual(Object.keys(invoked[0]!.data), ['finding'])
     assert.equal(await readConsent(), null)
   })
 
@@ -133,7 +122,7 @@ describe('fabric report, always', () => {
     await run({ consent: 'always' })
     const result = await run(finding('Test accounts get no roles'))
     assert.deepEqual(result, { sent: 1, held: 0, needsConsent: false })
-    assert.equal(received.length, 2)
+    assert.equal(invoked.length, 2)
     assert.equal(await readConsent(), 'always')
   })
 })
@@ -150,7 +139,7 @@ describe('fabric report, never', () => {
       needsConsent: false,
       reason: 'never',
     })
-    assert.equal(received.length, 0)
+    assert.equal(invoked.length, 0)
   })
 
   test('an explicit answer replaces it', async () => {

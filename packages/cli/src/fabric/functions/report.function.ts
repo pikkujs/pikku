@@ -8,6 +8,7 @@ import {
   buildFindingPayload,
   parseFinding,
   parseFindingJson,
+  findingRPC,
   postFinding,
   renderReceipt,
   validateFinding,
@@ -72,9 +73,10 @@ const askOnTerminal = async (): Promise<ReportAnswer | null> => {
 /** Oldest first, stopping at the first refusal; what is left stays held. */
 const sendHeld = async (held: HeldFinding[]) => {
   const { apiUrl } = await resolveApiContext()
+  const rpc = findingRPC(apiUrl)
   let sent = 0
   for (const entry of held) {
-    const result = await postFinding({ apiUrl, payload: entry.payload })
+    const result = await postFinding({ rpc, payload: entry.payload })
     if (!result.sent) {
       console.log(
         `[fabric] could not send (${result.reason}) — ${held.length - sent} still held`

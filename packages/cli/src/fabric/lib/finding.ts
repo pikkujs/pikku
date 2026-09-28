@@ -116,27 +116,39 @@ export function buildFindingPayload(
 }
 
 /**
- * Best-effort by construction. A finding is worth having and never worth
- * failing a build for, so a refused, slow or unreachable endpoint is reported
- * to the terminal and swallowed.
+ * Anonymous, and every request gives up after `timeoutMs`: a finding is worth
+ * having and never worth holding up a build for.
  */
-export async function postFinding(opts: {
-  apiUrl: string
-  payload: FindingPayload
-  timeoutMs?: number
-}): Promise<{ sent: boolean; reason?: string }> {
-  const signal = AbortSignal.timeout(opts.timeoutMs ?? 5000)
+export function findingRPC(
+  apiUrl: string,
+  timeoutMs = 5000,
+  send: typeof fetch = fetch
+): PikkuRPC {
   const rpc = new PikkuRPC()
   rpc.setPikkuFetch(
     new PikkuFetch({
-      serverUrl: opts.apiUrl,
+      serverUrl: apiUrl,
       fetch: ((input, init) =>
-        fetch(input, { ...init, signal })) as typeof fetch,
+        send(input, {
+          ...init,
+          signal: AbortSignal.timeout(timeoutMs),
+        })) as typeof fetch,
     })
   )
+  return rpc
+}
+
+/**
+ * Best-effort by construction: a refused, slow or unreachable endpoint is
+ * reported to the terminal and swallowed.
+ */
+export async function postFinding(opts: {
+  rpc: Pick<PikkuRPC, 'invoke'>
+  payload: FindingPayload
+}): Promise<{ sent: boolean; reason?: string }> {
+  const { environment, ...finding } = opts.payload
   try {
-    const { environment, ...finding } = opts.payload
-    await rpc.invoke('submitFinding', {
+    await opts.rpc.invoke('submitFinding', {
       finding: { ...finding, environment: { ...environment } },
     })
     return { sent: true }
