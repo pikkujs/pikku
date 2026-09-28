@@ -1,0 +1,20 @@
+{
+  "name": "@pikku/verifiers-addon-workspace",
+  "type": "module",
+  "private": true,
+  "description": "A pikku project whose addon is a dependency of a workspace package below it, not of the project root",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/node": "^24"
+  },
+  "scripts": {
+    "test": "node run.mjs"
+  }
+}

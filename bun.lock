@@ -1938,6 +1938,24 @@
         "zod": "^4",
       },
     },
+    "verifiers/addon-workspace": {
+      "name": "@pikku/verifiers-addon-workspace",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@types/node": "^24",
+      },
+    },
+    "verifiers/addon-workspace/functions": {
+      "name": "@pikku/verifier-addon-workspace-functions",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/templates-function-addon": "workspace:*",
+      },
+    },
     "verifiers/analytics": {
       "name": "@pikku/verifiers-analytics",
       "dependencies": {
@@ -3466,6 +3484,8 @@
 
     "@pikku/uws-handler": ["@pikku/uws-handler@workspace:packages/runtimes/uws-handler"],
 
+    "@pikku/verifier-addon-workspace-functions": ["@pikku/verifier-addon-workspace-functions@workspace:verifiers/addon-workspace/functions"],
+
     "@pikku/verifier-db-addon": ["@pikku/verifier-db-addon@workspace:verifiers/db-schema/addon"],
 
     "@pikku/verifier-db-remote-addon": ["@pikku/verifier-db-remote-addon@workspace:verifiers/db-schema/remote-addon"],
@@ -3481,6 +3501,8 @@
     "@pikku/verifiers-addon-registry": ["@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry"],
 
     "@pikku/verifiers-addon-treeshake": ["@pikku/verifiers-addon-treeshake@workspace:verifiers/addon-treeshake"],
+
+    "@pikku/verifiers-addon-workspace": ["@pikku/verifiers-addon-workspace@workspace:verifiers/addon-workspace"],
 
     "@pikku/verifiers-analytics": ["@pikku/verifiers-analytics@workspace:verifiers/analytics"],
 
@@ -6418,6 +6440,8 @@
 
     "@pikku/verifiers-addon-treeshake/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
+    "@pikku/verifiers-addon-workspace/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
+
     "@pikku/verifiers-analytics/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
 
     "@pikku/verifiers-better-auth/@types/node": ["@types/node@24.13.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q=="],
@@ -7023,6 +7047,8 @@
     "@pikku/verifiers-addon-openapi/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-addon-treeshake/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "@pikku/verifiers-addon-workspace/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 
     "@pikku/verifiers-addon/@types/node/undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 

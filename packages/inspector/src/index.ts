@@ -70,3 +70,7 @@ export type {
 export { resolveCoreType } from './utils/resolve-core-type.js'
 export { readModuleSpecifiers } from './utils/read-module-specifiers.js'
 export { readTsconfigOutDir } from './utils/read-tsconfig-out-dir.js'
+export {
+  addonResolutionDirs,
+  createAddonResolver,
+} from './utils/addon-resolution.js'

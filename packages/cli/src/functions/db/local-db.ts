@@ -11,6 +11,7 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
+import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import {
@@ -1611,6 +1612,8 @@ export interface AddonDeclaration {
    * database. Its tables are not this project's to create.
    */
   remote?: boolean
+  /** Absolute path of the file that wires it; resolution starts from its package. */
+  file?: string
 }
 
 const serializeSchemaMap = (tables: SchemaMap): Record<string, ColumnInfo[]> =>
@@ -1772,7 +1775,6 @@ export async function addonSchemaSources(
 ): Promise<SchemaSource[]> {
   if (addons.length === 0) return []
 
-  const require = createRequire(join(rootDir, 'package.json'))
   const sources: SchemaSource[] = []
   const seen = new Set<string>()
 
@@ -1782,7 +1784,9 @@ export async function addonSchemaSources(
 
     let artifactPath: string
     try {
-      artifactPath = require.resolve(`${addon.package}/${ADDON_DB_ARTIFACT}`)
+      artifactPath = createAddonResolver(
+        addonResolutionDirs(rootDir, addon.file)
+      ).resolve(`${addon.package}/${ADDON_DB_ARTIFACT}`)
     } catch {
       // Every addon publishes this file, and one with no tables publishes an
       // empty one. Absence is therefore never "contributes nothing" — it is a

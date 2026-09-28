@@ -26,6 +26,7 @@ import { flattenScopeDefinitions } from '@pikku/core/scope'
 import type { WorkflowStepMeta } from '@pikku/core/workflow'
 import type { ScenarioStepMeta } from '@pikku/core/scenario'
 import { DYNAMIC_SCENARIO_STEP_TARGET } from './workflow/dsl/patterns.js'
+import { addonResolutionDirs } from './addon-resolution.js'
 
 /**
  * Stamp the inspected authorize/callbacks service set onto the generated auth
@@ -607,32 +608,39 @@ export function validateVariableOverrides(
 }
 
 /**
- * Can `pkg` be resolved from `rootDir`, by any means the loader would use?
+ * Can `pkg` be resolved from any of `dirs`, by any means the loader would use?
  *
  * Resolution is attempted against `<pkg>/package.json` first and the bare
  * specifier second, because neither alone is conclusive. A package with a
  * restrictive `exports` map refuses the first with
  * `ERR_PACKAGE_PATH_NOT_EXPORTED` — which is not a failure at all: reaching the
- * exports map means the package was found. Only a module-not-found from both
- * attempts means it is genuinely absent.
+ * exports map means the package was found. Only a module-not-found from every
+ * attempt means it is genuinely absent.
  */
-const isPackageResolvable = (pkg: string, rootDir: string): boolean => {
+const isPackageResolvable = (pkg: string, dirs: string[]): boolean => {
   const NOT_FOUND = new Set(['MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND'])
-  let req: ReturnType<typeof createRequire>
-  try {
-    req = createRequire(join(rootDir, 'package.json'))
-  } catch {
-    return true // cannot ask; do not accuse
-  }
-  for (const specifier of [`${pkg}/package.json`, pkg]) {
+  for (const dir of dirs) {
+    let req: ReturnType<typeof createRequire>
     try {
-      req.resolve(specifier)
-      return true
-    } catch (e: any) {
-      if (!NOT_FOUND.has(e?.code)) return true
+      req = createRequire(join(dir, 'package.json'))
+    } catch {
+      return true // cannot ask; do not accuse
+    }
+    for (const specifier of [`${pkg}/package.json`, pkg]) {
+      try {
+        req.resolve(specifier)
+        return true
+      } catch (e: any) {
+        if (!NOT_FOUND.has(e?.code)) return true
+      }
     }
   }
   return false
+}
+
+type PackageManifest = {
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
 }
 
 /**
@@ -670,47 +678,55 @@ export function validateRemoteAddonDependencies(
   // in some tests) must not skip it.
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
     if (decl.remote) continue
-    if (isPackageResolvable(decl.package, state.rootDir)) continue
+    const dirs = addonResolutionDirs(state.rootDir, decl.file)
+    if (isPackageResolvable(decl.package, dirs)) continue
     logger.critical(
       ErrorCode.ADDON_NOT_INSTALLED,
-      `Addon '${namespace}' ('${decl.package}') is wired with wireAddon but cannot be resolved — every ref('${namespace}:…') will resolve to nothing and the surface will be dead at runtime. Install it, or remove the wireAddon call.`
+      `Addon '${namespace}' ('${decl.package}') is wired with wireAddon but cannot be resolved from ${dirs.join(' or ')} — every ref('${namespace}:…') will resolve to nothing and the surface will be dead at runtime. Add it to the dependencies of ${join(dirs[0], 'package.json')} and install, or remove the wireAddon call.`
     )
   }
 
-  if (!Array.from(wireAddonDeclarations.values()).some((d) => d.remote)) return
-
-  const pkgJsonPath = join(state.rootDir, 'package.json')
-  if (!existsSync(pkgJsonPath)) return // no manifest to check (e.g. some tests)
-
-  let pkgJson: {
-    dependencies?: Record<string, string>
-    devDependencies?: Record<string, string>
+  // A remote addon belongs in the devDependencies of the package that wires
+  // it, which in a workspace is not the root.
+  const manifests = new Map<string, PackageManifest | null>()
+  const readManifest = (path: string): PackageManifest | null => {
+    if (manifests.has(path)) return manifests.get(path)!
+    let manifest: PackageManifest | null = null
+    if (existsSync(path)) {
+      try {
+        manifest = JSON.parse(readFileSync(path, 'utf-8'))
+      } catch (e: any) {
+        logger.warn(
+          `Could not read ${path} to verify remote addon dependencies: ${e?.message ?? e}`
+        )
+      }
+    }
+    manifests.set(path, manifest)
+    return manifest
   }
-  try {
-    pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
-  } catch (e: any) {
-    logger.warn(
-      `Could not read ${pkgJsonPath} to verify remote addon dependencies: ${e?.message ?? e}`
-    )
-    return
-  }
-
-  const prodDeps = pkgJson.dependencies ?? {}
-  const devDeps = pkgJson.devDependencies ?? {}
 
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
     if (!decl.remote) continue
+    const pkgJsonPath = join(
+      addonResolutionDirs(state.rootDir, decl.file)[0],
+      'package.json'
+    )
+    const pkgJson = readManifest(pkgJsonPath)
+    if (!pkgJson) continue // no manifest to check (e.g. some tests)
+
+    const prodDeps = pkgJson.dependencies ?? {}
+    const devDeps = pkgJson.devDependencies ?? {}
     if (decl.package in devDeps) continue // correct
 
     if (decl.package in prodDeps) {
       logger.critical(
         ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
-        `Remote addon '${namespace}' ('${decl.package}') is a production dependency, but wireRemoteAddon consumes it for types only — its handlers run on the host. Move '${decl.package}' from "dependencies" to "devDependencies".`
+        `Remote addon '${namespace}' ('${decl.package}') is a production dependency in ${pkgJsonPath}, but wireRemoteAddon consumes it for types only — its handlers run on the host. Move '${decl.package}' from "dependencies" to "devDependencies".`
       )
     } else {
       logger.critical(
         ErrorCode.REMOTE_ADDON_NOT_DEV_DEPENDENCY,
-        `Remote addon '${namespace}' ('${decl.package}') is wired with wireRemoteAddon but is not in "devDependencies". Add '${decl.package}' to "devDependencies" (types only).`
+        `Remote addon '${namespace}' ('${decl.package}') is wired with wireRemoteAddon but is not in the "devDependencies" of ${pkgJsonPath}. Add '${decl.package}' to "devDependencies" (types only).`
       )
     }
   }
