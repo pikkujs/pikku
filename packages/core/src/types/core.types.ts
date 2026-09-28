@@ -427,6 +427,9 @@ export type CommonWireMeta = {
 export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
 export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
 
+/** `dev` = only reachable through devDependencies or build tooling, so never shipped. */
+export type SecurityDependencyType = 'prod' | 'dev'
+
 export interface SecurityAuditIssue {
   package: string
   severity: SecuritySeverity
@@ -437,6 +440,7 @@ export interface SecurityAuditIssue {
   cwe: string[]
   cvssScore: number | null
   recommendedVersion: string | null
+  dependencyType?: SecurityDependencyType
 }
 
 export interface SecurityAuditUpdate {
@@ -444,6 +448,7 @@ export interface SecurityAuditUpdate {
   current: string
   latest: string
   level: SecurityUpdateLevel
+  dependencyType?: SecurityDependencyType
 }
 
 export interface SecurityAuditSummary {

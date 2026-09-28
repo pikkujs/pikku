@@ -19,6 +19,7 @@ export type {
   SecurityAuditUpdate,
   SecuritySeverity,
   SecurityUpdateLevel,
+  SecurityDependencyType,
   ServerLifecycle,
   WireServices,
 } from './core.types.js'

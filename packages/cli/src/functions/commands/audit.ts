@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -6,6 +6,7 @@ import type {
   SecurityAuditIssue,
   SecurityAuditReport,
   SecurityAuditUpdate,
+  SecurityDependencyType,
 } from '@pikku/core/types'
 
 // `pikku audit` — dependency security audit. Security advisories are always
@@ -179,6 +180,68 @@ export function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
   return updates
 }
 
+const BUILD_TOOLS = new Set([
+  'vite',
+  'esbuild',
+  'rollup',
+  'typescript',
+  '@babel/core',
+  '@tanstack/start-plugin-core',
+  '@tanstack/router-plugin',
+  '@pikku/cli',
+])
+
+type BunLock = {
+  workspaces?: Record<string, Record<string, Record<string, string>>>
+  packages?: Record<string, unknown[]>
+}
+
+/** Packages reachable from any workspace's runtime dependencies, not descending into build tools or peers. */
+export function prodPackages(lockRaw: string): Set<string> {
+  const lock: BunLock = JSON.parse(lockRaw.replace(/,(\s*[}\]])/g, '$1'))
+  const children = new Map<string, Set<string>>()
+  for (const entry of Object.values(lock.packages ?? {})) {
+    const id = String(entry[0])
+    const name = id.slice(0, id.lastIndexOf('@'))
+    const meta = (entry.find(
+      (x) => x && typeof x === 'object' && !Array.isArray(x)
+    ) ?? {}) as Record<string, Record<string, string>>
+    const set = children.get(name) ?? new Set<string>()
+    for (const dep of Object.keys({
+      ...meta.dependencies,
+      ...meta.optionalDependencies,
+    }))
+      set.add(dep)
+    children.set(name, set)
+  }
+  const stack = Object.values(lock.workspaces ?? {}).flatMap((w) =>
+    Object.keys({
+      ...w.dependencies,
+      ...w.optionalDependencies,
+      ...w.peerDependencies,
+    })
+  )
+  const seen = new Set<string>()
+  while (stack.length) {
+    const name = stack.pop()!
+    if (seen.has(name) || BUILD_TOOLS.has(name)) continue
+    seen.add(name)
+    children.get(name)?.forEach((c) => stack.push(c))
+  }
+  return seen
+}
+
+function dependencyTyper(
+  root: string
+): ((pkg: string) => SecurityDependencyType) | null {
+  try {
+    const prod = prodPackages(readFileSync(join(root, 'bun.lock'), 'utf8'))
+    return (pkg) => (prod.has(pkg) ? 'prod' : 'dev')
+  } catch {
+    return null
+  }
+}
+
 export function summarise(
   tool: PackageManager,
   issues: SecurityAuditIssue[],
@@ -227,6 +290,10 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
         const latestByPkg = new Map(updates.map((u) => [u.package, u.latest]))
         for (const i of issues)
           i.recommendedVersion = latestByPkg.get(i.package) ?? null
+        const typeOf = dependencyTyper(root)
+        if (typeOf)
+          for (const x of [...issues, ...updates])
+            x.dependencyType = typeOf(x.package)
         report = summarise('bun', issues, updates)
       } catch (e) {
         // A failed run must NOT read as clean — emit a note so the UI shows
@@ -252,12 +319,16 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
     writeFileSync(outFile, JSON.stringify(report, null, 2))
 
     const { summary } = report
+    const devIssues = report.issues.filter(
+      (i) => i.dependencyType === 'dev'
+    ).length
     if (report.note) {
       logger.info(`pikku audit — ${report.note}`)
     } else {
       logger.info(
         `pikku audit — ${summary.totalIssues} advisory(ies)` +
-          ` (${summary.critical} critical, ${summary.high} high, ${summary.moderate} moderate, ${summary.low} low)` +
+          ` (${summary.critical} critical, ${summary.high} high, ${summary.moderate} moderate, ${summary.low} low` +
+          `${devIssues ? `; ${devIssues} dev-only` : ''})` +
           (includeOutdated
             ? `, ${summary.totalUpdates} available update(s)`
             : '')
