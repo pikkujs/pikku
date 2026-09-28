@@ -25,10 +25,23 @@ export function parseVersion(version: string): ParsedVersion {
   }
 }
 
-export function bumpVersion(version: string, level: Verdict): string {
+/** Below 1.0 a breaking change is a minor; 1.0 is only reached by going live. */
+export function bumpVersion(
+  version: string,
+  level: Verdict,
+  goLive = false
+): string {
   const v = parseVersion(version)
-  if (level === 'major') return `${v.major + 1}.0.0`
-  if (level === 'minor') return `${v.major}.${v.minor + 1}.0`
+  if (goLive) {
+    if (v.major > 0) {
+      throw new Error(
+        `Already live at ${version}; --go-live only moves 0.x to 1.0.0.`
+      )
+    }
+    return '1.0.0'
+  }
+  if (level === 'major' && v.major > 0) return `${v.major + 1}.0.0`
+  if (level !== 'patch') return `${v.major}.${v.minor + 1}.0`
   return `${v.major}.${v.minor}.${v.patch + 1}`
 }
 

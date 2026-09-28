@@ -1,6 +1,5 @@
 # Pikku Function Versioning
 
-
 ## Before You Start
 
 ```bash
@@ -166,12 +165,21 @@ again), or when `main` has commits `staging` lacks (merge `main` into `staging`
 with a merge commit first).
 
 The bump comes from the surface diff alone — there is no manual override. A
-release whose surface did not move is a patch, and a breaking change is a
-major at any version, 0.x included. A `Release-Note: …` commit trailer adds a line to the
+release whose surface did not move is a patch. Below 1.0 a breaking change
+is a minor, like any other surface change; from 1.0 it is a major. 1.0.0 is
+never reached by a diff: `pikku release prepare --go-live` releases it once,
+when the app is live. A `Release-Note: …` commit trailer adds a line to the
 changelog's Notes section. Branch names are configurable in `pikku.config.json`:
 
 ```json
-{ "release": { "trunk": "staging", "production": "main", "branch": "release/next", "remote": "origin" } }
+{
+  "release": {
+    "trunk": "staging",
+    "production": "main",
+    "branch": "release/next",
+    "remote": "origin"
+  }
+}
 ```
 
 The verdict, in order:

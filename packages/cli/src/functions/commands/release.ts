@@ -237,7 +237,7 @@ export const pikkuReleaseInit = pikkuSessionlessFunc<
   },
 })
 
-export type ReleasePrepareInput = { dryRun?: boolean }
+export type ReleasePrepareInput = { dryRun?: boolean; goLive?: boolean }
 export type ReleasePrepareResult =
   | { status: 'nothing'; trunk: string; trunkSha: string }
   | {
@@ -284,7 +284,7 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
     const commits = parseCommits(
       await git(['log', '--no-merges', `--format=${COMMIT_FORMAT}`, range], cwd)
     )
-    if (commits.length === 0) {
+    if (commits.length === 0 && !input?.goLive) {
       return { status: 'nothing', trunk: s.trunk, trunkSha }
     }
 
@@ -304,7 +304,12 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
     const packageJson = readFileSync(packagePath, 'utf-8')
     const previousVersion = readPackageVersion(packageJson)
     const level = surface.verdict
-    const version = bumpVersion(previousVersion, level)
+    let version: string
+    try {
+      version = bumpVersion(previousVersion, level, input?.goLive)
+    } catch (e) {
+      throw new PikkuError((e as Error).message)
+    }
     const changelog = renderChangelogSection({
       version,
       date: new Date().toISOString().slice(0, 10),

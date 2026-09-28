@@ -279,6 +279,7 @@ jobs:
             deploy-cloudflare,
             deploy-serverless,
             deploy-grouping,
+            release,
             deploy-azure,
             deploy-standalone,
             better-auth,

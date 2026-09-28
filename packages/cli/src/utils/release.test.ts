@@ -37,6 +37,17 @@ describe('bumpVersion', () => {
     assert.equal(bumpVersion('1.4.2', 'major'), '2.0.0')
   })
 
+  test('below 1.0 a breaking change is a minor', () => {
+    assert.equal(bumpVersion('0.4.2', 'major'), '0.5.0')
+    assert.equal(bumpVersion('0.4.2', 'minor'), '0.5.0')
+    assert.equal(bumpVersion('0.4.2', 'patch'), '0.4.3')
+  })
+
+  test('going live is the only way to 1.0.0', () => {
+    assert.equal(bumpVersion('0.4.2', 'patch', true), '1.0.0')
+    assert.throws(() => bumpVersion('1.2.0', 'minor', true), /Already live/)
+  })
+
   test('rejects anything but MAJOR.MINOR.PATCH', () => {
     assert.throws(
       () => bumpVersion('1.4.2-rc.1', 'patch'),

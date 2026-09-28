@@ -144,6 +144,21 @@ describe('pikku release', () => {
     )
   })
 
+  test('go-live releases 1.0.0 even with nothing new, then refuses', async () => {
+    await run(pikkuReleasePrepare)
+    await run(pikkuReleasePublish)
+    checkoutStaging()
+    const prepared = await run(pikkuReleasePrepare, { goLive: true })
+    assert.equal(prepared.version, '1.0.0')
+    await run(pikkuReleasePublish)
+    checkoutStaging()
+    commitOnStaging('after launch')
+    await assert.rejects(
+      run(pikkuReleasePrepare, { goLive: true }),
+      /Already live/
+    )
+  })
+
   test('dry runs write and push nothing', async () => {
     const prepared = await run(pikkuReleasePrepare, { dryRun: true })
     assert.equal(prepared.status, 'dry-run')

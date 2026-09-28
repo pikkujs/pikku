@@ -215,18 +215,31 @@ check('release diff --fail-on major fails on a removed route', () => {
   )
 })
 
-check('a removed route ships a major, even before 1.0', () => {
+check('a removed route is breaking but only a minor below 1.0', () => {
   const { version, level } = ship()
-  assert(level === 'major', `expected major, got ${level}`)
-  assert(version === '1.0.0', `expected 1.0.0, got ${version}`)
+  assert(level === 'major', `expected a major verdict, got ${level}`)
+  assert(version === '0.3.0', `expected 0.3.0, got ${version}`)
   const changelog = readFileSync(join(APP, 'CHANGELOG.md'), 'utf-8')
   assert(
-    changelog.indexOf('## 1.0.0') < changelog.indexOf('## 0.2.0'),
+    changelog.indexOf('## 0.3.0') < changelog.indexOf('## 0.2.0'),
     'changelog is not newest first'
   )
   assert(
     /### Breaking[\s\S]*wave/.test(changelog),
     `no breaking entry for wave:\n${changelog}`
+  )
+})
+
+check('--go-live releases 1.0.0', () => {
+  git('fetch', '-q', 'origin')
+  git('checkout', '-q', '--detach', 'origin/staging')
+  pikku([])
+  pikku(['release', 'prepare', '--go-live'])
+  pikku(['release', 'publish'])
+  git('fetch', '-q', '--tags', 'origin')
+  assert(
+    git('rev-parse', 'origin/main') === git('rev-parse', 'v1.0.0^{commit}'),
+    'main is not at the v1.0.0 tag'
   )
 })
 

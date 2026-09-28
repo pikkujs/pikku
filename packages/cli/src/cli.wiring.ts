@@ -481,6 +481,10 @@ wireCLI({
               description: 'Work out the release without writing or pushing',
               default: false,
             },
+            goLive: {
+              description: 'Release 1.0.0: the app is live and 0.x is over',
+              default: false,
+            },
           },
         }),
         publish: pikkuCLICommand({
