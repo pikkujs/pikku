@@ -1,4 +1,7 @@
-export { createSQLiteKysely } from './create-sqlite-kysely.js'
+export {
+  createSQLiteKysely,
+  type CreateSQLiteKyselyOptions,
+} from './create-sqlite-kysely.js'
 export { SQLiteKyselyWorkflowService } from './sqlite-kysely-workflow-service.js'
 export { SQLiteKyselyDeploymentService } from './sqlite-kysely-deployment-service.js'
 export { SQLiteKyselyAgentStorageService } from './sqlite-kysely-agent-storage-service.js'
@@ -12,6 +15,13 @@ export {
   type SqliteFunctionMap,
 } from './sqlite-functions.js'
 export { LibsqlWebDialect } from './libsql-web-dialect.js'
+
+export {
+  createCoercionPlugin,
+  type ColumnKind,
+  type CoercionMap,
+  type CreateCoercionPluginOptions,
+} from '@pikku/kysely'
 
 export type { KyselyPikkuDB } from '@pikku/kysely'
 export type { WorkflowRunService } from '@pikku/core/workflow'
