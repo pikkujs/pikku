@@ -100,9 +100,7 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./actor-flow": [
-    "runConversation"
-  ],
+  "./actor-flow": ["runConversation"],
   "./virtual-user": [
     "DEFAULT_MAX_INTERVAL_MS",
     "DEFAULT_MIN_INTERVAL_MS",
@@ -165,9 +163,7 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./remote": [
-    "buildRemoteHeaders"
-  ],
+  "./remote": ["buildRemoteHeaders"],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -184,9 +180,15 @@
     "wireScheduler"
   ],
   "./trigger": [
+    "PIKKU_INCOMING_WEBHOOK_QUEUE_NAME",
     "PikkuTriggerService",
+    "dispatchWebhookSourceJob",
+    "receiveWebhookSourceRequest",
+    "runWebhookSourceLifecycle",
+    "subscribedWebhookEvents",
     "wireTrigger",
-    "wireTriggerSource"
+    "wireTriggerSource",
+    "wireTriggerWebhookSource"
   ],
   "./rpc": [
     "PikkuRPCService",
@@ -207,10 +209,7 @@
     "safeFetch",
     "setDefaultHostResolver"
   ],
-  "./node-host-resolver": [
-    "installNodeHostResolver",
-    "nodeHostResolver"
-  ],
+  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -297,10 +296,7 @@
     "wantsStackTrace",
     "wireCLI"
   ],
-  "./cli/command-parser": [
-    "generateCommandHelp",
-    "parseCLIArguments"
-  ],
+  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -360,13 +356,8 @@
     "deriveOAuth2AppSecrets",
     "validateAndBuildSecretDefinitionsMeta"
   ],
-  "./variable": [
-    "defineVariable",
-    "validateAndBuildVariableDefinitionsMeta"
-  ],
-  "./webhook": [
-    "defineWebhook"
-  ],
+  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
+  "./webhook": ["defineOutgoingWebhook"],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -431,6 +422,7 @@
     "InMemorySessionStore",
     "InMemoryTriggerService",
     "InMemoryWorkflowService",
+    "IncomingWebhookService",
     "JsonConsoleLogger",
     "LocalCredentialService",
     "LocalEmailService",
@@ -489,19 +481,10 @@
     "subjectIdOf",
     "validateAndBuildFeatureFlagDefinitionsMeta"
   ],
-  "./services/local-meta": [
-    "LocalMetaService"
-  ],
-  "./services/v8-coverage": [
-    "V8CoverageService"
-  ],
-  "./services/istanbul-coverage": [
-    "IstanbulCoverageService"
-  ],
-  "./services/local-content": [
-    "LocalContent",
-    "signedContentPath"
-  ],
+  "./services/local-meta": ["LocalMetaService"],
+  "./services/v8-coverage": ["V8CoverageService"],
+  "./services/istanbul-coverage": ["IstanbulCoverageService"],
+  "./services/local-content": ["LocalContent", "signedContentPath"],
   "./services/local-content-request-handler": [
     "createLocalContentRequestHandler",
     "verifySignedContentRequest"
@@ -531,10 +514,7 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": [
-    "hmacSha256Hex",
-    "timingSafeStringEqual"
-  ],
+  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
   "./state": [
     "addPackageServiceFactories",
     "getAllPackageStates",
@@ -581,13 +561,6 @@
     "getSchema",
     "validateSchema"
   ],
-  "./testing": [
-    "clearPikkuRuntimeState",
-    "defineServiceTests"
-  ],
-  "./dev": [
-    "pikkuDevReloader",
-    "reconcileAddonRegistry",
-    "reloadGeneratedMeta"
-  ]
+  "./testing": ["clearPikkuRuntimeState", "defineServiceTests"],
+  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

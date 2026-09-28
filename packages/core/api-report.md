@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3088 observable things**: 1005 exported names, plus
-2083 members on the classes and interfaces among them, reachable
+**3119 observable things**: 1028 exported names, plus
+2091 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,21 +14,22 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 160 | 128 | 436 |
+| `./services` | 163 | 131 | 441 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
-| `./types` | 23 | 20 | 77 |
+| `./types` | 23 | 20 | 78 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
-| `./services/local-meta` | 22 | 2 | 41 |
+| `./services/local-meta` | 22 | 2 | 42 |
 | `./mcp` | 25 | 25 | 17 |
 | `./cli` | 16 | 14 | 26 |
+| `./trigger` | 28 | 28 | 11 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
@@ -39,7 +40,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./crypto-utils` | 20 | 20 | 2 |
 | `./utils` | 21 | 20 | 2 |
 | `./channel/local` | 3 | 3 | 18 |
-| `./trigger` | 8 | 8 | 11 |
 | `./workflow/timeline` | 9 | 4 | 14 |
 | `./services/local-content` | 3 | 3 | 15 |
 | `./services/v8-coverage` | 11 | 6 | 11 |
@@ -216,6 +216,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   credentialService?: CredentialService
   emailService?: EmailService
   webhookService?: WebhookService
+  incomingWebhookService?: IncomingWebhookService
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
   virtualUserScheduleStore?: VirtualUserScheduleStore
@@ -272,7 +273,7 @@ export interface PikkuPackageState {
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
   queue: { registrations: Map<string, CoreQueueWorker>; meta: QueueWorkersMeta }
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
-  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
+  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta; webhookSources: Map<string, CoreTriggerWebhookSource>; webhookSourceMeta: WebhookSourcesMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
   agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }
@@ -2936,6 +2937,24 @@ export interface CoreTrigger<PikkuFunctionConfig = any> {
   description?: string
   tags?: string[]
 }
+export type CoreTriggerWebhookSource<
+  Events extends Record<string, StandardSchemaV1> = Record<
+    string,
+    StandardSchemaV1
+  >,
+> = {
+  name: string
+  method?: 'post' | 'put' | 'get'
+  route?: string
+  secret?: string
+  events?: Events
+  receive?: SourceFunction<WebhookRequest, WebhookReceiveResult>
+  check?: SourceFunction<WebhookLifecycleInput, WebhookCheckResult>
+  setup?: SourceFunction<WebhookLifecycleInput, WebhookSetupResult>
+  teardown?: SourceFunction<WebhookTeardownInput, WebhookTeardownResult>
+}
+dispatchWebhookSourceJob: (job: WebhookSourceJob) => Promise<void>
+PIKKU_INCOMING_WEBHOOK_QUEUE_NAME: "pikku-incoming-webhooks"
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers: Map<string, TriggerInstance>
   abstract start(): Promise<void>
@@ -2945,13 +2964,94 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async setupTriggerInstance(name: string, input: unknown, onTrigger: (data: unknown) => Promise<void>): Promise<TriggerInstance>
   protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown): Promise<void>
 }
+receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<Response | { received: number; }>
+runWebhookSourceLifecycle: ({ action, baseUrl, labelPrefix, previous, singletonServices, }: { action: "check" | "setup" | "teardown"; baseUrl: string; labelPrefix: string; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+subscribedWebhookEvents: (source: string) => string[]
+export type TriggerEvent<Name extends string = string, Data = unknown> = {
+  name: Name
+  id?: string
+  data: Data
+}
 export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 export type TriggerSourceMeta = Record<
   string,
   { name: string; pikkuFuncId: string; packageName?: string }
 >
+export type WebhookCheckResult =
+  | { status: 'ok' }
+  | { status: 'missing' }
+  | { status: 'drifted'; reason: string }
+export type WebhookLifecycleInput = {
+  url: string
+  label: string
+  events: string[]
+  previous?: WebhookSourceState
+}
+export type WebhookReceiveResult =
+  | { events: TriggerEvent[] }
+  | {
+      respond: {
+        status: number
+        body?: unknown
+        headers?: Record<string, string>
+      }
+    }
+export type WebhookRequest = {
+  body: Uint8Array
+  headers: Record<string, string>
+  method: string
+  url: string
+  query: Record<string, string>
+}
+export type WebhookSetupResult =
+  | {
+      status: 'created' | 'updated' | 'unchanged'
+      state?: WebhookSourceState
+      secret?: string
+    }
+  | { status: 'manual'; instructions: string }
+export type WebhookSourceJob = {
+  source: string
+  event: TriggerEvent
+  receiptId?: string
+}
+export type WebhookSourceMeta = {
+  name: string
+  method: 'post' | 'put' | 'get'
+  route: string
+  secret?: string
+  events: string[]
+  receive?: string
+  check?: string
+  setup?: string
+  teardown?: string
+}
+export type WebhookSourceOutcome = {
+  source: string
+  url: string
+  status:
+    | WebhookCheckResult['status']
+    | WebhookSetupResult['status']
+    | WebhookTeardownResult['status']
+    | 'skipped'
+    | 'failed'
+  reason?: string
+  state?: WebhookSourceState
+  secretName?: string
+  secret?: string
+  instructions?: string
+  error?: string
+}
+export type WebhookSourcesMeta = Record<string, WebhookSourceMeta>
+export type WebhookSourceState = Record<string, unknown>
+export type WebhookTeardownInput = {
+  label: string
+  previous?: WebhookSourceState
+}
+export type WebhookTeardownResult = { status: 'deleted' | 'absent' }
 wireTrigger: (trigger: CoreTrigger<any>) => void
 wireTriggerSource: <TInput = unknown, TOutput = unknown>(source: CoreTriggerSource<TInput, TOutput>) => void
+wireTriggerWebhookSource: <Events extends Record<string, StandardSchemaV1>>(source: CoreTriggerWebhookSource<Events>) => void
 ```
 
 ## ./rpc
@@ -4305,7 +4405,7 @@ export type VariableDefinitionsMeta = Record<string, VariableDefinitionMeta>
 ## ./webhook
 
 ```ts
-export type CoreWebhook<
+export type CoreOutgoingWebhook<
   Event extends string = string,
   Payload extends StandardSchemaV1 = StandardSchemaV1,
 > = {
@@ -4314,18 +4414,15 @@ export type CoreWebhook<
   description?: string
   payload: Payload
 }
-defineWebhook: <const Event extends string, Payload extends StandardSchemaV1>(webhook: CoreWebhook<Event, Payload>) => CoreWebhook<Event, Payload>
-export interface TypedWebhookService<TMap = Record<string, unknown>> extends Omit<WebhookService, 'send'> {
-  send<const T extends SendWebhookInput>(input: Safe<T> & WebhookDataFor<TMap, T>): Promise<SendWebhookResult>
-}
-export type WebhookDataFor<TMap, Input> = Input extends {
+defineOutgoingWebhook: <const Event extends string, Payload extends StandardSchemaV1>(webhook: CoreOutgoingWebhook<Event, Payload>) => CoreOutgoingWebhook<Event, Payload>
+export type OutgoingWebhookDataFor<TMap, Input> = Input extends {
   event: infer Event
 }
   ? Event extends keyof TMap
     ? { data: Safe<TMap[Event]> }
     : unknown
   : unknown
-export type WebhookDefinitionMeta = {
+export type OutgoingWebhookMeta = {
   event: string
   title: string
   description?: string
@@ -4333,9 +4430,14 @@ export type WebhookDefinitionMeta = {
   exportedName?: string
   sourceFile?: string
 }
-export type WebhookDefinitionsMeta = Record<string, WebhookDefinitionMeta>
-export type WebhookPayloadOf<W> =
-  W extends CoreWebhook<string, infer S> ? StandardSchemaV1.InferInput<S> : never
+export type OutgoingWebhookPayloadOf<W> =
+  W extends CoreOutgoingWebhook<string, infer S>
+    ? StandardSchemaV1.InferInput<S>
+    : never
+export type OutgoingWebhooksMeta = Record<string, OutgoingWebhookMeta>
+export interface TypedWebhookService< TMap = Record<string, unknown>, > extends Omit<WebhookService, 'send'> {
+  send<const T extends SendWebhookInput>(input: Safe<T> & OutgoingWebhookDataFor<TMap, T>): Promise<SendWebhookResult>
+}
 ```
 
 ## ./oauth2
@@ -4845,6 +4947,28 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
+export type IncomingWebhookAttempt = {
+  trigger: string
+  error?: string
+}
+export type IncomingWebhookReceiptRecord = {
+  receiptId: string
+  source: string
+  providerEventId: string | null
+  event: string
+  status: 'pending' | 'delivered' | 'failed'
+  attempts: number
+  lastError: string | null
+  createdAt: Date
+  deliveredAt: Date | null
+}
+export class IncomingWebhookService {
+  constructor(protected queueService: QueueService, protected retries: number = DEFAULT_WEBHOOK_RETRIES)
+  public async accept({ source, events, }: { source: string; request: WebhookRequest; events: TriggerEvent[] }): Promise<number>
+  protected async enqueue(job: WebhookSourceJob): Promise<string>
+  public async recordAttempt(_receiptId: string, _attempt: IncomingWebhookAttempt): Promise<void>
+  public async listReceipts(_opts?: { source?: string; limit?: number }): Promise<IncomingWebhookReceiptRecord[]>
+}
 export class InMemoryAgentRunStateService implements AgentRunStateService {
   async createRun(run: CreateRunInput): Promise<string>
   async updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
@@ -5006,7 +5130,8 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
-  getWebhooksMeta(): Promise<WebhookDefinitionsMeta>
+  getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
+  getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5615,7 +5740,8 @@ export class LocalMetaService implements MetaService {
   async getSecretsMeta(): Promise<SecretDefinitionsMeta>
   async getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   async getVariablesMeta(): Promise<VariableDefinitionsMeta>
-  async getWebhooksMeta(): Promise<WebhookDefinitionsMeta>
+  async getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
+  async getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   async getEmailMeta(): Promise<EmailsMeta>
   async getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   async getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5657,7 +5783,8 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
-  getWebhooksMeta(): Promise<WebhookDefinitionsMeta>
+  getOutgoingWebhooksMeta(): Promise<OutgoingWebhooksMeta>
+  getWebhookSourcesMeta(): Promise<WebhookSourcesMeta>
   getEmailMeta(): Promise<EmailsMeta>
   getEmailTemplateAssets(templateName: string, locale: string): Promise<EmailTemplateAssets>
   getServicesMeta(): Promise<ServicesMetaRecord>
@@ -5925,7 +6052,7 @@ export interface PikkuPackageState {
   scheduler: { tasks: Map<string, CoreScheduledTask>; meta: ScheduledTasksMeta }
   queue: { registrations: Map<string, CoreQueueWorker>; meta: QueueWorkersMeta }
   workflows: { registrations: Map<string, CoreWorkflow>; features: Map<string, CoreFeature>; meta: WorkflowsRuntimeMeta }
-  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta }
+  trigger: { functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>; triggers: Map<string, CoreTrigger>; triggerSources: Map<string, CoreTriggerSource>; meta: TriggerMeta; sourceMeta: TriggerSourceMeta; webhookSources: Map<string, CoreTriggerWebhookSource>; webhookSourceMeta: WebhookSourcesMeta }
   mcp: { resources: Map<string, CoreMCPResource>; resourcesMeta: MCPResourceMeta; toolsMeta: MCPToolMeta; prompts: Map<string, CoreMCPPrompt>; promptsMeta: MCPPromptMeta }
   agent: { agents: Map<string, CoreAgent>; agentsMeta: AgentsMeta; scorers: Map<string, PikkuAgentScorer>; scorersMeta: ScorerMeta; modelAliases: Record<string, string>; rpcFactory?: AgentRPCFactory }
   gateway: { gateways: Map<string, CoreGateway>; meta: GatewaysMeta }

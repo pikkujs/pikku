@@ -36,18 +36,18 @@ const inspectSources = async (sources: Record<string, string>) => {
   }
 }
 
-const IMPORT = `import { defineWebhook } from '@pikku/core/webhook'\nimport { z } from 'zod'\n`
+const IMPORT = `import { defineOutgoingWebhook } from '@pikku/core/webhook'\nimport { z } from 'zod'\n`
 
-describe('addWebhook', () => {
+describe('addOutgoingWebhook', () => {
   test('records event, title, description and payload shape', async () => {
     const { state, errors, files } = await inspectSources({
       'webhooks.ts':
         IMPORT +
-        `export const orderPaid = defineWebhook({ event: 'order.paid', title: 'Order paid', description: 'Sent when a customer pays', payload: z.object({ orderId: z.string(), total: z.number() }) })\n`,
+        `export const orderPaid = defineOutgoingWebhook({ event: 'order.paid', title: 'Order paid', description: 'Sent when a customer pays', payload: z.object({ orderId: z.string(), total: z.number() }) })\n`,
     })
 
     assert.deepEqual(errors, [])
-    assert.deepEqual(state.webhooks, [
+    assert.deepEqual(state.outgoingWebhooks, [
       {
         file: files[0]!,
         variable: 'orderPaid',
@@ -62,32 +62,32 @@ describe('addWebhook', () => {
   test('matches an aliased import', async () => {
     const { state } = await inspectSources({
       'webhooks.ts':
-        `import { defineWebhook as hook } from '@pikku/core/webhook'\n` +
+        `import { defineOutgoingWebhook as hook } from '@pikku/core/webhook'\n` +
         `export const a = hook({ event: 'a', title: 'A', payload: {} as never })\n`,
     })
 
-    assert.equal(state.webhooks?.[0]?.event, 'a')
-    assert.equal(state.webhooks?.[0]?.payload, undefined)
+    assert.equal(state.outgoingWebhooks?.[0]?.event, 'a')
+    assert.equal(state.outgoingWebhooks?.[0]?.payload, undefined)
   })
 
   test('ignores a local helper of the same name', async () => {
     const { state } = await inspectSources({
       'webhooks.ts':
-        `const defineWebhook = (x: unknown) => x\n` +
-        `export const a = defineWebhook({ event: 'a', title: 'A', payload: {} })\n`,
+        `const defineOutgoingWebhook = (x: unknown) => x\n` +
+        `export const a = defineOutgoingWebhook({ event: 'a', title: 'A', payload: {} })\n`,
     })
 
-    assert.equal(state.webhooks, undefined)
+    assert.equal(state.outgoingWebhooks, undefined)
   })
 
   test('refuses a declaration the module does not export', async () => {
     const { state, errors } = await inspectSources({
       'webhooks.ts':
         IMPORT +
-        `const hidden = defineWebhook({ event: 'a', title: 'A', payload: z.object({}) })\n`,
+        `const hidden = defineOutgoingWebhook({ event: 'a', title: 'A', payload: z.object({}) })\n`,
     })
 
-    assert.equal(state.webhooks, undefined)
+    assert.equal(state.outgoingWebhooks, undefined)
     assert.match(errors[0]!, /does not export/)
   })
 
@@ -95,10 +95,10 @@ describe('addWebhook', () => {
     const { state, errors } = await inspectSources({
       'webhooks.ts':
         IMPORT +
-        `const name = 'a'\nexport const a = defineWebhook({ event: name, title: 'A', payload: z.object({}) })\n`,
+        `const name = 'a'\nexport const a = defineOutgoingWebhook({ event: name, title: 'A', payload: z.object({}) })\n`,
     })
 
-    assert.equal(state.webhooks, undefined)
+    assert.equal(state.outgoingWebhooks, undefined)
     assert.match(errors[0]!, /string literals/)
   })
 
@@ -106,13 +106,13 @@ describe('addWebhook', () => {
     const { state, errors } = await inspectSources({
       'a.ts':
         IMPORT +
-        `export const a = defineWebhook({ event: 'dup', title: 'A', payload: z.object({}) })\n`,
+        `export const a = defineOutgoingWebhook({ event: 'dup', title: 'A', payload: z.object({}) })\n`,
       'b.ts':
         IMPORT +
-        `export const b = defineWebhook({ event: 'dup', title: 'B', payload: z.object({}) })\n`,
+        `export const b = defineOutgoingWebhook({ event: 'dup', title: 'B', payload: z.object({}) })\n`,
     })
 
-    assert.equal(state.webhooks?.length, 1)
+    assert.equal(state.outgoingWebhooks?.length, 1)
     assert.match(errors[0]!, /declared twice/)
   })
 })

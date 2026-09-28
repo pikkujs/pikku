@@ -1,9 +1,9 @@
-export { defineWebhook } from './define-webhook.js'
+export { defineOutgoingWebhook } from './define-outgoing-webhook.js'
 export type {
-  CoreWebhook,
-  WebhookDataFor,
+  CoreOutgoingWebhook,
+  OutgoingWebhookDataFor,
   TypedWebhookService,
-  WebhookDefinitionMeta,
-  WebhookDefinitionsMeta,
-  WebhookPayloadOf,
-} from './define-webhook.js'
+  OutgoingWebhookMeta,
+  OutgoingWebhooksMeta,
+  OutgoingWebhookPayloadOf,
+} from './define-outgoing-webhook.js'

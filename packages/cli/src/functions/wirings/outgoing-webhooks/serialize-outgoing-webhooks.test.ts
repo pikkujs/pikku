@@ -3,7 +3,7 @@ import { describe, test } from 'node:test'
 import {
   buildWebhooksMeta,
   serializeWebhooks,
-} from './serialize-webhook-definitions.js'
+} from './serialize-outgoing-webhooks.js'
 
 const webhooks = [
   {
@@ -26,7 +26,10 @@ describe('serializeWebhooks', () => {
   test('maps each declared event to its payload type', () => {
     const content = serializeWebhooks({
       webhooks,
-      webhooksFile: '/app/.pikku/webhooks/pikku-webhooks.gen.ts',
+      outgoingWebhooksFile:
+        '/app/.pikku/webhooks/pikku-outgoing-webhooks.gen.ts',
+      outgoingWebhooksMetaJsonFile:
+        '/app/.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json',
       packageMappings: {},
     })
 
@@ -34,25 +37,46 @@ describe('serializeWebhooks', () => {
       content,
       /import type \{ bookingMade as webhook0 \} from '\.\.\/\.\.\/src\/webhooks\/booking\.js'/
     )
-    assert.match(content, /"booking\.made": WebhookPayloadOf<typeof webhook0>/)
-    assert.match(content, /"order\.paid": WebhookPayloadOf<typeof webhook1>/)
     assert.match(
       content,
-      /export type TypedWebhookService = CoreTypedWebhookService<WebhooksMap>/
+      /"booking\.made": OutgoingWebhookPayloadOf<typeof webhook0>/
     )
-    assert.match(content, /import '\.\/pikku-webhooks-meta\.gen\.json'/)
+    assert.match(
+      content,
+      /"order\.paid": OutgoingWebhookPayloadOf<typeof webhook1>/
+    )
+    assert.match(
+      content,
+      /export type TypedWebhookService = CoreTypedWebhookService<OutgoingWebhooksMap>/
+    )
+    assert.match(
+      content,
+      /import '\.\/pikku-outgoing-webhooks-meta\.gen\.json'/
+    )
     assert.match(content, /export const typedWebhookService = /)
   })
 
   test('emits an empty map when nothing is declared', () => {
     const content = serializeWebhooks({
       webhooks: [],
-      webhooksFile: '/app/.pikku/webhooks/pikku-webhooks.gen.ts',
+      outgoingWebhooksFile:
+        '/app/.pikku/webhooks/pikku-outgoing-webhooks.gen.ts',
       packageMappings: {},
     })
 
-    assert.match(content, /export interface WebhooksMap \{\}/)
-    assert.doesNotMatch(content, /WebhookPayloadOf/)
+    assert.match(content, /export interface OutgoingWebhooksMap \{\}/)
+  })
+
+  test('imports the metadata from where it is configured to be written', () => {
+    const content = serializeWebhooks({
+      webhooks: [],
+      outgoingWebhooksFile:
+        '/app/.pikku/webhooks/pikku-outgoing-webhooks.gen.ts',
+      outgoingWebhooksMetaJsonFile: '/app/meta/webhooks.gen.json',
+      packageMappings: {},
+    })
+
+    assert.match(content, /import '\.\.\/\.\.\/meta\/webhooks\.gen\.json'/)
   })
 })
 

@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { WebhookService } from '../../services/webhook-service.js'
 import {
-  defineWebhook,
+  defineOutgoingWebhook,
   type TypedWebhookService,
-  type WebhookPayloadOf,
-} from './define-webhook.js'
+  type OutgoingWebhookPayloadOf,
+} from './define-outgoing-webhook.js'
 
 const schema = <T>(): StandardSchemaV1<T> => ({
   '~standard': {
@@ -16,14 +16,14 @@ const schema = <T>(): StandardSchemaV1<T> => ({
   },
 })
 
-const orderPaid = defineWebhook({
+const orderPaid = defineOutgoingWebhook({
   event: 'order.paid',
   title: 'Order paid',
   payload: schema<{ orderId: string; total: number }>(),
 })
 
-interface WebhooksMap {
-  'order.paid': WebhookPayloadOf<typeof orderPaid>
+interface OutgoingWebhooksMap {
+  'order.paid': OutgoingWebhookPayloadOf<typeof orderPaid>
 }
 
 const sent: unknown[] = []
@@ -34,9 +34,9 @@ const service = {
   },
 } as unknown as WebhookService
 
-const typed = service as unknown as TypedWebhookService<WebhooksMap>
+const typed = service as unknown as TypedWebhookService<OutgoingWebhooksMap>
 
-describe('defineWebhook', () => {
+describe('defineOutgoingWebhook', () => {
   test('returns the declaration as given', () => {
     assert.equal(orderPaid.event, 'order.paid')
     assert.equal(orderPaid.title, 'Order paid')

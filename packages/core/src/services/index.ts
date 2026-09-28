@@ -19,6 +19,11 @@ export {
   pikkuWebhookWorkerFunc,
 } from './queue-webhook-service.js'
 export {
+  IncomingWebhookService,
+  type IncomingWebhookAttempt,
+  type IncomingWebhookReceiptRecord,
+} from './incoming-webhook-service.js'
+export {
   REMOTE_JOBS_SECRET_HEADER,
   REMOTE_JOBS_SECRET_VARIABLE,
   REMOTE_QUEUE_JOB_PATH,

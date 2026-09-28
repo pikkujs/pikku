@@ -9,7 +9,6 @@ import React, {
 import { usePikkuRPC } from './PikkuRpcProvider'
 import type { ResolvedPersona } from '@pikku/core/services'
 import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
-import type { WebhookDefinitionsMeta } from '@pikku/core/webhook'
 import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
@@ -32,7 +31,6 @@ type PikkuMetaState = Omit<
 > & {
   personas: Record<string, ResolvedPersona>
   systemRoles: SystemRoleDefinitionsMeta
-  webhooksMeta: WebhookDefinitionsMeta
 }
 
 interface PikkuMetaContextType {
@@ -91,7 +89,7 @@ const EMPTY_META: PikkuMetaState = {
   secretsMeta: {},
   credentialsMeta: {},
   variablesMeta: {},
-  webhooksMeta: {},
+  outgoingWebhooksMeta: {},
 }
 
 const EMPTY_COUNTS: MetaCounts = {
@@ -113,7 +111,7 @@ const EMPTY_COUNTS: MetaCounts = {
   variables: 0,
   featureFlags: 0,
   analyticsEvents: 0,
-  webhooks: 0,
+  outgoingWebhooks: 0,
 }
 
 export const PikkuMetaProvider: React.FC<{
@@ -165,9 +163,7 @@ export const PikkuMetaProvider: React.FC<{
         secretsMeta: allMeta.secretsMeta,
         credentialsMeta: allMeta.credentialsMeta ?? {},
         variablesMeta: allMeta.variablesMeta,
-        webhooksMeta:
-          (allMeta as { webhooksMeta?: WebhookDefinitionsMeta })
-            .webhooksMeta ?? {},
+        outgoingWebhooksMeta: allMeta.outgoingWebhooksMeta ?? {},
       })
       setCounts({
         ...EMPTY_COUNTS,

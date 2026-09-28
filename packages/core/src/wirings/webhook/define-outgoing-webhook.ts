@@ -6,7 +6,7 @@ import type {
   WebhookService,
 } from '../../services/webhook-service.js'
 
-export type CoreWebhook<
+export type CoreOutgoingWebhook<
   Event extends string = string,
   Payload extends StandardSchemaV1 = StandardSchemaV1,
 > = {
@@ -16,7 +16,7 @@ export type CoreWebhook<
   payload: Payload
 }
 
-export type WebhookDefinitionMeta = {
+export type OutgoingWebhookMeta = {
   event: string
   title: string
   description?: string
@@ -25,12 +25,14 @@ export type WebhookDefinitionMeta = {
   sourceFile?: string
 }
 
-export type WebhookDefinitionsMeta = Record<string, WebhookDefinitionMeta>
+export type OutgoingWebhooksMeta = Record<string, OutgoingWebhookMeta>
 
-export type WebhookPayloadOf<W> =
-  W extends CoreWebhook<string, infer S> ? StandardSchemaV1.InferInput<S> : never
+export type OutgoingWebhookPayloadOf<W> =
+  W extends CoreOutgoingWebhook<string, infer S>
+    ? StandardSchemaV1.InferInput<S>
+    : never
 
-export type WebhookDataFor<TMap, Input> = Input extends {
+export type OutgoingWebhookDataFor<TMap, Input> = Input extends {
   event: infer Event
 }
   ? Event extends keyof TMap
@@ -38,16 +40,17 @@ export type WebhookDataFor<TMap, Input> = Input extends {
     : unknown
   : unknown
 
-export interface TypedWebhookService<TMap = Record<string, unknown>>
-  extends Omit<WebhookService, 'send'> {
+export interface TypedWebhookService<
+  TMap = Record<string, unknown>,
+> extends Omit<WebhookService, 'send'> {
   send<const T extends SendWebhookInput>(
-    input: Safe<T> & WebhookDataFor<TMap, T>
+    input: Safe<T> & OutgoingWebhookDataFor<TMap, T>
   ): Promise<SendWebhookResult>
 }
 
-export const defineWebhook = <
+export const defineOutgoingWebhook = <
   const Event extends string,
   Payload extends StandardSchemaV1,
 >(
-  webhook: CoreWebhook<Event, Payload>
-): CoreWebhook<Event, Payload> => webhook
+  webhook: CoreOutgoingWebhook<Event, Payload>
+): CoreOutgoingWebhook<Event, Payload> => webhook

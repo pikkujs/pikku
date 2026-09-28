@@ -1,0 +1,16 @@
+{
+  "name": "@pikku/verifiers-release",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "pikku": "echo 'skip'",
+    "tsc": "echo 'skip'",
+    "build": "echo 'skip'",
+    "test": "npx tsx test-release.ts"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@types/node": "^24"
+  }
+}

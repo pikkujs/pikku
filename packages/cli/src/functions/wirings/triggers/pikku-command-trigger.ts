@@ -7,6 +7,7 @@ import {
   serializeTriggerMetaTS,
   serializeTriggerSourceMeta,
   serializeTriggerSourceMetaTS,
+  serializeWebhookSourceMetaTS,
 } from './serialize-trigger-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeWiringMeta } from '../../../utils/write-wiring-meta.js'
@@ -20,12 +21,17 @@ export const pikkuTrigger = pikkuSessionlessFunc<void, boolean | undefined>({
       triggersWiringMetaJsonFile,
       triggerSourcesMetaFile,
       triggerSourcesMetaJsonFile,
+      webhookSourcesMetaFile,
+      webhookSourcesMetaJsonFile,
       packageMappings,
       schema,
     } = config
     const { triggers } = visitState
 
-    if (Object.keys(triggers.meta).length === 0) {
+    if (
+      Object.keys(triggers.meta).length === 0 &&
+      Object.keys(triggers.webhookSourceMeta).length === 0
+    ) {
       return undefined
     }
 
@@ -81,6 +87,21 @@ export const pikkuTrigger = pikkuSessionlessFunc<void, boolean | undefined>({
         schema?.supportsImportAttributes ?? false
       )
     )
+
+    await writeWiringMeta({
+      logger,
+      meta: triggers.webhookSourceMeta,
+      metaJsonFile: webhookSourcesMetaJsonFile,
+      metaFile: webhookSourcesMetaFile,
+      packageMappings,
+      supportsImportAttributes,
+      serializeMetaTS: ({ jsonImportPath }) =>
+        serializeWebhookSourceMetaTS(
+          triggers.webhookSourceMeta,
+          jsonImportPath,
+          supportsImportAttributes
+        ),
+    })
 
     return true
   },

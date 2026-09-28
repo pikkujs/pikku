@@ -6,7 +6,7 @@ import {
   readEventShape,
 } from './add-analytics.js'
 
-const DEFINE_WEBHOOK = 'defineWebhook'
+const DEFINE_OUTGOING_WEBHOOK = 'defineOutgoingWebhook'
 
 const stringProperty = (
   object: ts.ObjectLiteralExpression,
@@ -15,9 +15,8 @@ const stringProperty = (
   for (const property of object.properties) {
     if (!ts.isPropertyAssignment(property)) continue
     const name = property.name
-    const text = ts.isIdentifier(name) || ts.isStringLiteral(name)
-      ? name.text
-      : undefined
+    const text =
+      ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : undefined
     if (text !== key) continue
     const value = property.initializer
     if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value))
@@ -34,13 +33,16 @@ const propertyInitializer = (
   for (const property of object.properties) {
     if (!ts.isPropertyAssignment(property)) continue
     const name = property.name
-    if ((ts.isIdentifier(name) || ts.isStringLiteral(name)) && name.text === key)
+    if (
+      (ts.isIdentifier(name) || ts.isStringLiteral(name)) &&
+      name.text === key
+    )
       return property.initializer
   }
   return undefined
 }
 
-export const addWebhook = (
+export const addOutgoingWebhook = (
   logger: InspectorLogger,
   node: ts.Node,
   checker: ts.TypeChecker,
@@ -49,7 +51,13 @@ export const addWebhook = (
   if (!ts.isVariableDeclaration(node)) return
   const { initializer, name } = node
   if (!initializer || !ts.isCallExpression(initializer)) return
-  if (!callsImportedDefiner(initializer.expression, checker, DEFINE_WEBHOOK))
+  if (
+    !callsImportedDefiner(
+      initializer.expression,
+      checker,
+      DEFINE_OUTGOING_WEBHOOK
+    )
+  )
     return
   if (!ts.isIdentifier(name)) return
 
@@ -57,7 +65,7 @@ export const addWebhook = (
   const [argument] = initializer.arguments
   if (!argument || !ts.isObjectLiteralExpression(argument)) {
     logger.error(
-      `defineWebhook in ${file} must be called with an object literal: { event, title, payload }.`
+      `defineOutgoingWebhook in ${file} must be called with an object literal: { event, title, payload }.`
     )
     return
   }
@@ -66,7 +74,7 @@ export const addWebhook = (
   const title = stringProperty(argument, 'title')
   if (!event || !title) {
     logger.error(
-      `defineWebhook '${name.text}' in ${file} needs 'event' and 'title' as string literals, so they can be listed without running the app.`
+      `defineOutgoingWebhook '${name.text}' in ${file} needs 'event' and 'title' as string literals, so they can be listed without running the app.`
     )
     return
   }
@@ -74,7 +82,7 @@ export const addWebhook = (
   const variable = exportedName(node, name, checker)
   if (!variable) {
     logger.error(
-      `defineWebhook '${event}' in ${file} is assigned to '${name.text}', which the module does not export. The generated webhook types import it by name, so export it.`
+      `defineOutgoingWebhook '${event}' in ${file} is assigned to '${name.text}', which the module does not export. The generated webhook types import it by name, so export it.`
     )
     return
   }
@@ -85,7 +93,7 @@ export const addWebhook = (
     ? readEventShape(payloadExpression)
     : undefined
 
-  const webhooks = (state.webhooks ??= [])
+  const webhooks = (state.outgoingWebhooks ??= [])
   const existing = webhooks.findIndex(
     (webhook) => webhook.file === file && webhook.variable === variable
   )
@@ -94,7 +102,7 @@ export const addWebhook = (
   )
   if (declared) {
     logger.error(
-      `Webhook event '${event}' is declared twice: ${declared.file} and ${file}. An event belongs to one defineWebhook.`
+      `Webhook event '${event}' is declared twice: ${declared.file} and ${file}. An event belongs to one defineOutgoingWebhook.`
     )
     return
   }

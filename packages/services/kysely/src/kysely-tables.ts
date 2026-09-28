@@ -318,6 +318,18 @@ export interface WebhookDeliveryAttemptTable {
   createdAt: Generated<Date>
 }
 
+export interface WebhookReceiptTable {
+  receiptId: string
+  source: string
+  event: string
+  providerEventId: string | null
+  status: Generated<'pending' | 'delivered' | 'failed'>
+  attempts: Generated<number>
+  lastError: string | null
+  createdAt: Generated<Date>
+  deliveredAt: Date | null
+}
+
 /**
  * One virtual-user run. The JSON columns (`goals`, `memory`, `findings`,
  * `tally`) are text the store serialises itself, so the row is byte-identical
@@ -474,6 +486,7 @@ export interface KyselyPikkuDB {
   pikkuUserSessions: UserSessionsTable
   webhookDelivery: WebhookDeliveryTable
   webhookDeliveryAttempt: WebhookDeliveryAttemptTable
+  webhookReceipt: WebhookReceiptTable
   virtualUserRun: VirtualUserRunTable
   virtualUserRunStep: VirtualUserRunStepTable
   virtualUserSchedule: VirtualUserScheduleTable

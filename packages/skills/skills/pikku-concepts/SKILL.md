@@ -115,7 +115,7 @@ flags; the "Read" column is the skill that teaches the thing, where one does.
 | `doc`                 | The installed API surface                                               | this skill                   |
 | `meta` / `info`       | What the project declares, machine- and human-readable                  | `pikku-meta`                 |
 | `validate`            | Every check that applies — app structure, an addon's published file set | `pikku-build`, `pikku-addon` |
-| `versions` / `semver` | Contract hashes, breaking-change detection, the release semver          | `pikku-meta`                 |
+| `versions` / `release` | Contract hashes, breaking-change detection, versioned releases        | `pikku-meta`                 |
 | `audit` / `update`    | Advisories; which `@pikku/*` can move and what peers that needs         | `pikku-meta`                 |
 | `scopes` / `roles`    | Declared authorization scopes; roles from `defineSystemRole`            | `pikku-auth`                 |
 | `knowledge`           | The knowledge base — what this app is, in its users' language           | `pikku-knowledge`            |

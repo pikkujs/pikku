@@ -1,8 +1,15 @@
 import React, { useMemo, useState } from 'react'
 import { Button, Collapse, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n, type I18nNode } from '@pikku/react'
-import { Check, ChevronDown, ChevronRight, Loader as Spinner, Send, X } from 'lucide-react'
-import type { WebhookDefinitionMeta } from '@pikku/core/webhook'
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Loader as Spinner,
+  Send,
+  X,
+} from 'lucide-react'
+import type { OutgoingWebhookMeta } from '@pikku/core/webhook'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import {
@@ -23,7 +30,11 @@ const LOOK: Record<
   WebhookDelivery['status'],
   { tone: StatusTone; Icon: typeof Check; label: () => string }
 > = {
-  delivered: { tone: 'good', Icon: Check, label: m.webhooks_delivery_delivered },
+  delivered: {
+    tone: 'good',
+    Icon: Check,
+    label: m.webhooks_delivery_delivered,
+  },
   failed: { tone: 'bad', Icon: X, label: m.webhooks_delivery_failed },
   pending: { tone: 'info', Icon: Spinner, label: m.webhooks_delivery_pending },
 }
@@ -36,7 +47,7 @@ type AppWebhook = {
 }
 
 type DeclaredWebhook = {
-  definition: WebhookDefinitionMeta
+  definition: OutgoingWebhookMeta
   addresses: AppWebhook[]
   deliveries: WebhookDelivery[]
 }
@@ -78,7 +89,12 @@ const groupWebhooks = (deliveries: WebhookDelivery[]): AppWebhook[] => {
   const byKey = new Map<string, AppWebhook>()
   for (const d of deliveries) {
     const key = `${d.event ?? ''} ${d.url}`
-    const hook = byKey.get(key) ?? { key, url: d.url, event: d.event, deliveries: [] }
+    const hook = byKey.get(key) ?? {
+      key,
+      url: d.url,
+      event: d.event,
+      deliveries: [],
+    }
     hook.deliveries.push(d)
     byKey.set(key, hook)
   }
@@ -96,7 +112,9 @@ const DeliveryLine: React.FC<{ delivery: WebhookDelivery; locale: string }> = ({
       {asI18n(LOOK[delivery.status].label())}
     </StatusBadge>
     <Text size="sm" c="dimmed">
-      {asI18n(`${runAgo(delivery.createdAt, locale)} · ${triesOf(delivery.attempts)}`)}
+      {asI18n(
+        `${runAgo(delivery.createdAt, locale)} · ${triesOf(delivery.attempts)}`
+      )}
     </Text>
   </Group>
 )
@@ -191,7 +209,11 @@ const DeclaredRow: React.FC<{ hook: DeclaredWebhook; locale: string }> = ({
                 <Stack key={address.key} gap={4} pt={4}>
                   <Text size="sm">{asI18n(hostOf(address.url))}</Text>
                   {address.deliveries.slice(0, 5).map((d) => (
-                    <DeliveryLine key={d.deliveryId} delivery={d} locale={locale} />
+                    <DeliveryLine
+                      key={d.deliveryId}
+                      delivery={d}
+                      locale={locale}
+                    />
                   ))}
                 </Stack>
               ))}
@@ -230,7 +252,11 @@ const OtherRow: React.FC<{ hook: AppWebhook; locale: string }> = ({
         </StatusTile>
       }
       title={nameOf(hook)}
-      badges={<StatusBadge tone={look.tone} size="sm">{asI18n(look.label())}</StatusBadge>}
+      badges={
+        <StatusBadge tone={look.tone} size="sm">
+          {asI18n(look.label())}
+        </StatusBadge>
+      }
       meta={asI18n(meta)}
       onClick={() => setOpen((o) => !o)}
       trailing={
@@ -252,14 +278,19 @@ const OtherRow: React.FC<{ hook: AppWebhook; locale: string }> = ({
   )
 }
 
-const DevDeclared: React.FC<{ definition: WebhookDefinitionMeta }> = ({
+const DevDeclared: React.FC<{ definition: OutgoingWebhookMeta }> = ({
   definition,
 }) => (
   <Stack gap={2}>
     <Text size="sm" fw={600}>
       {asI18n(definition.title)}
     </Text>
-    <Text size="xs" c="dimmed" ff="monospace" style={{ wordBreak: 'break-all' }}>
+    <Text
+      size="xs"
+      c="dimmed"
+      ff="monospace"
+      style={{ wordBreak: 'break-all' }}
+    >
       {asI18n(`${m.webhooks_dev_event()}: ${definition.event}`)}
     </Text>
     {Object.entries(definition.payload ?? {}).map(([key, schema]) => (
@@ -274,7 +305,12 @@ const DevDeclared: React.FC<{ definition: WebhookDefinitionMeta }> = ({
       </Text>
     ))}
     {definition.exportedName && (
-      <Text size="xs" c="dimmed" ff="monospace" style={{ wordBreak: 'break-all' }}>
+      <Text
+        size="xs"
+        c="dimmed"
+        ff="monospace"
+        style={{ wordBreak: 'break-all' }}
+      >
         {asI18n(
           `${m.webhooks_dev_declared_in()}: ${definition.exportedName}${
             definition.sourceFile
@@ -294,10 +330,22 @@ const DevWebhook: React.FC<{ hook: AppWebhook }> = ({ hook }) => {
       <Text size="sm" fw={600}>
         {nameOf(hook)}
       </Text>
-      <Text size="xs" c="dimmed" ff="monospace" style={{ wordBreak: 'break-all' }}>
-        {asI18n(`${m.webhooks_dev_event()}: ${hook.event ?? m.webhooks_dev_none()}`)}
+      <Text
+        size="xs"
+        c="dimmed"
+        ff="monospace"
+        style={{ wordBreak: 'break-all' }}
+      >
+        {asI18n(
+          `${m.webhooks_dev_event()}: ${hook.event ?? m.webhooks_dev_none()}`
+        )}
       </Text>
-      <Text size="xs" c="dimmed" ff="monospace" style={{ wordBreak: 'break-all' }}>
+      <Text
+        size="xs"
+        c="dimmed"
+        ff="monospace"
+        style={{ wordBreak: 'break-all' }}
+      >
         {asI18n(`${m.webhooks_dev_address()}: ${hook.url}`)}
       </Text>
       {data?.attempts.map((a) => (
@@ -326,8 +374,8 @@ export const WebhooksCards: React.FC = () => {
   const { data: deliveries = [], isLoading } = useWebhookDeliveries()
 
   const { declared, other } = useMemo(() => {
-    const definitions = Object.values(meta.webhooksMeta ?? {}).sort((a, b) =>
-      a.title.localeCompare(b.title)
+    const definitions = Object.values(meta.outgoingWebhooksMeta ?? {}).sort(
+      (a, b) => a.title.localeCompare(b.title)
     )
     const known = new Set(definitions.map((d) => d.event))
     const hooks = groupWebhooks(deliveries)
@@ -342,7 +390,7 @@ export const WebhooksCards: React.FC = () => {
       }),
       other: hooks.filter((h) => !h.event || !known.has(h.event)),
     }
-  }, [meta.webhooksMeta, deliveries])
+  }, [meta.outgoingWebhooksMeta, deliveries])
 
   const failing =
     declared.filter((h) => h.deliveries[0]?.status === 'failed').length +
@@ -386,7 +434,9 @@ export const WebhooksCards: React.FC = () => {
         blurb={m.webhooks_list_blurb()}
         right={
           overall && (
-            <StatusBadge tone={overall.tone}>{asI18n(overall.label)}</StatusBadge>
+            <StatusBadge tone={overall.tone}>
+              {asI18n(overall.label)}
+            </StatusBadge>
           )
         }
       >
@@ -408,7 +458,11 @@ export const WebhooksCards: React.FC = () => {
             </Text>
           ) : (
             declared.map((hook) => (
-              <DeclaredRow key={hook.definition.event} hook={hook} locale={locale} />
+              <DeclaredRow
+                key={hook.definition.event}
+                hook={hook}
+                locale={locale}
+              />
             ))
           )}
         </Stack>

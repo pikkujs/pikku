@@ -1,4 +1,4 @@
-import type { WebhookDefinitionsMeta } from '@pikku/core/webhook'
+import type { OutgoingWebhooksMeta } from '@pikku/core/webhook'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export interface WebhookDeclaration {
@@ -12,8 +12,8 @@ export interface WebhookDeclaration {
 
 export const buildWebhooksMeta = (
   webhooks: readonly WebhookDeclaration[]
-): WebhookDefinitionsMeta => {
-  const meta: WebhookDefinitionsMeta = {}
+): OutgoingWebhooksMeta => {
+  const meta: OutgoingWebhooksMeta = {}
   for (const webhook of [...webhooks].sort((a, b) =>
     a.event.localeCompare(b.event)
   )) {
@@ -33,35 +33,43 @@ export const buildWebhooksMeta = (
 
 export const serializeWebhooks = ({
   webhooks,
-  webhooksFile,
+  outgoingWebhooksFile,
+  outgoingWebhooksMetaJsonFile,
   packageMappings,
 }: {
   webhooks: readonly WebhookDeclaration[]
-  webhooksFile: string
+  outgoingWebhooksFile: string
+  outgoingWebhooksMetaJsonFile?: string
   packageMappings: Record<string, string>
 }): string => {
   const sorted = [...webhooks].sort((a, b) => a.event.localeCompare(b.event))
   const imports = sorted.map(
     (webhook, index) =>
-      `import type { ${webhook.variable} as webhook${index} } from '${getFileImportRelativePath(webhooksFile, webhook.file, packageMappings)}'`
+      `import type { ${webhook.variable} as webhook${index} } from '${getFileImportRelativePath(outgoingWebhooksFile, webhook.file, packageMappings)}'`
   )
   const entries = sorted.map(
     (webhook, index) =>
-      `  ${JSON.stringify(webhook.event)}: WebhookPayloadOf<typeof webhook${index}>`
+      `  ${JSON.stringify(webhook.event)}: OutgoingWebhookPayloadOf<typeof webhook${index}>`
   )
   return [
-    `import type { TypedWebhookService as CoreTypedWebhookService${entries.length > 0 ? ', WebhookPayloadOf' : ''} } from '@pikku/core/webhook'`,
+    entries.length > 0
+      ? `import type { TypedWebhookService as CoreTypedWebhookService, OutgoingWebhookPayloadOf } from '@pikku/core/webhook'`
+      : `import type { TypedWebhookService as CoreTypedWebhookService } from '@pikku/core/webhook'`,
     `import type { WebhookService } from '@pikku/core/services'`,
-    `import './pikku-webhooks-meta.gen.json' with { type: 'json' }`,
+    ...(outgoingWebhooksMetaJsonFile
+      ? [
+          `import '${getFileImportRelativePath(outgoingWebhooksFile, outgoingWebhooksMetaJsonFile, packageMappings)}' with { type: 'json' }`,
+        ]
+      : []),
     ...imports,
     '',
     entries.length > 0
-      ? `export interface WebhooksMap {\n${entries.join('\n')}\n}`
-      : `export interface WebhooksMap {}`,
+      ? `export interface OutgoingWebhooksMap {\n${entries.join('\n')}\n}`
+      : `export interface OutgoingWebhooksMap {}`,
     '',
-    `export type WebhookEvent = keyof WebhooksMap`,
+    `export type OutgoingWebhookEvent = keyof OutgoingWebhooksMap`,
     '',
-    `export type TypedWebhookService = CoreTypedWebhookService<WebhooksMap>`,
+    `export type TypedWebhookService = CoreTypedWebhookService<OutgoingWebhooksMap>`,
     '',
     `export const typedWebhookService = (service: WebhookService): TypedWebhookService =>\n  service as unknown as TypedWebhookService`,
     '',

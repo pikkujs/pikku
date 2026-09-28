@@ -297,9 +297,18 @@ export interface PikkuCLICoreOutputFiles {
   // Variables metadata JSON
   variablesMetaJsonFile: string
 
-  webhooksFile: string
+  outgoingWebhooksFile: string
 
-  webhooksMetaJsonFile: string
+  outgoingWebhooksMetaJsonFile: string
+
+  // Each webhook source's route and the worker that dispatches its events.
+  webhookSourcesFile: string
+
+  webhookSourcesLifecycleFile: string
+
+  webhookSourcesMetaFile: string
+
+  webhookSourcesMetaJsonFile: string
 }
 
 export type PikkuCLIInput = {
@@ -901,6 +910,14 @@ export type PikkuCLIInput = {
        */
       url?: string
     }
+  }
+
+  /** Branches `pikku release` moves; defaults staging → main via release/next on origin. */
+  release?: {
+    trunk?: string
+    production?: string
+    branch?: string
+    remote?: string
   }
 
   /** Named filter presets keyed by name, used via CLI --filter <name>. */

@@ -20,6 +20,11 @@ import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbCodegen } from './functions/commands/db-codegen.js'
+import {
+  webhooksSetup,
+  webhooksStatus,
+  webhooksTeardown,
+} from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
@@ -32,6 +37,16 @@ import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
 import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
+import {
+  pikkuReleaseDiff,
+  pikkuReleaseInit,
+  pikkuReleasePrepare,
+  pikkuReleaseSnapshot,
+} from './functions/commands/release.js'
+import {
+  renderReleaseInit,
+  renderReleasePrepare,
+} from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import {
   examplesAdd,
@@ -391,15 +406,14 @@ wireCLI({
       func: pikkuSemver,
       render: renderSemver,
       description:
-        "Derive the release semver by comparing this build's surface against a deployed one; writes .pikku/changes.gen.json",
+        'Deprecated: use `pikku release diff` or `pikku release snapshot`',
       options: {
         against: {
           description:
             'Baseline to compare against: a .pikku directory, a snapshot file, or a snapshot URL',
         },
         emit: {
-          description:
-            "Produce this build's surface snapshot instead of comparing — publish it to serve as a baseline. Pair with --out; without it the snapshot goes to stdout after the CLI banner",
+          description: 'Same as `pikku release snapshot`',
           default: false,
         },
         out: {
@@ -412,6 +426,72 @@ wireCLI({
         },
       },
     }),
+    release: {
+      description:
+        'Version and changelog releases from the API surface, for trunk to ship to production',
+      subcommands: {
+        diff: pikkuCLICommand({
+          func: pikkuReleaseDiff,
+          render: renderSemver,
+          description:
+            "Compare this build's surface against the last release and report the semver it owes; writes .pikku/changes.gen.json",
+          options: {
+            against: {
+              description:
+                'Baseline to compare against instead of surface.pikku.json: a .pikku directory, a snapshot file, or a snapshot URL',
+            },
+            out: {
+              description:
+                'Where to write the changes (defaults to .pikku/changes.gen.json)',
+            },
+            failOn: {
+              description:
+                'Exit non-zero when the verdict is at or above this level: major, minor or patch',
+            },
+          },
+        }),
+        snapshot: pikkuCLICommand({
+          func: pikkuReleaseSnapshot,
+          render: renderSemver,
+          description:
+            "Write this build's surface snapshot, the baseline a later diff compares against",
+          options: {
+            out: {
+              description:
+                'Where to write the snapshot (defaults to stdout, after the CLI banner)',
+            },
+          },
+        }),
+        init: pikkuCLICommand({
+          func: pikkuReleaseInit,
+          render: renderReleaseInit,
+          description:
+            'Write surface.pikku.json and CHANGELOG.md, the baseline the first release is measured against',
+          options: {
+            force: {
+              description: 'Overwrite an existing surface.pikku.json',
+              default: false,
+            },
+          },
+        }),
+        prepare: pikkuCLICommand({
+          func: pikkuReleasePrepare,
+          render: renderReleasePrepare,
+          description:
+            'Bump package.json and write the changelog and snapshot for the next release; commits and pushes nothing',
+          options: {
+            dryRun: {
+              description: 'Work out the release without writing anything',
+              default: false,
+            },
+            goLive: {
+              description: 'Release 1.0.0: the app is live and 0.x is over',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
     watch: pikkuCLICommand({
       func: watch,
       description: 'Watch for file changes and regenerate automatically',
@@ -541,6 +621,72 @@ wireCLI({
           func: pikkuEmails,
           description:
             'Generate typed email renderers and metadata from emailTemplatesDir in pikku.config.json',
+        }),
+      },
+    },
+    webhooks: {
+      description: 'Register webhook sources with their providers',
+      subcommands: {
+        status: pikkuCLICommand({
+          func: webhooksStatus,
+          description:
+            'Check each webhook source at its provider, printing one JSON line per source: ok, missing or drifted',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+          },
+        }),
+        setup: pikkuCLICommand({
+          func: webhooksSetup,
+          description:
+            'Create or update each webhook source at its provider where its check is not ok, printing one JSON line per source with any signing secret it produced',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+            secretsOut: {
+              description:
+                'Write produced signing secrets to this file (mode 600) as { secretName: secret } instead of printing them',
+            },
+          },
+        }),
+        teardown: pikkuCLICommand({
+          func: webhooksTeardown,
+          description:
+            'Remove each webhook source from its provider, printing one JSON line per source',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+          },
         }),
       },
     },
@@ -1204,7 +1350,8 @@ wireCLI({
                 'Header sent when fetching --openapi from a URL, as "Name: value" (repeatable), for specs published only to authenticated requests',
             },
             tags: {
-              description: 'With --openapi: keep only operations with these tags',
+              description:
+                'With --openapi: keep only operations with these tags',
             },
             include: {
               description:

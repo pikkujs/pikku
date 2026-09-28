@@ -167,8 +167,8 @@ bunx --bun pikku versions init
 
 The CLI suggests this on every run of a project without it. Versioning a function
 contract, then changing it, is a short milestone that shows something no
-scaffold demonstrates on its own. `pikku semver` derives the release version by
-comparing this build's surface against a deployed one.
+scaffold demonstrates on its own. `pikku release` derives the release version by
+comparing this build's surface against the last release, then ships it.
 
 ### Addons — `pikku-addon`
 

@@ -1,3 +1,4 @@
+import { normalize } from './meta-diff.js'
 import { diffSchema, type SchemaChange } from './schema-diff.js'
 import type { Surface, WiringCategory } from './surface.js'
 
@@ -210,7 +211,10 @@ function diffWirings(
           breaking: false,
           reasons: [`${category} wiring added`],
         })
-      } else if (JSON.stringify(previous[id]) !== JSON.stringify(current[id])) {
+      } else if (
+        JSON.stringify(normalize(previous[id])) !==
+        JSON.stringify(normalize(current[id]))
+      ) {
         // Requiring a session on something that did not is the one wiring-level
         // change that shuts out existing callers outright.
         const closed = !authRequired(previous[id]) && authRequired(current[id])

@@ -1,7 +1,11 @@
 import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { InMemoryQueueService, QueueWebhookService } from '@pikku/core/services'
+import {
+  IncomingWebhookService,
+  InMemoryQueueService,
+  QueueWebhookService,
+} from '@pikku/core/services'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import {
@@ -19,6 +23,7 @@ import {
   KyselyFeatureFlagStore,
   KyselyScopeService,
   KyselyWebhookService,
+  KyselyIncomingWebhookService,
 } from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
@@ -204,6 +209,13 @@ export const serve = pikkuSessionlessFunc<
     if (serveWebhookService instanceof KyselyWebhookService) {
       await serveWebhookService.init()
     }
+    const serveIncomingWebhookService =
+      kysely && requiredServices.has('incomingWebhookService')
+        ? new KyselyIncomingWebhookService(serveQueueService, kysely as any)
+        : new IncomingWebhookService(serveQueueService)
+    if (serveIncomingWebhookService instanceof KyselyIncomingWebhookService) {
+      await serveIncomingWebhookService.init()
+    }
     const inMemoryServices = {
       logger: devLogger,
       ...(agentRunner ? { agentRunner } : {}),
@@ -212,6 +224,7 @@ export const serve = pikkuSessionlessFunc<
       schedulerService,
       queueService: serveQueueService,
       webhookService: serveWebhookService,
+      incomingWebhookService: serveIncomingWebhookService,
       ...(scopeService ? { scopeService } : {}),
       workflowService,
       workflowRunService: workflowService,
