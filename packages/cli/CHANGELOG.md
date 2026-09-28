@@ -1,3 +1,21 @@
+## 0.12.168
+
+### Patch Changes
+
+- 5e93f30: Add `defineOutgoingWebhook({ event, title, description?, payload })` in `@pikku/core/webhook`. The CLI collects every exported declaration into `.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json` and `pikku-outgoing-webhooks.gen.ts`, which exports `OutgoingWebhooksMap`, `TypedWebhookService` and `typedWebhookService(service)`: `send` checks `data` against the declared payload for a declared event and accepts any other event unchanged. `MetaService.getOutgoingWebhooksMeta()` and the console addon's `outgoingWebhooksMeta` serve the declarations.
+- a45bdaa: Add `pikku release`: versioned releases from the API surface. `release prepare` diffs the surface against the committed `surface.pikku.json`, bumps `package.json`, prepends a `CHANGELOG.md` section listing the API changes and any `Release-Note:` commit trailers, and records the result in `release.gen.json`. It never commits, tags or pushes — the caller does, with plain git or a platform. The bump comes from the surface diff alone; below 1.0 a breaking change is a minor, and `--go-live` cuts 1.0.0. `release diff` and `release snapshot` replace `pikku semver`, which stays as a deprecated alias. Surface wirings no longer carry `sourceFile`, so a baseline from another checkout no longer reports every route as modified.
+- 5e93f30: Add `wireTriggerWebhookSource({ name, method?, route?, secret?, events, receive?, check?, setup?, teardown? })` in `#pikku/trigger`. Each source becomes a `POST /webhooks/<name>` route whose events are validated against their schemas and queued on `pikku-incoming-webhooks` through `IncomingWebhookService`; a generated worker runs the matching `wireTrigger({ name: '<source>:<event>' })` and the queue retries it on failure. `pikku webhooks status | setup | teardown --url --labelPrefix [--previous]` registers the routes with the provider and prints one JSON line per source.
+
+  `KyselyIncomingWebhookService` (with the `incoming-webhook` schema) records a receipt per event, drops a provider's redelivery of an event it already accepted, and keeps each dispatch's attempts and last error. `pikku dev` and `pikku serve` use it when a Kysely database is configured.
+
+- Updated dependencies [5e93f30]
+- Updated dependencies [a45bdaa]
+- Updated dependencies [5e93f30]
+  - @pikku/core@0.12.125
+  - @pikku/inspector@0.12.91
+  - @pikku/skills@0.12.41
+  - @pikku/kysely@0.13.29
+
 ## 0.12.167
 
 ### Patch Changes
