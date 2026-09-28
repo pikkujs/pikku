@@ -526,6 +526,23 @@ export type PikkuCLIInput = {
      * `CREATE EXTENSION` in a migration fails there unless it is declared here.
      */
     pgliteExtensions?: string[]
+
+    /**
+     * Loadable SQLite extensions loaded into every SQLite connection the CLI
+     * opens: migrations, the shadow database, the dev server and the seed.
+     *
+     * Defaults to `['sqlite-vec']`, so `CREATE VIRTUAL TABLE ... USING vec0(...)`
+     * works with no configuration. `[]` loads nothing. Setting this replaces the
+     * default, so list `sqlite-vec` too if you still want it.
+     *
+     * An entry is either a package that exports `getLoadablePath()` (as
+     * sqlite-vec does), resolved from the project and then from the CLI, or a
+     * path to the extension's library file, relative to the project.
+     *
+     * Separate from `pgliteExtensions` because a Postgres extension and a SQLite
+     * one never share a build, and often not a name.
+     */
+    sqliteExtensions?: string[]
   }
 
   cli?: {

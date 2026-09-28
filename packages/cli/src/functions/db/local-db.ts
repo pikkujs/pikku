@@ -38,6 +38,12 @@ import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
+import {
+  DEFAULT_SQLITE_EXTENSIONS,
+  explainMissingSqliteExtension,
+  openSqlite,
+  type SqliteExtensionContext,
+} from './sqlite/sqlite-extensions.js'
 import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
@@ -67,7 +73,8 @@ interface ResolvedDbBase {
   defaultSchema?: string
 }
 
-export interface ResolvedSqliteDb extends ResolvedDbBase {
+export interface ResolvedSqliteDb
+  extends ResolvedDbBase, SqliteExtensionContext {
   dialect: 'sqlite'
   dbFile: string
   runtimeDir: string
@@ -129,7 +136,12 @@ export function resolveDb(
   outDir: string,
   runtimeDir?: string,
   dbConfig?:
-    | { schema?: string; defaultSchema?: string; pgliteExtensions?: string[] }
+    | {
+        schema?: string
+        defaultSchema?: string
+        pgliteExtensions?: string[]
+        sqliteExtensions?: string[]
+      }
     | string
 ): ResolvedDb | null {
   // The parameter took a bare schema string before `defaultSchema` existed;
@@ -203,6 +215,7 @@ export function resolveDb(
       dbFile: resolveAgainst(rootDir, sqliteDb),
       runtimeDir: resolvedRuntimeDir,
       devSeedFile: resolveAgainst(rootDir, 'db/sqlite-dev-seed.sql'),
+      ...sqliteExtensionContext(rootDir, dbConfig),
       ...base('db/sqlite'),
     }
   }
@@ -221,6 +234,19 @@ export function resolveDb(
   }
 
   return null
+}
+
+function sqliteExtensionContext(
+  rootDir: string,
+  dbConfig: Parameters<typeof resolveDb>[4]
+): SqliteExtensionContext {
+  const declared =
+    typeof dbConfig === 'string' ? undefined : dbConfig?.sqliteExtensions
+  return {
+    rootDir,
+    sqliteExtensions: declared ?? DEFAULT_SQLITE_EXTENSIONS,
+    sqliteExtensionsDeclared: declared !== undefined,
+  }
 }
 
 function resolveAgainst(root: string, p: string): string {
@@ -568,14 +594,20 @@ export async function migrateAndCodegen(
   )
 
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
     if (!options.scratch) {
       mkdirSync(dirname(resolved.dbFile), { recursive: true })
     }
-    const db = runtime.open(options.scratch ? ':memory:' : resolved.dbFile)
+    const db = await openSqlite(
+      resolved,
+      options.scratch ? ':memory:' : resolved.dbFile
+    )
     try {
       const executor = new SqliteMigrationExecutor(db)
-      migrateResult = await migrate(executor, resolved.migrationsDir)
+      try {
+        migrateResult = await migrate(executor, resolved.migrationsDir)
+      } catch (error) {
+        throw explainMissingSqliteExtension(error, resolved)
+      }
       const introspector = new SqliteIntrospector(db)
       codegenResult = await generateSchemaTypes(introspector, {
         outFile: resolved.schemaFile,
@@ -670,10 +702,11 @@ export async function devSeed(resolved: ResolvedDb): Promise<DevSeedResult> {
   }
 
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
-    const db = runtime.open(resolved.dbFile)
+    const db = await openSqlite(resolved, resolved.dbFile)
     try {
       return runDevSeed(db, resolved.devSeedFile)
+    } catch (error) {
+      throw explainMissingSqliteExtension(error, resolved)
     } finally {
       db.close()
     }
@@ -873,9 +906,8 @@ export async function createKysely<DB>(
 
   if (resolved.dialect === 'sqlite') {
     mkdirSync(dirname(resolved.dbFile), { recursive: true })
-    const runtime = await loadSqliteRuntime()
     return createSqliteKysely<DB>({
-      db: runtime.open(resolved.dbFile),
+      db: await openSqlite(resolved, resolved.dbFile),
       camelCase: resolved.camelCase,
       plugins,
     })
@@ -1271,8 +1303,7 @@ export async function introspectSchema(
   resolved: ResolvedDb
 ): Promise<SchemaMap> {
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
-    const db = runtime.open(resolved.dbFile)
+    const db = await openSqlite(resolved, resolved.dbFile)
     try {
       return await introspectorToMap(new SqliteIntrospector(db))
     } finally {
@@ -1290,11 +1321,17 @@ export async function introspectSchema(
   })
 }
 
-async function coveredSqliteSchema(migrationsDir: string): Promise<SchemaMap> {
-  const runtime = await loadSqliteRuntime()
-  const db = runtime.open(':memory:')
+async function coveredSqliteSchema(
+  migrationsDir: string,
+  context: SqliteExtensionContext
+): Promise<SchemaMap> {
+  const db = await openSqlite(context, ':memory:')
   try {
-    await migrate(new SqliteMigrationExecutor(db), migrationsDir)
+    try {
+      await migrate(new SqliteMigrationExecutor(db), migrationsDir)
+    } catch (error) {
+      throw explainMissingSqliteExtension(error, context)
+    }
     return await introspectorToMap(new SqliteIntrospector(db))
   } finally {
     db.close()
@@ -1358,7 +1395,7 @@ export async function computeSchemaDrift(
 ): Promise<SchemaDriftResult> {
   const covered =
     resolved.dialect === 'sqlite'
-      ? await coveredSqliteSchema(resolved.migrationsDir)
+      ? await coveredSqliteSchema(resolved.migrationsDir, resolved)
       : await coveredPostgresSchema(resolved.migrationsDir, resolved)
   const actual = await introspectSchema(resolved)
 
@@ -1432,9 +1469,8 @@ export async function baseline(
   if (!drift.inSync) return { status: 'behind', drift }
 
   if (resolved.dialect === 'sqlite') {
-    const runtime = await loadSqliteRuntime()
     mkdirSync(dirname(resolved.dbFile), { recursive: true })
-    const db = runtime.open(resolved.dbFile)
+    const db = await openSqlite(resolved, resolved.dbFile)
     try {
       const recorded = await baselineMigrations(
         new SqliteMigrationExecutor(db),
@@ -1613,7 +1649,8 @@ const concatMigrations = (migrationsDir: string): string =>
  */
 export async function exportSchema(
   rootDir: string,
-  pgliteExtensions: string[] = []
+  pgliteExtensions: string[] = [],
+  sqliteExtensions?: string[]
 ): Promise<SchemaArtifact> {
   const artifact: SchemaArtifact = {}
 
@@ -1621,7 +1658,12 @@ export async function exportSchema(
   if (existsSync(sqliteDir)) {
     artifact.sqlite = {
       sql: concatMigrations(sqliteDir),
-      tables: serializeSchemaMap(await coveredSqliteSchema(sqliteDir)),
+      tables: serializeSchemaMap(
+        await coveredSqliteSchema(
+          sqliteDir,
+          sqliteExtensionContext(rootDir, { sqliteExtensions })
+        )
+      ),
     }
   }
 
@@ -1649,9 +1691,14 @@ export async function exportSchema(
 export async function writeSchemaArtifact(
   rootDir: string,
   outDir: string,
-  pgliteExtensions?: string[]
+  pgliteExtensions?: string[],
+  sqliteExtensions?: string[]
 ): Promise<{ file: string; dialects: string[] }> {
-  const artifact = await exportSchema(rootDir, pgliteExtensions)
+  const artifact = await exportSchema(
+    rootDir,
+    pgliteExtensions,
+    sqliteExtensions
+  )
   const file = join(outDir, 'db', 'pikku-db-meta.gen.json')
   mkdirSync(dirname(file), { recursive: true })
   writeFileSync(file, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8')
@@ -1930,7 +1977,7 @@ export async function generateMigrations(
     // is part of what the next one is compared against.
     const covered =
       resolved.dialect === 'sqlite'
-        ? await coveredSqliteSchema(resolved.migrationsDir)
+        ? await coveredSqliteSchema(resolved.migrationsDir, resolved)
         : await coveredPostgresSchema(resolved.migrationsDir, resolved)
 
     const { missingTables, missingColumns } = diffSchemas(

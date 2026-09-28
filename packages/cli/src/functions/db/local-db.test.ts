@@ -658,6 +658,127 @@ test('a module that exports no PGlite extension is rejected by name', async () =
   )
 })
 
+/**
+ * Whether this runtime can load a SQLite extension at all. Bun on macOS links
+ * Apple's SQLite, which cannot, so each vec0 test below only runs where its
+ * half of the behaviour applies.
+ */
+const sqliteLoadsExtensions = await (async () => {
+  const { getLoadablePath } = createRequire(import.meta.url)('sqlite-vec')
+  try {
+    const runtime = await loadSqliteRuntime()
+    runtime.open(':memory:', { extensions: [getLoadablePath()] }).close()
+    return true
+  } catch {
+    return false
+  }
+})()
+
+const VEC0_MIGRATION = `CREATE VIRTUAL TABLE passage_vectors USING vec0(
+  embedding float[3] distance_metric=cosine
+);
+`
+
+test('resolveDb loads sqlite-vec by default, and db.sqliteExtensions replaces it', () => {
+  const byDefault = resolveDb({}, root, root) as ResolvedSqliteDb
+  assert.deepEqual(byDefault.sqliteExtensions, ['sqlite-vec'])
+  assert.equal(byDefault.sqliteExtensionsDeclared, false)
+
+  const none = resolveDb({}, root, root, undefined, {
+    sqliteExtensions: [],
+  }) as ResolvedSqliteDb
+  assert.deepEqual(none.sqliteExtensions, [])
+  assert.equal(none.sqliteExtensionsDeclared, true)
+})
+
+test(
+  'sqlite-vec is available to the sqlite database without a declaration',
+  { skip: !sqliteLoadsExtensions && 'this SQLite cannot load extensions' },
+  async () => {
+    writeFileSync(
+      join(root, 'db', 'sqlite', '0002-vectors.sql'),
+      VEC0_MIGRATION
+    )
+    const resolved = resolveDb({}, root, root)!
+    const { codegen } = await migrateAndCodegen(resolved)
+    // vec0's own storage tables are not the project's to type.
+    assert.deepEqual(
+      codegen.tables.filter((t) => t.startsWith('passage_vectors')),
+      ['passage_vectors']
+    )
+
+    const db = await createKysely<any>(resolved)
+    try {
+      await sql`insert into passage_vectors (rowid, embedding) values
+        (1, '[1,0,0]'), (2, '[0,1,0]')`.execute(db)
+      const { rows } = await sql<{ rowid: number }>`
+        select rowid from passage_vectors
+        where embedding match '[0.9,0.1,0]' and k = 1`.execute(db)
+      assert.deepEqual(
+        rows.map((r) => r.rowid),
+        [1]
+      )
+    } finally {
+      await db.destroy()
+    }
+  }
+)
+
+test(
+  'a runtime that cannot load sqlite-vec skips it, and says so when a migration needs it',
+  { skip: sqliteLoadsExtensions && 'this SQLite loads extensions' },
+  async () => {
+    const resolved = resolveDb({}, root, root)!
+    // Everything that does not need the extension still works.
+    await migrateAndCodegen(resolved, { scratch: true })
+
+    writeFileSync(
+      join(root, 'db', 'sqlite', '0002-vectors.sql'),
+      VEC0_MIGRATION
+    )
+    await assert.rejects(
+      migrateAndCodegen(resolved, { scratch: true }),
+      (error: Error) => {
+        assert.match(error.message, /no such module: vec0/)
+        assert.match(
+          error.message,
+          /loaded by default, but could not be loaded here/
+        )
+        return true
+      }
+    )
+  }
+)
+
+test('a vec0 migration with sqlite-vec opted out says to add it back', async () => {
+  writeFileSync(join(root, 'db', 'sqlite', '0002-vectors.sql'), VEC0_MIGRATION)
+  const resolved = resolveDb({}, root, root, undefined, {
+    sqliteExtensions: [],
+  })!
+  await assert.rejects(
+    migrateAndCodegen(resolved, { scratch: true }),
+    (error: Error) => {
+      assert.match(error.message, /no such module: vec0/)
+      assert.match(error.message, /Add 'sqlite-vec' to it/)
+      return true
+    }
+  )
+})
+
+test('an unresolvable declared SQLite extension fails rather than being skipped', async () => {
+  const resolved = resolveDb({}, root, root, undefined, {
+    sqliteExtensions: ['@not-installed/sqlite-nothing'],
+  })!
+  await assert.rejects(
+    migrateAndCodegen(resolved, { scratch: true }),
+    (error: Error) => {
+      assert.match(error.message, /db\.sqliteExtensions could not be loaded/)
+      assert.match(error.message, /could not be resolved/)
+      return true
+    }
+  )
+})
+
 test('scratch codegen types the sqlite migrations without creating the db file', async () => {
   const resolved = resolveDb({}, root, root)!
   assert.equal(resolved.dialect, 'sqlite')

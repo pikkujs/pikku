@@ -69,6 +69,7 @@
     "path-to-regexp": "^8.4.2",
     "pg": "^8.23.0",
     "semver": "^7.8.5",
+    "sqlite-vec": "0.1.9",
     "tinyglobby": "^0.2.17",
     "ts-json-schema-generator": "2.9.1-next.18",
     "tsx": "^4.23.12",

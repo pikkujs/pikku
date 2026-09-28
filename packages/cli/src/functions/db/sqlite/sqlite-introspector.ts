@@ -32,7 +32,48 @@ export class SqliteIntrospector implements DbIntrospector {
            ORDER BY name`
       )
       .all() as Array<{ name: string }>
-    return rows.map((r) => r.name).filter((n) => !SKIP_TABLES.has(n))
+    const shadow = this.shadowTables()
+    return rows
+      .map((r) => r.name)
+      .filter((n) => !SKIP_TABLES.has(n) && !shadow.has(n))
+  }
+
+  /**
+   * Tables a virtual table keeps its own data in — fts5's `_data` and `_idx`,
+   * vec0's `_chunks` and `_rowids`. They are created by the `CREATE VIRTUAL
+   * TABLE` and belong to its module, so typing them would only invite writes
+   * that corrupt the index. SQLite marks them `shadow` in `table_list` while
+   * the module is loaded; without it they read as plain tables.
+   */
+  private shadowTables(): Set<string> {
+    const listed = this.db.prepare('PRAGMA table_list').all() as Array<{
+      name: string
+      type: string
+    }>
+    const shadow = new Set(
+      listed.filter((t) => t.type === 'shadow').map((t) => t.name)
+    )
+
+    // sqlite-vec 0.1 leaves one kind out of its own shadow set: the per-column
+    // `<table>_vector_chunksNN` it stores the vectors themselves in.
+    const vec0Tables = (
+      this.db
+        .prepare(
+          `SELECT name, sql FROM sqlite_master
+             WHERE type = 'table' AND sql LIKE 'create virtual table%'`
+        )
+        .all() as Array<{ name: string; sql: string }>
+    ).filter((t) => /\busing\s+vec0\b/i.test(t.sql))
+    for (const { name: table } of listed) {
+      if (
+        vec0Tables.some(({ name }) =>
+          new RegExp(`^${escapeRegExp(name)}_vector_chunks\\d+$`).test(table)
+        )
+      ) {
+        shadow.add(table)
+      }
+    }
+    return shadow
   }
 
   async getColumns(table: string): Promise<ColumnInfo[]> {
@@ -105,4 +146,8 @@ export class SqliteIntrospector implements DbIntrospector {
   async close(): Promise<void> {
     this.db.close()
   }
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

@@ -1,6 +1,10 @@
-export { SqliteMigrationExecutor, dropTrackingTable } from './sqlite-migrator.js'
+export {
+  SqliteMigrationExecutor,
+  dropTrackingTable,
+} from './sqlite-migrator.js'
 export { loadSqliteRuntime } from './sqlite-runtime.js'
 export type {
+  SqliteOpenOptions,
   SqliteRuntime,
   SyncSqliteChanges,
   SyncSqliteDatabase,
