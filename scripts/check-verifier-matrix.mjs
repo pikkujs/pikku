@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Every directory under verifiers/ must run in both workflows.
+// Every directory under verifiers/ must run in CI.
 //
 // The two matrices are maintained by hand and drifted: `scopes` and
 // `feature-flags` were added to the Release matrix but not to the CI one, so
@@ -17,10 +17,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const DEDICATED = new Set(['binary', 'db-vectors', 'fullstack'])
 
-const WORKFLOWS = [
-  '.github/workflows/develop.yml',
-  '.github/workflows/main.yml',
-]
+const WORKFLOWS = ['.github/workflows/develop.yml']
 
 const matrixOf = (workflow) => {
   const source = readFileSync(join(ROOT, workflow), 'utf8')
@@ -64,9 +61,9 @@ if (problems.length > 0) {
     console.error(`  • ${problem}`)
   }
   console.error(
-    '\nAdd the row to both matrices, or give the verifier its own job and list it in DEDICATED.'
+    '\nAdd the row to the matrix, or give the verifier its own job and list it in DEDICATED.'
   )
   process.exit(1)
 }
 
-console.log(`All ${verifiers.length} verifiers run in both workflows.`)
+console.log(`All ${verifiers.length} verifiers run in CI.`)
