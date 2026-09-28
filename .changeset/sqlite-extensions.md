@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 New `db.sqliteExtensions` in pikku.config.json: loadable SQLite extensions loaded into every SQLite connection the CLI opens (migrations, the shadow database, the dev server, the seed and scenario baselines). It defaults to `['sqlite-vec']`, which the CLI now ships, so `CREATE VIRTUAL TABLE ... USING vec0(...)` works in `pikku dev` with no configuration. `[]` opts out. An entry is a package exporting `getLoadablePath()` or a path to the extension's library file.
