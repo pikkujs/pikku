@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3119 observable things**: 1028 exported names, plus
-2091 members on the classes and interfaces among them, reachable
+**3122 observable things**: 1029 exported names, plus
+2093 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -20,7 +20,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
-| `./types` | 23 | 20 | 78 |
+| `./types` | 24 | 21 | 80 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
@@ -372,6 +372,7 @@ export interface SecurityAuditIssue {
   cwe: string[]
   cvssScore: number | null
   recommendedVersion: string | null
+  dependencyType?: SecurityDependencyType
 }
 export interface SecurityAuditReport {
   schemaVersion: number
@@ -398,7 +399,9 @@ export interface SecurityAuditUpdate {
   current: string
   latest: string
   level: SecurityUpdateLevel
+  dependencyType?: SecurityDependencyType
 }
+export type SecurityDependencyType = 'prod' | 'dev'
 export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
 export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
 export type ServerLifecycle<
