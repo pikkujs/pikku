@@ -347,7 +347,12 @@
     "validateAndBuildSecretDefinitionsMeta"
   ],
   "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
-  "./webhook": ["defineOutgoingWebhook"],
+  "./webhook": [
+    "defineIncomingWebhook",
+    "defineOutgoingWebhook",
+    "incomingWebhookRoute",
+    "upsertIncomingWebhooks"
+  ],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
