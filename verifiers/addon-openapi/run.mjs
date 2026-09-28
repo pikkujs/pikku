@@ -10,7 +10,9 @@
  *   weather    OpenAPI 3.1 in YAML: server variables, no security at all
  *   inventory  apiKey in a header, fetched from a URL that needs a header
  *   calendar   oauth2 authorizationCode
- *   dolibarr   a real Swagger 2.0 export with delegated login (auth-config)
+ *   dolibarr   a real Swagger 2.0 export with delegated login (auth-config),
+ *              Restler's `Obj` serializer as responses and PHP `request_data`
+ *              bodies
  *
  * Besides building, each addon is checked for what a consumer needs from it:
  * the `addon` block and icon the console lists it by, forceRequiredServices so
@@ -121,6 +123,8 @@ const corpus = [
     ],
     baseUrl: 'https://dolibarr.pikkufabric.cloud/api/index.php',
     unknownOutputs: ['usersRetrieveInfo'],
+    restlerOutputs: ['retrieveThirdparties', 'updateUsers'],
+    bodyStandIns: { createThirdparties: 'request_data' },
     delegated: true,
   },
 ]
@@ -242,6 +246,28 @@ try {
       check(
         /Output = z\.unknown\(\)/.test(schemas),
         `${addon.name}: ${fn} has a vague response and must declare z.unknown() output:\n${schemas}`
+      )
+    }
+
+    for (const fn of addon.restlerOutputs ?? []) {
+      const schemas = read(join(functionsDir, `${fn}.schemas.ts`))
+      check(
+        !schemas.includes('stringEncoderFunction'),
+        `${addon.name}: ${fn} answers with Restler's Obj serializer config, which must become an open record, not the output schema:\n${schemas}`
+      )
+    }
+    const apiService = read(
+      join(addonDir, 'src', `${addon.name}-api.service.ts`)
+    )
+    for (const [fn, key] of Object.entries(addon.bodyStandIns ?? {})) {
+      const schemas = read(join(functionsDir, `${fn}.schemas.ts`))
+      check(
+        schemas.includes(`${key}: z.record(z.string(), z.unknown())`),
+        `${addon.name}: ${fn} takes the whole body as ${key}, which must be an open record:\n${schemas}`
+      )
+      check(
+        apiService.includes(`"bodyKey": ${JSON.stringify(key)}`),
+        `${addon.name}: the route for ${fn} must send ${key} as the request body`
       )
     }
 

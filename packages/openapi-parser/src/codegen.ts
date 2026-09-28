@@ -300,11 +300,69 @@ function partitionSchemas(
   return { shared, single, unused }
 }
 
+const RESTLER_HELPER_KEYS = new Set([
+  'stringEncoderFunction',
+  'numberEncoderFunction',
+  'fix',
+  'separatorChar',
+  'removeEmpty',
+  'removeNull',
+])
+
+/** Restler's `Obj` serializer config, which Restler specs name as the response of every retrieve. */
+export function isRestlerHelper(schema: any): boolean {
+  const keys = Object.keys(schema?.properties ?? {})
+  return keys.length >= 3 && keys.every((key) => RESTLER_HELPER_KEYS.has(key))
+}
+
+const OPEN_RECORD = { type: 'object', additionalProperties: true } as const
+
+export function withoutRestlerHelpers(spec: ParsedSpec): ParsedSpec {
+  const operations = spec.operations.map((op) => {
+    const schema: any = op.responseSchema
+    if (isRestlerHelper(schema)) {
+      return { ...op, responseSchema: { ...OPEN_RECORD } }
+    }
+    if (schema?.type === 'array' && isRestlerHelper(schema.items)) {
+      return {
+        ...op,
+        responseSchema: { type: 'array', items: { ...OPEN_RECORD } },
+      }
+    }
+    return op
+  })
+  return { ...spec, operations }
+}
+
+/**
+ * The property that stands in for the whole request body, as PHP generators
+ * emit a `$request_data` method argument: a body whose only property is
+ * `request_data`, or a data-named `string[]`.
+ */
+export function bodyStandIn(schema: any): string | undefined {
+  const properties = schema?.properties
+  if (!properties) return undefined
+  const keys = Object.keys(properties)
+  if (keys.length !== 1) return undefined
+  const key = keys[0]!
+  const prop = properties[key]
+  if (key === 'request_data') return key
+  if (
+    prop?.type === 'array' &&
+    isBareString(prop.items) &&
+    /^(request_?)?(data|body|payload)$/i.test(key)
+  ) {
+    return key
+  }
+  return undefined
+}
+
 export function generateAddonFromOpenAPI(
-  spec: ParsedSpec,
+  specIn: ParsedSpec,
   vars: AddonVars,
   flags: CodegenFlags
 ): Record<string, string> {
+  const spec = withoutRestlerHelpers(specIn)
   const files: Record<string, string> = {}
   const { name } = vars
 
@@ -971,7 +1029,12 @@ function buildInputSchema(
     }
   }
 
-  if (parsed.requestBody) {
+  const standIn = parsed.requestBody && bodyStandIn(parsed.requestBody)
+  if (parsed.requestBody && standIn && !emittedNames.has(standIn)) {
+    props.push(
+      `  ${safeKey(standIn)}: z.record(z.string(), z.unknown()).describe(${JSON.stringify("The request body: the record's fields as an object")}),`
+    )
+  } else if (parsed.requestBody) {
     if (parsed.requestBody.properties) {
       const requiredSet = new Set(parsed.requestBody.required ?? [])
       for (const [key, propSchema] of Object.entries(
@@ -1311,6 +1374,7 @@ interface RouteInfo {
   query: string[]
   headers: string[]
   body?: 'form' | 'multipart'
+  bodyKey?: string
   errors?: Record<number, string>
 }
 
@@ -1379,6 +1443,12 @@ function generateServiceFile(
       query: parsed.queryParams.map((p) => p.name),
       headers: parsed.headerParams.map((p) => p.name),
     }
+    const standIn = parsed.requestBody && bodyStandIn(parsed.requestBody)
+    if (standIn) {
+      route.bodyKey = standIn
+    } else if (parsed.requestBody && !parsed.requestBody.properties) {
+      route.bodyKey = 'body'
+    }
     if (parsed.requestBodyMediaType?.includes('x-www-form-urlencoded')) {
       route.body = 'form'
     } else if (parsed.requestBodyMediaType?.includes('multipart/form-data')) {
@@ -1422,7 +1492,7 @@ function generateServiceFile(
   return `${credential === 'secret' ? `import type { ${pascalName}Secrets } from './${name}.secret.js'\n` : ''}import { ${errorClasses.join(', ')} } from '@pikku/core/errors'
 import type { TypedVariablesService } from '#pikku/addon/variables/pikku-variables.gen.js'
 
-const ROUTES: Record<string, { path: string[], query: string[], headers: string[], body?: 'form' | 'multipart', errors?: Record<number, string> }> = ${JSON.stringify(routes, null, 2)}
+const ROUTES: Record<string, { path: string[], query: string[], headers: string[], body?: 'form' | 'multipart', bodyKey?: string, errors?: Record<number, string> }> = ${JSON.stringify(routes, null, 2)}
 ${
   flags.camelCase
     ? `
@@ -1500,7 +1570,9 @@ export class ${pascalName}Service {
       const remaining = Object.fromEntries(
         Object.entries(${dataVar}).filter(([k]) => !pathQueryHeaders.has(k))
       )
-      if (Object.keys(remaining).length > 0) {
+      if (route.bodyKey && remaining[route.bodyKey] !== undefined) {
+        body = remaining[route.bodyKey] as Record<string, unknown>
+      } else if (Object.keys(remaining).length > 0) {
         body = remaining
       }
     }

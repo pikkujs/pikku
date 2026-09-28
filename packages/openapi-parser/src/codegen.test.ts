@@ -1,7 +1,12 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import ts from 'typescript'
-import { generateAddonFromOpenAPI } from './codegen.js'
+import {
+  bodyStandIn,
+  generateAddonFromOpenAPI,
+  isRestlerHelper,
+  withoutRestlerHelpers,
+} from './codegen.js'
 import type { ParsedSpec, ParsedOperation } from './parse-openapi.js'
 
 function makeVars(
@@ -1352,4 +1357,293 @@ describe('generated sources parse', () => {
       }
     })
   }
+})
+
+// ---------------------------------------------------------------------------
+// Restler serializer helpers as response schemas
+// ---------------------------------------------------------------------------
+describe('Restler helper responses', () => {
+  const restlerObj = {
+    type: 'object',
+    properties: {
+      stringEncoderFunction: { type: 'string' },
+      numberEncoderFunction: { type: 'string' },
+      fix: { type: 'boolean' },
+      separatorChar: { type: 'string' },
+      removeEmpty: { type: 'boolean' },
+      removeNull: { type: 'boolean' },
+    },
+  }
+
+  test('isRestlerHelper recognises the Obj serializer config', () => {
+    assert.equal(isRestlerHelper(restlerObj), true)
+    assert.equal(
+      isRestlerHelper({
+        type: 'object',
+        properties: { fix: {}, removeEmpty: {}, removeNull: {} },
+      }),
+      true
+    )
+  })
+
+  test('isRestlerHelper refuses real records and near misses', () => {
+    assert.equal(isRestlerHelper(undefined), false)
+    assert.equal(isRestlerHelper({ type: 'string' }), false)
+    assert.equal(isRestlerHelper({ type: 'object', properties: {} }), false)
+    assert.equal(
+      isRestlerHelper({
+        type: 'object',
+        properties: { fix: {}, removeNull: {} },
+      }),
+      false,
+      'two helper keys alone are too little to be sure'
+    )
+    assert.equal(
+      isRestlerHelper({
+        type: 'object',
+        properties: { ...restlerObj.properties, id: { type: 'integer' } },
+      }),
+      false,
+      'one real field makes it a record'
+    )
+  })
+
+  test('withoutRestlerHelpers opens the helper, alone or as array items', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({ operationId: 'one', path: '/a', responseSchema: restlerObj }),
+        makeOp({
+          operationId: 'many',
+          path: '/b',
+          responseSchema: { type: 'array', items: restlerObj },
+        }),
+        makeOp({
+          operationId: 'real',
+          path: '/c',
+          responseSchema: {
+            type: 'object',
+            properties: { id: { type: 'integer' } },
+          },
+        }),
+      ],
+    })
+    const [one, many, real] = withoutRestlerHelpers(spec).operations
+    assert.deepEqual(one!.responseSchema, {
+      type: 'object',
+      additionalProperties: true,
+    })
+    assert.deepEqual(many!.responseSchema, {
+      type: 'array',
+      items: { type: 'object', additionalProperties: true },
+    })
+    assert.equal(real!.responseSchema, spec.operations[2]!.responseSchema)
+  })
+
+  test('the generated output schema carries no serializer fields', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({ operationId: 'getThing', responseSchema: restlerObj }),
+      ],
+    })
+    const schemas = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+    })['src/functions/getThing.schemas.ts']!
+    assert.doesNotMatch(schemas, /stringEncoderFunction|removeEmpty/, schemas)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PHP request_data body stand-in
+// ---------------------------------------------------------------------------
+describe('request body stand-in', () => {
+  const flags = { oauth: false, secret: false }
+
+  test('bodyStandIn names a lone request_data, whatever its shape', () => {
+    assert.equal(
+      bodyStandIn({
+        type: 'object',
+        properties: {
+          request_data: { type: 'array', items: { type: 'string' } },
+        },
+      }),
+      'request_data'
+    )
+    assert.equal(
+      bodyStandIn({
+        type: 'object',
+        properties: { request_data: { type: 'object' } },
+      }),
+      'request_data'
+    )
+  })
+
+  test('bodyStandIn names a lone data-named string[]', () => {
+    for (const key of [
+      'data',
+      'body',
+      'payload',
+      'requestData',
+      'request_body',
+    ]) {
+      assert.equal(
+        bodyStandIn({
+          type: 'object',
+          properties: { [key]: { type: 'array', items: { type: 'string' } } },
+        }),
+        key
+      )
+    }
+  })
+
+  test('bodyStandIn refuses real bodies', () => {
+    assert.equal(bodyStandIn(undefined), undefined)
+    assert.equal(bodyStandIn({ type: 'object' }), undefined)
+    assert.equal(
+      bodyStandIn({
+        type: 'object',
+        properties: {
+          request_data: { type: 'object' },
+          name: { type: 'string' },
+        },
+      }),
+      undefined,
+      'a second property makes it a real body'
+    )
+    assert.equal(
+      bodyStandIn({
+        type: 'object',
+        properties: { data: { type: 'array', items: { type: 'integer' } } },
+      }),
+      undefined,
+      'a data list of numbers is real data'
+    )
+    assert.equal(
+      bodyStandIn({
+        type: 'object',
+        properties: { tags: { type: 'array', items: { type: 'string' } } },
+      }),
+      undefined,
+      'a string list that is not data-named is real data'
+    )
+  })
+
+  const standInSpec = () =>
+    makeSpec({
+      operations: [
+        makeOp({
+          method: 'post',
+          path: '/things/{id}',
+          operationId: 'updateThing',
+          pathParams: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'integer' },
+            },
+          ] as any,
+          requestBody: {
+            type: 'object',
+            properties: {
+              request_data: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        }),
+        makeOp({
+          method: 'post',
+          path: '/raw',
+          operationId: 'sendRaw',
+          requestBody: { type: 'array', items: { type: 'integer' } },
+        }),
+        makeOp({
+          method: 'post',
+          path: '/named',
+          operationId: 'sendNamed',
+          requestBody: {
+            type: 'object',
+            properties: { name: { type: 'string' } },
+          },
+        }),
+      ],
+    })
+
+  test('the input takes the stand-in as an open record', () => {
+    const schemas = generateAddonFromOpenAPI(standInSpec(), makeVars(), flags)[
+      'src/functions/updateThing.schemas.ts'
+    ]!
+    assert.ok(
+      schemas.includes('request_data: z.record(z.string(), z.unknown())'),
+      schemas
+    )
+    assert.ok(!schemas.includes('z.array(z.string())'), schemas)
+  })
+
+  test('the route names the key that carries the body', () => {
+    const service = generateAddonFromOpenAPI(standInSpec(), makeVars(), flags)[
+      'src/test-api-api.service.ts'
+    ]!
+    const routes = JSON.parse(
+      service.match(/> = (\{[\s\S]*?\n\})\n/)![1]!
+    ) as Record<string, { bodyKey?: string }>
+    assert.equal(routes['POST /things/{id}']!.bodyKey, 'request_data')
+    assert.equal(routes['POST /raw']!.bodyKey, 'body')
+    assert.equal(routes['POST /named']!.bodyKey, undefined)
+  })
+
+  test('the service sends the stand-in unwrapped, and a real body as is', async () => {
+    const service = generateAddonFromOpenAPI(standInSpec(), makeVars(), flags)[
+      'src/test-api-api.service.ts'
+    ]!
+    const { outputText } = ts.transpileModule(
+      service.replace(/^import .*$/gm, ''),
+      { compilerOptions: { target: ts.ScriptTarget.ES2022 } }
+    )
+    const errorNames = [
+      'BadRequestError',
+      'ConflictError',
+      'ForbiddenError',
+      'InternalServerError',
+      'MethodNotAllowedError',
+      'NotFoundError',
+      'TooManyRequestsError',
+      'UnauthorizedError',
+      'UnprocessableContentError',
+    ]
+    const TestApiService = new Function(
+      ...errorNames,
+      `${outputText.replace(/^export /gm, '')}; return TestApiService`
+    )(...errorNames.map(() => class extends Error {}))
+
+    const sent: { url: string; body: unknown }[] = []
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async (url: string, init: RequestInit) => {
+      sent.push({ url, body: JSON.parse(String(init.body)) })
+      return new Response('{}', {
+        headers: { 'content-type': 'application/json' },
+      })
+    }) as typeof fetch
+    try {
+      const api = new TestApiService({
+        get: async () => 'https://api.example.com',
+      })
+      await api.call('POST', '/things/{id}', {
+        id: 7,
+        request_data: { name: 'Acme', status: 1 },
+      })
+      await api.call('POST', '/raw', { body: [1, 2] })
+      await api.call('POST', '/named', { name: 'Acme' })
+    } finally {
+      globalThis.fetch = realFetch
+    }
+
+    assert.deepEqual(sent, [
+      {
+        url: 'https://api.example.com/things/7',
+        body: { name: 'Acme', status: 1 },
+      },
+      { url: 'https://api.example.com/raw', body: [1, 2] },
+      { url: 'https://api.example.com/named', body: { name: 'Acme' } },
+    ])
+  })
 })
