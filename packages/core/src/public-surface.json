@@ -514,7 +514,7 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
+  "./hmac": ["WebhookSigningSecret", "hmacSha256Hex", "timingSafeStringEqual"],
   "./state": [
     "addPackageServiceFactories",
     "getAllPackageStates",
