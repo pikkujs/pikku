@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/verifiers-validate",
+  "type": "module",
+  "private": true,
+  "description": "Checks that `pikku validate` reports app code reaching past #pikku into @pikku/core",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "test": "rm -rf .pikku && node ../../packages/cli/dist/bin/pikku.js && tsc --noEmit && npx tsx test-validate.ts",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^24",
+    "zod": "^4"
+  }
+}
