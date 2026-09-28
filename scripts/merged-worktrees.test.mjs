@@ -22,6 +22,11 @@ locked claude session 1702 (pid 78129)
 worktree /tmp/scratch
 HEAD 789abc
 detached
+
+worktree /repo/wt-orphan
+HEAD 666666
+branch refs/heads/feat/orphan
+prunable gitdir file points to non-existent location
 `
 
 /** Probes that say "nothing is merged, every tree is clean", overridden per test. */
@@ -42,7 +47,7 @@ const worktree = (branch = 'feat/thing') => ({
 test('parses the worktree list, marking the first as the main checkout', () => {
   const parsed = parseWorktrees(PORCELAIN)
 
-  assert.equal(parsed.length, 4)
+  assert.equal(parsed.length, 5)
   assert.equal(parsed[0].isMain, true)
   assert.equal(parsed[0].branch, 'main')
   assert.equal(parsed[1].isMain, false)
@@ -51,6 +56,10 @@ test('parses the worktree list, marking the first as the main checkout', () => {
   assert.equal(parsed[2].locked, 'claude session 1702 (pid 78129)')
   assert.equal(parsed[3].detached, true)
   assert.equal(parsed[3].branch, undefined)
+  assert.equal(
+    parsed[4].prunable,
+    'gitdir file points to non-existent location'
+  )
 })
 
 test('a squash-merged branch is deletable though its commits are not in main', () => {
@@ -176,4 +185,44 @@ test('a locked worktree is left to the session that locked it', () => {
 
   assert.equal(verdict.verdict, 'skip')
   assert.match(verdict.reason, /locked — claude session 1702/)
+})
+
+test('a worktree git marks prunable is skipped without being probed', () => {
+  const verdict = classifyWorktree(
+    {
+      ...worktree(),
+      prunable: 'gitdir file points to non-existent location',
+    },
+    probes({
+      isAncestor: () => true,
+      statusPorcelain: () => {
+        throw new Error('probed a prunable worktree')
+      },
+    })
+  )
+
+  assert.equal(verdict.verdict, 'skip')
+  assert.match(verdict.reason, /prunable — gitdir file points/)
+})
+
+test('a worktree whose .git link is broken is skipped, not fatal', () => {
+  // Found by running this against a real checkout: the directory was still on
+  // disk but its gitdir link was gone, `git status` inside it threw, and the
+  // uncaught failure ended the run before any worktree was judged.
+  const brokenStatus = () => {
+    const error = new Error('Command failed: git status --porcelain')
+    error.stderr =
+      'fatal: not a git repository: /repo/.git/worktrees/wt-feature\n'
+    throw error
+  }
+  const verdict = classifyWorktree(
+    worktree(),
+    probes({ isAncestor: () => true, statusPorcelain: brokenStatus })
+  )
+
+  assert.equal(verdict.verdict, 'skip')
+  assert.match(
+    verdict.reason,
+    /prunable — git cannot read it: fatal: not a git repository/
+  )
 })
