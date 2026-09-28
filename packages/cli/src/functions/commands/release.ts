@@ -267,6 +267,7 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
     if (!trunkSha) {
       throw new PikkuError(`${s.remote}/${s.trunk} does not exist.`)
     }
+    const releaseSha = await remoteBranchSha(s.remote, s.branch, cwd)
     if ((await headSha(cwd)) !== trunkSha) {
       throw new PikkuError(
         `HEAD is not ${s.remote}/${s.trunk}. Check out ${s.trunk} at ${trunkSha.slice(0, 7)} and run \`pikku all\` before preparing a release.`
@@ -349,10 +350,22 @@ export const pikkuReleasePrepare = pikkuSessionlessFunc<
       cwd
     )
     const sha = await headSha(cwd)
-    await git(
-      ['push', '--quiet', '--force', s.remote, `${sha}:refs/heads/${s.branch}`],
-      cwd
-    )
+    try {
+      await git(
+        [
+          'push',
+          '--quiet',
+          `--force-with-lease=refs/heads/${s.branch}:${releaseSha ?? ''}`,
+          s.remote,
+          `${sha}:refs/heads/${s.branch}`,
+        ],
+        cwd
+      )
+    } catch {
+      throw new PikkuError(
+        `${s.remote}/${s.branch} changed while preparing (another prepare ran). Rerun \`pikku release prepare\`.`
+      )
+    }
 
     const result: ReleasePrepareResult = { status: 'prepared', sha, ...base }
     writeJson(join(resolve(cwd, config.outDir), 'release.gen.json'), result)

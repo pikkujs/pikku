@@ -1,7 +1,13 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -121,6 +127,21 @@ describe('pikku release', () => {
     checkoutStaging()
     commitOnStaging('more work')
     await assert.rejects(run(pikkuReleasePrepare), /Merge main into staging/)
+  })
+
+  test('prepare does not clobber a release/next pushed by a concurrent prepare', async () => {
+    const hook = join(app, '.git', 'hooks', 'pre-push')
+    writeFileSync(
+      hook,
+      '#!/bin/sh\ngit push -q --no-verify --force origin origin/staging:refs/heads/release/next\n'
+    )
+    chmodSync(hook, 0o755)
+    await assert.rejects(run(pikkuReleasePrepare), /another prepare ran/)
+    sh(app, 'fetch', '-q', 'origin')
+    assert.equal(
+      sh(app, 'rev-parse', 'origin/release/next'),
+      sh(app, 'rev-parse', 'origin/staging')
+    )
   })
 
   test('dry runs write and push nothing', async () => {
