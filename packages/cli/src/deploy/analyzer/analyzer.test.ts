@@ -1210,3 +1210,79 @@ describe('analyzeDeployment - rpc.startWorkflow from a function body', () => {
     assert.ok(!unit?.services.some((s) => s.capability === 'workflow-state'))
   })
 })
+
+/**
+ * A project with both shapes of `http:<method>:<route>` id: an agent wired over
+ * HTTP with an inline `func` (the route is the app's own, nobody else serves
+ * it) and the OPTIONS preflight beside `rpcCaller`'s catch-all (a bridge whose
+ * route a named function already owns).
+ */
+function stateWithInlineHttpFuncs(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        rpcCaller: { pikkuFuncId: 'rpcCaller', name: 'rpcCaller' },
+        'http:post:/agents/shop': {
+          pikkuFuncId: 'http:post:/agents/shop',
+          name: 'http:post:/agents/shop',
+        },
+        'http:options:/rpc/:rpcName': {
+          pikkuFuncId: 'http:options:/rpc/:rpcName',
+          name: 'http:options:/rpc/:rpcName',
+        },
+      },
+    },
+    http: {
+      meta: {
+        post: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'rpcCaller',
+            method: 'post',
+            route: '/rpc/:rpcName',
+          },
+          '/agents/shop': {
+            pikkuFuncId: 'http:post:/agents/shop',
+            method: 'post',
+            route: '/agents/shop',
+          },
+        },
+        options: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'http:options:/rpc/:rpcName',
+            method: 'options',
+            route: '/rpc/:rpcName',
+          },
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - routes wired to an inline func', () => {
+  const servedRoutes = () =>
+    analyzeDeployment(stateWithInlineHttpFuncs(), { projectId: 'test' })
+      .units.flatMap((u) =>
+        u.handlers.flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      )
+      .map((r) => `${r.method} ${r.route}`)
+
+  // `wireHTTP({ func: agent('shopAssistant') })` has no nameable func, so the
+  // inspector ids it after its route. Skipping every such id dropped the route
+  // from the plan entirely: deployed, active units and a 404 at the edge.
+  test('an inline func on its own route still gets a unit', () => {
+    assert.ok(servedRoutes().includes('POST /agents/shop'))
+  })
+
+  test('a bridge onto a route a named function owns is still skipped', () => {
+    assert.ok(!servedRoutes().includes('OPTIONS /rpc/:rpcName'))
+    assert.ok(servedRoutes().includes('POST /rpc/:rpcName'))
+  })
+})

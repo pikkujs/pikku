@@ -285,6 +285,17 @@ export function analyzeDeployment(
     return name
   }
 
+  const routesWithNamedOwner = new Set<string>()
+  for (const method of HTTP_METHODS) {
+    const methodRoutes = httpMeta[method]
+    if (!methodRoutes) continue
+    for (const routeMeta of values(methodRoutes)) {
+      if (!isSyntheticHttpBridge(routeMeta.pikkuFuncId)) {
+        routesWithNamedOwner.add(routeMeta.route)
+      }
+    }
+  }
+
   // ── Step 1: Create function units ──────────────────────────────────
   // Each function gets one unit. Collect all its triggers.
 
@@ -307,7 +318,6 @@ export function analyzeDeployment(
 
     // Skip scaffold catch-all functions — they're bundled into units that need them
     if (
-      funcId.startsWith('http:') ||
       funcId === 'agentCaller' ||
       funcId === 'agentStreamCaller' ||
       funcId === 'agentApproveCaller' ||
@@ -316,6 +326,13 @@ export function analyzeDeployment(
       funcId === 'getAgentThreadMessages' ||
       funcId === 'getAgentThreadRuns' ||
       funcId === 'deleteAgentThread'
+    ) {
+      continue
+    }
+
+    if (
+      isSyntheticHttpBridge(funcId) &&
+      routesWithNamedOwner.has(routeOfSyntheticHttpBridge(funcId))
     ) {
       continue
     }
@@ -1264,6 +1281,21 @@ const HTTP_METHODS = [
   'patch',
   'options',
 ] as const
+
+/**
+ * `http:<method>:<route>` is the inspector's fallback id for a wiring whose
+ * `func` is an inline expression it could not name (`agent('x')`, an inline
+ * handler). It marks an unnamed function, NOT a route somebody else serves —
+ * only a route a named function also owns, such as the OPTIONS preflight beside
+ * `rpcCaller`'s `/rpc/:rpcName`, is a scaffold bridge safe to drop.
+ */
+function isSyntheticHttpBridge(funcId: string): boolean {
+  return funcId.startsWith('http:')
+}
+
+function routeOfSyntheticHttpBridge(funcId: string): string {
+  return funcId.slice(funcId.indexOf(':', 'http:'.length) + 1)
+}
 
 function collectHttpRoutes(
   httpMeta: HTTPWiringsMeta,
