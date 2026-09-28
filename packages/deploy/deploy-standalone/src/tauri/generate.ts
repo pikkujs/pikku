@@ -305,10 +305,7 @@ const renderIosPlist = (entries: Record<string, string>): string =>
 <plist version="1.0">
   <dict>
 ${Object.entries(entries)
-  .map(
-    ([key, value]) =>
-      `    <key>${key}</key>\n    <string>${value}</string>`
-  )
+  .map(([key, value]) => `    <key>${key}</key>\n    <string>${value}</string>`)
   .join('\n')}
   </dict>
 </plist>
@@ -364,6 +361,12 @@ export const generateTauriShell = async (
   }
 
   const native = resolveNativeApis(options.native)
+  const mobileOnly = native.filter((api) => api.support === 'mobile')
+  if (!remoteUrl && mobileOnly.length > 0) {
+    throw new Error(
+      `${mobileOnly.map((api) => api.name).join(', ')} ${mobileOnly.length === 1 ? 'exists' : 'exist'} only on iOS and Android, and a shell that bundles its server is desktop-only. Point the shell at a deployed server with a url to build it for a phone.`
+    )
+  }
   const version = options.version ?? '0.1.0'
   const windowTitle = options.windowTitle ?? appName
   const width = options.width ?? 1200
@@ -400,11 +403,11 @@ export const generateTauriShell = async (
     ],
     ['ui/index.html', PLACEHOLDER_UI],
     ['capabilities/default.json', CAPABILITIES],
-    ...(native.length > 0 ? renderRemoteCapabilities({ remoteUrl, native }) : []),
+    ...(native.length > 0
+      ? renderRemoteCapabilities({ remoteUrl, native })
+      : []),
     ...(Object.keys(plist).length > 0
-      ? ([['Info.ios.plist', renderIosPlist(plist)]] as Array<
-          [string, string]
-        >)
+      ? ([['Info.ios.plist', renderIosPlist(plist)]] as Array<[string, string]>)
       : []),
     ['icons/icon.png', renderPlaceholderIcon(ICON_SIZE)],
     ['.gitignore', GITIGNORE],

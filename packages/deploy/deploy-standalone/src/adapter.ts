@@ -450,6 +450,11 @@ export interface StandaloneProviderAdapterOptions {
    * The window is a webview onto that origin and nothing else is shipped.
    */
   desktopUrl?: string
+  /**
+   * Native APIs the shell's webview may call, by name (`biometric`,
+   * `geolocation`, …). Mobile-only ones need {@link desktopUrl}.
+   */
+  desktopNative?: string | readonly string[]
   contributors?: PlatformServiceContributor[]
 }
 
@@ -477,6 +482,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   readonly projectDir?: string
   readonly desktopIdentifier?: string
   readonly desktopUrl?: string
+  readonly desktopNative?: string | readonly string[]
   readonly contributors: PlatformServiceContributor[]
 
   constructor(options: StandaloneProviderAdapterOptions = {}) {
@@ -486,6 +492,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     this.projectDir = options.projectDir
     this.desktopIdentifier = options.desktopIdentifier
     this.desktopUrl = options.desktopUrl
+    this.desktopNative = options.desktopNative
     this.contributors = dedupeContributors(options.contributors)
     assertContributorsSupported(
       this.contributors,
@@ -944,6 +951,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
           appName,
           identifier: this.desktopIdentifier ?? tauriBundleIdentifier(appName),
           targetTriple,
+          native: this.desktopNative,
           ...(this.desktopUrl
             ? { remoteUrl: this.desktopUrl }
             : { binaryPath: join(outDir, appName) }),
@@ -965,6 +973,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         for (const line of renderTauriNextSteps({
           shellDir: shell.dir,
           hasRust: rustcVersionVerbose !== undefined,
+          remoteUrl: this.desktopUrl,
+          native: shell.native,
         })) {
           logger.info(line)
         }

@@ -1,4 +1,4 @@
-import type { NativeApi } from './native.js'
+import { iosUsageDescriptions, type NativeApi } from './native.js'
 
 export type TauriNextStepsOptions = {
   /** Absolute path of the generated crate. */
@@ -62,9 +62,9 @@ export const renderTauriNextSteps = ({
         remoteUrl ? new URL(remoteUrl).origin : 'the sidecar origin'
       }`,
       '  in capabilities/. Call them from the frontend with @tauri-apps/api, guarded',
-      "  by a check for window.__TAURI_INTERNALS__ so the same build still runs in a browser."
+      '  by a check for window.__TAURI_INTERNALS__ so the same build still runs in a browser.'
     )
-    if (Object.keys(Object.assign({}, ...native.map((a) => a.iosUsageDescriptions ?? {}))).length > 0) {
+    if (Object.keys(iosUsageDescriptions(native)).length > 0) {
       lines.push(
         '  Info.ios.plist holds the consent strings iOS demands — reword them for your',
         '  app, and check they reached gen/apple after `tauri ios init`.'
