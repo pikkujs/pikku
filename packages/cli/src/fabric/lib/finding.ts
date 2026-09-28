@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import type { ReportEnvironment } from './report-environment.js'
+import { PikkuFetch } from '../sdk/pikku-fetch.gen.js'
+import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 export const FindingInput = z.object({
   title: z.string(),
@@ -114,27 +116,46 @@ export function buildFindingPayload(
 }
 
 /**
- * Best-effort by construction. A finding is worth having and never worth
- * failing a build for, so a refused, slow or unreachable endpoint is reported
- * to the terminal and swallowed.
+ * Anonymous, and every request gives up after `timeoutMs`: a finding is worth
+ * having and never worth holding up a build for.
+ */
+export function findingRPC(
+  apiUrl: string,
+  timeoutMs = 5000,
+  send: typeof fetch = fetch
+): PikkuRPC {
+  const rpc = new PikkuRPC()
+  rpc.setPikkuFetch(
+    new PikkuFetch({
+      serverUrl: apiUrl,
+      fetch: ((input, init) =>
+        send(input, {
+          ...init,
+          signal: AbortSignal.timeout(timeoutMs),
+        })) as typeof fetch,
+    })
+  )
+  return rpc
+}
+
+/**
+ * Best-effort by construction: a refused, slow or unreachable endpoint is
+ * reported to the terminal and swallowed.
  */
 export async function postFinding(opts: {
-  apiUrl: string
+  rpc: Pick<PikkuRPC, 'invoke'>
   payload: FindingPayload
-  timeoutMs?: number
 }): Promise<{ sent: boolean; reason?: string }> {
+  const { environment, ...finding } = opts.payload
   try {
-    const response = await fetch(`${opts.apiUrl}/findings`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ finding: opts.payload }),
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 5000),
+    await opts.rpc.invoke('submitFinding', {
+      finding: { ...finding, environment: { ...environment } },
     })
-    if (!response.ok) {
-      return { sent: false, reason: `fabric answered ${response.status}` }
-    }
     return { sent: true }
   } catch (error: any) {
+    if (typeof error?.status === 'number') {
+      return { sent: false, reason: `fabric answered ${error.status}` }
+    }
     return { sent: false, reason: error?.message ?? 'request failed' }
   }
 }
