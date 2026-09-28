@@ -32,6 +32,8 @@ export type WebhookReceiveResult =
       }
     }
 
+export type WebhookSourceMethod = 'post' | 'put' | 'get'
+
 /** Whatever `setup` wants back on the next deploy, for providers whose endpoints cannot be found by label. */
 export type WebhookSourceState = Record<string, unknown>
 
@@ -79,7 +81,8 @@ export type CoreTriggerWebhookSource<
 > = {
   /** Triggers subscribe to `<name>:<event>`. Unique across every kind of trigger source. */
   name: string
-  method?: 'post' | 'put' | 'get'
+  /** Several for providers that verify the URL with a GET and deliver with a POST. */
+  method?: WebhookSourceMethod | WebhookSourceMethod[]
   /** Defaults to `/webhooks/<name>`. */
   route?: string
   /** The secret `receive` verifies with, which `setup` produces. */
@@ -95,7 +98,7 @@ export type CoreTriggerWebhookSource<
 
 export type WebhookSourceMeta = {
   name: string
-  method: 'post' | 'put' | 'get'
+  method: WebhookSourceMethod | WebhookSourceMethod[]
   route: string
   secret?: string
   events: string[]

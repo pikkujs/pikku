@@ -205,7 +205,8 @@ const addWireTriggerWebhookSource: (
     return
   }
 
-  const method = (getPropertyValue(obj, 'method') as string | null) ?? 'post'
+  const method =
+    (getPropertyValue(obj, 'method') as string | string[] | null) ?? 'post'
   const route =
     (getPropertyValue(obj, 'route') as string | null) ?? `/webhooks/${name}`
   let secret = getPropertyValue(obj, 'secret') as string | null

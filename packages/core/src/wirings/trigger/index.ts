@@ -18,6 +18,7 @@ export type {
   WebhookSetupResult,
   WebhookSourceJob,
   WebhookSourceMeta,
+  WebhookSourceMethod,
   WebhookSourcesMeta,
   WebhookSourceState,
   WebhookTeardownInput,

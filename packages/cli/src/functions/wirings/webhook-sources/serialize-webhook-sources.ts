@@ -32,6 +32,9 @@ export const serializeWebhookSourceWirings = (
 ): string => {
   const routes = Object.values(meta)
     .sort((a, b) => a.name.localeCompare(b.name))
+    .flatMap((source) =>
+      [source.method].flat().map((method) => ({ ...source, method }))
+    )
     .map(
       (source) => `wireHTTP({
   method: ${JSON.stringify(source.method)},
