@@ -296,6 +296,10 @@ export interface PikkuCLICoreOutputFiles {
 
   // Variables metadata JSON
   variablesMetaJsonFile: string
+
+  outgoingWebhooksFile: string
+
+  outgoingWebhooksMetaJsonFile: string
 }
 
 export type PikkuCLIInput = {

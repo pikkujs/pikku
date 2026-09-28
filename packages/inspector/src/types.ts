@@ -593,6 +593,14 @@ export interface InspectorState {
      *  inspector cannot read off the declaration. */
     props?: Record<string, Record<string, string>>
   }>
+  outgoingWebhooks?: Array<{
+    file: string
+    variable: string
+    event: string
+    title: string
+    description?: string
+    payload?: Record<string, string>
+  }>
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)
   configFactories: PathToNameAndType
   serverLifecycleFactories: PathToNameAndType

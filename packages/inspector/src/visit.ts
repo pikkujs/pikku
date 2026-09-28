@@ -36,6 +36,7 @@ import { addWorkflowGraph } from './add/add-workflow-graph.js'
 import { addFeature } from './add/add-feature.js'
 import { addAgent } from './add/add-agent.js'
 import { addAnalytics } from './add/add-analytics.js'
+import { addOutgoingWebhook } from './add/add-outgoing-webhook.js'
 import { addAgentScorer } from './add/add-agent-scorer.js'
 import { addApprovalDescription } from './add/add-approval-description.js'
 
@@ -103,6 +104,7 @@ export const visitSetup = (
   )
 
   addAnalytics(logger, node, checker, state)
+  addOutgoingWebhook(logger, node, checker, state)
   addRPCInvocations(node, state, logger)
   addWireAddon(node, state, logger)
   addWireRemoteAddon(node, state, logger)

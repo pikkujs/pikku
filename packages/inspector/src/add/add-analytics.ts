@@ -10,28 +10,26 @@ const DEFINE_ANALYTICS_EVENTS = 'defineAnalyticsEvents'
  * an ordinary thing to write, and matching on the callee's text alone both
  * misses that and claims a same-named local helper.
  */
-const callsDefineAnalyticsEvents = (
+export const callsImportedDefiner = (
   expression: ts.Expression,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  definer: string
 ): boolean => {
   if (!ts.isIdentifier(expression)) return false
   const symbol = checker.getSymbolAtLocation(expression)
-  if (!symbol) return expression.text === DEFINE_ANALYTICS_EVENTS
+  if (!symbol) return expression.text === definer
   // An import specifier names what it imported even when the module itself
   // does not resolve, which is every project whose deps are not installed yet.
   const declaration = symbol.declarations?.[0]
   if (declaration && ts.isImportSpecifier(declaration)) {
-    return (
-      (declaration.propertyName ?? declaration.name).text ===
-      DEFINE_ANALYTICS_EVENTS
-    )
+    return (declaration.propertyName ?? declaration.name).text === definer
   }
   // Only an import can be pikku's. A file's own helper of the same name
   // resolves to a symbol whose `.name` matches, so resolving without this
   // claims it — the mirror of what matching on the callee's text misses.
   if (!(symbol.flags & ts.SymbolFlags.Alias)) return false
   const resolved = checker.getAliasedSymbol(symbol) ?? symbol
-  return resolved.name === DEFINE_ANALYTICS_EVENTS
+  return resolved.name === definer
 }
 
 /**
@@ -40,7 +38,7 @@ const callsDefineAnalyticsEvents = (
  * that keeps the declaration to itself has no such name, so it is refused here
  * rather than emitted into an ingest that cannot compile.
  */
-const exportedName = (
+export const exportedName = (
   declaration: ts.VariableDeclaration,
   name: ts.Identifier,
   checker: ts.TypeChecker
@@ -93,7 +91,7 @@ const findObjectShape = (
  * Absent for a schema pikku cannot read the shape off (a shared const, a union,
  * a vendor that is not zod). The catalog renders nothing rather than guessing.
  */
-const readEventShape = (
+export const readEventShape = (
   initializer: ts.Expression
 ): Record<string, string> | undefined => {
   const shape = findObjectShape(initializer)
@@ -128,7 +126,14 @@ export const addAnalytics = (
   if (!ts.isVariableDeclaration(node)) return
   const { initializer, name } = node
   if (!initializer || !ts.isCallExpression(initializer)) return
-  if (!callsDefineAnalyticsEvents(initializer.expression, checker)) return
+  if (
+    !callsImportedDefiner(
+      initializer.expression,
+      checker,
+      DEFINE_ANALYTICS_EVENTS
+    )
+  )
+    return
   if (!ts.isIdentifier(name)) return
 
   const file = node.getSourceFile().fileName

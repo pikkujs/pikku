@@ -40,6 +40,9 @@ const makeMetaService = (
   getSecretsMeta: async () => ({}),
   getCredentialsMeta: async () => ({}),
   getVariablesMeta: async () => ({}),
+  getOutgoingWebhooksMeta: async () => ({
+    'order.paid': { event: 'order.paid', title: 'Order paid' },
+  }),
   getServicesMeta: async () => ({}),
   getEmailTemplateAssets: async () => ({
     theme: {},
@@ -81,5 +84,13 @@ describe('WiringService.readAllMeta', () => {
     const result = await service.readAllMeta()
 
     assert.equal(result.counts.emails, 0)
+  })
+
+  test('returns declared webhooks and counts them', async () => {
+    const service = new WiringService(makeMetaService() as never)
+    const result = await service.readAllMeta()
+
+    assert.equal(result.outgoingWebhooksMeta['order.paid']?.title, 'Order paid')
+    assert.equal(result.counts.outgoingWebhooks, 1)
   })
 })
