@@ -7,7 +7,7 @@ export const CardRow: React.FC<{
   leading?: React.ReactNode
   title: I18nNode
   badges?: React.ReactNode
-  meta?: React.ReactNode
+  meta?: I18nNode
   middle?: React.ReactNode
   trailing?: React.ReactNode
   children?: React.ReactNode

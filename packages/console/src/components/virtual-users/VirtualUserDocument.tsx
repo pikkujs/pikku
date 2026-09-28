@@ -113,8 +113,8 @@ const Trait: React.FC<{
       </Tooltip>
       <Progress value={Math.max(value, 2)} size="sm" />
       <Text size="sm">
-        {frequencyWord(value)}{' '}
-        <Text span size="xs" c="dimmed">
+        {frequencyWord(value)}
+        <Text span size="xs" c="dimmed" ml={4}>
           {asI18n(`· ${value}%`)}
         </Text>
       </Text>
@@ -199,8 +199,8 @@ const Tasks: React.FC<{ user: VirtualUserDoc }> = ({ user }) => {
           </Text>
         </Group>
         <Text size="sm" c="dimmed">
-          {m.virtual_users_tasks_note({ name: user.name })}{' '}
-          <Anchor component={Link} to="/scenarios" size="sm">
+          {m.virtual_users_tasks_note({ name: user.name })}
+          <Anchor component={Link} to="/scenarios" size="sm" ml={4}>
             {m.virtual_users_see_stories()}
           </Anchor>
         </Text>

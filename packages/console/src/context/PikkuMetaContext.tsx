@@ -113,6 +113,7 @@ const EMPTY_COUNTS: MetaCounts = {
   variables: 0,
   featureFlags: 0,
   analyticsEvents: 0,
+  webhooks: 0,
 }
 
 export const PikkuMetaProvider: React.FC<{
