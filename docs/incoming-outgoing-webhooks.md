@@ -1,21 +1,22 @@
 # Incoming and outgoing webhooks
 
-Two declarations with nothing in common but the word:
+Two features with nothing in common but the word:
 
 | | Outgoing | Incoming |
 | --- | --- | --- |
-| Declared with | `defineOutgoingWebhook` | `defineIncomingWebhook` |
+| Declared with | `defineOutgoingWebhook` | `wireTriggerWebhookSource` |
 | Direction | this app → a subscriber | a provider → this app |
-| Declares | `event`, `title`, `description?`, `payload` | `id`, `func`, `events`, `secret`, `upsert` (`delete` later) |
-| Who registers | the subscriber, at runtime | this app, at deploy time, through `upsert` |
-| Metadata | `.pikku/webhooks/pikku-outgoing-webhooks-meta.gen.json` | `.pikku/webhooks/pikku-incoming-webhooks-meta.gen.json` |
+| Declares | `event`, `title`, `description?`, `payload` | `name`, `events`, `receive`, `check?`, `setup?`, `teardown?` |
+| Who registers | the subscriber, at runtime | this app, at deploy time, through `setup` |
+| Delivery | `QueueWebhookService` → `pikku-outgoing-webhooks` queue | `IncomingWebhookService` → `pikku-incoming-webhooks` queue |
+| History | `webhookDelivery` + `webhookDeliveryAttempt` (`@pikku/kysely`) | `webhookReceipt` + `webhookReceiptAttempt` (`@pikku/kysely`) |
 
 `defineWebhook` only ever existed on `feat/console-ux` and was never released,
 so the rename to `defineOutgoingWebhook` breaks nobody.
 
 ## Scoping
 
-Both are scoped the same way everything else an addon owns is: by the
+Outgoing events are scoped the same way everything else an addon owns is: by the
 `wireAddon` instance name.
 
 - An app's own declarations have no prefix.
@@ -58,108 +59,149 @@ Typed at both levels from generated maps:
 Undeclared events currently pass `send` unchecked. They stay allowed for now
 (nothing declared yet would break), and closing that is a separate change.
 
-## Incoming
+## Incoming: a webhook is a trigger source
+
+A provider pushing events to us is the same thing as any other trigger source
+producing events: it just arrives over HTTP. So incoming webhooks are a kind of
+trigger source, next to the existing one, and consumers stay plain triggers.
+This is how n8n (`webhook()` beside `trigger()` and `poll()`), Activepieces
+(`TriggerStrategy.WEBHOOK | POLLING`) and Zapier (`hook | polling`) model it.
+
+Three wires, one per kind, so each has its own shape and errors:
+
+| Wire | Lowers onto | Runs |
+| --- | --- | --- |
+| `wireTriggerSource` | unchanged: a long-lived subscription returning teardown | trigger worker |
+| `wireTriggerWebhookSource` | an HTTP route, `auth: false` | every API instance |
+| `wireTriggerPollSource` | a scheduled task `trigger-poll:<source>` | wherever schedulers run |
+
+Webhook and poll sources lower onto routes and scheduled tasks the deploy
+analyzer already handles, so no deploy target changes. A source with no wired
+trigger lowers onto nothing.
+
+### Events
+
+Every kind produces `{ name, id?, data }`. The source declares what it can
+produce as Zod schemas; triggers subscribe by `<source>:<event>`:
 
 ```ts
-export const stripeCheckout = defineIncomingWebhook({
-  id: 'checkout',
-  func: handleStripeWebhook,
-  events: ['checkout.session.completed', /* … */],
-  secret: 'STRIPE_WEBHOOK_SECRET',
-  needs: ['STRIPE_SECRET_KEY'],
-  upsert: async ({ url, label, events, secrets }) => {
-    // find by label → create, update in place, or leave alone
-    return { secret: whsec }   // only when one was created
+wireTriggerWebhookSource({
+  name: 'stripe',
+  events: {
+    'checkout.session.completed': CheckoutSessionSchema,
+    'charge.refunded': ChargeSchema,
   },
+  receive: ref('stripe-eu:receiveStripeWebhook'),
+  check: ref('stripe-eu:checkStripeWebhook'),
+  setup: ref('stripe-eu:setupStripeWebhook'),
+  teardown: ref('stripe-eu:teardownStripeWebhook'),
 })
+
+wireTrigger({ name: 'stripe:checkout.session.completed', func: fulfilOrder })
 ```
 
-### The URL is never a parameter
+- `data` is validated against the event's schema before it is enqueued; a
+  malformed event is logged and dropped.
+- The trigger func's input is inferred from the schema.
+- The inspector reads the `events` keys statically: it rejects a trigger name
+  the source cannot produce, and the events `setup` registers are exactly the
+  keys some trigger is wired to. Nothing lists events by hand.
 
-The route is generated:
+### Who wires it
+
+The app, as with every addon function today. An addon exports `receive`,
+`check`, `setup`, `teardown` and its event schemas as ordinary functions and
+values; the app wires them with `ref('<instance>:<fn>')`, which runs them inside
+that instance so its `secretOverrides` apply. An app's own source may inline
+them instead.
+
+### receive
+
+`(services, { body, headers, method, url, query }) → { events } | { respond }`
+
+- `body` is the raw bytes: providers sign those, not re-serialised JSON.
+- Returns one or more events (some providers batch), or `respond` for a
+  handshake (Slack `url_verification`, Meta `hub.challenge`).
+- Throwing rejects the request (400; 401 for a bad signature). Nothing is
+  enqueued.
+- Omitted: the JSON body is one event named after the source, dispatched to a
+  trigger named just `<source>`.
+
+### Delivery: webhook → queue → worker
 
 ```
-https://<stage-host>/api/webhooks/<instance>/<id>   addon
-https://<stage-host>/api/webhooks/<id>              app
+POST /webhooks/<source> → receive → validate → enqueue one job per event → 200
+                                                        ↓
+                          pikku-incoming-webhooks worker → wireTrigger funcs for <source>:<event>
 ```
 
-`upsert` receives the full `url`; nothing in a declaration can point it
-elsewhere. The route is mounted automatically for every wired instance, with
-`auth: false` — verification is the signing secret, not a session. The app (not
-an addon) may override `route`, which is how a library with a fixed path (Better
-Auth Stripe at `/auth/stripe/webhook`) is wrapped without moving its handler.
+`IncomingWebhookService` takes `queueService` in its constructor, as
+`QueueWebhookService` does, so a source wired without a queue fails to compile.
 
-The inspector rejects an app webhook id that equals an addon instance name, and
-two declarations with the same scoped id.
+- The provider gets its 2xx once the event is queued; a failed enqueue answers
+  non-2xx so the provider retries.
+- Retries of our own processing come from the queue, not from the provider.
+- The job id is `<source>:<provider event id>`, which de-duplicates on queues
+  that honour job ids.
+- `KyselyIncomingWebhookService` extends it with a `webhookReceipt` row (raw
+  body, headers, parsed events, status) unique on `(source, providerEventId)`
+  — the reliable de-duplication — and a `webhookReceiptAttempt` row per
+  dispatch, mirroring the outgoing tables. The console reads these.
 
-### Upsert, not setup
+A poll source enqueues into the same queue, so there is one dispatch path.
 
-It runs on every deploy and converges:
+### Lifecycle: check, setup, teardown
 
-- find the provider's resource by `label` (`pikku:<app>:<stage>:<scoped id>`);
-- missing → create, return the new signing secret;
-- present but different (url, events) → update in place, return nothing;
-- present and equal → return nothing.
+Run by the CLI at deploy, never by the route:
 
-There is no local state file. The provider is the state; the label is the key. A
-lost signing secret means delete-and-recreate, i.e. rotate.
+- `check({ url, label, events, previous })` → `ok | missing | drifted` — the
+  read-only preview (`pikku webhooks status`) and drift detection.
+- `setup({ url, label, events, previous })` → `{ status, endpointId?, secret?,
+  expiresAt? }` — only when `check` is not `ok`, or always when there is no
+  `check`. `manual` with instructions when the provider has no API.
+- `teardown({ label, previous })` — when the stage goes away.
 
-### Secrets
+`url` is always the deployment's own route; nothing can point it elsewhere.
+`label` is `pikku:<app>:<stage>:<source>`, for providers that let endpoints be
+tagged and listed (Stripe metadata). `previous` is what the last `setup`
+returned, for providers that do not: the caller stores it between deploys.
 
-`secret` and `needs` are the addon's own secret names. The metadata records them
-resolved through the instance's `secretOverrides`, so whoever runs `upsert`
-never has to know about the renaming: it fetches what the entry says it needs
-and writes what the entry says it produces.
-
-### Metadata
-
-`pikku-incoming-webhooks-meta.gen.json`, keyed by scoped id:
-
-```json
-{
-  "stripe-eu:checkout": {
-    "id": "checkout",
-    "instance": "stripe-eu",
-    "package": "@pikku/addon-commerce-stripe",
-    "pikkuFuncId": "stripe-eu:handleStripeWebhook",
-    "route": "/webhooks/stripe-eu/checkout",
-    "events": ["checkout.session.completed"],
-    "secret": "STRIPE_EU_WEBHOOK_SECRET",
-    "needs": ["STRIPE_EU_SECRET_KEY"]
-  }
-}
-```
+`secret` on the wire names the secret `receive` verifies with. The metadata
+records it resolved through the instance's overrides, so whoever runs `setup`
+knows where to store what it returns.
 
 ### Running it
 
-`pikku webhooks upsert --url <base url> --label-prefix <app>:<stage>` imports
-every declaration, runs each `upsert` with only the secrets it `needs` (read from
-the environment), and prints one JSON line per webhook:
-`{ id, status: 'unchanged' | 'created' | 'updated' | 'failed', secret?, error? }`.
-Produced secrets go to stdout only for the caller to store; nothing is written
-to disk.
+`pikku webhooks status | setup | teardown --url <base url> --label-prefix
+<app>:<stage> [--previous <file>]` loads the app with its own services and
+prints one JSON line per source: `{ source, status, endpointId?, secretName?,
+secret?, instructions?, error? }`. Produced secrets go to stdout only for the
+caller to store.
 
 ## Fabric
 
-- CI gets a **webhooks** phase after publish, like migrations: fabric-api hands
-  it exactly the secrets the metadata `needs` (scoped deploy-token endpoint),
-  CI runs `pikku webhooks upsert`, and posts results back.
-- fabric-api writes produced secrets to the stage and keeps an applied row per
-  stage and webhook (`pending` / `active` / `failed`).
-- The deploy config gate treats a secret some incoming webhook produces as
-  covered.
-- `StageStripeSandboxService` keeps provisioning credentials (claimable
-  sandboxes / the stand-in key) and loses its hard-coded event map.
+- CI gets a **webhooks** phase after publish, like migrations: it runs
+  `pikku webhooks setup` and posts results back.
+- fabric-api stores produced secrets on the stage and each source's result as
+  `previous` for the next deploy, and runs `teardown` when a stage is deleted.
+- The deploy config gate treats a secret some source produces as covered.
+- `StageStripeSandboxService` keeps provisioning credentials and loses its
+  hard-coded event map.
 
 ## Slices
 
-1. **pikku OSS** — `defineOutgoingWebhook` (ported from `feat/console-ux`,
-   renamed), `defineIncomingWebhook`, inspector + metadata for both, automatic
-   route mounting, addon scoping for both, `pikku webhooks upsert`.
-2. **commerce-stripe** — its `defineIncomingWebhook` with a Stripe `upsert`; the
-   README drops the manual `wireHTTP`.
-3. **Fabric** — the CI phase, the scoped-secret endpoint, the applied row, the
-   gate change, removing the event map.
+1. **core** — `wireTriggerWebhookSource`, `IncomingWebhookService` and its
+   queue worker, dispatch to `<source>:<event>` triggers.
+2. **inspector** — source meta (`kind`, route, events, function ids), route
+   synthesis, trigger-name validation, derived events.
+3. **CLI** — generated route and worker wiring, `pikku webhooks status | setup |
+   teardown`.
+4. **@pikku/kysely** — `KyselyIncomingWebhookService` and its tables.
+5. **commerce-stripe** — the four functions and event schemas.
+6. **Fabric** — the CI phase, stored results, the gate, removing the event map.
+7. **poll sources** — `wireTriggerPollSource`, cursor in a `triggerSourceState`
+   row.
 
-Later: `delete` and pruning, a provider with no API (tell the user what to set
-by hand), Better Auth Stripe detection, the console pages.
+Later: `invoke(name, data)` on subscription sources, shared app-level endpoints
+(Slack, Meta), expiring registrations (Graph, Gmail `watch`), JSON Schema for
+events in the console, moving outgoing to the same service shape.
