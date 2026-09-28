@@ -288,6 +288,7 @@ jobs:
             bun-server,
             webhooks,
             db-schema,
+            validate,
             mcp-auth,
           ]
     steps:
