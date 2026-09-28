@@ -20,7 +20,11 @@ import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbCodegen } from './functions/commands/db-codegen.js'
-import { webhooksUpsert } from './functions/commands/webhooks-upsert.js'
+import {
+  webhooksSetup,
+  webhooksStatus,
+  webhooksTeardown,
+} from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
@@ -546,12 +550,12 @@ wireCLI({
       },
     },
     webhooks: {
-      description: 'Register incoming webhooks with their providers',
+      description: 'Register webhook sources with their providers',
       subcommands: {
-        upsert: pikkuCLICommand({
-          func: webhooksUpsert,
+        status: pikkuCLICommand({
+          func: webhooksStatus,
           description:
-            'Create or update each incoming webhook at its provider, printing one JSON line per webhook with any signing secret it produced',
+            'Check each webhook source at its provider, printing one JSON line per source: ok, missing or drifted',
           options: {
             url: {
               description:
@@ -560,6 +564,48 @@ wireCLI({
             labelPrefix: {
               description:
                 'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+          },
+        }),
+        setup: pikkuCLICommand({
+          func: webhooksSetup,
+          description:
+            'Create or update each webhook source at its provider where its check is not ok, printing one JSON line per source with any signing secret it produced',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
+            },
+          },
+        }),
+        teardown: pikkuCLICommand({
+          func: webhooksTeardown,
+          description:
+            'Remove each webhook source from its provider, printing one JSON line per source',
+          options: {
+            url: {
+              description:
+                'Where this deployment serves its routes, e.g. https://shop.example.com/api',
+            },
+            labelPrefix: {
+              description:
+                'Identifies this app and stage at the provider, e.g. shop:main',
+            },
+            previous: {
+              description:
+                'A JSON file of what the last setup returned as state, by source name',
             },
           },
         }),

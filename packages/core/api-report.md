@@ -4952,7 +4952,7 @@ export type IncomingWebhookReceiptRecord = {
   deliveredAt: Date | null
 }
 export class IncomingWebhookService {
-  constructor(protected queueService: QueueService)
+  constructor(protected queueService: QueueService, protected retries: number = DEFAULT_WEBHOOK_RETRIES)
   public async accept({ source, events, }: { source: string; request: WebhookRequest; events: TriggerEvent[] }): Promise<number>
   protected async enqueue(job: WebhookSourceJob): Promise<string>
   public async recordAttempt(_receiptId: string, _attempt: IncomingWebhookAttempt): Promise<void>

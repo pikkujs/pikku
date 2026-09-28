@@ -301,11 +301,14 @@ export interface PikkuCLICoreOutputFiles {
 
   outgoingWebhooksMetaJsonFile: string
 
-  incomingWebhooksFile: string
+  // Each webhook source's route and the worker that dispatches its events.
+  webhookSourcesFile: string
 
-  incomingWebhooksWiringFile: string
+  webhookSourcesLifecycleFile: string
 
-  incomingWebhooksMetaJsonFile: string
+  webhookSourcesMetaFile: string
+
+  webhookSourcesMetaJsonFile: string
 }
 
 export type PikkuCLIInput = {

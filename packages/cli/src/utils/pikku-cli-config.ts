@@ -1226,22 +1226,28 @@ const _getPikkuCLIConfig = async (
         'pikku-outgoing-webhooks-meta.gen.json'
       )
     }
-    if (!result.incomingWebhooksFile) {
-      result.incomingWebhooksFile = join(
+    if (!result.webhookSourcesFile) {
+      result.webhookSourcesFile = join(
         webhooksDir,
-        'pikku-incoming-webhooks.gen.ts'
+        'pikku-webhook-sources.gen.ts'
       )
     }
-    if (!result.incomingWebhooksWiringFile) {
-      result.incomingWebhooksWiringFile = join(
+    if (!result.webhookSourcesLifecycleFile) {
+      result.webhookSourcesLifecycleFile = join(
         webhooksDir,
-        'pikku-incoming-webhooks-wiring.gen.ts'
+        'pikku-webhook-sources-lifecycle.gen.ts'
       )
     }
-    if (!result.incomingWebhooksMetaJsonFile) {
-      result.incomingWebhooksMetaJsonFile = join(
+    if (!result.webhookSourcesMetaFile) {
+      result.webhookSourcesMetaFile = join(
         webhooksDir,
-        'pikku-incoming-webhooks-meta.gen.json'
+        'pikku-webhook-sources-meta.gen.ts'
+      )
+    }
+    if (!result.webhookSourcesMetaJsonFile) {
+      result.webhookSourcesMetaJsonFile = join(
+        webhooksDir,
+        'pikku-webhook-sources-meta.gen.json'
       )
     }
 
