@@ -509,7 +509,10 @@ export class PikkuMCPFetchServer {
         this.mcpEndpointRegistry.getPrompt(name) && getMCPPromptsMeta()[name]
 
       if (!promptMeta) {
-        throw new Error(`Prompt not found: ${name}`)
+        throw new ProtocolError(
+          -32602,
+          `Prompt not found: ${request.params.name}`
+        )
       }
 
       const result = await runMCPPrompt(

@@ -164,8 +164,9 @@ describe('an MCP endpoint serves only the tools in its own manifest', () => {
       false,
       `another endpoint's tool must not run here: ${JSON.stringify(foreign).slice(0, 200)}`
     )
-    assert.ok(
-      foreign?.error,
+    assert.equal(
+      foreign?.error?.code,
+      -32602,
       `another endpoint's tool must be refused: ${JSON.stringify(foreign).slice(0, 200)}`
     )
   })
@@ -339,8 +340,9 @@ describe('an MCP endpoint serves only the resources and prompts in its own manif
       false,
       `another endpoint's resource must not be read here: ${JSON.stringify(foreignResource).slice(0, 200)}`
     )
-    assert.ok(
-      foreignResource?.error,
+    assert.equal(
+      foreignResource?.error?.code,
+      -32602,
       `another endpoint's resource must be refused: ${JSON.stringify(foreignResource).slice(0, 200)}`
     )
 
@@ -369,8 +371,9 @@ describe('an MCP endpoint serves only the resources and prompts in its own manif
       false,
       `another endpoint's prompt must not run here: ${JSON.stringify(foreignPrompt).slice(0, 200)}`
     )
-    assert.ok(
-      foreignPrompt?.error,
+    assert.equal(
+      foreignPrompt?.error?.code,
+      -32602,
       `another endpoint's prompt must be refused: ${JSON.stringify(foreignPrompt).slice(0, 200)}`
     )
   })
