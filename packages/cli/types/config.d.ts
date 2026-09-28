@@ -899,6 +899,14 @@ export type PikkuCLIInput = {
     }
   }
 
+  /** Branches `pikku release` moves; defaults staging → main via release/next on origin. */
+  release?: {
+    trunk?: string
+    production?: string
+    branch?: string
+    remote?: string
+  }
+
   /** Named filter presets keyed by name, used via CLI --filter <name>. */
   namedFilters?: Record<string, InspectorFilters>
 

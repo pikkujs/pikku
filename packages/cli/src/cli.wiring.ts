@@ -32,6 +32,16 @@ import { rolesPrune } from './functions/commands/roles-prune.js'
 import { pikkuAudit } from './functions/commands/audit.js'
 import { pikkuSemver } from './functions/commands/semver.js'
 import { renderSemver } from './functions/commands/semver-render.js'
+import {
+  pikkuReleaseDiff,
+  pikkuReleaseInit,
+  pikkuReleasePrepare,
+  pikkuReleaseSnapshot,
+} from './functions/commands/release.js'
+import {
+  renderReleaseInit,
+  renderReleasePrepare,
+} from './functions/commands/release-render.js'
 import { validate, renderValidate } from './functions/commands/validate.js'
 import {
   examplesAdd,
@@ -391,15 +401,14 @@ wireCLI({
       func: pikkuSemver,
       render: renderSemver,
       description:
-        "Derive the release semver by comparing this build's surface against a deployed one; writes .pikku/changes.gen.json",
+        'Deprecated: use `pikku release diff` or `pikku release snapshot`',
       options: {
         against: {
           description:
             'Baseline to compare against: a .pikku directory, a snapshot file, or a snapshot URL',
         },
         emit: {
-          description:
-            "Produce this build's surface snapshot instead of comparing — publish it to serve as a baseline. Pair with --out; without it the snapshot goes to stdout after the CLI banner",
+          description: 'Same as `pikku release snapshot`',
           default: false,
         },
         out: {
@@ -412,6 +421,72 @@ wireCLI({
         },
       },
     }),
+    release: {
+      description:
+        'Version and changelog releases from the API surface, for trunk to ship to production',
+      subcommands: {
+        diff: pikkuCLICommand({
+          func: pikkuReleaseDiff,
+          render: renderSemver,
+          description:
+            "Compare this build's surface against the last release and report the semver it owes; writes .pikku/changes.gen.json",
+          options: {
+            against: {
+              description:
+                'Baseline to compare against instead of surface.pikku.json: a .pikku directory, a snapshot file, or a snapshot URL',
+            },
+            out: {
+              description:
+                'Where to write the changes (defaults to .pikku/changes.gen.json)',
+            },
+            failOn: {
+              description:
+                'Exit non-zero when the verdict is at or above this level: major, minor or patch',
+            },
+          },
+        }),
+        snapshot: pikkuCLICommand({
+          func: pikkuReleaseSnapshot,
+          render: renderSemver,
+          description:
+            "Write this build's surface snapshot, the baseline a later diff compares against",
+          options: {
+            out: {
+              description:
+                'Where to write the snapshot (defaults to stdout, after the CLI banner)',
+            },
+          },
+        }),
+        init: pikkuCLICommand({
+          func: pikkuReleaseInit,
+          render: renderReleaseInit,
+          description:
+            'Write surface.pikku.json and CHANGELOG.md, the baseline the first release is measured against',
+          options: {
+            force: {
+              description: 'Overwrite an existing surface.pikku.json',
+              default: false,
+            },
+          },
+        }),
+        prepare: pikkuCLICommand({
+          func: pikkuReleasePrepare,
+          render: renderReleasePrepare,
+          description:
+            'Bump package.json and write the changelog and snapshot for the next release; commits and pushes nothing',
+          options: {
+            dryRun: {
+              description: 'Work out the release without writing anything',
+              default: false,
+            },
+            goLive: {
+              description: 'Release 1.0.0: the app is live and 0.x is over',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
     watch: pikkuCLICommand({
       func: watch,
       description: 'Watch for file changes and regenerate automatically',
@@ -1204,7 +1279,8 @@ wireCLI({
                 'Header sent when fetching --openapi from a URL, as "Name: value" (repeatable), for specs published only to authenticated requests',
             },
             tags: {
-              description: 'With --openapi: keep only operations with these tags',
+              description:
+                'With --openapi: keep only operations with these tags',
             },
             include: {
               description:
