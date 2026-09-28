@@ -578,6 +578,15 @@ describe('pikku-workflow-service suspend', () => {
     run = await ws.getRun(runId)
     assert.equal(run?.status, 'suspended')
     assert.equal(run?.error?.message, 'Awaiting approval')
+    assert.equal(
+      (await ws.getStepState(runId, '__workflow_suspend:Building')).status,
+      'succeeded'
+    )
+    assert.equal(
+      (await ws.getStepState(runId, '__workflow_suspend:Awaiting approval'))
+        .status,
+      'running'
+    )
 
     await ws.resumeWorkflow(runId)
     await ws.runWorkflowJob(runId, {})
