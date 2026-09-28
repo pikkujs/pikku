@@ -122,8 +122,8 @@ them instead.
 - `body` is the raw bytes: providers sign those, not re-serialised JSON.
 - Returns one or more events (some providers batch), or `respond` for a
   handshake (Slack `url_verification`, Meta `hub.challenge`).
-- Throwing rejects the request (400; 401 for a bad signature). Nothing is
-  enqueued.
+- Throwing rejects the request with the error's own status
+  (`UnauthorizedError` → 401). Nothing is enqueued.
 - Omitted: the JSON body is one event named after the source, dispatched to a
   trigger named just `<source>`.
 
