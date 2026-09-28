@@ -7,7 +7,7 @@
  * users who want the D1-backed instance.
  */
 
-import { CamelCasePlugin, Kysely } from 'kysely'
+import { CamelCasePlugin, Kysely, type KyselyPlugin } from 'kysely'
 import { SerializePlugin } from '@pikku/kysely'
 import { D1Dialect } from 'kysely-d1'
 import type { D1Database } from '@cloudflare/workers-types'
@@ -19,15 +19,27 @@ import {
   KyselyAgentRunStateService,
 } from '@pikku/kysely'
 
+export interface CreateD1KyselyOptions {
+  /** Extra plugins to layer on, ahead of the always-last SerializePlugin. */
+  plugins?: KyselyPlugin[]
+}
+
 /**
  * Creates a Kysely instance backed by a Cloudflare D1 binding.
  * Convenience for callers that want a D1-backed kysely — services below
  * accept any `Kysely<KyselyPikkuDB>`, so libsql/Postgres works too.
  */
-export function createD1Kysely(d1Database: D1Database): Kysely<KyselyPikkuDB> {
+export function createD1Kysely(
+  d1Database: D1Database,
+  options: CreateD1KyselyOptions = {}
+): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
     dialect: new D1Dialect({ database: d1Database }),
-    plugins: [new CamelCasePlugin(), new SerializePlugin()],
+    plugins: [
+      new CamelCasePlugin(),
+      ...(options.plugins ?? []),
+      new SerializePlugin(),
+    ],
   })
 }
 

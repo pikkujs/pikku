@@ -1289,7 +1289,7 @@ export async function runValidate(
     const coercionPath = join(root, outDirRel, 'db', 'coercion.gen.ts')
     const coercionText = await readTextSafe(coercionPath)
     // `{}` means no column declared a `kind`, so there is nothing to wire.
-    if (coercionText && /:\s*"(date|boolean|json)"/.test(coercionText)) {
+    if (coercionText && /:\s*"(date|bool|json)"/.test(coercionText)) {
       const wired = (
         await Promise.all(
           (await walkSourceFiles(root)).map((f) => readTextSafe(f))
