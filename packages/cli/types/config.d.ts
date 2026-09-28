@@ -527,15 +527,43 @@ export type PikkuCLIInput = {
      * local dev database, and the shadow one every `db` command migrates to type
      * and diff a schema.
      *
+     * `pgcrypto` and `vector` (pgvector) are always loaded and need no entry.
+     *
      * A bare name is one of PGlite's bundled contrib extensions (`hstore`,
      * `citext`, `uuid_ossp`, …) and needs nothing installed. Anything else is a
-     * package the project depends on, such as `@electric-sql/pglite-pgvector`.
+     * package the project depends on. Declaring `@electric-sql/pglite-pgvector`
+     * here as well loads the project's copy in place of the CLI's.
      *
      * Needed even when the project runs against a Postgres server that already
      * has the extension: the shadow database is PGlite regardless, so a
      * `CREATE EXTENSION` in a migration fails there unless it is declared here.
      */
     pgliteExtensions?: string[]
+
+    /**
+     * Loadable SQLite extensions loaded into every SQLite connection the CLI
+     * opens: migrations, the shadow database, the dev server and the seed.
+     *
+     * Defaults to `['sqlite-vec']`, so `CREATE VIRTUAL TABLE ... USING vec0(...)`
+     * works with no configuration. `[]` loads nothing. Setting this replaces the
+     * default, so list `sqlite-vec` too if you still want it.
+     *
+     * An entry is either a package that exports `getLoadablePath()` (as
+     * sqlite-vec does), resolved from the project and then from the CLI, or a
+     * path to the extension's library file, relative to the project.
+     *
+     * A standalone build ships them inside the artifact, from the build
+     * machine, so an entry that cannot be resolved there fails the build.
+     *
+     * Bun on macOS opens Apple's SQLite, which cannot load extensions, so under
+     * bun the CLI uses Homebrew's libsqlite3 (`brew install sqlite`) instead, or
+     * the one `PIKKU_SQLITE_LIBRARY` names; a bun standalone build carries that
+     * library too. Without one the CLI warns and loads no extensions.
+     *
+     * Separate from `pgliteExtensions` because a Postgres extension and a SQLite
+     * one never share a build, and often not a name.
+     */
+    sqliteExtensions?: string[]
   }
 
   cli?: {

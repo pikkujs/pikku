@@ -84,3 +84,19 @@ test('getColumns ignores SQL comments inside a CHECK enum list', async () => {
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test('listTables leaves out the shadow tables a virtual table keeps its data in', async () => {
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(':memory:')
+  try {
+    db.exec(`CREATE TABLE passages (id INTEGER PRIMARY KEY, body TEXT);
+CREATE VIRTUAL TABLE passages_fts USING fts5(body);
+`)
+    assert.deepEqual(await new SqliteIntrospector(db).listTables(), [
+      'passages',
+      'passages_fts',
+    ])
+  } finally {
+    db.close()
+  }
+})

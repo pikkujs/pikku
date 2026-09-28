@@ -238,9 +238,12 @@ export abstract class BaseBundler implements Bundler {
     // three so CJS builtins resolve and native-addon loaders find their .node
     // files. Skipped when the provider opts out via `noRequireShim` (e.g. CF
     // Workers — `import.meta.url` is undefined there, so the shim crashes).
+    // The banner is raw text esbuild never renames around, so its imports carry
+    // names no generated entry uses: the standalone entry imports `dirname` as
+    // `__pikkuDirname`, and without mangling (bun) the two collided.
     const bannerJs =
       format === 'esm' && platform === 'node' && !options.noRequireShim
-        ? `import { createRequire as __pikkuCreateRequire } from 'node:module'; import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'; import { dirname as __pikkuDirname } from 'node:path'; const require = __pikkuCreateRequire(import.meta.url); const __filename = __pikkuFileURLToPath(import.meta.url); const __dirname = __pikkuDirname(__filename);`
+        ? `import { createRequire as __pikkuBannerCreateRequire } from 'node:module'; import { fileURLToPath as __pikkuBannerFileURLToPath } from 'node:url'; import { dirname as __pikkuBannerDirname } from 'node:path'; const require = __pikkuBannerCreateRequire(import.meta.url); const __filename = __pikkuBannerFileURLToPath(import.meta.url); const __dirname = __pikkuBannerDirname(__filename);`
         : undefined
 
     const compileInput: CompileInput = {

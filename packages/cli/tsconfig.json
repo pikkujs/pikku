@@ -15,7 +15,7 @@
     "types/*.ts",
     "types/*.d.ts"
   ],
-  "exclude": ["**/*.test.ts", "node_modules"],
+  "exclude": ["**/*.test.ts", "src/test-preload.ts", "node_modules"],
   "references": [
     {
       "path": "../core/tsconfig.json"

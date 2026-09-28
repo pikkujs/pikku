@@ -34,7 +34,8 @@
   "dependencies": {
     "@ai-sdk/openai": "^4.0.42",
     "@ai-sdk/openai-compatible": "^3.0.30",
-    "@electric-sql/pglite": "^0.5.5",
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
     "@jridgewell/trace-mapping": "^0.3.31",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
     "@pikku/ai-vercel": "^0.12.14",
@@ -68,6 +69,7 @@
     "path-to-regexp": "^8.4.2",
     "pg": "^8.23.0",
     "semver": "^7.8.5",
+    "sqlite-vec": "0.1.9",
     "tinyglobby": "^0.2.17",
     "ts-json-schema-generator": "2.9.1-next.18",
     "tsx": "^4.23.12",

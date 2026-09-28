@@ -23,7 +23,13 @@ interface NodeSqliteDatabaseShape {
 }
 
 interface NodeSqliteModule {
-  DatabaseSync: new (filename?: string) => NodeSqliteDatabaseShape
+  DatabaseSync: new (
+    filename?: string,
+    options?: { allowExtension?: boolean }
+  ) => NodeSqliteDatabaseShape & {
+    loadExtension(path: string): void
+    enableLoadExtension(allow: boolean): void
+  }
 }
 
 class NodeSqliteStatement implements SyncSqliteStatement {
@@ -111,8 +117,20 @@ async function importNodeSqlite(): Promise<NodeSqliteModule> {
 export async function createNodeSqliteRuntime(): Promise<SqliteRuntime> {
   const { DatabaseSync } = await importNodeSqlite()
   return {
-    open(filename) {
-      return new NodeSqliteDatabase(new DatabaseSync(filename))
+    open(filename, options) {
+      const extensions = options?.extensions ?? []
+      // node:sqlite refuses loadExtension unless the connection was opened
+      // allowing it. It is only allowed when there is something to load, and
+      // closed again straight after, so nothing can load more later. (SQL's own
+      // load_extension() stays refused either way.)
+      const db = new DatabaseSync(filename, {
+        allowExtension: extensions.length > 0,
+      })
+      if (extensions.length > 0) {
+        for (const path of extensions) db.loadExtension(path)
+        db.enableLoadExtension(false)
+      }
+      return new NodeSqliteDatabase(db)
     },
   }
 }

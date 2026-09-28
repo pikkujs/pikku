@@ -29,3 +29,6 @@ export type {
   CommandOutput,
   ParseOptions,
 } from './cli.js'
+
+export { materializeEmbeddedFiles } from './sqlite-extensions.js'
+export type { EmbeddedFile } from './sqlite-extensions.js'

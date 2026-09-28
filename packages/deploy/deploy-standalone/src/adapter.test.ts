@@ -182,6 +182,29 @@ describe('StandaloneProviderAdapter deploy output', () => {
     assert.equal(result.success, true)
     assert.equal(existsSync(join(outDir, 'frontend')), false)
     assert.equal(existsSync(join(outDir, 'frontend-assets.gen.js')), false)
+    assert.equal(existsSync(join(outDir, 'db')), false)
+  })
+
+  test('ships the migrations beside the bundle', async () => {
+    // `db migrate` looks for them next to the bundle (or the bun binary, which
+    // is compiled into the same directory); a copy left only in the build
+    // directory made the artifact report "already up to date" on an empty db.
+    const { buildDir, outDir } = await builtUnit({ withFrontend: false })
+    await mkdir(join(buildDir, 'app', 'db', 'sqlite'), { recursive: true })
+    await writeFile(
+      join(buildDir, 'app', 'db', 'sqlite', '0001_init.sql'),
+      'create table t (id integer);'
+    )
+
+    await new StandaloneProviderAdapter({ runtime: 'node' }).deploy({
+      buildDir,
+      logger: silentLogger,
+    })
+
+    assert.equal(
+      await readFile(join(outDir, 'db', 'sqlite', '0001_init.sql'), 'utf-8'),
+      'create table t (id integer);'
+    )
   })
 })
 
@@ -639,7 +662,10 @@ for (const runtime of ['node', 'bun'] as const) {
           source.indexOf('async function main()'),
         'version and help have to answer on a machine where neither works yet'
       )
-      assert.match(source, /if \(__pikkuCommand\.kind === 'exit'\) process\.exit/)
+      assert.match(
+        source,
+        /if \(__pikkuCommand\.kind === 'exit'\) process\.exit/
+      )
     })
 
     test('the version reported is the project’s own', () => {
@@ -697,7 +723,10 @@ for (const runtime of ['node', 'bun'] as const) {
       assert.match(source, /hasDb: false,/)
       assert.doesNotMatch(source, /engine:/)
       assert.doesNotMatch(source, /runStandaloneCommand/)
-      assert.match(source, /if \(__pikkuCommand\.kind !== 'serve'\) process\.exit\(0\)/)
+      assert.match(
+        source,
+        /if \(__pikkuCommand\.kind !== 'serve'\) process\.exit\(0\)/
+      )
     })
   })
 }
@@ -721,5 +750,138 @@ describe('StandaloneProviderAdapter migrations path per runtime', () => {
       ),
       /resolveMigrationsDir\(__pikkuJoin\(__pikkuDirname\(process\.execPath\), 'db', 'sqlite'\)\)/
     )
+  })
+})
+
+describe('StandaloneProviderAdapter SQLite extensions', () => {
+  const withVec = {
+    ...(baseContext as object),
+    db: { engine: 'sqlite', sqliteExtensions: ['vec0.dylib'] },
+  } as never
+  const generate = (runtime: 'node' | 'bun', ctx: never) =>
+    new StandaloneProviderAdapter({ runtime }).generateEntrySource(ctx)
+
+  test('a node build loads the libraries shipped beside the bundle', () => {
+    const source = generate('node', withVec)
+
+    assert.match(
+      source,
+      /const __pikkuSqliteExtensions = \['vec0\.dylib'\]\.map\(\(name\) =>\n\s+__pikkuJoin\(__pikkuDirname\(__pikkuFileURLToPath\(import\.meta\.url\)\), 'sqlite-extensions', name\)/
+    )
+    assert.match(source, /extensions: __pikkuSqliteExtensions,/)
+    assert.doesNotMatch(source, /sqlite-extensions\.gen/)
+  })
+
+  test('a bun build writes its embedded copies out beside the database', () => {
+    const source = generate('bun', withVec)
+
+    assert.match(
+      source,
+      /import \{ sqliteExtensions as __pikkuEmbeddedSqliteExtensions \} from '\.\/sqlite-extensions\.gen\.js'/
+    )
+    assert.match(
+      source,
+      /import \{[^}]*materializeEmbeddedFiles[^}]*\} from '@pikku\/deploy-standalone\/runtime'/
+    )
+    assert.match(
+      source,
+      /materializeEmbeddedFiles\(\n\s+__pikkuEmbeddedSqliteExtensions,\n\s+__pikkuJoin\(__pikkuDirname\(__pikkuDbFile\), '\.pikku-sqlite-extensions'\)/
+    )
+    assert.match(source, /extensions: __pikkuSqliteExtensions,/)
+  })
+
+  test('db migrate and backup open the database with the same extensions', () => {
+    for (const runtime of ['node', 'bun'] as const) {
+      assert.match(
+        generate(runtime, withVec),
+        /databaseFile: __pikkuDbFile, extensions: __pikkuSqliteExtensions,/
+      )
+    }
+  })
+
+  test('the extensions are bound before the database is opened', () => {
+    for (const runtime of ['node', 'bun'] as const) {
+      const source = generate(runtime, withVec)
+      assert.ok(
+        source.indexOf('const __pikkuSqliteExtensions') <
+          source.indexOf('const kysely =')
+      )
+    }
+  })
+
+  test('a build with none loads nothing', () => {
+    const plain = {
+      ...(baseContext as object),
+      db: { engine: 'sqlite' },
+    } as never
+    for (const runtime of ['node', 'bun'] as const) {
+      const source = generate(runtime, plain)
+      assert.doesNotMatch(source, /__pikkuSqliteExtensions/)
+      assert.doesNotMatch(source, /materializeEmbeddedFiles/)
+    }
+  })
+
+  test('the bun manifest stays out of esbuild', () => {
+    assert.ok(
+      new StandaloneProviderAdapter({ runtime: 'bun' })
+        .getExternals()
+        .includes('./sqlite-extensions.gen.js')
+    )
+  })
+
+  test('only a bun build asks for a SQLite library to carry', () => {
+    assert.equal(
+      new StandaloneProviderAdapter({ runtime: 'bun' }).bundlesSqliteLibrary,
+      true
+    )
+    assert.equal(
+      new StandaloneProviderAdapter({ runtime: 'node' }).bundlesSqliteLibrary,
+      false
+    )
+  })
+
+  test('a bun build points bun at its libsqlite3 before opening anything', () => {
+    // bun takes a library only before its first open, and then never again.
+    const withLibrary = {
+      ...(baseContext as object),
+      db: {
+        engine: 'sqlite',
+        sqliteExtensions: ['vec0.dylib'],
+        sqliteLibrary: 'libsqlite3.3.53.4.dylib',
+      },
+    } as never
+    const source = generate('bun', withLibrary)
+
+    assert.match(
+      source,
+      /import \{ sqliteLibrary as __pikkuEmbeddedSqliteLibrary \} from '\.\/sqlite-extensions\.gen\.js'/
+    )
+    assert.match(
+      source,
+      /import \{ Database as __pikkuBunDatabase \} from 'bun:sqlite'/
+    )
+    assert.match(
+      source,
+      /materializeEmbeddedFiles\(\n\s+\[__pikkuEmbeddedSqliteLibrary\],\n\s+__pikkuJoin\(__pikkuDirname\(__pikkuDbFile\), '\.pikku-sqlite-extensions'\)/
+    )
+    const swap = source.indexOf('__pikkuBunDatabase.setCustomSQLite(')
+    assert.ok(swap > 0)
+    assert.ok(swap < source.indexOf('const __pikkuSqliteExtensions'))
+    assert.ok(swap < source.indexOf('const kysely ='))
+  })
+
+  test('a library with no extensions is still swapped in', () => {
+    const libraryOnly = {
+      ...(baseContext as object),
+      db: { engine: 'sqlite', sqliteLibrary: 'libsqlite3.dylib' },
+    } as never
+    const source = generate('bun', libraryOnly)
+
+    assert.match(source, /__pikkuBunDatabase\.setCustomSQLite\(/)
+    assert.match(
+      source,
+      /import \{[^}]*materializeEmbeddedFiles[^}]*\} from '@pikku\/deploy-standalone\/runtime'/
+    )
+    assert.doesNotMatch(source, /__pikkuSqliteExtensions/)
   })
 })

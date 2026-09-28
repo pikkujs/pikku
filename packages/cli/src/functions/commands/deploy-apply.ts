@@ -494,6 +494,7 @@ export const deployApply = pikkuSessionlessFunc<
       frontend: config.frontend,
       outDir: config.outDir,
       srcDirectories: config.srcDirectories,
+      sqliteExtensions: config.db?.sqliteExtensions,
       debugArtifacts: data?.debugArtifacts ?? false,
       logger,
       bundler,
