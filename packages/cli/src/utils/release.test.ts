@@ -104,7 +104,7 @@ describe('changelog', () => {
     ],
   }
 
-  test('groups surface changes, then notes, then commits', () => {
+  test('groups surface changes, then notes', () => {
     const section = renderChangelogSection({
       version: '2.0.0',
       date: '2026-09-28',
@@ -134,11 +134,20 @@ describe('changelog', () => {
         '',
         '- Use /people instead',
         '',
-        '### Commits',
-        '',
-        '- drop users route (abcdef1)',
-        '',
       ].join('\n')
+    )
+  })
+
+  test('says so when nothing reached the API', () => {
+    const section = renderChangelogSection({
+      version: '2.0.1',
+      date: '2026-09-28',
+      changes: { ...changes, changes: [] },
+      commits: [commit('tidy logging')],
+    })
+    assert.equal(
+      section,
+      '## 2.0.1 (2026-09-28)\n\nInternal changes only, no changes to the API.\n'
     )
   })
 

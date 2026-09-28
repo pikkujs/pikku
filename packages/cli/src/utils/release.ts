@@ -84,8 +84,6 @@ export interface ChangelogInput {
   commits: Commit[]
 }
 
-const COMMIT_LIMIT = 100
-
 export function renderChangelogSection(input: ChangelogInput): string {
   const { changes, commits } = input
   const lines: string[] = [`## ${input.version} (${input.date})`, '']
@@ -111,15 +109,8 @@ export function renderChangelogSection(input: ChangelogInput): string {
     lines.push('### Notes', '', ...notes.map((n) => `- ${n}`), '')
   }
 
-  if (commits.length > 0) {
-    lines.push('### Commits', '')
-    for (const commit of commits.slice(0, COMMIT_LIMIT)) {
-      lines.push(`- ${commit.subject} (${commit.sha.slice(0, 7)})`)
-    }
-    if (commits.length > COMMIT_LIMIT) {
-      lines.push(`- …and ${commits.length - COMMIT_LIMIT} more`)
-    }
-    lines.push('')
+  if (changes.changes.length === 0 && notes.length === 0) {
+    lines.push('Internal changes only, no changes to the API.', '')
   }
 
   return lines.join('\n')

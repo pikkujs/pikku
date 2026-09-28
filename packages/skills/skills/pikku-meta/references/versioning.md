@@ -177,8 +177,10 @@ The bump comes from the surface diff alone — there is no manual override. A
 release whose surface did not move is a patch. Below 1.0 a breaking change
 is a minor, like any other surface change; from 1.0 it is a major. 1.0.0 is
 never reached by a diff: `pikku release prepare --go-live` releases it once,
-when the app is live. A `Release-Note: …` commit trailer adds a line to the
-changelog's Notes section. Branch names are configurable in `pikku.config.json`:
+when the app is live. The changelog lists the surface changes and nothing
+else from the code; a behaviour change behind an unchanged API only shows up
+if a commit carries a `Release-Note: …` trailer, which adds a line to Notes.
+A release with neither says it holds internal changes only. Branch names are configurable in `pikku.config.json`:
 
 ```json
 {
