@@ -1,0 +1,99 @@
+{
+  "title": "Backbone Rebuild Contact Sheet",
+  "eyebrow": "Every live screen · desktop and phone · match / partial / not done",
+  "heading": { "text": "Backbone,", "em": "side by side" },
+  "lede": "Every screen of the live application, captured at two widths, against the same screen in the rebuild. Both sides read the <b>same tenant</b>, so a difference here is a difference in the interface and not in the data. A screen is <em>Match</em> only when its anchors line up at every captured width; anything else carries the reason under it.",
+  "sides": {
+    "a": { "label": "Live", "origin": "bb115.backboneapp.cloud" },
+    "b": { "label": "Rebuild", "origin": "localhost:7110" }
+  },
+  "viewports": [
+    { "id": "desktop", "label": "Desktop 1440", "width": 1440, "height": 900 },
+    { "id": "phone", "label": "Phone 390", "width": 390, "height": 844, "mobile": true, "deviceScaleFactor": 2 }
+  ],
+  "statuses": [
+    { "id": "ok", "label": "Match", "legend": "anchors within a pixel or two at every width", "band": "Nothing here needs a second look." },
+    { "id": "warn", "label": "Partial", "legend": "the screen is there, something on it is not", "band": "Built and reachable, with a named difference under it." },
+    { "id": "bad", "label": "Not done", "legend": "no counterpart in the rebuild", "band": "Live has this screen and the rebuild does not." },
+    { "id": "open", "label": "Built, unverified", "legend": "rebuilt, no live capture to hold it against", "band": "No side-by-side exists, so nobody has checked these." }
+  ],
+  "screens": [
+    {
+      "id": "product-library",
+      "name": "Product Library",
+      "route": "/products",
+      "status": "ok",
+      "note": "The catalogue grid. Tile pitch is 232px on both axes against live's 232; card inner padding moved from the component default 16px to live's 12px 16px, centrally rather than on this page. The type ladder is the theme's, not the page's. On the phone the grid drops to one column at 640px on both sides.",
+      "captures": {
+        "desktop": {
+          "delta": "Δ ≤1px",
+          "a": { "image": "shots/live/product-library.desktop.png", "caption": "/products" },
+          "b": { "image": "shots/rebuild/product-library.desktop.png", "caption": "/app/products" },
+          "diff": { "image": "shots/diff/product-library.desktop.diff.png" },
+          "anchors": [
+            { "name": "Wordmark, ink box", "a": "x 16–130, y 22–39", "b": "x 16–130, y 22–39", "delta": "0" },
+            { "name": "Tile pitch, both axes", "a": "232 × 232", "b": "232 × 232", "delta": "0" },
+            { "name": "First row baseline", "a": "y 184", "b": "y 185", "delta": "±1" }
+          ]
+        },
+        "phone": {
+          "delta": "Δ ≤1px",
+          "a": { "image": "shots/live/product-library.phone.png", "caption": "/products" },
+          "b": { "image": "shots/rebuild/product-library.phone.png", "caption": "/app/products" },
+          "diff": { "image": "shots/diff/product-library.phone.diff.png" },
+          "anchors": [
+            { "name": "Column count at 390", "a": "1", "b": "1", "delta": "0" },
+            { "name": "Card left edge", "a": "x 16", "b": "x 16", "delta": "0" },
+            { "name": "Sticky header height", "a": "56px", "b": "56px", "delta": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "product-size-spec",
+      "name": "Product → Size Spec",
+      "route": "/products/:id (Size spec tab)",
+      "status": "warn",
+      "note": "The measurement table. Row rule sits on the cell in live and on the row in the component library, which doubled every rule until the row border was zeroed. Header cell is 49px tall against live's 48 — one pixel of the header's own border, left alone deliberately rather than compensated per page.",
+      "captures": {
+        "desktop": {
+          "delta": "Δ 1px",
+          "a": { "image": "shots/live/product-size-spec.desktop.png", "caption": "/products/4182" },
+          "b": { "image": "shots/rebuild/product-size-spec.desktop.png", "caption": "/app/products/tech-tee" },
+          "diff": { "image": "shots/diff/product-size-spec.desktop.diff.png" },
+          "anchors": [
+            { "name": "th height", "a": "48px", "b": "49px", "delta": "±1" },
+            { "name": "Cell padding", "a": "8px 12px", "b": "8px 12px", "delta": "0" },
+            { "name": "Column count", "a": "11", "b": "9", "delta": "—", "d": "none" }
+          ]
+        },
+        "phone": {
+          "delta": "Δ unmeasured",
+          "a": { "image": "shots/live/product-size-spec.phone.png", "caption": "/products/4182" },
+          "b": { "missing": "The rebuild has no phone layout for this table yet — it overflows the viewport instead of scrolling in its own container." }
+        }
+      },
+      "gaps": [
+        "Two grading columns are absent in the rebuild: live reads them from the tenant's size chart, which the rebuild does not import yet. A data gap, not a styling one.",
+        "At 390 the table overflows the page instead of scrolling in its own container. Desktop is unaffected."
+      ]
+    },
+    {
+      "id": "bulk-price-edit",
+      "name": "Bulk price edit",
+      "route": "/products (selection → Edit prices)",
+      "status": "bad",
+      "note": "Live's multi-select toolbar opens a dialog that writes a price to every selected row. The rebuild has the selection but no toolbar.",
+      "captures": {
+        "desktop": {
+          "delta": "Δ unmeasured",
+          "a": { "image": "shots/live/bulk-price-edit.desktop.png", "caption": "/products" },
+          "b": { "missing": "Not built. The selection exists; nothing acts on it." }
+        }
+      },
+      "gaps": ["Whole screen missing. Sized at two days, blocked on the pricing command."]
+    }
+  ],
+  "colophon": "Captured at 1440×900 and 390×844 (DPR 2, touch emulated), full page, signed in as the same operator account on both sides so no entitlement banner shifts one side's coordinates. Δ is the largest disagreement across the anchors listed under each screen, measured on the original captures with a 40/255 per-channel threshold and both sides cropped to their common box. Difference maps are precomputed at capture resolution. Not on this sheet: the print views, which have no screen layout, and the two onboarding steps that can only be reached by a fresh signup.",
+  "render": { "maxWidth": 1100, "maxHeight": 3000, "quality": 72 }
+}

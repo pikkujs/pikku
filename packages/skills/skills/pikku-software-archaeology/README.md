@@ -82,3 +82,25 @@ pikku-software-archaeology/
 └── scripts/
     └── validate.mjs                  # schema + cross-file validation (node, no deps)
 ```
+
+## Pixel parity
+
+The blueprint says what the app does. `references/pixel-parity.md` is the phase that
+proves the rebuilt screens *look* like the ones they replace: enumerate the screens
+(dialogs and menus included), let the user pick the viewports — desktop and mobile —
+take credentials once and securely, shoot both sides, measure at capture resolution,
+and publish one contact sheet with every screen side by side, the difference map, the
+anchor measurements, and the remaining differences with their causes.
+
+```
+scripts/crawl.mjs         shoot one side; secure credential intake, per-viewport contexts, manifest with provenance
+scripts/check-pairs.mjs   refuse to build from stale, redirected or half-shot captures
+scripts/measure.mjs       precomputed difference maps and scores, at capture resolution
+scripts/contact-sheet.mjs JSON + images -> one self-contained HTML page under the 16MB artifact cap
+```
+
+Contract: `references/contact-sheet.schema.json`. Worked example:
+`example/contact-sheet-sample.json`.
+
+The trap list in `references/pixel-parity.md` is the point of the reference — every
+entry on it already cost someone a day.

@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "pikku-software-archaeology/contact-sheet.schema.json",
+  "title": "Parity contact sheet",
+  "description": "The data a parity contact sheet is built from. `node scripts/contact-sheet.mjs <sheet.json> <out.html>` turns a file of this shape into the published page. Prose fields (lede, note, gaps[], band descriptions, colophon) accept inline HTML — <b>, <em>, <code>, <br> and entities — and are emitted verbatim; every other string is escaped. Image paths resolve relative to the sheet file's own directory.",
+  "type": "object",
+  "required": ["title", "heading", "sides", "viewports", "screens"],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "The <title>, and the artifact's name in the gallery. A short noun phrase specific to this product — 'Backbone Rebuild Contact Sheet', not 'Parity Report'."
+    },
+    "eyebrow": {
+      "type": "string",
+      "description": "Small uppercase line above the headline. Say what the sheet covers and how it is graded, e.g. 'Every live screen · desktop and mobile · match / partial / not done'."
+    },
+    "heading": {
+      "type": "object",
+      "description": "The masthead headline, split so the second half renders in muted ink.",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string", "description": "The part in full ink, e.g. 'Backbone,'" },
+        "em": { "type": "string", "description": "The part in muted ink, e.g. 'side by side'" }
+      }
+    },
+    "lede": {
+      "type": "string",
+      "description": "One paragraph under the headline. Say what was captured, from which two systems, at which viewports, whether the two sides read the SAME data or two fixtures, and how the grades were arrived at. A reader who stops here should know what the page is evidence of."
+    },
+    "sides": {
+      "type": "object",
+      "description": "The two systems being compared. `a` is the incumbent (what exists today); `b` is the rebuild. The labels appear on every pane caption, so keep them one word.",
+      "required": ["a", "b"],
+      "additionalProperties": false,
+      "properties": {
+        "a": { "$ref": "#/definitions/side" },
+        "b": { "$ref": "#/definitions/side" }
+      }
+    },
+    "viewports": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The widths both sides were captured at, in the order they appear in the per-screen switcher; the first is the one a screen opens on. THE USER PICKS THESE — scripts/crawl.mjs asks, offering a desktop width and a phone width as defaults, and whatever comes back is written here and used for every screen. A responsive rebuild that matches at 1440 and breaks at 390 is not a rebuild that matches, and a sheet with one viewport is a claim about one width only. Keep the same ids across re-runs: they are what a screen's `captures` map is keyed by.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "width"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "description": "Key used in every screen's `captures` map, e.g. 'desktop', 'tablet', 'phone'." },
+          "label": { "type": "string", "description": "Button text in the switcher. Carry the width — 'Desktop 1440', 'Phone 390' — so the reader never has to guess what they are looking at." },
+          "width": { "type": "integer", "description": "CSS px the browser viewport was set to." },
+          "height": { "type": "integer", "description": "Viewport height for the capture. Full-page captures grow past it; it still decides what counts as above the fold and what a sticky header does." },
+          "deviceScaleFactor": { "type": "number", "default": 1, "description": "DPR the capture ran at. Use 2 for a phone if you are judging hairlines and type rendering; it doubles the bytes, so keep it at 1 for a first pass." },
+          "mobile": { "type": "boolean", "description": "Emulate a touch device (touch events, mobile user agent). A responsive layout that keys off pointer type rather than width only renders correctly with this on, and a phone-width capture with it off can silently show the desktop nav." }
+        }
+      }
+    },
+    "statuses": {
+      "type": "array",
+      "description": "The grades, in the order their bands appear on the page. Omit to get the default four: ok / warn / bad / open. Every screen's `status` must name one of these ids.",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "enum": ["ok", "warn", "bad", "open"], "description": "ok = green, warn = amber, bad = red, open = grey. Fixed because each has its own palette in the template." },
+          "label": { "type": "string", "description": "Band heading and chip text, e.g. 'Match', 'Partial', 'Not done', 'Built, unverified'." },
+          "legend": { "type": "string", "description": "One clause for the masthead legend, e.g. 'same screen at every viewport, anchors within a pixel or two'." },
+          "band": { "type": "string", "description": "The sentence under the band heading, explaining what qualifies a screen for this grade." }
+        }
+      }
+    },
+    "screens": {
+      "type": "array",
+      "description": "One entry per screen, in the order you want them read. The builder groups them into bands by `status` and numbers them across the whole sheet in the order they appear here.",
+      "items": { "$ref": "#/definitions/screen" }
+    },
+    "colophon": {
+      "type": "string",
+      "description": "The closing note: the viewports, how the account was signed in, what a delta is measured in, and — importantly — what is NOT on the sheet and why. A reader must be able to tell a screen that matched from a screen nobody looked at, and a viewport that matched from one nobody captured."
+    },
+    "render": {
+      "type": "object",
+      "description": "Image budget. The published page must come in under 16MB including base64 overhead, and every viewport you add multiplies the image count — a second viewport roughly doubles the page. The builder reports the total and, when `autoDegrade` is on, lowers quality until it fits.",
+      "additionalProperties": false,
+      "properties": {
+        "maxWidth": { "type": "integer", "default": 1100, "description": "Widest a pane image is stored at, in px. Panes render at most ~1100 CSS px, so beyond that is waste. A phone capture is already narrower and is never upscaled." },
+        "maxHeight": { "type": "integer", "default": 4000, "description": "Captures taller than this are cut at the top and the pane is marked. Mobile captures run two to three times the height of the same screen on desktop, so expect this to bite there first." },
+        "quality": { "type": "integer", "default": 78, "description": "JPEG quality for pane images." },
+        "format": { "enum": ["jpeg", "png", "auto"], "default": "auto", "description": "'auto' keeps PNG for diff maps (flat colour, compresses well, and JPEG ringing invents differences) and uses JPEG for screen captures." },
+        "budgetBytes": { "type": "integer", "default": 15000000, "description": "Hard ceiling for the rendered page." },
+        "autoDegrade": { "type": "boolean", "default": true, "description": "Step quality, then width, down until the page fits the budget, rather than failing. When even that is not enough the builder says which viewport to split onto its own sheet." }
+      }
+    }
+  },
+  "definitions": {
+    "side": {
+      "type": "object",
+      "required": ["label"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "description": "One word, e.g. 'Live' or 'Rebuild'." },
+        "origin": { "type": "string", "description": "Host this side was captured from, e.g. 'bb115.backboneapp.cloud'. Shown in the masthead, never a credential." }
+      }
+    },
+    "screen": {
+      "type": "object",
+      "required": ["id", "name", "status", "captures"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "description": "Anchor id, kebab-case. Stable across re-runs — it is what a comment or a link points at." },
+        "name": { "type": "string", "description": "What a user would call this screen, e.g. 'Product Library' or 'Product → Size Spec'." },
+        "route": { "type": "string", "description": "Where it lives. Usually side A's route; for a screen with no route (a dialog reached by clicking) name the source file or the path through the UI." },
+        "status": { "enum": ["ok", "warn", "bad", "open"], "description": "Its grade, across ALL captured viewports. A screen that matches on desktop and breaks on the phone is 'warn' at best — grade the worst viewport, and say which one in the note." },
+        "note": { "type": "string", "description": "What this screen IS, and what was done to make it match. Concrete numbers beat adjectives: pitch, box sizes, type sizes, the breakpoint you moved, the anchor you re-measured. This is the paragraph that makes the page worth keeping." },
+        "captures": {
+          "type": "object",
+          "description": "The panes, keyed by viewport id. Every id must be declared in the top-level `viewports`; a viewport with no entry here renders as 'not captured at this width' rather than silently showing another width's image.",
+          "additionalProperties": { "$ref": "#/definitions/capture" }
+        },
+        "gaps": {
+          "type": "array",
+          "description": "Differences that remain, each with its cause, and which viewport it shows at when it is not all of them. A difference caused by data (two accounts, two tenants) is not a styling defect and must be said so; a difference caused by a missing feature is a gap. An empty list is a claim that nothing differs — leave it out rather than writing 'none'.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "description": "One viewport's worth of evidence for one screen.",
+      "additionalProperties": false,
+      "properties": {
+        "delta": { "type": "string", "description": "The headline measurement at this viewport, shown as a chip: 'Δ 0px', 'Δ ≤1px', 'Δ unmeasured'. Say 'unmeasured' rather than omitting it — a missing chip reads as zero." },
+        "a": { "$ref": "#/definitions/pane" },
+        "b": { "$ref": "#/definitions/pane" },
+        "diff": {
+          "$ref": "#/definitions/pane",
+          "description": "Precomputed pixel-difference map, from scripts/measure.mjs. Precomputed, never a CSS blend: mix-blend-mode difference with an inverted top pane computes |A + B - 255|, which draws agreement as a double exposure and lights up every antialiased pixel."
+        },
+        "anchors": {
+          "type": "array",
+          "description": "The measurements behind the grade at this viewport. Each row is one landmark located in both captures. Rows are what makes 'Match' checkable rather than asserted — and mobile needs its own rows, because the landmark that pins a desktop layout (a sidebar's left edge) often does not exist at 390.",
+          "items": {
+            "type": "object",
+            "required": ["name", "a", "b"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "description": "The landmark, e.g. 'Wordmark, ink box' or 'Tile pitch, both axes'." },
+              "a": { "type": "string", "description": "Its measurement on side A, e.g. 'x 16–130, y 22–39'." },
+              "b": { "type": "string", "description": "Same measurement on side B." },
+              "delta": { "type": "string", "description": "The difference, e.g. '0', '±1', '—'." },
+              "d": { "enum": ["zero", "near", "none"], "description": "Colours the delta cell: zero = green, near = amber, none = grey (unmeasurable). Inferred from `delta` when omitted." }
+            }
+          }
+        }
+      }
+    },
+    "pane": {
+      "type": "object",
+      "description": "One image in the stage. Give EITHER `image` or `missing` — `missing` renders the hatched placeholder and its reason, and a capture missing a side renders solo with the comparison toggle hidden.",
+      "additionalProperties": false,
+      "properties": {
+        "image": { "type": "string", "description": "Path to the capture, relative to the sheet file." },
+        "caption": { "type": "string", "description": "Right-aligned in the pane caption. Usually the exact URL captured." },
+        "missing": { "type": "string", "description": "Why there is no capture. 'Every door to this overlay is a write' is a reason; 'N/A' is not." }
+      }
+    }
+  }
+}

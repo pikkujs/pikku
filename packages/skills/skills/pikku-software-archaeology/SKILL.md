@@ -1,6 +1,6 @@
 ---
 name: pikku-software-archaeology
-description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — and when turning that blueprint into a plain-language second opinion for the non-technical owner who holds the app. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "what does this codebase actually do as a product", "prepare this repo for a rewrite/migration", points at a legacy repo (any language — JS, TS, Ruby, Python, PHP, Go) and asks for its domains, workflows, business rules or a rebuild plan, or asks "explain how my app works" / "what would you do differently" / "is this built well?" for a founder, PM or operator audience. DO NOT TRIGGER for: documenting code structure, generating API docs from an already-clean codebase, or an engineer-facing code review.'
+description: 'Use when reverse-engineering an existing repository into a Product Blueprint — recovering what product an undocumented or organically-grown codebase implements so it can be rebuilt cleanly (e.g. as a Pikku app) — when turning that blueprint into a plain-language second opinion for the non-technical owner, and when proving the rebuild looks like the app it replaces. TRIGGER when: user says "extract a blueprint", "reverse engineer this app", "prepare this repo for a rewrite/migration", points at a legacy repo (any language) and asks for its domains, workflows, business rules or a rebuild plan; asks "explain how my app works" / "is this built well?" for a founder, PM or operator; or asks for pixel parity — "does the rebuild look like the old one", "screenshot both and compare", a visual diff or contact sheet of old and new screens, including at mobile widths. DO NOT TRIGGER for: documenting code structure, API docs for an already-clean codebase, or an engineer-facing code review.'
 installGroups: [core]
 ---
 
@@ -201,3 +201,32 @@ That phase has its own voice rules, structure and red flags — read
 `references/second-opinion-report-template.md`, and match the tone of
 `example/second-opinion-sample-report.md`. It consumes the blueprint; it never
 re-derives facts from the code, so run the extraction first.
+
+## The third phase — proving the rebuild looks like the app it replaces
+
+A blueprint says what the app DOES. Nobody signs off on a migration until the
+screens also look right, and "they look right" is not an answer anyone can check.
+
+`references/pixel-parity.md` is that phase: enumerate the screens (including the
+dialogs and menus no route reaches), ask the user which viewports to capture —
+desktop AND mobile, they pick the widths — take credentials once and securely,
+shoot both sides, measure at capture resolution, and publish one contact sheet
+that puts every screen side by side with the differences named and their causes.
+
+```bash
+node <skill-dir>/scripts/crawl.mjs  --config shoot.json --side a --out shots/live
+node <skill-dir>/scripts/crawl.mjs  --config shoot.json --side b --out shots/rebuild --workers 4
+node <skill-dir>/scripts/check-pairs.mjs shots/*/manifest.tsv --since apps/app/src
+node <skill-dir>/scripts/measure.mjs --manifest shots/live/manifest.tsv --out shots/diff
+node <skill-dir>/scripts/contact-sheet.mjs sheet.json parity.html   # then publish as an artifact
+```
+
+- The page's data contract: `references/contact-sheet.schema.json`
+- A worked example: `example/contact-sheet-sample.json`
+
+Read the trap list in `references/pixel-parity.md` before the first shoot rather
+than after it. Every entry on it is something that already cost someone a day —
+the browser-computed overlay that draws agreement as a double exposure, the
+component-library default that makes eighty screens differ at once, the font
+ladder no stylesheet can reach, and the stale capture that looks exactly like a
+pass.
