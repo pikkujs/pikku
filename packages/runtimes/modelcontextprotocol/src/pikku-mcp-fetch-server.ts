@@ -401,12 +401,18 @@ export class PikkuMCPFetchServer {
    * Whether this endpoint's manifest carries the resource at `uri`.
    *
    * Resources are registered by name but listed and read by uri, so
-   * membership is matched on the uri rather than the map key.
+   * membership is matched on the uri rather than the map key. A resource
+   * declared as a template (`todos/{id}`) is read by a concrete uri
+   * (`todos/todo1`), so the concrete uri is matched against the template the
+   * same way `runMCPResource` resolves it.
    */
   private servesResource(uri: string): boolean {
-    return this.mcpEndpointRegistry
-      .getResources()
-      .some((resource) => resource.uri === uri)
+    return this.mcpEndpointRegistry.getResources().some((resource) => {
+      if (resource.uri === uri) return true
+      if (!resource.uri.includes('{')) return false
+      const pattern = resource.uri.replace(/\{[^}]+\}/g, '([^/]+)')
+      return new RegExp(`^${pattern}$`).test(uri)
+    })
   }
 
   private setupResources(server: Server, http?: PikkuHTTP): void {

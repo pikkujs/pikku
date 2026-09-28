@@ -378,3 +378,93 @@ describe('an MCP endpoint serves only the resources and prompts in its own manif
     )
   })
 })
+
+describe('an MCP endpoint reads a templated resource through a concrete uri', () => {
+  let server: Server | undefined
+
+  afterEach(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => server!.close(() => resolve()))
+      server = undefined
+    }
+    resetPikkuState()
+  })
+
+  // A resource declared as a template (`todos/{id}`) is listed as a template
+  // and read by a concrete uri (`todos/todo1`). Membership is matched on the
+  // concrete uri, so an exact-string check would refuse every read the
+  // endpoint had just advertised.
+  test('todos/todo1 matches the todos/{id} template it was listed under', async () => {
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: silentLogger,
+    } as never)
+
+    registerResource('todos/{id}', 'todoResourceFunc', 'todo one')
+
+    const mcp = new PikkuMCPServer(
+      {
+        name: 'pikku',
+        version: '1.0.0',
+        mcpJSON: {
+          tools: [],
+          resources: [
+            {
+              name: 'todos/{id}',
+              uri: 'todos/{id}',
+              description: 'A todo by id',
+              parameters: { type: 'object' },
+            },
+          ],
+        },
+        capabilities: { resources: {} },
+      } as never,
+      silentLogger as never
+    )
+    await mcp.init()
+
+    const { handler } = mcp.createHTTPRequestHandler({ path: '/mcp' })
+    server = createServer((req, res) => {
+      void handler(req, res)
+    })
+    await new Promise<void>((resolve) =>
+      server!.listen(0, '127.0.0.1', () => resolve())
+    )
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+
+    await rpc(origin, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'pikku-surface-test', version: '0.0.0' },
+      },
+    })
+
+    const read = await rpc(origin, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'resources/read',
+      params: { uri: 'todos/todo1' },
+    })
+    assert.equal(
+      JSON.stringify(read?.result ?? read).includes('todo one'),
+      true,
+      `the template's concrete uri reads: ${JSON.stringify(read).slice(0, 200)}`
+    )
+
+    const foreign = await rpc(origin, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'resources/read',
+      params: { uri: 'todos' },
+    })
+    assert.equal(
+      foreign?.error?.code,
+      -32602,
+      `a uri matching no template is refused: ${JSON.stringify(foreign).slice(0, 200)}`
+    )
+  })
+})
