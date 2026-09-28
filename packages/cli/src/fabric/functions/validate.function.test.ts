@@ -1646,6 +1646,10 @@ describe('pikku fabric validate', () => {
         assert.ok(finding, 'expected app-missing-actor-quick-login-web finding')
         assert.strictEqual(finding!.severity, 'error')
         assert.match(finding!.message, /src\/pages\/LoginPage\.tsx/)
+        assert.match(
+          finding!.fixHint,
+          /local runner \(the starter's scripts\/dev\.mjs\) has to do it itself/
+        )
         assert.strictEqual(result.ok, false)
       } finally {
         await rm(tmp, { recursive: true, force: true })
