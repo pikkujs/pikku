@@ -1,5 +1,11 @@
 # @pikku/migrator-sql
 
+## 0.12.6
+
+### Patch Changes
+
+- 1fe79bc: `SqliteRuntime.open` takes an `extensions` option: absolute paths of loadable SQLite extensions to load into the connection. On bun, `exec` now fails with `no such module: <name>` for a `CREATE VIRTUAL TABLE` over a module that is not loaded; bun:sqlite drops that error whenever anything follows the statement, which let such a migration be recorded as applied without its table.
+
 ## 0.12.5
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 # @pikku/deploy-standalone
 
+## 0.12.21
+
+### Patch Changes
+
+- 1fe79bc: SQLite extensions now load under bun on macOS. Bun there opens Apple's SQLite, which is built without extension loading, so the CLI points bun at Homebrew's libsqlite3 (`brew install sqlite`) as it starts, or at the one `PIKKU_SQLITE_LIBRARY` names; without one it warns and carries on without extensions. A bun standalone build on macOS embeds that libsqlite3 and opens its database with it, and fails if the build machine has none. Linux is unchanged: bun there brings a SQLite that loads extensions, and node uses `node:sqlite` everywhere.
+- 1fe79bc: A standalone artifact now carries its migrations: `db/<engine>` is copied beside the bundle (and the bun binary), where `db migrate` looks for them. Before, the artifact found none and reported an empty database as up to date. A bun standalone build of an app with a database also compiles again: the bundle's require shim declared the same `dirname` alias the entry imports.
+- 1fe79bc: A standalone build of a SQLite app now ships its `db.sqliteExtensions` (sqlite-vec's vec0 by default) inside the artifact, so a migration or query that uses them works in production the way it does under `pikku dev`. The node bundle loads them from `sqlite-extensions/` beside itself; a compiled bun binary embeds them and writes them out under `$PIKKU_DATA_DIR/.pikku-sqlite-extensions/` on start. The libraries are the build machine's, so an extension that cannot be resolved there fails the build; `[]` builds without them.
+
+  `createNodeSqliteKysely` and `createBunSqliteKysely` take an `extensions` list of library paths to load into the connection.
+
+- Updated dependencies [1fe79bc]
+- Updated dependencies [1fe79bc]
+- Updated dependencies [1fe79bc]
+  - @pikku/deploy@0.12.12
+  - @pikku/migrator-sql@0.12.6
+
 ## 0.12.20
 
 ### Patch Changes

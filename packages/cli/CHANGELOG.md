@@ -1,3 +1,60 @@
+## 0.12.167
+
+### Patch Changes
+
+- 1fe79bc: SQLite extensions now load under bun on macOS. Bun there opens Apple's SQLite, which is built without extension loading, so the CLI points bun at Homebrew's libsqlite3 (`brew install sqlite`) as it starts, or at the one `PIKKU_SQLITE_LIBRARY` names; without one it warns and carries on without extensions. A bun standalone build on macOS embeds that libsqlite3 and opens its database with it, and fails if the build machine has none. Linux is unchanged: bun there brings a SQLite that loads extensions, and node uses `node:sqlite` everywhere.
+- 4e05a10: Print the TypeScript text for a Zod schema directly, dropping `zod-to-ts`.
+
+  `processZodSchema` built a TypeScript AST only to print it straight back to a
+  string. `zodToTypeText` walks Zod's own definitions instead, which removes
+  `zod-to-ts`, `ts.createPrinter`, `ts.EmitHint` and `ts.createSourceFile` from
+  the Zod path — it no longer touches the compiler API at all. `@pikku/cli`
+  declared `zod-to-ts` without importing it; that is dropped too.
+
+  A defaulted field is now optional in the generated type. `processZodSchema`
+  already strips defaulted fields out of the JSON Schema's `required`, so the two
+  halves of the same contract disagreed: the validator accepted a payload that
+  omitted the field, while the type said a caller had to pass it.
+
+- 1fe79bc: The embedded PGlite database loads pgvector by default, so `CREATE EXTENSION vector` works in `pikku dev` and every `db` command without declaring `@electric-sql/pglite-pgvector` in `db.pgliteExtensions`. The CLI pins `@electric-sql/pglite` and `@electric-sql/pglite-pgvector` to the exact pair pgvector was built for, so they can no longer drift apart. A project that still declares its own copy keeps using that one.
+- 1fe79bc: New `db.sqliteExtensions` in pikku.config.json: loadable SQLite extensions loaded into every SQLite connection the CLI opens (migrations, the shadow database, the dev server, the seed and scenario baselines). It defaults to `['sqlite-vec']`, which the CLI now ships, so `CREATE VIRTUAL TABLE ... USING vec0(...)` works in `pikku dev` with no configuration. `[]` opts out. An entry is a package exporting `getLoadablePath()` or a path to the extension's library file.
+
+  A runtime that cannot load extensions (bun on macOS, whose system SQLite is built without it) skips the default rather than failing, and a migration that then needs vec0 says why it is missing. A declared extension that cannot be loaded is an error. Codegen no longer types the shadow tables a virtual table keeps its data in (fts5's, vec0's).
+
+- 7740547: Let the SQLite and D1 Kysely factories take extra plugins, and stop the fabric
+  coercion check from missing a bool-only map.
+
+  `createNodeSqliteKysely` and `createBunSqliteKysely` both accept a `plugins`
+  array, which is how the generated `coercionMap` reaches a Kysely instance.
+  `createSQLiteKysely` and `createD1Kysely` did not: they hard-coded their plugin
+  array, so the one instance a deployed Cloudflare Worker builds had no way to
+  apply the coercion the CLI generates. They now take an options object with
+  `plugins`, layered ahead of `SerializePlugin`, which has to stay last, and
+  `@pikku/kysely-sqlite` re-exports `createCoercionPlugin` and `CoercionMap` the
+  way `@pikku/kysely-node-sqlite` already did, so a worker that only depends on
+  the SQLite package can build the plugin.
+
+  The fabric `coercion-map-not-wired` check tested the generated file for
+  `"date" | "boolean" | "json"`, but the codegen emits `bool`, never `boolean`. A
+  project whose only annotated columns were booleans passed the check with the map
+  unwired — exactly the case that is invisible locally, since the dev driver
+  returns `true` where a deployed stage returns `1`.
+
+- 1fe79bc: A standalone artifact now carries its migrations: `db/<engine>` is copied beside the bundle (and the bun binary), where `db migrate` looks for them. Before, the artifact found none and reported an empty database as up to date. A bun standalone build of an app with a database also compiles again: the bundle's require shim declared the same `dirname` alias the entry imports.
+- 1fe79bc: A standalone build of a SQLite app now ships its `db.sqliteExtensions` (sqlite-vec's vec0 by default) inside the artifact, so a migration or query that uses them works in production the way it does under `pikku dev`. The node bundle loads them from `sqlite-extensions/` beside itself; a compiled bun binary embeds them and writes them out under `$PIKKU_DATA_DIR/.pikku-sqlite-extensions/` on start. The libraries are the build machine's, so an extension that cannot be resolved there fails the build; `[]` builds without them.
+
+  `createNodeSqliteKysely` and `createBunSqliteKysely` take an `extensions` list of library paths to load into the connection.
+
+- Updated dependencies [1394385]
+- Updated dependencies [1fe79bc]
+- Updated dependencies [4e05a10]
+- Updated dependencies [1fe79bc]
+- Updated dependencies [1fe79bc]
+  - @pikku/core@0.12.124
+  - @pikku/deploy@0.12.12
+  - @pikku/inspector@0.12.90
+  - @pikku/migrator-sql@0.12.6
+
 ## 0.12.166
 
 ### Patch Changes
