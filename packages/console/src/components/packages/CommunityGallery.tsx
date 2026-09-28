@@ -258,33 +258,9 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             : m.integrations_count({ count: restTotal })
         }
         blurb={m.integrations_browse_blurb()}
-      >
-        {rest.length === 0 && addons.length === 0 ? (
-          <Stack align="center" gap={6} py="xl">
-            <ThemeIcon size={40} radius="md" variant="light" color="gray">
-              <Search size={20} />
-            </ThemeIcon>
-            <Text fw={600} size="sm">
-              {m.integrations_no_matches()}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {m.packages_no_matches_hint()}
-            </Text>
-          </Stack>
-        ) : (
-          <>
-            {rows(rest)}
-            {hasMore && (
-              <Box ref={sentinelRef} py="lg">
-                <Center>
-                  <Loader size="sm" />
-                </Center>
-              </Box>
-            )}
-          </>
-        )}
-        <Box mt="lg">
+        footer={
           <ForDevelopers
+            attached
             label={m.integrations_dev_label()}
             hint={m.integrations_dev_hint()}
             testId="integrations-developers"
@@ -317,7 +293,32 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
               </Group>
             )}
           </ForDevelopers>
-        </Box>
+        }
+      >
+        {rest.length === 0 && addons.length === 0 ? (
+          <Stack align="center" gap={6} py="xl">
+            <ThemeIcon size={40} radius="md" variant="light" color="gray">
+              <Search size={20} />
+            </ThemeIcon>
+            <Text fw={600} size="sm">
+              {m.integrations_no_matches()}
+            </Text>
+            <Text size="sm" c="dimmed">
+              {m.packages_no_matches_hint()}
+            </Text>
+          </Stack>
+        ) : (
+          <>
+            {rows(rest)}
+            {hasMore && (
+              <Box ref={sentinelRef} py="lg">
+                <Center>
+                  <Loader size="sm" />
+                </Center>
+              </Box>
+            )}
+          </>
+        )}
       </SectionCard>
     </CardsPage>
   )

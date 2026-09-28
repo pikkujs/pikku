@@ -4,7 +4,7 @@ import { useLocale } from '@/i18n/config'
 import { Mail } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { EmailsComposePanel } from '../components/emails/EmailsComposePanel'
-import { EmailDetailCards } from '../components/emails/EmailsCards'
+import { EmailDetailCards, emailName } from '../components/emails/EmailsCards'
 import { useEmailsCompose } from '../hooks/useEmailsCompose'
 import type { EmailsCompose } from '../hooks/useEmailsCompose'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
@@ -101,16 +101,14 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
         header={
           <ListPageHeader
             title={m.emails_page_title()}
+            item={emailName(selectedTemplate)}
+            onTitle={() => setSearchParams({})}
             filters={headerRight}
           />
         }
       >
         <CardsPage>
-          <EmailDetailCards
-            compose={compose}
-            src={src}
-            onBack={() => setSearchParams({})}
-          />
+          <EmailDetailCards compose={compose} src={src} />
         </CardsPage>
       </ResizablePanelLayout>
     </ConsoleSurface>

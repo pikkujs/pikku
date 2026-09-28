@@ -32,7 +32,6 @@ export const McpPage: React.FC<McpPageProps> = ({ emptyHero }) => {
             }}
           />
         }
-        hidePanel
         surface="cards"
       >
         <CardsPage>

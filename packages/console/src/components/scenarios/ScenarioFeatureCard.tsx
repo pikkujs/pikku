@@ -7,7 +7,7 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { SectionCard } from '../ui/SectionCard'
 import { StatusBadge } from '../ui/StatusBadge'
 import { ForDevelopers } from '../ui/ForDevelopers'
-import { DevField, DevFields } from '../ui/DevDetail'
+import { DevCode } from '../ui/DevDetail'
 import { FeatureHooksNote } from './FeatureHooksNote'
 import { toSections } from './FeatureDocument'
 import { ScenarioRow } from './ScenarioRow'
@@ -81,6 +81,27 @@ export const ScenarioFeatureCard: React.FC<ScenarioFeatureCardProps> = ({
       }
       blurb={feature.description ? asI18n(feature.description) : undefined}
       right={lens ? <FeatureTally feature={feature} lens={lens} /> : undefined}
+      footer={
+        <ForDevelopers
+          attached
+          label={m.scenarios_dev_label()}
+          hint={m.scenarios_dev_hint()}
+          testId={`feature-developers-${feature.id}`}
+        >
+          <DevCode code={`pikku scenario run local --features ${feature.id}`} />
+          <FeatureHooksNote
+            hasBefore={feature.hasBefore}
+            hasAfter={feature.hasAfter}
+          />
+          {feature.unresolvedEntries > 0 && (
+            <Text size="sm" c="dimmed" data-testid="feature-partial">
+              {m.scenarios_partial_listing({
+                count: feature.unresolvedEntries,
+              })}
+            </Text>
+          )}
+        </ForDevelopers>
+      }
     >
       <Stack gap="xs" mt="md">
         {sections.map((section) => {
@@ -113,40 +134,6 @@ export const ScenarioFeatureCard: React.FC<ScenarioFeatureCardProps> = ({
             />
           )
         })}
-        <ForDevelopers
-          label={m.scenarios_dev_label()}
-          hint={m.scenarios_dev_hint()}
-          testId={`feature-developers-${feature.id}`}
-        >
-          <DevFields>
-            {feature.tags.length > 0 && (
-              <DevField
-                label={m.scenarios_dev_tags()}
-                value={feature.tags.join(' ')}
-              />
-            )}
-            <DevField label={m.dev_id()} value={feature.id} />
-            {sections.length > 0 && (
-              <DevField
-                label={m.dev_workflows()}
-                value={sections
-                  .map((section) => section.scenario.name)
-                  .join(', ')}
-              />
-            )}
-          </DevFields>
-          <FeatureHooksNote
-            hasBefore={feature.hasBefore}
-            hasAfter={feature.hasAfter}
-          />
-          {feature.unresolvedEntries > 0 && (
-            <Text size="sm" c="dimmed" data-testid="feature-partial">
-              {m.scenarios_partial_listing({
-                count: feature.unresolvedEntries,
-              })}
-            </Text>
-          )}
-        </ForDevelopers>
       </Stack>
     </SectionCard>
   )

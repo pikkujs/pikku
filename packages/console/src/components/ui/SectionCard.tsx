@@ -14,6 +14,7 @@ export type SectionCardProps = {
   fill?: boolean
   hero?: boolean
   children?: React.ReactNode
+  footer?: React.ReactNode
 }
 
 /** One section of a card-based screen: a heading, a plain sentence on what it is for, and its content. */
@@ -29,6 +30,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   fill = false,
   hero = false,
   children,
+  footer,
 }) => (
   <Card
     component="section"
@@ -61,5 +63,6 @@ export const SectionCard: React.FC<SectionCardProps> = ({
       {right}
     </Group>
     {children}
+    {footer}
   </Card>
 )

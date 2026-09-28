@@ -103,6 +103,7 @@ const PersonasDeveloperDetail: React.FC<{ personas: PersonaEntry[] }> = ({
 
   return (
     <ForDevelopers
+      attached
       label={m.personas_dev_label()}
       hint={m.personas_dev_hint()}
       testId="personas-developers"
@@ -253,6 +254,11 @@ export const PersonasWorkspace: React.FC = () => {
                   : m.personas_people_count({ count: filtered.length })
             }
             blurb={m.personas_people_blurb()}
+            footer={
+              !loading && filtered.length > 0 ? (
+                <PersonasDeveloperDetail personas={filtered} />
+              ) : undefined
+            }
           >
             <Stack gap="md" mt="md">
               <PersonasView
@@ -261,9 +267,6 @@ export const PersonasWorkspace: React.FC = () => {
                 query={query || undefined}
                 onOpenVirtualUser={openVirtualUser}
               />
-              {!loading && filtered.length > 0 && (
-                <PersonasDeveloperDetail personas={filtered} />
-              )}
             </Stack>
           </SectionCard>
         )}

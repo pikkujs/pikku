@@ -128,6 +128,31 @@ const ScopeAreaCard: React.FC<{ area: ScopeArea; roles?: Role[] }> = ({
           </StatusBadge>
         ) : undefined
       }
+      footer={
+        <ForDevelopers
+          attached
+          label={m.scopes_dev_label()}
+          hint={m.scopes_dev_hint()}
+          testId={`scope-area-developers-${area.id}`}
+        >
+          <DevFields>
+            {area.all.map((scope) => (
+              <DevField key={scope.id} label={label(scope)} value={scope.id}>
+                <Group gap="xs" wrap="wrap">
+                  <Text size="sm" ff="monospace">
+                    {asI18n(scope.id)}
+                  </Text>
+                  {!scope.declared && (
+                    <Text size="xs" c="dimmed">
+                      {m.scopes_state_stale()}
+                    </Text>
+                  )}
+                </Group>
+              </DevField>
+            ))}
+          </DevFields>
+        </ForDevelopers>
+      }
     >
       <Stack gap="xs" mt="md">
         {area.groups.map((group) => {
@@ -202,28 +227,6 @@ const ScopeAreaCard: React.FC<{ area: ScopeArea; roles?: Role[] }> = ({
             </Box>
           )
         })}
-        <ForDevelopers
-          label={m.scopes_dev_label()}
-          hint={m.scopes_dev_hint()}
-          testId={`scope-area-developers-${area.id}`}
-        >
-          <DevFields>
-            {area.all.map((scope) => (
-              <DevField key={scope.id} label={label(scope)} value={scope.id}>
-                <Group gap="xs" wrap="wrap">
-                  <Text size="sm" ff="monospace">
-                    {asI18n(scope.id)}
-                  </Text>
-                  {!scope.declared && (
-                    <Text size="xs" c="dimmed">
-                      {m.scopes_state_stale()}
-                    </Text>
-                  )}
-                </Group>
-              </DevField>
-            ))}
-          </DevFields>
-        </ForDevelopers>
       </Stack>
     </SectionCard>
   )

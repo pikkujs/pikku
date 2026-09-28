@@ -22,6 +22,8 @@ import classes from '../ui/console.module.css'
 
 interface ListPageHeaderProps<T extends string = string> {
   title: I18nNode
+  item?: I18nNode
+  onTitle?: () => void
   description?: I18nNode
   docsHref?: string
   lead?: ReactNode
@@ -45,6 +47,8 @@ interface ListPageHeaderProps<T extends string = string> {
 // through on the right.
 export function ListPageHeader<T extends string = string>({
   title,
+  item,
+  onTitle,
   description,
   docsHref,
   actions,
@@ -70,6 +74,8 @@ export function ListPageHeader<T extends string = string>({
   return (
     <ShellHeader
       title={title}
+      item={item}
+      onTitle={onTitle}
       count={description}
       search={search}
       selection={selection}

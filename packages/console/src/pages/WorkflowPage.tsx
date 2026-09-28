@@ -1,7 +1,6 @@
 import React, { Suspense, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Group, TextInput } from '@pikku/mantine/core'
-import { GitBranch, Search } from 'lucide-react'
+import { GitBranch } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { useSearchParams } from '../router'
@@ -9,7 +8,7 @@ import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
 import { ConsoleSurface } from '../components/console/ConsoleSurface'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { WorkflowListPanel } from '../components/workflow/WorkflowListPanel'
+import { WorkflowsWorkspace } from '../components/workflow/WorkflowsWorkspace'
 import {
   OSSConsoleNavigator,
   ConsoleNavigatorCtx,
@@ -60,29 +59,23 @@ const WorkflowPageInner: React.FC<{
     <ConsoleSurface>
       <ResizablePanelLayout
         hidePanel
+        surface="cards"
         header={
           <ListPageHeader
             title={m.workflows_title()}
-            description={m.workflows_description()}
+            description={m.workflows_page_description()}
             docsHref="https://pikku.dev/docs/wiring/workflows"
-            filters={
-              <Group gap="sm" wrap="nowrap">
-                <TextInput
-                  data-testid="page-search"
-                  placeholder={m.workflows_search_placeholder()}
-                  leftSection={<Search size={14} />}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  size="xs"
-                  style={{ width: 240 }}
-                />
-                {headerRight}
-              </Group>
-            }
+            search={{
+              placeholder: m.workflows_search(),
+              value: searchQuery,
+              onChange: setSearchQuery,
+              width: 240,
+            }}
+            view={headerRight}
           />
         }
       >
-        <WorkflowListPanel
+        <WorkflowsWorkspace
           onOpen={handleOpen}
           searchQuery={searchQuery}
           icon={icon}

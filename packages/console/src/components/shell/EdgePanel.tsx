@@ -4,6 +4,7 @@ import { ConsoleChromeContext } from '../../context/ConsoleChromeContext'
 import { usePanelInset, type PanelSide } from '../../context/PanelInsetProvider'
 import { usePhone } from '../../lib/breakpoints'
 import classes from '../ui/console.module.css'
+import { ShellHeaderSlotContext } from '../ui/ShellHeaderSlot'
 
 /** One card gutter, matching --app-card-gutter in shell/card.module.css. */
 export const CARD_GUTTER = 8
@@ -96,7 +97,9 @@ export function EdgePanel({
           chrome — where a card is deliberately not drawn because one already
           surrounds it — and render as a flush block on the canvas. */}
       <ConsoleChromeContext.Provider value="self">
-        {children}
+        <ShellHeaderSlotContext.Provider value={null}>
+          {children}
+        </ShellHeaderSlotContext.Provider>
       </ConsoleChromeContext.Provider>
     </div>
   )

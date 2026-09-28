@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react'
-import { ActionIcon, Box, Stack, Text } from '@pikku/mantine/core'
+import React, { useMemo } from 'react'
+import { ActionIcon, Stack, Text } from '@pikku/mantine/core'
 import { asI18n, type I18nNode } from '@pikku/react'
-import { ChevronDown, ChevronRight, Terminal } from 'lucide-react'
+import { ChevronRight, Terminal } from 'lucide-react'
 import { generateCommandHelp } from '@pikku/core/cli'
 import type { CLIMeta } from '@pikku/core/cli'
 import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { SectionCard } from '../ui/SectionCard'
 import { CardRow } from '../ui/CardRow'
 import { StatusTile } from '../ui/StatusTile'
@@ -74,22 +76,128 @@ const usageLine = (program: string, entry: CommandEntry) => {
 const commandText = (command: CliCommand) =>
   command.description || command.summary
 
-const CommandRow: React.FC<{
-  program: CliProgram
-  entry: CommandEntry
-  help: string
-}> = ({ program, entry, help }) => {
-  const [open, setOpen] = useState(false)
+const helpFor = (
+  program: CliProgram,
+  cliRenderers: Record<string, any>,
+  path: string[]
+) => {
+  const cliMeta = {
+    programs: {
+      [program.wireId]: {
+        program: program.program || program.wireId,
+        commands: program.commands,
+        options: program.options,
+        defaultRenderName: program.defaultRenderName,
+      },
+    },
+    renderers: cliRenderers,
+  } as CLIMeta
+  try {
+    return generateCommandHelp(program.wireId, cliMeta, path)
+  } catch {
+    return ''
+  }
+}
+
+const panelIdOf = (program: CliProgram, entry: CommandEntry) =>
+  `${program.wireId}::${entry.path.join(' ')}`
+
+const titleOf = (entry: CommandEntry) =>
+  commandText(entry.command) || entry.path.join(' ')
+
+export const CliCommandDetail: React.FC<{
+  programId: string
+  path: string[]
+}> = ({ programId, path }) => {
   const { meta } = usePikkuMeta()
+  const program = (meta.cliMeta as CliProgram[] | undefined)?.find(
+    (entry) => entry.wireId === programId
+  )
+  const entry = program
+    ? flatten(program.commands).find(
+        (candidate) => candidate.path.join(' ') === path.join(' ')
+      )
+    : undefined
+  if (!program || !entry) return null
+
   const name = program.program || program.wireId
-  const usage = usageLine(name, entry)
   const positionals = entry.command.positionals ?? []
   const options = Object.entries(entry.command.options ?? {})
-  const text = commandText(entry.command)
   const funcMeta = meta.functions?.find(
     (f: any) => f.pikkuFuncId === entry.command.pikkuFuncId
   )
   const inputs = positionals.length + options.length
+
+  return (
+    <Stack gap="md" data-testid={`cli-detail-${entry.path.join('-')}`}>
+      <DevCode code={usageLine(name, entry)} label={m.wires_cli_how_to_run()} />
+      {inputs > 0 && (
+        <Stack gap={6}>
+          <Text size="sm" c="dimmed">
+            {m.wires_cli_inputs_title()}
+          </Text>
+          {positionals.map((positional) => (
+            <Text size="sm" key={positional.name}>
+              <Text span fw={600}>
+                {asI18n(positional.name)}
+              </Text>
+              {asI18n(' — ')}
+              {positional.required
+                ? m.wires_cli_input_required()
+                : m.wires_cli_input_optional()}
+            </Text>
+          ))}
+          {options.map(([optionName, option]) => (
+            <Text size="sm" key={optionName}>
+              <Text span fw={600} ff="monospace">
+                {asI18n(`--${optionName}`)}
+              </Text>
+              {asI18n(' — ')}
+              {option.description
+                ? asI18n(option.description)
+                : option.required
+                  ? m.wires_cli_input_required()
+                  : m.wires_cli_input_optional()}
+            </Text>
+          ))}
+        </Stack>
+      )}
+      <ForDevelopers testId={`cli-command-dev-${entry.path.join('-')}`}>
+        <DevFields>
+          <DevField label={m.dev_function()} value={entry.command.pikkuFuncId} />
+          <DevField
+            label={m.wires_cli_dev_command()}
+            value={entry.path.join(' ')}
+          />
+          {funcMeta?.sourceFile && (
+            <DevField
+              label={m.dev_source()}
+              value={devSourcePath(funcMeta.sourceFile)}
+            />
+          )}
+        </DevFields>
+        <DevCode
+          code={helpFor(program, meta.cliRenderers || {}, entry.path)}
+          language="text"
+          label={m.wires_cli_dev_help({
+            command: `${name} ${entry.path.join(' ')} --help`,
+          })}
+        />
+      </ForDevelopers>
+    </Stack>
+  )
+}
+
+const CommandRow: React.FC<{
+  program: CliProgram
+  entry: CommandEntry
+  selected: boolean
+  onOpen: () => void
+}> = ({ program, entry, selected, onOpen }) => {
+  const name = program.program || program.wireId
+  const inputs =
+    (entry.command.positionals ?? []).length +
+    Object.keys(entry.command.options ?? {}).length
 
   const metaLine: I18nNode[] = [
     m.wires_cli_row_run({ command: `${name} ${entry.path.join(' ')}` }),
@@ -103,13 +211,14 @@ const CommandRow: React.FC<{
   return (
     <CardRow
       testId={`cli-command-${entry.path.join('-')}`}
-      onClick={() => setOpen((value) => !value)}
+      onClick={onOpen}
+      selected={selected}
       leading={
         <StatusTile tone="info">
           <Terminal size={18} />
         </StatusTile>
       }
-      title={text ? asI18n(text) : asI18n(entry.path.join(' '))}
+      title={asI18n(titleOf(entry))}
       meta={metaLine.map((part, index) => (
         <React.Fragment key={index}>
           {index > 0 && asI18n(' · ')}
@@ -120,83 +229,13 @@ const CommandRow: React.FC<{
         <ActionIcon
           variant="subtle"
           color="gray"
-          aria-label={open ? m.wires_cli_row_hide() : m.wires_cli_row_show()}
-          aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
+          aria-label={m.wires_cli_row_show()}
+          onClick={onOpen}
         >
-          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <ChevronRight size={16} />
         </ActionIcon>
       }
-    >
-      {open && (
-        <Box
-          mt="md"
-          pl={{ base: 0, sm: 52 }}
-          onClick={(event) => event.stopPropagation()}
-          style={{ cursor: 'default' }}
-        >
-          <Stack gap="md">
-            <DevCode code={usage} label={m.wires_cli_how_to_run()} />
-            {inputs > 0 && (
-              <Stack gap={6}>
-                <Text size="sm" c="dimmed">
-                  {m.wires_cli_inputs_title()}
-                </Text>
-                {positionals.map((positional) => (
-                  <Text size="sm" key={positional.name}>
-                    <Text span fw={600}>
-                      {asI18n(positional.name)}
-                    </Text>
-                    {asI18n(' — ')}
-                    {positional.required
-                      ? m.wires_cli_input_required()
-                      : m.wires_cli_input_optional()}
-                  </Text>
-                ))}
-                {options.map(([optionName, option]) => (
-                  <Text size="sm" key={optionName}>
-                    <Text span fw={600} ff="monospace">
-                      {asI18n(`--${optionName}`)}
-                    </Text>
-                    {asI18n(' — ')}
-                    {option.description
-                      ? asI18n(option.description)
-                      : option.required
-                        ? m.wires_cli_input_required()
-                        : m.wires_cli_input_optional()}
-                  </Text>
-                ))}
-              </Stack>
-            )}
-            <ForDevelopers testId={`cli-command-dev-${entry.path.join('-')}`}>
-              <DevFields>
-                <DevField
-                  label={m.dev_function()}
-                  value={entry.command.pikkuFuncId}
-                />
-                <DevField
-                  label={m.wires_cli_dev_command()}
-                  value={entry.path.join(' ')}
-                />
-                {funcMeta?.sourceFile && (
-                  <DevField
-                    label={m.dev_source()}
-                    value={devSourcePath(funcMeta.sourceFile)}
-                  />
-                )}
-              </DevFields>
-              <DevCode
-                code={help}
-                language="text"
-                label={m.wires_cli_dev_help({
-                  command: `${name} ${entry.path.join(' ')} --help`,
-                })}
-              />
-            </ForDevelopers>
-          </Stack>
-        </Box>
-      )}
-    </CardRow>
+    />
   )
 }
 
@@ -205,30 +244,10 @@ const ProgramCard: React.FC<{
   entries: CommandEntry[]
   total: number
   cliRenderers: Record<string, any>
-}> = ({ program, entries, total, cliRenderers }) => {
+  activePanel: string | null
+  onOpen: (program: CliProgram, entry: CommandEntry) => void
+}> = ({ program, entries, total, cliRenderers, activePanel, onOpen }) => {
   const name = program.program || program.wireId
-  const cliMeta = useMemo(
-    (): CLIMeta =>
-      ({
-        programs: {
-          [program.wireId]: {
-            program: name,
-            commands: program.commands,
-            options: program.options,
-            defaultRenderName: program.defaultRenderName,
-          },
-        },
-        renderers: cliRenderers,
-      }) as CLIMeta,
-    [program, name, cliRenderers]
-  )
-  const helpFor = (path: string[]) => {
-    try {
-      return generateCommandHelp(program.wireId, cliMeta, path)
-    } catch {
-      return ''
-    }
-  }
 
   return (
     <SectionCard
@@ -252,6 +271,18 @@ const ProgramCard: React.FC<{
         ) : undefined
       }
       blurb={m.wires_cli_blurb({ program: name })}
+      footer={
+        <ForDevelopers testId={`cli-program-dev-${program.wireId}`} attached>
+          <DevFields>
+            <DevField label={m.dev_id()} value={program.wireId} />
+          </DevFields>
+          <DevCode
+            code={helpFor(program, cliRenderers, [])}
+            language="text"
+            label={m.wires_cli_dev_help({ command: `${name} --help` })}
+          />
+        </ForDevelopers>
+      }
     >
       <Stack gap="xs" mt="md">
         {entries.length === 0 && (
@@ -264,19 +295,10 @@ const ProgramCard: React.FC<{
             key={entry.path.join(' ')}
             program={program}
             entry={entry}
-            help={helpFor(entry.path)}
+            selected={activePanel === `cli-${panelIdOf(program, entry)}`}
+            onOpen={() => onOpen(program, entry)}
           />
         ))}
-        <ForDevelopers testId={`cli-program-dev-${program.wireId}`}>
-          <DevFields>
-            <DevField label={m.dev_id()} value={program.wireId} />
-          </DevFields>
-          <DevCode
-            code={helpFor([])}
-            language="text"
-            label={m.wires_cli_dev_help({ command: `${name} --help` })}
-          />
-        </ForDevelopers>
       </Stack>
     </SectionCard>
   )
@@ -287,6 +309,26 @@ export const CliProgramCards: React.FC<{
   cliRenderers: Record<string, any>
   searchQuery: string
 }> = ({ programs, cliRenderers, searchQuery }) => {
+  const { openPanel, activePanel } = usePanelContext()
+  const rows = useMemo(
+    () =>
+      programs.flatMap((program) =>
+        flatten(program.commands).map((entry) => ({ program, entry }))
+      ),
+    [programs]
+  )
+  const open = (program: CliProgram, entry: CommandEntry) =>
+    openPanel('cli', panelIdOf(program, entry), titleOf(entry), {
+      command: { programId: program.wireId, path: entry.path },
+    })
+
+  usePanelUrl({
+    type: 'cli',
+    items: rows,
+    getId: ({ program, entry }) => panelIdOf(program, entry),
+    open: (_id, { program, entry }) => open(program, entry),
+  })
+
   const query = searchQuery.trim().toLowerCase()
   const shown = programs
     .map((program) => {
@@ -319,6 +361,8 @@ export const CliProgramCards: React.FC<{
           entries={entries}
           total={all.length}
           cliRenderers={cliRenderers}
+          activePanel={activePanel}
+          onOpen={open}
         />
       ))}
     </>

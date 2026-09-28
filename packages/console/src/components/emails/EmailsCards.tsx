@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react'
 import {
   ActionIcon,
   Box,
-  Button,
   Code,
   Group,
   Paper,
@@ -13,7 +12,6 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n, type I18nNode } from '@pikku/react'
 import {
-  ArrowLeft,
   ChevronRight,
   KeyRound,
   Mail,
@@ -92,6 +90,8 @@ const humanize = (name: string) => {
   const spaced = name.replace(/[-_]+/g, ' ').trim()
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
+
+export const emailName = (name: string): I18nNode => copyOf(name).name()
 
 const copyOf = (name: string): Copy =>
   KNOWN[name] ?? {
@@ -348,8 +348,7 @@ const Fact: React.FC<{ label: I18nNode; children: I18nNode }> = ({
 export const EmailDetailCards: React.FC<{
   compose: EmailsCompose
   src?: string
-  onBack: () => void
-}> = ({ compose, src, onBack }) => {
+}> = ({ compose, src }) => {
   const { locale } = useLocale()
   const languageName = useLanguageName()
   const [view, setView] = useState<View>('desktop')
@@ -367,20 +366,6 @@ export const EmailDetailCards: React.FC<{
       <SectionCard
         hero
         testId="emails-detail-hero"
-        eyebrow={
-          <Box mb={4}>
-            <Button
-              variant="subtle"
-              size="compact-sm"
-              leftSection={<ArrowLeft size={14} />}
-              onClick={onBack}
-              data-testid="emails-back"
-              px={4}
-            >
-              {m.emails_back()}
-            </Button>
-          </Box>
-        }
         title={copy.name()}
         blurb={copy.when()}
       >

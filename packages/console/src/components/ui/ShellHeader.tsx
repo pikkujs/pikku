@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ActionIcon,
   Box,
@@ -11,8 +12,10 @@ import {
   Text,
   TextInput,
   Tooltip,
+  UnstyledButton,
 } from '@pikku/mantine/core'
 import { useElementSize } from '@mantine/hooks'
+import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { ListFilter, Search } from 'lucide-react'
@@ -29,6 +32,7 @@ import {
   type Candidate,
   type ShellHeaderProps,
 } from './shellHeaderShared'
+import { useShellHeaderSlot } from './ShellHeaderSlot'
 
 export type {
   ShellHeaderProps,
@@ -52,6 +56,8 @@ export type {
 export const ShellHeader = <T extends string = string>({
   leading,
   title,
+  item,
+  onTitle,
   count,
   selection,
   filters = [],
@@ -61,17 +67,41 @@ export const ShellHeader = <T extends string = string>({
   filtersTitle,
 }: ShellHeaderProps<T>) => {
   useLocale()
+  const slot = useShellHeaderSlot()
   const filtersLabel = filtersTitle ?? m.shell_header_filters()
   const { ref: sizeRef, width } = useElementSize()
   const measRef = useRef<Record<string, HTMLElement | null>>({})
   const [w, setW] = useState<Record<string, number> | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const searchWidth = search?.width ?? 220
+  const titleNode =
+    item != null ? (
+      <Group gap={8} wrap="nowrap">
+        <UnstyledButton
+          onClick={onTitle}
+          c="dimmed"
+          fz={15}
+          fw={500}
+          data-testid="shell-header-up"
+        >
+          {title}
+        </UnstyledButton>
+        <Text component="span" c="dimmed" fz={15} fw={400}>
+          {asI18n('/')}
+        </Text>
+        <Text component="span" fz={15} fw={600} data-testid="shell-header-item">
+          {item}
+        </Text>
+      </Group>
+    ) : (
+      title
+    )
 
   // Re-measure whenever the content that affects natural widths changes.
   const sig = JSON.stringify({
     leading: leading != null,
     title: title != null,
+    item: typeof item === 'string' ? item : item != null,
     count: count != null,
     sel: selection?.options.map((o) => o.value),
     selVal: selection?.value,
@@ -107,9 +137,9 @@ export const ShellHeader = <T extends string = string>({
   // and the empty one.
   const candidates: Candidate[] = []
   if (title != null)
-    candidates.push(base({ showTitle: true, showCount: count != null }))
+    candidates.push(base({ showTitle: true, showCount: count != null && !slot }))
   if (title != null && count != null) candidates.push(base({ showTitle: true }))
-  if (count != null) candidates.push(base({ showCount: true }))
+  if (count != null && !slot) candidates.push(base({ showCount: true }))
   candidates.push(base({ actMode: 'label' }))
   candidates.push(base({ actMode: 'icon' }))
   for (let n = F - 1; n >= 0; n--) {
@@ -259,127 +289,135 @@ export const ShellHeader = <T extends string = string>({
     </div>
   )
 
-  return (
-    <>
-      <Paper
-        radius={0}
-        py={0}
-        h="var(--screen-header-height)"
-        bg="transparent"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          paddingInline:
-            'var(--console-body-gutter, var(--mantine-spacing-xl))',
-        }}
+  const bar = (
+    <Paper
+      radius={0}
+      py={0}
+      h={slot ? '100%' : 'var(--screen-header-height)'}
+      bg="transparent"
+      data-slotted={slot ? 'true' : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flex: slot ? 1 : undefined,
+        minWidth: 0,
+        paddingInline: slot
+          ? 0
+          : 'var(--console-body-gutter, var(--mantine-spacing-xl))',
+      }}
+    >
+      <Group
+        ref={sizeRef}
+        wrap="nowrap"
+        gap={GAP}
+        align="center"
+        justify="space-between"
+        w="100%"
+        style={{ minWidth: 0 }}
       >
+        <Group wrap="nowrap" gap={2 * GAP} style={{ minWidth: 0 }}>
+        {leading != null && (
+          <>
+            <div
+              ref={(el) => void (measRef.current.leading = el)}
+              style={{ flexShrink: 0 }}
+            >
+              {leading}
+            </div>
+            <Divider orientation="vertical" h={28} style={{ alignSelf: 'center' }} />
+          </>
+        )}
+        {((chosen.showTitle && title != null) ||
+          (chosen.showCount && count != null)) && (
+          <Stack
+            gap={2}
+            justify="center"
+            style={{ flexShrink: 0, minWidth: 0 }}
+          >
+            {chosen.showTitle && title != null && (
+              <Text
+                component="div"
+                fz={15}
+                fw={600}
+                lh={1.3}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {titleNode}
+              </Text>
+            )}
+            {chosen.showCount && count != null && (
+              <Text
+                component="div"
+                fz={13.5}
+                c="dimmed"
+                lh={1.3}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {count}
+              </Text>
+            )}
+          </Stack>
+        )}
+        </Group>
+
         <Group
-          ref={sizeRef}
           wrap="nowrap"
           gap={GAP}
           align="center"
-          justify="space-between"
-          w="100%"
-          style={{ minWidth: 0 }}
+          style={{ flexShrink: 0, minWidth: 0 }}
         >
-          <Group wrap="nowrap" gap={2 * GAP} style={{ minWidth: 0 }}>
-          {leading != null && (
-            <>
-              <div
-                ref={(el) => void (measRef.current.leading = el)}
-                style={{ flexShrink: 0 }}
-              >
-                {leading}
-              </div>
-              <Divider orientation="vertical" h={28} style={{ alignSelf: 'center' }} />
-            </>
-          )}
-          {((chosen.showTitle && title != null) ||
-            (chosen.showCount && count != null)) && (
-            <Stack
-              gap={2}
-              justify="center"
-              style={{ flexShrink: 0, minWidth: 0 }}
+          {visible.map((f) => (
+            <FilterChip key={f.key} filter={f} />
+          ))}
+          {showFunnel && (
+            <Indicator
+              label={hiddenCount}
+              size={16}
+              disabled={hiddenCount === 0}
+              offset={3}
+              color="blue"
             >
-              {chosen.showTitle && title != null && (
-                <Text
-                  component="div"
-                  fz={15}
-                  fw={600}
-                  lh={1.3}
-                  style={{ whiteSpace: 'nowrap' }}
+              <Tooltip label={filtersLabel}>
+                <ActionIcon
+                  variant={panelOpen || hiddenCount > 0 ? 'light' : 'default'}
+                  size={CONTROL_H}
+                  onClick={() => setPanelOpen((o) => !o)}
+                  aria-label={filtersLabel}
+                  aria-expanded={panelOpen}
                 >
-                  {title}
-                </Text>
-              )}
-              {chosen.showCount && count != null && (
-                <Text
-                  component="div"
-                  fz={13.5}
-                  c="dimmed"
-                  lh={1.3}
-                  style={{ whiteSpace: 'nowrap' }}
-                >
-                  {count}
-                </Text>
-              )}
-            </Stack>
+                  <ListFilter size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </Indicator>
           )}
-          </Group>
-
-          <Group
-            wrap="nowrap"
-            gap={GAP}
-            align="center"
-            style={{ flexShrink: 0, minWidth: 0 }}
-          >
-            {visible.map((f) => (
-              <FilterChip key={f.key} filter={f} />
-            ))}
-            {showFunnel && (
-              <Indicator
-                label={hiddenCount}
-                size={16}
-                disabled={hiddenCount === 0}
-                offset={3}
-                color="blue"
-              >
-                <Tooltip label={filtersLabel}>
-                  <ActionIcon
-                    variant={panelOpen || hiddenCount > 0 ? 'light' : 'default'}
-                    size={CONTROL_H}
-                    onClick={() => setPanelOpen((o) => !o)}
-                    aria-label={filtersLabel}
-                    aria-expanded={panelOpen}
-                  >
-                    <ListFilter size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              </Indicator>
-            )}
-            {searchInline && searchField}
-            {selection && !selectionInDrawer && (
-              <div style={{ flexShrink: 0, marginLeft: GAP }}>
-                {chosen.selMode === 'switch' ? (
-                  <PikkuSwitch
-                    ariaLabel={selection.ariaLabel}
-                    value={selection.value}
-                    onChange={selection.onChange}
-                    options={selection.options}
-                    showAllLabels={switchShowAllLabels}
-                  />
-                ) : (
-                  <CycleSwitch selection={selection} />
-                )}
-              </div>
-            )}
-            {actions.length > 0 && (
-              <ActionCluster actions={actions} mode={chosen.actMode} />
-            )}
-            {actionsNode}
-          </Group>
+          {searchInline && searchField}
+          {selection && !selectionInDrawer && (
+            <div style={{ flexShrink: 0, marginLeft: GAP }}>
+              {chosen.selMode === 'switch' ? (
+                <PikkuSwitch
+                  ariaLabel={selection.ariaLabel}
+                  value={selection.value}
+                  onChange={selection.onChange}
+                  options={selection.options}
+                  showAllLabels={switchShowAllLabels}
+                />
+              ) : (
+                <CycleSwitch selection={selection} />
+              )}
+            </div>
+          )}
+          {actions.length > 0 && (
+            <ActionCluster actions={actions} mode={chosen.actMode} />
+          )}
+          {actionsNode}
         </Group>
-      </Paper>
+      </Group>
+    </Paper>
+  )
+
+  return (
+    <>
+      {slot ? createPortal(bar, slot) : bar}
 
       {/* Overflow row — the funnel slides the collapsed controls down as a
           second toolbar row, pushing the page content below it. */}
@@ -439,7 +477,7 @@ export const ShellHeader = <T extends string = string>({
           measureNode(
             'title',
             <Text component="div" fz={15} fw={600}>
-              {title}
+              {titleNode}
             </Text>
           )}
         {count != null &&

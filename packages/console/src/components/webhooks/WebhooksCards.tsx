@@ -357,6 +357,7 @@ export const WebhooksCards: React.FC = () => {
 
   const developers = (
     <ForDevelopers
+      attached
       testId="webhooks-dev"
       label={m.webhooks_dev_label()}
       hint={m.webhooks_dev_hint()}
@@ -380,6 +381,7 @@ export const WebhooksCards: React.FC = () => {
     <Stack gap="lg">
       <SectionCard
         testId="webhooks-list"
+        footer={other.length === 0 ? developers : undefined}
         title={m.webhooks_list_title()}
         blurb={m.webhooks_list_blurb()}
         right={
@@ -409,12 +411,12 @@ export const WebhooksCards: React.FC = () => {
               <DeclaredRow key={hook.definition.event} hook={hook} locale={locale} />
             ))
           )}
-          {other.length === 0 && developers}
         </Stack>
       </SectionCard>
       {other.length > 0 && (
         <SectionCard
           testId="webhooks-other"
+          footer={developers}
           title={m.webhooks_other_title()}
           blurb={m.webhooks_other_blurb()}
         >
@@ -422,7 +424,6 @@ export const WebhooksCards: React.FC = () => {
             {other.map((hook) => (
               <OtherRow key={hook.key} hook={hook} locale={locale} />
             ))}
-            {developers}
           </Stack>
         </SectionCard>
       )}

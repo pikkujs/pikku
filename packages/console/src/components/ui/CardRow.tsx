@@ -12,6 +12,7 @@ export const CardRow: React.FC<{
   trailing?: React.ReactNode
   children?: React.ReactNode
   onClick?: () => void
+  selected?: boolean
   testId?: string
 }> = ({
   leading,
@@ -22,6 +23,7 @@ export const CardRow: React.FC<{
   trailing,
   children,
   onClick,
+  selected,
   testId,
 }) => (
   <Paper
@@ -30,7 +32,13 @@ export const CardRow: React.FC<{
     py="sm"
     data-testid={testId}
     onClick={onClick}
-    style={onClick ? { cursor: 'pointer' } : undefined}
+    aria-current={selected || undefined}
+    style={{
+      cursor: onClick ? 'pointer' : undefined,
+      boxShadow: selected
+        ? 'inset 0 0 0 1px var(--mantine-primary-color-filled)'
+        : undefined,
+    }}
   >
     <Group gap="md" wrap="nowrap" align="center">
       {leading}

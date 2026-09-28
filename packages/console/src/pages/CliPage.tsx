@@ -27,7 +27,6 @@ export const CliPage: React.FC = () => {
             }}
           />
         }
-        hidePanel
         surface="cards"
       >
         <CardsPage>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import {
+  Card,
   Collapse,
   Group,
   Paper,
@@ -22,6 +23,7 @@ export const ForDevelopers: React.FC<{
   hint?: I18nNode
   testId?: string
   detached?: boolean
+  attached?: boolean
 }> = ({
   label,
   children,
@@ -30,6 +32,7 @@ export const ForDevelopers: React.FC<{
   hint,
   testId,
   detached = false,
+  attached = false,
 }) => {
   const { shown, setShown } = useDeveloperDetails()
   const [open, setOpen] = useState(defaultOpen || shown)
@@ -44,8 +47,7 @@ export const ForDevelopers: React.FC<{
       </Stack>
     </Collapse>
   )
-  const bar = (
-    <Paper variant="inset" px="md" py="sm" data-testid={testId} data-dev-block>
+  const toggle = (
       <Group gap="sm" wrap="nowrap">
         <UnstyledButton
           onClick={() => setOpen((o) => !o)}
@@ -78,6 +80,33 @@ export const ForDevelopers: React.FC<{
           />
         )}
       </Group>
+  )
+  if (attached) {
+    return (
+      <Card.Section
+        mt="md"
+        py="sm"
+        data-testid={testId}
+        data-dev-block
+        style={{
+          paddingInline: 'var(--card-padding)',
+          marginBottom: 'calc(var(--card-padding) * -1)',
+          background: 'var(--app-panel-bg)',
+          borderTop: '1px solid var(--app-border)',
+        }}
+      >
+        {toggle}
+        <Collapse expanded={open}>
+          <Stack gap="md" pt="sm" pb="xs">
+            {children}
+          </Stack>
+        </Collapse>
+      </Card.Section>
+    )
+  }
+  const bar = (
+    <Paper variant="inset" px="md" py="sm" data-testid={testId} data-dev-block>
+      {toggle}
       {!detached && body}
     </Paper>
   )

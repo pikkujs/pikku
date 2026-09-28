@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React from 'react'
 import {
   ActionIcon,
-  Box,
   Stack,
   Tabs,
   Text,
@@ -10,7 +9,6 @@ import {
 import { asI18n, type I18nNode } from '@pikku/react'
 import {
   BookOpen,
-  ChevronDown,
   ChevronRight,
   Cpu,
   MessageSquareText,
@@ -18,6 +16,8 @@ import {
 } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { usePanelContext } from '../../context/PanelContext'
+import { usePanelUrl } from '../../hooks/usePanelUrl'
 import { getServerUrl } from '../../context/serverUrl'
 import { useSchema } from '../../hooks/useWirings'
 import { useMcpItems } from '../../hooks/useMcpItems'
@@ -40,7 +40,7 @@ const DOCS = 'https://pikku.dev/docs/wiring/mcp'
 
 type McpMethod = 'tool' | 'resource' | 'prompt'
 
-type McpItem = {
+export type McpItem = {
   method: McpMethod
   name?: string
   wireId?: string
@@ -95,18 +95,99 @@ const LOOK: Record<McpMethod, typeof Wrench> = {
   prompt: MessageSquareText,
 }
 
-const McpRow: React.FC<{ item: McpItem }> = ({ item }) => {
-  const [open, setOpen] = useState(false)
-  const { meta } = usePikkuMeta()
-  const id = idOf(item)
-  const funcMeta = meta.functions?.find(
+const describe = (item: McpItem, functions: any[] | undefined) => {
+  const funcMeta = functions?.find(
     (f: any) => f.pikkuFuncId === item.pikkuFuncId
   )
-  const text =
-    item.description ||
-    item.summary ||
-    funcMeta?.description ||
-    funcMeta?.summary
+  return {
+    funcMeta,
+    text:
+      item.description ||
+      item.summary ||
+      funcMeta?.description ||
+      funcMeta?.summary,
+  }
+}
+
+const titleOf = (item: McpItem) =>
+  item.title || readable(item.name || idOf(item))
+
+const panelIdOf = (item: McpItem) =>
+  `mcp::${item.method}::${item.wireId || item.name}`
+
+export const McpDetail: React.FC<{ item: McpItem }> = ({ item }) => {
+  const { meta } = usePikkuMeta()
+  const { funcMeta, text } = describe(item, meta.functions)
+  const id = idOf(item)
+  const args = item.arguments ?? []
+
+  return (
+    <Stack gap="md" data-testid={`mcp-detail-${item.method}-${id}`}>
+      <Text size="sm" c={text ? undefined : 'dimmed'}>
+        {text ? asI18n(text) : m.wires_mcp_row_no_description_hint()}
+      </Text>
+      {args.length > 0 && (
+        <Stack gap={6}>
+          <Text size="sm" c="dimmed">
+            {m.wires_mcp_prompt_asks_title()}
+          </Text>
+          {args.map((arg) => (
+            <Text size="sm" key={arg.name}>
+              <Text span fw={600}>
+                {asI18n(arg.name)}
+              </Text>
+              {asI18n(' — ')}
+              {arg.description
+                ? asI18n(arg.description)
+                : arg.required
+                  ? m.wires_mcp_input_required()
+                  : m.wires_mcp_input_optional()}
+            </Text>
+          ))}
+        </Stack>
+      )}
+      <ForDevelopers testId={`mcp-dev-${item.method}-${id}`}>
+        <DevFields>
+          {item.name && (
+            <DevField
+              label={m.wires_mcp_dev_name()}
+              value={item.name}
+              mono
+              copy
+            />
+          )}
+          {item.uri && (
+            <DevField label={m.wires_mcp_dev_uri()} value={item.uri} mono copy />
+          )}
+          {item.pikkuFuncId && (
+            <DevField label={m.dev_function()} value={item.pikkuFuncId} />
+          )}
+          {funcMeta?.sourceFile && (
+            <DevField
+              label={m.dev_source()}
+              value={devSourcePath(funcMeta.sourceFile)}
+            />
+          )}
+        </DevFields>
+        {item.inputSchema && (
+          <SchemaBlock
+            name={item.inputSchema}
+            label={m.wires_mcp_dev_input({ schema: item.inputSchema })}
+          />
+        )}
+      </ForDevelopers>
+    </Stack>
+  )
+}
+
+const McpRow: React.FC<{
+  item: McpItem
+  selected: boolean
+  onOpen: () => void
+}> = ({ item, selected, onOpen }) => {
+  const { meta } = usePikkuMeta()
+  const id = idOf(item)
+  const { text } = describe(item, meta.functions)
   const Icon = LOOK[item.method]
   const args = item.arguments ?? []
 
@@ -124,13 +205,14 @@ const McpRow: React.FC<{ item: McpItem }> = ({ item }) => {
   return (
     <CardRow
       testId={`mcp-${item.method}-${id}`}
-      onClick={() => setOpen((value) => !value)}
+      onClick={onOpen}
+      selected={selected}
       leading={
         <StatusTile tone="info">
           <Icon size={18} />
         </StatusTile>
       }
-      title={asI18n(item.title || readable(item.name || id))}
+      title={asI18n(titleOf(item))}
       badges={
         text ? undefined : (
           <StatusBadge tone="warn" size="sm">
@@ -148,86 +230,13 @@ const McpRow: React.FC<{ item: McpItem }> = ({ item }) => {
         <ActionIcon
           variant="subtle"
           color="gray"
-          aria-label={open ? m.wires_mcp_row_hide() : m.wires_mcp_row_show()}
-          aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
+          aria-label={m.wires_mcp_row_show()}
+          onClick={onOpen}
         >
-          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <ChevronRight size={16} />
         </ActionIcon>
       }
-    >
-      {open && (
-        <Box
-          mt="md"
-          pl={{ base: 0, sm: 52 }}
-          onClick={(event) => event.stopPropagation()}
-          style={{ cursor: 'default' }}
-        >
-          <Stack gap="md">
-            {!text && (
-              <Text size="sm" c="dimmed" maw={640}>
-                {m.wires_mcp_row_no_description_hint()}
-              </Text>
-            )}
-            {args.length > 0 && (
-              <Stack gap={6}>
-                <Text size="sm" c="dimmed">
-                  {m.wires_mcp_prompt_asks_title()}
-                </Text>
-                {args.map((arg) => (
-                  <Text size="sm" key={arg.name}>
-                    <Text span fw={600}>
-                      {asI18n(arg.name)}
-                    </Text>
-                    {asI18n(' — ')}
-                    {arg.description
-                      ? asI18n(arg.description)
-                      : arg.required
-                        ? m.wires_mcp_input_required()
-                        : m.wires_mcp_input_optional()}
-                  </Text>
-                ))}
-              </Stack>
-            )}
-            <ForDevelopers testId={`mcp-dev-${item.method}-${id}`}>
-              <DevFields>
-                {item.name && (
-                  <DevField
-                    label={m.wires_mcp_dev_name()}
-                    value={item.name}
-                    mono
-                    copy
-                  />
-                )}
-                {item.uri && (
-                  <DevField
-                    label={m.wires_mcp_dev_uri()}
-                    value={item.uri}
-                    mono
-                    copy
-                  />
-                )}
-                {item.pikkuFuncId && (
-                  <DevField label={m.dev_function()} value={item.pikkuFuncId} />
-                )}
-                {funcMeta?.sourceFile && (
-                  <DevField
-                    label={m.dev_source()}
-                    value={devSourcePath(funcMeta.sourceFile)}
-                  />
-                )}
-              </DevFields>
-              {item.inputSchema && (
-                <SchemaBlock
-                  name={item.inputSchema}
-                  label={m.wires_mcp_dev_input({ schema: item.inputSchema })}
-                />
-              )}
-            </ForDevelopers>
-          </Stack>
-        </Box>
-      )}
-    </CardRow>
+    />
   )
 }
 
@@ -280,6 +289,11 @@ const ConnectCard: React.FC = () => {
       }
       title={m.wires_mcp_connect_title()}
       blurb={m.wires_mcp_connect_blurb()}
+      footer={
+        <ForDevelopers testId="mcp-connect-dev" attached>
+          <DevNote>{m.wires_mcp_connect_dev_note()}</DevNote>
+        </ForDevelopers>
+      }
     >
       <Stack gap="md" mt="md">
         <TextInput
@@ -310,9 +324,6 @@ const ConnectCard: React.FC = () => {
             </Tabs.Panel>
           ))}
         </Tabs>
-        <ForDevelopers testId="mcp-connect-dev">
-          <DevNote>{m.wires_mcp_connect_dev_note()}</DevNote>
-        </ForDevelopers>
       </Stack>
     </SectionCard>
   )
@@ -363,6 +374,11 @@ export const McpCards: React.FC<{
 }> = ({ searchQuery = '', emptyHero }) => {
   const { items, loading } = useMcpItems()
   const all = items as McpItem[]
+  const { openPanel, activePanel } = usePanelContext()
+  const open = (id: string, item: McpItem) =>
+    openPanel('mcp', id, titleOf(item), { item })
+
+  usePanelUrl({ type: 'mcp', items: all, getId: panelIdOf, open })
 
   if (loading && all.length === 0) return null
 
@@ -413,7 +429,12 @@ export const McpCards: React.FC<{
         >
           <Stack gap="xs" mt="md">
             {shown.map((item) => (
-              <McpRow key={idOf(item)} item={item} />
+              <McpRow
+                key={idOf(item)}
+                item={item}
+                selected={activePanel === `mcp-${panelIdOf(item)}`}
+                onOpen={() => open(panelIdOf(item), item)}
+              />
             ))}
           </Stack>
         </SectionCard>

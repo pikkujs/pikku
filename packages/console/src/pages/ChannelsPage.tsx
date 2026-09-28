@@ -6,13 +6,18 @@ import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { ChannelsListPanel } from '../components/channel/ChannelsListPanel'
 import { CardsPage } from '../components/ui/CardsPage'
+import type { ChannelsBrowse } from '../hooks/useChannelsBrowse'
 
 export type ChannelsPageProps = {
   /** Shown in place of the empty list — fabric hands each wire kind its own. */
   emptyHero?: React.ReactNode
+  browse?: ChannelsBrowse
 }
 
-export const ChannelsPage: React.FC<ChannelsPageProps> = ({ emptyHero }) => {
+export const ChannelsPage: React.FC<ChannelsPageProps> = ({
+  emptyHero,
+  browse,
+}) => {
   const [search, setSearch] = useState('')
   useLocale()
 
@@ -32,11 +37,14 @@ export const ChannelsPage: React.FC<ChannelsPageProps> = ({ emptyHero }) => {
             }}
           />
         }
-        hidePanel
         surface="cards"
       >
         <CardsPage>
-          <ChannelsListPanel searchQuery={search} emptyHero={emptyHero} />
+          <ChannelsListPanel
+            searchQuery={search}
+            emptyHero={emptyHero}
+            selectedName={browse?.selected}
+          />
         </CardsPage>
       </ResizablePanelLayout>
     </ConsoleSurface>

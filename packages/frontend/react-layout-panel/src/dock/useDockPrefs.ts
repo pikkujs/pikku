@@ -17,7 +17,7 @@ export function defaultDockSide(): DockSide {
 }
 
 /** Percent of the dock's natural size. */
-export const DOCK_SCALE_MIN = 70
+export const DOCK_SCALE_MIN = 50
 export const DOCK_SCALE_MAX = 160
 export const DOCK_SCALE_STEP = 5
 
@@ -48,7 +48,7 @@ export function useDockPrefs() {
      largest tile that fits. */
   const [scale, setScale] = useLocalStorage({
     key: 'nav-dock-scale',
-    defaultValue: 100,
+    defaultValue: 70,
     getInitialValueInEffect: false,
   })
   return { side, setSide, alwaysVisible, setAlwaysVisible, scale, setScale }

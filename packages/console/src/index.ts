@@ -191,6 +191,10 @@ export type {
 export { PikkuSwitch } from './components/ui/PikkuSwitch'
 export type { PikkuSwitchOption } from './components/ui/PikkuSwitch'
 export { ShellHeader } from './components/ui/ShellHeader'
+export {
+  ShellHeaderSlotContext,
+  useShellHeaderSlot,
+} from './components/ui/ShellHeaderSlot'
 export type {
   ShellHeaderProps,
   ShellHeaderSelection,
@@ -277,6 +281,10 @@ export { HttpPage } from './pages/HttpPage'
 export type { HttpPageProps } from './pages/HttpPage'
 export { ChannelsPage } from './pages/ChannelsPage'
 export type { ChannelsPageProps } from './pages/ChannelsPage'
+export { ChannelsBrowseRail } from './components/channel/ChannelsBrowseRail'
+export type { ChannelsBrowseRailProps } from './components/channel/ChannelsBrowseRail'
+export { useChannelsBrowse } from './hooks/useChannelsBrowse'
+export type { ChannelsBrowse } from './hooks/useChannelsBrowse'
 export { McpPage } from './pages/McpPage'
 export type { McpPageProps } from './pages/McpPage'
 export { CliPage } from './pages/CliPage'

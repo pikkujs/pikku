@@ -158,9 +158,9 @@ export const AuthProvidersListPanel: React.FC<AuthProvidersListPanelProps> = ({
               ? m.authproviders_hero_body()
               : m.authproviders_hero_none_body()
           }
-        >
-          <Box mt="lg">
+          footer={
             <ForDevelopers
+              attached
               label={m.authproviders_dev_label()}
               testId="auth-providers-developers"
             >
@@ -182,8 +182,8 @@ export const AuthProvidersListPanel: React.FC<AuthProvidersListPanelProps> = ({
                 ]}
               />
             </ForDevelopers>
-          </Box>
-        </SectionCard>
+          }
+        />
 
         {shownOn.length > 0 && (
           <SectionCard

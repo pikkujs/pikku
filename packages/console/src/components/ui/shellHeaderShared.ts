@@ -79,6 +79,9 @@ export interface ShellHeaderProps<T extends string = string> {
   leading?: ReactNode
   /** Page title shown at the very start; the first thing to drop when narrow. */
   title?: I18nNode
+  /** The open item, shown after the title as the last crumb; the title then leads back. */
+  item?: I18nNode
+  onTitle?: () => void
   /** Status/count chip shown far left, already formatted (e.g. "6 · 1 error"). */
   count?: I18nNode
   /** Left selection control: PikkuSwitch when wide, a cycle button when narrow. */
