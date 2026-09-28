@@ -4948,6 +4948,7 @@ export type IncomingWebhookReceiptRecord = {
   event: string
   status: 'pending' | 'delivered' | 'failed'
   attempts: number
+  lastError: string | null
   createdAt: Date
   deliveredAt: Date | null
 }

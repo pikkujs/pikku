@@ -101,6 +101,7 @@ HTTP route, not a listener. `wireTriggerWebhookSource` declares it; triggers
 subscribe to its events as `<source>:<event>`:
 
 ```ts snippet:wireTriggerWebhookSource
+
 ```
 
 - The route is `POST /webhooks/<name>` unless `method`/`route` say otherwise.
@@ -110,7 +111,7 @@ subscribe to its events as `<source>:<event>`:
   `200`, so the provider does not retry forever.
 - `receive(services, { body, headers, method, url, query })` gets the **raw
   bytes** — verify the signature over those — and returns `{ events: [{ name,
-  id?, data }] }`, or `{ respond: { status, body } }` for a handshake. Throwing
+id?, data }] }`, or `{ respond: { status, body } }` for a handshake. Throwing
   rejects the request with the error's status (`UnauthorizedError` → 401).
   Omitted, the JSON body becomes one event dispatched to a trigger named just
   `<source>`.
@@ -119,6 +120,12 @@ subscribe to its events as `<source>:<event>`:
   retried by the queue. This needs a `queueService` and an
   `incomingWebhookService: new IncomingWebhookService(queueService)` in your
   singleton services. The event `id` becomes the job id.
+- With a database, use `KyselyIncomingWebhookService(queueService, db)` from
+  `@pikku/kysely` instead (and `await service.init()`). It keeps a receipt per
+  event, so a provider's redelivery of an event already accepted is dropped
+  even on queues that ignore job ids, and records each attempt and its last
+  error. Its `webhookReceipt` table comes from `pikku db generate`; `pikku dev`
+  and `pikku serve` use it when a Kysely database is configured.
 - `receive` sees singleton services without `secrets`: read the signing secret
   in a service method, and declare it with `defineSecret`. Name it in `secret`
   so deploy knows where `setup` should store it.
@@ -183,7 +190,6 @@ wireTriggerSource({
   input: { channels: ['orders:created', 'orders:updated'] },
 })
 ```
-
 
 ## Complete Example
 

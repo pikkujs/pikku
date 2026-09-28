@@ -102,6 +102,7 @@ function makeState(
     flagDefinitions?: any[]
     analytics?: any[]
     credentialDefinitions?: any[]
+    webhookSourceMeta?: Record<string, any>
   } = {}
 ): Omit<InspectorState, 'typesLookup'> {
   return {
@@ -134,6 +135,7 @@ function makeState(
     mcpEndpoints: { toolsMeta: {}, promptsMeta: {}, resourcesMeta: {} },
     agents: { agentsMeta: {} },
     workflows: { meta: {}, graphMeta: overrides.graphMeta ?? {} },
+    triggers: { webhookSourceMeta: overrides.webhookSourceMeta ?? {} },
     wireServicesMeta: new Map(),
     rpc: { internalMeta: {}, exposedMeta: {} },
     scopes: { definitions: overrides.scopeDefinitions ?? [] },
@@ -1216,6 +1218,43 @@ describe('aggregateRequiredServices — flags and analytics imply their services
       credentialDefinitions: [{ name: 'dolibarr', type: 'wire' }],
     })
     aggregateRequiredServices(state)
-    assert.ok(state.serviceAggregation.requiredServices.has('credentialService'))
+    assert.ok(
+      state.serviceAggregation.requiredServices.has('credentialService')
+    )
+  })
+})
+
+describe('aggregateRequiredServices — webhook sources', () => {
+  const webhookSourceMeta = {
+    shop: { name: 'shop', method: 'post', route: '/webhooks/shop' },
+  }
+
+  test('a wired source route requires the services it accepts through', () => {
+    const state = makeState({
+      webhookSourceMeta,
+      functionsMeta: { 'http:post:/webhooks/shop': { services: {} } },
+    })
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(required.has('incomingWebhookService'))
+    assert.ok(required.has('queueService'))
+  })
+
+  test('a unit with only the worker still records attempts', () => {
+    const state = makeState({
+      functionsMeta: { 'queue:pikku-incoming-webhooks': { services: {} } },
+    })
+    aggregateRequiredServices(state)
+    assert.ok(
+      state.serviceAggregation.requiredServices.has('incomingWebhookService')
+    )
+  })
+
+  test('a source filtered out of the unit requires nothing', () => {
+    const state = makeState({ webhookSourceMeta })
+    aggregateRequiredServices(state)
+    assert.ok(
+      !state.serviceAggregation.requiredServices.has('incomingWebhookService')
+    )
   })
 })
