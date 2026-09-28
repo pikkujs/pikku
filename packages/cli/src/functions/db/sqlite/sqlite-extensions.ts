@@ -44,7 +44,7 @@ const cacheKey = (context: SqliteExtensionContext) =>
  * does, through a `getLoadablePath()` export — resolved from the project first
  * and then from the CLI, which ships sqlite-vec itself.
  */
-function resolveSqliteExtension(spec: string, rootDir: string): string {
+export function resolveSqliteExtension(spec: string, rootDir: string): string {
   if (spec.startsWith('.') || isAbsolute(spec)) {
     return isAbsolute(spec) ? spec : resolve(rootDir, spec)
   }

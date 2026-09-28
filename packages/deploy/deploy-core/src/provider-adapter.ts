@@ -88,6 +88,16 @@ export interface EntryGenerationContext {
      * the same reason.
      */
     coercionImportPath?: string
+    /**
+     * File names of the loadable SQLite extensions the build staged into
+     * `<unitDir>/sqlite-extensions/`, from `db.sqliteExtensions` (sqlite-vec's
+     * `vec0` by default). SQLite only; absent when there are none.
+     *
+     * Beside the directory is `sqlite-extensions.gen.js`, which embeds each
+     * one with `with { type: 'file' }` for a runtime that compiles to a single
+     * binary.
+     */
+    sqliteExtensions?: string[]
   }
 
   /**
