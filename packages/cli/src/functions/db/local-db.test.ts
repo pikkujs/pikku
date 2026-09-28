@@ -9,7 +9,8 @@ import {
   existsSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { sql } from 'kysely'
 
 import {
@@ -547,6 +548,60 @@ CREATE TABLE docs (
   } finally {
     await kysely.destroy()
   }
+})
+
+test('pgvector is available to the local PGlite database without a declaration', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE passages (
+  id SERIAL PRIMARY KEY,
+  embedding vector(3) NOT NULL
+);
+CREATE INDEX passages_embedding_idx ON passages USING hnsw (embedding vector_cosine_ops);
+`,
+    devSeedSql: '',
+  })
+
+  const resolved = resolveDb({}, root, root)!
+  await migrateAndCodegen(resolved)
+
+  const kysely = await createKysely<{ passages: { id: number } }>(resolved)
+  try {
+    await sql`insert into passages (embedding) values ('[1,0,0]'), ('[0,1,0]')`.execute(
+      kysely
+    )
+    const { rows } = await sql<{ id: number }>`
+      select id from passages order by embedding <=> '[0.9,0.1,0]' limit 1`.execute(
+      kysely
+    )
+    assert.deepEqual(rows, [{ id: 1 }])
+  } finally {
+    await kysely.destroy()
+  }
+})
+
+test('the bundled pgvector is built for the PGlite the CLI runs', () => {
+  // A PGlite extension is WASM compiled against one PGlite build, and
+  // pglite-pgvector says which with an exact peer range. A caret on either
+  // dependency lets them drift apart, which fails at boot or not at all.
+  const require = createRequire(import.meta.url)
+  // Walked up to rather than required: neither package exports its
+  // package.json, and a dist/ folder may hold a stub one of its own.
+  const packageJsonOf = (name: string) => {
+    for (let dir = dirname(require.resolve(name)); ; dir = dirname(dir)) {
+      if (dir === dirname(dir)) throw new Error(`no package.json for ${name}`)
+      const file = join(dir, 'package.json')
+      if (!existsSync(file)) continue
+      const pkg = JSON.parse(readFileSync(file, 'utf8'))
+      if (pkg.name === name) return pkg
+    }
+  }
+  const pglite = packageJsonOf('@electric-sql/pglite')
+  const pgvector = packageJsonOf('@electric-sql/pglite-pgvector')
+  assert.equal(
+    pgvector.peerDependencies['@electric-sql/pglite'],
+    pglite.version
+  )
 })
 
 test('an undeclared extension fails with guidance rather than a bare Postgres error', async () => {

@@ -415,12 +415,19 @@ async function createEmbeddedPostgres(
 ): Promise<PGlite> {
   embeddedPostgresWasm ??= loadEmbeddedPostgresWasm()
 
-  const [{ PGlite }, { pgcrypto }, wasm, declared] = await Promise.all([
-    import('@electric-sql/pglite'),
-    import('@electric-sql/pglite/contrib/pgcrypto'),
-    embeddedPostgresWasm,
-    loadPGliteExtensions(context.rootDir, context.pgliteExtensions),
-  ])
+  // pgvector is loaded whether or not the project declares it: retrieval over
+  // embeddings is common enough that `CREATE EXTENSION vector` should just work,
+  // and loading it costs nothing measurable until a migration creates it. The
+  // CLI pins it to the exact PGlite it was built for (see package.json); a
+  // project that declares its own copy in `pgliteExtensions` overrides this one.
+  const [{ PGlite }, { pgcrypto }, { vector }, wasm, declared] =
+    await Promise.all([
+      import('@electric-sql/pglite'),
+      import('@electric-sql/pglite/contrib/pgcrypto'),
+      import('@electric-sql/pglite-pgvector'),
+      embeddedPostgresWasm,
+      loadPGliteExtensions(context.rootDir, context.pgliteExtensions),
+    ])
 
   // PGlite runs Postgres as an Emscripten module, and Emscripten's exit handler
   // writes the WASM program's status straight to `process.exitCode` — booting a
@@ -434,6 +441,7 @@ async function createEmbeddedPostgres(
     ...wasm,
     extensions: {
       pgcrypto,
+      vector,
       ...declared,
     },
   })
@@ -463,10 +471,10 @@ function explainMissingExtension(error: unknown, declared: string[]): unknown {
   return new Error(
     `The embedded PGlite database has no '${name}' extension. ` +
       `The CLI migrates a PGlite shadow database to type and diff your schema, ` +
-      `so every extension your migrations use has to be declared as ` +
+      `so every extension your migrations use, other than pgcrypto and vector ` +
+      `(pgvector), which are always loaded, has to be declared as ` +
       `db.pgliteExtensions in pikku.config.json — e.g. "db": { "pgliteExtensions": ["${name}"] } ` +
-      `for a PGlite contrib extension, or the package that publishes it ` +
-      `('@electric-sql/pglite-pgvector' for pgvector).` +
+      `for a PGlite contrib extension, or the package that publishes it.` +
       (declared.length > 0
         ? ` Currently declared: ${declared.join(', ')}.`
         : ''),
@@ -1660,10 +1668,7 @@ export async function writeSchemaArtifact(
  * that creates nothing, and the schema silently drifts from what the addon's
  * own functions expect.
  */
-function readSchemaArtifact(
-  artifactPath: string,
-  pkg: string
-): SchemaArtifact {
+function readSchemaArtifact(artifactPath: string, pkg: string): SchemaArtifact {
   let parsed: unknown
   try {
     parsed = JSON.parse(readFileSync(artifactPath, 'utf8'))
@@ -1740,7 +1745,7 @@ export async function addonSchemaSources(
       throw new Error(
         `The '${addon.package}' addon does not publish ${ADDON_DB_ARTIFACT}, so ` +
           'there is no way to tell whether it ships tables. Build it with a ' +
-          "current CLI (`pikku all` writes the file, empty when there are no " +
+          'current CLI (`pikku all` writes the file, empty when there are no ' +
           'tables), and make sure the package exports and packs it:\n' +
           `  "exports": { "./${ADDON_DB_ARTIFACT}": "./dist/.pikku/addon/db/pikku-db-meta.gen.json" }\n` +
           '  "files": ["dist"]'
@@ -1967,7 +1972,10 @@ export async function generateMigrations(
       body = source.desired.sql
     } else {
       const statements: string[] = []
-      for (const table of tablesInSourceOrder(source.desired.sql, missingTables)) {
+      for (const table of tablesInSourceOrder(
+        source.desired.sql,
+        missingTables
+      )) {
         // A wholly new table is the first-time case in miniature: nothing to
         // diff against, and the source's own SQL already says exactly how to
         // build it. Rendering the column map instead would drop the primary

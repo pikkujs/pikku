@@ -514,9 +514,12 @@ export type PikkuCLIInput = {
      * local dev database, and the shadow one every `db` command migrates to type
      * and diff a schema.
      *
+     * `pgcrypto` and `vector` (pgvector) are always loaded and need no entry.
+     *
      * A bare name is one of PGlite's bundled contrib extensions (`hstore`,
      * `citext`, `uuid_ossp`, …) and needs nothing installed. Anything else is a
-     * package the project depends on, such as `@electric-sql/pglite-pgvector`.
+     * package the project depends on. Declaring `@electric-sql/pglite-pgvector`
+     * here as well loads the project's copy in place of the CLI's.
      *
      * Needed even when the project runs against a Postgres server that already
      * has the extension: the shadow database is PGlite regardless, so a
