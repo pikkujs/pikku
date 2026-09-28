@@ -9,8 +9,8 @@ export interface QueueItem {
 }
 
 /**
- * Every queue in the project meta, shared by `QueuesPage` and
- * `QueuesListPanel` so a host can read the same rows without mounting either.
+ * Every queue in the project meta, so a host can read the same rows
+ * `QueuesPage` shows without mounting it.
  */
 export const useQueueItems = (): { items: QueueItem[]; loading: boolean } => {
   const { meta, loading } = usePikkuMeta()
