@@ -108,6 +108,11 @@ const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
 if (existsSync(pikkuCliPath)) {
   try {
     loadEnvFile()
+    // Before the CLI is imported, since bun only takes a SQLite library before
+    // the first database opens; after .env, which may name one.
+    const { useSqliteLibrary } =
+      await import('../src/functions/db/sqlite/sqlite-library.js')
+    await useSqliteLibrary()
     const { PikkuCLI } = await import(pathToFileURL(pikkuCliPath).href)
     const updateCheck = checkForUpdate()
     await PikkuCLI(process.argv.slice(2))

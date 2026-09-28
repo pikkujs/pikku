@@ -505,7 +505,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await writeSchemaArtifact(
         config.rootDir,
         config.outDir,
-        config.db?.pgliteExtensions
+        config.db?.pgliteExtensions,
+        config.db?.sqliteExtensions
       )
     }
 

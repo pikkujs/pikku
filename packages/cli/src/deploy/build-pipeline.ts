@@ -17,6 +17,7 @@ import { withoutScenarios } from '../functions/wirings/scenarios/scenario-partit
 import type { DeploymentManifest } from '@pikku/deploy'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
 import { materializeFrontend } from './frontend-assets.js'
+import { stageSqliteExtensions } from './sqlite-extension-assets.js'
 import { assertFrontendBuilt } from '../utils/frontend.js'
 import type { Bundler } from './bundler/bundler.interface.js'
 import type { BundleResult } from './bundler/types.js'
@@ -186,9 +187,17 @@ export async function resolveStandaloneDb(
   pikkuDir: string,
   unitDir: string,
   srcDirectories: string[],
-  logger: BuildLogger
+  logger: BuildLogger,
+  sqliteExtensions?: string[],
+  { withSqliteLibrary = false }: { withSqliteLibrary?: boolean } = {}
 ): Promise<
-  { engine: 'sqlite' | 'postgres'; coercionImportPath?: string } | undefined
+  | {
+      engine: 'sqlite' | 'postgres'
+      coercionImportPath?: string
+      sqliteExtensions?: string[]
+      sqliteLibrary?: string
+    }
+  | undefined
 > {
   const hasSqlite = existsSync(join(projectDir, 'db', 'sqlite'))
   const hasPostgres = existsSync(join(projectDir, 'db', 'postgres'))
@@ -227,15 +236,34 @@ export async function resolveStandaloneDb(
     })
   }
 
+  const { extensions, library } =
+    engine === 'sqlite'
+      ? await stageSqliteExtensions(projectDir, unitDir, sqliteExtensions, {
+          withLibrary: withSqliteLibrary,
+        })
+      : { extensions: [], library: undefined }
+  if (extensions.length > 0) {
+    logger.info(`SQLite extensions: ${extensions.join(', ')}`)
+  }
+  if (library) logger.info(`SQLite library: ${library}`)
+  const staged = {
+    ...(extensions.length > 0 ? { sqliteExtensions: extensions } : {}),
+    ...(library ? { sqliteLibrary: library } : {}),
+  }
+
   // Absent for an app that annotates no columns, which is a database with
   // nothing to coerce rather than a reason to hand the app no database.
   const coercionFile = join(pikkuDir, 'db', 'coercion.gen.ts')
-  if (!existsSync(coercionFile)) return { engine }
+  if (!existsSync(coercionFile)) return { engine, ...staged }
 
   let rel = relative(unitDir, coercionFile).replace(/\\/g, '/')
   if (!rel.startsWith('.')) rel = `./${rel}`
 
-  return { engine, coercionImportPath: rel.replace(/\.ts$/, '.js') }
+  return {
+    engine,
+    coercionImportPath: rel.replace(/\.ts$/, '.js'),
+    ...staged,
+  }
 }
 
 /**
@@ -293,6 +321,12 @@ export async function runBuildPipeline(options: {
    * which database a standalone artifact has to open.
    */
   srcDirectories?: string[]
+  /**
+   * `db.sqliteExtensions` from pikku.config.json: the loadable extensions a
+   * SQLite standalone ships and opens its database with. Defaults apply when
+   * absent.
+   */
+  sqliteExtensions?: string[]
   /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
   debugArtifacts?: boolean
   /** Overrides the provider's own choice when set. See PikkuCLIConfig. */
@@ -383,7 +417,9 @@ export async function runBuildPipeline(options: {
         pikkuDir,
         unitDir,
         options.srcDirectories ?? ['src'],
-        logger
+        logger,
+        options.sqliteExtensions,
+        { withSqliteLibrary: provider.bundlesSqliteLibrary }
       ),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
     }

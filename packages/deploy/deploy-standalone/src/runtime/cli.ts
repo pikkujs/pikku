@@ -28,6 +28,11 @@ export interface StandaloneSqliteDb {
   migrationsDir: string
   /** The file the app itself opens, so a migration cannot target another one. */
   databaseFile: string
+  /**
+   * The loadable extensions the app opens it with, so a migration creating a
+   * vec0 table finds the module the app will read it through.
+   */
+  extensions?: string[]
 }
 
 /**
@@ -38,7 +43,10 @@ export interface StandaloneSqliteDb {
  * different database than the one the next `serve` opens.
  */
 export interface PostgresSql {
-  unsafe(query: string, parameters?: unknown[]): Promise<any> & {
+  unsafe(
+    query: string,
+    parameters?: unknown[]
+  ): Promise<any> & {
     simple(): Promise<any>
   }
   begin<T>(handler: (sql: PostgresSql) => Promise<T>): Promise<T>
@@ -147,7 +155,9 @@ export function parseStandaloneCommand(
     return { kind: 'backup', destination }
   }
 
-  write(`Unknown command: ${command}\n\n${usage(options.hasDb, options.engine)}`)
+  write(
+    `Unknown command: ${command}\n\n${usage(options.hasDb, options.engine)}`
+  )
   return { kind: 'exit', code: 1 }
 }
 
@@ -173,20 +183,20 @@ const executorFor = async (
   db: StandaloneDb
 ): Promise<{ executor: MigrationExecutor; close: () => void }> => {
   if (db.engine === 'sqlite') {
-    const { SqliteMigrationExecutor, loadSqliteRuntime } = await import(
-      '@pikku/migrator-sql/sqlite'
-    )
+    const { SqliteMigrationExecutor, loadSqliteRuntime } =
+      await import('@pikku/migrator-sql/sqlite')
     const runtime = await loadSqliteRuntime()
-    const handle = runtime.open(db.databaseFile)
+    const handle = runtime.open(db.databaseFile, {
+      extensions: db.extensions,
+    })
     return {
       executor: new SqliteMigrationExecutor(handle),
       close: () => handle.close(),
     }
   }
 
-  const { PostgresMigrationExecutor } = await import(
-    '@pikku/migrator-sql/postgres'
-  )
+  const { PostgresMigrationExecutor } =
+    await import('@pikku/migrator-sql/postgres')
   return {
     executor: new PostgresMigrationExecutor(postgresClient(db.sql)),
     close: () => {},
@@ -270,7 +280,7 @@ export async function runBackupCommand(
 ): Promise<void> {
   const { loadSqliteRuntime } = await import('@pikku/migrator-sql/sqlite')
   const runtime = await loadSqliteRuntime()
-  const handle = runtime.open(db.databaseFile)
+  const handle = runtime.open(db.databaseFile, { extensions: db.extensions })
   try {
     handle.exec(`VACUUM INTO '${destination.replace(/'/g, "''")}'`)
     out.write(`Copied ${db.databaseFile} to ${destination}.`)

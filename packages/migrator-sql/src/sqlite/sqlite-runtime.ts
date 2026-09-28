@@ -17,8 +17,17 @@ export interface SyncSqliteDatabase {
   close(): void
 }
 
+export interface SqliteOpenOptions {
+  /**
+   * Absolute paths of loadable SQLite extensions (sqlite-vec's `vec0`, say) to
+   * load into the connection before it is handed back. They are loaded through
+   * the C API; SQL's own `load_extension()` stays refused either way.
+   */
+  extensions?: string[]
+}
+
 export interface SqliteRuntime {
-  open(filename: string): SyncSqliteDatabase
+  open(filename: string, options?: SqliteOpenOptions): SyncSqliteDatabase
 }
 
 let runtimePromise: Promise<SqliteRuntime> | undefined

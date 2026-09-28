@@ -341,7 +341,9 @@ async function checkForUpdate() {
     }
   } catch {}
 }
+import { useSqliteLibrary } from '../src/functions/db/sqlite/sqlite-library.js'
 import { PikkuCLI } from '../.pikku/cli/pikku-cli.gen.js'
+await useSqliteLibrary()
 const updateCheck = checkForUpdate()
 await PikkuCLI(process.argv.slice(2))
 await updateCheck

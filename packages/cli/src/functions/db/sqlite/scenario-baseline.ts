@@ -1,6 +1,7 @@
 import { MIGRATION_TRACKING_TABLE } from '@pikku/migrator-sql'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import type { ResolvedSqliteDb } from '../local-db.js'
+import { sqliteExtensionPaths } from './sqlite-extensions.js'
 import {
   BASELINE_PREFIX,
   FEATURE_LAYER,
@@ -18,10 +19,12 @@ export async function captureSqliteScenarioBaseline(
   { keep = [] }: ScenarioBaselineOptions
 ): Promise<ScenarioBaseline> {
   const runtime = await loadSqliteRuntime()
+  // vec0 tables are copied like any other, and reading one needs the module.
+  const extensions = await sqliteExtensionPaths(resolved)
   const shouldKeep = keepMatcher(keep)
 
   const withDb = <T>(run: (db: ReturnType<typeof runtime.open>) => T): T => {
-    const db = runtime.open(resolved.dbFile)
+    const db = runtime.open(resolved.dbFile, { extensions })
     // The app under test is still connected to this file. A rollback-journal
     // database gives a writer an exclusive lock, so without a timeout the first
     // statement that overlaps one of the app's reads fails outright with
