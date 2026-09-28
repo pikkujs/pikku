@@ -484,6 +484,37 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
   })
 
+  test('builds no wire services for a function that uses only singletons', async () => {
+    let built = 0
+    addTestFunction('singletonOnly', { func: async () => 'ok' })
+    ;(pikkuState(null, 'function', 'meta') as any).singletonOnly.services = {
+      optimized: true,
+      services: ['logger'],
+    }
+    addTestFunction('usesWire', { func: async () => 'ok' })
+    ;(pikkuState(null, 'function', 'meta') as any).usesWire.services = {
+      optimized: true,
+      services: ['logger', 'customService'],
+    }
+    const createWireServices = async () => {
+      built++
+      throw new Error('no credential')
+    }
+    const run = (name: string) =>
+      runPikkuFunc('rpc', name, name, {
+        singletonServices: mockSingletonServices,
+        createWireServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      })
+
+    assert.equal(await run('singletonOnly'), 'ok')
+    assert.equal(built, 0)
+    await assert.rejects(run('usesWire'), { message: 'no credential' })
+    assert.equal(built, 1)
+  })
+
   test('should resolve versioned function ids to the base function and warn once', async () => {
     const warnings: string[] = []
     const singletonServices = {
