@@ -84,7 +84,7 @@ export const upsertIncomingWebhooks = async ({
   getSecret,
   logger,
 }: {
-  definitions: Record<string, CoreIncomingWebhook<string>>
+  definitions: Record<string, CoreIncomingWebhook<any>>
   meta: IncomingWebhooksMeta
   /** Where the app's routes are served, e.g. `https://shop.example.com/api`. */
   baseUrl: string

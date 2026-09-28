@@ -413,6 +413,7 @@ export const createSingletonServices: CreateSingletonServices<
         strictMeta: !!(config as any).strictMeta,
         modelAliases: config.models ?? {},
         allow: config.allow ?? {},
+        incomingWebhooksWiringFile: config.incomingWebhooksWiringFile,
         schemaConfig: !setupOnly
           ? {
               tsconfig: config.tsconfig,

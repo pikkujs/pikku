@@ -300,6 +300,12 @@ export interface PikkuCLICoreOutputFiles {
   outgoingWebhooksFile: string
 
   outgoingWebhooksMetaJsonFile: string
+
+  incomingWebhooksFile: string
+
+  incomingWebhooksWiringFile: string
+
+  incomingWebhooksMetaJsonFile: string
 }
 
 export type PikkuCLIInput = {
