@@ -1,5 +1,11 @@
 # @pikku/mantine
 
+## 0.12.15
+
+### Patch Changes
+
+- e8d6374: `Radio`, `Checkbox` and `Switch` keep Mantine's statics (`Radio.Group`, `Checkbox.Group`, `Switch.Group`, …). The `original` wrapper dropped them, so those members were `undefined` at runtime while still typing.
+
 ## 0.12.14
 
 ### Patch Changes
