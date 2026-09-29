@@ -1,5 +1,14 @@
 # @pikku/playwright
 
+## 0.12.86
+
+### Patch Changes
+
+- ff38f13: The recording cursor no longer appears in screenshots — it is drawn for the video only.
+- Updated dependencies [f02585e]
+- Updated dependencies [5586749]
+  - @pikku/core@0.12.127
+
 ## 0.12.85
 
 ### Patch Changes
