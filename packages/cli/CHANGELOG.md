@@ -1,3 +1,61 @@
+## 0.12.170
+
+### Patch Changes
+
+- 02d9848: An addon can import `defineCLICommands` again. The whole `cli` leaf was retired for addons, so the helper the inspector explicitly permits — and that `refCLI` exists to mount on the consuming side — had nowhere to be imported from. The leaf now emits an addon-safe subset (`defineCLICommands`, `pikkuCLICommand`, `pikkuCLIRender`) and drops only `wireCLI`, the registry an addon genuinely cannot reach.
+- f84e173: An addon wired from a workspace package now resolves from that package. The installed-addon check (PKU340), the remote addon `devDependencies` check and `pikku db generate`'s addon schemas all looked only at the project root, so an addon declared where it is wired — the only place bun links it — failed codegen unless it was also declared at the root.
+- f02585e: `pikku audit` tags every advisory and update with `dependencyType: 'prod' | 'dev'`, walking `bun.lock` from each workspace's runtime dependencies without descending into peers or build tools (vite, esbuild, babel, the TanStack Start plugin, the pikku CLI). The console's security view counts only production advisories and folds dev-only ones into a collapsed section.
+- 3ff2b0c: Report the builder's own log when a fabric deploy fails. A failed deployment has
+  an empty manifest and plan, `statusReason` is null for anything that is not a
+  gate, and `fabric logs` serves the running stage rather than the build — so the
+  CLI said `failed in 248s` and nothing else, which reads as "your project is
+  broken" even when the build host was simply unreachable.
+- 974ced9: Add `pikku fabric user add <email>`, the CLI form of the console's Add user, so
+  a user can be created on a deployed stage without opening the console.
+- 9979830: `pikku fabric validate` reports failures that only show up on a deploy build host
+
+  - A project that still has `fabric.config.json` under its old name and no `pikkufabric.config.json` is an error, because the build container only reads the new name.
+  - An `overrides`/`resolutions` pin that holds an `@pikku/*` package at a different version from the one the project declares is an error.
+  - A `bun.lock` that resolves `ai`, `@ai-sdk/provider(-utils)`, `zod` or `@pikku/core` at more than one major version is a warning. A hoist can give a workspace member the wrong copy.
+  - An app whose vite config sets paraglide's `outputStructure`/`strategy`/`outdir` but has no `i18n:compile` script is flagged. The deploy compiles translations with the CLI's defaults.
+
+- ff38f13: A guide marker can name one scenario — `<!-- pikku:guide feature=F scenario=S -->` — so each section of a page shows its own figures instead of every scenario's landing in one block. Showcase shots now lead a scenario's figures, and a recording is captioned with its actor only when there are several.
+
+  The pikku-guide skill now plans pages from the suite, puts one `scenario=` marker under each section, gives every cited scenario a closing still, and treats captions and seed data on camera as copy.
+
+- 8ea16f5: `pikku validate` reports an app that authenticates with better-auth but never
+  wires `@pikku/addon-admin` (`admin-addon-not-wired`): it exposes no `admin:*`
+  RPCs, so the console's Users and Scopes pages have nothing to call.
+- e966cf2: `pikku validate` reports a raw `sql` template that double-quotes a non-snake_case
+  identifier (`raw-sql-camel-case-identifier`). `CamelCasePlugin` never rewrites the
+  text of a raw template, so `"createdAt"` reaches the database verbatim and fails
+  with `no such column`.
+- a377523: `pikku validate` reports app code importing `@pikku/core`
+
+  `#pikku` is the app's API and `@pikku/core` is the ecosystem's, so a name taken
+  from core is the untyped copy of one the alias hands over already typed against
+  the project. The new `coreImport` lint rule reports it, naming the `#pikku` leaf
+  that carries the name. `@pikku/core/services` stays exempt — the service
+  implementations bootstrap picks are a choice, not a wiring — as does
+  `application-types.d.ts`, which is codegen's input. Set
+  `"lint": { "coreImport": "off" | "warn" }` to lower or silence it.
+
+- 409f149: Workflow orchestrator units (`wf-*`) take `deploy.defaultTarget` instead of always being `serverless`. A project with `defaultTarget: 'server'` no longer gets a Cloudflare worker bundle per workflow, which failed for any workflow whose services need Node built-ins.
+- Updated dependencies [f84e173]
+- Updated dependencies [f02585e]
+- Updated dependencies [ff38f13]
+- Updated dependencies [3ff2b0c]
+- Updated dependencies [974ced9]
+- Updated dependencies [ff38f13]
+- Updated dependencies [413163d]
+- Updated dependencies [5586749]
+- Updated dependencies [a377523]
+  - @pikku/inspector@0.12.92
+  - @pikku/core@0.12.127
+  - @pikku/playwright@0.12.86
+  - @pikku/skills@0.12.42
+  - @pikku/knowledge@0.12.16
+
 ## 0.12.169
 
 ### Patch Changes

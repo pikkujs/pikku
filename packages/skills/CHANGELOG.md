@@ -1,5 +1,30 @@
 # @pikku/skills
 
+## 0.12.42
+
+### Patch Changes
+
+- 3ff2b0c: Report the builder's own log when a fabric deploy fails. A failed deployment has
+  an empty manifest and plan, `statusReason` is null for anything that is not a
+  gate, and `fabric logs` serves the running stage rather than the build — so the
+  CLI said `failed in 248s` and nothing else, which reads as "your project is
+  broken" even when the build host was simply unreachable.
+- 974ced9: Add `pikku fabric user add <email>`, the CLI form of the console's Add user, so
+  a user can be created on a deployed stage without opening the console.
+- ff38f13: A guide marker can name one scenario — `<!-- pikku:guide feature=F scenario=S -->` — so each section of a page shows its own figures instead of every scenario's landing in one block. Showcase shots now lead a scenario's figures, and a recording is captioned with its actor only when there are several.
+
+  The pikku-guide skill now plans pages from the suite, puts one `scenario=` marker under each section, gives every cited scenario a closing still, and treats captions and seed data on camera as copy.
+
+- a377523: `pikku validate` reports app code importing `@pikku/core`
+
+  `#pikku` is the app's API and `@pikku/core` is the ecosystem's, so a name taken
+  from core is the untyped copy of one the alias hands over already typed against
+  the project. The new `coreImport` lint rule reports it, naming the `#pikku` leaf
+  that carries the name. `@pikku/core/services` stays exempt — the service
+  implementations bootstrap picks are a choice, not a wiring — as does
+  `application-types.d.ts`, which is codegen's input. Set
+  `"lint": { "coreImport": "off" | "warn" }` to lower or silence it.
+
 ## 0.12.41
 
 ### Patch Changes

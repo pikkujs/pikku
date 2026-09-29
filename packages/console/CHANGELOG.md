@@ -1,3 +1,14 @@
+## 0.12.91
+
+### Patch Changes
+
+- f02585e: `pikku audit` tags every advisory and update with `dependencyType: 'prod' | 'dev'`, walking `bun.lock` from each workspace's runtime dependencies without descending into peers or build tools (vite, esbuild, babel, the TanStack Start plugin, the pikku CLI). The console's security view counts only production advisories and folds dev-only ones into a collapsed section.
+- Updated dependencies [f02585e]
+- Updated dependencies [5586749]
+- Updated dependencies [5586749]
+  - @pikku/core@0.12.127
+  - @pikku/workflow-graph@0.12.2
+
 ## 0.12.90
 
 ### Patch Changes

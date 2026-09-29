@@ -1,3 +1,10 @@
+## 0.12.127
+
+### Patch Changes
+
+- f02585e: `pikku audit` tags every advisory and update with `dependencyType: 'prod' | 'dev'`, walking `bun.lock` from each workspace's runtime dependencies without descending into peers or build tools (vite, esbuild, babel, the TanStack Start plugin, the pikku CLI). The console's security view counts only production advisories and folds dev-only ones into a collapsed section.
+- 5586749: A suspended workflow's pause step now reads as `running` while the run waits, and only becomes `succeeded` when the run resumes past it — previously it was marked succeeded the moment the run paused.
+
 ## 0.12.126
 
 ### Patch Changes
