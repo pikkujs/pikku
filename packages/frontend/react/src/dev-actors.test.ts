@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { signInAsPersona } from './dev-actors.js'
+import { signInAsPersona } from './dev-actors.ts'
 
 test('signInAsPersona posts only the persona id to the persona endpoint', async () => {
   let seen: { url: string; init: RequestInit } | null = null
