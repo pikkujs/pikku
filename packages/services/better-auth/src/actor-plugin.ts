@@ -159,14 +159,9 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
       : devSwitcherOn(options.personaSignIn?.featureFlags, options.allowSignIn)
 
   const signIn = async (ctx: any, email: string, name?: string) => {
-    type ActorUser = { id: string; actor?: boolean } & Record<
-      string,
-      unknown
-    >
-    const existing =
-      await ctx.context.internalAdapter.findUserByEmail(email)
-    let user: ActorUser | undefined = existing?.user as
-      ActorUser | undefined
+    type ActorUser = { id: string; actor?: boolean } & Record<string, unknown>
+    const existing = await ctx.context.internalAdapter.findUserByEmail(email)
+    let user: ActorUser | undefined = existing?.user as ActorUser | undefined
     if (user && !user.actor) {
       // Real user row — the secret must never impersonate real users
       throw new APIError('UNAUTHORIZED', {
@@ -197,9 +192,7 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
       }
     }
 
-    const session = await ctx.context.internalAdapter.createSession(
-      user.id
-    )
+    const session = await ctx.context.internalAdapter.createSession(user.id)
     if (!session) {
       throw new APIError('INTERNAL_SERVER_ERROR', {
         message: 'Failed to create actor session',
