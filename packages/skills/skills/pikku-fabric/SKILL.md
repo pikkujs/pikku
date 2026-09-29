@@ -439,6 +439,21 @@ the one the branch tracks; a stale `origin` left over from scaffolding blocks
 the deploy with "local HEAD … ≠ remote …" even though your code is pushed.
 `git branch --set-upstream-to=<remote>/main main` before deploying.
 
+### The first user on a deployed stage
+
+When sign-up is off, the first account has to come from outside the app.
+`pikku fabric user add <email>` is the CLI form of the console's Add user:
+
+```bash
+pikku fabric user add ada@example.com --name Ada          # prompts; blank generates one
+pikku fabric user add ada@example.com --password '<pw>' -b staging
+```
+
+It mints a short-lived operator token for the stage and calls the stage's own
+`admin:createUser`, so the stage must wire `@pikku/addon-admin` as `admin` —
+a 404 is refused by name and nothing is created. A generated password is printed
+once; one you passed is never echoed. With no TTY, pass `--password` or pipe it.
+
 ## Versioning
 
 Functions with `expose: true` are versioned via `versions.pikku.json`. When you change a function's input or output schema, you must bump its version number — otherwise `pikku all` will report a breaking change and callers' generated clients become stale.

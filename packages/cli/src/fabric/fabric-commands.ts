@@ -48,6 +48,7 @@ import {
   renderDbSchema,
 } from './functions/db-schema.function.js'
 import { FabricRollback } from './functions/rollback.function.js'
+import { FabricUserAdd } from './functions/user-add.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
 import { FabricSecretsDelete } from './functions/secrets-delete.function.js'
@@ -538,6 +539,25 @@ export const fabricCommands = defineCLICommands({
         description: 'Show the live database schema (tables + columns)',
         options: {
           branch: { description: 'Target branch', short: 'b' },
+        },
+      }),
+    },
+  },
+  user: {
+    description: "Manage a stage's end-users",
+    subcommands: {
+      add: pikkuCLICommand({
+        parameters: '<email>',
+        func: FabricUserAdd,
+        description:
+          'Create a user on a deployed stage (the CLI form of the console Add user)',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          password: {
+            description:
+              'Password (prompted if omitted; blank to auto-generate)',
+          },
+          name: { description: "The user's display name" },
         },
       }),
     },
