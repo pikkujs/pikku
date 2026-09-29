@@ -22,7 +22,7 @@ export type SignInAsPersonaOptions = {
  * password and no credential in the bundle.
  *
  * The server decides: `pikkuActor({ personaSignIn })` refuses unless its
- * `allowed()` says yes, and only ever signs in rows flagged `actor: true`, so
+ * its gate is open, and only ever signs in rows flagged `actor: true`, so
  * this can never reach a real user's account.
  */
 export const signInAsPersona = async ({

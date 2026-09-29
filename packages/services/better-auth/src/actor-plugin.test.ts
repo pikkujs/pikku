@@ -218,7 +218,12 @@ const listPersonas = (auth: ReturnType<typeof makeAuth>, app?: string) =>
 
 describe('persona sign-in', () => {
   const personas = [
-    { id: 'customer', email: 'customer@actors.local', name: 'Customer', app: 'web' },
+    {
+      id: 'customer',
+      email: 'customer@actors.local',
+      name: 'Customer',
+      app: 'web',
+    },
     { id: 'admin', email: 'admin@actors.local', name: 'Admin', app: 'admin' },
     { id: 'banned', email: 'banned@actors.local', runnable: false },
   ]
@@ -238,6 +243,34 @@ describe('persona sign-in', () => {
       ),
       ['admin']
     )
+  })
+
+  test('without `allowed`, a deployed stage follows its devSwitcher flag', async () => {
+    clearGateEnv()
+    let enabled = false
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      allowSignIn: ACTOR_SIGN_IN_OPT_IN_VALUE,
+      personaSignIn: {
+        personas,
+        featureFlags: {
+          snapshot: async () => ({
+            devSwitcher: { enabled, rolloutPercent: null, overrides: {} },
+          }),
+        },
+      },
+    })
+
+    assert.deepEqual((await (await listPersonas(auth)).json()).actors, [])
+    assert.equal((await signInPersona(auth, 'customer')).status, 401)
+    enabled = true
+    assert.equal((await (await listPersonas(auth)).json()).actors.length, 2)
+  })
+
+  test('without `allowed` or flags, `pikku dev` is open', async () => {
+    const auth = makeAuth({ user: [], session: [], account: [] }, ROOT, {
+      personaSignIn: { personas },
+    })
+    assert.equal((await (await listPersonas(auth)).json()).actors.length, 2)
   })
 
   test('lists nobody when `allowed` refuses', async () => {
@@ -263,7 +296,10 @@ describe('persona sign-in', () => {
     const res = await signInPersona(auth, 'customer')
 
     assert.equal(res.status, 200)
-    assert.match(res.headers.getSetCookie().join('; '), /better-auth\.session_token=/)
+    assert.match(
+      res.headers.getSetCookie().join('; '),
+      /better-auth\.session_token=/
+    )
     assert.equal((await res.json()).user.email, 'customer@actors.local')
   })
 

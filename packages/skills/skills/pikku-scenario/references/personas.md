@@ -91,7 +91,7 @@ serves both, in the auth config:
 ```ts snippet:personaSignIn
 ```
 
-`devSwitcherOn` is always true under `pikku dev`. A deployed stage needs actor
+It is always open under `pikku dev`. A deployed stage needs actor
 sign-in opted in **and** its `devSwitcher` feature flag on; production never
 has the opt-in, so it lists nobody and refuses every persona sign-in.
 

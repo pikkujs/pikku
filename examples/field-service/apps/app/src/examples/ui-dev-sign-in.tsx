@@ -10,7 +10,7 @@
 //~
 //~ The server half is `personaSignIn` on `pikkuActor` — see `src/auth.ts`. It
 //~ serves both the list and the sign-in, so without it the switcher silently
-//~ lists nobody. Gate it with `allowed: () => devSwitcherOn(featureFlags, optIn)`.
+//~ lists nobody. Pass it `featureFlags` so a stage can turn it on.
 //~
 //~ Only a persona's id and label reach the browser, so there is no credential to
 //~ keep out of the production bundle.

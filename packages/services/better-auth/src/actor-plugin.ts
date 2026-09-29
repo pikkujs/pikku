@@ -6,7 +6,7 @@ import {
   ACTOR_ROOT_SECRET_MIN_LENGTH,
   verifyActorSecret,
 } from '@pikku/core/services'
-import type { Logger } from '@pikku/core/services'
+import type { FeatureFlagSource, Logger } from '@pikku/core/services'
 
 import {
   ACTOR_NOT_PROVISIONED_MESSAGE,
@@ -19,7 +19,7 @@ import {
   WEAK_ACTOR_ROOT_SECRET_MESSAGE,
   weakActorRootSecretMessage,
 } from './actor-sign-in-gate.js'
-import { isSignInable, listDevActors } from './dev-actors.js'
+import { devSwitcherOn, isSignInable, listDevActors } from './dev-actors.js'
 import type { DevActorPersona } from './dev-actors.js'
 
 export interface ActorPluginOptions {
@@ -48,13 +48,15 @@ export interface ActorPluginOptions {
   /**
    * Opens the "Sign in as …" switcher's two endpoints: `GET /sign-in/personas
    * ?app=` lists the personas it may offer, and `POST /sign-in/persona { id }`
-   * signs in as one without the caller presenting a credential. `allowed` is
-   * asked on every call, so the app can gate both on a flag — pass
-   * `() => devSwitcherOn(featureFlags, optIn)`.
+   * signs in as one without the caller presenting a credential.
+   *
+   * Open under `pikku dev`; a deployed stage needs `allowSignIn` and the
+   * `devSwitcher` flag in `featureFlags`. `allowed` replaces that check.
    */
   personaSignIn?: {
     personas: ReadonlyArray<DevActorPersona>
-    allowed: () => boolean | Promise<boolean>
+    featureFlags?: FeatureFlagSource
+    allowed?: () => boolean | Promise<boolean>
   }
   /** Defaults to `console`: `actor()` is wired inside `betterAuth({...})`, where the app's logger is often not in scope. */
   logger?: Pick<Logger, 'info' | 'warn'>
@@ -150,6 +152,11 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
     logger.warn(actorSignInRefusedMessage())
     refusalAnnounced = true
   }
+
+  const personaAllowed = async () =>
+    options.personaSignIn?.allowed
+      ? options.personaSignIn.allowed()
+      : devSwitcherOn(options.personaSignIn?.featureFlags, options.allowSignIn)
 
   const signIn = async (ctx: any, email: string, name?: string) => {
     type ActorUser = { id: string; actor?: boolean } & Record<
@@ -289,7 +296,7 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
               },
               async (ctx) => {
                 const personaSignIn = options.personaSignIn!
-                const open = gate.enabled && (await personaSignIn.allowed())
+                const open = gate.enabled && (await personaAllowed())
                 return ctx.json({
                   actors: open
                     ? listDevActors(personaSignIn.personas, ctx.query?.app)
@@ -302,7 +309,7 @@ export const pikkuActor = (options: ActorPluginOptions): BetterAuthPlugin => {
               { method: 'POST', body: z.object({ id: z.string() }) },
               async (ctx) => {
                 const personaSignIn = options.personaSignIn!
-                if (!gate.enabled || !(await personaSignIn.allowed())) {
+                if (!gate.enabled || !(await personaAllowed())) {
                   throw new APIError('UNAUTHORIZED', {
                     message: 'Persona sign-in is disabled',
                   })

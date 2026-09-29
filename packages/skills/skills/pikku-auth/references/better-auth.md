@@ -561,7 +561,7 @@ actor`. So the secret cannot take over a **real user's** account — the blast
 This is the endpoint `pikku scenario` signs its actors in through. The frontend
 switcher does not use it: it lists from `/sign-in/personas` and posts a persona
 id to `/sign-in/persona`, both served by
-`pikkuActor({ personaSignIn: { personas, allowed } })` with no credential — see
+`pikkuActor({ personaSignIn: { personas, featureFlags } })` with no credential — see
 `pikku-scenario` for the setup and `pikku-react` for `useDevActors()`.
 
 ### Provisioning personas

@@ -57,7 +57,7 @@ import { DevActorSwitcher } from '@pikku/mantine/dev'
 No credential reaches the bundle: it lists personas from
 `/auth/sign-in/personas` and signs in by persona id through
 `/auth/sign-in/persona`. Both are served by `pikkuActor({ personaSignIn })` from
-`@pikku/better-auth`, gated with `devSwitcherOn`. Outside `pikku dev` the server offers nobody
+`@pikku/better-auth`. Outside `pikku dev` the server offers nobody
 unless the stage opts into actor sign-in and turns its `devSwitcher` flag on, so
 the control renders `null` in production.
 

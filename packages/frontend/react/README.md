@@ -51,7 +51,7 @@ const { actors, signInAs, isPending } = useDevActors({
 No credential reaches the bundle. The hook lists personas from
 `/auth/sign-in/personas`, and `signInAs(id)` posts only the persona id to
 `/auth/sign-in/persona`. The server decides both: pass `personaSignIn` to
-`pikkuActor` from `@pikku/better-auth`, gated with `devSwitcherOn`. They offer nobody outside `pikku dev` unless a
+`pikkuActor` from `@pikku/better-auth`. They offer nobody outside `pikku dev` unless a
 stage opts into actor sign-in and turns its `devSwitcher` flag on, and the
 endpoint only signs in users flagged `actor: true`, so it can never impersonate
 a real user.

@@ -1,7 +1,6 @@
 import { betterAuth } from 'better-auth'
 import {
   ACTOR_SIGN_IN_OPT_IN_ENV,
-  devSwitcherOn,
   pikkuActor,
   pikkuBan,
   pikkuFabric,
@@ -126,7 +125,7 @@ export const auth = pikkuBetterAuth(
           // POST /api/auth/sign-in/persona { id } signs in. No credential.
           personaSignIn: {
             personas: personaList,
-            allowed: () => devSwitcherOn(featureFlags, ALLOW_ACTOR_SIGN_IN),
+            featureFlags,
           },
         }),
         // @snippet end personaSignIn
