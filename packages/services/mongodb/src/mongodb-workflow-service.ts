@@ -443,10 +443,6 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return fn()
-  }
-
   /**
    * A pass-through: MongoDB has no advisory-lock primitive to build one on.
    * The one decision that must exclude — claiming a step to execute it — is

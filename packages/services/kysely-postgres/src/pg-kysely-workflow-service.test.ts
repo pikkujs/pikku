@@ -14,7 +14,7 @@ import {
 } from 'kysely'
 import { PGlite } from '@electric-sql/pglite'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import { applyPikkuSchemas, workflowSchema } from '@pikku/kysely'
+import { applyPikkuSchemas, lockSchema, workflowSchema } from '@pikku/kysely'
 
 import { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
 
@@ -154,7 +154,7 @@ const createDb = (intercept?: Intercept) => {
 beforeEach(async () => {
   open = []
   db = createDb()
-  await applyPikkuSchemas(db, [workflowSchema])
+  await applyPikkuSchemas(db, [workflowSchema, lockSchema])
   service = new PgKyselyWorkflowService(db, { wireQueues: false } as any)
   await service.init()
 })
@@ -177,13 +177,14 @@ const seedStep = async () => {
 }
 
 describe('the schema Postgres actually gets', () => {
-  test('the migration creates every workflow table', async () => {
+  test('the migration creates every workflow table and the run lock', async () => {
     const { rows } = await sql<{ tablename: string }>`
       SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `.execute(db)
     const tables = rows.map((r) => r.tablename).sort()
 
     assert.deepEqual(tables, [
+      'pikku_lock',
       'workflow_runs',
       'workflow_step',
       'workflow_step_history',
@@ -357,7 +358,7 @@ describe('a step transition on Postgres', () => {
   })
 })
 
-describe('advisory locks', () => {
+describe('run and step locks', () => {
   test('a run lock serialises its critical section', async () => {
     const order: string[] = []
     const hold = async (tag: string, ms: number) => {
@@ -397,141 +398,73 @@ describe('advisory locks', () => {
     }
   }
 
-  /** PGlite's single connection stands in for a saturated pool. */
-  test('a run lock on the query pool blocks unrelated queries', async () => {
-    let queryFinished = false
-    const { run, bodyEntered, release } = heldBody()
-
-    const held = service.withRunLock('run-1', run)
-    await bodyEntered
-
-    const query = sql`select 1`.execute(db).then(() => {
-      queryFinished = true
-    })
-    await new Promise((r) => setImmediate(r))
-    assert.equal(queryFinished, false)
-
-    release()
-    await Promise.all([held, query])
-    assert.equal(queryFinished, true)
-  })
-
-  /**
-   * Each PGlite instance is its own single-session database, so this can only
-   * show the query pool staying free, not two workers contending for the lock.
-   */
-  test('a run lock on lockDb leaves the query pool free', async () => {
-    const lockDb = createDb()
-    const isolated = new PgKyselyWorkflowService(db, {
-      wireQueues: false,
-      lockDb,
-    } as any)
-    await isolated.init()
-
-    const { run, bodyEntered, release } = heldBody()
-
-    const held = isolated.withRunLock('run-1', run)
-    await bodyEntered
-
-    const rows = await sql<{
-      one: number
-    }>`select 1 as one`.execute(db)
-    assert.equal(rows.rows[0]!.one, 1)
-
-    release()
-    await held
-  })
-
-  /**
-   * The bug this guards: the run lock used to be `pg_advisory_xact_lock` inside
-   * `lockDb.transaction()`, so a workflow body awaiting a build or an LLM left
-   * the connection `idle in transaction` for as long as it ran. On a shared
-   * pool that starves every other caller, and Postgres cannot vacuum past the
-   * pinned xid.
-   */
-  test('a run lock holds no transaction while the body runs', async () => {
+  test('a run lock holds no connection or transaction while the body runs', async () => {
     const { run, bodyEntered, release } = heldBody()
 
     executedSql.length = 0
     const held = service.withRunLock('run-1', run)
     await bodyEntered
 
+    const rows = await sql<{ one: number }>`select 1 as one`.execute(db)
+    assert.equal(rows.rows[0]!.one, 1, 'the run lock pinned the connection')
     assert.deepEqual(
       executedSql.filter((statement) => statement === 'begin'),
       [],
       'the run lock opened a transaction around the workflow body'
     )
-    assert.ok(
-      executedSql.some((statement) => statement.includes('pg_advisory_lock')),
-      'the run lock was never taken'
+
+    release()
+    await held
+  })
+
+  test('a released run lock is free for the next holder', async () => {
+    await service.withRunLock('run-1', async () => {})
+    const row = await db
+      .selectFrom('pikkuLock')
+      .selectAll()
+      .where('key', '=', 'workflow-run:run-1')
+      .executeTakeFirstOrThrow()
+    assert.ok(new Date(row.expiresAt).getTime() <= Date.now())
+  })
+
+  test('a taken run lock times out after waitMs', async () => {
+    const waiting = new PgKyselyWorkflowService(db, {
+      wireQueues: false,
+      runLock: { waitMs: 100, pollMs: 20 },
+    } as any)
+    await waiting.init()
+    const { run, bodyEntered, release } = heldBody()
+
+    const held = service.withRunLock('run-1', run)
+    await bodyEntered
+    await assert.rejects(
+      waiting.withRunLock('run-1', async () => {}),
+      (err: Error) => err.name === 'LockTimeoutError'
     )
 
     release()
     await held
-
-    assert.ok(
-      executedSql.some((statement) => statement.includes('pg_advisory_unlock')),
-      'the run lock was never released'
-    )
   })
 
-  test('a lock timeout is reset before the connection goes back', async () => {
-    const timed = new PgKyselyWorkflowService(db, {
-      wireQueues: false,
-      lockTimeoutMs: 250,
-    } as any)
-    await timed.init()
-
-    executedSql.length = 0
-    await timed.withRunLock('run-1', async () => 'done')
-
-    assert.ok(
-      executedSql.some((statement) => statement === 'SET lock_timeout = 250'),
-      'lock_timeout was never applied'
-    )
-    assert.ok(
-      executedSql.some((statement) => statement === 'RESET lock_timeout'),
-      'lock_timeout rode the connection back into the pool'
-    )
-  })
-
-  /**
-   * The leak this guards, seen in production: a workflow body that never
-   * settles never reaches the `finally` that unlocks, so the session keeps the
-   * advisory lock and the pooled connection for as long as the process lives.
-   * Every later message for that run then blocks for the full `lock_timeout`
-   * before failing, and a bounded worker pool ends up entirely queued behind
-   * runs that will never finish.
-   */
   test(
     'takes the lock back from a body that never settles',
     { timeout: 10_000 },
     async () => {
       const bounded = new PgKyselyWorkflowService(db, {
         wireQueues: false,
-        maxLockHoldMs: 100,
+        runLock: { maxHoldMs: 100 },
       } as any)
       await bounded.init()
 
-      executedSql.length = 0
       await assert.rejects(
         bounded.withRunLock('run-1', () => new Promise<never>(() => {})),
-        (err: Error) => {
-          assert.equal(err.name, 'RunLockHoldTimeoutError')
-          return true
-        }
+        (err: Error) => err.name === 'LockHoldTimeoutError'
       )
-
-      assert.ok(
-        executedSql.some((statement) =>
-          statement.includes('pg_advisory_unlock')
-        ),
+      assert.equal(
+        await bounded.withRunLock('run-1', async () => 'next'),
+        'next',
         'the abandoned body kept the run lock'
       )
-      // The connection matters as much as the lock: PGlite's single session
-      // stands in for the pool the leak drains.
-      const rows = await sql<{ one: number }>`select 1 as one`.execute(db)
-      assert.equal(rows.rows[0]!.one, 1, 'the lock connection never came back')
     }
   )
 
@@ -546,98 +479,28 @@ describe('advisory locks', () => {
     assert.equal(await held, undefined, 'a slow body was cut short')
   })
 
-  /**
-   * `idle_session_timeout` is what reclaims a holder that went away without
-   * closing its connection, but on its own it cannot tell that holder from a
-   * body legitimately awaiting a twenty-minute build — both leave the session
-   * idle. The keepalive is what makes idleness mean something, so the two only
-   * ever ship together.
-   */
-  test('a keepalive keeps a long hold from reading as idle', async () => {
-    const kept = new PgKyselyWorkflowService(db, {
+  test('a long hold keeps its lease alive', async () => {
+    const short = new PgKyselyWorkflowService(db, {
       wireQueues: false,
-      lockIdleTimeoutMs: 3_000,
+      runLock: { ttlMs: 150 },
     } as any)
-    await kept.init()
+    await short.init()
     const { run, bodyEntered, release } = heldBody()
 
-    executedSql.length = 0
-    const held = kept.withRunLock('run-1', run)
+    const held = short.withRunLock('run-1', run)
     await bodyEntered
-    await new Promise((r) => setTimeout(r, 2_200))
+    await new Promise((r) => setTimeout(r, 400))
+    const row = await db
+      .selectFrom('pikkuLock')
+      .selectAll()
+      .where('key', '=', 'workflow-run:run-1')
+      .executeTakeFirstOrThrow()
+    assert.ok(
+      new Date(row.expiresAt).getTime() > Date.now(),
+      'the lease lapsed under a body that was still running'
+    )
+
     release()
     await held
-
-    assert.ok(
-      executedSql.some(
-        (statement) => statement === 'SET idle_session_timeout = 3000'
-      ),
-      'the idle timeout was never applied'
-    )
-    const beats = executedSql.filter((statement) =>
-      statement.includes('pikku run lock heartbeat')
-    )
-    assert.ok(
-      beats.length >= 2,
-      `a 2.2s hold under a 3s idle timeout sent ${beats.length} keepalives, so the session read as idle`
-    )
-    assert.ok(
-      executedSql.some(
-        (statement) => statement === 'RESET idle_session_timeout'
-      ),
-      'the idle timeout rode the connection back into the pool'
-    )
-  })
-
-  /**
-   * A session lock outlives the statement that failed to release it, so an
-   * unlock that throws hands the next caller a pooled connection that still
-   * holds the run lock. Terminating our own backend is the release Postgres
-   * always honours.
-   */
-  test('a failed unlock kills the session rather than pool a held lock', async () => {
-    const brittle = createDb((statement) =>
-      statement.includes('pg_advisory_unlock')
-        ? 'throw'
-        : statement.includes('pg_terminate_backend')
-          ? 'skip'
-          : undefined
-    )
-    const unlucky = new PgKyselyWorkflowService(db, {
-      wireQueues: false,
-      lockDb: brittle,
-      lockTimeoutMs: 250,
-    } as any)
-    await unlucky.init()
-
-    executedSql.length = 0
-    const result = await unlucky.withRunLock('run-1', async () => 'done')
-
-    assert.equal(
-      result,
-      'done',
-      "the body's outcome was replaced by the unlock's own failure"
-    )
-    assert.ok(
-      executedSql.some((statement) =>
-        statement.includes('pg_terminate_backend')
-      ),
-      'a connection still holding the run lock went back to the pool'
-    )
-    assert.ok(
-      !executedSql.includes('RESET lock_timeout'),
-      'a terminated session was issued on anyway'
-    )
-  })
-
-  test('a non-finite lock timeout is rejected', () => {
-    assert.throws(
-      () =>
-        new PgKyselyWorkflowService(db, {
-          wireQueues: false,
-          lockTimeoutMs: Number.NaN,
-        } as any),
-      RangeError
-    )
   })
 })

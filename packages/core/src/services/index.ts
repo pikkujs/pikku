@@ -45,6 +45,10 @@ export {
 } from './trigger-source-store.js'
 export {
   InMemoryLockService,
+  holdLock,
+  LockHoldTimeoutError,
+  LockTimeoutError,
+  type HoldLockOptions,
   type LockLease,
   type LockService,
 } from './lock-service.js'

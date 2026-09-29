@@ -564,6 +564,7 @@ describe('requiredPikkuSchemas', () => {
       'secret',
       'deployment',
       'workflow',
+      'lock',
     ])
   })
 

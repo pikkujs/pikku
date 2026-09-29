@@ -74,3 +74,93 @@ export class InMemoryLockService implements LockService {
     return { ...lease }
   }
 }
+
+export type HoldLockOptions = {
+  /** Lease length; refreshed every third of it while `fn` runs. */
+  ttlMs?: number
+  /** How long to wait for a taken lock before `LockTimeoutError`. `0` waits forever. */
+  waitMs?: number
+  pollMs?: number
+  /** Longest `fn` may hold the lock before it is released and the caller rejected with `LockHoldTimeoutError`. `0` is unbounded. */
+  maxHoldMs?: number
+}
+
+export class LockTimeoutError extends Error {
+  constructor(
+    public readonly key: string,
+    public readonly waitedMs: number
+  ) {
+    super(`Lock ${key} was not free within ${waitedMs}ms`)
+    this.name = 'LockTimeoutError'
+  }
+}
+
+export class LockHoldTimeoutError extends Error {
+  constructor(
+    public readonly key: string,
+    public readonly heldForMs: number
+  ) {
+    super(
+      `Lock ${key} was held for longer than ${heldForMs}ms and was released`
+    )
+    this.name = 'LockHoldTimeoutError'
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Runs `fn` under `key`, waiting for the lock and keeping its lease alive until `fn` settles. */
+export const holdLock = async <T>(
+  locks: LockService,
+  key: string,
+  fn: () => Promise<T>,
+  {
+    ttlMs = 30_000,
+    waitMs = 0,
+    pollMs = 250,
+    maxHoldMs = 0,
+  }: HoldLockOptions = {}
+): Promise<T> => {
+  const holder = crypto.randomUUID()
+  const deadline = waitMs > 0 ? Date.now() + waitMs : Infinity
+  let lease = await locks.acquire(key, holder, ttlMs)
+  while (!lease) {
+    if (Date.now() >= deadline) throw new LockTimeoutError(key, waitMs)
+    await sleep(Math.min(pollMs, Math.max(0, deadline - Date.now())))
+    lease = await locks.acquire(key, holder, ttlMs)
+  }
+
+  let current: LockLease = lease
+  let refreshing: Promise<unknown> = Promise.resolve()
+  const refresher = setInterval(
+    () => {
+      refreshing = refreshing
+        .then(() => locks.refresh(current, ttlMs))
+        .then((next) => {
+          if (next) current = next
+        })
+        .catch(() => {})
+    },
+    Math.max(1, Math.floor(ttlMs / 3))
+  )
+  refresher?.unref?.()
+
+  let holdTimer: ReturnType<typeof setTimeout> | undefined
+  try {
+    if (maxHoldMs <= 0) return await fn()
+    return await Promise.race([
+      fn(),
+      new Promise<never>((_resolve, reject) => {
+        holdTimer = setTimeout(
+          () => reject(new LockHoldTimeoutError(key, maxHoldMs)),
+          maxHoldMs
+        )
+      }),
+    ])
+  } finally {
+    clearTimeout(holdTimer)
+    clearInterval(refresher)
+    await refreshing
+    await locks.release(current).catch(() => {})
+  }
+}

@@ -5,6 +5,11 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
+import {
+  holdLock,
+  type HoldLockOptions,
+  type LockService,
+} from '../../services/lock-service.js'
 import type { CoreUserSession, PikkuRawWire } from '../../types/core.types.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
@@ -155,6 +160,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected readonly queueConcurrency: number
   protected readonly queueGroupConcurrency: number | GroupConcurrencyConfig
 
+  protected lockService?: LockService
+  protected readonly runLock: HoldLockOptions
+
   constructor(
     options: {
       wireQueues?: boolean
@@ -163,6 +171,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ) {
     const wireQueues = options.wireQueues ?? true
     this.mirror = options.mirror
+    this.lockService = options.lockService
+    this.runLock = options.runLock ?? {}
     this.queueStrategy = options.queueStrategy ?? 'per-workflow'
     this.queueConcurrency = options.queueConcurrency ?? 20
     this.queueGroupConcurrency = options.queueGroupConcurrency ?? 2
@@ -494,7 +504,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     status: 'pending' | 'running'
   ): Promise<StepState>
 
-  abstract withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
+  /** Serialises orchestration of one run across processes. Without a `lockService` it is a pass-through: the step claim, not this lock, is what keeps a step from running twice. */
+  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+    if (!this.lockService) return fn()
+    return holdLock(this.lockService, `workflow-run:${id}`, fn, this.runLock)
+  }
 
   abstract withStepLock<T>(
     runId: string,

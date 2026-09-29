@@ -19,6 +19,7 @@ import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { parseJson } from './kysely-json.js'
 import { requirePikkuSchema } from './schema/index.js'
 import { workflowSchema } from './schema/workflow.schema.js'
+import { KyselyLockService } from './kysely-lock-service.js'
 
 export class KyselyWorkflowService extends PikkuWorkflowService {
   private initialized = false
@@ -35,6 +36,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   public async init(): Promise<void> {
     if (this.initialized) return
     await requirePikkuSchema(this.db, workflowSchema)
+    if (this.lockService instanceof KyselyLockService) {
+      await this.lockService.init()
+    }
     this.initialized = true
   }
 
@@ -457,10 +461,6 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }
-  }
-
-  async withRunLock<T>(_id: string, fn: () => Promise<T>): Promise<T> {
-    return fn()
   }
 
   /**

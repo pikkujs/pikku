@@ -2,6 +2,10 @@ import type { CommonWireMeta } from '../../types/core.types.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type { GroupConcurrencyConfig } from '../queue/queue.types.js'
+import type {
+  HoldLockOptions,
+  LockService,
+} from '../../services/lock-service.js'
 
 export type { WorkflowService } from '../../services/workflow-service.js'
 
@@ -55,6 +59,9 @@ export interface WorkflowQueueOptions {
   queueStrategy?: 'per-workflow' | 'shared-groups'
   queueConcurrency?: number
   queueGroupConcurrency?: number | GroupConcurrencyConfig
+  /** Serialises orchestration of a run across processes; without one the run lock is a pass-through. */
+  lockService?: LockService
+  runLock?: HoldLockOptions
 }
 
 export interface WorkflowPlannedStep {

@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3165 observable things**: 1043 exported names, plus
-2122 members on the classes and interfaces among them, reachable
+**3175 observable things**: 1047 exported names, plus
+2128 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,10 +14,10 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 172 | 140 | 460 |
+| `./services` | 176 | 144 | 462 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
-| `./workflow` | 84 | 35 | 140 |
+| `./workflow` | 84 | 35 | 142 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
 | `./types` | 24 | 21 | 82 |
@@ -1129,6 +1129,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected readonly queueStrategy: 'per-workflow' | 'shared-groups'
   protected readonly queueConcurrency: number
   protected readonly queueGroupConcurrency: number | GroupConcurrencyConfig
+  protected lockService?: LockService
+  protected readonly runLock: HoldLockOptions
   constructor(options: { wireQueues?: boolean; mirror?: WorkflowRunMirror } & WorkflowQueueOptions = {})
   public wireQueueWorkers(): void
   protected async isInline(runId: string): Promise<boolean>
@@ -1159,7 +1161,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected abstract setStepErrorImpl(stepId: string, error: Error): Promise<void>
   public async createRetryAttempt(failedStepId: string, status: 'pending' | 'running'): Promise<StepState>
   protected abstract createRetryAttemptImpl(failedStepId: string, status: 'pending' | 'running'): Promise<StepState>
-  abstract withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
+  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
   abstract withStepLock<T>(runId: string, stepName: string, fn: () => Promise<T>): Promise<T>
   abstract close(): Promise<void>
   abstract getCompletedGraphState(runId: string): Promise<{ completedNodeIds: string[]; failedNodeIds: string[]; branchKeys: Record<string, string> }>
@@ -1341,6 +1343,8 @@ export interface WorkflowQueueOptions {
   queueStrategy?: 'per-workflow' | 'shared-groups'
   queueConcurrency?: number
   queueGroupConcurrency?: number | GroupConcurrencyConfig
+  lockService?: LockService
+  runLock?: HoldLockOptions
 }
 export interface WorkflowRun {
   id: string
@@ -2020,6 +2024,8 @@ export interface WorkflowQueueOptions {
   queueStrategy?: 'per-workflow' | 'shared-groups'
   queueConcurrency?: number
   queueGroupConcurrency?: number | GroupConcurrencyConfig
+  lockService?: LockService
+  runLock?: HoldLockOptions
 }
 export interface WorkflowRun {
   id: string
@@ -4953,6 +4959,13 @@ export interface GroupMeta {
   instanceIds: string[]
   isFactory: boolean
 }
+holdLock: <T>(locks: LockService, key: string, fn: () => Promise<T>, { ttlMs, waitMs, pollMs, maxHoldMs, }?: HoldLockOptions) => Promise<T>
+export type HoldLockOptions = {
+  ttlMs?: number
+  waitMs?: number
+  pollMs?: number
+  maxHoldMs?: number
+}
 export type IncomingWebhookAttempt = {
   trigger: string
   error?: string
@@ -5098,6 +5111,9 @@ export class LocalVariablesService implements VariablesService {
   public has(name: string): boolean
   public delete(name: string): void
 }
+export class LockHoldTimeoutError extends Error {
+  constructor(public readonly key: string, public readonly heldForMs: number)
+}
 export type LockLease = {
   key: string
   holder: string
@@ -5109,6 +5125,9 @@ export interface LockService {
   refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
   release(lease: LockLease): Promise<void>
   get(key: string): Promise<LockLease | null>
+}
+export class LockTimeoutError extends Error {
+  constructor(public readonly key: string, public readonly waitedMs: number)
 }
 export interface Logger {
   info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void
