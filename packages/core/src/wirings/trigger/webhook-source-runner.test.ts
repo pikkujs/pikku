@@ -5,12 +5,15 @@ import {
   dispatchWebhookSourceJob,
   receiveWebhookSourceRequest,
   runWebhookSourceLifecycle,
+  setWebhookSourceEnabled,
+  syncTriggerSources,
   subscribedWebhookEvents,
   wireTriggerWebhookSource,
 } from './webhook-source-runner.js'
 import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { IncomingWebhookService } from '../../services/incoming-webhook-service.js'
+import { InMemoryTriggerSourceStore } from '../../services/trigger-source-store.js'
 import type { QueueService } from '../queue/queue.types.js'
 
 const logger = {
@@ -328,5 +331,99 @@ describe('runWebhookSourceLifecycle', () => {
       status: 'failed',
       error: 'no key',
     })
+  })
+})
+
+describe('setWebhookSourceEnabled', () => {
+  const withStore = () => {
+    const triggerSourceStore = new InMemoryTriggerSourceStore()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger,
+      triggerSourceStore,
+    } as never)
+    return triggerSourceStore
+  }
+  const lifecycle = { baseUrl: 'https://shop.test', labelPrefix: 'p' }
+
+  test('enables with setup, then disables with the stored state', async () => {
+    const store = withStore()
+    let teardownInput: any
+    setWebhookSourceMeta({
+      name: 'shop',
+      setup: 'shop:setup',
+      teardown: 'shop:teardown',
+    })
+    registerFunction('shop:setup', () => ({
+      status: 'created',
+      state: { id: 'we_1' },
+    }))
+    registerFunction('shop:teardown', (_services, data) => {
+      teardownInput = data
+      return { status: 'deleted' }
+    })
+    await syncTriggerSources()
+
+    await setWebhookSourceEnabled({ name: 'shop', enabled: true, ...lifecycle })
+    const enabled = await store.getTriggerSource('shop')
+    assert.equal(enabled!.enabled, true)
+    assert.deepEqual(enabled!.state, { id: 'we_1' })
+
+    await setWebhookSourceEnabled({
+      name: 'shop',
+      enabled: false,
+      actor: 'u1',
+      ...lifecycle,
+    })
+    assert.deepEqual(teardownInput, {
+      label: 'p:shop',
+      previous: { id: 'we_1' },
+    })
+    const disabled = await store.getTriggerSource('shop')
+    assert.equal(disabled!.enabled, false)
+    assert.equal(disabled!.state, null)
+    assert.equal(disabled!.updatedBy, 'u1')
+  })
+
+  test('leaves enabled as it was when the step fails', async () => {
+    const store = withStore()
+    setWebhookSourceMeta({ name: 'shop', setup: 'shop:setup' })
+    registerFunction('shop:setup', () => {
+      throw new Error('bad key')
+    })
+    await syncTriggerSources()
+
+    const outcome = await setWebhookSourceEnabled({
+      name: 'shop',
+      enabled: true,
+      ...lifecycle,
+    })
+
+    assert.equal(outcome.status, 'failed')
+    const row = await store.getTriggerSource('shop')
+    assert.equal(row!.enabled, false)
+    assert.equal(row!.detail, 'bad key')
+  })
+})
+
+describe('InMemoryTriggerSourceStore', () => {
+  test('sync keeps enabled; prune keeps enabled orphans unless forced', async () => {
+    const store = new InMemoryTriggerSourceStore()
+    await store.syncTriggerSources([
+      { name: 'a', kind: 'webhook' },
+      { name: 'b', kind: 'webhook' },
+    ])
+    await store.setTriggerSourceEnabled('a', true, { status: 'created' })
+    await store.syncTriggerSources([])
+
+    const rows = await store.listTriggerSources()
+    assert.deepEqual(
+      rows.map((r) => [r.name, r.enabled, r.declared]),
+      [
+        ['a', true, false],
+        ['b', false, false],
+      ]
+    )
+    assert.deepEqual(await store.pruneTriggerSources(), ['b'])
+    assert.deepEqual(await store.pruneTriggerSources({ force: true }), ['a'])
   })
 })

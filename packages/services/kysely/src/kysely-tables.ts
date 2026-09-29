@@ -266,6 +266,20 @@ export interface PikkuFeatureFlagsTable {
   updatedAt: Generated<Date>
 }
 
+/** Whether an operator enabled a trigger source, and what enabling registered. */
+export interface PikkuTriggerSourceTable {
+  name: string
+  kind: string
+  enabled: Generated<boolean>
+  declared: Generated<boolean>
+  status: string | null
+  /** The last setup's provider identifiers as JSON; never a secret. */
+  state: string | null
+  detail: string | null
+  updatedBy: string | null
+  updatedAt: Generated<Date>
+}
+
 /** One subject's short-circuit, in either direction, over a flag's rollout. */
 export interface PikkuFeatureFlagOverridesTable {
   flag: string
@@ -463,6 +477,7 @@ export interface KyselyPikkuDB {
   pikkuUserScope: PikkuUserScopeTable
   pikkuFeatureFlags: PikkuFeatureFlagsTable
   pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
+  pikkuTriggerSource: PikkuTriggerSourceTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable

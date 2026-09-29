@@ -4,6 +4,9 @@ export {
   receiveWebhookSourceRequest,
   dispatchWebhookSourceJob,
   runWebhookSourceLifecycle,
+  declaredTriggerSources,
+  setWebhookSourceEnabled,
+  syncTriggerSources,
   subscribedWebhookEvents,
 } from './webhook-source-runner.js'
 export type { WebhookSourceOutcome } from './webhook-source-runner.js'

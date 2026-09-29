@@ -65,6 +65,18 @@ defineScope({
           },
         },
       },
+      triggers: {
+        description: 'Trigger sources',
+        scopes: {
+          read: {
+            description: 'View trigger sources and whether they are enabled',
+          },
+          manage: {
+            description:
+              'Enable and disable trigger sources, registering them with their provider',
+          },
+        },
+      },
       audit: {
         description: 'The audit trail',
         scopes: {

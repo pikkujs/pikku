@@ -182,10 +182,13 @@
   "./trigger": [
     "PIKKU_INCOMING_WEBHOOK_QUEUE_NAME",
     "PikkuTriggerService",
+    "declaredTriggerSources",
     "dispatchWebhookSourceJob",
     "receiveWebhookSourceRequest",
     "runWebhookSourceLifecycle",
+    "setWebhookSourceEnabled",
     "subscribedWebhookEvents",
+    "syncTriggerSources",
     "wireTrigger",
     "wireTriggerSource",
     "wireTriggerWebhookSource"
@@ -421,6 +424,7 @@
     "InMemoryQueueService",
     "InMemorySessionStore",
     "InMemoryTriggerService",
+    "InMemoryTriggerSourceStore",
     "InMemoryWorkflowService",
     "IncomingWebhookService",
     "JsonConsoleLogger",

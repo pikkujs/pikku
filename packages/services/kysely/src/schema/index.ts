@@ -14,6 +14,7 @@ import { credentialSchema } from './credential.schema.js'
 import { deploymentSchema } from './deployment.schema.js'
 import { scopeSchema } from './scope.schema.js'
 import { flagSchema } from './flag.schema.js'
+import { triggerSourceSchema } from './trigger-source.schema.js'
 import { incomingWebhookSchema } from './incoming-webhook.schema.js'
 import { secretSchema } from './secret.schema.js'
 import { sessionSchema } from './session.schema.js'
@@ -63,6 +64,7 @@ export const pikkuSchemas: PikkuSchema[] = [
   agentSchema,
   scopeSchema,
   flagSchema,
+  triggerSourceSchema,
   auditSchema,
   analyticsSchema,
   virtualUserSchema,
@@ -76,6 +78,7 @@ export { channelSchema } from './channel.schema.js'
 export { credentialSchema } from './credential.schema.js'
 export { deploymentSchema } from './deployment.schema.js'
 export { flagSchema } from './flag.schema.js'
+export { triggerSourceSchema } from './trigger-source.schema.js'
 export { incomingWebhookSchema } from './incoming-webhook.schema.js'
 export { scopeSchema } from './scope.schema.js'
 export { secretSchema } from './secret.schema.js'

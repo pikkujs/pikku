@@ -7,6 +7,7 @@ import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
+import type { DeclaredTriggerSource } from '../../services/trigger-source-store.js'
 import type {
   CoreTriggerWebhookSource,
   TriggerEvent,
@@ -254,101 +255,183 @@ export type WebhookSourceOutcome = {
   error?: string
 }
 
-/**
- * Runs one lifecycle step for every webhook source, as `pikku webhooks
- * status | setup | teardown` does at deploy. `setup` runs only where `check`
- * does not report `ok`. One failing source does not stop the rest.
- */
-export const runWebhookSourceLifecycle = async ({
-  action,
-  baseUrl,
-  labelPrefix,
-  previous = {},
-  singletonServices = getSingletonServices(),
-}: {
-  action: 'check' | 'setup' | 'teardown'
+type LifecycleInput = {
   /** Where the app's routes are served, e.g. `https://shop.example.com/api`. */
   baseUrl: string
   labelPrefix: string
+}
+
+const runSourceLifecycleStep = async (
+  meta: WebhookSourceMeta,
+  action: 'check' | 'setup' | 'teardown',
+  { baseUrl, labelPrefix }: LifecycleInput,
+  previous: WebhookSourceState | undefined,
+  singletonServices: CoreSingletonServices
+): Promise<WebhookSourceOutcome> => {
+  const url = `${baseUrl.replace(/\/+$/, '')}${meta.route}`
+  const label = `${labelPrefix}:${meta.name}`
+  const input = {
+    url,
+    label,
+    events: subscribedWebhookEvents(meta.name),
+    ...(previous ? { previous } : {}),
+  }
+  const outcome = (
+    status: WebhookSourceOutcome['status'],
+    extra = {}
+  ): WebhookSourceOutcome => ({ source: meta.name, url, status, ...extra })
+
+  try {
+    if (action === 'teardown') {
+      if (!meta.teardown) return outcome('skipped')
+      const result = await runSourceStep<WebhookTeardownResult>(
+        singletonServices,
+        meta.name,
+        meta.teardown,
+        { label, ...(previous ? { previous } : {}) }
+      )
+      return outcome(result.status)
+    }
+
+    if (meta.check) {
+      const checked = await runSourceStep<WebhookCheckResult>(
+        singletonServices,
+        meta.name,
+        meta.check,
+        input
+      )
+      if (action === 'check' || checked.status === 'ok') {
+        return outcome(
+          checked.status === 'ok' && action === 'setup'
+            ? 'unchanged'
+            : checked.status,
+          checked.status === 'drifted' ? { reason: checked.reason } : {}
+        )
+      }
+    } else if (action === 'check') {
+      return outcome('skipped')
+    }
+
+    if (!meta.setup) {
+      return outcome('manual', {
+        instructions: `Register ${url} with the provider for: ${input.events.join(', ') || 'every event'}.`,
+      })
+    }
+    const result = await runSourceStep<WebhookSetupResult>(
+      singletonServices,
+      meta.name,
+      meta.setup,
+      input
+    )
+    if (result.status === 'manual') {
+      return outcome('manual', { instructions: result.instructions })
+    }
+    return outcome(result.status, result.state ? { state: result.state } : {})
+  } catch (error) {
+    return outcome('failed', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/**
+ * Runs one lifecycle step for every webhook source, as `pikku webhooks
+ * status | setup | teardown` does. `setup` runs only where `check` does not
+ * report `ok`. One failing source does not stop the rest.
+ */
+export const runWebhookSourceLifecycle = async ({
+  action,
+  previous = {},
+  singletonServices = getSingletonServices(),
+  ...input
+}: LifecycleInput & {
+  action: 'check' | 'setup' | 'teardown'
   /** What the last `setup` returned as `state`, by source name. */
   previous?: Record<string, WebhookSourceState>
   singletonServices?: CoreSingletonServices
 }): Promise<WebhookSourceOutcome[]> => {
-  const base = baseUrl.replace(/\/+$/, '')
   const outcomes: WebhookSourceOutcome[] = []
   for (const meta of Object.values(
     pikkuState(null, 'trigger', 'webhookSourceMeta')
   )) {
-    const url = `${base}${meta.route}`
-    const label = `${labelPrefix}:${meta.name}`
-    const input = {
-      url,
-      label,
-      events: subscribedWebhookEvents(meta.name),
-      ...(previous[meta.name] ? { previous: previous[meta.name] } : {}),
-    }
-    const outcome = (status: WebhookSourceOutcome['status'], extra = {}) =>
-      outcomes.push({ source: meta.name, url, status, ...extra })
-
-    try {
-      if (action === 'teardown') {
-        if (!meta.teardown) {
-          outcome('skipped')
-          continue
-        }
-        const result = await runSourceStep<WebhookTeardownResult>(
-          singletonServices,
-          meta.name,
-          meta.teardown,
-          { label, ...(input.previous ? { previous: input.previous } : {}) }
-        )
-        outcome(result.status)
-        continue
-      }
-
-      if (meta.check) {
-        const checked = await runSourceStep<WebhookCheckResult>(
-          singletonServices,
-          meta.name,
-          meta.check,
-          input
-        )
-        if (action === 'check' || checked.status === 'ok') {
-          outcome(
-            checked.status === 'ok' && action === 'setup'
-              ? 'unchanged'
-              : checked.status,
-            checked.status === 'drifted' ? { reason: checked.reason } : {}
-          )
-          continue
-        }
-      } else if (action === 'check') {
-        outcome('skipped')
-        continue
-      }
-
-      if (!meta.setup) {
-        outcome('manual', {
-          instructions: `Register ${url} with the provider for: ${input.events.join(', ') || 'every event'}.`,
-        })
-        continue
-      }
-      const result = await runSourceStep<WebhookSetupResult>(
-        singletonServices,
-        meta.name,
-        meta.setup,
-        input
+    outcomes.push(
+      await runSourceLifecycleStep(
+        meta,
+        action,
+        input,
+        previous[meta.name],
+        singletonServices
       )
-      if (result.status === 'manual') {
-        outcome('manual', { instructions: result.instructions })
-        continue
-      }
-      outcome(result.status, result.state ? { state: result.state } : {})
-    } catch (error) {
-      outcome('failed', {
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
+    )
   }
   return outcomes
+}
+
+const requireTriggerSourceStore = (
+  singletonServices: CoreSingletonServices
+) => {
+  const store = singletonServices.triggerSourceStore
+  if (!store) {
+    throw new Error('No triggerSourceStore is configured')
+  }
+  return store
+}
+
+/** The trigger sources this app declares, as the store is synced to. */
+export const declaredTriggerSources = (): DeclaredTriggerSource[] =>
+  Object.keys(pikkuState(null, 'trigger', 'webhookSourceMeta')).map((name) => ({
+    name,
+    kind: 'webhook',
+  }))
+
+/** Upserts the declared sources and marks the rest undeclared; `enabled` is left alone. */
+export const syncTriggerSources = async (
+  singletonServices: CoreSingletonServices = getSingletonServices()
+) =>
+  requireTriggerSourceStore(singletonServices).syncTriggerSources(
+    declaredTriggerSources()
+  )
+
+/**
+ * Enables or disables one webhook source: `setup` (after `check`) or
+ * `teardown` with the provider, recorded in the store. A failed step leaves
+ * `enabled` as it was.
+ */
+export const setWebhookSourceEnabled = async ({
+  name,
+  enabled,
+  actor,
+  singletonServices = getSingletonServices(),
+  ...input
+}: LifecycleInput & {
+  name: string
+  enabled: boolean
+  actor?: string
+  singletonServices?: CoreSingletonServices
+}): Promise<WebhookSourceOutcome> => {
+  const store = requireTriggerSourceStore(singletonServices)
+  const meta = getSourceMeta(name)
+  const row = await store.getTriggerSource(name)
+  if (!row) {
+    throw new Error(`Trigger source '${name}' is not synced`)
+  }
+  const outcome = await runSourceLifecycleStep(
+    meta,
+    enabled ? 'setup' : 'teardown',
+    input,
+    row.state ?? undefined,
+    singletonServices
+  )
+  const failed = outcome.status === 'failed'
+  await store.setTriggerSourceEnabled(
+    name,
+    failed ? row.enabled : enabled,
+    {
+      status: outcome.status,
+      state: failed ? row.state : enabled ? (outcome.state ?? row.state) : null,
+      detail: outcome.instructions ?? outcome.error ?? outcome.reason ?? null,
+    },
+    actor
+  )
+  return outcome
 }

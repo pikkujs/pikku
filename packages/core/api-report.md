@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3130 observable things**: 1031 exported names, plus
-2099 members on the classes and interfaces among them, reachable
+**3152 observable things**: 1040 exported names, plus
+2112 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,21 +14,21 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 163 | 131 | 441 |
+| `./services` | 169 | 137 | 451 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
-| `./types` | 24 | 21 | 80 |
+| `./types` | 24 | 21 | 81 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
 | `./errors` | 51 | 51 | 24 |
 | `./analytics` | 26 | 26 | 40 |
 | `./services/local-meta` | 22 | 2 | 42 |
+| `./trigger` | 32 | 32 | 11 |
 | `./mcp` | 25 | 25 | 17 |
-| `./trigger` | 29 | 29 | 11 |
 | `./cli` | 16 | 14 | 26 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
@@ -48,11 +48,11 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./cli/channel` | 7 | 7 | 5 |
 | `./scope` | 12 | 12 | 0 |
 | `./services/temporary-file-service` | 2 | 2 | 9 |
+| `./hmac` | 3 | 3 | 8 |
 | `./addon` | 8 | 8 | 2 |
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
-| `./hmac` | 3 | 3 | 6 |
 | `./scheduler` | 7 | 7 | 1 |
 | `./secret` | 8 | 8 | 0 |
 | `./webhook` | 7 | 7 | 1 |
@@ -217,6 +217,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   emailService?: EmailService
   webhookService?: WebhookService
   incomingWebhookService?: IncomingWebhookService
+  triggerSourceStore?: TriggerSourceStore
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
   virtualUserScheduleStore?: VirtualUserScheduleStore
@@ -2956,6 +2957,7 @@ export type CoreTriggerWebhookSource<
   setup?: SourceFunction<WebhookLifecycleInput, WebhookSetupResult>
   teardown?: SourceFunction<WebhookTeardownInput, WebhookTeardownResult>
 }
+declaredTriggerSources: () => DeclaredTriggerSource[]
 dispatchWebhookSourceJob: (job: WebhookSourceJob) => Promise<void>
 PIKKU_INCOMING_WEBHOOK_QUEUE_NAME: "pikku-incoming-webhooks"
 export abstract class PikkuTriggerService implements TriggerService {
@@ -2968,8 +2970,10 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown): Promise<void>
 }
 receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<Response | { received: number; }>
-runWebhookSourceLifecycle: ({ action, baseUrl, labelPrefix, previous, singletonServices, }: { action: "check" | "setup" | "teardown"; baseUrl: string; labelPrefix: string; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+runWebhookSourceLifecycle: ({ action, previous, singletonServices, ...input }: LifecycleInput & { action: "check" | "setup" | "teardown"; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
+setWebhookSourceEnabled: ({ name, enabled, actor, singletonServices, ...input }: LifecycleInput & { name: string; enabled: boolean; actor?: string | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome>
 subscribedWebhookEvents: (source: string) => string[]
+syncTriggerSources: (singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => Promise<void>
 export type TriggerEvent<Name extends string = string, Data = unknown> = {
   name: Name
   id?: string
@@ -4784,6 +4788,7 @@ export interface CredentialService {
   getUsersWithCredential(name: string): Promise<string[]>
   getAllUsers(): Promise<string[]>
 }
+export type DeclaredTriggerSource = { name: string; kind: TriggerSourceKind }
 DEFAULT_WEBHOOK_RETRIES: 3
 export interface DeploymentConfig {
   deploymentId: string
@@ -4991,6 +4996,13 @@ export class InMemorySessionStore< UserSession extends CoreUserSession = CoreUse
 }
 export class InMemoryTriggerService extends PikkuTriggerService {
   async start(): Promise<void>
+}
+export class InMemoryTriggerSourceStore implements TriggerSourceStore {
+  async syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
+  async listTriggerSources(): Promise<{ name: string; kind: "webhook"; enabled: boolean; declared: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedBy: string | null; updatedAt: string | null; }[]>
+  async getTriggerSource(name: string): Promise<{ name: string; kind: "webhook"; enabled: boolean; declared: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedBy: string | null; updatedAt: string | null; } | null>
+  async setTriggerSourceEnabled(name: string, enabled: boolean, result: TriggerSourceResult, actor?: string): Promise<void>
+  async pruneTriggerSources({ force = false } = {}): Promise<string[]>
 }
 export class InMemoryWorkflowService extends PikkuWorkflowService implements WorkflowRunService {
   constructor(options: WorkflowQueueOptions = {})
@@ -5446,6 +5458,28 @@ export class StubTracker {
 export interface TriggerService {
   start(): Promise<void>
   stop(): Promise<void>
+}
+export type TriggerSourceKind = 'webhook'
+export type TriggerSourceResult = {
+  status: string
+  state?: WebhookSourceState | null
+  detail?: string | null
+}
+export type TriggerSourceRow = DeclaredTriggerSource & {
+  enabled: boolean
+  declared: boolean
+  status: string | null
+  state: WebhookSourceState | null
+  detail: string | null
+  updatedBy: string | null
+  updatedAt: string | null
+}
+export interface TriggerSourceStore {
+  syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
+  listTriggerSources(): Promise<TriggerSourceRow[]>
+  getTriggerSource(name: string): Promise<TriggerSourceRow | null>
+  setTriggerSourceEnabled(name: string, enabled: boolean, result: TriggerSourceResult, actor?: string): Promise<void>
+  pruneTriggerSources(options?: { force?: boolean }): Promise<string[]>
 }
 export class TypedCredentialService< TMap = Record<string, unknown>, > implements CredentialService {
   constructor(private credentials: CredentialService, private credentialsMeta: Record<string, CredentialMetaInfo>)
@@ -6037,7 +6071,7 @@ export class WebhookSigningSecret {
   constructor(private readonly provider: string, private readonly secret: SecretSource)
   static fromCredential(provider: string, credentials: CredentialService | undefined, name: string): WebhookSigningSecret
   get configured(): boolean
-  load(): Promise<WebhookSigningSecret>
+  async load(): Promise<WebhookSigningSecret>
   hmac(algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): string
   verifyHmac(signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): void
   verifyToken(token: string | undefined): void
