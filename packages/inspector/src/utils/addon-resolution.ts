@@ -26,7 +26,7 @@ export const addonResolutionDirs = (
   declFile?: string
 ): string[] => {
   const root = resolve(rootDir)
-  const declDir = declFile ? nearestPackageDir(declFile) : null
+  const declDir = declFile ? nearestPackageDir(resolve(declFile)) : null
   return declDir && declDir !== root ? [declDir, root] : [root]
 }
 
