@@ -25,6 +25,7 @@ import {
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
   inspect,
+  finalizeSchemas,
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
@@ -253,11 +254,48 @@ export const createSingletonServices: CreateSingletonServices<
   let unfilteredStateIsSetupOnly = false
   let inspectedTsGeneration: number | undefined
   let inspectorInvalidated = false
+  let schemasDeferred = false
+  let schemasFinalized = false
 
   let inspectPass = 0
   const releaseProgram = (state: { program?: unknown } | undefined) => {
     if (state) state.program = undefined
   }
+
+  const saveStateOutput = async () => {
+    if (stateOutput && unfilteredState && 'typesLookup' in unfilteredState) {
+      try {
+        logger.info(`Saving inspector state to ${stateOutput}`)
+        const serialized = serializeInspectorState(unfilteredState)
+        await writeFile(
+          stateOutput,
+          JSON.stringify(serialized, null, 2),
+          'utf-8'
+        )
+        logger.info(`Inspector state saved successfully`)
+      } catch (error: any) {
+        logger.error(
+          `Failed to save inspector state to ${stateOutput}: ${error.message}`
+        )
+        // Don't throw - state saving is optional/nice-to-have
+      }
+    }
+  }
+
+  const schemaOptions = () => ({
+    schemaConfig: {
+      tsconfig: config.tsconfig,
+      schemasFromTypes: config.schemasFromTypes,
+      schema: config.schema,
+      // Persist generated TS schemas under node_modules/.cache (gitignored
+      // by convention) so a warm `pikku all` with unchanged function types
+      // skips ts-json-schema-generator — the largest cold-run cost.
+      cacheDir: path.join(rootDir, 'node_modules', '.cache', 'pikku'),
+    },
+    openAPI: config.openAPI
+      ? { additionalInfo: config.openAPI.additionalInfo }
+      : undefined,
+  })
 
   /**
    * `unfiltered` is for commands that RUN the project rather than generate from
@@ -415,23 +453,11 @@ export const createSingletonServices: CreateSingletonServices<
         strictMeta: !!(config as any).strictMeta,
         modelAliases: config.models ?? {},
         allow: config.allow ?? {},
-        schemaConfig: !setupOnly
-          ? {
-              tsconfig: config.tsconfig,
-              schemasFromTypes: config.schemasFromTypes,
-              schema: config.schema,
-              // Persist generated TS schemas under node_modules/.cache (gitignored
-              // by convention) so a warm `pikku all` with unchanged function types
-              // skips ts-json-schema-generator — the largest cold-run cost.
-              cacheDir: path.join(rootDir, 'node_modules', '.cache', 'pikku'),
-            }
-          : undefined,
-        openAPI:
-          !setupOnly && config.openAPI
-            ? { additionalInfo: config.openAPI.additionalInfo }
-            : undefined,
+        ...(setupOnly ? {} : schemaOptions()),
+        deferSchemas: schemasDeferred,
         manifest,
       })
+      schemasFinalized = false
 
       logger.debug(`Inspector took ${Date.now() - inspectStart}ms`)
       // One row per inspector pass under PIKKU_TIMING, next to the step table
@@ -459,22 +485,8 @@ export const createSingletonServices: CreateSingletonServices<
         processDiagnostics(unfilteredState.diagnostics, config.lint)
       }
 
-      if (stateOutput && 'typesLookup' in unfilteredState) {
-        try {
-          logger.info(`Saving inspector state to ${stateOutput}`)
-          const serialized = serializeInspectorState(unfilteredState)
-          await writeFile(
-            stateOutput,
-            JSON.stringify(serialized, null, 2),
-            'utf-8'
-          )
-          logger.info(`Inspector state saved successfully`)
-        } catch (error: any) {
-          logger.error(
-            `Failed to save inspector state to ${stateOutput}: ${error.message}`
-          )
-          // Don't throw - state saving is optional/nice-to-have
-        }
+      if (!schemasDeferred) {
+        await saveStateOutput()
       }
     }
 
@@ -490,6 +502,25 @@ export const createSingletonServices: CreateSingletonServices<
 
   const invalidateInspectorState = () => {
     inspectorInvalidated = true
+  }
+
+  const inspectorStateIsStale = () =>
+    inspectorInvalidated || getTsWriteGeneration() !== inspectedTsGeneration
+
+  const deferInspectorSchemas = (defer: boolean) => {
+    schemasDeferred = defer
+  }
+
+  const ensureInspectorSchemas = async () => {
+    if (!schemasDeferred || schemasFinalized) return
+    if (!unfilteredState || !('typesLookup' in unfilteredState)) return
+    if (unfilteredStateIsSetupOnly) return
+    await finalizeSchemas(logger, unfilteredState, {
+      ...schemaOptions(),
+      manifest: unfilteredState.manifest.initial ?? undefined,
+    })
+    schemasFinalized = true
+    await saveStateOutput()
   }
 
   const workflowService = new InMemoryWorkflowService()
@@ -510,6 +541,9 @@ export const createSingletonServices: CreateSingletonServices<
     audit: new NoopAuditService(),
     getInspectorState,
     invalidateInspectorState,
+    inspectorStateIsStale,
+    deferInspectorSchemas,
+    ensureInspectorSchemas,
     workflowService,
     bundler: bundleWithBun ? new BunBundler() : new NodeBundler(),
     devServerRunner: isBun

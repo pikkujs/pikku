@@ -1,4 +1,8 @@
-export { inspect, getInitialInspectorState } from './inspector.js'
+export {
+  inspect,
+  getInitialInspectorState,
+  finalizeSchemas,
+} from './inspector.js'
 export type { TypesMap } from './types-map.js'
 export type {
   AddonConfig,

@@ -39,6 +39,14 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
    *  change) so the next getInspectorState(refresh) truly re-inspects —
    *  refreshes are otherwise skipped when no generated .ts file changed. */
   invalidateInspectorState: () => void
+  /** True when a generated .ts file changed since the last inspection, so
+   *  that inspection no longer describes the source graph. */
+  inspectorStateIsStale: () => boolean
+  /** While on, inspections skip schema generation until
+   *  `ensureInspectorSchemas` — for a run that re-inspects as it generates. */
+  deferInspectorSchemas: (defer: boolean) => void
+  /** Generates the deferred schemas for the current inspection, once. */
+  ensureInspectorSchemas: () => Promise<void>
   /** Runtime-specific deploy bundler (esbuild for node, Bun.build for bun). */
   bundler: Bundler
   /** Runtime-specific dev server runner (node http+ws, or bun-server). */

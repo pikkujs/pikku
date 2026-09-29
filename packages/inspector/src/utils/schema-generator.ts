@@ -544,7 +544,7 @@ function processZodSchema(
   logger.debug(`• Generated schema from Zod: ${schemaName}`)
 }
 
-async function generateZodSchemas(
+export async function generateZodSchemas(
   logger: InspectorLogger,
   schemaLookup: Map<string, SchemaRef>,
   typesMap: TypesMap

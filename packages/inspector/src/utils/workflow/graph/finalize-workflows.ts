@@ -13,12 +13,14 @@ import type { InspectorState } from '../../../types.js'
 export function finalizeWorkflows(state: InspectorState): void {
   const { workflows, functions } = state
   const functionsMeta = functions.meta
+  const fromDsl = new Set<SerializedWorkflowGraph>()
 
   for (const [name, meta] of Object.entries(workflows.meta)) {
     const graph = convertDslToGraph(name, meta)
     stampVersionsOnGraph(graph, functionsMeta)
     computeStepHashes(graph, functionsMeta)
     graph.graphHash = computeGraphHash(graph)
+    fromDsl.add(graph)
     // Predictable (loopless) DSL workflows carry their full step list so a UI
     // can render the skeleton up front without executing the run. Only DSL is
     // gated: a complex workflow's step tree is incomplete (inline JS branches
@@ -36,8 +38,10 @@ export function finalizeWorkflows(state: InspectorState): void {
     workflows.graphMeta[name] = graph
   }
 
+  // Not only the unhashed ones: step hashes come from contract hashes, which a
+  // deferred-schema inspection only has by its second call.
   for (const graph of Object.values(workflows.graphMeta)) {
-    if (graph.graphHash) {
+    if (fromDsl.has(graph)) {
       continue
     }
     stampVersionsOnGraph(graph, functionsMeta)

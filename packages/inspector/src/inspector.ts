@@ -53,7 +53,10 @@ import {
   finalizeWorkflowHelperTypes,
   finalizeWorkflowWires,
 } from './utils/workflow/graph/finalize-workflow-wires.js'
-import { generateAllSchemas } from './utils/schema-generator.js'
+import {
+  generateAllSchemas,
+  generateZodSchemas,
+} from './utils/schema-generator.js'
 import { extractSecretUsage } from './utils/extract-secret-usage.js'
 import {
   accumulateSurfaceUsage,
@@ -329,6 +332,69 @@ const readProjectPathMappings = (
   }
 }
 
+const applySchemas = async (
+  logger: InspectorLogger,
+  state: InspectorState,
+  options: Partial<InspectorOptions>
+) => {
+  if (options.schemaConfig) {
+    const startSchemas = performance.now()
+    state.schemas = await generateAllSchemas(
+      logger,
+      options.schemaConfig,
+      state
+    )
+    logger.debug(
+      `generateAllSchemas took ${(performance.now() - startSchemas).toFixed(0)}ms`
+    )
+    computeContractHashes(
+      state.schemas,
+      state.functions.typesMap,
+      state.functions.meta
+    )
+    computeRequiredSchemas(state, options as InspectorOptions)
+  }
+
+  // Re-load addon schemas (generateAllSchemas replaces state.schemas)
+  await loadAddonSchemas(logger, state)
+
+  // After the addon merge, not before: an addon supplies its own schemas here,
+  // and checking earlier would report every one of them as unresolved.
+  if (options.schemaConfig) {
+    validateSchemaReferences(logger, state)
+  }
+
+  state.manifest.initial = options.manifest ?? null
+  const contracts = extractContractsFromMeta(state.functions.meta)
+  const baseManifest = state.manifest.initial ?? createEmptyManifest()
+  state.manifest.current = updateManifest(baseManifest, contracts)
+  state.manifest.errors = validateContracts(baseManifest, contracts).errors
+}
+
+/**
+ * The schema half of an inspection run with `deferSchemas`: schemas, the
+ * contract hashes and manifest built from them, the workflow step hashes built
+ * from those, and the OpenAPI spec.
+ */
+export const finalizeSchemas = async (
+  logger: InspectorLogger,
+  state: InspectorState,
+  options: Partial<InspectorOptions>
+): Promise<void> => {
+  await applySchemas(logger, state, options)
+  finalizeWorkflows(state)
+  if (options.openAPI) {
+    state.openAPISpec = await generateOpenAPISpec(
+      logger,
+      state.functions.meta,
+      state.http.meta,
+      state.schemas,
+      options.openAPI.additionalInfo,
+      pikkuState(null, 'misc', 'errors')
+    )
+  }
+}
+
 export const inspect = async (
   logger: InspectorLogger,
   routeFiles: string[],
@@ -465,38 +531,20 @@ export const inspect = async (
 
     resolveLatestVersions(state, logger)
 
-    if (options.schemaConfig) {
-      const startSchemas = performance.now()
-      state.schemas = await generateAllSchemas(
+    if (options.deferSchemas && options.schemaConfig) {
+      // Only the TS half waits. Converting a zod schema is also what gives a
+      // zod-typed contract its TS type, which every wiring map prints.
+      state.schemas = await generateZodSchemas(
         logger,
-        options.schemaConfig,
-        state
+        state.schemaLookup,
+        state.functions.typesMap
       )
-      logger.debug(
-        `generateAllSchemas took ${(performance.now() - startSchemas).toFixed(0)}ms`
-      )
-      computeContractHashes(
-        state.schemas,
-        state.functions.typesMap,
-        state.functions.meta
-      )
-      computeRequiredSchemas(state, options)
     }
-
-    // Re-load addon schemas (generateAllSchemas replaces state.schemas)
-    await loadAddonSchemas(logger, state)
-
-    // After the addon merge, not before: an addon supplies its own schemas here,
-    // and checking earlier would report every one of them as unresolved.
-    if (options.schemaConfig) {
-      validateSchemaReferences(logger, state)
-    }
-
-    state.manifest.initial = options.manifest ?? null
-    const contracts = extractContractsFromMeta(state.functions.meta)
-    const baseManifest = state.manifest.initial ?? createEmptyManifest()
-    state.manifest.current = updateManifest(baseManifest, contracts)
-    state.manifest.errors = validateContracts(baseManifest, contracts).errors
+    await applySchemas(
+      logger,
+      state,
+      options.deferSchemas ? { manifest: options.manifest } : options
+    )
 
     finalizeWorkflows(state)
     finalizeWorkflowHelperTypes(state)
@@ -546,7 +594,7 @@ export const inspect = async (
     validateExposedFunctionsGated(logger, state)
     validateTagsResolveToMiddleware(logger, state)
 
-    if (options.openAPI) {
+    if (options.openAPI && !options.deferSchemas) {
       state.openAPISpec = await generateOpenAPISpec(
         logger,
         state.functions.meta,

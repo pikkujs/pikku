@@ -369,6 +369,12 @@ export type InspectorOptions = Partial<{
      */
     cacheDir?: string
   }
+  /**
+   * Leave `schemaConfig` and `openAPI` to `finalizeSchemas`. Schema generation
+   * dominates an inspection, and a caller that re-inspects while it generates
+   * into the source graph only needs the schemas of the last pass.
+   */
+  deferSchemas: boolean
   openAPI: {
     additionalInfo: OpenAPISpecInfo
   }
