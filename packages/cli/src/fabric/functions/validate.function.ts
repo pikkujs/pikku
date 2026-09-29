@@ -13,6 +13,7 @@ import {
   runSharedProjectChecks,
 } from '../../functions/validate/shared-checks.js'
 import { runTypeIdentityChecks } from '../../functions/validate/type-identity-checks.js'
+import { runDeployReadinessChecks } from '../../functions/validate/deploy-readiness-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
 import { isGitRepo, isTracked } from '../lib/git.js'
 import { resolveApiContext } from '../lib/config.js'
@@ -514,6 +515,13 @@ export async function runValidate(
       )
     )
   }
+
+  // ── deploy-only failure classes ────────────────────────────────────────
+  // Everything in here passed locally and failed on a build host: the config
+  // under its retired name, an override pinning @pikku/* below what the project asks for, a
+  // lockfile holding two versions of a package the deploy's hoist will pick one
+  // of, and paraglide flags written in a vite config the container never reads.
+  findings.push(...(await runDeployReadinessChecks(root)))
 
   // ── .gitignore must ignore generated/runtime artifacts ─────────────────
   // These are regenerated on every dev boot / scaffold / codegen. Committing
