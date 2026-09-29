@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3122 observable things**: 1029 exported names, plus
-2093 members on the classes and interfaces among them, reachable
+**3130 observable things**: 1031 exported names, plus
+2099 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -28,8 +28,8 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./analytics` | 26 | 26 | 40 |
 | `./services/local-meta` | 22 | 2 | 42 |
 | `./mcp` | 25 | 25 | 17 |
+| `./trigger` | 29 | 29 | 11 |
 | `./cli` | 16 | 14 | 26 |
-| `./trigger` | 28 | 28 | 11 |
 | `./function` | 32 | 27 | 10 |
 | `./classification` | 22 | 22 | 14 |
 | `./flag` | 23 | 23 | 8 |
@@ -52,6 +52,7 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./safe-fetch` | 6 | 6 | 3 |
 | `./credential` | 9 | 9 | 0 |
 | `./role` | 9 | 9 | 0 |
+| `./hmac` | 3 | 3 | 6 |
 | `./scheduler` | 7 | 7 | 1 |
 | `./secret` | 8 | 8 | 0 |
 | `./webhook` | 7 | 7 | 1 |
@@ -67,7 +68,6 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 | `./node` | 3 | 3 | 0 |
 | `./node-host-resolver` | 2 | 2 | 0 |
 | `./oauth2` | 2 | 2 | 0 |
-| `./hmac` | 2 | 2 | 0 |
 | `./remote` | 1 | 1 | 0 |
 | `.` | 8 | 0 | 0 |
 
@@ -710,6 +710,7 @@ export type FunctionRuntimeMeta = {
   audit?: {
     durability: AuditDurability
   }
+  singletonServicesOnly?: boolean
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string
@@ -2947,7 +2948,7 @@ export type CoreTriggerWebhookSource<
   >,
 > = {
   name: string
-  method?: 'post' | 'put' | 'get'
+  method?: WebhookSourceMethod | WebhookSourceMethod[]
   route?: string
   secret?: string
   events?: Events
@@ -3020,7 +3021,7 @@ export type WebhookSourceJob = {
 }
 export type WebhookSourceMeta = {
   name: string
-  method: 'post' | 'put' | 'get'
+  method: WebhookSourceMethod | WebhookSourceMethod[]
   route: string
   secret?: string
   events: string[]
@@ -3029,6 +3030,7 @@ export type WebhookSourceMeta = {
   setup?: string
   teardown?: string
 }
+export type WebhookSourceMethod = 'post' | 'put' | 'get'
 export type WebhookSourceOutcome = {
   source: string
   url: string
@@ -6036,6 +6038,14 @@ wrapDEK: (kek: CryptoKey, plaintextDEK: string) => Promise<WrappedValue>
 ```ts
 hmacSha256Hex: (secret: string, payload: string) => string
 timingSafeStringEqual: (a: string, b: string) => boolean
+export class WebhookSigningSecret {
+  constructor(private readonly provider: string, private readonly secret: string | null)
+  get configured(): boolean
+  hmac(algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): string
+  verifyHmac(signature: string | undefined, algorithm: HmacAlgorithm, payload: WebhookPayload, encoding: 'hex' | 'base64', secretEncoding: SecretEncoding = 'utf8'): void
+  verifyToken(token: string | undefined): void
+  verifyPublicKey(signature: string | undefined, payload: WebhookPayload, options: { algorithm?: string; dsaEncoding?: 'der' | 'ieee-p1363' } = {}): void
+}
 ```
 
 ## ./state
