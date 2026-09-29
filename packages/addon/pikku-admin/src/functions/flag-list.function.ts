@@ -2,7 +2,7 @@ import { pikkuFunc } from '#pikku/addon/function'
 import { asFlagStore } from '../lib/flag-store.js'
 import {
   flagRowsFromSource,
-  sortFlagRows,
+  flagRowsFromStore,
   type FlagListRow,
 } from '../lib/flag-rows.js'
 
@@ -18,9 +18,11 @@ export const flagList = pikkuFunc<
   func: async ({ featureFlags }) => {
     const store = asFlagStore(featureFlags)
     if (store) {
-      const flags = await store.listFlags()
       return {
-        flags: sortFlagRows(flags.map((flag) => ({ ...flag, backed: true }))),
+        flags: flagRowsFromStore(
+          store.declaredFlags?.() ?? [],
+          await store.listFlags()
+        ),
         writable: true,
       }
     }
