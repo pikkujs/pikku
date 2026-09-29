@@ -136,8 +136,10 @@ to be a migration instead.
 
 This is **local dev data only**: enough rows that a fresh dev database isn't an
 empty app. Nothing else ever runs it. A deployed stage applies `db/<engine>/*.sql`
-and stops there — reset refuses `NODE_ENV=production` and refuses a database
-outside the runtime directory, and no deploy step reaches for the seed file.
+and stops there — the one exception is a disposable stage deployed with
+`pikku fabric deploy apply <branch> --reset` (see Deploy), which is never
+production. Local reset refuses `NODE_ENV=production` and refuses a database
+outside the runtime directory.
 
 So the test is not "is this row realistic?", it is **"would the app be broken
 without it in production?"** If yes, it is configuration and belongs in a
@@ -399,6 +401,24 @@ pikku fabric deploy apply my-branch -y  # a named one
 `-y` answers the prompts and nothing more. It does **not** approve migrations
 that drop or rewrite data — that stays `--allow-destructive`, typed out on
 purpose.
+
+### Rebuilding a disposable stage: `--reset`
+
+A non-production stage whose migration history or schema has drifted (an app's
+`develop` branch) can be wiped and rebuilt in one deploy:
+
+```bash
+pikku fabric deploy apply develop --reset      # asks first, naming app + stage
+pikku fabric deploy apply develop --reset -y   # prints the warning, skips the prompt
+```
+
+It is the deployed counterpart of `pikku db reset`: **all data on that stage is
+deleted**, every migration is re-applied and `db/<engine>-dev-seed.sql` is
+loaded. It is refused for `--production`, for `main`, and with `--deployment-id`
+(it only applies to a deploy it creates). It needs a fabric server that reports
+the reset back on the deployment; against one that does not, the command fails
+naming the deployment it created without a reset, and wipes nothing. `-y` does
+not imply `--allow-destructive`.
 
 Inferring the branch is safe because the git safety check refuses any branch
 without an upstream or out of sync with it, so it cannot ship an unpushed
