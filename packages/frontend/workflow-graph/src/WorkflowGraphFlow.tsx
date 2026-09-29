@@ -32,6 +32,7 @@ import { GenericNode } from './components/nodes/GenericNode'
 import { ElkEdge } from './components/edges/ElkEdge'
 import { createWorkflowFlow } from './hooks/create-workflow-flow'
 import { useElkLayout } from './hooks/useElkLayout'
+import { useGraphRun, type WorkflowGraphRun } from './context/GraphHostContext'
 import '@xyflow/react/dist/style.css'
 
 const graphNodeTypes = {
@@ -55,6 +56,84 @@ const graphNodeTypes = {
   setNode: SetNode,
 }
 
+const REACHED = new Set([
+  'running',
+  'succeeded',
+  'completed',
+  'failed',
+  'suspended',
+  'cancelled',
+])
+
+const STRUCTURAL = new Set([
+  'branchNode',
+  'switchNode',
+  'parallelNode',
+  'fanoutNode',
+  'filterNode',
+  'arrayPredicateNode',
+  'setNode',
+])
+
+const NOT_TAKEN = { strokeDasharray: '2 5', opacity: 0.45 }
+
+function reachedNodes(
+  nodes: Node[],
+  edges: Edge[],
+  run: WorkflowGraphRun
+): Set<string> {
+  const recorded = new Set(run.stepStates.keys())
+  const reached = new Set(
+    [...run.stepStates]
+      .filter(([, s]) => REACHED.has(String(s.status)))
+      .map(([id]) => id)
+  )
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const node of nodes) {
+      if (
+        reached.has(node.id) ||
+        recorded.has(node.id) ||
+        !STRUCTURAL.has(node.type ?? '')
+      )
+        continue
+      if (edges.some((e) => e.source === node.id && reached.has(e.target))) {
+        reached.add(node.id)
+        grew = true
+      }
+    }
+  }
+  return reached
+}
+
+function paintTakenRoutes(
+  nodes: Node[],
+  edges: Edge[],
+  run: WorkflowGraphRun | null
+): Edge[] {
+  if (!run?.runId) return edges
+  const reached = reachedNodes(nodes, edges, run)
+  const finished = (id: string) =>
+    ['succeeded', 'completed'].includes(String(run.stepStates.get(id)?.status))
+  const joins = (e: Edge) =>
+    reached.has(e.source) &&
+    reached.has(e.target) &&
+    (!e.data?.back || finished(e.source))
+  return edges.map((edge) => {
+    const taken =
+      joins(edge) &&
+      !(
+        edge.data?.skip &&
+        edges.some(
+          (other) =>
+            other !== edge && other.source === edge.source && joins(other)
+        )
+      )
+    return taken ? edge : { ...edge, style: { ...edge.style, ...NOT_TAKEN } }
+  })
+}
+
 export const nodeTypes = graphNodeTypes as unknown as NodeTypes
 
 const graphEdgeTypes = {
@@ -71,6 +150,7 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
   onPaneClick,
 }) => {
   const { fitView } = useReactFlow()
+  const run = useGraphRun()
 
   const { nodes: flowNodes, edges: initialEdges } = useMemo(() => {
     return createWorkflowFlow(workflow)
@@ -92,6 +172,11 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
     }
   }, [layoutResult, setNodes, setEdges, fitView])
 
+  const paintedEdges = useMemo(
+    () => paintTakenRoutes(layoutResult.nodes, edges, run),
+    [layoutResult.nodes, edges, run]
+  )
+
   return (
     <Box style={{ width: '100%', height: '100%' }}>
       <style>{`
@@ -100,21 +185,19 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
       `}</style>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={paintedEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{
           style: {
-            stroke: '#c0c0c0',
+            stroke: 'var(--mantine-color-dimmed)',
             strokeWidth: 1.5,
-            strokeDasharray: '6 4',
           },
-          animated: true,
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: '#c0c0c0',
-            width: 16,
-            height: 16,
+            color: 'var(--mantine-color-dimmed)',
+            width: 14,
+            height: 14,
           },
         }}
         zoomOnScroll={true}
@@ -126,7 +209,11 @@ export const WorkflowGraphFlow: React.FC<WorkflowGraphViewProps> = ({
         noDragClassName="nodrag"
         onPaneClick={onPaneClick}
       >
-        <Background color="#e0e0e0" variant={BackgroundVariant.Dots} size={1} />
+        <Background
+          color="var(--mantine-color-default-border)"
+          variant={BackgroundVariant.Dots}
+          size={1}
+        />
       </ReactFlow>
     </Box>
   )

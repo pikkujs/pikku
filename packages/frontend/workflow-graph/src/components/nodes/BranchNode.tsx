@@ -30,23 +30,6 @@ export const BranchNode: React.FC<GraphNodeProps<BranchNodeData>> = ({
     return null
   }, [graphHighlight, id])
 
-  const outputHandles = React.useMemo(() => {
-    const handles = [{ id: 'true', label: 'if' }]
-
-    if (data.branchCount && data.branchCount > 1) {
-      for (let i = 1; i < data.branchCount; i++) {
-        handles.push({ id: `branch-${i}`, label: `elif ${i}` })
-      }
-    }
-
-    if (data.hasElse) {
-      handles.push({ id: 'false', label: 'else' })
-    }
-
-    handles.push({ id: 'after', label: 'next' })
-    return handles
-  }, [data.hasElse, data.branchCount])
-
   const handleClick = React.useCallback(() => {
     openWorkflowStep(id, 'branch')
   }, [id, openWorkflowStep])
@@ -56,10 +39,8 @@ export const BranchNode: React.FC<GraphNodeProps<BranchNodeData>> = ({
       icon={Split}
       colorKey={data.colorKey}
       hasInput={true}
-      outputHandles={outputHandles}
-      size={80}
-      label="Branch"
-      subtitle={data.stepName}
+      outputHandles={[{ id: 'out' }]}
+      size={36}
       onClick={handleClick}
       showBorder={false}
       highlightType={highlightType}

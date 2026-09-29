@@ -14,6 +14,9 @@ interface SuspendNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
+const humanizeReason = (reason: string) =>
+  reason.replace(/[-_]+/g, ' ').replace(/^(.)/, (c) => c.toUpperCase())
+
 export const SuspendNode: React.FC<GraphNodeProps<SuspendNodeData>> = ({
   data,
   id,
@@ -39,8 +42,8 @@ export const SuspendNode: React.FC<GraphNodeProps<SuspendNodeData>> = ({
       hasInput={true}
       outputHandles={[{ id: 'default', label: '' }]}
       size={80}
-      label="Suspend"
-      subtitle={data.description}
+      label={data.description ? humanizeReason(data.description) : 'Suspend'}
+      subtitle={data.description ? 'waits' : undefined}
       onClick={handleClick}
       showBorder={false}
       highlightType={highlightType}
