@@ -106,7 +106,8 @@ subscribe to its events as `<source>:<event>`:
 
 - The route is `POST /webhooks/<name>` unless `method`/`route` say otherwise.
   `method` may be a list, e.g. `['get', 'post']` for a provider that verifies
-  the URL with a GET and delivers events with a POST.
+  the URL with a GET and delivers events with a POST, or `['head', 'post']`
+  for one that checks the URL with a HEAD.
   It needs no session.
 - `events` maps each event name to a schema. An event that fails its schema is
   logged and dropped; so is one no `wireTrigger` listens for. Both still get a

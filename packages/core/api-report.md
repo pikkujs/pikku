@@ -3030,7 +3030,7 @@ export type WebhookSourceMeta = {
   setup?: string
   teardown?: string
 }
-export type WebhookSourceMethod = 'post' | 'put' | 'get'
+export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
 export type WebhookSourceOutcome = {
   source: string
   url: string

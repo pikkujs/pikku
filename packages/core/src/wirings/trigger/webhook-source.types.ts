@@ -32,7 +32,7 @@ export type WebhookReceiveResult =
       }
     }
 
-export type WebhookSourceMethod = 'post' | 'put' | 'get'
+export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
 
 /** Whatever `setup` wants back on the next deploy, for providers whose endpoints cannot be found by label. */
 export type WebhookSourceState = Record<string, unknown>
