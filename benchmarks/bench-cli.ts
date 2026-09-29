@@ -1,5 +1,12 @@
 import { spawnSync } from 'child_process'
-import { mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'fs'
+import {
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+  symlinkSync,
+  readFileSync,
+} from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import os from 'os'
@@ -18,6 +25,15 @@ const PIKKU_NODE_MODULES = resolve(SIBLING_PIKKU, 'node_modules')
 //   --runs=3               runs per size
 //   --heap=6144            --max-old-space-size for the child; omit for Node's
 //                          default, which is the whole point when hunting an OOM
+//   --project=<dir>        benchmark an existing project instead of the
+//                          synthetic fixture, and report the inspect/codegen
+//                          split from PIKKU_TIMING. The synthetic sweep answers
+//                          "how does cost scale with N functions"; a real
+//                          project answers "where does the time actually go",
+//                          which is the only number that says whether making
+//                          the inspector faster is worth anything.
+//   --bin=<path>           pikku binary to run (default: the sibling checkout's)
+//   --cold                 wipe outDir and the schema cache before every run
 function argOf(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`))
   return hit?.slice(name.length + 3)
@@ -42,6 +58,12 @@ const RUNS_PER_SIZE = parseInt(argOf('runs') ?? '3', 10)
 // 8192 here, which made the OOM this benchmark is meant to catch unobservable.
 const HEAP_MB = argOf('heap') ? parseInt(argOf('heap')!, 10) : undefined
 const KEEP = process.argv.includes('--keep')
+
+const EXTERNAL_PROJECT = argOf('project')
+  ? resolve(argOf('project')!)
+  : undefined
+const BIN = argOf('bin') ? resolve(argOf('bin')!) : PIKKU_BIN
+const COLD = process.argv.includes('--cold')
 
 function setupProject() {
   mkdirSync(resolve(PROJECT_DIR, 'src/functions'), { recursive: true })
@@ -565,13 +587,18 @@ function cleanSrc() {
   // services.ts is kept (not in functions/ or wirings/)
 }
 
-function runAll(): { ms: number; peakMB: number; oom: boolean } {
+function runAll(
+  cwd: string = PROJECT_DIR,
+  timing = false
+): { ms: number; peakMB: number; oom: boolean; output: string } {
   const start = performance.now()
-  const result = spawnSync('/usr/bin/time', ['-l', PIKKU_BIN, 'all'], {
-    cwd: PROJECT_DIR,
-    timeout: 600_000,
+  const result = spawnSync('/usr/bin/time', ['-l', BIN, 'all'], {
+    cwd,
+    timeout: 900_000,
+    maxBuffer: 64 * 1024 * 1024,
     env: {
       ...process.env,
+      ...(timing ? { PIKKU_TIMING: '1' } : {}),
       ...(HEAP_MB
         ? { NODE_OPTIONS: `--max-old-space-size=${HEAP_MB}` }
         : // Strip any inherited NODE_OPTIONS so the child really does run on
@@ -592,7 +619,7 @@ function runAll(): { ms: number; peakMB: number; oom: boolean } {
   if (result.status !== 0 && !oom) {
     throw new Error(stderr || result.error?.message || 'pikku all failed')
   }
-  return { ms, peakMB, oom }
+  return { ms, peakMB, oom, output: (result.stdout?.toString() ?? '') + stderr }
 }
 
 function median(vals: number[]): number {
@@ -601,7 +628,123 @@ function median(vals: number[]): number {
   return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m]
 }
 
+interface TimingBreakdown {
+  totalMs: number
+  peakMB: number
+  inspectPasses: Array<{ kind: string; wallMs: number; cpuMs: number }>
+  steps: Array<{ name: string; ms: number }>
+}
+
+function parseTiming(
+  output: string,
+  totalMs: number,
+  peakMB: number
+): TimingBreakdown {
+  const inspectPasses: TimingBreakdown['inspectPasses'] = []
+  const steps: TimingBreakdown['steps'] = []
+  for (const line of output.split('\n')) {
+    const pass = line.match(
+      /\[INSPECT\] pass=\d+ (\w+) .*?cpu=(\d+)ms wall=(\d+)ms/
+    )
+    if (pass) {
+      inspectPasses.push({
+        kind: pass[1]!,
+        cpuMs: parseInt(pass[2]!, 10),
+        wallMs: parseInt(pass[3]!, 10),
+      })
+      continue
+    }
+    const step = line.match(/\[TIMING\]\s+(\d+)ms\s{2}(.+?)\s*$/)
+    if (step) steps.push({ ms: parseInt(step[1]!, 10), name: step[2]! })
+  }
+  return { totalMs, peakMB, inspectPasses, steps }
+}
+
+/** outDir and the ts-json-schema-generator cache, the two things a warm run reuses. */
+function coldPaths(dir: string): string[] {
+  const cfg = JSON.parse(
+    readFileSync(resolve(dir, 'pikku.config.json'), 'utf-8')
+  ) as { rootDir?: string; outDir?: string }
+  const root = resolve(dir, cfg.rootDir ?? '.')
+  return [
+    resolve(root, cfg.outDir ?? '.pikku'),
+    resolve(root, 'node_modules/.cache/pikku'),
+  ]
+}
+
+async function mainExternal(dir: string) {
+  console.log(`Project:   ${dir}`)
+  console.log(`Pikku bin: ${BIN}`)
+  console.log(
+    `Mode:      ${COLD ? 'cold (outDir + schema cache wiped per run)' : 'warm'}\n`
+  )
+
+  // A cold run needs a completed warm run first: codegen writes the `#pikku/*`
+  // tree its own inputs import, so a wiped outDir on an unbuilt project fails
+  // the first pass rather than measuring it.
+  if (COLD) {
+    process.stdout.write('Priming (untimed)... ')
+    runAll(dir)
+    console.log('done')
+  }
+
+  const runs: TimingBreakdown[] = []
+  for (let r = 0; r < RUNS_PER_SIZE; r++) {
+    if (COLD)
+      for (const p of coldPaths(dir))
+        rmSync(p, { recursive: true, force: true })
+    process.stdout.write(`  run ${r + 1}/${RUNS_PER_SIZE}: `)
+    const { ms, peakMB, output, oom } = runAll(dir, true)
+    const t = parseTiming(output, ms, peakMB)
+    if (!t.steps.length) {
+      throw new Error(
+        'no [TIMING] rows — is this CLI new enough to honour PIKKU_TIMING?'
+      )
+    }
+    const inspectMs = t.inspectPasses.reduce((n, p) => n + p.wallMs, 0)
+    console.log(
+      `${Math.round(ms)}ms total, ${inspectMs}ms in ${t.inspectPasses.length} inspector passes, ${peakMB}MB peak` +
+        (oom ? '  OOM' : '')
+    )
+    runs.push(t)
+  }
+
+  const rep =
+    runs[
+      runs.findIndex((r) => r.totalMs === median(runs.map((x) => x.totalMs)))
+    ] ?? runs[0]!
+  const inspectMs = rep.inspectPasses.reduce((n, p) => n + p.wallMs, 0)
+  const stepMs = rep.steps.reduce((n, s) => n + s.ms, 0)
+
+  console.log('\nMedian run — inspector passes:')
+  console.table(
+    rep.inspectPasses.map((p, i) => ({
+      pass: i + 1,
+      kind: p.kind,
+      'wall (ms)': p.wallMs,
+      'cpu (ms)': p.cpuMs,
+    }))
+  )
+
+  console.log('Median run — 10 slowest steps:')
+  console.table(rep.steps.slice(0, 10).map((s) => ({ step: s.name, ms: s.ms })))
+
+  // The whole point of the external mode. Codegen is what stays TypeScript in
+  // every version of the Go-inspector plan, so this ratio caps what a faster
+  // inspector can possibly buy end to end.
+  const codegenMs = Math.max(0, stepMs - inspectMs)
+  const pct = (n: number) => `${((n / rep.totalMs) * 100).toFixed(1)}%`
+  console.log(
+    `\nprocess ${Math.round(rep.totalMs)}ms  =  inspect ${inspectMs}ms (${pct(inspectMs)})` +
+      `  +  codegen ${codegenMs}ms (${pct(codegenMs)})` +
+      `  +  startup/other ${Math.round(rep.totalMs - stepMs)}ms (${pct(rep.totalMs - stepMs)})`
+  )
+  console.log(`peak RSS ${rep.peakMB}MB`)
+}
+
 async function main() {
+  if (EXTERNAL_PROJECT) return mainExternal(EXTERNAL_PROJECT)
+
   console.log(`Project dir: ${PROJECT_DIR}`)
   console.log(`Pikku bin:   ${PIKKU_BIN}\n`)
 
