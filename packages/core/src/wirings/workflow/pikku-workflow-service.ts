@@ -79,6 +79,7 @@ import type {
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
 import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
+import { storeWorkflowVersion } from './workflow-version-store.js'
 import {
   jobGroupFor,
   orchestratorQueueName,
@@ -242,6 +243,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       plannedSteps?: WorkflowPlannedStep[]
     }
   ): Promise<string> {
+    await storeWorkflowVersion(this, workflowName, graphHash)
     return this.mirrored(
       () =>
         this.createRunImpl(
