@@ -1108,3 +1108,36 @@ describe('analyzeDeployment - a unit records why it is where it is', () => {
     assert.deepEqual(merged?.targetForcedBy, ['pdfService', 'ghostscript'])
   })
 })
+
+describe('analyzeDeployment - workflow orchestrator target', () => {
+  function stateWithWorkflow(): InspectorState {
+    const state = stateWithScenario() as any
+    state.functions.meta.sendEmail = {
+      pikkuFuncId: 'sendEmail',
+      name: 'sendEmail',
+    }
+    state.workflows.graphMeta = {
+      onboard: {
+        name: 'onboard',
+        pikkuFuncId: 'onboard',
+        nodes: { 'step-1': { rpcName: 'sendEmail', stepName: 'send' } },
+        entryNodeIds: ['step-1'],
+      },
+    }
+    return state
+  }
+
+  const orchestrator = (defaultTarget?: 'serverless' | 'server') =>
+    analyzeDeployment(stateWithWorkflow(), {
+      projectId: 'test',
+      defaultTarget,
+    }).units.find((u) => u.name === 'wf-onboard')
+
+  test('inherits deploy.defaultTarget', () => {
+    assert.equal(orchestrator('server')?.target, 'server')
+  })
+
+  test('stays serverless by default', () => {
+    assert.equal(orchestrator()?.target, 'serverless')
+  })
+})

@@ -703,7 +703,8 @@ export function analyzeDeployment(
     workflows,
     queues,
     workflowQueues,
-    unitFor
+    unitFor,
+    defaultTarget
   )
 
   // ── Step 6: Ensure function units exist for gateway dependencies ───
@@ -1004,7 +1005,8 @@ function buildWorkflows(
   workflows: WorkflowDefinition[],
   queues: QueueDefinition[],
   workflowQueues: boolean,
-  unitFor: (funcId: string) => string
+  unitFor: (funcId: string) => string,
+  defaultTarget: 'serverless' | 'server'
 ): void {
   for (const [_wfName, graph] of entries(graphMeta)) {
     const steps: WorkflowStepDefinition[] = []
@@ -1087,7 +1089,7 @@ function buildWorkflows(
     units.push({
       name: orchUnitName,
       role: 'workflow',
-      target: 'serverless',
+      target: defaultTarget,
       functionIds: [],
       services: orchServices,
       dependsOn: stepUnitNames,
