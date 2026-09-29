@@ -72,3 +72,21 @@ export const ensurePackageDependency = async (
     `Added ${name}@${range} to ${relative(process.cwd(), path) || path} — run your package manager's install`
   )
 }
+
+/**
+ * Every package the package owning `generatedFile` declares, whichever field
+ * declares it — for a generated file that must only import what that package
+ * can actually resolve.
+ */
+export const declaredPackageDependencies = async (
+  generatedFile: string
+): Promise<Set<string>> => {
+  const found = await findPackageJson(dirname(generatedFile))
+  if (!found) return new Set()
+  const { pkg } = found
+  return new Set([
+    ...Object.keys(pkg.dependencies ?? {}),
+    ...Object.keys(pkg.devDependencies ?? {}),
+    ...Object.keys(pkg.peerDependencies ?? {}),
+  ])
+}

@@ -1,10 +1,16 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
-import { ensurePackageDependency } from '../../../utils/ensure-package-dependency.js'
+import {
+  declaredPackageDependencies,
+  ensurePackageDependency,
+} from '../../../utils/ensure-package-dependency.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { join } from 'node:path'
 import { serializeLocalCLIBootstrap } from './serialize-local-cli-bootstrap.js'
+import { serializeLocalServices } from './serialize-local-services.js'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { flattenSystemRoleDefinitions } from '@pikku/core/role'
 import { serializeChannelCLI } from './serialize-channel-cli.js'
 import {
   serializeChannelCLIClient,
@@ -13,6 +19,51 @@ import {
 import { existsSync } from 'fs'
 import { rm } from 'fs/promises'
 import { ErrorCode } from '@pikku/inspector'
+import type { InspectorState } from '@pikku/inspector'
+import type { Config } from '../../../../types/application-types.js'
+import type { CLILogger } from '../../../services/cli-logger.service.js'
+
+/**
+ * The packages `pikku-local-services.gen.ts` imports unconditionally. A local
+ * CLI runs outside the pikku CLI's own dependencies, so the project has to
+ * carry them itself.
+ */
+const LOCAL_SERVICES_PACKAGES = ['@pikku/kysely', '@pikku/schedule', 'kysely']
+
+const writeLocalServices = async (
+  logger: CLILogger,
+  config: Config,
+  visitState: InspectorState
+): Promise<void> => {
+  const file = config.localServicesFile
+  const declared = await declaredPackageDependencies(file)
+  const coercionFile = join(config.outDir, 'db', 'coercion.gen.ts')
+  const code = serializeLocalServices({
+    localServicesFile: file,
+    packageMappings: config.packageMappings,
+    coercionFile: existsSync(coercionFile) ? coercionFile : undefined,
+    requiredServices: visitState.serviceAggregation.requiredServices,
+    scopes: flattenScopeDefinitions(visitState.scopes.definitions),
+    systemRoles: flattenSystemRoleDefinitions(
+      visitState.systemRoles.definitions
+    ),
+    // The default `pikku serve` falls back to for a project with sqlite
+    // migrations and no configured database.
+    conventionalSqliteDb: existsSync(join(config.rootDir, 'db', 'sqlite'))
+      ? '.pikku-runtime/dev.db'
+      : undefined,
+    drivers: {
+      nodeSqlite: declared.has('@pikku/kysely-node-sqlite'),
+      bunSqlite: declared.has('@pikku/kysely-bun-sqlite'),
+      pg: declared.has('pg'),
+      pgTypes: declared.has('@types/pg'),
+    },
+  })
+  await writeFileInDir(logger, file, code)
+  for (const name of LOCAL_SERVICES_PACKAGES) {
+    await ensurePackageDependency(logger, file, name)
+  }
+}
 
 export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -31,6 +82,8 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
       })
       return false
     }
+
+    let localServicesWritten = false
 
     // Generate bootstrap files for each configured entrypoint
     for (const [programName, entrypointConfigs] of Object.entries(
@@ -209,6 +262,11 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
 
         if (!singletonServicesFactory) {
           throw new Error('Required types not found')
+        }
+
+        if (!localServicesWritten) {
+          await writeLocalServices(logger, config, visitState)
+          localServicesWritten = true
         }
 
         const bootstrapCode = serializeLocalCLIBootstrap(
