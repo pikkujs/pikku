@@ -1,6 +1,6 @@
 import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import {
@@ -124,6 +124,8 @@ describe('pikkuServices', () => {
       requiredServices: new Set(['todoStore']),
     },
     addonRequiredParentServices: [],
+    scopes: { definitions: [] },
+    systemRoles: { definitions: [] },
     ...(authDefinition === undefined
       ? {}
       : { auth: { definition: authDefinition } }),
@@ -135,11 +137,18 @@ describe('pikkuServices', () => {
   ) => ({
     logger: {
       debug: () => {},
+      info: () => {},
     },
     config: {
       forceRequiredServices: [],
       packageMappings: {},
       servicesFile,
+      rootDir: dirname(servicesFile),
+      outDir: dirname(servicesFile),
+      localServicesFile: join(
+        dirname(servicesFile),
+        'pikku-local-services.gen.ts'
+      ),
     },
     getInspectorState: async () => createVisitState(authDefinition),
   })
@@ -156,6 +165,27 @@ describe('pikkuServices', () => {
 
     const content = await readFile(servicesFile, 'utf8')
     assert.match(content, /'auth': false,/)
+  })
+
+  // `pikku serve` and `pikku dev` load it, so it is written for every project
+  // — and one with no database gets a file that imports nothing it lacks.
+  test('writes the local services file beside the services map', async () => {
+    const outDir = await mkdtemp(join(tmpdir(), 'pikku-command-services-'))
+    const servicesFile = join(outDir, 'pikku-services.gen.ts')
+
+    await (pikkuServices as any).func(
+      await createContext(servicesFile),
+      undefined,
+      {}
+    )
+
+    const content = await readFile(
+      join(outDir, 'pikku-local-services.gen.ts'),
+      'utf8'
+    )
+    assert.match(content, /export const createLocalServices/)
+    assert.doesNotMatch(content, /from '@pikku\/kysely'/)
+    assert.doesNotMatch(content, /from '@pikku\/schedule'/)
   })
 
   test('marks auth required when inspector state exposes an auth definition', async () => {

@@ -15,26 +15,56 @@ export interface LocalServicesDrivers {
   pgTypes: boolean
 }
 
-export interface SerializeLocalServicesOptions {
-  localServicesFile: string
-  packageMappings: Record<string, string>
+/**
+ * What a generated local CLI needs on top of what `pikku serve` hands the
+ * file: it runs with no host, so it opens its own database and builds the
+ * scheduler and meta services the dev server otherwise passes in.
+ */
+export interface LocalCLIServicesOptions {
+  drivers: LocalServicesDrivers
   /** The generated coercion map, when the project has run a migration. */
   coercionFile?: string
-  /** The services the project's functions reach for, as the inspector found them. */
-  requiredServices: Iterable<string>
-  scopes: FlatScope[]
-  systemRoles: SystemRole[]
   /**
    * The sqlite file a project with `db/sqlite` and no configured database runs
    * against — the same default `pikku serve` resolves.
    */
   conventionalSqliteDb?: string
-  drivers: LocalServicesDrivers
+}
+
+export interface SerializeLocalServicesOptions {
+  localServicesFile: string
+  packageMappings: Record<string, string>
+  /** The services the project's functions reach for, as the inspector found them. */
+  requiredServices: Iterable<string>
+  scopes: FlatScope[]
+  systemRoles: SystemRole[]
+  /**
+   * Whether the project has a database, which is what brings in `@pikku/kysely`
+   * and the services backed by it. Without one the file imports from
+   * `@pikku/core` alone.
+   */
+  database: boolean
+  /** Set when the project has a local CLI entrypoint, which imports this file. */
+  localCLI?: LocalCLIServicesOptions
 }
 
 /**
- * The services gated on `requiredServices`, and only those: the set is baked
- * in because nothing inspects the project when a generated CLI runs.
+ * The packages beyond `@pikku/core` a file serialized with these options
+ * imports, which the project has to declare itself: the file is loaded from
+ * the project, not from the pikku CLI's own dependencies.
+ */
+export const localServicesPackages = ({
+  database,
+  localCLI,
+}: Pick<SerializeLocalServicesOptions, 'database' | 'localCLI'>): string[] => [
+  ...(database ? ['@pikku/kysely', 'kysely'] : []),
+  ...(localCLI ? ['@pikku/schedule'] : []),
+]
+
+/**
+ * The services gated on `requiredServices`, and only those: a project that
+ * never asks for one has no tables for it, so bringing it up would fail a boot
+ * over a service nothing uses.
  */
 const GATED_SERVICES = [
   'scopeService',
@@ -97,104 +127,17 @@ const postgresOpener = (
 }`
 }
 
-/**
- * Serializes `pikku-local-services.gen.ts`: the services a locally run
- * process of this app boots on top of its own `createSingletonServices`,
- * assembled the way `pikku serve` assembles them.
- *
- * `pikku serve` reads what gates them — `requiredServices`, the scope and
- * system-role declarations — off the inspector as it starts. A generated CLI
- * runs with no inspector, so those answers are baked in here at codegen time,
- * and the database it would otherwise be handed is opened here too.
- */
-export const serializeLocalServices = ({
-  localServicesFile,
-  packageMappings,
-  coercionFile,
-  requiredServices,
-  scopes,
-  systemRoles,
-  conventionalSqliteDb,
-  drivers,
-}: SerializeLocalServicesOptions): string => {
-  const required = new Set(requiredServices)
-  const gated = Object.fromEntries(
-    GATED_SERVICES.map((name) => [name, required.has(name)])
-  )
-  // Only a driver the project declares opens anything, and an import nothing
-  // uses fails a project that type-checks with noUnusedLocals.
-  const coerces =
-    !!coercionFile && (drivers.nodeSqlite || drivers.bunSqlite || drivers.pg)
-  const coercionImport =
-    coerces && coercionFile
-      ? `import { coercionMap } from '${getFileImportRelativePath(localServicesFile, coercionFile, packageMappings)}'`
-      : ''
-  const coercionPlugins = coerces
+const databaseOpener = (
+  localCLI: LocalCLIServicesOptions,
+  coerces: boolean
+): string => {
+  const plugins = coerces
     ? '[createCoercionPlugin({ map: coercionMap })]'
     : '[]'
-  const kyselyImport = drivers.pg
-    ? `import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'`
-    : `import type { Kysely } from 'kysely'`
-
-  return `/**
- * The services a locally run process of this app boots on top of its own
- * createSingletonServices — the same set \`pikku serve\` injects, so a command
- * run from the generated CLI sees the database, scopes, webhooks and in-memory
- * queue, scheduler and workflow services a request to the dev server sees.
- *
- * What gates them is baked in from the last codegen, since nothing inspects the
- * project when this runs. Regenerate rather than edit.
- */
-import { mkdirSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-${kyselyImport}
-import {
-  IncomingWebhookService,
-  InMemoryAgentRunStateService,
-  InMemoryQueueService,
-  InMemoryTriggerService,
-  InMemoryWorkflowService,
-  LocalEmailService,
-  QueueWebhookService,
-} from '@pikku/core/services'
-import { LocalMetaService } from '@pikku/core/services/local-meta'
-import type { FlatScope } from '@pikku/core/scope'
-import type { SystemRole } from '@pikku/core/role'
-import { InMemorySchedulerService } from '@pikku/schedule'
-import {
-  ${coerces ? 'createCoercionPlugin,\n  ' : ''}KyselyAgentRunService,
-  KyselyAgentRunStateService,
-  KyselyAgentStorageService,
-  KyselyAnalyticsService,
-  KyselyFeatureFlagStore,
-  KyselyIncomingWebhookService,
-  KyselyScopeService,
-  KyselyWebhookService,
-} from '@pikku/kysely'
-${coercionImport}
-
-const requiredServices = ${json(gated)}
-
-const declaredScopes: FlatScope[] = ${json(scopes)}
-
-const declaredSystemRoles: SystemRole[] = ${json(systemRoles)}
-
-const conventionalSqliteDb: string | undefined = ${conventionalSqliteDb ? `'${conventionalSqliteDb}'` : 'undefined'}
-
-export interface LocalServicesExtras {
-  /**
-   * A database the host has already opened, or \`null\` for none. Left out, one
-   * is opened from DATABASE_URL or the config's \`sqliteDb\` / \`postgresUrl\`.
-   */
-  kysely?: Kysely<any> | null
-  /** Where a service dropped for a missing table is reported. Stderr otherwise. */
-  logger?: { warn(message: string): void }
-  /** Anything else the host provides, which wins over what is assembled here. */
-  [service: string]: unknown
-}
-
-type DatabaseTarget = { sqliteDb?: string; postgresUrl?: string }
+  const conventional = localCLI.conventionalSqliteDb
+    ? `'${localCLI.conventionalSqliteDb}'`
+    : 'undefined'
+  return `const conventionalSqliteDb: string | undefined = ${conventional}
 
 /** DATABASE_URL read the way \`pikku serve\` reads it. A remote libsql URL is not opened here. */
 const parseDatabaseUrl = (url: string): DatabaseTarget => {
@@ -203,9 +146,9 @@ const parseDatabaseUrl = (url: string): DatabaseTarget => {
   return { sqliteDb: url }
 }
 
-${sqliteOpener(drivers, coercionPlugins)}
+${sqliteOpener(localCLI.drivers, plugins)}
 
-${postgresOpener(drivers, coercionPlugins)}
+${postgresOpener(localCLI.drivers, plugins)}
 
 /**
  * Opens the database this app runs against locally, or returns undefined when
@@ -234,16 +177,63 @@ export const openLocalDatabase = async (
   }
   return undefined
 }
+`
+}
 
-/**
- * Brings a database-backed service up, or drops it with the reason: its table
- * comes from a declaration the project may have added since it last migrated,
- * and running without it degrades to what the project had before.
+/** The services a project without a database gets: all in memory. */
+const inMemoryBody = (
+  localCLI: boolean
+): string => `export const createLocalServices = async (
+  _config: DatabaseTarget,
+  extras: LocalServicesExtras = {},
+  options: LocalServicesOptions = {}
+): Promise<Record<string, any>> => {
+  const { kysely, ...hostServices } = extras
+  if (kysely) {
+    // Handed a database this file was generated without: the database-backed
+    // services are only emitted for a project codegen saw a database in.
+    const warnLogger = options.logger ?? stderr
+    warnLogger.warn(
+      'A database is configured, but pikku-local-services.gen.ts was generated for a project without one, so its services run in memory. Add db/sqlite or db/postgres, or declare @pikku/kysely, and regenerate.'
+    )
+  }
+  const queueService = new InMemoryQueueService()
+  const workflowService = new InMemoryWorkflowService()
+  return {
+    emailService: new LocalEmailService(),
+${localCLI ? cliOnlyServices : ''}    queueService,
+    webhookService: new QueueWebhookService(queueService),
+    incomingWebhookService: new IncomingWebhookService(queueService),
+    workflowService,
+    workflowRunService: workflowService,
+    triggerService: new InMemoryTriggerService(),
+    agentStorage: undefined,
+    agentRunState: new InMemoryAgentRunStateService(),
+    agentRunService: undefined,
+    ...(kysely ? { kysely } : {}),
+    ...hostServices,
+  }
+}
+`
+
+const cliOnlyServices = `    metaService: new LocalMetaService(dirname(fileURLToPath(import.meta.url))),
+    schedulerService: new InMemorySchedulerService(),
+`
+
+/** The services a project with a database gets, backed by it when one is open. */
+const databaseBody = (localCLI: boolean): string => `/**
+ * Brings a database-backed service up, or drops it with the reason.
+ *
+ * \`init()\` on these services is a check, not a create: a project whose
+ * migrations predate the declaration that needs the table gets a throw, and the
+ * project never asked for the service. So it is dropped and the reason printed,
+ * which is only done where running without it degrades to what the project had
+ * before rather than doing something wrong.
  */
 const initOrWarn = async <T extends { init(): Promise<void> }>(
   service: T,
   name: string,
-  logger: { warn(message: string): void }
+  logger: WarnLogger
 ): Promise<T | undefined> => {
   try {
     await service.init()
@@ -257,14 +247,19 @@ const initOrWarn = async <T extends { init(): Promise<void> }>(
 }
 
 export const createLocalServices = async (
-  config: DatabaseTarget,
-  extras: LocalServicesExtras = {}
+  ${localCLI ? 'config' : '_config'}: DatabaseTarget,
+  extras: LocalServicesExtras = {},
+  options: LocalServicesOptions = {}
 ): Promise<Record<string, any>> => {
-  const { kysely: hostKysely, logger, ...hostServices } = extras
-  const warnLogger = logger ?? { warn: (message: string) => console.error(message) }
+  const { kysely: hostKysely, ...hostServices } = extras
+  const warnLogger = options.logger ?? stderr
+  const isRequired = (name: GatedService): boolean =>
+    options.requiredServices
+      ? options.requiredServices.has(name)
+      : requiredServices[name]
   const kysely =
     hostKysely === undefined
-      ? await openLocalDatabase(config)
+      ? ${localCLI ? 'await openLocalDatabase(config)' : 'undefined'}
       : (hostKysely ?? undefined)
 
   const agentStorage = kysely ? new KyselyAgentStorageService(kysely) : undefined
@@ -277,6 +272,11 @@ export const createLocalServices = async (
     await agentRunState.init()
   }
 
+  // Dropped with a warning rather than thrown on, unlike the agent services
+  // above: both tables come from a declaration the project may have added since
+  // it last migrated, and neither absence is worse than having no service — an
+  // unregistered flag source resolves every gate open, and analytics without a
+  // service falls back to the logger.
   const featureFlags = kysely
     ? await initOrWarn(new KyselyFeatureFlagStore(kysely), 'featureFlags', warnLogger)
     : undefined
@@ -285,38 +285,38 @@ export const createLocalServices = async (
     : undefined
 
   const scopeService =
-    kysely && requiredServices.scopeService
-      ? new KyselyScopeService(kysely)
-      : undefined
+    kysely && isRequired('scopeService') ? new KyselyScopeService(kysely) : undefined
   if (scopeService) {
     await scopeService.init()
-    await scopeService.syncScopes(declaredScopes)
-    await scopeService.syncSystemRoles(declaredSystemRoles)
+    await scopeService.syncScopes(options.scopes ?? declaredScopes)
+    await scopeService.syncSystemRoles(options.systemRoles ?? declaredSystemRoles)
   }
 
+  // The queue-only webhook service delivers but keeps no history, so the
+  // console's webhooks page is empty on a project that has the tables for it.
   const queueService = new InMemoryQueueService()
   const webhookService =
-    kysely && requiredServices.webhookService
+    kysely && isRequired('webhookService')
       ? new KyselyWebhookService(queueService, kysely)
       : new QueueWebhookService(queueService)
   if (webhookService instanceof KyselyWebhookService) {
     await webhookService.init()
   }
   const incomingWebhookService =
-    kysely && requiredServices.incomingWebhookService
+    kysely && isRequired('incomingWebhookService')
       ? new KyselyIncomingWebhookService(queueService, kysely)
       : new IncomingWebhookService(queueService)
   if (incomingWebhookService instanceof KyselyIncomingWebhookService) {
     await incomingWebhookService.init()
   }
 
+  // One instance under both names: InMemoryWorkflowService implements the
+  // workflowRunService surface too, which the console reads runs through.
   const workflowService = new InMemoryWorkflowService()
 
   return {
     emailService: new LocalEmailService(),
-    metaService: new LocalMetaService(dirname(fileURLToPath(import.meta.url))),
-    schedulerService: new InMemorySchedulerService(),
-    queueService,
+${localCLI ? cliOnlyServices : ''}    queueService,
     webhookService,
     incomingWebhookService,
     ...(scopeService ? { scopeService } : {}),
@@ -329,9 +329,154 @@ export const createLocalServices = async (
     ...(featureFlags ? { featureFlags } : {}),
     ...(analyticsService ? { analyticsService } : {}),
     ...(kysely ? { kysely } : {}),
-    ...(logger ? { logger } : {}),
     ...hostServices,
   }
 }
 `
+
+/**
+ * Serializes `pikku-local-services.gen.ts`: the services a locally run process
+ * of this app boots on top of its own `createSingletonServices`. `pikku serve`,
+ * `pikku dev` and a generated local CLI all assemble them here.
+ *
+ * The dev server passes what only it has — the database it opened, its event
+ * hub, content store, scheduler — and the gates it read off a live inspector.
+ * A generated CLI runs with neither, so the gates are baked in at codegen, and
+ * when the project has a local CLI entrypoint the file also opens the database
+ * and builds the scheduler itself.
+ *
+ * What the file imports is decided here too, from what the project has, since
+ * every one of those packages has to be declared by the project: a project with
+ * no database imports nothing past `@pikku/core`.
+ */
+export const serializeLocalServices = ({
+  localServicesFile,
+  packageMappings,
+  requiredServices,
+  scopes,
+  systemRoles,
+  database,
+  localCLI,
+}: SerializeLocalServicesOptions): string => {
+  const required = new Set(requiredServices)
+  const gated = Object.fromEntries(
+    GATED_SERVICES.map((name) => [name, required.has(name)])
+  )
+  const opens = database && !!localCLI
+  const drivers = localCLI?.drivers
+  // Only a driver the project declares opens anything, and an import nothing
+  // uses fails a project that type-checks with noUnusedLocals.
+  const coerces =
+    opens &&
+    !!localCLI?.coercionFile &&
+    !!drivers &&
+    (drivers.nodeSqlite || drivers.bunSqlite || drivers.pg)
+
+  const imports: string[] = []
+  if (localCLI) {
+    imports.push(
+      opens
+        ? `import { mkdirSync } from 'node:fs'\nimport { dirname, resolve } from 'node:path'`
+        : `import { dirname } from 'node:path'`,
+      `import { fileURLToPath } from 'node:url'`
+    )
+  }
+  if (database) {
+    imports.push(
+      opens && drivers?.pg
+        ? `import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'`
+        : `import type { Kysely } from 'kysely'`
+    )
+  }
+  imports.push(`import {
+  IncomingWebhookService,
+  InMemoryAgentRunStateService,
+  InMemoryQueueService,
+  InMemoryTriggerService,
+  InMemoryWorkflowService,
+  LocalEmailService,
+  QueueWebhookService,
+} from '@pikku/core/services'`)
+  if (localCLI) {
+    imports.push(
+      `import { LocalMetaService } from '@pikku/core/services/local-meta'`,
+      `import { InMemorySchedulerService } from '@pikku/schedule'`
+    )
+  }
+  imports.push(
+    `import type { FlatScope } from '@pikku/core/scope'`,
+    `import type { SystemRole } from '@pikku/core/role'`
+  )
+  if (database) {
+    imports.push(`import {
+  ${coerces ? 'createCoercionPlugin,\n  ' : ''}KyselyAgentRunService,
+  KyselyAgentRunStateService,
+  KyselyAgentStorageService,
+  KyselyAnalyticsService,
+  KyselyFeatureFlagStore,
+  KyselyIncomingWebhookService,
+  KyselyScopeService,
+  KyselyWebhookService,
+} from '@pikku/kysely'`)
+  }
+  if (coerces && localCLI?.coercionFile) {
+    imports.push(
+      `import { coercionMap } from '${getFileImportRelativePath(localServicesFile, localCLI.coercionFile, packageMappings)}'`
+    )
+  }
+
+  const baked = database
+    ? `type GatedService = ${GATED_SERVICES.map((name) => `'${name}'`).join(' | ')}
+
+/** Which gated services the project required at the last codegen. */
+const requiredServices: Record<GatedService, boolean> = ${json(gated)}
+
+const declaredScopes: FlatScope[] = ${json(scopes)}
+
+const declaredSystemRoles: SystemRole[] = ${json(systemRoles)}
+`
+    : ''
+
+  return `/**
+ * The services a locally run process of this app boots on top of its own
+ * createSingletonServices. \`pikku serve\`, \`pikku dev\` and a generated local
+ * CLI all take them from here, so a command run from the CLI sees what a
+ * request to the dev server sees.
+ *
+ * What gates them is baked in from the last codegen, for a caller that has no
+ * inspector to ask. Regenerate rather than edit.
+ */
+${imports.join('\n')}
+
+${baked}
+type WarnLogger = { warn(message: string): void }
+
+const stderr: WarnLogger = { warn: (message) => console.error(message) }
+
+export interface LocalServicesExtras {
+  /**
+   * A database the host has already opened, or \`null\` for none.${
+     opens
+       ? " Left out, one\n   * is opened from DATABASE_URL or the config's `sqliteDb` / `postgresUrl`."
+       : ''
+   }
+   */
+  kysely?: ${database ? 'Kysely<any>' : 'unknown'} | null
+  /** Anything else the host provides, which wins over what is assembled here. */
+  [service: string]: unknown
+}
+
+/** What a host that inspects the project live passes instead of the baked answers. */
+export interface LocalServicesOptions {
+  /** Where a service dropped for a missing table is reported. Stderr otherwise. */
+  logger?: WarnLogger
+  requiredServices?: ReadonlySet<string>
+  scopes?: FlatScope[]
+  systemRoles?: SystemRole[]
+}
+
+type DatabaseTarget = { sqliteDb?: string; postgresUrl?: string }
+
+${opens && localCLI ? databaseOpener(localCLI, coerces) : ''}
+${database ? databaseBody(!!localCLI) : inMemoryBody(!!localCLI)}`
 }

@@ -1,30 +1,9 @@
 import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
-import {
-  IncomingWebhookService,
-  InMemoryQueueService,
-  QueueWebhookService,
-} from '@pikku/core/services'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
-import {
-  ConsoleLogger,
-  LocalEmailService,
-  InMemoryAgentRunStateService,
-} from '@pikku/core/services'
-import { InMemoryTriggerService } from '@pikku/core/services'
-import { InMemoryWorkflowService } from '@pikku/core/services'
-import {
-  KyselyAgentStorageService,
-  KyselyAgentRunStateService,
-  KyselyAgentRunService,
-  KyselyAnalyticsService,
-  KyselyFeatureFlagStore,
-  KyselyScopeService,
-  KyselyWebhookService,
-  KyselyIncomingWebhookService,
-} from '@pikku/kysely'
+import { ConsoleLogger } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { pikkuState } from '@pikku/core/state'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
@@ -40,8 +19,11 @@ import {
   parseDatabaseUrl,
   type ResolvedDb,
 } from '../db/local-db.js'
-import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
-import { initOrWarn } from './init-or-warn.js'
+import {
+  loadCreateLocalServices,
+  loadUserBootstrap,
+  loadUserModule,
+} from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
@@ -90,8 +72,6 @@ export const serve = pikkuSessionlessFunc<
       registerScenarioInstrumentation()
     }
 
-    const workflowService = new InMemoryWorkflowService()
-
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
     const userCreateConfig = configModule[pikkuConfigFactory.variable]
@@ -134,62 +114,7 @@ export const serve = pikkuSessionlessFunc<
       contentSigningJWT
     )
 
-    const schedulerService = new InMemorySchedulerService()
-    const agentStorage = kysely
-      ? new KyselyAgentStorageService(kysely as any)
-      : undefined
-    const agentRunState = kysely
-      ? new KyselyAgentRunStateService(kysely as any)
-      : new InMemoryAgentRunStateService()
-    const agentRunService = kysely
-      ? new KyselyAgentRunService(kysely as any)
-      : undefined
-
-    if (agentStorage) await agentStorage.init()
-    if ('init' in agentRunState && typeof agentRunState.init === 'function') {
-      await agentRunState.init()
-    }
-
-    // Flags and analytics get the same local database the rest of the services
-    // do, so a flag an operator flips in the console survives a restart and a
-    // declared event lands somewhere a query can reach.
-    //
-    // Dropped with a warning rather than thrown on, unlike the agent services
-    // above: both tables are generated from a declaration the project may have
-    // added since it last migrated, and neither absence is worse than what a
-    // project has today — an unregistered flag source resolves every gate open,
-    // and analytics without a service falls back to the logger. Failing the
-    // boot instead would turn adding one `featureFlag:` into a dead dev server.
-    const featureFlags = kysely
-      ? await initOrWarn(
-          new KyselyFeatureFlagStore(kysely as any),
-          'featureFlags',
-          logger
-        )
-      : undefined
-    const analyticsService = kysely
-      ? await initOrWarn(
-          new KyselyAnalyticsService(kysely as any),
-          'analyticsService',
-          logger
-        )
-      : undefined
     const requiredServices = inspectorState.serviceAggregation.requiredServices
-    const scopeService =
-      kysely && requiredServices.has('scopeService')
-        ? new KyselyScopeService(kysely as any)
-        : undefined
-    if (scopeService) {
-      await scopeService.init()
-      await scopeService.syncScopes(
-        flattenScopeDefinitions(inspectorState.scopes.definitions)
-      )
-      await scopeService.syncSystemRoles(
-        flattenSystemRoleDefinitions(inspectorState.systemRoles.definitions)
-      )
-    }
-
-    const devLogger = new ConsoleLogger()
     const hasAgents = Object.keys(inspectorState.agents.agentsMeta).length > 0
     const agentRunner =
       hasAgents || requiredServices.has('agentRunner')
@@ -200,49 +125,40 @@ export const serve = pikkuSessionlessFunc<
           })
         : undefined
 
-    const eventHub = await devServerRunner.createEventHub()
-    const serveQueueService = new InMemoryQueueService()
-    const serveWebhookService =
-      kysely && requiredServices.has('webhookService')
-        ? new KyselyWebhookService(serveQueueService, kysely as any)
-        : new QueueWebhookService(serveQueueService)
-    if (serveWebhookService instanceof KyselyWebhookService) {
-      await serveWebhookService.init()
-    }
-    const serveIncomingWebhookService =
-      kysely && requiredServices.has('incomingWebhookService')
-        ? new KyselyIncomingWebhookService(serveQueueService, kysely as any)
-        : new IncomingWebhookService(serveQueueService)
-    if (serveIncomingWebhookService instanceof KyselyIncomingWebhookService) {
-      await serveIncomingWebhookService.init()
-    }
-    const inMemoryServices = {
-      logger: devLogger,
-      ...(agentRunner ? { agentRunner } : {}),
-      emailService: new LocalEmailService(),
-      metaService: new LocalMetaService(pikkuDir),
-      schedulerService,
-      queueService: serveQueueService,
-      webhookService: serveWebhookService,
-      incomingWebhookService: serveIncomingWebhookService,
-      ...(scopeService ? { scopeService } : {}),
-      workflowService,
-      workflowRunService: workflowService,
-      triggerService: new InMemoryTriggerService(),
-      agentStorage,
-      agentRunState,
-      agentRunService,
-      ...(featureFlags ? { featureFlags } : {}),
-      ...(analyticsService ? { analyticsService } : {}),
-      eventHub,
-      ...(kysely ? { kysely } : {}),
-      content: localContent,
-    }
+    const createLocalServices = await loadCreateLocalServices(
+      config.rootDir,
+      config.localServicesFile
+    )
+    // Only what the dev server alone has is passed in: the database it opened
+    // (so sqlite extensions and embedded postgres apply), its event hub and
+    // content store, and the gates read off the live inspector rather than the
+    // ones baked in at the last codegen.
+    const localServices = await createLocalServices(
+      userConfig,
+      {
+        kysely: kysely ?? null,
+        logger: new ConsoleLogger(),
+        ...(agentRunner ? { agentRunner } : {}),
+        metaService: new LocalMetaService(pikkuDir),
+        schedulerService: new InMemorySchedulerService(),
+        eventHub: await devServerRunner.createEventHub(),
+        content: localContent,
+        getInspectorState,
+      },
+      {
+        logger,
+        requiredServices,
+        scopes: flattenScopeDefinitions(inspectorState.scopes.definitions),
+        systemRoles: flattenSystemRoleDefinitions(
+          inspectorState.systemRoles.definitions
+        ),
+      }
+    )
 
-    const singletonServices = await userCreateSingletonServices(userConfig, {
-      ...inMemoryServices,
-      getInspectorState,
-    })
+    const singletonServices = await userCreateSingletonServices(
+      userConfig,
+      localServices
+    )
     const resolvedServices = {
       ...singletonServices,
       getInspectorState,

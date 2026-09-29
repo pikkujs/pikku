@@ -4,7 +4,9 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import {
+  localServicesPackages,
   serializeLocalServices,
+  type LocalCLIServicesOptions,
   type LocalServicesDrivers,
   type SerializeLocalServicesOptions,
 } from './serialize-local-services.js'
@@ -16,6 +18,10 @@ const noDrivers: LocalServicesDrivers = {
   pgTypes: false,
 }
 
+const withCLI = (
+  overrides: Partial<LocalCLIServicesOptions> = {}
+): LocalCLIServicesOptions => ({ drivers: noDrivers, ...overrides })
+
 const emit = (overrides: Partial<SerializeLocalServicesOptions> = {}) =>
   serializeLocalServices({
     localServicesFile: '/project/.pikku/pikku-local-services.gen.ts',
@@ -23,9 +29,58 @@ const emit = (overrides: Partial<SerializeLocalServicesOptions> = {}) =>
     requiredServices: [],
     scopes: [],
     systemRoles: [],
-    drivers: noDrivers,
+    database: true,
+    localCLI: withCLI(),
     ...overrides,
   })
+
+const importedModules = (code: string): string[] =>
+  [...code.matchAll(/^import [^;]*?from '([^']+)'/gms)].map(
+    (match) => match[1]!
+  )
+
+/**
+ * The file is written into every project, and `pikku serve` loads it from
+ * there, so every package it imports has to be one the project declares.
+ */
+describe('what the file imports', () => {
+  test('a project with no database and no CLI imports from @pikku/core alone', () => {
+    const code = emit({ database: false, localCLI: undefined })
+    for (const module of importedModules(code)) {
+      assert.match(module, /^@pikku\/core\//)
+    }
+    assert.doesNotMatch(code, /import\(/)
+  })
+
+  test('a database brings in @pikku/kysely, and only a CLI opens one', () => {
+    const code = emit({ localCLI: undefined })
+    assert.ok(importedModules(code).includes('@pikku/kysely'))
+    assert.match(code, /import type \{ Kysely \} from 'kysely'/)
+    assert.doesNotMatch(code, /openLocalDatabase/)
+    assert.doesNotMatch(code, /node:/)
+    assert.doesNotMatch(code, /@pikku\/schedule/)
+  })
+
+  test('a local CLI brings in the scheduler and meta services it has no host for', () => {
+    const code = emit({ database: false })
+    assert.ok(importedModules(code).includes('@pikku/schedule'))
+    assert.match(code, /metaService: new LocalMetaService/)
+    assert.ok(!importedModules(code).includes('@pikku/kysely'))
+    assert.doesNotMatch(code, /openLocalDatabase/)
+  })
+
+  test('declares exactly the packages it imports', () => {
+    assert.deepStrictEqual(localServicesPackages({ database: false }), [])
+    assert.deepStrictEqual(localServicesPackages({ database: true }), [
+      '@pikku/kysely',
+      'kysely',
+    ])
+    assert.deepStrictEqual(
+      localServicesPackages({ database: false, localCLI: withCLI() }),
+      ['@pikku/schedule']
+    )
+  })
+})
 
 /**
  * A generated CLI runs with no inspector, so whatever `pikku serve` reads off
@@ -40,6 +95,19 @@ describe('the answers baked in at codegen', () => {
     assert.doesNotMatch(code, /"jwt"/)
   })
 
+  test('prefers what a live inspector passes over what was baked', () => {
+    const code = emit()
+    assert.match(
+      code,
+      /options\.requiredServices\s*\?\s*options\.requiredServices\.has\(name\)\s*:\s*requiredServices\[name\]/
+    )
+    assert.match(code, /syncScopes\(options\.scopes \?\? declaredScopes\)/)
+    assert.match(
+      code,
+      /syncSystemRoles\(options\.systemRoles \?\? declaredSystemRoles\)/
+    )
+  })
+
   test('carries the declared scopes and system roles it syncs', () => {
     const code = emit({
       scopes: [{ id: 'todos', description: 'Todos' }],
@@ -51,7 +119,9 @@ describe('the answers baked in at codegen', () => {
 
   test('falls back to the sqlite file serve would, only when told to', () => {
     assert.match(
-      emit({ conventionalSqliteDb: '.pikku-runtime/dev.db' }),
+      emit({
+        localCLI: withCLI({ conventionalSqliteDb: '.pikku-runtime/dev.db' }),
+      }),
       /const conventionalSqliteDb: string \| undefined = '\.pikku-runtime\/dev\.db'/
     )
     assert.match(
@@ -67,7 +137,9 @@ describe('the answers baked in at codegen', () => {
  */
 describe('the database openers', () => {
   test('imports only the sqlite drivers the project declares', () => {
-    const code = emit({ drivers: { ...noDrivers, nodeSqlite: true } })
+    const code = emit({
+      localCLI: withCLI({ drivers: { ...noDrivers, nodeSqlite: true } }),
+    })
     assert.match(code, /await import\('@pikku\/kysely-node-sqlite'\)/)
     assert.doesNotMatch(code, /await import\('@pikku\/kysely-bun-sqlite'\)/)
     assert.match(code, /needs @pikku\/kysely-bun-sqlite/)
@@ -76,7 +148,9 @@ describe('the database openers', () => {
   test('opens postgres through pg only when it is declared', () => {
     assert.doesNotMatch(emit(), /import\('pg'\)/)
     assert.doesNotMatch(emit(), /PostgresDialect/)
-    const code = emit({ drivers: { ...noDrivers, pg: true, pgTypes: true } })
+    const code = emit({
+      localCLI: withCLI({ drivers: { ...noDrivers, pg: true, pgTypes: true } }),
+    })
     assert.match(code, /await import\('pg'\)/)
     assert.match(code, /allowExitOnIdle: true/)
     assert.doesNotMatch(code, /@ts-ignore/)
@@ -84,15 +158,17 @@ describe('the database openers', () => {
 
   test('waives the missing pg types rather than failing the type check', () => {
     assert.match(
-      emit({ drivers: { ...noDrivers, pg: true } }),
+      emit({ localCLI: withCLI({ drivers: { ...noDrivers, pg: true } }) }),
       /\/\/ @ts-ignore -- pg ships no types[^\n]*\n\s*const \{ default: pg \} = await import\('pg'\)/
     )
   })
 
   test('applies the generated coercion map to what it opens', () => {
     const code = emit({
-      coercionFile: '/project/.pikku/db/coercion.gen.ts',
-      drivers: { ...noDrivers, nodeSqlite: true },
+      localCLI: withCLI({
+        coercionFile: '/project/.pikku/db/coercion.gen.ts',
+        drivers: { ...noDrivers, nodeSqlite: true },
+      }),
     })
     assert.match(
       code,
@@ -105,9 +181,16 @@ describe('the database openers', () => {
   })
 
   test('leaves the coercion map out when nothing is opened with it', () => {
-    const code = emit({ coercionFile: '/project/.pikku/db/coercion.gen.ts' })
-    assert.doesNotMatch(code, /coercionMap/)
-    assert.doesNotMatch(code, /createCoercionPlugin/)
+    const coercionFile = '/project/.pikku/db/coercion.gen.ts'
+    for (const code of [
+      emit({ localCLI: withCLI({ coercionFile }) }),
+      emit({
+        localCLI: undefined,
+      }),
+    ]) {
+      assert.doesNotMatch(code, /coercionMap/)
+      assert.doesNotMatch(code, /createCoercionPlugin/)
+    }
   })
 })
 
@@ -165,6 +248,44 @@ describe('the generated createLocalServices', async () => {
     )
     assert.strictEqual(services.eventHub, eventHub)
     assert.strictEqual(services.logger, logger)
+  })
+
+  test('a project with no database gets the same in-memory set, with no CLI', async () => {
+    const { createLocalServices } = await load('no-database', {
+      database: false,
+      localCLI: undefined,
+    })
+    const schedulerService = {}
+    const services = await createLocalServices({}, { schedulerService })
+    assert.strictEqual(services.schedulerService, schedulerService)
+    assert.strictEqual(services.metaService, undefined)
+    assert.strictEqual(services.workflowRunService, services.workflowService)
+    assert.strictEqual(
+      services.webhookService.constructor.name,
+      'QueueWebhookService'
+    )
+    assert.strictEqual(
+      services.agentRunState.constructor.name,
+      'InMemoryAgentRunStateService'
+    )
+    assert.ok('agentStorage' in services)
+  })
+
+  test('says so when handed a database it was generated without', async () => {
+    const { createLocalServices } = await load('unexpected-database', {
+      database: false,
+      localCLI: undefined,
+    })
+    const warnings: string[] = []
+    const kysely = {}
+    const services = await createLocalServices(
+      {},
+      { kysely },
+      { logger: { warn: (message: string) => warnings.push(message) } }
+    )
+    assert.strictEqual(services.kysely, kysely)
+    assert.strictEqual(warnings.length, 1)
+    assert.match(warnings[0]!, /generated for a project without one/)
   })
 
   test('names the driver to install when it cannot open the database', async () => {
