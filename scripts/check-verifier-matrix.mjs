@@ -17,7 +17,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const DEDICATED = new Set(['binary', 'db-vectors', 'fullstack'])
 
-const WORKFLOWS = ['.github/workflows/develop.yml']
+const WORKFLOWS = ['.github/workflows/full.yml']
 
 const matrixOf = (workflow) => {
   const source = readFileSync(join(ROOT, workflow), 'utf8')

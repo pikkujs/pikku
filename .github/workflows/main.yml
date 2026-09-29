@@ -14,9 +14,8 @@ on:
 # cancelling an older one. Publishing is the exception, and it no longer lives
 # here: `publish.yml` picks up a successful run of this workflow and queues
 # instead of cancelling. See that file for why.
-# Pull requests into main must pass CI on an up-to-date branch, so this run
-# keeps only the jobs publish.yml gates on. The verifier, template and example
-# matrices run on the pull request alone.
+# This run keeps only the jobs publish.yml gates on. The verifier, template and
+# example matrices run in `full.yml`, which nothing waits on.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -50,7 +49,7 @@ jobs:
         run: node --test scripts/merged-worktrees.test.mjs
       - name: Check peer dependency ranges agree across the monorepo
         run: node scripts/check-peer-dependency-consistency.mjs
-      - name: Check every verifier runs in both workflows
+      - name: Check every verifier runs in the full suite
         run: node scripts/check-verifier-matrix.mjs
       - name: Test the live-AI e2e gate
         run: node --test scripts/ai-e2e-gate.test.mjs
@@ -81,6 +80,8 @@ jobs:
         with:
           download-build: 'false'
       - uses: ./.github/actions/build
+        with:
+          templates: 'false'
 
   unit-tests:
     name: Unit Tests

@@ -1,11 +1,17 @@
 name: Build
 description: Build all packages, generate pikku files, build templates + console, and upload build artifact
 
+inputs:
+  templates:
+    description: Build the templates. Only the template jobs in the Full Suite read them.
+    default: 'true'
+
 runs:
   using: composite
   steps:
     - name: Restore TypeScript build cache
-      uses: actions/cache@v6
+      id: ts-cache
+      uses: actions/cache/restore@v6
       with:
         # tsc -b is incremental: given the prior tsconfig.tsbuildinfo + emitted
         # dist it only recompiles projects whose inputs changed. Key on all
@@ -55,6 +61,7 @@ runs:
         bun run build:addons
         echo "::notice::⏱ Build addons: $((SECONDS - start))s"
     - name: Build function-addon template
+      if: ${{ inputs.templates == 'true' }}
       shell: bash
       run: |
         start=$SECONDS
@@ -67,6 +74,7 @@ runs:
         bun run pikku
         echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
     - name: Build templates
+      if: ${{ inputs.templates == 'true' }}
       shell: bash
       run: |
         start=$SECONDS
@@ -85,28 +93,43 @@ runs:
         bun run build:console
         echo "::notice::⏱ Build console: $((SECONDS - start))s"
 
+    # One tar rather than the tree: upload-artifact sends each file on its own,
+    # and ~16 MB of small build files took two minutes that way.
+    #
+    # The node_modules prune keeps every dependency's own dist and .pikku out.
+    #
+    # `templates/functions/pikku` is the scaffold directory that config's
+    # `scaffold.pikkuDir` names, and it is build output exactly as `.pikku`
+    # is. It has to travel with it: a variable or a secret declared in a
+    # scaffold is imported by name from `.pikku`, so shipping one without the
+    # other hands the next job a generated file whose import resolves to
+    # nothing, and codegen there dies on the first re-inspect.
+    - name: Pack build output
+      shell: bash
+      run: |
+        {
+          find packages templates -name node_modules -prune -o -type d \( -name dist -o -name .pikku \) -print -prune \
+            -o -path 'packages/*' -type d -name bin -print -prune
+          for dir in packages/cli/console-app templates/functions/pikku; do
+            [ -d "$dir" ] && echo "$dir"
+          done
+        } > "$RUNNER_TEMP/build-output.list"
+        tar cf build-output.tar -T "$RUNNER_TEMP/build-output.list"
+        ls -lh build-output.tar
     - name: Save build output (for later jobs)
       uses: actions/upload-artifact@v7
       with:
         name: build-output
-        # Same node_modules exclusion as the cache above: these globs otherwise
-        # sweep up every dependency's own dist and .pikku alongside our own.
-        #
-        # `templates/functions/pikku` is the scaffold directory that config's
-        # `scaffold.pikkuDir` names, and it is build output exactly as `.pikku`
-        # is. It has to travel with it: a variable or a secret declared in a
-        # scaffold is imported by name from `.pikku`, so shipping one without the
-        # other hands the next job a generated file whose import resolves to
-        # nothing, and codegen there dies on the first re-inspect.
-        path: |
-          packages/**/dist/**
-          packages/**/bin/**
-          packages/**/.pikku/**
-          packages/cli/console-app/**
-          templates/**/.pikku/**
-          templates/functions/pikku/**
-          templates/**/dist/**
-          !packages/**/node_modules/**
-          !templates/**/node_modules/**
-        include-hidden-files: true
+        path: build-output.tar
         retention-days: 1
+    # Branches restore main's cache through the restore key and never save
+    # their own: the save took ~40s at the end of every branch build.
+    - name: Save TypeScript build cache
+      if: ${{ github.ref == 'refs/heads/main' && steps.ts-cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          packages/**/tsconfig.tsbuildinfo
+          packages/**/dist
+          !packages/**/node_modules/**
+        key: ${{ steps.ts-cache.outputs.cache-primary-key }}
