@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import {
   readDiskTSSchemas,
@@ -40,7 +41,14 @@ function makeCache(sourceContent: string): {
   return {
     cacheDir: dir,
     source,
-    deps: [{ path: source, mtimeMs: stat.mtimeMs, size: stat.size }],
+    deps: [
+      {
+        path: source,
+        mtimeMs: stat.mtimeMs,
+        size: stat.size,
+        hash: createHash('sha1').update(sourceContent).digest('hex'),
+      },
+    ],
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   }
 }
@@ -79,10 +87,26 @@ describe('TS schema disk cache', () => {
     try {
       writeDiskTSSchemas(silentLogger, cacheDir, KEY, SCHEMAS, deps)
       // Same byte count, different type: size alone would call this unchanged, so
-      // the mtime half of the fingerprint is what has to catch it.
+      // the content hash is what has to catch it.
       writeFileSync(source, 'export type A = 2')
       utimesSync(source, new Date(), new Date(Date.now() + 5000))
       assert.equal(readDiskTSSchemas(silentLogger, cacheDir, KEY), null)
+    } finally {
+      cleanup()
+    }
+  })
+
+  test('serves the cache when a source is touched but not changed', () => {
+    const { cacheDir, source, deps, cleanup } = makeCache('export type A = 1')
+    try {
+      writeDiskTSSchemas(silentLogger, cacheDir, KEY, SCHEMAS, deps)
+      // A checkout or an untarred CI artifact restamps every file. Judged by
+      // mtime alone that threw away every schema a cache carried to another job.
+      utimesSync(source, new Date(), new Date(Date.now() + 5000))
+      assert.deepEqual(
+        readDiskTSSchemas(silentLogger, cacheDir, KEY)?.schemas,
+        SCHEMAS
+      )
     } finally {
       cleanup()
     }

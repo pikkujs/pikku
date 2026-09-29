@@ -135,7 +135,15 @@ function schemaCacheFile(cacheDir: string): string {
 }
 
 /** One file the generated schemas were derived from, as of when they were generated. */
-export type SchemaDep = { path: string; mtimeMs: number; size: number }
+export type SchemaDep = {
+  path: string
+  mtimeMs: number
+  size: number
+  hash: string
+}
+
+const hashContent = (content: string) =>
+  createHash('sha1').update(content).digest('hex')
 
 /**
  * The files a set of generated schemas was actually derived from.
@@ -164,6 +172,7 @@ function fingerprintSchemaDeps(program: ts.Program): SchemaDep[] {
         path: sourceFile.fileName,
         mtimeMs: stat.mtimeMs,
         size: stat.size,
+        hash: hashContent(sourceFile.text),
       })
     } catch {
       // The virtual root has no file on disk. Its content is the custom-types
@@ -174,13 +183,14 @@ function fingerprintSchemaDeps(program: ts.Program): SchemaDep[] {
 }
 
 /**
- * Whether every file the schemas were derived from is still exactly as it was.
+ * Whether every file the schemas were derived from still has the same content.
  *
- * mtime-and-size rather than a content hash: this runs on the cache-hit path,
- * where the whole point is to answer in milliseconds without building a TS
- * program. Anything that rewrites a file — a dependency rebuild, a checkout, an
- * edit — moves its mtime, and a missing file reads as changed, so the answer errs
- * toward regenerating.
+ * mtime-and-size first, so the common hit answers without reading anything. A
+ * file whose mtime moved is then compared by content: a checkout, an untarred
+ * artifact or a rebuild stamps files without changing them, and judged by mtime
+ * alone that discarded every schema — so a cache carried to another CI job was
+ * never used. A missing file reads as changed. Deps whose content matched get
+ * their new mtime, so the next check is the fast one again.
  */
 function schemaDepsUnchanged(deps: unknown): boolean {
   if (!Array.isArray(deps)) return false
@@ -188,7 +198,16 @@ function schemaDepsUnchanged(deps: unknown): boolean {
     if (!dep || typeof dep.path !== 'string') return false
     try {
       const stat = statSync(dep.path)
-      if (stat.mtimeMs !== dep.mtimeMs || stat.size !== dep.size) return false
+      if (stat.mtimeMs === dep.mtimeMs && stat.size === dep.size) continue
+      if (
+        stat.size !== dep.size ||
+        typeof dep.hash !== 'string' ||
+        hashContent(readFileSync(dep.path, 'utf-8').replace(/^\uFEFF/, '')) !==
+          dep.hash
+      ) {
+        return false
+      }
+      dep.mtimeMs = stat.mtimeMs
     } catch {
       return false
     }
