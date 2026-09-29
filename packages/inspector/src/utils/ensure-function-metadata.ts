@@ -259,6 +259,9 @@ export function ensureFunctionMetadata(
   }
 
   const meta = state.functions.meta[pikkuFuncId]!
+  if (!meta.sourceFile && funcInitializer) {
+    meta.sourceFile = funcInitializer.getSourceFile().fileName
+  }
 
   if (funcInitializer && checker) {
     let pikkuFuncCall: ts.CallExpression | null = null
