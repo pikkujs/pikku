@@ -8,7 +8,14 @@ import {
   writeFileSync,
 } from 'fs'
 import { dirname, join, resolve } from 'path'
-import { createGenerator, RootlessError } from 'ts-json-schema-generator'
+import {
+  createFormatter,
+  createParser,
+  DEFAULT_CONFIG,
+  RootlessError,
+  SchemaGenerator,
+  type Config,
+} from 'ts-json-schema-generator'
 import { register } from 'tsx/esm/api'
 import * as z from 'zod'
 import { findZodTransform } from './find-zod-transform.js'
@@ -228,6 +235,48 @@ export function writeDiskTSSchemas(
   }
 }
 
+// The base class walks every source file again for each type it looks up by
+// name, which was nearly all of schema generation (8.7s for 677 types on e2e).
+class IndexedSchemaGenerator extends SchemaGenerator {
+  private projectTypes?: Map<string, ts.Node>
+  private allTypes?: Map<string, ts.Node>
+
+  protected override findNamedNode(fullName: string): ts.Node {
+    const typeChecker = this.program.getTypeChecker()
+    if (!this.projectTypes) {
+      this.projectTypes = new Map()
+      this.appendTypes(
+        this.partitionFiles().projectFiles,
+        typeChecker,
+        this.projectTypes
+      )
+    }
+    const projectType = this.projectTypes.get(fullName)
+    if (projectType) return projectType
+    if (!this.allTypes) {
+      this.allTypes = new Map(this.projectTypes)
+      this.appendTypes(
+        this.partitionFiles().externalFiles,
+        typeChecker,
+        this.allTypes
+      )
+    }
+    const type = this.allTypes.get(fullName)
+    if (type) return type
+    throw new RootlessError(fullName)
+  }
+}
+
+const createIndexedGenerator = (program: ts.Program, config: Config) => {
+  const completedConfig = { ...DEFAULT_CONFIG, ...config }
+  return new IndexedSchemaGenerator(
+    program,
+    createParser(program, completedConfig),
+    createFormatter(completedConfig),
+    completedConfig
+  )
+}
+
 function createProgramWithVirtualFile(
   logger: InspectorLogger,
   tsconfig: string,
@@ -373,8 +422,7 @@ function generateTSSchemas(
     customTypesContent
   )
 
-  const generator = createGenerator({
-    tsProgram: program,
+  const generator = createIndexedGenerator(program, {
     skipTypeCheck: true,
     topRef: false,
     discriminatorType: 'open-api',
