@@ -30,6 +30,7 @@ import {
   flagAttentionReason,
   type FlagBoardRow,
 } from './flag-lanes'
+import { flagTitle } from './FlagRow'
 
 type FlagDetailPanelProps = {
   flag: FlagBoardRow | null
@@ -128,7 +129,7 @@ export const FlagDetailPanel: React.FC<FlagDetailPanelProps> = ({
       opened={opened}
       onClose={onClose}
       width="lg"
-      title={flag ? asI18n(flag.name) : undefined}
+      title={flag ? asI18n(flagTitle(flag.name)) : undefined}
       testId="flag-panel"
     >
       {flag && (
