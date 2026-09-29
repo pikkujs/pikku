@@ -56,9 +56,13 @@ const SecretStatus: React.FC<{ source: string; name: string }> = ({
           </Text>
           {!stored && (
             <Anchor
-              component="button"
+              href="/credentials"
               size="sm"
-              onClick={() => navigate('/credentials')}
+              data-testid="webhook-source-secret-link"
+              onClick={(e: React.MouseEvent) => {
+                e.preventDefault()
+                navigate('/credentials')
+              }}
             >
               {m.webhook_source_secret_open()}
             </Anchor>

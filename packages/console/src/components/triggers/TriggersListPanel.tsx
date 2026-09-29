@@ -6,11 +6,14 @@ import { useLocale } from '@/i18n/config'
 import { ChevronRight, Webhook, Zap } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePanelUrl } from '../../hooks/usePanelUrl'
+import { useTriggerItems } from '../../hooks/useTriggerItems'
 import {
+  hasSource,
+  matchesTriggerQuery,
   sourcePanelMetadata,
-  useTriggerItems,
+  triggerCounts,
   type TriggerPair,
-} from '../../hooks/useTriggerItems'
+} from '../../lib/trigger-pairs'
 import { toEnglishName } from '../../lib/strings'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { CardsPage } from '../ui/CardsPage'
@@ -81,23 +84,8 @@ export const TriggersListPanel: React.FC<TriggersListPanelProps> = ({
       openTriggerSource(pair.name, sourcePanelMetadata(pair))
     else if (pair.trigger) openTrigger(pair.name, pair.trigger)
   }
-  const total = pairs.length
-  const hasSource = (p: TriggerPair) => !!(p.source || p.webhook)
-  const listening = pairs.filter(hasSource).length
-  const running = pairs.filter((p) => p.trigger).length
-  const incomplete = pairs.filter((p) => !hasSource(p) || !p.trigger).length
-  const shown = pairs.filter(
-    (pair) =>
-      !query ||
-      [
-        pair.name,
-        toEnglishName(pair.name),
-        pair.source?.pikkuFuncId,
-        pair.webhook?.source,
-        pair.webhook?.meta.route,
-        pair.trigger?.pikkuFuncId,
-      ].some((v) => v?.toLowerCase().includes(query))
-  )
+  const { total, listening, running, incomplete } = triggerCounts(pairs)
+  const shown = pairs.filter((pair) => matchesTriggerQuery(pair, query))
 
   return (
     <CardsPage>
