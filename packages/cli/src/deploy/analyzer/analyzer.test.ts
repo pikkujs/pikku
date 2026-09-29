@@ -1443,3 +1443,120 @@ describe('unroutedHttpWirings - ownership', () => {
     )
   })
 })
+
+/**
+ * A function body that calls `rpc.invoke('x')` crosses to x's unit through the
+ * DeploymentService, which only knows the units the plan binds. Grouped by
+ * service set, a caller that builds no services lands in `svc-base` while a DB
+ * callee lands in `svc-kysely`.
+ */
+function stateWithRpcInvoke(
+  extraFunctions: Record<string, unknown> = {},
+  extraRoutes: Record<string, unknown> = {}
+): InspectorState {
+  return {
+    functions: {
+      meta: {
+        getCandidate: {
+          pikkuFuncId: 'getCandidate',
+          name: 'getCandidate',
+          invokes: ['getCandidateById'],
+        },
+        getCandidateById: {
+          pikkuFuncId: 'getCandidateById',
+          name: 'getCandidateById',
+          services: { services: ['kysely'] },
+        },
+        ...extraFunctions,
+      },
+    },
+    http: {
+      meta: {
+        get: {
+          '/candidate': {
+            pikkuFuncId: 'getCandidate',
+            method: 'get',
+            route: '/candidate',
+          },
+          ...extraRoutes,
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - rpc.invoke between units', () => {
+  test('a no-service caller is bound to the DB unit of the function it invokes', () => {
+    const { units } = analyzeUnpinned(stateWithRpcInvoke(), {
+      projectId: 'test',
+    })
+    const base = units.find((u) => u.name === 'svc-base')
+    const kysely = units.find((u) => u.name === 'svc-kysely')
+    assert.deepEqual(base?.functionIds, ['getCandidate'])
+    assert.deepEqual(kysely?.functionIds, ['getCandidateById'])
+    assert.ok(base?.dependsOn.includes('svc-kysely'))
+    assert.equal(base?.dispatch?.['getCandidateById'], 'svc-kysely')
+  })
+
+  test('the callee gets an RPC unit even when nothing else wires it', () => {
+    const { units } = analyzeUnpinned(stateWithRpcInvoke(), {
+      projectId: 'test',
+    })
+    const kysely = units.find((u) => u.name === 'svc-kysely')
+    assert.ok(kysely?.handlers.some((h) => h.type === 'fetch'))
+  })
+
+  test('a callee in the same unit needs no binding', () => {
+    const { units } = analyzeUnpinned(
+      stateWithRpcInvoke({
+        getCandidateById: {
+          pikkuFuncId: 'getCandidateById',
+          name: 'getCandidateById',
+        },
+      }),
+      { projectId: 'test' }
+    )
+    const base = units.find((u) => u.name === 'svc-base')
+    assert.deepEqual(base?.dependsOn, [])
+    assert.equal(base?.dispatch, undefined)
+  })
+
+  test('calls made by a callee reached only over rpc are bound too', () => {
+    const { units } = analyzeUnpinned(
+      stateWithRpcInvoke({
+        getCandidateById: {
+          pikkuFuncId: 'getCandidateById',
+          name: 'getCandidateById',
+          services: { services: ['kysely'] },
+          invokes: ['translate'],
+        },
+        translate: {
+          pikkuFuncId: 'translate',
+          name: 'translate',
+          services: { services: ['translation'] },
+        },
+      }),
+      { projectId: 'test' }
+    )
+    const kysely = units.find((u) => u.name === 'svc-kysely')
+    assert.equal(kysely?.dispatch?.['translate'], 'svc-translation')
+    assert.ok(units.some((u) => u.name === 'svc-translation'))
+  })
+
+  test('under one unit per function, the binding is by function unit', () => {
+    const { units } = analyzeDeployment(stateWithRpcInvoke(), {
+      projectId: 'test',
+    })
+    const caller = units.find((u) => u.name === 'get-candidate')
+    assert.ok(caller?.dependsOn.includes('get-candidate-by-id'))
+    assert.equal(caller?.dispatch?.['getCandidateById'], 'get-candidate-by-id')
+  })
+})

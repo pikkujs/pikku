@@ -40,6 +40,71 @@ function invocationReceiver(node: ts.Expression): ts.Expression {
   return inner
 }
 
+/** `rpc`, or anything ending in `.rpc` (`wire.rpc`), seen through `!` and parens. */
+function isRpcReceiver(node: ts.Expression): boolean {
+  const receiver = invocationReceiver(node)
+  return ts.isIdentifier(receiver)
+    ? receiver.text === 'rpc'
+    : ts.isPropertyAccessExpression(receiver) && receiver.name.text === 'rpc'
+}
+
+/**
+ * Methods on `rpc` that call another function by name and, when that function
+ * is not bundled in the caller's deploy unit, cross to another unit through the
+ * `DeploymentService`.
+ */
+const CROSS_UNIT_RPC_METHODS = new Set(['invoke', 'remote'])
+
+/** The name argument when it is statically known: `'x'`, `"x"` or `` `x` ``. */
+function literalRpcName(arg: ts.Expression): string | undefined {
+  if (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg)) {
+    return arg.text
+  }
+  return undefined
+}
+
+/**
+ * The RPC names a function handler calls through `rpc.invoke(...)` /
+ * `rpc.remote(...)`, read from its own body.
+ *
+ * This is what the deploy planner uses to bind a unit to the units its
+ * functions call: without it, a caller and callee split into different units
+ * type-check, work in a single process, and fail on the deployed stage with
+ * "No service binding for function". `dynamic` holds the source text of calls
+ * whose name is not a literal — those cannot be planned for.
+ *
+ * Only the handler's own body is read. A call made from a helper defined
+ * elsewhere, with `rpc` passed in, is not seen.
+ */
+export function collectInvokedRpcNames(handler: ts.Node): {
+  names: string[]
+  dynamic: string[]
+} {
+  const names = new Set<string>()
+  const dynamic: string[] = []
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      CROSS_UNIT_RPC_METHODS.has(node.expression.name.text) &&
+      isRpcReceiver(node.expression.expression)
+    ) {
+      const [firstArg] = node.arguments
+      if (firstArg) {
+        const name = literalRpcName(firstArg)
+        if (name !== undefined) {
+          names.add(name)
+        } else {
+          dynamic.push(node.getText())
+        }
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(handler)
+  return { names: [...names].sort(), dynamic }
+}
+
 /**
  * Helper to extract namespace from a namespaced function reference like 'ext:hello'
  */
@@ -186,8 +251,9 @@ export function addRPCInvocations(
 
       const [firstArg] = args
       if (firstArg) {
-        if (ts.isStringLiteral(firstArg)) {
-          const functionRef = firstArg.text
+        const literalName = literalRpcName(firstArg)
+        if (literalName !== undefined) {
+          const functionRef = literalName
           logger.debug(`• Found RPC invocation: ${functionRef}`)
           state.rpc.invokedFunctions.add(functionRef)
 
@@ -206,13 +272,10 @@ export function addRPCInvocations(
           }
         }
         // Handle template literals like `function-${name}`
-        else if (
-          ts.isTemplateExpression(firstArg) ||
-          ts.isNoSubstitutionTemplateLiteral(firstArg)
-        ) {
+        else if (ts.isTemplateExpression(firstArg)) {
           logger.warn(`• Found dynamic RPC invocation: ${firstArg.getText()}`)
           logger.warn(
-            `\tYou can only use string literals for RPC function names, with ' or " and not \``
+            `\tYou can only use literal RPC function names, without \${...} substitutions`
           )
         }
       }

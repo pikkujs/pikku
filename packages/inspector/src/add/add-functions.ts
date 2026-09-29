@@ -8,6 +8,7 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
+import { collectInvokedRpcNames } from './add-rpc-invocations.js'
 import { collectStartedWorkflows } from './collect-started-workflows.js'
 import type { AuditDurability } from '@pikku/core/services'
 import type { FunctionServicesMeta } from '@pikku/core/function'
@@ -981,6 +982,13 @@ export const addFunctions: AddWiring = (
 
   const wires = extractUsedWires(handler, 2)
 
+  const invoked = collectInvokedRpcNames(handler.body)
+  for (const call of invoked.dynamic) {
+    logger.warn(
+      `• ${pikkuFuncId} calls ${call} with a computed name — the deploy planner cannot bind its unit to the callee's, so the call fails with "No service binding" if the two are deployed apart. Use a literal RPC name.`
+    )
+  }
+
   // --- Generics → ts.Type[], unwrapped from Promise ---
   const genericTypes: ts.Type[] = (typeArguments ?? [])
     .map((tn) => checker.getTypeFromTypeNode(tn))
@@ -1383,6 +1391,7 @@ export const addFunctions: AddWiring = (
     name,
     services,
     wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
+    invokes: invoked.names.length > 0 ? invoked.names : undefined,
     inputSchemaName: inputNames[0] ?? null,
     outputSchemaName: outputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,

@@ -759,39 +759,83 @@ export function analyzeDeployment(
   // Gateways depend on function units. If a function is only used via
   // a gateway (not directly wired to HTTP/queue/cron), it still needs
   // a unit with a fetch handler for RPC access.
+  const ensureRpcFunctionInUnit = (unitName: string, funcId: string) => {
+    const existing = units.find((u) => u.name === unitName)
+    if (existing?.functionIds.includes(funcId)) {
+      return
+    }
+    const funcMeta = functionsMeta[funcId]
+    if (!funcMeta) {
+      return
+    }
+    const invokedAgents = collectInvokedAgents(state, funcId)
+    addFunctionUnit({
+      name: unitName,
+      role: 'function',
+      target: resolveDeployTarget(
+        funcMeta,
+        serverlessIncompatible,
+        funcId,
+        defaultTarget
+      ),
+      functionIds: [funcId],
+      services: withAgentServices(
+        collectServicesForFunction(funcMeta),
+        invokedAgents
+      ),
+      dependsOn: [],
+      handlers: [{ type: 'fetch', routes: [] }],
+      tags: tagsFor(funcId),
+      ...(invokedAgents.length > 0 && { invokedAgents }),
+    })
+  }
+
   const unitsSnapshot = Array.from(units)
   for (const unit of unitsSnapshot) {
     for (const dep of unit.dependsOn) {
       for (const funcId of unitFunctionIds.get(dep) ?? []) {
-        const existing = units.find((u) => u.name === dep)
-        if (existing?.functionIds.includes(funcId)) {
-          continue
-        }
-        const funcMeta = functionsMeta[funcId]
-        if (!funcMeta) {
-          continue
-        }
-        const invokedAgents = collectInvokedAgents(state, funcId)
-        addFunctionUnit({
-          name: dep,
-          role: 'function',
-          target: resolveDeployTarget(
-            funcMeta,
-            serverlessIncompatible,
-            funcId,
-            defaultTarget
-          ),
-          functionIds: [funcId],
-          services: withAgentServices(
-            collectServicesForFunction(funcMeta),
-            invokedAgents
-          ),
-          dependsOn: [],
-          handlers: [{ type: 'fetch', routes: [] }],
-          tags: tagsFor(funcId),
-          ...(invokedAgents.length > 0 && { invokedAgents }),
-        })
+        ensureRpcFunctionInUnit(dep, funcId)
       }
+    }
+  }
+
+  // ── Step 6b: Bind units to the functions their bodies rpc.invoke ───
+  // A call to a function bundled in another unit leaves the process through
+  // the DeploymentService, which only knows the units named here. Grouped
+  // unit names are not RPC names, so the target goes in `dispatch` as well
+  // as `dependsOn`. A worklist, because a callee pulled into a unit only for
+  // this may itself call further.
+  const rpcNameToFuncId = {
+    ...state.rpc?.exposedMeta,
+    ...state.rpc?.internalMeta,
+  } as Record<string, string>
+  const pending = units.flatMap((u) =>
+    u.functionIds.map((funcId) => [u.name, funcId] as const)
+  )
+  const queued = new Set(pending.map(([u, f]) => `${u}\0${f}`))
+  while (pending.length > 0) {
+    const [unitName, callerId] = pending.shift()!
+    const unit = units.find((u) => u.name === unitName)!
+    for (const rpcName of functionsMeta[callerId]?.invokes ?? []) {
+      let targetUnit = addonUnitByRpcName.get(rpcName)
+      if (!targetUnit) {
+        const calleeId = rpcNameToFuncId[rpcName] ?? rpcName
+        if (!functionsMeta[calleeId] || unit.functionIds.includes(calleeId)) {
+          continue
+        }
+        targetUnit = unitFor(calleeId)
+        ensureRpcFunctionInUnit(targetUnit, calleeId)
+        const key = `${targetUnit}\0${calleeId}`
+        if (!queued.has(key)) {
+          queued.add(key)
+          pending.push([targetUnit, calleeId])
+        }
+      }
+      if (targetUnit === unit.name) continue
+      if (!unit.dependsOn.includes(targetUnit)) {
+        unit.dependsOn.push(targetUnit)
+      }
+      unit.dispatch = { ...(unit.dispatch ?? {}), [rpcName]: targetUnit }
     }
   }
 
