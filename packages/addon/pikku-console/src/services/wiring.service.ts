@@ -227,6 +227,17 @@ export interface TriggerSourceMeta {
   description?: string
 }
 
+export interface WebhookSourceMeta {
+  name: string
+  method: string | string[]
+  route: string
+  events: string[]
+  receive?: string
+  check?: string
+  setup?: string
+  teardown?: string
+}
+
 export interface MetaCounts {
   functions: number
   workflows: number
@@ -283,6 +294,7 @@ export interface PikkuMetaState {
   features: FeaturesMeta
   triggerMeta: Record<string, TriggerMeta>
   triggerSourceMeta: Record<string, TriggerSourceMeta>
+  webhookSourceMeta: Record<string, WebhookSourceMeta>
   middlewareGroupsMeta: MiddlewareGroupsMeta
   permissionsGroupsMeta: PermissionsGroupsMeta
   agentsMeta: AgentsMeta
@@ -327,6 +339,7 @@ export class WiringService {
       features,
       triggerMeta,
       triggerSourceMeta,
+      webhookSourceMeta,
       middlewareGroupsMeta,
       permissionsGroupsMeta,
       agentsMeta,
@@ -353,6 +366,7 @@ export class WiringService {
       this.metaService.getFeaturesMeta(),
       this.metaService.getTriggerMeta(),
       this.metaService.getTriggerSourceMeta(),
+      this.metaService.getWebhookSourcesMeta(),
       this.metaService.getMiddlewareGroupsMeta(),
       this.metaService.getPermissionsGroupsMeta(),
       this.metaService.getAgentsMeta(),
@@ -627,6 +641,7 @@ export class WiringService {
       triggerMeta: triggerMeta as unknown as AllMeta['triggerMeta'],
       triggerSourceMeta:
         triggerSourceMeta as unknown as AllMeta['triggerSourceMeta'],
+      webhookSourceMeta,
       middlewareGroupsMeta,
       permissionsGroupsMeta,
       agentsMeta,

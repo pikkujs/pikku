@@ -53,6 +53,7 @@ import {
   TriggerSourceConfiguration,
 } from '../project/panels/WiringPanels'
 import { GatewayConfiguration } from '../project/panels/GatewayConfiguration'
+import { WebhookSourceConfiguration } from '../triggers/WebhookSourcePanel'
 import { MiddlewareConfiguration } from '../project/panels/MiddlewarePanels'
 import { PermissionConfiguration } from '../project/panels/PermissionsPanels'
 import { AgentTabbedPanel } from '../project/panels/AgentTabbedPanel'
@@ -501,10 +502,14 @@ export const createPanelChildren = (
           title: 'Configuration',
           content: (
             <Box px="md">
-              <TriggerSourceConfiguration
-                wireId={panelData.id}
-                metadata={panelData.metadata}
-              />
+              {panelData.metadata?.kind === 'webhook' ? (
+                <WebhookSourceConfiguration webhook={panelData.metadata} />
+              ) : (
+                <TriggerSourceConfiguration
+                  wireId={panelData.id}
+                  metadata={panelData.metadata}
+                />
+              )}
             </Box>
           ),
         },
