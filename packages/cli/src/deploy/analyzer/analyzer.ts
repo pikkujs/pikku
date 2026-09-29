@@ -93,16 +93,25 @@ export interface AnalyzerOptions {
  */
 /**
  * Scaffold functions the analyzer re-emits as concrete routes: `agentCaller`'s
- * `/rpc/agent/:agentName` becomes one route per agent, and the thread readers
- * ride the agent gateway unit. Their parameterized declarations are therefore
- * expected to own no unit, which is what keeps them out of
- * `unroutedHttpWirings`.
+ * `/rpc/agent/:agentName` becomes one route per agent. Their parameterized
+ * declarations are therefore expected to own no unit, which is what keeps them
+ * out of `unroutedHttpWirings`.
  */
-const EXPANDED_SCAFFOLD_CALLERS = new Set([
+const GATEWAY_EXPANDED_CALLERS = new Set([
   'agentCaller',
   'agentStreamCaller',
   'agentApproveCaller',
   'agentResumeCaller',
+])
+
+/**
+ * Scaffold functions skipped as units but NOT exempt from the unrouted check.
+ * The thread readers ride the agent gateway unit but the gateway declares no
+ * route for them, so a declared HTTP route onto one has no unit and must be
+ * reported rather than silently dropped.
+ */
+const SKIPPED_SCAFFOLD_UNITS = new Set([
+  ...GATEWAY_EXPANDED_CALLERS,
   'getAgentThreads',
   'getAgentThreadMessages',
   'getAgentThreadRuns',
@@ -166,6 +175,10 @@ export function analyzeDeployment(
   const httpPrefix = (options.globalHTTPPrefix ?? '').replace(/\/+$/, '')
   const prefixed = (route: string) => `${httpPrefix}${route}`
   const units: DeploymentUnit[] = []
+  // A synthetic bridge (the OPTIONS preflight beside a catch-all) belongs to
+  // exactly one unit. When two named functions share a path, the bridge's route
+  // is in both owners' `owned` sets; this keeps the second from claiming it too.
+  const claimedSyntheticBridges = new Set<string>()
   const queues: QueueDefinition[] = []
   const scheduledTasks: ScheduledTaskDefinition[] = []
   const channels: ChannelDefinition[] = []
@@ -335,7 +348,7 @@ export function analyzeDeployment(
     }
 
     // Skip scaffold catch-all functions — they're bundled into units that need them
-    if (EXPANDED_SCAFFOLD_CALLERS.has(funcId)) {
+    if (SKIPPED_SCAFFOLD_UNITS.has(funcId)) {
       continue
     }
 
@@ -349,7 +362,11 @@ export function analyzeDeployment(
     const handlers: DeploymentHandler[] = []
 
     // HTTP routes for this function
-    const routes = collectHttpRoutes(httpMeta, funcId)
+    const routes = collectHttpRoutes(
+      httpMeta,
+      funcId,
+      claimedSyntheticBridges
+    )
     if (routes.length > 0) {
       handlers.push({ type: 'fetch', routes })
     }
@@ -488,7 +505,9 @@ export function analyzeDeployment(
     for (const [funcName, funcMeta] of wired) {
       const rpcName = `${namespace}:${funcName}`
       functionIds.push(rpcName)
-      routes.push(...collectHttpRoutes(httpMeta, rpcName))
+      routes.push(
+        ...collectHttpRoutes(httpMeta, rpcName, claimedSyntheticBridges)
+      )
       if (isExposed(funcName, funcMeta)) {
         addonUnitByRpcName.set(rpcName, unitName)
         routes.push({
@@ -1329,7 +1348,9 @@ export function unroutedHttpWirings(
     for (const handler of unit.handlers) {
       if (handler.type !== 'fetch') continue
       for (const route of handler.routes) {
-        served.add(`${route.method.toUpperCase()} ${route.route}`)
+        served.add(
+          `${route.method.toUpperCase()} ${route.route} ${route.pikkuFuncId}`
+        )
       }
     }
   }
@@ -1339,8 +1360,8 @@ export function unroutedHttpWirings(
     const methodRoutes = httpMeta[method]
     if (!methodRoutes) continue
     for (const routeMeta of values(methodRoutes)) {
-      if (EXPANDED_SCAFFOLD_CALLERS.has(routeMeta.pikkuFuncId)) continue
-      const key = `${method.toUpperCase()} ${routeMeta.route}`
+      if (GATEWAY_EXPANDED_CALLERS.has(routeMeta.pikkuFuncId)) continue
+      const key = `${method.toUpperCase()} ${routeMeta.route} ${routeMeta.pikkuFuncId}`
       if (served.has(key) || seen.has(key)) continue
       seen.add(key)
       unrouted.push({
@@ -1355,7 +1376,8 @@ export function unroutedHttpWirings(
 
 function collectHttpRoutes(
   httpMeta: HTTPWiringsMeta,
-  funcId: string
+  funcId: string,
+  claimedSyntheticBridges?: Set<string>
 ): HttpRouteInfo[] {
   const routes: HttpRouteInfo[] = []
   const owned = new Set<string>()
@@ -1387,6 +1409,11 @@ function collectHttpRoutes(
         isSyntheticHttpBridge(routeMeta.pikkuFuncId) &&
         owned.has(routeMeta.route)
       ) {
+        const bridgeKey = `${method.toUpperCase()} ${routeMeta.route} ${routeMeta.pikkuFuncId}`
+        if (claimedSyntheticBridges) {
+          if (claimedSyntheticBridges.has(bridgeKey)) continue
+          claimedSyntheticBridges.add(bridgeKey)
+        }
         routes.push({
           method: method.toUpperCase(),
           route: routeMeta.route,

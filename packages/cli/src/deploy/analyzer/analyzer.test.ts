@@ -1332,3 +1332,112 @@ describe('unroutedHttpWirings', () => {
     assert.deepEqual(unroutedHttpWirings(httpMeta, []), [])
   })
 })
+
+function stateWithTwoFunctionsOnOnePath(): InspectorState {
+  return {
+    functions: {
+      meta: {
+        getItems: { pikkuFuncId: 'getItems', name: 'getItems' },
+        postItems: { pikkuFuncId: 'postItems', name: 'postItems' },
+        'http:options:/items': {
+          pikkuFuncId: 'http:options:/items',
+          name: 'http:options:/items',
+        },
+      },
+    },
+    http: {
+      meta: {
+        get: {
+          '/items': { pikkuFuncId: 'getItems', method: 'get', route: '/items' },
+        },
+        post: {
+          '/items': {
+            pikkuFuncId: 'postItems',
+            method: 'post',
+            route: '/items',
+          },
+        },
+        options: {
+          '/items': {
+            pikkuFuncId: 'http:options:/items',
+            method: 'options',
+            route: '/items',
+          },
+        },
+      },
+    },
+    agents: { agentsMeta: {} },
+    mcpEndpoints: { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} },
+    channels: { meta: {} },
+    queueWorkers: { meta: {} },
+    scheduledTasks: { meta: {} },
+    workflows: { graphMeta: {} },
+    secrets: { definitions: [] },
+    variables: { definitions: [] },
+  } as unknown as InspectorState
+}
+
+describe('analyzeDeployment - a synthetic bridge shared by two owners', () => {
+  test('the bridge is attached to exactly one unit', () => {
+    const manifest = analyzeDeployment(stateWithTwoFunctionsOnOnePath(), {
+      projectId: 'test',
+    })
+    const bridges = manifest.units
+      .flatMap((u) =>
+        u.handlers.flatMap((h) => (h.type === 'fetch' ? h.routes : []))
+      )
+      .filter((r) => r.method === 'OPTIONS' && r.route === '/items')
+    assert.equal(bridges.length, 1)
+  })
+})
+
+describe('unroutedHttpWirings - ownership', () => {
+  // Another function's route on the same method and path must not satisfy the
+  // declaration: the declared handler would still be missing.
+  test('a different pikkuFuncId on the same method and path does not count', () => {
+    const httpMeta = {
+      get: {
+        '/mcp': {
+          pikkuFuncId: 'declaredThing',
+          method: 'get',
+          route: '/mcp',
+        },
+      },
+    } as any
+    const units = [
+      {
+        name: 'u',
+        handlers: [
+          {
+            type: 'fetch',
+            routes: [
+              { method: 'GET', route: '/mcp', pikkuFuncId: 'mcpGateway' },
+            ],
+          },
+        ],
+      },
+    ] as any
+    assert.deepEqual(
+      unroutedHttpWirings(httpMeta, units).map((r) => r.pikkuFuncId),
+      ['declaredThing']
+    )
+  })
+
+  // The thread readers ride the gateway unit but declare no route of their own,
+  // so a declared HTTP route onto one reaches nothing and must be reported.
+  test('a declared route onto a thread reader is reported', () => {
+    const httpMeta = {
+      get: {
+        '/threads': {
+          pikkuFuncId: 'getAgentThreads',
+          method: 'get',
+          route: '/threads',
+        },
+      },
+    } as any
+    assert.deepEqual(
+      unroutedHttpWirings(httpMeta, []).map((r) => r.route),
+      ['/threads']
+    )
+  })
+})
