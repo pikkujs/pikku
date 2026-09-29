@@ -24,46 +24,38 @@ beforeEach(async () => {
 })
 
 describe('KyselyTriggerSourceStore', () => {
-  test('registers declared sources, disabled', async () => {
+  test('registers declared sources', async () => {
     const rows = await store.listTriggerSources()
     assert.deepEqual(
-      rows.map((r) => [r.name, r.enabled, r.declared]),
+      rows.map((r) => [r.name, r.declared, r.status]),
       [
-        ['github', false, true],
-        ['stripe', false, true],
+        ['github', true, null],
+        ['stripe', true, null],
       ]
     )
   })
 
-  test('records enabling and keeps it across a sync', async () => {
-    await store.setTriggerSourceEnabled(
-      'stripe',
-      true,
-      { status: 'created', state: { id: 'we_1' } },
-      'u1'
-    )
+  test('records what setup registered and keeps it across a sync', async () => {
+    await store.recordTriggerSource('stripe', {
+      status: 'created',
+      state: { id: 'we_1' },
+    })
     await store.syncTriggerSources([{ name: 'stripe', kind: 'webhook' }])
 
     const row = await store.getTriggerSource('stripe')
-    assert.equal(row!.enabled, true)
+    assert.equal(row!.status, 'created')
     assert.deepEqual(row!.state, { id: 'we_1' })
-    assert.equal(row!.updatedBy, 'u1')
     assert.equal((await store.getTriggerSource('github'))!.declared, false)
   })
 
-  test('prune keeps an enabled orphan unless forced', async () => {
-    await store.setTriggerSourceEnabled('stripe', true, { status: 'created' })
-    await store.syncTriggerSources([])
-
-    assert.deepEqual(await store.pruneTriggerSources(), ['github'])
-    assert.deepEqual(await store.pruneTriggerSources({ force: true }), [
-      'stripe',
-    ])
+  test('forgets a torn-down source', async () => {
+    await store.deleteTriggerSource('github')
+    assert.equal(await store.getTriggerSource('github'), null)
   })
 
   test('refuses an unknown source', async () => {
     await assert.rejects(
-      store.setTriggerSourceEnabled('nope', true, { status: 'created' })
+      store.recordTriggerSource('nope', { status: 'created' })
     )
   })
 })

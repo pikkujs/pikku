@@ -22,12 +22,10 @@ const parseState = (value: unknown) => {
 const toRow = (row: Selectable<PikkuTriggerSourceTable>): TriggerSourceRow => ({
   name: row.name,
   kind: row.kind as TriggerSourceRow['kind'],
-  enabled: !!row.enabled,
   declared: !!row.declared,
   status: row.status,
   state: parseState(row.state),
   detail: row.detail,
-  updatedBy: row.updatedBy,
   updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
 })
 
@@ -86,22 +84,18 @@ export class KyselyTriggerSourceStore implements TriggerSourceStore {
     return row ? toRow(row) : null
   }
 
-  async setTriggerSourceEnabled(
+  async recordTriggerSource(
     name: string,
-    enabled: boolean,
-    result: TriggerSourceResult,
-    actor?: string
+    result: TriggerSourceResult
   ): Promise<void> {
     const { numUpdatedRows } = await this.db
       .updateTable('pikkuTriggerSource')
       .set({
-        enabled,
         status: result.status,
         ...(result.state !== undefined
           ? { state: result.state ? JSON.stringify(result.state) : null }
           : {}),
         detail: result.detail ?? null,
-        updatedBy: actor ?? null,
         updatedAt: new Date(),
       })
       .where('name', '=', name)
@@ -111,12 +105,10 @@ export class KyselyTriggerSourceStore implements TriggerSourceStore {
     }
   }
 
-  async pruneTriggerSources({ force = false } = {}): Promise<string[]> {
-    let query = this.db
+  async deleteTriggerSource(name: string): Promise<void> {
+    await this.db
       .deleteFrom('pikkuTriggerSource')
-      .where('declared', '=', false)
-    if (!force) query = query.where('enabled', '=', false)
-    const rows = await query.returning('name').execute()
-    return rows.map((r) => r.name)
+      .where('name', '=', name)
+      .execute()
   }
 }

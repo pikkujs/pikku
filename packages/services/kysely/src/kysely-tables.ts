@@ -266,17 +266,15 @@ export interface PikkuFeatureFlagsTable {
   updatedAt: Generated<Date>
 }
 
-/** Whether an operator enabled a trigger source, and what enabling registered. */
+/** What a declared trigger source registered with its provider. */
 export interface PikkuTriggerSourceTable {
   name: string
   kind: string
-  enabled: Generated<boolean>
   declared: Generated<boolean>
   status: string | null
   /** The last setup's provider identifiers as JSON; never a secret. */
   state: string | null
   detail: string | null
-  updatedBy: string | null
   updatedAt: Generated<Date>
 }
 

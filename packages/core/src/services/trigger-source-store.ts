@@ -5,19 +5,17 @@ export type TriggerSourceKind = 'webhook'
 export type DeclaredTriggerSource = { name: string; kind: TriggerSourceKind }
 
 /**
- * One trigger source as an operator sees it. `state` is what the last `setup`
- * returned — provider identifiers only; any secret it issued lives in the
- * credential service.
+ * What was registered with the provider for one declared trigger source.
+ * `state` is what the last `setup` returned — provider identifiers only; any
+ * secret it issued lives in the credential service.
  */
 export type TriggerSourceRow = DeclaredTriggerSource & {
-  enabled: boolean
-  /** False once the declaration has gone from code, awaiting prune. */
+  /** False once the declaration has gone from code without a teardown: an orphan. */
   declared: boolean
   status: string | null
   state: WebhookSourceState | null
-  /** The last step's instructions or error, for the operator. */
+  /** The last step's instructions or error. */
   detail: string | null
-  updatedBy: string | null
   updatedAt: string | null
 }
 
@@ -27,27 +25,14 @@ export type TriggerSourceResult = {
   detail?: string | null
 }
 
-/**
- * Which trigger sources an operator has enabled on this deployment, and what
- * enabling them registered with the provider.
- */
+/** What each declared trigger source registered with its provider. */
 export interface TriggerSourceStore {
-  /** Upserts the declared sources and marks the rest undeclared. Never touches `enabled`. */
+  /** Upserts the declared sources and marks the rest undeclared. */
   syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
   listTriggerSources(): Promise<TriggerSourceRow[]>
   getTriggerSource(name: string): Promise<TriggerSourceRow | null>
-  setTriggerSourceEnabled(
-    name: string,
-    enabled: boolean,
-    result: TriggerSourceResult,
-    actor?: string
-  ): Promise<void>
-  /**
-   * Deletes undeclared rows. An undeclared row still enabled is kept unless
-   * `force`: its provider registration outlived its code and nothing is left
-   * to tear it down.
-   */
-  pruneTriggerSources(options?: { force?: boolean }): Promise<string[]>
+  recordTriggerSource(name: string, result: TriggerSourceResult): Promise<void>
+  deleteTriggerSource(name: string): Promise<void>
 }
 
 export class InMemoryTriggerSourceStore implements TriggerSourceStore {
@@ -67,12 +52,10 @@ export class InMemoryTriggerSourceStore implements TriggerSourceStore {
       this.rows.set(name, {
         name,
         kind,
-        enabled: false,
         declared: true,
         status: null,
         state: null,
         detail: null,
-        updatedBy: null,
         updatedAt: null,
       })
     }
@@ -89,30 +72,16 @@ export class InMemoryTriggerSourceStore implements TriggerSourceStore {
     return row ? { ...row } : null
   }
 
-  async setTriggerSourceEnabled(
-    name: string,
-    enabled: boolean,
-    result: TriggerSourceResult,
-    actor?: string
-  ) {
+  async recordTriggerSource(name: string, result: TriggerSourceResult) {
     const row = this.rows.get(name)
     if (!row) throw new Error(`Unknown trigger source: ${name}`)
-    row.enabled = enabled
     row.status = result.status
     if (result.state !== undefined) row.state = result.state
     row.detail = result.detail ?? null
-    row.updatedBy = actor ?? null
     row.updatedAt = new Date().toISOString()
   }
 
-  async pruneTriggerSources({ force = false } = {}) {
-    const pruned: string[] = []
-    for (const row of this.rows.values()) {
-      if (!row.declared && (force || !row.enabled)) {
-        this.rows.delete(row.name)
-        pruned.push(row.name)
-      }
-    }
-    return pruned
+  async deleteTriggerSource(name: string) {
+    this.rows.delete(name)
   }
 }

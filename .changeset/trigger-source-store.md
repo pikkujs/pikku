@@ -5,4 +5,4 @@
 '@pikku/better-auth': minor
 ---
 
-Trigger sources are enabled at runtime. `TriggerSourceStore` (in-memory and `KyselyTriggerSourceStore` on `pikku_trigger_source`) records which sources an operator enabled and what setup registered; `syncTriggerSources` and `setWebhookSourceEnabled` run the sync and the setup/teardown in the app, and the admin addon exposes list, enable/disable, sync and prune under the new `admin:triggers` scopes.
+A declared webhook source is a registered one. `reconcileTriggerSources` sets up every declared source with its provider (check, then setup where missing or drifted) and `teardownTriggerSources` removes named ones, recording what was registered in a `TriggerSourceStore` (in-memory, or `KyselyTriggerSourceStore` on `pikku_trigger_source`). The admin addon exposes list, reconcile, teardown and forget under the new `admin:triggers` scopes.

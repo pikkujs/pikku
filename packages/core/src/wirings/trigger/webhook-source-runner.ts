@@ -384,54 +384,80 @@ export const declaredTriggerSources = (): DeclaredTriggerSource[] =>
     kind: 'webhook',
   }))
 
-/** Upserts the declared sources and marks the rest undeclared; `enabled` is left alone. */
-export const syncTriggerSources = async (
-  singletonServices: CoreSingletonServices = getSingletonServices()
-) =>
-  requireTriggerSourceStore(singletonServices).syncTriggerSources(
-    declaredTriggerSources()
-  )
+const detailOf = (outcome: WebhookSourceOutcome) =>
+  outcome.instructions ?? outcome.error ?? outcome.reason ?? null
 
 /**
- * Enables or disables one webhook source: `setup` (after `check`) or
- * `teardown` with the provider, recorded in the store. A failed step leaves
- * `enabled` as it was.
+ * Registers every declared webhook source with its provider: `check`, then
+ * `setup` where it is missing or drifted, recording what was registered.
+ * Run after a deployment goes live.
  */
-export const setWebhookSourceEnabled = async ({
-  name,
-  enabled,
-  actor,
+export const reconcileTriggerSources = async ({
   singletonServices = getSingletonServices(),
   ...input
 }: LifecycleInput & {
-  name: string
-  enabled: boolean
-  actor?: string
   singletonServices?: CoreSingletonServices
-}): Promise<WebhookSourceOutcome> => {
+}): Promise<WebhookSourceOutcome[]> => {
   const store = requireTriggerSourceStore(singletonServices)
-  const meta = getSourceMeta(name)
-  const row = await store.getTriggerSource(name)
-  if (!row) {
-    throw new Error(`Trigger source '${name}' is not synced`)
-  }
-  const outcome = await runSourceLifecycleStep(
-    meta,
-    enabled ? 'setup' : 'teardown',
-    input,
-    row.state ?? undefined,
-    singletonServices
-  )
-  const failed = outcome.status === 'failed'
-  await store.setTriggerSourceEnabled(
-    name,
-    failed ? row.enabled : enabled,
-    {
+  await store.syncTriggerSources(declaredTriggerSources())
+  const outcomes: WebhookSourceOutcome[] = []
+  for (const meta of Object.values(
+    pikkuState(null, 'trigger', 'webhookSourceMeta')
+  )) {
+    const row = await store.getTriggerSource(meta.name)
+    const outcome = await runSourceLifecycleStep(
+      meta,
+      'setup',
+      input,
+      row?.state ?? undefined,
+      singletonServices
+    )
+    await store.recordTriggerSource(meta.name, {
       status: outcome.status,
-      state: failed ? row.state : enabled ? (outcome.state ?? row.state) : null,
-      detail: outcome.instructions ?? outcome.error ?? outcome.reason ?? null,
-    },
-    actor
-  )
-  return outcome
+      ...(outcome.state ? { state: outcome.state } : {}),
+      detail: detailOf(outcome),
+    })
+    outcomes.push(outcome)
+  }
+  return outcomes
+}
+
+/**
+ * Removes the named webhook sources from their providers and forgets them.
+ * Run on the outgoing deployment for the sources the next release drops,
+ * since only the code that set a source up can tear it down.
+ */
+export const teardownTriggerSources = async ({
+  names,
+  singletonServices = getSingletonServices(),
+  ...input
+}: LifecycleInput & {
+  names: string[]
+  singletonServices?: CoreSingletonServices
+}): Promise<WebhookSourceOutcome[]> => {
+  const store = requireTriggerSourceStore(singletonServices)
+  const outcomes: WebhookSourceOutcome[] = []
+  for (const name of names) {
+    const meta = getSourceMeta(name)
+    const row = await store.getTriggerSource(name)
+    const outcome = await runSourceLifecycleStep(
+      meta,
+      'teardown',
+      input,
+      row?.state ?? undefined,
+      singletonServices
+    )
+    if (outcome.status === 'failed') {
+      if (row) {
+        await store.recordTriggerSource(name, {
+          status: 'failed',
+          detail: detailOf(outcome),
+        })
+      }
+    } else {
+      await store.deleteTriggerSource(name)
+    }
+    outcomes.push(outcome)
+  }
+  return outcomes
 }

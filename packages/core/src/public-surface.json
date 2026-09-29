@@ -185,10 +185,10 @@
     "declaredTriggerSources",
     "dispatchWebhookSourceJob",
     "receiveWebhookSourceRequest",
+    "reconcileTriggerSources",
     "runWebhookSourceLifecycle",
-    "setWebhookSourceEnabled",
     "subscribedWebhookEvents",
-    "syncTriggerSources",
+    "teardownTriggerSources",
     "wireTrigger",
     "wireTriggerSource",
     "wireTriggerWebhookSource"

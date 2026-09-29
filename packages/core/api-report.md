@@ -2970,10 +2970,10 @@ export abstract class PikkuTriggerService implements TriggerService {
   protected async onTriggerFire(triggerName: string, targets: TriggerTarget[], data: unknown): Promise<void>
 }
 receiveWebhookSourceRequest: (sourceName: string, wire: { http?: PikkuHTTP<unknown> | undefined; }) => Promise<Response | { received: number; }>
+reconcileTriggerSources: ({ singletonServices, ...input }: LifecycleInput & { singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
 runWebhookSourceLifecycle: ({ action, previous, singletonServices, ...input }: LifecycleInput & { action: "check" | "setup" | "teardown"; previous?: Record<string, WebhookSourceState> | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
-setWebhookSourceEnabled: ({ name, enabled, actor, singletonServices, ...input }: LifecycleInput & { name: string; enabled: boolean; actor?: string | undefined; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome>
 subscribedWebhookEvents: (source: string) => string[]
-syncTriggerSources: (singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }>) => Promise<void>
+teardownTriggerSources: ({ names, singletonServices, ...input }: LifecycleInput & { names: string[]; singletonServices?: CoreSingletonServices<{ logLevel?: LogLevel | undefined; secrets?: { requireAllowedHosts?: boolean | undefined; } | undefined; workflow?: WorkflowServiceConfig | undefined; webhook?: WebhookServiceConfig | undefined; postgres?: PostgresConfig | undefined; }> | undefined; }) => Promise<WebhookSourceOutcome[]>
 export type TriggerEvent<Name extends string = string, Data = unknown> = {
   name: Name
   id?: string
@@ -4999,10 +4999,10 @@ export class InMemoryTriggerService extends PikkuTriggerService {
 }
 export class InMemoryTriggerSourceStore implements TriggerSourceStore {
   async syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
-  async listTriggerSources(): Promise<{ name: string; kind: "webhook"; enabled: boolean; declared: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedBy: string | null; updatedAt: string | null; }[]>
-  async getTriggerSource(name: string): Promise<{ name: string; kind: "webhook"; enabled: boolean; declared: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedBy: string | null; updatedAt: string | null; } | null>
-  async setTriggerSourceEnabled(name: string, enabled: boolean, result: TriggerSourceResult, actor?: string): Promise<void>
-  async pruneTriggerSources({ force = false } = {}): Promise<string[]>
+  async listTriggerSources(): Promise<{ name: string; kind: "webhook"; declared: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedAt: string | null; }[]>
+  async getTriggerSource(name: string): Promise<{ name: string; kind: "webhook"; declared: boolean; status: string | null; state: WebhookSourceState | null; detail: string | null; updatedAt: string | null; } | null>
+  async recordTriggerSource(name: string, result: TriggerSourceResult): Promise<void>
+  async deleteTriggerSource(name: string): Promise<void>
 }
 export class InMemoryWorkflowService extends PikkuWorkflowService implements WorkflowRunService {
   constructor(options: WorkflowQueueOptions = {})
@@ -5466,20 +5466,18 @@ export type TriggerSourceResult = {
   detail?: string | null
 }
 export type TriggerSourceRow = DeclaredTriggerSource & {
-  enabled: boolean
   declared: boolean
   status: string | null
   state: WebhookSourceState | null
   detail: string | null
-  updatedBy: string | null
   updatedAt: string | null
 }
 export interface TriggerSourceStore {
   syncTriggerSources(sources: DeclaredTriggerSource[]): Promise<void>
   listTriggerSources(): Promise<TriggerSourceRow[]>
   getTriggerSource(name: string): Promise<TriggerSourceRow | null>
-  setTriggerSourceEnabled(name: string, enabled: boolean, result: TriggerSourceResult, actor?: string): Promise<void>
-  pruneTriggerSources(options?: { force?: boolean }): Promise<string[]>
+  recordTriggerSource(name: string, result: TriggerSourceResult): Promise<void>
+  deleteTriggerSource(name: string): Promise<void>
 }
 export class TypedCredentialService< TMap = Record<string, unknown>, > implements CredentialService {
   constructor(private credentials: CredentialService, private credentialsMeta: Record<string, CredentialMetaInfo>)

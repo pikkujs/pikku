@@ -69,11 +69,11 @@ defineScope({
         description: 'Trigger sources',
         scopes: {
           read: {
-            description: 'View trigger sources and whether they are enabled',
+            description: 'View trigger sources and what they registered',
           },
           manage: {
             description:
-              'Enable and disable trigger sources, registering them with their provider',
+              'Set up and remove trigger sources with their providers',
           },
         },
       },
