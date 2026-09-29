@@ -5,19 +5,104 @@ import type { FlowDirection } from '../context/FlowDirectionContext'
 
 const elk = new ELK()
 
+const LABEL_SPACE = 58
+const LABEL_WIDTH = 172
+const EDGE_LABEL_HEIGHT = 18
+
+const edgeLabelWidth = (text: string) => Math.ceil(text.length * 6.7) + 14
+
+function tileSize(node: Node): number | null {
+  if (node.type === 'branchNode') return 36
+  const nodeData = node.data as any
+  if (nodeData?.nodeType === 'flow' || nodeData?.nodeType === 'rpc') return 80
+  if (node.type === 'functionNode') return 80
+  if (nodeData?.nodeType === 'wiring' && node.type !== 'channelWiringNode')
+    return 80
+  return null
+}
+
+function backEdgeIds(nodes: Node[], edges: Edge[]): Set<string> {
+  const outgoing = new Map<string, Edge[]>()
+  for (const edge of edges) {
+    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge])
+  }
+  const state = new Map<string, 'open' | 'done'>()
+  const back = new Set<string>()
+  const visit = (id: string) => {
+    state.set(id, 'open')
+    for (const edge of outgoing.get(id) ?? []) {
+      const seen = state.get(edge.target)
+      if (seen === 'open') back.add(edge.id)
+      else if (!seen) visit(edge.target)
+    }
+    state.set(id, 'done')
+  }
+  for (const node of nodes) if (!state.has(node.id)) visit(node.id)
+  return back
+}
+
+function tileElkNode(
+  node: Node,
+  tile: number,
+  vertical: boolean,
+  loopTarget: boolean
+) {
+  const labelled = node.type !== 'branchNode'
+  const half = tile / 2
+  return {
+    id: node.id,
+    width: vertical && labelled ? tile + LABEL_WIDTH : tile,
+    height: !vertical && labelled ? tile + LABEL_SPACE : tile,
+    layoutOptions: { 'elk.portConstraints': 'FIXED_POS' },
+    ports: [
+      {
+        id: `${node.id}::in`,
+        width: 0,
+        height: 0,
+        ...(vertical ? { x: half, y: 0 } : { x: 0, y: half }),
+        layoutOptions: { 'elk.port.side': vertical ? 'NORTH' : 'WEST' },
+      },
+      {
+        id: `${node.id}::out`,
+        width: 0,
+        height: 0,
+        ...(vertical ? { x: half, y: tile } : { x: tile, y: half }),
+        layoutOptions: { 'elk.port.side': vertical ? 'SOUTH' : 'EAST' },
+      },
+      ...(loopTarget
+        ? [
+            {
+              id: `${node.id}::back`,
+              width: 0,
+              height: 0,
+              ...(vertical
+                ? { x: 0, y: half }
+                : { x: half, y: labelled ? tile + LABEL_SPACE : tile }),
+              layoutOptions: { 'elk.port.side': vertical ? 'WEST' : 'SOUTH' },
+            },
+          ]
+        : []),
+    ],
+  }
+}
+
 const elkOptions = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.spacing.nodeNode': '80',
   'elk.layered.spacing.nodeNodeBetweenLayers': '120',
   'elk.layered.spacing.edgeNodeBetweenLayers': '40',
-  'elk.spacing.edgeNode': '40',
+  'elk.spacing.edgeNode': '90',
   'elk.spacing.edgeEdge': '20',
   'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+  'elk.layered.layering.strategy': 'LONGEST_PATH_SOURCE',
   'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
   'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
   'elk.layered.mergeEdges': 'false',
   'elk.edgeRouting': 'ORTHOGONAL',
+  'elk.edgeLabels.inline': 'false',
+  'elk.edgeLabels.placement': 'CENTER',
+  'elk.spacing.edgeLabel': '6',
 }
 
 interface ElkLayoutResult {
@@ -48,21 +133,37 @@ export function useElkLayout(
         return
       }
 
-      // DOWN (side-panel) layouts: tighter layers to keep flows compact, wider
-      // in-layer gaps so the labels hung beside nodes clear their siblings.
       const directionOptions =
         direction === 'DOWN'
           ? {
               'elk.direction': direction,
-              'elk.spacing.nodeNode': '150',
+              'elk.spacing.nodeNode': '48',
+              'elk.spacing.edgeNode': '40',
               'elk.layered.spacing.nodeNodeBetweenLayers': '70',
             }
           : { 'elk.direction': direction }
+
+      const tiled = new Set(
+        nodes.filter((n) => tileSize(n) !== null).map((n) => n.id)
+      )
+      const back = backEdgeIds(nodes, edges)
+      const loopTargets = new Set(
+        edges.filter((e) => back.has(e.id)).map((e) => e.target)
+      )
 
       const graph = {
         id: 'root',
         layoutOptions: { ...elkOptions, ...directionOptions },
         children: nodes.map((node) => {
+          const tile = tileSize(node)
+          if (tile !== null) {
+            return tileElkNode(
+              node,
+              tile,
+              direction === 'DOWN',
+              loopTargets.has(node.id)
+            )
+          }
           const nodeData = node.data as any
           const nodeType = nodeData?.nodeType
           let width = node.width || 200
@@ -111,8 +212,35 @@ export function useElkLayout(
         }),
         edges: edges.map((edge) => ({
           id: edge.id,
-          sources: [edge.source],
-          targets: [edge.target],
+          sources: [
+            tiled.has(edge.source) ? `${edge.source}::out` : edge.source,
+          ],
+          targets: [
+            tiled.has(edge.target)
+              ? `${edge.target}::${back.has(edge.id) ? 'back' : 'in'}`
+              : edge.target,
+          ],
+          ...(typeof edge.label === 'string'
+            ? {
+                labels: [
+                  {
+                    id: `${edge.id}::label`,
+                    text: edge.label,
+                    width: edgeLabelWidth(edge.label),
+                    height: EDGE_LABEL_HEIGHT,
+                  },
+                ],
+              }
+            : {}),
+          ...(edge.data?.straightness
+            ? {
+                layoutOptions: {
+                  'elk.layered.priority.straightness': String(
+                    edge.data.straightness
+                  ),
+                },
+              }
+            : {}),
         })),
       }
 
@@ -137,39 +265,43 @@ export function useElkLayout(
           return node
         })
 
-        const bendPointMap = new Map<string, { x: number; y: number }[]>()
-        if (layout.edges) {
-          for (const elkEdge of layout.edges) {
-            const sections = (elkEdge as any).sections
-            if (sections && sections.length > 0) {
-              const allBendPoints: { x: number; y: number }[] = []
-              for (const section of sections) {
-                if (section.bendPoints) {
-                  for (const bp of section.bendPoints) {
-                    allBendPoints.push({
-                      x: bp.x,
-                      y: (bp.y ?? 0) + yOffset,
-                    })
-                  }
-                }
-              }
-              if (allBendPoints.length > 0) {
-                bendPointMap.set(elkEdge.id, allBendPoints)
-              }
-            }
+        const shift = (p: { x: number; y: number }) => ({
+          x: p.x,
+          y: p.y + yOffset,
+        })
+        const routes = new Map<string, { x: number; y: number }[]>()
+        const labelAt = new Map<string, { x: number; y: number }>()
+        for (const elkEdge of layout.edges ?? []) {
+          const sections = (elkEdge as any).sections ?? []
+          if (sections.length === 0) continue
+          const points: { x: number; y: number }[] = []
+          for (const section of sections) {
+            points.push(shift(section.startPoint))
+            for (const bp of section.bendPoints ?? []) points.push(shift(bp))
+            points.push(shift(section.endPoint))
           }
+          routes.set(elkEdge.id, points)
+          const label = (elkEdge as any).labels?.[0]
+          if (label?.x !== undefined) labelAt.set(elkEdge.id, shift(label))
         }
 
         const newEdges = edges.map((edge) => {
-          const bendPoints = bendPointMap.get(edge.id)
-          if (bendPoints) {
-            return {
-              ...edge,
-              type: 'elk',
-              data: { ...edge.data, bendPoints },
-            }
+          const points = routes.get(edge.id)
+          return {
+            ...edge,
+            type: 'elk',
+            ...(points
+              ? {
+                  sourceHandle: undefined,
+                  data: {
+                    ...edge.data,
+                    points,
+                    labelAt: labelAt.get(edge.id),
+                    back: back.has(edge.id),
+                  },
+                }
+              : {}),
           }
-          return { ...edge, type: 'elk' }
         })
 
         setResult({ nodes: newNodes, edges: newEdges })

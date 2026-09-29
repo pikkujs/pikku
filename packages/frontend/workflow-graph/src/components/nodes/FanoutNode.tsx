@@ -9,6 +9,8 @@ import { useGraphHighlight } from '../../context/GraphHostContext'
 interface FanoutNodeData {
   colorKey: string
   childRpc?: string
+  itemVar?: string
+  sourceVar?: string
   stepName?: string
 }
 
@@ -28,11 +30,6 @@ export const FanoutNode: React.FC<GraphNodeProps<FanoutNodeData>> = ({
     return null
   }, [graphHighlight, id])
 
-  const outputHandles = [
-    { id: 'each', label: 'each' },
-    { id: 'done', label: 'done' },
-  ]
-
   const handleClick = React.useCallback(() => {
     openWorkflowStep(id, 'fanout')
   }, [id, openWorkflowStep])
@@ -42,10 +39,10 @@ export const FanoutNode: React.FC<GraphNodeProps<FanoutNodeData>> = ({
       icon={Repeat}
       colorKey={data.colorKey}
       hasInput={true}
-      outputHandles={outputHandles}
+      outputHandles={[{ id: 'out' }]}
       size={80}
-      label="Loop"
-      subtitle={data.stepName}
+      label={data.itemVar ? `For each ${data.itemVar}` : 'For each'}
+      subtitle={data.sourceVar ?? data.stepName}
       onClick={handleClick}
       showBorder={false}
       highlightType={highlightType}
@@ -66,6 +63,8 @@ export const getFanoutNodeConfig = (
     data: {
       colorKey: 'workflow',
       childRpc: step.childRpc || step.eachRpc,
+      itemVar: step.itemVar,
+      sourceVar: step.sourceVar,
       stepName: step.stepName,
       nodeType: 'flow',
     },

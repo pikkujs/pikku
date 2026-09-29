@@ -28,19 +28,6 @@ export const ParallelNode: React.FC<GraphNodeProps<ParallelNodeData>> = ({
     return null
   }, [graphHighlight, id])
 
-  const outputHandles = React.useMemo(() => {
-    const handles = []
-    const count = data.childrenCount || 0
-
-    for (let i = 0; i < count; i++) {
-      handles.push({ id: `child-${i}`, label: `${i + 1}` })
-    }
-
-    handles.push({ id: 'done', label: 'done' })
-
-    return handles
-  }, [data.childrenCount])
-
   const handleClick = React.useCallback(() => {
     openWorkflowStep(id, 'parallel')
   }, [id, openWorkflowStep])
@@ -50,7 +37,7 @@ export const ParallelNode: React.FC<GraphNodeProps<ParallelNodeData>> = ({
       icon={Workflow}
       colorKey={data.colorKey}
       hasInput={true}
-      outputHandles={outputHandles}
+      outputHandles={[{ id: 'out' }]}
       size={80}
       label="Parallel"
       subtitle={data.stepName}

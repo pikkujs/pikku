@@ -58,6 +58,10 @@ function createEdge(
     edge.label = label
   }
 
+  if (sourceHandle === 'after') {
+    edge.data = { ...edge.data, skip: true }
+  }
+
   return edge
 }
 
@@ -232,6 +236,21 @@ function getSourceHandle(
   return undefined
 }
 
+function chainEnd(
+  workflowNodes: Record<string, any>,
+  entry: string
+): string | null {
+  const seen = new Set<string>()
+  let current: string | undefined = entry
+  while (current && workflowNodes[current] && !seen.has(current)) {
+    seen.add(current)
+    const next: string | undefined = workflowNodes[current].next
+    if (!next) return current
+    current = next
+  }
+  return null
+}
+
 export function createWorkflowFlow(
   workflow: WorkflowsMeta[0]
 ): WorkflowFlowResult {
@@ -385,6 +404,10 @@ export function createWorkflowFlow(
         )
       )
       processNode(step.childEntry, depth + 1)
+      const bodyEnd = chainEnd(workflowNodes, step.childEntry)
+      if (bodyEnd) {
+        edges.push(createEdge(`${bodyEnd}-repeat-${nodeId}`, bodyEnd, nodeId))
+      }
     }
 
     if (stepType === 'parallel' && step.children) {
@@ -399,6 +422,18 @@ export function createWorkflowFlow(
           )
         )
         processNode(childNodeId, depth + 1)
+        const child = workflowNodes[childNodeId]
+        const childEnds =
+          !child?.next || parallelChildren.get(childNodeId)?.has(child.next)
+        if (step.next && childEnds) {
+          edges.push(
+            createEdge(
+              `${childNodeId}-join-${step.next}`,
+              childNodeId,
+              step.next
+            )
+          )
+        }
       })
     }
 
@@ -408,7 +443,9 @@ export function createWorkflowFlow(
 
       nextTargets.forEach((target: string) => {
         const isNextASibling = siblingSet && siblingSet.has(target)
-        if (!isNextASibling) {
+        const joinedByChildren =
+          stepType === 'parallel' && step.children?.length
+        if (!isNextASibling && !joinedByChildren) {
           edges.push(
             createEdge(
               `${nodeId}-to-${target}`,
@@ -706,5 +743,29 @@ export function createWorkflowFlow(
     }
   }
 
+  markSpine(workflowNodes, entryNodeIds, edges)
   return { nodes, edges }
+}
+
+function markSpine(
+  workflowNodes: Record<string, any>,
+  entryNodeIds: string[] | undefined,
+  edges: Edge[]
+): void {
+  const spine = new Set<string>()
+  for (const entry of entryNodeIds ?? []) {
+    let nodeId: string | undefined = entry
+    while (nodeId && !spine.has(nodeId)) {
+      spine.add(nodeId)
+      const next: unknown = workflowNodes[nodeId]?.next
+      nodeId = typeof next === 'string' ? next : undefined
+    }
+  }
+  for (const edge of edges) {
+    if (workflowNodes[edge.source]?.next !== edge.target) continue
+    edge.data = {
+      ...edge.data,
+      straightness: spine.has(edge.source) && spine.has(edge.target) ? 100 : 20,
+    }
+  }
 }
