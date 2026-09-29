@@ -1446,7 +1446,12 @@ export function computeDiagnostics(state: InspectorState): void {
     // bridges that reference addon functions (id `http:<method>:<route>`, no
     // source file). The user can't edit any of these, so a destructure lint
     // meant to nudge them about their own code must not fail the build over them.
-    if (!meta.sourceFile || meta.sourceFile.endsWith(".gen.ts") || meta.functionType === "inline") {
+    if (
+      !meta.sourceFile ||
+      meta.sourceFile.endsWith(".gen.ts") ||
+      meta.functionType === "inline" ||
+      meta.functionType === "helper"
+    ) {
       continue;
     }
     if (meta.services && !meta.services.optimized) {

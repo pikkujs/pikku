@@ -80,6 +80,21 @@ describe("computeDiagnostics", () => {
     assert.equal(state.diagnostics.length, 0);
   });
 
+  test("does NOT flag an inline wiring function that records a source file", () => {
+    const state = stateWithFunctions({
+      "http:post:/agents/ops/approve": {
+        pikkuFuncId: "http:post:/agents/ops/approve",
+        functionType: "inline",
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sourceFile: "/project/src/wirings/shop.agent-controls.ts",
+        services: { optimized: false, services: [] },
+      },
+    });
+    computeDiagnostics(state);
+    assert.equal(state.diagnostics.length, 0);
+  });
+
   test("flags a user-authored function that does a dynamic import in its body", () => {
     const state = stateWithFunctions(
       {
