@@ -296,6 +296,12 @@ export type InspectorFilters = {
   // Sourced from `pikku.config.json` → `deploy.defaultTarget`. Used only
   // when deploy filters are set. Defaults to 'serverless'.
   defaultTarget?: 'serverless' | 'server'
+  // Workflows whose meta is kept without their registration: enough for
+  // `rpc.startWorkflow(name)` to create a run and hand it to the orchestrator
+  // queue, without bundling the workflow function. Used by per-unit deploy
+  // codegen for units that start a workflow another unit runs. A workflow also
+  // matched by `names` keeps its registration.
+  workflowMeta?: string[]
 }
 
 export type AddonConfig = {

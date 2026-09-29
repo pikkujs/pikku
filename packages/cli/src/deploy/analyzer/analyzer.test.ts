@@ -1141,3 +1141,72 @@ describe('analyzeDeployment - workflow orchestrator target', () => {
     assert.equal(orchestrator()?.target, 'serverless')
   })
 })
+
+/**
+ * `rpc.startWorkflow('onboard')` resolves onboard's meta in the calling
+ * process. A unit whose function starts it, but which is not onboard's
+ * orchestrator, needs that meta — or the deployed call fails with
+ * WorkflowNotFoundError.
+ */
+describe('analyzeDeployment - rpc.startWorkflow from a function body', () => {
+  function stateWithStarter(starter: Record<string, unknown> = {}) {
+    const state = stateWithScenario() as any
+    state.functions.meta.createTodo = {
+      ...state.functions.meta.createTodo,
+      services: { services: ['kysely'] },
+      startsWorkflows: ['onboard', 'notAWorkflow'],
+      ...starter,
+    }
+    state.functions.meta.sendEmail = {
+      pikkuFuncId: 'sendEmail',
+      name: 'sendEmail',
+    }
+    state.workflows.graphMeta = {
+      onboard: {
+        name: 'onboard',
+        pikkuFuncId: 'onboard',
+        nodes: { 'step-1': { rpcName: 'sendEmail', stepName: 'send' } },
+        entryNodeIds: ['step-1'],
+      },
+    }
+    return state as InspectorState
+  }
+
+  const starterUnit = (state: InspectorState, workflowQueues?: boolean) =>
+    analyzeUnpinned(state, { projectId: 'test', workflowQueues }).units.find(
+      (u) => u.functionIds.includes('createTodo')
+    )
+
+  test('the starting unit records the workflows it starts, known ones only', () => {
+    assert.deepEqual(starterUnit(stateWithStarter())?.startedWorkflows, [
+      'onboard',
+    ])
+  })
+
+  test('the starting unit gets the run store and the queue a start enqueues on', () => {
+    const unit = starterUnit(stateWithStarter())
+    assert.ok(unit?.services.some((s) => s.capability === 'workflow-state'))
+    assert.ok(unit?.services.some((s) => s.capability === 'queue'))
+  })
+
+  test('no queue capability when the provider runs workflows without queues', () => {
+    const unit = starterUnit(stateWithStarter(), false)
+    assert.deepEqual(unit?.startedWorkflows, ['onboard'])
+    assert.ok(!unit?.services.some((s) => s.capability === 'queue'))
+  })
+
+  test('a unit that already has workflow-state is left to bundle every workflow', () => {
+    const unit = starterUnit(
+      stateWithStarter({
+        services: { services: ['kysely', 'workflowService'] },
+      })
+    )
+    assert.equal(unit?.startedWorkflows, undefined)
+  })
+
+  test('a unit that starts nothing is unchanged', () => {
+    const unit = starterUnit(stateWithStarter({ startsWorkflows: undefined }))
+    assert.equal(unit?.startedWorkflows, undefined)
+    assert.ok(!unit?.services.some((s) => s.capability === 'workflow-state'))
+  })
+})

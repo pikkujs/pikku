@@ -2062,6 +2062,39 @@ describe('Workflow file pruning', () => {
     assert.equal(state.workflows.files.size, 2)
     assert.equal(Object.keys(state.workflows.graphMeta).length, 2)
   })
+  test('workflowMeta keeps the meta of a workflow the unit only starts, not its registration', () => {
+    const state = workflowState()
+    state.queueWorkers.meta['wf-orchestrator-move-out'] = {
+      name: 'wf-orchestrator-move-out',
+      pikkuFuncId: 'pikkuWorkflowOrchestrator:moveOut',
+    } as any
+    const result = filterInspectorState(
+      state,
+      { names: ['createUser'], workflowMeta: ['moveOut'] },
+      mockLogger
+    )
+
+    // The start is routed to the workflow's own orchestrator queue.
+    assert.ok(result.queueWorkers.meta['wf-orchestrator-move-out'])
+
+    assert.ok(result.workflows.graphMeta['moveOut'])
+    assert.ok(result.workflows.meta['moveOut'])
+    // The generated workflow map types the start from the function meta.
+    assert.ok(result.functions.meta['getUsers'])
+    assert.equal(result.workflows.files.has('moveOut'), false)
+    assert.ok(result.serviceAggregation.requiredServices.has('workflowService'))
+  })
+
+  test('a workflow also named in full keeps its registration', () => {
+    const result = filterInspectorState(
+      workflowState(),
+      { names: ['getUsers'], workflowMeta: ['moveOut'] },
+      mockLogger
+    )
+
+    assert.ok(result.workflows.graphMeta['moveOut'])
+    assert.ok(result.workflows.files.has('moveOut'))
+  })
 })
 
 describe('invokedAgentsByFile', () => {

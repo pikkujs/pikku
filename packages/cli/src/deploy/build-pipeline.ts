@@ -511,6 +511,9 @@ export async function runBuildPipeline(options: {
       const forcedBy = [
         ...new Set(serverUnits.flatMap((u) => u.targetForcedBy ?? [])),
       ]
+      const startedWorkflows = [
+        ...new Set(serverUnits.flatMap((u) => u.startedWorkflows ?? [])),
+      ].sort()
 
       // Create a merged server unit with all server function IDs
       const mergedServerUnit: DeploymentManifest['units'][0] = {
@@ -523,6 +526,7 @@ export async function runBuildPipeline(options: {
         handlers: serverUnits.flatMap((u) => u.handlers),
         tags: [],
         ...(forcedBy.length > 0 && { targetForcedBy: forcedBy }),
+        ...(startedWorkflows.length > 0 && { startedWorkflows }),
       }
 
       // Run per-unit codegen for the merged server unit (tree-shakes to only server functions)

@@ -53,6 +53,7 @@ export function parseCLIFilters(
     append('excludeHttpRoutes', source.excludeHttpRoutes)
     append('excludeHttpMethods', source.excludeHttpMethods)
     append('excludeTarget', source.excludeTarget as string[] | undefined)
+    append('workflowMeta', source.workflowMeta)
   }
 
   const namedFilters = cliConfig?.namedFilters ?? {}
@@ -88,6 +89,7 @@ export function parseCLIFilters(
     excludeHttpRoutes: data.excludeHttpRoutes,
     excludeHttpMethods: data.excludeHttpMethods,
     excludeTarget: data.excludeTarget,
+    workflowMeta: data.workflowMeta,
   })
 
   const validateTargetList = (

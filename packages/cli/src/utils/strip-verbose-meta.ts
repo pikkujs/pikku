@@ -34,6 +34,7 @@ const VERBOSE_FIELDS = new Set([
   'bodySourceFile',
   'bodyStart',
   'bodyEnd',
+  'startsWorkflows',
 ])
 
 /**

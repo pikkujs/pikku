@@ -8,6 +8,7 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
+import { collectStartedWorkflows } from './collect-started-workflows.js'
 import type { AuditDurability } from '@pikku/core/services'
 import type { FunctionServicesMeta } from '@pikku/core/function'
 import type { ScenarioSurface, ScenarioStepKind } from '@pikku/core/scenario'
@@ -1358,6 +1359,22 @@ export const addFunctions: AddWiring = (
           bodyEnd: lineOf(handlerBody.getEnd()),
         }
 
+  const started = collectStartedWorkflows(handler.body)
+  // Generated scaffolds (the workflow start/run routes) take the name from the
+  // request by design, and are served by units that have every workflow.
+  const handlerFile = handler.getSourceFile().fileName
+  const warnOnStarts = !/\.gen\.[cm]?[jt]s$/.test(handlerFile)
+  for (const call of warnOnStarts ? started.dynamic : []) {
+    logger.warn(
+      `• ${pikkuFuncId} calls ${call} with a computed name — the deploy planner cannot bundle that workflow's meta into ${pikkuFuncId}'s unit, so the deployed call fails with "Workflow not found" unless the unit has it for another reason. Use a literal workflow name.`
+    )
+  }
+  if (warnOnStarts && started.rpcHandoffs.length > 0) {
+    logger.warn(
+      `• ${pikkuFuncId} passes rpc to ${started.rpcHandoffs.join(', ')} — rpc.startWorkflow / rpc.invoke calls made there are invisible to the deploy planner, so their targets are not bundled into or bound to ${pikkuFuncId}'s unit. Make those calls in the handler itself.`
+    )
+  }
+
   state.functions.meta[pikkuFuncId] = {
     pikkuFuncId,
     functionType: 'user',
@@ -1410,6 +1427,7 @@ export const addFunctions: AddWiring = (
     bodySourceFile,
     exportedName: exportedName || undefined,
     ...bodySpan,
+    startsWorkflows: started.names.length > 0 ? started.names : undefined,
   }
 
   if (handlerHasDynamicImport(handler)) {
