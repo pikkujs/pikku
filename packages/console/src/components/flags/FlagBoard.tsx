@@ -1,37 +1,66 @@
 import { useMemo } from 'react'
-import { Alert, SimpleGrid, Stack } from '@pikku/mantine/core'
+import { Alert, Group, Stack, Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { ToggleLeft } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { ConsoleLoading } from '../ui/ConsoleLoading'
+import { SectionCard } from '../ui/SectionCard'
+import { StatusBadge } from '../ui/StatusBadge'
+import { ForDevelopers } from '../ui/ForDevelopers'
 import { isForbiddenScopeError } from '../scopes/scope-error'
-import { FlagLaneColumn } from './FlagLaneColumn'
 import { FlagDetailPanel } from './FlagDetailPanel'
+import { FlagRow, LANE_LOOK } from './FlagRow'
 import {
-  FLAG_LANE_ORDER,
   groupFlagsByLane,
   type FlagBoardRow,
+  type FlagLaneId,
 } from './flag-lanes'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { m } from '@/i18n/messages'
+import { plural } from '@/i18n/plural'
 
 const DOCS_HREF = 'https://pikku.dev/docs/console/features#feature-flags'
 
+const LIST_ORDER: readonly FlagLaneId[] = ['rolling', 'live', 'dark']
+
 type FlagBoardProps = {
   search: string
-  /** The open flag by NAME rather than by row: a switch or a rollout the panel
-   *  sets refetches the list, and a row captured at click time would leave the
-   *  panel describing the flag as it was before the operator changed it. */
   selectedName: string | null
   panelOpen: boolean
   onOpenFlag: (flag: FlagBoardRow) => void
   onClosePanel: () => void
 }
 
-/**
- * The launch board: every declared flag in the lane its rollout has reached,
- * with one flag's controls open beside it.
- */
+const LaneGroup: React.FC<{
+  lane: FlagLaneId
+  flags: FlagBoardRow[]
+  selectedName: string | null
+  onOpen: (flag: FlagBoardRow) => void
+  heading?: boolean
+}> = ({ lane, flags, selectedName, onOpen, heading = true }) => (
+  <Stack gap="sm" data-testid="flag-lane" data-lane={lane}>
+    {heading && (
+      <Group gap={8} align="baseline">
+        <Text size="sm" fw={600}>
+          {LANE_LOOK[lane].title()}
+        </Text>
+        <Text size="xs" c="dimmed">
+          {flags.length === 0 ? m.flags_lane_empty() : LANE_LOOK[lane].hint()}
+        </Text>
+      </Group>
+    )}
+    {flags.map((flag) => (
+      <FlagRow
+        key={flag.name}
+        flag={flag}
+        selected={flag.name === selectedName}
+        onOpen={onOpen}
+      />
+    ))}
+  </Stack>
+)
+
+/** Every switch the app declares, grouped by how far it has been turned on, with one open beside the list. */
 export const FlagBoard: React.FC<FlagBoardProps> = ({
   search,
   selectedName,
@@ -61,7 +90,6 @@ export const FlagBoard: React.FC<FlagBoardProps> = ({
       return (
         <Alert
           color="yellow"
-          m="md"
           title={m.flags_forbidden_title()}
           data-testid="flags-forbidden"
         >
@@ -72,11 +100,7 @@ export const FlagBoard: React.FC<FlagBoardProps> = ({
     return (
       <Alert
         color="red"
-        m="md"
         title={m.flags_load_error()}
-        // A server's message can be one unbroken token — a schema union listing
-        // every name it accepts — and an alert that will not break it runs off
-        // the side of the page, taking the part that says what went wrong.
         styles={{ message: { overflowWrap: 'anywhere' } }}
         data-testid="flags-load-error"
       >
@@ -102,29 +126,103 @@ export const FlagBoard: React.FC<FlagBoardProps> = ({
     )
   }
 
+  const attention = lanes.attention.length
+  const openName = panelOpen ? selectedName : null
+
   return (
     <>
-      <Stack gap="md" p="md" data-testid="flag-board" data-help="board">
-        {!writable && (
-          <Alert
-            color="blue"
-            title={m.flags_read_only_title()}
-            data-testid="flags-read-only"
+      <Stack gap="lg" data-testid="flag-board" data-help="board">
+        {attention > 0 && (
+          <SectionCard
+            testId="flags-attention"
+            title={m.flags_attention_title()}
+            blurb={m.flags_attention_blurb()}
+            right={
+              <StatusBadge tone="warn">
+                {plural(
+                  attention,
+                  m.flags_state_attention_one,
+                  m.flags_state_attention
+                )}
+              </StatusBadge>
+            }
           >
-            {m.flags_read_only_body()}
-          </Alert>
+            <Stack gap="sm" mt="md">
+              <LaneGroup
+                lane="attention"
+                heading={false}
+                flags={lanes.attention}
+                selectedName={openName}
+                onOpen={onOpenFlag}
+              />
+            </Stack>
+          </SectionCard>
         )}
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-          {FLAG_LANE_ORDER.map((lane) => (
-            <FlagLaneColumn
-              key={lane}
-              lane={lane}
-              flags={lanes[lane]}
-              selectedName={panelOpen ? selectedName : null}
-              onOpen={onOpenFlag}
-            />
-          ))}
-        </SimpleGrid>
+        <SectionCard
+          testId="flags-list"
+          title={m.flags_list_title()}
+          blurb={m.flags_list_blurb()}
+          right={
+            attention === 0 && (
+              <StatusBadge tone="good">{m.flags_state_ok()}</StatusBadge>
+            )
+          }
+          footer={
+            <ForDevelopers
+              attached
+              testId="flags-dev"
+              label={m.dev_label()}
+              hint={m.flags_dev_hint()}
+            >
+              <Stack gap={2}>
+                {flags.map((flag) => (
+                  <Text
+                    key={flag.name}
+                    size="xs"
+                    c="dimmed"
+                    ff="monospace"
+                    style={{ wordBreak: 'break-all' }}
+                  >
+                    {asI18n(
+                      flag.anyOf && flag.anyOf.length > 0
+                        ? `${flag.name} · ${flag.anyOf.join(', ')}`
+                        : flag.name
+                    )}
+                  </Text>
+                ))}
+              </Stack>
+            </ForDevelopers>
+          }
+        >
+          <Stack gap="lg" mt="md">
+            {!writable && (
+              <Alert
+                color="blue"
+                title={m.flags_read_only_title()}
+                data-testid="flags-read-only"
+              >
+                {m.flags_read_only_body()}
+              </Alert>
+            )}
+            {LIST_ORDER.map((lane) => (
+              <LaneGroup
+                key={lane}
+                lane={lane}
+                flags={lanes[lane]}
+                selectedName={openName}
+                onOpen={onOpenFlag}
+              />
+            ))}
+            {attention === 0 && (
+              <LaneGroup
+                lane="attention"
+                flags={[]}
+                selectedName={null}
+                onOpen={onOpenFlag}
+              />
+            )}
+          </Stack>
+        </SectionCard>
       </Stack>
       <FlagDetailPanel
         flag={selected}

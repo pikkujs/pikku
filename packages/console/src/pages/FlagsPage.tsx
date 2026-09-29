@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Alert, Stack } from '@pikku/mantine/core'
+import { Alert } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { RefreshCw, Trash2 } from 'lucide-react'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { FlagBoard } from '../components/flags/FlagBoard'
+import { CardsPage } from '../components/ui/CardsPage'
 import type { FlagBoardRow } from '../components/flags/flag-lanes'
 import {
   useFeatureFlags,
@@ -18,14 +19,9 @@ import { plural } from '@/i18n/plural'
 export const FlagsPage: React.FC = () => {
   useLocale()
   const [search, setSearch] = useState('')
-  // The open flag is a URL param rather than component state: "look at
-  // quarterlyReports" is a thing one operator sends another, and a panel that
-  // cannot be linked to is a screenshot.
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedName = searchParams.get('flag')
 
-  // The same query the board reads, so the header and the panel agree about
-  // whether this source can be written to at all.
   const writable = useFeatureFlags().data?.writable ?? false
   const syncFlags = useSyncFlags()
   const pruneFlags = usePruneFlags()
@@ -37,7 +33,6 @@ export const FlagsPage: React.FC = () => {
 
   return (
     <PageContainer
-      noPadding
       header={
         <ListPageHeader
           title={m.flags_page_title()}
@@ -77,12 +72,10 @@ export const FlagsPage: React.FC = () => {
         />
       }
     >
-      <Stack gap={0}>
+      <CardsPage>
         {(syncFlags.data || syncError) && (
           <Alert
             color={syncError ? 'red' : 'teal'}
-            m="md"
-            mb={0}
             styles={{ message: { overflowWrap: 'anywhere' } }}
             withCloseButton
             onClose={() => syncFlags.reset()}
@@ -104,8 +97,6 @@ export const FlagsPage: React.FC = () => {
         {(pruneFlags.data || pruneError) && (
           <Alert
             color={pruneError ? 'red' : 'teal'}
-            m="md"
-            mb={0}
             styles={{ message: { overflowWrap: 'anywhere' } }}
             withCloseButton
             onClose={() => pruneFlags.reset()}
@@ -131,7 +122,7 @@ export const FlagsPage: React.FC = () => {
           onOpenFlag={openFlag}
           onClosePanel={() => setSearchParams({})}
         />
-      </Stack>
+      </CardsPage>
     </PageContainer>
   )
 }
