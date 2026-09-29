@@ -24,8 +24,14 @@ export const devWebhookLabelPrefix = (
 ): string =>
   env[DEV_WEBHOOK_LABEL_PREFIX_ENV]?.trim() || `dev-${userInfo().username}`
 
+/** Without the `GIT_*` a hook exports, which would point every call at the hook's repository instead of `dir`'s. */
+export const gitEnv = (): NodeJS.ProcessEnv =>
+  Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))
+  )
+
 const git = (dir: string, args: string[]) =>
-  spawnSync('git', args, { cwd: dir, stdio: 'ignore' }).status
+  spawnSync('git', args, { cwd: dir, stdio: 'ignore', env: gitEnv() }).status
 
 /**
  * The file holds signing secrets, so it must never be committed: refuse when

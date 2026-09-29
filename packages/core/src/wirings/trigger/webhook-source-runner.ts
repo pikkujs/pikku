@@ -7,7 +7,6 @@ import type { PikkuHTTP } from '../http/http.types.js'
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
-import { resolveAddonFunctionTarget } from '../addon/wire-addon.js'
 import type { DeclaredTriggerSource } from '../../services/trigger-source-store.js'
 import type {
   CoreTriggerWebhookSource,
@@ -451,9 +450,10 @@ export type OrphanedWebhookRegistration = {
 /** The singleton credentials the package owning a source's `setup` declares: where its signing secret goes. */
 const sourceCredentialNames = (meta: WebhookSourceMeta): string[] => {
   if (!meta.setup) return []
-  const target = resolveAddonFunctionTarget(meta.setup, null)
-  const declared =
-    pikkuState(target?.packageName ?? null, 'package', 'credentialsMeta') ?? {}
+  const namespace = meta.setup.includes(':') ? meta.setup.split(':')[0]! : ''
+  const packageName =
+    pikkuState(null, 'addons', 'packages').get(namespace)?.package ?? null
+  const declared = pikkuState(packageName, 'package', 'credentialsMeta') ?? {}
   return Object.entries(declared)
     .filter(
       ([, credential]) => credential.type === 'singleton' && !credential.oauth2

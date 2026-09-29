@@ -10,6 +10,7 @@ import { pikkuState, resetPikkuState } from '@pikku/core/state'
 
 import {
   WEBHOOK_REGISTRATIONS_FILE,
+  gitEnv,
   reconcileDevWebhooks,
 } from './dev-webhook-registrations.js'
 
@@ -18,9 +19,12 @@ const env = {
   PIKKU_DEV_WEBHOOK_LABEL_PREFIX: 'dev-sam',
 }
 
+const git = (dir: string, args: string[]) =>
+  spawnSync('git', args, { cwd: dir, env: gitEnv() })
+
 const gitDir = () => {
   const dir = mkdtempSync(join(tmpdir(), 'pikku-webhooks-'))
-  spawnSync('git', ['init', '-q'], { cwd: dir })
+  git(dir, ['init', '-q'])
   return dir
 }
 
@@ -102,7 +106,7 @@ test('registers once, ignores the file in git and keeps it private', async () =>
 test('refuses to write the file when git tracks it', async () => {
   const dir = gitDir()
   writeFileSync(join(dir, WEBHOOK_REGISTRATIONS_FILE), '{}\n')
-  spawnSync('git', ['add', WEBHOOK_REGISTRATIONS_FILE], { cwd: dir })
+  git(dir, ['add', WEBHOOK_REGISTRATIONS_FILE])
   const { logger, lines } = recordingLogger()
 
   await reconcile(dir, logger)
