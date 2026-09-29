@@ -12,12 +12,20 @@ import { pikkuAddonServices } from '#pikku/addon/setup'
 export const createSingletonServices = pikkuAddonServices(
   async (
     _config,
-    { scopeService, credentialService, audit, auth, featureFlags }
+    {
+      scopeService,
+      credentialService,
+      audit,
+      auth,
+      featureFlags,
+      triggerSourceStore,
+    }
   ) => ({
     scopeService,
     credentialService,
     audit,
     auth,
     featureFlags,
+    triggerSourceStore,
   })
 )

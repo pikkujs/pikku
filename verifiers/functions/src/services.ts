@@ -59,8 +59,12 @@ export const createSingletonServices = pikkuServices(
  * This function creates the wire services on each request.
  * It's important to use the type CreateWireServices here, as the pikku CLI uses them to improve the development experience!
  */
+let wireServicesBuildCount = 0
+export const wireServicesBuilt = (): number => wireServicesBuildCount
+
 export const createWireServices = pikkuWireServices(
   async (_singletonServices, _session) => {
-    return {}
+    wireServicesBuildCount++
+    return { requestStamp: { id: crypto.randomUUID() } }
   }
 )

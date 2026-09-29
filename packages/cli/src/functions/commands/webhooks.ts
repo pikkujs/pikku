@@ -1,5 +1,5 @@
 import { existsSync } from 'fs'
-import { readFile, writeFile } from 'fs/promises'
+import { readFile } from 'fs/promises'
 import type { WebhookSourceOutcome } from '@pikku/core/trigger'
 import type { Logger } from '@pikku/core/services'
 import { pikkuSessionlessFunc } from '#pikku/function'
@@ -9,20 +9,19 @@ export type WebhooksInput = {
   url: string
   labelPrefix: string
   previous?: string
-  secretsOut?: string
 }
 
 /**
  * Runs one lifecycle step for every webhook source through the app's own
- * services and prints one JSON line per source. A produced signing secret is
- * printed for the caller to store, or with `secretsOut` written to that file
- * (owner-only) instead, so a CI log that records stdout never holds it.
+ * services and prints one JSON line per source. A signing secret the provider
+ * issues is stored by the source's own `setup`, in the credential store, so
+ * it never passes through here.
  */
 const runWebhooks = async (
   action: 'check' | 'setup' | 'teardown',
   logger: Logger,
   webhookSourcesLifecycleFile: string,
-  { url, labelPrefix, previous, secretsOut }: WebhooksInput
+  { url, labelPrefix, previous }: WebhooksInput
 ) => {
   if (!url || !labelPrefix) {
     throw new Error(
@@ -45,16 +44,8 @@ const runWebhooks = async (
     previous: previous ? JSON.parse(await readFile(previous, 'utf-8')) : {},
   })
 
-  const secrets: Record<string, string> = {}
-  for (const { secret, ...outcome } of outcomes) {
-    if (secret && outcome.secretName && secretsOut) {
-      secrets[outcome.secretName] = secret
-    }
-    const line = secret && !secretsOut ? { ...outcome, secret } : outcome
-    process.stdout.write(`${JSON.stringify(line)}\n`)
-  }
-  if (secretsOut) {
-    await writeFile(secretsOut, JSON.stringify(secrets), { mode: 0o600 })
+  for (const outcome of outcomes) {
+    process.stdout.write(`${JSON.stringify(outcome)}\n`)
   }
   const failed = outcomes.filter((outcome) => outcome.status === 'failed')
   if (failed.length > 0) {

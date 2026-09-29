@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import {
+  getArrayPropertyValue,
   getPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
@@ -205,10 +206,12 @@ const addWireTriggerWebhookSource: (
     return
   }
 
-  const method = (getPropertyValue(obj, 'method') as string | null) ?? 'post'
+  const method =
+    getArrayPropertyValue(obj, 'method') ??
+    (getPropertyValue(obj, 'method') as string | null) ??
+    'post'
   const route =
     (getPropertyValue(obj, 'route') as string | null) ?? `/webhooks/${name}`
-  let secret = getPropertyValue(obj, 'secret') as string | null
 
   const eventsInitializer = getPropertyAssignmentInitializer(
     obj,
@@ -266,24 +269,11 @@ const addWireTriggerWebhookSource: (
     state.serviceAggregation.usedFunctions.add(pikkuFuncId)
   }
 
-  // An addon's receive reads the secret by its own name; the app may have
-  // renamed it for this instance.
-  const namespace = steps.receive?.includes(':')
-    ? steps.receive.slice(0, steps.receive.indexOf(':'))
-    : null
-  const addon = namespace
-    ? state.rpc.wireAddonDeclarations.get(namespace)
-    : undefined
-  if (secret && addon?.secretOverrides?.[secret]) {
-    secret = addon.secretOverrides[secret]!
-  }
-
   const meta: WebhookSourceMeta = {
     name,
     method: method as WebhookSourceMeta['method'],
     route,
     events,
-    ...(secret ? { secret } : {}),
     ...steps,
   }
   state.triggers.webhookSourceMeta[name] = meta

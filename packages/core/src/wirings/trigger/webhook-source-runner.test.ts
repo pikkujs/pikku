@@ -5,12 +5,15 @@ import {
   dispatchWebhookSourceJob,
   receiveWebhookSourceRequest,
   runWebhookSourceLifecycle,
+  reconcileTriggerSources,
+  teardownTriggerSources,
   subscribedWebhookEvents,
   wireTriggerWebhookSource,
 } from './webhook-source-runner.js'
 import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { IncomingWebhookService } from '../../services/incoming-webhook-service.js'
+import { InMemoryTriggerSourceStore } from '../../services/trigger-source-store.js'
 import type { QueueService } from '../queue/queue.types.js'
 
 const logger = {
@@ -279,7 +282,6 @@ describe('runWebhookSourceLifecycle', () => {
     setWebhookSourceMeta({
       name: 'shop',
       events: ['paid', 'refunded'],
-      secret: 'SHOP_WEBHOOK_SECRET',
       check: 'shop:check',
       setup: 'shop:setup',
     })
@@ -287,7 +289,7 @@ describe('runWebhookSourceLifecycle', () => {
     registerFunction('shop:check', () => ({ status: 'missing' }))
     registerFunction('shop:setup', (_services, data) => {
       input = data
-      return { status: 'created', state: { id: 'we_1' }, secret: 'whsec' }
+      return { status: 'created', state: { id: 'we_1' } }
     })
 
     const [outcome] = await runWebhookSourceLifecycle({
@@ -306,8 +308,6 @@ describe('runWebhookSourceLifecycle', () => {
       url: 'https://shop.test/webhooks/shop',
       status: 'created',
       state: { id: 'we_1' },
-      secretName: 'SHOP_WEBHOOK_SECRET',
-      secret: 'whsec',
     })
   })
 
@@ -331,5 +331,68 @@ describe('runWebhookSourceLifecycle', () => {
       status: 'failed',
       error: 'no key',
     })
+  })
+})
+
+describe('reconcileTriggerSources / teardownTriggerSources', () => {
+  const withStore = () => {
+    const triggerSourceStore = new InMemoryTriggerSourceStore()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger,
+      triggerSourceStore,
+    } as never)
+    return triggerSourceStore
+  }
+  const lifecycle = { baseUrl: 'https://shop.test', labelPrefix: 'p' }
+
+  test('sets up declared sources, then tears one down with its state', async () => {
+    const store = withStore()
+    let teardownInput: any
+    setWebhookSourceMeta({
+      name: 'shop',
+      setup: 'shop:setup',
+      teardown: 'shop:teardown',
+    })
+    registerFunction('shop:setup', () => ({
+      status: 'created',
+      state: { id: 'we_1' },
+    }))
+    registerFunction('shop:teardown', (_services, data) => {
+      teardownInput = data
+      return { status: 'deleted' }
+    })
+
+    await reconcileTriggerSources(lifecycle)
+    const row = await store.getTriggerSource('shop')
+    assert.equal(row!.status, 'created')
+    assert.deepEqual(row!.state, { id: 'we_1' })
+
+    await teardownTriggerSources({ names: ['shop'], ...lifecycle })
+    assert.deepEqual(teardownInput, {
+      label: 'p:shop',
+      previous: { id: 'we_1' },
+    })
+    assert.equal(await store.getTriggerSource('shop'), null)
+  })
+
+  test('keeps the state when setup fails, and marks orphans', async () => {
+    const store = withStore()
+    await store.syncTriggerSources([{ name: 'gone', kind: 'webhook' }])
+    setWebhookSourceMeta({ name: 'shop', setup: 'shop:setup' })
+    registerFunction('shop:setup', () => {
+      throw new Error('bad key')
+    })
+
+    const [outcome] = await reconcileTriggerSources(lifecycle)
+
+    assert.equal(outcome!.status, 'failed')
+    const rows = await store.listTriggerSources()
+    assert.deepEqual(
+      rows.map((r) => [r.name, r.declared, r.status, r.detail]),
+      [
+        ['gone', false, null, null],
+        ['shop', true, 'failed', 'bad key'],
+      ]
+    )
   })
 })

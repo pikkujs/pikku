@@ -37,6 +37,23 @@ describe('serializeWebhookSourceWirings', () => {
     )
   })
 
+  test('mounts a route per method for a source verified by GET', () => {
+    const whatsapp = serializeWebhookSourceWirings(
+      {
+        whatsapp: {
+          name: 'whatsapp',
+          method: ['get', 'post'],
+          route: '/webhooks/whatsapp',
+          events: [],
+        },
+      },
+      leaf,
+      './pikku-webhook-sources.schemas.gen.js'
+    )
+    assert.match(whatsapp, /method: "get",\n  route: "\/webhooks\/whatsapp"/)
+    assert.match(whatsapp, /method: "post",\n  route: "\/webhooks\/whatsapp"/)
+  })
+
   test('wires one worker on the incoming queue', () => {
     assert.equal(content.match(/wireQueueWorker\(\{/g)?.length, 1)
     assert.match(content, /name: 'pikku-incoming-webhooks'/)

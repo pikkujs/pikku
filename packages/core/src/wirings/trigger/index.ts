@@ -4,6 +4,9 @@ export {
   receiveWebhookSourceRequest,
   dispatchWebhookSourceJob,
   runWebhookSourceLifecycle,
+  declaredTriggerSources,
+  reconcileTriggerSources,
+  teardownTriggerSources,
   subscribedWebhookEvents,
 } from './webhook-source-runner.js'
 export type { WebhookSourceOutcome } from './webhook-source-runner.js'
@@ -18,6 +21,7 @@ export type {
   WebhookSetupResult,
   WebhookSourceJob,
   WebhookSourceMeta,
+  WebhookSourceMethod,
   WebhookSourcesMeta,
   WebhookSourceState,
   WebhookTeardownInput,

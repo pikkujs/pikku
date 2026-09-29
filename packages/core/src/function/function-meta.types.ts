@@ -116,6 +116,13 @@ export type FunctionRuntimeMeta = {
   audit?: {
     durability: AuditDurability
   }
+  /**
+   * Set by the inspector when every service the function destructures is a
+   * singleton, so the runner skips `createWireServices` for it. Absent means
+   * the function reads a wire service, takes `services` whole, or the app's
+   * `Services` type did not resolve — in each case the wire services are built.
+   */
+  singletonServicesOnly?: boolean
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string

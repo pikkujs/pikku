@@ -44,7 +44,6 @@ describe('wireTriggerWebhookSource', () => {
       HEADER +
         `wireTriggerWebhookSource({
   name: 'shop',
-  secret: 'SHOP_SECRET',
   events: { 'order.paid': schema, 'order.refunded': schema },
   receive: { func: async () => ({ events: [] }) },
   check: { func: async () => ({ status: 'ok' }) },
@@ -59,7 +58,6 @@ wireTrigger({ name: 'shop:order.paid', func: { func: async () => {} } })
       method: 'post',
       route: '/webhooks/shop',
       events: ['order.paid', 'order.refunded'],
-      secret: 'SHOP_SECRET',
       receive: 'trigger-webhook:shop:receive',
       check: 'trigger-webhook:shop:check',
     })
@@ -94,5 +92,25 @@ wireTrigger({ name: 'shop:order.lost', func: { func: async () => {} } })
       errors[0]!,
       /Trigger 'shop:order.lost' listens for 'order.lost'/
     )
+  })
+})
+
+describe('wireTriggerWebhookSource method shorthand', () => {
+  test('keeps an array of methods as an array, not its source text', async () => {
+    const { state, errors } = await inspectSource(
+      HEADER +
+        `wireTriggerWebhookSource({
+  name: 'dual',
+  method: ['get', 'post'],
+  receive: { func: async () => ({ events: [] }) },
+})
+`
+    )
+
+    assert.deepEqual(errors, [])
+    assert.deepEqual(state.triggers.webhookSourceMeta.dual?.method, [
+      'get',
+      'post',
+    ])
   })
 })

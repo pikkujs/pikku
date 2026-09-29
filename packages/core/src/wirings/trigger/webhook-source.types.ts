@@ -32,6 +32,8 @@ export type WebhookReceiveResult =
       }
     }
 
+export type WebhookSourceMethod = 'post' | 'put' | 'get' | 'head'
+
 /** Whatever `setup` wants back on the next deploy, for providers whose endpoints cannot be found by label. */
 export type WebhookSourceState = Record<string, unknown>
 
@@ -54,8 +56,6 @@ export type WebhookSetupResult =
   | {
       status: 'created' | 'updated' | 'unchanged'
       state?: WebhookSourceState
-      /** Only when the provider issued a new signing secret. */
-      secret?: string
     }
   /** The provider has no API for this: `instructions` tell a person what to set by hand. */
   | { status: 'manual'; instructions: string }
@@ -79,11 +79,10 @@ export type CoreTriggerWebhookSource<
 > = {
   /** Triggers subscribe to `<name>:<event>`. Unique across every kind of trigger source. */
   name: string
-  method?: 'post' | 'put' | 'get'
+  /** Several for providers that verify the URL with a GET and deliver with a POST. */
+  method?: WebhookSourceMethod | WebhookSourceMethod[]
   /** Defaults to `/webhooks/<name>`. */
   route?: string
-  /** The secret `receive` verifies with, which `setup` produces. */
-  secret?: string
   /** What the source can produce. Each event's data is validated against its schema before it is queued. */
   events?: Events
   /** Omitted: the JSON body is one event dispatched to the trigger named `<name>`. */
@@ -95,9 +94,8 @@ export type CoreTriggerWebhookSource<
 
 export type WebhookSourceMeta = {
   name: string
-  method: 'post' | 'put' | 'get'
+  method: WebhookSourceMethod | WebhookSourceMethod[]
   route: string
-  secret?: string
   events: string[]
   receive?: string
   check?: string

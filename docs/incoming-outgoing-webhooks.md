@@ -160,8 +160,7 @@ Run by the CLI at deploy, never by the route:
 
 - `check({ url, label, events, previous })` → `ok | missing | drifted` — the
   read-only preview (`pikku webhooks status`) and drift detection.
-- `setup({ url, label, events, previous })` → `{ status, endpointId?, secret?,
-expiresAt? }` — only when `check` is not `ok`, or always when there is no
+- `setup({ url, label, events, previous })` → `{ status, state? }` — only when `check` is not `ok`, or always when there is no
   `check`. `manual` with instructions when the provider has no API.
 - `teardown({ label, previous })` — when the stage goes away.
 
@@ -170,26 +169,25 @@ expiresAt? }` — only when `check` is not `ok`, or always when there is no
 tagged and listed (Stripe metadata). `previous` is what the last `setup`
 returned, for providers that do not: the caller stores it between deploys.
 
-`secret` on the wire names the secret `receive` verifies with. The metadata
-records it resolved through the instance's overrides, so whoever runs `setup`
-knows where to store what it returns.
+A signing secret the provider issues is written by `setup` to the credential
+store (`credentialService.set`) and removed by `teardown`; `receive` reads it
+per delivery through `WebhookSigningSecret.fromCredential`. A new secret takes
+effect without a deploy and never passes through the CLI.
 
 ### Running it
 
 `pikku webhooks status | setup | teardown --url <base url> --label-prefix
-<app>:<stage> [--previous <file>] [--secrets-out <file>]` loads the app with
-its own services and prints one JSON line per source: `{ source, status,
-endpointId?, secretName?, secret?, instructions?, error? }`. With
-`--secrets-out`, produced secrets are written to that file (mode 600) as
-`{ secretName: secret }` and left out of stdout, which is what CI should use.
+<app>:<stage> [--previous <file>]` loads the app with its own services and
+prints one JSON line per source: `{ source, status, state?, instructions?,
+error? }`.
 
 ## Fabric
 
 - CI gets a **webhooks** phase after publish, like migrations: it runs
   `pikku webhooks setup` and posts results back.
-- fabric-api stores produced secrets on the stage and each source's result as
-  `previous` for the next deploy, and runs `teardown` when a stage is deleted.
-- The deploy config gate treats a secret some source produces as covered.
+- fabric-api stores each source's `state` as `previous` for the next deploy,
+  and runs `teardown` when a stage is deleted. Signing secrets land in the
+  stage's credential store through `setup` itself.
 - `StageStripeSandboxService` keeps provisioning credentials and loses its
   hard-coded event map.
 

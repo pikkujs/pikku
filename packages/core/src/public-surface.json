@@ -182,10 +182,13 @@
   "./trigger": [
     "PIKKU_INCOMING_WEBHOOK_QUEUE_NAME",
     "PikkuTriggerService",
+    "declaredTriggerSources",
     "dispatchWebhookSourceJob",
     "receiveWebhookSourceRequest",
+    "reconcileTriggerSources",
     "runWebhookSourceLifecycle",
     "subscribedWebhookEvents",
+    "teardownTriggerSources",
     "wireTrigger",
     "wireTriggerSource",
     "wireTriggerWebhookSource"
@@ -421,6 +424,7 @@
     "InMemoryQueueService",
     "InMemorySessionStore",
     "InMemoryTriggerService",
+    "InMemoryTriggerSourceStore",
     "InMemoryWorkflowService",
     "IncomingWebhookService",
     "JsonConsoleLogger",
@@ -514,7 +518,7 @@
     "verifyWithKeyMaterial",
     "wrapDEK"
   ],
-  "./hmac": ["hmacSha256Hex", "timingSafeStringEqual"],
+  "./hmac": ["WebhookSigningSecret", "hmacSha256Hex", "timingSafeStringEqual"],
   "./state": [
     "addPackageServiceFactories",
     "getAllPackageStates",

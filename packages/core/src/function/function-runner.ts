@@ -457,10 +457,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
     let invocationAuditLog: AuditLog | undefined
     let invocationAnalytics: AnalyticsLog | undefined
     try {
-      wireServices = (await resolvedCreateWireServices?.(
-        resolvedSingletonServices,
-        invocationWire
-      )) as Record<string, unknown> | undefined
+      wireServices = funcMeta.singletonServicesOnly
+        ? undefined
+        : ((await resolvedCreateWireServices?.(
+            resolvedSingletonServices,
+            invocationWire
+          )) as Record<string, unknown> | undefined)
       let services =
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }

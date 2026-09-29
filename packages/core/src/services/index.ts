@@ -35,6 +35,14 @@ export {
 } from './remote-jobs.js'
 export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
+export {
+  InMemoryTriggerSourceStore,
+  type DeclaredTriggerSource,
+  type TriggerSourceKind,
+  type TriggerSourceResult,
+  type TriggerSourceRow,
+  type TriggerSourceStore,
+} from './trigger-source-store.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
 export { LocalGatewayService } from './local-gateway-service.js'
 export {
