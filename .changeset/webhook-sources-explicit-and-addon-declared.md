@@ -1,9 +1,9 @@
 ---
-'@pikku/core': minor
-'@pikku/kysely': minor
-'@pikku/inspector': minor
-'@pikku/cli': minor
-'@pikku/addon-admin': minor
+'@pikku/core': patch
+'@pikku/kysely': patch
+'@pikku/inspector': patch
+'@pikku/cli': patch
+'@pikku/addon-admin': patch
 ---
 
 Webhook trigger sources are off until someone turns them on, and addons declare their own.
