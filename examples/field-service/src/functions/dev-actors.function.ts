@@ -7,6 +7,7 @@ import {
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { personaList } from '#pikku/scenarios/pikku-personas.gen.js'
 
+// @snippet start listDevActors
 export const ListDevActorsInput = z.object({ app: z.string().optional() })
 
 export const ListDevActorsOutput = z.object({
@@ -36,3 +37,4 @@ export const listDevActors = pikkuSessionlessFunc({
     return { actors: signInablePersonas(personaList, app) }
   },
 })
+// @snippet end listDevActors

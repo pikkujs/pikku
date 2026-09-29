@@ -118,6 +118,7 @@ export const auth = pikkuBetterAuth(
       // afterStart: that hook only ever runs under `pikku dev` and `pikku serve`,
       // so a deployed stage would provision nobody.
       plugins: [
+        // @snippet start personaSignIn
         pikkuActor({
           secret: SCENARIO_ACTOR_SECRET,
           allowSignIn: ALLOW_ACTOR_SIGN_IN,
@@ -128,6 +129,7 @@ export const auth = pikkuBetterAuth(
             allowed: () => devSwitcherOn(featureFlags, ALLOW_ACTOR_SIGN_IN),
           },
         }),
+        // @snippet end personaSignIn
         pikkuBan(),
         pikkuFabric({
           publicKey: FABRIC_AUTH_PUBLIC_KEY,

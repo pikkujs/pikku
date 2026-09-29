@@ -86,30 +86,14 @@ app can be reviewed as each kind of user without anyone knowing a seed password.
 The switcher holds no credential. It asks the app's `listDevActors` function
 for the personas to offer and signs in by posting only a persona id to
 `/auth/sign-in/persona`; the server resolves the address. Two server pieces,
-both built from `@pikku/better-auth`:
+both built from `@pikku/better-auth` — an exposed, sessionless function:
 
-```ts
-// an exposed, sessionless function
-export const listDevActors = pikkuSessionlessFunc({
-  expose: true,
-  input: z.object({ app: z.string().optional() }),
-  output: ListDevActorsOutput,
-  func: async ({ variables, featureFlags }, { app }) => {
-    const optIn = await variables.get(ACTOR_SIGN_IN_OPT_IN_ENV)
-    if (!(await devSwitcherOn(featureFlags, optIn))) return { actors: [] }
-    return { actors: listDevActors(personaList, app) }
-  },
-})
+```ts snippet:listDevActors
+```
 
-// in the auth config
-pikkuActor({
-  secret: SCENARIO_ACTOR_SECRET,
-  allowSignIn: ALLOW_ACTOR_SIGN_IN,
-  personaSignIn: {
-    personas: personaList,
-    allowed: () => devSwitcherOn(featureFlags, ALLOW_ACTOR_SIGN_IN),
-  },
-})
+and, in the auth config:
+
+```ts snippet:personaSignIn
 ```
 
 `devSwitcherOn` is always true under `pikku dev`. A deployed stage needs actor
