@@ -10,14 +10,22 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { envWithoutInheritedRepo } from '../../fabric/lib/git.js'
 import { pikkuReleaseInit, pikkuReleasePrepare } from './release.js'
 
 let root: string
 let app: string
 let remote: string
 
+// Under a git hook (`git push` from a worktree) GIT_DIR outranks `cwd`: without
+// dropping it, the fixture below configures, commits and adds remotes in the
+// repository running the tests instead of the temp one.
 const sh = (cwd: string, ...args: string[]) =>
-  execFileSync('git', args, { cwd, encoding: 'utf-8' }).trim()
+  execFileSync('git', args, {
+    cwd,
+    encoding: 'utf-8',
+    env: envWithoutInheritedRepo(),
+  }).trim()
 
 const services = () => ({
   config: { rootDir: app, outDir: '.pikku' },
@@ -43,7 +51,14 @@ const ship = async (input: unknown = {}) => {
   const prepared = await run(pikkuReleasePrepare, input)
   sh(app, 'add', '--', ...prepared.files)
   sh(app, 'commit', '-q', '-m', `release: v${prepared.version}`)
-  sh(app, 'push', '-q', 'origin', 'HEAD:refs/heads/staging', 'HEAD:refs/heads/main')
+  sh(
+    app,
+    'push',
+    '-q',
+    'origin',
+    'HEAD:refs/heads/staging',
+    'HEAD:refs/heads/main'
+  )
   checkoutStaging()
   return prepared
 }
@@ -86,7 +101,10 @@ describe('pikku release', () => {
       'surface.pikku.json',
     ])
     assert.equal(version(), '0.1.1')
-    assert.match(readFileSync(join(app, 'CHANGELOG.md'), 'utf-8'), /## 0\.1\.1 /)
+    assert.match(
+      readFileSync(join(app, 'CHANGELOG.md'), 'utf-8'),
+      /## 0\.1\.1 /
+    )
     assert.equal(sh(app, 'rev-parse', 'HEAD'), head)
     assert.equal(sh(app, 'ls-remote', 'origin', 'refs/heads/main'), '')
     assert.equal(sh(app, 'ls-remote', 'origin', 'refs/heads/release/next'), '')

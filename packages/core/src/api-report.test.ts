@@ -10,6 +10,30 @@ const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const reportPath = join(packageRoot, 'api-report.md')
 
 /**
+ * The environment for git run against a throwaway repository. Under a git hook
+ * (`git push` from a worktree) GIT_DIR and friends outrank `cwd`, so without
+ * dropping them the sandbox below would quietly be the repository running the
+ * tests.
+ */
+const sandboxGitEnv = () => {
+  const env = { ...process.env }
+  for (const key of [
+    'GIT_DIR',
+    'GIT_COMMON_DIR',
+    'GIT_WORK_TREE',
+    'GIT_INDEX_FILE',
+    'GIT_PREFIX',
+    'GIT_NAMESPACE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+    'GIT_CEILING_DIRECTORIES',
+  ]) {
+    delete env[key]
+  }
+  return env
+}
+
+/**
  * `public-surface.json` pins the *names* a consumer can reach. That catches an
  * export appearing or vanishing and nothing else — adding a method to
  * `MetaService`, or making a field on `ChannelMeta` required, sails past it,
@@ -96,16 +120,17 @@ describe('merging the API report is not hand work', () => {
     // this in place would reach into whatever else is checked out beside it.
     const sandbox = mkdtempSync(join(tmpdir(), 'pikku-merge-driver-'))
     try {
-      execFileSync('git', ['init', '--quiet', sandbox], { stdio: 'pipe' })
+      const env = sandboxGitEnv()
+      execFileSync('git', ['init', '--quiet', sandbox], { stdio: 'pipe', env })
       execFileSync(
         'node',
         [join(repoRoot, 'scripts', 'setup-merge-drivers.mjs')],
-        { cwd: sandbox, stdio: 'pipe' }
+        { cwd: sandbox, stdio: 'pipe', env }
       )
       const driver = execFileSync(
         'git',
         ['config', '--local', 'merge.api-report.driver'],
-        { cwd: sandbox, stdio: 'pipe' }
+        { cwd: sandbox, stdio: 'pipe', env }
       )
         .toString()
         .trim()

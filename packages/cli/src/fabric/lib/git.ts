@@ -46,7 +46,7 @@ const REPO_LOCATION_ENV = [
   'GIT_CEILING_DIRECTORIES',
 ] as const
 
-function envWithoutInheritedRepo(): NodeJS.ProcessEnv {
+export function envWithoutInheritedRepo(): NodeJS.ProcessEnv {
   const env = { ...process.env }
   for (const key of REPO_LOCATION_ENV) {
     delete env[key]
