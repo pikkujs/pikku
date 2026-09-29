@@ -7,6 +7,7 @@ import {
   destructiveMigrations,
   isApprovable,
   missingConfigHints,
+  readDeploymentStatus,
   reconcileDeployedRef,
   stateLabel,
   waitForDeployment,
@@ -20,6 +21,7 @@ type StatusRow = {
   statusReason?: string | null
   missingSecrets?: { name: string }[]
   missingVariables?: { name: string }[]
+  buildLog?: string | null
 }
 
 function fakeRpc(script: StatusRow[]) {
@@ -39,6 +41,9 @@ function fakeRpc(script: StatusRow[]) {
           hostname: row.status === 'active' ? 'app.example.com' : null,
           dispatchNamespace: null,
           manifest: {},
+          buildLog: row.buildLog ?? null,
+          imageBuildLog: null,
+          imageBuildStatus: null,
           missingSecrets: (row.missingSecrets ?? []).map((s) => ({
             ...s,
             displayName: null,
@@ -583,5 +588,42 @@ describe('reconcileDeployedRef', () => {
       deploymentId: 'dep-1',
     })
     assert.strictEqual(ref, requested)
+  })
+})
+
+describe('the builder’s own account of a failure', () => {
+  test('is carried off the RPC rather than dropped at the boundary', async () => {
+    const { rpc } = fakeRpc([
+      { status: 'failed', buildLog: 'Build host unreachable, retrying' },
+    ])
+    const status = await readDeploymentStatus(rpc, 'dep-1')
+    assert.equal(status.buildLog, 'Build host unreachable, retrying')
+  })
+
+  test('reaches the caller that waited, which is where it is printed', async () => {
+    // A failed deployment has an empty manifest and plan and a null
+    // statusReason, so this log is routinely the ONLY record of why. Losing it
+    // left `failed in 248s` as the whole report — which reads as a broken
+    // project even when the cause was fabric-side.
+    const { rpc } = fakeRpc([
+      { status: 'failed', buildLog: 'Build host unreachable, retrying' },
+    ])
+    const result = await waitForDeployment({
+      rpc,
+      deploymentId: 'dep-1',
+      timeoutMs: 1_000,
+      approve: async () => false,
+      onEvent: () => {},
+      sleep: async () => {},
+    })
+    assert.equal(result.outcome, 'failed')
+    assert.equal(result.buildLog, 'Build host unreachable, retrying')
+  })
+
+  test('is null, not undefined, when the builder recorded nothing', async () => {
+    const { rpc } = fakeRpc([{ status: 'failed' }])
+    const status = await readDeploymentStatus(rpc, 'dep-1')
+    assert.equal(status.buildLog, null)
+    assert.equal(status.imageBuildLog, null)
   })
 })

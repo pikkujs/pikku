@@ -376,6 +376,12 @@ returns 0, which tells you nothing about whether it worked:
 | 3    | the deployment is blocked and nothing the CLI can do will unblock it    |
 | 4    | the wait hit `--timeout` with the deployment still in flight            |
 
+On a failure or timeout, `apply` prints the tail of the builder's own log (and
+carries `buildLog` / `imageBuildLog` on the `--json` result). Read it before
+touching code: `fabric logs` serves the running stage, not the build. When the
+builder recorded nothing, the CLI says so — that is usually fabric-side, so run
+`pikku fabric smoke` before assuming the project is broken.
+
 Fabric parks every deploy at a gate after the plan phase (`status: suspended`).
 Why it parked is the whole story, and it is `statusReason`, not `status`:
 

@@ -113,6 +113,17 @@ export interface DeploymentStatus {
   hostname: string | null
   missingSecrets: MissingConfigEntry[]
   missingVariables: MissingConfigEntry[]
+  /**
+   * Why a build failed, when the builder got far enough to say. This is often the
+   * ONLY record of the cause: a failed deployment has an empty manifest and plan,
+   * `statusReason` is null for anything that is not a gate, and `fabric logs`
+   * serves the running stage rather than the build. Dropping these here left the
+   * CLI reporting `failed in 248s` and nothing else, which reads as "your project
+   * is broken" even when the log says the build host was unreachable.
+   */
+  buildLog: string | null
+  imageBuildLog: string | null
+  imageBuildStatus: string | null
 }
 
 export async function readDeploymentStatus(
@@ -127,6 +138,9 @@ export async function readDeploymentStatus(
     hostname: s.hostname,
     missingSecrets: s.missingSecrets,
     missingVariables: s.missingVariables,
+    buildLog: s.buildLog ?? null,
+    imageBuildLog: s.imageBuildLog ?? null,
+    imageBuildStatus: s.imageBuildStatus ?? null,
   }
 }
 
@@ -336,6 +350,9 @@ export interface WaitResult {
   reason: BlockedReason | null
   missingSecrets: MissingConfigEntry[]
   missingVariables: MissingConfigEntry[]
+  /** The builder's own account of a failure. See {@link DeploymentStatus}. */
+  buildLog: string | null
+  imageBuildLog: string | null
   approved: boolean
   elapsedMs: number
 }
@@ -394,6 +411,8 @@ export async function waitForDeployment({
     reason,
     missingSecrets: status.missingSecrets,
     missingVariables: status.missingVariables,
+    buildLog: status.buildLog,
+    imageBuildLog: status.imageBuildLog,
     approved,
     elapsedMs: elapsed(),
   })
@@ -523,7 +542,8 @@ export function reconcileDeployedRef({
       'A deployment already parked for this branch was attached to rather than a new one being cut,',
       'so continuing would deploy a different commit than the one named.',
       `Inspect it with \`pikku fabric deploy list --json\`, then either publish it deliberately with`,
-      `\`pikku fabric deploy apply --deployment-id ${deploymentId} --sync\` or dismiss it and re-run.`,
+      `\`pikku fabric deploy apply --deployment-id ${deploymentId} --sync\`, wait for it to finish,`,
+      `or dismiss it from the stage in the Fabric console and re-run.`,
     ].join('\n')
   )
 }

@@ -111,6 +111,12 @@ export const FabricDeployApplyOutput = z.object({
     .optional(),
   missingSecrets: z.array(MissingConfig).optional(),
   missingVariables: z.array(MissingConfig).optional(),
+  /**
+   * The builder's own account of a failure, when it produced one. Carried on the
+   * result so a script reading --json sees the cause, not just `failed`.
+   */
+  buildLog: z.string().nullable().optional(),
+  imageBuildLog: z.string().nullable().optional(),
   approvalWithheld: z.literal('destructive_migrations').optional(),
   changes: Changes.optional(),
   workers: z
@@ -386,6 +392,8 @@ async function applyDeploy(
             missingVariables: status.missingVariables,
           }
         : {}),
+      ...(status.buildLog ? { buildLog: status.buildLog } : {}),
+      ...(status.imageBuildLog ? { imageBuildLog: status.imageBuildLog } : {}),
       ...finished,
     }
   }
@@ -415,6 +423,8 @@ async function applyDeploy(
     approved: waited.approved,
     elapsedMs: waited.elapsedMs,
     url: waited.hostname ? `https://${waited.hostname}` : null,
+    ...(waited.buildLog ? { buildLog: waited.buildLog } : {}),
+    ...(waited.imageBuildLog ? { imageBuildLog: waited.imageBuildLog } : {}),
     ...(waited.outcome === 'timeout' ? { timeoutSeconds } : {}),
     ...(waited.outcome === 'blocked'
       ? {
@@ -500,6 +510,32 @@ const missingLines = (
   ]
 }
 
+/**
+ * Print what the builder said, when it said anything.
+ *
+ * Without this a failed deploy printed `failed main in 248s` and a pointer to
+ * `fabric logs`, which serves the RUNNING stage and is empty for a build that
+ * never produced one — so the only visible evidence pointed at the project.
+ * `buildLog` is frequently the sole record of the cause (a failed deployment
+ * carries an empty manifest and plan, and `statusReason` is null for anything
+ * that is not an approval gate), and it was being dropped at the RPC boundary.
+ *
+ * Indented rather than raw so a multi-line log reads as one block, and capped:
+ * this is the summary line's neighbour, not a log viewer.
+ */
+const BUILD_LOG_LINES = 20
+
+const printBuildLog = (label: string, log: string | null | undefined): void => {
+  if (!log) return
+  const lines = log.trimEnd().split('\n')
+  const shown = lines.slice(-BUILD_LOG_LINES)
+  console.log(dim(`${label}:`))
+  for (const line of shown) console.log(dim(`  ${line}`))
+  if (shown.length < lines.length) {
+    console.log(dim(`  … ${lines.length - shown.length} earlier line(s)`))
+  }
+}
+
 const reattachHint = (deploymentId: string): string =>
   dim(
     `Re-attach with \`pikku fabric deploy apply --deployment-id ${deploymentId}\`.`
@@ -527,6 +563,8 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
     elapsedMs,
     timeoutSeconds,
     approved,
+    buildLog,
+    imageBuildLog,
   } = result
   const where = branch ?? 'deployment'
   const at = ref ? ` ${dim('@')} ${ref.slice(0, 8)}` : ''
@@ -609,6 +647,8 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
     console.log(
       `${changed('timed out')} after ${timeoutSeconds}s ${dim('·')} ${deploymentId} ${dim(`(still ${status ?? 'in flight'})`)}`
     )
+    printBuildLog('build log', buildLog)
+    printBuildLog('image build log', imageBuildLog)
     console.log(reattachHint(deploymentId))
     console.log(dim('Raise the ceiling with `--timeout <seconds>`.'))
     return
@@ -617,5 +657,19 @@ export const renderDeployApply = (_s: unknown, result: ApplyOutput): void => {
   console.log(
     `${removed('failed')} ${where}${at} ${dim('·')} ${deploymentId}${took} ${dim(`(${stateLabel(status ?? 'failed', statusReason ?? null)})`)}`
   )
+  printBuildLog('build log', buildLog)
+  printBuildLog('image build log', imageBuildLog)
+  if (!buildLog && !imageBuildLog) {
+    console.log(
+      dim(
+        'The builder recorded no reason. That is usually a fabric-side failure rather than'
+      )
+    )
+    console.log(
+      dim(
+        'a defect in this project — check `pikku fabric smoke` before changing code.'
+      )
+    )
+  }
   if (branch) console.log(dim(`Logs: \`pikku fabric logs --branch ${branch}\``))
 }
