@@ -9,6 +9,7 @@ import {
   resolveRef,
 } from '../../utils/git.js'
 import { FabricPreconditionError } from '../lib/errors.js'
+import { migrationHistoryErrors, runValidate } from './validate.function.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { added, changed, removed, dim, table } from '../lib/output.js'
 import {
@@ -41,6 +42,8 @@ export const FabricDeployInput = z.object({
   detach: z.boolean().optional(),
   autoApprove: z.boolean().optional(),
   allowDestructive: z.boolean().optional(),
+  skipMigrationCheck: z.boolean().optional(),
+  migrationsBase: z.string().optional(),
   timeout: z.number().optional(),
   json: z.boolean().optional(),
 })
@@ -222,6 +225,37 @@ export const FabricDeployApply = pikkuSessionlessFunc({
   },
 })
 
+/**
+ * Refuses to create a deployment while the migration history is broken: a
+ * stage would run the migrations that exist and silently skip the ones that
+ * were edited, so it ends up with a schema no migration describes.
+ */
+export async function guardMigrationHistory(input: DeployInput): Promise<void> {
+  if (input.skipMigrationCheck) {
+    console.error(
+      '\u26a0  --skip-migration-check: deploying WITHOUT checking migration history.\n' +
+        '   Edited, deleted or renamed applied migrations will not reach the stage database,\n' +
+        '   and the app may be deployed against a schema it was not written for.'
+    )
+    return
+  }
+  const { findings } = await runValidate(process.cwd(), {
+    skipTypecheck: true,
+    migrationsBase: input.migrationsBase,
+  })
+  const errors = migrationHistoryErrors(findings)
+  if (errors.length === 0) return
+  throw new FabricPreconditionError(
+    [
+      `Refusing to deploy: ${errors.length} migration-history problem${errors.length === 1 ? '' : 's'}.`,
+      ...errors.map((f) => `  - [${f.id}] ${f.message}`),
+      '',
+      'Applied migrations are forward-only: restore the original file and add a NEW migration.',
+      'Run `pikku fabric validate` for fix hints, or pass --skip-migration-check to override (not recommended).',
+    ].join('\n')
+  )
+}
+
 async function applyDeploy(
   input: DeployInput,
   started: { deploymentId?: string }
@@ -275,6 +309,8 @@ async function applyDeploy(
     branch = targetBranch
     ref = resolved
     rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
+
+    await guardMigrationHistory(input)
 
     // An inferred target is said out loud before anything is built. Under -y
     // there is no confirmation prompt to name it, and a deploy that never

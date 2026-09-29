@@ -16,6 +16,7 @@ import { runTypeIdentityChecks } from '../../functions/validate/type-identity-ch
 import { runDeployReadinessChecks } from '../../functions/validate/deploy-readiness-checks.js'
 import { migrationCreatesTable } from '../../functions/validate/shared-checks.js'
 import { resolveApiContext } from '../lib/config.js'
+import { compareMigrationsWithBase } from '../lib/migration-base.js'
 import { getFabricRPC } from '../lib/http.js'
 import { blankComments, lineOfOffset } from '../lib/blank-comments.js'
 import { blankScenarioMeta } from '../lib/blank-scenario-meta.js'
@@ -35,6 +36,12 @@ export const FabricValidateInput = z.object({
     .optional()
     .describe(
       'Skip the frontend type-check stage (structural checks only, much faster)'
+    ),
+  migrationsBase: z
+    .string()
+    .optional()
+    .describe(
+      'Git ref whose migrations are frozen (default origin/main, or $PIKKU_MIGRATIONS_BASE)'
     ),
 })
 
@@ -312,6 +319,71 @@ export function migrationDriftFindings(
   return findings
 }
 
+/**
+ * A migration that exists on the base branch is treated as applied: it must
+ * not be modified, deleted or renamed. New files are fine. Silent outside a git
+ * repository or when no base ref exists, so a fresh project is not nagged.
+ */
+async function checkMigrationsAgainstBase(
+  root: string,
+  migrationsDir: string,
+  explicitBase?: string
+): Promise<Finding[]> {
+  if (!existsSync(migrationsDir)) return []
+  const cmp = await compareMigrationsWithBase(
+    root,
+    migrationsDir,
+    explicitBase
+  ).catch(() => ({ ok: false as const }))
+  if (!cmp.ok) {
+    if (!('unresolvedBase' in cmp) || !cmp.unresolvedBase) return []
+    return [
+      {
+        id: 'migration-base-unresolved',
+        severity: 'info',
+        message: `migration base "${cmp.unresolvedBase}" does not resolve — migrations were not compared against it`,
+        path: migrationsDir,
+        fixHint:
+          'Fetch the ref (`git fetch origin main`) or pass a ref that exists to --migrations-base. In CI use a full clone (fetch-depth: 0).',
+      },
+    ]
+  }
+  const { baseName, changes } = cmp.result
+  return changes.map((c): Finding => {
+    const what =
+      c.kind === 'modified'
+        ? 'was modified'
+        : c.kind === 'renamed'
+          ? `was renamed to ${c.renamedTo}`
+          : 'was deleted'
+    return {
+      id: `migration-modified-after-base-${slug(c.file)}`,
+      severity: 'error',
+      message: `${c.file} exists on ${baseName} but ${what}`,
+      path: join(migrationsDir, c.file),
+      fixHint: [
+        'Restore the file exactly as it is on the base branch',
+        `(\`git checkout ${baseName} -- ${relative(root, join(migrationsDir, c.file))}\`)`,
+        'and put the change in a NEW numbered migration. A stage records a',
+        'migration by name and never re-runs it, so an edit, rename or deletion',
+        'never reaches a database that already applied it.',
+      ].join('\n'),
+    }
+  })
+}
+
+/** Findings that mean the migration history is unsafe to deploy. */
+export const MIGRATION_HISTORY_FINDING =
+  /^(migration-applied-file-missing-|migration-drift-|migration-gap$|migration-modified-after-base-)/
+
+export function migrationHistoryErrors<
+  T extends { id: string; severity: string },
+>(findings: T[]): T[] {
+  return findings.filter(
+    (f) => f.severity === 'error' && MIGRATION_HISTORY_FINDING.test(f.id)
+  )
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
@@ -360,7 +432,7 @@ async function checkMigrationDrift(
 
 export async function runValidate(
   startDir = process.cwd(),
-  opts: { skipTypecheck?: boolean } = {}
+  opts: { skipTypecheck?: boolean; migrationsBase?: string } = {}
 ): Promise<z.infer<typeof FabricValidateOutput>> {
   const root = await findProjectRoot(startDir)
   const findings: Finding[] = []
@@ -1238,6 +1310,13 @@ export async function runValidate(
     // you are about to push: the case this is for is merging a branch that
     // edited a migration another stage already ran.
     findings.push(...(await checkMigrationDrift(root, migrationsDir)))
+    findings.push(
+      ...(await checkMigrationsAgainstBase(
+        root,
+        migrationsDir,
+        opts.migrationsBase
+      ))
+    )
 
     // ── the coercion map has to reach a Kysely instance ──────────────────
     // `pikku db migrate` generates a CoercionMap from the `kind` entries in
@@ -2262,8 +2341,8 @@ export const FabricValidate = pikkuSessionlessFunc({
     'Check the current project structure for fabric compatibility. Prints all missing or misconfigured items with fix hints so an AI agent or developer can resolve them.',
   input: FabricValidateInput,
   output: FabricValidateOutput,
-  func: async (_services, { skipTypecheck }) =>
-    runValidate(process.cwd(), { skipTypecheck }),
+  func: async (_services, { skipTypecheck, migrationsBase }) =>
+    runValidate(process.cwd(), { skipTypecheck, migrationsBase }),
 })
 
 export const renderValidate = (
