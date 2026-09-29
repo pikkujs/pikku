@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 '@pikku/skills': patch
 ---
 
