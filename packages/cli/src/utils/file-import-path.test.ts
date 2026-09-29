@@ -1,4 +1,7 @@
 import { strict as assert } from 'assert'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, test } from 'node:test'
 import { getFileImportRelativePath } from './file-import-path.js'
 
@@ -280,6 +283,32 @@ describe('getFileImportRelativePath', () => {
     assert.strictEqual(
       getFileImportRelativePath(from, to, {}),
       './nested/file2.js'
+    )
+  })
+
+  test('imports a built package declaration through its exported subpath', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pikku-exports-'))
+    const core = join(root, 'packages', 'core')
+    mkdirSync(join(core, 'dist', 'wirings', 'trigger'), { recursive: true })
+    writeFileSync(
+      join(core, 'package.json'),
+      JSON.stringify({
+        name: '@pikku/core',
+        exports: {
+          '.': './dist/index.js',
+          './trigger': './dist/wirings/trigger/index.js',
+        },
+      })
+    )
+    const to = join(core, 'dist', 'wirings', 'trigger', 'types.d.ts')
+
+    assert.strictEqual(
+      getFileImportRelativePath(
+        join(root, 'app', '.pikku', 'rpc.gen.d.ts'),
+        to,
+        {}
+      ),
+      '@pikku/core/trigger'
     )
   })
 })

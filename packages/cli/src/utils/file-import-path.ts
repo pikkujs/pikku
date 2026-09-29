@@ -1,4 +1,39 @@
-import { relative, dirname, resolve } from 'path'
+import { existsSync, readFileSync } from 'fs'
+import { relative, dirname, join, posix, resolve } from 'path'
+
+/**
+ * A type declared in a built package's `.d.ts` is imported through the
+ * `exports` entry whose index sits in the same directory: `@pikku/core/trigger`
+ * for `dist/wirings/trigger/webhook-source.types.d.ts`. A path into `dist/` is
+ * not exported, so a consumer cannot resolve it.
+ */
+const exportedSubpath = (to: string): string | undefined => {
+  if (!to.endsWith('.d.ts')) return undefined
+  const file = resolve(to)
+  for (let dir = dirname(file); dir !== dirname(dir); dir = dirname(dir)) {
+    const packageJson = join(dir, 'package.json')
+    if (!existsSync(packageJson)) continue
+    const { name, exports } = JSON.parse(readFileSync(packageJson, 'utf-8'))
+    if (!name || !exports || typeof exports !== 'object') return undefined
+    const fileDir = relative(dir, dirname(file)).replace(/\\/g, '/')
+    for (const [subpath, entry] of Object.entries<any>(exports)) {
+      const target =
+        typeof entry === 'string'
+          ? entry
+          : (entry?.types ?? entry?.import ?? entry?.default)
+      if (
+        typeof target === 'string' &&
+        !subpath.includes('*') &&
+        /\/index\.(d\.ts|js)$/.test(target) &&
+        posix.dirname(posix.normalize(target)) === fileDir
+      ) {
+        return `${name}${subpath.slice(1)}`
+      }
+    }
+    return undefined
+  }
+  return undefined
+}
 
 export const getFileImportRelativePath = (
   from: string,
@@ -18,6 +53,9 @@ export const getFileImportRelativePath = (
   if (!to.startsWith('.') && !to.startsWith('/') && !/^[a-zA-Z]:/.test(to)) {
     return to
   }
+
+  const exported = exportedSubpath(to)
+  if (exported) return exported
 
   let filePath = relative(dirname(from), to)
   if (!/^\.+\//.test(filePath)) {
