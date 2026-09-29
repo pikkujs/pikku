@@ -3,11 +3,14 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { betterAuth } from 'better-auth'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
-import { loadAuthOptions, withoutAuthSchemaCheck } from './better-auth-schema.js'
+import {
+  loadAuthOptions,
+  withoutAuthSchemaCheck,
+} from './better-auth-schema.js'
 
 /**
  * A Better Auth 1.7 plugin starts work in `init` and does not wait for it — the
@@ -26,7 +29,7 @@ import { loadAuthOptions, withoutAuthSchemaCheck } from './better-auth-schema.js
  * itself and fails the case before any listener of ours is consulted. The exit
  * code is the only honest witness.
  */
-test('reading the schema survives a plugin whose init rejects with nothing awaiting it', () => {
+test('reading the schema survives a plugin whose init rejects with nothing awaiting it', async () => {
   const root = mkdtempSync(join(tmpdir(), 'pikku-auth-schema-'))
   try {
     mkdirSync(join(root, 'src'), { recursive: true })
@@ -59,9 +62,28 @@ if (options?.database?.type !== 'sqlite') {
 }
 await new Promise((r) => setTimeout(r, 250))
 `
-    const run = spawnSync(process.execPath, ['--eval', script], {
-      encoding: 'utf8',
-    })
+    // Async on purpose: bun's spawnSync can miss a child's exit and spin forever.
+    const run = await new Promise<{
+      status: number | null
+      stdout: string
+      stderr: string
+    }>((resolve) =>
+      execFile(
+        process.execPath,
+        ['--eval', script],
+        { encoding: 'utf8' },
+        (error, stdout, stderr) =>
+          resolve({
+            status: error
+              ? typeof error.code === 'number'
+                ? error.code
+                : null
+              : 0,
+            stdout,
+            stderr,
+          })
+      )
+    )
 
     assert.equal(
       run.status,
