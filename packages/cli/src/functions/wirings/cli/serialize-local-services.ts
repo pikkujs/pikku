@@ -57,7 +57,7 @@ export const localServicesPackages = ({
   database,
   localCLI,
 }: Pick<SerializeLocalServicesOptions, 'database' | 'localCLI'>): string[] => [
-  ...(database ? ['@pikku/kysely', 'kysely'] : []),
+  ...(database ? ['@pikku/kysely'] : []),
   ...(localCLI ? ['@pikku/schedule'] : []),
 ]
 
@@ -70,6 +70,9 @@ const GATED_SERVICES = [
   'scopeService',
   'webhookService',
   'incomingWebhookService',
+  'agentStorage',
+  'agentRunState',
+  'agentRunService',
 ] as const
 
 const json = (value: unknown): string => JSON.stringify(value, null, 2)
@@ -262,11 +265,18 @@ export const createLocalServices = async (
       ? ${localCLI ? 'await openLocalDatabase(config)' : 'undefined'}
       : (hostKysely ?? undefined)
 
-  const agentStorage = kysely ? new KyselyAgentStorageService(kysely) : undefined
-  const agentRunState = kysely
-    ? new KyselyAgentRunStateService(kysely)
-    : new InMemoryAgentRunStateService()
-  const agentRunService = kysely ? new KyselyAgentRunService(kysely) : undefined
+  const agentStorage =
+    kysely && isRequired('agentStorage')
+      ? new KyselyAgentStorageService(kysely)
+      : undefined
+  const agentRunState =
+    kysely && isRequired('agentRunState')
+      ? new KyselyAgentRunStateService(kysely)
+      : new InMemoryAgentRunStateService()
+  const agentRunService =
+    kysely && isRequired('agentRunService')
+      ? new KyselyAgentRunService(kysely)
+      : undefined
   if (agentStorage) await agentStorage.init()
   if ('init' in agentRunState && typeof agentRunState.init === 'function') {
     await agentRunState.init()
@@ -384,8 +394,8 @@ export const serializeLocalServices = ({
   if (database) {
     imports.push(
       opens && drivers?.pg
-        ? `import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'`
-        : `import type { Kysely } from 'kysely'`
+        ? `import { CamelCasePlugin, Kysely, PostgresDialect } from '@pikku/kysely'`
+        : `import type { Kysely } from '@pikku/kysely'`
     )
   }
   imports.push(`import {

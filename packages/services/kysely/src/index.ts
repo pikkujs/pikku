@@ -25,6 +25,11 @@ export { KyselyAnalyticsService } from './kysely-analytics-service.js'
 export { KyselyVirtualUserRunStore } from './kysely-virtual-user-run-store.js'
 export { KyselyVirtualUserScheduleStore } from './kysely-virtual-user-schedule-store.js'
 
+// Re-exported so a generated file that constructs the services above opens and
+// types its database with the same copy of kysely those services were built
+// against, rather than a second copy the project may resolve on its own.
+export { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
+
 export {
   SerializePlugin,
   BaseSerializePlugin,

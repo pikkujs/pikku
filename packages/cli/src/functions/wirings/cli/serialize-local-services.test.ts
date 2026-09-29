@@ -55,7 +55,7 @@ describe('what the file imports', () => {
   test('a database brings in @pikku/kysely, and only a CLI opens one', () => {
     const code = emit({ localCLI: undefined })
     assert.ok(importedModules(code).includes('@pikku/kysely'))
-    assert.match(code, /import type \{ Kysely \} from 'kysely'/)
+    assert.match(code, /import type \{ Kysely \} from '@pikku\/kysely'/)
     assert.doesNotMatch(code, /openLocalDatabase/)
     assert.doesNotMatch(code, /node:/)
     assert.doesNotMatch(code, /@pikku\/schedule/)
@@ -73,7 +73,6 @@ describe('what the file imports', () => {
     assert.deepStrictEqual(localServicesPackages({ database: false }), [])
     assert.deepStrictEqual(localServicesPackages({ database: true }), [
       '@pikku/kysely',
-      'kysely',
     ])
     assert.deepStrictEqual(
       localServicesPackages({ database: false, localCLI: withCLI() }),
@@ -92,7 +91,31 @@ describe('the answers baked in at codegen', () => {
     assert.match(code, /"scopeService": true/)
     assert.match(code, /"webhookService": false/)
     assert.match(code, /"incomingWebhookService": false/)
+    assert.match(code, /"agentStorage": false/)
+    assert.match(code, /"agentRunState": false/)
+    assert.match(code, /"agentRunService": false/)
     assert.doesNotMatch(code, /"jwt"/)
+  })
+
+  test('only builds the database-backed agent services the project uses', () => {
+    const used = emit({
+      requiredServices: new Set(['agentStorage', 'agentRunState']),
+    })
+    assert.match(
+      used,
+      /kysely && isRequired\('agentStorage'\)\s*\n\s*\? new KyselyAgentStorageService\(kysely\)/
+    )
+    assert.match(
+      used,
+      /kysely && isRequired\('agentRunState'\)\s*\n\s*\? new KyselyAgentRunStateService\(kysely\)/
+    )
+    assert.match(
+      used,
+      /kysely && isRequired\('agentRunService'\)\s*\n\s*\? new KyselyAgentRunService\(kysely\)/
+    )
+    assert.match(used, /"agentStorage": true/)
+    assert.match(used, /"agentRunState": true/)
+    assert.match(used, /"agentRunService": false/)
   })
 
   test('prefers what a live inspector passes over what was baked', () => {
