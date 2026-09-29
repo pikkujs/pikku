@@ -575,8 +575,13 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
             runId,
             stepName,
             stepState.attemptCount
-          )
+          ),
+          stepState.attemptCount
         )
+        // `executeWorkflowStepInner` reads a null claim as "another dispatch
+        // owns it" and returns without resuming, so the run would stay
+        // `running` until a stalled sweep. Requeue the orchestrator here.
+        await this.resumeWorkflow(runId)
         return null
       }
     }

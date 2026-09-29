@@ -135,7 +135,7 @@ describe('step leases', () => {
   })
 
   test('a step that keeps losing its worker fails instead of looping', async () => {
-    trackResumes()
+    const resumes = trackResumes()
     const ws = new InMemoryWorkflowService()
     const runId = await startRun(ws, 'Charge card', { retries: 1 })
 
@@ -149,6 +149,11 @@ describe('step leases', () => {
     const step = await ws.getStepState(runId, 'Charge card')
     assert.equal(step.status, 'failed', 'it fails loudly rather than wedging')
     assert.match(String(step.error?.message), /lease/i)
+    assert.deepEqual(
+      resumes.runIds,
+      [runId],
+      'the failure requeues the orchestrator so the run settles'
+    )
   })
 
   // The sweep resumes the run, and the resumed run meets the step still
@@ -224,6 +229,35 @@ describe('step leases', () => {
     }
 
     assert.equal(stopped, true)
+  })
+
+  // A slow refresh must not overlap the next tick: overlapping renewals mean
+  // `stop` only waits for the latest, so an earlier one can land after the
+  // caller released the lease and put it back.
+  test('a refresh tick is skipped while a previous one is still in flight', async () => {
+    let release!: () => void
+    let calls = 0
+
+    mock.timers.enable({ apis: ['setInterval'] })
+    try {
+      const stop = startStepLeaseRefresh('step-1', 10_000, () => {
+        calls += 1
+        return new Promise<void>((resolve) => (release = resolve))
+      })
+      mock.timers.tick(5_000)
+      mock.timers.tick(5_000)
+      assert.equal(calls, 1, 'the second tick did not start a second refresh')
+
+      release()
+      await new Promise((resolve) => setImmediate(resolve))
+      mock.timers.tick(5_000)
+      assert.equal(calls, 2, 'the next tick runs once the first settled')
+
+      release()
+      await stop()
+    } finally {
+      mock.timers.reset()
+    }
   })
 
   test('a lease shorter than the refresh floor is still refreshed before it lapses', async () => {

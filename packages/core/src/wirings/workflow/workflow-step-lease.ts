@@ -55,13 +55,23 @@ export const startStepLeaseRefresh = (
   }
 
   let inFlight: Promise<void> = Promise.resolve()
+  let refreshing = false
   const timer = setInterval(() => {
-    inFlight = refresh(new Date(Date.now() + leaseMs)).catch((error) =>
-      getSingletonServices()?.logger?.warn(
-        `Workflow step ${stepId}: could not refresh its lease; another worker may take the step`,
-        error
+    // One refresh at a time. Overlapping ticks overwrite `inFlight`, so the
+    // stop below would wait only for the latest — and an earlier, slower
+    // refresh could land after the caller released the lease and put it back.
+    if (refreshing) return
+    refreshing = true
+    inFlight = refresh(new Date(Date.now() + leaseMs))
+      .catch((error) =>
+        getSingletonServices()?.logger?.warn(
+          `Workflow step ${stepId}: could not refresh its lease; another worker may take the step`,
+          error
+        )
       )
-    )
+      .finally(() => {
+        refreshing = false
+      })
   }, interval)
   timer.unref?.()
   return async () => {

@@ -9,12 +9,17 @@ import type { StepState } from './workflow.types.js'
 export type StepClaimStore = {
   getStepState(runId: string, stepName: string): Promise<StepState>
   setStepRunning(stepId: string): Promise<void>
-  setStepError(stepId: string, error: Error): Promise<void>
+  setStepError(stepId: string, error: Error, attempt?: number): Promise<void>
   refreshStepLease(stepId: string, expiresAt: Date | null): Promise<void>
   createRetryAttempt(
     failedStepId: string,
     status: 'pending' | 'running'
   ): Promise<StepState>
+  /**
+   * Requeue the orchestrator so it sees the failure. Without it a step failed
+   * for lease exhaustion leaves the run `running` until a sweep notices.
+   */
+  resumeWorkflow?(runId: string): Promise<void>
 }
 
 /**
@@ -61,8 +66,10 @@ export const claimStepByReadThenWrite = async (
           runId,
           stepName,
           stepState.attemptCount
-        )
+        ),
+        stepState.attemptCount
       )
+      await store.resumeWorkflow?.(runId)
       return null
     }
   }
