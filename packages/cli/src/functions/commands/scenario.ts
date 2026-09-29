@@ -1142,9 +1142,11 @@ export const scenarioGuide = pikkuSessionlessFunc<
         `${join(docs, path)} cites '${featureId}', which declares \`document: false\`.`
       )
     }
-    for (const { path, featureId } of coverage.figureless) {
+    for (const { path, featureId, scenario } of coverage.figureless) {
       logger.warn(
-        `${join(docs, path)} cites '${featureId}', whose run filed no screenshot — the block renders empty. Take one with \`actor.screenshot(...)\` in a scenario the feature owns.`
+        `${join(docs, path)} cites '${featureId}'${
+          scenario ? ` scenario '${scenario}'` : ''
+        }, whose run filed no screenshot — the block renders empty. Take one with \`actor.screenshot(...)\` in a scenario the feature owns.`
       )
     }
     for (const { path, featureId, locked, current } of coverage.stale) {

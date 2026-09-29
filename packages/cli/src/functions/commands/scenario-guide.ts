@@ -312,7 +312,7 @@ export interface GuideCoverage {
     known: string[]
   }>
   /** Cited, but the run filed no figure for it — a citation that shows nothing. */
-  figureless: Array<{ path: string; featureId: string }>
+  figureless: Array<{ path: string; featureId: string; scenario?: string }>
   /** Pages whose locked evidence is not the feature's current evidence. */
   stale: Array<{
     path: string
@@ -368,6 +368,22 @@ export const checkGuideCoverage = (
       const known = [...new Set(feature.scenarios.map((s) => s.name))]
       if (!known.includes(scenario)) {
         unknownScenarios.push({ path: page.path, featureId, scenario, known })
+        continue
+      }
+      // The feature-wide check above passes when *another* scenario has
+      // figures, but a marker naming this one still renders an empty block.
+      const scenarioFigures = feature.scenarios
+        .filter((s) => s.name === scenario)
+        .reduce(
+          (total, s) => total + s.screenshots.length + (s.videos?.length ?? 0),
+          0
+        )
+      const featureFigures = feature.scenarios.reduce(
+        (total, s) => total + s.screenshots.length + (s.videos?.length ?? 0),
+        0
+      )
+      if (scenarioFigures === 0 && featureFigures > 0) {
+        figureless.push({ path: page.path, featureId, scenario })
       }
     }
   }
@@ -415,7 +431,8 @@ const generatedRegion = ({ featureId, scenario }: GuideCitation) =>
       scenario
         ? `\\s+scenario=${escapeRegExp(scenario)}(?![^\\s>])`
         : '(?![^\\s>])(?![^>]*scenario=)'
-    }[^>]*-->[\\s\\S]*?${escapeRegExp(GENERATED_CLOSE)}`
+    }[^>]*-->[\\s\\S]*?${escapeRegExp(GENERATED_CLOSE)}`,
+    'g'
   )
 
 /** Any region, for dropping the blocks of features a page no longer cites. */
@@ -465,26 +482,48 @@ const renderFeature = (
       figures.push(figure)
     }
   }
-  for (const each of feature.scenarios) {
-    if (scenario && each.name !== scenario) {
-      continue
-    }
-    const shot = (item: GuideScreenshot) =>
+  const rows = feature.scenarios.filter(
+    (each) => !scenario || each.name === scenario
+  )
+  // A data-driven scenario runs once per row and so appears once per row in the
+  // record. Group the rows by name so showcase → recording → stills holds across
+  // the whole scenario instead of restarting at every row.
+  const groups = new Map<string, typeof rows>()
+  for (const row of rows) {
+    const group = groups.get(row.name)
+    if (group) group.push(row)
+    else groups.set(row.name, [row])
+  }
+  for (const group of groups.values()) {
+    const shot = (each: (typeof rows)[number], item: GuideScreenshot) =>
       add(
         item.id ?? item.path,
         `![${item.name ?? each.title}](${artifactBase}${item.path})`
       )
-    const videos = each.videos ?? []
-    const actors = new Set(videos.map((video) => video.actor).filter(Boolean))
-    each.screenshots.filter((item) => item.showcase).forEach(shot)
-    for (const video of videos) {
-      const caption =
-        video.actor && actors.size > 1
-          ? `${each.title} — ${video.actor}`
-          : each.title
-      add(video.id ?? video.path, `![${caption}](${artifactBase}${video.path})`)
+    for (const each of group) {
+      each.screenshots
+        .filter((item) => item.showcase)
+        .forEach((item) => shot(each, item))
     }
-    each.screenshots.filter((item) => !item.showcase).forEach(shot)
+    for (const each of group) {
+      const videos = each.videos ?? []
+      const actors = new Set(videos.map((video) => video.actor).filter(Boolean))
+      for (const video of videos) {
+        const caption =
+          video.actor && actors.size > 1
+            ? `${each.title} — ${video.actor}`
+            : each.title
+        add(
+          video.id ?? video.path,
+          `![${caption}](${artifactBase}${video.path})`
+        )
+      }
+    }
+    for (const each of group) {
+      each.screenshots
+        .filter((item) => !item.showcase)
+        .forEach((item) => shot(each, item))
+    }
   }
   return figures.join('\n\n')
 }

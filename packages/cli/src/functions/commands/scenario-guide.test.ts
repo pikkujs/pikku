@@ -631,3 +631,99 @@ describe('steps', () => {
     assert.deepEqual(guideStep('  some step  '), { sentence: 'some step' })
   })
 })
+
+describe('a narrowed citation checks its own scenario for figures', () => {
+  const twoScenarios = (): GuideFeature => ({
+    id: 'tours',
+    name: 'Tours',
+    description: '',
+    document: true,
+    scenarios: [
+      {
+        name: 'hasFigure',
+        title: 'Has a figure',
+        description: '',
+        steps: [],
+        screenshots: [{ id: 'a', name: 'a', path: 'a.png' }],
+      },
+      {
+        name: 'noFigure',
+        title: 'Has none',
+        description: '',
+        steps: [],
+        screenshots: [],
+      },
+    ],
+  })
+
+  test('a cited scenario with no figure is reported even when the feature has one', () => {
+    const p = parseGuidePage(
+      'product/tours.md',
+      '---\ntitle: Tours\n---\n<!-- pikku:guide feature=tours scenario=noFigure -->\n<!-- /pikku:guide -->\n'
+    )
+    const coverage = checkGuideCoverage([twoScenarios()], [p])
+    assert.deepEqual(coverage.figureless, [
+      { path: 'product/tours.md', featureId: 'tours', scenario: 'noFigure' },
+    ])
+  })
+})
+
+describe('a repeated marker refreshes every occurrence', () => {
+  test('both regions render the same figure', () => {
+    const p = parseGuidePage(
+      'product/deployments.md',
+      `---\ntitle: Deployments\n---\n\n${cite('deployments')}\n\nBetween.\n\n${cite('deployments')}\n`
+    )
+    const rendered = renderGuidePage(
+      p,
+      new Map([['deployments', deployments()]]),
+      ''
+    )
+    assert.equal(rendered.split('shipping/2.png').length - 1, 2)
+  })
+})
+
+describe('data-driven rows keep the scenario figure order', () => {
+  const dataDriven = (): GuideFeature => ({
+    id: 'tours',
+    name: 'Tours',
+    description: '',
+    document: true,
+    scenarios: [
+      {
+        name: 'tourScenario',
+        title: 'A tour',
+        description: '',
+        steps: [],
+        screenshots: [{ id: 'r1-still', name: 'Row one still', path: 'r1.png' }],
+      },
+      {
+        name: 'tourScenario',
+        title: 'A tour',
+        description: '',
+        steps: [],
+        screenshots: [
+          { id: 'r2-show', name: 'Row two showcase', path: 'r2.png', showcase: true },
+        ],
+      },
+    ],
+  })
+
+  test('a later row showcase leads an earlier row still', () => {
+    const p = parseGuidePage(
+      'product/tours.md',
+      `---\ntitle: Tours\n---\n${cite('tours')}\n`
+    )
+    const rendered = renderGuidePage(
+      p,
+      new Map([['tours', dataDriven()]]),
+      ''
+    )
+    const showcase = rendered.indexOf('r2.png')
+    const still = rendered.indexOf('r1.png')
+    assert.ok(
+      showcase >= 0 && still >= 0 && showcase < still,
+      `showcase should come before the still:\n${rendered}`
+    )
+  })
+})
