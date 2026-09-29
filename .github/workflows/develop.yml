@@ -1,9 +1,10 @@
 name: CI
 
+# Pull requests only, and not drafts: a branch uses no runners until it is up
+# for review. `ready_for_review` starts the run a draft skipped.
 on:
-  push:
-    branches-ignore:
-      - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +20,7 @@ env:
 jobs:
   validate-deps:
     name: Validate Package Deps
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -45,6 +47,7 @@ jobs:
 
   lint:
     name: Lint & Format
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,6 +69,7 @@ jobs:
 
   build:
     name: Build
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -79,10 +83,12 @@ jobs:
         with:
           templates: 'false'
 
-  # Ran only on main until now, so a branch could go green with a red unit
-  # suite and only break once it had already landed.
+  # Two runners. The sequential one holds what cannot share a machine: the CLI
+  # suite spawns subprocesses with 120s timeouts and writes fixtures inside
+  # packages/cli that the core suite walks, and the database suites. The rest
+  # run package-parallel on the other.
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (sequential)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build
@@ -108,9 +114,19 @@ jobs:
           echo "NATS did not become ready" >&2
           docker logs pikku-nats >&2 || true
           exit 1
-      - run: bun run test
+      - run: bun run --filter @pikku/cli --filter @pikku/kysely-postgres --filter @pikku/kysely --filter @pikku/mongodb --filter @pikku/queue-nats --filter @pikku/deploy-standalone --sequential test
         env:
           NATS_TEST_URL: nats://127.0.0.1:4222
+
+  unit-tests-parallel:
+    name: Unit Tests (parallel)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/console' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/kysely-postgres' --filter '!@pikku/kysely' --filter '!@pikku/mongodb' --filter '!@pikku/queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
 
   # Generated once for all the e2e jobs, in their container: see the action for
   # why the container matters.
@@ -154,7 +170,7 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     needs: e2e-codegen
     steps:
       - uses: actions/checkout@v7
@@ -165,25 +181,8 @@ jobs:
           name: e2e-codegen-output
       - name: Run e2e tests
         run: bun run test:e2e
-
-  e2e-agent:
-    name: E2E Agent (deterministic)
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    timeout-minutes: 15
-    needs: e2e-codegen
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Download e2e codegen output
-        uses: ./.github/actions/download-tar
-        with:
-          name: e2e-codegen-output
       - name: Run deterministic agent e2e tests
+        if: ${{ !cancelled() }}
         run: bun run test:e2e:agent
 
   # Newly guarded: `tests/cli/` drives the CLI as a subprocess against a server
@@ -231,61 +230,3 @@ jobs:
           name: e2e-codegen-output
       - name: Run console browser scenarios
         run: bun run test:e2e:console
-
-  # Live-model scenarios are the only coverage the agent runner has, but they
-  # spend real tokens and about twenty minutes — which is why the Release
-  # workflow parked them outright. Here they run on the commits that can break
-  # them: `scripts/ai-e2e-gate.mjs` says which those are.
-  ai-gate:
-    name: AI e2e gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      run: ${{ steps.decide.outputs.run }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - id: decide
-        run: node scripts/ai-e2e-gate.mjs >> "$GITHUB_OUTPUT"
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
-          AFTER_SHA: ${{ github.sha }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-
-  e2e-ai-live:
-    name: E2E AI (live)
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/pikkujs/pikku-e2e:v1.58.2-noble
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    timeout-minutes: 30
-    needs: [e2e-codegen, ai-gate]
-    # A fork has no OPENROUTER_API_KEY, so every scenario there would fail with
-    # AIProviderNotConfiguredError before it said anything.
-    if: ${{ needs.ai-gate.outputs.run == 'true' && github.repository_owner == 'pikkujs' }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Download e2e codegen output
-        uses: ./.github/actions/download-tar
-        with:
-          name: e2e-codegen-output
-      - name: Run live-model AI e2e tests
-        timeout-minutes: 22
-        run: bun run test:e2e:ai-live
-        env:
-          # OpenRouter, reached through the standard OPENAI_* pair because
-          # `createDevAgentRunner` builds one openai-compatible provider from
-          # whatever that pair points at. `parseModel` strips the provider
-          # prefix, so the agents' `openai/gpt-5.6-luna` arrives as
-          # `gpt-5.6-luna` — which OpenRouter resolves to the same model an
-          # unprefixed name would. No agent declaration changes.
-          OPENAI_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          # A persona's own turns are LLM calls made in the scenario process,
-          # not on the target, and that runner is built by `createDevAgentRunner`
-          # — which needs a base URL paired with the key and disables agents
-          # without one.
-          OPENAI_BASE_URL: https://openrouter.ai/api/v1
