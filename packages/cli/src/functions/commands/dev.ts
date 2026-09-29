@@ -51,6 +51,7 @@ import {
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { initOrWarn } from './init-or-warn.js'
 import { createDevCredentialService } from './dev-credentials.js'
+import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
@@ -524,6 +525,17 @@ export const dev = pikkuSessionlessFunc<
     }
 
     logger.info(serverReadyLine(hostname, boundPort))
+
+    // After start, not before: some providers probe the URL before they accept it.
+    await reconcileDevWebhooks({
+      configDir: config.configDir,
+      logger,
+      singletonServices: resolvedServices,
+    }).catch((error) =>
+      logger.warn(
+        `Webhook sources were not registered: ${error instanceof Error ? error.message : String(error)}`
+      )
+    )
 
     // Written from the bound port, so anything that has to find this server later
     // reads where it actually is rather than where it was asked to be.

@@ -6,6 +6,7 @@ import {
   receiveWebhookSourceRequest,
   runWebhookSourceLifecycle,
   reconcileTriggerSources,
+  reconcileWebhookRegistrations,
   teardownTriggerSources,
   subscribedWebhookEvents,
   wireTriggerWebhookSource,
@@ -14,6 +15,7 @@ import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { IncomingWebhookService } from '../../services/incoming-webhook-service.js'
 import { InMemoryTriggerSourceStore } from '../../services/trigger-source-store.js'
+import { LocalCredentialService } from '../../services/local-credential-service.js'
 import type { QueueService } from '../queue/queue.types.js'
 
 const logger = {
@@ -394,5 +396,159 @@ describe('reconcileTriggerSources / teardownTriggerSources', () => {
         ['shop', true, 'failed', 'bad key'],
       ]
     )
+  })
+})
+
+describe('reconcileWebhookRegistrations', () => {
+  const lifecycle = { baseUrl: 'https://dev.test', labelPrefix: 'dev-sam' }
+
+  const withCredentials = () => {
+    const credentialService = new LocalCredentialService()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger,
+      credentialService,
+    } as never)
+    pikkuState(null, 'package', 'credentialsMeta', {
+      shopWebhookSecret: {
+        name: 'shopWebhookSecret',
+        displayName: 'Shop signing secret',
+        type: 'singleton',
+      },
+      shopOauth: {
+        name: 'shopOauth',
+        displayName: 'Shop OAuth',
+        type: 'singleton',
+        oauth2: true,
+      },
+    })
+    return credentialService
+  }
+
+  const shopSource = () => {
+    let setups = 0
+    setWebhookSourceMeta({
+      name: 'shop',
+      events: ['paid'],
+      setup: 'shop:setup',
+    })
+    wireTriggerMeta('shop:paid', () => {})
+    registerFunction('shop:setup', async ({ credentialService }) => {
+      setups++
+      await credentialService.set('shopWebhookSecret', `whsec_${setups}`)
+      return { status: 'created', state: { id: `we_${setups}` } }
+    })
+    return () => setups
+  }
+
+  test('records what setup registered, with the secret it stored', async () => {
+    const credentials = withCredentials()
+    await credentials.set('shopOauth', { token: 't' })
+    shopSource()
+
+    const { registrations, outcomes } = await reconcileWebhookRegistrations({
+      ...lifecycle,
+      registrations: {},
+    })
+
+    assert.equal(outcomes[0]!.status, 'created')
+    assert.deepEqual(registrations, {
+      shop: {
+        url: 'https://dev.test/webhooks/shop',
+        events: ['paid'],
+        status: 'created',
+        state: { id: 'we_1' },
+        credentials: { shopWebhookSecret: 'whsec_1' },
+      },
+    })
+  })
+
+  test('leaves a matching registration alone and refills a wiped secret', async () => {
+    const credentials = withCredentials()
+    const setups = shopSource()
+    const { registrations } = await reconcileWebhookRegistrations({
+      ...lifecycle,
+      registrations: {},
+    })
+    await credentials.delete('shopWebhookSecret')
+
+    const again = await reconcileWebhookRegistrations({
+      ...lifecycle,
+      registrations,
+    })
+
+    assert.equal(setups(), 1)
+    assert.equal(again.outcomes[0]!.status, 'unchanged')
+    assert.deepEqual(again.registrations, registrations)
+    assert.equal(await credentials.get('shopWebhookSecret'), 'whsec_1')
+  })
+
+  test('sets up again when the url or events change, passing the old state', async () => {
+    withCredentials()
+    const setups = shopSource()
+    const { registrations } = await reconcileWebhookRegistrations({
+      ...lifecycle,
+      registrations: {},
+    })
+    let previous: any
+    registerFunction('shop:setup', (_services, data) => {
+      previous = data.previous
+      return { status: 'updated' }
+    })
+
+    const moved = await reconcileWebhookRegistrations({
+      ...lifecycle,
+      baseUrl: 'https://tunnel.test',
+      registrations,
+    })
+
+    assert.equal(setups(), 1)
+    assert.deepEqual(previous, { id: 'we_1' })
+    assert.equal(
+      moved.registrations.shop!.url,
+      'https://tunnel.test/webhooks/shop'
+    )
+    assert.deepEqual(moved.registrations.shop!.state, { id: 'we_1' })
+  })
+
+  test('retries a failed registration', async () => {
+    withCredentials()
+    const setups = shopSource()
+
+    await reconcileWebhookRegistrations({
+      ...lifecycle,
+      registrations: {
+        shop: {
+          url: 'https://dev.test/webhooks/shop',
+          events: ['paid'],
+          status: 'failed',
+        },
+      },
+    })
+
+    assert.equal(setups(), 1)
+  })
+
+  test('keeps registrations no source declares and reports them', async () => {
+    withCredentials()
+    const gone = {
+      url: 'https://dev.test/webhooks/gone',
+      events: [],
+      status: 'created' as const,
+      state: { id: 'we_old' },
+    }
+
+    const { registrations, orphans } = await reconcileWebhookRegistrations({
+      ...lifecycle,
+      registrations: { gone },
+    })
+
+    assert.deepEqual(registrations, { gone })
+    assert.deepEqual(orphans, [
+      {
+        source: 'gone',
+        url: 'https://dev.test/webhooks/gone',
+        label: 'dev-sam:gone',
+      },
+    ])
   })
 })

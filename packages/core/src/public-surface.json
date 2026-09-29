@@ -186,6 +186,7 @@
     "dispatchWebhookSourceJob",
     "receiveWebhookSourceRequest",
     "reconcileTriggerSources",
+    "reconcileWebhookRegistrations",
     "runWebhookSourceLifecycle",
     "subscribedWebhookEvents",
     "teardownTriggerSources",
