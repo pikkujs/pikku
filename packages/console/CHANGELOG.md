@@ -1,3 +1,9 @@
+## 0.12.93
+
+### Patch Changes
+
+- 79b15b3: Feature switch panel redesigned: status card, "Who sees it" rows, "Chosen by hand" list with a collapsed add form, and a For developers section.
+
 ## 0.12.92
 
 ### Patch Changes

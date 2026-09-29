@@ -447,7 +447,7 @@
     },
     "packages/console": {
       "name": "@pikku/console",
-      "version": "0.12.92",
+      "version": "0.12.93",
       "dependencies": {
         "@assistant-ui/react": "^0.15.14",
         "@codemirror/lang-html": "^6.4.12",
@@ -701,7 +701,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.94",
+      "version": "0.12.95",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
         "openapi-types": "^12.1.3",
