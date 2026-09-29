@@ -1,3 +1,21 @@
+## 0.12.128
+
+### Patch Changes
+
+- 658f047: A function whose services are all singletons no longer builds wire services, so an addon's credential-bound wire factory does not run for, or fail, a webhook `receive` step that needs no connection. The inspector decides this from the `Services` type and records it as `singletonServicesOnly` on the function's runtime meta; the runner only reads the flag.
+- de63ab2: Store a workflow's graph when a run is created, so a run suspended across a
+  deploy that changes the definition resumes on the graph it started on instead
+  of failing with `VERSION_NOT_FOUND`. Nothing called `registerWorkflowVersions`,
+  so the versions table stayed empty and the replay fallback could never find a
+  version.
+- 658f047: A declared webhook source is a registered one. `reconcileTriggerSources` sets up every declared source with its provider (check, then setup where missing or drifted) and `teardownTriggerSources` removes named ones, recording what was registered in a `TriggerSourceStore` (in-memory, or `KyselyTriggerSourceStore` on `pikku_trigger_source`). The admin addon exposes list, reconcile, teardown and forget under the new `admin:triggers` scopes.
+- 658f047: Webhook signing secrets live in the credential store. `WebhookSigningSecret.fromCredential(provider, credentialService, name)` reads the secret per delivery via `load()`, so a `setup` step (or a handshake) that stores a new one with `credentialService.set` takes effect without a deploy.
+
+  Breaking: `setup` no longer returns `secret`, `wireTriggerWebhookSource` no longer takes `secret`, lifecycle outcomes drop `secretName`/`secret`, and `pikku webhooks setup` drops `--secretsOut`.
+
+- 658f047: `WebhookSigningSecret` in `@pikku/core/hmac`: holds a provider's webhook signing secret in a singleton service and checks HMAC, shared-token and public-key signatures for a `receive` step, refusing everything when the secret was never provisioned.
+- 658f047: A webhook source's `method` may be a list, mounting one route per method, for providers that verify the URL with a GET and deliver events with a POST (WhatsApp, Strava, Onfleet, Mailchimp), or a HEAD (Trello, Mandrill, SurveyMonkey).
+
 ## 0.12.127
 
 ### Patch Changes

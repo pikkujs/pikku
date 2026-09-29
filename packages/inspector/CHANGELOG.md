@@ -1,3 +1,21 @@
+## 0.12.93
+
+### Patch Changes
+
+- 658f047: A function whose services are all singletons no longer builds wire services, so an addon's credential-bound wire factory does not run for, or fail, a webhook `receive` step that needs no connection. The inspector decides this from the `Services` type and records it as `singletonServicesOnly` on the function's runtime meta; the runner only reads the flag.
+- 658f047: Webhook signing secrets live in the credential store. `WebhookSigningSecret.fromCredential(provider, credentialService, name)` reads the secret per delivery via `load()`, so a `setup` step (or a handshake) that stores a new one with `credentialService.set` takes effect without a deploy.
+
+  Breaking: `setup` no longer returns `secret`, `wireTriggerWebhookSource` no longer takes `secret`, lifecycle outcomes drop `secretName`/`secret`, and `pikku webhooks setup` drops `--secretsOut`.
+
+- 658f047: A webhook source's `method` may be a list, mounting one route per method, for providers that verify the URL with a GET and deliver events with a POST (WhatsApp, Strava, Onfleet, Mailchimp), or a HEAD (Trello, Mandrill, SurveyMonkey).
+- Updated dependencies [658f047]
+- Updated dependencies [de63ab2]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+- Updated dependencies [658f047]
+  - @pikku/core@0.12.128
+
 ## 0.12.92
 
 ### Patch Changes
