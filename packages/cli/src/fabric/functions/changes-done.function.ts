@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/function/index.js'
-import { changesContext } from '../lib/changes.js'
+import { changesContext, resolveChangeId } from '../lib/changes.js'
 import { currentBranch, headSha, isGitRepo } from '../lib/git.js'
 import { dim, safe } from '../lib/output.js'
 import type { CompleteChangeOutput } from '../sdk/rpc-map.gen.d.js'
@@ -48,9 +48,10 @@ export const FabricChangesDone = pikkuSessionlessFunc({
       headCommit ??= await headSha().catch(() => undefined)
     }
 
-    const { rpc } = await changesContext(input.apiUrl)
+    const { rpc, projectId } = await changesContext(input.apiUrl)
+    const changeId = await resolveChangeId(rpc, projectId, input.changeId)
     return await rpc.invoke('completeChange', {
-      changeId: input.changeId,
+      changeId,
       branch,
       headCommit,
       note: input.note,

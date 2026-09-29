@@ -131,6 +131,7 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'fabric.report',
   'fabric.changes',
   'fabric.changes.list',
+  'fabric.changes.next',
   'fabric.changes.show',
   'fabric.changes.file',
   'fabric.changes.claim',

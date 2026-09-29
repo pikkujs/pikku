@@ -6,6 +6,7 @@ import {
   changesContext,
   imageContentType,
   type ImageContentType,
+  resolveChangeId,
 } from '../lib/changes.js'
 import { dim, safe } from '../lib/output.js'
 import type { AttachChangeShotOutput } from '../sdk/rpc-map.gen.d.js'
@@ -54,9 +55,10 @@ export const FabricChangesShot = pikkuSessionlessFunc({
       imageBase64 = (await readFile(input.image)).toString('base64')
     }
 
-    const { rpc } = await changesContext(input.apiUrl)
+    const { rpc, projectId } = await changesContext(input.apiUrl)
+    const changeId = await resolveChangeId(rpc, projectId, input.changeId)
     return await rpc.invoke('attachChangeShot', {
-      changeId: input.changeId,
+      changeId,
       label: input.label,
       kind: input.kind ?? 'option',
       contentType: contentType ?? 'image/png',

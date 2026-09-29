@@ -19,6 +19,8 @@ import * as gitLib from '../lib/git.js'
  */
 const invoked: { name: string; data: any }[] = []
 
+let respond: (name: string, data: any) => unknown = () => ({ ok: true })
+
 let projectId: string | null = 'proj_linked'
 let git: { repo: boolean; branch: string; sha: string } = {
   repo: true,
@@ -32,7 +34,7 @@ mock.module('../lib/changes.js', () => ({
     rpc: {
       invoke: async (name: string, data: unknown) => {
         invoked.push({ name, data })
-        return { ok: true }
+        return respond(name, data)
       },
     },
     projectId: projectIdOverride ?? projectId,
@@ -118,6 +120,77 @@ describe('changes claim', () => {
       )
     } finally {
       projectId = 'proj_linked'
+    }
+  })
+})
+
+describe('changes claim, refused', () => {
+  const HELD = '5f0f6a4e-0000-4000-8000-000000000001'
+  const TAKEN = '5f0f6a4e-0000-4000-8000-000000000002'
+
+  test('a 409 names why each item could not be taken', async () => {
+    respond = (name) => {
+      if (name === 'claimChanges')
+        throw Object.assign(new Error('no claimable items in that set'), {
+          status: 409,
+        })
+      return {
+        changes: [
+          {
+            changeId: HELD,
+            shortId: '3',
+            status: 'open',
+            held: true,
+            groupId: null,
+            createdAt: new Date(Date.now() - 20_000).toISOString(),
+          },
+          {
+            changeId: TAKEN,
+            shortId: '4',
+            status: 'claimed',
+            held: false,
+            groupId: 'grp_1',
+            createdAt: new Date(Date.now() - 600_000).toISOString(),
+          },
+        ],
+        groups: [
+          {
+            groupId: 'grp_1',
+            claimedBy: 'other-agent',
+            claimExpiresAt: new Date(Date.now() + 20 * 60_000).toISOString(),
+          },
+        ],
+      }
+    }
+    try {
+      await assert.rejects(
+        FabricChangesClaim.func({} as any, { changeIds: [HELD, TAKEN] } as any),
+        (error: Error) =>
+          /#3: still held for the person filing it \(filed 2\ds ago\)/.test(
+            error.message
+          ) &&
+          /#4: claimed, claimed by other-agent for 20m more/.test(
+            error.message
+          ) &&
+          /changes next --claim/.test(error.message)
+      )
+    } finally {
+      respond = () => ({ ok: true })
+    }
+  })
+
+  test('short ids are resolved before claiming', async () => {
+    respond = (name) =>
+      name === 'listChanges'
+        ? { changes: [{ changeId: HELD, shortId: '3' }], groups: [] }
+        : { ok: true }
+    try {
+      invoked.length = 0
+      await FabricChangesClaim.func({} as any, { changeIds: ['#3'] } as any)
+      const claim = invoked.find((call) => call.name === 'claimChanges')!
+      assert.deepStrictEqual(claim.data.changeIds, [HELD])
+    } finally {
+      respond = () => ({ ok: true })
     }
   })
 })

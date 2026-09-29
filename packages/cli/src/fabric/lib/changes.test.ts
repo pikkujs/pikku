@@ -6,7 +6,9 @@ import {
   imageContentType,
   remaining,
   requireProjectId,
+  resolveChangeId,
 } from './changes.js'
+import type { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
 describe('idList', () => {
   test('reads a comma-separated flag', () => {
@@ -71,5 +73,46 @@ describe('imageContentType', () => {
   test('says nothing when the name says nothing', () => {
     assert.strictEqual(imageContentType('shot'), undefined)
     assert.strictEqual(imageContentType('shot.gif'), undefined)
+  })
+})
+
+describe('resolveChangeId', () => {
+  const UUID = '0f3c8a12-9b44-4d2e-8f01-27c6a1d9e5b3'
+  const listed: boolean[] = []
+  const rpc = {
+    invoke: async (_name: string, data: { includeDone: boolean }) => {
+      listed.push(data.includeDone)
+      return {
+        changes: data.includeDone
+          ? [
+              { shortId: '2', changeId: UUID },
+              { shortId: '9', changeId: 'done-9' },
+            ]
+          : [{ shortId: '2', changeId: UUID }],
+      }
+    },
+  } as unknown as PikkuRPC
+
+  test('2 and #2 both name the change', async () => {
+    assert.strictEqual(await resolveChangeId(rpc, 'p1', '2'), UUID)
+    assert.strictEqual(await resolveChangeId(rpc, 'p1', '#2'), UUID)
+  })
+
+  test('a uuid goes straight through without a lookup', async () => {
+    listed.length = 0
+    assert.strictEqual(await resolveChangeId(rpc, 'p1', UUID), UUID)
+    assert.deepStrictEqual(listed, [])
+  })
+
+  test('falls back to closed items', async () => {
+    assert.strictEqual(await resolveChangeId(rpc, 'p1', '#9'), 'done-9')
+  })
+
+  test('refuses a short id with no project to look in', async () => {
+    await assert.rejects(resolveChangeId(rpc, null, '#2'), /uuid/)
+  })
+
+  test('says so when no change has that number', async () => {
+    await assert.rejects(resolveChangeId(rpc, 'p1', '#40'), /No change #40/)
   })
 })

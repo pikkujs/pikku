@@ -67,6 +67,10 @@ import {
   renderChangesList,
 } from './functions/changes-list.function.js'
 import {
+  FabricChangesNext,
+  renderChangesNext,
+} from './functions/changes-next.function.js'
+import {
   FabricChangesShow,
   renderChangesShow,
 } from './functions/changes-show.function.js'
@@ -213,8 +217,7 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   addon: {
-    description:
-      'Search, publish and install Fabric community-registry addons',
+    description: 'Search, publish and install Fabric community-registry addons',
     subcommands: {
       search: pikkuCLICommand({
         parameters: '<query>',
@@ -610,6 +613,11 @@ export const fabricCommands = defineCLICommands({
             short: 'p',
           },
           stageId: { description: 'Only changes filed on this stage' },
+          stage: {
+            description:
+              'Only changes filed on this stage, by branch, url or id — e.g. develop',
+            short: 's',
+          },
           route: {
             description: 'Only changes filed on this route, e.g. /checkout',
           },
@@ -630,14 +638,63 @@ export const fabricCommands = defineCLICommands({
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
       }),
+      next: pikkuCLICommand({
+        func: FabricChangesNext,
+        render: renderChangesNext,
+        description:
+          'Wait until there is work — an item past its grace window, or an answer to a question you asked — then print it and exit. Run it in the background instead of polling. Exits 0 with work, 2 on --timeout/--once with none, 3 when the session is refused',
+        options: {
+          projectId: {
+            description: 'Project to watch (defaults to the linked checkout)',
+            short: 'p',
+          },
+          stage: {
+            description:
+              'Only changes filed on this stage, by branch, url or id — e.g. develop',
+            short: 's',
+          },
+          route: {
+            description: 'Only changes filed on this route, e.g. /checkout',
+          },
+          claim: {
+            description:
+              'Claim what it finds as one group before returning, so no other harness takes it',
+            default: false,
+          },
+          claimedBy: {
+            description:
+              'Who you are, e.g. claude-code — needed with --claim, and wakes you when someone answers a question you asked',
+          },
+          title: { description: 'What to call the group --claim forms' },
+          leaseMinutes: {
+            description: 'Lease for --claim (default 30)',
+            type: 'number',
+          },
+          interval: {
+            description: 'Seconds between checks (default 15, minimum 5)',
+            type: 'number',
+          },
+          timeout: {
+            description: 'Give up after this many seconds and exit 2',
+            type: 'number',
+          },
+          once: {
+            description:
+              'Check once without waiting; exit 2 if there is nothing',
+            default: false,
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
       show: pikkuCLICommand({
+        parameters: '[changeId]',
         func: FabricChangesShow,
         render: renderChangesShow,
         description:
-          'One change with its thread, its circled elements and the build it was filed against',
+          'One change with its thread, its circled elements and the build it was filed against. Takes 2, #2 or the uuid',
         options: {
           changeId: {
-            description: 'The change to read, from `pikku fabric changes list`',
+            description: 'The change to read — 2, #2 or its uuid',
           },
           apiUrl: { description: 'Override the fabric-api URL for this call' },
         },
@@ -689,7 +746,8 @@ export const fabricCommands = defineCLICommands({
             description: 'Claim an existing group instead of forming one',
           },
           changeIds: {
-            description: 'The items to take, comma-separated or repeated',
+            description:
+              'The items to take — #2, 2 or uuids — comma-separated or repeated',
             type: 'string[]',
           },
           title: { description: 'What to call the group being formed' },

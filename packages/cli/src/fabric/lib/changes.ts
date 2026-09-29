@@ -49,6 +49,56 @@ export function idList(values: string[] | undefined): string[] | undefined {
   return ids.length ? ids : undefined
 }
 
+/** The HTTP status a failed `rpc.invoke` carried, if it got as far as a response. */
+export const httpStatus = (error: unknown): number | undefined => {
+  const status = (error as { status?: unknown } | null)?.status
+  return typeof status === 'number' ? status : undefined
+}
+
+const SHORT_ID = /^#?(\d+)$/
+
+/**
+ * Accept a change the way a person refers to it — `2`, `#2` — as well as by
+ * uuid. Anything that is not a short id is passed through untouched.
+ */
+export async function resolveChangeId(
+  rpc: PikkuRPC,
+  projectId: string | null,
+  ref: string
+): Promise<string> {
+  const match = ref.trim().match(SHORT_ID)
+  if (!match) return ref.trim()
+  const shortId = match[1]!
+  if (!projectId)
+    throw new FabricPreconditionError(
+      `#${shortId} is a short id, which only means something inside a project. Pass the uuid, or run this from the linked checkout.`
+    )
+  for (const includeDone of [false, true]) {
+    const { changes } = await rpc.invoke('listChanges', {
+      projectId,
+      includeDone,
+      pickupOnly: false,
+      limit: 200,
+    })
+    const found = changes.find((change) => change.shortId === shortId)
+    if (found) return found.changeId
+  }
+  throw new FabricPreconditionError(
+    `No change #${shortId} in this project. Pass its uuid if it is an old one.`
+  )
+}
+
+export async function resolveChangeIds(
+  rpc: PikkuRPC,
+  projectId: string | null,
+  refs: string[] | undefined
+): Promise<string[] | undefined> {
+  if (!refs) return undefined
+  const ids: string[] = []
+  for (const ref of refs) ids.push(await resolveChangeId(rpc, projectId, ref))
+  return ids
+}
+
 const span = (minutes: number): string => {
   if (minutes < 60) return `${minutes}m`
   if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h`
