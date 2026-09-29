@@ -7,17 +7,17 @@ export const serializeCLITypes = (
   userSessionTypeImport: string,
   userSessionTypeName: string,
   singletonServicesTypeImport: string,
-  singletonServicesTypeName: string
+  singletonServicesTypeName: string,
+  { addon = false }: { addon?: boolean } = {}
 ) => {
   return `/**
 
  * CLI-specific type definitions for tree-shaking optimization
  */
 
-import { wireCLI as wireCLICore, defineCLICommands as defineCLICommandsCore } from '@pikku/core/cli'
+import { ${addon ? '' : 'wireCLI as wireCLICore, '}defineCLICommands as defineCLICommandsCore } from '@pikku/core/cli'
 import {
-  CoreCLI,
-  CorePikkuCLIRender,
+${addon ? '' : '  CoreCLI,\n'}  CorePikkuCLIRender,
   CoreCLICommandConfig,
 } from '@pikku/core/cli'
 import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
@@ -60,7 +60,10 @@ export const pikkuCLIRender = <Data, RequiredServices extends SingletonServices 
  */
 type CLICommandConfig<Func extends PikkuFunctionConfig<In, Out, 'cli' | 'rpc' | 'session'>, In = any, Out = any, Params extends string = string> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>, Params>
 
-/**
+${
+  addon
+    ? ''
+    : `/**
  * Type definition for CLI applications with commands and global options.
  *
  * @template Commands - Type describing the command structure
@@ -83,7 +86,8 @@ export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any
 ) => {
   wireCLICore(cli as any)
 }
-
+`
+}
 /**
  * Creates a CLI command definition with automatic option inference from the function's input type.
  * This allows TypeScript to automatically derive CLI options from the function signature.
