@@ -1,3 +1,9 @@
+## 0.12.129
+
+### Patch Changes
+
+- 1ab6eb4: Fix app functions reached through `rpc.invoke`/`rpc.exposed` (including the generated `/rpc/:rpcName` endpoint) running without their wire services. Since `singletonServicesOnly`, the forwarding `rpcCaller` built none and the callee inherited that, so any service from `pikkuWireServices` was `undefined`. The runner now resolves the callee's factory itself. Channels pass their per-connection set as the new `wireServices` option, which is reused and left open.
+
 ## 0.12.128
 
 ### Patch Changes
