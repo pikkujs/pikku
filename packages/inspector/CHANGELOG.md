@@ -1,3 +1,10 @@
+## 0.12.95
+
+### Patch Changes
+
+- 6ecf80e: Stop the services-destructure lint (PKU410) firing on the stub a wiring registers for its function. Since inline functions carry a source file, a queue worker wired to a named function failed the build with a critical PKU410 even though that function destructures its services.
+- 2612a67: The services-destructure lint also skips the `helper` wiring functions `ensureFunctionMetadata` synthesizes, alongside the `inline` ones it already skips, and a test pins that an inline wiring function that records a source file is not flagged.
+
 ## 0.12.94
 
 ### Patch Changes
