@@ -1,4 +1,6 @@
 name: Full Suite
+# The tested commit is in the title so Publish can find this run: see publish.yml.
+run-name: Full Suite ${{ github.event.workflow_run.head_sha || github.sha }}
 
 # The verifier, template and example matrices, run once per push to main.
 #
