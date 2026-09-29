@@ -80,6 +80,8 @@ jobs:
         with:
           download-build: 'false'
       - uses: ./.github/actions/build
+        with:
+          templates: 'false'
 
   unit-tests:
     name: Unit Tests
