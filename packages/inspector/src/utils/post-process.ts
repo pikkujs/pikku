@@ -132,6 +132,32 @@ function extractAllServices(
     state.serviceAggregation.allWireServices = extractTypeKeys(servicesType)
       .filter((name) => !singletonSet.has(name))
       .sort()
+    markSingletonServicesOnly(
+      state,
+      new Set(state.serviceAggregation.allWireServices)
+    )
+  }
+}
+
+/**
+ * Marks the functions that never read a wire service, so the runner can skip
+ * `createWireServices` for them. Only called once the `Services` type has
+ * resolved: an unresolved type yields no wire services, which would otherwise
+ * mark every function.
+ */
+function markSingletonServicesOnly(
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  wireServices: Set<string>
+): void {
+  for (const meta of Object.values(state.functions.meta)) {
+    if (
+      meta.services?.optimized &&
+      !meta.services.services.some((name) => wireServices.has(name))
+    ) {
+      meta.singletonServicesOnly = true
+    } else {
+      delete meta.singletonServicesOnly
+    }
   }
 }
 

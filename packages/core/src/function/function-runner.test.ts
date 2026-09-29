@@ -484,18 +484,13 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
   })
 
-  test('builds no wire services for a function that uses only singletons', async () => {
+  test('builds no wire services for a function marked singletonServicesOnly', async () => {
     let built = 0
     addTestFunction('singletonOnly', { func: async () => 'ok' })
-    ;(pikkuState(null, 'function', 'meta') as any).singletonOnly.services = {
-      optimized: true,
-      services: ['logger'],
-    }
+    ;(
+      pikkuState(null, 'function', 'meta') as any
+    ).singletonOnly.singletonServicesOnly = true
     addTestFunction('usesWire', { func: async () => 'ok' })
-    ;(pikkuState(null, 'function', 'meta') as any).usesWire.services = {
-      optimized: true,
-      services: ['logger', 'customService'],
-    }
     const createWireServices = async () => {
       built++
       throw new Error('no credential')
