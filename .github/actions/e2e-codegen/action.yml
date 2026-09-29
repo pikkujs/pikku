@@ -1,60 +1,40 @@
 name: E2E Codegen
-description: Generate pikku files for all e2e packages (two-pass for cross-package resolution)
+description: Rebuild the console and graph addons, generate pikku files for the e2e fixtures and project, then compile the fixtures.
 
+# Generated files hold absolute paths (the meta service reads its .pikku from
+# one at runtime), so this runs in the same container as the e2e jobs, whose
+# checkout sits at /__w rather than the build runner's /home/runner/work. That
+# is also why the console and graph addons are rebuilt here although the Build
+# job already built them.
 runs:
   using: composite
   steps:
-    - name: Generate pikku files for e2e addons
-      shell: bash
-      run: |
-        cd packages/addon/pikku-console && npx pikku all
-        cd ../../..
-        cd packages/addon/pikku-graph && npx pikku all
-        cd ../../..
-        cd e2e/packages/todos && npx pikku all
-        cd ../../..
-        cd e2e/packages/emails && npx pikku all
-    - name: Generate pikku files for e2e hmac-signer
-      shell: bash
-      run: cd e2e/packages/hmac-signer && npx pikku all
-    - name: Generate pikku files for e2e oauth-api
-      shell: bash
-      run: cd e2e/packages/oauth-api && npx pikku all
-    - name: Generate pikku files for e2e fake-crm
-      shell: bash
-      run: cd e2e/packages/fake-crm && npx pikku all
-    - name: Generate pikku files for e2e project
-      shell: bash
-      run: cd e2e && npx pikku all
-    - name: Regenerate pikku files (second pass resolves cross-package type imports)
-      shell: bash
-      run: |
-        cd packages/addon/pikku-console && npx pikku all
-        cd ../../..
-        cd packages/addon/pikku-graph && npx pikku all
-        cd ../../..
-        cd e2e/packages/todos && npx pikku all
-        cd ../../..
-        cd e2e/packages/emails && npx pikku all
-        cd ../../..
-        cd e2e/packages/hmac-signer && npx pikku all
-        cd ../../..
-        cd e2e/packages/oauth-api && npx pikku all
-        cd ../../..
-        cd e2e/packages/fake-crm && npx pikku all
-        cd ../../..
-        cd e2e && npx pikku all
-    - name: Compile the regenerated packages
-      # Every package above is consumed through its `exports` as dist/, not as
-      # source, so the server loads whatever the build job compiled — the
-      # regeneration above never reaches it. Without this step a schema that
-      # codegen emits here is still missing from the running registry.
+    # Their build runs `pikku all` before tsc.
+    - name: Rebuild the console and graph addons
       shell: bash
       run: |
         bun run --filter @pikku/addon-console build
         bun run --filter @pikku/addon-graph build
-        bun run --filter @pikku/addon-todos build
-        bun run --filter @pikku/addon-emails build
-        bun run --filter @pikku/addon-hmac-signer build
-        bun run --filter @pikku/addon-oauth-api build
-        bun run --filter @pikku/addon-fake-crm build
+    - name: Generate pikku files for the e2e fixtures
+      shell: bash
+      run: |
+        start=$SECONDS
+        for pkg in todos emails hmac-signer oauth-api fake-crm; do
+          (cd e2e/packages/$pkg && npx pikku all)
+        done
+        echo "::notice::⏱ E2E fixture codegen: $((SECONDS - start))s"
+    # The project imports types from its own .pikku, so its first run inspects
+    # without them and the second resolves them. Everything else comes out
+    # byte-identical on a second run, so only the project repeats.
+    - name: Generate pikku files for the e2e project (two runs)
+      shell: bash
+      run: |
+        start=$SECONDS
+        cd e2e && npx pikku all && npx pikku all
+        echo "::notice::⏱ E2E project codegen: $((SECONDS - start))s"
+    - name: Compile the e2e fixtures
+      shell: bash
+      run: |
+        for pkg in todos emails hmac-signer oauth-api fake-crm; do
+          bun run --filter @pikku/addon-$pkg build
+        done

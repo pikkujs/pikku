@@ -1,6 +1,11 @@
 name: Build
 description: Build all packages, generate pikku files, build templates + console, and upload build artifact
 
+inputs:
+  templates:
+    description: Build the templates. Only the template jobs in the Full Suite read them.
+    default: 'true'
+
 runs:
   using: composite
   steps:
@@ -55,6 +60,7 @@ runs:
         bun run build:addons
         echo "::notice::⏱ Build addons: $((SECONDS - start))s"
     - name: Build function-addon template
+      if: ${{ inputs.templates == 'true' }}
       shell: bash
       run: |
         start=$SECONDS
@@ -67,6 +73,7 @@ runs:
         bun run pikku
         echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
     - name: Build templates
+      if: ${{ inputs.templates == 'true' }}
       shell: bash
       run: |
         start=$SECONDS
