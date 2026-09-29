@@ -1,22 +1,10 @@
 import { useMemo } from 'react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
-import {
-  findWebhookSource,
-  type WebhookSourcePair,
-} from '../lib/webhook-source'
+import { pairTriggers, type TriggerPair } from '../lib/trigger-pairs'
 
-export type { WebhookSourcePair }
-
-export interface TriggerPair {
-  name: string
-  source: any | null
-  trigger: any | null
-  webhook: WebhookSourcePair | null
-}
-
-/** What the source panel is opened with: the plain source meta, or the webhook it comes from. */
-export const sourcePanelMetadata = (pair: TriggerPair) =>
-  pair.webhook ? { kind: 'webhook', ...pair.webhook } : pair.source
+export type { TriggerPair } from '../lib/trigger-pairs'
+export { sourcePanelMetadata } from '../lib/trigger-pairs'
+export type { WebhookSourcePair } from '../lib/webhook-source'
 
 /**
  * Every trigger name in the project meta paired with its source and its
@@ -29,26 +17,10 @@ export const useTriggerItems = (): {
 } => {
   const { meta, loading } = usePikkuMeta()
 
-  const items = useMemo((): TriggerPair[] => {
-    const names = new Set<string>()
-    if (meta.triggerSourceMeta)
-      Object.keys(meta.triggerSourceMeta).forEach((n) => names.add(n))
-    if (meta.triggerMeta)
-      Object.keys(meta.triggerMeta).forEach((n) => names.add(n))
-    return Array.from(names)
-      .sort()
-      .map((name) => {
-        const source = meta.triggerSourceMeta?.[name] || null
-        return {
-          name,
-          source,
-          trigger: meta.triggerMeta?.[name] || null,
-          webhook: source
-            ? null
-            : findWebhookSource(name, meta.webhookSourceMeta),
-        }
-      })
-  }, [meta.triggerMeta, meta.triggerSourceMeta, meta.webhookSourceMeta])
+  const items = useMemo(
+    () => pairTriggers(meta),
+    [meta.triggerMeta, meta.triggerSourceMeta, meta.webhookSourceMeta]
+  )
 
   return { items, loading }
 }
