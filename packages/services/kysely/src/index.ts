@@ -15,6 +15,7 @@ export { KyselyFeatureFlagStore } from './kysely-feature-flag-store.js'
 export type { KyselyFeatureFlagStoreOptions } from './kysely-feature-flag-store.js'
 export { KyselyWebhookService } from './kysely-webhook-service.js'
 export { KyselyTriggerSourceStore } from './kysely-trigger-source-store.js'
+export { KyselyLockService } from './kysely-lock-service.js'
 export { KyselyIncomingWebhookService } from './kysely-incoming-webhook-service.js'
 export {
   createAuditedKysely,
@@ -60,6 +61,7 @@ export {
   deploymentSchema,
   flagSchema,
   incomingWebhookSchema,
+  lockSchema,
   scopeSchema,
   secretSchema,
   sessionSchema,

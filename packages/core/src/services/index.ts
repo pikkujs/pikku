@@ -43,6 +43,11 @@ export {
   type TriggerSourceRow,
   type TriggerSourceStore,
 } from './trigger-source-store.js'
+export {
+  InMemoryLockService,
+  type LockLease,
+  type LockService,
+} from './lock-service.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
 export { LocalGatewayService } from './local-gateway-service.js'
 export {

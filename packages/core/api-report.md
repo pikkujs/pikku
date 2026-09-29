@@ -5,8 +5,8 @@ signature, so a member-level change is a reviewable diff. Do not edit.
 
 ## What a compatibility promise covers
 
-**3152 observable things**: 1040 exported names, plus
-2112 members on the classes and interfaces among them, reachable
+**3165 observable things**: 1043 exported names, plus
+2122 members on the classes and interfaces among them, reachable
 through 56 entry points.
 
 An entry point whose exports are mostly *exclusive* is a self-contained
@@ -14,13 +14,13 @@ subsystem rather than shared machinery — which tends to mean a newer one.
 
 | entry point | exports | exclusive | members on those |
 | --- | ---: | ---: | ---: |
-| `./services` | 169 | 137 | 451 |
+| `./services` | 172 | 140 | 460 |
 | `./virtual-user` | 66 | 66 | 215 |
 | `./scenario` | 50 | 50 | 160 |
 | `./workflow` | 84 | 35 | 140 |
 | `./agent` | 52 | 50 | 81 |
 | `./channel` | 32 | 32 | 85 |
-| `./types` | 24 | 21 | 81 |
+| `./types` | 24 | 21 | 82 |
 | `./queue` | 22 | 22 | 71 |
 | `./persona` | 45 | 39 | 48 |
 | `./http` | 26 | 26 | 56 |
@@ -218,6 +218,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   webhookService?: WebhookService
   incomingWebhookService?: IncomingWebhookService
   triggerSourceStore?: TriggerSourceStore
+  lockService?: LockService
   metaService?: MetaService
   virtualUserRunStore?: VirtualUserRunStore
   virtualUserScheduleStore?: VirtualUserScheduleStore
@@ -4984,6 +4985,13 @@ export class InMemoryAgentRunStateService implements AgentRunStateService {
   async saveScore(score: SaveScoreInput): Promise<void>
   async getScores(runId: string): Promise<AgentRunScore[]>
 }
+export class InMemoryLockService implements LockService {
+  constructor(private now: () => number = Date.now)
+  async acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
+  async refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
+  async release(lease: LockLease): Promise<void>
+  async get(key: string): Promise<LockLease | null>
+}
 export class InMemoryQueueService implements QueueService {
   readonly supportsResults: false
   async add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
@@ -5089,6 +5097,18 @@ export class LocalVariablesService implements VariablesService {
   public set(name: string, value: unknown): void
   public has(name: string): boolean
   public delete(name: string): void
+}
+export type LockLease = {
+  key: string
+  holder: string
+  token: number
+  expiresAt: Date
+}
+export interface LockService {
+  acquire(key: string, holder: string, ttlMs: number): Promise<LockLease | null>
+  refresh(lease: LockLease, ttlMs: number): Promise<LockLease | null>
+  release(lease: LockLease): Promise<void>
+  get(key: string): Promise<LockLease | null>
 }
 export interface Logger {
   info<M extends string | Record<string, any>, A extends unknown[]>(messageOrObj: Safe<M>, ...meta: { [K in keyof A]: Safe<A[K]> }): void

@@ -278,6 +278,14 @@ export interface PikkuTriggerSourceTable {
   updatedAt: Generated<Date>
 }
 
+/** A named lock's current or last lease. */
+export interface PikkuLockTable {
+  key: string
+  holder: string
+  token: number
+  expiresAt: Date
+}
+
 /** One subject's short-circuit, in either direction, over a flag's rollout. */
 export interface PikkuFeatureFlagOverridesTable {
   flag: string
@@ -476,6 +484,7 @@ export interface KyselyPikkuDB {
   pikkuFeatureFlags: PikkuFeatureFlagsTable
   pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
   pikkuTriggerSource: PikkuTriggerSourceTable
+  pikkuLock: PikkuLockTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable
