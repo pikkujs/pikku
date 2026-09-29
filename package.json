@@ -60,7 +60,7 @@
     "test:e2e:cli": "bun run --filter @pikku/e2e test:cli",
     "test:e2e:console": "bun run --filter @pikku/e2e test:console",
     "test:e2e:ai-live": "bun run --filter @pikku/e2e test:ai-live",
-    "test": "bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/console' --filter '!@pikku/e2e' --sequential test",
+    "test": "bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/addon-console' --filter '!@pikku/console' --filter '!@pikku/e2e' --parallel test",
     "test:coverage": "bun run --filter '*' --sequential test:coverage",
     "lint": "oxlint",
     "prettier": "npx --yes prettier . --write --log-level warn",
