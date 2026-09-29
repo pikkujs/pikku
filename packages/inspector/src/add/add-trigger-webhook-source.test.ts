@@ -96,3 +96,23 @@ wireTrigger({ name: 'shop:order.lost', func: { func: async () => {} } })
     )
   })
 })
+
+describe('wireTriggerWebhookSource method shorthand', () => {
+  test('keeps an array of methods as an array, not its source text', async () => {
+    const { state, errors } = await inspectSource(
+      HEADER +
+        `wireTriggerWebhookSource({
+  name: 'dual',
+  method: ['get', 'post'],
+  receive: { func: async () => ({ events: [] }) },
+})
+`
+    )
+
+    assert.deepEqual(errors, [])
+    assert.deepEqual(state.triggers.webhookSourceMeta.dual?.method, [
+      'get',
+      'post',
+    ])
+  })
+})

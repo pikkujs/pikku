@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import {
+  getArrayPropertyValue,
   getPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
@@ -206,7 +207,9 @@ const addWireTriggerWebhookSource: (
   }
 
   const method =
-    (getPropertyValue(obj, 'method') as string | string[] | null) ?? 'post'
+    getArrayPropertyValue(obj, 'method') ??
+    (getPropertyValue(obj, 'method') as string | null) ??
+    'post'
   const route =
     (getPropertyValue(obj, 'route') as string | null) ?? `/webhooks/${name}`
   let secret = getPropertyValue(obj, 'secret') as string | null
